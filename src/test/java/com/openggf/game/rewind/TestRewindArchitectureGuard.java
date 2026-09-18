@@ -85,6 +85,15 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossOrbChild.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossLaserChild.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossLaserChild.java#restoreRewindState", 1),
+            // Triaged: Mecha Sonic's act-1 graph is twenty-one routines over a 16.16 position, a
+            // $34 callback, a $38 flag byte and a raw-animation cursor addressed by ROM address,
+            // none of which the generic capture reaches; and the after-image children hold the
+            // boss and the subtype sub_7D236 turns into their offset and priority. Restore
+            // equality is covered by TestS3kSszMechaSpawnHeadless and the per-object round trip.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicTrailChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicTrailChild.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboJetFlameChildInstance.java#captureRewindState", 1),

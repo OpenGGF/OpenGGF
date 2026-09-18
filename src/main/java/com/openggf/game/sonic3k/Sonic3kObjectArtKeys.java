@@ -414,6 +414,11 @@ public final class Sonic3kObjectArtKeys {
     public static final String SSZ_MTZ_ORBS = "ssz_mtz_orbs";
     /** {@code ArtKosM_MechaSonicHead} over {@code Map_MechaSonicHead}. */
     public static final String MECHA_SONIC_HEAD = "mecha_sonic_head";
+
+    /** {@code ArtUnc_MechaSonic} DPLC'd through {@code DPLCPtr_MechaSonic} over {@code Map_MechaSonic}. */
+    public static final String MECHA_SONIC = "mecha_sonic";
+    /** {@code ArtKosM_MechaSonicExtra} over {@code Map_MechaSonicExtra}. */
+    public static final String MECHA_SONIC_EXTRA = "mecha_sonic_extra";
     /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */
     public static final String SSZ_FLOATING_PLATFORM = "ssz_floating_platform";
     /**

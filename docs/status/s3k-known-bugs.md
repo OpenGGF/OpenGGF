@@ -65,7 +65,7 @@ Entries should include:
 39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
 40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
 41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
-42. [Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss](#sky-sanctuary-mecha-sonic-spawner-pad-allocates-no-boss)
+42. [Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop](#sky-sanctuary-mecha-sonic-is-only-its-entry-and-its-attack-loop)
 43. [Sky Sanctuary Boss Defeats Draw No Explosion](#sky-sanctuary-boss-defeats-draw-no-explosion)
 44. [Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship](#sky-sanctuary-metropolis-orbs-still-on-the-ring-are-deleted-with-their-ship)
 45. [S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object](#s3k-special-property-touch-teleports-the-sidekick-for-every-c0-object)
@@ -5926,20 +5926,23 @@ That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
   `ensureBackgroundTilemapData` showing where the base is dropped. Until one of those lands, treat
   the plain-mode half as **asserted, not demonstrated**; the wide-viewport capture is owed too.
 
-## Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss
+## Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop
 
-- **Location** — `SSZHPZTeleporterObjectInstance` (`src/main/java/com/openggf/game/sonic3k/objects/`)
-- **Symptom** — The `$79:$00` placement at `($1A40,$670)` takes the ROM's `loc_455BA` branch and
-  installs `loc_45A72` instead of the teleporter routine, so it is correctly never solid and never
-  launches the player, but it never allocates `Obj_SSZEndBoss` into `_unkFAA4` and never explodes.
-  Reaching the final arena therefore produces no Mecha Sonic.
-- **Suspected cause** — Not a defect: `loc_45A84`'s `AllocateObject` needs `Obj_SSZEndBoss`, which
-  slice 7 of the [SSZ bring-up plan](../architecture/plans/2026-09-17-ssz-bring-up.md) owns. The
-  branch detection, the `Camera_Y == Camera_max_Y` condition and the no-solid behaviour are in
-  place; only the allocation, the `$30(a0)` boss handle, the `x_pos` comparison at `loc_45AB0` and
-  the `Child6_CreateBossExplosion` child are missing.
-- **Removal condition** — Slice 7 lands `Obj_SSZEndBoss`, `loc_45A84` allocates it and writes
-  `_unkFAA4`, and `loc_45AB0` explodes the pad once the boss passes its X.
+- **Location** — `SszMechaSonicObjectInstance` (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
+- **Symptom** — The `$79:$00` pad at `($1A40,$670)` now allocates `Obj_SSZEndBoss` and explodes
+  behind it, and the boss runs `SSZEndBoss_Index`'s act-1 entries 0 through `$28` — the entry run,
+  the return, the landing, the two openings and the three-way attack cycle — with `sub_7D2D8`'s
+  per-frame collision byte and `sub_7D312`'s window. Three things below that are not there.
+- **Suspected cause** — Not a defect; slice 7 of the
+  [SSZ bring-up plan](../architecture/plans/2026-09-17-ssz-bring-up.md) is delivered in stages and
+  the first stage stops at the killing hit. What is missing is (a) `loc_7B81A`'s post-defeat graph
+  beyond `sub_7D35A`'s own writes — the `loc_7B87C` fall, `loc_7B888`'s landing with
+  `ChildObjDat_7D48C` and `sub_7C678`, and the `loc_7D056` object that runs `sub_868F8` and hands
+  the act over, so a beaten Mecha Sonic holds its defeat pose instead of finishing the act; (b) the
+  `ChildObjDat_7D474` child at `loc_7C9BA`; and (c) `Obj_MechaSonic_Sparks`, whose gate is a
+  palette read (`cmpi.w #$E88,(Normal_palette_line_2+$12).w`) rather than a state.
+- **Removal condition** — `loc_7B81A`'s routines 0 to 4 run for act 1, the act-1 handover through
+  `loc_7D056` reaches the results screen, and both remaining children exist with their own tests.
 
 ## Sky Sanctuary Boss Defeats Draw No Explosion
 

@@ -39,7 +39,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public static final int EVENTS_BG_BYTES = 0x10;
 
     private static final int CAPTURE_BYTES =
-            EVENTS_BG_BYTES + 11 * Short.BYTES + 3 * Integer.BYTES + 2;
+            EVENTS_BG_BYTES + 14 * Short.BYTES + 3 * Integer.BYTES + 2;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -52,6 +52,17 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     private short unkEE9C;
     /** {@code _unkFAA4}: the SST slot of the object the launch carries; written by the bosses. */
     private short unkFAA4;
+    /**
+     * {@code _unkFAB0} and {@code _unkFAB4}/{@code _unkFAB6}: the box Mecha Sonic runs inside.
+     * {@code loc_7B308} writes them from the camera at the moment it is allocated —
+     * {@code Camera_X + $20} and {@code + $120} for the two X limits, {@code Camera_Y + $30} for
+     * the ceiling — and {@code loc_7D216} is the shared test that turns the boss at whichever of
+     * the two X limits its {@code x_vel} is heading for. They are world coordinates, not camera
+     * offsets, and nothing rewrites them for act 1 after the init.
+     */
+    private short unkFAB0;
+    private short unkFAB4;
+    private short unkFAB6;
     /**
      * {@code _unkFA82}: one bit per EggRobo pairing group, indexed by {@code subtype >> 4}. A
      * nibble-0 fly-by sets its bit as it leaves the screen ({@code loc_91570}) and the matching
@@ -158,6 +169,18 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public int carriedObjectSlot() { return unkFAA4 & 0xFFFF; }
     public void setCarriedObjectSlot(int value) { unkFAA4 = (short) value; }
 
+    /** {@code _unkFAB0}: the ceiling {@code loc_7B308} writes as {@code Camera_Y + $30}. */
+    public int bossCeilingY() { return unkFAB0 & 0xFFFF; }
+    public void setBossCeilingY(int value) { unkFAB0 = (short) value; }
+
+    /** {@code _unkFAB4}: the left limit, {@code Camera_X + $20}. */
+    public int bossLeftX() { return unkFAB4 & 0xFFFF; }
+    public void setBossLeftX(int value) { unkFAB4 = (short) value; }
+
+    /** {@code _unkFAB6}: the right limit, {@code Camera_X + $120}. */
+    public int bossRightX() { return unkFAB6 & 0xFFFF; }
+    public void setBossRightX(int value) { unkFAB6 = (short) value; }
+
     /** {@code btst d0,(_unkFA82).w}. */
     public boolean eggRoboFlyByPassed(int group) {
         return (unkFA82 & (1 << (group & 0x0F))) != 0;
@@ -187,6 +210,13 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     /** {@code btst #bit,(_unkFAB8).w}. */
     public boolean cutsceneFlag(int bit) { return (unkFAB8 & (1 << bit)) != 0; }
     public void setCutsceneFlag(int bit) { unkFAB8 |= 1 << bit; }
+    /** {@code bclr #bit,(_unkFAB8).w}, and whether the bit it cleared had been set. */
+    public boolean clearCutsceneFlag(int bit) {
+        boolean was = (unkFAB8 & (1 << bit)) != 0;
+        unkFAB8 &= ~(1 << bit);
+        return was;
+    }
+
     public void clearCutsceneFlags() { unkFAB8 = 0; }
     public int cutsceneFlags() { return unkFAB8; }
 
@@ -240,6 +270,9 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putShort(unkEE98);
         buffer.putShort(unkEE9C);
         buffer.putShort(unkFAA4);
+        buffer.putShort(unkFAB0);
+        buffer.putShort(unkFAB4);
+        buffer.putShort(unkFAB6);
         buffer.putShort(unkFA84);
         buffer.putInt(unkFAB8);
         buffer.put((byte) (screenInitApplied ? 1 : 0));
@@ -266,6 +299,9 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         unkEE98 = buffer.getShort();
         unkEE9C = buffer.getShort();
         unkFAA4 = buffer.getShort();
+        unkFAB0 = buffer.getShort();
+        unkFAB4 = buffer.getShort();
+        unkFAB6 = buffer.getShort();
         unkFA84 = buffer.getShort();
         unkFAB8 = buffer.getInt();
         screenInitApplied = buffer.get() != 0;

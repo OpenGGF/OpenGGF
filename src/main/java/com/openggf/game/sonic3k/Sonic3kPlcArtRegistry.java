@@ -2744,6 +2744,29 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 -1
         ));
+        // Obj_SSZEndBoss runs Perform_DPLC over DPLCPtr_MechaSonic on every dispatch, so its art
+        // is dynamic exactly as a player's is: ArtUnc_MechaSonic uncompressed, DPLC_MechaSonic
+        // cues, Map_MechaSonic frames. ObjSlot_MechaSonic draws it on line 1.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.MECHA_SONIC,
+                Sonic3kConstants.ART_UNC_MECHA_SONIC_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_MECHA_SONIC_SIZE,
+                Sonic3kConstants.MAP_MECHA_SONIC_ADDR,
+                1,
+                Sonic3kConstants.DPLC_MECHA_SONIC_ADDR
+        ));
+        // loc_7B35A queues ArtKosM_MechaSonicExtra into ArtTile_MechaSonicExtra for the trail and
+        // spark children; ObjDat3_7D402 draws them on line 1.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.MECHA_SONIC_EXTRA,
+                Sonic3kConstants.ART_KOSM_MECHA_SONIC_EXTRA_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR,
+                1,
+                -1
+        ));
     }
 
     /**

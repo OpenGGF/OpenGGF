@@ -2078,6 +2078,46 @@ public class Sonic3kConstants {
     public static final int MAP_MECHA_SONIC_HEAD_ADDR = 0x0681FC;
 
     /**
+     * {@code ArtUnc_MechaSonic} ($175A9E): Mecha Sonic's own sheet, uncompressed and DPLC'd
+     * frame by frame by {@code Perform_DPLC} over {@code DPLCPtr_MechaSonic}, exactly as the
+     * players' art is. The size is the gap to {@code ArtKosM_EggRoboBadnik} ($17B17E), and the
+     * committed {@code Mecha Sonic.bin} is 22240 bytes, which agrees.
+     */
+    public static final int ART_UNC_MECHA_SONIC_ADDR = 0x175A9E;
+    public static final int ART_UNC_MECHA_SONIC_SIZE = 0x56E0;
+    /** {@code Map_MechaSonic} ($1853AA). */
+    public static final int MAP_MECHA_SONIC_ADDR = 0x1853AA;
+    /** {@code DPLC_MechaSonic} ($185852), the second longword of {@code DPLCPtr_MechaSonic}. */
+    public static final int DPLC_MECHA_SONIC_ADDR = 0x185852;
+    /** {@code ArtKosM_MechaSonicExtra} ($17F738), queued into {@code ArtTile_MechaSonicExtra}. */
+    public static final int ART_KOSM_MECHA_SONIC_EXTRA_ADDR = 0x17F738;
+    /** {@code Map_MechaSonicExtra} ($18561E). */
+    public static final int MAP_MECHA_SONIC_EXTRA_ADDR = 0x18561E;
+
+    /**
+     * {@code Obj_SSZEndBoss}'s raw animation scripts, addressed by ROM address because
+     * {@code Animate_RawMultiDelay} keeps the script pointer in {@code $30(a0)} and the
+     * {@code $F8} command rewrites it.
+     */
+    public static final int SSZ_MECHA_ANIM_BLOCK_ADDR = 0x07D4D0;
+    /**
+     * The whole block is loaded in one window because the {@code $F8} jump command carries a
+     * signed byte: {@code byte_7D52A} ends {@code dc.b $F8,$F9}, which is seven bytes backwards,
+     * and a window that began at the script's own address could not address it.
+     */
+    public static final int SSZ_MECHA_ANIM_BLOCK_SIZE = 0x01C0;
+    public static final int SSZ_MECHA_ANIM_LAND_SHORT_ADDR = 0x07D4DE;
+    public static final int SSZ_MECHA_ANIM_LAND_LONG_ADDR = 0x07D4EF;
+    public static final int SSZ_MECHA_ANIM_ENTRY_ADDR = 0x07D523;
+    public static final int SSZ_MECHA_ANIM_RUN_ADDR = 0x07D541;
+    public static final int SSZ_MECHA_ANIM_JUMP_ADDR = 0x07D54A;
+    public static final int SSZ_MECHA_ANIM_STAND_ADDR = 0x07D596;
+    public static final int SSZ_MECHA_ANIM_SKID_ADDR = 0x07D59B;
+    public static final int SSZ_MECHA_ANIM_TURN_ADDR = 0x07D5A2;
+    /** {@code byte_7D65F}: the after-image child's own four-frame loop. */
+    public static final int SSZ_MECHA_TRAIL_ANIM_ADDR = 0x07D65F;
+
+    /**
      * CNZ Act 1 miniboss PLC id.
      *
      * <p>ROM: {@code sonic3k.asm:144844} — {@code moveq #$5D,d0} then

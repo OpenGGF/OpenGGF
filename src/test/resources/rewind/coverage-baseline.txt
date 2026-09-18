@@ -29,3 +29,7 @@ com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance#objectRef#arc
 com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance#finalScalar#group
 com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance#finalScalar#mode
 com.openggf.game.sonic3k.objects.badniks.EggRoboShotInstance#finalScalar#facingLeft
+com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild#finalScalar#childDx
+com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild#finalScalar#childDy
+com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild#finalScalar#priorityWord
+com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild#finalScalar#subtype

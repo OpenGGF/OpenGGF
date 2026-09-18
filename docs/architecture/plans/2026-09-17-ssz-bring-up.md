@@ -2235,3 +2235,93 @@ proper starts at 2257 at 16 px a frame and takes him 929 px out of the arena.
 **Still owed on this fight.** No clip is cut to the `$68` arm extension itself, and nothing on
 film distinguishes the raised ring from the resting one. The palette flash still has no native
 comparison, because palette is not in the trace schema.
+
+### 2026-09-18 — slice 7, stage 1: Mecha Sonic's entry and its attack loop
+
+Branch `feature/ai-ssz-bring-up`, base develop `035e48a58`. `Obj_SSZEndBoss` is much the largest
+object in this zone and it is being delivered in stages; this is the first, and it ends at the
+killing hit.
+
+**What the spawner actually needed.** Known bug #42 described the gap as "the allocation, the
+`$30(a0)` handle, the `x_pos` comparison and the explosion child", and that reading held up.
+`loc_45A84` tests `Camera_Y_pos == Camera_max_Y_pos` and nothing about the player, so the pad
+fires the frame the final arena's own `$5C0` has finished easing the camera down; the allocation
+is a **plain** `AllocateObject`, which in this engine is `spawnFreeChild` and not
+`spawnChild`, so the boss can take a slot below the pad's and may not run in the same frame. The
+test steps for that rather than assuming it.
+
+**Four calls, not one.** `Obj_SSZEndBoss` runs the routine, then `sub_7D312`, then `sub_7D2D8`,
+then `Perform_DPLC` over `DPLCPtr_MechaSonic`. The last of those is why the art is registered as
+`ArtUnc_MechaSonic` ($175A9E, $56E0 bytes) plus `DPLC_MechaSonic` ($185852) over
+`Map_MechaSonic` ($1853AA) — a DPLC'd sheet exactly like a player's, not a flat one. The
+committed `Mecha Sonic.bin` is 22240 bytes, which is the gap to `ArtKosM_EggRoboBadnik`; that
+agreement is the only check on the size.
+
+**`sub_7D2D8` is the finding worth keeping.** The collision byte is not a state this object
+holds: it is `byte_7D2FC` indexed by `mapping_frame`, rewritten every frame the boss is not
+flashing. Frames 3 to 6 are `$86` (harm), frame `$F` is `$00` (nothing at all), and the rest are
+`$23`, `$09`, `$1A` or `$06` — attackable. So which part of Mecha Sonic's animation can be hit is
+a property of the animation and of nothing else, and a test that asserted "the boss is
+attackable in phase X" would be asserting the wrong thing. The twenty-two bytes are written out
+as literals in both the class and the test.
+
+**`sub_7D312` splits across the engine's touch pass.** The ROM does the decrement, `sfx_BossHit`
+and `status` bit 6 inside this routine because `Touch_Enemy` has already zeroed
+`collision_flags`; the engine's shared boss touch pass is where those live, and its default
+invulnerability duration is `$20`, which is `sub_7D312`'s own `move.b #$20,$20(a0)`. What this
+class keeps is the countdown and the `bclr`, because without them `sub_7D2D8` would put the
+collision byte straight back on the next frame and the window would not exist.
+
+**One animation detail that is not a tidy-up.** `Set_Raw_Animation` clears `anim_frame` and
+`anim_frame_timer`; a bare `move.l #script,$30(a0)` does not. The act-1 graph uses the bare form
+at `loc_7B41C`, `loc_7B4EC`, `loc_7B5C2` and `loc_7B57A` and `Set_Raw_Animation` only at
+`loc_7B5E8`, so four of the five script changes resume at whatever index the previous script
+left behind. The first draft of this class cleared them everywhere, which is a different object.
+
+**The attacks are a cycle, not a draw.** `loc_7B5E8` reads `byte_7B62E[$3B & 7]` — `0,1,2,0,1,2,
+0,1` — and steps `$3B`; `byte_7B636` turns that into routine `$16`, `$1A` or `$1E`. The RNG is
+consulted in exactly one place, `loc_7B484`'s choice of landing animation, and `loc_7B2DC` seeds
+it from `V_int_run_count`. That is a declared clock seed for native matching, as DDZ's was, and
+the clock is `V_int_run_count` — not `Level_frame_counter` and not the executed-frame count.
+
+**`sub_7D236`, and the reading the first RED run killed.** The after-image children index
+`byte_7D24C` at `subtype * 2` against rows that are four bytes wide, which looks like an
+overlapping read and was written up as one. It is not: `CreateChild6_Simple` numbers its children
+with `addq.w #2,d2`, so the subtypes are 0, 2, 4 and the doubling lands on whole rows.
+`loc_7C8FE` adds four before the shared init, so `ChildObjDat_7D486`'s pair takes rows 2 and 3
+where `ChildObjDat_7D47A`'s takes 0 and 1, and `ChildObjDat_7D480`'s `move.b #8,subtype(a1)`
+takes row 4 — five rows, each used once.
+
+The first run of `TestS3kSszMechaSpawnHeadless` failed all seven of its live cases with
+`not an S3K sprite priority word: 0x81c`, which is what the wrong stride produces for subtype 1,
+and `RenderPriority.fromS3kWord` refuses to clamp. A priority word in S3K is a raw byte offset
+into `Sprite_table_input` (`Draw_Sprite`, `adda.w priority(a0),a1`), so `$81C` is not a rounding
+error, it is off the end of the table; the engine rejecting it is what turned a plausible
+write-up into a caught misreading. The lesson is the ordinary one — the child-numbering routine
+had to be read before the table that consumes its numbers could be.
+
+**What this stage does not do**, recorded in `docs/status/s3k-known-bugs.md` #42 rather than
+approximated: `loc_7B81A`'s post-defeat graph beyond `sub_7D35A`'s own writes (the `loc_7B87C`
+fall, `loc_7B888`'s landing, and the `loc_7D056` object that runs `sub_868F8` and hands the act
+over), the `ChildObjDat_7D474` child at `loc_7C9BA`, and `Obj_MechaSonic_Sparks` — whose gate is
+a palette read, `cmpi.w #$E88,(Normal_palette_line_2+$12).w`, rather than a state. No clip and no
+native comparison for this stage either.
+
+**Verification.** `python3 tools/testing/maven_queue.py -Dmse=off -Dtest=<batch>
+-Ds3k.rom.path=…/ai-ssz-bring-up/s3k.gen test` over `TestS3kSszMechaSpawnHeadless`,
+`TestS3kSszMtzArenaHeadless`, `TestS3kSszGhzArenaHeadless`, `TestS3kSszTeleporterPads`,
+`TestS3kSszArrivalHeadless`, `TestS3kSszLifecycleProduction`, `TestS3kSszPlacementCensus`,
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`, `TestEveryObjectRewindRoundTrip`,
+`TestRewindHarnessCoverageRatchet` and `TestGameplayCaptureToolArgs`: **1275 run, 0 failures,
+0 errors, 0 skipped.** Then `-Pguards`: **669 run, 0 failures, 0 errors, 0 skipped**, after
+three rewind ratchets were triaged rather than silenced — the two new capture/restore overrides
+into `TestRewindArchitectureGuard`'s baseline with their reason, the child's four spawn-derived
+finals into `coverage-baseline.txt` (which is what that file is for), and the two cached
+`S3kRawAnimation` windows given the `transient` disposition instead of being added to the
+field-disposition debt file, which says never to grow it. Focused validation, not a suite pass.
+
+**The comparison was broken on purpose, by accident.** The first run of the new test failed
+seven of its eight cases and passed the eighth; the seven were the ones that boot the level and
+the eighth is the pure table assertion, which is exactly the split that proves the live cases
+reach production code rather than passing vacuously.

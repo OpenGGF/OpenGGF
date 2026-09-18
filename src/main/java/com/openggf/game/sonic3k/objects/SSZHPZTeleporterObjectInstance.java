@@ -12,10 +12,12 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -24,6 +26,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -100,6 +103,8 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     public static final int STATE_ALTAR_DONE = 6;
     /** {@code loc_45A66}: the SSZ Mecha Sonic spawner pad. Never solid, never launches. */
     public static final int STATE_MECHA_SPAWNER = 7;
+    /** {@code move.w #$20,$32(a0)} in {@code loc_45AB0}. */
+    public static final int MECHA_PAD_EXPLOSION_FRAMES = 0x20;
 
     private int x;
     private int y;
@@ -128,12 +133,20 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     private boolean altarActivated;
     /** {@code loc_457A2} has cleared Player_1 {@code Status_OnObj} during this charge. */
     private boolean playerOnObjCleared;
+    /** {@code $2E(a0)} on the Mecha Sonic spawner: {@code st} once the boss has been allocated. */
+    private boolean mechaSpawned;
+    /** {@code $30(a0)}: the boss slot, which {@code loc_45AB0} reads back every frame. */
+    private SszMechaSonicObjectInstance mechaBoss;
+    /** {@code $32(a0)}: the {@code $20}-frame countdown to {@code Delete_Current_Sprite}. */
+    private int mechaDeleteTimer;
 
     private record RewindExtra(int subtype, boolean initialized, int state, int beamFlag,
                                int lightTimer, int lightIndex, int riseRemaining, int swingSpeed,
                                int swingOffset, boolean swingReversed, int settleBaseY,
                                ObjectRefId beamId, boolean altarActivated,
-                               boolean playerOnObjCleared, int baseY, int sinkOffset)
+                               boolean playerOnObjCleared, int baseY, int sinkOffset,
+                               boolean mechaSpawned, ObjectRefId mechaBossId,
+                               int mechaDeleteTimer)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public SSZHPZTeleporterObjectInstance(ObjectSpawn spawn) {
@@ -383,7 +396,54 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
      * pad draws and does nothing else, which is recorded as a gap rather than faked.
      */
     private void updateMechaSpawner() {
-        // Deliberately empty: loc_45A72's only work before the boss exists is jmp Draw_Sprite.
+        // loc_45A72: once $32(a0) is armed nothing else runs; the pad counts down and deletes.
+        if (mechaDeleteTimer != 0) {
+            mechaDeleteTimer--;
+            if (mechaDeleteTimer == 0) {
+                ObjectLifetimeOps.deleteNoRespawn(this);
+            }
+            return;
+        }
+        if (!mechaSpawned) {
+            // loc_45A84: the allocation waits for the final arena's lock to have eased the
+            // camera all the way down, which is Camera_Y_pos == Camera_max_Y_pos, not a
+            // position test on the player.
+            var camera = services().camera();
+            if (camera == null
+                    || (camera.getY() & 0xFFFF) != (camera.getMaxY() & 0xFFFF)) {
+                return;
+            }
+            // jsr (AllocateObject).l -- the plain one. The boss takes the lowest free slot,
+            // which may be below this pad's, so it may not run in the same frame. A failed
+            // allocation writes nothing and the gate is simply retried next frame.
+            SszMechaSonicObjectInstance boss = spawnFreeChild(() ->
+                    new SszMechaSonicObjectInstance(
+                            new ObjectSpawn(x, y, 0, 0, 0, false, 0)));
+            if (boss == null) {
+                return;
+            }
+            mechaBoss = boss;
+            mechaSpawned = true;
+            SszZoneRuntimeState ssz = sszState();
+            if (ssz != null) {
+                // move.w a1,(_unkFAA4).w: the slot SSZ1's background event at :116134 reads,
+                // and the one sub_5750C carries when the launch comes.
+                ssz.setCarriedObjectSlot(boss.getSlotIndex() & 0xFFFF);
+            }
+            return;
+        }
+        // loc_45AB0: movea.w $30(a0),a1 -- the pad reads the boss slot back every frame and
+        // explodes as soon as the boss's x_pos is no longer above its own, which is the
+        // moment routine 4's run to the left has carried Mecha Sonic past it.
+        if (mechaBoss == null || mechaBoss.isDestroyed()) {
+            return;
+        }
+        if ((mechaBoss.getX() & 0xFFFF) > (x & 0xFFFF)) {
+            return;
+        }
+        mechaDeleteTimer = MECHA_PAD_EXPLOSION_FRAMES;
+        spawnChild(() -> new BossExplosionObjectInstance(x, y, 0,
+                Sonic3kSfx.EXPLODE.id, getPriorityBucket()));
     }
 
     /** {@code loc_457BE}. */
@@ -661,7 +721,9 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 subtype, initialized, state, beamFlag, lightTimer, lightIndex, riseRemaining,
                 swingSpeed, swingOffset, swingReversed, settleBaseY, beamId, altarActivated,
-                playerOnObjCleared, baseY, sinkOffset));
+                playerOnObjCleared, baseY, sinkOffset, mechaSpawned,
+                context.identityTable().map(table -> table.encodeObject(mechaBoss)).orElse(null),
+                mechaDeleteTimer));
     }
 
     @Override
@@ -686,6 +748,11 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
             beam = extra.beamId() == null ? null
                     : (TeleporterBeamObjectInstance) context.requireIdentityTable()
                     .resolveObject(extra.beamId(), true);
+            mechaSpawned = extra.mechaSpawned();
+            mechaDeleteTimer = extra.mechaDeleteTimer();
+            mechaBoss = extra.mechaBossId() == null ? null
+                    : (SszMechaSonicObjectInstance) context.requireIdentityTable()
+                    .resolveObject(extra.mechaBossId(), true);
         }
     }
 

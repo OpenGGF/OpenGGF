@@ -49,7 +49,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   you, and the ship will not come back down until every thrown orb has been dealt with; it has
   seven of those in it. After the seventh it stops raising its arms, dives at the floor and
   fires three pairs of lasers along it instead. The eighth hit sends it away and raises the
-  sunk pad in the arena floor. The Death Egg launch is still to come.
+  sunk pad in the arena floor. Mecha Sonic himself now turns up for the third: reach the far
+  end of the act and the pad there breaks apart as he comes tearing in from the right, runs
+  clean off the left of the screen, turns and comes back along the top with an after-image
+  trailing him. From there he works through his own repertoire — dropping on the floor, dashing
+  along it, turning to face the player, jumping, and following the jump with an air dash, a
+  ground pound or a landing that sets up two more dashes. Which parts of him can be hit and
+  which hurt to touch change frame by frame with his animation, as they do on the cartridge.
+  What happens after his eighth hit, and the Death Egg launch, are still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
