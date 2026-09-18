@@ -109,10 +109,21 @@ harness. It does **not** close:
 
 | Claim | State |
 | --- | --- |
-| Cold-reachable | Unchanged. Every slice-3 class sits past the bridge and is exercised from star-post checkpoint entries; the cold route still stops where slice 1b left it |
-| Rewind-verified | No spot exercised for any slice-3 family. The carrier chain (hub -> arc -> rider bar, three object references) and the EggRobo `_unkFA82` pairing are the two that most need one |
-| Visually matched | No capture for any of the six part-3/part-4 families. Clip numbering is at `09`; the next is `10` |
-| Breadth | No `TestS3kSszCompatibilityMatrix` yet. The shape is `TestFbzCompatibilityMatrix`: 320 plus one wide width, S1 donor, Sonic / Tails / Knuckles rosters, live roster and ROM-backed renderers asserted, covering every slice 1b-3 class |
+| Cold-reachable | **Advanced.** The native fixture that carries SSZ act 1 is the one named `hpz_completerun` (`zone_id 10`, start `($100,$FAE)`, `bk2_frame_offset 396720`, `s3k-complete-sonic-tails.bk2`); the `ssz`-named fixtures are `zone_id 11`, Death Egg. `TestS3kSszColdRoutes` drives that movie's inputs from the SSZ entry: the bridge finishes at route frame **1390** and the route carries Sonic to X **`$6EB`** inside 6000 frames with nobody dying. That is past the bridge and the ledge, and stops just short of the `$7B` diagonal-walkway cluster at `$740` |
+| Rewind-verified | **Six spots delivered**, one per family, each taken mid-action: cloud mid sag ramp, bar while holding, post with its carrier, the whole carrier chain, spring mid extension, EggRobo mid animal release. Each captures, steps, captures, restores, compares, replays one frame and compares again. What they cannot see is recorded in the helper: at every spot the instances survive the restore in place, so an `ObjectRefId` sidecar restore is never exercised — disabling the post's carrier restore leaves both these spots and `TestEveryObjectRewindRoundTrip` green. An `assertSame` on the resolved reference was written, found unable to disagree, and removed rather than shipped. A spot that forces recreation is owed |
+| Visually matched | Four of six filmed: `10` the bouncy cloud throwing the player with its puffs (frame 68), `11` the elevator bar hanging him at mapping frame `$E5` (120), `12` the rotating post walking him through `byte_468C4` (200), `13` the swinging carrier's jointed arc (200). The `$74` spring and the `$A0` EggRobo are owed, with the reasons in `~/Videos/OGGF/ssz-bring-up/INDEX.md` |
+| Breadth | **Delivered.** `TestS3kSszCompatibilityMatrix`: 320 and 800, no donor and the S1 donor, Sonic / Tails / Knuckles and two team shapes, ten scenarios each walking nine checkpoints, asserting every slice 1b-3 class loads and all eight ROM art keys have a ready renderer |
+
+### The cold route, as far as it is measured
+
+`TestS3kSszColdRoutes` drives `s3k-complete-sonic-tails.bk2` from frame 396720. The first attempt
+gave it 1200 frames and the bridge never finished; widening the budget to 6000 was the cheaper of
+the two candidates to rule out and it was the right one — the cutscene simply takes longer from a
+cold load than the HPZ routes do. Measured 2026-09-18: bridge open at route frame **1390**,
+furthest X **`$6EB`**, nobody dead across 6000 frames. The case pins both with a little slack so an
+ordinary physics wobble does not fail it while a regression that stalls at the bridge or the ledge
+will. What it does **not** do is compare against the fixture's own rows: this is recorded-input
+reachability, not a trace replay, and no frontier is claimed past `$6EB`.
 
 ## Open items carried into later slices
 
