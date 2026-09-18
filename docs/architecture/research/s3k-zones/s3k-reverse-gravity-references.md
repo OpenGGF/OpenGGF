@@ -191,8 +191,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 35550 | `loc_1A67A` | ring spill (`loc_1A67A`): spawns `Obj_Bouncing_Ring_Reverse_Gravity` | `LostRingObjectInstance:208` (selection only) | partial |
-| 35621 | `loc_1A738` | ring spill first object (`loc_1A738`): takes the reverse-gravity body | `LostRingObjectInstance:208-214` integrates `+yVel` with gravity negated; ROM `loc_1A7E8` keeps `y_vel += $18` and integrates `-y_vel` (`MoveSprite_TestGravity2`). No negation of the initial spill velocity was found, so the arc looks mirrored the wrong way. Not executed: settle with the 2b test | partial |
+| 35550 | `loc_1A67A` | ring spill (`loc_1A67A`): spawns `Obj_Bouncing_Ring_Reverse_Gravity` | `LostRingObjectInstance.stepPhysics` selects the reverse body from the flag | covered |
+| 35621 | `loc_1A738` | ring spill first object (`loc_1A738`): takes the reverse-gravity body | `LostRingObjectInstance.stepPhysics` now integrates `-yVel` with gravity kept positive, as `loc_1A7E8` does, and gates the ceiling probe on `yVel >= 0` like both bodies' `bmi`. The doubt recorded here was real: the old conjugate form (negated gravity, `+yVel`) agreed on position only for a negated launch velocity, and the spill loop has no flag branch | covered |
 
 ### H. Solid objects and platforms
 
@@ -257,12 +257,12 @@ is the RAM wipe described above).
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
 | E. Knuckles routines | 24 | 17 | 1 | 5 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 2 | 0 | 7 | 0 |
-| G. Lost rings | 2 | 0 | 2 | 0 | 0 |
+| G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 0 | 0 | 5 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **67** | **6** | **39** | **4** |
+| **Total** | **116** | **69** | **4** | **39** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
