@@ -172,6 +172,19 @@ public final class GameplayCaptureSession implements AutoCloseable {
             if (settings.startY() != null) {
                 NativePositionOps.writeYPosPreserveSubpixel(player, settings.startY());
             }
+            // A positioned entry moves the whole team, not just the leader: a sidekick left at
+            // the act start is thousands of pixels away and never catches up inside a capture,
+            // which silently turns any "team" clip into a solo one. The ROM's own level start
+            // places the sidekick just behind the leader, so the seed does the same. Declared
+            // capture setup, like --x/--y itself.
+            for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
+                if (sidekick == player) {
+                    continue;
+                }
+                NativePositionOps.writeXPosPreserveSubpixel(sidekick,
+                        (player.getCentreX() - SIDEKICK_TRAIL_X) & 0xFFFF);
+                NativePositionOps.writeYPosPreserveSubpixel(sidekick, player.getCentreY());
+            }
             Camera camera = GameServices.camera();
             camera.updatePosition(true);
             level.initCameraForLevel();
@@ -179,6 +192,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
             level.updateObjectPositions();
         }
     }
+
+    /** How far behind the leader a teleported sidekick is placed, as the ROM's level start does. */
+    private static final int SIDEKICK_TRAIL_X = 0x20;
 
     /** Steps one gameplay frame with the given held input ({@code null} = neutral). */
     public void step(Bk2FrameInput input) {
