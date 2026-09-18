@@ -2296,3 +2296,51 @@ combined run, and each failure was checked against the message that test exists 
 catches a test that cannot fail. It does not catch a misreading its author would make twice,
 which is what a second pair of eyes is for, and the routine-table and continuation-chain constants
 remain unreviewed by anyone but their author.
+
+### 2026-09-18 - The miniboss cannot be filmed from a teleport, and the reason is the arena floor
+
+**Nine capture probes, no clip.** Every one is recorded here because the negative results are the
+expensive part and re-running them costs a queue cycle each.
+
+`$9D` is placed at **`($2CA0,$880)`** and is live on a teleported load: a teleport onto it dies on
+frame 1 (the drill's own box, with 0 rings). But **there is no floor anywhere under it.**
+
+| Teleport | Result |
+| --- | --- |
+| `($2C40,$8A0)` | falls to `y=$B9A`, dies frame 118 |
+| `($2B80,$8A0)` | falls to `y=$C05`, dies frame 91 |
+| `($2DC0,$8A0)` | falls to `y=$C05`, dies frame 91 |
+| `($2CA0,$8A0)` | dies frame 1 -- inside the drill |
+| `($2CA0,$7E0)` | falls onto the drill, dies frame 95 at `y=$841` |
+| `($2CA0,$940)` | falls to `y=$BEA`, dies frame 142 |
+| `($2C60,$820)`, `($2CE0,$820)` | both fall to `y=$BFE`, die frame 97 |
+| `($2A80,$600)`, `($2B40,$600)`, `($2C00,$600)` | **land safely** at `y=$7B3`, `$66C`, `$7AD` |
+
+The three that land are on ledges *above and left of* the drill, not in the arena: a 640-frame
+capture at `($2C00,$600)` shows a lava shaft and a rock ledge with the drill off the bottom-right
+of the screen (camera `(11114,1869)`, drill centre `(11424,2176)`), and the player stands there
+untouched for the whole capture. That capture was deleted rather than numbered, because a clip
+that does not show the boss is not a clip of the boss.
+
+**Why there is no floor: the teleport skips the events that build it.** The `gameplay-capture`
+skill's own warning ("teleporting skips plane switchers and level events between the act start and
+that point") is the whole story here. The arena floor in Lava Reef act 1 is not static layout; the
+only floor-producing mechanisms in this act are the `LRZ1_ScreenEvent` chunk edits and the rock
+crusher's `Child7_ChangeLevSize` bridge, and neither runs for a player set down at the arena.
+
+**And the walk-in is blocked.** From the furthest-right position any previous LRZ capture reached
+alive (`($2857,$6D9)`, from `raw-28`), holding Right for 900 frames walks to **`x=$2995`,
+`y=$68F`** and stops dead against a wall; adding a jump every 45 frames for 1200 frames does not
+pass it either (`x=$2995` at frame 213 and unchanged to frame 1199). The frame shows Sonic on a
+ledge against a rock column with a structure above right. That is **780 px short of the drill**.
+
+**What the next round should do instead of repeating this.** Do not scan for a teleport spot;
+there is not one. Extend an authored route: the `$1C` button / `$19` door / `$1A` big door clips
+(`10`, `11`, `12`) and `lrz1-cold-route-v7` already drive the triggers in this part of the act, so
+start from one of those input logs and carry it right through the wall at `$2995` with the door
+open, then into the arena. The capture that films the fight is the same capture that proves the
+cold route reaches the boss, so doing the route work once serves both the clips and the frontier
+re-measurement the lead asked for.
+
+**Clips `29`-`32` are therefore still owed, and so is the route re-measurement.** Nothing was
+numbered this round; the next clip number is still `29`.
