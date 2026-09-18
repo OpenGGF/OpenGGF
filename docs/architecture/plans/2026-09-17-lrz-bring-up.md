@@ -1616,7 +1616,7 @@ miniboss. **Slices 0-5 are complete.**
 | What | Result |
 | --- | --- |
 | Mandatory S3K + `TestLrz*`/`TestS3kLrz*`/`TestS3kHpz*`/`TestS3kSoz*`/`TestS3kDdz*`/`SwScrlLrzTest`/`TestFireworm*` + both rewind guards | 1654 tests, 0 failures, **0 skips** |
-| `-Pguards test -B` | 669 tests, 0 failures (measured at `13a7c8fe8`; the Fireworm retire commit adds no annotation or registry change) |
+| `-Pguards test -B` | 669 tests, 0 failures, re-run at `82a790ba4` |
 | Cold act 1 route, `GameplayCaptureTool --main sonic --sidekick tails --settle 1` on the fixture's own recorded input | exact Player 1 `(x, y)` for **native rows 0-2322**; first divergence row 2323, `player_y` 390 against 399 |
 
 Not re-measured at this head: `TestS3kSonicTailsLrzSegmentTraceReplay`. This is focused validation; no `run_categories.py --base 035e48a58 --run` has been run for
