@@ -313,7 +313,9 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x1A, // LRZBigDoor
             0x1C, // LRZButtonHorizontal
             0x1D, // LRZShootingTrigger
-            0x1E // LRZDashElevator
+            0x1E, // LRZDashElevator
+            0x21, // LRZSmashingSpikePlatform
+            0x22 // LRZSpikeBall
     );
 
     // DDZ-only implementations from SKL ids gated on ZONE_DDZ.

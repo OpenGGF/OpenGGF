@@ -296,6 +296,21 @@ public final class Sonic3kObjectArtKeys {
     public static final String LRZ_FIREBALL = "lrz_fireball";
     /** The drops {@code Obj_LRZLavaFall} allocates: {@code Map_LRZLavaFall} on palette line 2. */
     public static final String LRZ_LAVA_FALL = "lrz_lava_fall";
+    /**
+     * {@code Obj_LRZSmashingSpikePlatform}: {@code Map_LRZSmashingSpikePlatform} over
+     * {@code ArtTile_LRZMisc}, palette 2 (sonic3k.asm:88540).
+     */
+    public static final String LRZ_SMASHING_SPIKE_PLATFORM = "lrz_smashing_spike_platform";
+    /**
+     * {@code Obj_LRZSpikeBall}: {@code Map_LRZSpikeBall} over {@code ArtTile_LRZBigSpike},
+     * palette 1 (sonic3k.asm:88840).
+     */
+    public static final String LRZ_SPIKE_BALL = "lrz_spike_ball";
+    /**
+     * The chips {@code sub_439EC} throws: {@code Map_LRZRockDebris} on
+     * {@code make_art_tile($0D3,2,1)} (sonic3k.asm:89025).
+     */
+    public static final String LRZ_ROCK_DEBRIS = "lrz_rock_debris";
     /** {@code Obj_LRZSwingingSpikeBall}: {@code Map_LRZSwingingSpikeBall}, palette 1. */
     public static final String LRZ_SWINGING_SPIKE_BALL = "lrz_swinging_spike_ball";
     /** The same map on palette line 0, which {@code andi.w #$9FFF} leaves the chain child. */

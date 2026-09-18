@@ -2630,6 +2630,32 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 null
         ));
+        // Spike ball (SKL object $22) and the chips sub_439EC throws:
+        // make_art_tile(ArtTile_LRZBigSpike,1,0) and make_art_tile($0D3,2,1)
+        // (sonic3k.asm:88840, :89025). All six placements are in act 1.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_SPIKE_BALL,
+                Sonic3kConstants.MAP_LRZ_SPIKE_BALL_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_BIG_SPIKE,
+                1,
+                null
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_ROCK_DEBRIS,
+                Sonic3kConstants.MAP_LRZ_ROCK_DEBRIS_ADDR,
+                0x00D3,
+                2,
+                null
+        ));
+        // Smashing spike platform (SKL object $21): make_art_tile(ArtTile_LRZMisc,2,0)
+        // (sonic3k.asm:88540). All fifteen placements are in act 1.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_SMASHING_SPIKE_PLATFORM,
+                Sonic3kConstants.MAP_LRZ_SMASHING_SPIKE_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                2,
+                null
+        ));
         // Swinging spike ball (SKL object $20) and its chain: the same map on palette lines 1 and
         // 0, the latter being what andi.w #$9FFF leaves the child (sonic3k.asm:88654, :88669).
         if (actIndex == 0) {

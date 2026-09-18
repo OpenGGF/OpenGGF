@@ -1719,6 +1719,14 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_FIREBALL_LAUNCHER_ADDR = 0x042CB2;
     /** {@code Map_LRZLavaFall} (sonic3k.lst: $43782), used only by the drops. */
     public static final int MAP_LRZ_LAVA_FALL_ADDR = 0x043782;
+    /** {@code Map_LRZSmashingSpikePlatform} (sonic3k.lst: $4324A). */
+    public static final int MAP_LRZ_SMASHING_SPIKE_PLATFORM_ADDR = 0x04324A;
+    /** {@code Map_LRZSpikeBall} (sonic3k.lst: $43A8E). */
+    public static final int MAP_LRZ_SPIKE_BALL_ADDR = 0x043A8E;
+    /** {@code Map_LRZRockDebris} (sonic3k.lst: $43B12). */
+    public static final int MAP_LRZ_ROCK_DEBRIS_ADDR = 0x043B12;
+    /** {@code ArtTile_LRZBigSpike} (sonic3k.lst: $442). */
+    public static final int ARTTILE_LRZ_BIG_SPIKE = 0x0442;
     /** {@code Map_LRZSwingingSpikeBall} (sonic3k.lst: $43666). */
     public static final int MAP_LRZ_SWINGING_SPIKE_BALL_ADDR = 0x043666;
     /** {@code Map_LRZSwingingSpikeBall2} (sonic3k.lst: $4367E), the act 2 skin. */

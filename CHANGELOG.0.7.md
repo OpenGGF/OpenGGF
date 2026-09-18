@@ -387,6 +387,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   blob every sixth frame, and every second blob carries the falling-lava sound.
   The swinging spike balls sweep their circles in both acts, chain and all, with act 2 using
   its own artwork.
+  Act 1's smashing spike platforms work: each one accelerates down its own shaft, slams with a
+  crash and a squash, holds for half a second and grinds back up a pixel at a time, hurting
+  anyone it lands on and shrinking its solid box as the art compresses.
+  The act 1 spike balls are in too: the big ones grind back and forth along the floor throwing
+  rock chips, and the one on the swinging arm is only dangerous on half its sweep until a player
+  approaches it from the left, when it breaks off the arm and rolls away downhill.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
