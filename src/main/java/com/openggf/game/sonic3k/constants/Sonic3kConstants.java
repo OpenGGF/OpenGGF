@@ -1711,6 +1711,13 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_SHOOTING_TRIGGER_ADDR = 0x042F06;
     /** {@code make_art_tile($090,2,0)}: the act 2 door's tile base (sonic3k.asm:88027). */
     public static final int ARTTILE_LRZ2_DOOR = 0x0090;
+    /** {@code Map_LRZSinkingRock} (sonic3k.lst: $42834); both acts share it. */
+    public static final int MAP_LRZ_SINKING_ROCK_ADDR = 0x042834;
+    /**
+     * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87910).
+     * The same base the act 2 door uses; named separately so neither owner reads as the other's.
+     */
+    public static final int ARTTILE_LRZ2_SINKING_ROCK = 0x0090;
     public static final int MAP_HCZ_BUTTON_ADDR = 0x22BD1A;
     public static final int MAP_CNZ_BUTTON_ADDR = 0x22BD4A;
     public static final int ARTTILE_MHZ1_CUTSCENE_BUTTON = 0x0341;

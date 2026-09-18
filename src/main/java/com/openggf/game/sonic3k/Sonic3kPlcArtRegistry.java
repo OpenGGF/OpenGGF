@@ -2598,6 +2598,26 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
         if (actIndex == 0) {
+            // make_art_tile($0D3,2,0) (sonic3k.asm:87900). Act 1 holds all eleven placements.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_SINKING_ROCK,
+                    Sonic3kConstants.MAP_LRZ_SINKING_ROCK_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    2,
+                    null
+            ));
+        } else {
+            // make_art_tile($090,2,0) (sonic3k.asm:87910).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SINKING_ROCK,
+                    Sonic3kConstants.MAP_LRZ_SINKING_ROCK_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_SINKING_ROCK,
+                    2,
+                    null
+            ));
+        }
+
+        if (actIndex == 0) {
             // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:88017).
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.LRZ_DOOR,

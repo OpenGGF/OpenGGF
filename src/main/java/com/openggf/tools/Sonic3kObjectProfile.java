@@ -303,6 +303,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     // LRZ-only implementations from SKL ids gated on ZONE_LRZ.
     private static final Set<Integer> LRZ_ONLY_IDS = Set.of(
             0x15, // LRZCorkscrew
+            0x17, // LRZSinkingRock
             0x19, // LRZDoor
             0x1A, // LRZBigDoor
             0x1C, // LRZButtonHorizontal

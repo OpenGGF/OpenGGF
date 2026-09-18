@@ -1481,6 +1481,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_PLAYER_LAUNCHER,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzCorkscrewObjectInstance(spawn));
+        // Id $17 is Obj_LRZSinkingRock in the SKL set (sonic3k.asm:87898); the S3KL set spends it
+        // on Obj_LBZRideGrapple.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_RIDE_GRAPPLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzSinkingRockObjectInstance(spawn));
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZMasterEmeraldObjectInstance(spawn));
