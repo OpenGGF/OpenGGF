@@ -198,12 +198,12 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 41407 | `SolidObject_cont` | `SolidObject_cont`: vertical overlap uses the mirrored radii (`default_y_radius`) | — | missing |
-| 41569 | `loc_1E0FC` | `sub_1E0C2` `loc_1E0FC`: negates the vertical push-out | — | missing |
-| 41623 | `loc_1E154` | `sub_1E0C2` `loc_1E154`: landing from "above" is from below (`neg d3`, `+2`) | — | missing |
-| 41648 | `MvSonicOnPtfm` | `MvSonicOnPtfm`: rider placed under the platform (`loc_1E1AA`) | — | missing |
+| 41407 | `SolidObject_cont` | `SolidObject_cont`: the reverse branch is `loc_1DFD6` plus one `neg.w d3` on the player-minus-object Y delta; the `default_y_radius`/`y_radius` pair is identical | `ObjectSolidContactController.resolveContact` mirrors that one term (`anchorY` is the object centre, `maxTop` the ROM's `d2`) | covered |
+| 41569 | `loc_1E0FC` | `sub_1E0C2` `loc_1E0FC`: negates the vertical push-out | `ObjectSolidContactController`'s air bottom-hit separation | covered |
+| 41623 | `loc_1E154` | `sub_1E0C2` `loc_1E154`: landing from "above" is from below (`neg d3`, `+2`), turning `y - d3 + 3` into `y + d3 - 3` | both top-landing writes in `ObjectSolidContactController` | covered |
+| 41648 | `MvSonicOnPtfm` | `MvSonicOnPtfm`: rider placed under the platform (`loc_1E1AA`/`loc_1E1F4`), `y_pos(a0) + d3 + y_radius(a1)` | both continued-ride sites in `ObjectSolidContactController` | covered |
 | 41661 | `loc_1E1AA` | `MvSonicOnPtfm` unused S1 branch (`y + 9`); unreachable, record only | — | n/a |
-| 41999 | `loc_1E44C` | `sub_1E410` (`SolidObjectTop` landing): reverse variant `loc_1E4D6` | — | missing |
+| 41999 | `loc_1E44C` | `sub_1E410` (`SolidObjectTop` landing): reverse variant `loc_1E4D6` | — **not a sign flip.** `loc_1E4D6` (:42053-42071) rebuilds the whole comparison — feet at `y_pos - y_radius - 4` against `y_pos(a0) + d3`, and a final `y = objBottom + y_radius` against the upright path's `objTop - y_radius - 1`, a deliberate one-pixel asymmetry. The engine's sloped/top path carries its own compensations, so this needs its own measurement rather than the mirror the other four rows share | missing |
 
 ### I. Monitors, springs, spikes
 
@@ -258,11 +258,11 @@ is the RAM wipe described above).
 | E. Knuckles routines | 24 | 17 | 1 | 5 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 6 | 0 | 3 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
-| H. Solid objects and platforms | 6 | 0 | 0 | 5 | 1 |
+| H. Solid objects and platforms | 6 | 4 | 0 | 1 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **76** | **4** | **32** | **4** |
+| **Total** | **116** | **80** | **4** | **28** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
