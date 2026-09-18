@@ -163,6 +163,9 @@ public final class Sonic3kObjectIds {
     // SKL object table only: Obj_DEZGravityRoom (sonic3k.asm:95814). The S3KL table has
     // no object at $5F, so this number is named after its only owner.
     public static final int DEZ_GRAVITY_ROOM = 0x5F;
+    // SKL $61 is Obj_DEZGravityPuzzle (sonic3k.asm:96087); S3KL $61 is Obj_BPZBalloon, a
+    // competition-zone object no zone 0-6 layout places. The two tables share the number.
+    public static final int DEZ_GRAVITY_PUZZLE = 0x61;
     public static final int HCZ_SNAKE_BLOCKS = 0x67;
     public static final int TENSION_BRIDGE = 0x6C;
     public static final int INVISIBLE_HURT_BLOCK_H = 0x6A;

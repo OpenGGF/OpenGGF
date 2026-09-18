@@ -97,6 +97,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityPuzzleObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityPuzzleObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityRoomObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityRoomObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityHubObjectInstance.java#captureRewindState", 1),

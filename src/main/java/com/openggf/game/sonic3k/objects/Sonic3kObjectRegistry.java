@@ -563,6 +563,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
+        factories.put(Sonic3kObjectIds.DEZ_GRAVITY_PUZZLE,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $61 is Obj_DEZGravityPuzzle (sonic3k.asm:96087); S3KL $61 is
+                        // Obj_BPZBalloon, which no zone 0-6 layout places.
+                        return new S3kDezGravityPuzzleObjectInstance(spawn);
+                    }
+                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                });
         registerStockZoneBound(Sonic3kObjectIds.BUMPER,
                 (spawn, registry) -> {
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {

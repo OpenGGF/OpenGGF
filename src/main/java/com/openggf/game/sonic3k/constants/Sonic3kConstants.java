@@ -485,12 +485,16 @@ public class Sonic3kConstants {
     public static final int ARTTILE_LBZ_MISC = 0x03C3;
     public static final int ARTTILE_FBZ_MISC = 0x0379;
     public static final int ARTTILE_DEZ_MISC = 0x034D;
+    /** {@code ArtTile_DEZMisc2 = $02FC} (sonic3k.constants.asm:1355). */
+    public static final int ARTTILE_DEZ_MISC2 = 0x02FC;
 
     // ===== DEZ Gravity Switch (Obj_DEZGravitySwitch, SKL ID 0x58) =====
     // Map_DEZGravitySwitch (sonic3k.asm:94909, sonic3k.lst:112040). Two frames:
     // word_48BEE is the armed 32x16 pad, word_48C08 the two-piece pressed pose.
     // The header takes make_art_tile(ArtTile_DEZMisc+$143,1,0) (sonic3k.asm:94802).
     public static final int MAP_DEZ_GRAVITY_SWITCH_ADDR = 0x048BEA;
+    /** {@code Map_DEZGravityPuzzle} (sonic3k.lst: ROM $00049A6C). */
+    public static final int MAP_DEZ_GRAVITY_PUZZLE_ADDR = 0x049A6C;
 
     // ===== Tension Bridge mappings (Obj_TensionBridge, ID 0x6C) =====
     public static final int MAP_TENSION_BRIDGE_ADDR = 0x038FF2;   // Map_TensionBridge

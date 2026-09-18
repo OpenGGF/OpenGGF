@@ -33,7 +33,7 @@ import java.util.Objects;
  * stays in {@code GameStateManager} where rewind already captures it.
  */
 public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 8 * Short.BYTES;
+    private static final int CAPTURE_BYTES = 9 * Short.BYTES;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -46,6 +46,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     private short cameraStoredMaxX;
     private short cameraStoredMinY;
     private short cameraStoredMaxY;
+    private short panelBits;
 
     public S3kDezZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -105,6 +106,15 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     public void setBackgroundRoutine(int value) { backgroundRoutine = (short) value; }
     public void advanceBackgroundRoutine() { backgroundRoutine += 4; }
 
+    /**
+     * {@code MHZ_pollen_counter}, the byte Mushroom Hill counts particles in and Death Egg
+     * reuses as {@code Obj_DEZGravityPuzzle}'s six panel bits ({@code bset d0,
+     * (MHZ_pollen_counter).w}, sonic3k.asm:96229). The two zones never share a level, so the
+     * byte lives with whichever zone's runtime state is installed.
+     */
+    public int panelBits() { return panelBits & 0xFF; }
+    public void setPanelBits(int value) { panelBits = (short) (value & 0xFF); }
+
     @Override public int cameraStoredMinX() { return cameraStoredMinX & 0xFFFF; }
     @Override public int cameraStoredMaxX() { return cameraStoredMaxX & 0xFFFF; }
     @Override public int cameraStoredMinY() { return cameraStoredMinY; }
@@ -125,6 +135,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         buffer.putShort(cameraStoredMaxX);
         buffer.putShort(cameraStoredMinY);
         buffer.putShort(cameraStoredMaxY);
+        buffer.putShort(panelBits);
         return buffer.array();
     }
 
@@ -142,5 +153,6 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         cameraStoredMaxX = buffer.getShort();
         cameraStoredMinY = buffer.getShort();
         cameraStoredMaxY = buffer.getShort();
+        panelBits = buffer.getShort();
     }
 }

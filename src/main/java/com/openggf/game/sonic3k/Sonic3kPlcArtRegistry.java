@@ -31,6 +31,9 @@ public final class Sonic3kPlcArtRegistry {
     private static final int[] DOOR_VERTICAL_DEZ_FRAMES = {2};
     /** word_48BEE (armed) and word_48C08 (pressed), sonic3k.lst:112043-112044. */
     private static final int DEZ_GRAVITY_SWITCH_FRAME_COUNT = 2;
+    // Map_DEZGravityPuzzle: frame 0 the six-piece shaft, 1 and 2 the mirrored marker panel,
+    // 3 and 4 both word_49AAC with zero pieces (the unpressed panels draw nothing).
+    private static final int DEZ_GRAVITY_PUZZLE_FRAME_COUNT = 5;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -2680,6 +2683,19 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null,
                 DEZ_GRAVITY_SWITCH_FRAME_COUNT
+        ));
+
+        // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
+        // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:96088-96089),
+        // the same block Obj_DEZBumperWall draws from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_GRAVITY_PUZZLE,
+                Sonic3kConstants.MAP_DEZ_GRAVITY_PUZZLE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x31,
+                1,
+                null,
+                DEZ_GRAVITY_PUZZLE_FRAME_COUNT
         ));
     }
 

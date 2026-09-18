@@ -489,6 +489,9 @@ public final class Sonic3kObjectArtKeys {
 
     // DEZ Gravity Switch (SKL 0x58) - ArtTile_DEZMisc+$143, palette 1, Map_DEZGravitySwitch
     public static final String DEZ_GRAVITY_SWITCH = "dez_gravity_switch";
+
+    // DEZ Gravity Puzzle (SKL 0x61) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZGravityPuzzle
+    public static final String DEZ_GRAVITY_PUZZLE = "dez_gravity_puzzle";
     public static final String DOOR_HORIZONTAL = "door_horizontal";        // ArtTile_CNZMisc+$C5, Map_CNZDoorHorizontal
 
     private Sonic3kObjectArtKeys() {
