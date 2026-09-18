@@ -366,7 +366,7 @@ Still open:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 0-2 complete and slice 3a started (placeholder baseline 199 / 277 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, and `Obj_LRZDashElevator` (`$1E`, 6 placements). **Slice 3a remains open on `$15` corkscrew and `$16` wall ride; 3b, 3c and 3d are untouched.** Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
+| Implemented | Slices 0-2 complete, slice 3a started and slice 3b complete (placeholder baseline 171 / 255 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, `Obj_LRZDashElevator` (`$1E`, 6 placements), and slice 3b's `Obj_LRZDoor` (`$19`, 15 + 11), `Obj_LRZBigDoor` (`$1A`, 1), `Obj_LRZButtonHorizontal` (`$1C`, 10 + 11) and `Obj_LRZShootingTrigger` (`$1D`, 2) with its projectile child. **Slice 3a remains open on `$15` corkscrew and `$16` wall ride; 3c and 3d are untouched.** Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
 | Cold-reachable | Not started |
 | Rewind-verified | `LrzZoneRuntimeState` capture/restore round trips only (`TestS3kLrzScrollRegistrationHeadless`, and the rock window pointers in `TestLrzRockSpriteRenderer`) plus the animator's counter blob; no route spots yet |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
@@ -672,6 +672,145 @@ Input preserved as `target/capture/lrz-dash-elevator.txt`
 player left-speed before Down and produced a roll rather than a spindash, so it has to be
 stationary first.
 
+**Clip 10** `10-lrz1-button-opens-door-before-after.mp4` (`raw-12-lrz1-drop-on-button-{before,after}`,
+260 frames, before on the left): Sonic is dropped at `($DF0,$710)` and lands on the shared
+`$33 Obj_Button` subtype `$03` at `($DF0,$736)` on frame 58, which writes trigger index 3; the
+`$19` door subtype `$03` at `($E10,$719)` then rises out of the way over its 64 frames. On the left
+the same door is still a pink placeholder box. 259 of the 260 frames differ, checked before
+publishing. The "before" build disabled only the four slice 3b registrations in an uncommitted
+edit, reverted and recompiled immediately. Input preserved as
+`target/capture/lrz-drop-on-button.txt` (260 neutral frames: the drop and the door are the whole
+demo).
+
+Two earlier attempts at this clip are kept as the record of what does not work:
+`raw-10-lrz1-button-door-after` walks Sonic right along the floor past the `$1C`/`$19` pair at
+`($445,$4D4)`/`($490,$500)`, but the floor there is 57 px below the horizontal button, so he walks
+under it and is simply blocked by the closed door; `raw-11-lrz1-button33-door-after` starts level
+with the `$33` button and is blocked by its own solid box before ever standing on it. A horizontal
+button has to be approached at its own height and a stand-on button from above.
+
+**Hazard worth carrying.** The first `feat` commit of this slice was made while a detached capture
+script had temporarily disabled the four registrations for its "before" build, and `git add`
+raced that edit: the commit contained four `// DEMO-DISABLED` comments instead of the
+registrations. `git show <sha>:<file>` caught it. Never stage while a before/after capture script
+owns the tree; the branch was reset with `git reset --mixed` and re-committed from the restored
+tree as `d2c58f148`, with the registry content verified inside the commit.
+
 **Not delivered.** `$15` corkscrew and `$16` wall ride, the other two classes of sub-slice 3a, and
 all of 3b, 3c and 3d. No wide-viewport or donor row for the elevator, and no mid-ride rewind spot:
 both belong with the rest of the sub-slice's review.
+
+### 2026-09-18 - Slice 3b: doors, buttons and shooting triggers (commit `d2c58f148`)
+
+Worktree `.worktrees/ai-lrz-bring-up`. All Maven through `maven_queue.py -Dmse=off` with
+`-Ds3k.rom.path=<worktree>/s3k.gen`; every run below reports 0 skips.
+
+**Delivered.** `LrzDoorObjectInstance` (`$19`), `LrzBigDoorObjectInstance` (`$1A`),
+`LrzButtonHorizontalObjectInstance` (`$1C`), `LrzShootingTriggerObjectInstance` (`$1D`) and its
+`LrzShootingTriggerProjectileInstance` child, all four registered under `S3kZoneSet.SKL` +
+`ZONE_LRZ` with `Sonic3kObjectProfile` `LRZ_ONLY_IDS` entries and act-keyed `LevelArtEntry` rows
+(`Map_LRZDoor` `$429DA`, `Map_LRZBigDoor` `$42B24`, `Map_LRZButtonHorizontal` `$42D7C`,
+`Map_LRZButtonHorizontal2` `$42D9E`, `Map_LRZShootingTrigger` `$42F06`). `$19` reuses the id the
+S3KL set spends on `Obj_LBZCupElevatorPole`; `$1A`, `$1C` and `$1D` were unregistered ids.
+
+**ROM read** (`Obj_LRZDoor` 88015-88063, `Obj_LRZBigDoor` 88070-88145,
+`Obj_LRZButtonHorizontal` 88221-88277, `Obj_LRZShootingTrigger` 88279-88348, `sub_42EC0`
+88349-88361, `Touch_Special` 21162-21194, `SolidObject_cont` 41486-41512). Six things worth
+carrying forward:
+
+1. The door's gate is `tst.b (Level_trigger_array,d0.w)` - the **whole byte**, not bit 0. Any
+   writer of that index opens it, which is why `$1C`, the shared `$33 Obj_Button` and `$1D` can all
+   feed the same doors.
+2. Both doors are one-way. `loc_42974`/`loc_42A68` replace the routine pointer and **fall straight
+   into** the next handler, so the trigger frame is also the first frame of travel, and once
+   `$2E(a0)` hits `$40` the routine becomes a solid-box-only tail. Clearing the trigger afterwards
+   cannot shut a door.
+3. The horizontal button is not a stand-on button. Its `swap d6 / andi.w #3,d6` reads
+   `SolidObjectFull`'s own return: `SolidObject_cont` does `move.w d6,d4 / addi.b #$D,d4 /
+   bset d4,d6` on every horizontal push, and `d6` still holds the standing-bit number (3 for P1, 4
+   for P2), so the tested bits are 16 and 17 - "either player is against my side this frame".
+4. The big door's two proximity tests differ in signedness on purpose: `cmpi.w #$80,d0 / bhs` after
+   `addi.w #-$40` is **unsigned**, so the band is `[y+$40, y+$C0)` and a player above the door wraps
+   out of it; `cmpi.w #$50,d0 / blt` is **signed**, so the door only opens from the right. Its sine
+   term is *added* (`asr #1`, no `neg`), which is why the already-open branch is `addi.w #$80`.
+5. `$1D`'s `collision_flags` is `$C6`: `Touch_Special`'s size list includes 6, and `loc_103FA` adds
+   1 for the main character and 2 for the sidekick, so `collision_property` is a per-player bitmask
+   that `loc_42E84` consumes with `bclr`. `sub_42EC0` then does nothing unless that player's `anim`
+   is 2, so only a rolling player arms the trigger.
+6. `$1D`'s subtype is split both ways from one byte: low nibble is the trigger index, high nibble
+   times four is the shot period. The two act 1 placements `$A0` and `$C2` are therefore trigger 0
+   at 40 frames and trigger 2 at 48 frames. `subq.w #1,$2E / bpl` fires on the frame the word first
+   goes **negative**, so the real gap between shots is `$30 + 1` frames.
+
+**Tests.** `TestLrzDoorsButtonsAndTriggers` (18): the door's trigger-index decode over all sixteen
+subtypes, that a zero byte holds it shut for 120 frames, the same-frame start, the full
+`GetSineCosine` ramp frame by frame against the ROM `SineTable`
+(`docs/skdisasm/Levels/Misc/sine.bin`, `sin($40) = $100`), the one-way latch, and the solid box; the
+horizontal button's three subtype fields, side-contact-only pressing (a standing contact is
+explicitly asserted **not** to press it), the release/latch split and its solid box; the shooting
+trigger's index/period split, the `$30 + 1` reload period, a non-rolling touch doing nothing at all,
+and a rolling touch negating both velocities, setting bit 0 and self-destructing; the shot's
+velocities and flip; and the big door's proximity box over eight boundary cases plus its sine ramp.
+Broken on purpose once: `TRAVEL_SHIFT` 2 to 1 turned three door comparisons red
+(`doorStartsMovingOnTheSameFrameItsTriggerIsWritten` `expected: <1535> but was: <1533>`,
+`doorRisesOneSineStepAFrameAndStopsExactlySixtyFourPixelsUp`, `doorNeverClosesOnceItHasStartedOpening`);
+reverted and re-verified.
+
+The census went red on exactly the 28 act-1 and 22 act-2 rows before the baseline was ratcheted
+(`$19` 15/11, `$1A` 1/0, `$1C` 10/11, `$1D` 2/0), taking the placeholder totals from 199 / 277 to
+**171 / 255**. Batch: 1273 tests, 0 failures, 0 skips (the object test, the census, the dash
+elevator, the rock renderer, scroll registration, pattern animation, the falling intro, palette
+cycling, `Obj_Button`, the lava block, `TestEveryObjectRewindRoundTrip`,
+`TestRewindHarnessCoverageRatchet` and the four mandatory S3K classes); re-run after the guard fixes
+as 1201 tests, 0 failures, 0 skips. `-Pguards`: 669 tests, 0 failures.
+
+**Guards that bit, and what they wanted.** The first `-Pguards` run was red seven ways and all seven
+are worth recording: `TestRewindCoverageGuard` rejects `private final` scalars decoded from the
+spawn (seven keys across the three classes) and wants them non-final, exactly as the dash elevator
+found; `TestObjectPhysicsStandardizationGuard` caps raw `setDestroyed(true)` calls in object
+packages (582) and wants `ObjectLifetimeOps.destroyLatched`; the same guard rejects
+`usesS3kTouchSpecialPropertyResponse()` / `requiresContinuousTouchCallbacks()` without an explicit
+`getTouchResponseProfile()`; and `TestArchUnitRules` plus `TestObjectServicesMigrationGuard`
+(three assertions) reject `GameServices` in an object package - the zone runtime state has to come
+through `services().zoneRuntimeRegistry()`.
+
+**Gap recorded.** The big door's "already opened" bit lives in its placement's
+`Object_respawn_table` byte in ROM; the engine models only bit 7 of that table, so
+`LrzZoneRuntimeState` keeps the opened placement's X word instead. Entered in
+[s3k-known-bugs.md](../../status/s3k-known-bugs.md) with its removal condition.
+
+**Clip 06 re-cut as `09-lrz1-rock-sprites-in-front-of-player-before-after.mp4`.** The complaint was
+right and the cause was clip selection, not the renderer. A frame-by-frame diff of the two existing
+raw captures (`raw-06-lrz1-rocks-before` vs `raw-06-lrz1-slice2-after`, both 320x224, 360 frames)
+shows 271 differing frames, but the largest difference anywhere on that route is 455 pixels in a
+single 16x40 box around frame 209 - every other rock in range sits behind opaque foreground tiles.
+Cropping that box and looking at it shows what the old clip buried: in "after" a rock sprite is
+drawn **in front of Sonic**, hiding most of him, and that is ROM-correct.
+`Render_Sprites_NextLevel` (sonic3k.asm:36392-36396) emits the rocks at the end of priority level 0,
+and on the Genesis an earlier sprite-list entry is in front, so the rocks sit in front of everything
+from level 1 on - and `Obj_Sonic` is `move.w #$100,priority(a0)`, level 2. The new clip is frames
+150-280 of the same two captures (123 of those 131 frames differ, checked before publishing), which
+is 45 frames of lead-in before the overlap and 50 after. The two earlier raw directories
+`raw-06-lrz1-rocks-after-400` (400 px) and `raw-06-lrz1-rocks-after-640` (empty) are not comparable
+with the 320 px "before" and were not used. A capture aimed at the twelve-rock column at
+`($15C8,$598-$668)` died in lava at frame 43 (`raw-09-lrz1-rocks-column-after`) and is kept only as
+the record of that attempt.
+
+**Not delivered.** `$15` corkscrew and `$16` wall ride (the rest of 3a), all of 3c and 3d, and the
+dash elevator's owed wide/donor row and mid-ride rewind spot. No cold controller-driven act 1 route
+was started. Act 2's door and button skins are registered but have no act-2 unit case and no route
+spot. No rewind spot for any slice 3b object beyond the generic
+`TestEveryObjectRewindRoundTrip` coverage.
+
+**Read ahead for 3a's remainder, so the next agent does not re-derive it.** `Obj_LRZCorkscrew`
+(sonic3k.asm:87494-87513, ROM `$4224E`) and `Obj_LRZWallRide` (:87693-87712, ROM `$4254A`) are both
+much larger than anything in 3b: each takes full control of the player through
+`object_control = $43`, drives `x_pos` from `GetSineCosine` times `$4800` and `y_pos` from a
+128-byte offset table (`byte_4248A`, with `byte_4250A` swapped in above `(a2) = $600`), picks
+`mapping_frame` through `divu.w #$16` into the 12-byte `RawAni_4247E`, flips `art_tile` bit 7 from
+the ride angle, and tail-calls `Perform_Player_DPLC`. Capture needs `ground_vel >= 0`, not airborne,
+no existing `object_control`, and a `$20`-wide box; the corkscrew floors `ground_vel` at `$600` and
+accelerates by `$10` a frame to `$1000`, the wall ride floors it at `+-$400` and reads `status`
+bit 0 to pick the direction. Both carry a live `FixBugs = 0` branch: `addq.b
+#p2_standing_bit-p1_standing_bit,d6` leaves `d6` dirty after Player 1's `Perform_Player_DPLC`, so
+Player 2 behaves erratically on a shared ride, and the shipped behaviour is the dirty one.
