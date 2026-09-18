@@ -373,6 +373,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   you approach it from the right; and the shooting triggers fire their slow diagonal
   shots until you roll into one, which bounces you back, blows the trigger up and
   opens its door.
+  The act 1 corkscrew works: run into it with enough speed and it takes hold of you,
+  sweeps you around the turn and spits you back out the way you came.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
