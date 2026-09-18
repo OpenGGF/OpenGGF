@@ -1559,3 +1559,308 @@ Not checked by anyone: `sub_7A5A0`'s `$25(a0)` collision restore against the sha
 equivalent, `Swing_UpAndDown`'s shared helper against the ROM routine text, and every citation in
 the four classes' Javadoc. Those remain open for slice 6's reviewer, who should be given the same
 brief and actually waited on.
+
+### 2026-09-18 — slice 5's review, applied, disputed and tested
+
+The independent review of the Green Hill port at `9e38c808c` finally reached an implementer. It
+is at `~/Videos/OGGF/ssz-bring-up/notes/ssz-ghz-boss-review-9e38c808c.md`. Every citation in it
+was re-read against `docs/skdisasm/sonic3k.asm` before anything was changed; two of its claims did
+not survive that and are recorded as disputed rather than quietly dropped.
+
+**A — the entry wait was two frames short, not one.** `Obj_SSZGHZBoss`'s body ends
+`jmp (PalLoad_Line1)`; the `move.l #Obj_Wait,(a0)` at its top only changes what the *next* frame
+runs, so the init execution does not consume a wait frame. `Obj_Wait` then decrements `$2E` from
+`$1F` and goes negative on the 32nd decrement, at which point `loc_84892` tail-calls `$34(a0)` —
+`loc_7A294`, which installs `loc_7A29C` and returns inside that same frame. `off_7A2B4` is
+therefore first dispatched on init + 33. (The first draft of this entry said `loc_7A294` spends a
+frame of its own; review 02 caught that, and the count is unaffected either way.) The port ran `loc_7A2C0` on init + 31, because it did the
+init and the first decrement in one frame and had no handover frame. Both are fixed with explicit
+`initExecuted` / `dispatcherInstalled` flags, and the test now asserts the count 33 rather than
+"routine became 2 eventually". The review said 33 counting from a different origin; the two agree
+on the shape and the test pins the number.
+
+**B — the fade wait is `$3F`, and the fight is worth 100 points.** `loc_7A5EC` ends
+`jmp (BossDefeated)` and `BossDefeated` (:180822) is `move.w #$3F,$2E(a0)` / `moveq #100,d0` /
+`jsr (HUD_AddToScore)` / `bclr #7,render_flags`. `onDefeatStarted` left `$2E` holding the last
+routine's value and the shared base awarded the S2 boss's 1000. `AbstractBossInstance` gained a
+`getDefeatScore()` hook (default 1000, both award sites route through it) and this boss overrides
+it with 100. The escape arithmetic now lands where the ROM's does: `$3F + 1` frames of
+`Wait_FadeToLevelMusic`, then `loc_85674`'s `(2*60)-1` plus the frame `loc_7A3E6` goes negative on,
+which the ROM makes `$40 + $78` = 184 frames. The engine delivers 183, because it detects the
+killing hit in the touch pass and runs this object's own update later in the same frame where the
+ROM does both inside `sub_7A5A0`; the test asserts that 183 and the one-frame offset is stated on
+the assertion rather than hidden in it.
+
+**Two things the review did not find, in the same routine.** `loc_7A5EC` installs a code pointer
+and returns: nothing there clears `$38` bit 6 and nothing deletes the chain. That reading is
+correct, but the conclusion drawn from it — that the six links therefore ride the escape out —
+was not; see the review-02 entry below.
+
+**C — the hit flash is three colours, not a line.** `sub_7A5A0` arms `$20(a0)`, then every frame
+`sub_7A614` runs `CopyWordData_3` from `word_7A628` into the three addresses in `word_7A622`:
+`Normal_palette+$0E/$1C/$1E`. `Normal_palette_line_2 = Normal_palette+$20` (sonic3k.constants.asm
+:768), so those are line 0 colours 7, 14 and 15 — the line
+`make_art_tile(ArtTile_RobotnikShip,0,0)` draws the ship on. `btst #0,$20(a0)` leaves `d0` zero on
+the odd counter values, so the odd frames write row 0 (`$8,$866,$222`, the ship's normal colours,
+which is why the ROM needs no restore) and the even frames add a byte offset. `FixBugs = 0` ships
+`addi.w #2*2,d0`, a four-*byte* offset into a six-word table — one word short of the second row —
+so the flash row is `$222,$888,$CCC` and overlaps the normal row's last colour. The `FixBugs`
+branch is `2*3` and would write `$888,$CCC,$EEE`. Ported as shipped, with both branches commented,
+a new `S3kPaletteOwners.SSZ_GHZ_BOSS_HIT_FLASH`, and `usesBaseHitHandler()` returning false so the
+boss owns `$20(a0)` — the shared handler decrements before its flash reads the counter, which
+would invert the parity. The test asserts both rows appear and that the `2*3` row never does.
+
+**D — the chain carries sub-pixels.** `MoveSprite_CircularSimple` is `move.l x_pos(a1),d2` /
+`move.l d2,x_pos(a0)` throughout, so each link reads its parent's fraction and passes its own down
+the tree; `Refresh_ChildPosition` is `move.w`, so the root's own fraction stays zero and every
+fraction in the chain is made below it. The links now keep 16.16 positions. This closes the
+precision deviation the 2026-09-18 slice-5 follow-up entry recorded.
+
+**E — the ball had no collision at all, so the fight could not hurt anyone.** `ObjDat3_7A678` is
+`dc.b 8,8,0,$8F` and only `loc_7A514` — the ball's dispatcher — ends
+`Child_DrawTouch_Sprite_FlickerMove`; the root and the four middle links end
+`Child_Draw_Sprite_FlickerMove`, which never reaches `Add_SpriteToCollisionResponseList`. Neither
+routine flickers per frame: "FlickerMove" names what they do when the parent's `status` bit 7 is
+set, which in this fight never happens, so the ball's box is live on every frame of the swing.
+`SszGhzBossChainLinkChild` now implements `TouchResponseProvider`, returning `$8F` for subtype
+`$A` and zero for the rest.
+
+**F — half right, and the wrong half was mine.** `word_7A65A`'s last byte is the
+`collision_flags` `SetUp_ObjAttributes3` writes and it is `0`, so the class comment's "harmful
+exactly on the frames it is visible" was wrong and is corrected. But this entry also claimed
+`loc_7A568`'s `btst #7,status(a1)` was dead code, on the grounds that nothing in
+`Obj_SSZGHZBoss` sets `status` bit 7. Nothing in `Obj_SSZGHZBoss` does — and the bit is set
+anyway, by the shared touch response: `Touch_Enemy`'s `.checkhurtenemy` ends
+`subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)`
+(sonic3k.asm:20922). See the review-02 entry below for what that changes.
+
+**G — `state.x`/`state.y` were never updated.** The shared base reads them for the defeat
+explosion offsets, the debug overlay and the dynamic spawn a rewind recreation rebuilds from, and
+this object moves through its own `MoveSprite2` fields, so all three were reading the spawn. Synced
+at the end of every dispatched frame.
+
+**H — disputed, then killed by its own test, and the review was right.** The first reading here
+was that `loc_7A244`'s `Camera_X + $110` and `loc_7A32C`'s `Camera_X + $A0` must *not* be reframed,
+on the grounds recorded in slice 5's own entry: that the lock's `Camera_max_X_pos = $160` pins the
+camera at `$160` at every viewport, making those two world offsets from a fixed point rather than
+view offsets. A test was written to prove it — assert the spawn and the drop land on the same world
+position at 320 and at 800 — and it failed immediately: `camera.getX()` is `$160` at 320 px and
+`$70` at 800 px. **The slice-5 claim was false.** The lock fixes the ROM's 320-pixel frame; the
+engine's wider viewport then centres the same focus point, which moves its left edge left by half
+the extra width. Read raw, the ship spawned at `$180` and dropped its chain at `$110` on a wide
+screen — a different arena from the cartridge's, at every wide viewport, which is exactly what the
+review said. Both reads now go through a `nativeFramedCameraX` of the same shape as
+`HczMinibossInstance`'s, in the boss for the trigger and in `Sonic3kSSZEvents.allocateGhzBoss` for
+the spawn, and the test asserts the framed camera is `$160`, the spawn `($270,$780)` and the drop
+`$200` at both widths.
+
+This is worth keeping as a method note, not just a fix: "the lock pins the camera" was asserted in
+a previous entry from a reading of the lock routine, carried forward as settled, and used to argue
+against a correct review finding. One `assertEquals` at two widths killed it in under a second.
+
+**The swing arc — also disputed.** The review's "short arc `$40`→`$C0`, never through zero" is
+wrong on the second half. The reversal test is
+`subi.b #$40,d0 / cmpi.b #-$80,d0 / bhs loc_7A4C2`, so the step is negated on every angle in
+`[$40,$BF]`. Walked from zero: the step flips at `$40` (landing on `$3F`) and at `$BF` (landing on
+`$C0`), so the sweep runs `$40 -> 0 -> $BF` the long way round through zero, holding `$BF` and
+`$C0` for a frame each at the far end, and the interior `[$41,$BE]` is never visited at all. The
+existing Javadoc was right about the direction; the first version of the new test asserted the
+excluded band as `[$41,$BF]` and failed on `$BF`, which is how the endpoint was pinned.
+`theRootLinkSweepsThroughZeroAndTurnsTheShipAtOneEnd` now asserts that `$00` and `$FF` are visited,
+that no angle in `[$41,$BE]` ever is, that `$40`, `$BF` and `$C0` all are, and that the step only
+ever flips at `$3F` and `$C0`.
+
+**The seven assertions that could not disagree, and what replaced them.** The spawn identity
+(`camera.getX() + SPAWN_CAMERA_X_OFFSET == boss.getX()`) is now the literals `$270` and `$780`
+against an asserted camera of `$160`. The subtype identity (`index*2`) is now
+`List.of(0,2,4,6,8,$A)`. "Any downward motion" is now exactly `$20` pixels after exactly `$20`
+frames of routine 2, which is what `y_vel $100` with `MoveSprite2` and no gravity means.
+"`routine >= 4`" is now `== 4`. The zero-frames-stepped cooldown is gone with the direct
+`onPlayerAttack` calls: all eight hits are delivered by pinning an attacking player on the ship and
+stepping the engine's own collision pass, one hit per `$20` window, and the ball's hurt is
+delivered the same way. The entry assertion that missed finding A is the frame count above. Six new
+tests cover the angle machine and the 8/`$A` turn loop, the orbit radii and the sub-pixels, the
+emitter's flicker parity and its zero collision byte, the ball's touch path, the hit flash's two
+rows, and palette line 1's round trip.
+
+**Still not done for this fight**, unchanged from slice 5: no capture, and no native row
+comparison against the `hpz` fixture's Green Hill window. "Native behaviour matched" is still not
+claimed for any of these rows.
+
+### 2026-09-18 — review 02, and the two things it caught that the first review and this implementer both missed
+
+An independent reviewer was spawned against the uncommitted review-application tree with the same
+brief shape as slice 5's, plus two explicit asks: check every changed Javadoc citation, and name
+every assertion that cannot disagree. It ended without returning through the handback the way
+slice 5's did — but it had written its report first, at
+`~/Videos/OGGF/ssz-bring-up/notes/ssz-ghz-review-02-applied.md`, so this time the findings exist.
+**Writing the report to a file before returning it is what made the difference**; that is worth
+carrying into every future reviewer brief.
+
+**The finding that mattered, and it was mine to lose.** Both the first review and this
+implementer concluded that `loc_7A568`'s `btst #7,status(a1)` is dead code, and both reached it
+the same way: by grepping `Obj_SSZGHZBoss`'s own routines for anything setting `status` bit 7 and
+finding nothing. Nothing there sets it. The shared touch response does —
+`Touch_Enemy`'s `.checkhurtenemy`, at sonic3k.asm:20922:
+
+```
+		subq.b	#1,boss_hitcount2(a1)	; Subtract from boss hit counter
+		bne.s	.bossnotdefeated
+		bset	#7,status(a1)
+```
+
+That is the ship's `status` bit 7, set in the collision pass on the killing hit. Three things
+follow, and the port had all three wrong:
+
+1. **The emitter is deleted at the killing hit**, by `loc_7A568`'s first test taking
+   `loc_7A59A -> Delete_Current_Sprite` — not leaked, and not held until the escape finishes.
+2. **Every chain link converts to scatter debris.** Both dispatchers end in a
+   `Child_*_Sprite_FlickerMove` whose first test is the same bit on `parent3`; `loc_849D8` then
+   runs `bset #7,status(a0)`, installs `Obj_FlickerMove`, **clears `collision_flags`** and calls
+   `Set_IndexedVelocity` with `d0 = 0`, reading `Obj_VelocityIndex + subtype*2` — a different
+   velocity pair per link. Because each link's `parent3` is the link in front of it, the bit walks
+   down the tree one link a frame, so the chain comes apart from the ship outward.
+3. **The ball's hitbox goes the frame it converts**, not when the ship finally leaves.
+
+So the change this entry made three paragraphs above — removing the chain deletion from
+`onDefeatStarted` so the links "ride the escape out" — was a regression, and a gameplay one: it
+left a live HURT box orbiting through the whole 183-frame escape. It is replaced by the ROM's
+actual behaviour, `Obj_FlickerMove` and all, with `theKillingHitScattersTheChainOneLinkAFrameAnd
+TakesTheBallsHitbox` asserting the one-link-a-frame cascade, the cleared collision byte and the
+deleted emitter. The old code's unconditional delete was closer to the cartridge than the "fix".
+
+**The method note.** This is the second time in one task that a claim was reached by searching
+only the routine under the microscope. The first was the widescreen camera, where a previous
+entry's "the lock pins the camera at `$160`" was carried forward as settled. Both were killed by
+evidence that took seconds to gather once someone looked outside the file. *An empty grep is a
+fact about the grep*: for a shared SST field like `status`, the writer is very often in the shared
+subsystem that owns the interaction, not in the object.
+
+**The rest of review 02, applied.** The escape total is 184 frames in the ROM and 183 here (the
+one-frame offset is now stated on the assertion). The widescreen test's own Javadoc still argued
+the position the test had disproved, and is rewritten. `assertEquals(0x20, hitWindow + 1 > 0x20 ?
+0x20 : hitWindow + 1, ...)` accepted two values — exactly the two that distinguish the flash
+parity — and is now `assertEquals($1F, hitWindow)` with the parity spelled out. The `sawNormal`
+half of the flash test could have passed with no palette write at all if line 0 already held
+`word_7A628`'s first row, so the colours are sampled before the first hit and asserted different.
+The `assertEquals(0xC0 | $F, ...)` message claimed `$F` is category BOSS in the ROM: it is not —
+`$0F`'s top bits are `%00`, which `Touch_ChkValue` sends to `Touch_Enemy`, and the boss-ness comes
+from `boss_hitcount2`; `$C0` is the engine's own category and the message now says so. The
+chain-drop position was asserted as a four-pixel window where `x_vel -$100` from an even `$270`
+lands it exactly on `$200`. The root's zero sub-pixel word was an identity on the implementation
+and is now paired with an assertion that the link behind it does carry a fraction. And the
+emitter's "cannot hurt anything" was a statement about the Java class hierarchy; it now stands a
+player on the emitter for forty frames and asserts no hurt and no ring loss.
+
+**One review-02 finding rejected, and the question behind it settled by measurement.** Its
+finding 12 suspected the hit flash's known-bugs entry described the deviation backwards, and it
+did: `PaletteOwnershipRegistry.submit` feeds `resolveInto`, which writes into the level's own
+`Palette` objects, so the last row written persists after the boss stops submitting — exactly as
+the cartridge leaves it. Its finding 6 then asked whether `sawNormal` could disagree, which turned
+on what line 0's colours 7, 14 and 15 hold before the fight. An assertion written to defend the
+test answered it: they are `[$008,$866,$222]` — **`word_7A628`'s first row exactly**. So the
+"normal" row is the ship's own colours, which is why `sub_7A614` needs no restore when the window
+closes, and why the row the ROM leaves behind is invisible. There is no deviation and no gap, so
+the known-bugs entry that was drafted for it is deleted rather than kept as a non-finding. The
+test no longer asserts that the normal row "appeared" — that is true of a boss that writes nothing
+— but that the two rows *alternate*, at least `$E` shipped frames each followed by the `d0 = 0`
+row, which is the parity `btst #0,$20(a0)` selects.
+
+**And one review-02 finding that was right about the assertion and wrong about the fix.** Its
+finding 9 said the emitter's "cannot hurt anything" was a statement about the Java class hierarchy
+rather than about behaviour. True — so the test was changed to stand a player on the emitter for
+forty frames, and it failed: the player is hurt. Not by the emitter. The emitter sits `$1E` in
+front of the ship, comfortably inside the ship's own `$F`-index box, so a player at the emitter's
+position is touching the ship whatever the emitter does. The behavioural assertion was
+unobtainable at that position, so it is replaced by one over the object graph that can still
+disagree: of everything the fight allocates before the chain drops, nothing publishes a non-zero
+collision byte. That would fail the moment someone gave the emitter or the head one.
+
+**And one left alone.** Finding 13: `Sonic3kSSZEvents.allocateGhzBoss` still reads
+`camera.getY()` raw for the `-$40` spawn offset while X goes through `nativeFramedCameraX`. There
+is no Y equivalent of that helper and both viewports the tests exercise share a height, so this is
+untested rather than wrong. Recorded here so the next person does not have to rediscover that it
+was considered.
+
+### 2026-09-18 — slice 6 not started; the ROM reading that is already done
+
+Slice 6 (the Metropolis recreation) was not implemented in this session. Applying and then
+re-reviewing slice 5's review took the whole of it, and two of the corrections were behavioural
+regressions that had to be caught before anything new landed. What follows is the disassembly
+reading done while the suites ran, so the next implementer does not start from the label list.
+
+**The arena gate, `loc_5770C`/`loc_5775C` (sonic3k.asm:116303).** `d0` at entry is the leader's
+`y_pos`, from `sub_575EA`'s caller. The sequence is: `Events_bg+$02` negative means beaten (jump to
+`loc_5777E`, which reopens the bounds to `0`/`$19A0`); non-zero-but-positive means the fight is
+running and nothing below executes; `Events_bg+$03` non-zero means the lock has already fired, so
+skip straight to the spawn gate. Otherwise `Camera_max_X_pos = $1660` and `Camera_min_X_pos` is
+`$160` or `0` depending on whether `Events_bg+$00` (the Green Hill fight's own word) is still set —
+**the Metropolis lock reads the Green Hill flag**, which is worth knowing before writing the test.
+The lock needs `y_pos >= $420`, `Camera_X_pos == $1660` exactly and the leader not airborne
+(`btst #1,status`), and then writes `Camera_min_X_pos = $1660`,
+`Camera_min_Y_pos = Camera_target_max_Y_pos = $380` and `st (Events_bg+$03).w`. The spawn is the
+separate `loc_5775C`: `Camera_Y_pos == $380` exactly, `AllocateObject`, `st (Events_bg+$05).w`,
+`move.w #$7F00,(Events_bg+$02).w`.
+
+Two things carry over from Green Hill and are now proved rather than assumed. The
+`Camera_X_pos == $1660` compare **must** go through `Sonic3kSSZEvents.nativeFramedCameraX`: the
+lock fixes the ROM's 320-pixel frame, and this session measured `camera.getX()` as `$70` at 800 px
+where it is `$160` at 320 px in the Green Hill arena, so a raw compare is unreachable at every wide
+viewport. And the `Camera_Y_pos == $380` gate eases at two pixels a frame, so the test budget is
+~1650 frames from `$1000`.
+
+**`Obj_SSZMTZBoss` (`loc_7A6B6`, sonic3k.asm:163023).** Same init shape as Green Hill —
+`Obj_Wait` `$1F` with `$34 = loc_7A712`, `Boss_flag`, `cmd_FadeOut`, an
+`Obj_Song_Fade_Transition` carrying `mus_EndBoss`, `clr.w (_unkFA88).w`, `Load_PLC $7B`,
+`Queue_Kos_Module ArtKosM_SSZMTZOrbs`, the `Normal_palette_line_2 -> Target_palette_line_2` save
+and `PalLoad_Line1 Pal_SSZMTZOrbs` — so the frame accounting settled for Green Hill applies
+unchanged: `loc_7A712` spends its own frame installing `loc_7A71A`, and `off_7A728` is first
+dispatched on init + 33.
+
+`off_7A728` has only two entries, and the second (`loc_7A7E2`) dispatches again on `$26(a0)`
+through `off_7A7F0`, eight entries. The boss does **not** use `MoveSprite2`'s SST fields: it keeps
+`SSZ_MTZ_boss_X_pos`/`_Y_pos` as longwords and `_X_vel`/`_Y_vel` as words, moved by
+`Boss_MoveObject` (sonic3k.asm:163~; the Sonic 2 routine, `asl.l #8` into a 16.16 pair), and copies
+`x_pos` back out of them at `loc_7A8DA`. Fixed positions worth having: it starts at
+`($1700,$300)`, descends to `$420` before taking `$26 = 2`, patrols between `$1680` and `$1780`,
+hovers at `$3B0`-`$3F0`, and the laser pass fires at `$16A0`/`$1760`. `$3C(a0)` is initialised to
+7 and is the count of arm-raise cycles; `$38`/`$3A` are the arm angles (`$27` at rest, up to
+`$68`); `$1D` is the hover phase (`sub_7A85A`, `asr.w #6` on the sine, `addq.b #4`).
+
+`loc_7A7C4` writes `$10,0,3,0,1,0` into `_unkFA82.._unkFA87`, and `sub_7AC06` rewrites
+`2(a1)` of the same block on a hit (`andi.b #$F0` / `ori.b #5`) and on a player death
+(`ori.b #4`). That is the same word the EggRobo pairing uses, so an EggRobo released before the
+fight will read as released afterwards unless the write is modelled.
+
+The hit machine is `sub_7ACF2`, and it is `sub_7A5A0` with different offsets: `$1C(a0)` is the
+window counter rather than `$20(a0)`, the restore is `move.b #$F,collision_flags(a0)` rather than
+`$25(a0)`, and the same `FixBugs` `addi.w #2*2` off-by-one indexes `word_7AD7E`, which is byte for
+byte `word_7A628`. The defeat is `loc_7AD3A` -> `loc_7AC7A` -> `loc_7AC92` -> `loc_7ACA4`, ending
+`st (Events_bg+$02).w`, which is what opens the `$F6`-gated pad — and note it also does
+`st (_unkFA88).w` and `clr.b $38(a0)` where Green Hill did neither. `collision_flags` is `$11`
+here, not `$F`.
+
+**The orbs, `loc_7AD8A` (sonic3k.asm:163663).** Allocated by a second object the init creates with
+`$34 = a0`; routine 0 allocates seven of them in a loop, each with `$2E`/`$41` from `byte_7AE14`
+(`$24,$6C,$B4,$FC,$48,$90,$D8`) and `$40` from `byte_7AE1B` (`0,1,1,0,1,1,0`),
+`collision_flags $87`, `$2F = $40`. `sub_7AEB0` is the orbit: two `GetSineCosine` lookups scaled by
+the boss's `$38`/`$3A` arm lengths, `addq.b #4,$2E` a frame, and `sub_7AF5A` picks the mapping
+frame and one of four priorities (`$80`/`$100`/`$300`/`$380`) from the sign and magnitude of the
+computed `$3A(a0)` — that is the front/back sort, and it is the thing most likely to be got wrong.
+The launched orb (`loc_7AFA4`) takes `collision_flags $C6` after `$3C` frames, uses `MoveSprite`
+with a `-$20` per frame vertical term clamped at `$180`, lands at `$42C`, then `loc_7B02A`
+bounces along the floor with `$DA`. `sub_7B0C2` is the orb's own touch handler, keyed on
+`collision_property` holding which player hit it (`word_7B10E`), and `loc_7B116` is the pop.
+
+**The laser children, `ChildObjDat_7AB80` (sonic3k.asm:163458).** Two, at `(-$C,-4)` and
+`(-$18,-4)`, both `loc_7AB8E`, `ObjDat3_7ABFA` = `dc.b $28,8,$D,$9C` on
+`make_art_tile(ArtTile_SSZMTZOrbs,1,1)` priority `$280`. Subtype 1 waits 8 frames rather than 0 and
+uses mapping frame `$C` and priority `$100`. Then `x_vel = -$400` (negated when X-flipped),
+`sfx_Laser`, `MoveSprite2` and `Sprite_CheckDeleteTouch`. `sub_7AB56` fires them on the
+`SSZ_MTZ_boss_laser_timer` reaching zero with `$31(a0)` shots left, rearming `$1E`.
+
+**What slice 6 should do first.** The arena gate and the entry, as a test, before any of the boss
+machine: it is the same shape as Green Hill's and the two width lessons above are the only things
+that made that one hard. Then `$26` states 0 and 2 (descent and patrol), which are enough to see
+the ship on screen. The orbs are the large piece and their priority sort is the part that needs a
+native capture to check, not a reading.
