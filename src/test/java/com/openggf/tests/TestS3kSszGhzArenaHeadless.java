@@ -594,11 +594,10 @@ class TestS3kSszGhzArenaHeadless {
         assertEquals(0, boss.getCollisionFlags(), "a defeated ship is no longer hittable");
         assertEquals(0x3E, boss.waitTimerForTest(),
                 "BossDefeated (sonic3k.asm:180822) is move.w #$3F,$2E(a0), and one "
-                        + "Wait_FadeToLevelMusic decrement has already been taken: the engine "
-                        + "detects the killing hit in the touch pass and runs this object's own "
-                        + "update later in the same frame, where the ROM does both inside "
-                        + "sub_7A5A0. The value is derived from $3F, not left over from the last "
-                        + "routine, which is what the total below pins");
+                        + "Wait_FadeToLevelMusic decrement has already been taken. The cartridge "
+                        + "takes none on the killing frame — see the plan's review-02 entry and "
+                        + "the defeatDeferralAppliesToThisBoss() override it hands over — so the "
+                        + "value is derived from $3F, one frame ahead of the ROM");
         assertEquals(scoreBefore + 100,
                 GameServices.gameState().getScore(),
                 "moveq #100,d0 / jsr (HUD_AddToScore) in the same routine");
@@ -618,7 +617,12 @@ class TestS3kSszGhzArenaHeadless {
                 "loc_7A3F8 st (Events_bg+$00).w after the escape");
         assertEquals(0x3F + 0x78, framesToBeaten,
                 "the rest of the $3F Wait_FadeToLevelMusic frames, then loc_85674's "
-                        + "(2*60)-1 = $77 escape frames plus the frame loc_7A3E6 goes negative on");
+                        + "(2*60)-1 = $77 escape frames plus the frame loc_7A3E6 goes negative "
+                        + "on: 183. The cartridge takes 184 — the s3k-sonic-tails-complete-"
+                        + "emeralds hpz segment puts the ship on Wait_FadeToLevelMusic at native "
+                        + "frame 4412 and frees its slot at 4596 — and the one-frame gap is the "
+                        + "killing-frame decrement the engine takes and the ROM does not. "
+                        + "Comparison only");
         assertEquals(0, countActive(SszMechaSonicHeadChild.class),
                 "st (_unkFA89).w deletes the head with the ship");
         assertEquals(0, countActive(SszGhzBossObjectInstance.class), "Go_Delete_Sprite");
@@ -638,11 +642,14 @@ class TestS3kSszGhzArenaHeadless {
      * {@code parent3}: the emitter takes {@code loc_7A59A} and deletes, and every link takes
      * {@code loc_849D8}, which installs {@code Obj_FlickerMove}, clears {@code collision_flags}
      * and fills {@code x_vel}/{@code y_vel} from {@code Obj_VelocityIndex + subtype*2}. Because
-     * each link's {@code parent3} is the link in front of it, the bit walks down the tree one
-     * link a frame.
+     * each link's {@code parent3} is the link in front of it and {@code CreateChild9_TreeList}
+     * allocates them into ascending slots in that same order, one object pass walks the whole
+     * chain: all six convert on the killing-hit frame, which is what the
+     * {@code s3k-sonic-tails-complete-emeralds} {@code hpz} segment's aux rows show at frame
+     * 4412. Comparison only.
      */
     @Test
-    void theKillingHitScattersTheChainOneLinkAFrameAndTakesTheBallsHitbox() {
+    void theKillingHitScattersTheWholeChainAtOnceAndTakesTheBallsHitbox() {
         HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y);
         SszGhzBossObjectInstance boss = runToSpawn(fixture);
         runToSwingingRoot(fixture, boss);
@@ -655,27 +662,22 @@ class TestS3kSszGhzArenaHeadless {
         defeatThroughTheTouchPass(fixture, boss);
         assertTrue(boss.hasStatusBit7(), "bset #7,status(a1) on the killing hit");
 
-        // One frame per link, starting at the root, because parent3 threads down the list.
-        int[] converted = new int[SszGhzBossObjectInstance.CHAIN_LINKS + 2];
-        for (int frame = 0; frame < converted.length; frame++) {
-            int count = 0;
-            for (SszGhzBossChainLinkChild link : links) {
-                if (link.routineForTest() == -1) {
-                    count++;
-                }
+        // All six on the killing-hit frame, not one a frame. parent3 threads down the list, but
+        // CreateChild9_TreeList allocates the links into ascending slots in that same order, so
+        // one object pass walks the whole chain: the root sees the ship's bit and sets its own,
+        // and every later link sees its parent's bit already up. Measured in the
+        // s3k-sonic-tails-complete-emeralds `hpz` segment, whose aux rows put all six links on
+        // Obj_FlickerMove ($85102) on frame 4412, the same frame the ship takes
+        // Wait_FadeToLevelMusic ($85668). Comparison only; nothing here is hydrated from it.
+        int convertedOnTheHitFrame = 0;
+        for (SszGhzBossChainLinkChild link : links) {
+            if (link.routineForTest() == -1) {
+                convertedOnTheHitFrame++;
             }
-            converted[frame] = count;
-            pinNonAttackingAt(fixture, APPROACH_X, APPROACH_Y);
-            fixture.stepIdleFrames(1);
         }
-        for (int frame = 1; frame < converted.length; frame++) {
-            assertTrue(converted[frame] - converted[frame - 1] <= 1,
-                    "loc_849D8 reaches one more link a frame, not all six at once: "
-                            + java.util.Arrays.toString(converted));
-        }
-        assertEquals(SszGhzBossObjectInstance.CHAIN_LINKS, converted[converted.length - 1],
-                "every link has converted by the sixth frame after the hit: "
-                        + java.util.Arrays.toString(converted));
+        assertEquals(SszGhzBossObjectInstance.CHAIN_LINKS, convertedOnTheHitFrame,
+                "loc_849D8 reaches every link in one object pass, because the tree list's slots "
+                        + "ascend along the chain");
         assertEquals(0, ((com.openggf.level.objects.TouchResponseProvider) ball)
                         .getCollisionFlags(),
                 "loc_849D8's clr.b collision_flags(a0): a scattered ball hurts nobody, and it "

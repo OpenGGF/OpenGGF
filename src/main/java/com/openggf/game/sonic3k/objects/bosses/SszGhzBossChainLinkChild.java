@@ -64,10 +64,14 @@ import java.util.List;
  * (sonic3k.asm:20922) — on the killing hit. When the test passes, {@code loc_849D8} runs
  * {@code bset #7,status(a0)}, installs {@code Obj_FlickerMove}, <em>clears</em>
  * {@code collision_flags} and calls {@code Set_IndexedVelocity} with {@code d0 = 0}, which reads
- * {@code Obj_VelocityIndex + subtype*2}. Because each link's {@code parent3} is the link in front
- * of it, the bit walks down the tree one link a frame, so the chain comes apart from the ship
- * outward rather than all at once — and the ball stops being able to hurt anyone the moment it
- * converts, not when the ship finally leaves.
+ * {@code Obj_VelocityIndex + subtype*2}. Each link's {@code parent3} is the link in front of it
+ * and {@code CreateChild9_TreeList} allocates them into ascending slots in that same order, so a
+ * single object pass walks the whole chain — the root reads the ship's bit and sets its own, and
+ * every later link finds its parent's already up. All six convert on the killing-hit frame, not
+ * one a frame: the {@code s3k-sonic-tails-complete-emeralds} {@code hpz} segment's aux rows put
+ * all six on {@code Obj_FlickerMove} at frame 4412, the same frame the ship takes
+ * {@code Wait_FadeToLevelMusic}. The ball stops being able to hurt anyone on that frame, not when
+ * the ship finally leaves.
  *
  * <p><b>The ball is the fight's only threat.</b> {@code ObjDat3_7A678}'s last byte is
  * {@code $8F} — category HURT, size index {@code $F} — and only {@code loc_7A514}, the ball's

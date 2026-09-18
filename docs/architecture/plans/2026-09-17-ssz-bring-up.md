@@ -1864,3 +1864,95 @@ machine: it is the same shape as Green Hill's and the two width lessons above ar
 that made that one hard. Then `$26` states 0 and 2 (descent and patrol), which are enough to see
 the ship on screen. The orbs are the large piece and their priority sort is the part that needs a
 native capture to check, not a reading.
+
+### 2026-09-18 — the Green Hill fight against native rows, and the claim it corrected
+
+The `s3k-sonic-tails-complete-emeralds` run's **`hpz` segment** is the one that carries Sky
+Sanctuary act 1's Green Hill arena — 1142 rows at camera `($160,$7C0)`, exactly as the slice-5
+entry guessed. (The segment is named for where it *ends*; per-zone segments start in the previous
+act.) Its `aux_state.jsonl.gz` carries `object_appeared`/`object_removed` rows whose
+`object_type` is the **ROM address of the slot's code pointer**, which makes the whole fight
+readable without a single physics row. Comparison only: nothing below is hydrated, and no engine
+value is taken from it.
+
+| native frame | slot 8 / children | address | what it is |
+| --- | --- | --- | --- |
+| 3792 | boss appears, `x = y = 0` | `$7A20E` `Obj_SSZGHZBoss` | `loc_576E8`'s `AllocateObject`; the init has not run |
+| 3825 | boss code changes, `($270,$780)` | `$7A29C` `loc_7A29C` | `loc_7A294` ran; the init was frame 3793 |
+| 4042 | six children appear, all `($200,$7E9)` | `$7A428`, `$7A4D0`×4, `$7A514` | `CreateChild9_TreeList` |
+| 4412 | boss code changes, `($220,$7E7)` | `$85668` `Wait_FadeToLevelMusic` | the killing hit |
+| 4412 | **all six children change on the same frame** | `$85102` `Obj_FlickerMove` | `loc_849D8` |
+| 4476 | boss code changes | `$7A3E6` `loc_7A3E6` | `loc_85674` handed to `loc_7A3CE` |
+| 4596 | slot 8 taken by another object | — | `loc_7A3F8`'s `Go_Delete_Sprite` |
+
+**Five things the port already had right, now corroborated rather than merely derived.** The spawn
+is `($270,$780)` — the literals the test asserts. The first dispatch is init + 33: the init is
+3793, `Obj_Wait` runs 3794-3825 with its 32nd decrement going negative, and `loc_7A294` hands over
+inside 3825. The chain drops with every link at `x = $200`. `4476 - 4412 = 64 = $3F + 1`, which is
+`BossDefeated`'s `move.w #$3F,$2E(a0)`. `4596 - 4476 = 120 = $78`, which is `loc_85674`'s
+`(2*60)-1`. The whole defeat is **184 frames**.
+
+**The one-frame deviation is now a one-line fix with its evidence, and it is handed over rather
+than applied.** The engine delivers 183, because it detects the killing hit in the touch pass and
+then runs the object's own update later in the same frame, taking one decrement the cartridge does
+not. These rows make it fixable rather than merely describable: `4476 - 4412 = 64` is `$3F`
+decrements *plus* the one that goes negative, so the killing frame decrements nothing. That
+follows from the dispatch shape — `loc_7A29C` reads `routine(a0)` at its head and only reaches
+`sub_7A5A0` after the arm has run, so `loc_7A5EC`'s `move.l #Wait_FadeToLevelMusic,(a0)` lands
+after this slot is done for the frame. The shared base already has the mechanism:
+`AbstractBossInstance.defeatDeferralAppliesToThisBoss()`, which `HczMinibossInstance` overrides
+for exactly this ROM shape (the 2026-08-26 conflict ledger records it as `BOSS_DEFEATED_WAIT=0x3F`
+plus `pendingDefeatDispatch`).
+
+**The change is: override it to `true` on `SszGhzBossObjectInstance`, and move the test's two
+numbers from `$3E` to `$3F` and from `$3F + $78` to `$40 + $78`.** It was written, and then
+reverted unrun: three queued Maven runners were reaped while waiting for a slot against a queue
+with nine contending requests, and an unverified behaviour change is not worth committing when the
+verified state is one `git checkout` away. The tree is exactly the state that ran 14/14. Whoever
+picks this up applies those three edits and runs `TestS3kSszGhzArenaHeadless`; if it is green the
+deviation is gone and the assertion messages (which currently describe the gap) should be
+rewritten to describe the match.
+
+**One thing it corrected, and it was written two entries above.** That entry said `loc_849D8`
+"walks down the tree one link a frame, so the chain comes apart from the ship outward". It does
+not: **all six links convert on frame 4412**, the same frame the ship takes
+`Wait_FadeToLevelMusic`. The reason is slot order, not the tree — `CreateChild9_TreeList`
+allocates the links into ascending slots along the chain, so a single `ObjectsLoad` pass walks the
+whole thing: the root reads the ship's `status` bit 7 and sets its own, and every later link finds
+its parent's already up. The Javadoc and the plan are corrected and the test now asserts all six
+on the hit frame.
+
+**And the test that made the wrong claim could not have caught it.** It sampled the converted
+count once a frame and asserted each step was `<= 1` and that all six had converted by the eighth
+frame. If all six convert before the first sample — which is what happens — every delta is zero
+and both assertions pass. A "no more than one a frame" assertion is satisfied by "all of them at
+once". That is the third cannot-disagree assertion found in this fight's tests, and the first one
+written *while fixing* cannot-disagree assertions.
+
+**Also visible, and consistent with the review's finding E.** The native player's ring count falls
+55 → 54 → 48 → 47 → 45 across the window. The fight takes rings off the player, which the port
+could not do at all before the ball got its `$8F` box.
+
+**What these rows cannot settle.** The hit flash — palette is not in this schema. And the engine's
+own frame numbers, because the engine reaches the arena by a declared checkpoint restart and the
+native run arrives along the act's route; only the *intervals* above are comparable, and those are
+what is compared.
+
+### 2026-09-18 — clip 18 is blocked, and the measurement that says why
+
+`GameplayCaptureTool` cannot film this fight yet. Two teleport boots,
+`--x 0x200 --y 0x7C8` and `--x 0x200 --y 0x860`, both drop the leader straight through the arena
+floor and settle it at `($100,$C4C)` with the camera at `($60,$BC0)`, far below the arena and with
+the boss gates unreachable. The floor is real: the native rows above have the player grounded
+(`player_air 0`) at `($249,$86C)` on frame 4596, and `TestS3kSszGhzArenaHeadless` reaches
+`($200,$86C)` by the act's own physics from a checkpoint restart. What the capture tool has no
+flag for is that restart — it teleports after boot, which is the documented "skips plane switchers
+and level events between the act start and that point" pitfall, and the arena's collision plane is
+one of the things skipped.
+
+So clip `17` still stands as the only footage, and it predates the fixes: it shows a ball that
+cannot hurt anybody and a defeat with no debris. The re-film is recorded as owed in
+`~/Videos/OGGF/ssz-bring-up/INDEX.md` and in the act-1 matrix. **Do not re-attempt it with a bare
+teleport** — either give `GameplayCaptureTool` a checkpoint-restart option of the same shape as
+`HeadlessTestFixture`'s, or author a route from the previous star post. That is the next thing to
+try, and it is not a five-minute job.
