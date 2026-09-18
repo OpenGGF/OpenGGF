@@ -1539,6 +1539,13 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.SPIKER,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzRockCrusherObjectInstance(spawn));
+        // Id $9D is Obj_LRZMiniboss in the SKL set (sonic3k.asm:160001); the S3KL set spends it
+        // on Obj_Mantis, which is the name the id constant carries. Its one placement is in
+        // act 1, far past the current cold-route frontier.
+        registerStockRomZoneBound(Sonic3kObjectIds.MANTIS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new com.openggf.game.sonic3k.objects.bosses
+                        .LrzMinibossInstance(spawn));
         // Id $22 is Obj_LRZSpikeBall in the SKL set (sonic3k.asm:88838); the S3KL set spends it
         // on Obj_LBZAlarm.
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_ALARM,

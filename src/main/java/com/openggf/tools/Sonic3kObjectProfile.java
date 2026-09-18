@@ -319,7 +319,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x99, // Fireworm
             0x9A, // Iwamodoki
             0x9B, // Toxomister
-            0x9C // LRZRockCrusher
+            0x9C, // LRZRockCrusher
+            0x9D // LRZMiniboss
     );
 
     // DDZ-only implementations from SKL ids gated on ZONE_DDZ.

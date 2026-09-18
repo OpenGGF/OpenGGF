@@ -79,10 +79,11 @@ class TestS3kLrzPlacementCensus {
      * {@code Obj_LRZRockCrusher} (2 / 0) to 75, and slice 4's {@code $9A}
      * {@code Obj_Iwamodoki} (32 / 34) took the totals to 43 / 206, and {@code $9B}
      * {@code Obj_Toxomister} (22 / 9) to 21 / 197, and {@code $99} {@code Obj_Fireworm}
-     * (20 / 9) to 1 / 188.
+     * (20 / 9) to 1 / 188, and slice 6's {@code $9D} {@code Obj_LRZMiniboss} (1 / 0) took act 1
+     * to <b>0</b>: every act 1 placement now builds a concrete class.
      */
     private static final Map<String, String> PLACEHOLDER_BASELINE = Map.of(
-            "LRZ1", "9D:00=1",
+            "LRZ1", "",
             "LRZ2", "25:80=1,81=1,82=1;"
                     + "29:08=1,10=1,13=15,14=4,15=2,16=6,18=1,93=4,94=4,95=2,96=12;"
                     + "2B:00=8,80=4;"
@@ -112,7 +113,7 @@ class TestS3kLrzPlacementCensus {
 
     @Test
     void act1PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 1);
+        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 0);
     }
 
     @Test
@@ -167,6 +168,11 @@ class TestS3kLrzPlacementCensus {
 
     private static Map<String, Integer> parseBaseline(String spec) {
         Map<String, Integer> parsed = new TreeMap<>();
+        if (spec.isEmpty()) {
+            // An act with nothing left on the placeholder baseline, as LRZ1 has been since the
+            // miniboss landed. The ratchet only goes down, so an empty spec is a real state.
+            return parsed;
+        }
         for (String idGroup : spec.split(";")) {
             String[] idAndSubtypes = idGroup.split(":", 2);
             int id = Integer.parseInt(idAndSubtypes[0], 16);

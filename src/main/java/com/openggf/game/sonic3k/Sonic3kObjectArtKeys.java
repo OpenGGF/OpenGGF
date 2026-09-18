@@ -317,6 +317,15 @@ public final class Sonic3kObjectArtKeys {
      * sonic3k.asm:197426-197428). Its eight hit pieces copy the same art_tile.
      */
     public static final String LRZ_ROCK_CRUSHER = "lrz_rock_crusher";
+    /**
+     * {@code Obj_LRZMiniboss} and every one of its children: {@code Map_LRZMiniboss} over
+     * {@code ArtTile_LRZMiniboss}, {@code make_art_tile(ArtTile_LRZMiniboss,1,1)} so palette
+     * line 1 and high priority ({@code ObjDat_LRZMiniboss}, sonic3k.asm:160797-160799).
+     * {@code CreateChild8_TreeListRepeated} copies the parent's mappings and art tile into
+     * every child, so the arms, orbiters, hand, projectiles and defeat debris all draw from
+     * this one sheet.
+     */
+    public static final String LRZ_MINIBOSS = "lrz_miniboss";
     /** {@code Obj_LRZSwingingSpikeBall}: {@code Map_LRZSwingingSpikeBall}, palette 1. */
     public static final String LRZ_SWINGING_SPIKE_BALL = "lrz_swinging_spike_ball";
     /** The same map on palette line 0, which {@code andi.w #$9FFF} leaves the chain child. */

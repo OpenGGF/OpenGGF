@@ -1729,6 +1729,20 @@ public class Sonic3kConstants {
     public static final int ARTTILE_LRZ_ROCK_CRUSHER = 0x052E;
     /** {@code Pal_LRZRockCrusher} (sonic3k.lst: $90680), one 32-byte line. */
     public static final int PAL_LRZ_ROCK_CRUSHER_ADDR = 0x090680;
+    /** {@code Map_LRZMiniboss} (sonic3k.lst: $186EC8). */
+    public static final int MAP_LRZ_MINIBOSS_ADDR = 0x186EC8;
+    /** {@code ArtKosM_LRZMiniboss} (sonic3k.lst: $16FCDA); {@code loc_78592} queues it. */
+    public static final int ART_KOSM_LRZ_MINIBOSS_ADDR = 0x16FCDA;
+    /** {@code ArtTile_LRZMiniboss} (sonic3k.constants.asm:1320). */
+    public static final int ARTTILE_LRZ_MINIBOSS = 0x03FB;
+    /** {@code Pal_LRZMiniboss1} (sonic3k.lst: $78E0A): {@code PalLoad_Line1} at object setup. */
+    public static final int PAL_LRZ_MINIBOSS_1_ADDR = 0x078E0A;
+    /** {@code Pal_LRZMiniboss2} (sonic3k.lst: $78E2A): {@code sub_78B38} copies $40 bytes to line 3. */
+    public static final int PAL_LRZ_MINIBOSS_2_ADDR = 0x078E2A;
+    /** {@code Pal_LRZMiniboss3} (sonic3k.lst: $78E6A): the post-defeat camera release, {@code loc_78B08}. */
+    public static final int PAL_LRZ_MINIBOSS_3_ADDR = 0x078E6A;
+    /** {@code Pal_LRZ2} (sonic3k.lst: $A96DC): {@code loc_78B08} copies $20 bytes over line 2. */
+    public static final int PAL_LRZ2_ADDR = 0x0A96DC;
     /** {@code Pal_LRZ1} (sonic3k.lst: $A967C), the line the crusher restores on exit. */
     public static final int PAL_LRZ1_ADDR = 0x0A967C;
     /** {@code Map_LRZSpikeBall} (sonic3k.lst: $43A8E). */

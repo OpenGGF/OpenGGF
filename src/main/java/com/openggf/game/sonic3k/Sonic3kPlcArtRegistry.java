@@ -2652,6 +2652,18 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null
         ));
+        // Miniboss (SKL object $9D): make_art_tile(ArtTile_LRZMiniboss,1,1)
+        // (ObjDat_LRZMiniboss, sonic3k.asm:160797-160799). loc_78592 queues
+        // ArtKosM_LRZMiniboss itself once the Nemesis queue drains. Every child copies the
+        // parent's mappings and art tile through CreateChild8_TreeListRepeated, so this one
+        // entry serves the arms, orbiters, hand, projectiles and defeat debris too.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_MINIBOSS,
+                Sonic3kConstants.MAP_LRZ_MINIBOSS_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MINIBOSS,
+                1,
+                null
+        ));
         // Spike ball (SKL object $22) and the chips sub_439EC throws:
         // make_art_tile(ArtTile_LRZBigSpike,1,0) and make_art_tile($0D3,2,1)
         // (sonic3k.asm:88840, :89025). All six placements are in act 1.
