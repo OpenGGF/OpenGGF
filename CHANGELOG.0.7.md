@@ -377,6 +377,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   sweeps you around the turn and spits you back out the way you came.
   Act 1's sinking rocks are solid again: stand on one and it sinks smoothly under your
   weight, rising back once you step off.
+  The wall rides work in both acts: run into one with any speed at all and it takes hold,
+  sweeps you up over the curve and drops you back on the floor heading the other way.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
