@@ -3151,6 +3151,79 @@ wide/donor/roster row. Every one of those needs an act 2 route, which needs the 
 results-handover gaps above closed first -- which is why those are slice 7's first item and not
 its last.
 
+
+### 2026-09-19 - Both act-2 "blockers" were misdiagnosed, and the native capture says so
+
+**Neither of the two gaps clip 33 was said to show is what it was said to be.** The thirteenth
+handover made them the campaign's blocking item; a morning of measurement killed both readings and
+left one real defect and one new gap.
+
+**(1) The lava background is act 2's own.** The reasoning that produced the entry was: the plane
+looks like act 1, therefore act 1's plane survived, therefore the missing `LRZ2_BackgroundEvent`
+stages are the cause. Three measurements, in order:
+
+- `getBackgroundTilemapData()` after the change is **byte-identical** to a direct `$901` load's
+  (both `1024x64` tiles, same 81 distinct descriptors, same FNV hash `fb11fbeedf6b87c3`), and so is
+  the foreground's. So the nametable is act 2's, and no redraw could change it.
+- Hashing all 2016 patterns each frame across the change, the only art that moves is tiles
+  `$350`-`$35D`, the animated range. So the art is act 2's too.
+- A **direct `$901` load forced to the native camera** `(0,$710)` renders the same lava. Entry
+  independent.
+
+The camera is the whole story, and the fixture had it all along: `s3k-sonic-tails-complete-emeralds/lrz`
+rows 25549-25579 have `camera_y` `$0710` before and after the change and `camera_x` `$2C00` -> `0`
+at row 25558, and the engine reaches `camera_y 1808 = $710` exactly. `Camera_Y_pos_mask` is `$FF0`
+for the whole game (sonic3k.asm:102206), so nothing about the act-2 window is engine-specific.
+
+**The native capture settles it.** `tools/bizhawk/capture_movie_checkpoints.lua` through the shared
+host, movie frames `415532, 415541, 415543, 415549, 415586, 415641, 416433`
+(`bk2_frame_offset 389982` + `pre_trace_osc_frames 1` + row), output
+`~/Videos/OGGF/lrz-bring-up/native-lrz2-bg/run1`, six minutes. Its `frames.csv` reproduces the
+fixture's camera exactly, and `f415586.png` -- the results panel, 45 frames after the native's own
+change -- has the **same lava-filled background** as the engine's clip 33. The known-bugs entry was
+deleted rather than resolved, per the file's intentional-only rule; the reading is preserved here.
+
+**(2) The results panel does hand control back; the camera does not.** Replaying
+`inputs/lrz1-miniboss-full-fight-v13.txt` with a probe on the live objects: the twelve results
+elements retire at +914 to +934 frames, the results owner at +934, `nativeResultsControlRestored`
+flips at +934, `End_of_level_flag` sets at +1084 and `S3kBossDefeatSignpostFlow` destroys itself
+there. `Ctrl_1_locked` reads **false for the entire capture**. The original entry's "still cannot
+move at frame 4500" came from a script that presses only jump after the fight; it never pressed a
+direction.
+
+`inputs/lrz1-act-change-walk-v14.txt` (v13 truncated at 3200 with a 900-frame right-hold tail) is
+what exposed the real defect: with right held the player still sat at `x 296`, with a **ground speed
+that built 12 -> 42 -> 72 and reset**. That is a wall, and the wall is
+`Camera_max_X_pos`: `loc_56CAA` subtracts `$2C00` from it (:115368-115369) and carries the miniboss
+arena's right edge into act 2. `Obj_EndSignControlDoStart` calls `Change_Act2Sizes`
+(:180420-180424), which returns early only for Sandopolis and Hydrocity (:180580-180596), and the
+Lava Reef flow was not asking for it. One flag (`4dd0844b6`), and the player walks: clip `34`,
+`x 296` -> `2357`.
+
+**The new gap the native capture found.** `f416433.png` -- 893 frames after the native change, where
+the run is moving again -- draws act 2's blocks **gold and brown**, not blue. `loc_78B08`
+(:160536-160545) is why: the act-2 palette arrives with the *second camera release*, once
+`Camera_X_pos` reaches `$2C0`, together with `Camera_min_X_pos = $2C0`. Neither release nor the
+`word_78EAA` rotation between them is implemented, so the engine shows act 2's palette from the
+change frame. Recorded in `s3k-known-bugs.md` in place of the two deleted entries, and it is now
+the best-evidenced item in the act-2 backlog.
+
+**What landed.** `4dd0844b6` the hand-off (public `changeAct2SizesOnTitleComplete` constructor,
+`LrzMinibossInstance` passing it, `TestS3kLrzActChangeHandoffHeadless` driving arena gate -> defeat
+-> results -> change -> right-hold); `10dc06bb5` `Lrz2BackgroundStageMachine` with
+`LRZ2_BackgroundEvent`'s three stages wired for both act-2 entries (`LRZ2_BackgroundInit` starts a
+direct load on stage 8, the seamless change starts on stage 0). The stage machine is fidelity, not
+a fix, and its commit says so.
+
+**A method note.** `TestS3kLrzActChangeHandoffHeadless` reaches a real drill defeat in about a
+second by driving the production route and then repeatedly offering the last hit -- the offer is a
+no-op while `collision_flags` is zero, so the hit lands on the frame the ROM's own window opens.
+Two setup facts it needs, both measured: 355 rings (the recorded run's own count), and 120 frames of
+left before the fight, because `sub_7867C` parks the drill where the player stands and the right
+wall leaves it nowhere to put a ringless Sonic.
+
+**Owed, unchanged:** `loc_5711E`, the act-2 Death Egg background sprite `loc_5700C` allocates.
+
 ## Handover, 2026-09-18 (thirteenth)
 
 **Head is this commit**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
