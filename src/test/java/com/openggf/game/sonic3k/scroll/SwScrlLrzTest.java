@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.data.Rom;
+import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.scroll.ZoneScrollHandler;
@@ -12,6 +14,7 @@ import static com.openggf.level.scroll.M68KMath.unpackBG;
 import static com.openggf.level.scroll.M68KMath.unpackFG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -199,6 +202,85 @@ class SwScrlLrzTest {
         handler.update(buffer, 0x1234, 0x0640, 0, 0);
         for (int line = 0; line < VISIBLE_LINES; line++) {
             assertEquals((short) -0x1234, unpackFG(buffer[line]), "foreground word on line " + line);
+        }
+    }
+
+    /**
+     * {@code loc_56C6E}: while {@code Events_routine_bg} is 4, {@code sub_56DAC}
+     * (sonic3k.asm:115442-115452) replaces {@code LRZ1_Deform} and {@code PlainDeformation}
+     * (:103598-103613) replaces {@code ApplyDeformation}, so every line carries the same pair.
+     */
+    @Test
+    void theLockedDomeFillsEveryLineFromSub56DAC() {
+        LrzZoneRuntimeState lrz = lockedState(4);
+        lrz.setDomePlatformPhase(0x0120);
+        int cameraX = 0x1B20;
+        int cameraY = 0x0860;
+
+        int[] buffer = new int[VISIBLE_LINES];
+        new StatefulLrzHandler(lrz).update(buffer, cameraX, cameraY, 0, 0);
+
+        short expectedBgX = (short) (cameraX - 0x1500);
+        for (int line = 0; line < VISIBLE_LINES; line++) {
+            assertEquals((short) -cameraX, unpackFG(buffer[line]), "foreground word on line " + line);
+            assertEquals((short) -expectedBgX, unpackBG(buffer[line]),
+                    "background word on line " + line);
+        }
+        assertEquals(cameraY - 0x788 + 0x0120, lrz.backgroundCameraY(),
+                "Camera_Y_pos_BG_copy = Camera_Y_pos_copy - $788 + _unkEE9C");
+        assertEquals(expectedBgX, (short) lrz.backgroundCameraX(),
+                "Camera_X_pos_BG_copy = Camera_X_pos_copy - $1500");
+    }
+
+    /** The locked frame must not look like the unlocked one, or the test above proves nothing. */
+    @Test
+    void theLockedDomeDiffersFromTheOrdinaryDeformationAtTheSameCamera() {
+        int cameraX = 0x1B20;
+        int cameraY = 0x0860;
+        int[] locked = new int[VISIBLE_LINES];
+        int[] ordinary = new int[VISIBLE_LINES];
+        new StatefulLrzHandler(lockedState(4)).update(locked, cameraX, cameraY, 0, 0);
+        new StatefulLrzHandler(lockedState(0)).update(ordinary, cameraX, cameraY, 0, 0);
+        assertNotEquals(locked[0], ordinary[0], "the locked and unlocked backgrounds must differ");
+    }
+
+    /**
+     * {@code loc_56C30}'s tail: a non-zero {@code Events_bg+$02} long puts the saved copies back
+     * and selects {@code PlainDeformation}, which is how the dome stays on screen for the eight
+     * frames {@code Draw_PlaneVertBottomUpComplex} spends redrawing the plane.
+     */
+    @Test
+    void theSavedCopiesPinTheBackgroundDuringTheBottomUpRefresh() {
+        LrzZoneRuntimeState lrz = lockedState(8);
+        lrz.saveBackgroundCamera(0x0620, 0x00D8);
+        int[] buffer = new int[VISIBLE_LINES];
+        new StatefulLrzHandler(lrz).update(buffer, 0x1B20, 0x0860, 0, 0);
+
+        for (int line = 0; line < VISIBLE_LINES; line++) {
+            assertEquals((short) -0x0620, unpackBG(buffer[line]),
+                    "background word on line " + line);
+        }
+        assertEquals(0x00D8, lrz.backgroundCameraY(), "the pinned Camera_Y_pos_BG_copy");
+    }
+
+    private static LrzZoneRuntimeState lockedState(int backgroundRoutine) {
+        LrzZoneRuntimeState lrz =
+                new LrzZoneRuntimeState(Sonic3kZoneIds.ZONE_LRZ, 0, PlayerCharacter.SONIC_AND_TAILS);
+        lrz.setBackgroundRoutine(backgroundRoutine);
+        return lrz;
+    }
+
+    /** Supplies the runtime state the locked and pinned modes read, with no live session. */
+    private static final class StatefulLrzHandler extends SwScrlLrz {
+        private final LrzZoneRuntimeState lrz;
+
+        private StatefulLrzHandler(LrzZoneRuntimeState lrz) {
+            this.lrz = lrz;
+        }
+
+        @Override
+        protected LrzZoneRuntimeState lrzState() {
+            return lrz;
         }
     }
 

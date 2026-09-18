@@ -10,6 +10,7 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.render.LrzRockSpriteRenderer;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.Level;
@@ -88,11 +89,26 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     private static final int CRUSHER_EDIT_POSITIVE_COLUMN = 10;
     private static final int CRUSHER_EDIT_POSITIVE_ID = 0x9C;
 
+    /**
+     * {@code LRZ1_BackgroundInit} (sonic3k.asm:115239-115242): with {@code Player_mode} 3
+     * (Knuckles) it takes the background layout's row 1 pointer and writes {@code $F6}
+     * ({@code move.b #-$A,4(a1)}) into its column 4 -- one chunk, once, before the first
+     * deformation. Everything else in that routine is the row-0 repeat the engine's plane period
+     * already gives and the first {@code LRZ1_Deform}.
+     */
+    private static final int KNUCKLES_BG_CHUNK_LAYER = 1;
+    private static final int KNUCKLES_BG_CHUNK_ROW = 1;
+    private static final int KNUCKLES_BG_CHUNK_COLUMN = 4;
+    private static final int KNUCKLES_BG_CHUNK_ID = 0xF6;
+
+    private boolean act1BackgroundInitialised;
+
     @Override
     public void update(int act, int frameCounter) {
         // LRZ1_ScreenEvent reads Events_bg+$0C before anything else draws (:115201-115204); with
         // no pending edit it is loc_56B5E, DrawTilesAsYouMove only, which the engine's own tile
         // streaming already does. The stage machines arrive with their slices.
+        applyBackgroundInit(act);
         applyPendingChunkEdit(act);
         advanceDomeRegions(act);
         advanceRockSpriteWindow();
@@ -118,21 +134,25 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         if (player1 == null) {
             return;
         }
-        LrzDomeRegions.Transition transition = LrzDomeRegions.evaluate(
-                player1.getCentreX(), player1.getCentreY(), lrz.domeRegionLocked());
-        switch (transition) {
-            case LOCK -> {
-                // loc_56E40: st (Events_bg+$00) then AllocateObject -> Obj_56EA0.
-                lrz.setDomeRegionLocked(true);
-                lrz.setDomePlatformPhase(0);
-                spawnDomeLavaPlatform();
-            }
-            case RELEASE ->
-                // loc_56E66: clr.w (Events_bg+$00). loc_56EC2 deletes the platform on its own
-                // next dispatch, exactly as the ROM does.
-                lrz.setDomeRegionLocked(false);
-            case NONE -> { }
+        LrzBackgroundStageMachine.advance(lrz, player1.getCentreX(), player1.getCentreY(),
+                this::spawnDomeLavaPlatform);
+    }
+
+    /** {@code LRZ1_BackgroundInit}'s Knuckles-only background chunk, run once per act 1 load. */
+    private void applyBackgroundInit(int act) {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ || act != 0) {
+            return;
         }
+        if (act1BackgroundInitialised) {
+            return;
+        }
+        act1BackgroundInitialised = true;
+        if (lrz.playerCharacter() != PlayerCharacter.KNUCKLES) {
+            return;
+        }
+        applyLayoutWrite(KNUCKLES_BG_CHUNK_LAYER, KNUCKLES_BG_CHUNK_ROW,
+                KNUCKLES_BG_CHUNK_COLUMN, KNUCKLES_BG_CHUNK_ID);
     }
 
     private void spawnDomeLavaPlatform() {
@@ -173,16 +193,17 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             applyLayoutWrites(CRUSHER_EDIT_ROW_B, CRUSHER_EDIT_ROW_B_IDS);
             return;
         }
-        applyLayoutWrite(CRUSHER_EDIT_ROW_C, CRUSHER_EDIT_POSITIVE_COLUMN, CRUSHER_EDIT_POSITIVE_ID);
+        applyLayoutWrite(0, CRUSHER_EDIT_ROW_C, CRUSHER_EDIT_POSITIVE_COLUMN,
+                CRUSHER_EDIT_POSITIVE_ID);
     }
 
     private void applyLayoutWrites(int row, int[] ids) {
         for (int i = 0; i < ids.length; i++) {
-            applyLayoutWrite(row, CRUSHER_EDIT_FIRST_COLUMN + i, ids[i]);
+            applyLayoutWrite(0, row, CRUSHER_EDIT_FIRST_COLUMN + i, ids[i]);
         }
     }
 
-    private void applyLayoutWrite(int row, int column, int blockId) {
+    private void applyLayoutWrite(int layer, int row, int column, int blockId) {
         LevelManager manager = levelManager();
         Level level = manager != null ? manager.getCurrentLevel() : null;
         if (level == null) {
@@ -191,7 +212,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         LayoutMutationContext context = new LayoutMutationContext(
                 LevelMutationSurface.forLevel(level), manager::applyMutationEffects);
         zoneLayoutMutationPipeline().applyImmediately(
-                ctx -> ctx.surface().setBlockInMap(0, column, row, blockId), context);
+                ctx -> ctx.surface().setBlockInMap(layer, column, row, blockId), context);
     }
 
     /**

@@ -1,12 +1,15 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.events.LrzBackgroundStageMachine;
+import com.openggf.game.sonic3k.events.LrzDomeRegions;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 
+import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
 import static com.openggf.level.scroll.M68KMath.negWord;
 
 /**
@@ -103,10 +106,16 @@ public class SwScrlLrz extends SwScrlS3kDefault {
         resetScrollTracking();
         composer.reset();
 
-        int shake = screenShakeOffset();
+        LrzZoneRuntimeState lrz = lrzState();
+        int shake = screenShakeOffset(lrz);
         // LRZ1_ScreenEvent / LRZ2_ScreenEvent: add.w d0,(Camera_Y_pos_copy).w.
         int cameraYCopy = (short) (cameraY + shake);
         foregroundVscroll = (short) cameraYCopy;
+
+        if (actId == 0 && lrz != null && lrz.backgroundRoutine() == LrzBackgroundStageMachine.BG_STAGE_LOCKED) {
+            applyLockedDome(horizScrollBuf, cameraX, cameraYCopy, lrz);
+            return;
+        }
 
         short bgY = backgroundY(actId, cameraYCopy, shake);
         composer.setVscrollFactorBG(bgY);
@@ -114,21 +123,61 @@ public class SwScrlLrz extends SwScrlS3kDefault {
         int base = (cameraX << 16) >> 3;               // asr.l #3: b
         int step = base >> 2;                          // asr.l #2: s
         buildHScrollTable(actId, base, step);
-        publishDeformationWords(bgY, base, step);
+        publishDeformationWords(lrz, bgY, base, step);
 
-        DeformationPlan.applyTableBands(
-                composer,
-                bgY,
-                negWord(cameraX),
-                hScrollTable,
-                actId == 0 ? ACT1_BG_DEFORM : ACT2_BG_DEFORM,
-                actId == 0 ? ACT1_DEFORM_START_WORD : ACT2_DEFORM_START_WORD,
-                NEGATE_WORD);
+        if (actId == 0 && lrz != null && lrz.backgroundCameraPinned()) {
+            // loc_56C30's tail: a non-zero Events_bg+$02 long puts the saved copies back into
+            // Camera_X/Y_pos_BG_copy and runs PlainDeformation instead of ApplyDeformation, so
+            // the plane keeps showing the dome while Draw_PlaneVertBottomUpComplex redraws it.
+            short pinnedY = (short) lrz.savedBackgroundCameraY();
+            composer.setVscrollFactorBG(pinnedY);
+            lrz.publishLockedBackgroundCamera(lrz.savedBackgroundCameraX(), pinnedY);
+            plainDeformation(cameraX, lrz.savedBackgroundCameraX());
+        } else {
+            DeformationPlan.applyTableBands(
+                    composer,
+                    bgY,
+                    negWord(cameraX),
+                    hScrollTable,
+                    actId == 0 ? ACT1_BG_DEFORM : ACT2_BG_DEFORM,
+                    actId == 0 ? ACT1_DEFORM_START_WORD : ACT2_DEFORM_START_WORD,
+                    NEGATE_WORD);
+        }
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    /**
+     * {@code loc_56C6E}: {@code sub_56DCA}, then {@code sub_56DAC} in place of
+     * {@code LRZ1_Deform}, then {@code loc_56C76}'s {@code DrawBGAsYouMove} +
+     * {@code PlainDeformation}. No {@code HScroll_table} word is rebuilt while the dome is
+     * locked, and neither are {@code Events_bg+$10}/{@code +$12}, so the animated-tile channels
+     * hold whatever phase the last unlocked frame published.
+     */
+    private void applyLockedDome(int[] horizScrollBuf, int cameraX, int cameraYCopy,
+                                 LrzZoneRuntimeState lrz) {
+        int bgX = LrzDomeRegions.lockedBackgroundX(cameraX);
+        short bgY = (short) LrzDomeRegions.lockedBackgroundY(cameraYCopy, lrz.domePlatformPhase());
+        lrz.publishLockedBackgroundCamera(bgX, bgY);
+        composer.setVscrollFactorBG(bgY);
+        plainDeformation(cameraX, bgX);
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    /**
+     * {@code PlainDeformation} (sonic3k.asm:103598-103613): every line of
+     * {@code H_scroll_buffer} gets {@code -Camera_X_pos_copy} for the foreground and
+     * {@code -Camera_X_pos_BG_copy} for the background.
+     */
+    private void plainDeformation(int cameraXCopy, int backgroundCameraX) {
+        composer.fillPackedScrollWords(0, VISIBLE_LINES,
+                (short) negWord(cameraXCopy), (short) negWord(backgroundCameraX));
     }
 
     @Override
@@ -157,16 +206,15 @@ public class SwScrlLrz extends SwScrlS3kDefault {
      * {@code Events_bg+$10} = {@code b - s} and {@code Events_bg+$12} = {@code b - 2s}, together
      * with the two background camera words. Both acts write the same four.
      */
-    private void publishDeformationWords(short bgY, int base, int step) {
-        if (!GameServices.hasRuntime()) {
+    private void publishDeformationWords(LrzZoneRuntimeState lrz, short bgY, int base, int step) {
+        if (lrz == null) {
             return;
         }
-        S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).ifPresent(lrz ->
-                lrz.publishDeformationWords(
-                        base >> 16,
-                        bgY,
-                        (base - step) >> 16,
-                        (base - 2 * step) >> 16));
+        lrz.publishDeformationWords(
+                base >> 16,
+                bgY,
+                (base - step) >> 16,
+                (base - 2 * step) >> 16);
     }
 
     /**
@@ -203,13 +251,16 @@ public class SwScrlLrz extends SwScrlS3kDefault {
      * {@code Screen_shake_offset} as this frame's events read it. The Lava Reef runtime state owns
      * the {@code ShakeScreen_Setup} countdown; outside a gameplay runtime there is no shake.
      */
-    protected int screenShakeOffset() {
+    protected int screenShakeOffset(LrzZoneRuntimeState lrz) {
+        return lrz == null ? 0 : lrz.appliedScreenShakeOffset();
+    }
+
+    /** The Lava Reef runtime state, or {@code null} outside a gameplay runtime. */
+    protected LrzZoneRuntimeState lrzState() {
         if (!GameServices.hasRuntime()) {
-            return 0;
+            return null;
         }
-        return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry())
-                .map(LrzZoneRuntimeState::appliedScreenShakeOffset)
-                .orElse(0);
+        return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElse(null);
     }
 
     /** Test access to the {@code HScroll_table} words this handler writes for an act. */

@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + Integer.BYTES + 16 * Short.BYTES;
+            S3kScreenShake.captureBytes() + Integer.BYTES + 19 * Short.BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -65,6 +65,9 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short openedBigDoorX;
     /** ROM {@code Events_bg+$00}: non-zero while a dome region holds the background locked. */
     private short domeRegionLocked;
+    private short savedBackgroundCameraX;
+    private short savedBackgroundCameraY;
+    private short delayedRowcount;
     /** ROM {@code _unkEE9C}: the dome lava platform's published phase, and the locked BG's Y term. */
     private short domePlatformPhase;
     private short cameraStoredMinX;
@@ -132,6 +135,16 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     public int backgroundCameraX() { return backgroundCameraX; }
     public int backgroundCameraY() { return backgroundCameraY; }
 
+    /**
+     * {@code sub_56DAC}'s two writes. The locked background never runs {@code LRZ1_Deform}, so
+     * {@code Events_bg+$10}/{@code +$12} keep the values the last unlocked frame left and the
+     * animated-tile channels hold their phase while the dome is on screen.
+     */
+    public void publishLockedBackgroundCamera(int backgroundX, int backgroundY) {
+        backgroundCameraX = (short) backgroundX;
+        backgroundCameraY = (short) backgroundY;
+    }
+
     /** {@code Events_bg+$10} / {@code Events_bg+$12}: the animated-tile phase sources. */
     public int animationPhaseX0() { return animationPhaseX0; }
     public int animationPhaseX1() { return animationPhaseX1; }
@@ -193,6 +206,43 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         domeRegionLocked = (short) (locked ? 0xFF00 : 0);
     }
 
+    /**
+     * {@code Events_bg+$02} and {@code Events_bg+$04}: the background camera copies
+     * {@code loc_56E66} saves on the way out of a dome region, before it runs
+     * {@code LRZ1_Deform} again. They are the <em>locked</em> copies, which is why the plane keeps
+     * showing the dome while the bottom-up refresh walks up it. {@code loc_56C28}'s tail reads
+     * them back as one long: zero means "no refresh in progress" and any non-zero value pins
+     * {@code Camera_X/Y_pos_BG_copy} and selects {@code PlainDeformation}.
+     */
+    public int savedBackgroundCameraX() { return savedBackgroundCameraX & 0xFFFF; }
+
+    public int savedBackgroundCameraY() { return savedBackgroundCameraY & 0xFFFF; }
+
+    /** {@code tst.l} on {@code Events_bg+$02}: both words zero is the only "off". */
+    public boolean backgroundCameraPinned() {
+        return (savedBackgroundCameraX | savedBackgroundCameraY) != 0;
+    }
+
+    public void saveBackgroundCamera(int x, int y) {
+        savedBackgroundCameraX = (short) x;
+        savedBackgroundCameraY = (short) y;
+    }
+
+    /** {@code clr.l (Events_bg+$02).w} at {@code loc_56C88}. */
+    public void clearSavedBackgroundCamera() {
+        savedBackgroundCameraX = 0;
+        savedBackgroundCameraY = 0;
+    }
+
+    /** {@code Draw_delayed_rowcount}, signed: the pass ends on the decrement that makes it negative. */
+    public int delayedRowcount() {
+        return delayedRowcount;
+    }
+
+    public void setDelayedRowcount(int value) {
+        delayedRowcount = (short) value;
+    }
+
     /** ROM {@code _unkEE9C}. */
     public int domePlatformPhase() {
         return domePlatformPhase & 0xFFFF;
@@ -230,6 +280,9 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(rocksBackIndex);
         buffer.putShort(openedBigDoorX);
         buffer.putShort(domeRegionLocked);
+        buffer.putShort(savedBackgroundCameraX);
+        buffer.putShort(savedBackgroundCameraY);
+        buffer.putShort(delayedRowcount);
         buffer.putShort(domePlatformPhase);
         buffer.putShort(cameraStoredMinX);
         buffer.putShort(cameraStoredMaxX);
@@ -257,6 +310,9 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         rocksBackIndex = buffer.getShort();
         openedBigDoorX = buffer.getShort();
         domeRegionLocked = buffer.getShort();
+        savedBackgroundCameraX = buffer.getShort();
+        savedBackgroundCameraY = buffer.getShort();
+        delayedRowcount = buffer.getShort();
         domePlatformPhase = buffer.getShort();
         cameraStoredMinX = buffer.getShort();
         cameraStoredMaxX = buffer.getShort();
