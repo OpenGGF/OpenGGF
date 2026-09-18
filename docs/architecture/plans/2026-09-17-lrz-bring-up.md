@@ -2648,3 +2648,41 @@ failing only its own assertion); a focused run of the four mandatory S3K classes
 (1150) and `TestRewindHarnessCoverageRatchet`, all green with no skips; `-Pguards` 669/669 green.
 **This is focused validation, not a suite pass**: no trace fixtures, no `run_categories.py`
 selection, and no act 2 or LRZ3 coverage were run.
+
+## Handover, 2026-09-18 (eleventh)
+
+**Head `4509d4f25`**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
+nothing pushed or merged.
+
+**What landed.** `c83854dc7` the hit finding and `TestLrzMinibossHitPath` (4 tests, two deliberate
+breaks); `37c45d1ae`, `805625add`, `4509d4f25` the evidence, the route re-measurement and the
+seamless-change spec.
+
+**The hit defect does not exist.** The drill's touch box is `Touch_Sizes` entry 6, 32x32; the
+tenth round read the `$33` solid half-width as a size index. The engine lands a hit at native's
+own relative offset, and lands one in a real fight capture (`hits 6 -> 5` at `v 972`, the `$20`
+window restoring the byte at `v 1004`). Clip `30` is delivered.
+
+**Owed, in the order the next round should take it.**
+
+1. **Clips `31` and `32`.** Neither is delivered. They need an input script that lands six hits;
+   the best so far (`inputs/lrz1-miniboss-fight-v7.txt`) lands one, because the arena confines the
+   player to `x 11272`-`11560` and the drill tracks to wherever the player stood at `v 901`. Start
+   from the three measured facts in the entry above, and note the hit that did land was an
+   insta-shield reach, not the ordinary 16 px box. Clip `31` also needs a hand killed
+   (`sub_78CF4`, `collision_property 4`).
+2. **The standing-still ring loss** (~180 frames, all three tested spots inside the band) with its
+   native kill condition. It is what makes a six-hit script hard: two hits and the capture is over.
+3. **The act change**, both halves together, from the spec above.
+4. **The route.** First divergence re-measured at `37c45d1ae`: engine frame 2324 = native row 2323,
+   cause identified as the `Obj_Toxomister` rebound, kill condition in the frontier log.
+5. **Slice 6 items 2-5** (stage `$C`, the two camera releases and `word_78EAA`, `LRZ2_BackgroundEvent`
+   stages 0/4, the transition class, timeline isolation, rewind spots, clip `33`, matrix rows) are
+   **not started**. No reviewer was run.
+
+**Verification at this head.** `-Dtest=TestLrzMinibossHitPath,TestLrzMinibossInstance,
+TestEveryObjectRewindRoundTrip,TestRewindHarnessCoverageRatchet,TestS3kLrzPlacementCensus,
+TestS3kLrzRouteRewindSpots`: 1191 tests, 0 failures, 0 errors, 0 skips. The four mandatory S3K
+classes plus `TestSozMiniboss` were run at `c83854dc7`: 73 tests, 0 failures, 0 skips. This is
+focused validation, not a suite pass; no `-Pguards` run was needed (no registry, profile or
+rewind-annotation change) and none was made.
