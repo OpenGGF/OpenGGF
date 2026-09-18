@@ -103,9 +103,11 @@ public class TestSonic3kObjectProfile {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
         // Numeric slots whose SKL owner is implemented too, so the id is legitimately in both
         // sets under two different names. $A4 joined them when Obj_Spikebonker landed for the
-        // Death Egg; CNZ's own $A4 is Obj_Sparkle.
+        // Death Egg and $A5 when Obj_Chainspike did; CNZ's own $A4 and $A5 are Obj_Sparkle
+        // and Obj_Batbot.
         var sklOwners = java.util.Map.of(0x41, "SOZLightSwitch", 0x43, "SOZSwingingPlatform",
-                0x47, "SOZSandCork", 0x48, "SOZRapelWire", 0xA4, "Spikebonker");
+                0x47, "SOZSandCork", 0x48, "SOZRapelWire", 0xA4, "Spikebonker",
+                0xA5, "Chainspike");
         for (int objectId : implementedCnzIds) {
             assertTrue(profile.getImplementedIds(cnz2).contains(objectId),
                     "CNZ object $" + Integer.toHexString(objectId) + " should be reported as implemented");

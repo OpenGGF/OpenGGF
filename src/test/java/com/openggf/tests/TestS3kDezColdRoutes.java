@@ -98,7 +98,7 @@ class TestS3kDezColdRoutes {
     static final int FREE_PLAY_CAMERA_Y = 0x0332;
 
     /** How far each route is driven before the frontier is reported. */
-    static final int ROUTE_FRAMES = 1200;
+    static final int ROUTE_FRAMES = 4000;
     /**
      * Measured 2026-09-18 on this branch: 527 frames of exact player x, y, camera and ring
      * parity from the first frame of act 2 free play. It was 390 until {@code $A4}
@@ -111,14 +111,20 @@ class TestS3kDezColdRoutes {
      * player falls onto at native row 20300, and until the route began carrying the ROM's
      * {@code Level_frame_counter} (see {@link #FREE_PLAY_LEVEL_FRAME_COUNTER}).
      *
-     * <p>The first divergence is now native row 20389, where the player takes a hit: {@code y_vel}
-     * goes to {@code $FC00} ({@code -$400}), {@code x_vel} to {@code -$200} and the ring count
-     * from 4 to 0, at {@code $0426,$05B0}. The engine still has its four rings. The only
-     * placement in reach is {@code DEZ2_Sprites} record 7, {@code $A5} {@code Obj_Chainspike} at
-     * {@code $0480,$05B0} subtype {@code $00}, whose chain hangs down from there and which is
-     * still a placeholder. A ratchet, not a target: raise it when the frontier moves.
+     * It was 616 until {@code $A5} {@code Obj_Chainspike} landed, which is the hit at native
+     * row 20389 and the 640 frames after it; {@link #ROUTE_FRAMES} had to be widened from 1200
+     * to find the next divergence at all.
+     *
+     * <p>The first divergence is now native row 21029, and it is <b>not a Death Egg object</b>.
+     * The player has been riding a shared {@code $08} platform since row 21026
+     * ({@code status_byte $08}, {@code stand_on_obj $09}; {@code DEZ2_Sprites} record 13 places
+     * a {@code $08} at {@code $05C0,$038F} subtype {@code $20}) and the engine's {@code x} falls
+     * one pixel behind — {@code $0696} against {@code $0697}, with {@code camera_x} following —
+     * while {@code y}, both speeds, the angle and the rings all still match. That is a
+     * one-frame difference in the shared platform's horizontal carry, not in anything this
+     * campaign has written. A ratchet, not a target: raise it when the frontier moves.
      */
-    static final int SEEDED_ROUTE_FRONTIER = 616;
+    static final int SEEDED_ROUTE_FRONTIER = 1256;
 
     @AfterEach
     void reset() {

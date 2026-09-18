@@ -111076,3 +111076,42 @@ had collected since row 20300 are lost. The engine still has them. The only plac
 hangs down from there and which is still a placeholder. Six act 1 and twelve act 2 placements.
 
 `SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 616.
+
+### 2026-09-19 — DEZ act 2: the Chainspike, and a frontier that outran its own window
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$A5` `ChainspikeBadnikInstance`.
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 616 frames | **1256 frames** |
+
+The object closed the hit at native row 20389 and the 640 frames after it. `ROUTE_FRAMES` had to
+be widened from 1200 to 4000 to find the next divergence at all: the first run after the class
+landed reported "no divergence in 1200 frames", which is not a frontier, it is the end of the
+window.
+
+**Two readings of the ROM that the arithmetic settled before any code was written.**
+`$2E(a0)` is zero out of the RAM wipe and `SetUp_ObjAttributes` (sonic3k.asm:41043-41052) never
+writes it, so `Obj_Wait`'s first `subq.w #1` already goes negative and the badnik charges on its
+first update in routine 2 — there is no rest before the first charge. And `loc_91CC2`'s ramp runs
+*down*: `$40(a0)` steps `$C` towards zero every update (:199191-199195) and the new value is
+added to `x_vel`, so the corrections are `$174, $168, $15C, …`, largest first. The charge ends
+when the sum crosses the `-$1200` launch, which is `n*$180 - $C*n*(n+1)/2 > $1200` at
+**n = 17**.
+
+**The new first divergence is not a Death Egg object.** Native row 21029:
+
+```
+row=21026 x=0685 y=03CC xs=0600 status=08 sto=09    <- the ride starts
+row=21029 x=0697 y=03CE xs=0600 status=08 sto=09    engine x=0696, cam 05F6 vs 05F7
+```
+
+`status_byte $08` is `Status_OnObj`: the player has been riding an object since row 21026, and
+the only placement in reach is `DEZ2_Sprites` record 13, a shared **`$08`** at `$05C0,$038F`
+subtype `$20`. `y`, both speeds, the angle and the ring count all still match; the engine's `x`
+is one behind for one frame and then stays one behind. That is the shared platform's horizontal
+carry, not anything this campaign has written, and it is where the next measurement should start.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 1256 and `ROUTE_FRAMES` to 4000.

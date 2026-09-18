@@ -140,6 +140,10 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/SpikebonkerBadnikInstance.java#@RewindTransient", 2),
+            // Chainspike's body holds its four children and each child holds the body; both
+            // links are structural and both sides relink to the nearest live body in
+            // recreateForRewind, the same triage as the Spikebonker's mace above.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ChainspikeBadnikInstance.java#@RewindTransient", 2),
             // HPZ Knuckles-fight object links are restored by ObjectRefId sidecars.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#@RewindTransient", 1),
             // DDZ parent3 link, restored by the ObjectRefId sidecar in AbstractDdzObjectInstance.

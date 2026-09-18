@@ -2553,3 +2553,55 @@ Census: act 1 placeholders 192 → 179, concrete 173 → 186; act 2 placeholders
 `y_vel` `-$400`, `x_vel` `-$200`, four rings lost, at `$0426,$05B0`. The only placement in reach
 is `DEZ2_Sprites` record 7 at `$0480,$05B0` subtype `$00`. Six act 1 and twelve act 2 placements,
 and its art is already in the PLC registry (`ART_KOSM_CHAINSPIKE_ADDR`).
+
+### 2026-09-19 — `$A5` `Obj_Chainspike`, and the frontier that outran its window
+
+Frontier 616 → **1256**, and the first run after the class landed said "no divergence in 1200
+frames" — which is not a frontier, it is the end of `ROUTE_FRAMES`. Widening it to 4000 found
+the real one 56 frames later, and it turned out not to be a Death Egg object at all.
+
+**Five things the ROM says about this badnik.**
+
+1. **There is no rest before the first charge.** `$2E(a0)` is zero out of the RAM wipe and
+   `SetUp_ObjAttributes` (:41043-41052) never writes it, so `Obj_Wait`'s first `subq.w #1`
+   already goes negative (:180237-180243) and `loc_91CA6` fires on the object's first update in
+   routine 2.
+2. **The deceleration ramp runs down, not up.** `loc_91CC2` (:199191-199195) steps `$40(a0)` by
+   `$C` *towards zero* — the `bmi` chooses `+$C` for a negative accumulator and `-$C` otherwise
+   — and adds the new value to `x_vel`. The corrections are `$174, $168, $15C, …`: the largest
+   is the first. The charge ends when `n*$180 - $C*n*(n+1)/2` crosses the `-$1200` launch, at
+   **n = 17**, and then `$3E` and `$3C` are both negated so the next one goes the other way.
+3. **`sub_91E7E` discards its caller's return address.** `addq.w #4,sp` at :199362 means that
+   when a player comes within `$10` px, the rest of routine 2 or 4 simply does not run on that
+   update. The reaction is not a flag the routine checks afterwards; it is a jump out.
+4. **The extend signal is a handshake, not a timer.** The raw animation's end sets bit 1 of
+   `$38(a0)` (`loc_91D12`, :199222-199224); routine 8 does nothing at all until a spike clears
+   it again (`loc_91E22`, :199330-199331); only then does routine `$A` count out `$1F` more
+   updates and restore the saved routine and timer.
+5. **The spike probes 128 px ahead of itself.** `word_91EE6` gives it `height_pixels = $80`
+   (:199411) and `ObjCheckFloorDist` uses `y_radius(a0)` as its probe offset (:42430-42433), so
+   the spike finds the floor on its first outbound update and rebounds at a quarter of its
+   speed (`asr.w #2 / neg.w`, :199339-199342). The unit test asserts that rebound rather than a
+   clean 8-per-update extension, because in a real Death Egg act the floor is always there.
+
+**One branch was read backwards first and the test caught it.** `tst.b collision_flags(a0) /
+beq.s loc_91E40` (:199325) turns the spike around when the flags are **zero**; a live spike
+falls through to the ordinary `Obj_Wait`. Reading the `beq` as "non-zero" made every extension
+bounce on its first update, which is what the eight-then-six offset in the failing assertion
+was saying.
+
+Nine tests, twelve deliberate breaks in four groups. Two of the breaks had to be re-run on their
+own because an earlier assertion in the same test failed first and masked them — the rest timer
+and the rebound shift. That is worth naming: a group of mutations only proves the assertions it
+actually reaches.
+
+Census: act 1 placeholders 179 → 173, concrete 186 → 192; act 2 placeholders 244 → 232, concrete
+250 → 262.
+
+**The next divergence belongs to a shared object.** Native row 21029: the player has been riding
+a shared `$08` platform since row 21026 (`status_byte $08`, `stand_on_obj $09`; `DEZ2_Sprites`
+record 13 places a `$08` at `$05C0,$038F` subtype `$20`) and the engine's `x` falls one pixel
+behind, `$0696` against `$0697`, with `camera_x` following. `y`, both speeds, the angle and the
+rings all still match. That is the shared platform's horizontal carry and it is the first
+divergence on this route that is not a Death Egg object — worth a separate, shared-object
+measurement rather than another DEZ class.

@@ -111,7 +111,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | placeholder | 4 |
 | `$78` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete | 4 (verify; duplicate registration above) |
 | `$A4` | `Obj_Spikebonker` | 7 | 11 | `SpikebonkerBadnikInstance` | 4 |
-| `$A5` | `Obj_Chainspike` | 6 | 12 | placeholder | 4 |
+| `$A5` | `Obj_Chainspike` | 6 | 12 | implemented | 4 |
 | `$A6` | `Obj_DEZMiniboss` | 1 | 0 | placeholder | 6 |
 | `$A7` | `Obj_DEZEndBoss` | 0 | 1 | placeholder | 8 |
 
@@ -302,7 +302,7 @@ so subtypes `$80+` arrive inverted.
 | `$78` | `$00` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete |
 | `$A4` | `$20` | `Obj_Spikebonker` | 4 | 10 | implemented |
 | `$A4` | `$40` | `Obj_Spikebonker` | 3 | 1 | implemented |
-| `$A5` | `$00` | `Obj_Chainspike` | 6 | 12 | placeholder |
+| `$A5` | `$00` | `Obj_Chainspike` | 6 | 12 | implemented |
 | `$A6` | `$00` | `Obj_DEZMiniboss` | 1 | 0 | placeholder |
 | `$A7` | `$00` | `Obj_DEZEndBoss` | 0 | 1 | placeholder |
 

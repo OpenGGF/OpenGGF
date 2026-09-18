@@ -36,6 +36,7 @@ import com.openggf.game.sonic3k.objects.badniks.RhinobotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.ChainspikeBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikebonkerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance;
@@ -1225,6 +1226,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.BATBOT,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $A5 is Obj_Chainspike (sonic3k.asm:199132); S3KL $A5 is
+                        // Obj_Batbot. The two object tables share the number.
+                        return new ChainspikeBadnikInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }

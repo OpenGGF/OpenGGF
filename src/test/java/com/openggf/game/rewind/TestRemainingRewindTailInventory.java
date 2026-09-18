@@ -145,9 +145,12 @@ class TestRemainingRewindTailInventory {
         // ObjectAnimationState both round-trip through the generic subclass scalar capture, and
         // $55 S3kDezEnergyBridgeObjectInstance the eleventh: its routine flag, countdown and
         // mapping frame are scalars, and its two standing bits are booleans rather than player
-        // references so nothing about it needs a rewind annotation.
+        // references so nothing about it needs a rewind annotation. $A5
+        // ChainspikeBadnikInstance and its ChainspikeChild are the twelfth and thirteenth:
+        // the body keeps its four children behind @RewindTransient and each child relinks to
+        // the nearest live body, the same shape as the Spikebonker's mace.
         // No bucket grows.
-        return new TailInventory(1120, 885, 235, 0, buckets);
+        return new TailInventory(1122, 887, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
