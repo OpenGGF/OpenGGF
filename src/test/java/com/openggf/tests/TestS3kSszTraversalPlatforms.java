@@ -11,6 +11,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.SszBridgeDebrisObjectInstance;
+import com.openggf.game.sonic3k.objects.SszCollapsingBridgeDiagonalObjectInstance;
 import com.openggf.game.sonic3k.objects.SszCollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.SszCollapsingColumnDebrisObjectInstance;
 import com.openggf.game.sonic3k.objects.SszCollapsingColumnObjectInstance;
@@ -231,6 +232,50 @@ class TestS3kSszTraversalPlatforms {
         int parkedX = bridge.getX() & 0xFFFF;
         assertTrue(parkedX >= 0x7FF7 && parkedX <= 0x8007,
                 "parked off-level at $7FFF +/- 8, was $" + Integer.toHexString(parkedX));
+    }
+
+    /**
+     * {@code Obj_SSZCollapsingBridgeDiagonal} ({@code $7B}): thirty-one {@code $00} and four
+     * {@code $80}, and as with {@code $7C} bit 7 is the only subtype bit the routine reads
+     * ({@code tst.b subtype(a0)} / {@code bmi.s loc_44DFC}).
+     */
+    @Test
+    void theDiagonalWalkwayReadsOnlyBitSevenOfItsSubtype() throws IOException {
+        List<Placement> walkways = placementsOf(0x7B);
+        assertEquals(35, walkways.size(), "$7B records in SSZ1_Sprites");
+        assertEquals(31, walkways.stream().filter(p -> p.subtype() == 0x00).count(),
+                "$7B:$00 collapsing walkways");
+        assertEquals(4, walkways.stream().filter(p -> p.subtype() == 0x80).count(),
+                "$7B:$80 permanent walkways");
+    }
+
+    /**
+     * {@code byte_46658} is one signed byte per two pixels, and {@code d1 = $40} makes the index
+     * reach {@code $40} — {@code $41} bytes, so the last sample comes from past the table's end.
+     * The engine reads them from the ROM rather than clamping, which is what the 68000 does.
+     */
+    @Test
+    void theDiagonalSlopeSamplesComeFromTheRomTableIncludingTheOverRead() throws IOException {
+        RomByteReader rom = RomByteReader.fromRom(RomManager.getInstance().getRom());
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x740, 0x5B0);
+        SszCollapsingBridgeDiagonalObjectInstance walkway = null;
+        for (int frame = 0; frame < 240 && walkway == null; frame++) {
+            fixture.stepIdleFrames(1);
+            walkway = active(SszCollapsingBridgeDiagonalObjectInstance.class);
+        }
+        assertNotNull(walkway, "a $7B walkway loads near ($740,$618)");
+        assertEquals(0, walkway.slopeOffsetForTest(), "the pointer starts at byte_46658");
+        for (int index = 0; index <= 0x40; index++) {
+            assertEquals(rom.readU8(
+                            SszCollapsingBridgeDiagonalObjectInstance.SLOPE_TABLE_ADDR + index),
+                    walkway.sampleSlopeByte(index) & 0xFF,
+                    "slope sample " + index);
+        }
+        // The table itself is 64 bytes of a 1:2 diagonal; sample $40 is already past its end.
+        assertEquals(-6, (byte) rom.readU8(
+                SszCollapsingBridgeDiagonalObjectInstance.SLOPE_TABLE_ADDR), "byte_46658[0]");
+        assertEquals(25, (byte) rom.readU8(
+                SszCollapsingBridgeDiagonalObjectInstance.SLOPE_TABLE_ADDR + 63), "byte_46658[63]");
     }
 
     private static <T> T active(Class<T> type) {

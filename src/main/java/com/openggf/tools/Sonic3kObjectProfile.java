@@ -310,6 +310,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     private static final Set<Integer> SSZ_ONLY_IDS = Set.of(
             0x77, // SSZCutsceneBridge
             0x79, // SSZHPZTeleporter's Sky Sanctuary branch (HPZ shares the id and the class)
+            0x7B, // SSZCollapsingBridgeDiagonal
             0x7C, // SSZCollapsingBridge
             0x7E, // SSZCollapsingColumn
             0x7F, // SSZFloatingPlatform

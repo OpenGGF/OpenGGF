@@ -64,7 +64,7 @@ Entries should include:
 38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
 39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
 40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
-41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Is Unverified](#sky-sanctuary-plain-mode-background-below-camera_y-800-is-unverified)
+41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
 42. [Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss](#sky-sanctuary-mecha-sonic-spawner-pad-allocates-no-boss)
 
 ---
@@ -5869,7 +5869,7 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Suspected cause** — `SSZ1_BackgroundEvent` routine 4 keeps rendering the framing frozen in `Events_bg+$0C`/`+$0E` until the staged redraw reports done, and routine `$C` does the same on the way back. The engine draws the background from the whole level layout instead of a nametable, so it has nothing to stage: each redraw routine completes in one frame. The framing values, the deform bands and the routine order all match; only the duration of the two transition states does not.
 - **Removal condition** — Either a native probe measures the ROM's redraw length at that crossing and the engine holds routines 4 and `$C` for the same number of frames, or a `hpz` fixture window shows the crossing and the engine matches it frame for frame.
 
-## Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Is Unverified
+## Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky
 
 The cloud-mode half of the old "flat sky in both BG modes" entry is **fixed**: `SwScrlSsz` now
 pins the cloud-mode plane to background layout X `$1C00` (columns 56-59) through `getBgCameraX()`,
@@ -5878,17 +5878,23 @@ that mode is active — the same mechanism MGZ state 8 and the ICZ1 opening use.
 renders; see `05-ssz-cloud-band-before-after.mp4`.
 
 - **Location** — `SwScrlSsz` (`src/main/java/com/openggf/game/sonic3k/scroll/`)
-- **Symptom** — None observed; this is a missing observation, not a reported fault. The act-1
-  background layout holds a second, disjoint picture at columns ~9-52, rows 4-17 (chunks `$BC`-`$EA`,
-  `$C3`, `$38`, `$62`, `$01`, `$0F`, `$3A`-`$3D`) — distant sanctuary structures that only plain
-  mode can show, at wrapped `Camera_Y` below `$800`. No capture has had a camera there.
-- **Suspected cause** — Possibly none. Plain mode is camera-derived on the cartridge too
-  (`Reset_TileOffsetPositionEff` loads `Camera_X_pos_BG_copy`), and `SwScrlSsz.getBgCameraX()`
-  deliberately returns `MIN_VALUE` there, which leaves the tilemap window at base 0. Whether that
-  reaches columns 9-52 at those rows is exactly what has not been checked.
-- **Removal condition** — A capture with the camera below wrapped `Camera_Y $800` either shows the
-  structures the layout holds there, closing this, or does not, in which case plain mode needs its
-  own window handling and this becomes a defect entry.
+- **Symptom** — **Now observed.** `~/Videos/OGGF/ssz-bring-up/raw-10-ssz-diagonal-walkway` frame 75
+  sits at camera `($6A0,$550)` — wrapped `Camera_Y` well below `$800`, so plain mode throughout, and
+  the cloud window is never engaged — and the background is flat blue. The act-1 layout's row 13
+  (`BG Y = $550 + $160 = $6B0`) carries thirteen distinct chunk ids across columns ~9-52, the
+  distant sanctuary structures (`$BC`-`$EA`, `$C3`, `$38`, `$62`, `$01`, `$0F`, `$3A`-`$3D`). None of
+  them reaches the screen.
+- **Suspected cause** — Not yet established, and deliberately not guessed. Plain mode is
+  camera-derived on the cartridge (`Reset_TileOffsetPositionEff` loads `Camera_X_pos_BG_copy`) and
+  `SwScrlSsz.plainParameters` does produce `Camera_X + $28`, which at this camera is layout column
+  13 — inside the cluster. `getBgCameraX()` returns `MIN_VALUE` in plain mode by design, so the
+  tilemap window stays at base 0 and the column is meant to come from the scroll word instead, the
+  way every non-wrapping zone works. Which of those two is not lining up is the open question. Note
+  the frame predates nothing: the cloud-window change is not implicated, because this capture never
+  enters cloud mode.
+- **Removal condition** — The structures the layout holds at rows 4-17, columns ~9-52 appear on a
+  capture with the camera below wrapped `Camera_Y $800`, at 320 and at a wide viewport, with the
+  act-1 matrix's plain-mode background row carrying the frame numbers.
 
 ## Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss
 

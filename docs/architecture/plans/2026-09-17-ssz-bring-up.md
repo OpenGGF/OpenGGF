@@ -1014,3 +1014,42 @@ cloud after. White text on white cloud reads as low contrast. That is the cartri
 composition — the background is correct now, and the HUD is unchanged — so nothing is filed as a
 gap. It is recorded here because "the HUD looks wrong after a background fix" is exactly the shape
 of report that invites a renderer change that would be wrong.
+
+### 2026-09-18 — slice 3, part 3: `$7B`, the largest family
+
+**`$7B` `Obj_SSZCollapsingBridgeDiagonal`** (35 placements: 31 `$00`, 4 `$80`). Same bit-7-only
+subtype as `$7C`, same `Map_SSZCollapsingBridge` art, same `loc_45052` debris — eight pieces this
+time, from `$38` px toward the player stepping `$10` back, frames alternating through the `$405`
+word, delays 6 to 48, with a vertical stagger that flips every other piece (`btst #0,d5`).
+
+Three things the routine does that a summary would lose:
+
+- The solid is `SolidObjectTopSloped2` over `byte_46658` with `d1 = $40`, one signed byte per two
+  pixels. The index reaches `$40`, so it reads `$41` bytes and the last one is past the table's end
+  — `byte_46698[0]`. The engine reads them from the ROM at the live pointer rather than holding a
+  clamped copy, so the shipped over-read is what the geometry is. Same hazard as the solid clouds.
+- `loc_44D98` snapshots `status(a0)` *before* the solid call and then re-grounds each player who was
+  standing and is now airborne and not jumping (`bclr #Status_InAir`). Without it the slope drops
+  the player it just carried.
+- `loc_44EBA` advances the slope pointer four bytes as well as shrinking the half-width by eight,
+  so the visible surface slides along the diagonal while it retreats, and the object steps two
+  pixels vertically to keep its centre on the slope.
+
+`mainspr_childsprites` is never set despite the multi-sprite render flag, so the object draws no
+sub-sprites. Faithful, and recorded so nobody goes looking for a missing chain.
+
+**Clip** `09-ssz-diagonal-walkway-collapses.mp4` from `raw-10-ssz-diagonal-walkway`; frame 75 shows
+the player standing on the sloped walkway before it goes.
+
+**That capture also settled the open plain-mode question**, from the opposite direction to the one
+hoped for. It sits at camera `($6A0,$550)` — wrapped `Camera_Y` far below `$800`, so plain mode
+throughout and the cloud window never engaged — and the background is flat blue, while the layout's
+row 13 carries thirteen distinct chunk ids across columns ~9-52. So s3k-known-bugs #41 moves from
+"unverified" to an observed defect with a frame. The cause is *not* established and is deliberately
+not guessed: `plainParameters` does produce `Camera_X + $28` (layout column 13 here, inside the
+cluster), and `getBgCameraX()` returns `MIN_VALUE` by design so the column is meant to come from
+the scroll word as it does in every non-wrapping zone. Which of the two is not lining up is the open
+question, and the cloud-window change is not implicated because this capture never enters cloud mode.
+
+**Tests.** `TestS3kSszTraversalPlatforms` 7 cases, `TestS3kSszTeleporterPads` 8,
+`TestS3kSszBackgroundLayout` 6 — 21, 0 failures, 0 skips. `-Pguards` 669, 0 failures, 0 skips.

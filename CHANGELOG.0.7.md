@@ -23,7 +23,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   a defeated boss sit sunk in the floor until it is beaten and then rise back into place.
   The small floating platforms dip under a standing player, the tall columns break into eight
   falling pieces when one is stood on, and the flat bridge sections crumble away from under the
-  player four pieces at a time — except the one section the cartridge marks permanent. The recreated Green Hill and Metropolis arenas,
+  player four pieces at a time — except the one section the cartridge marks permanent — and the
+  sloped walkways break into eight, sliding along their own slope as they go. The recreated Green Hill and Metropolis arenas,
   their bosses and the Death Egg launch are still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
