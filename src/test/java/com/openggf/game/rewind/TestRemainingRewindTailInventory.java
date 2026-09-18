@@ -132,7 +132,10 @@ class TestRemainingRewindTailInventory {
         // HPZ compatibility, fight and native-sequence graph tests.
         // Doomsday bring-up: 23 object classes, all passing the isolated sweep through their
         // private ObjectSpawn probe constructors.
-        return new TailInventory(1109, 874, 235, 0, buckets);
+        // Death Egg gravity slice: S3kDezGravitySwapObjectInstance ($5B) is one more class and
+        // one more isolated pass -- its spawn constructor is its probe constructor and its two
+        // booleans round-trip through the subclass extra. No bucket grows.
+        return new TailInventory(1110, 875, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

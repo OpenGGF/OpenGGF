@@ -1544,3 +1544,31 @@ sessions, the `f60b3f3e2` side was not re-detached — it is the baseline record
 the part-2, part-3 and part-10 entries, and these numbers match it error for error. That is a
 comparison against a thrice-recorded baseline, not two fresh measurements. Four classes, not the
 trace profiles, and no evidence about any other class.
+
+**The gate.** Preflight (Java 21, Lua 5.4, PowerShell) passed in the launch environment.
+`run_categories.py --base 035e48a58 --run` selected **BROAD**: 2713/2713 classes, the full
+ordinary suite plus all structural guards in a separate JVM. Stated before launching: tens of
+minutes, with the runner's 40-minute per-invocation timeout as the stopping rule.
+
+| Lane | Result |
+| --- | --- |
+| Ordinary | 2713 reports, **22066 tests, 1 failure, 0 errors, 27 skipped**, 1039.9 s |
+| Guards | 85 reports, **669 tests, 0/0/0**, 194.4 s |
+
+Run id `20260918T121620Z-f86a6ea0`. All 27 skips are opt-in profiles
+(`openggf.audio.repeatedPlaybackBenchmark`, `openggf.checkpoint.measure`, `rewind.soak`,
+`openggf.rewind.alloc.measure`, the `openggf.aiz1.*` trio, the eight `soz.*` capture properties,
+`openggf.scrollNative`, `openggf.slotNative`, `openggf.performance.rewindDispatch.measure`,
+`openggf.test.gl.native`, the shaderlib and background-sampling diagnostics) or unavailable-host
+assumptions (Surfaceless EGL, OpenGL 4.1, a local BizHawk reference, a local timeline capture,
+and one CPZ spin-tube capture assumption). **None is a missing ROM**: no `@RequiresRom` class
+skipped, which is the check that a silent ROM-path mistake would fail.
+
+The one failure is a third ratchet, and it is the sanctioned shape:
+`TestRemainingRewindTailInventory` counts round-trip tail types and read
+`total=1110 passed=875` against a recorded `1109/874`. The new class is one more type and one
+more **passing** type; `graphCovered` and `noCodec` are unchanged and no failure bucket grows. It
+was bumped to `1110/875` with that note and verified narrowly rather than by repeating the broad
+run, since nothing else in the tree changed. Three ratchets in one slice — the profile registry,
+the rewind override baseline and this one — is worth recording: a new object class touches more
+recorded inventories than a new branch does, and none of the three is visible from a focused run.
