@@ -2399,6 +2399,54 @@ normally. Either `GameplayCaptureTool` repeated a presented frame there or the r
 `state.csv` is the authority for what happened, and the hit is evidenced by the probe, not by the
 PNGs.
 
+### 2026-09-18 - The seamless act change, read out of the ROM in full
+
+Not implemented this round. Read and written down so the next round does not re-derive it, and
+because the two halves **must land together**: stage 0's advance to `$C` without `loc_56CAA`
+behind it leaves `Events_routine_bg` pointing at an unimplemented stage and the background stops
+being drawn.
+
+**The trigger (item 1).** `Obj_Results` (sonic3k.asm:62615-62622) ends its sprite-creation routine
+with `addq.b #2,routine(a0)` and then, **only** when `Apparent_act` is zero (act 1),
+`Apparent_zone` is neither `0` (Angel Island) nor `5` (Ice Cap), `st (Events_fg_5).w`. Note
+`Apparent_act`/`Apparent_zone`, not the loaded pair: across a seamless change those differ, which
+is why the engine's results owner has to read the apparent values.
+
+**Stage 0's branch (`loc_56BD2`, 115273-115292).** `tst.w (Events_fg_5)`; when zero it falls to
+`loc_56C28`, the ordinary dome-region path. When set: `clr.w (Events_fg_5)`, then queue
+`LRZ2_128x128_Secondary_Kos` into `Chunk_table+$180` and `LRZ2_16x16_Secondary_Kos` into
+`Block_table+$128` through `Queue_Kos`; queue `ArtKosM_LRZ2_Secondary` at
+`tiles_to_bytes($090)` through `Queue_Kos_Module`; `Load_PLC $30`; then
+`move.w #$C,(Events_routine_bg)` and `bra loc_56D16` -- so the frame that arms the change still
+draws the background normally.
+
+**Stage `$C` (`loc_56CAA`, 115347-115380).** `tst.b (Kos_modules_left)`; while non-zero it does
+nothing but `loc_56D16`, so the change waits for the queued art. When the queue is empty, on
+**one** frame:
+
+| Step | ROM |
+| --- | --- |
+| The act | `move.w #$901,(Current_zone_and_act)` |
+| Level variables | `clr.b` on `Dynamic_resize_routine`, `Object_load_routine`, `Rings_manager_routine`, `Boss_flag`, `Respawn_table_keep` |
+| Switches | `jsr Clear_Switches` -- `$20` bytes, which is the trigger array **and** `Anim_Counters` |
+| Rocks | `clr.b (LRZ_rocks_routine)` |
+| Reload | `jsr Load_Level`, `jsr LoadSolids` (both inside a `movem.l d7-a0/a2-a3` save) |
+| The rebase | `d0 = $2C00`, `d1 = 0`; `sub.w d0` from `Player_1+x_pos`, `Player_2+x_pos`, then `jsr Offset_ObjectsDuringTransition`, then `Camera_X_pos`, `Camera_X_pos_copy`, `Camera_min_X_pos`, `Camera_max_X_pos` |
+| Tiles | `jsr Reset_TileOffsetPositionActual` |
+| The stage | `clr.w (Events_routine_bg)` -- back to stage 0, which is now LRZ2's |
+
+Then it falls into `loc_56D16` like every other stage: `LRZ1_Deform`, `Draw_BG` with
+`LRZ1_BGDrawArray` (`d6 = $20`, `d5 = 3`), `ApplyDeformation` with `LRZ1_BGDeformArray` at
+`HScroll_table+$00C`, `ShakeScreen_Setup`.
+
+**What that means for the engine.** The owner is a transition class beside
+`SozActTransitionHandoff`, driven from `LrzBackgroundStageMachine`; the rebase goes through the
+existing transition offset path, not per-object edits; `Clear_Switches` has to clear the animation
+counters as well as the triggers, which is the part an engine is most likely to miss; and
+`Respawn_table_keep` being cleared is what makes the new act's objects load rather than being
+suppressed as already-visited. The `$901` art readiness closed by the KosM queue here is the same
+gap a direct `$901` load has.
+
 ## Handover, 2026-09-18 (eighth)
 
 **Where the work is.** Branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. This round
