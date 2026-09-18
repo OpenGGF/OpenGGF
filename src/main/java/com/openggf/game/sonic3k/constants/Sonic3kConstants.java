@@ -496,6 +496,11 @@ public class Sonic3kConstants {
     /** {@code Map_DEZGravityPuzzle} (sonic3k.lst: ROM $00049A6C). */
     public static final int MAP_DEZ_GRAVITY_PUZZLE_ADDR = 0x049A6C;
 
+    /** {@code ArtTile_DEZ2Extra = $0332} (sonic3k.lst:1945). */
+    public static final int ARTTILE_DEZ2_EXTRA = 0x0332;
+    /** {@code Map_DEZRetractingSpring} (sonic3k.lst: ROM $000481B6). */
+    public static final int MAP_DEZ_RETRACTING_SPRING_ADDR = 0x0481B6;
+
     // ===== Tension Bridge mappings (Obj_TensionBridge, ID 0x6C) =====
     public static final int MAP_TENSION_BRIDGE_ADDR = 0x038FF2;   // Map_TensionBridge
     public static final int MAP_ICZ_TENSION_BRIDGE_ADDR = 0x038FBA; // Map_ICZTensionBridge

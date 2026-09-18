@@ -282,6 +282,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     // SKL-only implementations (zones 7-13: MHZ through DDZ), on top of SHARED.
     private static final Set<Integer> SKL_ONLY_IDS = Set.of(
             0x14, // Updraft
+            0x5D, // DEZRetractingSpring -- S3KL $5D is the competition-only Obj_CGZTriangleBumpers
             0x5F, // DEZGravityRoom -- the S3KL table has no object at this number
             0x61, // DEZGravityPuzzle -- S3KL $61 is the competition-only Obj_BPZBalloon
             0x8B // SpriteMask

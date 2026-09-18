@@ -492,6 +492,10 @@ public final class Sonic3kObjectArtKeys {
 
     // DEZ Gravity Puzzle (SKL 0x61) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZGravityPuzzle
     public static final String DEZ_GRAVITY_PUZZLE = "dez_gravity_puzzle";
+
+    // DEZ Retracting Spring (SKL 0x5D) - ArtTile_DEZ2Extra, palette 1, Map_DEZRetractingSpring
+    // (sonic3k.asm:94099-94100).
+    public static final String DEZ_RETRACTING_SPRING = "dez_retracting_spring";
     public static final String DOOR_HORIZONTAL = "door_horizontal";        // ArtTile_CNZMisc+$C5, Map_CNZDoorHorizontal
 
     private Sonic3kObjectArtKeys() {

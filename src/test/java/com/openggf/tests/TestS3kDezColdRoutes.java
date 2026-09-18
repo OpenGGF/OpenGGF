@@ -90,19 +90,23 @@ class TestS3kDezColdRoutes {
     /** How far each route is driven before the frontier is reported. */
     static final int ROUTE_FRAMES = 1200;
     /**
-     * Measured 2026-09-18 on this branch: 472 frames of exact player x, y, camera and ring
+     * Measured 2026-09-18 on this branch: 527 frames of exact player x, y, camera and ring
      * parity from the first frame of act 2 free play. It was 390 until {@code $A4}
      * {@code Obj_Spikebonker} landed — the divergence there was the badnik's own destruction
-     * rebound ({@code neg.w y_vel(a0)}, sonic3k.asm:20979) that a placeholder could not give.
+     * rebound ({@code neg.w y_vel(a0)}, sonic3k.asm:20979) that a placeholder could not give —
+     * and 472 until {@code $5D} {@code Obj_DEZRetractingSpring} landed, which is the
+     * {@code -$A00} launch at native row 20245.
      *
-     * <p>The first divergence is now native row 20245, where {@code y_vel} goes from
-     * {@code $09A0} to {@code $F600} ({@code -$A00}) and {@code stand_on_obj} changes from
-     * {@code $06} to {@code $0E}: a spring. The only placement in reach is {@code DEZ2_Sprites}
-     * record 8, {@code $5D} {@code Obj_DEZRetractingSpring} at {@code $04B0,$04C0} with
-     * {@code render_flags} bit 1 set and subtype {@code $02}, which is still a placeholder.
+     * <p>The first divergence is now native row 20300, the frame the ROM <em>lands</em> the
+     * player from that launch: {@code air} goes to 0, {@code stand_on_obj} from {@code $0E} to
+     * {@code $0D} and {@code y} settles at {@code $03CB} against the engine's {@code $03CA},
+     * with {@code camera_y} {@code $037C} against {@code $0382}. The only placements under
+     * {@code x $0495} at that height are {@code DEZ2_Sprites} records 5 and 6, {@code $55}
+     * {@code Obj_DEZEnergyBridge} at {@code $0400,$03E8} and {@code $0480,$03E8} subtype
+     * {@code $01}, both still placeholders: there is nothing for the player to land on.
      * A ratchet, not a target: raise it when the frontier moves.
      */
-    static final int SEEDED_ROUTE_FRONTIER = 472;
+    static final int SEEDED_ROUTE_FRONTIER = 527;
 
     @AfterEach
     void reset() {

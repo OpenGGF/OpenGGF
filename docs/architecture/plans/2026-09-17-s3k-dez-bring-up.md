@@ -2424,3 +2424,57 @@ class.
    test is a stronger oracle than any unit test, and it names the next object for free.** Two
    frontiers in a row have been closed by reading the arithmetic of one native row, naming the
    ROM routine before writing code, and letting the ratchet check the work.
+
+### 2026-09-18 — `$5D` `Obj_DEZRetractingSpring`, and the flip bits that mean something else
+
+The route named it and the route checked it: 472 → **527 frames**, and the new divergence is a
+landing rather than a launch.
+
+**The handover's description of the placement was wrong in two ways that cancelled.** It called
+`DEZ2_Sprites` record 8 "Y-flipped, which is why it fires a player upward from below". The Y word
+is `$24C0` and `CommonPlacementParser` reads the flip pair as `(yWord >> 13) & 3`, so the flags are
+`1`: X-flipped. And the flips have nothing to do with the launch direction — they pick which way
+the piston travels in X. Every one of the thirteen placements is subtype `$02`, so every one of
+them launches at `-$A00` whichever way it is flipped. Two wrong halves that produce the right
+observable are exactly the shape a repointed-but-unchecked citation takes, so the
+correction is recorded in the frontier log as well.
+
+**Four things the ROM says about this object that a summary would not.**
+
+1. **It is a horizontal piston.** `y_pos` is never written. `$44(a0)` holds the placement X
+   (:94105) and every update rewrites `x_pos` as `$44 ± $34(a0)` (:94156-94158), in eight-pixel
+   steps up to the `$32(a0) = $20` limit set at init (:94106).
+2. **Its direction is the exclusive or of the two flip bits.** `btst #0,status(a0)` *skips* a
+   negate and `btst #1,status(a0)` *adds* one (:94146-94154). Unflipped and both-flipped extend
+   towards −X; either flip alone extends towards +X. Decoded: records 4 and 373 are unflipped,
+   records 8, 198, 239, 327, 397 and 398 carry one flip, records 206, 332, 355, 356 and 414 carry
+   both.
+3. **The dead band is asymmetric, and that asymmetry is what lets you ride it.** The extend test
+   is `cmpi.w #$20,d0 / blt` (:94116-94117) and the retract test is `cmpi.w #-$20,d0 / bge`
+   (:94132-94133), so a player exactly `$20` below extends it but a player exactly `$20` above
+   does not retract it. In between it holds. The `bcs` that splits the two branches (:94115) is an
+   unsigned borrow — it asks which side of the spring Player 1 is on, not whether a signed
+   difference is negative — and the sidekick is never consulted.
+4. **The latch sounds twice per stroke, not once per step.** `tst.w $34(a0) / bne` (:94121-94122)
+   and `cmp.w $34(a0),d1 / bne` (:94137-94138) fire `sfx_SpringLatch` only on the update that
+   leaves rest and the update that leaves full extension. The three steps in between are silent.
+
+**One deviation from the nearest neighbour, recorded rather than copied.** `Sonic3kSpringObjectInstance`
+ends every launch with `setSpringing(15)`, the engine's fifteen-frame jump suppression. `sub_22F98`
+has no `move_lock` and neither does `Obj_Spring_Up` (:22F04-22F36), so this class does not set it.
+If a later route frame shows a re-jump one frame early, that is the row to bring back here.
+
+Thirteen tests, eleven deliberate breaks in four groups, each group's expected failure set
+predicted before the run and matched afterwards: the launch nudge, the solid box and the animation
+script (4 failures); the extension limit, the launch word and the subtype bit 7 gate (7); the
+direction exclusive-or, the dead band and the never-moves-in-Y invariant (7); and the latch
+condition, the extension's rewind coverage and the step size (2). No assertion was silent.
+
+Census: act 2 placeholders 269 → 256, concrete 225 → 238. Act 1 is unchanged — `$5D` places none
+there.
+
+**The next class the route wants is `$55` `Obj_DEZEnergyBridge`.** Native row 20300 is the frame
+the ROM lands the player from the spring's arc: `air` 1 → 0, `stand_on_obj` `$0E` → `$0D`, `y`
+settling at `$03CB` against the engine's `$03CA` and `camera_y` `$037C` against `$0382`. The only
+placements under `x $0495` at that height are `DEZ2_Sprites` records 5 and 6 at `$0400,$03E8` and
+`$0480,$03E8`, both subtype `$01`. Thirteen act 1 and twelve act 2 placements.

@@ -34,6 +34,9 @@ public final class Sonic3kPlcArtRegistry {
     // Map_DEZGravityPuzzle: frame 0 the six-piece shaft, 1 and 2 the mirrored marker panel,
     // 3 and 4 both word_49AAC with zero pieces (the unpressed panels draw nothing).
     private static final int DEZ_GRAVITY_PUZZLE_FRAME_COUNT = 5;
+    // Map_DEZRetractingSpring: word_481BC retracted, word_481D0 compressed, word_481DE
+    // extended (sonic3k.lst:111138-111140).
+    private static final int DEZ_RETRACTING_SPRING_FRAME_COUNT = 3;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -2696,6 +2699,20 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null,
                 DEZ_GRAVITY_PUZZLE_FRAME_COUNT
+        ));
+
+        // Retracting spring (SKL object 0x5D, Obj_DEZRetractingSpring): act 2's horizontal
+        // piston. ROM header: move.l #Map_DEZRetractingSpring,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZ2Extra,1,0),art_tile(a0) (sonic3k.asm:94099-94100).
+        // ArtNem_DEZ2Extra is already queued into ArtTile_DEZ2Extra by DEZ act 2's PLC
+        // (plreq at sonic3k.lst:228636), so no extra PLC is needed.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_RETRACTING_SPRING,
+                Sonic3kConstants.MAP_DEZ_RETRACTING_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ2_EXTRA,
+                1,
+                null,
+                DEZ_RETRACTING_SPRING_FRAME_COUNT
         ));
     }
 

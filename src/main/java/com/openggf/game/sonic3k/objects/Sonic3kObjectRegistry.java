@@ -554,6 +554,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new MGZTopLauncherObjectInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.DEZ_RETRACTING_SPRING,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $5D is Obj_DEZRetractingSpring (sonic3k.asm:94098); S3KL $5D is
+                        // Obj_CGZTriangleBumpers, which no zone 0-6 layout places.
+                        return new S3kDezRetractingSpringObjectInstance(spawn);
+                    }
+                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                });
         factories.put(Sonic3kObjectIds.DEZ_GRAVITY_ROOM,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();

@@ -141,8 +141,10 @@ class TestRemainingRewindTailInventory {
         // S3kDezGravityHubObjectInstance a fifth, $5F S3kDezGravityRoomObjectInstance a
         // sixth and $61 S3kDezGravityPuzzleObjectInstance a seventh. $A4
         // SpikebonkerBadnikInstance and its SpikebonkerMace child add the eighth and ninth.
+        // $5D S3kDezRetractingSpringObjectInstance is the tenth: its extension byte and its
+        // ObjectAnimationState both round-trip through the generic subclass scalar capture.
         // No bucket grows.
-        return new TailInventory(1118, 883, 235, 0, buckets);
+        return new TailInventory(1119, 884, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

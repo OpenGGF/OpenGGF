@@ -110976,3 +110976,49 @@ reach is `DEZ2_Sprites` record 8, **`$5D` `Obj_DEZRetractingSpring`** at `$04B0,
 wants.
 
 `SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 472.
+
+### 2026-09-18 — DEZ act 2: the retracting spring moves the seeded frontier to 527
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$5D` `S3kDezRetractingSpringObjectInstance`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 472 frames | **527 frames** |
+
+**One correction to the previous entry.** It called record 8 "Y-flipped, which is why it fires a
+player upward from below". Both halves are wrong and they cancelled. `Levels/DEZ/Object Pos/2.bin`
+record 8 has Y word `$24C0`, and `CommonPlacementParser` reads the flip pair as
+`(yWord >> 13) & 3`, so the flags are `1` — **X**-flipped, not Y. And the flip bits do not choose
+the launch direction at all: they choose which way the piston extends in X
+(`loc_48124`, sonic3k.asm:94146-94157, where `btst #0` skips a negate and `btst #1` adds one, so
+the sign is the exclusive or of the two). The launch is always `$30(a0)`, which
+`word_4808A(pc,subtype & 2)` fixed at `-$A00` for every one of the thirteen subtype-`$02`
+placements. A Y-flipped retracting spring still fires upward.
+
+The 55 frames the implementation bought are the whole ballistic arc: row 20245's `-$A00`, the
+`addq.w #8,y_pos(a1)` nudge that puts the player at `$04AB` rather than the engine's old `$04A4`,
+and the fall back down through row 20299.
+
+**The new first divergence is a landing, at native row 20300.**
+
+```
+row=20299 x=0497 y=03C8 xs=FDE8 ys=01D0 air=1 sto=0E
+row=20300 x=0495 y=03CB xs=FDD0 ys=0000 air=0 sto=0D
+```
+
+The ROM lands: `air` clears, `y_vel` zeroes, `ground_vel` takes `x_speed` and `stand_on_obj`
+changes from `$0E` to `$0D`. The engine is one pixel high at `y=$03CA` and its `camera_y` is
+`$0382` against `$037C`, because it has nothing to land on. The only placements under `x $0495` at
+that height are `DEZ2_Sprites` records 5 and 6, **`$55` `Obj_DEZEnergyBridge`** at `$0400,$03E8`
+and `$0480,$03E8`, both subtype `$01` and both still placeholders. `$55` has 13 act 1 and 12 act 2
+placements, so it is the next class the route wants.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 527.
