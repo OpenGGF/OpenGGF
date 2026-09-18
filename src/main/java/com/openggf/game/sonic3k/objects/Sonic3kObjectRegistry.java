@@ -1479,6 +1479,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.SSZ_COLLAPSING_COLUMN,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
                 (spawn, registry) -> new SszCollapsingColumnObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_COLLAPSING_BRIDGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCollapsingBridgeObjectInstance(spawn));
 
         // The Doomsday Zone's SKL object set.
         registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,

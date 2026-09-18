@@ -945,3 +945,49 @@ as an `ObjectRefId`; what was missing was the `DefaultObjectRewindPolicies` entr
 audit so, exactly as `SSZHPZTeleporterObjectInstance#beam` and `TeleporterBeamObjectInstance#parent`
 already do. The rewind architecture guard's override baseline gained the debris pair with the same
 "cross-object SST link" triage as the slice-1 classes.
+
+### 2026-09-18 — slice 3, part 2: `$7C`, the shared bridge debris, and a capture-tool flag
+
+**`$7C` `Obj_SSZCollapsingBridge`** (8 placements) and the `loc_45052` debris both families use.
+Re-read in `sonic3k.asm` rather than taken from the relayed spec: init `bset #2,render_flags`,
+`height_pixels $10`, `width_pixels $20`, `priority $180`,
+`make_art_tile(ArtTile_SSZMisc+$20,2,1)` over `Map_SSZCollapsingBridge` — the same sheet, tile base
+and palette line `Obj_SSZCutsceneBridge` already uses, so no new art entry was needed.
+
+**Subtype, now verified rather than assumed.** `tst.b subtype(a0)` / `bmi.s loc_44C96` is the only
+read: bit 7 set means the section never collapses, bits 0-6 are never read. The ROM places seven
+`$00` and one `$80`, and the test asserts both the split and that no placement sets a bit the
+routine ignores — so the two rows really are the whole behaviour space.
+
+`loc_44C9C` records which side the player is on in `$2E(a0)` (`scc` after `cmp.w x_pos(a1),d4`) and
+lays four pieces from that side inward: first at `$18` px toward the player, stepping `$10` back,
+mapping frames alternating through the `$102` word, hang delays 6/12/18/24. `loc_44D22` then
+shrinks the solid half-width from `$20` by 8 every sixth frame, walks the object 8 px away from the
+player each step so the near edge retreats, and parks it at `x_pos $7FFF` — plus that same 8 px
+step, so the parked X is `$7FF7` or `$8007`, which the test asserts as a range rather than the bare
+literal. The section stays solid at the shrinking width the whole time.
+
+**A capture-tool flag, because the clips could not be taken without it.** `GameplayCaptureTool`'s
+`--x/--y` teleport is overridden outright in `$A00`: `SSZ1_ScreenInit` forces the arrival camera and
+`Obj_57C1E` writes Player 1 to `Camera_Y + $65`, so every positioned SSZ capture snapped back to the
+arrival column by frame 58 — visible in the first attempt's `state.csv`. The ROM's own answer is the
+star-post branch, so the tool gained `--star-post`: declared capture setup, in the same block as
+`--emeralds`, `--vint-run-count` and `--camera-x-sub`, writing `Last_star_post_hit` with `Saved_X/Y`
+at the requested start. It is generic — any act with a star-post-gated intro needs it — and it is
+what makes slice 4's respawn captures possible too.
+
+**Clips** (each cut with at least 30 frames of lead-in and lead-out):
+
+| Clip | Raw | What the frames show |
+| --- | --- | --- |
+| `05-ssz-cloud-band-before-after.mp4` (+ `05a`/`05b`) | `raw-06-ssz1-cloud-window-after` vs slice 2's `raw-04-ssz1-sky-320` | The cloud band fills the plane where the before is flat blue |
+| `06-ssz-floating-platform-dips.mp4` | `raw-07-ssz-floating-platform` | `$7F` at `($600,$C20)` carrying the player; frame 150 inspected |
+| `07-ssz-column-breaks-into-eight.mp4` | `raw-08-ssz-collapsing-column` | `$7E` at `($600,$960)` breaking; frame 90 shows the pieces falling under the player |
+| `08-ssz-teleporter-pad-launch.mp4` | `raw-09-ssz-teleporter-pad-launch` | `$79:$15` at `($1000,$7B0)` launching; frame 200 shows the rolled player mid-lift |
+
+The `$79` pad also shows drawn rather than as a placeholder box in `raw-06` frames 250 and 400.
+One placeholder box remains visible in `raw-07` and `raw-08`: the families this entry has not
+reached yet.
+
+**Tests.** `TestS3kSszTraversalPlatforms` grew to 5 cases, `TestS3kSszTeleporterPads` 8,
+`TestS3kSszBackgroundLayout` 5 — 18, 0 failures, 0 skips.

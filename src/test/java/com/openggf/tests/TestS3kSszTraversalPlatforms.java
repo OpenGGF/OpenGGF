@@ -10,6 +10,8 @@ import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.SszBridgeDebrisObjectInstance;
+import com.openggf.game.sonic3k.objects.SszCollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.SszCollapsingColumnDebrisObjectInstance;
 import com.openggf.game.sonic3k.objects.SszCollapsingColumnObjectInstance;
 import com.openggf.game.sonic3k.objects.SszFloatingPlatformObjectInstance;
@@ -164,6 +166,71 @@ class TestS3kSszTraversalPlatforms {
         fixture.stepIdleFrames(1);
         assertEquals(0x7FFF, column.getX() & 0xFFFF,
                 "loc_44B98 move.w #$7FFF,x_pos(a0)");
+    }
+
+    /**
+     * {@code Obj_SSZCollapsingBridge} ({@code $7C}): the ROM places it seven times as {@code $00}
+     * and once as {@code $80}, and bit 7 is the only subtype bit the routine reads
+     * ({@code tst.b subtype(a0)} / {@code bmi.s loc_44C96}) — set means the section never
+     * collapses. Bits 0-6 are unread, so the two rows are the whole behaviour space.
+     */
+    @Test
+    void theCollapsingBridgeReadsOnlyBitSevenOfItsSubtype() throws IOException {
+        List<Placement> bridges = placementsOf(0x7C);
+        assertEquals(8, bridges.size(), "$7C records in SSZ1_Sprites");
+        assertEquals(7, bridges.stream().filter(p -> p.subtype() == 0x00).count(),
+                "$7C:$00 collapsing sections");
+        assertEquals(1, bridges.stream().filter(p -> p.subtype() == 0x80).count(),
+                "$7C:$80, the one permanent section");
+        for (Placement bridge : bridges) {
+            assertTrue(bridge.subtype() == 0x00 || bridge.subtype() == 0x80,
+                    "no $7C placement sets a bit the routine never reads: "
+                            + Integer.toHexString(bridge.subtype()));
+        }
+    }
+
+    /**
+     * {@code loc_44C9C}-{@code loc_44D22}: standing on a collapsing section lays four
+     * {@code loc_45052} pieces and then shrinks the solid half-width from {@code $20} by 8 every
+     * sixth frame until the section parks at {@code x_pos $7FFF}.
+     */
+    @Test
+    void theCollapsingBridgeShedsFourPiecesAndShrinksToNothing() {
+        // $7C:$00 at ($820,$648).
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x820, 0x5E0);
+        SszCollapsingBridgeObjectInstance bridge = null;
+        for (int frame = 0; frame < 300 && bridge == null; frame++) {
+            fixture.stepIdleFrames(1);
+            bridge = active(SszCollapsingBridgeObjectInstance.class);
+        }
+        assertNotNull(bridge, "$7C:$00 at ($820,$648)");
+        assertEquals(0x20, bridge.halfWidthForTest(), "moveq #$20,d1 before the collapse");
+
+        for (int frame = 0; frame < 600 && !bridge.collapsedForTest(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(bridge.collapsedForTest(), "standing on the section runs loc_44C9C");
+        assertEquals(SszCollapsingBridgeObjectInstance.DEBRIS_COUNT,
+                countActive(SszBridgeDebrisObjectInstance.class),
+                "moveq #4-1,d5: four loc_45052 pieces");
+
+        // subq.w #8,$32(a0) every sixth frame: $20 -> 0 is four steps, 24 frames.
+        int parkedAt = -1;
+        for (int frame = 0; frame < 120; frame++) {
+            fixture.stepIdleFrames(1);
+            if (bridge.halfWidthForTest() <= 0) {
+                parkedAt = frame;
+                break;
+            }
+        }
+        assertTrue(parkedAt >= 0, "the section shrinks away");
+        assertTrue(parkedAt >= 20 && parkedAt <= 28,
+                "four 8-pixel steps at one per six frames is about 24 frames, not " + parkedAt);
+        // move.w #$7FFF,x_pos(a0) and then loc_44D3A's add.w d0,x_pos(a0) with d0 = +/-8, so the
+        // parked X is $7FF7 or $8007 depending on which side the player stood.
+        int parkedX = bridge.getX() & 0xFFFF;
+        assertTrue(parkedX >= 0x7FF7 && parkedX <= 0x8007,
+                "parked off-level at $7FFF +/- 8, was $" + Integer.toHexString(parkedX));
     }
 
     private static <T> T active(Class<T> type) {

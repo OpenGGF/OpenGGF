@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
+import com.openggf.game.CheckpointState;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelBackdropResultsScreen;
@@ -152,6 +153,20 @@ public final class GameplayCaptureSession implements AutoCloseable {
                     .orElseThrow(() -> new IllegalArgumentException(
                             "--camera-x-sub needs a zone that keeps a camera fraction"))
                     .setCameraXFraction(settings.cameraXSub());
+        }
+        if (settings.starPost()) {
+            // Declared capture setup: a star post already hit, with Saved_X/Y at the requested
+            // start. Several acts run a scripted intro on the no-star-post path that overrides
+            // --x/--y outright — Sky Sanctuary act 1's SSZ1_ScreenInit forces the arrival camera
+            // and Obj_57C1E then writes Player 1 to Camera_Y + $65 — so positioned captures of
+            // anything past the intro need the star-post branch the ROM itself provides.
+            if (GameServices.level().getCheckpointState() instanceof CheckpointState checkpoint) {
+                checkpoint.saveCheckpoint(1,
+                        settings.startX() != null ? settings.startX() : 0,
+                        settings.startY() != null ? settings.startY() : 0,
+                        false);
+            }
+            level.initLevelEventsForLevel();
         }
         player = GameServices.camera().getFocusedSprite();
         if (player == null) {
@@ -336,7 +351,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
-                           Integer cameraXSub) {
+                           Integer cameraXSub, boolean starPost) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
@@ -347,7 +362,15 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         Path donorRom, Integer startX, Integer startY, String emeraldStates,
                         boolean showTitleCard, boolean completeSpecialStage) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, null, null);
+                    showTitleCard, completeSpecialStage, null, null, false);
+        }
+
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false);
         }
 
         public Settings {
