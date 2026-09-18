@@ -2282,6 +2282,38 @@ and compare `rings`. If the engine still loses rings there, the arm link's colli
 `MoveSprite_AtAngleLookup` radius is wrong; if not, the hit is the capture's own phase and nothing
 is owed.
 
+### 2026-09-18 - The measured fight cycle, so the next round does not author blind
+
+Printed from `LrzMinibossInstance.updateBossLogic` against `V_int_run_count` during a capture from
+`($2C00,$600)`. **The gate completes at `v 172`**; the drill's routine byte then runs:
+
+| `V_int_run_count` | routine | what it is | `collision_flags` | drill `y` |
+| --- | --- | --- | --- | --- |
+| 173 / 174 / 175 | `00` / `02` / `04` | `loc_78562` children, `loc_78592` art, `loc_785C2` delay | `00` | 2176 |
+| 223 | `06` | hover wait `$15F`; **`bset #3` here is the arms unrolling** | `00` | 2176 |
+| 575 | `08` | pre-descent wait `$4F` | `00` | 2176 |
+| 655 | `0A` | rise to `_unkFAB0 $7A8` | `00` | 2176 -> 1960 |
+| 709 | `0C` | swing `$BF`, **tracking Player 1's X** | `00` | 1960 |
+| 901 | `0E` | pre-drop wait `$1F`; **X is locked from here** | `00` | 1963 |
+| 933 | `10` | drop | **`B5` (hurts)** | 1963 |
+| 936 | `12` | slam `$5F` | **`06` (hittable)** | 1975 |
+| 1032 | `14` | return to bottom | `06` | 1975 -> 2176 |
+| 1083 | `06` | the cycle repeats, 874 frames long | `00` | 2176 |
+
+So the **window to damage the drill is `v 936`-`1082`, 146 frames**, with the drill resting at
+`y 1975` -- five pixels below the player's standing height -- at whatever X it tracked to by
+`v 901`. A capture frame is `V_int_run_count − 1`, and an input-log frame is the capture frame
+minus `--settle`.
+
+**Three things this settles.** The drop hurts for three frames and the slam is an ordinary enemy
+box for ninety-six, so the play is to be clear of the drill's X at `v 933` and to arrive on it
+airborne after `v 936`. A 32-frame walk away is not enough: from a standstill it moves about 17 px
+and the drill's own box is `$33` half-width. A 90-frame walk left starting at `v ~860` does clear
+it -- that capture took no damage at all through the whole first cycle (`lrz-arena-fight-timed-v3`)
+-- but the jumps that followed passed over the drill without a recorded hit, and **whether a hit
+landed was not measured**: the instrumented re-run of that input was still waiting on the Maven
+queue when this round ended. That measurement is the next round's first step, and it is one
+capture.
 ## Handover, 2026-09-18 (eighth)
 
 **Where the work is.** Branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. This round
