@@ -858,6 +858,58 @@ bounce it (:88312). The engine can only express that through a canonical `TouchR
 whose remaining fields were not traced, so the shot is a plain harmful `$98` object and a shielded
 player absorbs it instead of deflecting it. Recorded here rather than guessed at.
 
+### 2026-09-18 - Slice 3b follow-up: rewind spots and the cold act 1 route
+
+**Rewind spots** (`TestLrzDoorButtonRewindSpots`, 5 tests). Before, during and after the door
+opening, plus the button latch and the two together, each followed by a forward replay: the same
+number of updates after a restore has to land on exactly the state the uninterrupted timeline
+reached. The door cases pin the routine stage as well as `$2E`, because a restore that brought back
+the counter but not the stage would replay from the wrong branch. The harness registers
+`Sonic3kLevelTriggerStaticAdapter` alongside the object manager, as
+`Sonic3kLevelEventManager#extraRewindAdapters` does in production. Broken on purpose once by
+dropping that adapter: two tests went red on the shared-array assertion in opposite directions
+(`buttonRewindSpot... expected: <true> but was: <false>`, `doorRewindSpotBefore... expected:
+<false> but was: <true>`), which is the discriminator that the array and the objects restore
+together rather than either alone. Reverted and re-verified 5/5.
+
+**Cold act 1 route, started from the level start with no teleport.** Five hand-authored attempts
+and one derived from the native input; inputs preserved in `~/Videos/OGGF/lrz-bring-up/inputs/`.
+
+| Attempt | Reaches | Blocker | What it was |
+| --- | ---: | --- | --- |
+| v1 hold right + jump every 45 frames | x 326 | the `$05` rock at `($161,$51E)` | input, not engine |
+| v2 hold right, no jumps | x 326 | same | input |
+| v3 spindash from a standing start | x 1141 | the `$19` door subtype `$04` at `($490,$500)`, correctly shut | **the slice 3b object, working** |
+| v4 back off and jump right | x 1141 | no ledge to the left; he falls | input |
+| v5 native door manoeuvre | **x 1573** | the `$08` spikes at `($640,$538)` | input |
+| native input column, 12000 rows | **x 2357** at frame 2318 | open-loop drift, then death at frame 4659 | measurement, see below |
+
+Three things worth keeping from this:
+
+1. **No blocker so far selects a new object class.** All three real stops are navigation: the `$05`
+   rock is subtype `$44`, whose low nibble sets bit 2, so `AIZLRZEMZRock_CheckPushBreak` sends it to
+   `AIZLRZEMZRock_PushBreakMain` - it breaks to a *rolling* player, and a walking or jumping route
+   can never pass it. The spikes want a jump. The door wants its button.
+2. **The door is opened on a cold route.** v5 reproduces the native manoeuvre at `($475,$50D)`:
+   turn left one frame, jump up-left for eleven, drift left for seventeen, then steer right. The
+   engine reaches `(1116,1235)` at frame 400 - level with the `$1C` button at `($445,$4D4)`, 57 px
+   above the floor - and is past the door's x at 1169 on the ground by frame 460. That is the
+   button, the `Level_trigger_array` write and the door's 64-frame rise exercised end to end through
+   production, not a unit test.
+3. **How the route was found.** Not by guessing: the segment fixture
+   `traces/s3k/runs/s3k-sonic-tails-complete-emeralds/lrz/physics.csv.gz` is a plain gzipped CSV
+   whose `input` column is the recorded controller state. Its bit order is recoverable from the
+   trace's own behaviour - 0 Up, 1 Down, 2 Left, 3 Right, 4 A, and no other bit occurs in any of the
+   38,885 rows - and those five bits convert straight into a `GameplayCaptureTool` input log. This
+   is controller input, not gameplay state: nothing physics or aux is read, so it stays inside the
+   comparison-only rule, and it is the same shape as the DDZ seeded-route captures.
+
+**The open-loop limit, measured.** Replaying the native input is not a trace replay and drifts: the
+engine is 44 px behind native by frame 400, 202 by 663, 582 by 1000 and 1833 by 2200, and dies at
+frame 4659. The first 460 frames track within about 40 px, which covers the rock and the door. Do
+not read the later divergence as a list of engine defects - it is one accumulated phase error - but
+the early drift is itself worth a look when slice 11 starts on the strict replay.
+
 **Read ahead for 3a's remainder, so the next agent does not re-derive it.** `Obj_LRZCorkscrew`
 (sonic3k.asm:87494-87513, ROM `$4224E`) and `Obj_LRZWallRide` (:87693-87712, ROM `$4254A`) are both
 much larger than anything in 3b: each takes full control of the player through
