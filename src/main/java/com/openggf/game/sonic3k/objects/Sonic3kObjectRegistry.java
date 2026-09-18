@@ -517,6 +517,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.MGZ_PULLEY,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $5A is Obj_DEZGravityTube (sonic3k.asm:95169); S3KL $5A is
+                        // Obj_MGZPulley. The two object tables share the number.
+                        return new S3kDezGravityTubeObjectInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }

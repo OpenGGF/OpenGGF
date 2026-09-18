@@ -226,8 +226,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 95045 | `loc_48D78` | `Obj_DEZTeleporter`: Y-flip on the captured player frames | `AbstractPlayableSprite.renderVFlipForDraw` (the slice 2 draw-time mirror already composes bit 1 from the flag; `S3kDezTeleporterObjectInstance.updatePose` writes only the pose table's X flip) | covered |
 | 95075 | `loc_48DCA` | `Obj_DEZTeleporter` (`loc_48DCA`): compares subtype bit 7 with the flag (Player 1 only) | `S3kDezTeleporterObjectInstance.writeFlagAtMidpoint` | covered |
 | 95080 | `loc_48DF2` | `Obj_DEZTeleporter` (`loc_48DF2`): **writer** — flag = subtype bit 7 | `S3kDezTeleporterObjectInstance.writeFlagAtMidpoint` | covered |
-| 95277 | `loc_48FBA` | `Obj_DEZGravityTube` (`$5A`, `loc_48FBA`) exit: mirrors `flip_angle`, Y-flip | new | missing |
-| 95322 | `loc_4904A` | `Obj_DEZGravityTube` (`loc_4904A`): Y-flip while riding | new | missing |
+| 95277 | `loc_48FBA` | `Obj_DEZGravityTube` (`$5A`, `loc_48FBA`) exit: mirrors `flip_angle`, Y-flip | `S3kDezGravityTubeObjectInstance.horizontalExit` (the Y flip is the slice 2 draw-time mirror) | covered |
+| 95322 | `loc_4904A` | `Obj_DEZGravityTube` (`loc_4904A`): Y-flip while riding | `AbstractPlayableSprite.renderVFlipForDraw` — the per-frame `eori.b #2` nets to "the drawn flip equals the flag", which the slice 2 draw-time mirror already composes | covered |
 | 95511 | `sub_49228` | `Obj_DEZGravitySwap` (`$5B`, `sub_49228`): **writer** — clear | `S3kDezGravitySwapObjectInstance.applyCrossing` | covered |
 | 95514 | `sub_49228` | `Obj_DEZGravitySwap`: **writer** — set when `render_flags` bit 0 is clear | `S3kDezGravitySwapObjectInstance.applyCrossing` | covered |
 | 95536 | `loc_49270` | `Obj_DEZGravitySwap` (`loc_49270`, opposite crossing): **writer** — clear | `S3kDezGravitySwapObjectInstance.applyCrossing` | covered |

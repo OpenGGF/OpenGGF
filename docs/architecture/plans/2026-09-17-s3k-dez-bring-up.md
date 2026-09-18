@@ -544,21 +544,19 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 Slices 0 and 1 delivered 2026-09-17 on base `035e48a58` (`0d9a4f3ea`, `4e7655bf9`); see the
 evidence log. **Slice 2 is delivered and gated three times** (runs `20260918T100237Z-e62d5573`,
 `20260918T105742Z-cc4590b5` and `20260918T132045Z-02b73773`, all acknowledged). The reference
-table now stands at **91 covered, 4 partial, 17 missing, 4 n/a**. The 17 missing rows are, by
+table now stands at **93 covered, 4 partial, 15 missing, 4 n/a**. The 15 missing rows are, by
 owner: the Knuckles glide/slide/climb rows behind the glide probe wrapper (5), the dash-dust
 and Tails'-tail render rows (3), the two rows blocked on upright behaviour the engine does not
 model (`Touch_Monitor`, `Obj_Spikes`), `loc_1E44C`'s rebuilt comparison (1), the act 2 boss's
-three, and slice 3's remaining DEZ-object rows (`$5A`'s two, `$53`'s one).
+three, and `Obj_DEZConveyorPad`'s one (a slice 4 object).
 
-**Slice 3 is three of seven.** `$5B` `Obj_DEZGravitySwap`, `$58` `Obj_DEZGravitySwitch` (with
-its art and its transporter sound) and `$59` `Obj_DEZTeleporter` are concrete, so every writer
-of `Reverse_gravity_flag` a player can reach is implemented. `$5A` `Obj_DEZGravityTube` (24
-act 1, 17 act 2, and the only remaining *reader*), `$5C`, `$5F` and `$61` remain; `$5A` is the
-next one and also the object that unblocks the three slice 2 clips still unfilmed, because it
-is the neighbour of every `$5B` site. The ROM reading for `$5A` is in the 2026-09-18 handover
-entry (`Obj_DEZGravityTube` at :95169, two variants — the horizontal `loc_48EEC`/`sub_48F12`
-selected when `subtype` bit 7 is clear, and the vertical `loc_4906A`/`sub_49090` when it is
-set — with `loc_48FBA` mirroring `flip_angle` on exit and `loc_4904A` Y-flipping the rider).
+**Slice 3 is four of seven, and every `Reverse_gravity_flag` writer and reader in the Death
+Egg object set is now implemented.** `$5B` `Obj_DEZGravitySwap`, `$58` `Obj_DEZGravitySwitch`
+(with its art and its transporter sound), `$59` `Obj_DEZTeleporter` and `$5A`
+`Obj_DEZGravityTube` are concrete. `$5C` `Obj_DEZGravityHub`, `$5F` `Obj_DEZGravityRoom` and
+`$61` `Obj_DEZGravityPuzzle` remain; the handover entry records that none of the three contains
+a flag reference at all, so they are traversal work rather than gravity work and nothing in
+this campaign's reverse-gravity obligation depends on them.
 
 The blocker for the rest is not ROM reading — it is that **no fixture exists in which an inverted
 player can be shown landing on real ceiling terrain**. Three candidates were tried and rejected
@@ -1795,4 +1793,42 @@ one new shared helper: `NativePositionOps.addYPos16_16`, the Y twin of the exist
 `addXPos16_16`, because the ride's `move.l y_pos(a1),d3 / asl.l #8,d0 / add.l d0,d3`
 (:95095-95101) accumulates the whole `y_vel` in the subpixel half and a
 `addYPosPreserveSubpixel` would truncate it every frame.
+
+### 2026-09-18 — `$5A` `Obj_DEZGravityTube`, the last flag reader
+
+Twenty-four act 1 placements and seventeen act 2 ones, and `subtype` bit 7 chooses between two
+bodies that share nothing but the mount test: the horizontal tube (`loc_48EEC` / `sub_48F12`)
+that the player runs *along* while it lifts them on a cosine, and the vertical one
+(`loc_4906A` / `sub_49090`) that turns the player on their side and swings them around the
+tube's X axis. `(subtype & $3F) << 3` is the half-span in both — X for the horizontal tube, Y
+for the vertical one — and bit 6 widens the horizontal band from `$20` to `$60`, which also
+selects the twelve-entry mount table `byte_48F98`, the `$5000` amplitude and the four-step
+angle instead of `byte_48F90`, `$1000` and eight.
+
+**Both reverse-gravity rows are in the horizontal body, and the exit row is a reflection.**
+`loc_48FBA` (:95278-95284) runs `addi.b #$40,d0 / neg.b d0 / subi.b #$40,d0` on `flip_angle`,
+which is `-a - $80`: a rider leaving at 0 leaves at `$80` and one at `$20` at `$60`. Reading
+it as a negation gives `$00` and `$E0`. `loc_4904A` (:95320) is the per-frame
+`eori.b #2,render_flags(a1)`, whose net effect — the drawn Y flip equals the flag — the slice 2
+draw-time mirror already composes, so nothing is written for it here. The vertical body reads
+the flag **nowhere**; its exit at :95420-95428 writes `flip_angle = 1` flat. That asymmetry is
+asserted rather than assumed, because it is exactly the kind of thing a later agent would
+"fix".
+
+Ten mechanisms, ten breaks, ten reds — but only after two rounds, and the first round is the
+lesson. Four of the six first-round breaks reddened their test; two did not, for two different
+reasons. The span break replaced `(subtype & $3F) << 3` with `0x40`, which is what subtype
+`$08` — the only subtype the test used — already computes, so the break was a no-op and the
+test's silence said nothing. A second subtype (`$04`, half the reach) fixes it. And the
+`divu.w #$B` divisor could be set to 1 with every test still green, because the vertical
+rider's `mapping_frame` was not asserted anywhere: the rider swung correctly and only the pose
+was nonsense. **A break that changes nothing is not evidence the mechanism is pinned — it is
+evidence the break was badly chosen.** Both gaps are now closed by their own assertions
+(`theSpanScalesWithTheSubtypesLowSixBits`, `theMountAngleComesFromTheRomTable`,
+`theVerticalRiderPoseComesFromTheDividedAngle`), each shown red on a second break round.
+
+Census: act 1 placeholders 225 → 201 and concrete 140 → 164 — the first act 1 movement of the
+campaign, and all of it this one object; act 2 placeholders 300 → 283, concrete 194 → 211.
+Reference table **93 covered, 4 partial, 15 missing, 4 n/a**; the 15 remaining have no Death
+Egg gravity-object owner left in them.
 
