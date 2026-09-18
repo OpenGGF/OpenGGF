@@ -1936,24 +1936,29 @@ own frame numbers, because the engine reaches the arena by a declared checkpoint
 native run arrives along the act's route; only the *intervals* above are comparable, and those are
 what is compared.
 
-### 2026-09-18 — clip 18 is blocked, and the measurement that says why
+### 2026-09-18 — clip 18, and the flag that was in the tool and not in the skill
 
-`GameplayCaptureTool` cannot film this fight yet. Two teleport boots,
-`--x 0x200 --y 0x7C8` and `--x 0x200 --y 0x860`, both drop the leader straight through the arena
-floor and settle it at `($100,$C4C)` with the camera at `($60,$BC0)`, far below the arena and with
-the boss gates unreachable. The floor is real: the native rows above have the player grounded
-(`player_air 0`) at `($249,$86C)` on frame 4596, and `TestS3kSszGhzArenaHeadless` reaches
-`($200,$86C)` by the act's own physics from a checkpoint restart. What the capture tool has no
-flag for is that restart — it teleports after boot, which is the documented "skips plane switchers
-and level events between the act start and that point" pitfall, and the arena's collision plane is
-one of the things skipped.
+`GameplayCaptureTool` films this fight with **`--star-post`**, not with `--x/--y` alone. Two
+attempts were wasted first: `--x 0x200 --y 0x7C8` and `--y 0x860` both drop the leader through the
+arena floor and settle it at `($100,$C4C)`, and the first reading of that was "the arena's
+collision plane is a switcher a teleport skips". Wrong. `GameplayCaptureSession`'s `starPost`
+branch says what it actually is, in a comment written when the flag was added:
+`SSZ1_ScreenInit` runs a scripted intro on the no-star-post path that **overrides `--x/--y`
+outright**, and `Obj_57C1E` then writes Player 1 to `Camera_Y + $65`. The flag does what
+`TestS3kSszGhzArenaHeadless.bootAtCheckpoint` does — `saveCheckpoint` at the requested position,
+then `initLevelEventsForLevel()`.
 
-So clip `17` still stands as the only footage, and it predates the fixes: it shows a ball that
-cannot hurt anybody and a defeat with no debris. The re-film is recorded as owed in
-`~/Videos/OGGF/ssz-bring-up/INDEX.md` and in the act-1 matrix. **Do not re-attempt it with a bare
-teleport** — either give `GameplayCaptureTool` a checkpoint-restart option of the same shape as
-`HeadlessTestFixture`'s, or author a route from the previous star post. That is the next thing to
-try, and it is not a five-minute job.
+The flag is absent from the `gameplay-capture` skill's table, which is why two captures went into
+the floor before anyone looked at the tool. **Read the tool's arguments, not only the skill's
+summary of them**, and the skill's table is worth a line.
+
+With it the leader settles on the arena floor at `$86C` — the same place the native rows put it
+and the same place the headless test measures — the lock fires, the camera settles at `$7C0` and
+the boss spawns. `18-ssz-green-hill-ball-and-chain-hurts.mp4` (`raw-29-ssz-ghz-ball-hurts`) is
+that capture: the arena closing, the ship dropping in, the chain paying out, and at **frame 361**
+the ball on top of a standing Sonic, killing him. That last frame is the review's blocking finding
+made visible — before the fix the ball had no collision byte at all and an idle player could stand
+in the arena indefinitely. Clip `17` is kept, and labelled as the pre-review fight.
 
 ### 2026-09-18 — handover after the review-application round
 
