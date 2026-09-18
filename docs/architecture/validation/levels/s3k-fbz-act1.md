@@ -1,0 +1,438 @@
+# FBZ Act 1 coverage matrix
+
+Moving-camera presentation follow-up (2026-09-15): the
+[MHZ regression audit](../../audits/2026-09-15-s3k-presentation-camera.md)
+tracks the shared retained-SAT/scroll correction. Earlier stationary FBZ
+comparison pairs do not cover camera-relative terrain/object alignment;
+moving-camera validation supplements these obligations without closing the
+remaining act/character/viewport visual matrix.
+
+Miniboss presentation follow-up (2026-09-15): the [visual comparison](../../audits/2026-09-15-fbz1-miniboss-visual.md)
+tracks the native plunger artwork, waiting-eye frame and inherited cover/face
+tile priority. The local setup places Sonic above the plunger and lets real
+contact open the boss. Artwork and tile priority are independent of viewport,
+donor and team selection; no movement or contact authority changes. Existing
+act breadth and complete-route visual gaps remain inherited. The focused child
+regressions and existing encounter/art/rewind/S3K checks passed 178 tests with
+zero failures/errors/skips; the corrected capture preserves the complete
+player/camera CSV and observed boss positions/timers.
+
+Hanging-handle presentation follow-up (2026-09-14, amended 2026-09-15): horizontal `$72` grab regions
+must not submit vertical chain art (`Obj_FBZChainLink` → `loc_3AA5A`).
+`TestFbzRailAndChainPlatforms` covers all six used horizontal subtypes and
+retains a positive vertical descent/mapping check. `TestFbzChainLinkArtWord`
+checks the real 15-frame mapping table, shared terminal frame, representative
+piece geometry, resolved palette/priority, and exact `$467`/`$379` level-pattern
+sources after the ROM's 16-bit `$E0EE + $4379` addition. This local render-only change
+preserves the existing interaction/rewind obligations and inherited visual gaps;
+earlier execution evidence is in the [completion record](../../plans/2026-09-14-fbz-completion.md).
+Focused validation on `bugfix/ai-fbz-chain-art-word`, based on `c8138d304`, ran
+`TestFbzChainLinkArtWord`, `TestFbzRailAndChainPlatforms`, the full registry mapping
+crawler, the renderer corruption guard, and the required S3K loading/bootstrap
+checks: 98 tests passed with zero failures, errors, or skips. This is bounded
+art/presentation validation, not a full ordinary-suite or pixel-comparison pass.
+
+Spike-art follow-up (2026-09-14): the ROM-backed
+`TestSonic3kObjectArtProvider#fbzSpikeOrientationsUseTheirNativeTileBanksInBothActs`
+passes all eight mapping frames in both acts, including piece dimensions/flips,
+live upright `$200` and sideways `$494` pattern references, and exact refresh
+range boundaries. This local presentation check does not certify the act's
+remaining native visual checkpoints; see the completion record for execution.
+
+Status: **partial; not certified**. Source inventory inspected on 2026-09-14
+against develop `435ec2e68`, with focused completion evidence subsequently
+recorded on the uncommitted `ai-fbz-native-loading` candidate based on
+`6897a604895a4822e85b766859624a95c42bd4b6`. Only the explicit execution
+ledger below makes current PASS claims; other named tests are source contracts.
+See the [completion record](../../plans/2026-09-14-fbz-completion.md) for commands,
+source changes and delivery status.
+Inherited results and exact commands remain in [outstanding actions](../../research/s3k-zones/fbz-outstanding-actions.md)
+and [test lanes](../2026-09-13-fbz-test-lanes.md); their commit/date limits apply.
+Use the [level standard](../../../guide/contributing/level-test-standard.md).
+ROM act indices are zero-based; displayed act numbers below are one-based.
+
+Canonical slot: `S3K_FLYING_BATTERY_1`, FBZ ROM act 0. The outgoing
+results-owned reload enters FBZ act 1 (displayed Act 2), with world translation
+and carried owners; it is part of this act's completion contract.
+
+## Character and configuration routes
+
+| Route | Concrete existing contract and setup | Remaining obligation |
+| --- | --- | --- |
+| Sonic solo / Sonic + Tails | `TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults` passed the ordinary cold Sonic + Tails route on the integrated runtime (six-impact boss → sign/results → Act 2 title teardown/control release); see exact source and limits below. `TestFbzNativeCharacterRoutes#everyNativeTeamCanEnterBothActsFromLevelSelectAtTheRomStart`: production level-select selection, ROM start, concrete sprite types, two idle frames | Sonic solo candidate now passes below; representative full-route configuration breadth remains open |
+| Tails solo | Same entry method with Tails radius/character assertions; checkpoint method below | Tails solo candidate now passes below; additional flight-specific and configuration coverage remains open |
+| Knuckles solo | `TestFbzAct1ColdRoute#nativeSoloColdRouteReachesReleasedAct2`: actual Knuckles, ordinary jumps/glides, real boss/results/title release; 22,162 frames in the combined nine-case pass below | Additional character-specific geometry and rewind breadth remain open |
+| 400/512/640/800-pixel Sonic + Tails | `TestFbzAct1ColdRoute#fourHundredPixelColdRouteReachesReleasedAct2` and `#widerNativeColdRoutesReachReleasedAct2`: actual camera/viewport width and physical boss/results/title/control-release assertions | All four pass in the combined nine-case run below; other width/donor/team combinations remain open |
+| S1 Sonic solo, 320px | `TestFbzAct1ColdRoute#sonic1DonorColdRouteReachesReleasedAct2`: real donor ROM and no-spindash assertions; ordinary run/jump controller | FAIL at the lower curved-wall transfer; exact matched baseline/current failure below. Full S1 traversal remains open |
+| Width/donor/team lifecycle | `TestFbzAct1RouteHeadless#resultsOwnedReloadAndTitleLifecycleSupportsWidthsDonationsAndEveryTeamShape`: seeded boss-boundary fixture, real results/reload/title lifecycle; widths 320/352/400/512/528/640/800 × off/S1/S2 × five team shapes (105 cases), then native reset | 105-case product plus final native reset PASS in focused validation below. Not full traversal or rendered-width evidence |
+| Current standard width/team/donor axes | `TestFbzCompatibilityMatrix#configuredTeamSynchronousTransitionPreflight`, `viewportSynchronousTransitionPreflight`, `donorSynchronousTransitionPreflight` | The separate 30-row entry/reload/reset product below closes that specific load-isolation obligation; independent axis sweeps alone do not prove traversal |
+
+## Obligation map
+
+| Obligation | Named test contract / independent oracle and setup authority | Limit or open work |
+| --- | --- | --- |
+| ENTRY / LOAD | Native-character entry above; `TestFbzAct1RomRuntimeLifecycle#freshLevelEventInitializationClaimsNativeFirstDynamicSlotBeforePlacement` and `outdoorStartupPaletteAndRetainedRingSurviveRealFramePreparation`; real ROM load/frame preparation | Alternate-entry inventory, repeated resets and required breadth still need explicit executed rows |
+| INTERACT / EVENTS / BOSS | `TestFbzAct1RouteHeadless#loadedFbz1PlacementStartsOnlyWhenP1ReallyStandsOnItsPlunger` and `p2AndExtraSidekickCanRideTheRealPlungerButOnlyP1CanStartIt`; real placed miniboss from local boundary setup. `TestFbzEventsAct1`, `TestFbzAct1Miniboss` pin ROM branch behavior | Seeded arena evidence does not cover reaching it. Map all encountered carriers, hazards and indoor/outdoor boundaries to local production-binding tests |
+| CHECKPOINT / DEATH | `TestFbzCheckpointRoutes#romDecodedActsExposeTheCompleteAuthoredStarpostSet` and `everyNativeTeamDeathReloadsAtEverySupportedCheckpoint`: ROM placement oracle, save checkpoint then production death/reload; Act 1 posts 1–5 × four native teams. `TestFbzAct1RouteHeadless#checkpointDeathReloadRecreatesPristinePlacedBossAndClearsEncounterTransients` | Saved-state setup does not prove physical starpost activation; width/donor respawn product and repeated restart leak checks need mapping/evidence |
+| LOAD / ROUTE boundary | `TestFbzActTransitionHeadless#productionReloadPreservesConcreteSstFamiliesAtExactBoundarySlotsAndLinks`, `synchronousReloadCarriesAndReadoptsTheExactOutdoorMotionSlot`, `screenEventReloadPreservesLiveTeamStateAndUsesShiftedWindows`; ROM-backed seeded transition state, production reload | Do not substitute this boundary for a complete Act 1 route |
+| REWIND: boss/events | `TestFbzBossGraphRewind#act1MinibossFullNativeGraphRoundTripsAndReplaysDeterministically`; `TestFbzMinibossRewind#forcedReconstructionRelinksAllSimpleChildrenAfterAdverseChildFirstOrder`; constructed non-default object graphs and ROM-owned identities | Inventory before creation, active attack, hit, killing hit, cleanup spots individually; graph reconstruction alone is narrower than every player-contact/clock boundary |
+| REWIND: real carried title initialization | `TestFbzAct1RouteHeadless#realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch`: actual six-impact boss/sign/results; complete registry capture immediately before `TITLE_CARD_INIT`, after its dispatch, and after the following dispatch; two restore/replay cycles on each side | Passed in `0d4de81f1`; compare every registry owner and semantic field, including all 64 pattern pixels; only existing documented bookkeeping exclusions |
+| REWIND: load/timeline | `TestFbzActTransitionHeadless#realLiveRewindRoundTripsAct1OwnersBeforeResultsPublication` and `realLiveRewindCannotCrossResultsReloadButCanSeekInsideAct2Segment`; real live rewind service | Results reload intentionally severs timeline: test old-history rejection and new Act 2 seek, not cross-boundary restoration |
+| REWIND: interactions/world/camera | `TestFbzObjectRewind#eventsPolarityCarriersHazardsAndBadniksRoundTripAndReplayDeterministically`, `TestFbzEnvironmentalGraphRewind` provide local mechanisms | Assign before/contact/held/release and before/active/after redraw, palette and camera-lock spots to each applicable Act 1 binding; unassessed breadth remains open |
+| PRESENT / ORACLE | `TestFbzScrollHandler#outdoorDeformUsesBobAndReadThenIncrementE00Drift`, `TestFbzAnimatedTiles`, `TestFbzPlcArtHandoffs`; ROM scripts and event constants. `TestS3kFbzCompleteRunTraceReplay` is the independent complete-run oracle | Complete V5 recording passes in the uncommitted `ai-fbz-native-loading` candidate; nine Act 1 boundary afterstates match whole frames. B2 both ways, B4 forward, intermediate redraws and other event recipes remain open; see current native validation ledger |
+
+## Visual acceptance and execution ledger
+
+[Native validation](../../research/s3k-zones/fbz-validation.md) and the
+[amendment](../../research/s3k-zones/fbz-visual-evidence-amendment-proposal.json)
+remain authoritative. The new Python/BizHawk host captured a visible native start
+and six-frame native candidates for all five AniPLC channels. The paired engine
+start matches level frame 35 and raw animation counters after the production
+setup pass; terrain raster alignment and cloud phase still differ. `$230` is
+placed only in Act 2, as proven by ROM block/chunk/layout decoding. These are
+candidate references, not completed paired cadence or checkpoint acceptance.
+The frozen checkpoint manifest remains unchanged. See the current native
+validation record for exact artifact hashes, regions and outstanding obligations.
+
+Read-only prerequisite check on 2026-09-14:
+`tools/tracechaser/bizhawk/preflight_bizhawk_2_11.sh --bizhawk-home $BIZHAWK_HOME`
+passed: exact 2.11.0.0 and 30 Lua capabilities. Mono/ffmpeg/pwsh/Lua 5.4 and
+the complete Sonic/Tails BK2 exist; display access and fresh pixels were not tested.
+That initial preflight produced no accepted capture. Later native execution and its
+exporter defects are recorded in the completion record; those PNGs do not close
+visual acceptance.
+
+Focused lifecycle evidence on `c31bdbd7a` plus local task changes:
+`mvn -Dmse=off -B -Dtest=TestFbzSqueezeOrdinaryRoll,TestFbzAct1RouteHeadless#resultsOwnedReloadAndTitleLifecycleSupportsWidthsDonationsAndEveryTeamShape test`
+with absolute verified ROM properties completed in 51.80 seconds. The Act 1
+method passed all 105 width × donor × team combinations and the final native
+reset. Surefire reports that loop as **one test**, not 106 independently reported
+cases. The combined invocation reported 115 tests: 112 passed and three local
+squeeze rewind failures; it was not a green run. Those rewind failures were
+subsequently resolved and narrowly verified as recorded in the Act 2 ledger.
+This proves the seeded results/reload/title lifecycle, not every Act 1 main-character
+route, physical checkpoint interaction, complete rewind matrix or visual outcome.
+
+The final eleven-route Act 2 compatibility matrix also passed (62.306 seconds,
+zero failures/errors/skips) on the same candidate plus slot-restoration/local
+changes; see the [Act 2 ledger](s3k-fbz-act2.md). Those routes begin at cold Act 2
+entry and do not close Act 1 traversal or Tails/Knuckles-main route gaps.
+
+## Ordinary cold-route work (base `51677cdd2`)
+
+`TestFbzAct1ColdRoute` uses the ROM start, native Sonic + Tails, live production
+hardware readiness, and pad input only. The committed BK2 supplies its opening
+pad sequence; comparison rows and recorded readiness never supply route state.
+The first ordinary run died at `$0A63/$0BE6` on input frame 2,970: stale
+recorded RIGHT walked off a moving platform. Live geometry steering now clears
+the `$0A78` chain and the `$0B10`, `$0BC0`, and `$0C90` platform sequence.
+Circle forecasts use the actual level clock and native phase; future landing
+reachability controls when ordinary jumping starts. Stable placement anchors
+track progress, while current coordinates drive steering. Treating these two
+coordinate domains as interchangeable reselected the same moving platform;
+forecasting the first gap prematurely also regressed it. Both were rejected.
+The `$0D90/$0A80` launcher now records actual P1 standing, acceleration and
+release, followed by upper-route ascent. Continuous jumping previously skipped
+its standing callback and looped below the upper route. Live LEFT steering also
+reaches the horizontal wire-cage chain. Subsequent live input steering completes that trap, the upper snake-platform
+tower, the `$08B0` trap, upper platform/pole section, screw-door descent,
+`$1940` platform-to-wire gap and the `$1B20` rider-triggered rising platform.
+Live polarity/clearance inputs now cross the magnetic corridor and physically
+activate starpost 4. All three following magnetic carriers, the return plunger
+and launcher, three upper rotating gaps, missile bursts and real five-impact
+companion release also complete. The final carrier transfer now uses ordinary run-up to clear the low ceiling,
+then rides both `$2C80` rotating families through the `$2CE0` floating platform.
+The full native Sonic + Tails route **passed once** at `a9354be64` plus the
+candidate: 1 test, zero failures/errors/skips, 23.334 seconds Maven / 5.126
+seconds class time. It activates checkpoints 4 and 5, reaches the real miniboss,
+observes all six scripted impacts and defeat, the falling sign and results, and
+waits for actual Act 2 title teardown and released P1 control. The live boss
+driver leaves during normal-attack alignment so later, accelerating fans cannot
+catch P1 on the plunger. No runtime values were changed. The final integrated native repeat also passes (details below). Representative
+configuration traversal is still open; this does not certify Tails-main or
+Knuckles-main traversal.
+
+Focused queued command: `python3 tools/testing/maven_queue.py -Dmse=off -B
+-Pfbz-routes -Dtest=TestFbzAct1ColdRoute -Ds3k.rom.path=<absolute locked-on ROM>
+test`. On `51677cdd2` plus the candidate, the initial diagnostic run had one
+error (null-spawn failure formatting); seven subsequent controller checks each
+reported one failure and zero errors/skips. Their successive frontiers were
+2,970, 3,271, 2,986, 3,111, 3,271, 3,363, and the 35,400-frame route watchdog.
+The last check survived the outdoor gaps without dying but did not complete:
+23.659 seconds Maven / 6.024 seconds class time. These are red development
+checks, not inherited or new passing route evidence.
+
+After merging `46fe2152f`, five further queued one-test checks each failed
+with zero errors/skips (Maven 21.037, 21.601, 19.779, 21.043, 24.444 seconds).
+The first two prove launcher progression but stale pad continuation eventually
+dies near the upper egg prison. The third reaches the wire cages and trap area.
+The next two expose premature trap steering/jumping during the curved climb,
+which drops P1 onto the lower floor. Survival is the current safety assertion;
+continuous no-hurt/ring-loss is not yet certified.
+
+Independent ending allocation regression on `46fe2152f` plus the candidate:
+`python3 tools/testing/maven_queue.py -Dmse=off -B
+-Dtest=TestFbzAct1RouteHeadless#realBossSignWaitsForGroundAndAllocatesResultsInEarlierFreeSlot
+-Ds3k.rom.path=<absolute locked-on ROM> test` passed **1 test, zero failures,
+errors or skips**, 50.886 seconds Maven / 1.481 seconds class time. This short
+local boundary fixture uses the actual placed boss and all six automatic arm
+impacts. It then reserves allocation slots (explicit test setup), makes an
+ordinary jump across the real sign countdown, verifies grounded gating and
+first-free lower-slot results publication, and observes initialization on the
+next object dispatch. It does not substitute for cold traversal.
+
+The subsequent real-title initialization regression is committed in `0d4de81f1`
+(on merged `f14a27b51`, including `5f5a73d61`). Queued focused command selects
+`TestFbzAct1RouteHeadless#realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch`:
+**1 test, zero failures/errors/skips**, 20.069 seconds Maven / 1.998 seconds
+class time. The preceding paired run reported 2 tests with one comparison
+failure and zero errors/skips (51.259 seconds): allocation passed, while title
+forward replay compared newly created `Pattern` identities. The corrected test
+compares every pattern's complete 64-byte pixel state, not object identity;
+no title/gameplay field is dropped. Full-registry restoration and forward replay
+now pass twice before and after actual title initialization.
+
+`3db7af70d` updates the real converted-controller allocation regression after
+native camera-worker ownership was corrected: exact 0–3 post-controller free
+slots, exact worker prefix/slots, preserved unallocated targets, and four
+ordinary updates including the first nonzero worker delta. Queued selection
+`TestFbzAct1RouteHeadless#realConvertedEndSignControllerAllocatesExactWorkerPrefixAndRunsFirstTwoUpdates`
+passed **4 tests, zero failures/errors/skips**, 23.001 seconds Maven / 3.969
+seconds class time. Two preceding 4-row red checks exposed obsolete test setup:
+`TITLE_CARD_INIT` is not an initialized provider, and the corrected rebase no
+longer loads the former extra StillSprite into the allocation window. Neither
+was addressed by weakening worker-prefix or camera-tail assertions.
+
+Ordinary route controller lessons: on a small trap reached from curved terrain,
+LEFT cannot brake during the real slope-slip movement lock and prevents neutral
+friction. The verified input solution preserves neutral while that lock burns
+down, then centres on the trap; it never changes the lock. Directional input
+during the subsequent ceiling arc also loses the momentum needed to climb, so
+that section retains neutral until the terrain releases P1. At the lower cage,
+the route goes down to the floor and uses an ordinary charged roll up the curved
+wall; a direct cage-to-platform jump was an incorrect route assumption. The
+cold completion assertion now requires results retirement, title completion,
+and released P1 control in Act 2, not merely the early seamless reload.
+
+
+The independent `TestFbzEntryReloadResetMatrix#coldEntryAndRepeatedProductionReloadsIsolateActOwners`
+passed **30 rows, zero failures/errors/skips** in `ad293afee` (executed on `15976fff2` plus the new test)
+(23.909 seconds Maven, 3.764 seconds body). Its product is both FBZ acts × widths
+320/400/512/640/800 × donors off/S1/S2, with concrete Sonic + Tails. Each row
+checks the cold ROM start, then two opposite-act `loadZoneAndAct` →
+`resetState` + target-load cycles: actual viewport, composed rules, fresh event
+and runtime owners, and no seeded trigger/shake/reversal or standing/riding
+contact leakage. Command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestFbzEntryReloadResetMatrix -Ds3k.rom.path=<absolute S3K ROM>
+-Dsonic1.rom.path=<absolute S1 ROM>
+-Dsonic2.rom.path=<absolute S2 ROM> test`. This is entry
+and reset breadth, not full traversal, other-main-character coverage, death or
+checkpoint restoration, or pixel acceptance.
+
+
+### Integrated ordinary-route evidence and rejected breadth experiments
+
+On `4d9bcf459` (including `74b91937d`, `1e8e86743`, and `c45a977ce`) plus
+the final controller, the native 320-pixel Sonic + Tails cold route passed:
+**1 test, zero failures/errors/skips**, 23.530 seconds Maven / 5.788 seconds
+class time, **27,051 ordinary frames** through actual Act 2 control release.
+The queued command was the cold-route command above. Configuration checks
+verify actual camera and viewport width, concrete Sonic/Tails CPU ownership,
+and donation state; session overrides and viewport are restored. A live
+low-platform gate, safe-floor run-up and centre landing replace the third
+magnetic carrier's previously phase-sensitive jump from rest.
+
+The seven short encounter/ending cases separately passed on the preceding
+`74b91937d` integration plus corrected assertions: **7 tests, zero
+failures/errors/skips**, 6.437 seconds Maven / 5.730 seconds class time. Command:
+`python3 tools/testing/maven_queue.py -Dmse=off -B
+-Dtest=TestFbzAct1RouteHeadless#realConvertedEndSignControllerAllocatesExactWorkerPrefixAndRunsFirstTwoUpdates+realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch+realBossSignWaitsForGroundAndAllocatesResultsInEarlierFreeSlot+placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5
+-Ds3k.rom.path=<absolute locked-on ROM> surefire:test`. The earlier combined
+`-Pfbz-routes` invocation executed only the tagged cold test; it did **not**
+execute these untagged short methods. The one short failure was the obsolete
+publication-frame `+2` bound expectation: `FBZ1BGE_Normal` subtracts `$2E00`
+from both current X bounds then branches directly to `FBZ1BGE_GoDeform`. The
+correct `$20/$A0` bounds retain the rest of the actual publication/owner checks.
+
+A four-case breadth assessment passed native Sonic + Tails but failed the
+400-pixel camera setup (stale session), Sonic solo traversal near `$0CA5/$08AC`
+at frame 25,362, and S2-donor traversal near `$09CD/$0A45` at frame 3,033
+(4 tests, 3 failures, no errors/skips, 28.314 seconds Maven). Fixing width
+setup exposed a real 400-pixel controller frontier at the early `$0A78` chain,
+not width coverage. A common chain-height gate was rejected: the first version
+required an unreachable height; the revised version cleared that chain but
+changed native timing and exposed later upper-route failures (2 failures, no
+errors/skips, 29.118 seconds Maven). The accepted native controller excludes
+that experiment. The subsequent 400-pixel ordinary route passes below. Other wider viewports,
+solo, S1/S2-donor and other-main-character full routes remain open; none are
+represented by a passing load-only test.
+
+
+## Ordinary 400-pixel route follow-up
+
+On `d36a68ef0` plus the width-specific controller,
+`TestFbzAct1ColdRoute#fourHundredPixelColdRouteReachesReleasedAct2` passed
+**1 test, zero failures/errors/skips**, 23.541 seconds Maven / 5.676 seconds
+class time, completing in **25,765 ordinary frames**. Command:
+`python3 tools/testing/maven_queue.py -Dmse=off -B -Pfbz-routes
+-Dtest=TestFbzAct1ColdRoute#fourHundredPixelColdRouteReachesReleasedAct2
+-Ds3k.rom.path=<absolute locked-on ROM> test`.
+The route verifies the actual 400-pixel camera/viewport, preserves the native
+Sonic + Tails setup, and reaches the same six-impact miniboss, sign/results,
+Act 2 title teardown and released P1 control as the native-width route.
+It does not establish continuous no-hurt/ring-loss, another donor or team,
+rendered pixels, or a width Cartesian product.
+
+The wider camera changes object activation timing. Its independent input
+branches use actual bent-pipe/snake contacts, all eight spinning-pole grabs
+and ordinary climbs/releases, raised magnetic-platform clearance, and the
+real rider-triggered platform descent. The two lower oscillating steps use
+actual support/height handoffs. The second wire cage needs a short jump from
+the intermediate platform: jumping directly through its upper band starts
+its native 40-update landing cooldown. The final cage-to-platform transfer
+walks off near the predicted upper arc; `sub_39F7E` advances the actual wire
+angle by four units per update. This prediction consumes live player speed,
+acceleration and angle solely to choose ordinary input.
+
+Rejected controller approaches are retained here, not in runtime: walking
+into the raised bent-pipe sides stalled; one-sided descent met the left wall;
+a full jump between cages triggered the native cooldown; jumping at the last
+cage met its low ceiling; choosing the current high arc ignored the time to
+walk off. At the rising `$1B20` platform, full ordinary charge overshot its left
+edge, while heavy braking before the curve missed its right top edge. Fewer
+ordinary charge taps (observed charge threshold `$400`, versus the original
+route's `$600`) plus live landing steering complete that transfer. All native
+320-pixel input branches remain intact. The eighteen preceding focused
+400-pixel controller checks each reported one failure and zero errors/skips;
+they were development frontiers, not partial passing routes.
+
+
+Final combined verification after merging runtime `0b91327a1` and event carry
+`20dfa3877` (worktree source `361218525` plus the cleaned controller) passed
+**2 tests, zero failures/errors/skips**, 55.889 seconds Maven / 9.424 seconds
+class time. Command: `python3 tools/testing/maven_queue.py -Dmse=off -B
+-Pfbz-routes -Dtest=TestFbzAct1ColdRoute
+-Ds3k.rom.path=<absolute locked-on ROM> test`. Native 320-pixel completion
+remains **27,051 ordinary frames**; 400-pixel completion remains **25,765**.
+This is focused route validation; parent delivery owns combined runtime and
+structural verification. The native and representative wider route are proven,
+while the other character/donor/full-route breadth gaps above remain explicit.
+
+
+### Settled B1 whole-frame follow-up
+
+Both B1 afterstates now have zero full-frame pixel, Plane-B and palette
+mismatches after the S3K TIME glyph/life-digit palette corrections. The
+[validation record](../../research/s3k-zones/fbz-validation.md#b1-whole-frame-hud-correction-2026-09-14-follow-up)
+contains commands, hashes, focused results and the comparison video identity.
+Before/mid redraw phases, other whole-frame checkpoints and retained B2/B4
+sprite presentation remain open. Native solo cold-route evidence follows.
+
+
+### Native solo, donor and viewport cold-route expansion (candidate)
+
+On pinned base `6897a6048` plus uncommitted `ai-fbz-native-loading` changes,
+five routes reach released Act 2 through the real boss and results:
+
+| Route | Ordinary frames |
+|---|---:|
+| Native Sonic solo, 320px | 20,909 |
+| Native Tails solo, 320px | 22,448 |
+| S2 Sonic solo, 320px | 20,909 |
+| Native Sonic/Tails, 320px | 27,563 |
+| Native Sonic/Tails, 400px | 26,188 |
+
+Queued command: `test -Dmse=off -Pfbz-routes -Dsurefire.forkCount=1
+-Dtest=TestFbzAct1ColdRoute -Ds3k.rom.path=<absolute locked-on ROM>
+-Dsonic2.rom.path=<absolute S2 ROM>`. The completed
+`routes-glide-release-and-platform-phase-profile` invocation has nine cases:
+five passes, four failures, zero errors/skips (26.15 seconds test body,
+43.334 seconds Maven). Knuckles clears the three early rotating gaps but
+fails at the late magnetic carriers; 512/800px fail the first outdoor transfer,
+and 640px stalls in that platform sequence. S1 full Act 1 is still absent.
+These are test-controller frontiers; they do not establish gameplay defects.
+The earlier invocation without `-Pfbz-routes` selected zero tests and is not
+validation evidence.
+
+The controller uses pad inputs and live geometry only. This is focused
+candidate evidence, not certification of all donors, widths, teams, rewind
+checkpoints or the integrated tree.
+
+
+### Whole-frame and wider-route follow-up
+
+The current candidate has nine accepted Act 1 whole-frame boundary afterstates:
+B1/B3/B5/B6 both directions and B4 reverse. Both established Act 2 afterstates
+also match, making eleven across FBZ. B5 and Act 2 preserve their declared
+control prerequisite. B6 now starts from the same native fresh-entry state as
+other Act 1 fixtures. This does not close the intermediate/SAT/event matrix;
+see the [native validation ledger](../../research/s3k-zones/fbz-validation.md).
+
+The wider snake-platform driver now predicts where the moving segment will be
+when the player's feet reach its top. The 640px native Sonic/Tails route reaches
+released Act 2 control in **26,689 ordinary frames** in the completed
+`routes-wide-snake-intercept` invocation: three cases, one pass/two failures,
+zero errors/skips, Maven34.244 seconds. Previously it reached the boss only at
+frame31,993 and timed out after three impacts; both arms/all ten links were
+present and patrolling. This rejects missing-child allocation or a frozen
+boss as explanations for that run. The 512/800px cases remain open, and the
+latest combined nine-case result is still five passes/four failures before
+this subsequent focused 640px pass. No broader all-route pass is claimed.
+
+
+The subsequent combined nine-case check (`routes-transfer-geometry-and-pole-wait`)
+has **six passes/three failures**, zero errors/skips, Maven 49.885 seconds.
+A focused carrier run-up follow-up adds a **512px native Sonic/Tails pass in
+21,568 ordinary frames**: six selected cases, four passes/two failures,
+zero errors/skips, Maven 36.658 seconds. The other focused passes are native
+Sonic/Tails solo and 640px. Knuckles' upper carousel and 800px pole/missiles
+remain input-controller frontiers; S1 full Act 1 is still absent. Seven of
+the nine established route cases now have passing evidence, with three of
+those carried from the unchanged paths in the earlier combined invocation.
+
+
+The next focused run (`routes-upper-carousel-runup`) adds an **800px native
+Sonic/Tails pass in 23,163 ordinary frames**. Six selected cases: five passes,
+one Knuckles failure, zero errors/skips, Maven 38.861 seconds. Eight of the
+nine established cases now have passing evidence; the most recent combined
+nine-case run is still the earlier six-pass/three-failure result. Knuckles'
+upper carousel remains open, independently of the absent S1 full-act route.
+
+
+**Established cold-route controller matrix closed on the candidate:** the
+combined `routes-nine-final` invocation passes all nine cases, zero failures,
+errors/skips, Maven 52.101 seconds (32.83 seconds test body). Native Knuckles
+solo completes in 22,162 ordinary frames. This supersedes the earlier partial
+combined results. An explicit S1 donor case is now being measured separately;
+this does not close retained-SAT/intermediate visuals, Hyper progression,
+rewind breadth, or integration validation.
+
+
+### S1 lower-curve matched baseline
+
+The explicit S1 full-act test remains red at the lower curved-wall transfer.
+On identical fixture source and absolute S3K/S1 ROM paths, pinned unchanged
+production base `6897a6048` and the current candidate each complete one test
+with one failure, zero errors/skips (Maven 24.108/23.359 seconds). The entire
+failure diagnostic and final 45-frame history are identical; this is an
+existing route/controller frontier, not an introduced production regression.
+See the [command, hashes and rejected approaches](../../plans/2026-09-14-fbz-completion.md#matched-attribution-of-the-s1-route-gap).
+Nine established routes pass together; S1 full-act traversal is not certified.
+
+Retained presentation follow-up (2026-09-15 candidate on `dedd18877`): all nine
+established Act 1 cold routes still pass with identical completion frame counts.
+The S1 full-act case reproduces the same failure plus all 45 history frames on
+unchanged destination production code and the candidate. This remains a route
+controller gap, not a new runtime regression or proof of impossibility. All
+twelve Act 1 settled native/engine boundary afterstates now match whole-frame
+pixels, palette and descriptors. Production full-registry capture/restore and
+forward replay preserve both sprite tables and the separately published HUD
+counters; the focused/strict invocation passes 97 checks, zero skips. See the
+[validation ledger](../../research/s3k-zones/fbz-validation.md) for remaining
+intermediate-frame and whole-zone coverage limits.
+
+Retained-presentation follow-up (2026-09-15): real-boss title-init rewind now
+excludes the results renderer's rebuildable cache flag while retaining its
+gameplay readiness/timing state. The existing full-registry oracle passes in
+the final 158-case focused run, with no skips; the full strict FBZ replay also
+passes. All 36 fresh B2 capture PNGs match the reviewed v2 inputs exactly.

@@ -77,7 +77,7 @@ public final class PaletteWriteSupport {
 
     private static void cachePaletteTextureIfReady(GraphicsManager graphics, Palette palette, int paletteIndex) {
         if (graphics != null && graphics.isGlInitialized()) {
-            graphics.cachePaletteTexture(palette, paletteIndex);
+            com.openggf.graphics.PaletteUploadPresentation.cacheLevelPalette(graphics, palette, paletteIndex);
         }
     }
 

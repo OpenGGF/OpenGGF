@@ -3,14 +3,10 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.SpawnCoordinateSubtypeDefaultArgsRewindRecreatable;
-import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.level.render.SpriteMappingFrame;
-import com.openggf.level.render.SpriteMappingPiece;
 
 import java.util.List;
 
@@ -80,27 +76,19 @@ public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObj
         setDestroyed(true);
     }
 
+    // Pow_Main move.b #3,obPriority(a0): docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:233.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(3);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) {
             return;
         }
-        ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null) {
-            return;
-        }
-        PatternSpriteRenderer renderer = renderManager.getMonitorRenderer();
-        ObjectSpriteSheet sheet = renderManager.getMonitorSheet();
-        int frameIndex = subtype + ICON_FRAME_OFFSET;
-        if (renderer == null || !renderer.isReady() || sheet == null
-                || frameIndex < 0 || frameIndex >= sheet.getFrameCount()) {
-            return;
-        }
-        SpriteMappingFrame frame = sheet.getFrame(frameIndex);
-        if (frame == null || frame.pieces().isEmpty()) {
-            return;
-        }
-        SpriteMappingPiece iconPiece = frame.pieces().get(0);
-        renderer.drawPieces(List.of(iconPiece), spawn.x(), iconSubY >> 8, false, false);
+        drawMonitorIcon(subtype + ICON_FRAME_OFFSET, spawn.x(), iconSubY >> 8);
     }
 }

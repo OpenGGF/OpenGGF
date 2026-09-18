@@ -85,11 +85,12 @@ public final class FbzMissileLauncherObjectInstance
   }
   private int resolveLevelFrameCounter(int fallbackFrameCounter) {
     ObjectServices objectServices = tryServices();
+    // LevelFrameStep has already advanced this counter before objects.
     return objectServices != null && objectServices.levelManager() != null
-        ? objectServices.levelManager().getFrameCounter() + 1
+        ? objectServices.levelManager().getFrameCounter()
         : fallbackFrameCounter;
   }
-  private void coarseCull() { coarseXCull(spawn.x(), 0x280); }
+  private void coarseCull() { coarseXCullViewport(spawn.x()); }
   void missileImpacted() {
     if (liveImpacts > 0)
       liveImpacts--;

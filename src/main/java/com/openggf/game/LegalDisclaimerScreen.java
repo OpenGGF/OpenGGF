@@ -2,16 +2,16 @@ package com.openggf.game;
 
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
+import com.openggf.control.MenuInput;
+import com.openggf.graphics.MenuPixelFont;
 import com.openggf.control.PlayerInputState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.TexturedQuadRenderer;
-
-import org.lwjgl.system.MemoryUtil;
+import com.openggf.graphics.SolidColorTexture;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,20 +19,10 @@ import java.util.function.ToIntFunction;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.GL_BLEND;
-import static org.lwjgl.opengl.GL11.GL_NEAREST;
 import static org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA;
-import static org.lwjgl.opengl.GL11.GL_RGBA;
 import static org.lwjgl.opengl.GL11.GL_SRC_ALPHA;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_MAG_FILTER;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_MIN_FILTER;
-import static org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE;
-import static org.lwjgl.opengl.GL11.glBindTexture;
 import static org.lwjgl.opengl.GL11.glBlendFunc;
 import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL11.glGenTextures;
-import static org.lwjgl.opengl.GL11.glTexImage2D;
-import static org.lwjgl.opengl.GL11.glTexParameteri;
 
 /**
  * Legal disclaimer screen shown on engine startup before the master title
@@ -52,13 +42,7 @@ public class LegalDisclaimerScreen {
     /** Maximum width in px for a wrapped body line. */
     static final int BODY_MAX_WIDTH = SCREEN_W - (SIDE_MARGIN * 2);
 
-    /**
-     * Body text scale. PixelFont is 9 px/char wide at scale 1.0; at scale
-     * 0.75 each char is ~6.75 px wide, giving ~41 chars per 280 px line.
-     * The chosen scale keeps the three paragraphs inside Y=48..Y=200 so
-     * the dismiss prompt at Y=210 has clearance. Do not raise above 0.85
-     * without recomputing the layout (see TestLegalDisclaimerLayoutFits).
-     */
+    /** Select the authored compact font; glyphs remain on the native pixel grid. */
     static final float BODY_SCALE = 0.75f;
 
     /** Pixel advance from one body line to the next. */
@@ -103,7 +87,7 @@ public class LegalDisclaimerScreen {
         "This project is not affiliated with or endorsed by Sega. Sonic the Hedgehog and all related characters, names, and trademarks are the property of Sega Corporation, to which no claim is made."
     };
 
-    private static final String PROMPT = "Press any key to continue";
+    private String prompt = "Enter Continue";
 
     private final FadeManager fadeManager;
     private final LegalDisclaimerState state = new LegalDisclaimerState();
@@ -122,9 +106,9 @@ public class LegalDisclaimerScreen {
         try {
             renderer = new TexturedQuadRenderer();
             renderer.init();
-            font = new PixelFont();
+            font = new MenuPixelFont();
             font.init("pixel-font.png", renderer);
-            solidWhiteTextureId = createSolidWhiteTexture();
+            solidWhiteTextureId = SolidColorTexture.createWhite();
             ToIntFunction<String> measure = s -> font.measureWidth(s, BODY_SCALE);
             wrappedBodyLines = new ArrayList<>();
             for (String paragraph : BODY_PARAGRAPHS) {
@@ -142,20 +126,8 @@ public class LegalDisclaimerScreen {
         }
     }
 
-    private static int createSolidWhiteTexture() {
-        ByteBuffer pixel = MemoryUtil.memAlloc(4);
-        pixel.put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).flip();
-        int texId = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, texId);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        MemoryUtil.memFree(pixel);
-        return texId;
-    }
-
     public void update(InputHandler inputHandler) {
+        prompt = MenuInput.confirmLabel(inputHandler) + " Continue";
         PlayerInputState p1 = inputHandler.logical().player1();
         boolean p1LogicalDismiss = (p1.actionPressedMask() & InputActionMasks.ACTION_ALL) != 0
                 || p1.startPressed();
@@ -220,7 +192,7 @@ public class LegalDisclaimerScreen {
                     : dismissibleFrames / (float) PROMPT_FADE_IN_FRAMES;
             float pulse = 0.6f - 0.4f * (float) Math.cos(dismissibleFrames * PROMPT_PULSE_OMEGA);
             float brightness = pulse * fadeIn;
-            font.drawText(PROMPT, centeredTextXForWidth(logicalWidth, font.measureWidth(PROMPT)),
+            font.drawText(prompt, centeredTextXForWidth(logicalWidth, font.measureWidth(prompt)),
                     PROMPT_Y, brightness, brightness, brightness, 1f);
         }
 

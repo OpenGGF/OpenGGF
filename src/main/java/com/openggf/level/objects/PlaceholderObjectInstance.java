@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 
 import java.util.List;
 
@@ -64,5 +65,11 @@ public class PlaceholderObjectInstance extends AbstractObjectInstance implements
                 COLOR_R, COLOR_G, COLOR_B, x1, y1, 0, 0));
         commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID,
                 COLOR_R, COLOR_G, COLOR_B, x2, y2, 0, 0));
+    }
+
+    /** Engine placeholder for an unimplemented ROM object: front-most so it is visible. */
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.bucket(0);
     }
 }

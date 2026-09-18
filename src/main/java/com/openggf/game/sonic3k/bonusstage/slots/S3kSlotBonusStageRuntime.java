@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.bonusstage.slots;
 
 
 import com.openggf.game.session.EngineServices;
+import com.openggf.game.timing.VIntRunCounter;
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.RomByteReader;
@@ -67,13 +68,8 @@ public final class S3kSlotBonusStageRuntime {
     private S3kSlotRenderBuffers.VisibleCells visibleCells = S3kSlotRenderBuffers.VisibleCells.empty();
     private int lastFrameCounter = -1;
     private final List<SuppressedSidekick> suppressedSidekicks = new ArrayList<>();
-    // Trace-replay-only bootstrap seed for globalVIntRunCounter() -- see
-    // primeVIntRunCountForReplay(). null on the live path, where
-    // globalVIntRunCounter() falls back to the raw ObjectManager.vblaCounter
-    // approximation documented on that method.
-    private Long vIntRunCountBase;
-    private int vIntRunCountBaseVbla;
-
+    // V_int_run_count at the end of the previous update: see previousIterationVIntRunCount().
+    private Integer lastIterationVIntRunCount;
     public void bootstrap() {
         initialized = false;
         originalPlayer = null;
@@ -88,8 +84,7 @@ public final class S3kSlotBonusStageRuntime {
         visibleCells = S3kSlotRenderBuffers.VisibleCells.empty();
         lastFrameCounter = -1;
         suppressedSidekicks.clear();
-        vIntRunCountBase = null;
-        vIntRunCountBaseVbla = 0;
+        lastIterationVIntRunCount = null;
         slotStageState = S3kSlotStageState.bootstrap();
         slotRenderBuffers = S3kSlotRenderBuffers.fromRomData();
         optionCycleSystem.bootstrap(slotStageState);
@@ -182,14 +177,21 @@ public final class S3kSlotBonusStageRuntime {
             // vs the engine's stale (04D3,02C9) held from frame 867).
             updateCamera();
             updateVisuals();
+            latchIterationVIntRunCount();
             return;
         }
 
         // ROM line 98745: move.b #0,$30(a0) — clear collision tile at start of frame
 
-        // Option cycle system
+        // Option cycle system. LevelLoop calls Slots_CycleOptions after
+        // Process_Sprites (sonic3k.asm:7894, 7916), so the reel state this
+        // iteration's cage and reward objects act on was produced at the tail of
+        // the previous LevelLoop iteration. The runtime runs that tail cycle here,
+        // ahead of the cage, and therefore hands it the V_int_run_count that
+        // previous iteration read -- not this iteration's, which lag V-ints in
+        // between would also have advanced.
         if (!slotStageController.isReelsFrozen()) {
-            optionCycleSystem.tick(slotStageState, globalVIntRunCounter());
+            optionCycleSystem.tick(slotStageState, previousIterationVIntRunCount());
             if (optionCycleSystem.isResolved(slotStageState)) {
                 slotStageController.latchResolvedPrize(
                         optionCycleSystem.lastPrizeResult(slotStageState),
@@ -228,6 +230,7 @@ public final class S3kSlotBonusStageRuntime {
 
         // Visuals
         updateVisuals();
+        latchIterationVIntRunCount();
     }
 
     public void queueRingReward() {
@@ -804,111 +807,49 @@ public final class S3kSlotBonusStageRuntime {
 
     /**
      * ROM {@code Slots_CycleOptions} (sonic3k.asm:99614-99946) reads {@code
-     * V_int_run_count} -- a longword that counts every VBlank since power-on and
-     * never resets on level load -- for every reel-spin/target/RNG-mix
-     * computation: {@code loc_4C416}'s reel-word seeds (line 99646 {@code
-     * move.b (V_int_run_count+3).w,d0}), {@code loc_4C480}'s per-reel velocity
-     * offsets and fixed-row scan seed (lines 99679-99702, same byte), and {@code
-     * loc_4C4F8}'s random-target draw (line 99722 {@code add.w
-     * (V_int_run_count+2).w,d0}) and {@code loc_4C54C}'s post-decelerate
-     * countdown extension (lines 99753-99755, same byte). This is a distinct
-     * ROM variable from {@code Level_frame_counter} (the level-local counter
-     * the reward-spawn cadence gate in {@link
-     * com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance} correctly
-     * reads via this method's {@code frameCounter} parameter). Passing the
-     * level-local {@code frameCounter} into {@link S3kSlotOptionCycleSystem}
-     * instead -- reset to whatever {@code LevelManager.getFrameCounter()} held
-     * when the bonus stage loaded, rather than a persistent run count -- fed
-     * the wrong seed into the reel-target selection, resolving a different
-     * (and differently-timed) prize than ROM and producing a rings-count
-     * divergence that starts well before any position/velocity field diverges
-     * (TestS3kSlotsBonusTraceReplay frame 269: expected rings=75, actual=76).
-     * {@code ObjectManager.vblaCounter} is at least the right *shape* of
-     * approximation for {@code V_int_run_count} -- unlike {@code
-     * Level_frame_counter} it does not reset on level load -- and it is the
-     * same proxy every ordinary object's {@code update(int frameCounter, ...)}
-     * dispatch already receives (see {@code ObjectManager.update}), so route
-     * the option-cycle system to it explicitly here, since the slots runtime
-     * suppresses ObjectManager's own dispatch and drives its objects with a
-     * bespoke, level-local counter instead. It is <strong>not</strong> a
-     * validated match for {@code V_int_run_count}: {@code
-     * GumballMachineObjectInstance}'s frame-0 RNG-reseed comment and the
-     * "Gumball Machine Frame-0 RNG Reseed" entry in {@code
-     * docs/S3K_KNOWN_DISCREPANCIES.md} document {@code vblaCounter} as a
-     * per-gameplay-session counter that resets far more often, and starts from
-     * a materially smaller range, than the hardware counter a trace reflects --
-     * a disclosed approximation gap, not a proven-accurate substitute. Routing
-     * Slots' reel-word seed, per-reel velocity offsets, fixed-row scan seed,
-     * random-target draw, and post-decelerate countdown extension through this
-     * same proxy inherits that same disclosed gap (see the Slots paragraph
-     * added to that discrepancies entry); this is a like-for-like ROM-shape
-     * fix relative to the previous {@code Level_frame_counter} bug, not a
-     * claim of exact parity with real hardware.
-     */
-    private int globalVIntRunCounter() {
-        int rawVbla = rawVblaCounter();
-        if (vIntRunCountBase != null) {
-            // Trace replay only: recordedBase + ticks elapsed since the
-            // priming call (bonus-stage entry) -- see
-            // primeVIntRunCountForReplay(). Mirrors the ROM's free-running
-            // V_int_run_count from the recorded entry value instead of the
-            // raw per-session vblaCounter approximation below.
-            long delta = rawVbla - vIntRunCountBaseVbla;
-            return (int) ((vIntRunCountBase.longValue() + delta) & 0xFFFFFFFFL);
-        }
-        return rawVbla;
-    }
-
-    private int rawVblaCounter() {
-        if (bootstrapGameplayMode == null) {
-            return lastFrameCounter;
-        }
-        ObjectManager objectManager = bootstrapGameplayMode.getLevelManager().getObjectManager();
-        return objectManager != null ? objectManager.getVblaCounter() : lastFrameCounter;
-    }
-
-    /**
-     * Trace-replay-only bootstrap seam (comparison-bootstrap pattern, same
-     * shape as {@code TraceReplaySessionBootstrap.applyInitialRngSeedForReplay}
-     * / {@code metadata.rng_seed}). Called once from {@code
-     * TraceReplaySessionBootstrap.applyBonusStageEntry} when the trace's
-     * {@code metadata.v_int_run_count} is present (recorder v6.32-s3k+,
-     * bonus segments only). Primes {@link #globalVIntRunCounter()} so it
-     * returns {@code recordedBase + ticks-since-entry} rather than the raw
-     * {@code ObjectManager.vblaCounter} value, letting {@link
-     * S3kSlotOptionCycleSystem#tick} reproduce the recorded ROM
-     * {@code V_int_run_count}-seeded reel outcomes. No effect on live play,
-     * which never calls this method.
+     * V_int_run_count} -- the longword {@code VInt_Done} increments on every
+     * V-int since power-on (sonic3k.asm:542-543) and never clears on level load
+     * -- for every reel-spin/target/RNG-mix computation: {@code loc_4C416}'s
+     * reel-word seeds (line 99646 {@code move.b (V_int_run_count+3).w,d0}),
+     * {@code loc_4C480}'s per-reel velocity offsets and fixed-row scan seed
+     * (lines 99679-99702, same byte), {@code loc_4C4F8}'s random-target draw
+     * (line 99722 {@code add.w (V_int_run_count+2).w,d0}) and {@code
+     * loc_4C54C}'s post-decelerate countdown extension (lines 99753-99755, same
+     * byte). This is a distinct ROM variable from {@code Level_frame_counter}
+     * (the level-local counter the reward-spawn cadence gate in {@link
+     * com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance} reads
+     * via this method's {@code frameCounter} parameter).
      *
-     * <p>{@code initialVblankCounter} must be the trace's own {@code
-     * TraceData.initialVblankCounter()} (trace frame 0's recorded {@code
-     * vblank_counter}), NOT a live read of {@code rawVblaCounter()} taken at
-     * priming time. {@code applyBonusStageEntry} runs from {@code
-     * afterFixtureBuild}, which fires <em>before</em> {@code
-     * TraceReplaySessionBootstrap.applyBootstrap} seeds {@code
-     * ObjectManager.vblaCounter} via {@code initVblaCounter(trace.initialVblankCounter()
-     * - objectPreludeFrames - 1)} (see {@code AbstractTraceReplayTest} steps 4-4b:
-     * {@code afterFixtureBuild(trace)} precedes {@code applyBootstrap(trace, ...)}).
-     * A live read at priming time therefore captured the pre-seed counter (0 on a
-     * freshly loaded bonus-zone level) instead of the trace's real starting value
-     * (e.g. 1024 for {@code bonus_slots}), baking a large constant error into every
-     * later {@link #globalVIntRunCounter()} read. Because most {@code V_int_run_count}
-     * consumers in {@code Slots_CycleOptions} only read the low byte ({@code
-     * move.b (V_int_run_count+3).w,d0}, sonic3k.asm:99646/99679/99684/99701/99753 --
-     * bits 0-7), a constant error confined to bit 8 and above (1024 = 0x400 = bit 10)
-     * left those reads untouched, which is why the first spin's reel *symbols*
-     * already matched (044cf51fd). It corrupted the bit-8-and-up consumers instead:
-     * the reel-2 velocity offset ({@code move.b (V_int_run_count+2).w,d0 / andi.b
-     * #7,d0}, sonic3k.asm:99690-99694, reads bits 8-10) and the random-target draw's
-     * word addend ({@code add.w (V_int_run_count+2).w,d0}, sonic3k.asm:99722, reads
-     * bits 0-15), which feed the DECELERATE/LOCK_REELS reel-search timing and so
-     * shifted when the reels actually finish locking (TestS3kSlotsBonusTraceReplay
-     * frame 301: engine's first ring grant at local frame 275+26=301 vs the
-     * recorded 282+26=308).
+     * <p>While a level is attached, ROM {@code V_int_run_count} is the session's
+     * {@code ObjectManager} V-blank clock: the value every object's {@code
+     * update(int, ...)} receives, which {@link VIntRunCounter} carries across
+     * non-gameplay modes and sessions from power-on, and which trace replay
+     * seeds once at the segment boundary (hardware-relative initial base).
+     *
+     * <p>{@code LevelLoop} calls {@code Slots_CycleOptions} after {@code
+     * Process_Sprites} (sonic3k.asm:7894, 7916), so the runtime's tick ahead of
+     * the cage stands for the previous iteration's tail call. It reads the count
+     * latched when that iteration finished ({@link #latchIterationVIntRunCount}).
+     * Lag V-ints between the two iterations advance the live clock but not the
+     * latch, matching the ROM, whose tail call ran before them. Before the first
+     * latch the pre-iteration count ({@code clock - 1}) stands in.
      */
-    public void primeVIntRunCountForReplay(long recordedVIntRunCount, int initialVblankCounter) {
-        vIntRunCountBase = recordedVIntRunCount;
-        vIntRunCountBaseVbla = initialVblankCounter;
+    private int previousIterationVIntRunCount() {
+        if (lastIterationVIntRunCount != null) {
+            return lastIterationVIntRunCount;
+        }
+        Integer live = liveVIntRunCount();
+        return live != null ? live - 1 : lastFrameCounter;
+    }
+
+    private void latchIterationVIntRunCount() {
+        lastIterationVIntRunCount = liveVIntRunCount();
+    }
+
+    private Integer liveVIntRunCount() {
+        ObjectManager objects = bootstrapGameplayMode != null
+                ? bootstrapGameplayMode.getLevelManager().getObjectManager() : null;
+        return objects != null ? objects.getVblaCounter() : null;
     }
 
     private void registerDynamicSlotObject(com.openggf.level.objects.ObjectInstance object) {

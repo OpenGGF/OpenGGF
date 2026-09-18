@@ -131,7 +131,7 @@ class TestGameLoopSpecialStageEntryRequest {
         when(levelManager.getRequestedAct()).thenReturn(1);
 
         assertFalse(SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
-                levelManager, EmeraldRewardKind.SUPER_EMERALD, 3, true),
+                levelManager, EmeraldRewardKind.SUPER_EMERALD, 3),
                 "an origin return is not a sanctuary hub return");
 
         verify(levelManager).loadZoneAndAct(0, 1);
@@ -145,11 +145,12 @@ class TestGameLoopSpecialStageEntryRequest {
         when(levelManager.requestSanctuaryExit()).thenReturn(false);
 
         assertTrue(SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
-                levelManager, EmeraldRewardKind.SUPER_EMERALD, 3, true));
+                levelManager, EmeraldRewardKind.SUPER_EMERALD, 3));
 
-        // The controller reads its re-entry context while the load spawns it.
+        // The controller reads its re-entry context while the load spawns it. The success
+        // reveal already ran behind the results screen, so the hub never replays it.
         InOrder order = inOrder(levelManager);
-        order.verify(levelManager).markSanctuaryReentry(3, true);
+        order.verify(levelManager).markSanctuaryReentry(3, false);
         order.verify(levelManager).loadCurrentLevel();
         verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
     }
@@ -159,7 +160,7 @@ class TestGameLoopSpecialStageEntryRequest {
         LevelManager levelManager = mock(LevelManager.class);
 
         assertFalse(SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
-                levelManager, EmeraldRewardKind.CHAOS_EMERALD, 3, true));
+                levelManager, EmeraldRewardKind.CHAOS_EMERALD, 3));
 
         verify(levelManager).loadCurrentLevel();
         verify(levelManager, never()).requestSanctuaryExit();

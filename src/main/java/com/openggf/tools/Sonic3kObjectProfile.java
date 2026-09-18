@@ -84,6 +84,30 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x35, // AIZForegroundPlant
+            0x41, // CNZBalloon / SOZLightSwitch
+            0x98, // Poindexter / SOZEndBoss
+            0x97, // MegaChopper / SOZMiniboss
+            0xAA, // FBZMiniboss / Hyudoro
+            0xAB, // FBZ2Subboss / SOZHyudoroArtTrigger
+            0xAC, // FBZEndBoss / SOZHyudoroCapsule
+            0x39, // HCZLargeFan / SOZSpawningSandBlocks
+            0x3A, // HCZHandLauncher / SOZPathSwap
+            0x40, // HCZBlock / SOZRisingSandWall
+            0x43, // CNZRisingPlatform / SOZSwingingPlatform
+            0x47, // CNZCylinder / SOZSandCork
+            0x48, // CNZVacuumTube / SOZRapelWire
+            0x94, // Blastoid / Skorp
+            0x95, // Buggernaut / Sandworm
+            0x96, // TurboSpiker / Rockn
+            0x3B, // HCZWaterWall / SOZLoopFallthrough
+            0x49, // CNZGiantWheel / SOZSolidSprites
+            0x42, // CNZCannon / SOZFloatingPillar
+            0x45, // CNZLightBulb / SOZPushSwitch
+            0x46, // CNZHoverFan / SOZDoor
+            0x38, // HCZCGZFan / SOZQuicksand
+            0x44, // CNZTrapDoor / SOZBreakableSandRock
+            0x3E, // HCZConveyorBelt / SOZPushableRock
+            0x3F, // HCZConveyorSpike / SOZSpringVine
             0x3C, // Door
             0x3D, // RetractingSpring
             0x51, // FloatingPlatform
@@ -134,22 +158,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x32, // AIZDrawBridge
             0x36, // HCZBreakableBar
             0x37, // HCZWaterRush
-            0x38, // HCZCGZFan
-            0x39, // HCZLargeFan
-            0x3A, // HCZHandLauncher
-            0x3B, // HCZWaterWall
-            0x3E, // HCZConveyorBelt
-            0x3F, // HCZConveyorSpike
-            0x40, // HCZBlock
-            0x41, // CNZBalloon
-            0x42, // CNZCannon
-            0x43, // CNZRisingPlatform
-            0x44, // CNZTrapDoor
-            0x45, // CNZLightBulb
-            0x46, // CNZHoverFan
-            0x47, // CNZCylinder
-            0x48, // CNZVacuumTube
-            0x49, // CNZGiantWheel
             0x4C, // CNZSpiralTube
             0x4D, // CNZBarberPoleSprite
             0x4E, // CNZWireCage
@@ -187,11 +195,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x91, // AIZMiniboss
             0x92, // AIZEndBoss
             0x93, // Jawz
-            0x94, // Blastoid
-            0x95, // Buggernaut
-            0x96, // TurboSpiker
-            0x97, // MegaChopper
-            0x98, // Poindexter
             0x99, // HCZMiniboss
             0x9A, // HCZEndBoss
             0x9B, // BubblesBadnik
@@ -206,9 +209,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0xA5, // Batbot
             0xA6, // CNZMiniboss
             0xA7, // CNZEndBoss
-            0xAA, // FBZMiniboss
-            0xAB, // FBZ2Subboss
-            0xAC, // FBZEndBoss
             0xAD, // Penguinator
             0xAE, // StarPointer
             0xAF, // ICZCrushingColumn
@@ -277,7 +277,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
 
     // SKL-only implementations (zones 7-13: MHZ through DDZ), on top of SHARED.
     private static final Set<Integer> SKL_ONLY_IDS = Set.of(
-            0x14 // Updraft
+            0x14, // Updraft
+            0x8B // SpriteMask
     );
 
     // MHZ-only implementations from SKL ids gated on ZONE_MHZ.
@@ -298,6 +299,13 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x93 // MHZEndBoss
     );
 
+    // DDZ-only implementations from SKL ids gated on ZONE_DDZ.
+    private static final Set<Integer> DDZ_ONLY_IDS = Set.of(
+            0xB6, // DDZEndBoss
+            0xB7, // DDZAsteroid
+            0xB8 // DDZMissile
+    );
+
     /** Every id implemented in at least one S3KL zone. */
     private static final Set<Integer> S3KL_IMPLEMENTED_IDS = union(
             SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS, CNZ_ONLY_IDS, FBZ_ONLY_IDS, LBZ_ONLY_IDS);
@@ -305,8 +313,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     /** Implemented ids for one ROM zone id, resolved through the same gates as the registry. */
     public static Set<Integer> implementedIdsForZone(int zoneId) {
         if (S3kZoneSet.forZone(zoneId) == S3kZoneSet.SKL) {
-            return zoneId == Sonic3kZoneIds.ZONE_MHZ
-                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS)
+            if (zoneId == Sonic3kZoneIds.ZONE_MHZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS);
+            }
+            return zoneId == Sonic3kZoneIds.ZONE_DDZ
+                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS)
                     : union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS);
         }
         if (zoneId == Sonic3kZoneIds.ZONE_CNZ) {
@@ -341,7 +352,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x95, // Buggernaut
             0x96, // TurboSpiker
             0x97, // MegaChopper
-            0x98, // Poindexter
             0x9B, // BubblesBadnik
             0x9C, // Spiker
             0x9D, // Mantis

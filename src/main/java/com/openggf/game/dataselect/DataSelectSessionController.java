@@ -3,6 +3,7 @@ package com.openggf.game.dataselect;
 import com.openggf.game.save.SaveSlotState;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.save.SavePayloadReader;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -225,7 +226,7 @@ public class DataSelectSessionController {
                 slot,
                 zone,
                 act,
-                teamFromPayload(payload));
+                SavePayloadReader.readTeam(payload));
     }
 
     public void queuePendingAction(DataSelectAction action) {
@@ -236,21 +237,6 @@ public class DataSelectSessionController {
         DataSelectAction action = pendingAction;
         pendingAction = DataSelectAction.none();
         return action;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static SelectedTeam teamFromPayload(Map<String, Object> payload) {
-        String main = String.valueOf(payload.getOrDefault("mainCharacter", "sonic"));
-        Object sidekicksRaw = payload.get("sidekicks");
-        List<String> sidekicks = sidekicksRaw instanceof List<?>
-                ? ((List<?>) sidekicksRaw).stream().map(String::valueOf).toList()
-                : List.of();
-        return new SelectedTeam(main, sidekicks);
-    }
-
-    private static int readInt(Map<String, Object> payload, String key, int fallback) {
-        Object value = payload.get(key);
-        return value instanceof Number number ? number.intValue() : fallback;
     }
 
     private int defaultClearRestartIndexForRow(int row) {

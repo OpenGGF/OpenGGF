@@ -88,6 +88,8 @@ public final class FbzEndBossInstance extends AbstractBossInstance
     private boolean nativeStarted;
     private boolean capsuleSpawnAttempted;
     private boolean pendingHitProcessing;
+    private long exitDoorArtOrdinal = -1;
+    private long exitHallArtOrdinal = -1;
     private int exitArtQueuedCount;
     private String exitArtQueueFailure;
     private int positionFractionY;
@@ -174,12 +176,16 @@ public final class FbzEndBossInstance extends AbstractBossInstance
         nativeStarted = false;
         capsuleSpawnAttempted = false;
         pendingHitProcessing = false;
+        exitDoorArtOrdinal = -1;
+        exitHallArtOrdinal = -1;
         exitArtQueuedCount = 0;
         exitArtQueueFailure = null;
         positionFractionY = 0;
     }
 
     @Override protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
+        exitDoorArtOrdinal = serviceExitArt(exitDoorArtOrdinal);
+        exitHallArtOrdinal = serviceExitArt(exitHallArtOrdinal);
         if (!nativeStarted) {
             nativeStarted = true;
             if (services().gameState() != null) services().gameState().setCurrentBossId(OBJECT_ID);
@@ -459,7 +465,10 @@ public final class FbzEndBossInstance extends AbstractBossInstance
                     | (input == ForcedExitInput.RIGHT ? 0 : AbstractPlayableSprite.INPUT_JUMP);
             boolean jumpPress = input == ForcedExitInput.A_RIGHT;
             main.setForcedInputMask(mask);
-            main.writeLogicalInputAndCurrentFollowerHistory(mask, jumpPress);
+            // loc_86358 runs after Sonic_RecordPos in the player SST slot.
+            // Publish the next logical word without rewriting that earlier sample.
+            main.setLogicalInputState(false, false, false, true,
+                    input != ForcedExitInput.RIGHT, jumpPress);
         }
     }
 
@@ -490,6 +499,16 @@ public final class FbzEndBossInstance extends AbstractBossInstance
                 if (entity instanceof AbstractPlayableSprite sprite) {
                     sprite.setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
+                    // loc_708AA calls Restore_PlayerControl / Restore_PlayerControl2:
+                    // clear only air and reset the Wait animation word/clocks,
+                    // preserving velocity and standing ownership.
+                    sprite.clearAirForNativeControlRestore();
+                    sprite.setAnimationId(com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.WAIT);
+                    sprite.getAnimationManager().publishPreviousAnimationId(
+                            com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.WAIT.id());
+                    sprite.setAnimationFrameIndex(0);
+                    sprite.setAnimationTick(0);
+                    sprite.setForcedAnimationId(-1);
                     sprite.setHidden(false);
                 }
             }
@@ -575,6 +594,31 @@ public final class FbzEndBossInstance extends AbstractBossInstance
         }
     }
 
+    private long serviceExitArt(long ordinal) {
+        if (ordinal < 0) return ordinal;
+        var queue = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        var handle = services().hardwareTiming().pendingHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)
+                .orElseThrow(() -> new IllegalStateException("FBZ end boss lost its submitted KosM job"));
+        if (!queue.isReady(handle)) return ordinal;
+        queue.claim(handle);
+        return -1;
+    }
+
+    private long submitExitArt(com.openggf.data.Rom rom, Sonic3kPlcLoader.KosmQueueEntry entry)
+            throws IOException {
+        try {
+            // loc_7090C is a physical Queue_Kos_Module producer. The legacy
+            // pattern-DMA journal below does not submit to that timing ledger.
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue()
+                    .queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32).ordinal();
+        } catch (IllegalStateException unavailable) {
+            if (!"runtime-art coordination is unavailable in these object services"
+                    .equals(unavailable.getMessage())) throw unavailable;
+            return -1; // explicit lightweight object fixture without runtime coordination
+        }
+    }
+
     private void queueExitArt() {
         if (exitArtQueued) return;
         exitArtQueued = true;
@@ -592,6 +636,9 @@ public final class FbzEndBossInstance extends AbstractBossInstance
                     LOG.warning("FBZ end-boss exit art prefix only: " + exitArtQueueFailure);
                     break;
                 }
+                long ordinal = submitExitArt(rom, entry);
+                if (exitArtQueuedCount == 0) exitDoorArtOrdinal = ordinal;
+                else exitHallArtOrdinal = ordinal;
                 exitArtQueuedCount++;
             }
         } catch (IOException failure) {

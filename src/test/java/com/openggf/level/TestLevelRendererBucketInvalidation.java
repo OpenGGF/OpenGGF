@@ -62,6 +62,79 @@ class TestLevelRendererBucketInvalidation {
     }
 
     @Test
+    void tilePriorityMustNotReorderObjectsWithinTheSameDisplayBucket() {
+        var manager=newObjectManager();
+        var front=new TestObject(0x100,4,false);
+        var rear=new TestObject(0x100,4,true);
+        manager.addDynamicObjectAtSlot(front,40);
+        manager.addDynamicObjectAtSlot(rear,41);
+        // Draw_Sprite / Render_Sprites use SST insertion order, independent of art_tile bit15.
+        assertEquals(List.of(new DrawnEntry(rear,true),new DrawnEntry(front,false)),collectObjectOrder(manager));
+    }
+
+    @Test
+    void playableTerrainPriorityDoesNotPutSidekickInFrontOfLeader() {
+        SpriteManager manager = new SpriteManager();
+        manager.clearAllSprites();
+        var leader = playableSprite("leader", 2, false, false);
+        var follower = playableSprite("follower", 2, true, true);
+        manager.addSprite(leader);
+        manager.addSprite(follower);
+        assertEquals(List.of(new DrawnEntry(follower, true), new DrawnEntry(leader, false)),
+                collectSpriteOrder(manager));
+        manager.clearAllSprites();
+    }
+
+    @Test
+    void satMaskClipsLaterSlotsWithoutHidingEarlierSameBucketObjects() {
+        var manager=newObjectManager();
+        var front=new TestObject(0x100,4,false);
+        var mask=new TestObject(0x100,4,false);
+        var rear=new TestObject(0x100,4,false);
+        front.drawAction=()->submitTestPiece(0x100);
+        mask.drawAction=()->{
+            graphicsManager.requestSpriteMask();
+            graphicsManager.submitSpriteSatControlEntry(0,0,1,1,0x7C0);
+            graphicsManager.submitSpriteSatControlEntry(0,0,1,1,0);
+        };
+        rear.drawAction=()->submitTestPiece(0x200);
+        manager.addDynamicObjectAtSlot(front,40);
+        manager.addDynamicObjectAtSlot(mask,41);
+        manager.addDynamicObjectAtSlot(rear,42);
+        var frame=com.openggf.level.render.SpritePresentationRenderer.prepare(graphicsManager,0,0,()->{
+            graphicsManager.beginSpriteSatCollection();
+            graphicsManager.setCurrentSpriteSatBucket(4);
+            manager.drawUnifiedBucketWithPriority(4,graphicsManager);
+            graphicsManager.endSpriteSatCollectionAndReplay();
+        });
+        assertEquals(List.of(0x100),frame.tiles().stream().map(com.openggf.graphics.SpritePresentation.Tile::patternId).toList());
+    }
+
+    @Test
+    void preparedSatReplayReversesObjectsAndTheirMappingPieces() {
+        var manager = newObjectManager();
+        var front = new TestObject(0x100, 4, false);
+        var rear = new TestObject(0x100, 4, true);
+        front.drawAction = () -> { submitTestPiece(0x100); submitTestPiece(0x101); };
+        rear.drawAction = () -> submitTestPiece(0x200);
+        manager.addDynamicObjectAtSlot(front, 40);
+        manager.addDynamicObjectAtSlot(rear, 41);
+        var frame = com.openggf.level.render.SpritePresentationRenderer.prepare(graphicsManager, 0, 0, () -> {
+            graphicsManager.beginSpriteSatCollection();
+            graphicsManager.setCurrentSpriteSatBucket(4);
+            manager.drawUnifiedBucketWithPriority(4, graphicsManager);
+            graphicsManager.endSpriteSatCollectionAndReplay();
+        });
+        assertEquals(List.of(0x200, 0x101, 0x100), frame.tiles().stream()
+                .map(com.openggf.graphics.SpritePresentation.Tile::patternId).toList());
+    }
+
+    private void submitTestPiece(int pattern) {
+        graphicsManager.submitSpriteSatPiece(new com.openggf.level.render.SpritePieceRenderer.PreparedPiece(
+                0,0,1,1,pattern,pattern,0,false,false,false,false,0,1));
+    }
+
+    @Test
     void rendererPassesRevalidateInsteadOfUnconditionallyInvalidating() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
 
@@ -221,7 +294,7 @@ class TestLevelRendererBucketInvalidation {
         for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
             manager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, hook);
         }
-        assertEquals(1234, fingerprint[0], "hook must run immediately before its nonempty sprite layer");
+        assertEquals(3412, fingerprint[0], "hook follows native sprite order, independent of terrain priority");
 
         manager.suppressionResolutionCount = 0;
         for (int frame = 0; frame < 1_200; frame++) {
@@ -415,6 +488,7 @@ class TestLevelRendererBucketInvalidation {
     }
 
     private static final class TestObject extends AbstractObjectInstance {
+        private Runnable drawAction;
         private int priorityBucket;
         private boolean highPriority;
         private int tileOcclusionPaletteMask = -1;
@@ -446,6 +520,7 @@ class TestLevelRendererBucketInvalidation {
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+            if(drawAction!=null)drawAction.run();
             if (graphicsManager != null) {
                 observedTileOcclusionMasks.add(graphicsManager.getCurrentSpriteTileOcclusionPaletteMask());
             }

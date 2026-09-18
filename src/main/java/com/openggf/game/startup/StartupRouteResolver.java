@@ -24,6 +24,7 @@ public final class StartupRouteResolver {
             return switch (action) {
                 case TWO_PLAYER -> TitleActionRoute.TWO_PLAYER;
                 case OPTIONS -> TitleActionRoute.OPTIONS;
+                case LEVEL_SELECT -> TitleActionRoute.LEVEL_SELECT;
                 default -> TitleActionRoute.OTHER;
             };
         }

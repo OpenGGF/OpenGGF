@@ -184,6 +184,16 @@ public class PlayableSpriteAnimation {
             sprite.getSpindashDustController().update();
         }
 
+        // Knuckles_Climbing_Onto_Ledge / Knuckles_Climb_Ledge owns the
+        // mapping but still reaches Animate's anim_frame_duration decrement
+        // after movement (KiS2 SAnim_Do; S3K Animate_Knuckles). The next
+        // movement pass polls zero before consuming another table entry.
+        if (sprite.isObjectMappingFrameControl()
+                && sprite.getSecondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.GLIDE
+                && sprite.getDoubleJumpFlag() == 5 && sprite.getAnimationTick() > 0) {
+            sprite.setAnimationTick(sprite.getAnimationTick() - 1);
+        }
+
         SpriteAnimationProfile profile = sprite.getAnimationProfile();
         if (sprite.getAnimationSet() != null && !sprite.getAnimationSet().getAllScripts().isEmpty()) {
             int forced = sprite.getForcedAnimationId();
@@ -541,9 +551,23 @@ public class PlayableSpriteAnimation {
             sprite.setAnimationTick(0);
             return;
         }
+        if (flipType >= 5 && profile != null && profile.getTumbleTypeFrameBase(1) >= 0) {
+            // S3K Anim_Tumble loc_129F6: flip types above 4 ignore the flip-type
+            // sign and use (flip_angle+$B)/$16+$31, mirrored horizontally only by
+            // Status_Facing (sonic3k.asm:25133-25148).
+            sprite.setRenderFlips(facingLeft, false);
+            sprite.setMappingFrame((((d0 + 0x0B) & 0xFF) / 0x16) + base);
+            sprite.setAnimationTick(0);
+            return;
+        }
+        var levelManager = sprite.currentLevelManagerIfAvailable();
+        var zoneFeatures = levelManager != null ? levelManager.getZoneFeatureProvider() : null;
+        boolean unreflectedNegative = negativeFlipType
+                && zoneFeatures instanceof com.openggf.game.internal.ZoneTumbleAnimationPolicy policy
+                && policy.negativeTumbleUsesUnreflectedAngle(facingLeft);
         if (!facingLeft) {
-            sprite.setRenderFlips(false, negativeFlipType);
-            int adjusted = negativeFlipType
+            sprite.setRenderFlips(false, negativeFlipType && !unreflectedNegative);
+            int adjusted = unreflectedNegative ? d0 : negativeFlipType
                     ? ((-d0 + 0x8F) & 0xFF)
                     : ((d0 + 0x0B) & 0xFF);
             int frame = adjusted / 0x16;
@@ -556,7 +580,7 @@ public class PlayableSpriteAnimation {
         int adjusted;
         boolean hFlip = true;
         boolean vFlip;
-        if (flipTurned) {
+        if (flipTurned || unreflectedNegative) {
             vFlip = false;
             adjusted = (d0 + 0x0B) & 0xFF;
         } else {

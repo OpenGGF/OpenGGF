@@ -75,7 +75,7 @@ class TestLevelTransitionCoordinatorPeeks {
         BigRingReturnState saved = new BigRingReturnState(
                 1, 2, 3, 4, 5, (byte) 6, (byte) 7, 8, 9, 10);
         PersistentRespawnState respawn = new PersistentRespawnState(
-                new long[]{1L}, new long[]{2L}, new long[]{3L}, new long[]{4L});
+                new long[]{1L}, new long[]{2L}, new long[]{3L}, new long[]{4L}, new byte[]{5});
         c.saveBigRingReturn(saved, respawn);
         c.clearLastStarPostHit();
         c.markSanctuaryReentry(2, true);
@@ -104,7 +104,7 @@ class TestLevelTransitionCoordinatorPeeks {
                 1, 2, 3, 4, 5, (byte) 6, (byte) 7, 8, 9, 10,
                 7, 1, 2, 3, 4, 5, 6, 7);
         c.saveBigRingReturn(saved, new PersistentRespawnState(
-                new long[]{1L}, new long[]{2L}, new long[]{3L}, new long[]{4L}));
+                new long[]{1L}, new long[]{2L}, new long[]{3L}, new long[]{4L}, new byte[]{5}));
         c.markSanctuaryReentry(4);
         assertTrue(c.requestSanctuaryExit());
 

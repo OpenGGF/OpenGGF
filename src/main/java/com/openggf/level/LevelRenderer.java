@@ -24,6 +24,7 @@ import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.SpritePresentation;
 import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.TilePriorityFBO;
@@ -357,6 +358,9 @@ public final class LevelRenderer {
                 pendingFgWaterlineScreenY_high);
     });
 
+    private final GLCommand reversedRearHighCommand = new GLCommand(GLCommand.CommandType.CUSTOM,
+            (cx, cy, cw, ch) -> renderReversedRearHighTiles(false));
+
     private final GLCommand highPriorityFboCommand = new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
         TilePriorityFBO tileFbo = lm.graphicsManager.getTilePriorityFBO();
         TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
@@ -370,6 +374,9 @@ public final class LevelRenderer {
         glBlendEquation(GL_MAX);
         glBlendFunc(GL_ONE, GL_ONE);
 
+        if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
+            renderReversedRearHighTiles(true);
+        }
         applyForegroundScrollFeatures(tilemapRenderer);
         enableForegroundPerColumnVScroll(tilemapRenderer);
         tilemapRenderer.render(
@@ -525,7 +532,7 @@ public final class LevelRenderer {
     }
 
     static final class FrameCommand implements GLCommandable {
-        enum Kind { WATER, BG_ENSURE, BG_RENDER, FG_LOW, FG_HIGH, HIGH_FBO, BG_TILE, TEST }
+        enum Kind { WATER, BG_ENSURE, BG_RENDER, FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO, BG_TILE, TEST }
 
         private final FrameCommandPool pool;
         private final int[] viewport = new int[4];
@@ -635,9 +642,9 @@ public final class LevelRenderer {
                     setShort0(r.pendingBgVScrollData);
                     setShort1(r.pendingBgVScrollColumnData);
                 }
-                case FG_LOW, FG_HIGH, HIGH_FBO -> {
-                    setScroll0(r.lm.parallaxManager.getHScrollForShader());
-                    setShort0(r.lm.parallaxManager.getVScrollPerColumnFGForShader());
+                case FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO -> {
+                    setScroll0(r.presentationHScroll());
+                    setShort0(r.presentationForegroundColumns());
                 }
                 case BG_TILE -> setScroll0(r.pendingBgTilePassHScrollData);
                 default -> { }
@@ -709,7 +716,7 @@ public final class LevelRenderer {
                     r.pendingBgVScrollView = short0Present ? short0View : null;
                     r.pendingBgVScrollColumnView = short1Present ? short1View : null;
                 }
-                case FG_LOW, FG_HIGH, HIGH_FBO -> {
+                case FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO -> {
                     r.pendingFgHScrollView = scroll0Present ? scroll0View : null;
                     r.pendingFgDefaultVScrollView = short0Present ? short0View : null;
                 }
@@ -729,6 +736,7 @@ public final class LevelRenderer {
                     case BG_RENDER -> owner.bgRenderWithScrollCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case FG_LOW -> owner.fgTilemapPassLowCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case FG_HIGH -> owner.fgTilemapPassHighCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case REVERSED_REAR_HIGH -> owner.reversedRearHighCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case HIGH_FBO -> owner.highPriorityFboCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case BG_TILE -> owner.bgTilePassCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case TEST -> { }
@@ -866,8 +874,92 @@ public final class LevelRenderer {
         return currentAdvancedRenderFrameState;
     }
 
+    final LevelSpritePresentation.Tables spriteTables = new LevelSpritePresentation.Tables();
+    private boolean preparingSpritePresentation;
+    private LevelScrollPresentation currentScrollPresentation;
+
+    /** Select the VDP scroll generation paired with the displayed sprite table. */
+    private LevelScrollPresentation scrollForDraw() {
+        return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;
+    }
+
+    private int presentationCameraX() {
+        return currentScrollPresentation == null ? lm.camera.getX()
+                : currentScrollPresentation.registers().cameraX();
+    }
+
+    private int presentationCameraY() {
+        return currentScrollPresentation == null ? lm.camera.getY()
+                : currentScrollPresentation.registers().cameraY();
+    }
+
+    private int presentationCameraXWithShake() {
+        return currentScrollPresentation == null ? lm.camera.getXWithShake()
+                : currentScrollPresentation.registers().cameraXWithShake();
+    }
+
+    private int[] presentationHScroll() {
+        return currentScrollPresentation == null ? lm.parallaxManager.getHScrollForShader()
+                : currentScrollPresentation.horizontal();
+    }
+
+    private short[] presentationForegroundColumns() {
+        return currentScrollPresentation == null ? lm.parallaxManager.getVScrollPerColumnFGForShader()
+                : currentScrollPresentation.foregroundColumns();
+    }
+
+    private short presentationForegroundY() {
+        return currentScrollPresentation == null ? lm.parallaxManager.getVscrollFactorFG()
+                : currentScrollPresentation.registers().foregroundY();
+    }
+
+    private short presentationBackgroundY() {
+        return currentScrollPresentation == null ? lm.parallaxManager.getVscrollFactorBG()
+                : currentScrollPresentation.registers().backgroundY();
+    }
+
+    void prepareSpritePresentation(SpriteManager sprites) {
+        if (lm.graphicsManager == null || lm.camera == null) return;
+        preparingSpritePresentation = true;
+        try {
+            resolveAdvancedRenderFrameState(lm.frameCounter);
+            var scroll = lm.parallaxManager == null ? null
+                    : LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+            spriteTables.prepare(com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
+                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
+                        renderSpriteObjectPass(sprites, false);
+                        if (lm.hudRenderManager != null && !lm.isHudSuppressed()) {
+                            SpritePresentation.layer(lm.graphicsManager,
+                                    SpritePresentation.Layer.HUD);
+                            prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
+                            lm.hudRenderManager.draw(lm.levelGamestate, lm.camera.getFocusedSprite());
+                        }
+                    }), scroll);
+        } finally {
+            preparingSpritePresentation = false;
+        }
+    }
+
+    void publishHudCounters(boolean advanceTimer) {
+        if (lm.hudRenderManager == null || lm.graphicsManager == null || lm.camera == null || lm.isHudSuppressed()) return;
+        spriteTables.publishCounters(com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
+                lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
+                    SpritePresentation.layer(lm.graphicsManager, SpritePresentation.Layer.HUD);
+                    prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
+                    com.openggf.level.objects.HudProfileAccess.drawVBlankCounters(lm.hudRenderManager,
+                            lm.levelGamestate, lm.camera.getFocusedSprite(), advanceTimer);
+                }));
+    }
+
+    private void drawPublishedSprites(java.util.function.Predicate<SpritePresentation.Layer> visible) {
+        com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.published(),
+                lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible);
+    }
+
     /** Resets per-frame derived state (used when the level is unloaded). */
     void resetState() {
+        spriteTables.reset();
+        currentScrollPresentation = null;
         frameCommandPool.cancelOutstanding();
         currentShimmerStyle = 0;
         currentAdvancedRenderFrameState = AdvancedRenderFrameState.disabled();
@@ -995,7 +1087,9 @@ public final class LevelRenderer {
 
         Camera camera = lm.camera;
         resolvePendingPaletteOwnershipWrites();
-        resolveAdvancedRenderFrameState(lm.frameCounter);
+        currentScrollPresentation = scrollForDraw();
+        if (currentScrollPresentation == null) resolveAdvancedRenderFrameState(lm.frameCounter);
+        else currentAdvancedRenderFrameState = currentScrollPresentation.renderMode();
 
         List<GLCommand> collisionCommands = lm.debugRenderer != null
                 ? lm.debugRenderer.getCollisionCommands() : new ArrayList<>();
@@ -1004,7 +1098,7 @@ public final class LevelRenderer {
         PerformanceProfiler profiler = lm.profiler;
         // Update water shader state before rendering level
         profiler.beginSection("render.water_setup");
-        updateWaterShaderState(camera);
+        updateWaterShaderState();
         profiler.endSection("render.water_setup");
 
         // Draw Background (Layer 1)
@@ -1019,15 +1113,19 @@ public final class LevelRenderer {
         }
         dispatchSpecialRenderEffects(SpecialRenderEffectStage.AFTER_BACKGROUND, lm.frameCounter);
 
-        // Draw Foreground (Layer 0) low-priority pass
+        // Draw Foreground (Layer 0) low-priority pass. The AIZ2 forest-loop
+        // plane ring takes its camera and Level_repeat_offset from the gameplay
+        // step (LevelForegroundPlane.drawAsYouMove), never from the
+        // retained scroll presentation: ROM DrawTilesAsYouMove writes Plane A
+        // from the live CPU camera inside ScreenEvents.
         profiler.beginSection("render.fg");
-        if (lm.tilemapManager != null && lm.zoneFeatureProvider != null
-                && lm.zoneFeatureProvider.foregroundWrapsHorizontally()) {
-            lm.tilemapManager.setForegroundRingCamera((int) camera.getXWithShake(), lm.cachedScreenWidth,
-                    lm.zoneFeatureProvider.foregroundWorldWrapOffset());
-        }
         lm.ensureForegroundTilemapData();
-        enqueueForegroundTilemapPass(camera, 0);
+        enqueueForegroundTilemapPass(0);
+        if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
+            // VDP order: B-low, A-low, B-high, A-high. The normal background
+            // composite includes both priorities, so replay B-high above A-low.
+            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.REVERSED_REAR_HIGH));
+        }
 
         // Generate collision debug overlay commands (independent of GPU/CPU path)
         DebugOverlayManager overlayManager = lm.overlayManager;
@@ -1070,7 +1168,7 @@ public final class LevelRenderer {
         // Section name reflects that the registered command sets up GL_MAX blend
         // mode and renders into the TilePriorityFBO ("FBO compose").
         profiler.beginSection("render.fbo_compose");
-        renderHighPriorityTilesToFBO(camera);
+        renderHighPriorityTilesToFBO();
         profiler.endSection("render.fbo_compose");
 
         // The HTZ earthquake BG high-priority cave-ceiling overlay used to render
@@ -1079,7 +1177,7 @@ public final class LevelRenderer {
         // CNZ slot overlay and other AFTER_FOREGROUND effects.
 
         // Draw Foreground (Layer 0) high-priority pass to screen
-        enqueueForegroundTilemapPass(camera, 1);
+        enqueueForegroundTilemapPass(1);
 
         if (options.hasGameplayPass()) {
             if (options.includePlayerSprites()
@@ -1106,11 +1204,21 @@ public final class LevelRenderer {
         }
 
         profiler.beginSection("render.hud");
-        if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudSuppressed()
+        if (options.includeHud() && lm.hudRenderManager != null
+                && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
                 && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
-            AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
-            prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
-            lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
+            if (LevelSpritePresentation.enabled(lm)) {
+                drawPublishedSprites(layer -> layer == SpritePresentation.Layer.HUD);
+                if (spriteTables.published().tiles().stream().anyMatch(tile -> tile.layer().isHud())) {
+                    com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.counters(),
+                            camera.getXWithShake(), camera.getYWithShake(),
+                            layer -> layer == SpritePresentation.Layer.HUD_COUNTERS);
+                }
+            } else {
+                AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
+                prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
+                lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
+            }
         }
         profiler.endSection("render.hud");
 
@@ -1131,7 +1239,7 @@ public final class LevelRenderer {
         hud.setViewportWidth(graphics.getProjectionWidth());
     }
 
-    private void updateWaterShaderState(Camera camera) {
+    private void updateWaterShaderState() {
         int zoneId = lm.getFeatureZoneId();
         int actId = lm.getFeatureActId();
         if (lm.waterSystem.hasWater(zoneId, actId)) {
@@ -1167,7 +1275,7 @@ public final class LevelRenderer {
                     waterlineOffset = zoneOffset;
                 }
             }
-            float waterlineScreenY = (float) (waterLevel - camera.getY() + waterlineOffset);
+            float waterlineScreenY = (float) (waterLevel - presentationCameraY() + waterlineOffset);
             currentShimmerStyle = shimmerStyle;
 
             // Set mutable state for pre-allocated water shader setup command
@@ -1198,11 +1306,14 @@ public final class LevelRenderer {
                 backdropColor.gFloat(),
                 backdropColor.bFloat());
 
-        int[] hScrollData = lm.parallaxManager.getHScrollForShader();
-        short[] vScrollData = lm.parallaxManager.getVScrollPerLineBGForShader();
-        short[] vScrollColumnData = lm.parallaxManager.getVScrollPerColumnBGForShader();
+        int[] hScrollData = presentationHScroll();
+        short[] vScrollData = currentScrollPresentation == null
+                ? lm.parallaxManager.getVScrollPerLineBGForShader() : currentScrollPresentation.backgroundLines();
+        short[] vScrollColumnData = currentScrollPresentation == null
+                ? lm.parallaxManager.getVScrollPerColumnBGForShader() : currentScrollPresentation.backgroundColumns();
 
-        int bgCameraX = lm.parallaxManager.getBgCameraX();
+        int bgCameraX = currentScrollPresentation == null ? lm.parallaxManager.getBgCameraX()
+                : currentScrollPresentation.registers().backgroundX();
         boolean mgzStateEightPerLineTilemap = lm.applyBackgroundTilemapWindowSelection(bgCameraX);
         // Side-effect-only: tilemap manager has been refreshed.
 
@@ -1220,8 +1331,16 @@ public final class LevelRenderer {
         float nametableBaseTile = 0.0f;
         float upperBandWrapHeightPx = 0.0f;
         float upperBandWrapWidthTiles = 0.0f;
-        Camera camera = lm.camera;
-        if (lm.zoneFeatureProvider != null && lm.zoneFeatureProvider.isIntroOceanPhaseActive(lm.currentZone, lm.currentAct)) {
+        if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
+            // This pass now reads the foreground world texture. A 512px
+            // background cache window would wrap camera X into unrelated
+            // foreground columns. Sample the physical Plane B HScroll word
+            // directly, just as the front pass samples Plane A's word.
+            bgPeriodWidthPixels = lm.cachedScreenWidth;
+            shaderScrollMidpoint = 0;
+            shaderExtraBuffer = 0;
+            perLineScrollActive = true;
+        } else if (lm.zoneFeatureProvider != null && lm.zoneFeatureProvider.isIntroOceanPhaseActive(lm.currentZone, lm.currentAct)) {
             // Per-scanline HScroll in the tilemap shader, matching VDP behavior.
             // Each pixel computes worldX = pixelX - hScroll[scanline] directly,
             // then looks up the correct tile from the full-width tilemap.
@@ -1237,7 +1356,7 @@ public final class LevelRenderer {
             // Camera tracking: overflow gradually increases, revealing beach tiles.
             vdpWrapWidthTiles = 64.0f;
             nametableBaseTile = lm.zoneFeatureProvider.getVdpNametableBase(
-                    lm.currentZone, lm.currentAct, camera.getX(), lm.tilemapManager.getBackgroundTilemapWidthTiles());
+                    lm.currentZone, lm.currentAct, presentationCameraX(), lm.tilemapManager.getBackgroundTilemapWidthTiles());
         } else if (mgzStateEightPerLineTilemap) {
             // MGZ2 state 8 still uses Draw_BG on hardware, but the 64-cell plane is
             // refreshed incrementally as the camera advances. Our rebuild-from-scratch
@@ -1261,11 +1380,16 @@ public final class LevelRenderer {
         // Zones with a single BG scroll speed cap at VDP nametable width (512px).
         // Zones with multi-speed parallax (e.g., GHZ) need a wider period to
         // avoid a visible wrap seam where slower and faster layers overlap.
-        int bgPeriodCap = lm.parallaxManager.getBgPeriodWidth();
+        int bgPeriodCap = currentScrollPresentation == null ? lm.parallaxManager.getBgPeriodWidth()
+                : currentScrollPresentation.registers().backgroundPeriod();
         if (!perLineScrollActive && bgPeriodWidthPixels > bgPeriodCap) {
             bgPeriodWidthPixels = bgPeriodCap;
         }
-        int renderWidth = Math.max(lm.cachedScreenWidth, bgPeriodWidthPixels);
+        // The compositor uses this width as its modulo. A wider display must
+        // repeat the plane, not enlarge its period (e.g. 512 -> 528 creates a
+        // duplicate 16px strip followed by a seam). Per-line tile-pass paths
+        // already select the viewport width above because they need no H wrap.
+        int renderWidth = bgPeriodWidthPixels;
         // Add CHUNK_HEIGHT (16px) to cover VScroll range
         // This prevents bottom clipping when VScroll > 0 (max VScroll = 15, max gameY = 223, max fboY = 238 < 272)
         int renderHeight = 256 + LevelConstants.CHUNK_HEIGHT;
@@ -1278,7 +1402,7 @@ public final class LevelRenderer {
         // Use zone-specific vertical scroll from parallax manager
         // This ensures zones like MCZ use their act-dependent BG Y calculations
         int actualBgScrollY = Math.round(backgroundVScroll(currentAdvancedRenderFrameState,
-                lm.parallaxManager.getVscrollFactorBG()));
+                presentationBackgroundY()));
 
         // 1. Ensure FBO capacity (grow-only, no per-frame reallocation)
         pendingBgRenderWidth = renderWidth;
@@ -1306,11 +1430,12 @@ public final class LevelRenderer {
         // so we must shift the waterline by the same amount to keep it steady on screen
         int vOffset = actualBgScrollY - alignedBgY;
         int tilePassWorldOffsetY =
-                alignedBgY - lm.tilemapManager.getBackgroundTilemapSourceY();
-        float fboWaterlineY = (float) ((waterLevelWorldY - camera.getY()) + vOffset);
+                alignedBgY - (currentAdvancedRenderFrameState.reversePlaneAssignment()
+                        ? 0 : lm.tilemapManager.getBackgroundTilemapSourceY());
+        float fboWaterlineY = (float) ((waterLevelWorldY - presentationCameraY()) + vOffset);
 
         // Compute screen-space waterline for BG parallax shimmer
-        float bgWaterlineScreenY = (float) (waterLevelWorldY - camera.getY());
+        float bgWaterlineScreenY = (float) (waterLevelWorldY - presentationCameraY());
 
         lm.ensureBackgroundTilemapData();
         pendingBgTilePassRenderWidth = renderWidth;
@@ -1377,6 +1502,28 @@ public final class LevelRenderer {
      * sprites/objects visible while the level tiles remain hidden.
      */
     public void renderSpriteObjectPass(SpriteManager spriteManager, boolean includeWaterSurface) {
+        if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm)) {
+            drawPublishedSprites(layer -> !layer.isHud());
+        } else {
+            prepareOrDrawLiveSprites(spriteManager);
+        }
+        if (preparingSpritePresentation) return;
+        GraphicsManager graphicsManager = lm.graphicsManager;
+        ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
+
+        if (includeWaterSurface) {
+            graphicsManager.registerCommand(disableShimmerCommand);
+        }
+        if (zoneFeatureProvider != null) {
+            zoneFeatureProvider.render(lm.camera, lm.frameCounter);
+        }
+        dispatchSpecialRenderEffects(SpecialRenderEffectStage.AFTER_SPRITES, lm.frameCounter);
+
+        // Revert to default shader for any following HUD/debug/screen-space rendering.
+        graphicsManager.registerCommand(disableWaterShaderCommand);
+    }
+
+    private void prepareOrDrawLiveSprites(SpriteManager spriteManager) {
         // Render ALL sprites in unified bucket order (7→0)
         // Sprite-to-sprite ordering is by bucket number regardless of isHighPriority
         // The sprite priority shader composites sprites with tile priority awareness
@@ -1399,9 +1546,8 @@ public final class LevelRenderer {
         graphicsManager.setCurrentSpriteHighPriority(false);
         graphicsManager.beginPatternBatch();
 
-        boolean bonusStageSpriteSatOrdering = zoneFeatureProvider != null
+        boolean useSpriteSatMasking = zoneFeatureProvider != null
                 && zoneFeatureProvider.useSpriteSatMasking(lm.currentZone);
-        boolean useSpriteSatMasking = bonusStageSpriteSatOrdering;
         TraceGhostHook.GhostLayerRenderer traceGhostHook = selectGhostLayerHook(
                 currentTraceVisibility, TraceGhostHook.active());
         GhostRenderRegistry gameplayGhosts = resolveGameplayGhostRegistry();
@@ -1415,58 +1561,38 @@ public final class LevelRenderer {
             // SAT collection must follow sprite-table order, not painter order.
             // Draw_Sprite inserts into Sprite_table_input by ascending priority bucket,
             // and lower sprite slots end up in front later during rasterization.
-            // In the Gumball stage the playable sprites must still come after same-bucket
-            // machine objects so Sonic/sidekicks remain on top within bucket 2.
+            // Players occupy the first SST slots, ahead of same-bucket objects.
             for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
                 graphicsManager.setCurrentSpriteSatBucket(bucket);
-                if (objectManager != null) {
-                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
-                }
                 if (spriteManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
                     spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+                }
+                if (objectManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
                 drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
             }
             graphicsManager.endSpriteSatCollectionAndReplay();
         } else {
             for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-                if (bonusStageSpriteSatOrdering) {
-                    // In the gumball bonus stage, the player and bonus-stage objects share
-                    // the same priority buckets. Draw objects first so lower-slot player
-                    // sprites remain on top within a shared bucket.
-                    if (objectManager != null) {
-                        objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
-                    }
-                    if (spriteManager != null) {
-                        spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
-                    }
-                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
-                } else {
-                    if (spriteManager != null) {
-                        spriteManager.drawPreparedUnifiedBucketWithPriority(
-                                bucket, graphicsManager, ghostLayerHook);
-                    }
-                    if (objectManager != null) {
-                        objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
-                    }
-                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
+                // Painter order reverses the native SAT: objects before players.
+                if (objectManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
+                if (spriteManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
+                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook);
+                }
+                drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
             }
         }
         graphicsManager.flushPatternBatch();
         graphicsManager.setUseSpritePriorityShader(false);
         profiler.endSection("render.sprites");
 
-        if (includeWaterSurface) {
-            graphicsManager.registerCommand(disableShimmerCommand);
-        }
-        if (zoneFeatureProvider != null) {
-            zoneFeatureProvider.render(lm.camera, lm.frameCounter);
-        }
-        dispatchSpecialRenderEffects(SpecialRenderEffectStage.AFTER_SPRITES, lm.frameCounter);
-
-        // Revert to default shader for any following HUD/debug/screen-space rendering.
-        graphicsManager.registerCommand(disableWaterShaderCommand);
     }
 
     private void renderGhostsForLayer(int bucket, boolean highPriority) {
@@ -1498,28 +1624,39 @@ public final class LevelRenderer {
         ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
         profiler.beginSection("render.sprites");
 
-        if (objectManager != null && options.includeObjectSprites()) {
-            objectManager.refreshRenderBucketsIfChanged();
-        }
-
-        graphicsManager.setUseSpritePriorityShader(true);
-        graphicsManager.setCurrentSpriteHighPriority(false);
-        graphicsManager.beginPatternBatch();
-
-        if (spriteManager != null && options.includePlayerSprites()) {
-            spriteManager.prepareRenderBucketsForPass();
-        }
-
-        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-            if (spriteManager != null && options.includePlayerSprites()) {
-                spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
-            }
+        if (LevelSpritePresentation.enabled(lm)) {
+            drawPublishedSprites(layer -> switch (layer) {
+                case PLAYER -> options.includePlayerSprites();
+                case OBJECT -> options.includeObjectSprites();
+                case RINGS -> options.includeRings();
+                case HUD, HUD_COUNTERS -> false;
+            });
+        } else {
             if (objectManager != null && options.includeObjectSprites()) {
-                objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
+                objectManager.refreshRenderBucketsIfChanged();
             }
-            drawStageRingsForBucket(ringManager, graphicsManager, bucket, options.includeRings());
-        }
 
+            graphicsManager.setUseSpritePriorityShader(true);
+            graphicsManager.setCurrentSpriteHighPriority(false);
+            graphicsManager.beginPatternBatch();
+
+            if (spriteManager != null && options.includePlayerSprites()) {
+                spriteManager.prepareRenderBucketsForPass();
+            }
+
+            for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+                if (spriteManager != null && options.includePlayerSprites()) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
+                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+                }
+                if (objectManager != null && options.includeObjectSprites()) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
+                }
+                drawStageRingsForBucket(ringManager, graphicsManager, bucket, options.includeRings());
+            }
+
+        }
         graphicsManager.flushPatternBatch();
         graphicsManager.setUseSpritePriorityShader(false);
         profiler.endSection("render.sprites");
@@ -1541,6 +1678,7 @@ public final class LevelRenderer {
             return;
         }
 
+        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.RINGS);
         Camera camera = lm.camera;
         boolean verticalWrapEnabled = camera != null && camera.isVerticalWrapEnabled();
         if (verticalWrapEnabled) {
@@ -1592,6 +1730,9 @@ public final class LevelRenderer {
         // ending cutscene re-enters the BG render path outside drawWithRenderOptions.
         cacheViewportForFrame();
 
+        // This separate scene owns live scrolling, not the parked level's SAT.
+        currentScrollPresentation = null;
+
         // Update parallax with camera=(0,0) and the ending's BG vscroll
         // This drives SwScrlDez TempArray accumulation for star parallax
         lm.frameCounter++;
@@ -1624,7 +1765,30 @@ public final class LevelRenderer {
         }
     }
 
-    private void enqueueForegroundTilemapPass(Camera camera, int priorityPass) {
+    /** High-priority rear-plane pixels participate in both VDP tile order and sprite occlusion. */
+    private void renderReversedRearHighTiles(boolean mask) {
+        TilemapGpuRenderer renderer = lm.graphicsManager.getTilemapGpuRenderer();
+        BackgroundRenderer background = lm.graphicsManager.getBackgroundRenderer();
+        Integer atlas = mask ? pendingFboAtlasId : pendingFgAtlasId_low;
+        Integer palette = mask ? pendingFboPaletteId : pendingFgPaletteId_low;
+        if (renderer == null || background == null || atlas == null || palette == null) return;
+        int width = mask ? pendingFboScreenW : pendingFgScreenW_low;
+        int height = mask ? pendingFboScreenH : pendingFgScreenH_low;
+        // The background buffer extracts the low, physical Plane B HScroll word.
+        background.uploadHScroll(pendingFgHScrollView);
+        renderer.enablePerLineScroll(background.getHScrollTextureId(), 224.0f, 0, 0, 0);
+        float worldY = backgroundVScroll(currentAdvancedRenderFrameState, 0);
+        float waterline = pendingFgWaterlineScreenY_low + pendingFgWorldOffsetY_low - worldY;
+        renderer.render(backgroundPlaneSource(currentAdvancedRenderFrameState), width, height,
+                mask ? 0 : viewportBuffer[0], mask ? 0 : viewportBuffer[1],
+                mask ? width : viewportBuffer[2], mask ? height : viewportBuffer[3],
+                0, worldY, lm.graphicsManager.getPatternAtlasWidth(), lm.graphicsManager.getPatternAtlasHeight(),
+                atlas, palette,
+                !mask && pendingFgUnderwaterPaletteId_low != null ? pendingFgUnderwaterPaletteId_low : 0,
+                1, pendingFgVerticalWrap, mask, !mask && pendingFgUseUnderwater_low, waterline);
+    }
+
+    private void enqueueForegroundTilemapPass(int priorityPass) {
         TilemapGpuRenderer renderer = lm.graphicsManager.getTilemapGpuRenderer();
         if (renderer == null) {
             return;
@@ -1642,9 +1806,9 @@ public final class LevelRenderer {
         // Y: vscrollFactorFG already includes scroll-handler shake (HTZ earthquake,
         //    HCZ2 wall push, MCZ boss, etc.).  Do NOT add getShakeOffsetY() again
         //    — that caused double-amplitude shake on FG tiles.
-        float worldOffsetX = camera.getXWithShake();
+        float worldOffsetX = presentationCameraXWithShake();
         float worldOffsetY = foregroundVScroll(currentAdvancedRenderFrameState,
-                lm.parallaxManager.getVscrollFactorFG());
+                presentationForegroundY());
         // Waterline tracks the same Y offset as tile rendering
         float waterlineScreenY = (float) (waterLevel - worldOffsetY);
 
@@ -1691,7 +1855,7 @@ public final class LevelRenderer {
      * This FBO is sampled by the sprite priority shader to determine
      * if low-priority sprites should be hidden behind high-priority tiles.
      */
-    private void renderHighPriorityTilesToFBO(Camera camera) {
+    private void renderHighPriorityTilesToFBO() {
         TilePriorityFBO fbo = lm.graphicsManager.getTilePriorityFBO(lm.cachedScreenWidth, lm.cachedScreenHeight);
         if (fbo == null || !fbo.isInitialized()) {
             return;
@@ -1710,11 +1874,11 @@ public final class LevelRenderer {
 
         int screenW = lm.cachedScreenWidth;
         int screenH = lm.cachedScreenHeight;
-        float fgWorldOffsetX = camera.getXWithShake();
+        float fgWorldOffsetX = presentationCameraXWithShake();
         // The mask must use the same Plane A origin as the visible foreground pass;
         // S3K scroll handlers can decouple foreground VScroll from camera Y.
         float fgWorldOffsetY = foregroundVScroll(currentAdvancedRenderFrameState,
-                lm.parallaxManager.getVscrollFactorFG());
+                presentationForegroundY());
 
         pendingFboScreenW = screenW;
         pendingFboScreenH = screenH;

@@ -12,6 +12,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.camera.Camera;
@@ -73,11 +74,37 @@ public class TestTouchResponseManager {
         when(player.getInvulnerable()).thenReturn(false);
         when(player.getDead()).thenReturn(false);
         when(player.getRingCount()).thenReturn(0);
+        when(player.getSecondaryAbility()).thenReturn(SecondaryAbility.INSTA_SHIELD);
     }
 
     @AfterEach
     public void tearDown() {
         SessionManager.clear();
+    }
+
+    @Test
+    void patchedMultiSpriteTouchRetainsSeparateShippedDuckMappingTest() {
+        var interaction = mock(com.openggf.game.rules.ObjectInteractionRules.class);
+        when(interaction.duckTouchBoxMappingFrame()).thenReturn(0x9C);
+        when(interaction.bossDuckTouchBoxMappingFrame()).thenReturn(0x4D);
+        when(interaction.isDuckTouchBoxMappingFrame(0x9C)).thenReturn(true);
+        GameRules rules = new GameRules(GameRules.SONIC_2.playerMovement(),
+                GameRules.SONIC_2.playerCapability(), GameRules.SONIC_2.collision(),
+                GameRules.SONIC_2.playerAnimation(), GameRules.SONIC_2.camera(),
+                GameRules.SONIC_2.ring(), interaction, GameRules.SONIC_2.sidekickCpu(),
+                GameRules.SONIC_2.powerUp(), GameRules.SONIC_2.drowningBubble());
+        when(player.getGameRules()).thenReturn(rules);
+        when(player.getMappingFrame()).thenReturn(0x9C);
+        setupTableSize(8, 2, 2);
+        // Above the shifted normal duck box, inside the full multi-sprite box.
+        MockTouchObject ordinary = new MockTouchObject(160, 98, 0x08);
+        MockMultiRegionTouchObject multi = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 98, 0x08));
+        objectManager.addDynamicObject(ordinary);
+        objectManager.addDynamicObject(multi);
+        objectManager.update(0, player, List.of(), 1);
+        assertFalse(ordinary.wasTouched);
+        assertTrue(multi.wasTouched);
     }
 
     // ==================== Overlap Detection Tests ====================
@@ -445,6 +472,111 @@ public class TestTouchResponseManager {
                 "A null PlayerCapabilityRules group should not recreate removed feature-set insta-shield rules");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"1,1096", "1,-1096", "3,1096", "3,-1096"})
+    void kis2GlideAndSlideAttackBossWithoutElementalShields(int flag, int speed) {
+        Knuckles knuckles = mockKnucklesTouchPlayer(com.openggf.game.sonic2.kis2.Kis2Rules.RULES);
+        when(knuckles.getDoubleJumpFlag()).thenReturn(flag);
+        when(knuckles.getXSpeed()).thenReturn((short) speed);
+        when(knuckles.getYSpeed()).thenReturn((short) 0);
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(boss);
+
+        objectManager.update(0, knuckles, List.of(), 1);
+
+        assertTrue(boss.wasAttacked, "KiS2 Touch_Enemy allows glide flag " + flag);
+        verify(knuckles).setXSpeed((short) -speed);
+        if (flag == 1) {
+            verify(knuckles).setDoubleJumpFlag(2);
+            verify(knuckles).setAnimationId(0x21);
+            verify(knuckles).setForcedAnimationId(0x21);
+            verify(knuckles).setDirection(speed > 0
+                    ? com.openggf.physics.Direction.RIGHT : com.openggf.physics.Direction.LEFT);
+            verify(knuckles).restoreDefaultRadii();
+            verify(knuckles).setObjectMappingFrameControl(false);
+        } else {
+            verify(knuckles, never()).setDoubleJumpFlag(anyInt());
+        }
+        verify(knuckles, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 2, 4, 5})
+    void kis2NonAttackingAbilityStatesDoNotAttack(int flag) {
+        Knuckles knuckles = mockKnucklesTouchPlayer(com.openggf.game.sonic2.kis2.Kis2Rules.RULES);
+        when(knuckles.getDoubleJumpFlag()).thenReturn(flag);
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(boss);
+        objectManager.update(0, knuckles, List.of(), 1);
+        assertFalse(boss.wasAttacked);
+    }
+
+    @Test
+    void s3kBossReboundKeepsActiveGlide() {
+        Knuckles knuckles = mockKnucklesTouchPlayer(GameRules.SONIC_3K);
+        when(knuckles.getDoubleJumpFlag()).thenReturn(1);
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(boss);
+        objectManager.update(0, knuckles, List.of(), 1);
+        assertTrue(boss.wasAttacked);
+        verify(knuckles, never()).setDoubleJumpFlag(anyInt());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void velocityOnlyBossReboundKeepsActiveGlideRegardlessOfRegionCount(boolean multiRegion) {
+        Knuckles knuckles = mockKnucklesTouchPlayer(com.openggf.game.sonic2.kis2.Kis2Rules.RULES);
+        when(knuckles.getDoubleJumpFlag()).thenReturn(1);
+        MockAttackableEnemy boss = new MockAttackableEnemy(160, 112, 0xC8) {
+            @Override
+            public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+                return multiRegion ? new TouchResponseProvider.TouchRegion[] {
+                    new TouchResponseProvider.TouchRegion(160, 112, 0xC8, 0)
+                } : null;
+            }
+            @Override
+            public TouchResponseProfile getTouchResponseProfile() {
+                return getTouchResponseProfile(multiRegion);
+            }
+            @Override
+            public TouchResponseProfile getTouchResponseProfile(boolean regions) {
+                var base = TouchResponseProfile.fromProvider(this, regions);
+                return new TouchResponseProfile(base.categoryDecodeMode(), base.continuousCallbacks(),
+                        base.requiresRenderFlagForTouch(), base.multiRegionSource(), base.shieldDeflectCapability(),
+                        base.shieldReactionFlags(), base.enablesPostSpecialTouchAirborneSideVelocityPreservation(),
+                        TouchAttackBouncePolicy.BOSS_REFLECT, base.actorContextPolicy(),
+                        base.stopAfterFirstOverlapPolicy());
+            }
+        };
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(boss);
+        objectManager.update(0, knuckles, List.of(), 1);
+        assertTrue(boss.wasAttacked);
+        verify(knuckles, never()).setDoubleJumpFlag(anyInt());
+    }
+
+    @Test
+    void elementalShieldsDoNotEnableAnExplicitlyDisabledGlideAttack() {
+        GameRules base = GameRules.SONIC_3K;
+        var c = base.playerCapability();
+        var capability = new com.openggf.game.rules.PlayerCapabilityRules(
+                c.spindashEnabled(), c.spindashSpeedTable(), true, false,
+                c.tailsFlightEnabled(), c.jumpRepressClearsRollJumpBeforeAbility(),
+                c.lightningShieldEnabled(), c.superSpindashSpeedTable(), false);
+        var rules = com.openggf.game.rules.CrossGameRuleComposer.withPlayerRules(base,
+                base.playerMovement(), base.objectInteraction(), base.collision(), base.ring(), capability);
+        Knuckles knuckles = mockKnucklesTouchPlayer(rules);
+        when(knuckles.getDoubleJumpFlag()).thenReturn(1);
+        MockAttackableEnemy enemy = new MockAttackableEnemy(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(enemy);
+        objectManager.update(0, knuckles, List.of(), 1);
+        assertFalse(enemy.wasAttacked);
+    }
+
     @Test
     public void typedPlayerCapabilityRuleEnablesKnucklesAbilityAttack() {
         Knuckles knuckles = mockKnucklesTouchPlayer(
@@ -458,7 +590,7 @@ public class TestTouchResponseManager {
         objectManager.update(0, knuckles, List.of(), 1);
 
         assertTrue(enemy.wasAttacked,
-                "Typed PlayerCapabilityRules.elementalShieldsEnabled should enable Knuckles ability attacks");
+                "Typed PlayerCapabilityRules.glideAttacksEnabled should enable Knuckles ability attacks");
     }
 
     @Test
@@ -474,7 +606,7 @@ public class TestTouchResponseManager {
         objectManager.update(0, knuckles, List.of(), 1);
 
         assertFalse(enemy.wasAttacked,
-                "Typed PlayerCapabilityRules.elementalShieldsEnabled=false should keep ability attacks disabled");
+                "Typed PlayerCapabilityRules.glideAttacksEnabled=false should keep ability attacks disabled");
     }
 
     @Test
@@ -734,6 +866,30 @@ public class TestTouchResponseManager {
         assertFalse(projectile.wasShieldDeflected,
                 "S3K Insta-Shield temporarily sets Status_Invincible and returns before the shield deflect branch");
         verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
+    public void s3kDoubleJumpFlagOnlyExpandsInstaShieldForInstaShieldCharacters() {
+        // Recorded s3k-tails-full-chain-all-emeralds SOZ1 row 6553: flying Tails
+        // (double_jump_flag=1) is hurt by a Skorp tail. TouchResponse branches to
+        // Touch_NoInstaShield unless character_id is Sonic (sonic3k.asm TouchResponse).
+        for (SecondaryAbility ability : new SecondaryAbility[]{SecondaryAbility.FLY, SecondaryAbility.GLIDE}) {
+            setUp();
+            when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+            when(player.getSecondaryAbility()).thenReturn(ability);
+            when(player.getDoubleJumpFlag()).thenReturn(1);
+            when(player.getShieldType()).thenReturn(null);
+            when(player.hasShield()).thenReturn(false);
+
+            MockMultiRegionTouchObject hazard = new MockMultiRegionTouchObject(
+                    new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0));
+            setupTableSize(8, 8, 8);
+            objectManager.addDynamicObject(hazard);
+
+            objectManager.update(0, player, List.of(), 1);
+
+            verify(player).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+        }
     }
 
     @Test

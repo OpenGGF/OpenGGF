@@ -26,7 +26,7 @@ public final class FbzExitHallInstance extends AbstractObjectInstance implements
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (tryServices() != null && services().camera() != null
-                && isCoarseXOutOfRange(spawn.x(), services().camera().getX(), 0x280)) {
+                && isCoarseXOutOfRange(spawn.x(), services().camera().getX(), coarseXCullRange())) {
             destroyedByOffscreen = true;
             ObjectLifetimeOps.destroyRespawnableOffscreen(this);
         }

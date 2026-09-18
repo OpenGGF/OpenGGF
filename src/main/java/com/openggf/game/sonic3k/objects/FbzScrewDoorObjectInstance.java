@@ -72,7 +72,7 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
       animTimer = 1;
     }
   }
-  private void coarseCull() { coarseXCull(spawn.x(), 0x280); }
+  private void coarseCull() { coarseXCullViewport(spawn.x()); }
   public int getX() {
     if (legacyRestored)
       return spawn.x();
@@ -127,6 +127,8 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
   public void appendRenderCommands(List<GLCommand> c) {
     PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.FBZ_SCREW_DOOR);
     if (r != null && r.isReady())
-      r.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+      // Obj_FBZScrewDoor preserves placement flips for the entire mapping, including its end.
+      r.drawFrameIndex(mappingFrame, getX(), getY(),
+          (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
   }
 }

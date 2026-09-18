@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.AbstractBonusStageCoordinator;
 import com.openggf.game.BonusStageProvider;
+import com.openggf.game.BonusStagePlayerPriorityPolicy;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
@@ -28,7 +29,8 @@ import com.openggf.level.objects.ObjectSpawn;
  * divisor would be 2 and remainder=2 branch would route to Pachinko instead
  * of Gumball (ROM loc_2D47E lines 61897, 61910-61912).
  */
-public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator {
+public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
+        implements BonusStagePlayerPriorityPolicy {
 
     private static final int ZONE_GUMBALL  = 0x1300;
     private static final int ZONE_PACHINKO = 0x1400;
@@ -51,6 +53,14 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator 
                     PachinkoEnergyTrapObjectInstance::new);
 
     private S3kSlotBonusStageRuntime slotRuntime;
+
+    @Override
+    public boolean shouldForcePlayerHighPriority() {
+        // Obj_GumballMachine sets both players' art_tile priority bits. Slots
+        // uses Obj_Sonic_RotatingSlotBonus / loc_4B9E8's make_art_tile(...,0,0)
+        // instead: promoting it after physics hides the foreground glass.
+        return getActiveType() != BonusStageType.SLOT_MACHINE;
+    }
 
     @Override
     public BonusStageProvider.BootstrapObject bootstrapObject(BonusStageType type) {

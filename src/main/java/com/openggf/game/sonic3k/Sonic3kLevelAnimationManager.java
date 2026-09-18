@@ -8,6 +8,7 @@ import com.openggf.level.Level;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.animation.SeamlessTransitionAnimationClock;
+import com.openggf.level.animation.InitialLevelAnimationPass;
 
 import java.nio.ByteBuffer;
 
@@ -18,11 +19,14 @@ import java.nio.ByteBuffer;
  */
 public final class Sonic3kLevelAnimationManager implements AnimatedPatternManager, AnimatedPaletteManager,
         RewindSnapshottable<PatternAnimatorSnapshot>, AizVineAngleProvider,
-        SeamlessTransitionAnimationClock {
+        SeamlessTransitionAnimationClock, InitialLevelAnimationPass,
+        com.openggf.level.animation.StageRingAnimationFrameProvider {
 
     /** See {@code Sonic2LevelAnimationManager.COMBINED_EXTRA_MAGIC} for rationale. */
     private static final byte COMBINED_EXTRA_MAGIC = (byte) 0xC3;
     private static final byte COMBINED_EXTRA_WITH_GLOBALS_MAGIC = (byte) 0xC4;
+
+    private static final byte COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC = (byte) 0xC5;
 
     private final Sonic3kPatternAnimator patternAnimator;
     private final Sonic3kPaletteCycler paletteCycler;
@@ -56,10 +60,27 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         }
     }
 
+    void publishAniPlcAtVBlank() {
+        patternAnimator.publishAniPlcAtVBlank();
+    }
+
+    @Override
+    public int stageRingAnimationFrame() { return globalAnimationState.ringFrame(); }
+
+    /** ROM {@code Palette_fade_timer} is still counting down the fresh-level fade. */
+    public boolean paletteFadeTimerRunning() {
+        return globalAnimationState.paletteFadeTimer() > 0;
+    }
+
+    void resetFreshLevelRingAnimation() {
+        globalAnimationState.resetFreshLevelRingAnimation();
+        globalAnimationState.armFreshLevelPaletteFade();
+    }
+
     @Override
     public void update() {
         patternAnimator.update();
-        paletteCycler.update();
+        paletteCycler.update(!globalAnimationState.consumePaletteFadeFrame());
         applyPoweredFormPaletteUploadVInt();
         // LevelLoop runs Process_Sprites before ChangeRingFrame
         // (sonic3k.asm:7888-7910). LevelFrameRuntimeUpdater calls this combined
@@ -81,12 +102,23 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     }
 
     /**
+     * loc_6468 runs Animate_Tiles once after setup objects, at Level_frame_counter
+     * zero. Palette cycling and ChangeRingFrame belong only to LevelLoop.
+     */
+    @Override
+    public void runInitialLevelAnimationPass() {
+        // MHZ's runtime constructor already represents its pre-loop cap counter;
+        // retain that existing ownership while initializing ROM-backed pattern DMA.
+        patternAnimator.updatePatternsPreservingPreseededCounters();
+    }
+
+    /**
      * Replay bootstrap for native {@code Animate_Tiles} calls that happened
      * before the first compared row. This deliberately excludes
      * {@code Animate_Palette}; the ROM setup pass calls only the tile animator.
      */
     public void updatePatternsOnlyForReplayBootstrap() {
-        patternAnimator.updateForReplayBootstrapPrelude();
+        patternAnimator.updatePatternsPreservingPreseededCounters();
     }
 
     Sonic3kPatternAnimator patternAnimatorForTesting() {
@@ -114,13 +146,16 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         byte[] innerExtra = inner.extra() != null ? inner.extra() : new byte[0];
         byte[] cyclerState = paletteCycler.captureCyclerState();
         ByteBuffer wrapped = ByteBuffer.allocate(
-                1 + 4 + innerExtra.length + 4 + cyclerState.length + 2);
-        wrapped.put(COMBINED_EXTRA_WITH_GLOBALS_MAGIC);
+                1 + 4 + innerExtra.length + 4 + cyclerState.length + 4 + 2);
+        wrapped.put(COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC);
         wrapped.putInt(innerExtra.length);
         wrapped.put(innerExtra);
         wrapped.putInt(cyclerState.length);
         wrapped.put(cyclerState);
         wrapped.putShort((short) globalAnimationState.aizVineAngleWord());
+        wrapped.put((byte) globalAnimationState.ringTimer());
+        wrapped.put((byte) globalAnimationState.ringFrame());
+        wrapped.putShort((short) globalAnimationState.paletteFadeTimer());
         return new PatternAnimatorSnapshot(inner.scriptCounters(), inner.handlerCounters(),
                 wrapped.array());
     }
@@ -133,11 +168,13 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         byte[] extra = snapshot.extra();
         if (extra == null || extra.length == 0
                 || (extra[0] != COMBINED_EXTRA_MAGIC
-                && extra[0] != COMBINED_EXTRA_WITH_GLOBALS_MAGIC)) {
+                && extra[0] != COMBINED_EXTRA_WITH_GLOBALS_MAGIC
+                && extra[0] != COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC)) {
             patternAnimator.restore(snapshot);
             return;
         }
-        boolean hasGlobalAnimationState = extra[0] == COMBINED_EXTRA_WITH_GLOBALS_MAGIC;
+        boolean hasRingClock = extra[0] == COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC;
+        boolean hasGlobalAnimationState = hasRingClock || extra[0] == COMBINED_EXTRA_WITH_GLOBALS_MAGIC;
         ByteBuffer buf = ByteBuffer.wrap(extra, 1, extra.length - 1);
         int innerSize = buf.getInt();
         if (innerSize < 0 || innerSize > buf.remaining()) {
@@ -159,6 +196,12 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         paletteCycler.restoreCyclerState(cyclerState);
         if (hasGlobalAnimationState && buf.remaining() >= 2) {
             globalAnimationState.restoreAizVineAngleWord(buf.getShort() & 0xFFFF);
+        }
+        if (hasRingClock && buf.remaining() >= 2) {
+            globalAnimationState.restoreRingAnimation(buf.get() & 0xFF, buf.get() & 0xFF);
+        }
+        if (hasRingClock && buf.remaining() >= 2) {
+            globalAnimationState.restorePaletteFadeTimer(buf.getShort());
         }
     }
 }

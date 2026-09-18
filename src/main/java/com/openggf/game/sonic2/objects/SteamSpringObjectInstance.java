@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.SolidWireCommands;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -16,9 +17,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
-import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpringBounceHelper;
@@ -48,7 +47,7 @@ import java.util.List;
  * </ul>
  */
 public class SteamSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable {
 
     // ROM: move.w #-$A00,y_vel(a1) at loc_26798
     private static final int SPRING_VELOCITY = SpringBounceHelper.STRENGTH_YELLOW;
@@ -237,13 +236,6 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
         return true;
     }
 
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // Spring fire is handled by the manual checkpoint pass in update() — see ROM
-        // loc_26688 / loc_2678E (s2.asm:52030-52049, 52121-52124). Manual checkpoint
-        // mode does not invoke this callback, so it is intentionally a no-op.
-    }
-
     /**
      * ROM: loc_26798 - Apply spring force to standing player.
      */
@@ -349,18 +341,7 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
         int hw = 0x10;
         int hh = 0x10;
         float r = 0.6f, g = 0.6f, b = 1.0f;
-        addLine(commands, cx - hw, cy - hh, cx + hw, cy - hh, r, g, b);
-        addLine(commands, cx + hw, cy - hh, cx + hw, cy + hh, r, g, b);
-        addLine(commands, cx + hw, cy + hh, cx - hw, cy + hh, r, g, b);
-        addLine(commands, cx - hw, cy + hh, cx - hw, cy - hh, r, g, b);
-    }
-
-    private void addLine(List<GLCommand> commands, int x1, int y1, int x2, int y2,
-                          float r, float g, float b) {
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID,
-                r, g, b, x1, y1, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID,
-                r, g, b, x2, y2, 0, 0));
+        SolidWireCommands.rectangle(commands, cx - hw, cy - hh, cx + hw, cy + hh, r, g, b);
     }
 
     @Override

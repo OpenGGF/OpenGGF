@@ -212,14 +212,17 @@ class TestResourceLoaderModSources {
         System.arraycopy(compressed, 0, romBytes, 0, compressed.length);
         System.arraycopy(compressed, 0, romBytes, 64, compressed.length);
         Path romPath = Files.write(tmp.resolve("fixture.bin"), romBytes);
-        try (Rom rom = new Rom()) {
+        try (Rom rom = new Rom();
+             var channels = org.mockito.Mockito.mockStatic(com.openggf.data.RomChannel.class,
+                     org.mockito.Mockito.CALLS_REAL_METHODS)) {
             assertTrue(rom.open(romPath.toString()));
             assertCheckedSizingFailure(() -> new ResourceLoader(rom).loadWithOverlays(List.of(
                     LoadOp.kosinskiOverlay(0, Integer.MAX_VALUE),
                     LoadOp.kosinskiAppend(64)), 0));
-            long position = rom.getFileChannel().position();
-            assertTrue(position > 0 && position < 64,
-                    "first ROM op should decode, but the later op must remain unread; position=" + position);
+            // Every ROM decode opens a private positioned channel, so the
+            // addresses handed to RomChannel say exactly which ops were read.
+            channels.verify(() -> com.openggf.data.RomChannel.at(rom, 0L));
+            channels.verify(() -> com.openggf.data.RomChannel.at(rom, 64L), org.mockito.Mockito.never());
         }
     }
 

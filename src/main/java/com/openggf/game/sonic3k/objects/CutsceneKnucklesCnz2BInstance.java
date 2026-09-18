@@ -9,8 +9,10 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectRangeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -360,9 +362,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     }
 
     private boolean isOutsideNativeDeleteRange(Camera camera) {
-        int objectRounded = currentX & 0xFF80;
-        int cameraCoarseBack = (((camera.getX() & 0xFFFF) - 0x80) & 0xFF80);
-        return ((objectRounded - cameraCoarseBack) & 0xFFFF) > 0x280;
+        return ObjectRangeOps.outOfRangeX(currentX, camera.getX());
     }
 
     private void restoreCnzPaletteLine1() {
@@ -416,6 +416,15 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
         animationIndex = 0;
         animationTick = script[0];
         mappingFrame = script[1];
+    }
+
+    // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
+    // (sonic3k.asm:134800, 178886).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

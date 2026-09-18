@@ -4578,3 +4578,171 @@ Plane A and restore the hidden rows before disabling the window. See
 `docs/architecture/audits/2026-09-09-lbz2-ending-sequence.md` and the pixel test
 `TestForegroundWindowRendering`. The rendering principle also applies to S1/S2
 scenes that use the hardware window.
+
+## Sanctuary routes must exercise the ROM destination, not only an engine alias
+
+`SSEntryFlash_GoSS` / `loc_618AC` writes `$1701` before restarting the level.
+The engine also exposes the sanctuary through its legacy `$1601` alias. A
+headless test loading only the alias can pass while giant-ring entry has no
+controller, emeralds, custom palette, camera setup, or background handler.
+`ScreenEvents` dispatches `$1701` to `HPZS_*`; connect the resource profile
+and stock object factories to that destination and test both entry identities.
+Keep the paired `$1700` Death Egg boss act outside the sanctuary profile.
+
+## Deferred deletion still has a final draw/touch pass
+
+**Evidence:** MHZ Madmole `loc_8D602`, `loc_8D6D6` and `Go_Delete_Sprite`;
+MHZ end-boss fragments `loc_766CA`, `Obj_FlickerMove`, `Go_Delete_Sprite_3`.
+
+Installing a deletion routine does not free the object immediately. Read the
+caller after the helper returns: Madmole still publishes body touch at its
+final submerged position. A folded parent/body must retain that position and
+its reserved slot until the next pass, rather than restoring parent fields
+early. Fragment boundary deletion similarly retains its slot for one pass.
+
+Read child initialization separately from its installed update routine.
+`loc_766CA` initializes and draws; movement begins next pass. Do not inherit
+parent flip flags unless the allocation helper copies them: `CreateChild6_Simple`
+copies mappings/art tile but leaves these fragments unflipped. These lifetime
+and copy-contract checks also apply to S1/S2 helpers; verify each owning routine.
+
+
+## Seamless carry must replace freshly initialized fixed SST occupants
+
+A replacement object manager may install fixed-slot defaults during reset even
+when the act transition will retain the original occupants of those slots.
+Keeping both duplicates gameplay owners and can collide their rewind identities
+at the immediate transition-boundary capture. MHZ pollen (slot 4) and HCZ water
+splash (slot 5) exposed this together. In exact-slot carry, discard the freshly
+initialized occupant of each carried slot before importing the original
+identity and registering the carried object. Preserve fixed defaults in slots
+that are not carried. Do not weaken identity-table uniqueness checks or merely
+renumber duplicate owners. Verify one owner, retained slot/identity, and
+capture/restore immediately after a real resource reload.
+
+## Preserve the operand width of animation and clock accesses
+
+FBZ completion (2026-09-14): `move.w #1,anim(a1)` stores big-endian bytes
+`anim = 0`, `prev_anim = 1`; it does not select animation 1. The stationary and
+moving wire cages use this release/entry word write. Preserve both writes,
+including donor animation translation, rather than translating the word as an
+animation ID. Likewise `(Level_frame_counter+1).w` is an address expression
+selecting the low byte of the counter, not an arithmetic increment of its
+value. FBZ floating-platform mode 3 reads that byte after the engine has already
+advanced the level clock. Test equal low bytes with different high bytes to
+catch an incorrectly widened or incremented port. The horizontal chain's timed
+hand-step writes are separate byte writes and must not inherit cage semantics.
+
+## Preserve unsigned angle clamps and the exact parent-bit owner
+
+FBZ miniboss completion (2026-09-14): `sub_6F830` and `sub_6F8C8`
+advance an angle byte by two, compare unsigned bounds, and clamp to the target.
+Equality-only ports miss odd-angle crossings or keep rotating after arrival.
+Do not assume mirrored branches share equality: `sub_6F8F2` accepts left
+`angle <= $80`, but right `angle > $80`, before clamping. Test before, at,
+and across each boundary, including odd angles and repeated clamped updates.
+
+Follow every pointer hop before translating a control-bit write. In
+`sub_6F85A`, `$44 -> arm -> parent3 -> root` publishes root bit 2; it does
+not publish arm bit 2. The terminal recycle tail at `loc_6F64E` owns arm
+readiness later. Arm routine `$E` runs only `Obj_Wait`; its `loc_6F360`
+callback clears arm bit 3 before root bit 2. Advancing patrol during that
+wait, clearing the wrong owner, or publishing readiness early can compensate
+for each other while producing a wrong attack. Regress the whole hold/recycle
+handoff as well as individual angle boundaries.
+
+## Full-resolution sloped helpers and radius-independent landing windows
+
+SOZ spring-vine bring-up (2026-09-15): `SolidObjectTopSloped` /
+`SolidObjSloped` / `SolidObjCheckSloped` sample one byte per pixel; their
+`Sloped2` counterparts shift X by one. Preserve the particular helper's sample
+resolution and `NOT.W` flip. An even-X-only test can hide a wrong shift.
+`loc_1E45A` accepts feet overlap 0 through 16 inclusive, independently of player
+radius. Routing that overlap through a full-solid top/bottom classifier can
+reject a valid Tails or rolling landing. Test odd X, both flips and radii 19,
+15 and 14 at overlaps 15/16/17. Existing providers keep their helper selection.
+
+`Delete_Sprite_If_Not_In_Range` returns without drawing: the SOZ vine parent
+is invisible and its later-slot child draws eight pieces. Do not infer drawing
+from a culling helper's name or add a ninth parent piece. Preserve the child's
+own coarse-X deletion check.
+
+## Fresh contact is not always the native object standing bit
+
+SOZ sand rock (`loc_41760`, 2026-09-15) reads the object's standing mask after
+SolidObjectFull. Offscreen P2 can bypass fresh contact while retaining the prior
+standing bit. When the ROM branches on that latch, query the explicit object's
+standing bit after the checkpoint; `standingNow()` alone is insufficient, and
+player OnObj may belong to a different object. Test a retained offscreen rider
+with a no-contact checkpoint. This also matters when one rolling rider breaks a
+shared platform and every standing rider must be released.
+
+## Add `art_tile` to the complete mapping word before decoding its fields
+
+**Evidence:** FBZ `Obj_FBZChainLink` / `Map_FBZChainLink` (2026-09-15
+chain-art follow-up). The object installs
+`make_art_tile(ArtTile_FBZMisc,2,0) = $4379`; each repeated link piece stores
+`$E0EE`. `Draw_Sprite` adds those words as unsigned 16-bit values, so
+`$E0EE + $4379 = $12467`, truncated to `$2467`. The carry clears priority,
+selects palette line 1, and resolves source tile `$467`.
+
+Parsing tile index, flips, palette, and priority first and then adding each field
+independently loses carries between the fields. The FBZ chain consequently keeps
+the raw high-priority bit and appears in front of scenery that should occlude it,
+even though its object priority remains the correct `$80` bucket.
+
+When mapping words contain large or apparently negative tile offsets, add the
+object's full `art_tile` word modulo `$10000` first, then decode the final tile,
+flip, palette, and priority fields. Test both the resolved attributes and the
+actual level-pattern identity; a correct-looking tile index alone does not catch
+the priority carry. This applies across S1/S2/S3K mapping consumers that use the
+same word-addition path.
+
+
+## Post-solid movement is not the next checkpoint's carry delta
+
+SOZ pushable rock (`Obj_SOZPushableRock`, `$40546`; `loc_405D8`) pushes itself
+one pixel after SolidObjectFull, then saves its current X immediately before the
+next falling MoveSprite. A controller record still holding the last checkpoint's
+X includes that old push, whereas native d4 excludes it. Initial X velocity is
+zero: suppress horizontal carry on that fall and refresh the checkpoint baseline.
+Later track falls retain their nonzero horizontal velocity and must carry riders.
+Verify a rider plus a separate side pusher across the transition; testing only a
+walking pusher misses the stale carry. See `TestSolidObjectManager`'s SOZ push-to-fall
+regression and the 2026-09-15 SOZ methodology-v2 execution plan.
+
+
+## Object floor probes do not inherit the focused player's path bits
+
+`ObjCheckFloorDist2` sets d5 to `$C` before `FindFloor`; a SOZ pushable rock
+therefore probes the primary solidity path even while the focused player uses
+another path. Pass that native bit selection explicitly to `ObjectTerrainUtils`.
+The shared `FindFloor` still honors `Background_collision_flag`, so preserve the
+injected background-collision provider independently. Do not equate foreground vs
+background planes with primary vs secondary solidity paths. Covered by
+`TestSozPushableRock` with the service's focused-player path set secondary.
+
+
+## SOZ1's entry lock requires a jump, not an idle delay
+
+`Obj_LevelIntro_PlayerFallIntoGround` ($41FF4) owns P1/P2 controls during the
+fall into sand. `loc_420A6` holds both locks and waits for a newly pressed A/B/C;
+`loc_4213C` clears the locks and deletes the intro actor after emergence. An
+LFC35 save can advance indefinitely while controls remain locked. Clearing a
+lock byte once does not bypass an actor which writes it every frame. For a
+native positioned probe, first finish the intro through its ordinary jump,
+then normalize the explicitly declared player setup. The reusable
+`tools/bizhawk/capture_soz_pushable_rock.lua` records that entry handshake.
+
+
+## SOZ golem children do not share one dynamic priority rule
+
+The SOZ priority audit (2026-09-16) distinguishes sprite bucket order from the
+art word's terrain-priority bit. `sub_770EA` changes body/cover attributes at
+X `$4200`, but dust's `ObjDat3_773CA` remains bucket3/high and the hitbox's
+`loc_76F6A` remains bucket5 with the art word copied at creation. Detached parts
+apply the X gate once before `loc_849D8` replaces their routine with
+`Obj_FlickerMove`; their last attributes must then remain fixed, including
+through rewind. Applying the parent's dynamic getter to every child causes
+layer changes the native child routines never perform. Audit the routine after
+a generic debris dispatch, not only the originating object's setup table.

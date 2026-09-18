@@ -6,6 +6,7 @@ import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -18,8 +19,6 @@ import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PlatformBobHelper;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SolidContact;
-import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -36,7 +35,7 @@ import java.util.logging.Logger;
  * Implements movement behaviors and rendering from the disassembly.
  */
 public class ARZPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ARZPlatformObjectInstance.class.getName());
 
     private static final int[] WIDTH_PIXELS = {
@@ -111,6 +110,14 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
 
         y = (baseYFixed >> 8) + bobHelper.getOffset();
         updateDynamicSpawn(x, y);
+    }
+
+    // Obj18_Init move.b #4,priority(a0): docs/s2disasm/s2.asm:23195.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override
@@ -189,14 +196,7 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Platform state is driven via ObjectManager standing checks.
-    }
-
-    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
     }
 

@@ -24,6 +24,12 @@ which behavior is required; derive unspecified details from the requested route.
   writes, allocation failure, and same-pass update visibility where the ROM uses them.
 - Load art, mappings, DPLCs, and animation data through the ROM pipeline. Verify
   addresses and data shape, then register art and the object factory.
+- Transcribe the sprite bucket: `move.b #n,priority(a0)` is bucket `n`
+  (0 = front-most) and goes through `RenderPriority.bucket(n)`; override
+  `getPriorityBucket()` on every class that draws, returning `bucket(0)` with the
+  citation when the ROM leaves priority at 0. The art word's bit 15
+  (`make_art_tile(.., 1)` / `ori.w #$8000,art_tile`) is `isHighPriority()`, never a
+  bucket. Copy runtime priority writes and parent-to-child copies at the same points.
 - Capture new persistent state and recreate paths for rewind. Exercise the
   affected routine edge/subtype with focused tests and the relevant object/art guards.
   Use trace replay when it provides evidence for the changed behavior.
@@ -50,3 +56,14 @@ Check the existing object checklist/profile when implementation coverage changes
 
 Read only references needed for the behavior being changed. Integration and
 project-wide verification follow the repository instructions.
+
+## Per-act coverage obligation
+
+Follow the [zone and act test standard](../../../docs/guide/contributing/level-test-standard.md)
+for this change's affected contracts and the owning act/character-route matrix.
+New acts require the full applicable matrix; local changes record inherited gaps.
+Include supported viewport/donor/team breadth and the applicable rewind spots:
+events, interactions, boss graphs, camera locks, world changes and loads/respawn.
+Prove restoration and forward replay, or timeline isolation at an intentional reset.
+Keep short checks independent of full routes and update the
+[coverage backlog](../../../docs/status/level-test-coverage.md) in the same delivery.

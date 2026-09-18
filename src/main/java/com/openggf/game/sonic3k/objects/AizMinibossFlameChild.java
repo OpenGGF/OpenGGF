@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -172,6 +173,15 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
     public boolean isHighPriority() {
         // ROM: make_art_tile(ArtTile_AIZBossFire,0,1) — priority bit = 1
         return true;
+    }
+
+    // ObjDat_AIZMiniboss_Flame priority $100 (sonic3k.asm:137848); AIZMiniboss_ImpactFlame_Init
+    // rewrites the same $100 for the subtype-6 impact flame (sonic3k.asm:137182).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

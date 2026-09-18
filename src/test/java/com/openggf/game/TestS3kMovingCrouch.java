@@ -31,26 +31,26 @@ class TestS3kMovingCrouch {
     @Test
     void s3k_hasMovingCrouchThreshold() {
         GameRules fs = GameRules.SONIC_3K;
-        assertEquals(0x100, fs.playerMovement().movingCrouchThreshold(),
+        assertEquals(0x100, fs.playerMovement().groundPose().movingCrouchThreshold(),
                 "S3K moving crouch threshold should be $100");
     }
 
     @Test
     void s2_noMovingCrouchThreshold() {
-        assertEquals(0, GameRules.SONIC_2.playerMovement().movingCrouchThreshold(),
+        assertEquals(0, GameRules.SONIC_2.playerMovement().groundPose().movingCrouchThreshold(),
                 "S2 should have no moving crouch threshold");
     }
 
     @Test
     void s1_noMovingCrouchThreshold() {
-        assertEquals(0, GameRules.SONIC_1.playerMovement().movingCrouchThreshold(),
+        assertEquals(0, GameRules.SONIC_1.playerMovement().groundPose().movingCrouchThreshold(),
                 "S1 should have no moving crouch threshold");
     }
 
     @Test
     void s3k_thresholdHigherThanS2RollSpeed() {
         // S3K roll threshold (0x100) is higher than S2's (0x80)
-        assertTrue(GameRules.SONIC_3K.playerMovement().movingCrouchThreshold() > 0x80,
+        assertTrue(GameRules.SONIC_3K.playerMovement().groundPose().movingCrouchThreshold() > 0x80,
                 "S3K threshold should be higher than S2's roll speed");
     }
 }

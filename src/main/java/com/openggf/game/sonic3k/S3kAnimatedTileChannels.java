@@ -86,26 +86,23 @@ final class S3kAnimatedTileChannels {
         return channels;
     }
 
-    static List<AnimatedTileChannel> buildSozChannels(Sonic3kPatternAnimator owner,
-                                                      List<AniPlcScriptState> scripts) {
-        List<AnimatedTileChannel> channels = new ArrayList<>(scripts.size() + 1);
-        for (int i = 0; i < scripts.size(); i++) {
-            AniPlcScriptState script = scripts.get(i);
-            channels.add(new AnimatedTileChannel(
-                    "s3k.soz.script." + i,
-                    owner::shouldRunScriptChannels,
+    static List<AnimatedTileChannel> buildSozChannels(Sonic3kPatternAnimator owner, int actIndex) {
+        if (actIndex == 1) {
+            return List.of(new AnimatedTileChannel(
+                    "s3k.soz2.torches",
+                    owner::shouldRunSoz2CustomChannels,
                     ctx -> ctx.frameCounter(),
-                    scriptDestination(script),
+                    new DestinationPlan(0x330, 0x335),
                     AnimatedTileCachePolicy.ALWAYS,
-                    ctx -> owner.tickScript(script)
-            ));
+                    ctx -> owner.updateSoz2TorchesForGraph()));
         }
+        List<AnimatedTileChannel> channels = new ArrayList<>(1);
 
         channels.add(new AnimatedTileChannel(
                 "s3k.soz1.scroll",
                 owner::shouldRunSoz1CustomChannels,
                 ctx -> owner.computeSoz1Phase(),
-                new DestinationPlan(0x330, 0x33E),
+                new DestinationPlan(0x330, 0x341),
                 AnimatedTileCachePolicy.ON_PHASE_CHANGE,
                 new SplitTransferApplyStrategy(owner::updateSoz1BackgroundTilesForGraph)
         ));

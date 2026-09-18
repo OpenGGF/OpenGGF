@@ -325,7 +325,14 @@ class TestS3kIczEndBossObject {
         object.setServices(services);
 
         stepFrames(instance, 122);
-        instance.appendRenderCommands(new ArrayList<>());
+        // ObjectManager paints bucket 7 down to 0 and each list's low then high class:
+        // the bottom platform and body sit in the $280 list, the top child in $200
+        // (word_72312), so it lands on top of both.
+        var owner = (com.openggf.level.objects.MultiBucketRenderable) instance;
+        for (int bucket = com.openggf.graphics.RenderPriority.MAX; bucket >= com.openggf.graphics.RenderPriority.MIN; bucket--) {
+            owner.appendRenderCommands(new ArrayList<>(), bucket, false);
+            owner.appendRenderCommands(new ArrayList<>(), bucket, true);
+        }
 
         InOrder order = inOrder(bossRenderer);
         order.verify(bossRenderer).drawFrameIndexWithPaletteBase(eq(2), anyInt(), anyInt(), anyBoolean(), eq(false), eq(1));

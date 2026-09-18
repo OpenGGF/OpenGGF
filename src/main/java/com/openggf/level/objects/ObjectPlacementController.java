@@ -162,7 +162,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private int bwdCounter;
     // ROM: v_objstate[2..255] — per-counter-slot state.
     // Bit 7: set = object loaded or permanently destroyed.
-    private final int[] objState = new int[256];
+    private int[] objState = new int[256];
     // Maps active spawn (identity) → counter value assigned during load.
     // Used to clear objState bit when the object is normally unloaded.
     private final IdentityHashMap<ObjectSpawn, Integer> spawnToCounter = new IdentityHashMap<>();
@@ -186,6 +186,56 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
     }
 
+    /**
+     * S3K {@code Seek_Object_Manager} (sonic3k.asm:37986-38063): after a direct camera X write, moves
+     * the two load cursors to the window around {@code (Camera_X_pos + $400) & $FF80} without loading
+     * or unloading anything, and makes that the stored coarse camera. The next {@link #update(int)} then
+     * sees the real camera behind (or ahead of) the stored one and runs the ordinary backward (or
+     * forward) load step, exactly as {@code Load_Sprites} does on the following frame. Live objects keep
+     * their active entries, as the ROM keeps their respawn bits.
+     */
+    void seekCursors(int cameraX) {
+        if (spawns.isEmpty() || counterBasedRespawn) {
+            return;
+        }
+        int d6 = (cameraX + 0x400) & CHUNK_MASK & 0xFFFF;
+        int stored = lastCameraX == Integer.MIN_VALUE ? Integer.MIN_VALUE : toCoarseChunk(lastCameraX);
+        if (d6 == stored) {
+            return;
+        }
+        if (stored != Integer.MIN_VALUE && d6 < stored) {
+            // loc_1BBD0: back cursor retreats while the previous entry lies right of d6 - $80.
+            int backEdge = d6 - 0x80;
+            if (backEdge >= 0) {
+                while (leftCursorIndex > 0 && spawns.get(leftCursorIndex - 1).x() > backEdge) {
+                    leftCursorIndex--;
+                }
+            }
+            // Front cursor retreats while the previous entry is at or right of d6 - $80 + $300.
+            int frontEdge = d6 - 0x80 + 0x300;
+            while (cursorIndex > 0 && spawns.get(cursorIndex - 1).x() >= frontEdge) {
+                cursorIndex--;
+            }
+        } else {
+            // loc_1BC1C: front cursor advances over entries left of d6 + $280, back over d6 - $80.
+            int frontEdge = d6 + 0x280;
+            while (cursorIndex < spawns.size() && spawns.get(cursorIndex).x() < frontEdge) {
+                cursorIndex++;
+            }
+            int backEdge = frontEdge - 0x300;
+            if (backEdge >= 0) {
+                while (leftCursorIndex < spawns.size() && spawns.get(leftCursorIndex).x() < backEdge) {
+                    leftCursorIndex++;
+                }
+            }
+        }
+        if (leftCursorIndex > cursorIndex) {
+            leftCursorIndex = cursorIndex;
+        }
+        lastCameraX = d6;
+        lastCameraChunk = d6;
+    }
+
     void enableCounterBasedRespawn() {
         this.counterBasedRespawn = true;
         this.execThenLoadPlacement = true;
@@ -197,6 +247,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     void setTwoAxisCursorPlacement(boolean twoAxisCursorPlacement) {
         this.twoAxisCursorPlacement = twoAxisCursorPlacement;
+        if (twoAxisCursorPlacement && objState.length < spawns.size()) {
+            objState = Arrays.copyOf(objState, spawns.size());
+        }
     }
 
     void setWindowingStrategy(ObjectWindowingStrategy strategy) {
@@ -234,6 +287,21 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 && execOrder[oldExecIndex] == object) {
             execOrder[oldExecIndex] = null;
         }
+        return true;
+    }
+
+    boolean transferPlacementOwnership(ObjectInstance from, ObjectInstance to,
+            Map<ObjectSpawn, ObjectInstance> activeObjects,
+            Map<ObjectInstance, ObjectSpawn> instanceToSpawn,
+            List<ObjectInstance> dynamicObjects) {
+        ObjectSpawn placementSpawn = instanceToSpawn.get(from);
+        if (placementSpawn == null || to == null || !dynamicObjects.contains(to)
+                || activeObjects.get(placementSpawn) != from) return false;
+        activeObjects.put(placementSpawn, to);
+        instanceToSpawn.remove(from);
+        instanceToSpawn.put(to, placementSpawn);
+        dynamicObjects.remove(to);
+        dynamicObjects.add(from);
         return true;
     }
 
@@ -282,23 +350,62 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         if (spawn == null || currentYCoarse == previousYCoarse) {
             return false;
         }
-        int bandTop = currentYCoarse > previousYCoarse
-                ? currentYCoarse + 0x180
-                : currentYCoarse - 0x80;
-        int bandBottom = currentYCoarse > previousYCoarse ? bandTop + 0x80 : currentYCoarse;
-        int spawnY = spawn.rawYWord() & 0x0FFF;
-        int wrapRange = camera != null && camera.isVerticalWrapEnabled()
-                ? camera.getVerticalWrapRange()
-                : 0;
-        if (wrapRange > 0 && (short) (camera != null ? camera.getMinY() : 0) < 0) {
-            int wrapMask = wrapRange - 1;
-            bandTop &= wrapMask;
-            bandBottom &= wrapMask;
-            return bandTop <= bandBottom
-                    ? spawnY >= bandTop && spawnY <= bandBottom
-                    : spawnY >= bandTop || spawnY <= bandBottom;
+        boolean wrapping = camera != null && (short) camera.getMinY() < 0;
+        int wrapValue = camera != null && camera.isVerticalWrapEnabled()
+                ? camera.getVerticalWrapRange() - 1
+                : 0xFFFF;
+        int bandTop = twoAxisYPassStripTop(previousYCoarse, currentYCoarse, wrapping, wrapValue);
+        if (bandTop < 0) {
+            return false;
         }
-        return bandTop >= 0 && spawnY >= bandTop && spawnY <= bandBottom;
+        // loc_1B9A4 masks the layout Y word with $FFF, then rejects y < d3 and
+        // y > d3+$80 (sonic3k.asm:37744-37751).
+        int spawnY = spawn.rawYWord() & 0x0FFF;
+        return spawnY >= bandTop && spawnY <= bandTop + 0x80;
+    }
+
+    /**
+     * Load_Sprites' Camera_Y strip start d3 (sonic3k.asm:37679-37723), or -1 when
+     * the pass loads nothing. The coarse words compare signed ({@code bge}), so a
+     * wrapped camera moving from $FF00 to $0680 counts as moving down.
+     */
+    static int twoAxisYPassStripTop(int previousYCoarse, int currentYCoarse,
+            boolean wrapping, int wrapValue) {
+        int d6 = currentYCoarse & 0xFFFF;
+        int old = previousYCoarse & 0xFFFF;
+        boolean down = (short) d6 >= (short) old;
+        if (down) {
+            if (!wrapping) {
+                // loc_1B978
+                int d3 = (d6 + 0x180) & 0xFFFF;
+                return d3 > wrapValue ? -1 : d3;
+            }
+            if (old != 0 || d6 == 0x80) {
+                return stripBelowWrapped(d6, wrapValue);
+            }
+            return stripAboveWrapped(d6, wrapValue);
+        }
+        if (!wrapping) {
+            // loc_1B94C
+            int d3 = (short) (d6 - 0x80);
+            return d3 < 0 ? -1 : d3;
+        }
+        if (d6 != 0 || old == 0x80) {
+            return stripAboveWrapped(d6, wrapValue);
+        }
+        return stripBelowWrapped(d6, wrapValue);
+    }
+
+    private static int stripAboveWrapped(int d6, int wrapValue) {
+        // loc_1B940
+        int d3 = (d6 - 0x80) & 0xFFFF;
+        return (short) d3 >= 0 ? d3 : d3 & wrapValue;
+    }
+
+    private static int stripBelowWrapped(int d6, int wrapValue) {
+        // loc_1B968
+        int d3 = (d6 + 0x180) & 0xFFFF;
+        return d3 < wrapValue ? d3 : d3 & wrapValue;
     }
 
     static boolean isNonCounterSpawnVerticallyEligible(ObjectSpawn spawn,
@@ -306,21 +413,26 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         if ((spawn.rawYWord() & 0x8000) != 0) {
             return true;
         }
-        int windowTop = (cameraY & 0xFF80) - 0x80;
-        int windowBottom = (cameraY & 0xFF80) + 0x200;
         int spawnY = spawn.rawYWord() & 0x0FFF;
         if ((short) cameraMinY < 0) {
+            // loc_1B7F2 works in 16-bit words: a wrapped camera at $FF09 gives d3=$FE80,
+            // whose sign selects the split loc_1BA40 band after masking with Screen_Y_wrap_value.
             int wrapRange = verticalWrapRange > 0 ? verticalWrapRange : 0x1000;
             int wrapMask = wrapRange - 1;
-            if (windowTop < 0) {
-                return spawnY >= (windowTop & wrapMask) || spawnY <= windowBottom;
+            int coarse = cameraY & 0xFF80;
+            int top = (coarse - 0x80) & 0xFFFF;
+            int bottom = (coarse + 0x200) & 0xFFFF;
+            if ((short) top < 0) {
+                return spawnY >= (top & wrapMask) || spawnY <= bottom;
             }
-            if (windowBottom > wrapRange) {
-                return spawnY >= windowTop || spawnY <= (windowBottom & wrapMask);
+            if (bottom > wrapRange) {
+                return spawnY >= top || spawnY <= (bottom & wrapMask);
             }
-        } else {
-            windowTop = Math.max(0, windowTop);
+            return spawnY >= top && spawnY <= bottom;
         }
+        // loc_1B84A clamps a negative d3 to zero when the level does not wrap.
+        int windowTop = Math.max(0, (cameraY & 0xFF80) - 0x80);
+        int windowBottom = (cameraY & 0xFF80) + 0x200;
         return spawnY >= windowTop && spawnY <= windowBottom;
     }
 
@@ -450,8 +562,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * {@link PersistentRespawnState}.
      */
     PersistentRespawnState capturePersistentRespawn() {
+        // The kept ROM table includes object-owned low bits, not just its load latch.
+        byte[] lowerBits = new byte[twoAxisCursorPlacement ? spawns.size() : 0];
+        for (int i = 0; i < lowerBits.length; i++) lowerBits[i] = (byte) (objState[i] & 0x7F);
         return new PersistentRespawnState(remembered.toLongArray(), stayActive.toLongArray(),
-                destroyedInWindow.toLongArray());
+                destroyedInWindow.toLongArray(), new long[0], lowerBits);
     }
 
     /**
@@ -475,6 +590,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // the table wipe at :37429-37438), so a bit 7 left set by
         // Delete_Current_Sprite must survive the return.
         destroyedInWindow.or(BitSet.valueOf(state.destroyedInWindowBits()));
+        if (twoAxisCursorPlacement) {
+            byte[] lowerBits = state.objectStateBits();
+            for (int i = 0; i < Math.min(lowerBits.length, spawns.size()); i++) {
+                objState[i] |= lowerBits[i] & 0x7F;
+            }
+        }
     }
 
     int restoreRewindState(
@@ -808,6 +929,27 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     public List<ObjectSpawn> getAllSpawns() {
         return spawns;
+    }
+
+    void markRemembered(ObjectSpawn spawn, Map<ObjectSpawn, ObjectInstance> activeObjects) {
+        // Look up the instance to check if it should stay active.
+        // activeObjects is an IdentityHashMap so try identity first.
+        ObjectInstance instance = activeObjects.get(spawn);
+        if (instance == null) {
+            // Fallback: scan by equals() in case the caller's spawn reference
+            // differs from the canonical key stored in the IdentityHashMap.
+            for (Map.Entry<ObjectSpawn, ObjectInstance> entry : activeObjects.entrySet()) {
+                if (entry.getKey().equals(spawn)) {
+                    instance = entry.getValue();
+                    break;
+                }
+            }
+        }
+        if (instance != null) {
+            markRemembered(spawn, instance);
+        } else {
+            markRemembered(spawn);
+        }
     }
 
     void markRemembered(ObjectSpawn spawn) {
@@ -1181,8 +1323,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     List<ObjectSpawn> getDeferredVerticalLoadSpawns() {
         ArrayList<ObjectSpawn> result = new ArrayList<>();
-        for (int index = deferredVerticalLoad.nextSetBit(0);
-             index >= 0;
+        // loc_1B982 scans only the entries between Object_load_addr_back and
+        // Object_load_addr_front (sonic3k.asm:37723-37762); a deferred entry the
+        // X cursors have since left behind is not part of that scan.
+        for (int index = deferredVerticalLoad.nextSetBit(leftCursorIndex);
+             index >= 0 && index < cursorIndex;
              index = deferredVerticalLoad.nextSetBit(index + 1)) {
             if (index < spawns.size()) {
                 result.add(spawns.get(index));
@@ -1489,6 +1634,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     boolean isCounterStateBitSet(ObjectSpawn spawn, int bit) {
+        // Two-axis placement owns one respawn byte per layout entry, not an
+        // S1 rolling counter. Lower bits survive ordinary culling and rewind.
+        if (twoAxisCursorPlacement && bit >= 0 && bit < 7) {
+            int index = getSpawnIndex(spawn);
+            return index >= 0 && (objState[index] & (1 << bit)) != 0;
+        }
         Integer counter = spawnToCounter.get(spawn);
         if (counter == null || bit < 0 || bit > 7) {
             return false;
@@ -1497,6 +1648,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     void setCounterStateBit(ObjectSpawn spawn, int bit) {
+        if (twoAxisCursorPlacement && bit >= 0 && bit < 7) {
+            int index = getSpawnIndex(spawn);
+            if (index >= 0) objState[index] |= 1 << bit;
+            return;
+        }
         Integer counter = spawnToCounter.get(spawn);
         if (counter != null && bit >= 0 && bit <= 7) {
             objState[counter] |= 1 << bit;

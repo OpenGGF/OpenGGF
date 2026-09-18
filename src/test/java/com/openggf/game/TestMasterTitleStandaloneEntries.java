@@ -36,8 +36,9 @@ class TestMasterTitleStandaloneEntries {
     void standaloneChooserReturnsTypedNewGameLaunch() {
         MasterTitleScreen screen = standaloneScreen(false);
 
+        press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_ENTER);
-        assertFalse(screen.isGameSelected(), "first confirm opens the standalone action chooser");
+        assertFalse(screen.isGameSelected(), "Start opens the standalone action chooser");
         assertEquals(List.of(MasterTitleEntry.Action.NEW_GAME), screen.standaloneActionsForTest());
 
         press(screen, GLFW_KEY_ENTER);
@@ -51,6 +52,7 @@ class TestMasterTitleStandaloneEntries {
     void standaloneChooserOffersContinueOnlyWhenSnapshotWasValid() {
         MasterTitleScreen screen = standaloneScreen(true);
 
+        press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_ENTER);
         assertEquals(List.of(MasterTitleEntry.Action.NEW_GAME, MasterTitleEntry.Action.CONTINUE),
                 screen.standaloneActionsForTest());

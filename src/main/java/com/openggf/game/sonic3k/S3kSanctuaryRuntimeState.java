@@ -44,6 +44,28 @@ public final class S3kSanctuaryRuntimeState {
         }
     }
 
+    /** {@code word_2E398} (sonic3k.asm:63282): results camera X by Super Emerald stage. */
+    private static final int[] RESULTS_CAMERA_X =
+            {0x15A0, 0x1540, 0x1600, 0x1500, 0x1640, 0x14B0, 0x1690};
+    /** {@code word_2E398+$10}: the pedestal Y {@code loc_2ECD0} centres its stars on. */
+    private static final int[] RESULTS_PEDESTAL_Y =
+            {0x368, 0x3A0, 0x3A0, 0x350, 0x350, 0x390, 0x390};
+
+    public static int resultsCameraX(int stageIndex) {
+        return RESULTS_CAMERA_X[requireStage(stageIndex)];
+    }
+
+    public static int resultsPedestalY(int stageIndex) {
+        return RESULTS_PEDESTAL_Y[requireStage(stageIndex)];
+    }
+
+    private static int requireStage(int stageIndex) {
+        if (stageIndex < 0 || stageIndex >= RESULTS_CAMERA_X.length) {
+            throw new IllegalArgumentException("stageIndex");
+        }
+        return stageIndex;
+    }
+
     private final S3kEmeraldProgression progression;
     private Phase phase;
     private int introTimer;
@@ -144,8 +166,11 @@ public final class S3kSanctuaryRuntimeState {
     }
 
     public boolean beginPedestalSelection(int stageIndex) {
+        S3kEmeraldProgression.EmeraldState state = progression.state(stageIndex);
+        // loc_907A8 arms both state 1 and state 2 pedestals (sonic3k.asm:197577).
         if (phase != Phase.READY
-                || progression.state(stageIndex) != S3kEmeraldProgression.EmeraldState.GRAY_SUPER) {
+                || (state != S3kEmeraldProgression.EmeraldState.CHAOS
+                && state != S3kEmeraldProgression.EmeraldState.GRAY_SUPER)) {
             return false;
         }
         selectedStage = stageIndex;

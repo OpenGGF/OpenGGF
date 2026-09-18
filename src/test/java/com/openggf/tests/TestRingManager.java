@@ -368,6 +368,51 @@ public class TestRingManager {
     }
 
     @Test
+    public void lightningAllocationDoesNotAlsoCollectLaterOverlappingPlacements() {
+        RingSpawn first = new RingSpawn(60, 100);
+        RingSpawn overlapping = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(first, overlapping));
+        ringManager.reset(0);
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
+
+        ringManager.attractStageRings(player);
+        ringManager.collectStageRings(player, 7);
+
+        assertTrue(ringManager.isCollected(first));
+        assertFalse(ringManager.isCollected(overlapping));
+        assertEquals(0, player.getRingCount());
+        assertEquals(1, ringManager.capture().attractedRings().length);
+        player.giveShield(ShieldType.FIRE);
+        ringManager.collectStageRings(player, 8);
+        assertEquals(1, player.getRingCount(), "ordinary collection resumes without lightning");
+    }
+
+    @Test
+    public void exhaustedAttractionPoolGivesRemainingRingsInTheAttractionBox() {
+        List<RingSpawn> rings = new ArrayList<>();
+        for (int i = 0; i < 34; i++) {
+            rings.add(new RingSpawn(60 + i, 100));
+        }
+        RingManager ringManager = buildRingManager(rings);
+        ringManager.reset(0);
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
+        for (int i = 0; i < 32; i++) {
+            ringManager.attractStageRings(player);
+        }
+        assertEquals(0, player.getRingCount());
+
+        ringManager.attractStageRings(player);
+
+        assertEquals(2, player.getRingCount(), "loc_EB16 gives each unallocated ring directly");
+        assertEquals(32, ringManager.capture().attractedRings().length);
+        assertTrue(rings.stream().allMatch(ringManager::isCollected));
+    }
+
+    @Test
     public void testLightningAttractionAllocatesOneRingPerPlayerTouchPass() {
         RingSpawn first = new RingSpawn(140, 100);
         RingSpawn second = new RingSpawn(164, 100);
@@ -969,7 +1014,8 @@ public class TestRingManager {
                 ringCollisionHalfSize,
                 ringCollisionHalfSize,
                 ringRules.stageRingsUseObjectTouchCollection(),
-                ringRules.stageRingSweepUsesRawCameraWindow());
+                ringRules.stageRingSweepUsesRawCameraWindow(),
+                ringRules.checkpointRestoresSavedRings());
         return new GameRules(
                 source.playerMovement(),
                 source.playerCapability(),
@@ -994,7 +1040,7 @@ public class TestRingManager {
                 capability.tailsFlightEnabled(),
                 capability.jumpRepressClearsRollJumpBeforeAbility(),
                 enabled,
-                capability.superSpindashSpeedTable());
+                capability.superSpindashSpeedTable(), capability.glideAttacksEnabled());
         return new GameRules(
                 base.playerMovement(),
                 playerCapability,

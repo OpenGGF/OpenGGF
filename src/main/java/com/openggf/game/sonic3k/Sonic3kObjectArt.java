@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomChannel;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
@@ -18,10 +19,10 @@ import com.openggf.level.render.TileLoadRequest;
 import com.openggf.level.resources.CompressionType;
 import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
+import com.openggf.util.DplcStaticFlattener;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -167,6 +168,49 @@ public class Sonic3kObjectArt {
     }
 
     /**
+     * Builds the FBZ descending chain after applying the object's complete
+     * {@code art_tile} word to every mapping piece.
+     *
+     * <p>{@code Obj_FBZChainLink} uses {@code make_art_tile(ArtTile_FBZMisc,2,0)}.
+     * Its repeated link piece is encoded as {@code $E0EE}; the native word
+     * addition wraps {@code $E0EE + $4379} to {@code $2467}, clearing the
+     * priority bit as well as resolving the final palette. Treating those
+     * fields independently leaves the links in the foreground.</p>
+     */
+    public ObjectSpriteSheet buildFbzChainLinkSheet(int artTileBase) {
+        return buildLevelArtSheetWithResolvedTileWords(
+                Sonic3kConstants.MAP_FBZ_CHAIN_LINK_ADDR, artTileBase | (2 << 13));
+    }
+
+    /** Obj_SOZFloatingPillar: $C49B/$D49B + $4001 wraps to low-priority spike art. */
+    public ObjectSpriteSheet buildSozFloatingPillarSheet(int artTileBase) {
+        return buildLevelArtSheetWithResolvedTileWords(
+                Sonic3kConstants.MAP_SOZ_FLOATING_PILLAR_ADDR, artTileBase | (2 << 13));
+    }
+
+    private ObjectSpriteSheet buildLevelArtSheetWithResolvedTileWords(int mappingAddress, int artTileWord) {
+        if (reader == null) return null;
+        List<SpriteMappingFrame> rawFrames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddress);
+        List<SpriteMappingFrame> resolvedFrames = new ArrayList<>(rawFrames.size());
+        int minTile = Integer.MAX_VALUE;
+        int maxTile = Integer.MIN_VALUE;
+        for (SpriteMappingFrame rawFrame : rawFrames) {
+            List<SpriteMappingPiece> resolvedPieces = new ArrayList<>(rawFrame.pieces().size());
+            for (SpriteMappingPiece rawPiece : rawFrame.pieces()) {
+                SpriteMappingPiece resolvedPiece = SpriteMappingPieces.withTileWord(
+                        rawPiece, (SpriteMappingPieces.toTileWord(rawPiece) + artTileWord) & 0xFFFF);
+                resolvedPieces.add(resolvedPiece);
+                minTile = Math.min(minTile, resolvedPiece.tileIndex());
+                maxTile = Math.max(maxTile,
+                        resolvedPiece.tileIndex() + resolvedPiece.widthTiles() * resolvedPiece.heightTiles());
+            }
+            resolvedFrames.add(new SpriteMappingFrame(resolvedPieces));
+        }
+        if (minTile == Integer.MAX_VALUE) return null;
+        return buildLevelArtSheet(0, 0, resolvedFrames, minTile, maxTile);
+    }
+
+    /**
      * Builds the AIZ1Tree sprite sheet.
      * <p>
      * From disassembly (Map - Act 1 Tree.asm):
@@ -251,6 +295,24 @@ public class Sonic3kObjectArt {
             frames.add(new SpriteMappingFrame(pieces));
         }
         return buildLevelArtSheet(artTileBase, 0, frames, 0, 16);
+    }
+
+    /** Obj_Spikes / loc_23FD0: only upright FBZ spikes use the AniPLC bank. */
+    public ObjectSpriteSheet buildFbzSpikesSheet(int uprightTileBase) {
+        ObjectSpriteSheet sheet = buildSpikesSheet(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS);
+        if (sheet == null) return null;
+        // Keep Map_Spikes' geometry/flips and compact indices: sideways at 0,
+        // upright at 8. The size >= 4 branch restores the shared $494 base;
+        // upright FBZ art starts at $200, without the ordinary +8 adjustment.
+        for (int tile = 0; tile < 8; tile++) {
+            sheet.getPatterns()[8 + tile] = level.getPattern(uprightTileBase + tile);
+        }
+        lastBuildStartTile = uprightTileBase;
+        lastBuildTileCount = Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 8 - uprightTileBase;
+        lastBuildTileRanges = List.of(
+                new Sonic3kPlcLoader.TileRange(uprightTileBase, 8),
+                new Sonic3kPlcLoader.TileRange(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS, 8));
+        return sheet;
     }
 
     // --- Spring art sheets ---
@@ -743,7 +805,7 @@ public class Sonic3kObjectArt {
             List<SpriteMappingFrame> rawMappings =
                     S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_RHINOBOT_ADDR);
             List<SpriteDplcFrame> dplcFrames = loadObjectDplcFrames(reader, Sonic3kConstants.DPLC_RHINOBOT_ADDR);
-            List<SpriteMappingFrame> remapped = applyDplcRemap(rawMappings, dplcFrames);
+            List<SpriteMappingFrame> remapped = DplcStaticFlattener.applyDplcRemap(rawMappings, dplcFrames);
             return new ObjectSpriteSheet(patterns, remapped, 1, 1);
         } catch (IOException e) {
             LOG.warning("Failed loading Rhinobot art: " + e.getMessage());
@@ -863,8 +925,10 @@ public class Sonic3kObjectArt {
         }
 
         if (entry.dplcAddr() > 0) {
-            List<SpriteDplcFrame> dplcFrames = loadObjectDplcFrames(reader, entry.dplcAddr());
-            mappings = applyDplcRemap(mappings, dplcFrames);
+            List<SpriteDplcFrame> dplcFrames = entry.dplcLayout() == Sonic3kPlcArtRegistry.DplcLayout.PLAYER
+                    ? S3kSpriteDataLoader.loadDplcFrames(reader, entry.dplcAddr())
+                    : loadObjectDplcFrames(reader, entry.dplcAddr());
+            mappings = DplcStaticFlattener.applyDplcRemap(mappings, dplcFrames);
         } else {
             if (entry.mappingTileOffset() != 0) {
                 mappings = adjustTileIndices(mappings, entry.mappingTileOffset());
@@ -1263,6 +1327,10 @@ public class Sonic3kObjectArt {
             Pattern empty = new Pattern();
             Arrays.fill(patterns, empty);
 
+            // 0. SUPER/HYPER word → VRAM $50F, queued before the name (loc_2E04E-loc_2E06A)
+            loadKosmArtInto(rom, getSsResultsFormWordArtAddr(character), patterns,
+                    Sonic3kConstants.VRAM_SS_RESULTS_SUPER - base);
+
             // 1. Character name → VRAM $4F1 (index 0)
             loadKosmArtInto(rom, getCharacterNameArtAddr(character), patterns,
                     Sonic3kConstants.VRAM_SS_RESULTS_CHAR_NAME - base);
@@ -1288,6 +1356,22 @@ public class Sonic3kObjectArt {
             LOG.warning("Failed to load SS results screen art: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * ROM {@code SpecialStage_Results} (sonic3k.asm:63063-63082): Knuckles takes the
+     * {@code k} variants; everyone except Tails alone reads HYPER once
+     * {@code Super_emerald_count} reaches 7, on either kind of stage.
+     */
+    static int getSsResultsFormWordArtAddr(PlayerCharacter character) {
+        boolean hyper = GameServices.gameState().getCollectedSuperEmeraldIndices().size() >= 7;
+        if (character == PlayerCharacter.KNUCKLES) {
+            return hyper ? Sonic3kConstants.ART_KOSM_SS_RESULTS_HYPER_K_ADDR
+                    : Sonic3kConstants.ART_KOSM_SS_RESULTS_SUPER_K_ADDR;
+        }
+        return hyper && character != PlayerCharacter.TAILS_ALONE
+                ? Sonic3kConstants.ART_KOSM_SS_RESULTS_HYPER_ADDR
+                : Sonic3kConstants.ART_KOSM_SS_RESULTS_SUPER_ADDR;
     }
 
     // ROM: HUD_DrawInitial reads HUD_Initial_Parts then HUD_Zero_Rings,
@@ -1341,12 +1425,8 @@ public class Sonic3kObjectArt {
      */
     private void loadNemesisArtInto(Rom rom, int romAddr, Pattern[] dest, int destIndex, int maxTiles)
             throws IOException {
-        FileChannel channel = rom.getFileChannel();
-        // Rom exposes a shared FileChannel; lock around seek+decode so concurrent
-        // readers cannot move the channel position mid-stream.
         byte[] data;
-        synchronized (rom) {
-            channel.position(romAddr);
+        try (var channel = RomChannel.at(rom, romAddr)) {
             data = NemesisReader.decompress(channel);
         }
         int tileCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
@@ -1466,89 +1546,6 @@ public class Sonic3kObjectArt {
             frames.add(new SpriteDplcFrame(requests));
         }
         return frames;
-    }
-
-    /**
-     * Remaps mapping tile indices through object DPLC requests.
-     */
-    private static List<SpriteMappingFrame> applyDplcRemap(
-            List<SpriteMappingFrame> mappings, List<SpriteDplcFrame> dplcFrames) {
-        if (dplcFrames == null || dplcFrames.isEmpty()) {
-            return mappings;
-        }
-
-        List<SpriteMappingFrame> remapped = new ArrayList<>(mappings.size());
-        for (int i = 0; i < mappings.size(); i++) {
-            SpriteMappingFrame frame = mappings.get(i);
-            if (i >= dplcFrames.size()) {
-                remapped.add(frame);
-                continue;
-            }
-
-            SpriteDplcFrame dplc = dplcFrames.get(i);
-            int totalSlots = 0;
-            for (TileLoadRequest req : dplc.requests()) {
-                totalSlots += req.count();
-            }
-
-            int[] vramToSource = new int[totalSlots];
-            int slot = 0;
-            for (TileLoadRequest req : dplc.requests()) {
-                for (int t = 0; t < req.count(); t++) {
-                    vramToSource[slot++] = req.startTile() + t;
-                }
-            }
-
-            List<SpriteMappingPiece> remappedPieces = new ArrayList<>(frame.pieces().size());
-            for (SpriteMappingPiece piece : frame.pieces()) {
-                int tileIdx = piece.tileIndex();
-                int wTiles = piece.widthTiles();
-                int hTiles = piece.heightTiles();
-                int tileCount = wTiles * hTiles;
-
-                if (tileIdx < 0 || tileIdx >= vramToSource.length) {
-                    remappedPieces.add(piece);
-                    continue;
-                }
-
-                int remappedBase = vramToSource[tileIdx];
-                boolean contiguous = true;
-                for (int t = 1; t < tileCount; t++) {
-                    int vramSlot = tileIdx + t;
-                    if (vramSlot >= vramToSource.length || vramToSource[vramSlot] != remappedBase + t) {
-                        contiguous = false;
-                        break;
-                    }
-                }
-
-                if (contiguous) {
-                    remappedPieces.add(new SpriteMappingPiece(
-                            piece.xOffset(), piece.yOffset(),
-                            wTiles, hTiles,
-                            remappedBase, piece.hFlip(), piece.vFlip(),
-                            piece.paletteIndex(), piece.priority()));
-                    continue;
-                }
-
-                for (int tx = 0; tx < wTiles; tx++) {
-                    for (int ty = 0; ty < hTiles; ty++) {
-                        int tileOffset = tx * hTiles + ty;
-                        int vramSlot = tileIdx + tileOffset;
-                        int remappedTile = vramSlot < vramToSource.length
-                                ? vramToSource[vramSlot]
-                                : tileIdx + tileOffset;
-                        remappedPieces.add(new SpriteMappingPiece(
-                                piece.xOffset() + tx * 8,
-                                piece.yOffset() + ty * 8,
-                                1, 1,
-                                remappedTile, piece.hFlip(), piece.vFlip(),
-                                piece.paletteIndex(), piece.priority()));
-                    }
-                }
-            }
-            remapped.add(new SpriteMappingFrame(remappedPieces));
-        }
-        return remapped;
     }
 
     private static List<SpriteMappingFrame> applyDplcRemapWithDestinationBase(

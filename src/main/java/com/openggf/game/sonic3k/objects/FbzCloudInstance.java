@@ -40,8 +40,9 @@ public final class FbzCloudInstance extends AbstractObjectInstance implements Sp
         var handler = services().parallaxManager().getHandler(services().featureZoneId());
         if (!(handler instanceof FbzCloudPositionSource source)) return;
         SwScrlFbz.CloudPosition screen = source.cloudPositionAtAddressSlot(addressSlot);
-        worldX = (services().camera().getX() + screen.x()) & 0xFFFF;
-        worldY = (services().camera().getY() + screen.y()) & 0xFFFF;
+        // CloudDeform writes VDP screen coordinates ($80 bias on both axes).
+        worldX = (services().camera().getX() + screen.x() - 0x80) & 0xFFFF;
+        worldY = (services().camera().getY() + screen.y() - 0x80) & 0xFFFF;
         updateDynamicSpawn(worldX, worldY);
     }
 
@@ -52,7 +53,8 @@ public final class FbzCloudInstance extends AbstractObjectInstance implements Sp
         resolveWorldPosition();
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_CLOUD);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(mappingFrame, worldX, worldY, false, false);
+            // FBZ_CLOUD filters native frames 1/2/3 into sheet indices 0/1/2.
+            renderer.drawFrameIndex(mappingFrame - 1, worldX, worldY, false, false);
         }
     }
 
@@ -61,5 +63,7 @@ public final class FbzCloudInstance extends AbstractObjectInstance implements Sp
     public int mappingFrame() { return mappingFrame; }
     @Override public int getX() { return worldX; }
     @Override public int getY() { return worldY; }
+    @Override public int getOnScreenHalfWidth() { return 0x2C; }
+    @Override public int getOnScreenHalfHeight() { return 0x0C; }
     @Override public int getPriorityBucket() { return 7; }
 }

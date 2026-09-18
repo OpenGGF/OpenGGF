@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 
 import java.util.List;
@@ -14,8 +15,19 @@ final class HczEndBossWaterSurfaceChild extends AbstractBossChild implements Rew
     private int xOffset;
 
     HczEndBossWaterSurfaceChild(HczEndBossInstance boss, int xOffset) {
-        super(boss, "HCZEndBossWaterSurface", 3, 0);
+        // HCZEndBossWaterLine_ObjData priority 0 (sonic3k.asm:142171-142172), applied by
+        // HCZEndBossWaterLine_Init's SetUp_ObjAttributes3 (sonic3k.asm:141255-141257).
+        super(boss, "HCZEndBossWaterSurface", RenderPriority.fromS3kWord(0), 0);
         this.xOffset = xOffset;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // HCZEndBoss_WaterLineChildren are created by the platform (sonic3k.asm:141121-141122)
+        // or the subtype-0 debris chute (sonic3k.asm:141300) through CreateChild1_Normal, which
+        // copies the creator's art_tile (sonic3k.asm:176933): both carry
+        // make_art_tile(ArtTile_HCZEndBoss,0,1), bit 15 set (sonic3k.asm:142165, 142180).
+        return true;
     }
 
     @Override

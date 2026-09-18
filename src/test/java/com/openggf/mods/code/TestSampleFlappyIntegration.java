@@ -458,7 +458,7 @@ class TestSampleFlappyIntegration {
                         "native Tails line-0 RGB mismatch at color " + color);
             }
 
-            for (int color : new int[]{1, 5, 14, 15}) {
+            for (int color : new int[]{1, 5, 12, 14, 15}) {
                 assertEquals("host:s3k-hud", GameServices.paletteOwnershipRegistry()
                         .ownerAt(PaletteSurface.NORMAL, 1, color),
                         "S3K lives HUD must own reserved line-1 color " + color);

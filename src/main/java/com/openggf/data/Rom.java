@@ -1,19 +1,31 @@
 package com.openggf.data;
 
+import com.openggf.game.ModApi;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Represents a ROM file for reading and writing.
+ * Represents a ROM for reading (and, for file-backed tools, writing).
  * Implements AutoCloseable for proper resource management.
+ *
+ * <p>A ROM is backed either by a file opened with {@link #open(String)} or by
+ * an in-memory {@link RomByteReader} view supplied through
+ * {@link #fromReader(RomByteReader, String)}. The engine's ROM catalogue hands
+ * out the second kind: a logical ROM extracted from a lock-on dump, or a
+ * composite assembled from two user-supplied images, has no file of its own.
+ * In-memory ROMs are read-only and expose no {@link FileChannel}; gameplay
+ * code reads through {@link #readBytes(long, int)}, {@link RomByteReader} or
+ * {@link RomChannel}, never through the channel.
  */
-@com.openggf.game.ModApi
+@ModApi
 public class Rom implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(Rom.class.getName());
 
@@ -40,7 +52,49 @@ public class Rom implements AutoCloseable {
     // a ROM releases the cache and cannot mix assets from different games.
     private RomByteReader byteReader;
 
+    /** In-memory backing view; non-null only for reader-backed ROMs. */
+    private RomByteReader memoryView;
+    private boolean memoryOpen;
+    private String description = "";
+
+    public Rom() {
+    }
+
+    private Rom(RomByteReader view, String description) {
+        this.memoryView = view;
+        this.byteReader = view;
+        this.memoryOpen = true;
+        this.fileSize = view.size();
+        this.description = description;
+    }
+
+    /**
+     * Wraps an in-memory ROM view. The result reports {@link #isOpen()} until
+     * {@link #close()}, serves every read from the view, rejects writes, and
+     * returns {@code null} from {@link #getFileChannel()}.
+     *
+     * @param view        bytes of the logical ROM, address 0 at the view's start
+     * @param description human-readable origin used in log messages
+     */
+    public static Rom fromReader(RomByteReader view, String description) {
+        return new Rom(Objects.requireNonNull(view, "view"),
+                Objects.requireNonNull(description, "description"));
+    }
+
+    /** True when this ROM serves bytes from memory rather than a file channel. */
+    public boolean isInMemory() {
+        return memoryView != null;
+    }
+
+    /** Human-readable origin of the bytes: the file path, or the catalogue description. */
+    public String describe() {
+        return description;
+    }
+
     public synchronized boolean open(String spath) {
+        if (memoryView != null) {
+            throw new IllegalStateException("An in-memory ROM cannot open a file");
+        }
         byteReader = null;
         try {
             Path path = Path.of(spath);
@@ -59,6 +113,7 @@ public class Rom implements AutoCloseable {
             // are not used during normal engine operation.
             fileChannel = FileChannel.open(path, StandardOpenOption.READ);
             fileSize = fileChannel.size();
+            description = path.toString();
             return true;
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Failed to open ROM: " + spath, e);
@@ -72,6 +127,7 @@ public class Rom implements AutoCloseable {
     @Override
     public synchronized void close() {
         byteReader = null;
+        memoryOpen = false;
         if (fileChannel != null) {
             try {
                 fileChannel.close();
@@ -84,9 +140,12 @@ public class Rom implements AutoCloseable {
     }
 
     /**
-     * Checks if the ROM file is currently open.
+     * Checks if the ROM is currently open.
      */
     public boolean isOpen() {
+        if (memoryView != null) {
+            return memoryOpen;
+        }
         return fileChannel != null && fileChannel.isOpen();
     }
 
@@ -100,11 +159,21 @@ public class Rom implements AutoCloseable {
         return byteReader;
     }
 
+    /**
+     * Returns the underlying file channel, or {@code null} for an in-memory
+     * ROM. Engine code must not read through the channel: its position is
+     * shared mutable state and catalogue-served ROMs have no channel at all.
+     * Use {@link #readBytes(long, int)}, {@link RomByteReader#fromRom(Rom)} or
+     * {@link RomChannel#at(Rom, long)} instead.
+     */
     public FileChannel getFileChannel() {
         return fileChannel;
     }
 
     public long getSize() throws IOException {
+        if (memoryView != null) {
+            return memoryView.size();
+        }
         return fileSize >= 0 ? fileSize : fileChannel.size();
     }
 
@@ -112,6 +181,10 @@ public class Rom implements AutoCloseable {
      * Read the whole ROM into memory.
      */
     public byte[] readAllBytes() throws IOException {
+        if (memoryView != null) {
+            requireMemoryOpen();
+            return memoryView.slice(0, memoryView.size());
+        }
         long size = getSize();
         if (size > Integer.MAX_VALUE) {
             throw new IOException("ROM too large to buffer in memory: " + size + " bytes");
@@ -148,6 +221,19 @@ public class Rom implements AutoCloseable {
      * position would make it skip or repeat a block.
      */
     public int calculateChecksum() throws IOException {
+        if (memoryView != null) {
+            requireMemoryOpen();
+            int count = 0;
+            int size = memoryView.size();
+            for (int i = 512; i < size; i += 2) {
+                int num = memoryView.readU8(i) << 8;
+                if (i + 1 < size) {
+                    num |= memoryView.readU8(i + 1);
+                }
+                count = (count + num) & 0xFFFF;
+            }
+            return count;
+        }
         ByteBuffer buffer = ByteBuffer.allocate(CHECKSUM_BUFFER_SIZE);
         long position = 512; // Skip the first 512 bytes
         int count = 0;
@@ -190,6 +276,10 @@ public class Rom implements AutoCloseable {
         if (offset < 0 || offset >= fileSize) {
             throw new IOException("ROM read out of bounds: offset=" + offset + " size=" + fileSize);
         }
+        if (memoryView != null) {
+            requireMemoryOpen();
+            return (byte) memoryView.readU8((int) offset);
+        }
         synchronized (this) {
             buffer1.clear();
             fileChannel.position(offset);
@@ -202,6 +292,10 @@ public class Rom implements AutoCloseable {
     public byte[] readBytes(long offset, int count) throws IOException {
         if (offset < 0 || offset + count > fileSize) {
             throw new IOException("ROM read out of bounds: offset=0x" + Long.toHexString(offset) + " + " + count + " > size=" + fileSize);
+        }
+        if (memoryView != null) {
+            requireMemoryOpen();
+            return memoryView.slice((int) offset, count);
         }
         synchronized (this) {
             ByteBuffer buffer = ByteBuffer.allocate(count);
@@ -218,6 +312,10 @@ public class Rom implements AutoCloseable {
         if (offset < 0 || offset + 2 > fileSize) {
             throw new IOException("ROM read out of bounds: offset=0x" + Long.toHexString(offset) + " + 2 > size=" + fileSize);
         }
+        if (memoryView != null) {
+            requireMemoryOpen();
+            return memoryView.readU16BE((int) offset);
+        }
         synchronized (this) {
             buffer2.clear();
             fileChannel.position(offset);
@@ -231,6 +329,10 @@ public class Rom implements AutoCloseable {
     public int read32BitAddr(long offset) throws IOException {
         if (offset < 0 || offset + 4 > fileSize) {
             throw new IOException("ROM read out of bounds: offset=0x" + Long.toHexString(offset) + " + 4 > size=" + fileSize);
+        }
+        if (memoryView != null) {
+            requireMemoryOpen();
+            return memoryView.readU32BE((int) offset);
         }
         synchronized (this) {
             buffer4.clear();
@@ -249,6 +351,7 @@ public class Rom implements AutoCloseable {
     }
 
     public synchronized void write16BitAddr(int addr, long offset) throws IOException {
+        requireWritable();
         byteReader = null;
         ByteBuffer buffer = ByteBuffer.allocate(2);
         buffer.put((byte) ((addr >> 8) & 0xFF));
@@ -259,6 +362,7 @@ public class Rom implements AutoCloseable {
     }
 
     public synchronized void write32BitAddr(int addr, long offset) throws IOException {
+        requireWritable();
         byteReader = null;
         ByteBuffer buffer = ByteBuffer.allocate(4);
         buffer.put((byte) ((addr >> 24) & 0xFF));
@@ -268,6 +372,18 @@ public class Rom implements AutoCloseable {
         buffer.flip();
         fileChannel.position(offset);
         fileChannel.write(buffer);
+    }
+
+    private void requireWritable() throws IOException {
+        if (memoryView != null) {
+            throw new IOException("In-memory ROM views are read-only: " + description);
+        }
+    }
+
+    private void requireMemoryOpen() throws IOException {
+        if (!memoryOpen) {
+            throw new IOException("ROM is closed: " + description);
+        }
     }
 
     /**
@@ -293,6 +409,10 @@ public class Rom implements AutoCloseable {
     private String readString(long offset, int length) throws IOException {
         if (offset < 0 || offset + length > fileSize) {
             throw new IOException("ROM read out of bounds: offset=0x" + Long.toHexString(offset) + " + " + length + " > size=" + fileSize);
+        }
+        if (memoryView != null) {
+            requireMemoryOpen();
+            return new String(memoryView.slice((int) offset, length)).trim();
         }
         ByteBuffer buffer = ByteBuffer.allocate(length);
         long position = offset;

@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -58,6 +59,20 @@ public final class CutsceneKnucklesLbz1ThrownBomb extends AbstractObjectInstance
         if (!isOnScreen(64)) {
             setDestroyedByOffscreen();
         }
+    }
+
+    // ObjDat3_6640E priority $80 (sonic3k.asm:134831).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat3_6640E art make_art_tile(ArtTile_LBZKnuxBomb,1,1) sets bit 15 (sonic3k.asm:134830).
+        return true;
     }
 
     @Override

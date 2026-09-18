@@ -175,6 +175,26 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         return 0xC0 | (getCollisionSizeIndex() & 0x3F); // Category BOSS (0xC0)
     }
 
+    /** Native multi-sprite boss-hit paths reflect velocity without leaving an active ability. */
+    protected com.openggf.level.objects.TouchAttackBouncePolicy getAttackBouncePolicy() {
+        return com.openggf.level.objects.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL;
+    }
+
+    @Override
+    public com.openggf.level.objects.TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    @Override
+    public com.openggf.level.objects.TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        var base = com.openggf.level.objects.TouchResponseProfile.fromProvider(this, multiRegionSource);
+        return new com.openggf.level.objects.TouchResponseProfile(
+                base.categoryDecodeMode(), base.continuousCallbacks(), base.requiresRenderFlagForTouch(),
+                base.multiRegionSource(), base.shieldDeflectCapability(), base.shieldReactionFlags(),
+                base.enablesPostSpecialTouchAirborneSideVelocityPreservation(), getAttackBouncePolicy(),
+                base.actorContextPolicy(), base.stopAfterFirstOverlapPolicy());
+    }
+
     public int getCollisionProperty() {
         return state.hitCount; // Return hit count for ROM accuracy
     }
@@ -250,6 +270,14 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     /**
      * ROM object id used by the transient boss-defeat explosion object.
      */
+    /**
+     * Sprite bucket of the defeat explosion: S2 Obj58 and the S3K explosion table
+     * use 0; Sonic 1 bosses override with Obj3F's bucket 1.
+     */
+    protected int getBossExplosionPriorityBucket() {
+        return BossExplosionObjectInstance.S2_S3K_PRIORITY_BUCKET;
+    }
+
     protected int getBossExplosionObjectId() {
         return 0;
     }
@@ -285,7 +313,8 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
                 state.x + xOffset,
                 state.y + yOffset,
                 getBossExplosionObjectId(),
-                getBossExplosionSfxId());
+                getBossExplosionSfxId(),
+                getBossExplosionPriorityBucket());
         services().objectManager().addDynamicObject(explosion);
     }
 

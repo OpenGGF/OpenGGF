@@ -1,0 +1,279 @@
+# Project simplification — second pass
+
+## Scope and base
+
+Implement the seven source-backed candidates approved after the second discovery
+pass. Base: `6cd8ec1881fcab438705ec4fd736804dd6630a50` on develop. Use isolated
+`feature/ai-simplification-pass2`; preserve the main workspace's existing changes.
+Java 21, existing libraries, unchanged public Mod API. Keep behavior at the owning
+callers; extract repeated mechanics only. ROM hashing and editor overlay extras
+are deferred. First-pass retained gates remain closed.
+
+## Work list
+
+- [x] Preview cache validation/loading: share manifest and PNG mechanics across
+  S1/S2 managers. Preserve versions, zones, lazy hash and failure order, second
+  manifest read, exception handling, and immutable all-or-empty results.
+- [x] Preview scaling/publication: share exact nearest-neighbor scaling and file
+  publication. Preserve game-specific capture coordinates, equal-size copy,
+  image-before-manifest order, partial output and cleanup exception behavior.
+- [x] Raw patterns: delegate the S2/S3K conversion loops to existing
+  PatternDecompressor.fromBytes after current caller validation and ROM reads.
+- [x] S1 voices: share operator normalization for music, SFX and zero-address voices;
+  preserve address/bounds branches and fresh arrays.
+- [x] Audio reference files: share identical path/digest primitives across S2/S3K
+  producers and matching process/snapshot sites. Keep request validation order,
+  output checks, publication ownership and error identities local.
+- [x] GPU scroll uploads: private upload tail per HScrollBuffer/VScrollBuffer;
+  retain source staging, signed values, zero fill, lazy allocation and GL lifetime.
+- [x] Playable-sheet ordering: retained after the repository coupling hook rejected
+  implementation-only reader changes without a candidate API-pin change. No public
+  signature changes justify pin regeneration; fixing the coarse hook would expand
+  this small extraction into unrelated API-policy work. Original code restored.
+- [x] Review, focused and combined verification, integrate, push, clean up.
+
+## Verification
+
+Workers own disjoint files in one task tree. Queue all Maven commands. Preview
+checks cover invalidation, malformed/missing files, ordered lazy hashing, pixel
+scaling and copy isolation, publication failure/cleanup. Pattern/voice checks
+exercise production consumers, malformed input, exact pixels/operator bytes and
+mutation isolation. Path checks cover noncanonical paths, symlinks, digests,
+exceptions and producer ownership. Ordering checks distinguish UTF-8 from UTF-16
+and retain reader/writer integration. GPU checks require native array/view texture
+readback and cleanup/reinitialization, beyond existing headless staging coverage.
+
+Finish edits before a combined category run against the pinned base. Inspect the
+plan and preflight; shared changes require full ordinary/guard selection. No
+tracked-file edits during that run. Use no injected MAVEN_OPTS: the runner adds
+stock ROM paths. Inspect all failures/skips; match inherited failures by exact
+identity and message. Attribute uncertain failures with bounded baseline checks.
+Run mandatory S3K loading/bootstrap tests and applicable audio checks. Reconcile
+upstream and verify integration by actual changed behavior; do not repeat unchanged
+checks without cause. Acknowledge/delete consumed diagnostics. Record results here
+before delivery; preserve only durable decisions, not raw logs.
+
+## Results
+
+Six implementations are retained; the comparator candidate is closed as retained duplication. Two Astra low workers implemented
+preview and ROM/audio conversions; each cross-reviewed other owned code. Root
+reviewed callers and native upload paths. No further actionable issue remained.
+
+A copy-and-normalize voice prototype changed the exception class for malformed
+`voiceId=85899345`: multiplication produces offset 2147483625 and offset+25
+wraps negative, admitting the existing guard. The original zero-address
+Arrays.copyOfRange throws IllegalArgumentException; System.arraycopy instead
+throws ArrayIndexOutOfBoundsException. Retained original copies in all callers
+and shared only in-place operator normalization. A regression covers this edge.
+No arithmetic or bounds policy was repaired as part of the extraction.
+
+Preview extraction retains typed local manifests and the second disk read;
+wrapper tests replace the manifest from the hash supplier to protect that order.
+Whole-generation transactionality and asynchronous ownership were not changed.
+The final implementation removes 126 production Java lines overall, including
+four new internal helpers. The reduction is smaller than discovery estimates:
+explicit adapters preserve caller policies without a callback-heavy framework.
+
+Focused verification passed: 277 tests, zero failures/errors/skips, 52.852 seconds
+(excluding queue wait), on the final source tree based on `6cd8ec188`. This includes
+native array/view texture readback across two contexts and repeated resource
+lifetimes, caller-level overflow behavior, both preview wrappers, ROM-backed art,
+and mandatory S3K bootstrap/loading tests. Command:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestPreviewCacheFiles,TestPreviewImageFiles,TestS1DataSelectImageCacheManager,TestS2DataSelectImageCacheManager,TestS3kDataSelectPresentation,TestSonic1SfxData,TestSmpsDataEndianParsing,TestSmpsAssetCatalog,TestSmpsFmVoiceWriteProfiles,TestPatternDecompressor,TestSonic3kObjectArtProvider,TestObjectArtPatternCapacity,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestCompleteRunAudioFiles,TestCompleteRunAudioInputSnapshot,TestTraceChaserAudioProcess,TestS2CompleteRunReferenceProducer,TestS3kCompleteRunReferenceProducer,TestPlayableSheetV2,TestHScrollBufferCompatibility,TestVScrollColumnCount,TestScrollBufferUploadNative' \
+  -Dopenggf.scrollNative=true \
+  -Dsonic1.rom.path=${OPEN_GGF_REPO}/s1.gen \
+  -Dsonic2.rom.path=${OPEN_GGF_REPO}/s2.gen \
+  -Ds3k.rom.path=${OPEN_GGF_REPO}/s3k.gen test -B
+```
+
+Broad plan selects 2,592 classes, all ordinary categories plus fresh-JVM guards.
+Combined verification is pending. Java 21/Lua 5.4/PowerShell
+preflight passed. Initial hook installation encountered the expected read-only
+Git sandbox boundary; the escalated hook installation succeeded.
+
+Commit-hook scope correction: the focused run also included the proposed shared
+UTF-8 comparator, which passed its checks. The coupling hook treats any source
+change in an @ModApi-annotated file as an API delta. The reader/writer and their
+test were restored byte-for-byte to the pinned base, and the new comparator was
+removed. No signature pin, API declaration or policy was altered to bypass the
+hook. The remaining source is unchanged from the 277-test focused run; the broad
+run will validate the final retained scope.
+
+## First broad run and reconciliation
+
+At `48ab5ea1e`, command
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 6cd8ec1881fcab438705ec4fd736804dd6630a50 --run`
+completed run `20260915T103934Z-56a46939`:
+
+- Ordinary: 2,592 reports, 20,498 tests, one failure, zero errors, 19 skips;
+  746.97 seconds. TestRemainingRewindTailInventory expected 1010/790 total/passed
+  but found 1011/791 after the pre-existing SOZ quicksand addition. Upstream
+  `c2812dc11` independently corrects this inventory. The corrected test passed
+  on current develop (one test, zero failures/errors/skips).
+- Guards: 84 reports, 668 tests, five failures, zero errors/skips; 173.25 seconds.
+  Two task regressions: Sonic1FmVoiceDecoder was in the shared audio package rather
+  than game.sonic1; CompleteRunAudioFiles used the overly generic parameter name
+  `expected`, which the authority guard rejects in authenticated tooling. Move the
+  helper to game.sonic1.audio.smps and name the fixed identity `pinnedDigest`.
+  No guard or baseline is weakened; digest checking supplies no gameplay data.
+- The other three failures reproduce on develop `316788395` with identical method
+  identities and complete messages: TestRewindArchitectureGuard reports SOZ's two
+  RewindTransient annotations; TestBuildToolingGuard still expects old direct-Maven
+  guidance; TestNoAssertionFreeDiagnostics flags FbzRouteEvidenceProbe#printEvidence
+  and LevelSolidityMapProbe#writeSolidityMap. Matched command:
+  `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+  -Dtest=TestRewindArchitectureGuard,TestBuildToolingGuard,TestNoAssertionFreeDiagnostics test -B`.
+  Baseline: 123 tests, three failures, zero errors/skips.
+- All 19 skip identities/reasons were inspected. Eighteen are the inherited opt-in
+  routes/benchmarks/native/local-reference checks and CPZ assumption from pass one.
+  The additional native scroll check is opt-in and already passed in the focused
+  native run; no stock-ROM prerequisites were missing.
+
+Upstream since the pinned base includes resource-aware Maven admission/cleanup,
+the SOZ inventory correction, and KiS2 native act-entry/gap ownership changes.
+They are disjoint from the simplification source. Preserve them, run a final
+integrated selection, and report its exact commit/results. Focused guard fixes
+and reconciliation are in progress.
+
+### Guard correction result
+
+The authority guard passed all 25 tests after the parameter became pinnedDigest.
+The first relocation recheck exposed the second architecture boundary: shared
+Sonic1SmpsData cannot depend on a helper in game.sonic1. The final owner is the
+semantic shared `audio.smps.FmVoiceOperatorOrder.swapMiddleOperatorsInPlace`:
+it performs only the six middle-operator swaps; S1 callers own when it is needed.
+No architecture rule or frozen baseline changed. Original copying and overflow
+behavior stay in the callers. Obsolete compiled helper classes were removed
+before checking the moved source.
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestArchUnitRules test -B`
+passed 29 tests, zero failures/errors/skips (53.083 seconds). Combined authority
+and architecture recheck before the final relocation had 54 tests, one failure;
+that failure was the now-corrected downward dependency. Consumed first broad-run
+diagnostics were acknowledged and deleted. No raw reports are archived.
+
+## Final integrated verification
+
+Merged task commits `48ab5ea1e` and `e907ec580` into develop `42df8150c` without
+conflicts, producing `7480ef0dec89305a2b358ac0dd03e33bb20882f1`. Incoming Maven
+resource/cleanup work, SOZ inventory correction, and KiS2 native act-entry/gap fixes
+were preserved. Every task-owned source/test file matches the reviewed task tree;
+the two incoming runtime files remain byte-identical to the destination base.
+Final production reduction: 126 lines, including four new internal helpers.
+
+With Java 21/Lua 5.4/PowerShell preflight passed, the completed command was:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 6cd8ec1881fcab438705ec4fd736804dd6630a50 --run
+```
+
+Run `20260915T111543Z-4ab732b3` at `7480ef0de` completed all selected classes on an
+unchanged integrated tree:
+
+- Ordinary: 2,592 reports, 20,499 tests, zero failures/errors, 19 skips; 756.41 seconds.
+  The SOZ inventory correction passes. All skip identities/reasons were inspected:
+  they match the preceding run's documented limitations, including the opt-in
+  native scroll check already passed separately. No stock ROM was missing.
+- Guards: 84 reports, 668 tests, three failures, zero errors/skips; 180.65 seconds.
+  Exact class/method identities and entire assertion messages match the baseline
+  three documented above. Both task-caused guard issues are corrected. The combined
+  command exits 1 for inherited guard failures; this is not an all-gates-green claim.
+- The original 277-test focused run included successful native texture checks;
+  GPU code did not change afterward. Final ordinary coverage exercises the relocated
+  FM helper and restored original playable-sheet implementation.
+
+No trace frontier was moved or selected; no standalone trace sweep was used to
+claim gameplay coverage. Existing discrepancy, API/version, configuration and
+skill documentation remain unchanged. The develop maintenance entry and engine
+map describe the final owners.
+
+Delivery completed: develop was pushed through `535ef0958` after policy and
+release-tree checks. The clean, fully merged task worktree and local branch were
+removed, and worktree metadata pruned. Consumed category and matched-baseline
+diagnostics were deleted. Original dirty disassemblies and untracked user files
+remain untouched. This documentation-only closure is pushed as the final follow-up;
+unchanged engine checks are not repeated.
+
+
+## Follow-up: S3K main-player Tails tail corruption
+
+The reported feet-in-place-of-tails symptom reproduced at `342f01cb4` with
+stock S3K ROM art. `AniTails00` frame 7 loads 18 body tiles at `$6A0`;
+`AniTails02` frame `$96` replaces only 16. `Obj_Tails_Tail` / `Tails_Tail_Load_PLC`
+use `$6B0`. The body renderer retains stale foot pixels in slots 16–17.
+Whole-bank publication introduced by `7653029ab` (subsequently moved to the
+level renderer by `892292047`) overwrote the tail's published pattern versions
+with those unused body slots. Sidekick body banks are relocated and avoid the
+collision. Neither simplification pass introduced that copy.
+
+Fix: publish only pattern slots referenced by the current mapping, and keep
+frame-bounds queries free of publication writes. ROM addresses, DPLC requests,
+animation timing, and gameplay state remain unchanged. Reallocating banks or
+changing ROM constants was rejected: the constants match the disassembly and
+the stale unused-slot publication is the demonstrated cause.
+
+The ROM-backed regression primes walking frame 7, renders tail frame 5 then
+body roll frame `$96`, and compares the tail's actual published pixels. It
+failed before the fix at tile 1712 (`$6B0`); coverage also exercises sidekick
+bank relocation and deferred sprite-table collection. Validation and delivery
+results are recorded below when complete.
+
+### Tails follow-up verification
+
+- Focused queued Maven run: `-Dtest=TestSpritePresentation,TestTailsRendering,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection,TestSpriteManagerMainTailsTailsDispatch,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` with all three absolute stock ROM properties: exit 0. After expanding the regression, `-Dtest=TestSpritePresentation` with the absolute S3K ROM property also exited 0 (all four role/collection combinations ran).
+- Java 21 / Lua 5.4 / PowerShell preflight passed. Candidate change-based run:
+  `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 342f01cb4dadb5e1ed771270d90f759923825807 --category rewind --run`.
+  Selected 2,202/2,597 classes; ordinary: 16,437 tests, zero failures/errors,
+  17 skips, 548.83 seconds. Guards: 668 tests, two failures, no errors/skips,
+  173.35 seconds. This is category validation, not a full-suite or native-rendering pass.
+- Skips: opt-in benchmarks, probes, soak/route matrices and native graphics;
+  two unavailable GL contexts; existing CPZ spin-tube assumption. The ROM-backed
+  Tails tests were not skipped. The regression checks the published pixel data
+  directly; no separate gameplay capture or trace sweep was run.
+- Guard failures: `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+  (five obsolete required guidance strings) and
+  `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`
+  (`FbzRouteEvidenceProbe#printEvidence`, `LevelSolidityMapProbe#writeSolidityMap`).
+
+- Matched destination-baseline check at `c8138d304`:
+  `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestRewindArchitectureGuard,TestBuildToolingGuard,TestNoAssertionFreeDiagnostics test -q`:
+  123 tests, exactly the same two failures (programmatically compared by identity
+  and full failure message), no errors/skips. The main branch advanced during
+  validation with independent KiS2 wall/Coconuts fixes; those changes are preserved.
+  Candidate diagnostics were inspected and acknowledged.
+
+
+### Tails follow-up integration
+
+Fix commit `1055d9cc3` merged without conflicts into develop at `5557d4e48`,
+preserving the destination's independent KiS2 changes (`c8138d304`).
+Post-integration command:
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base c8138d30467dab6a5c9fcbb904aeaa8082195e6a --category rewind --run`.
+The main workspace's preserved untracked notes expanded selection to all
+2,598 classes. Full ordinary suite: 20,547 tests, zero failures/errors,
+19 skips, 767.79 seconds. The skips match the candidate categories plus two
+opt-in Sonic 1 audio captures; no Tails regression was skipped.
+
+Concurrent merge `a27e86f68` added only KiS2 validation prose during the run.
+The runner correctly stopped before guards on the changed-worktree check;
+comparison with `5557d4e48` confirmed identical engine/test sources. The
+ordinary lane completed successfully, but the combined invocation was
+incomplete. Completed its guard obligation separately at `a27e86f68` with
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -q`:
+668 tests, the same two baseline failures documented above, no errors/skips.
+No ordinary tests were repeated for that documentation-only merge.
+
+
+Final concurrent integration: `7b43ddffb` added a localized FBZ descending-chain
+art-word resolver before the verification-record merge. Review confirmed that
+it does not alter player art or the shared presentation implementation. At
+pushed head `a98c67c07`, the focused queued Maven selection above, expanded
+with `TestFbzChainLinkArtWord` and all three absolute ROM properties, exited 0.
+This exercises both corrections together, including all four mandatory S3K
+checks. The full ordinary result above belongs to `5557d4e48`'s engine sources;
+this final check is focused validation of the additional integration, not a
+second full-suite claim. Both category run directories were inspected and
+acknowledged.

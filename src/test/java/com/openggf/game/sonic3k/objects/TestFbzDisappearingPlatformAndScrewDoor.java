@@ -82,6 +82,88 @@ class TestFbzDisappearingPlatformAndScrewDoor {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"0,false", "1,true", "16,true", "17,false"})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void disappearingTopLandingRequiresNegativeNativeOverlap(int overlap, boolean lands) {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var level = com.openggf.game.GameServices.level();
+        var manager = level.getObjectManager();
+        var platform = manager.createDynamicObject(() -> new FbzDisappearingPlatformObjectInstance(
+                new ObjectSpawn(0x0E90, 0x0470, 0x79, 0xE9, 0, false, 0)));
+        level.setFrameCounter((-platform.phaseOffset()) & platform.phaseMask());
+        for (int i = 0; i <= 6; i++) platform.update(100 + i, fixture.sprite());
+        assertTrue(platform.isSolidFor(fixture.sprite()));
+        platform.snapshotPreUpdatePosition();
+        var player = fixture.sprite();
+        player.setRolling(true);
+        player.applyRollingRadii(false);
+        player.setCentreX((short) platform.getX());
+        player.setCentreY((short) (platform.getY() - 0x11 - player.getYRadius() - 4 + overlap));
+        player.setAir(true);
+        player.setYSpeed((short) 0x1D0);
+        int beforeY = player.getCentreY();
+
+        manager.processImmediateInlineSolidCheckpoint(platform, player, List.of());
+
+        assertEquals(lands, manager.isRidingObject(player, platform));
+        assertEquals(lands, manager.hasObjectStandingBit(player, platform));
+        if (!lands) {
+            assertEquals(beforeY, player.getCentreY(), "rejected top overlap performs no position write");
+            assertEquals(0x1D0, player.getYSpeed());
+        }
+    }
+
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void disappearingLandingKeepsSnapBeforeNonRollingRadiusReset() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var level = com.openggf.game.GameServices.level();
+        var manager = level.getObjectManager();
+        var platform = manager.createDynamicObject(() -> new FbzDisappearingPlatformObjectInstance(
+                new ObjectSpawn(0x0EF0, 0x0418, 0x79, 0xC9, 0, false, 0)));
+        var player = fixture.sprite();
+        level.setFrameCounter((-platform.phaseOffset()) & platform.phaseMask());
+        for (int i = 0; i <= 6; i++) {
+            platform.update(100 + i, player);
+        }
+        platform.snapshotPreUpdatePosition();
+        player.setRolling(false);
+        player.applyRollingRadii(false);
+        int entryRadius = player.getYRadius();
+        player.setCentreX((short) platform.getX());
+        player.setCentreY((short) (platform.getY() - 0x11 - entryRadius - 3));
+        player.setAir(true);
+        player.setYSpeed((short) 0xE0);
+
+        manager.processImmediateInlineSolidCheckpoint(platform, player, List.of());
+
+        assertTrue(manager.isRidingObject(player, platform));
+        assertFalse(player.getAir());
+        assertFalse(player.getRolling());
+        assertEquals(player.getStandYRadius(), player.getYRadius(), "Player_TouchFloor restores radii");
+        assertEquals(platform.getY() - 0x11 - entryRadius - 1, player.getCentreY(),
+                "loc_1E45A snaps with entry y_radius; non-rolling TouchFloor does not shift Y");
+    }
+
+    @Test
+    void disappearingActivationReadsLevelClockRatherThanObjectVintClock() {
+        var level = mock(com.openggf.level.LevelManager.class);
+        for (int subtype : new int[]{0x79, 0x99, 0xB9, 0xD9, 0xF9, 0x89, 0xA9, 0xC9, 0xE9}) {
+            var platform = new FbzDisappearingPlatformObjectInstance(spawn(0x79, subtype));
+            platform.setServices(new PlayersServices(null, List.of()).withLevelManager(level));
+            int activation = (-platform.phaseOffset()) & platform.phaseMask();
+            when(level.getFrameCounter()).thenReturn(activation - 1);
+            platform.update(activation, null);
+            assertEquals(2, platform.mappingFrame(), "VInt equality cannot activate subtype " + subtype);
+            when(level.getFrameCounter()).thenReturn(activation);
+            platform.update(activation + 11, null);
+            assertEquals(1, platform.mappingFrame(), "Level_frame_counter owns loc_3BB08 phase gate");
+            for (int i = 0; i < 6; i++) platform.update(activation + 12 + i, null);
+            assertTrue(platform.isSolidFor(null), "script duration counts subsequent object dispatches");
+        }
+    }
+
     @Test
     void disappearingPlatformRunsExactSixNonSolidThenOneHundredTwentyOneSolidGlobalPhaseCycle() {
         var platform = new FbzDisappearingPlatformObjectInstance(spawn(0x79, 0x79));

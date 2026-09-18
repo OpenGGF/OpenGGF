@@ -74,7 +74,7 @@ public final class S3kPaletteWriteSupport {
         for (int i = 0; i < lineData.length / 2; i++) {
             palette.getColor(i).fromSegaFormat(lineData, i * 2);
         }
-        graphics.cachePaletteTexture(palette, paletteIndex);
+        com.openggf.graphics.PaletteUploadPresentation.cacheLevelPalette(graphics, palette, paletteIndex);
     }
 
     public static void applyUnderwaterLine(PaletteOwnershipRegistry registry,
@@ -262,7 +262,7 @@ public final class S3kPaletteWriteSupport {
 
     private static void cachePaletteTextureIfReady(GraphicsManager graphics, Palette palette, int paletteIndex) {
         if (graphics != null && graphics.isGlInitialized()) {
-            graphics.cachePaletteTexture(palette, paletteIndex);
+            com.openggf.graphics.PaletteUploadPresentation.cacheLevelPalette(graphics, palette, paletteIndex);
         }
     }
 

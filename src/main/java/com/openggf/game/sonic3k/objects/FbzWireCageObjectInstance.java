@@ -53,7 +53,8 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
             int gap=spawn.y()+0x3C-(p.getCentreY()+p.getYRadius()+4);if(gap>=0||gap< -0x10)return;
             NativePositionOps.writeYPosPreserveSubpixel(p,p.getCentreY()+gap+3);
             applyRideObjectSetRide(p);
-            p.setFlipType(0x80);p.setAnimationId(1);participants.set(i,0,0);participants.flag(i,2,true);if(p.getGSpeed()==0)p.setGSpeed((short)1);return;
+            // sub_39F7E writes WORD #1 at anim: walk=0, prev_anim=1.
+            p.setFlipType(0x80);p.setAnimationId(0);p.publishRunAsPreviousAnimation();participants.set(i,0,0);participants.flag(i,2,true);if(p.getGSpeed()==0)p.setGSpeed((short)1);return;
         }
         if(p.getAir()){int next=(participants.get(i,0)+0x20)&0xFF;if(next<0x40)p.setYSpeed((short)(p.getYSpeed()>>1));else p.setYSpeed((short)0);release(p,i);return;}
         if(((dx+rangePixels)&0xFFFF)>=rangePixels*2){release(p,i);return;}if(!p.isOnObject())return;
@@ -90,6 +91,13 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
             player.setGroundMode(GroundMode.GROUND);
             player.setPushing(false);
             player.setRollingJump(false);
+            // RideObject_SetRide calls Player_TouchFloor on airborne entry;
+            // Sonic, Tails and Knuckles all clear the tumble state here
+            // (sonic3k.asm:24368-24373,29161-29166,32857-32862).
+            player.setJumping(false);
+            player.setFlipAngle(0);
+            player.setFlipType(0);
+            player.setFlipsRemaining(0);
             player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
         }
     }
@@ -100,9 +108,12 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
             int band=(dx+0x80)&0xFFFF;if(band>=0x100||((dy+rangePixels)&0xFFFF)>=rangePixels*2||p.isObjectControlled()||(band>=0x20&&band<0xE0))return;
             transferStandingOwner(p);
             if(p.getAir()){p.setXSpeed((short)0);p.setAir(false);}p.setOnObject(true);p.setLatchedSolidObject(spawn.objectId(),this);p.setDirection(com.openggf.physics.Direction.RIGHT);
-            int angle=dx<0?0x80:0;int speed=-p.getYSpeed();if(dy<0){angle=0x40;speed=-speed;}participants.set(i,0,angle);p.setGSpeed((short)(speed==0?1:speed));
+            // loc_3A126 stores the orbit side in (a2). loc_3A14E changes
+            // angle(a1), the player's ground angle, without changing that side.
+            int orbitAngle=dx<0?0x80:0;int speed=-p.getYSpeed();if(dy<0){speed=-speed;}participants.set(i,0,orbitAngle);p.setGSpeed((short)(speed==0?1:speed));
             p.setAngle((byte)(dy<0?0x40:0xC0));
-            ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(p);p.setSuppressGroundWallCollision(true);p.setAnimationId(1);p.setFlipAngle(0);p.setObjectMappingFrameControl(true);participants.flag(i,2,true);
+            // loc_3A16C writes the same anim/prev_anim word on vertical entry.
+            ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(p);p.setSuppressGroundWallCollision(true);p.setAnimationId(0);p.publishRunAsPreviousAnimation();p.setFlipAngle(0);p.setObjectMappingFrameControl(true);participants.flag(i,2,true);
         }
         dy=(short)(p.getCentreY()-spawn.y());if(((dy+rangePixels)&0xFFFF)>=rangePixels*2){release(p,i);return;}if(!p.isOnObject())return;
         p.setRenderFlips(p.getRenderHFlip(),p.getYSpeed()>=0);

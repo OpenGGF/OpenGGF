@@ -39,6 +39,19 @@ class TestS3kZoneRuntimeStateAdapters {
     }
 
     @Test
+    void sozReconciliationPreservesRockSlotButFreshActInstallationClearsIt() {
+        var events=new Sonic3kLevelEventManager();events.initLevel(8,1);
+        var registry=com.openggf.game.GameServices.zoneRuntimeRegistry();
+        var state=assertInstanceOf(com.openggf.game.sonic3k.runtime.SozZoneRuntimeState.class,registry.current());
+        state.publishPushableRockSlot(42);
+        events.ensureZoneRuntimeStateInstalled();
+        assertSame(state,registry.current());assertEquals(42,state.pushableRockSlot());
+        events.initLevel(8,0);
+        var fresh=assertInstanceOf(com.openggf.game.sonic3k.runtime.SozZoneRuntimeState.class,registry.current());
+        assertNotSame(state,fresh);assertEquals(-1,fresh.pushableRockSlot());
+    }
+
+    @Test
     void aizAdapterMirrorsNamedStateFromExistingEvents() {
         Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.init(0);

@@ -88,7 +88,7 @@ class TestSonic3kPatternAnimatorRewindSnapshot {
         Sonic3kPatternAnimator anim = buildAnimator(0, 1); // AIZ2
         PatternAnimatorSnapshot snap = anim.capture();
         assertNotNull(snap.extra(), "S3K animator should pack scalar state into extra blob");
-        assertEquals(53, snap.extra().length, "Extra blob should be 53 bytes (1 bool + 13 ints)");
+        assertTrue(snap.extra().length > 61, "scalar state plus all presented destinations before first submission");
     }
 
     @Test

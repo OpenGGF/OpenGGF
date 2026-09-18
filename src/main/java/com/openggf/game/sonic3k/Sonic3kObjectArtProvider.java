@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.data.RomChannel;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
@@ -37,12 +38,12 @@ import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
+import com.openggf.sprites.render.ShieldPatternBanks;
 import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -120,6 +121,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     // Shield DPLC-driven renderers and art sets
     private final Map<String, PlayerSpriteRenderer> dplcRenderers = new HashMap<>();
     private final Map<String, SpriteArtSet> shieldArtSets = new HashMap<>();
+    private final ShieldPatternBanks shieldPatternBanks = new ShieldPatternBanks();
 
     // HUD pattern caches
     private Pattern[] hudDigitPatterns;
@@ -170,6 +172,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         rendererOrder.clear();
         dplcRenderers.clear();
         shieldArtSets.clear();
+        shieldPatternBanks.clear();
         levelArtTileRanges.clear();
         runtimePublishedLevelArtKeys.clear();
 
@@ -319,15 +322,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     private Pattern[] loadUncompressedPatterns(Rom rom, int addr, int size) throws IOException {
         byte[] data = rom.readBytes(addr, size);
-        int count = data.length / Pattern.PATTERN_SIZE_IN_ROM;
-        Pattern[] patterns = new Pattern[count];
-        for (int i = 0; i < count; i++) {
-            patterns[i] = new Pattern();
-            byte[] tile = Arrays.copyOfRange(data, i * Pattern.PATTERN_SIZE_IN_ROM,
-                    (i + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-            patterns[i].fromSegaFormat(tile);
-        }
-        return patterns;
+        return PatternDecompressor.fromBytes(data);
     }
 
 
@@ -336,12 +331,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * The first 14 tiles are ring art; tiles 14+ are HUD text (S, C, O, R, R, I, N, G, T, I, M, E).
      */
     private Pattern[] loadHudTextFromNemesis(Rom rom) throws IOException {
-        FileChannel channel = rom.getFileChannel();
-        // Rom exposes a shared FileChannel; lock around seek+decode so concurrent
-        // readers cannot move the channel position mid-stream.
         byte[] data;
-        synchronized (rom) {
-            channel.position(Sonic3kConstants.ART_NEM_RING_HUD_TEXT_ADDR);
+        try (var channel = RomChannel.at(rom, Sonic3kConstants.ART_NEM_RING_HUD_TEXT_ADDR)) {
             data = NemesisReader.decompress(channel);
         }
 
@@ -1009,6 +1000,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         return dplcRenderers.get(key);
     }
 
+    /** Mutable shield playback belongs to its player, across shield object recreation. */
+    public PlayerSpriteRenderer getShieldDplcRenderer(String key,
+            com.openggf.sprites.playable.AbstractPlayableSprite owner) {
+        return shieldPatternBanks.renderer(owner, shieldArtSets.get(key),
+                !com.openggf.game.CrossGameFeatureProvider.isActive());
+    }
+
     /** Returns the art set for a shield type, or null. */
     public SpriteArtSet getShieldArtSet(String key) {
         return shieldArtSets.get(key);
@@ -1256,6 +1254,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private static ObjectSpriteSheet invokeBuilder(Sonic3kObjectArt art, String builderName, int artTileBase) {
         return switch (builderName) {
             case "buildSpikesSheet" -> art.buildSpikesSheet(artTileBase);
+            case "buildFbzSpikesSheet" -> art.buildFbzSpikesSheet(artTileBase);
             case "buildSpringVerticalSheet" -> art.buildSpringVerticalSheet(artTileBase);
             case "buildSpringVerticalYellowSheet" -> art.buildSpringVerticalYellowSheet(artTileBase);
             case "buildSpringHorizontalSheet" -> art.buildSpringHorizontalSheet(artTileBase);
@@ -1265,6 +1264,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             case "buildAiz1TreeSheet" -> art.buildAiz1TreeSheet(artTileBase);
             case "buildAiz1ZiplinePegSheet" -> art.buildAiz1ZiplinePegSheet(artTileBase);
             case "buildAizForegroundPlantSheet" -> art.buildAizForegroundPlantSheet(artTileBase);
+            case "buildFbzChainLinkSheet" -> art.buildFbzChainLinkSheet(artTileBase);
+            case "buildSozFloatingPillarSheet" -> art.buildSozFloatingPillarSheet(artTileBase);
             case "buildAnimatedStillSpritesSheet" -> art.buildAnimatedStillSpritesSheet(artTileBase);
             case "buildAnimStillLrzD3Sheet" -> art.buildAnimStillLrzD3Sheet(artTileBase);
             case "buildAnimStillLrz2Sheet" -> art.buildAnimStillLrz2Sheet(artTileBase);
@@ -1407,19 +1408,26 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     /**
-     * Ensures the shared boss explosion art is registered.
+     * Ensures the shared boss explosion art is registered and ready to draw.
      * Used by bosses in zones that do not preload the explosion sheet during zone art setup.
      *
-     * @return true if the shared boss explosion sheet exists after the call
+     * @return true if the shared boss explosion renderer is ready after the call
      */
     public boolean ensureBossExplosionArtLoaded() {
+        PatternSpriteRenderer renderer = renderers.get(ObjectArtKeys.BOSS_EXPLOSION);
         if (sheets.containsKey(ObjectArtKeys.BOSS_EXPLOSION)
-                && renderers.containsKey(ObjectArtKeys.BOSS_EXPLOSION)) {
+                && renderer != null && renderer.isReady()) {
             return true;
         }
         loadSharedBossExplosionArt();
-        return sheets.containsKey(ObjectArtKeys.BOSS_EXPLOSION)
-                && renderers.containsKey(ObjectArtKeys.BOSS_EXPLOSION);
+        renderer = renderers.get(ObjectArtKeys.BOSS_EXPLOSION);
+        if (!sheets.containsKey(ObjectArtKeys.BOSS_EXPLOSION) || renderer == null) {
+            return false;
+        }
+        // Boss initialization can run after the level's atlas upload. Registering
+        // a sheet alone leaves patternBase=-1, so explosion draws are discarded.
+        ensurePatternsCached(GameServices.graphics(), PatternAtlasRange.OBJECTS.base());
+        return renderer.isReady();
     }
 
     /**
@@ -1730,6 +1738,20 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_CNZ_BALLOON_ADDR,
                             Sonic3kConstants.ARTTILE_CNZ_BALLOON_PLC));
+            // LoadEnemyArt selects PLCKosM_FBZ for both acts. Preserve the
+            // ROM batch order and VRAM destinations; these parents produce
+            // the direct Kosinski children through the ordinary module tail.
+            // docs/skdisasm/sonic3k.asm:64325-64326, 64386-64390
+            case Sonic3kZoneIds.ZONE_FBZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_FBZ_BLASTER_ADDR,
+                            Sonic3kConstants.ARTTILE_BLASTER),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_FBZ_TECHNOSQUEEK_ADDR,
+                            Sonic3kConstants.ARTTILE_TECHNOSQUEEK),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_FBZ_BUTTON_ADDR,
+                            Sonic3kConstants.ARTTILE_FBZ_BUTTON));
             // ROM PLCKosM_ICZ queues these entries in this order from
             // LoadEnemyArt after the title-card owner retires.
             // docs/skdisasm/sonic3k.asm:62287-62300, 64392-64395
@@ -1783,6 +1805,19 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             new EnemyKosEntry(
                                     Sonic3kConstants.ART_KOSM_DRAGONFLY_ADDR,
                                     Sonic3kConstants.ARTTILE_DRAGONFLY));
+            // ROM Offs_LoadEnemyArt selects PLCKosM_SOZ for both acts and
+            // queues Skorp, Sandworm and Rockn in this order.
+            // docs/skdisasm/sonic3k.asm:64333-64334, 64417-64421
+            case Sonic3kZoneIds.ZONE_SOZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_SKORP_ADDR,
+                            Sonic3kConstants.ARTTILE_SKORP),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_SANDWORM_ADDR,
+                            Sonic3kConstants.ARTTILE_SANDWORM),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_ROCKN_ADDR,
+                            Sonic3kConstants.ARTTILE_ROCKN));
             default -> List.of();
         };
     }

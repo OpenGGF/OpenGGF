@@ -37,11 +37,17 @@ import static com.openggf.level.scroll.M68KMath.*;
 public class SwScrlEhz extends AbstractZoneScrollHandler {
 
     private final ParallaxTables tables;
+    private final boolean writesFinalTwoLines;
 
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     public SwScrlEhz(ParallaxTables tables) {
+        this(tables, false);
+    }
+
+    public SwScrlEhz(ParallaxTables tables, boolean writesFinalTwoLines) {
         this.tables = tables;
+        this.writesFinalTwoLines = writesFinalTwoLines;
     }
 
     @Override
@@ -186,6 +192,12 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
                     d3 += increment;
                     d3 += increment;
                 }
+            }
+            // KiS2 SwScrl_EHZ (gameRevision=3, fixBugs=0) writes d3 after
+            // the final three increments, rather than repeating the last triplet.
+            if (writesFinalTwoLines) {
+                composer.fillPackedScrollWords(lineIndex, 2, fgScroll, (short) (d3 >> 16));
+                lineIndex = Math.min(VISIBLE_LINES, lineIndex + 2);
             }
         }
 

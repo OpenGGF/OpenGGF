@@ -38,6 +38,14 @@ public final class DefaultBackgroundPlaneCollisionProvider implements Background
     }
 
     @Override
+    public int backgroundY(State current, int worldY) {
+        int translated = BackgroundPlaneCollisionProvider.super.backgroundY(current, worldY);
+        int mask = zoneRuntime.current().backgroundLayoutYMask();
+        // Preserve signed/unbounded legacy coordinates when no native row mask is supplied.
+        return mask == 0xFFFF ? translated : translated & mask;
+    }
+
+    @Override
     public State state() {
         return state(null);
     }

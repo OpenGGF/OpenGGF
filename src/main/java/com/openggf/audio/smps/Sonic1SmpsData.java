@@ -1,5 +1,6 @@
 package com.openggf.audio.smps;
 
+
 /**
  * SMPS 68k music data parser for Sonic 1.
  *
@@ -58,7 +59,8 @@ public class Sonic1SmpsData extends AbstractSmpsData {
     }
 
     public Sonic1SmpsData(byte[] data, int z80StartAddress) {
-        super(data, z80StartAddress);
+        super(data, z80StartAddress, true);
+        SmpsHeaderDecoder.parseInto(this, SmpsHeaderDecoder.Format.RELATIVE_BIG_ENDIAN);
     }
 
     /**
@@ -72,62 +74,7 @@ public class Sonic1SmpsData extends AbstractSmpsData {
 
     @Override
     protected void parseHeader() {
-        if (data.length < 8) {
-            return;
-        }
-
-        // Voice pointer: 16-bit BE, relative to song start (data[0])
-        this.voicePtr = read16(0);
-
-        // Channel counts
-        this.channels = data[2] & 0xFF;  // FM channel count (includes DAC)
-        this.psgChannels = data[3] & 0xFF;
-
-        // Timing
-        this.dividingTiming = data[4] & 0xFF;
-        this.tempo = data[5] & 0xFF;
-
-        // DAC + FM channel entries start at offset 0x06.
-        // The first entry in the channels count is the DAC track.
-        // Each FM/DAC entry is 4 bytes: pointer(2) + transpose(1) + volume(1).
-        int fmStart = 0x06;
-        this.fmPointers = new int[channels];
-        this.fmKeyOffsets = new int[channels];
-        this.fmVolumeOffsets = new int[channels];
-
-        int offset = fmStart;
-        for (int i = 0; i < channels; i++) {
-            if (offset + 3 < data.length) {
-                this.fmPointers[i] = read16(offset);
-                this.fmKeyOffsets[i] = (byte) data[offset + 2];
-                this.fmVolumeOffsets[i] = (byte) data[offset + 3];
-            }
-            offset += 4;
-        }
-
-        // The first FM pointer is the DAC pointer
-        if (channels > 0) {
-            this.dacPointer = this.fmPointers[0];
-        }
-
-        // PSG channel entries: 6 bytes each
-        // pointer(2) + transpose(1) + volume(1) + modulation(1) + envelope index(1)
-        this.psgPointers = new int[psgChannels];
-        this.psgKeyOffsets = new int[psgChannels];
-        this.psgVolumeOffsets = new int[psgChannels];
-        this.psgModEnvs = new int[psgChannels];
-        this.psgInstruments = new int[psgChannels];
-
-        for (int i = 0; i < psgChannels; i++) {
-            if (offset + 5 < data.length) {
-                this.psgPointers[i] = read16(offset);
-                this.psgKeyOffsets[i] = (byte) data[offset + 2];
-                this.psgVolumeOffsets[i] = (byte) data[offset + 3];
-                this.psgModEnvs[i] = data[offset + 4] & 0xFF;
-                this.psgInstruments[i] = data[offset + 5] & 0xFF;
-            }
-            offset += 6;
-        }
+        SmpsHeaderDecoder.parseInto(this, SmpsHeaderDecoder.Format.RELATIVE_BIG_ENDIAN);
     }
 
     @Override
@@ -161,20 +108,9 @@ public class Sonic1SmpsData extends AbstractSmpsData {
             return null;
         }
 
-        // S1 voice bytes per 4-byte group are in order Op4,Op3,Op2,Op1 (InsMode=DEFAULT).
-        // The S1 sequencer profile consumes normalized order: Op4,Op2,Op3,Op1.
-        // The difference: bytes at positions [g+1] and [g+2] are swapped.
-        // Convert S1 → S2 format by swapping the middle two bytes in each group.
         byte[] voice = new byte[stride];
         System.arraycopy(data, offset, voice, 0, stride);
-
-        // Swap positions [g+1] and [g+2] for each 4-byte operator group
-        // Groups start at byte offsets 1, 5, 9, 13, 17, 21
-        for (int g = 1; g < 25; g += 4) {
-            byte tmp = voice[g + 1];
-            voice[g + 1] = voice[g + 2];
-            voice[g + 2] = tmp;
-        }
+        FmVoiceOperatorOrder.swapMiddleOperatorsInPlace(voice);
         return voice;
     }
 

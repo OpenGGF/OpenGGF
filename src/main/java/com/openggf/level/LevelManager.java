@@ -99,7 +99,6 @@ import com.openggf.sprites.playable.SidekickCpuController;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -206,7 +205,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     PerformanceProfiler profiler;
     private CrossGameFeatureProvider crossGameFeatures;
     final List<List<LevelDescriptor>> levels = new ArrayList<>();
-    private final List<PendingLostRingSpawn> pendingLostRingSpawns = new ArrayList<>();
+    private final LevelLostRingSpawnCoordinator lostRingSpawnCoordinator =
+            new LevelLostRingSpawnCoordinator(this);
     private final WorldSession worldSession;
     private ZoneProgressionPlan zoneProgressionPlan = ZoneProgressionPlan.LINEAR;
     private ZoneProgressionPlan.ZoneTopology zoneProgressionTopology;
@@ -515,7 +515,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     @Override
     protected void executeInitialProcessSprites() {
         new InitialProcessSpritesExecutor().execute(
-                gameModule, spriteManager, objectManager, camera, zoneFeatureProvider, frameCounter);
+                gameModule, spriteManager, objectManager, camera, zoneFeatureProvider,
+                animatedPatternManager, frameCounter);
     }
 
     /**
@@ -877,6 +878,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase G: Create ObjectManager, TouchResponseTable, and wire CollisionSystem.
      */
     public void initObjectManager() throws IOException {
+        lostRingSpawnCoordinator.reset();
         touchResponseTable = gameModule.createTouchResponseTable(worldSession.getDataSource());
         objectManager = new ObjectManager(level.getObjects(),
                 gameModule.createObjectRegistry(),
@@ -1028,7 +1030,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
+    LevelRenderer spritePresentationRenderer() { return levelRenderer; }
+
     void resetZoneScopedRegistriesForLevelLoad() {
+        levelRenderer.spriteTables.reset();
         LevelZoneScopedRegistryResetter.reset();
     }
 
@@ -1501,7 +1506,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // NOTE: OscillationManager and objectManager are now updated via updateObjectPositions()
         // which is called earlier in GameLoop to fix platform riding sync (1-frame lag fix).
 
-        processPendingLostRingSpawns();
+        lostRingSpawnCoordinator.processPending();
 
         Sprite player = null;
         AbstractPlayableSprite playable = null;
@@ -1703,6 +1708,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
+            var warningCycle = gameModule.getGameService(com.openggf.game.internal.HudWarningPolicyProvider.class);
+            if (warningCycle != null) {
+                HudProfileAccess.installWarningPolicy(hudRenderManager, warningCycle, this::getFrameCounter);
+            }
+            var livesNumberPalette = gameModule.getGameService(
+                    com.openggf.game.internal.HudLivesNumberPaletteProvider.class);
+            if (livesNumberPalette != null) {
+                HudPaletteBridgeAccess.setLivesNumberPaletteLine(
+                        hudRenderManager, livesNumberPalette.paletteLine());
+            }
             if (activeModZoneRuntimeContribution != null) {
                 activeCustomZonePaletteBridge = gameModule.createCustomZonePaletteBridge(
                         activeModZoneRuntimeContribution, level, provider);
@@ -2838,91 +2853,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void spawnLostRings(AbstractPlayableSprite player, int frameCounter) {
-        if (ringManager == null || player == null) {
-            return;
-        }
-        int count = player.getRingCount();
-        if (count <= 0) {
-            return;
-        }
-        ringManager.spawnLostRings(player, count, frameCounter);
+        lostRingSpawnCoordinator.spawnImmediately(player, frameCounter);
     }
 
     public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
-        queueLostRingSpawn(player, frameCounter, false);
+        lostRingSpawnCoordinator.queue(player, frameCounter, false);
     }
 
     public void spawnLostRingsWithDeferredOwner(AbstractPlayableSprite player, int frameCounter) {
-        queueLostRingSpawn(player, frameCounter, true);
-    }
-
-    private void queueLostRingSpawn(
-            AbstractPlayableSprite player, int scheduledFrame, boolean deferOwnerRingClear) {
-        if (player == null || ringManager == null) {
-            return;
-        }
-        int count = player.getRingCount();
-        if (count <= 0) {
-            return;
-        }
-        int preallocatedFirstSlot = -1;
-        if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
-            preallocatedFirstSlot = objectManager.allocateDynamicSlotAvoidingCurrentPassFrees();
-        }
-        int[] preallocatedSlots = preallocatedFirstSlot >= 0
-                ? new int[] {preallocatedFirstSlot}
-                : new int[0];
-        boolean slotsFullyReserved = false;
-        if (preallocatedFirstSlot >= 0 && objectManager != null
-                && objectManager.lostRingRemainderAllocatesAfterOwnerSlot()) {
-            int requested = Math.min(count, 32);
-            int[] reserved = new int[requested];
-            reserved[0] = preallocatedFirstSlot;
-            int reservedCount = 1;
-            int previousSlot = preallocatedFirstSlot;
-            while (reservedCount < requested) {
-                int slot = objectManager.allocateSlotAfter(previousSlot);
-                if (slot < 0) {
-                    break;
-                }
-                reserved[reservedCount++] = slot;
-                previousSlot = slot;
-            }
-            preallocatedSlots = java.util.Arrays.copyOf(reserved, reservedCount);
-            slotsFullyReserved = true;
-        }
-        pendingLostRingSpawns.add(new PendingLostRingSpawn(
-                player, count, player.getCentreX(), player.getCentreY(), scheduledFrame,
-                preallocatedSlots, slotsFullyReserved, deferOwnerRingClear));
-    }
-
-    private void processPendingLostRingSpawns() {
-        if (pendingLostRingSpawns.isEmpty() || ringManager == null) {
-            return;
-        }
-        Iterator<PendingLostRingSpawn> iterator = pendingLostRingSpawns.iterator();
-        while (iterator.hasNext()) {
-            PendingLostRingSpawn pending = iterator.next();
-            if (frameCounter <= pending.frameCounter()) {
-                continue;
-            }
-            if (pending.player().getRingCount() > 0) {
-                ringManager.spawnLostRingsWithInitialObjectStep(
-                        pending.player(), pending.ringCount(), frameCounter,
-                        pending.x(), pending.y(), pending.preallocatedSlots(),
-                        pending.slotsFullyReserved(), pending.deferOwnerRingClear());
-            } else if (objectManager != null) {
-                for (int slot : pending.preallocatedSlots()) {
-                    objectManager.releaseDynamicSlot(slot);
-                }
-            }
-            iterator.remove();
-        }
-    }
-
-    private record PendingLostRingSpawn(
-            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
-            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
+        lostRingSpawnCoordinator.queue(player, frameCounter, true);
     }
 
     // ── Post-load assembly methods ──────────────────────────────────────
@@ -3042,7 +2981,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         player.setLayer((byte) 0);
         playable.setHighPriority(false);
         playable.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
-        playable.setRingCount(0);
+        // Obj79_LoadData banks rings/1-up thresholds at checkpoint activation.
+        // The semantic rule keeps the KiS2 saved bank through a death reload;
+        // stock games retain their zero-ring start.
+        boolean restoreCheckpointRings = ctx.hasCheckpoint()
+                && activeGameModule().getRules().ring().checkpointRestoresSavedRings();
+        playable.setRingCount(restoreCheckpointRings ? ctx.getCheckpointRings() : 0);
+        if (levelGamestate != null) {
+            levelGamestate.setRingExtraLifeFlags(
+                    restoreCheckpointRings ? ctx.getCheckpointRingExtraLifeFlags() : 0);
+        }
         if (ctx.hasCheckpoint() && ctx.hasCheckpointSolidBits()) {
             playable.setTopSolidBit(ctx.getCheckpointTopSolidBit());
             playable.setLrbSolidBit(ctx.getCheckpointLrbSolidBit());
@@ -3564,7 +3512,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // seamless act-transition path, but must carry this clock across
             // the rebuild so slot-phased object gates (e.g. Batbrain) retain
             // their native timing.
-            int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
+            // A session's first object clock continues the power-on V_int_run_count
+            // (CrossResetRAM, never cleared by Level: sonic3k.asm:542-543).
+            int inheritedVblaCounter = objectManager != null
+                    ? objectManager.getVblaCounter()
+                    : com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).objectClockSeed();
             int inheritedVIntRunCounterPhaseOffset = objectManager != null
                     ? objectManager.getVIntRunCounterPhaseOffset()
                     : 0;
@@ -3637,7 +3589,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     private void activateScheduledPlaybackForLoadedLevel() {
         PlaybackDebugManager playback = GameServices.playbackDebug();
-        if (!playback.activateScheduledLevelLoadSession()) {
+        if (!com.openggf.TraceSessionLauncher.activateScheduledPlaybackForLoadedLevel(playback)) {
             return;
         }
         spriteManager.setPlaybackInputSuppressed(true);
@@ -3714,7 +3666,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
         checkpointCoordinator.clear();
-        loadCurrentLevel();
+        // Results sets Level_Inactive_flag after selecting Current_ZoneAndAct
+        // (KiS2 s2.asm:loc_1429C), so Level_MainLoop re-enters Level: and its
+        // locked title-card loop. Retain that owner in headless play too; the
+        // generic host load omits it and starts the gameplay exit tail early.
+        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(
+                () -> loadCurrentLevel(true, LevelLoadMode.FULL, true, true));
     }
 
     /**
@@ -4006,12 +3963,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void rebuildManagersForActTransition(Camera cam, List<TransitionSstOccupant> persistentDynamicObjects,
                                          SeamlessLevelTransitionRequest request, int cameraX) {
+        lostRingSpawnCoordinator.reset();
         ObjectManager previousObjectManager = objectManager;
         // V_int_run_count is global work RAM, outside Dynamic_object_RAM, and
         // Load_Level does not clear it. The ObjectManager owns our live copy of
         // that clock, so carry it across the manager rebuild even though the
         // per-act object execution counter intentionally restarts.
-        int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
+        int inheritedVblaCounter = objectManager != null
+                ? objectManager.getVblaCounter()
+                : com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).objectClockSeed();
         int inheritedVIntRunCounterPhaseOffset = objectManager != null
                 ? objectManager.getVIntRunCounterPhaseOffset()
                 : 0;
@@ -4059,6 +4019,19 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             com.openggf.level.objects.ObjectCallbackDispatch.inheritOwners(
                     objectManager, previousObjectManager, carriedIdentities);
             if (exactSstCarry) {
+                // Reset installs the target act's fixed SST defaults. A retained
+                // native occupant replaces that default, not a second live object
+                // beside it (e.g. the persistent pollen / water-splash owners).
+                // Remove defaults before importing the original rewind identities.
+                for (ObjectInstance initialized : new ArrayList<>(objectManager.getActiveObjects())) {
+                    if (initialized instanceof com.openggf.level.objects.AbstractObjectInstance fresh
+                            && persistentDynamicObjects.stream().anyMatch(occupant ->
+                                    occupant.identity() != initialized
+                                            && occupant.originalSlot() >= 0
+                                            && occupant.originalSlot() == fresh.getSlotIndex())) {
+                        objectManager.removeDynamicObject(initialized);
+                    }
+                }
                 objectManager.inheritTransitionObjectIdentities(previousObjectManager, carriedIdentities);
             }
         }
@@ -4481,10 +4454,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void resetGameplayState() {
         discardPreparedLevelLoad();
         discardInitialProcessSpritesLifecycle();
+        lostRingSpawnCoordinator.reset();
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {
             gameplayMode.getRewindRegistry().deregister("level");
+            LevelLostRingSpawnRewindAccess.unregister(gameplayMode.getRewindRegistry());
             gameplayMode.getRewindRegistry().deregister("level-transition");
             gameplayMode.getRewindRegistry().deregister("object-manager");
             gameplayMode.getRewindRegistry().deregister("level-event");
@@ -4893,6 +4868,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public RewindSnapshottable<LevelSnapshot> levelRewindSnapshottable() {
         return LevelRewindSnapshotAdapter.create(this);
+    }
+
+    LevelLostRingSpawnCoordinator createLostRingSpawnRewindAdapterInternal() {
+        return lostRingSpawnCoordinator;
     }
 
     public RewindSnapshottable<?> levelTransitionRewindSnapshottable() {

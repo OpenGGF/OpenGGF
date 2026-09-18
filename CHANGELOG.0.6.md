@@ -1541,6 +1541,8 @@ execution order, SST slot ownership, and routines that read their state once per
   art and writes the same words. The line uses palette line 0, which the ROM clears at setup and
   only fills when `Obj0E_Sonic_LoadPalette` copies Sonic's palette in at frame 128, so the text
   appears with Sonic rather than fading in with the emblem.
+- **Title screen sparkles:** stars disappear between appearances and animate with the ROM's
+  cadence, including the shorter first pause and the final animation transition before each gap.
 - **Title card:** the wait loop exits on the ROM's own two-part test, the zone-name piece plus the
   art queue, instead of an invented sixty-frame minimum, and the `Obj34_WaitAndGoAway` tail is
   shared between the omitted and displayed presentation paths.
@@ -1711,7 +1713,9 @@ request scheduling. Full parity and human listening sign-off remain open.
   Point Pokey's Casino Bonus and the ARZ splash remain audible after other effects end.
 - **Drowning recovery and substituted music:** surfacing from the drowning countdown resumes the
   track the ROM specifies, and invincibility, Super and Hyper forms, and boss fights each keep their
-  own per-game music substitution instead of being cut off by the zone theme.
+  own per-game music substitution instead of being cut off by the zone theme. Starting Sonic 1's
+  drowning cue also runs the shipped all-channel silence sequence, so a note from the level theme
+  cannot hang underneath it.
 - **Driver data integrity:** the supported retail catalogs reject malformed ROM framing instead of
   guessing past it, verified by ROM-backed sweeps over every declared song, effect and DAC catalog.
   Replacing a base ROM, audio profile or donor source publishes its loader, DAC, configuration and

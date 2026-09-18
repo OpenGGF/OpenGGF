@@ -6,6 +6,21 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TestLevelLoadContext {
 
     @Test
+    void ringBankIsCopiedAndClearedWithTheCheckpoint() {
+        var state = new CheckpointState();
+        state.restoreFromSaved(100, 200, 0, 0, 1);
+        state.saveRingState(123, 2);
+        var context = new LevelLoadContext();
+        context.snapshotCheckpoint(state);
+        state.clear();
+        assertEquals(123, context.getCheckpointRings());
+        assertEquals(2, context.getCheckpointRingExtraLifeFlags());
+        context.snapshotCheckpoint(state);
+        assertEquals(0, context.getCheckpointRings());
+        assertEquals(0, context.getCheckpointRingExtraLifeFlags());
+    }
+
+    @Test
     public void contextStartsEmpty() {
         var ctx = new LevelLoadContext();
         assertNull(ctx.getRom());

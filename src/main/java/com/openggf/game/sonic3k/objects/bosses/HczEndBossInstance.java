@@ -15,6 +15,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -988,6 +989,20 @@ public class HczEndBossInstance extends AbstractBossInstance
     // =========================================================================
     // Rendering
     // =========================================================================
+
+    // ObjDat_HCZEndBoss priority $100 (sonic3k.asm:142153).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat_HCZEndBoss art make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142152).
+        return true;
+    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

@@ -35,6 +35,35 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TestSonic3kTitleCardManagerRewind {
 
     @Test
+    void externalParentWaitsForArtAndThePrecedingChildMovementLatch() throws Exception {
+        startLevel();
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        title.initializeInLevel(4, 1);
+        title.requestLevelGamestateResetAfterCreateDispatches(38);
+        title.useExternalInLevelGameplayOwner();
+        assertFalse(title.capture().resetLevelGamestateOnInLevelDisplay(),
+                "the retained SST must be the only gameplay reset owner");
+        assertFalse(title.isExternalInLevelWaitReady(), "queued art has not created children");
+        setField(title, "artLoading", false);
+        assertFalse(title.isExternalInLevelWaitReady(), "children are still sliding");
+        setField(title, "state", Sonic3kTitleCardState.DISPLAY);
+        setField(title, "stateTimer", 0);
+        assertFalse(title.isExternalInLevelWaitReady(), "last movement set the child latch");
+        title.update();
+        assertEquals(0, title.getStateTimer(), "generic overlay cannot double-dispatch children");
+        title.updateExternalInLevelChildren();
+        assertTrue(title.isExternalInLevelWaitReady(), "next parent sees settled children");
+        for (int i = 0; i < 95; i++) title.updateExternalInLevelChildren();
+        assertEquals("DISPLAY", title.getStateName(), "only the native parent's timer starts exit");
+        title.startExternalInLevelChildExit();
+        for (int i = 0; i < 40 && !title.areExternalInLevelChildrenRetired(); i++) {
+            title.updateExternalInLevelChildren();
+        }
+        assertTrue(title.areExternalInLevelChildrenRetired());
+        assertFalse(title.isComplete(), "retired children do not publish their parent's completion");
+    }
+
+    @Test
     void restoreRebindsFourProductionHandlesWithoutResubmission() {
         HardwareTimingService timing = startLevel();
         Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();

@@ -834,6 +834,13 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
     }
 
     @Override
+    protected com.openggf.level.objects.TouchAttackBouncePolicy getAttackBouncePolicy() {
+        // Obj57_Init sets render_flags.multi_sprite and boss_hitcount2:
+        // Touch_Enemy returns after velocity reflection, before KiS2's glide exit.
+        return com.openggf.level.objects.TouchAttackBouncePolicy.BOSS_REFLECT;
+    }
+
+    @Override
     protected int getInitialHitCount() {
         return 8; // ROM: move.b #8,boss_hitcount2(a0)
     }

@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -15,14 +16,11 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SolidContact;
-import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpritePieceRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.LazyMappingHolder;
 
 import java.util.ArrayList;
@@ -60,7 +58,7 @@ import java.util.logging.Logger;
  * the parent's first phase load).
  */
 public class MCZRotPformsObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable {
 
     private static final Logger LOGGER = Logger.getLogger(MCZRotPformsObjectInstance.class.getName());
 
@@ -315,11 +313,6 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // Standing detection is polled in update() via ObjectManager.isAnyPlayerRiding.
-    }
-
-    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         if (isDestroyed()) {
@@ -538,6 +531,14 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         for (MCZRotPformsObjectInstance child : children) {
             child.owner = this;
         }
+    }
+
+    // Obj6A_Init move.b #4,priority(a0) (docs/s2disasm/s2.asm:54170); children run Obj6A_Init themselves, Obj6A_InitSubObject copies no priority (s2.asm:54213-54220).
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

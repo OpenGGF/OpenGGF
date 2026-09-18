@@ -18,14 +18,25 @@ This page gets you from zero to playing in under five minutes.
 The engine is verified against these specific ROM revisions. Other revisions may produce
 incorrect results.
 
-| Game | Expected Filename | Expected revision and hash |
-|------|-------------------|----------------------------|
-| Sonic 1 | `s1.gen` | World, Revision 01; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
-| Sonic 2 | `s2.gen` | World, Revision 01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
-| Sonic 3&K | `s3k.gen` | World lock-on combined ROM; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| Game | Expected revision and hash |
+|------|----------------------------|
+| Sonic 1 | World, Revision 01; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 | World, Revision 01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 3&K | World lock-on combined ROM; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-ROM filenames can be changed in `config.yaml` if yours differ. See
-[Configuration](configuration.md) for details.
+Filenames do not matter. Put your images next to `config.yaml` (or in the folder named by
+`roms.directory`) and the engine recognises each one by its size and cartridge header:
+
+- a standalone Sonic 1, Sonic 2, Sonic 3 or Sonic & Knuckles image;
+- a Sonic 3 & Knuckles lock-on dump (4 MiB), which also serves as Sonic 3 and Sonic & Knuckles;
+- a Sonic & Knuckles + Sonic 1 or + Sonic 2 lock-on dump, which also serves the game it carries;
+- a separate Sonic 3 image plus a separate Sonic & Knuckles image, which together boot
+  Sonic 3 & Knuckles with no joining on disk.
+
+The per-game keys (`roms.sonic1`, `roms.sonic2`, `roms.sonic3k`) remain as explicit
+overrides through master-title **Settings** or `config.yaml`: leave them at their
+defaults or blank to let the engine find your images, or set one to a file that must
+exist. See [Configuration](configuration.md) for the full identity table.
 
 ## Install and Run
 
@@ -41,7 +52,7 @@ ROM filenames can be changed in `config.yaml` if yours differ. See
    - Windows: double-click `OpenGGF.exe`, or run it from a terminal.
    - macOS: open `OpenGGF.app`.
    - Linux: run `./OpenGGF` from the extracted `OpenGGF` directory.
-5. If your ROM filenames differ from the defaults, edit `config.yaml` in the extracted package.
+5. If your ROM filenames differ from the defaults, set their paths in master-title **Settings**, or edit `config.yaml` in the extracted package.
 
 Windows terminal example:
    ```
@@ -66,7 +77,7 @@ Linux terminal example:
    tools/testing/install-hooks.sh
    mvn package
    ```
-3. Place your ROM files in the project root directory (next to `pom.xml`).
+3. Place your ROM files in the project root directory (next to `pom.xml`); any filename works.
 4. Run:
    ```
    java -jar target/OpenGGF-0.8.prerelease-jar-with-dependencies.jar
@@ -76,10 +87,21 @@ Linux terminal example:
 
 When the engine starts, you will see:
 
-1. **Master title screen** -- An engine-wide title screen with animated clouds and a game
-   selection menu. Use the arrow keys to highlight a game and press Space to select it.
+1. **Master title screen** -- Choose a game with left/right from either pane.
+   Up/down enters its action list, then selects Start Game, Launch Options, Time Attack,
+   Recordings, Mods, Settings, Advanced, or Quit. Confirm from the game pane opens
+   **Browse Games**, a full-width list with availability and page navigation.
+   Confirm from the action pane opens the selected action; Back returns
+   one level. Quit (or Esc/B from game selection) opens an exit confirmation.
+   Missing ROM entries remain visible but dimmed. Prompts follow the last
+   keyboard/controller input. The original animated
+   game logos remain, scaled proportionally into the game pane.
    When audio is enabled, navigation, confirmation, and missing-ROM errors use short
-   host-owned cues that do not depend on the selected game's ROM.
+   host-owned cues that do not depend on the selected game's ROM. Opening menu screens
+   plays confirmation; backing out plays a distinct cancel sound. Navigation, edits,
+   confirmations and errors also have feedback inside the nested menus. Game selection
+   uses a wrapping carousel with neighboring names and a position count, so added
+   standalone games do not need extra slots or smaller primary labels.
 2. **Game title screen** -- The selected game's original title screen (e.g., the Sonic 2
    "PRESS START BUTTON" screen).
 3. **Gameplay** -- The first zone of the selected game.
@@ -88,12 +110,26 @@ If a ROM file is missing for the game you selected, the engine will show an erro
 
 ## Quick Configuration
 
+Choose **Settings** on the master title for a controller-accessible editor with
+visible categories, onscreen text/key editing, and draft Apply/Cancel. Non-default
+settings are amber. In text editors, Down enters the keypad and Up from its top
+row returns to the text field. Enter/A chooses a key or accepts the focused field;
+you can also type normally. Number fields use a numeric keypad, and Up in path
+fields opens a controller file browser. **Details** (`F1` or controller north button)
+shows complete help, values and errors with manual scrolling, including when a
+setting takes effect. Hold directions for repeated navigation. Mods uses the same
+explicit Apply and Back/discard behavior; applied mod changes require restart.
+Controller prompts follow Xbox/PlayStation labels or physical button positions.
+See [configuration](../../../CONFIGURATION.md#engine-settings-from-the-title) for
+navigation and current prototype limits.
+
 The engine reads settings from `config.yaml` in the working directory. If the file
 does not exist, defaults are used. A few settings you might want to change immediately:
 
 | Setting | What it does | Default |
 |---------|-------------|---------|
-| `roms.default` | Which game boots first (`"s1"`, `"s2"`, or `"s3k"`) | `"s2"` |
+| `roms.default` | Which game boots when the master title is bypassed (`"s1"`, `"s2"`, or `"s3k"`) | `"s2"` |
+| `roms.directory` | Folder scanned for ROM images, identified by size and header rather than name | `"."` |
 | `startup.masterTitleScreen` | Show game picker on launch | `true` |
 | `display.windowAutosize` | Derive the window size from the aspect preset | `true` |
 | `audio.enabled` | Enable or disable sound | `true` |

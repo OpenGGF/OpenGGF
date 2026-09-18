@@ -5,6 +5,7 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.playable.SecondaryAbility;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 /**
  * Chooses animation script IDs based on simple movement state.
@@ -233,7 +234,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 && sprite.getCrouching()
                 && sprite.getGameRules() != null
                 && sprite.getGameRules().playerMovement() != null
-                && sprite.getGameRules().playerMovement().movingCrouchThreshold() > 0;
+                && sprite.getGameRules().playerMovement().groundPose().movingCrouchThreshold() > 0;
         if (sprite.getMoveLockTimer() > 0 && !rollCrouchWriteAfterMoveLock) {
             return null;
         }
@@ -263,8 +264,19 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (sprite.isDrowningDeath() && drownAnimId >= 0) {
             return drownAnimId;
         }
-        if (sprite.getDead() && deathAnimId >= 0) {
-            return deathAnimId;
+        SidekickCpuController cpu = sprite.getCpuController();
+        boolean cpuDeadDispatch = sprite.isCpuControlled() && cpu != null
+                && cpu.getState() == SidekickCpuController.State.DEAD_FALLING;
+        if ((sprite.getDead() || cpuDeadDispatch) && deathAnimId >= 0) {
+            // CPU dead fall owns routine 6 without setting the main-player dead
+            // flag. Its previous ground-move snapshot cannot overwrite the
+            // later Kill_Character byte (S3K loc_14760; S2 Obj02_Dead).
+            // Kill_Character writes Death once; the dead routine only moves and
+            // animates. A later SolidObject_TestClearPush word remains authoritative,
+            // just as for Hurt below (S3K loc_1E0A2; retail FixBugs=0).
+            // S1 Sonic_Death (_incObj/01 Sonic.asm:1967-1987) and S2
+            // Obj01_Dead/Obj02_Dead (s2.asm:38255,41131) likewise never write anim.
+            return sprite.getAnimationId() == deathAnimId ? deathAnimId : null;
         }
         // Hurt state uses separate hurt animation (animation 0x19).
         //

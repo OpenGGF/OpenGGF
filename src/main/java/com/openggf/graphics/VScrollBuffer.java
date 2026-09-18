@@ -78,6 +78,10 @@ public class VScrollBuffer {
             scrollData[i] = normalized;
         }
 
+        uploadStagedData();
+    }
+
+    private void uploadStagedData() {
         if (uploadBuffer == null) {
             uploadBuffer = MemoryUtil.memAllocFloat(entryCount);
         }
@@ -113,15 +117,7 @@ public class VScrollBuffer {
             scrollData[i] = normalized;
         }
 
-        if (uploadBuffer == null) {
-            uploadBuffer = MemoryUtil.memAllocFloat(entryCount);
-        }
-        uploadBuffer.clear();
-        uploadBuffer.put(scrollData);
-        uploadBuffer.flip();
-        glBindTexture(GL_TEXTURE_1D, textureId);
-        glTexSubImage1D(GL_TEXTURE_1D, 0, 0, entryCount, GL_RED, GL_FLOAT, uploadBuffer);
-        glBindTexture(GL_TEXTURE_1D, 0);
+        uploadStagedData();
     }
 
     public void bind(int textureUnit) {

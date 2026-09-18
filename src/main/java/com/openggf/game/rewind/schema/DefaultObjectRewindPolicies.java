@@ -103,6 +103,36 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // These SOZ SST links remain mutable during native graph teardown.
+            // Capture their identities explicitly so both schema restore and the
+            // coverage audit agree; constructors deliberately recreate null links.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance", "controller"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance", "pendingContacts"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroCapsuleObjectInstance$Button", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozMinibossChild", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozMinibossChild$Explosions", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance", "endpoint"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance", "first"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance$Segment", "next"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance$Segment", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance$Segment", "preceding"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozSwingingPlatformObjectInstance", "display"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Legs", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Shell", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.SandwormBadnikInstance$Segment", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.SkorpBadnikInstance$Tail", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.SkorpBadnikInstance$Tail", "previous"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance", "resultsSolidContactPlayers"), RewindFieldPolicy.CAPTURED),
+            // SOZ2 has two previous-link arms and a charge/terminal-particle cycle.
+            // Preserve exact identities, including partial allocation prefixes.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "terminal"), RewindFieldPolicy.CAPTURED),
+            // ExplosionRewindState captures the exact configured factory references and
+            // rebinds them on recreation. TRANSIENT excludes them only from the generic
+            // codec; these construction policies are not omitted from rewind state.
+            Map.entry(new FieldKey("com.openggf.level.objects.ExplosionObjectInstance", "animalFactory"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.level.objects.ExplosionObjectInstance", "pointsFactory"), RewindFieldPolicy.TRANSIENT),
             // FBZ end-boss topology is derived from captured role/subtype words after all SST slots settle.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "arms"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "joints"), RewindFieldPolicy.DEFERRED),
@@ -138,6 +168,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance", "progression"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance", "runtime"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance", "owner"), RewindFieldPolicy.CAPTURED),
+            // HPZ teleporter, beam and route helper relink through typed ObjectRefId sidecars;
+            // TestS3kHpzCompatibilityMatrix replays restore across charge, rise, settle and beam deletion.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance", "beam"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HpzTeleporterRouteHelperObjectInstance", "teleporter"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             // Boss childComponents is an identity-bearing live graph. The compact collection
             // codec retains its exact managed children and their roles for restore/relink.
@@ -455,6 +490,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "rockets"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "rocketTouchChildren"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "vortexBubbles"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "vortexControlledPlayers"), RewindFieldPolicy.CAPTURED),
             // HCZ traversal objects retain the actual native-slot owner across roster
             // reorder/replacement. Player-reference codecs serialize these as stable

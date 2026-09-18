@@ -351,6 +351,13 @@ public class Sonic2SpecialStageManager {
             0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0
     };
 
+    private java.util.function.Function<Rom, Sonic2SpecialStageDataLoader> dataLoaderFactory = Sonic2SpecialStageDataLoader::new;
+
+    public Sonic2SpecialStageManager(java.util.function.Function<Rom, Sonic2SpecialStageDataLoader> factory) {
+        this();
+        this.dataLoaderFactory = java.util.Objects.requireNonNull(factory);
+    }
+
     public Sonic2SpecialStageManager() {
         this(new Sonic2SpecialStageSpriteDebug(), null, null);
     }
@@ -365,6 +372,11 @@ public class Sonic2SpecialStageManager {
         this.debugSprites = debugSprites;
         this.configService = configService;
         this.graphicsManager = graphicsManager;
+    }
+
+    /** Debug surface owned by this same stage manager, including injected ROM profiles. */
+    public Sonic2SpecialStageSpriteDebug getDebugSprites() {
+        return debugSprites;
     }
 
     void setDiagnosticClockForTesting(DiagnosticClock diagnosticClock) {
@@ -412,7 +424,7 @@ public class Sonic2SpecialStageManager {
             rom = GameServices.rom().getRom();
 
             if (dataLoader == null) {
-                dataLoader = new Sonic2SpecialStageDataLoader(rom);
+                dataLoader = dataLoaderFactory.apply(rom);
             }
 
             this.currentStage = stageIndex;
@@ -868,7 +880,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void setupPalettes() {
-        palettes = Sonic2SpecialStagePalette.createPalettes(currentStage);
+        palettes = dataLoader.getPalettes(currentStage);
         // SSInitPalAndData (s2.asm:10232, called at 6639) runs after
         // Pal_FadeToWhite and the masked-interrupt load, so the level's
         // palette stays in the shared lines through the fade over the level;
@@ -956,6 +968,7 @@ public class Sonic2SpecialStageManager {
 
         // Update debug sprite viewer with all pattern bases
         debugSprites.setPlayerPatternBase(playerPatternBase);
+        debugSprites.setMainPlayerMappings(dataLoader::getMainPlayerFrame);
         debugSprites.setHudPatternBase(hudPatternBase, hudPatterns.length);
         debugSprites.setStartPatternBase(startPatternBase, startPatterns.length);
         debugSprites.setMessagesPatternBase(messagesPatternBase, messagesPatterns.length);
@@ -964,6 +977,7 @@ public class Sonic2SpecialStageManager {
     private void setupRenderer() throws IOException {
         GraphicsManager graphicsManager = graphicsManager();
         renderer = new Sonic2SpecialStageRenderer(graphicsManager);
+        renderer.setDataLoader(dataLoader);
         renderer.setSpecialStageViewport(specialStageViewport);
         renderer.beginStaticBackgroundStage(backgroundStageGeneration);
         renderer.onRenderContextGenerationChanged(graphicsManager.getPatternAtlas());
@@ -1107,11 +1121,11 @@ public class Sonic2SpecialStageManager {
     private void primeDynamicArtDedupBaselines() {
         DynamicArtLifecycleService lifecycle =
                 GameServices.dynamicArtLifecycleOrNull();
-        if (lifecycle == null || !lifecycle.isRunActive()) {
+        if (lifecycle == null || !lifecycle.isRunActive() || dataLoader == null) {
             return;
         }
         if (sonicPlayer != null) {
-            lifecycle.primeDplcDedupBaseline("ss-sonic", 1);
+            lifecycle.primeDplcDedupBaseline(dataLoader.mainPlayerDynamicArtOwner(), 1);
         }
         if (tailsPlayer != null) {
             lifecycle.primeDplcDedupBaseline("ss-tails", 1);
@@ -2091,7 +2105,7 @@ public class Sonic2SpecialStageManager {
         // skip the same passes.
         if (sonicPlayer != null && sonicPlayer.dplcLoadRuns()) {
             publishSpecialStageOwner(
-                    lifecycle, "ss-sonic", sonicPlayer.getMappingFrame(),
+                    lifecycle, dataLoader.mainPlayerDynamicArtOwner(), sonicPlayer.getMappingFrame(),
                     dplcRequests(plans.sonic(), sonicPlayer.getMappingFrame()),
                     0x5CA0);
         }

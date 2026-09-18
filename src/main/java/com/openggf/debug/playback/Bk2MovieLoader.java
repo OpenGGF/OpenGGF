@@ -55,6 +55,47 @@ public final class Bk2MovieLoader {
         }
     }
 
+    /**
+     * Loads a bare BizHawk {@code Input Log.txt} (the {@code [Input]} block with
+     * its {@code LogKey:} line) that is not wrapped in a BK2 zip container. The
+     * frame lines use the same parser as {@link #load(Path)}, so an authored log
+     * plays back exactly as a BizHawk-recorded movie would.
+     */
+    public Bk2Movie loadInputLog(Path inputLogPath) throws IOException {
+        Objects.requireNonNull(inputLogPath, "inputLogPath");
+        if (!Files.exists(inputLogPath)) {
+            throw new IOException("Input log file not found: " + inputLogPath);
+        }
+        return parseInputLogText(inputLogPath, Files.readAllLines(inputLogPath, StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Loads either container: a {@code .bk2} zip or a plain input-log text file,
+     * decided by the zip magic bytes rather than the extension.
+     */
+    public Bk2Movie loadMovieOrInputLog(Path path) throws IOException {
+        Objects.requireNonNull(path, "path");
+        if (!Files.exists(path)) {
+            throw new IOException("Movie file not found: " + path);
+        }
+        return isZipFile(path) ? load(path) : loadInputLog(path);
+    }
+
+    /** Parses in-memory input-log lines; {@code sourcePath} is diagnostic only. */
+    public Bk2Movie parseInputLogText(Path sourcePath, List<String> lines) throws IOException {
+        ParsedInputLog parsed = parseInputLog(Objects.requireNonNull(lines, "lines"));
+        return new Bk2Movie(sourcePath, parsed.logKey(), Map.of(), parsed.frames(),
+                parsed.firstFrameLineNumber());
+    }
+
+    private static boolean isZipFile(Path path) throws IOException {
+        try (InputStream in = Files.newInputStream(path)) {
+            int first = in.read();
+            int second = in.read();
+            return first == 'P' && second == 'K';
+        }
+    }
+
     private static ZipEntry findEntryIgnoreCase(ZipFile zip, String expectedName) {
         String expected = expectedName.toLowerCase(Locale.ROOT);
         return zip.stream()

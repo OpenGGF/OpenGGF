@@ -163,6 +163,18 @@ public abstract class Sonic3kZoneEvents {
         return AizPreparedTransitionArtBridge.current(module().getLevelEventProvider());
     }
 
+    /** ROM {@code Palette_fade_timer} non-zero: a screen fade is still running. */
+    protected boolean paletteFadeActive() {
+        var level = GameServices.levelOrNull();
+        if (level != null && level.getAnimatedPatternManager()
+                instanceof com.openggf.game.sonic3k.Sonic3kLevelAnimationManager animation
+                && animation.paletteFadeTimerRunning()) {
+            return true;
+        }
+        var fade = GameServices.fadeOrNull();
+        return fade != null && fade.isActive();
+    }
+
     protected ZoneRuntimeRegistry zoneRuntimeRegistry() {
         return GameServices.zoneRuntimeRegistry();
     }

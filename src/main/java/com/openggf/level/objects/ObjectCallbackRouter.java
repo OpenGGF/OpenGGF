@@ -135,7 +135,10 @@ final class ObjectCallbackRouter {
                 ? call(instance, object::getSlotIndex) : Integer.MAX_VALUE;
         int bucket = RenderPriority.clamp(call(instance, instance::getPriorityBucket))
                 - RenderPriority.MIN;
-        return (slot << 8) | (long) (bucket << 1)
+        long extra = instance instanceof MultiBucketRenderable parts
+                ? call(instance, () -> MultiBucketRenderable.extraBucketSignature(parts)
+                        | ((long) MultiBucketRenderable.partSlotSignature(parts) << 16)) : 0L;
+        return (extra << 40) | (slot << 8) | (long) (bucket << 1)
                 | (call(instance, instance::isHighPriority) ? 1L : 0L);
     }
 
@@ -209,6 +212,21 @@ final class ObjectCallbackRouter {
                     - RenderPriority.MIN;
             (call(instance, instance::isHighPriority)
                     ? highPriorityBuckets[index] : lowPriorityBuckets[index]).add(instance);
+            if (instance instanceof MultiBucketRenderable parts) {
+                for (int extra : call(instance, parts::extraRenderBuckets)) {
+                    int extraIndex = RenderPriority.clamp(extra) - RenderPriority.MIN;
+                    if (extraIndex == index) {
+                        continue;
+                    }
+                    int classes = call(instance, () -> parts.partTilePriorities(extra));
+                    if ((classes & MultiBucketRenderable.LOW_PARTS) != 0) {
+                        lowPriorityBuckets[extraIndex].add(instance);
+                    }
+                    if ((classes & MultiBucketRenderable.HIGH_PARTS) != 0) {
+                        highPriorityBuckets[extraIndex].add(instance);
+                    }
+                }
+            }
         }
     }
 

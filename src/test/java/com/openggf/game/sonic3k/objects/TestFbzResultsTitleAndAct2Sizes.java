@@ -44,14 +44,14 @@ class TestFbzResultsTitleAndAct2Sizes {
         onExitReady.setAccessible(true);
         onExitReady.invoke(results);
 
-        assertTrue(services.titleCard.started,
-                "loc_2DD06 converts the surviving results owner into the in-level title card");
+        assertFalse(services.titleCard.started,
+                "loc_2DD06 replaces the SST code pointer without dispatching Obj_TitleCardInit");
         assertTrue(services.playedMusic.isEmpty(),
                 "Obj_TitleCardWait, not the earlier results exit, restores FBZ2 music");
         assertFalse(results.isDestroyed(),
                 "the live results SST slot survives and owns the carried title-card wait");
         assertTrue(results.carriedTitlePhase()
-                        == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_WAIT,
+                        == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_INIT,
                 "the surviving SST owner must change routine identity, not remain results logic");
         assertEquals(0x20, services.camera.getMinX() & 0xFFFF);
         assertEquals(0xA0, services.camera.getMaxX() & 0xFFFF);
@@ -59,6 +59,9 @@ class TestFbzResultsTitleAndAct2Sizes {
         assertEquals(0x540, services.camera.getMaxY() & 0xFFFF,
                 "carried FBZ results must not restore full Act 2 camera bounds");
 
+        results.update(-1, null);
+        assertTrue(services.titleCard.started, "the following owner pass initializes title art");
+        verify(services.levelManager, never()).resetLevelGamestate(services.freshLevelState);
         results.update(0, null);
         assertTrue(results.carriedTitlePhase()
                         == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_WAIT2);
@@ -80,7 +83,55 @@ class TestFbzResultsTitleAndAct2Sizes {
         assertTrue(results.isDestroyed());
     }
 
+    @Test
+    void actTwoResultsExitPreservesTheLiveBossArenaBounds() throws Exception {
+        RecordingServices services = new RecordingServices();
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 1));
+        results.setServices(services);
+        var p1 = new com.openggf.game.sonic1.objects.TestPlayableSprite();
+        var p2 = new com.openggf.game.sonic1.objects.TestPlayableSprite();
+        for (var player : List.of(p1, p2)) {
+            com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
+            player.setControlLocked(true);
+            player.setAnimationId(0x13);
+            player.setAnimationFrameIndex(3);
+            player.setAnimationTick(7);
+        }
+        services.sidekicks = List.of(p2);
+        var playerRef = S3kResultsScreenObjectInstance.class.getDeclaredField("playerRef");
+        playerRef.setAccessible(true);
+        playerRef.set(results, p1);
+        services.camera.setMinX((short) 0x2FDC);
+        services.camera.setMaxX((short) 0x2FDC);
+        services.camera.setMinY((short) 0x060C);
+        services.camera.setMaxY((short) 0x060C);
+
+        results.onExitReady();
+
+        for (var player : List.of(p1, p2)) {
+            assertTrue(player.isObjectControlled(), "loc_2DCF8 leaves control to the surviving boss's next slot");
+            assertTrue(player.isControlLocked());
+            assertEquals(0x13, player.getAnimationId());
+            assertEquals(3, player.getAnimationFrameIndex());
+            assertEquals(7, player.getAnimationTick());
+        }
+        assertEquals(0x2FDC, services.camera.getMinX());
+        assertEquals(0x2FDC, services.camera.getMaxX());
+        assertEquals(0x060C, services.camera.getMinY());
+        assertEquals(0x060C, services.camera.getMaxY());
+        assertEquals(0x060C, services.camera.getMaxYTarget(),
+                "loc_2DCF8 only publishes completion; loc_708AA later expands the arena");
+        verify(services.gameState).setEndOfLevelActive(false);
+        verify(services.gameState).setEndOfLevelFlag(true);
+        assertTrue(results.isDestroyed());
+    }
+
     private static final class RecordingServices extends TestObjectServices {
+        private List<? extends com.openggf.game.PlayableEntity> sidekicks = List.of();
+        @Override public com.openggf.level.objects.ObjectPlayerQuery playerQuery() {
+            return new com.openggf.level.objects.ObjectPlayerQuery(() -> null, () -> sidekicks);
+        }
         private final GameStateManager gameState = mock(GameStateManager.class);
         private final RecordingTitleCard titleCard = new RecordingTitleCard();
         private final Camera camera = new Camera();

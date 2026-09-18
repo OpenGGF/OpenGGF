@@ -57,6 +57,30 @@ class TestFbzVisualCadenceContract {
     }
 
     @Test
+    void distinguishesSubmissionFromNextVBlankAndAllowsIdenticalRomArt() {
+        var changing = new FbzVisualCadenceRomContract(7, List.of(V0, V1));
+        var queued = List.of(
+                frame(0, "zero-step", 0, 1, 0, 1, V0, C0, false),
+                frame(1, "one-step", 0, 1, 7, 2, V0, C0, false),
+                frame(2, "one-step", 7, 2, 6, 2, V1, C1, true),
+                frame(3, "one-step", 6, 2, 5, 2, V1, C1, false),
+                frame(4, "one-step", 5, 2, 4, 2, V1, C1, false),
+                frame(5, "one-step", 4, 2, 3, 2, V1, C1, false));
+        assertDoesNotThrow(() -> FbzVisualCadenceVerifier.verifyPatternDomain(queued, changing, true));
+        assertThrows(IllegalStateException.class,
+                () -> FbzVisualCadenceVerifier.verifySubmissions(queued, changing));
+        var identical = new FbzVisualCadenceRomContract(7, List.of(V0, V0));
+        var staticFrames = queued.stream().map(f -> frame(f.index(), f.control(),
+                f.timerBefore(), f.frameBefore(), f.timerAfter(), f.frameAfter(), V0, C0, false)).toList();
+        assertTrue(identical.stableArt());
+        assertDoesNotThrow(() -> FbzVisualCadenceVerifier.verifySubmissions(staticFrames, identical));
+        var bad = new java.util.ArrayList<>(staticFrames);
+        bad.set(2, frame(2, "one-step", 7, 2, 5, 2, V0, C0, false));
+        assertThrows(IllegalStateException.class,
+                () -> FbzVisualCadenceVerifier.verifySubmissions(bad, identical));
+    }
+
+    @Test
     void hashesPackedGenesisDestinationPatternsAndDetectsOnlyReviewedRegionChanges() {
         Pattern first = new Pattern();
         Pattern second = new Pattern();

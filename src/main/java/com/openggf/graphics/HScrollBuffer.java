@@ -96,23 +96,7 @@ public class HScrollBuffer {
 
         stageForUpload(hScroll);
 
-        if (uploadBuffer == null) {
-            uploadBuffer = MemoryUtil.memAllocFloat(VISIBLE_LINES);
-        }
-        uploadBuffer.clear();
-        uploadBuffer.put(scrollData);
-        uploadBuffer.flip();
-
-        glBindTexture(GL_TEXTURE_1D, textureId);
-        glTexSubImage1D(
-                GL_TEXTURE_1D,
-                0,
-                0,
-                VISIBLE_LINES,
-                GL_RED,
-                GL_FLOAT,
-                uploadBuffer);
-        glBindTexture(GL_TEXTURE_1D, 0);
+        uploadStagedData();
     }
 
     void stageForUpload(int[] hScroll) {
@@ -132,6 +116,26 @@ public class HScrollBuffer {
         return Math.max(-1.0f, Math.min(1.0f, raw / 32767.0f));
     }
 
+    private void uploadStagedData() {
+        if (uploadBuffer == null) {
+            uploadBuffer = MemoryUtil.memAllocFloat(VISIBLE_LINES);
+        }
+        uploadBuffer.clear();
+        uploadBuffer.put(scrollData);
+        uploadBuffer.flip();
+
+        glBindTexture(GL_TEXTURE_1D, textureId);
+        glTexSubImage1D(
+                GL_TEXTURE_1D,
+                0,
+                0,
+                VISIBLE_LINES,
+                GL_RED,
+                GL_FLOAT,
+                uploadBuffer);
+        glBindTexture(GL_TEXTURE_1D, 0);
+    }
+
     /** Uploads a logical-size read-only view, zero-filling missing scanlines. */
     public void upload(IntIndexedView hScroll) {
         if (!initialized || hScroll == null) {
@@ -141,15 +145,7 @@ public class HScrollBuffer {
             int packed = i < hScroll.size() ? hScroll.get(i) : 0;
             scrollData[i] = normalize(packed);
         }
-        if (uploadBuffer == null) {
-            uploadBuffer = MemoryUtil.memAllocFloat(VISIBLE_LINES);
-        }
-        uploadBuffer.clear();
-        uploadBuffer.put(scrollData);
-        uploadBuffer.flip();
-        glBindTexture(GL_TEXTURE_1D, textureId);
-        glTexSubImage1D(GL_TEXTURE_1D, 0, 0, VISIBLE_LINES, GL_RED, GL_FLOAT, uploadBuffer);
-        glBindTexture(GL_TEXTURE_1D, 0);
+        uploadStagedData();
     }
 
     /**

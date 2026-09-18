@@ -258,6 +258,43 @@ public class TestPlayableSpriteAnimation {
         assertFalse(sprite.getRenderVFlip());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "4,false,49,false", "4,true,49,false",
+            "11,false,49,false", "11,true,49,false",
+            "7,false,55,true", "7,true,49,false",
+            "2,false,55,true", "2,true,55,true"})
+    void zoneNegativeTumblePolicySelectsNativeMappingAndFlips(
+            int zone, boolean facingLeft, int expectedFrame, boolean verticalFlip) throws Exception {
+        var provider = new com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider() {
+            @Override protected int getFeatureZoneId() { return zone; }
+        };
+        var level = com.openggf.game.GameServices.level();
+        var field = com.openggf.level.LevelManager.class.getDeclaredField("zoneFeatureProvider");
+        field.setAccessible(true);
+        Object previous = field.get(level);
+        field.set(level, provider);
+        try {
+            TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+            ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile()).setTumbleFrameBase(0x31);
+            SpriteAnimationSet animations = new SpriteAnimationSet();
+            animations.addScript(0, new SpriteAnimationScript(0xFF,
+                    List.of(0x21), SpriteAnimationEndAction.LOOP, 0));
+            sprite.setAnimationSet(animations);
+            sprite.setAnimationId(0);
+            sprite.setMovementInputActive(true);
+            sprite.setDirection(facingLeft ? Direction.LEFT : Direction.RIGHT);
+            sprite.setFlipType(0x80);
+            sprite.setFlipAngle(0);
+            sprite.getAnimationManager().update(0);
+            assertEquals(expectedFrame, sprite.getMappingFrame());
+            assertEquals(facingLeft, sprite.getRenderHFlip());
+            assertEquals(verticalFlip, sprite.getRenderVFlip());
+        } finally {
+            field.set(level, previous);
+        }
+    }
+
     @Test
     public void s3kNegativeFlipTypeEntersTumbleBeforeAngleAdvances() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);

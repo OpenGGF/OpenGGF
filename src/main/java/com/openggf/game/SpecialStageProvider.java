@@ -22,7 +22,7 @@ import java.util.Optional;
  * <li>Sonic 3&K: Giant rings (Blue Sphere stages)</li>
  * </ul>
  */
-@com.openggf.game.ModApi
+@ModApi
 public interface SpecialStageProvider extends MiniGameProvider {
     String SPECIAL_STAGE_REWIND_KEY = "special-stage-runtime";
 
@@ -90,6 +90,16 @@ public interface SpecialStageProvider extends MiniGameProvider {
      * semantic entry policy.
      */
     default boolean fadesMusicOnEntry() {
+        return true;
+    }
+
+    /**
+     * Returns whether leaving the results screen plays the stage transition SFX and fades to
+     * white. Sonic 1 ({@code SS_NormalExit}) and Sonic 2 ({@code PlaySound} +
+     * {@code Pal_FadeToWhite}) do; a provider returning {@code false} leaves silently through a
+     * fade to black, and the returning level fades in from black.
+     */
+    default boolean resultsExitFadesToWhite() {
         return true;
     }
 

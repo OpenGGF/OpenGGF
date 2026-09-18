@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 
 import java.util.List;
@@ -14,7 +15,10 @@ final class HczEndBossRobotnikHead extends AbstractBossChild implements RewindRe
     private static final int Y_OFFSET = -0x1C;
 
     HczEndBossRobotnikHead(HczEndBossInstance boss) {
-        super(boss, "HCZEndBossRobotnikHead", 3, 0);
+        // Child1_MakeRoboHead -> Obj_RobotnikHead applies ObjDat_RobotnikHead priority $280
+        // (sonic3k.asm:136645-136648); its art make_art_tile(ArtTile_RobotnikShip,0,0) leaves
+        // bit 15 clear, matching the default isHighPriority().
+        super(boss, "HCZEndBossRobotnikHead", RenderPriority.fromS3kWord(0x280), 0);
     }
 
     @Override

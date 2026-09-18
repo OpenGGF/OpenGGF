@@ -71,10 +71,22 @@ public final class FbzVisualStateProbe {
         values.put("rng_seed", runtime.rngSeed());
         values.put("rng_state", String.format("0x%08X:%s",
                 runtime.rngSeed() & 0xFFFFFFFFL, runtime.rngFlavour()));
+        addScrollState(values);
         addAnimationState(values);
         addVisibilityState(values);
         addRuntimeDetails(values);
         return new Snapshot(values);
+    }
+
+    private static void addScrollState(Map<String, Object> values) {
+        try {
+            var parallax = GameServices.parallax();
+            values.put("foreground_vscroll", parallax.getVscrollFactorFG() & 0xFFFF);
+            values.put("background_vscroll", parallax.getVscrollFactorBG() & 0xFFFF);
+            values.put("packed_hscroll_words", java.util.Arrays.stream(parallax.getHScroll()).boxed().toList());
+        } catch (RuntimeException ignored) {
+            // Synthetic RuntimeView contracts have no installed scroll owner.
+        }
     }
 
     private static void addAnimationState(Map<String, Object> values) {
@@ -132,6 +144,14 @@ public final class FbzVisualStateProbe {
             if (!(GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager)
                     || manager.getFbzEvents() == null) return;
             Sonic3kFBZEvents events = manager.getFbzEvents();
+            var controlledPlayer = GameServices.camera().getFocusedSprite();
+            values.put("visual_movement_control", controlledPlayer.isObjectControlled()
+                    && controlledPlayer.isObjectControlAllowsCpu()
+                    && controlledPlayer.isObjectControlSuppressesMovement()
+                    ? "movement-suppressed-cpu-allowed" : "other");
+            values.put("outdoor_hscroll_accumulator", events.getHScrollAccumulator());
+            values.put("outdoor_hscroll_sample_frame", events.getHScrollAccumulatorLastFrame());
+            values.put("outdoor_hscroll_last_read", events.getHScrollAccumulatorLastRead());
             values.put("events_fg_5", events.isEventsFg5());
             values.put("boss_event_setup_attempted", events.isBossEventSetupAttempted());
             values.put("boss_load_position_adjustment_pending",

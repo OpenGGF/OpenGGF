@@ -10,7 +10,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.bosses.S3kSharedBossCameraGate;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
+import com.openggf.level.objects.MultiBucketRenderable;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -32,7 +34,8 @@ import java.util.List;
  * around {@code loc_711EC..loc_713D2}; the orb/projectile children are modeled
  * as owned state so rewind captures the encounter with the parent.
  */
-public final class IczMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public final class IczMinibossInstance extends AbstractBossInstance
+        implements SpawnRewindRecreatable, MultiBucketRenderable {
 
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_DESCEND = 0x02;
@@ -144,6 +147,9 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     private boolean arenaGateComplete;
     private boolean bossMusicStarted;
     private boolean shardsReleased;
+    // loc_711EC creates the six shard SSTs (CreateChild1_Normal, sonic3k.asm:149713-149714);
+    // from that dispatch on, loc_71446 draws them every frame (149901-149908).
+    private boolean shardsCreated;
     private boolean orbThrowRight;
     private int mappingFrame;
     private int defeatTimer;
@@ -221,6 +227,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         arcXVelocityLatch = 0x200;
         parentFlags = 0;
         shardsReleased = false;
+        shardsCreated = false;
         orbThrowRight = true;
         mappingFrame = 0;
         defeatTimer = 0;
@@ -252,6 +259,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                 // after loc_85CA4 has completed the camera gate.
                 reserveNativeChildSlots();
                 initOrbs(false);
+                shardsCreated = true;
                 state.routine = ROUTINE_DESCEND;
             }
             case ROUTINE_DESCEND -> {
@@ -648,7 +656,8 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         switch (callback) {
             case ATTACH_TO_RING -> {
                 orb.routine = ORB_ROUTINE_ATTACH_TO_RING;
-                orb.priority = 0x180;
+                // loc_7153A: move.w #$180,priority(a0) (sonic3k.asm:150011).
+                orb.priority = ORB_ATTACH_PRIORITY_WORD;
                 calculateOrbAttachVelocity(orb);
                 orb.timer = 0x1F;
                 orb.callback = OrbCallback.START_ORBIT;
@@ -804,7 +813,9 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         if ((angle >= 0x20 && angle < 0x60) || (angle >= 0xA0 && angle < 0xE0)) {
             orb.frame = lowPriority ? 5 : 8;
         }
-        orb.priority = lowPriority ? 0x180 : 0x300;
+        // loc_7183C: move.w #$180,priority(a0), then #$300 when d3 is clear
+        // (sonic3k.asm:150313, 150316).
+        orb.priority = lowPriority ? ORB_FRONT_PRIORITY_WORD : ORB_BEHIND_PRIORITY_WORD;
         orb.front = !lowPriority;
     }
 
@@ -1066,8 +1077,126 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         return Sonic3kSfx.EXPLODE.id;
     }
 
+    // ObjDat3_71960 priority $280 (sonic3k.asm:149704-149705, 150441).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+    // The ROM child SSTs are drawn inline from this owner, each in its own
+    // priority list (MultiBucketRenderable):
+    //  - Ice shards (ChildObjDat_71984 via CreateChild1_Normal, 149713-149714):
+    //    loc_7146A / word_7196C priority $280 (149918-149919, 150444), never
+    //    rewritten. CreateChild1_Normal copies the parent art word (176933), so
+    //    art bit 15 stays set.
+    //  - Orbs (ChildObjDat_719AA via CreateChild6_Simple, 149711-149712):
+    //    loc_714E6 / ObjDat3_71972 priority $280 (149977-149978, 150449) with
+    //    art make_art_tile(ArtTile_ICZMiniboss,2,0) (150448): bit 15 clear and
+    //    never rewritten. priority becomes $180 at loc_7153A (150011), then
+    //    $180/$300 in sub_717B8 (150313/150316), reached from loc_7179E
+    //    (150256 fall-through, orbit routines 8/$A), loc_715B4 (150066) and
+    //    loc_71600 (150095). loc_7167C (150127-150130) restarts an orb without
+    //    restoring $280, so a recycled orb keeps its last sub_717B8 word.
+    private static final int SHARD_PRIORITY_WORD = 0x280;
+    private static final int SHARD_BUCKET = RenderPriority.fromS3kWord(SHARD_PRIORITY_WORD);
+    private static final int ORB_INITIAL_PRIORITY_WORD = 0x280;
+    private static final int ORB_ATTACH_PRIORITY_WORD = 0x180;
+    private static final int ORB_FRONT_PRIORITY_WORD = 0x180;
+    private static final int ORB_BEHIND_PRIORITY_WORD = 0x300;
+    private static final boolean ORB_HIGH_PRIORITY = false;
+    private static final int[] NO_EXTRA_BUCKETS = new int[0];
+    private static final int[][] EXTRA_BUCKETS_BY_MASK =
+            new int[1 << (RenderPriority.MAX - RenderPriority.MIN + 1)][];
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat3_71960 art make_art_tile(ArtTile_ICZMiniboss,1,1) sets bit 15 (sonic3k.asm:150440).
+        return true;
+    }
+
+    @Override
+    public boolean isHighPriority(int bucket) {
+        // Body and shards carry art bit 15 (ObjDat3_71960 / CreateChild1_Normal copy);
+        // orbs never do (ObjDat3_71972, sonic3k.asm:150448).
+        return bucket == PRIORITY_BUCKET ? isHighPriority() : ORB_HIGH_PRIORITY;
+    }
+
+    @Override
+    public int partTilePriorities(int bucket) {
+        if (bucket != PRIORITY_BUCKET) {
+            return LOW_PARTS;
+        }
+        // Orbs still at their initial $280 word (until loc_7153A, sonic3k.asm:150011)
+        // share the body's list with bit 15 clear: the list then holds both classes.
+        return HIGH_PARTS | (hasVisibleOrbInBucket(bucket) ? LOW_PARTS : 0);
+    }
+
+    private boolean hasVisibleOrbInBucket(int bucket) {
+        if (orbs == null) {
+            return false;
+        }
+        for (OrbState orb : orbs) {
+            if (orb != null && orb.isVisible() && orbBucket(orb) == bucket) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public int[] extraRenderBuckets() {
+        if (!arenaGateInitialized || orbs == null) {
+            return NO_EXTRA_BUCKETS;
+        }
+        int mask = 0;
+        for (OrbState orb : orbs) {
+            if (orb != null && orb.isVisible()) {
+                mask |= 1 << (orbBucket(orb) - RenderPriority.MIN);
+            }
+        }
+        if (shardsCreated) {
+            mask |= 1 << (SHARD_BUCKET - RenderPriority.MIN);
+        }
+        mask &= ~(1 << (PRIORITY_BUCKET - RenderPriority.MIN));
+        return extraBucketsForMask(mask);
+    }
+
+    private static int orbBucket(OrbState orb) {
+        return RenderPriority.fromS3kWord(orb.priority);
+    }
+
+    private static int[] extraBucketsForMask(int mask) {
+        if (mask == 0) {
+            return NO_EXTRA_BUCKETS;
+        }
+        int[] buckets = EXTRA_BUCKETS_BY_MASK[mask];
+        if (buckets == null) {
+            buckets = new int[Integer.bitCount(mask)];
+            int count = 0;
+            for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+                if ((mask & (1 << (bucket - RenderPriority.MIN))) != 0) {
+                    buckets[count++] = bucket;
+                }
+            }
+            EXTRA_BUCKETS_BY_MASK[mask] = buckets;
+        }
+        return buckets;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        appendRenderCommands(commands, getPriorityBucket());
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands, int bucket) {
+        appendRenderCommands(commands, bucket, false);
+        appendRenderCommands(commands, bucket, true);
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands, int bucket, boolean highPriority) {
         if (!arenaGateInitialized) {
             return;
         }
@@ -1076,21 +1205,37 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
             return;
         }
 
-        for (OrbState orb : orbs) {
-            if (orb != null && !orb.front && orb.isVisible()) {
-                renderer.drawFrameIndex(orb.frame, orb.x, orb.y, false, false, ORB_PALETTE_LINE);
+        // Draw_Sprite appends in Process_Sprites slot order and lower sprite-table
+        // entries win, so within one list the parent is on top, then the orbs
+        // (created first, 149711-149712), then the shards (149713-149714).
+        // Painter's order therefore runs shards, orbs, body. The manager draws a
+        // list's low-class parts (orbs, bit 15 clear) before its high-class parts,
+        // so while floor-phase orbs share the body's list they sit under the shards.
+        if (!highPriority) {
+            if (orbs != null) {
+                for (int i = orbs.length - 1; i >= 0; i--) {
+                    OrbState orb = orbs[i];
+                    if (orb != null && orb.isVisible() && orbBucket(orb) == bucket) {
+                        renderer.drawFrameIndex(orb.frame, orb.x, orb.y, false, false, ORB_PALETTE_LINE);
+                    }
+                }
             }
+            return;
         }
-        renderer.drawFrameIndex(mappingFrame, state.x, state.y, false, false, BODY_PALETTE_LINE);
-        for (ShardState shard : shards) {
-            if (shardsReleased) {
+        // Shards exist from loc_711EC (149713-149714) and loc_71446 ends every
+        // dispatch in Child_Draw_Sprite2_FlickerMove (149907-149908, 178129-178133):
+        // with parent $38 bit 4 clear that is a plain Draw_Sprite each frame, so
+        // the attached shell is drawn from creation at word_7196C / RawAni_716C2
+        // frames (149918-149921, 150200-150208) without flicker; only the defeat
+        // signal switches the children to Obj_FlickerMove.
+        if (bucket == SHARD_BUCKET && shardsCreated && shards != null) {
+            for (int i = shards.length - 1; i >= 0; i--) {
+                ShardState shard = shards[i];
                 renderer.drawFrameIndex(shard.frame, shard.x, shard.y, false, false, BODY_PALETTE_LINE);
             }
         }
-        for (OrbState orb : orbs) {
-            if (orb != null && orb.front && orb.isVisible()) {
-                renderer.drawFrameIndex(orb.frame, orb.x, orb.y, false, false, ORB_PALETTE_LINE);
-            }
+        if (bucket == PRIORITY_BUCKET) {
+            renderer.drawFrameIndex(mappingFrame, state.x, state.y, false, false, BODY_PALETTE_LINE);
         }
     }
 
@@ -1148,6 +1293,10 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
 
     public int getOrbAngleCForTesting(int index) {
         return orbs[index].angleC;
+    }
+
+    public int getOrbPriorityWordForTesting(int index) {
+        return orbs[index].priority;
     }
 
     public boolean isOrbVisibleForTesting(int index) {
@@ -1250,7 +1399,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         private int angleD;
         private int targetAngle;
         private int frame = 6;
-        private int priority = 0x280;
+        private int priority = ORB_INITIAL_PRIORITY_WORD;
         private int collisionFlags;
         private int frameCounter;
         private boolean front;

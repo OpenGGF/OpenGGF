@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -376,6 +377,21 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
             }
         }
 
+        // loc_8E236 ObjDat3_8E3F6 priority word 0 (sonic3k.asm:194327): display list 0 is the
+        // ROM value.
+        private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // ObjDat3_8E3F6 art make_art_tile(ArtTile_MHZMisc+$1C,3,1) sets bit 15 (sonic3k.asm:194326).
+            return true;
+        }
+
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             ObjectRenderManager renderManager = services().renderManager();
@@ -509,6 +525,20 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
             if (parent.isDestroyed()) {
                 setDestroyed(true);
             }
+        }
+
+        // loc_8E2BE ObjDat3_8E3EA priority $280 (sonic3k.asm:194322).
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // ObjDat3_8E3EA art make_art_tile(ArtTile_Cluckoid+$22,1,1) sets bit 15 (sonic3k.asm:194321).
+            return true;
         }
 
         @Override

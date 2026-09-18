@@ -10,13 +10,13 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -42,7 +42,7 @@ import java.util.List;
  *   <li>0x68: SCZ mode - animates only, no player interaction (routine 4 = ObjB5_Animate)</li>
  * </ul>
  */
-public class HPropellerObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class HPropellerObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // ========== Subtype constants ==========
 
@@ -145,8 +145,22 @@ public class HPropellerObjectInstance extends AbstractObjectInstance implements 
     private int lastPush;
     private boolean lastPushedPlayer;
 
+    @Override
+    public HPropellerObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HPropellerObjectInstance(ctx.spawn(), clearsAirAbility);
+    }
+
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable ObjB5 air-ability release profile; "
+            + "recreateForRewind passes this constructor configuration to the replacement instance")
+    private final boolean clearsAirAbility;
+
     public HPropellerObjectInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    public HPropellerObjectInstance(ObjectSpawn spawn, boolean clearsAirAbility) {
         super(spawn, "HPropeller");
+        this.clearsAirAbility = clearsAirAbility;
 
         // ROM: ObjB5_Init
         // bsr.w LoadSubObject       -> sets up mappings, art_tile, render_flags, priority, width, collision
@@ -297,13 +311,7 @@ public class HPropellerObjectInstance extends AbstractObjectInstance implements 
 
     private List<PlayableEntity> pushParticipants(PlayableEntity updatePlayer) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
-        if (updatePlayer != null && !participants.contains(updatePlayer)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(updatePlayer);
-            withUpdatePlayer.addAll(participants);
-            return withUpdatePlayer;
-        }
-        return participants;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     /**
@@ -371,6 +379,12 @@ public class HPropellerObjectInstance extends AbstractObjectInstance implements 
 
         // ROM: bset #status.player.in_air,status(a1)
         player.setAir(true);
+        // KiS2 ObjB5_CheckPlayer (gameRevision=3, fixBugs=0): the upward
+        // wind push releases roll-jump control and any active glide.
+        if (clearsAirAbility) {
+            player.setRollingJump(false);
+            player.setDoubleJumpFlag(0);
+        }
 
         // ROM: move.w #0,y_vel(a1)
         player.setYSpeed((short) 0);

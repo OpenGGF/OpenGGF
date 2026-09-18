@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -142,7 +143,9 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild implements Rewi
      * @param slotIndex 0-4 corresponding to subtypes 0/2/4/6/8.
      */
     public HczEndBossBladeWaterChute(HczEndBossInstance boss, int bladeX, int slotIndex) {
-        super(boss, "HCZEndBossBladeWaterChute[" + slotIndex + "]", 3, 0);
+        // HCZEndBossDebris_ObjData priority $100 (sonic3k.asm:142178-142181), applied by
+        // HCZEndBossDebris_Init's SetUp_ObjAttributes (sonic3k.asm:141292-141294).
+        super(boss, "HCZEndBossBladeWaterChute[" + slotIndex + "]", RenderPriority.fromS3kWord(0x100), 0);
         this.boss = boss;
         this.slotIndex = Math.min(Math.max(slotIndex, 0), 4);
 
@@ -165,6 +168,13 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild implements Rewi
         this.animComplete = false;
 
         updateDynamicSpawn();
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // HCZEndBossDebris_ObjData art make_art_tile(ArtTile_HCZEndBoss,0,1) sets bit 15
+        // (sonic3k.asm:142180).
+        return true;
     }
 
     private HczEndBossBladeWaterChute(ObjectSpawn spawn, HczEndBossInstance boss, int ignored) {

@@ -132,8 +132,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             0x060, 0x060,
             0x030, 0x090
     };
-    private static final int SOZ1_BOSS_LOCK_MIN_X = 0x4180;
-    private static final int SOZ1_BOSS_LOCK_MIN_Y = 0x0960;
 
     private final AnimatedTileChannelGraph graph;
     private final Level level;
@@ -141,6 +139,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private final int actIndex;
     private final boolean isSkipIntro;
     private final List<AniPlcScriptState> scripts;
+    private final Sonic3kAniPlcPublicationQueue aniPlcPublications = new Sonic3kAniPlcPublicationQueue();
 
     private final Pattern[] firstTreePatterns;
     private boolean firstTreeApplied;
@@ -188,6 +187,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private byte[] lbzWaterlineScrollData;
     private final byte[] soz1BgData;
     private final byte[] soz1Bg2Data;
+    private final byte[] soz2BgData;
     private final byte[] pachinkoScratch;
     private final byte[] pachinkoLowSource;
     private final byte[] pachinkoHighSource;
@@ -279,6 +279,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.iczArt5Data = null;
             this.soz1BgData = null;
             this.soz1Bg2Data = null;
+            this.soz2BgData = null;
             this.pachinkoScratch = null;
             this.pachinkoLowSource = null;
             this.pachinkoHighSource = null;
@@ -293,7 +294,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
 
-        List<AniPlcScriptState> parsedScripts = AniPlcParser.parseScripts(reader, aniPlcAddr);
+        // Offs_AniPLC names LRZ1 for both SOZ acts, but AnimateTiles_SOZ1/2
+        // return directly: neither invokes AnimateTiles_DoAniPLC. Loading that
+        // unused list would replace static SOZ art at $350-$357 with lava flames.
+        List<AniPlcScriptState> parsedScripts = zoneIndex == 0x08
+                ? List.of() : AniPlcParser.parseScripts(reader, aniPlcAddr);
         this.lbzRegularScriptCount = parsedScripts.size();
         if (zoneIndex == 0x06 && actIndex == 0) {
             List<AniPlcScriptState> specScripts = AniPlcParser.parseScripts(reader,
@@ -307,6 +312,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.scripts = parsedScripts;
         }
         AniPlcParser.ensurePatternCapacity(scripts, level);
+        for (AniPlcScriptState script : scripts) {
+            // Capture original presented bytes even before the first submission.
+            aniPlcPublications.registerDestination(script.destinationTileIndex(), script.tilesPerFrame());
+        }
 
         if (zoneIndex == 0 && actIndex == 1) {
             int firstTreeEnd = Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_DEST_TILE
@@ -552,6 +561,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.soz1Bg2Data = null;
         }
 
+        this.soz2BgData = zoneIndex == 0x08 && actIndex == 1
+                ? loadRawBytes(reader, Sonic3kConstants.ART_UNC_ANI_SOZ2_BG_ADDR,
+                        Sonic3kConstants.ART_UNC_ANI_SOZ2_BG_SIZE) : null;
+
         if (zoneIndex == 0x14) {
             byte[] lowSource = loadKosinskiBytes(reader,
                     Sonic3kConstants.ART_KOS_PACHINKO_BG1_ADDR,
@@ -624,21 +637,22 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     /**
-     * Runs one animated-tile pass for the trace-replay bootstrap prelude, which
-     * warms the ROM's pre-first-frame VRAM tile state before the first compared
-     * row. All animated-tile channels except the MHZ mushroom-cap position
+     * Runs a pattern-only setup or replay-prelude pass while preserving counters
+     * already represented by a zone runtime's initialization. Production calls
+     * this after initial Process_Sprites (loc_6468); replay uses it only for an
+     * additional omitted handoff iteration. All animated-tile channels except the MHZ mushroom-cap position
      * counter recompute their transfer from current camera/frame state, so the
      * warmup pass reproduces the ROM's DMA output. The mushroom-cap channel is
      * the one stateful accumulator: it advances {@code Anim_Counters+$F}
      * (AnimateTiles_MHZ, sonic3k.asm:54901-54908). That counter is already seeded
      * to its ROM {@code LevelLoop} frame-0 value by the pre-loop
-     * {@code Animate_Tiles} pass (loc_6468, sonic3k.asm:7853-7855), which the
-     * prelude is not re-running here — the prelude only warms VRAM patterns.
-     * Advancing the accumulator during the warmup would double-count that setup
+     * {@code Animate_Tiles} pass (loc_6468, sonic3k.asm:7853-7855). The pattern
+     * pass must not repeat that separately represented counter effect.
+     * Advancing the accumulator here would double-count that setup
      * pass and leave the caps two bob-steps ahead. Preserve the counter across
      * the warmup so caps read {@code Anim_Counters+$F} at the ROM frame-0 phase.
      */
-    public void updateForReplayBootstrapPrelude() {
+    public void updatePatternsPreservingPreseededCounters() {
         MhzZoneRuntimeState mhz = currentMhzState();
         int preservedMushroomCapCounter = mhz != null ? mhz.mushroomCapPositionCounter() : -1;
         update();
@@ -734,6 +748,16 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 && hcz2Art4Data != null;
     }
 
+    boolean shouldRunSoz2CustomChannels() { return soz2BgData != null; }
+
+    void updateSoz2TorchesForGraph() {
+        if (!GameServices.hasRuntime()) return;
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (state == null || state.actIndex() != 1) return;
+        int frame = state.lighting().tickTorch();
+        if (frame >= 0) applyRawPatternSliceToLevel(soz2BgData, frame * 0xC0, 0xC0, 0x330);
+    }
+
     boolean shouldRunSoz1CustomChannels() {
         return soz1BgData != null && soz1Bg2Data != null;
     }
@@ -804,12 +828,34 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     void tickScript(AniPlcScriptState script) {
-        if (script.tick(level, GameServices.graphics()) && requiresObjectRendererRefresh(script)) {
-            Sonic3kPlcLoader.refreshAffectedRenderers(
-                    List.of(new Sonic3kPlcLoader.TileRange(
-                            script.destinationTileIndex(), script.tilesPerFrame())),
-                    GameServices.level());
+        // AnimateTiles_DoAniPLC changes counters now, but Add_To_DMA_Queue
+        // publishes its ROM payload only in the following VInt Process_DMA_Queue.
+        script.tickSubmission(tileId -> aniPlcPublications.submit(
+                script.destinationTileIndex(), script.copyFramePayload(tileId)));
+    }
+
+    void publishAniPlcAtVBlank() {
+        aniPlcPublications.publish(this::publishAniPlcPayload);
+    }
+
+    private void publishAniPlcPayload(int destination, byte[] payload) {
+        GraphicsManager graphics = GameServices.graphics();
+        for (int tile = 0; tile < payload.length / 32; tile++) {
+            Pattern pattern = level.getPattern(destination + tile);
+            pattern.fromSegaFormat(java.util.Arrays.copyOfRange(payload, tile * 32, (tile + 1) * 32));
+            if (graphics != null && graphics.isGlInitialized()) graphics.updatePatternTexture(pattern, destination + tile);
         }
+        Sonic3kPlcLoader.refreshAffectedRenderers(List.of(new Sonic3kPlcLoader.TileRange(
+                destination, payload.length / 32)), GameServices.level());
+    }
+
+    private byte[] presentedAniPlcPattern(int tile) {
+        Pattern pattern = level.getPattern(tile);
+        byte[] packed = new byte[32];
+        for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x += 2)
+            packed[y * 4 + x / 2] = (byte) ((pattern.getPixel(x, y) & 15) << 4
+                    | pattern.getPixel(x + 1, y) & 15);
+        return packed;
     }
 
     boolean requiresObjectRendererRefresh(AniPlcScriptState script) {
@@ -1180,39 +1226,18 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         if (isSoz1BossArenaPhaseLocked()) {
             return 0;
         }
-        int cameraX = getCameraX();
-        int eventsBg10 = cameraX >> 5;
-        int cameraXPosBgCopy = resolveSoz1BgCameraX(cameraX);
-        return (eventsBg10 - cameraXPosBgCopy) & 0x1F;
+        // sub_55D56 uses the current camera. Animation may precede the
+        // presentation pass, so do not read ParallaxManager's cached BG copy.
+        return com.openggf.game.sonic3k.scroll.SwScrlSoz.desertTilePhase(getCameraX());
     }
 
-    // SOZ1 normally derives this phase from Events_bg+$10 and Camera_X_pos_BG_copy.
-    // Until SOZ event/runtime state exists, use the boss-arena camera locks as a
-    // compatibility bridge for the late-act path that forces the phase back to 0.
+    // sub_55E4C writes equal Events_bg+$10 and Camera_X_pos_BG_copy
+    // throughout the arena background routine, fixing AnimateTiles_SOZ1 at zero.
     private boolean isSoz1BossArenaPhaseLocked() {
-        if (zoneIndex != 0x08 || actIndex != 0) {
-            return false;
-        }
-        try {
-            int minX = GameServices.camera().getMinX() & 0xFFFF;
-            int minY = GameServices.camera().getMinY() & 0xFFFF;
-            return minX >= SOZ1_BOSS_LOCK_MIN_X && minY >= SOZ1_BOSS_LOCK_MIN_Y;
-        } catch (Exception e) {
-            LOG.fine(() -> "Sonic3kPatternAnimator.isSoz1BossArenaPhaseLocked: " + e.getMessage());
-            return false;
-        }
-    }
-
-    private int resolveSoz1BgCameraX(int cameraX) {
-        try {
-            int bgCameraX = GameServices.parallax().getBgCameraX();
-            if (bgCameraX != Integer.MIN_VALUE) {
-                return bgCameraX;
-            }
-        } catch (Exception e) {
-            LOG.fine(() -> "Sonic3kPatternAnimator.resolveSoz1BgCameraX: " + e.getMessage());
-        }
-        return cameraX >> 4;
+        return zoneIndex == 8 && actIndex == 0
+                && com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                        .currentSoz(GameServices.zoneRuntimeRegistry())
+                        .map(state -> state.events().backgroundRoutine() != 0).orElse(false);
     }
 
     /**
@@ -1689,7 +1714,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             applyRawPatternSliceToLevel(soz1BgData, baseOffset, secondWordCount << 1, secondDestTile);
         }
 
-        applyRawPatternSliceToLevel(soz1Bg2Data, phase * 0x0C0, 0x060, 0x33C);
+        applyRawPatternSliceToLevel(soz1Bg2Data, phase * 0x0C0, 0x0C0, 0x33C);
     }
 
     private void ensureHczPatternCapacity() {
@@ -2067,6 +2092,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             case 0x07 -> Sonic3kConstants.ANIPLC_MHZ_ADDR;
             case 0x08, Sonic3kZoneIds.ZONE_LRZ -> ANIPLC_LRZ1_ADDR;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
+            // Offs_AniFunc pairs for $1601 (Hidden Palace) and $1701 (sanctuary) are
+            // AnimateTiles_DoAniPLC / AniPLC_HPZ; $1600 and $1700 have no AniPLC
+            // script (sonic3k.asm AnimateTiles table, entries 44-47).
+            case 0x16, 0x17 -> actIndex == 1 ? Sonic3kConstants.ANIPLC_HPZ_ADDR : -1;
             default -> -1;
         };
     }
@@ -2080,8 +2109,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             graph.install(S3kAnimatedTileChannels.buildHczChannels(this, scripts, actIndex));
             return;
         }
-        if (zoneIndex == 0x08 && actIndex == 0) {
-            graph.install(S3kAnimatedTileChannels.buildSozChannels(this, scripts));
+        if (zoneIndex == 0x08) {
+            graph.install(S3kAnimatedTileChannels.buildSozChannels(this, actIndex));
             return;
         }
         if (zoneIndex == 0x03) {
@@ -2202,7 +2231,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                     s.getTimer(), s.getFrameIndex());
         }
         // Scalar state packed into extra blob (53 bytes: 1 bool + 13 ints)
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(53);
+        byte[] publicationState = aniPlcPublications.capture(this::presentedAniPlcPattern);
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(53 + publicationState.length);
         buf.put((byte) (firstTreeApplied ? 1 : 0));
         buf.putInt(lastHcz1WaterlineDelta);
         buf.putInt(lastHcz2SmallBgLineValue);
@@ -2217,6 +2247,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         buf.putInt(frameCounter);
         buf.putInt(lastGumballIndex);
         buf.putInt(gumballFrameCounter);
+        buf.put(publicationState);
         return new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot(
                 sc,
                 new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.HandlerCounter[0],
@@ -2251,6 +2282,12 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             frameCounter             = buf.getInt();
             lastGumballIndex         = buf.getInt();
             gumballFrameCounter      = buf.getInt();
+            if (extra.length > 53) {
+                aniPlcPublications.restore(java.util.Arrays.copyOfRange(extra, 53, extra.length),
+                        this::publishAniPlcPayload);
+            } else {
+                aniPlcPublications.clear();
+            }
         }
     }
 }

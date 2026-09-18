@@ -100,6 +100,25 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    void transitionContactsExcludeObjectsWhoseSstDidNotSurvive() {
+        TestPlayableSprite player = createStandingProbePlayer();
+        TestSolidObject removed = new TestSolidObject(100, 100, new SolidObjectParams(16, 8, 8));
+        TestSolidObject retained = new TestSolidObject(200, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager source = buildManager(removed);
+        source.addDynamicObject(retained);
+        source.forceRidingObjectForBootstrap(player, removed);
+        assertTrue(source.hasObjectStandingBit(player, removed));
+        ObjectManager target = buildManager(retained);
+
+        ObjectTransitionContacts.inherit(target, source, List.of(retained));
+
+        assertFalse(target.isRidingObject(player));
+        assertFalse(target.hasObjectStandingBit(player, removed));
+        assertFalse(target.hasObjectStandingBit(player, retained));
+        assertTrue(source.isRidingObject(player, removed), "the old world's state must remain independent");
+    }
+
+    @Test
     public void nativeFloorReleaseDetachesRideAtNonPositiveDistance() {
         TestPlayableSprite player = createStandingProbePlayer();
         TestSolidObject object = new TestSolidObject(
@@ -1046,6 +1065,45 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void sonic3kDeadPlayerRetainsNativeOffscreenOwnedPushRelease() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        ToggleOnScreenSolidObject object = new ToggleOnScreenSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.update(0, player, List.of(), 0, false, true, false);
+        assertTrue(player.getPushing(), "the visible solid should own the native push latch");
+
+        player.setDead(true);
+        player.setAir(true);
+        player.setPushing(false); // Kill_Character clears the player bit, not the object's.
+        player.setAnimationId(0x18);
+        manager.update(0, player, List.of(), 1, false, true, false);
+        assertEquals(0x18, player.getAnimationId(), "visible dead-player check does not release the push");
+        object.withinSolidContactBounds = false;
+        manager.update(0, player, List.of(), 2, false, true, false);
+
+        assertTrue(player.getDead());
+        assertTrue(player.getAir());
+        assertFalse(player.getPushing());
+        assertEquals(0, player.getAnimationId(),
+                "S3K offscreen SolidObject_TestClearPush writes Walk to anim");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "the offscreen release writes Run to the adjacent prev_anim byte");
+    }
+
+    @Test
     public void sonic3kSolidPushReleasePreservesSpindashAnimation() {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
@@ -1666,6 +1724,26 @@ public class TestSolidObjectManager {
         assertFalse(player.isOnObject());
         assertFalse(player.getAir(),
                 "Profile forceAirOnRideExit=false should win over the provider hook default");
+    }
+
+    @Test
+    public void groundedBottomSquashProfileAppliesBeforeVerticalSpeedTest() {
+        for (boolean alwaysSquashes : new boolean[] {false, true}) {
+            TestSolidObject object = new TestSolidObject(100, 100, new SolidObjectParams(32, 8, 8)) {
+                @Override public boolean groundedBottomContactAlwaysSquashes() { return alwaysSquashes; }
+            };
+            TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+            player.useGameRules(GameRules.SONIC_2);
+            player.setWidth(20);
+            player.setHeight(20);
+            player.setAir(false);
+            player.setYSpeed((short) 0x100);
+            player.setCentreX((short) 100);
+            player.setCentreY((short) 119);
+            buildManager(object).updateSolidContacts(player);
+            assertEquals(alwaysSquashes, player.getDead(),
+                    "the patched falling pillar enters squash even at positive y_vel");
+        }
     }
 
     @Test
@@ -2503,6 +2581,146 @@ public class TestSolidObjectManager {
         player.setYSpeed((short) 0x100);
         player.setAir(true);
         return player;
+    }
+
+    @Test
+    void pixelResolutionSlopesKeepOddPixelLandingAndRidingSamples() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        for (boolean flip : new boolean[]{false, true}) {
+            class PixelSlope extends TestSolidObject implements SlopedSolidProvider {
+                PixelSlope() { super(200, 300, new SolidObjectParams(48, 0, 0), true, null, true); }
+                @Override public byte[] getSlopeData() {
+                    byte[] data = new byte[96];
+                    for (int i = 0; i < data.length; i++) data[i] = (byte)i;
+                    return data;
+                }
+                @Override public boolean isSlopeFlipped() { return flip; }
+                @Override public int getSlopeSampleShift() { return 0; }
+                @Override public int getSlopeBaseline() { return 0; }
+                @Override public boolean usesPlatformObjectLandingSnap() { return false; }
+            }
+            var object = new PixelSlope();
+            var manager = buildManager(object);
+            var player = new TestPlayableSprite((short)0, (short)0);
+            player.useGameRules(GameRules.SONIC_3K);
+            player.setAir(true); player.setYSpeed((short)0x100);
+            player.setCentreX((short)(200 - 48 + 37));
+            int sample = flip ? 58 : 37;
+            player.setCentreY((short)(300 - sample - player.getYRadius() - 1));
+            manager.updateSolidContacts(player);
+            assertTrue(player.isOnObject(), "falling player must use full pixel index, flip=" + flip);
+            assertEquals(300 - sample - player.getYRadius() - 1, player.getCentreY());
+            player.setCentreX((short)(200 - 48 + 38));
+            manager.updateSolidContacts(player);
+            sample = flip ? 57 : 38;
+            assertEquals(300 - sample - player.getYRadius(), player.getCentreY(),
+                    "continued ride must use the same full-resolution surface");
+        }
+    }
+
+    @Test
+    void sozVineLandingRequiresPositiveOverlapThroughSixteenPixels() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        for (boolean airborne : new boolean[]{false, true})
+        for (int radius : new int[]{19, 15, 14}) for (int overlap : new int[]{-1, 0, 1, 15, 16, 17}) {
+            var vine = new com.openggf.game.sonic3k.objects.SozSpringVineObjectInstance(
+                    new ObjectSpawn(200, 300, 0x3F, 0, 0, false, 0));
+            var manager = buildManager(vine);
+            // Production's object pass clears the constructor's first-frame contact skip.
+            vine.snapshotPreUpdatePosition();
+            var player = new TestPlayableSprite((short)0, (short)0);
+            player.useGameRules(GameRules.SONIC_3K);
+            player.applyCustomRadii(7, radius);
+            player.setAir(airborne); player.setYSpeed((short)0x100);
+            player.setCentreX((short)200);
+            int surfaceY = 340 - 48;
+            player.setCentreY((short)(surfaceY - player.getYRadius() - 4 + overlap));
+            assertEquals(overlap > 0 && overlap <= 16, manager.hasStandingContact(player),
+                    "geometry overlap="+overlap+" radius="+player.getYRadius()+" y="+player.getCentreY()+" anchor="+vine.getY());
+            manager.processImmediateInlineSolidCheckpoint(vine, player, List.of());
+            assertEquals(overlap > 0 && overlap <= 16, player.isOnObject(), "native overlap=" + overlap);
+            // Snap reads the incoming radius; ResetOnFloor then restores standing radii.
+            if (overlap > 0 && overlap <= 16) assertEquals(surfaceY-radius-1, player.getCentreY(),
+                    "snap overlap=" + overlap + " incoming radius=" + radius);
+        }
+    }
+
+    @Test
+    void sozStaticSolidsResolveSidesAndUndersidesForBothShapes() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        for(int subtype:new int[]{0,1}) {
+            var object=new com.openggf.game.sonic3k.objects.SozSolidSpritesObjectInstance(
+                    new ObjectSpawn(100,100,0x49,subtype,0,false,0));
+            var manager=buildManager(object);
+            AbstractObjectInstance.updateCameraBounds(0,0,320,224,0);
+            // Native SolidObject_cont needs the prior display pass's bit 7.
+            object.snapshotPreUpdatePosition();
+            var player=new TestPlayableSprite((short)0,(short)0);
+            player.useGameRules(GameRules.SONIC_3K); player.setWidth(20); player.setHeight(38);
+            player.setCentreX((short)(100-(subtype==0 ? 27 : 43)+1)); player.setCentreY((short)100);
+            player.setAir(false); player.setXSpeed((short)0x100);
+            manager.processImmediateInlineSolidCheckpoint(object,player,List.of());
+            assertTrue(player.getPushing(),"subtype="+subtype+" x="+player.getCentreX()+" y="+player.getCentreY()+" vx="+player.getXSpeed()); assertEquals(0,player.getXSpeed());
+            assertEquals(100-(subtype==0 ? 27 : 43),player.getCentreX());
+            player.setCentreX((short)100);
+            player.setCentreY((short)(100+(subtype==0 ? 24 : 8)+player.getYRadius()-6));
+            player.setAir(true); player.setYSpeed((short)-0x100);
+            manager.processImmediateInlineSolidCheckpoint(object,player,List.of());
+            assertEquals(0,player.getYSpeed()); assertTrue(player.getAir()); assertFalse(player.isOnObject());
+        }
+    }
+
+    @Test
+    void sozPushToFallDoesNotCarryThePreviousPushButTrackMotionCarries() throws Exception {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        var rock = new com.openggf.game.sonic3k.objects.SozPushableRockObjectInstance(
+                new ObjectSpawn(100,100,0x3E,9,0,false,0));
+        var manager = buildManager(rock);
+        var rider = new TestPlayableSprite((short)0,(short)0);
+        var pusher = new TestPlayableSprite((short)0,(short)0);
+        for(var player:List.of(rider,pusher)) {
+            player.useGameRules(GameRules.SONIC_3K);
+            player.setWidth(20); player.setHeight(38); player.setAir(false);
+        }
+        rider.setCentreX((short)100); rider.setCentreY((short)67);
+        pusher.setCentreX((short)74); pusher.setCentreY((short)92);
+        pusher.setPushing(true); pusher.setXSpeed((short)0x100);
+        manager.forceRidingObjectForBootstrap(rider,rock);
+        var rom=org.mockito.Mockito.mock(com.openggf.data.Rom.class);
+        org.mockito.Mockito.when(rom.read32BitAddr(org.mockito.ArgumentMatchers.anyLong())).thenReturn(0x100);
+        org.mockito.Mockito.when(rom.read16BitAddr(0x100L)).thenReturn(105);
+        org.mockito.Mockito.when(rom.read16BitAddr(0x102L)).thenReturn(103);
+        org.mockito.Mockito.when(rom.read16BitAddr(0x104L)).thenReturn(0xFFFF);
+        var context=org.mockito.Mockito.mock(com.openggf.game.solid.ObjectSolidExecutionContext.class);
+        org.mockito.Mockito.when(context.resolveSolidNowAll()).thenAnswer(i -> {
+            manager.processImmediateInlineSolidCheckpoint(rock,rider,List.of(pusher));
+            return new com.openggf.game.solid.SolidCheckpointBatch(rock,Map.of());
+        });
+        var level=org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        org.mockito.Mockito.when(level.getFrameCounter()).thenReturn(1);
+        rock.setServices(new StubObjectServices() {
+            @Override public com.openggf.data.Rom rom() { return rom; }
+            @Override public com.openggf.level.LevelManager levelManager() { return level; }
+            @Override public com.openggf.game.solid.ObjectSolidExecutionContext solidExecution() { return context; }
+        }.withPlayerQuery(new ObjectPlayerQuery(() -> rider, () -> List.of(pusher))));
+        try (var terrain=mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(org.mockito.ArgumentMatchers.any(),
+                    org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.anyBoolean(),
+                    org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt()))
+                    .thenReturn(new TerrainCheckResult(15,(byte)0,0));
+            rock.snapshotPreUpdatePosition(); rock.update(0,rider);
+            assertEquals(101,rock.getX()); assertEquals(100,rider.getCentreX());
+            assertTrue(manager.isRidingObject(rider,rock));
+            rock.snapshotPreUpdatePosition(); rock.update(1,rider);
+            assertEquals(101,rock.getX()); assertEquals(100,rider.getCentreX(),
+                    "initial FALL d4 is current X; previous PUSH must not carry the standing rider");
+            for(int frame=2;frame<30 && rock.getX()==101;frame++) {
+                rock.snapshotPreUpdatePosition(); rock.update(frame,rider);
+            }
+            assertEquals(102,rock.getX()); assertEquals(101,rider.getCentreX(),
+                    "first horizontal track pass carries by exactly its own one-pixel motion");
+            assertTrue(manager.isRidingObject(rider,rock));
+        }
     }
 
     private ObjectManager buildManager(ObjectInstance instance) {

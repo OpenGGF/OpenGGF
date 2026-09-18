@@ -19,6 +19,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestFbzAct2CameraResizeWorker {
     @Test
+    void nativeWorkersAreNotUndoneByTheOrdinaryCameraTail() {
+        RecordingServices services = new RecordingServices();
+        services.camera.setMaxX((short) 0xA0);
+        services.camera.setMinY((short) 0x540);
+        var maxX = new FbzAct2CameraResizeWorker(FbzAct2CameraResizeWorker.MAX_X, 0xA6);
+        var minY = new FbzAct2CameraResizeWorker(FbzAct2CameraResizeWorker.MIN_Y, 0x53A);
+        maxX.setServices(services);
+        minY.setServices(services);
+        int[] nativeSteps = {0, 0, 0, 1, 2, 3, 4, 6};
+        for (int frame = 0; frame < nativeSteps.length; frame++) {
+            maxX.update(frame, null);
+            minY.update(frame, null);
+            services.camera.updateBoundaryEasing();
+            assertEquals(0xA0 + nativeSteps[frame], services.camera.getMaxX() & 0xFFFF,
+                    "the frame tail must not add a second max-X worker at frame " + frame);
+            assertEquals(0x540 - nativeSteps[frame], services.camera.getMinY() & 0xFFFF,
+                    "the frame tail must not undo the native min-Y write at frame " + frame);
+        }
+        assertTrue(maxX.isDestroyed());
+        assertTrue(minY.isDestroyed());
+        services.camera.updateBoundaryEasing();
+        assertEquals(0xA6, services.camera.getMaxX() & 0xFFFF,
+                "the retired worker's published bound must remain stable");
+        assertEquals(0x53A, services.camera.getMinY() & 0xFFFF);
+    }
+
+    @Test
     void workersPublishAbsoluteFixedPointBoundsWithoutDoubleCounting() {
         RecordingServices services = new RecordingServices();
         services.camera.setX((short) 0x00A2);
@@ -52,13 +79,13 @@ class TestFbzAct2CameraResizeWorker {
         assertEquals(0x053E, services.camera.getYCopy() & 0xFFFF,
                 "Change_Act2Sizes must not overwrite the last ScreenEvents Y copy");
         assertEquals(0x2D10, services.camera.getMinXTarget() & 0xFFFF);
-        assertEquals(0x6200, services.camera.getMaxXTarget() & 0xFFFF);
-        assertEquals(0x0520, services.camera.getMinYTarget() & 0xFFFF);
+        assertEquals(0x3101, services.camera.getMaxXTarget() & 0xFFFF);
+        assertEquals(0x04FF, services.camera.getMinYTarget() & 0xFFFF);
         assertEquals(0x0B00, services.camera.getMaxYTarget() & 0xFFFF);
     }
 
     @Test
-    void cumulativeHighWordUsesRomOddArithmeticAndPreservesTargets() {
+    void cumulativeHighWordUsesRomOddArithmeticWithoutASecondEasingOwner() {
         RecordingServices services = new RecordingServices();
         services.camera.setMaxX((short) 0x3100);
         services.camera.setMaxXTarget((short) 0x6200);
@@ -75,8 +102,8 @@ class TestFbzAct2CameraResizeWorker {
 
         assertEquals(0x3106, services.camera.getMaxX() & 0xFFFF,
                 "ROM reapplies the cumulative high word; this is intentionally non-linear");
-        assertEquals(0x6200, services.camera.getMaxXTarget() & 0xFFFF,
-                "gradual workers write only Camera_max_X_pos");
+        assertEquals(0x3106, services.camera.getMaxXTarget() & 0xFFFF,
+                "the worker retains its stored destination independently from engine easing");
     }
 
     @Test

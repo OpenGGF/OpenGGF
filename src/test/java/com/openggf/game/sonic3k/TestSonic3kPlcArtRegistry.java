@@ -12,6 +12,8 @@ import com.openggf.level.resources.CompressionType;
 import com.openggf.level.resources.PlcParser;
 import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +48,23 @@ public class TestSonic3kPlcArtRegistry {
     private static final Set<String> HARDCODED_MAPPING_BUILDERS = Set.of();
 
     @Test
+    public void modZoneIndicesOutsideTheRomTablePlanOnlySharedArt() {
+        // The bundled sample mod zone declares zoneIndex 64 / levelIndex 1024
+        // (src/test/resources/mods/sample-flappy-src/.../level.json). Planning
+        // art for it must not construct a stock resource profile, whose
+        // constructor rejects acts outside 0..1.
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(64, 1024);
+        Sonic3kPlcArtRegistry.ZoneArtPlan aiz = Sonic3kPlcArtRegistry.getPlan(0, 0);
+        assertTrue(plan.standaloneArt().size() <= aiz.standaloneArt().size());
+        assertTrue(plan.levelArt().size() <= aiz.levelArt().size());
+        // $1601 is the playable Hidden Palace act; only $1701 is the Super Emerald sanctuary.
+        assertTrue(Sonic3kLevelResourceProfile.isHiddenPalace(0x16, 1));
+        assertTrue(!Sonic3kLevelResourceProfile.isHpzSanctuary(0x16, 1));
+        assertTrue(Sonic3kLevelResourceProfile.isHpzSanctuary(0x17, 1));
+        assertTrue(!Sonic3kLevelResourceProfile.isHpzSanctuary(64, 1024));
+    }
+
+    @Test
     public void poweredFormEffectsUseExactRomBackedMappingContracts() {
         Sonic3kPlcArtRegistry.StandaloneArtEntry stars =
                 Sonic3kPlcArtRegistry.poweredFormArtEntry(
@@ -68,10 +87,11 @@ public class TestSonic3kPlcArtRegistry {
                         || entry.key().equals(Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS)));
     }
 
-    @Test
-    public void hpzSanctuaryPlanUsesRomBackedEmeraldAndTeleporterAssets() {
+    @ParameterizedTest
+    @ValueSource(ints = {0x16, 0x17})
+    public void hpzSanctuaryPlanUsesRomBackedEmeraldAndTeleporterAssets(int zone) {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan =
-                Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HPZ, 1);
+                Sonic3kPlcArtRegistry.getPlan(zone, 1);
 
         Sonic3kPlcArtRegistry.LevelArtEntry master = levelEntry(
                 plan, Sonic3kObjectArtKeys.HPZ_MASTER_EMERALD);
@@ -1034,7 +1054,7 @@ public class TestSonic3kPlcArtRegistry {
             RomByteReader reader = RomByteReader.fromRom(rom);
             Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
 
-            for (int zone = 0x00; zone <= 0x0D; zone++) {
+            for (int zone : new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0x16, 0x17}) {
                 for (int act = 0; act <= 1; act++) {
                     Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
                     String context = "zone 0x" + Integer.toHexString(zone) + " act " + act;
@@ -1438,13 +1458,15 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
-    public void sozPlanHasThreeBadniks() {
+    public void sozPlanHasThreeBadniksAndActOneBossArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x08, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(11, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SKORP)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SANDWORM)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ROCKN)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SOZ_MINIBOSS)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SOZ_MINIBOSS_DUST)));
     }
 
     @Test
@@ -1490,7 +1512,8 @@ public class TestSonic3kPlcArtRegistry {
     public void ddzPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0C, 0);
         assertNotNull(plan);
-        assertEquals(7, plan.standaloneArt().size());
+        // + PLC_BossExplosion, ArtKosM_DDZMisc and the boss Master Emerald.
+        assertEquals(10, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DDZ_EGG_ROBO)));
         Sonic3kPlcArtRegistry.StandaloneArtEntry ddzEggRobo = plan.standaloneArt().stream()
                 .filter(e -> e.key().equals(Sonic3kObjectArtKeys.DDZ_EGG_ROBO))

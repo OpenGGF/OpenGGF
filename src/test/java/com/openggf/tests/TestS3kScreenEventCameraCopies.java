@@ -41,7 +41,8 @@ class TestS3kScreenEventCameraCopies {
 
         // Production ScreenEvents dispatch: copies live X/Y first, then the
         // FBZ background handler reloads Act 2 and subtracts $2E00 from both
-        // the live X and freshly-copied X word.
+        // the live X and freshly-copied X word. Horizontal easing targets
+        // share that rebased coordinate system; Y words remain unchanged.
         manager.update();
 
         assertEquals(1, GameServices.level().getCurrentAct());
@@ -53,8 +54,8 @@ class TestS3kScreenEventCameraCopies {
         assertEquals(0x00A0, camera.getMaxX() & 0xFFFF);
         assertEquals(0x0500, camera.getMinY() & 0xFFFF);
         assertEquals(0x0580, camera.getMaxY() & 0xFFFF);
-        assertEquals(0x2D10, camera.getMinXTarget() & 0xFFFF);
-        assertEquals(0x2FB0, camera.getMaxXTarget() & 0xFFFF);
+        assertEquals((0x2D10 - 0x2E00) & 0xFFFF, camera.getMinXTarget() & 0xFFFF);
+        assertEquals(0x2FB0 - 0x2E00, camera.getMaxXTarget() & 0xFFFF);
         assertEquals(0x0520, camera.getMinYTarget() & 0xFFFF);
         assertEquals(0x0560, camera.getMaxYTarget() & 0xFFFF);
     }

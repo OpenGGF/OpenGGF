@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 
 import java.util.List;
 
@@ -80,5 +81,14 @@ public class BoxObjectInstance extends AbstractObjectInstance implements RewindR
 
     protected int getHalfHeight() {
         return halfHeight;
+    }
+
+    /**
+     * Engine debug primitive, not a ROM object: front-most so it is visible.
+     * Subclasses that stand in for ROM objects transcribe their own bucket.
+     */
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.bucket(0);
     }
 }

@@ -23,11 +23,19 @@ public final class FbzBentPipeObjectInstance extends AbstractObjectInstance
         // extension belongs only to loc_3B718's SolidObjectFull d1.
         return SIZE[sizeIndex][0];
     }
-    @Override public boolean usesCustomOutOfRangeCheck(){return true;}@Override public boolean isCustomOutOfRange(int cameraX){int object=spawn.x()&0xFF80;int back=(cameraX-0x80)&0xFF80;return ((object-back)&0xFFFF)>0x280;}
+    @Override public boolean usesCustomOutOfRangeCheck(){return true;}@Override public boolean isCustomOutOfRange(int cameraX){return isCoarseXOutOfRange(spawn.x(),cameraX,coarseXCullRange());}
     @Override public SolidRoutineProfile getSolidRoutineProfile(){
         // loc_3B718 reaches SolidObject_cont, whose unsigned BHI comparison
         // retains the exact right boundary of the expanded d1 span.
         return SolidRoutineProfile.fullSolid(false,true,false);
     }
-    @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_BENT_PIPE);if(r!=null&&r.isReady())r.drawFrameIndex(frame,spawn.x(),spawn.y(),false,false);}
+    @Override public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_BENT_PIPE);
+        if (renderer != null && renderer.isReady()) {
+            // Obj_FBZBentPipe ORs bit2 into render_flags, preserving both
+            // placement flip bits. In particular FBZ1's $0CDA/$0317 pipe is mirrored.
+            renderer.drawFrameIndex(frame, spawn.x(), spawn.y(),
+                    (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
+        }
+    }
 }

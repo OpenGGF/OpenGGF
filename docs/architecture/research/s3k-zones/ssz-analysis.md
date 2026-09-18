@@ -1,16 +1,59 @@
 # S3K SSZ Zone Analysis
 
+> **Corrections 2026-09-17** (made while hardening the
+> [SSZ bring-up plan](../../plans/2026-09-17-ssz-bring-up.md); each was checked against
+> `sonic3k.asm` at submodule `1a454a0e`, not reworded from the plan):
+>
+> 1. **Line citations in this document run about 5 lines early** (`SSZ1_ScreenInit` is at 115851,
+>    `Obj_SSZEndBoss` 164162, `Obj_SSZ2_Boss` 165052, `AniPLC_SSZ` 56040). They were *not*
+>    repointed: cite labels, and re-find the line when you need it.
+> 2. **Who spawns Mecha Sonic.** Act 1: the `$79` pad at `($1A40,$670)` turns into the spawner
+>    `loc_45A66`/`loc_45A84` (`x >= $1A00 && y < $680`; allocates when `Camera_Y == Camera_max_Y`).
+>    Act 2: the crane cutscene `Obj_KnuxFinalBossCrane` (`loc_7CB64`). It was listed as "HPZ
+>    teleporter exit".
+> 3. **`Obj_SSZEndBoss` → `Obj_SSZ2_Boss` happens in act 2 only** (`loc_7BBE0`, after the forced
+>    run-right). Act 1 ends at `End_of_level_flag`; it never enters the Super phase.
+> 4. **`$B2` is `Obj_KnuxFinalBossCrane`**, not an Egg Mobile.
+> 5. **`Obj_57E34` is not a Tails follower.** It waits `$60` frames and beams in
+>    `Obj_CutsceneKnuckles` subtype `$2C` (`CutsceneKnux_SSZ`) in act 1 for every player mode; his
+>    landing on the button sets `Events_bg+$08` with `sfx_Switch` (`loc_658F2`), the bridge `$77` cue. The Tails helper is `Obj_57DCC` (`Player_mode == 0`).
+> 6. **Act 2 has no animated tiles.** `Offs_AniFunc` gives `$A01` `AnimateTiles_NULL`, which is a
+>    bare `rts`; the `AniPLC_SSZ` pointer beside it is never read.
+> 7. **`SSZ1_ScreenInit` steps 2-3 are inside the no-starpost branch**; a respawn keeps normal bounds.
+> 8. **`SSZ2_ScreenEvent` stage 4 runs after the fight.** The only act-2 writer of `Events_fg_4` before
+>    it is the defeat routine `loc_7BCB0` (`st Events_fg_4+1`), so the floor patch and
+>    `Ending_running_flag` follow the Super Mecha defeat; pause works during the fight. The negative
+>    `Events_fg_4` that `loc_59078` waits for comes from the ending object `loc_5E6C0` (`loc_5E98A`).
+> 9. **Act 1 exits to `$B00` (Death Egg)**, not to the ending or Doomsday; Knuckles' good ending
+>    never leads to Doomsday.
+> 10. **Boss flags:** the spawn writes `Events_bg+$00/$02 = $7F00` (in progress); the defeat does
+>     `st` on the high byte (negative = beaten). `LevelSetup` clears `Events_bg+$00..$0F` on every
+>     load, so a respawn forgets beaten bosses.
+>
+> 11. **`loc_591D6` is the Knuckles-ending island sprite mask**, not a floor collapse (independent
+>     verification, re-read here).
+> 12. **The arrival writes a pseudo-starpost.** Bridge `$77` (`loc_44FBA`) and cutscene Knuckles
+>     (`loc_65976`) set `Last_star_post_hit = 1`, `Saved_X/Y = $140,$C6C`, `Save_Level_Data`. A later
+>     death skips the beam arrival and finds the bridge extended (`loc_4501A`).
+> 13. **`sub_5750C` carries the `_unkFAA4` object** (the slot allocated for Mecha Sonic), not the
+>     player; the players are scripted by `sub_57FE2`/`sub_58048`. **`sub_574DC`** drives
+>     `_unkEEEA/_unkEEEE`: X 1:1, Y `(Camera_Y - $110) >> 2` plus `$6000`/frame once `Camera_Y == $110`.
+> 14. **`word_58C80` is an FG per-line table** (`ApplyFGDeformation`); act-2 column waves come from
+>     `HScroll_table+$170` into `Vscroll_buffer` (20 columns, `loc_5904A`).
+>
+> Placement counts and subtypes: [ssz-object-inventory.md](ssz-object-inventory.md).
+
 ## Summary
 
 - **Zone:** Sky Sanctuary Zone (SSZ)
 - **Zone Index:** 0x0A (Current_zone_and_act = $A00 / $A01)
 - **Zone Set:** SKL (S&K zones 7-13)
 - **Acts:** 2 acts with completely different art sets and gameplay
-  - **Act 1 ($A00):** Sonic/Tails only (Knuckles denied in level select). Tall vertically-wrapping zone with three boss fights (GHZ boss recreation, MTZ boss recreation, Mecha Sonic). Features crumbling tower ascent, Death Egg launch sequence, and transition to the ending/Doomsday Zone.
+  - **Act 1 ($A00):** Sonic/Tails only (Knuckles denied in level select). Tall vertically-wrapping zone with three boss fights (GHZ boss recreation, MTZ boss recreation, Mecha Sonic). Features crumbling tower ascent, Death Egg launch sequence, and transition to Death Egg Zone (`StartNewLevel $B00`, `loc_581D2`).
   - **Act 2 ($A01):** Knuckles only (Sonic/Tails denied in level select). Flat arena zone for Mecha Sonic + Super Mecha Sonic boss fight.
 - **Water:** No
 - **Palette Cycling:** Act 1: No (AnPal_None). Act 2: Yes -- sub_5928C (water cycle, 3 colors, palette line 4) and sub_592EE (emerald glow, 2 colors, palette line 4), both used conditionally during the ending sequence.
-- **Animated Tiles:** Yes (6 scripts shared for both acts via AniPLC_SSZ)
+- **Animated Tiles:** Act 1 only (6 scripts, `AniPLC_SSZ` via `AnimateTiles_DoAniPLC`). Act 2 dispatches `AnimateTiles_NULL` (`rts`): nothing animates
 - **Character Branching:** Extreme -- Acts are entirely character-segregated. Act 1 = Sonic/Tails, Act 2 = Knuckles. Different level art, layout, objects, bosses, and event systems.
 - **Special Features:** Vertical wrapping (Act 1, Camera_min_Y_pos = -$100), screen shake, Death Egg launch cutscene, teleporter beam intro, roaming cloud sprites, multi-layer parallax clouds, collapsing tower sequence, custom block/chunk/pattern hot-swap mid-level.
 
@@ -87,9 +130,9 @@ SSZ is an S&K zone; the S3 `LevelResizeArray` (line 38808) maps SSZ slots to `No
 **Disassembly location:** sonic3k.asm line 115846
 
 **Initialization sequence:**
-1. If no checkpoint: Spawns `Obj_57C1E` (teleporter beam controller) at X=$100 with subtype $6C. Sets `Events_bg+$05` flag.
-2. Forces Camera_max_X_pos = $200, Camera_max_Y_pos = $BC0.
-3. Forces camera to ($60, $F49) and locks scroll (`Scroll_lock = true`).
+1. If no checkpoint (`Last_star_post_hit == 0`): Spawns `Obj_57C1E` (teleporter beam controller) at X=$100 with `$2D` = $6C. Sets `Events_bg+$05` flag.
+2. Same branch only: forces Camera_max_X_pos = $200, Camera_max_Y_pos = Camera_target_max_Y_pos = $BC0.
+3. Same branch only: forces camera to ($60, $F49) and locks scroll (`Scroll_lock = true`). A starpost respawn skips steps 1-3.
 4. Clears `_unkEE98` and `_unkEE9C` (cloud offset accumulators).
 5. Clears 5 words at HScroll_table+$1F6 (cloud sprite position cache).
 6. Allocates 5 roaming cloud sprite objects from `word_58758` data table -- each gets position, velocity, and mapping frame.
@@ -139,11 +182,11 @@ SSZ is an S&K zone; the S3 `LevelResizeArray` (line 38808) maps SSZ slots to `No
      | $13C0 | $0660 |
      | $7FFF | $03E0 |
 
-4. **MTZ Boss trigger (line 116262):** When Player Y is in range $440-$880 and `Events_bg+$00` is not negative and not already triggered:
+4. **GHZ Boss trigger, lower arena (line 116262):** When Player Y is in range $440-$880 and `Events_bg+$00` is not negative and not already triggered:
    - If `Events_bg+$01` not yet set: lock Camera_min_X_pos=$160, Camera_max_X_pos=$19A0. When Player Y >= $7C0 and Camera X == $160 and player on ground: lock Camera_max_X_pos=$160, Camera_min/target_max_Y_pos=$7C0. Set `Events_bg+$01`.
    - When Camera Y reaches $7C0: spawn `Obj_SSZGHZBoss` (GHZ recreation boss). Set `Events_bg+$05`, Events_bg+$00 = $7F00.
 
-5. **GHZ Boss trigger (line 116298):** When Player Y < $440 and `Events_bg+$02` is not negative:
+5. **MTZ Boss trigger, upper arena (line 116298):** When Player Y < $440 and `Events_bg+$02` is not negative:
    - If `Events_bg+$03` not yet set: lock Camera_max_X_pos=$1660. When Player Y >= $420 and Camera X == $1660 and player on ground: lock Camera_min_X_pos=$1660, Camera_min/target_max_Y_pos=$380. Set `Events_bg+$03`.
    - When Camera Y reaches $380: spawn `Obj_SSZMTZBoss` (MTZ recreation boss). Set `Events_bg+$05`, Events_bg+$02 = $7F00.
 
@@ -198,8 +241,8 @@ These are foreground decorative cloud objects that parallax relative to the came
 | Stage | Offset | Trigger | Action | Notes |
 |-------|--------|---------|--------|-------|
 | 0 | $00 | Level start | Waits until Camera_min_Y_pos == Camera_max_Y_pos (camera settled). Adds 4 to Special_V_int_routine, advances to $04. | Initial sync wait. |
-| 4 | $04 | Events_fg_4 set | Patches level layout bytes at the FG row pointed to by $24(a3) and $28(a3) -- writes tile IDs $17/$18/$19 to create the arena floor. Sets `Ending_running_flag`. Calls Refresh_PlaneFullDirect. Advances to $08. | Creates the boss arena platform dynamically. |
-| 8 | $08 | Events_fg_4 set (positive) | Fills VRAM tiles $7F0-$800 with solid $66666666 pattern. Spawns `loc_591D6` (floor collapse visual). Sets Draw_delayed_position=$1F0 with 15 rows. Clears palette cycle gate. Advances to $0C. | Creates solid floor tiles for Death Egg sequence. |
+| 4 | $04 | Events_fg_4 set | Patches level layout bytes at the FG row pointed to by $24(a3) and $28(a3) -- writes tile IDs $17/$18/$19 into the floor rows. Sets `Ending_running_flag`. Calls Refresh_PlaneFullDirect. Advances to $08. | Runs **after** the Super Mecha defeat: the first act-2 `Events_fg_4` write is `loc_7BCB0`. It is not arena construction before the fight. |
+| 8 | $08 | Events_fg_4 set (positive) | Fills VRAM tiles $7F0-$800 with solid $66666666 pattern. Spawns `loc_591D6` (the `Map_KnuxEndingIslandMask` sprite mask: 8 child sprites following `Camera_Y_pos_BG_copy`, which it lowers by `$6000` per frame to `$80` once `Events_routine_bg != 0`; deleted at `Events_routine_fg == $18`. It is not a floor collapse; SSZ2 has none). Sets Draw_delayed_position=$1F0 with 15 rows. Clears palette cycle gate. Advances to $0C. | Creates solid floor tiles for Death Egg sequence. |
 | C | $0C | Auto | Draws plane vertically (bottom-up) using Draw_PlaneVertBottomUp with d1=$200, d2=$100. When complete: clears Camera Y to 0, clears Camera X, advances to $10. | Scrolls new floor into view. |
 | 10 | $10 | Post-boss sequence | Calls sub_5B18E (ending sequence manager). Branches based on emerald count: If >= 7 Super Emeralds OR >= 7 Chaos Emeralds: runs sub_592EE (emerald palette cycle), waits for _unkFAAE. Target Y is $14C0 (SK alone) or $1660 (S3K). When Camera Y reaches target with Events_routine_bg == 0: loads Pal_Ending2 into palette line 2, adjusts BG camera, sets Events_routine_bg += 4. If < 7 Chaos Emeralds: waits for Events_fg_4, loads Pal_Ending1, sets Draw_delayed at $7F0, advances to $14. | Determines good/bad ending path. $14C0/$1660 heights lead to Doomsday zone (good ending) or credits (bad ending). |
 | 14 | $14 | Bad ending | Draws plane vertically (bottom-up) with d1=0, d2=$700. When complete: sets Camera Y = $720, advances to $18. | Scrolls to ending scene. |
@@ -379,7 +422,7 @@ $120, $8, $8, $4, $4, $8, $8, $18, $10, $10, $7FFF
 
 **Disassembly location:** sonic3k.asm line 56035
 
-**Dispatch:** Act 1 uses `AnimateTiles_DoAniPLC` (generic AniPLC processor). Act 2 uses `AnimateTiles_NULL` (no custom animate function, AniPLC only).
+**Dispatch:** Act 1 uses `AnimateTiles_DoAniPLC` (generic AniPLC processor). Act 2 uses `AnimateTiles_NULL`, a bare `rts` (`Offs_AniFunc`, sonic3k.asm:53881-53884): the `AniPLC_SSZ` pointer stored next to it is never consumed, so act 2 animates nothing.
 
 | Script | Speed | Art Source | VRAM Dest | Frames | Tile Size | Description |
 |--------|-------|------------|-----------|--------|-----------|-------------|
@@ -452,20 +495,21 @@ Both routines are also used by the Ending_ScreenEvent (line 121268): sub_592EE d
 ### Act 1: Mecha Sonic (Obj_SSZEndBoss)
 
 - **Object:** `Obj_SSZEndBoss` at line 164157
-- **Spawn trigger:** HPZ teleporter exit (Obj_SSZHPZTeleporter, line 91421)
+- **Spawn trigger:** the `$79` pad at ($1A40,$670) running `loc_45A66`/`loc_45A84` (sonic3k.asm:91406-91432): once `Camera_Y_pos == Camera_max_Y_pos` it allocates `Obj_SSZEndBoss` and stores the slot in `_unkFAA4`. Act 2 spawns the same object from `Obj_KnuxFinalBossCrane` (`loc_7CB64`)
 - **Arena:** Camera_min_X_pos=$19A0, Camera_min/target_max_Y_pos=$5C0 (sub_575EA final arena)
 - **Art:** ObjSlot_MechaSonic + ArtKosM_MechaSonicExtra (DPLC-driven)
 - **Health:** 8 hits (collision_property = 8)
 - **State machine:** 21 states (SSZEndBoss_Index, line 164169). Multi-phase fight including dash attacks, jumping patterns, and defeat sequence.
-- **Defeat:** Transitions to Obj_SSZ2_Boss (Super Mecha Sonic phase, line 164947) which has 36 states.
-- **Act 1 only behavior:** When Current_act == 0: routine starts at state 4 (line 164205, sets starting position differently).
-- **Notes:** Uses Map_MechaSonic and DPLCPtr_MechaSonic for sprite rendering. The SSZ2_Boss phase is Super Mecha Sonic using the Master Emerald.
+- **Defeat (act 1):** ends the act (`End_of_level_flag`, results, then the launch). The in-place switch to `Obj_SSZ2_Boss` (`loc_7BBE0`, sonic3k.asm:164932-164955) is act 2 only.
+- **RNG:** init `loc_7B2DC` copies `V_int_run_count` into `RNG_seed`.
+- **Act split in init:** `Current_act == 0` → `loc_7B308` (routine 4, `x_vel -$800`, position from the camera, children `ChildObjDat_7D47A`); act 2 → fixed position `($220,$4A0)` then `loc_7B35A`.
+- **Notes:** Uses Map_MechaSonic and DPLCPtr_MechaSonic for sprite rendering. The `Obj_SSZ2_Boss` phase (act 2 only) is Super Mecha Sonic using the Master Emerald.
 - **Confidence:** HIGH
 
 ### Act 2: Mecha Sonic / Super Mecha Sonic (Obj_SSZ2_Boss)
 
 - **Object:** `Obj_SSZ2_Boss` at line 165047
-- **Context:** Knuckles' boss fight. Direct continuation from Obj_SSZEndBoss defeat.
+- **Context:** Knuckles' boss fight, act 2 only. `Obj_SSZEndBoss` (spawned by the `$B2` crane cutscene) is fought first; after its defeat it forces Knuckles to run right and rewrites its own code pointer to `Obj_SSZ2_Boss` (`loc_7BBE0`).
 - **Health:** 8 hits
 - **State machine:** 36 states (SSZ2_Boss_Index, line 165059). Extended multi-phase fight.
 - **Art:** Same MechaSonic DPLC system.
@@ -498,7 +542,8 @@ Both routines are also used by the Ending_ScreenEvent (line 121268): sub_592EE d
 | ID | Object | Notes |
 |----|--------|-------|
 | $00 | Ring | Standard ring |
-| $B2 | Egg Mobile (Obj_SSZ2_Boss related) | Eggman's ship in Knuckles ending |
+| $79 | Teleporter (Obj_SSZHPZTeleporter) | Placed in both acts (10 + 1); see the inventory for subtype meaning |
+| $B2 | Final boss crane (Obj_KnuxFinalBossCrane) | EggRobo crane cutscene at ($180,$430); spawns `Obj_SSZEndBoss`, `mus_EndBoss` then `mus_FinalBoss` |
 
 **Shared objects (spawned by events):**
 - Teleporter beam (Obj_57C1E / Obj_TeleporterBeamExpand)
@@ -530,7 +575,7 @@ Both acts use screen shake:
 ### Teleporter Beam Intro
 
 Both acts start with a teleporter beam sequence (Obj_57C1E):
-- **Act 1:** Player appears at Y=$F49 (near bottom of wrapped zone), teleporter at X=$100. Player is locked (object_control = 3), rolls upward with y_vel = -1. On Act 1, also spawns Obj_57E34 (Tails follower) if Player_mode == 0 (Sonic & Tails).
+- **Act 1:** Player appears at Y=$F49 (near bottom of wrapped zone), teleporter at X=$100. Player is locked (object_control = 3), rolls upward with y_vel = -1. On Act 1, `Obj_57C1E` always spawns `Obj_57E34` (`subtype $60`), which after $60 frames beams in `Obj_CutsceneKnuckles` subtype $2C (`CutsceneKnux_SSZ`) at X=$100; when `Player_mode == 0` it also spawns `Obj_57DCC`, the Player 2 (Tails) arrival helper that ends with `Tails_CPU_routine = 6`.
 - **Act 2:** Player appears at Y=$649, teleporter at X=$A0. Subtype $44 indicates Act 2 behavior. Art_tile bit 7 set (high priority) for Act 2.
 
 ### Death Egg Launch Sequence (Act 1)
@@ -545,7 +590,7 @@ Triggered by End_of_level_flag (after Mecha Sonic defeated):
 ### Ending Branching (Act 2)
 
 After defeating Super Mecha Sonic:
-- **>= 7 Chaos Emeralds OR >= 7 Super Emeralds:** Good ending path. Camera rises to $14C0 (S&K alone) or $1660 (S3K). Loads Pal_Ending2. Leads to Doomsday Zone or good ending credits.
+- **>= 7 Chaos Emeralds OR >= 7 Super Emeralds:** Good ending path. Camera rises to $14C0 (S&K alone) or $1660 (S3K). Loads Pal_Ending2. Leads to the good ending credits (Knuckles never reaches Doomsday).
 - **< 7 Chaos Emeralds:** Bad ending path. Camera descends. Loads Pal_Ending1. Leads to bad ending credits with water palette cycling.
 
 ### Music
@@ -574,7 +619,7 @@ After defeating Super Mecha Sonic:
 
 2. **Events (HIGH):** Act 1 has 3 boss arenas with dynamic boundary management, Death Egg launch sequence with art hot-swap, crumbling platform physics, and teleporter intro. Act 2 has arena construction, ending sequence branching, and camera controller object.
 
-3. **Animated Tiles (MEDIUM):** 6 standard AniPLC scripts, no custom AnimateTiles handler (uses generic DoAniPLC for Act 1, NULL for Act 2).
+3. **Animated Tiles (MEDIUM):** 6 standard AniPLC scripts, no custom AnimateTiles handler (uses generic DoAniPLC for Act 1; Act 2 is `AnimateTiles_NULL` = no animation at all).
 
 4. **Palette Cycling (LOW):** No standard palette cycling. Two conditional palette mutation routines used only during the ending sequence (Act 2 only, and shared with the Ending zone).
 

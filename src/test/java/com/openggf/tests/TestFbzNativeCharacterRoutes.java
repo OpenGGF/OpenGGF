@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.levelselect.Sonic3kLevelSelectManager;
 import com.openggf.game.sonic3k.objects.FbzEndBossInstance;
+import com.openggf.game.sonic3k.objects.TestFbzAct2TraversalPreboss;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.Sonic;
@@ -25,7 +26,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,25 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Eight native-team act starts and three bounded solo-character boss entries. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzNativeCharacterRoutes {
-    /**
-     * Immutable input from authored FBZ2 starpost 6 through the plane event and
-     * into the real end-boss graph. Task 17 owns the strict uninterrupted
-     * Sonic+Tails FBZ2-to-SOZ completion oracle; this route only proves that
-     * each solo native character can participate in the production graph.
-     */
-    private static final List<InputRun> TERMINAL_BOSS_ENTRY = List.of(
-            new InputRun(600, 0x0), new InputRun(300, 0x8),
-            new InputRun(20, 0x18), new InputRun(300, 0x8),
-            new InputRun(800, 0x0), new InputRun(60, 0x8),
-            new InputRun(2140, 0x0), new InputRun(20, 0x18),
-            new InputRun(100, 0x8));
-    private static final List<InputRun> TAILS_TERMINAL_BOSS_ENTRY = List.of(
-            new InputRun(600, 0x0), new InputRun(300, 0x8),
-            new InputRun(20, 0x18), new InputRun(300, 0x8),
-            new InputRun(800, 0x0), new InputRun(120, 0x4),
-            new InputRun(2140, 0x0), new InputRun(20, 0x18),
-            new InputRun(100, 0x8));
-
     @ParameterizedTest(name = "{0} level-select FBZ{1} normal start")
     @MethodSource("teamActCases")
     void everyNativeTeamCanEnterBothActsFromLevelSelectAtTheRomStart(Team team, int act) {
@@ -126,28 +107,11 @@ class TestFbzNativeCharacterRoutes {
 
         assertEquals(checkpoint.x(), fixture.sprite().getCentreX() & 0xFFFF);
         assertEquals(checkpoint.y(), fixture.sprite().getCentreY() & 0xFFFF);
-        FbzEndBossInstance boss = null;
-        int frame = 0;
-        List<InputRun> route = team == Team.TAILS
-                ? TAILS_TERMINAL_BOSS_ENTRY : TERMINAL_BOSS_ENTRY;
-        outer:
-        for (InputRun run : route) {
-            for (int i = 0; i < run.frames(); i++, frame++) {
-                fixture.stepFrame(
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_UP) != 0,
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN) != 0,
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT) != 0,
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT) != 0,
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_JUMP) != 0);
-                List<FbzEndBossInstance> bosses = GameServices.level().getObjectManager()
-                        .activeObjectsOfType(FbzEndBossInstance.class);
-                if (!bosses.isEmpty()) {
-                    boss = bosses.getFirst();
-                    break outer;
-                }
-                if (fixture.sprite().getDead()) break outer;
-            }
-        }
+        int[] frames = {0};
+        TestFbzAct2TraversalPreboss.runOrdinaryPlaneApproach(fixture, () -> frames[0]++);
+        int frame = frames[0];
+        FbzEndBossInstance boss = GameServices.level().getObjectManager()
+                .activeObjectsOfType(FbzEndBossInstance.class).stream().findFirst().orElse(null);
         assertFalse(fixture.sprite().getDead(), team + " died before terminal participation at frame "
                 + frame + " player=(0x"
                 + Integer.toHexString(fixture.sprite().getCentreX() & 0xFFFF) + ",0x"
@@ -254,5 +218,4 @@ class TestFbzNativeCharacterRoutes {
     }
 
     private record ConfigSnapshot(String main, String sidekicks) { }
-    private record InputRun(int frames, int mask) { }
 }

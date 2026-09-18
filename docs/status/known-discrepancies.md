@@ -54,6 +54,7 @@ no discrepancy entry was added or reclassified by the cutover.
 35. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention)
 36. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
 37. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
+38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
 
 ---
 
@@ -915,7 +916,39 @@ return dy >= 0 && dy < viewportHeight;
 
 `cameraBounds` is updated once per frame by `ObjectManager.updateCameraBounds()` from `camera.getX() / getY() / getWidth() / getHeight()`, so the window always matches the configured viewport.
 
+Objects that run their own `Sprite_OnScreen_Test2`-style delete-touch check
+(FBZ screw doors, elevator cars, magnetic spike balls and pendulums, platform
+blocks, propellers, spinning poles, spring plungers, missile launchers, wall
+missiles, the exit hall and the prison/capsule debris) use
+`AbstractObjectInstance.coarseXCullViewport()` / `coarseXCullRange()`, the
+same `$80 + viewportWidth + $C0` window (`$280` at native width). A bare
+`$280` there deleted those objects on the frame the wider load-ahead placed
+them at 640 and 800 pixels. Objects with a ROM-specific range (the FBZ piston's
+travel-derived `$200 + travel`) keep their own constant.
+
 **Load-ahead window is capped (intentionally narrower than the despawn window).** The despawn/visibility windows above scale by the *full* viewport width so on-screen objects at the wider right edge are never culled. The *spawn load-ahead* window (`AbstractPlacementManager.loadAheadFor`), however, grows only by the minimum pre-load lead — `max(320 + extraAhead, viewportWidth + 128)` — NOT by `viewportWidth + extraAhead`. The object slot pool is a fixed ROM-sized table (`ObjectSlotLayout`: S1=96, S2=112, S3K=89); a window that grew by the full extra width overran the pool in dense areas, so `allocateSlot()` returned −1 and spawns were silently dropped (objects intermittently failing to load when scrolling right at widescreen, in all games). Capping the load-ahead keeps the live-object count close to native (≈+2% at ULTRA_21_9 vs +27% before) so the pool no longer overruns, while the wider despawn/visibility windows still prevent right-edge culling. This narrower load window is deliberate — do not widen it to match the despawn window. Native (320) is byte-identical (load-ahead = `0x280`).
+
+Stage rings in Sonic 2 and Sonic 3 & Knuckles use their separate raw-camera
+window: `[cameraX - 8, cameraX + viewportWidth + 8)`, with the existing left
+clamp near the level origin. This follows S2 `RingsManager_Main`'s
+`screen_width + 16` span and S3K `loc_E942`'s native `$150` span. Both drawing
+and collection use this window; widescreen admits rings visible beyond the
+native right edge, while rings behind the left margin remain excluded.
+`TestRingViewportWindow` covers native and wider widths in both scroll
+directions. Expanded ring lists must be sorted by full X, matching S2
+`RingsMgr_SortRings`, rather than object placement's chunk/table order. Otherwise
+the forward scan can stop at an off-screen ring before admitting a nearer one
+(EHZ1's ring at `(3464,948)` was hidden behind `(3528,900)`). The ROM-backed
+`Sonic2RingPlacementTest` covers that case, and ring editor reloads enforce the
+same ordering. Sonic 1's object placement remains unchanged.
+
+The September 12 rollover (`3f19fb60fc`) brought the chunk-sorted ring parser
+from `next` into the new `develop` line; the previous day's `develop`
+(`45cecf5668`) still sorted full X. An isolated comparison using the same
+pre-fix ring manager and EHZ1 ROM layout kept `(3464,948)` active at camera
+X=3195 and 3212 with the September 11 parser, but only at X=3212 with the
+rollover parser. This distinguishes the July source edit from the date the
+regression reached `develop`.
 
 ### Parity at Native Width
 
@@ -3223,3 +3256,164 @@ fade-in flag from there until the fade-in stepper's counter runs down
   that completes during the jingle leaves SFX refused until the next song
   loads. The engine releases the block on the global stop, as it does for the
   other two games.
+
+---
+
+## Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It
+
+**Status:** Open (tier two, 2026-09-14). Owner: `com.openggf.game.sonic2.kis2`;
+catalogue: [docs/kis2/BRANCH_DIFFS.md](../kis2/BRANCH_DIFFS.md).
+
+Selecting Knuckles as the Sonic 2 main character activates the built-in
+`kis2` patch, which reproduces the lock-on program from the S&K half of the
+S3K image and the Sonic 2 cart. The shipped Knuckles in Sonic 2 also runs
+code and data from a 256 KiB chip that only the user-supplied S&K + Sonic 2
+lock-on dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`)
+holds. With that dump present the patch runs **tier two** and reads the
+chip's in-level data; without it the patch runs **tier one** and this entry's
+tier-one list applies. Neither tier is the full presentation of Knuckles in
+Sonic 2 yet.
+
+### Original Implementation
+
+The KiS2 branch (`s2disasm c336fed`) reads Knuckles' art, DPLCs, the
+`Off_Objects_KiS2` layout table, the ending image and `Pal_KnuxEndPose` from
+the S&K cart, stock data from the S2 cart, and everything it added itself
+from the chip: CNZ layouts, the title screen, special-stage Knuckles frames,
+results and continue-screen art, the lives counter, signpost and monitor
+patches, the grey shield/stars, all changed palettes (`Pal_BGND`,
+underwater lines, Super Knuckles cycles) and the modified HUD/object
+mappings.
+
+### Our Implementation
+
+Both tiers model:
+
+- Knuckles physics (`Kis2Physics.KNUCKLES`, `PhysicsModifiers.KNUCKLES`),
+  the KiS2 landing form and `$9C` duck touch-box (`Kis2Rules`), glide/climb
+  through the engine-shared `SecondaryAbility.GLIDE`.
+- The 16 rewritten S&K-side act layouts and the S2-cart HPZ/DEZ/SCZ layouts
+  through `LockOnAddressSpace`.
+- Knuckles art converted through `ArtConvTable` and drawn with the Knuckles
+  line 0 (the S&K `Pal_KnuxEndPose` line, byte-identical to the chip's
+  `Pal_BGND` line 0).
+
+Tier two additionally reads from the chip (`Kis2ChipArt`, addresses in the
+catalogue's §Chip addresses): the CNZ 1 and 2 layouts (`Objects_CNZ_1`,
+`Objects_CNZ_2`), the Knuckles lives counter and 1-up monitor face
+(`ArtNem_Sonic_life_counter`), the grey monitor icons
+(`ArtNem_PowerupsKnucklesPatch`), the merged grey shield and invincibility
+stars (`ArtNem_Shield_and_invincible_stars`), the signpost face
+(`ArtNem_SignpostKnucklesPatch`), the continue-screen mini icon
+(`ArtNem_MiniSonic`), `Pal_BGND` line 0 itself, and the CPZ/ARZ underwater
+palettes (`Pal_CPZ_U`, `Pal_ARZ_U`). The `hud_a` lives-name piece draws on
+palette line 0 as in the branch's mapping.
+
+Tier one (no dump) instead:
+
+- **CNZ 1 and 2 use the stock S2 layouts** (chip pointers
+  `$33F06E`/`$33F74C`), with one logged warning per act.
+- Uses the S&K `ArtNem_KnucklesLifeIcon` for the HUD and 1-up monitor face
+  and keeps the stock signpost, monitor icons, shield/stars, continue icon
+  and underwater palettes.
+
+Known deviations from the shipped lock-on game in both tiers (each cites
+the owning KiS2 routine in the catalogue):
+
+- **Roster.** KiS2 forces Sonic-alone mode (`Level_SetPlayerMode`,
+  `ObjPtr_Tails = ObjNull`). The launch panel selects Knuckles alone when the
+  patch-backed main is entered, but a configured sidekick is still honoured
+  as an intentional engine divergence; that sidekick shares the module-wide
+  `PhysicsModifiers.KNUCKLES` underwater jump.
+- **Movement and contacts (2026-09-14 follow-up).** KiS2 now preserves air
+  superspeed, gates wall pushing on facing, keeps the full signed inertia word
+  for skid thresholds, restarts the balance script at index 4 on facing flips,
+  temporarily uses 10/10 radii during glide/climb terrain checks and restores
+  standing radii for later touch checks. Its idle climb omits the S3K floor-below
+  detach probe. Near-edge/inside-bottom solid contacts use the existing matching
+  rules; multi-sprite boss touch keeps $4D while normal duck touch uses $9C.
+  Wall grabs now test both wall ends and the ROM ledge-fit range; glide floor
+  angles include tile flips, and sliding retains the animation register. Wall grabs
+  store their native X anchor in `x_sub` and detach on displacement or object carry;
+  wall and ledge steps preserve the low position words. Ledge entries use the native
+  six-slot animation holds and same-slot grounding, with bounded rewind checks.
+  Wall-grab suppression and complete rewind route coverage remain open.
+- **Zone mechanics.** Wind tunnels use the $420 first-tunnel minimum, clamp Up
+  movement and clear roll-jump/glide state. Held vines pin the player each pass;
+  propeller launch clears the same state; grounded falling-pillar contact can
+  squash before testing Y velocity. EHZ writes the final two scroll lines.
+  The CNZ boundary sentinel, debug-monitor missing respawn index and signed
+  title-card movement already have bounded/equivalent engine representations.
+- **Checkpoint rings.** Both tiers restore the ring count and extra-life flags
+  saved at checkpoint activation through death reload, special-stage return and
+  checkpoint rewind. New acts clear the bank; stock S2 keeps zero-ring respawn.
+- **Presentation.** Chip-backed title animation, special-stage character/HUD,
+  ring targets, results lettering, ending/continue player and CNZ Knuckles slot
+  pictures are implemented. KiS2's directional title code opens level select
+  with A+Start; its Super sound-test sequence survives new-game initialization.
+  Results headings move independently, including the all-emeralds Super message.
+  Attract demos still need a title-owned gameplay/input/return lifecycle; native
+  debug placement and its cheat remain absent. Level-select extra PLC work and
+  exact VDP sprite masking/debug sprite maps are not modeled. Special-stage
+  perfect-bonus progression and tally sound timing retain shared-owner gaps.
+  Results-mode rewind is absent; message-core snapshots alone do not supply it.
+  The formerly listed ending walk cadence is not a KiS2 gap: its forced
+  Ending_Routine=0 never takes that walk branch.
+- **Super Knuckles.** Chip palettes, sparse colour writes (2/3/5), 16-pass
+  transform freeze, $800/$18/$C0 movement, unchanged $600/$300 jump, seeded ring
+  drain, revert and controller rewind are implemented. KiS2 now accepts a fresh
+  second jump-button edge while another remains held. The ROM demo-mode gate
+  still lacks an engine attract-demo owner. Complete powered-form route and
+  gameplay rewind coverage remains open.
+- **Trace coverage.** The EHZ1 KiS2 fixture exists. The published 36-segment all-emeralds chain fixture
+  has converted-art and chip SS transfer observations; all 36 segments pass
+  v5 validation. The corrected patch launch and chip PLC queue let the first
+  3,180-row EHZ1 segment complete with 91 history-bootstrap differences and one
+  monitor ring-reward timing difference. The return title card now releases
+  after its final locked object pass, and synchronous reloads publish their
+  production load receipt. Native wall anchoring and ledge timing let
+  `seg3_ehz1` and `seg4_ehz1` complete all compared rows with zero errors. The
+  results-driven act advance retains its locked title card and retires the
+  source-loop admission flag before destination gameplay. `seg5_ehz2` now
+  completes all 3,561 rows with zero errors, including its act-entry art gap.
+  Native signed-width wall contact and the live solidity path make `seg6_ehz2`
+  (segment 9) zero-error across all 1,177 rows. Coconuts now retains its native
+  init-only pass; wall jumps preserve the center and restart animation from the
+  ROM's glide/previous-animation writes. `seg7_ehz2` (segment 11) first differs
+  at row 1590, X `$220A` versus `$2206`, with 1,889 comparison errors. The chain
+  crosses the sixth special-stage entry/return and reaches `seg8_ehz2`
+  (segment 13). Independent glide/slide attack admission and the active-glide
+  boss-hit exit now let all 3,222 rows complete: 1,068 remaining errors, first
+  at row 1963's dynamic-art edge. The chain advances into `seg9_cpz1`
+  (segment 14) and compares all 5,574 rows, with 57,715 errors beginning at
+  row 1112 (Y $01CA versus $01B5); the following level-load boundary is not
+  observed (LEVEL mode, BK2 cursor 65,856). This is 7,405 movie frames beyond
+  the previous ownership stop at 58,451. The first
+  three special-stage return gaps still publish art 39 movie frames early;
+  the next three returns publish 37/38/38 frames early, with additional art
+  ledger differences propagated from gameplay. All six exercised SS interior
+  art ledgers have zero errors. The first
+  returned EHZ1 segment completes with one ring-count difference. SS interiors do not
+  compare gameplay, so this does not establish special-stage physics parity.
+  Current evidence is tracked in [the frontier log](trace-frontier-log.md). There are no passing
+  end-to-end trace fixtures for these presentation or powered-form paths.
+
+The [completion plan and coverage matrix](../architecture/plans/2026-09-14-kis2-presentation-super.md)
+records exercised paths and inherited coverage gaps. The
+[trace-readiness follow-up](../architecture/plans/2026-09-14-kis2-trace-readiness.md)
+records the subsequent movement, checkpoint, zone and presentation work.
+
+### Rationale
+
+Every runtime byte must come through the ROM pipeline from a user-supplied
+image. The chip is served only by the lock-on dump, so the patch reads it
+when the dump is present and otherwise stops at the data the S&K half and
+S2 cart provide, recording the rest instead of substituting disassembly
+data.
+
+### Verification
+
+`TestKis2PhysicsProvider`, `TestKis2GamePatchResolution`,
+`TestKis2PlacementOracle` (walks `$DF370` against the catalogue counts),
+`TestKis2HeadlessBoot`, `TestLaunchProfileKis2Roster`.
+

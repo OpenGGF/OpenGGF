@@ -37,6 +37,11 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
     private void updateParticipant(AbstractPlayableSprite p,int i){
         if(participants.flag(i,0)&&invalidHeldState(p)){releaseInvalid(p,i);return;}
         if(!participants.flag(i,0)){
+            // loc_3A9B4 (vertical) and loc_3AC94 (horizontal) reject native
+            // routine >= 4 and Debug_placement_mode before any grab writes.
+            // A hurt player must keep the recoil trajectory, not grab for one
+            // update and then be released by the held-state invalidation path.
+            if (p.isHurt() || p.getDead() || p.isDebugMode()) return;
             int objectY=spawn.y()+(horizontalMode?0:currentLength);int dx=(short)(p.getCentreX()-spawn.x()),dy=(short)(p.getCentreY()-objectY);
             boolean contact=horizontalMode?dx>=-rangePixels&&dx<rangePixels&&dy>=0&&dy<0x18:
                     dx>=-0x10&&dx<0x10&&dy>=0x90&&dy<0xA8;
@@ -89,6 +94,10 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
         if(participants.get(i,2)==0)return;
         int timer=(byte)(participants.get(i,3)-1);participants.set(i,3,timer);if(timer>=0)return;participants.set(i,3,7);
         int remaining=participants.get(i,2),index=4-remaining;
+        // loc_3ABBE clears anim on every timed hand step; loc_3ABE4
+        // selects hanging ($14) only for the last step. These are BYTE
+        // writes and must leave prev_anim unchanged for the next animator.
+        p.setAnimationId(remaining == 1 ? 0x14 : 0);
         int phase=(participants.get(i,5)&4)==0?0:1;int dx=HAND_DELTAS[phase][index];if(participants.get(i,4)!=0)dx=-dx;
         NativePositionOps.addXPosPreserveSubpixel(p,dx);p.setMappingFrame(HAND_FRAMES[phase][index]);if(remaining==2)services().playSfx(Sonic3kSfx.GRAB.id);
         participants.set(i,2,remaining-1);if(participants.get(i,2)==0){participants.set(i,3,0);participants.set(i,5,participants.get(i,5)^4);if((spawn.subtype()&0x40)!=0){int rel=p.getCentreX()-spawn.x(),endpoint=(spawn.renderFlags()&1)!=0?-rangePixels+0x10:rangePixels-0x10;if(rel==endpoint)releaseInvalid(p,i);}int logicalInput=p.getLogicalInputState();if((logicalInput&(AbstractPlayableSprite.INPUT_LEFT|AbstractPlayableSprite.INPUT_RIGHT))!=0)updateHorizontal(p,i);}
@@ -117,5 +126,16 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
         return out.toString();
     }
     @Override public int getPriorityBucket(){return 1;}
-    @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_CHAIN_LINK);if(r!=null&&r.isReady())r.drawFrameIndex(Math.min(14,(currentLength>>4)+(currentLength==0?0:1)),spawn.x(),spawn.y()+currentLength,false,false);}
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        // Obj_FBZChainLink branches directly to loc_3AA5A for negative
+        // subtypes: invisible horizontal grab regions neither initialize
+        // mappings nor call Sprite_OnScreen_Test. The chain is level art there.
+        if (horizontalMode) return;
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_CHAIN_LINK);
+        if (renderer != null && renderer.isReady()) {
+            renderer.drawFrameIndex(Math.min(14, (currentLength >> 4) + (currentLength == 0 ? 0 : 1)),
+                    spawn.x(), spawn.y() + currentLength, false, false);
+        }
+    }
 }

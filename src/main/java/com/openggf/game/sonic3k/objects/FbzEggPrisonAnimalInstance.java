@@ -43,7 +43,7 @@ public final class FbzEggPrisonAnimalInstance extends AbstractObjectInstance
         if (!initialized) { initializeNative(); return; }
         if (!active) {
             if (--waitTimer < 0) active=true;
-            coarseXCull(x,0x280);
+            coarseXCullViewport(x);
             return;
         }
         SubpixelMotion.State motion=new SubpixelMotion.State(x,y,xSub,ySub,xVelocity,yVelocity);
@@ -51,7 +51,7 @@ public final class FbzEggPrisonAnimalInstance extends AbstractObjectInstance
         var floor=ObjectTerrainUtils.checkFloorDist(x,y,8);
         if(floor.distance()<0){y+=floor.distance();yVelocity=savedYVelocity;}
         mappingFrame=(vIntRunCount&8)==0?1:0;
-        coarseXCull(x,0x280);
+        coarseXCullViewport(x);
     }
     @Override public int getX(){return x;} @Override public int getY(){return y;}
     @Override public int getOnScreenHalfWidth(){return 0x20;} @Override public int getOnScreenHalfHeight(){return 0x28;}

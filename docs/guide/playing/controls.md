@@ -122,7 +122,7 @@ five seconds for accepted writes to finish.
 | Key | Action |
 |-----|--------|
 | D | Toggle free-fly debug mode (move camera freely with arrow keys) |
-| C | Teleport to the last checkpoint (furthest 'right') in this act. |
+| C | Reload at the furthest-right checkpoint in this act, initializing destination events without losing a life. |
 
 The `D` mode is the engine's free-fly debug movement capability. It is not Sonic
 2's native `Debug_placement_mode`: ring/item placement and the other level-wide
@@ -168,3 +168,33 @@ are unavailable.
 | F3 | Cycle Special Stage plane visibility debug modes (S2 only) |
 | F4 | Toggle the Special Stage alignment test (S2 only) |
 | F1 | Toggle the Special Stage lag-compensation display (S2 only) |
+
+## Host menu and editor navigation
+
+Host menus repeat held directions after a short delay; confirm and Back remain single
+presses. Prompt names follow the last device: Xbox A/B/Y, PlayStation
+Cross/Circle/Triangle, or South/East/North for unknown controllers.
+
+In the master-title game pane, Confirm opens Browse Games; Up/Down enters the action
+list. Settings and text editors expose full manually scrollable Details with F1 or
+the north controller button. Numeric values use a numeric keypad; Up from a path
+field opens the file browser. Mods requires explicit Apply to save drafts.
+
+The experimental level editor opens its command palette with F1 or the north
+controller button. Directions choose a command, Confirm executes it, and Back
+closes the palette. The palette includes placement, hierarchy/focus, library/filter,
+undo/redo, save/export, playtest and fresh-start commands. While it is open,
+underlying editor input and global playtest/fresh-start shortcuts are suppressed.
+
+## Knuckles in Sonic 2 title and sound-test codes
+
+With Knuckles selected as the Sonic 2 main character and the supported lock-on
+ROM dump available, enter **Up, Up, Up, Down, Down, Down, Left, Right, Left,
+Right** on the KiS2 title, then hold controller **A** and press **Start** to
+open level select. These are controller actions, using your configured bindings.
+
+On the sound-test row, A increments the sound number; B or C plays it. Play
+**1, 6, 7, 7, 7, 2, 1, 6** to enable all seven emeralds for the selected gameplay
+start. Super Knuckles still requires at least 50 rings and a fresh jump-button
+press while airborne. A second jump button can be pressed while the first is held.
+Native ROM debug placement and its code are not implemented.

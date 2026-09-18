@@ -79,6 +79,17 @@ class TestObjectManagerVerticalPlacement {
     }
 
     @Test
+    void negativeWrappedCameraYUsesSixteenBitCoarseBand() {
+        // SOZ2 wraps at $800 with Camera_Y_pos=$FF09: d3=$FE80 is negative, so loc_1B7F2 masks
+        // it to $680 and loc_1BA40 loads the breakable rock at y=$770 (soz_completerun row 43202).
+        ObjectSpawn rock = new ObjectSpawn(0x1EC0, 0x0770, 0x44, 0, 0, false, 0x0770);
+        ObjectSpawn middle = new ObjectSpawn(0x1EC0, 0x0400, 0x44, 0, 0, false, 0x0400);
+
+        assertTrue(ObjectManager.isNonCounterSpawnVerticallyEligible(rock, (short) 0xFF09, 0xFF00, 0x800));
+        assertFalse(ObjectManager.isNonCounterSpawnVerticallyEligible(middle, (short) 0xFF09, 0xFF00, 0x800));
+    }
+
+    @Test
     void s3kCursorLoadsNewXPassEntriesBeforeDeferredYPassEntries() {
         Camera camera = new Camera(SonicConfigurationService.getInstance());
         camera.setMinY((short) 0);

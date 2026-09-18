@@ -7,11 +7,10 @@ import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SolidContact;
-import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -25,7 +24,7 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/0C Flapping Door.asm
  */
 public class Sonic1FlappingDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable {
 
     private static final int FRAME_DURATION = 3;
 
@@ -107,6 +106,14 @@ public class Sonic1FlappingDoorObjectInstance extends AbstractObjectInstance
         animationTimer = 0;
     }
 
+    // Flap_Main never writes obPriority, so the cleared SST byte (0) stands: docs/s1disasm/_incObj/0C LZ Flapping Door.asm:19-29.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(ObjectArtKeys.LZ_FLAPPING_DOOR);
@@ -124,14 +131,7 @@ public class Sonic1FlappingDoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return solidActive;
-    }
-
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // SolidObject handles response; no extra per-contact behavior.
     }
 
     @Override

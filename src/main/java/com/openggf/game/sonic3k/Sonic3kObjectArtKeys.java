@@ -1,6 +1,24 @@
 package com.openggf.game.sonic3k;
 
 public final class Sonic3kObjectArtKeys {
+    public static final String SOZ_END_BOSS = "soz_end_boss";
+    public static final String SOZ_END_BOSS_BODY = "soz_end_boss_body";
+    public static final String SOZ_SPAWNING_SAND_BLOCKS = "soz_spawning_sand_blocks";
+    public static final String SOZ_RISING_SAND_WALL = "soz_rising_sand_wall";
+    public static final String SOZ_SAND_CORK = "soz_sand_cork";
+    public static final String SOZ_DOOR = "soz_door";
+    public static final String SOZ_PUSH_SWITCH = "soz_push_switch";
+    public static final String SOZ_FLOATING_PILLAR = "soz_floating_pillar";
+    public static final String SOZ_SOLID_SPRITES = "soz_solid_sprites";
+    public static final String SOZ_PUSHABLE_ROCK = "soz_pushable_rock";
+    public static final String SOZ_BREAKABLE_SAND_ROCK = "soz_breakable_sand_rock";
+    public static final String SOZ_LIGHT_SWITCH = "soz_light_switch";
+    public static final String SOZ_GHOSTS = "soz_ghosts";
+    public static final String SOZ_GHOST_CAPSULE = "soz_ghost_capsule";
+    public static final String SOZ_SWINGING_PLATFORM = "soz_swinging_platform";
+    public static final String SOZ_RAPEL_WIRE = "soz_rapel_wire";
+    public static final String SOZ_SPRING_VINE = "soz_spring_vine";
+
     public static final String MONITOR = "monitor";
     public static final String SPIKES = "s3k_spikes";
     public static final String AIZ_RIDE_VINE = "aiz_ride_vine";
@@ -52,6 +70,20 @@ public final class Sonic3kObjectArtKeys {
     public static final String HPZ_GRAY_EMERALD = "hpz_gray_emerald";
     public static final String HPZ_SMALL_EMERALDS = "hpz_small_emeralds";
     public static final String HPZ_ENTRY_TELEPORTER = "hpz_entry_teleporter";
+    /** CutsceneKnux_HPZ {@code $44(a0)=0}: Map_Knuckles through PLC_Knuckles. */
+    public static final String HPZ_CUTSCENE_KNUCKLES = "hpz_cutscene_knuckles";
+    /** CutsceneKnux_HPZ {@code $44(a0)=2}: Map_HPZKnucklesGrab. */
+    public static final String HPZ_CUTSCENE_KNUCKLES_GRAB = "hpz_cutscene_knuckles_grab";
+    /** CutsceneKnux_HPZ {@code $44(a0)=4}: Map_SSZKnucklesTired. */
+    public static final String HPZ_CUTSCENE_KNUCKLES_TIRED = "hpz_cutscene_knuckles_tired";
+    /** ObjDat3_6654E: Map_HPZKnuxDizzyStars over ArtKosM_HPZKnuxDizzy. */
+    public static final String HPZ_KNUX_DIZZY_STARS = "hpz_knux_dizzy_stars";
+    /** ObjDat3_664E2: Map_DashDust over ArtTile_HPZKnuxBossDust. */
+    public static final String HPZ_KNUX_BOSS_DUST = "hpz_knux_boss_dust";
+    /** ObjDat3_664FA / ObjDat3_6652A: Map_KnuxFinalBossCrane over ArtKosM_KnuxFinalBossCrane. */
+    public static final String KNUX_FINAL_BOSS_CRANE = "knux_final_boss_crane";
+    /** ObjDat3_6653C: Map_LRZ3Platform over level tiles, palette 2. */
+    public static final String HPZ_COLLAPSE_BLOCK = "hpz_collapse_block";
     public static final String END_SIGN = "EndSign";
     public static final String SIGNPOST_STUB = "SignpostStub";
 
@@ -341,6 +373,9 @@ public final class Sonic3kObjectArtKeys {
     public static final String SKORP = "soz_skorp";
     public static final String SANDWORM = "soz_sandworm";
     public static final String ROCKN = "soz_rockn";
+    public static final String SOZ_ACT1_END_DOOR = "soz_act1_end_door";
+    public static final String SOZ_MINIBOSS = "soz_miniboss";
+    public static final String SOZ_MINIBOSS_DUST = "soz_miniboss_dust";
 
     // LRZ badniks
     public static final String FIREWORM = "lrz_fireworm";
@@ -357,6 +392,10 @@ public final class Sonic3kObjectArtKeys {
 
     // DDZ badniks
     public static final String DDZ_EGG_ROBO = "ddz_egg_robo";
+    /** {@code Map_DDZMissileAsteroid} over {@code ArtKosM_DDZMisc}. */
+    public static final String DDZ_MISC = "ddz_misc";
+    /** {@code Map_BossMasterEmerald} over {@code ArtKosM_BossMasterEmerald}. */
+    public static final String DDZ_MASTER_EMERALD = "ddz_master_emerald";
 
     // StillSprite per-zone art sheet keys (grouped by artTileBase)
     public static final String STILL_AIZ_MISC2 = "still_aiz_misc2";       // base 0x2E9

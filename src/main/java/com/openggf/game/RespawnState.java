@@ -22,7 +22,7 @@ public interface RespawnState {
 
     /**
      * Restore state after player death.
-     * Restores player position, camera position, and clears rings.
+     * Restores player position, camera position, and the game-specific ring state.
      *
      * @param player The player sprite to restore
      * @param camera The camera to restore

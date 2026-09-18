@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -72,6 +73,14 @@ public class EHZWaterfallObjectInstance extends AbstractObjectInstance implement
                 mappingFrame = baseFrame;
             }
         }
+    }
+
+    // Obj49_Init move.b #0,priority(a0): docs/s2disasm/s2.asm:46433.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

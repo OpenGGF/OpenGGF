@@ -4,6 +4,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectArtKeys;
@@ -148,6 +149,14 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
                 animFrameIndex++;
             }
         }
+    }
+
+    // Elec_Main never writes obPriority, so the cleared SST byte (0) stands: docs/s1disasm/_incObj/6E SBZ Electrocuter.asm:18-31.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

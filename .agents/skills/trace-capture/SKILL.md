@@ -14,7 +14,7 @@ Have the relevant user-supplied ROM discoverable by `RomManager`, `ffmpeg` on
 example. The trace catalog defaults to `src/test/resources/traces`.
 
 ```bash
-mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceCaptureTool" \
+python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.tools.TraceCaptureTool" \
   "-Dexec.args=--trace <id|name|dir> --out-dir target/trace-videos"
 ```
 
@@ -28,7 +28,12 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 | `--scale <n>` | `CAPTURE_SCALE=4` | Integer nearest-neighbor scaling of 320×224 |
 | `--fps <n>` | `CAPTURE_FPS=60` | Capture/engine cadence; a region-pinned rate such as PAL 50 takes precedence |
 | `--codec <name>` | `CAPTURE_CODEC=ffv1` | Video codec; changing it may change losslessness |
+| `--clip frames:START:END` | None | Fast-forward from the original start, then capture the inclusive zero-based trace-row window, retaining elapsed-VBlank title/lag frames; explicit windows do not add `--tail-frames` |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS=true` | Desync ghost visibility |
+
+A full-run capture presents no frame on trace lag rows (`lag_counter` != 0): MKV frame
+n is row n only until the first lag row, then row minus the lag rows before it (measured
+on `soz_completerun`, 2026-09-17).
 
 HUD visibility uses config rather than CLI flags:
 `TRACE_SHOW_GAME_HUD=true`, `TRACE_SHOW_DEBUG_HUD=false`; enabled debug panels

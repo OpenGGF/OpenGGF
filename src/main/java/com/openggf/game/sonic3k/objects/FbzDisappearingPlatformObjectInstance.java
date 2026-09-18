@@ -27,7 +27,12 @@ public final class FbzDisappearingPlatformObjectInstance
   }
   public void update(int vIntRunCount, PlayableEntity p) {
     if (state == 0) {
-      if (((vIntRunCount + offset) & mask) != 0) {
+      // loc_3BB08 reads Level_frame_counter, not the V_int_run_count
+      // delivered to object updates. Fade/lag history can separate those clocks.
+      ObjectServices objectServices = tryServices();
+      int levelFrameCounter = objectServices != null && objectServices.levelManager() != null
+          ? objectServices.levelManager().getFrameCounter() : vIntRunCount;
+      if (((levelFrameCounter + offset) & mask) != 0) {
         coarseCull(spawn.x());
         return;
       }
@@ -58,7 +63,7 @@ public final class FbzDisappearingPlatformObjectInstance
           this, DETACH);
     coarseCull(spawn.x());
   }
-  private void coarseCull(int anchor) { coarseXCull(anchor, 0x280); }
+  private void coarseCull(int anchor) { coarseXCullViewport(anchor); }
   private void detachRider(PlayableEntity player) {
     int slot = riders.slot(player);
     if (!riders.flag(slot, 0))
@@ -86,13 +91,29 @@ public final class FbzDisappearingPlatformObjectInstance
     return new SolidObjectParams(0x1B, 0x11, 0x11);
   }
   public boolean isSolidFor(PlayableEntity p) { return frame == 0; }
+  @Override
+  public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
+    // loc_3BB6E calls SolidObjectTop: loc_1E45A accepts d0 in [-$10,-1],
+    // rejecting zero before the first position or riding-state write.
+    return true;
+  }
+  public boolean isTopSolidOnly() { return true; }
+  public boolean usesStickyContactBuffer() { return false; }
+  public boolean usesPlatformObjectLandingSnap() {
+    // loc_3BB6E -> loc_1E45A writes Y using the entry y_radius before
+    // Player_TouchFloor restores default radii. If Status_Roll was clear,
+    // TouchFloor does not shift Y; a second snap with the new radius is wrong.
+    return false;
+  }
   public SolidRoutineProfile getSolidRoutineProfile() {
-    return SolidRoutineProfile.topSolid(false);
+    return SolidRoutineProfile.fromProvider(this);
   }
   public void appendRenderCommands(List<GLCommand> c) {
     PatternSpriteRenderer r =
         getRenderer(Sonic3kObjectArtKeys.FBZ_DISAPPEARING_PLATFORM);
     if (r != null && r.isReady())
-      r.drawFrameIndex(frame, spawn.x(), spawn.y(), false, false);
+      // Obj_FBZDisappearingPlatform preserves the placement's render flip bits.
+      r.drawFrameIndex(frame, spawn.x(), spawn.y(),
+          (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
   }
 }

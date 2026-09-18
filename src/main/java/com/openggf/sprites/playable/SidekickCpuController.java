@@ -51,9 +51,6 @@ public class SidekickCpuController {
     private static final int JUMP_DISTANCE_TRIGGER = 64;
     private static final int JUMP_HEIGHT_THRESHOLD = 32;
     private static final int PUSH_STATUS_GRACE_FRAMES = 16;
-    private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE =
-            PUSH_STATUS_GRACE_FRAMES - 4;
-    private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE = 7;
     private static final int RIDING_OBJECT_PUSH_BRIDGE_MIN_GRACE =
             PUSH_STATUS_GRACE_FRAMES - 2;
     private static final int OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE = 4;
@@ -678,6 +675,25 @@ public class SidekickCpuController {
     }
 
     private Integer currentS3kInteractWord() {
+        int slot = sidekick.getInteractSlotIndex();
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        if (slot >= 0 && levelManager != null && levelManager.getObjectManager() != null) {
+            // sub_13EFC dereferences interact(a0) on every comparison/refresh.
+            // The old Java owner may have unloaded and its SST may now contain
+            // a different object with the same code-pointer high word.
+            for (ObjectInstance occupant : levelManager.getObjectManager().getActiveObjects()) {
+                if (occupant instanceof com.openggf.level.objects.AbstractObjectInstance object
+                        && callObject(occupant, object::getSlotIndex) == slot
+                        && !callObject(occupant, occupant::isDestroyed)) {
+                    return occupant instanceof RomObjectCodePointerProvider provider
+                            ? callObject(occupant, provider::romObjectCodePointerHighWord) & 0xFFFF
+                            : null; // A live provider-less SST is unknown, never a freed slot.
+                }
+            }
+            return 0; // Delete_Referenced_Sprite clears word zero of an empty SST.
+        }
+        // Synthetic/isolated contacts without a managed SST retain their existing
+        // owner projection. Production assigned slots always take the live read above.
         ObjectInstance instance = sidekick.getLatchedSolidObjectInstance();
         if (instance == null || isLatchedRideSlotFreed(instance)) {
             return null;
@@ -771,70 +787,17 @@ public class SidekickCpuController {
     }
 
     public String formatLatestNormalStepDiagnostics() {
-        if (latestNormalStepDiagnostics == null) {
-            return "eng-tails-cpu none";
-        }
-        NormalStepDiagnostics d = latestNormalStepDiagnostics;
-        return String.format(
-                "eng-tails-cpu f=%d state=%s branch=%s hist=%d/%02d in=%04X stat=%02X push=%02X "
-                        + "pre=obj%02X st%02X x=%04X.%04X xv%04X yv%04X gv%04X a=%02X "
-                        + "gen=%04X jp=%s postCpu=obj%02X st%02X xv%04X yv%04X gv%04X "
-                        + "x=%04X.%04X a=%02X nudge=%d postPhys=%s obj%02X st%02X "
-                        + "xv%04X yv%04X gv%04X x=%04X.%04X a=%02X dx=%04X dy=%04X skip=%s grace=%d",
-                d.frameCounter(),
-                d.state(),
-                d.followBranch(),
-                d.followDelayFrames(),
-                d.followHistorySlot(),
-                d.recordedInput() & 0xFFFF,
-                d.recordedStatus() & 0xFF,
-                d.pushBypassStatus() & 0xFF,
-                d.preObjectControl() & 0xFF,
-                d.preStatus() & 0xFF,
-                d.preCpuX() & 0xFFFF,
-                d.preCpuXSubpixel() & 0xFFFF,
-                d.preXVel() & 0xFFFF,
-                d.preYVel() & 0xFFFF,
-                d.preGroundVel() & 0xFFFF,
-                d.preAngle() & 0xFF,
-                d.generatedInput() & 0xFFFF,
-                d.inputJumpPress(),
-                d.postCpuObjectControl() & 0xFF,
-                d.postCpuStatus() & 0xFF,
-                d.postCpuXVel() & 0xFFFF,
-                d.postCpuYVel() & 0xFFFF,
-                d.postCpuGroundVel() & 0xFFFF,
-                d.postCpuX() & 0xFFFF,
-                d.postCpuXSubpixel() & 0xFFFF,
-                d.postCpuAngle() & 0xFF,
-                d.appliedFollowNudge(),
-                d.postPhysicsRecorded() ? "seen" : "missing",
-                d.postPhysicsObjectControl() & 0xFF,
-                d.postPhysicsStatus() & 0xFF,
-                d.postPhysicsXVel() & 0xFFFF,
-                d.postPhysicsYVel() & 0xFFFF,
-                d.postPhysicsGroundVel() & 0xFFFF,
-                d.postPhysicsX() & 0xFFFF,
-                d.postPhysicsXSubpixel() & 0xFFFF,
-                d.postPhysicsAngle() & 0xFF,
-                d.dx() & 0xFFFF,
-                d.dy() & 0xFFFF,
-                d.skipFollowSteering(),
-                normalPushingGraceFrames);
+        return SidekickNormalStepDiagnosticRecorder.format(
+                latestNormalStepDiagnostics, normalPushingGraceFrames);
     }
 
     public void recordDiagnosticPostPhysics() {
         if (latestNormalStepDiagnostics != null
                 && latestNormalStepDiagnostics.frameCounter() == frameCounter) {
-            latestNormalStepDiagnostics = latestNormalStepDiagnostics.withPostPhysics(
-                    diagnosticStatusByte(),
-                    diagnosticObjectControlByte(),
-                    sidekick.getXSpeed(),
-                    sidekick.getYSpeed(),
-                    sidekick.getGSpeed(),
-                    sidekick.getCentreX(),
-                    (short) sidekick.getXSubpixelRaw(),
-                    sidekick.getAngle());
+            latestNormalStepDiagnostics = SidekickNormalStepDiagnosticRecorder.recordPostPhysics(
+                    latestNormalStepDiagnostics, frameCounter, diagnosticStatusByte(), diagnosticObjectControlByte(),
+                    sidekick.getXSpeed(), sidekick.getYSpeed(), sidekick.getGSpeed(), sidekick.getCentreX(),
+                    (short) sidekick.getXSubpixelRaw(), sidekick.getAngle());
         }
         applyPendingNativeEndingPoseAfterPhysics();
     }
@@ -871,47 +834,10 @@ public class SidekickCpuController {
     }
 
     private NormalStepDiagnostics beginNormalStepDiagnostics(String branch) {
-        latestNormalStepDiagnostics = new NormalStepDiagnostics(
-                frameCounter,
-                state,
-                branch,
-                diagnosticStatusByte(),
-                diagnosticObjectControlByte(),
-                sidekick.getXSpeed(),
-                sidekick.getYSpeed(),
-                sidekick.getGSpeed(),
-                sidekick.getCentreX(),
-                (short) sidekick.getXSubpixelRaw(),
-                sidekick.getAngle(),
-                -1,
-                -1,
-                0,
-                0,
-                0,
-                -1,
-                -1,
-                0,
-                0,
-                diagnosticStatusByte(),
-                diagnosticObjectControlByte(),
-                sidekick.getXSpeed(),
-                sidekick.getYSpeed(),
-                sidekick.getGSpeed(),
-                sidekick.getCentreX(),
-                (short) sidekick.getXSubpixelRaw(),
-                sidekick.getAngle(),
-                0,
-                false,
-                0,
-                0,
-                (short) 0,
-                (short) 0,
-                (short) 0,
-                (short) 0,
-                (short) 0,
-                (byte) 0,
-                false,
-                false);
+        latestNormalStepDiagnostics = SidekickNormalStepDiagnosticRecorder.begin(
+                frameCounter, state, branch, diagnosticStatusByte(), diagnosticObjectControlByte(),
+                sidekick.getXSpeed(), sidekick.getYSpeed(), sidekick.getGSpeed(), sidekick.getCentreX(),
+                (short) sidekick.getXSubpixelRaw(), sidekick.getAngle());
         return latestNormalStepDiagnostics;
     }
 
@@ -964,7 +890,8 @@ public class SidekickCpuController {
                                                       int appliedFollowNudge) {
         diagnosticCtrl2HeldLatch = generatedInput & 0xFF;
         diagnosticCtrl2PressedLatch = generatedPressedInput & 0xFF;
-        latestNormalStepDiagnostics = base.withCpuResult(
+        latestNormalStepDiagnostics = SidekickNormalStepDiagnosticRecorder.recordCpuResult(
+                base,
                 branch,
                 followDelayFrames,
                 followHistorySlot,
@@ -1203,6 +1130,16 @@ public class SidekickCpuController {
             return;
         }
 
+        if (preservesAssembledSpawnState()) {
+            // The game-owned routine-zero branch skips placement, kinematic,
+            // and object-control writes. Initial Process_Sprites already owns
+            // player placement and history; this branch only enters normal CPU
+            // follow and clears its flight timer, without same-tick steering.
+            state = State.NORMAL;
+            flightTimer = 0;
+            return;
+        }
+
         boolean establishedFollowerEntry = isEstablishedFollowerEntry();
         if (establishedFollowerEntry) {
             // ROM only runs SpawnLevelMainSprites' Tails placement / kinematic
@@ -1245,6 +1182,18 @@ public class SidekickCpuController {
         }
 
         updateNormal();
+    }
+
+    private boolean preservesAssembledSpawnState() {
+        GameModule module = sidekick.currentGameModule();
+        LevelManager level = sidekick.currentLevelManager();
+        if (module == null || level == null) return false;
+        var policy = module.getGameService(
+                com.openggf.game.internal.SidekickCpuInitializationPolicy.class);
+        if (policy == null) return false;
+        var checkpoint = level.getCheckpointState();
+        return policy.preservesSpawnState(level.getCurrentZone(), level.getCurrentAct(),
+                checkpoint == null ? 0 : checkpoint.getStarPostActivationMark());
     }
 
     private void initializeLevelStartSidekickPlacement() {
@@ -2384,9 +2333,6 @@ public class SidekickCpuController {
                         && Math.abs(sidekick.getGSpeed()) >= LOCAL_BELOW_TARGET_REBOUND_NUDGE_MIN_GSPEED
                         && dy >= 0
                         && localBelowTargetFacingIntoFollowSide;
-        boolean localBelowTargetBridgeWindow =
-                normalPushingGraceFrames >= LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE
-                        && normalPushingGraceFrames <= LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE;
         // The local push-grace nudge suppression is an object-order bridge: it
         // exists for zones where solid-object processing clears Tails' push bit a
         // frame early/late relative to ROM's CPU slot, so the engine must not run
@@ -2465,23 +2411,9 @@ public class SidekickCpuController {
             // immediately (sonic3k.asm:26696-26729,28330-28401).
             suppressNextAirbornePushFollowSteering = false;
         }
-        // Engine-side push grace only skips follow steering when it models a
-        // ROM-visible current push bit at Tails' CPU slot. Object-order grace
-        // covers provider-approved SolidObjectFull timing; the local
-        // below-target bridge covers the same side-contact continuity only in
-        // the fresh local push window, while Tails is still facing into the
-        // delayed follow side. Once that early continuity window is gone, or
-        // the facing bit flips away from the contact, ROM current Status_Push
-        // is clear and Ctrl_2 falls through FollowLeft/FollowRight
-        // (sonic3k.asm:26702-26729).
-        boolean localBelowTargetGrace =
-                localGracePushBypass
-                        && !supportGraceKeepsFollowSteering
-                        && !freshBelowTargetReboundGrace
-                        && localBelowTargetBridgeWindow
-                        && !delayedInputIntoFollowSide
-                        && dy >= 0
-                        && localBelowTargetFacingIntoFollowSide;
+        // loc_13DD0 tests the current Status_Push bit, not elapsed time since
+        // an earlier push. A cleared bit must reach follow steering even when
+        // the delayed target remains locally below the player.
         boolean objectOrderGrace = localGracePushBypass
                 && normalPushingGraceFrames >= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE
                 && objectOrderFollowSteeringContext
@@ -2498,12 +2430,10 @@ public class SidekickCpuController {
                         && sidekickRules.sidekickFollowNudgeBlockedByObjectControlBit0()
                         && sidekick.isObjectControlSuppressesMovement();
         boolean skipFollowSteering = currentPushBypass
-                || localBelowTargetGrace
                 || ridingObjectPushGrace
                 || interactObjectPushGrace
                 || (objectOrderGrace && !supportGraceKeepsFollowSteering);
         String followBranch = currentPushBypass ? "current_push_bypass"
-                : localBelowTargetGrace ? "grace_push_bypass"
                 : ridingObjectPushGrace ? "riding_push_grace"
                 : interactObjectPushGrace ? "interact_push_grace"
                 : (objectOrderGrace && !supportGraceKeepsFollowSteering) ? "grace_push_bypass"
@@ -3074,6 +3004,9 @@ public class SidekickCpuController {
     }
 
     private boolean hasReleasedLatchedSolidObject() {
+        if (sidekick.isLatchedSolidObjectReleased()) {
+            return true;
+        }
         ObjectInstance latched = sidekick.getLatchedSolidObjectInstance();
         if (latched != null) {
             return !hasLiveRidingObject(latched);
@@ -4031,6 +3964,7 @@ public class SidekickCpuController {
         sidekick.setJumping(false);
         sidekick.setPushing(false);
         sidekick.setOnObject(false);
+        clearRecoveryGroundingCache();
         sidekick.setMoveLockTimer(0);
         clearRespawnAnimationState();
         // loc_13B50 clears the complete tumble selector before installing the
@@ -4040,7 +3974,7 @@ public class SidekickCpuController {
         sidekick.setFlipType(0);
         sidekick.setFlipsRemaining(0);
         sidekick.setFlipSpeed(0);
-        sidekick.setForcedAnimationId(flyAnimId);
+        publishRecoveryFlightAnimation(flyAnimId);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         // ROM loc_13B50 (sonic3k.asm:26502-26508) writes double_jump_flag=0,
@@ -4118,7 +4052,7 @@ public class SidekickCpuController {
                 sidekick.setAir(true);
                 sidekick.setDoubleJumpFlag(1);
                 sidekick.setDoubleJumpProperty((byte) FLIGHT_FUEL);
-                sidekick.setForcedAnimationId(flyAnimId);
+                publishRecoveryFlightAnimation(flyAnimId);
                 state = State.CATCH_UP_FLIGHT;
                 return;
             }
@@ -4137,8 +4071,7 @@ public class SidekickCpuController {
             // family from live Status_Underwater rather than retaining the
             // entry-time Fly byte (sonic3k.asm:26551-26555,27646-27717).
             int recoveryAnimation = resolveRecoveryFlightAnimation();
-            sidekick.setAnimationId(recoveryAnimation);
-            sidekick.setForcedAnimationId(recoveryAnimation);
+            publishRecoveryFlightAnimation(recoveryAnimation);
         }
 
         // 3. Target = Sonic's 16-frame-delayed position. ROM
@@ -4236,8 +4169,21 @@ public class SidekickCpuController {
                 // (sonic3k.asm:26458-26472,26631-26648).
                 sidekick.setAnimationId(0);
             }
+            // loc_13CD2 masks status to underwater then sets in-air. Preserve
+            // radii and the native interact pointer; these are not TouchFloor.
+            // S2 loc_1BC68 clears these same bits with literal status=2. Its
+            // additional underwater clear remains an inherited separate gap.
+            sidekick.clearRollingFlagPreserveRadii();
+            sidekick.setPushing(false);
+            sidekick.setOnObject(false);
+            clearRecoveryGroundingCache();
             sidekick.setAir(true);
             sidekick.setDirection(Direction.RIGHT);
+            // S3K loc_13D34 and S2 loc_1BC68 copy the live leader's
+            // collision plane and art priority when recovery returns control.
+            sidekick.setTopSolidBit(leader.getTopSolidBit());
+            sidekick.setLrbSolidBit(leader.getLrbSolidBit());
+            sidekick.setHighPriority(leader.isHighPriority());
             // ROM loc_1384A (sonic3k.asm:26213): while object_control bit 0 is
             // set (FLIGHT_AUTO_RECOVERY keeps it high), double_jump_flag is
             // cleared every frame by the dispatcher. On the NORMAL transition
@@ -4270,6 +4216,29 @@ public class SidekickCpuController {
         // (sonic3k.asm:26646-26652).
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setObjectMappingFrameControl(false);
+    }
+
+    /** Native recovery status resets invalidate engine support, not object SST bits. */
+    private void clearRecoveryGroundingCache() {
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        if (levelManager != null && levelManager.getObjectManager() != null) {
+            // A prior support can survive while object_control skips solid cleanup.
+            // Keeping that cache after Status_OnObj is cleared makes pre-movement
+            // recovery incorrectly ground the player before its first air dispatch.
+            // clearRidingObject deliberately preserves object-owned standing bits
+            // and the player's stale native interact slot for their native owners.
+            levelManager.getObjectManager().clearRidingObject(sidekick);
+        }
+    }
+
+    private void publishRecoveryFlightAnimation(int animationId) {
+        sidekick.setAnimationId(animationId);
+        // S3K Tails_Set_Flying_Animation writes anim only at its CPU call site.
+        // Later object slots can replace it (wire-cage capture or spring launch),
+        // and off-screen loc_13C50 skips the next animation write altogether.
+        // The native catch-up path already suppresses movement; its animation
+        // profile preserves this byte without a persistent forced owner.
+        sidekick.setForcedAnimationId(usesS3kCatchUpMarker() ? -1 : animationId);
     }
 
     private int resolveRecoveryFlightAnimation() {
@@ -4581,15 +4550,12 @@ public class SidekickCpuController {
      * {@code -1}) maps back to ROM's zeroed object id, so the compare sees the
      * same id change ROM sees after {@code DeleteObject} clears the slot.
      *
-     * <p>S3K's {@code sub_13EFC} (docs/skdisasm/sonic3k.asm:26816-26833) compares
-     * the routine-pointer high word, which is identical for virtually all
-     * gameplay objects, so its only practical despawn trigger is a slot freed by
-     * {@code Delete_Referenced_Sprite} (id word → 0, sonic3k.asm:36116-36124).
-     * That stays modelled by the riding-instance-loss path, gated by
-     * {@link ObjectInteractionRules#sidekickDespawnUsesRidingInstanceLoss()} (S3K
-     * true). The S2 slot-id-mismatch path is gated by
-     * {@link ObjectInteractionRules#sidekickDespawnUsesObjectIdMismatch()} (S2 true,
-     * S3K false), so the two games never both fire.
+     * <p>S3K {@code sub_13EFC} (sonic3k.asm:26816-26843) instead compares
+     * the live slot's code-pointer high word with {@code Tails_CPU_interact}.
+     * Same-word replacements survive; changed words and a newly emptied slot
+     * can despawn. The released-instance fallback is retained only for contacts
+     * without a resolvable managed SST. Unknown live providers are not treated
+     * as empty slots. S2 continues to use its byte-id comparison independently.
      */
     private boolean checkDespawn() {
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
@@ -4647,15 +4613,18 @@ public class SidekickCpuController {
         }
 
         if (sidekick.isOnObject()) {
-            // S3K: sub_13EFC's only practical trigger is a slot freed by
-            // Delete_Referenced_Sprite (id word zeroed -> mismatch -> despawn).
-            // Tracked via the latched-instance reference because S3K's
-            // latchedSolidObjectId is sticky across destruction.
-            if (useRidingInstanceLossDespawn) {
-                ObjectInstance ridingInstance = sidekick.getLatchedSolidObjectInstance();
+            // S3K sub_13EFC compares live code words, including zero after
+            // Delete_Referenced_Sprite and changed words after slot reuse.
+            // Use the captured release marker only when no live SST word can
+            // be resolved (legacy/synthetic contacts). A recycled occupied slot
+            // is not freed merely because the old Java owner was released.
+            LevelManager contactLevel = sidekick.currentLevelManagerIfAvailable();
+            boolean managedSlotReadable = sidekick.getInteractSlotIndex() >= 0
+                    && contactLevel != null && contactLevel.getObjectManager() != null;
+            if (useRidingInstanceLossDespawn && !managedSlotReadable
+                    && currentS3kInteractWord() == null && rawLiveSlotId < 0) {
                 if ((sidekick.getLatchedSolidObjectId() & 0xFF) != 0
-                        && ridingInstance != null
-                        && isLatchedRideSlotFreed(ridingInstance)) {
+                        && sidekick.isLatchedSolidObjectReleased()) {
                     triggerDespawn(DespawnCause.FREED_INTERACT_SLOT);
                     return true;
                 }
@@ -4693,7 +4662,8 @@ public class SidekickCpuController {
                 Integer currentWord = currentS3kInteractWord();
                 if (currentWord != null
                         && (currentWord & 0xFFFF) != (diagnosticS3kInteractWord & 0xFFFF)) {
-                    triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                    triggerDespawn(currentWord == 0 ? DespawnCause.FREED_INTERACT_SLOT
+                            : DespawnCause.OBJECT_ID_MISMATCH);
                     return true;
                 }
             }
@@ -5052,11 +5022,10 @@ public class SidekickCpuController {
         sidekick.setMoveLockTimer(0);
         clearRespawnAnimationState();
         int deathAnimationId = resolveDeathAnimationId();
-        // Kill_Character publishes anim=Death in the kill frame. Keep the
-        // forced owner for subsequent dead-fall updates, but do not defer the
-        // ROM-visible animation byte until the next animation phase.
+        // Kill_Character publishes Death once. The dead routine does not
+        // reclaim anim from a later solid push-release word (loc_1E0A2).
         sidekick.setAnimationId(deathAnimationId);
-        sidekick.setForcedAnimationId(deathAnimationId);
+        sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(true);
         // NOT object_controlled - DEAD_FALLING is its own dispatch state
         // so updateDeadFalling fires on the next tick regardless.

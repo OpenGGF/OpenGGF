@@ -184,7 +184,11 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
         int target = side == 0 ? -0x40 : 0x40;
         int step = side == 0 ? 2 : -2;
         angle = FbzMinibossArmChild.signedByte(angle + step);
-        if (angle == target) {
+        // sub_6F830 uses unsigned byte bounds, including an odd-angle overshoot.
+        // Equality alone can miss the target forever with the two-unit step.
+        boolean reached = side == 0 ? (angle & 0xFF) >= 0xC0 : (angle & 0xFF) <= 0x40;
+        if (reached) {
+            angle = target;
             stateOrdinal = State.NORMAL_WAIT_PARENT.ordinal();
             if (isTerminal()) arm.setControlBit(FbzMinibossArmChild.ARM_TERMINAL_EDGE);
         }
@@ -211,7 +215,8 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
             stateOrdinal = State.RECYCLE_WAIT.ordinal();
             angleStep = FbzMinibossArmChild.signedByte(angleStep + 2);
             if (isTerminal()) {
-                arm.setControlBit(FbzMinibossArmChild.ARM_PATROL_READY);
+                // sub_6F85A follows $44 -> arm -> parent3 -> root. Arm
+                // readiness belongs to the later loc_6F64E recycle tail.
                 boss.setRootBit(FbzMinibossInstance.ROOT_ARM_RETURNED);
                 boss.publishScriptedTerminalImpact();
             }
@@ -229,14 +234,20 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
         int target = side == 0 ? -0x60 : 0x60;
         int step = side == 0 ? 2 : -2;
         angle = FbzMinibossArmChild.signedByte(angle + step);
-        if (angle == target && isTerminal()) arm.setControlBit(FbzMinibossArmChild.ARM_PATROL_READY);
+        // sub_6F8C8 clamps every link; only the terminal publishes readiness.
+        if (side == 0 ? (angle & 0xFF) >= 0xA0 : (angle & 0xFF) <= 0x60) {
+            angle = target;
+            if (isTerminal()) arm.setControlBit(FbzMinibossArmChild.ARM_PATROL_READY);
+        }
         circularMove();
     }
 
     private void updateOutwardAlign() {
         int step = side == 0 ? -2 : 2;
         angle = FbzMinibossArmChild.signedByte(angle + step);
-        if ((angle & 0xFF) == 0x80) {
+        // sub_6F8F2: left accepts equality, right requires a strict crossing.
+        if (side == 0 ? (angle & 0xFF) <= 0x80 : (angle & 0xFF) > 0x80) {
+            angle = -0x80;
             stateOrdinal = State.OUTWARD_WAIT_PARENT.ordinal();
             if (isTerminal()) arm.setControlBit(FbzMinibossArmChild.ARM_TERMINAL_EDGE);
         }
@@ -295,15 +306,18 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
 
     private void circularMove() {
         Object parent = previous;
-        int parentX = parent instanceof FbzMinibossArmChild a ? a.getX() : ((FbzMinibossChainLink) parent).getX();
-        int parentY = parent instanceof FbzMinibossArmChild a ? a.getY() : ((FbzMinibossChainLink) parent).getY();
+        int parentXFixed = parent instanceof FbzMinibossArmChild a
+                ? a.nativeXFixed() : ((FbzMinibossChainLink) parent).xFixed;
+        int parentYFixed = parent instanceof FbzMinibossArmChild a
+                ? a.nativeYFixed() : ((FbzMinibossChainLink) parent).yFixed;
         int amplitude = isTerminal() ? 32 : 16;
-        // MoveSprite_CircularSimple maps the returned sine word to X and the
-        // cosine word to Y (d0/d1), rather than the conventional screen axes.
-        x = parentX + ((TrigLookupTable.sinHex(angle & 0xFF) * amplitude) >> 8);
-        y = parentY + ((TrigLookupTable.cosHex(angle & 0xFF) * amplitude) >> 8);
-        xFixed = x << 8;
-        yFixed = y << 8;
+        // MoveSprite_CircularSimple shifts the sine/cosine LONGs, then adds
+        // the parent's full position LONG. Keep the fractions through every
+        // link; rounding each parent word accumulates a visible chain error.
+        xFixed = parentXFixed + TrigLookupTable.sinHex(angle & 0xFF) * amplitude;
+        yFixed = parentYFixed + TrigLookupTable.cosHex(angle & 0xFF) * amplitude;
+        x = xFixed >> 8;
+        y = yFixed >> 8;
     }
 
     private void interpolateBetweenArmAndTerminal() {
@@ -312,8 +326,8 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
         int factor = linkIndex + 1;
         x = arm.getX() + ((end.getX() - arm.getX()) / 5) * factor;
         y = arm.getY() + ((end.getY() - arm.getY()) / 5) * factor;
-        xFixed = x << 8;
-        yFixed = y << 8;
+        xFixed = (x << 8) | (xFixed & 0xFF);
+        yFixed = (y << 8) | (yFixed & 0xFF);
     }
 
     private void refreshFromParent() {

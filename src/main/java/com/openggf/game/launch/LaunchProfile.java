@@ -207,8 +207,14 @@ public record LaunchProfile(
             case DEBUG_TOOLS -> new LaunchProfile(rewind, crossGameSource, !debugTools, aspect, mainCharacter, sidekick);
             case WIDESCREEN -> new LaunchProfile(rewind, crossGameSource, debugTools,
                     cycle(List.of(ASPECT_VALUES), aspect, forward), mainCharacter, sidekick);
-            case MAIN_CHARACTER -> new LaunchProfile(rewind, crossGameSource, debugTools, aspect,
-                    cycle(mainCharacterValues(entry, patchCharacters), mainCharacter, forward), sidekick);
+            case MAIN_CHARACTER -> {
+                String nextMain = cycle(mainCharacterValues(entry, patchCharacters), mainCharacter, forward);
+                // A patch-backed main (Knuckles in Sonic 2) ships alone: entering it
+                // selects the faithful roster; the sidekick row stays editable.
+                String nextSidekick = patchCharacters.contains(nextMain)
+                        && !patchCharacters.contains(mainCharacter) ? NONE : sidekick;
+                yield new LaunchProfile(rewind, crossGameSource, debugTools, aspect, nextMain, nextSidekick);
+            }
             case SIDEKICK -> new LaunchProfile(rewind, crossGameSource, debugTools, aspect, mainCharacter,
                     cycle(sidekickValues(entry), sidekick, forward));
         };

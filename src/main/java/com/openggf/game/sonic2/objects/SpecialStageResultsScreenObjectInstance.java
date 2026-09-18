@@ -141,6 +141,10 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private int totalFrames = 0;
     private int slideProgress = 0;
     private boolean complete = false;
+    private Sonic2SpecialStageDataLoader presentationData;
+    private SplitNameResultsMessages messagePresentation;
+    private boolean presentationResolved;
+
     /** True once Obj6F_Init has observed an empty PLC queue. */
     private boolean plcReadinessPassed;
 
@@ -266,7 +270,18 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
      * 4. Special stage results art - from SS DataLoader -> VRAM $590-$6C9
      * 5. HUD text (SCORE/TIME/RING) - from ArtNem_HUD -> VRAM $6CA-$700
      */
+    /** Bind the session presentation once, independently of lazy graphics loading. */
+    private void resolvePresentation() {
+        if (presentationResolved) return;
+        Sonic2SpecialStageManager manager = services().gameService(Sonic2SpecialStageManager.class);
+        presentationData = manager == null ? null : manager.getDataLoader();
+        if (presentationData != null)
+            messagePresentation = presentationData.createResultsMessages(gotEmerald, totalEmeraldCount >= 7);
+        presentationResolved = true;
+    }
+
     private void loadArt() {
+        resolvePresentation();
         try {
             var romManager = services().romManager();
             if (!romManager.isRomAvailable()) {
@@ -293,12 +308,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
             // Load special stage results art from DataLoader
             Pattern[] resultsArtPatterns = null;
-            Sonic2SpecialStageManager manager = services().gameService(Sonic2SpecialStageManager.class);
-            if (manager != null) {
-                Sonic2SpecialStageDataLoader dataLoader = manager.getDataLoader();
-                if (dataLoader != null) {
-                    resultsArtPatterns = dataLoader.getResultsArtPatterns();
-                }
+            if (presentationData != null) {
+                resultsArtPatterns = presentationData.getResultsArtPatterns();
             }
             LOGGER.fine("Loaded " + (resultsArtPatterns != null ? resultsArtPatterns.length : 0) + " results art patterns");
 
@@ -360,6 +371,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             copyPatterns(hudPatterns, hudOffset);
             LOGGER.fine("Copied " + hudPatterns.length + " HUD patterns to index " + hudOffset + " (0x" + Integer.toHexString(hudOffset) + ")");
 
+            if (presentationData != null) {
+                presentationData.patchResultsPatterns(combinedPatterns, VRAM_BASE, titleCard2Patterns);
+            }
             artLoaded = true;
             LOGGER.fine("Art loaded successfully: total " + totalSize + " pattern slots");
 
@@ -775,6 +789,11 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             playTallyEndSound();
             state = STATE_WAIT;
             stateTimer = 0;
+            if (messagePresentation != null && gotEmerald && totalEmeraldCount >= 7) {
+                // Obj6F_TallyScore sets routine $30 on this pass, without the $78 wait.
+                messagePresentation.startSuper();
+                state = STATE_SUPER_SONIC_DISPLAY;
+            }
         }
     }
 
@@ -786,9 +805,11 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
                 state = STATE_SUPER_SONIC_DISPLAY;
                 stateTimer = 0;
                 superMsgTimer = 0;
-            } else {
+            } else if (messagePresentation == null) {
                 complete = true;
             }
+            // The ROM advances TimedDisplay to DisplayOnly; the next object pass
+            // sets Level_Inactive_flag. Keep the inherited stock timing unchanged.
         }
     }
 
@@ -797,6 +818,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     @Override
     public void update(int frameCounter, Object context) {
         this.frameCounter = frameCounter;
+        resolvePresentation();
         if (!plcReadinessPassed) {
             Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
             if (plcService != null && plcService.isBusy()) {
@@ -804,6 +826,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             }
             plcReadinessPassed = true;
         }
+        if (messagePresentation != null) messagePresentation.tick();
         stateTimer++;
         totalFrames++;
         // Render-only fade ramp for the sliding rows; runs off the object's own
@@ -833,6 +856,11 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
      * All three messages display simultaneously for SUPER_MSG_DURATION frames.
      */
     private void updateSuperSonicMessages() {
+        if (messagePresentation != null) {
+            complete = messagePresentation.complete();
+            if (complete) state = STATE_SUPER_DONE;
+            return;
+        }
         superMsgTimer++;
         if (superMsgTimer >= SUPER_MSG_DURATION) {
             state = STATE_SUPER_DONE;
@@ -876,7 +904,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         // start=320+128=448, target=160, distance=288
         int titleOffset = getSlideOffset(288);
         int titleX = xOff + SCREEN_CENTER_X + titleOffset;
-        if (!gotEmerald) {
+        if (!gotEmerald && messagePresentation == null) {
             if (useRomArt) {
                 renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_SPECIAL_STAGE,
                         titleX, TITLE_Y);
@@ -888,7 +916,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
         // Result text based on emerald count
         // Hide during Super Sonic message sequence (replaced by the three Super Sonic messages)
-        if (gotEmerald && state < STATE_SUPER_SONIC_DISPLAY) {
+        if (gotEmerald && state < STATE_SUPER_SONIC_DISPLAY && messagePresentation == null) {
             // "Sonic got a" slides from left: start=-128, target=160, distance=288
             int gotTextOffset = getSlideOffset(288);
             int gotTextX = xOff + SCREEN_CENTER_X - gotTextOffset;
@@ -924,7 +952,10 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
         // Render collected emeralds
         // Hide during Super Sonic message sequence
-        if (state < STATE_SUPER_SONIC_DISPLAY) {
+        if (messagePresentation != null && useRomArt) {
+            for (var line : messagePresentation.lines()) renderMappingFrame(line.frame(), xOff + line.x(), line.y());
+        }
+        if (state < STATE_SUPER_SONIC_DISPLAY || messagePresentation != null) {
             if (useRomArt) {
                 renderEmeralds(xOff, 0, slideAlpha);
             } else {
@@ -1011,7 +1042,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         }
 
         // Super Sonic message sequence - all three messages display simultaneously
-        if (state == STATE_SUPER_SONIC_DISPLAY) {
+        if (state == STATE_SUPER_SONIC_DISPLAY && messagePresentation == null) {
             if (useRomArt) {
                 // Render all three messages at their respective Y positions
                 renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_NOW_SONIC_CAN,
@@ -1074,7 +1105,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         }
 
         Sonic2SpecialStageResultsMappings.ResultsPiece[] pieces =
-                Sonic2SpecialStageResultsMappings.getFrame(frameIndex);
+                presentationData == null ? Sonic2SpecialStageResultsMappings.getFrame(frameIndex)
+                        : messagePresentation == null ? presentationData.getResultsFrame(frameIndex)
+                        : presentationData.getResultsObjectFrame(frameIndex);
 
         // Render pieces in reverse order (painter's algorithm - first piece on top)
         for (int i = pieces.length - 1; i >= 0; i--) {

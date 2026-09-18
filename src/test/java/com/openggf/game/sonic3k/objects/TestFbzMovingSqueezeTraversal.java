@@ -1,10 +1,13 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GroundMode;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,6 +15,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestFbzMovingSqueezeTraversal {
+
+    @BeforeEach
+    void exposeTheLiveButtonToTheNativeRenderGate() {
+        AbstractObjectInstance.updateCameraBounds(0x1C80, 0x700, 0x1DC0, 0x7E0, 0);
+    }
+
+    @AfterEach
+    void resetCameraBounds() {
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
+
 
     @Test
     void exactLiveFlatButtonLatchIsLaunchFloorAuthority() {
@@ -30,6 +44,23 @@ class TestFbzMovingSqueezeTraversal {
         when(player.getYRadius()).thenReturn((short) 0x13);
 
         assertTrue(FbzMovingSqueezeTraversal.hasLaunchFloorAuthority(player));
+    }
+
+    @Test
+    void offscreenButtonLatchDoesNotSupplyLaunchFloorAuthority() {
+        Sonic3kButtonObjectInstance button = liveButton();
+        AbstractPlayableSprite player = ordinaryFlatPlayer();
+        int surfaceY = button.getY() + button.getSolidParams().offsetY()
+                - button.getSolidParams().groundHalfHeight();
+        when(player.isOnObject()).thenReturn(true);
+        when(player.getLatchedSolidObjectInstance()).thenReturn(button);
+        when(player.getCentreX()).thenReturn((short) button.getX());
+        when(player.getCentreY()).thenReturn((short) (surfaceY - 0x13 - 1));
+        when(player.getYRadius()).thenReturn((short) 0x13);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+
+        assertFalse(FbzMovingSqueezeTraversal.hasLaunchFloorAuthority(player),
+                "loc_2C62C skips the whole solid routine while the button is offscreen");
     }
 
     @Test

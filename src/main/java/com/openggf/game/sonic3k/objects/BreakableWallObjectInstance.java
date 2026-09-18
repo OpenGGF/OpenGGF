@@ -24,9 +24,7 @@ import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
-import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
-import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -43,7 +41,7 @@ import java.util.logging.Logger;
  * Object 0x0D - Breakable Wall (Sonic 3 & Knuckles).
  */
 public class BreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -59,7 +57,6 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     public int romObjectCodePointerHighWord() {
         return 0x0002;
     }
-
 
     private static final Logger LOG = Logger.getLogger(BreakableWallObjectInstance.class.getName());
 
@@ -190,11 +187,6 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // Manual checkpoints drive the current-frame contact state from update().
-    }
-
-    @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
@@ -213,7 +205,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
                 break;
             }
             if (participant instanceof AbstractPlayableSprite sprite) {
-                applyCheckpointContact(sprite, batch.perPlayer().get(participant));
+                applyCheckpointContact(sprite, batch.perPlayer().get(participant), participantIndex == 0);
                 if (broken && participantIndex == 0) {
                     restoreSidekickPushContactsAfterPrimaryBreak(participants, batch, participantIndex + 1);
                 }
@@ -259,7 +251,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         return new ObjectPlayerQuery(() -> primary, query::sidekicks);
     }
 
-    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result,
+            boolean playerOneLeg) {
         if (player == null || result == null || broken || result.kind() == com.openggf.game.solid.ContactKind.NONE) {
             return;
         }
@@ -271,6 +264,13 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         // MGZ spin-break walls key off side-contact feedback instead of the
         // generic push flag. The other modes still require a pushing contact.
         if (config.breakMode == BreakMode.MGZ_SPIN_BREAK) {
+            if (result.kind() != com.openggf.game.solid.ContactKind.SIDE) {
+                return;
+            }
+        } else if (config.breakMode == BreakMode.KNUCKLES_ONLY && playerOneLeg) {
+            // loc_21862 tests SolidObjectFull's Player_1 side-touch bit (swap d6),
+            // which loc_1E094 also sets for an airborne player without Status_Push.
+            // Only the Player_2 leg (loc_218B0) consults the wall's pushing bit.
             if (result.kind() != com.openggf.game.solid.ContactKind.SIDE) {
                 return;
             }

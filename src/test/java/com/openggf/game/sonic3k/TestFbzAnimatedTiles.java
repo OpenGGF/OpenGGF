@@ -16,9 +16,68 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzAnimatedTiles {
+    @Test void freshSetupRunsPatternPassOnceWithoutSpendingGameplayOrGlobalAnimationClock() {
+        HeadlessTestFixture.builder().withZoneAndAct(4, 0).build();
+        var level = GameServices.level();
+        var manager = (Sonic3kLevelAnimationManager) level.getAnimatedPatternManager();
+        var scripts = manager.patternAnimatorForTesting().scriptsForTesting();
+        int frame = level.getFrameCounter();
+        int globalAngle = manager.aizVineAngleWord();
+        assertEquals(0, scripts.get(0).getFrameIndex());
+        assertTrue(level.consumePendingInitialProcessSpritesPass());
+        assertEquals(frame, level.getFrameCounter(), "setup runs before the LevelLoop clock");
+        assertEquals(globalAngle, manager.aizVineAngleWord(), "setup has no ChangeRingFrame");
+        assertEquals(List.of(63, 7, 1, 7, 7), scripts.stream().map(AniPlcScriptState::getTimer).toList());
+        assertTrue(scripts.stream().allMatch(script -> script.getFrameIndex() == 1));
+        assertFalse(level.consumePendingInitialProcessSpritesPass());
+        assertEquals(63, scripts.get(0).getTimer(), "one-shot setup must not double tick");
+        manager.update();
+        assertEquals(List.of(62, 6, 0, 6, 6), scripts.stream().map(AniPlcScriptState::getTimer).toList(),
+                "ROM LFC1 is already one ordinary tick after the setup animation pass");
+    }
+
+    @Test void productionVBlankPublishesQueuedArtAndRewindPreservesBothSidesOfExpiry() {
+        HeadlessTestFixture.builder().withZoneAndAct(4, 0).build();
+        var level = GameServices.level();
+        var manager = (Sonic3kLevelAnimationManager) level.getAnimatedPatternManager();
+        var animator = manager.patternAnimatorForTesting();
+        var script = animator.scriptsForTesting().get(3);
+        var profile = GameServices.module().getLevelInitProfile();
+        assertTrue(level.consumePendingInitialProcessSpritesPass());
+        ((com.openggf.game.internal.QueuedPatternDmaPublication) profile).serviceQueuedPatternDma(
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false);
+        byte[] first = patternBytes(level.getCurrentLevel().getPattern(0x200));
+        for (int i = 0; i < 7; i++) { ((com.openggf.game.internal.QueuedPatternDmaPublication) profile).serviceQueuedPatternDma(
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false); manager.update(); }
+        assertEquals(0, script.getTimer());
+        manager.update();
+        assertEquals(2, script.getFrameIndex(), "logical frame advances on expiry");
+        assertArrayEquals(first, patternBytes(level.getCurrentLevel().getPattern(0x200)),
+                "submitted art cannot appear before VBlank");
+        var pending = manager.capture();
+        ((com.openggf.game.internal.QueuedPatternDmaPublication) profile).serviceQueuedPatternDma(
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false);
+        byte[] second = patternBytes(level.getCurrentLevel().getPattern(0x200));
+        assertFalse(java.util.Arrays.equals(first, second), "ROM spike frames differ");
+        manager.restore(pending);
+        assertArrayEquals(first, patternBytes(level.getCurrentLevel().getPattern(0x200)),
+                "rewind restores presented art without consuming queued art");
+        assertEquals(2, script.getFrameIndex());
+        ((com.openggf.game.internal.QueuedPatternDmaPublication) profile).serviceQueuedPatternDma(
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false);
+        assertArrayEquals(second, patternBytes(level.getCurrentLevel().getPattern(0x200)));
+        assertEquals(2, script.getFrameIndex(), "VBlank does not tick animation counters");
+    }
+
+    private static byte[] patternBytes(Pattern pattern) {
+        byte[] bytes = new byte[64]; pattern.copyInto(bytes, 0); return bytes;
+    }
+
     @Test void bothActsInstallFiveExactRomOwnedChannels() {
         for (int act = 0; act < 2; act++) {
             HeadlessTestFixture.builder().withZoneAndAct(4, act).build();

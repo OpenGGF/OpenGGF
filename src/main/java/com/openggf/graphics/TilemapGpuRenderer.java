@@ -28,8 +28,18 @@ public class TilemapGpuRenderer {
     }
 
     private TilemapShaderProgram shader;
+
+    // Package-only diagnostic access keeps GL program ownership out of the Mod API.
+    TilemapShaderProgram samplingShaderForDiagnostics() {
+        return shader;
+    }
+
     private final TilemapTexture backgroundTexture = new TilemapTexture();
     private final TilemapTexture foregroundTexture = new TilemapTexture();
+    int foregroundTextureForDiagnostics() { return foregroundTexture.getTextureId(); }
+    int backgroundTextureForDiagnostics() { return backgroundTexture.getTextureId(); }
+    int lookupTextureForDiagnostics() { return patternLookup.getTextureId(); }
+
     private final TilemapTexture foregroundWindowTexture = new TilemapTexture();
     private ForegroundWindow foregroundWindow;
     private int[] uploadedWindowDescriptors;

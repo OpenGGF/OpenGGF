@@ -149,6 +149,53 @@ public class PatternRenderCommand implements GLCommandable {
         textureCoordinatesResolved = true;
     }
 
+    /**
+     * Obtains a command drawing pixel rows {@code [rowStart, rowEnd)} (screen order,
+     * 0 = tile top) of an 8x8 tile whose top is at {@code y}. Attributes are primitives
+     * so the graphics layer gains no level-type dependency.
+     */
+    static PatternRenderCommand obtainRows(PatternAtlas.Entry entry, int paletteTextureId, int paletteIndex,
+            boolean hFlip, boolean vFlip, boolean piecePriority, int x, int y, int rowStart, int rowEnd,
+            GraphicsManager graphicsManager) {
+        PatternRenderCommand cmd = pool.pollFirst();
+        if (cmd == null) {
+            cmd = new PatternRenderCommand();
+        }
+        cmd.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
+        cmd.paletteTextureId = paletteTextureId;
+        cmd.atlasIndex = entry.atlasIndex();
+        cmd.paletteIndex = paletteIndex;
+        cmd.hFlip = hFlip;
+        cmd.vFlip = vFlip;
+        cmd.piecePriority = piecePriority;
+        cmd.capturedTileOcclusionPaletteMask = graphicsManager.getCurrentSpriteTileOcclusionPaletteMask();
+        cmd.ghostEffectActive = graphicsManager.isGhostRenderEffectActive();
+        cmd.ghostAlpha = graphicsManager.getGhostRenderAlpha();
+        cmd.x = x;
+        cmd.width = 8f;
+        cmd.height = rowEnd - rowStart;
+        cmd.leased = true;
+        cmd.y = resolveDisplayHeight(graphicsManager) - (y + rowStart) - cmd.height;
+        cmd.resolveRowTextureCoordinates(entry, rowStart, rowEnd);
+        return cmd;
+    }
+
+    /**
+     * V is interpolated along the same top/bottom mapping a whole tile uses, so flips
+     * match the uncropped path.
+     */
+    private void resolveRowTextureCoordinates(PatternAtlas.Entry entry, int rowStart, int rowEnd) {
+        // Unresolved whole tiles put entry.v0 on the top edge unless V-flipped.
+        float vTop = vFlip ? entry.v1() : entry.v0();
+        float vBottom = vFlip ? entry.v0() : entry.v1();
+        u0 = hFlip ? entry.u1() : entry.u0();
+        u1 = hFlip ? entry.u0() : entry.u1();
+        // Resolved coordinates: v0 is the quad's bottom edge, v1 its top edge.
+        v0 = vTop + (vBottom - vTop) * (rowEnd / 8.0f);
+        v1 = vTop + (vBottom - vTop) * (rowStart / 8.0f);
+        textureCoordinatesResolved = true;
+    }
+
     private PatternRenderCommand() {
         // Private constructor for pooling
     }

@@ -21,6 +21,7 @@ import com.openggf.game.sonic3k.features.AizTransitionRenderFeature;
 import com.openggf.game.sonic3k.render.HczBgHighPriorityForegroundOverlayEffect;
 import com.openggf.game.sonic3k.render.HczWallChaseBgOverlayEffect;
 import com.openggf.game.sonic3k.render.FbzBossPlaneRenderMode;
+import com.openggf.game.sonic3k.render.DdzForegroundPlaneRenderMode;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotMachinePanelAnimator;
 import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
@@ -53,7 +54,16 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy {
+    @Override
+    public boolean negativeTumbleUsesUnreflectedAngle(boolean facingLeft) {
+        // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24938-24984):
+        // FBZ/DEZ retain the angle for both facings; MHZ does so only left.
+        int zone = getFeatureZoneId();
+        return zone == Sonic3kZoneIds.ZONE_FBZ || zone == Sonic3kZoneIds.ZONE_DEZ
+                || (facingLeft && zone == Sonic3kZoneIds.ZONE_MHZ);
+    }
+
     private static final Logger LOGGER = Logger.getLogger(Sonic3kZoneFeatureProvider.class.getName());
     private static final int VDP_BG_PLANE_WIDTH_PX = 512;
 
@@ -65,6 +75,23 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     private final SpecialRenderEffect iczBigSnowPileBackgroundEffect = new IczBigSnowPileBackgroundEffect();
     private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
     private final AdvancedRenderMode fbzBossPlaneRenderMode = new FbzBossPlaneRenderMode();
+    private final AdvancedRenderMode ddzForegroundPlaneRenderMode = new DdzForegroundPlaneRenderMode();
+    private final AdvancedRenderMode sozForegroundHeatHazeMode = new AdvancedRenderMode() {
+        @Override
+        public String id() {
+            return "soz-foreground-heat-haze";
+        }
+
+        @Override
+        public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            // SOZ1 loc_55DF2 / MakeFGDeformArray supplies the foreground half
+            // of H_scroll_buffer. Consume that ROM wave through the same tile
+            // rendering path as AIZ2; SOZ2 does not use this deformation.
+            if (context.zoneIndex() == Sonic3kZoneIds.ZONE_SOZ && context.actIndex() == 0) {
+                builder.enableForegroundHeatHaze();
+            }
+        }
+    };
     private final AdvancedRenderMode slotMachineForegroundScrollMode = new AdvancedRenderMode() {
         @Override
         public String id() {
@@ -167,7 +194,42 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                 || zoneId == Sonic3kZoneIds.ZONE_FBZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
                 || isHcz2BackgroundPlaneWindowActive(zoneId)
-                || isCnzBossBackgroundWindowActive(zoneId);
+                || isCnzBossBackgroundWindowActive(zoneId)
+                || isSozEventBackgroundWindowActive(zoneId);
+    }
+
+    @Override public long backgroundDescriptorRevision() {
+        if (!GameServices.hasRuntime() || GameServices.level().getFeatureZoneId() != Sonic3kZoneIds.ZONE_SOZ) return 0;
+        return S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
+                .map(state -> extendedSozPyramid(state) ? -1L
+                        : (long) state.events().postBossPlane().revision()).orElse(0L);
+    }
+
+    @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (state != null && extendedSozPyramid(state)) {
+            // SOZ1's authored pyramid ends at BG column 15 ($780). Wider views
+            // repeat its last 64px of plain masonry; keep the doorway in column 13
+            // and all original descriptors untouched. This is a widescreen
+            // presentation extension, not ROM terrain or collision data.
+            int x = sourceX >= 0x780 ? 0x740 + Math.floorMod(sourceX - 0x780, 0x40) : sourceX;
+            return GameServices.level().getBackgroundTileDescriptorAtWorld(x, sourceY);
+        }
+        return state != null && state.events().postBossPlane().revision() != 0
+                ? state.events().postBossPlane().descriptor(sourceX, sourceY) : 0;
+    }
+
+    private boolean extendedSozPyramid(com.openggf.game.sonic3k.runtime.SozZoneRuntimeState state) {
+        return state.actIndex() == 0 && state.backgroundPlaneWindowActive()
+                && GameServices.camera().getWidth() > 320;
+    }
+
+    /** SOZ event DrawBGAsYouMove reads arena/room columns beyond the normal repeating strip. */
+    private boolean isSozEventBackgroundWindowActive(int zoneId) {
+        return zoneId == Sonic3kZoneIds.ZONE_SOZ && GameServices.hasRuntime()
+                && S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
+                        .map(com.openggf.game.sonic3k.runtime.SozZoneRuntimeState::backgroundPlaneWindowActive)
+                        .orElse(false);
     }
 
     /**
@@ -240,7 +302,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         // BG camera runs past the data the ROM plane shows blank chunks. Linear
         // overflow reproduces that instead of wrapping back into the normal strip.
         return isCnzBossBackgroundWindowActive()
-                || isHcz2BackgroundPlaneWindowActive(zoneIndex);
+                || isHcz2BackgroundPlaneWindowActive(zoneIndex)
+                || isSozEventBackgroundWindowActive(zoneIndex);
     }
 
     /**
@@ -324,6 +387,14 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                 playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (participant instanceof AbstractPlayableSprite playable) {
                 updateAizForestFrontPriority(playable, zoneIndex);
+                // LevelLoop: DeformBgLayer -> ScreenEvents -> Handle_Onscreen_Water_Height.
+                // SOZ sub_730C must change Y/radii only after the camera has tracked this frame.
+                if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ
+                        && GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager mgr) {
+                    mgr.ensureZoneRuntimeStateInstalled();
+                    var events = mgr.getSozEvents();
+                    if (events != null) events.updateSlideTerrainAfterPlayablePhysics(playable);
+                }
             }
         }
     }
@@ -606,6 +677,10 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                 registry.register(aizBattleshipRenderFeature);
             }
         }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ) {
+            registry.register(new com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect());
+            registry.register(com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect.spritePriorityMask());
+        }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
             registry.register(hczBgHighPriorityForegroundOverlayEffect);
             registry.register(hczWallChaseBgOverlayEffect);
@@ -621,6 +696,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         if (zoneIndex == Sonic3kZoneIds.ZONE_AIZ) {
             controller.register(aizTransitionRenderFeature);
         }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ && actIndex == 0) {
+            controller.register(sozForegroundHeatHazeMode);
+        }
         if (zoneIndex == Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
             controller.register(slotMachineForegroundScrollMode);
         }
@@ -632,6 +710,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_FBZ && actIndex == 1) {
             controller.register(fbzBossPlaneRenderMode);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DDZ) {
+            controller.register(ddzForegroundPlaneRenderMode);
         }
     }
 
@@ -688,11 +769,6 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 1) {
             return true;
         }
-        // Canonical HPZ owns a separate nonlinear-resource presentation policy.
-        if (zoneIndex == Sonic3kZoneIds.ZONE_HPZ && actIndex == 1) {
-            return Sonic3kLevelResourceProfile.resolve(zoneIndex, actIndex)
-                    .requireCustomResources().suppressTitleCard();
-        }
         if (zoneIndex != 0 || actIndex != 0) {
             return false;
         }
@@ -724,7 +800,10 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public boolean useSpriteSatMasking(int zoneIndex) {
-        return zoneIndex == Sonic3kZoneIds.ZONE_GUMBALL;
+        // SOZ uses Map_SOZ1EndDoor's sand-surface mask, the placed Obj_SpriteMask,
+        // and the end-boss laser mask. Their marker/companion pairs require the
+        // same SAT post-pass as Gumball; ordinary painter rendering drops them.
+        return zoneIndex == Sonic3kZoneIds.ZONE_GUMBALL || zoneIndex == Sonic3kZoneIds.ZONE_SOZ;
     }
 
     protected AizZoneRuntimeState getAizState() {

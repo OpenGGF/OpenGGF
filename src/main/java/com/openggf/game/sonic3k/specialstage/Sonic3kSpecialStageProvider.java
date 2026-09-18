@@ -50,6 +50,15 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
         return viewport;
     }
 
+    /**
+     * The results object only writes {@code Game_mode = $C} (sonic3k.asm loc_2E5B8/loc_2E5EC);
+     * {@code Level} then fades to black ({@code loc_5FF6}) with no exit SFX.
+     */
+    @Override
+    public boolean resultsExitFadesToWhite() {
+        return false;
+    }
+
     @Override
     public SpecialStageDebugCapabilities debugCapabilities() {
         // X/Z stage and layout navigation are live manager operations. The

@@ -2,10 +2,10 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -42,7 +42,7 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/2A SBZ Small Door.asm
  */
 public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable {
 
     // Detection range for door opening: move.w #$40,d1
     private static final int DETECTION_RANGE = 0x40;
@@ -172,6 +172,14 @@ public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
         animationFrameIndex++;
     }
 
+    // move.b #4,obPriority(a0): docs/s1disasm/_incObj/2A SBZ Small Door.asm:22.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(ObjectArtKeys.SBZ_SMALL_DOOR);
@@ -216,17 +224,10 @@ public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return solidActive;
     }
 
     // ---- SolidObjectListener ----
-
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // SolidObject handles the collision response; no extra per-contact behavior.
-    }
 
     // ---- Persistence ----
 

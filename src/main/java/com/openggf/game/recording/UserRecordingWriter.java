@@ -116,6 +116,16 @@ public final class UserRecordingWriter {
                 + "Frames: " + manifest.frameCount() + "\n";
     }
 
+    /**
+     * Formats frames as a BizHawk {@code Input Log.txt} body ({@code [Input]},
+     * {@code LogKey:}, one {@code |P1|P2|} line per frame, {@code [/Input]}).
+     * Shared with the input-log authoring tool so authored scripts and user
+     * recordings produce byte-identical frame lines.
+     */
+    public static String inputLogText(List<RecordedFrameInput> inputs) {
+        return inputLog(Objects.requireNonNull(inputs, "inputs"));
+    }
+
     private static String inputLog(List<RecordedFrameInput> inputs) {
         StringBuilder builder = new StringBuilder();
         builder.append("[Input]\n");

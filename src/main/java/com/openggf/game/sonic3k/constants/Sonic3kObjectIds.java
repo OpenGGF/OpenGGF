@@ -257,6 +257,10 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_ICE_SPIKES = 0xB7;
     // S3KL object table: Obj_ICZHarmfulIce. SKL reuses $B8 for DDZMissile.
     public static final int ICZ_HARMFUL_ICE = 0xB8;
+    // SKL object table: Obj_DDZEndBoss, Obj_DDZAsteroid, Obj_DDZMissile.
+    public static final int DDZ_END_BOSS = 0xB6;
+    public static final int DDZ_ASTEROID = 0xB7;
+    public static final int DDZ_MISSILE = 0xB8;
     // S3KL object table: Obj_ICZSnowPile.
     public static final int ICZ_SNOW_PILE = 0xB9;
     // S3KL object table: Obj_ICZTensionPlatform.

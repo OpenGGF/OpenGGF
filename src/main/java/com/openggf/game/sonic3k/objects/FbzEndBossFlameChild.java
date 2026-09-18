@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -87,7 +88,12 @@ public final class FbzEndBossFlameChild extends AbstractFbzEndBossChild implemen
         rawAnimationIndex++;
         visibleAndTouching = true;
     }
-    @Override public boolean isHighPriority() { return true; }
+    // loc_70BB0 runs Child_GetPriority on every drawn frame (sonic3k.asm:149198, 180198-180205):
+    // the flame takes parent3's (the weapon's) priority word and art bit 15.
+    @Override public int getPriorityBucket() {
+        return weapon != null ? weapon.getPriorityBucket() : RenderPriority.MIN;
+    }
+    @Override public boolean isHighPriority() { return weapon != null && weapon.isHighPriority(); }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (!visibleAndTouching || isDestroyed()) return;
         PatternSpriteRenderer renderer;

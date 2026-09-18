@@ -197,6 +197,47 @@ function Test-ContainsModApiAnnotation([string]$Text) {
     return $Text -match '(?m)^\s*@ModApi(?:[.(\s]|$)'
 }
 
+# Mirrors mod_api_surface_text in validate-policy.sh.
+function Get-ModApiSurfaceText([string]$Text) {
+    $inBlock = $false
+    $kind = ""
+    $stripped = New-Object System.Collections.Generic.List[string]
+    foreach ($raw in ($Text -split "\r?\n")) {
+        $line = $raw
+        $out = ""
+        while ($true) {
+            if ($inBlock) {
+                $e = $line.IndexOf("*/", [StringComparison]::Ordinal)
+                if ($e -lt 0) { $line = ""; break }
+                $line = $line.Substring($e + 2); $inBlock = $false
+            }
+            $s = $line.IndexOf("/*", [StringComparison]::Ordinal)
+            $c = $line.IndexOf("//", [StringComparison]::Ordinal)
+            if ($c -ge 0 -and ($s -lt 0 -or $c -lt $s)) { $out += $line.Substring(0, $c); break }
+            if ($s -lt 0) { $out += $line; break }
+            $out += $line.Substring(0, $s); $line = $line.Substring($s + 2); $inBlock = $true
+        }
+        $stripped.Add($out)
+        if ($kind -eq "" -and $out -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_]') {
+            $kind = $Matches[1]
+        }
+    }
+    $whole = $kind -ne "class"
+    $depth = 0
+    $kept = New-Object System.Collections.Generic.List[string]
+    foreach ($l in $stripped) {
+        if ($l -notmatch '[^ \t]') { continue }
+        if ($whole) { $kept.Add($l); continue }
+        if ($depth -gt 0 -or $l -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]' -or $l -match '^[ \t]*@' -or
+                $l -cmatch '(?:^|[ \t])(?:class|interface|record|enum|extends|implements)[ \t]') {
+            $kept.Add($l)
+            $depth += ([regex]::Matches($l, '\(')).Count - ([regex]::Matches($l, '\)')).Count
+            if ($depth -lt 0) { $depth = 0 }
+        }
+    }
+    return ($kept -join "`n")
+}
+
 function Validate-ModApiCoupling([string]$OldRef, [string]$NewRef, [string[]]$DiffArguments) {
     $args = if ($NewRef -eq "INDEX") { @("diff", "--cached", "--name-status", "-M") } else { @("diff", "--name-status", "-M") + $DiffArguments }
     $candidate = (Get-DescriptorPins $NewRef | Where-Object { $_ -match 'mod-api-signatures-\d+\.\d+\.txt$' } | Select-Object -First 1)
@@ -224,7 +265,7 @@ function Validate-ModApiCoupling([string]$OldRef, [string]$NewRef, [string[]]$Di
             if (-not $path.EndsWith(".java", [StringComparison]::Ordinal)) { continue }
             $oldText = Get-BlobText $before $path
             $newText = Get-BlobText $after $path
-            if (((Test-ContainsModApiAnnotation $oldText) -or (Test-ContainsModApiAnnotation $newText)) -and $oldText -ne $newText) { $apiDelta = $true }
+            if (((Test-ContainsModApiAnnotation $oldText) -or (Test-ContainsModApiAnnotation $newText)) -and (Get-ModApiSurfaceText $oldText) -cne (Get-ModApiSurfaceText $newText)) { $apiDelta = $true }
         }
     }
     if ($currentChanged -and (-not $descriptorChanged -or (-not $candidateContent -and -not $candidateStructural))) {

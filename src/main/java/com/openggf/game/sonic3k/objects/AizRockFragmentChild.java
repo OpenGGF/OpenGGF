@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
@@ -59,6 +60,19 @@ public class AizRockFragmentChild extends GravityDebrisChild
         super(spawn, "RockFragment", xVel, yVel, GRAVITY);
         this.mappingFrame = mappingFrame;
         this.pieceIndex = pieceIndex;
+    }
+
+    // Parent CutsceneKnucklesRockChild carries priority $180 (bucket 3). BreakObjectToPieces
+    // keeps piece 0 in the parent slot (a1=a0, sonic3k.asm:45793) with that word, and copies
+    // only the HIGH byte into each freshly allocated piece (move.b priority(a0),priority(a1),
+    // sonic3k.asm:45811), so pieces 1-11 carry $0100, bucket 2.
+    private static final int PARENT_PRIORITY_WORD = 0x180;
+    private static final int PIECE0_PRIORITY_BUCKET = RenderPriority.fromS3kWord(PARENT_PRIORITY_WORD);
+    private static final int PIECE_PRIORITY_BUCKET = RenderPriority.fromS3kWord(PARENT_PRIORITY_WORD & 0xFF00);
+
+    @Override
+    public int getPriorityBucket() {
+        return pieceIndex == 0 ? PIECE0_PRIORITY_BUCKET : PIECE_PRIORITY_BUCKET;
     }
 
     @Override

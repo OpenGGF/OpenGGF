@@ -103,6 +103,31 @@ class TestPlayableSpriteMovementTailsFlight {
     }
 
     @Test
+    void activationFrameKeepsNormalAirGravityBeforeFlightGravityStarts() throws Exception {
+        // Recorded s3k-tails-full-chain-all-emeralds SOZ1 rows 533-535: y_vel
+        // $FE18 -> $FE50 on the activating repress, then $FE58. Tails_Stand_Freespace
+        // (sonic3k.asm:27553) sets double_jump_flag inside Tails_JumpHeight but still
+        // runs MoveSprite_TestGravity (+$38) that frame; Tails_FlyingSwimming's
+        // +$08 begins on the next frame.
+        tails.setYSpeed((short) -0x1E8);
+        setField(movement, "jumpReleasedSinceJump", true);
+        tails.setForcedJumpPress(true);
+
+        movement.handleMovement(false, false, false, false,
+                true, false, false, false);
+
+        assertTrue(tails.getTailsFlightController().isActive());
+        assertEquals((short) -0x1B0, tails.getYSpeed(),
+                "the activating frame applies MoveSprite_TestGravity's +$38");
+
+        movement.handleMovement(false, false, false, false,
+                true, false, false, false);
+
+        assertEquals((short) -0x1A8, tails.getYSpeed(),
+                "Tails_Move_FlySwim's +$08 owns the following frame");
+    }
+
+    @Test
     void activeManualSwimmingWithoutInputGentlySinksAtFlightGravity() {
         tails.setInWater(true);
         tails.setYSpeed((short) 0);
@@ -149,6 +174,23 @@ class TestPlayableSpriteMovementTailsFlight {
 
         assertEquals((short) -0x6C8, tails.getYSpeed(),
                 "the following dead frame must use normal +$38 gravity, not flight gravity");
+    }
+
+    @Test
+    void instantDeathReplacesHurtDispatchAndRetainsItsTimer() {
+        tails.setHurt(true);
+        tails.setInvulnerableFrames(0x78);
+
+        assertTrue(tails.applyCrushDeath());
+        assertFalse(tails.isHurt(), "Kill_Character replaces routine 4 with routine 6");
+        assertEquals(0x78, tails.getInvulnerableFrames(),
+                "Kill_Character does not write the post-hit invulnerability timer");
+
+        movement.handleMovement(false, false, false, false,
+                false, false, false, false);
+
+        assertEquals((short) -0x6C8, tails.getYSpeed(),
+                "The dead routine uses +$38 gravity even when the preceding state was hurt");
     }
 
     @Test

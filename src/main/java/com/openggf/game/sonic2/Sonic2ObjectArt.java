@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.GameServices;
+import com.openggf.data.RomChannel;
 import com.openggf.game.ZoneArtProvider;
 import com.openggf.game.common.CommonSpriteDataLoader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -20,7 +21,6 @@ import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -312,9 +312,7 @@ public class Sonic2ObjectArt {
         }
         byte[] result = new byte[length];
         java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(result);
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(artAddr);
+        try (var channel = RomChannel.at(rom, artAddr)) {
             while (buffer.hasRemaining()) {
                 int read = channel.read(buffer);
                 if (read < 0) {
@@ -328,15 +326,7 @@ public class Sonic2ObjectArt {
         if (result.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
             throw new IOException("Inconsistent uncompressed art tile data");
         }
-        int patternCount = result.length / Pattern.PATTERN_SIZE_IN_ROM;
-        Pattern[] patterns = new Pattern[patternCount];
-        for (int i = 0; i < patternCount; i++) {
-            patterns[i] = new Pattern();
-            byte[] subArray = Arrays.copyOfRange(result, i * Pattern.PATTERN_SIZE_IN_ROM,
-                    (i + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-            patterns[i].fromSegaFormat(subArray);
-        }
-        return patterns;
+        return PatternDecompressor.fromBytes(result);
     }
 
     /**

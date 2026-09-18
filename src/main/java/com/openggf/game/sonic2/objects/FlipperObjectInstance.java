@@ -18,7 +18,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 
@@ -34,7 +33,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 57800-58058
  */
 public class FlipperObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable {
 
     private static final int TYPE_VERTICAL = 0;
     private static final int TYPE_HORIZONTAL = 1;
@@ -134,12 +133,6 @@ public class FlipperObjectInstance extends BoxObjectInstance
     @Override
     public FlipperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new FlipperObjectInstance(ctx.spawn(), "Flipper");
-    }
-
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // Manual checkpoints drive Obj86 state; callbacks are intentionally
-        // passive so the inline and normal object paths share one state machine.
     }
 
     @Override
@@ -432,7 +425,6 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return true;
     }
 
@@ -573,13 +565,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
     private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
-        if (updatePlayer != null && !participants.contains(updatePlayer)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(updatePlayer);
-            withUpdatePlayer.addAll(participants);
-            return withUpdatePlayer;
-        }
-        return participants;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {

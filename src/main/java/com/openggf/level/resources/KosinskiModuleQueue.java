@@ -1,11 +1,11 @@
 package com.openggf.level.resources;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomChannel;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.data.compression.KosinskiReader;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -270,26 +270,15 @@ public final class KosinskiModuleQueue
         if (rom == null) {
             throw new IllegalStateException("KosM ROM owner is unavailable");
         }
-        FileChannel channel = rom.getFileChannel();
-        if (channel == null) {
-            throw new IllegalStateException("KosM ROM channel is unavailable");
-        }
-        try {
-            int compressedEnd;
-            synchronized (rom) {
-                long priorPosition = channel.position();
-                try {
-                    channel.position(active.sourceAddress());
-                    byte[] data = KosinskiReader.decompress(channel);
-                    compressedEnd = Math.toIntExact(channel.position());
-                    return new StartResult(new ArchiveState(active.archiveAddress(), active.sourceAddress(),
-                            active.destinationVramBytes(), active.uncompressedBytes(),
-                            active.totalModules(), active.modulesRemaining(), active.lastModuleWords(),
-                            compressedEnd, true), data);
-                } finally {
-                    channel.position(priorPosition);
-                }
-            }
+        try (var channel = RomChannel.at(rom, active.sourceAddress())) {
+            // A private positioned channel: its position after decompression is
+            // the end of the compressed module, and no other reader shares it.
+            byte[] data = KosinskiReader.decompress(channel);
+            int compressedEnd = Math.toIntExact(channel.position());
+            return new StartResult(new ArchiveState(active.archiveAddress(), active.sourceAddress(),
+                    active.destinationVramBytes(), active.uncompressedBytes(),
+                    active.totalModules(), active.modulesRemaining(), active.lastModuleWords(),
+                    compressedEnd, true), data);
         } catch (IOException e) {
             throw new IllegalStateException(String.format(
                     "Could not process KosM module at $%06X", active.sourceAddress()), e);

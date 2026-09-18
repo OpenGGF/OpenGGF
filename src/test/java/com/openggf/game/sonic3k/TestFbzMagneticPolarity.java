@@ -9,6 +9,35 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class TestFbzMagneticPolarity {
+    @Test void fixedPreludeReadsTheAlreadyAdvancedLiveCounter() throws Exception {
+        com.openggf.tests.TestEnvironment.activeGameplayMode();
+        var level = com.openggf.game.GameServices.level();
+        level.resetFrameCounter();
+        var provider = new Sonic3kLevelEventManager();
+        var events = new Sonic3kFBZEvents();
+        events.init(0);
+        var field = Sonic3kLevelEventManager.class.getDeclaredField("fbzEvents");
+        field.setAccessible(true);
+        field.set(provider, events);
+        try {
+            for (int frame = 1; frame <= 0xFF; frame++) level.advanceLevelFrameCounter();
+            provider.updateFixedInLevelObjectsBeforeDynamicObjects();
+            assertEquals(0xFF, events.getMagneticTimerPhase());
+            assertEquals(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, events.getMagneticPolarity());
+            level.advanceLevelFrameCounter();
+            provider.updateFixedInLevelObjectsBeforeDynamicObjects();
+            assertEquals(0, events.getMagneticTimerPhase());
+            assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
+            provider.updateFixedInLevelObjectsBeforeDynamicObjects();
+            assertEquals(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, events.getMagneticPolarity());
+            level.advanceLevelFrameCounter();
+            provider.updateFixedInLevelObjectsBeforeDynamicObjects();
+            assertEquals(1, events.getMagneticTimerPhase());
+        } finally {
+            com.openggf.tests.TestEnvironment.resetAll();
+        }
+    }
+
     @Test void anPalFbzTogglesOnlyAtThe256FrameLowByteEdge() {
         Sonic3kFBZEvents events = new Sonic3kFBZEvents();
         events.init(0);

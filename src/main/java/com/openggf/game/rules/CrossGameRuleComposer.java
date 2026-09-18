@@ -11,6 +11,42 @@ public final class CrossGameRuleComposer {
     private CrossGameRuleComposer() {
     }
 
+    /**
+     * Copies {@code base} with its movement, interaction, collision and ring
+     * policies replaced. Game patches use this to express shipped rule differences
+     * (for example the lock-on program's landing form) without positional
+     * construction outside the owned rule factories.
+     */
+    public static GameRules withPlayerRules(GameRules base, PlayerMovementRules playerMovement,
+            ObjectInteractionRules objectInteraction, CollisionRules collision, RingRules ring) {
+        return withPlayerRules(base, playerMovement, objectInteraction, collision, ring,
+                base == null ? null : base.playerCapability());
+    }
+
+    public static GameRules withPlayerRules(GameRules base, PlayerMovementRules playerMovement,
+            ObjectInteractionRules objectInteraction, CollisionRules collision, RingRules ring,
+            PlayerCapabilityRules playerCapability) {
+        if (base == null) {
+            throw new IllegalArgumentException("Base GameRules are required");
+        }
+        if (playerMovement == null || objectInteraction == null || collision == null
+                || ring == null || playerCapability == null) {
+            throw new IllegalArgumentException("Replacement rules are required");
+        }
+        return new GameRules(
+                playerMovement,
+                playerCapability,
+                collision,
+                base.playerAnimation(),
+                base.camera(),
+                ring,
+                objectInteraction,
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble(),
+                base.dynamicArtDmaService());
+    }
+
     public static GameRules compose(GameRules host, GameRules donor, DonorCapabilities donorCapabilities) {
         if (host == null) {
             throw new IllegalArgumentException("Host GameRules are required");
@@ -35,7 +71,10 @@ public final class CrossGameRuleComposer {
                 donorCapabilities.hasTailsFlight(),
                 hostCapability.jumpRepressClearsRollJumpBeforeAbility(),
                 donorCapabilities.hasElementalShields(),
-                hostCapability.superSpindashSpeedTable());
+                hostCapability.superSpindashSpeedTable(),
+                hostCapability.glideAttacksEnabled()
+                        || (donorCapability.glideAttacksEnabled()
+                        && donorCapabilities.getPlayableCharacters().contains(com.openggf.game.PlayerCharacter.KNUCKLES)));
 
         return new GameRules(
                 host.playerMovement(),

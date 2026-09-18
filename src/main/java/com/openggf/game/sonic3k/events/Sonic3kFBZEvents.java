@@ -93,7 +93,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                                      int redrawProgress, int redrawPosition,
                                      int redrawRowCount, int redrawVerticalAnchor,
                                      DeformMode deformMode, PaletteVariant paletteVariant,
-                                     PaletteTarget paletteTarget) {}
+                                     PaletteTarget paletteTarget, boolean sidekickBoundsPublishPending) {}
+
+    private boolean sidekickBoundsPublishPending;
 
     private static final int FG_LAYER = 0;
     private static final int[][] ACT1_LAYOUT_RANGES = {
@@ -178,16 +180,26 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             FbzZoneRuntimeState.S1DonationUpperLoopAssistState.ARMED;
     private FbzZoneRuntimeState.S1DonationSqueezeAssistState s1DonationSqueezeAssistState =
             FbzZoneRuntimeState.S1DonationSqueezeAssistState.ARMED;
+    // Setup_TileRowDraw/Setup_TileColumnDraw subtract one from d6 before
+    // DBF: helper inputs $20/$10 are counts of 32/16 blocks, not 33/17.
     private final StagedBackgroundPlaneRedrawController planeBRedraw =
             new StagedBackgroundPlaneRedrawController(new StagedBackgroundPlaneRedrawController.Surface() {
                 @Override public void copyRow(int sx, int sy, int dy) {
+                    // Draw_PlaneVertTopDown/SingleBottomUp clip before queuing.
+                    // FBZ outdoor callers explicitly pass d2=0 even while the
+                    // bobbing scroll produces a $10-aligned delayed position.
+                    int windowY = (backgroundOutdoor ? 0 : effectiveBackgroundY()) & 0xFF0;
+                    if (sy < windowY || sy > ((windowY + 0xF0) & 0xFF0)) return;
                     int dest = 0xE000 + ((dy >>> 3) & 0x1F) * 0x80;
                     retainedPlaneOwned = true;
-                    planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(sx, sy, dest, 0x21);
+                    planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(sx, sy, dest, 0x20);
                 }
                 @Override public void copyColumn(int sx, int sy, int dx) {
+                    // loc_5293C/loc_52962 supply d1=0 outdoors. Indoors,
+                    // Setup_TileColumnDraw shifts d1 by4 before resolving blocks.
+                    sy = backgroundOutdoor ? 0 : sy & 0xFFF0;
                     retainedPlaneOwned = true;
-                    planeBFrameTouched |= levelManager().copyBackgroundTileColumnsFromWorldToVdpPlane(sx, sy, dx, 1, 0x11);
+                    planeBFrameTouched |= levelManager().copyBackgroundTileColumnsFromWorldToVdpPlane(sx, sy, dx, 1, 0x10);
                 }
             });
 
@@ -226,6 +238,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         magneticEdgeObserved = false;
         magneticLastEdgeFrame = 0;
         pendulumOrientationBits.clear();
+        sidekickBoundsPublishPending = false;
         act2ForegroundStage = 0;
         bossBackgroundStage = 0;
         bossBackgroundOffsetX = 0;
@@ -309,7 +322,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             if (player.getDead()) {
                 screenShakeOffset = 0;
             } else if (screenShakeActive) {
-                screenShakePhase = frameCounter & 0x3F;
+                // loc_4F3FA samples Level_frame_counter, not this event
+                // manager's independently advanced dispatch count.
+                screenShakePhase = levelManager().getFrameCounter() & 0x3F;
                 screenShakeOffset = SCREEN_SHAKE_ARRAY_2[screenShakePhase & 0x1F];
             } else {
                 screenShakeOffset = 0;
@@ -427,7 +442,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             if (ownsActiveRuntime()) {
                 retainedPlaneOwned = true;
                 planeBFrameTouched |= levelManager().copyTileRowFromLayerToRetainedPlane(
-                        0, 0x2D00, sourceY, dest, 0x21);
+                        0, 0x2D00, sourceY, dest, 0x20);
             }
         }
         finishPlaneBFrame();
@@ -504,7 +519,28 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         backgroundRedrawProgress = 0;
         backgroundRedrawRowCount = 0x0F;
         backgroundRedrawVerticalAnchor = effectiveBackgroundY() & 0xFF0;
+        // FBZ2_CheckBGChange/loc_5327E resets effective tile offsets after
+        // deformation, just like the Act 1 mode-change tail.
+        lastRoundedBackgroundY = backgroundRedrawVerticalAnchor;
         submitAct1PaletteOwnership();
+    }
+
+    public void requestSidekickBoundsPublishAfterCameraEasing() {
+        requireAct2("sidekick boundary publication");
+        sidekickBoundsPublishPending = true;
+    }
+
+    public boolean consumeSidekickBoundsPublishAfterCameraEasing() {
+        boolean pending = sidekickBoundsPublishPending;
+        sidekickBoundsPublishPending = false;
+        return pending;
+    }
+
+    public boolean isSidekickBoundsPublishPending() { return sidekickBoundsPublishPending; }
+
+    public void restoreSidekickBoundsPublishPending(boolean pending) {
+        requireAct2("sidekick boundary restore");
+        sidekickBoundsPublishPending = pending;
     }
 
     public Act2TraversalState captureAct2TraversalState() {
@@ -512,7 +548,8 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         return new Act2TraversalState(foregroundLayoutRegion, foregroundOutdoor, backgroundOutdoor,
                 act2ForegroundStage, bossBackgroundStage, backgroundRedrawDirection,
                 backgroundRedrawProgress, backgroundRedrawPosition, backgroundRedrawRowCount,
-                backgroundRedrawVerticalAnchor, deformMode, paletteVariant, paletteTarget);
+                backgroundRedrawVerticalAnchor, deformMode, paletteVariant, paletteTarget,
+                sidekickBoundsPublishPending);
     }
 
     public void restoreAct2TraversalState(Act2TraversalState state) {
@@ -536,6 +573,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         deformMode = Objects.requireNonNull(state.deformMode(), "deform mode");
         paletteVariant = Objects.requireNonNull(state.paletteVariant(), "palette variant");
         paletteTarget = Objects.requireNonNull(state.paletteTarget(), "palette target");
+        sidekickBoundsPublishPending = state.sidekickBoundsPublishPending();
     }
 
     public static int[][] act1LayoutRanges() {
@@ -669,6 +707,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
                 .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(0x04, 1)
+                // FBZ1BGE_Normal reloads terrain/solids only. LoadEnemyArt is
+                // owned by the later in-level title's teardown, not Load_Level.
+                .runtimeArtAdmissionPolicy(com.openggf.game.RuntimeArtAdmissionPolicy.TITLE_OWNER)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
                 .preserveEndOfLevelState(true)
@@ -679,8 +720,8 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                 .postTransitionMaxX((int) cam.getMaxX() + ACT_TRANSITION_WORLD_OFFSET_X)
                 .postTransitionMinY((int) cam.getMinY())
                 .postTransitionMaxY((int) cam.getMaxY())
-                .postTransitionMinXTarget((int) cam.getMinXTarget())
-                .postTransitionMaxXTarget((int) cam.getMaxXTarget())
+                .postTransitionMinXTarget((int) cam.getMinXTarget() + ACT_TRANSITION_WORLD_OFFSET_X)
+                .postTransitionMaxXTarget((int) cam.getMaxXTarget() + ACT_TRANSITION_WORLD_OFFSET_X)
                 .postTransitionMinYTarget((int) cam.getMinYTarget())
                 .postTransitionMaxYTarget((int) cam.getMaxYTarget())
                 .objectSurvivalPolicy(
@@ -754,6 +795,10 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         backgroundRedrawRowCount = direction == RedrawDirection.TOP_DOWN
                 || direction == RedrawDirection.BOTTOM_UP ? 0x0F : 0x1F;
         backgroundRedrawVerticalAnchor = effectiveBackgroundY() & 0xFF0;
+        // FBZ_BGChangeGoIn/Out and horizontal loc_52C42 call
+        // Reset_TileOffsetPositionEff after FBZ_Deform. The normal row tail
+        // must not interpret the mode's new scroll origin as camera travel.
+        lastRoundedBackgroundY = backgroundRedrawVerticalAnchor;
         submitAct1PaletteOwnership();
     }
 
@@ -816,7 +861,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             int dest = 0xE000 + ((position >>> 3) & 0x1F) * 0x80;
             retainedPlaneOwned = true;
             planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(
-                    backgroundOutdoor ? 0x200 : 0, position, dest, 0x21);
+                    backgroundOutdoor ? 0x200 : 0, position, dest, 0x20);
         }
         lastRoundedBackgroundY = rounded;
     }
@@ -824,9 +869,12 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     /** Exact Draw_TileRow position selection, including the ROM's optional second 16px update. */
     public static int[] normalDrawRowPositions(int oldRounded, int newRounded) {
         int signedDelta = (short) (oldRounded - newRounded);
-        int position = signedDelta < 0 ? oldRounded + 0xF0 : newRounded;
+        // Draw_TileRow branches on TST.B d2 after SUB.W, including for
+        // large wrapped differences whose byte and word signs disagree.
+        boolean negativeByte = (byte) signedDelta < 0;
+        int position = negativeByte ? oldRounded + 0xF0 : newRounded;
         position &= 0xFF0;
-        int maskedDistance = Math.abs(signedDelta) & 0x30;
+        int maskedDistance = (negativeByte ? -signedDelta : signedDelta) & 0x30;
         return maskedDistance == 0x10
                 ? new int[]{position}
                 : new int[]{position, (position + 0x10) & 0xFF0};
@@ -1091,12 +1139,14 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         }
         if (player != null) player.shiftX(-dx);
         for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) sidekick.shiftX(-dx);
-        camera().setY((short) (camera().getY() + dy));
+        // loc_53134 adjusts live and published words independently. Ordinary
+        // setters also publish, which would translate the copy twice here.
+        camera().setYAfterRenderCopy((short) (camera().getY() + dy));
         camera().setYCopy((short) (camera().getYCopy() + dy));
         camera().setMinY((short) (camera().getMinY() + dy));
         camera().setMaxY((short) (camera().getMaxY() + dy));
         camera().setMaxYTarget(camera().getMaxY());
-        camera().setX((short) (camera().getX() - dx));
+        camera().setXAfterRenderCopy((short) (camera().getX() - dx));
         camera().setXCopy((short) (camera().getXCopy() - dx));
         camera().setMinX((short) (camera().getMinX() - dx));
         camera().setMaxX((short) (camera().getMaxX() - dx));

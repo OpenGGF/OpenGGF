@@ -105,7 +105,11 @@ public class TestS3kPachinkoPaletteCycling {
         assertNotNull(cycler);
         PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistry();
 
-        cycler.update();
+        // Level/loc_64DC arms Palette_fade_timer = $16; Animate_Palette reaches AnPal_Load
+        // only once those fresh-level fade frames have been spent.
+        for (int frame = 0; frame <= 0x16; frame++) {
+            cycler.update();
+        }
 
         for (int color = 8; color <= 14; color++) {
             org.junit.jupiter.api.Assertions.assertEquals(S3kPaletteOwners.PACHINKO_ZONE_CYCLE,

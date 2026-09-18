@@ -553,6 +553,18 @@ public enum SonicConfiguration {
 	SONIC_3K_ROM,
 
 	/**
+	 * Directory scanned for ROM images (*.gen, *.bin, *.md) in addition to the
+	 * per-game keys. Images are identified by size and header, never filename.
+	 */
+	ROMS_DIRECTORY,
+
+	/**
+	 * If true, a logical ROM assembled from separate images (Sonic 3 plus
+	 * Sonic & Knuckles for S3K) is preferred over a single lock-on dump.
+	 */
+	ROMS_PREFER_COMPOSITE,
+
+	/**
 	 * If true, zone intro sequences (AIZ biplane, etc.) are skipped and
 	 * gameplay-ready bootstrap data is used instead.
 	 */

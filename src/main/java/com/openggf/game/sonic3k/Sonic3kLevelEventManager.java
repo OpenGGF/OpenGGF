@@ -33,6 +33,7 @@ import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
@@ -40,6 +41,7 @@ import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -60,6 +62,7 @@ import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
+import com.openggf.game.sonic3k.objects.LevelIntroPlayerRunInstance;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance;
@@ -121,6 +124,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kLBZEvents lbzEvents;
     private Sonic3kMGZEvents mgzEvents;
     private Sonic3kMHZEvents mhzEvents;
+    private com.openggf.game.sonic3k.events.Sonic3kSOZEvents sozEvents;
+    private com.openggf.game.sonic3k.events.Sonic3kHPZEvents hpzEvents;
     private final AizPreparedTransitionArtState aizPreparedTransitionArt =
             new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -297,6 +302,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             mhzEvents = null;
         }
 
+        sozEvents = zone == Sonic3kZoneIds.ZONE_SOZ
+                ? new com.openggf.game.sonic3k.events.Sonic3kSOZEvents() : null;
+        if (Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
+            hpzEvents = new com.openggf.game.sonic3k.events.Sonic3kHPZEvents();
+            hpzEvents.init(act);
+        } else {
+            hpzEvents = null;
+        }
+
         // Install typed zone runtime state into the registry.
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
         // getCurrent() which can destroy the runtime during level loading.
@@ -375,11 +389,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public void updateFixedInLevelObjectsBeforeDynamicObjects() {
         var levelManager = GameServices.levelOrNull();
         if (fbzEvents != null && levelManager != null) {
-            // ROM LevelLoop increments Level_frame_counter, runs AnPal_FBZ,
-            // then Process_Sprites. ObjectManager receives this same +1 frame.
+            // LevelFrameStep already incremented Level_frame_counter before
+            // this prelude. AnPal_FBZ reads its low byte at the address
+            // Level_frame_counter+1 (sonic3k.asm:3371), not counter plus one.
             var fade = GameServices.fadeOrNull();
             fbzEvents.advanceMagneticPhase(
-                    levelManager.getFrameCounter() + 1,
+                    levelManager.getFrameCounter(),
                     fade != null && fade.isActive());
         }
         if (iczEvents != null) {
@@ -468,11 +483,33 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new IczZoneRuntimeState(act, playerCharacter, iczEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_MHZ && mhzEvents != null) {
             registry.install(new MhzZoneRuntimeState(act, playerCharacter, mhzEvents));
+        } else if (zone == Sonic3kZoneIds.ZONE_SOZ) {
+            registry.install(new SozZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
+        } else if (zone == Sonic3kZoneIds.ZONE_DDZ) {
+            registry.install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(act, playerCharacter));
+            allocateDdzFlightController();
+        } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)
+                || Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
+            registry.install(new HpzZoneRuntimeState(zone, act, playerCharacter));
         } else {
             registry.clear();
         }
+    }
+
+    /**
+     * {@code DDZ_ScreenInit} (sonic3k.asm:118813-118826): {@code AllocateObject} the flight controller
+     * {@code loc_81492} before the level's first object pass; the {@code _unkEE98..EEA2} words start at
+     * zero in the fresh runtime state.
+     */
+    private void allocateDdzFlightController() {
+        if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null
+                || GameServices.levelOrNull().getObjectManager() == null) {
+            return;
+        }
+        GameServices.level().getObjectManager().createDynamicObject(
+                com.openggf.game.sonic3k.objects.DdzFlightControllerObjectInstance::new);
     }
 
     private void installFixedDynamicObjects(int zone) {
@@ -550,8 +587,22 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     instanceof Sonic3kSuperStateController superState) {
             superState.applyHyperKnucklesWallQuake(camera());
         }
-        if (screenEventIdentity == ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB) {
-            applyHpzsScreenEvent(camera());
+        if (screenEventIdentity == ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB || hpzEvents != null) {
+            HpzZoneRuntimeState hpzState = GameServices.hasRuntime()
+                    ? S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry()).orElse(null)
+                    : null;
+            if (hpzState != null) {
+                // ROM ScreenEvents: HPZS_ScreenEvent and HPZS_BackgroundEvent both
+                // (and HPZ_ScreenEvent / HPZ_BackgroundEvent for $1601,
+                // sonic3k.asm:120075-120076, 120128) read Screen_shake_offset, and the background event tail-calls
+                // ShakeScreen_Setup (sonic3k.asm:120855) for the next frame. The
+                // engine advances the countdown here, at the head of the pass, so
+                // the applied word is the one the previous setup produced and the
+                // scroll handler consumes it without re-running the setup.
+                hpzState.advanceScreenShake(frameCounter,
+                        mainPlayer != null && mainPlayer.getDead());
+                applyHpzsScreenEvent(camera(), hpzState.appliedScreenShakeOffset());
+            }
         }
 
         // ROM: ScreenEvents dispatches to both FG and BG handlers each frame.
@@ -581,20 +632,32 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
             mhzEvents.update(currentAct, frameCounter);
         }
+        if (sozEvents != null && currentZone == Sonic3kZoneIds.ZONE_SOZ) {
+            sozEvents.update(currentAct, frameCounter);
+        }
+        if (hpzEvents != null && currentZone == Sonic3kZoneIds.ZONE_HPZ) {
+            hpzEvents.update(currentAct, frameCounter);
+        }
         releasePendingMgzPostTransition();
         syncSidekickBoundsToCamera();
     }
 
     /**
-     * ROM {@code HPZS_ScreenEvent}: publish screen shake on the copied camera
-     * word before the ordinary tile-movement draw consumes it.
+     * ROM {@code HPZS_ScreenEvent} (sonic3k.asm:120823-120826):
+     * {@code move.w (Screen_shake_offset).w,d0 / add.w d0,(Camera_Y_pos_copy).w}
+     * before {@code DrawTilesAsYouMove}. The copy is the sprite and foreground
+     * vertical scroll source, so this is the only place the sanctuary shake
+     * enters the camera; the scroll handler publishes no separate shake offset.
      */
-    static void applyHpzsScreenEvent(com.openggf.camera.Camera camera) {
-        camera.setYCopy((short) (camera.getYCopy() + camera.getShakeOffsetY()));
+    static void applyHpzsScreenEvent(com.openggf.camera.Camera camera, int screenShakeOffset) {
+        camera.setYCopy((short) (camera.getYCopy() + screenShakeOffset));
     }
 
     @Override
     public void updatePrePhysics() {
+        if (sozEvents != null && currentZone == Sonic3kZoneIds.ZONE_SOZ) {
+            sozEvents.updateSpecialEvents(currentAct);
+        }
         // ROM LevelLoop dispatches SpecialEvents before Load_Sprites/Process_Sprites;
         // MHZ uses that slot for its arena repeat loops (sonic3k.asm:7887-7894,
         // 104080-104094). ScreenEvents remains in onUpdate() after camera movement.
@@ -629,7 +692,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 && cnzEvents.consumeSidekickBoundsPublishAfterCameraEasing();
         boolean lbzPublishPending = state != null
                 && state.isLbz1KnucklesBoundaryPublishPending();
-        if (!cnzPublishPending && !lbzPublishPending) {
+        boolean fbzPublishPending = fbzEvents != null
+                && fbzEvents.consumeSidekickBoundsPublishAfterCameraEasing();
+        if (!cnzPublishPending && !lbzPublishPending && !fbzPublishPending) {
             return;
         }
         if (camera == null) {
@@ -651,7 +716,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // DynamicLevelEvents explicitly publishes that post-easing value;
         // unrelated gradual resize owners retain their native cadence
         // (sonic3k.asm:28410-28443).
-        if (cnzPublishPending || boundsMovedPastSidekickMirror) {
+        if (cnzPublishPending || fbzPublishPending || boundsMovedPastSidekickMirror) {
             syncSidekickBoundsToCamera();
         }
     }
@@ -664,6 +729,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      */
     @Override
     public void requestSidekickBoundsPublishAfterCameraEasing() {
+        if (fbzEvents != null) {
+            fbzEvents.requestSidekickBoundsPublishAfterCameraEasing();
+        }
         if (cnzEvents != null) {
             cnzEvents.requestSidekickBoundsPublishAfterCameraEasing();
         }
@@ -842,6 +910,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_SOZ && currentAct == 0 && !bootstrap.isSkipIntro()) {
+            // SpawnLevelMainSprites loc_695A, before the initial controller pass.
+            var players = new java.util.ArrayList<AbstractPlayableSprite>(GameServices.sprites().getRegisteredSidekicks());
+            if (GameServices.sprites().getMainPlayable() != null) players.addFirst(GameServices.sprites().getMainPlayable());
+            for (var player : players) {
+                player.setAir(true);
+                player.setAnimationId(2);
+            }
+            spawnSozFallingIntro(true);
+        }
         // ROM: sonic3k.asm loc_68A6 — simple falling intro (anim $1B + airborne).
         // MGZ1 is unconditional; LRZ1 explicitly skips Knuckles at
         // sonic3k.asm:8161-8165 (Player_mode != 3).
@@ -865,6 +943,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
             spawnLbz1GroundLaunchIntro(false);
+        }
+        if (usesLevelIntroPlayerRun()) {
+            spawnLevelIntroPlayerRun();
         }
         // ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1
         // a throwaway Player_2 Tails is spawned to carry solo Sonic in. This runs
@@ -912,7 +993,38 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    /**
+     * Obj_TitleCardWait2/loc_2D86E allocates the SOZ2 Hyudoro controller when
+     * the title owner's children have retired. This also runs on saved-player
+     * reloads: their intro suppression does not suppress the native controller.
+     */
+    public void onTitleCardOwnerRetired() {
+        if (currentZone != Sonic3kZoneIds.ZONE_SOZ || currentAct != 1) {
+            return;
+        }
+        var objectManager = GameServices.level().getObjectManager();
+        if (objectManager == null) {
+            return;
+        }
+        var titleOwnerSlot = objectManager.getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.S3kTitleCardOwnerSlotObjectInstance.class::isInstance)
+                .findFirst().orElse(null);
+        if (objectManager.getActiveObjects().stream()
+                .noneMatch(com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance.class::isInstance)) {
+            // The owner is still in its SST here, so AllocateObject skips that slot.
+            objectManager.createDynamicObject(() ->
+                    new com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance(
+                            new com.openggf.level.objects.ObjectSpawn(0x120, 0xA0, 0xAA, 0, 0, false, 0)));
+        }
+        if (titleOwnerSlot instanceof com.openggf.level.objects.AbstractObjectInstance owner) {
+            // loc_2D8DC: Delete_Current_Sprite.
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(owner);
+        }
+    }
+
     public void applyZonePlayerStateAfterTitleCard() {
+        if (!hasSavedPlayerReturnState() && currentZone == Sonic3kZoneIds.ZONE_SOZ
+                && currentAct == 0 && !bootstrap.isSkipIntro()) spawnSozFallingIntro(true);
         // The title-card caller also owns LBZ1's launch below the shared seam.
         // Saved-state returns must skip that spawn as well as the shared intros.
         if (hasSavedPlayerReturnState()) {
@@ -946,6 +1058,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // dynamic objects; rebuild this level-owned controller before executing
         // those prelude object frames so its Random_Number cadence remains native.
         installFixedDynamicObjects(currentZone);
+        if (currentZone == Sonic3kZoneIds.ZONE_SOZ && currentAct == 0
+                && !hasSavedPlayerReturnState() && !bootstrap.isSkipIntro()) spawnSozFallingIntro(true);
         if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0 && aizEvents != null) {
             aizEvents.restoreIntroObjectAfterPreludeReset();
         }
@@ -958,6 +1072,29 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_FBZ && fbzEvents != null) {
             fbzEvents.restoreOutdoorMotionAfterPlacementReset();
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_DDZ) {
+            restoreDdzFlightControllerAfterPlacementReset();
+        }
+    }
+
+    /**
+     * A placement reset cleared the {@code DDZ_ScreenInit} allocation before its first dispatch:
+     * restart the Doomsday runtime words and allocate the flight controller again.
+     */
+    private void restoreDdzFlightControllerAfterPlacementReset() {
+        if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null
+                || GameServices.levelOrNull().getObjectManager() == null) {
+            return;
+        }
+        boolean present = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .anyMatch(object -> object instanceof com.openggf.game.sonic3k.objects.DdzFlightControllerObjectInstance
+                        && !object.isDestroyed());
+        if (present) {
+            return;
+        }
+        GameServices.zoneRuntimeRegistry().install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(
+                currentAct, getPlayerCharacter()));
+        allocateDdzFlightController();
     }
 
     private void releaseIczStartupObjectControlAfterTitleCard() {
@@ -1021,6 +1158,23 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    private void spawnSozFallingIntro(boolean arm) {
+        var manager = GameServices.level().getObjectManager();
+        if (manager == null) return;
+        for (var object : manager.getActiveObjects()) {
+            if (object instanceof com.openggf.game.sonic3k.objects.SozFallingIntroInstance intro
+                    && !intro.isDestroyed()) {
+                if (arm) intro.arm();
+                return;
+            }
+        }
+        // loc_695A writes Dynamic_object_RAM+2*object_size: base3 + 2 = SST5.
+        var intro = manager.createDynamicObjectAtSlot(() ->
+                new com.openggf.game.sonic3k.objects.SozFallingIntroInstance(
+                        new ObjectSpawn(0, 0, 0, 0, 0, false, 0)), 5);
+        if (intro != null && arm) intro.arm();
+    }
+
     private void spawnLbz1GroundLaunchIntro(boolean armImmediately) {
         ObjectManager objectManager = GameServices.level().getObjectManager();
         if (objectManager == null) {
@@ -1039,6 +1193,58 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 objectManager.createDynamicObject(() -> new Lbz1GroundLaunchIntroInstance(spawn));
         if (intro != null && armImmediately) {
             intro.applyInitialHoldForLevelStart();
+        }
+    }
+
+    /**
+     * SpawnLevelMainSprites loc_6986 (sonic3k.asm:8243-8256): {@code $B00} and {@code $1601} for
+     * every character; {@code $300} and {@code $900} only when {@code Player_mode} is Knuckles.
+     */
+    private boolean usesLevelIntroPlayerRun() {
+        if (currentZone == Sonic3kZoneIds.ZONE_HPZ && currentAct == 1) {
+            return true;
+        }
+        if (currentZone == Sonic3kZoneIds.ZONE_DEZ && currentAct == 0) {
+            return true;
+        }
+        return getPlayerCharacter() == PlayerCharacter.KNUCKLES && currentAct == 0
+                && (currentZone == Sonic3kZoneIds.ZONE_CNZ || currentZone == Sonic3kZoneIds.ZONE_LRZ);
+    }
+
+    /**
+     * {@code Sonic_Start_Locations} / {@code Knux_Start_Locations} for the current act. The ROM only
+     * spawns {@code Obj_LevelIntro_PlayerRun} with Player_1 on that point (loc_1BE7A), so the stored
+     * target does not follow a positioned harness start.
+     */
+    private int[] romPlayerStartLocation() {
+        var level = GameServices.levelOrNull();
+        if (level != null && level.getGame() instanceof com.openggf.game.DynamicStartPositionProvider provider) {
+            try {
+                int[] start = provider.getStartPosition(currentZone, currentAct);
+                if (start != null && start.length >= 2) {
+                    return start;
+                }
+            } catch (java.io.IOException ignored) {
+                // Fall through to the registered player's load position.
+            }
+        }
+        var leader = GameServices.sprites().getMainPlayable();
+        return leader == null ? null : new int[]{leader.getCentreX() & 0xFFFF, leader.getCentreY() & 0xFFFF};
+    }
+
+    private void spawnLevelIntroPlayerRun() {
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        if (objectManager == null || objectManager.getActiveObjects().stream()
+                .anyMatch(o -> o instanceof LevelIntroPlayerRunInstance intro && !intro.isDestroyed())) {
+            return;
+        }
+        LevelIntroPlayerRunInstance intro = objectManager.createDynamicObject(() -> new LevelIntroPlayerRunInstance(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        if (intro != null) {
+            int[] start = romPlayerStartLocation();
+            if (start != null) {
+                intro.captureStartTarget(start[0], start[1]);
+            }
         }
     }
 
@@ -1165,8 +1371,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
         return java.util.List.of(
                 aizPreparedTransitionArt,
+                new com.openggf.game.sonic3k.objects.AizTreeRevealStaticAdapter(),
                 new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter(),
                 new Sonic3kLevelTriggerStaticAdapter(),
+                new Sonic3kCheatFlagsRewindAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterSkimStaticAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterTunnelStaticAdapter(),
                 new com.openggf.game.sonic3k.objects.HCZBreakableBarStaticAdapter(),
@@ -1437,6 +1645,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             case Sonic3kZoneIds.ZONE_MHZ ->
                     state instanceof MhzZoneRuntimeState mhzState && mhzState.isBackedBy(mhzEvents);
             case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState;
+            case Sonic3kZoneIds.ZONE_SOZ -> state instanceof SozZoneRuntimeState;
+            // Reinstalling would zero the Doomsday words and allocate a second flight controller.
+            case Sonic3kZoneIds.ZONE_DDZ -> state instanceof com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
+            case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
+                    state instanceof HpzZoneRuntimeState hpzState
+                            && hpzState.zoneIndex() == currentZone
+                            && hpzState.actIndex() == currentAct;
             default -> false;
         };
     }
@@ -1521,6 +1736,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     public Sonic3kHCZEvents getHczEvents() {
         return hczEvents;
+    }
+
+    public com.openggf.game.sonic3k.events.Sonic3kSOZEvents getSozEvents() {
+        return sozEvents;
     }
 
     public Sonic3kICZEvents getIczEvents() {

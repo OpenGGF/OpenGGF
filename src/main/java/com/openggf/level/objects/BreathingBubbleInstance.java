@@ -3,6 +3,7 @@ package com.openggf.level.objects;
 import com.openggf.camera.Camera;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -49,6 +50,17 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     private static final int COUNTDOWN_MASK = 0x0F;
     private static final int ART_PROFILE_SHIFT = 4;
     private static final int ART_PROFILE_MASK = 0x03;
+    private static final int PRIORITY_SHIFT = 6;
+    private static final int PRIORITY_MASK = 0x07;
+
+    /**
+     * Drowning-bubble bucket: S1 Obj0A {@code move.b #1,obPriority(a0)}
+     * (_incObj/0A LZ Drowning Countdown.asm:39), S2 Obj0A {@code move.b #1,priority(a0)}
+     * (s2.asm:41890), S3K Obj_Bubbler child {@code move.w #$80,priority(a0)} (sonic3k.asm:64753).
+     * Other spawners pass their own ROM bucket (S2 ChopChop bubbles are Obj91's
+     * {@code move.b #4,priority(a1)}, s2.asm:74201).
+     */
+    public static final int DROWNING_PRIORITY_BUCKET = RenderPriority.bucket(1);
     private static final int ART_PROFILE_S2 = 0;
     private static final int ART_PROFILE_S1 = 1;
 
@@ -93,6 +105,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     private int wobbleAngle;
 
     /** Countdown number to display (-1 for regular bubble) */
+    private int priorityBucket;
     private int countdownNumber;
 
     /** Obj0A's obj0a_character pointer; captured as a player reference for rewind. */
@@ -169,8 +182,22 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     public BreathingBubbleInstance(int x, int y, boolean startsFacingLeft, int countdownNumber,
                                    String artKey, int[] countdownFrameMap, int maxBubbleFrame,
                                    int riseVelocity, boolean skipFirstUpdate, AbstractPlayableSprite owner) {
-        super(buildSpawn(x, y, startsFacingLeft, countdownNumber, artKey, riseVelocity),
+        this(x, y, startsFacingLeft, countdownNumber, artKey, countdownFrameMap,
+                maxBubbleFrame, riseVelocity, skipFirstUpdate, owner, DROWNING_PRIORITY_BUCKET);
+    }
+
+    /**
+     * @param priorityBucket ROM sprite bucket written by the spawner; see
+     *                       {@link #DROWNING_PRIORITY_BUCKET}
+     */
+    public BreathingBubbleInstance(int x, int y, boolean startsFacingLeft, int countdownNumber,
+                                   String artKey, int[] countdownFrameMap, int maxBubbleFrame,
+                                   int riseVelocity, boolean skipFirstUpdate, AbstractPlayableSprite owner,
+                                   int priorityBucket) {
+        super(buildSpawn(x, y, startsFacingLeft, countdownNumber, artKey, riseVelocity,
+                        RenderPriority.bucket(priorityBucket)),
                 "BreathingBubble");
+        this.priorityBucket = RenderPriority.bucket(priorityBucket);
         this.currentX = x;
         this.currentY = y;
         this.baseX = x;
@@ -191,7 +218,12 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     public BreathingBubbleInstance(ObjectSpawn spawn) {
         this(spawn.x(), spawn.y(), startsFacingLeft(spawn), countdownNumber(spawn),
                 artKey(spawn), countdownFrameMap(spawn), maxBubbleFrame(spawn),
-                riseVelocity(spawn));
+                riseVelocity(spawn), true, null, priorityBucket(spawn));
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return priorityBucket;
     }
 
     @Override
@@ -205,8 +237,10 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
             boolean startsFacingLeft,
             int countdownNumber,
             String artKey,
-            int riseVelocity) {
-        int subtype = ((artProfile(artKey) & ART_PROFILE_MASK) << ART_PROFILE_SHIFT)
+            int riseVelocity,
+            int priorityBucket) {
+        int subtype = ((priorityBucket & PRIORITY_MASK) << PRIORITY_SHIFT)
+                | ((artProfile(artKey) & ART_PROFILE_MASK) << ART_PROFILE_SHIFT)
                 | encodeCountdown(countdownNumber);
         return new ObjectSpawn(x, y, 0x0A, subtype, startsFacingLeft ? 1 : 0,
                 false, riseVelocity);
@@ -214,6 +248,10 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
 
     private static int encodeCountdown(int countdownNumber) {
         return countdownNumber >= 0 && countdownNumber <= 5 ? countdownNumber : COUNTDOWN_NONE;
+    }
+
+    private static int priorityBucket(ObjectSpawn spawn) {
+        return (spawn.subtype() >> PRIORITY_SHIFT) & PRIORITY_MASK;
     }
 
     private static int countdownNumber(ObjectSpawn spawn) {

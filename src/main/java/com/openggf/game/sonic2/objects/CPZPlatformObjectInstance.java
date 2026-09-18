@@ -6,12 +6,11 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SolidContact;
-import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
@@ -41,7 +40,7 @@ import java.util.logging.Logger;
  * - C-F: Circular motion reversed (variants)
  */
 public class CPZPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(CPZPlatformObjectInstance.class.getName());
 
     // Subtype properties: width_pixels, mapping_frame (from
@@ -101,6 +100,22 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(x, y);
     }
 
+    // Obj19_Init move.b #4,priority(a0): docs/s2disasm/s2.asm:47980.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // Only the WFZ art word sets bit 15: make_art_tile(ArtTile_ArtNem_WfzFloatingPlatform,1,1)
+        // (docs/s2disasm/s2.asm:47969); the CPZ/OOZ words at s2.asm:47961/47965 leave it clear.
+        var services = tryServices();
+        return services != null && services.currentZone() == Sonic2ZoneConstants.ROM_ZONE_WFZ;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(artKeyForRomZone(services().currentZone()));
@@ -151,14 +166,7 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Platform state is driven via ObjectManager standing checks.
-    }
-
-    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
     }
 

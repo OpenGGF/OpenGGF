@@ -89,6 +89,8 @@ public class PlayerSpriteRenderer {
         }
 
         SpriteMappingFrame frame = artSet.mappingFrames().get(frameIndex);
+        com.openggf.level.render.SpritePresentationRenderer.bindPatternBank(graphicsManager,
+                patternBank.getBasePatternIndex(), patternBank.getPatterns(), frame);
         if (graphicsManager.isSpriteSatCollectionActive()) {
             int satPaletteIndex = resolveRenderPaletteIndex(artSet.paletteIndex());
             for (int i = 0; i < frame.pieces().size(); i++) {

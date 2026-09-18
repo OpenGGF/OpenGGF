@@ -9,7 +9,7 @@ import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.capture.BackpressurePolicy;
 import com.openggf.capture.CaptureRecorder;
 import com.openggf.capture.CapturedFrame;
-import com.openggf.capture.DrainPcmAudioTap;
+import com.openggf.capture.AudioFrameTap;
 import com.openggf.capture.FfmpegEncoder;
 import com.openggf.capture.GlReadPixelsGrabber;
 import com.openggf.configuration.SonicConfiguration;
@@ -185,6 +185,17 @@ public final class TraceCaptureTool {
                 || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD);
     }
 
+    static boolean shouldPresentFrameWindowRow(TraceReplayDrive.DriveOutcome outcome,
+            TraceExecutionPhase phase, TraceFrame previous, TraceFrame current) {
+        if (!outcome.consumedRow() || phase == TraceExecutionPhase.ADVANCE_ONLY) return false;
+        if (previous != null && previous.vblankCounter() >= 0 && current.vblankCounter() >= 0) {
+            // A held gameplay counter still presents the title, fade or lag
+            // VBlank. A cursor-only/no-VBlank row contributes no video/audio.
+            return current.vblankCounter() != previous.vblankCounter();
+        }
+        return shouldPresentOuterFrame(outcome, phase);
+    }
+
     static void requireCapturedFrames(long captured) {
         if (captured <= 0) {
             throw new IllegalStateException(
@@ -199,7 +210,7 @@ public final class TraceCaptureTool {
             throw new java.io.IOException("capture output is missing or empty: " + output);
         }
         return TraceCaptureManifest.write(output, entry, trace,
-                dimensions, clip, tailFrames);
+                dimensions, clip, clip != null && clip.startsWith("frames:") ? 0 : tailFrames);
     }
 
     public static void main(String[] argv) {
@@ -284,6 +295,11 @@ public final class TraceCaptureTool {
                     trace.hardwareTimingSchedule().hasRecordedInput()
                             ? HardwareReadinessAdmissionPolicy.RECORDED
                             : HardwareReadinessAdmissionPolicy.LIVE);
+        // This recording starts after the host's initial presentation. Reach
+        // the same production omitted-presentation boundary as live replay
+        // and the benchmark before installing recorded readiness ownership.
+        GameServices.level().skipPendingInitialTitleCardPresentation();
+        GameServices.level().consumeInLevelTitleCardRequest();
         // --- deterministic trace replay bootstrap -------------------------
         // Mirror AbstractTraceReplayTest steps 4-5: start position + ground
         // snap, then the shared replay bootstrap (timing prelude, native
@@ -316,7 +332,7 @@ public final class TraceCaptureTool {
                 ? trace.getFrame(replayStart.seededTraceIndex())
                 : startIndex > 0 ? trace.getFrame(startIndex - 1) : null;
         TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
-                previousDriveFrame,
+                trace, replayStart, previousDriveFrame,
                 startIndex < trace.frameCount() ? trace.getFrame(startIndex) : null);
 
         if (args.verifyFrames() != null) {
@@ -348,7 +364,6 @@ public final class TraceCaptureTool {
 
         GlReadPixelsGrabber grabber = new GlReadPixelsGrabber(
                 dimensions.physicalWidth(), dimensions.physicalHeight());
-        DrainPcmAudioTap audioTap = new DrainPcmAudioTap(GameServices.audio());
         // The offline lease is a non-consuming view of the already-authoritative
         // presentation producer, so both its rate and the container's rate are
         // the producer's rates. Take it before the recorder opens so the first
@@ -361,7 +376,10 @@ public final class TraceCaptureTool {
                     + frameRate + " fps; capturing at " + frameRate
                     + " so audio and video stay in sync");
         }
-        GameServices.audio().beginCaptureMode(sampleRate, frameRate);
+        // The manager-owned recording lease follows producer rebuilds during
+        // fresh level loads. The compatibility offline lease ends on reset.
+        var audioLease = GameServices.audio().beginLiveCaptureAudio(frameRate);
+        AudioFrameTap audioTap = audioLease::drainPresentationFrame;
         try {
             recorder.start(dimensions.physicalWidth(), dimensions.physicalHeight(),
                     frameRate, sampleRate);
@@ -369,7 +387,7 @@ public final class TraceCaptureTool {
             // The recorder never opened, so nothing will stop it and run the
             // finally below: release the lease here or it is leaked onto the
             // producer for the rest of the process.
-            GameServices.audio().endCaptureMode();
+            audioLease.close();
             throw failedToOpen;
         }
         HeadlessOuterAudioFrames audioFrames =
@@ -408,7 +426,7 @@ public final class TraceCaptureTool {
                 }
             } finally {
                 try {
-                    GameServices.audio().endCaptureMode();
+                    audioLease.close();
                 } finally {
                     // The grabber holds a frame-sized native read buffer for
                     // its lifetime now that it reuses one per grab.
@@ -542,13 +560,13 @@ public final class TraceCaptureTool {
      * instead of silently emitting several packets per captured frame.
      */
     static final class HeadlessOuterAudioFrames {
-        private final DrainPcmAudioTap audioTap;
+        private final AudioFrameTap audioTap;
         private final short[] discardBuffer = new short[16384];
         private boolean presentedUndrained;
         private int presentedFrames;
         private int drainedFrames;
 
-        HeadlessOuterAudioFrames(DrainPcmAudioTap audioTap) {
+        HeadlessOuterAudioFrames(AudioFrameTap audioTap) {
             this.audioTap = audioTap;
         }
 
@@ -669,17 +687,21 @@ public final class TraceCaptureTool {
                            TraceCaptureDimensions dimensions,
                            TraceReplayDrive.DriverFixture fixture)
             throws Exception {
+        int[] frameWindow = parseFrameWindow(clipName);
+        if (frameWindow != null && frameWindow[1] >= trace.frameCount()) {
+            throw new IllegalArgumentException("clip end exceeds the trace row count");
+        }
         boolean fireTransitionClip = "aiz-fire-transition".equals(clipName);
         boolean battleshipClip = "aiz-battleship-to-boss".equals(clipName);
-        if (!fireTransitionClip && !battleshipClip) {
+        if (frameWindow == null && !fireTransitionClip && !battleshipClip) {
             throw new IllegalArgumentException("Unknown --clip '" + clipName
-                    + "' (supported: aiz-fire-transition, aiz-battleship-to-boss)");
+                    + "' (supported: frames:START:END, aiz-fire-transition, aiz-battleship-to-boss)");
         }
         // The aiz1_to_hcz trace transitions AIZ1 -> AIZ2 mid-run, and the act load
         // recreates the Sonic3kAIZEvents instance (Sonic3kLevelEventManager:189), so
         // the live handler must be re-resolved each frame (never cached). The
         // battleship (and its auto-scroll flag) live on the AIZ2 instance.
-        if (resolveAizEvents() == null) {
+        if (frameWindow == null && resolveAizEvents() == null) {
             throw new IllegalStateException(
                     "--clip " + clipName + " requires a live S3K AIZ event state");
         }
@@ -698,7 +720,8 @@ public final class TraceCaptureTool {
                 : driveTraceIndex > 0 ? trace.getFrame(driveTraceIndex - 1) : null;
 
         System.out.println("clip " + clipName + ": fast-forwarding to semantic start...");
-        while (driveTraceIndex < trace.frameCount()) {
+        while (driveTraceIndex < trace.frameCount()
+                && (frameWindow == null || driveTraceIndex <= frameWindow[1])) {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
@@ -717,10 +740,14 @@ public final class TraceCaptureTool {
                 }
             }
 
-            if (shouldPresentOuterFrame(outcome, phase)) {
+            boolean presentRow = frameWindow == null
+                    ? shouldPresentOuterFrame(outcome, phase)
+                    : shouldPresentFrameWindowRow(outcome, phase, previousDriveFrame, driveFrame);
+            if (presentRow) {
                 if (!capturing) {
                     Sonic3kAIZEvents live = resolveAizEvents();
-                    boolean start = fireTransitionClip
+                    boolean start = frameWindow != null ? driveTraceIndex >= frameWindow[0]
+                            : fireTransitionClip
                             ? fireTransitionStartPending
                                     || isFireTransitionClipStart(live, previousFireActive)
                             : live != null && live.isBattleshipAutoScrollActive();
@@ -741,12 +768,13 @@ public final class TraceCaptureTool {
                     recorder.submit(new CapturedFrame(rgba, dimensions.physicalWidth(),
                             dimensions.physicalHeight(),
                             pcmBuffer, sampleCount, frameIndex++));
-                    boolean stop = fireTransitionClip
+                    boolean stop = frameWindow != null ? driveTraceIndex >= frameWindow[1]
+                            : fireTransitionClip
                             ? isFireTransitionClipStop(resolveAizEvents())
                             : GameServices.audio().musicFadeOutCount() > fadeBaseline;
                     if (stopAtFrame < 0 && stop) {
-                        stopAtFrame = frameIndex + tailFrames;
-                        System.out.println("clip: semantic stop -> recording " + tailFrames
+                        stopAtFrame = frameIndex + (frameWindow == null ? tailFrames : 0);
+                        System.out.println("clip: semantic stop -> recording " + (frameWindow == null ? tailFrames : 0)
                                 + " more frame(s)");
                     }
                     if (stopAtFrame >= 0 && frameIndex >= stopAtFrame) {
@@ -767,11 +795,26 @@ public final class TraceCaptureTool {
         }
         if (!capturing) {
             System.out.println("clip: WARNING semantic start never detected; nothing captured");
-        } else if (stopAtFrame < 0) {
+        } else if (frameWindow == null && stopAtFrame < 0) {
             System.out.println("clip: WARNING semantic stop never detected; captured to end of "
                     + "trace (" + frameIndex + " frames)");
         }
         return frameIndex;
+    }
+
+    /** Inclusive zero-based trace row window; it selects output, never replay state. */
+    static int[] parseFrameWindow(String clip) {
+        if (!clip.startsWith("frames:")) return null;
+        String[] fields = clip.split(":", -1);
+        if (fields.length != 3) {
+            throw new IllegalArgumentException("frame clip syntax is frames:START:END");
+        }
+        int start = Integer.parseInt(fields[1]);
+        int end = Integer.parseInt(fields[2]);
+        if (start < 0 || end < start) {
+            throw new IllegalArgumentException("frame clip requires 0 <= START <= END");
+        }
+        return new int[]{start, end};
     }
 
     private Sonic3kAIZEvents resolveAizEvents() {

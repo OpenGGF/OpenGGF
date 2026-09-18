@@ -22,7 +22,10 @@ and the published-baseline set. This guide explains that policy but does not def
 version state. The current descriptor has an empty published set.
 
 `targetBranch` identifies the destination branch checked by CI; the three line
-fields describe engine versions. An unpublished candidate on `develop` or `next`
+fields describe engine versions. Pushes to `master`, `develop` and `next` must
+agree with that destination. Feature-branch pushes still validate the descriptor,
+but omit the optional destination property because a feature ref is not a release
+integration destination. Pull-request jobs check their base branch. An unpublished candidate on `develop` or `next`
 may retain an API line at or below its engine line. Thus both the 0.7 and 0.8 engine
 lines carry the same 0.7.0 candidate until an explicit API policy change. This does
 not publish a baseline or rename the candidate pin. Master and publication checks
@@ -36,6 +39,27 @@ engineApiRange: ">=0.7.0 <0.8.0"
 
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
+
+The KiS2 trace-readiness follow-up adds semantic movement and checkpoint-ring
+rules, the saved ring bank in checkpoint/load snapshots, separate boss duck-frame
+selection, and an explicit title-to-level-select action plus post-reset menu
+handoff. Movement policies now group air and ground-pose decisions separately.
+Candidate records use canonical constructors; owning factories pass stock defaults
+explicitly. These are
+changes to the unpublished candidate; version `0.7.0` remains unchanged and its
+normalized `0.7` signature pin is replaced in place.
+
+The SOZ completion extends `PersistentRespawnState` with the object-owned lower
+respawn-table bits so bonus/special-stage returns preserve activated mechanisms.
+Its canonical constructor now accepts those bytes. Placement ownership transfer
+is also exposed by `ObjectManager` for children that retain a parent's layout
+entry. These update the mutable `0.7` pin; the descriptor's candidate version
+remains `0.7.0` and no published baseline is created.
+
+The Hidden Palace completion adds `SpecialStageProvider.resultsExitFadesToWhite()` (default
+`true`: the Sonic 1/2 exit SFX and white fade; Sonic 3&K leaves silently through black) and
+`GameLoop.debugCompleteSpecialStageWithEmerald()`, the debug completion that capture tools
+request without reading a key binding. Both update the mutable `0.7` pin.
 
 ## What the 0.7 candidate includes
 
@@ -56,6 +80,24 @@ The zone seam uses `LevelDescriptor` in creator-facing signatures; stock
 object rewind entries retain their owning compiled-mod loader through
 `DynamicObjectEntry.ownerModId` and `RewindClassResolver`. Creator callbacks stay
 transactional, owner-fault-bounded, and engine-authoritative.
+
+## SMPS construction compatibility
+
+`AbstractSmpsData(byte[], int)` retains its legacy constructor-time `parseHeader()`
+hook for existing extensions. The new protected overload with a
+`deferHeaderParsing` boolean lets extensions initialize their own fields before
+parsing. Passing `true` leaves the default header state installed and suppresses
+the hook; the subclass then owns explicit initialization.
+
+Built-in S1, S2 and S3K music data use this deferred path and a format decoder,
+so their construction never dispatches overridden `parseHeader()` or `read16()`.
+Their byte order, signed key/volume offsets, voice-bank resolution and existing
+truncated-input policies remain distinct where required. The decoder's temporary
+result is private; it adds no creator-facing header or array API. The existing
+`FrozenSmpsData` snapshot boundary remains unchanged. This is an additive change
+to the unpublished 0.7.0 candidate, with its candidate pin replaced in place.
+Distinct SFX header parsers retain their legacy initialization path in this change;
+their offset-dependent reparsing is a separate construction migration.
 
 ## Reviewing, maintaining, and publishing the recursive surface
 
@@ -79,6 +121,13 @@ $cp = "target/classes;$((Get-Content target/mod-api-snapshot-classpath.txt -Raw)
 java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot |
     Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-0.7.txt
 ```
+
+The pre-commit and CI policy hooks require the candidate pin to be staged whenever a
+`@ModApi` source changes its declaration text: comments are ignored; interfaces,
+records, enums and annotation types compare every remaining line; classes compare
+annotations, type declarations and `public`/`protected` declarations. A body-only
+edit to an annotated class therefore commits without a pin change, and
+`TestModApiSignatureSurface` remains the exact check.
 
 Release packaging generates exact-inventory Javadoc and attaches
 `openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the engine
@@ -166,3 +215,9 @@ The root release-policy descriptor is the sole current Mod API version authority
 The maintained
 creator workflow and format documentation begins at
 [`docs/modding/index.md`](../modding/index.md).
+
+The KiS2 touch continuation adds explicit `glideAttacksEnabled` player capability
+and `bossHitEndsActiveGlide` interaction components to the unpublished 0.7
+candidate. Rule producers pass both values explicitly. No older constructor
+overload is retained; the current candidate signature pin is regenerated in
+place and the descriptor/runtime version remains 0.7.0.

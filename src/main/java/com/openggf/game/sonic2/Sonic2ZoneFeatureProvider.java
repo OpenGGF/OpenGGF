@@ -56,6 +56,25 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ZoneFeatureProvider.class.getName());
     private static final String CNZ_SLOTS_SHADER_PATH = "shaders/shader_cnz_slots.glsl";
 
+    private final Sonic2WindTunnelProfile windTunnelProfile;
+    private final CNZSlotMachineRenderer.ArtPresentation slotArtPresentation;
+
+    public Sonic2ZoneFeatureProvider() { this(Sonic2WindTunnelProfile.STOCK, null); }
+
+    public Sonic2ZoneFeatureProvider(Sonic2WindTunnelProfile windTunnelProfile) {
+        this(windTunnelProfile, null);
+    }
+
+    public Sonic2ZoneFeatureProvider(CNZSlotMachineRenderer.ArtPresentation slotArtPresentation) {
+        this(Sonic2WindTunnelProfile.STOCK, slotArtPresentation);
+    }
+
+    public Sonic2ZoneFeatureProvider(Sonic2WindTunnelProfile windTunnelProfile,
+            CNZSlotMachineRenderer.ArtPresentation slotArtPresentation) {
+        this.windTunnelProfile = java.util.Objects.requireNonNull(windTunnelProfile);
+        this.slotArtPresentation = slotArtPresentation;
+    }
+
     private CNZBumperManager cnzBumperManager;
     private CNZSlotMachineManager cnzSlotMachineManager;
     private CNZSlotMachineRenderer cnzSlotMachineRenderer;
@@ -155,7 +174,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
         // Initialize the visual renderer (owned by this provider, not GraphicsManager)
         if (cnzSlotMachineRenderer == null) {
-            cnzSlotMachineRenderer = new CNZSlotMachineRenderer();
+            cnzSlotMachineRenderer = new CNZSlotMachineRenderer(slotArtPresentation);
         }
         GraphicsManager graphicsManager = GameServices.graphics();
         if (!graphicsManager.isHeadlessMode()) {
@@ -427,7 +446,15 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
         player.setYSpeed((short) 0);
         player.setAnimationId(Sonic2AnimationIds.FLOAT2);
         player.setAir(true);
-        if (player.isUpPressed()) {
+        // KiS2 WindTunnel, gameRevision=3 (fixBugs=0): release roll-jump
+        // control and glide on each wind pass; Up stops at the selected tunnel top.
+        if (windTunnelProfile.clearsAirAbility()) {
+            player.setRollingJump(false);
+            player.setDoubleJumpFlag(0);
+        }
+        int minimumY = x < 0x20F0 ? windTunnelProfile.firstTunnelMinimumY() : 0x618;
+        if (player.isUpPressed()
+                && (!windTunnelProfile.clampsUpwardMovement() || y > minimumY)) {
             player.shiftY(-1);
         }
         if (player.isDownPressed()) {
@@ -451,7 +478,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     }
 
     private boolean isInsideWfzWindTunnel(int x, int y) {
-        return (x >= 0x1510 && x < 0x1AF0 && y >= 0x0400 && y < 0x0580)
+        return (x >= 0x1510 && x < 0x1AF0 && y >= windTunnelProfile.firstTunnelMinimumY() && y < 0x0580)
                 || (x >= 0x20F0 && x < 0x2500 && y >= 0x0618 && y < 0x0680);
     }
 

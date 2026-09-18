@@ -127,7 +127,8 @@ public class GHZBossWreckingBall extends AbstractBossChild
         final int yOff = ((random >>> 8) & 0xFF) >> 3;
         services().objectManager().createDynamicObject(() -> new BossExplosionObjectInstance(
                 currentX + xOff, currentY + yOff,
-                Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id));
+                Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id,
+                BossExplosionObjectInstance.S1_PRIORITY_BUCKET));
     }
 
     /**
@@ -142,7 +143,8 @@ public class GHZBossWreckingBall extends AbstractBossChild
         }
         services().objectManager().createDynamicObject(() -> new BossExplosionObjectInstance(
                 currentX, currentY,
-                Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id));
+                Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id,
+                BossExplosionObjectInstance.S1_PRIORITY_BUCKET));
     }
 
     @Override

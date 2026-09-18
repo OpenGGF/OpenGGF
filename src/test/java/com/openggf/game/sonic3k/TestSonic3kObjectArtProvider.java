@@ -47,6 +47,26 @@ public class TestSonic3kObjectArtProvider {
     }
 
     @Test
+    public void sandopolisLoadEnemyArtQueuesSkorpSandwormAndRocknForBothActs() throws Exception {
+        // Recorded s3k SOZ run segments submit ArtKosM_Skorp at row 34; without a
+        // SOZ case the engine submitted nothing and every later job ordinal lagged.
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        Field pending = Sonic3kObjectArtProvider.class.getDeclaredField("pendingEnemyKosEntries");
+        pending.setAccessible(true);
+        for (int act = 0; act < 2; act++) {
+            schedule.invoke(provider, Sonic3kZoneIds.ZONE_SOZ, act);
+            List<?> entries = (List<?>) pending.get(provider);
+            assertEquals(List.of("EnemyKosEntry[source=1486278, destinationTile=1334]",
+                            "EnemyKosEntry[source=1486904, destinationTile=1367]",
+                            "EnemyKosEntry[source=1487546, destinationTile=1280]"),
+                    entries.stream().map(Object::toString).toList(),
+                    "PLCKosM_SOZ: ArtKosM_Skorp/$536, ArtKosM_Sandworm/$557, ArtKosM_Rockn/$500");
+        }
+    }
+
+    @Test
     public void registerSheetReplacesExistingRendererOrderInsteadOfAppendingDuplicates() throws Exception {
         ObjectSpriteSheet first = buildSheet(2);
         ObjectSpriteSheet second = buildSheet(3);
@@ -60,6 +80,44 @@ public class TestSonic3kObjectArtProvider {
 
         int next = provider.ensurePatternsCached(GraphicsManager.getInstance(), 0x20000);
         assertEquals(0x20000 + second.getPatterns().length, next);
+    }
+
+    @Test
+    public void fbzSpikeOrientationsUseTheirNativeTileBanksInBothActs() throws Exception {
+        for (int act = 0; act < 2; act++) {
+            HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, act).build();
+            var level = com.openggf.game.GameServices.level().getCurrentLevel();
+            var currentProvider = (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+            var sheet = currentProvider.getSheet(Sonic3kObjectArtKeys.SPIKES);
+            assertEquals(8, sheet.getFrameCount());
+            assertEquals(16, sheet.getPatterns().length);
+            for (int source : List.of(0x200, 0x207, 0x494, 0x49B)) {
+                assertTrue(currentProvider.getAffectedRendererKeys(List.of(new TileRange(source, 1)))
+                        .contains(Sonic3kObjectArtKeys.SPIKES), "live spike bank " + source);
+            }
+            for (int unrelated : List.of(0x1FF, 0x208, 0x493, 0x49C)) {
+                assertFalse(currentProvider.getAffectedRendererKeys(List.of(new TileRange(unrelated, 1)))
+                        .contains(Sonic3kObjectArtKeys.SPIKES), "unrelated tile " + unrelated);
+            }
+            for (int frame = 0; frame < 8; frame++) {
+                boolean upright = frame < 4;
+                var pieces = sheet.getFrame(frame).pieces();
+                assertEquals(2 * ((frame & 3) + 1), pieces.size());
+                for (var piece : pieces) {
+                    assertEquals(upright ? 2 : 4, piece.widthTiles());
+                    assertEquals(upright ? 4 : 2, piece.heightTiles());
+                    assertEquals(!upright, piece.hFlip());
+                    // Obj_Spikes: FBZ overrides upright art to $200, then the
+                    // size >= 4 branch restores ArtTile_SpikesSprings ($494).
+                    int nativeBase = upright ? 0x200 : 0x494;
+                    for (int tile = 0; tile < 8; tile++) {
+                        assertSame(level.getPattern(nativeBase + tile),
+                                sheet.getPatterns()[piece.tileIndex() + tile],
+                                "act=" + act + " frame=" + frame + " tile=" + tile);
+                    }
+                }
+            }
+        }
     }
 
     @Test

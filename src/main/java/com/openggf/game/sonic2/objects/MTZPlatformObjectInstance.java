@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -225,6 +226,14 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         // vertical band is BuildSprites' fixed 32px .assumeHeight path
         // (docs/s2disasm/s2.asm:53906-53930).
         onScreenAtNextDisplay = isWithinBuildSpritesBounds(x, y, widthPixels, 32);
+    }
+
+    // Obj6B_Init move.b #3,priority(a0): docs/s2disasm/s2.asm:54411.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(3);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

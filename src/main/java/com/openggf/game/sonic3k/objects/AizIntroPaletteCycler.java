@@ -15,7 +15,7 @@ import com.openggf.level.objects.ObjectServices;
  * helper used only by the intro cutscene object. Cycles through
  * PalCycle_SuperSonic entries at 6-frame intervals.
  */
-public class AizIntroPaletteCycler {
+public class AizIntroPaletteCycler implements com.openggf.game.rewind.RewindStateful<AizIntroPaletteCycler.Snapshot> {
     private static final Logger LOG = Logger.getLogger(AizIntroPaletteCycler.class.getName());
     private static final int TIMER_PERIOD = 6;
     private static final int FRAME_ADVANCE = 6;   // bytes per cycle step
@@ -35,13 +35,32 @@ public class AizIntroPaletteCycler {
 
     private int paletteTimer;
     private int paletteFrame;
-    private final ObjectServices services;
+    private ObjectServices services;
 
     public AizIntroPaletteCycler() {
         this(null);
     }
 
     public AizIntroPaletteCycler(ObjectServices services) {
+        this.services = services;
+    }
+
+    /** sub_679B8's timer and palette-table offset are object state, not cached art. */
+    public record Snapshot(int paletteTimer, int paletteFrame) { }
+
+    @Override
+    public Snapshot captureRewindStateValue() {
+        return new Snapshot(paletteTimer, paletteFrame);
+    }
+
+    @Override
+    public void restoreRewindStateValue(Snapshot snapshot) {
+        paletteTimer = snapshot.paletteTimer();
+        paletteFrame = snapshot.paletteFrame();
+    }
+
+    // Recreated owners receive services after construction; bind before using runtime assets.
+    void bindServices(ObjectServices services) {
         this.services = services;
     }
 

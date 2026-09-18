@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AnimalType;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -85,6 +86,16 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
         }
     }
 
+    // loc_86820 word_86B50 priority $280 (sonic3k.asm:182169); loc_8689C drops to $80 when the
+    // orbit timer expires and the animal walks off (sonic3k.asm:181867).
+    private static final int ORBIT_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+    private static final int RELEASED_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
+
+    @Override
+    public int getPriorityBucket() {
+        return released ? RELEASED_PRIORITY_BUCKET : ORBIT_PRIORITY_BUCKET;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed() || waitDelay > 0) {
@@ -115,6 +126,8 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
+        // CreateChild copies the capsule's art_tile, ObjDat_EggCapsule
+        // make_art_tile(ArtTile_EggCapsule,0,1) (sonic3k.asm:182157).
         return true;
     }
 

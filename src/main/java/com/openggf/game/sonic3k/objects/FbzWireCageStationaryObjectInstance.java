@@ -128,7 +128,30 @@ public final class FbzWireCageStationaryObjectInstance extends AbstractObjectIns
         player.setFlipAngle(0);player.setFlipType(0);player.setFlipsRemaining(0);
         player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
     }
-    private void release(AbstractPlayableSprite p,int i,boolean slow,boolean nativeP2,boolean dirtyP2StandingBit){setSelectedStanding(i,nativeP2,dirtyP2StandingBit,false);if(slow){p.setXSpeed((short)(p.getXSpeed()>>1));p.setAir(true);p.setFlipAngle(0xC0);p.setFlipsRemaining(0);p.setFlipSpeed(4);}p.setOnObject(false);p.setRolling(false);p.applyStandingRadii(false);p.setAnimationId(1);p.setObjectMappingFrameControl(false);p.setSuppressGroundWallCollision(false);ObjectControlState.none().applyTo(p);ObjectManager objectManager=services().objectManager();if(objectManager!=null)objectManager.releaseRidingObject(p,this);}
+    private void release(AbstractPlayableSprite player, int index, boolean slow,
+                         boolean nativeP2, boolean dirtyP2StandingBit) {
+        setSelectedStanding(index, nativeP2, dirtyP2StandingBit, false);
+        if (slow) {
+            player.setXSpeed((short) (player.getXSpeed() >> 1));
+            player.setAir(true);
+            player.setFlipAngle(0xC0);
+            player.setFlipsRemaining(0);
+            player.setFlipSpeed(4);
+        }
+        player.setOnObject(false);
+        player.setRolling(false);
+        player.applyStandingRadii(false);
+        // loc_3A344 / loc_3A36E write WORD #1 at anim: anim=0,
+        // prev_anim=1. The next animator dispatch restarts walking; this
+        // object pass preserves the last cage mapping and script state.
+        player.setAnimationId(0);
+        player.publishRunAsPreviousAnimation();
+        player.setObjectMappingFrameControl(false);
+        player.setSuppressGroundWallCollision(false);
+        ObjectControlState.none().applyTo(player);
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null) objectManager.releaseRidingObject(player, this);
+    }
     private void transferStandingOwner(AbstractPlayableSprite player){if(!player.isOnObject())return;ObjectInstance previous=player.getLatchedSolidObjectInstance();if(previous==null||previous==this)return;ObjectManager objectManager=services().objectManager();if(objectManager!=null)objectManager.releaseRidingObject(player,previous);if(previous instanceof FbzWireCageObjectInstance cage)cage.clearStandingOwner(player);else if(previous instanceof FbzWireCageStationaryObjectInstance cage)cage.clearStandingOwner(player);else if(previous instanceof FbzChainLinkObjectInstance chain)chain.clearForStandingTransfer(player,0);}
     void clearStandingOwner(AbstractPlayableSprite player){
         // Rewind restores primitive participant columns but deliberately drops

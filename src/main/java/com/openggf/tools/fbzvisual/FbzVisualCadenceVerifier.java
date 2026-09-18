@@ -65,6 +65,43 @@ final class FbzVisualCadenceVerifier {
         }
     }
 
+    /** Verifies logical submissions only; never certifies native VRAM/pixel phase parity. */
+    static void verifySubmissions(List<FrameEvidence> frames, FbzVisualCadenceRomContract contract) {
+        verifyPatternDomain(frames, contract, false);
+    }
+
+    static void verifyPatternDomain(List<FrameEvidence> frames, FbzVisualCadenceRomContract contract,
+                                    boolean nextVBlankPublication) {
+        if (frames.size() < 6) throw new IllegalStateException("FBZ submission series needs six frames");
+        boolean expiry = false;
+        for (int i = 0; i < frames.size(); i++) {
+            FrameEvidence frame = frames.get(i);
+            if (!frame.overlayFree()) throw new IllegalStateException("Contaminated cadence frame");
+            requireHash(frame.cropSha256(), "crop", i);
+            String expectedPayload = nextVBlankPublication && i > 0
+                    ? contract.submittedHash(frames.get(i - 1).frameAfter())
+                    : contract.submittedHash(frame.frameAfter());
+            if ((!nextVBlankPublication || i > 0) && !expectedPayload.equalsIgnoreCase(frame.vramSha256()))
+                throw new IllegalStateException("Pattern domain disagrees with ROM service phase at " + i);
+            if (i == 0) {
+                if (!"zero-step".equals(frame.control()) || frame.timerBefore() != frame.timerAfter()
+                        || frame.frameBefore() != frame.frameAfter())
+                    throw new IllegalStateException("Invalid zero-step submission control");
+                continue;
+            }
+            FrameEvidence prior = frames.get(i - 1);
+            if (!"one-step".equals(frame.control()) || frame.timerBefore() != prior.timerAfter()
+                    || frame.frameBefore() != prior.frameAfter())
+                throw new IllegalStateException("Discontinuous submission series");
+            int expectedTimer = frame.timerBefore() == 0 ? contract.duration() : frame.timerBefore() - 1;
+            int expectedIndex = frame.timerBefore() == 0 ? contract.nextIndex(frame.frameBefore()) : frame.frameBefore();
+            if (frame.timerAfter() != expectedTimer || frame.frameAfter() != expectedIndex)
+                throw new IllegalStateException("AniPLC timer/index violates ROM equation at " + i);
+            expiry |= frame.timerBefore() == 0;
+        }
+        if (!expiry) throw new IllegalStateException("No natural submission expiry");
+    }
+
     private static void requireHash(String hash, String kind, int index) {
         if (hash == null || !hash.matches("(?i)[0-9a-f]{64}")) {
             throw new IllegalStateException("FBZ cadence frame " + index + " lacks a valid "

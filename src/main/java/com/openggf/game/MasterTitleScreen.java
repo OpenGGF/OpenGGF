@@ -2,13 +2,18 @@ package com.openggf.game;
 
 import com.openggf.TraceSessionLauncher;
 import com.openggf.control.InputHandler;
+import com.openggf.control.MenuInput;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.Rom;
+import com.openggf.data.RomImageCatalogue;
+import com.openggf.data.RomIdentity;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
+import com.openggf.graphics.SolidColorTexture;
 import com.openggf.game.recording.UserRecordingCatalog;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.recording.menu.UserRecordingMenuState;
@@ -25,19 +30,16 @@ import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.version.AppVersion;
 
-import org.lwjgl.system.MemoryUtil;
-
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
-import java.util.function.ToIntFunction;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -46,13 +48,11 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
 
 /**
  * Master title screen shown on startup for game selection.
- * Runs before any ROM is loaded, using its own PNG-based rendering path.
+ * Runs before gameplay initialization, using host UI and ROM-backed preview textures.
  *
- * <p>Widescreen layout: the background and clouds fill the full projection width
- * ({@link #setViewportWidth(int)} driven by Engine's {@code realWidth}). All foreground
- * elements (emblem, title text, subtitle, game menu, nav hints, error overlay) are
- * centered on the viewport midpoint so they remain visually centered at any width.
- * At native width 320 every value collapses to the original literals — byte-identical.
+ * <p>The hub fits the native 320x224 viewport. The left pane preserves animated
+ * ROM logos and their aspect ratio; the right pane exposes launch and engine actions.
+ * Wider viewports expand the panes without changing the navigation model.
  */
 @com.openggf.game.ModApi
 public class MasterTitleScreen {
@@ -60,23 +60,12 @@ public class MasterTitleScreen {
     private static final Logger LOGGER = Logger.getLogger(MasterTitleScreen.class.getName());
     static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
-    private static final String MISSING_ROM_PROMPT = "Requires the following ROM:";
     private static final int TITLE_LOGO_BASE_SCALE_NUMERATOR = 35;
     private static final int TITLE_LOGO_BASE_SCALE_DENOMINATOR = 100;
     private static final int TITLE_LOGO_SCALE_NUMERATOR = 9;
     private static final int TITLE_LOGO_SCALE_DENOMINATOR = 10;
-    private static final int TOP_UI_MATTE_HEIGHT = 0;
-    private static final int BOTTOM_UI_MATTE_HEIGHT = 56;
-    private static final float BOTTOM_UI_MATTE_ALPHA = 0.68f;
-    static final int LAUNCH_HOVER_Y = 178;
-    static final float LAUNCH_HOVER_SCALE = 0.55f;
-    static final float LAUNCH_PANEL_OVERLAY_ALPHA = 0.72f;
-    private static final int FITTED_TEXT_SIDE_PADDING = 4;
 
     record PreviewLayout(int width, int height, float x, float y) {
-    }
-
-    record MenuItemLayout(int entryIndex, String text, int x, int width) {
     }
 
     @com.openggf.game.ModApi
@@ -125,6 +114,7 @@ public class MasterTitleScreen {
     public enum AudioCue {
         NAVIGATE("UI_NAVIGATE"),
         CONFIRM("UI_CONFIRM"),
+        CANCEL("UI_CANCEL"),
         ERROR("UI_ERROR");
 
         private final String sfxName;
@@ -179,12 +169,12 @@ public class MasterTitleScreen {
     private State state = State.INACTIVE;
     private int selectedIndex = 1; // Default to Sonic 2
     private int frameCounter = 0;
-    private int errorFrameCounter = 0;
     private String launchErrorTitle;
     private String launchErrorDetail;
-    private static final int ERROR_DISPLAY_FRAMES = 180; // 3 seconds at 60fps
+    private boolean traceFailureAnnounced;
 
-    private final List<MasterTitleEntry> entries;
+    private List<MasterTitleEntry> entries;
+    private java.util.function.Supplier<List<MasterTitleEntry>> entrySource;
     private final Map<GameEntry, Boolean> stockAvailability = new EnumMap<>(GameEntry.class);
 
     // GL resources
@@ -195,7 +185,7 @@ public class MasterTitleScreen {
     private PixelFont pickerFont;
     private TestModeTracePicker tracePicker;
     private UserRecordingMenu userRecordingMenu;
-    private UserRecordingMenuFactory userRecordingMenuFactory = this::createUserRecordingMenu;
+    private UserRecordingMenuFactory userRecordingMenuFactory;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter =
             (entry, options) -> LOGGER.info("User recording playback callback not configured.");
     private TimeAttackMenu timeAttackMenu;
@@ -222,7 +212,23 @@ public class MasterTitleScreen {
     private final AudioSink audioSink;
     private LaunchConfigPanel launchConfigPanel;
     private boolean programmaticSelection;
-    private final MasterTitleSecondaryActions secondaryActions = new MasterTitleSecondaryActions();
+    private final TitleHubNavigation navigation = new TitleHubNavigation();
+    private InputHandler menuInput;
+    private EngineSettingsScreen settingsScreen;
+    private float[] currentProjection;
+    private boolean toolsOpen;
+    private boolean gameBrowserOpen;
+    private int gameBrowserIndex;
+    private MenuLoadTask<?> catalogLoad;
+    private java.util.function.Consumer<Object> catalogLoaded;
+    private String catalogLoadingTitle;
+    private final Map<GameEntry, String> previewSources = new EnumMap<>(GameEntry.class);
+    /** User-supplied images as last scanned; rebuilt on initialise and after Settings apply. */
+    private RomImageCatalogue romCatalogue;
+    private int toolIndex;
+    private boolean helpOpen;
+    private boolean modsShortcutHeld;
+    private boolean childInputPending;
     private Runnable modManagerOpenHandler =
             () -> LOGGER.info("Mod manager open callback not configured.");
     private ModManagerScreenFactory modManagerScreenFactory;
@@ -253,25 +259,24 @@ public class MasterTitleScreen {
         this(GameServices.configuration());
     }
 
+    private static List<MasterTitleEntry> defaultEntries() {
+        return java.util.Arrays.stream(GameEntry.values())
+                .map(game -> (MasterTitleEntry) new MasterTitleEntry.Stock(game)).toList();
+    }
+
     public MasterTitleScreen(SonicConfigurationService configService) {
         this(configService, new LaunchProfileStore(configService));
     }
 
     public MasterTitleScreen(SonicConfigurationService configService,
                              LaunchProfileStore launchProfileStore) {
-        this(configService, launchProfileStore, List.of(
-                new MasterTitleEntry.Stock(GameEntry.SONIC_1),
-                new MasterTitleEntry.Stock(GameEntry.SONIC_2),
-                new MasterTitleEntry.Stock(GameEntry.SONIC_3K)), AudioSink.NO_OP);
+        this(configService, launchProfileStore, defaultEntries(), AudioSink.NO_OP);
     }
 
     public MasterTitleScreen(SonicConfigurationService configService,
                              LaunchProfileStore launchProfileStore,
                              AudioSink audioSink) {
-        this(configService, launchProfileStore, List.of(
-                new MasterTitleEntry.Stock(GameEntry.SONIC_1),
-                new MasterTitleEntry.Stock(GameEntry.SONIC_2),
-                new MasterTitleEntry.Stock(GameEntry.SONIC_3K)), audioSink);
+        this(configService, launchProfileStore, defaultEntries(), audioSink);
     }
 
     public MasterTitleScreen(SonicConfigurationService configService,
@@ -288,34 +293,26 @@ public class MasterTitleScreen {
         this.launchProfileStore = Objects.requireNonNull(launchProfileStore, "launchProfileStore");
         this.entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
         this.audioSink = Objects.requireNonNull(audioSink, "audioSink");
-        if (this.entries.isEmpty()) throw new IllegalArgumentException("Master title requires entries");
         this.selectedIndex = defaultSelectionIndex(this.entries);
         for (GameEntry game : GameEntry.values()) stockAvailability.put(game, false);
     }
 
     public void initialize() {
-        // Check ROM availability
-        for (MasterTitleEntry entry : entries) {
-            if (entry instanceof MasterTitleEntry.Stock stock) {
-                String romPath = configService.getString(stock.game().romConfigKey);
-                stockAvailability.put(stock.game(),
-                        romPath != null && !romPath.isEmpty() && new File(romPath).exists());
-            }
-        }
+        refreshStockAvailability();
 
         try {
             // Initialize renderer and font
             renderer = new TexturedQuadRenderer();
             renderer.init();
 
-            font = new PixelFont();
+            font = new com.openggf.graphics.MenuPixelFont();
             font.init("pixel-font.png", renderer);
 
             // Load background
             bgTextureId = PngTextureLoader.loadTexture("titlescreen/bg.png");
 
             // Create 1x1 solid white texture for overlays
-            solidWhiteTextureId = createSolidWhiteTexture();
+            solidWhiteTextureId = SolidColorTexture.createWhite();
 
             // Load title text
             titleTextId = PngTextureLoader.loadTexture("titlescreen/titletext.png");
@@ -358,25 +355,16 @@ public class MasterTitleScreen {
     }
 
     /**
-     * Creates a 1x1 opaque white texture for use as a solid-color overlay base.
-     */
-    private static int createSolidWhiteTexture() {
-        ByteBuffer pixel = MemoryUtil.memAlloc(4);
-        pixel.put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).flip();
-        int texId = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, texId);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        MemoryUtil.memFree(pixel);
-        return texId;
-    }
-
-    /**
      * Updates the title screen state. Called once per frame from GameLoop.
      */
     public void update(InputHandler inputHandler) {
+        MenuFeedback.withSink(cue -> audioSink.play(AudioCue.valueOf(cue.name())),
+                () -> updateMenu(inputHandler));
+    }
+
+    private void updateMenu(InputHandler inputHandler) {
+        menuInput = inputHandler;
+        navigation.capture(inputHandler);
         frameCounter++;
         advancePreviewAnimationFrame();
 
@@ -394,10 +382,9 @@ public class MasterTitleScreen {
         }
 
         if (state == State.ERROR_DISPLAY) {
-            errorFrameCounter++;
-            if (errorFrameCounter >= ERROR_DISPLAY_FRAMES) {
+            if (navigation.back() || navigation.accept()) {
                 state = State.ACTIVE;
-                errorFrameCounter = 0;
+                playCancelSound();
             }
             return;
         }
@@ -410,15 +397,39 @@ public class MasterTitleScreen {
             return;
         }
 
+        if (childInputPending) {
+            if (MenuInput.accept(inputHandler) || MenuInput.back(inputHandler) || MenuInput.up(inputHandler)
+                    || MenuInput.down(inputHandler) || MenuInput.left(inputHandler) || MenuInput.right(inputHandler)) return;
+            childInputPending = false;
+        }
+        if (catalogLoad != null) { updateCatalogLoad(); return; }
+        if (gameBrowserOpen) { updateGameBrowser(); return; }
+        if (quitPrompt) { updateQuitPrompt(); return; }
+        if (settingsScreen != null) {
+            settingsScreen.update(inputHandler);
+            if (settingsScreen.consumeApplied()) refreshRomPreviews();
+            if (settingsScreen.consumeCloseRequested()) settingsScreen = null;
+            return;
+        }
+        if (helpOpen) {
+            if (navigation.back()) { helpOpen = false; playCancelSound(); }
+            return;
+        }
+        if (toolsOpen) {
+            updateTools();
+            return;
+        }
         if (modManagerScreen != null) {
-            modManagerScreen.update(inputHandler);
-            if (modManagerScreen.consumeCloseRequested()) {
+            ModManagerView menu = modManagerScreen;
+            menu.update(inputHandler);
+            if (modManagerScreen == menu && menu.consumeCloseRequested()) {
                 modManagerScreen = null;
+                if (entrySource != null) replaceEntries(entrySource.get());
             }
             return;
         }
 
-        if (configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
+        if (tracePicker != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             userRecordingMenu = null;
             timeAttackMenu = null;
             raceLobbyScreen = null;
@@ -427,8 +438,8 @@ public class MasterTitleScreen {
                 Path root = Path.of(System.getProperty("user.dir"))
                         .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR))
                         .normalize();
-                tracePicker = new TestModeTracePicker(
-                        TraceCatalog.scan(root), ensurePickerFont());
+                openTraceCatalog(root);
+                return;
             }
             tracePicker.update(inputHandler);
             switch (tracePicker.consumeResult()) {
@@ -437,6 +448,10 @@ public class MasterTitleScreen {
                     if (entry != null) {
                         if (TraceSessionLauncher.launch(entry)) {
                             tracePicker = null;
+                        } else if (tracePicker != null) {
+                            // Keep the diagnostic, but release the loading latch so
+                            // acknowledging it permits selection and another launch.
+                            tracePicker.launchFailed();
                         }
                     }
                 }
@@ -461,8 +476,9 @@ public class MasterTitleScreen {
         }
 
         if (userRecordingMenu != null) {
-            userRecordingMenu.update(inputHandler);
-            if (userRecordingMenu.consumeCloseRequested()) {
+            UserRecordingMenu menu = userRecordingMenu;
+            menu.update(inputHandler);
+            if (userRecordingMenu == menu && menu.consumeCloseRequested()) {
                 userRecordingMenu = null;
             }
             return;
@@ -474,7 +490,7 @@ public class MasterTitleScreen {
             // The launch starter may synchronously tear this screen down
             // (Engine.launchTimeAttack -> cleanup()), nulling timeAttackMenu
             // mid-update; re-check the field before touching it again.
-            if (timeAttackMenu != null && menu.consumeCloseRequested()) {
+            if (timeAttackMenu == menu && menu.consumeCloseRequested()) {
                 timeAttackMenu = null;
             }
             return;
@@ -482,10 +498,20 @@ public class MasterTitleScreen {
 
         if (launchConfigPanel != null) {
             launchConfigPanel.update(inputHandler);
-            if (launchConfigPanel.consumeResult() == LaunchConfigPanel.Result.CLOSED) {
-                MasterTitleEntry.Stock stock = (MasterTitleEntry.Stock) selectedEntry();
-                launchProfileStore.save(stock.game(), launchConfigPanel.currentProfile());
+            LaunchConfigPanel.Result result = launchConfigPanel.consumeResult();
+            if (result == LaunchConfigPanel.Result.CANCELLED) {
                 launchConfigPanel = null;
+            } else if (result == LaunchConfigPanel.Result.CLOSED) {
+                MasterTitleEntry.Stock stock = (MasterTitleEntry.Stock) selectedEntry();
+                try {
+                    launchProfileStore.save(stock.game(), launchConfigPanel.currentProfile());
+                    launchConfigPanel = null;
+                    playConfirmSound();
+                } catch (java.io.UncheckedIOException failure) {
+                    LOGGER.warning("Could not save launch profile: " + failure.getMessage());
+                    launchConfigPanel.saveFailed();
+                    playErrorSound();
+                }
             }
             return;
         }
@@ -495,97 +521,278 @@ public class MasterTitleScreen {
             return;
         }
 
-        // Handle input
-        int leftKey = configService.getInt(SonicConfiguration.LEFT);
-        int rightKey = configService.getInt(SonicConfiguration.RIGHT);
-        int jumpKey = configService.getInt(SonicConfiguration.JUMP);
-        boolean leftPressed = inputHandler.isKeyPressed(leftKey) || inputHandler.logical().menuLeft();
-        boolean rightPressed = inputHandler.isKeyPressed(rightKey) || inputHandler.logical().menuRight();
-        boolean confirmPressed = inputHandler.isKeyPressed(jumpKey)
-                || inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)
-                || inputHandler.logical().menuAccept();
-
-        MasterTitleSecondaryActions.Result secondaryResult = secondaryActions.update(
-                inputHandler.logical(),
-                inputHandler.isKeyPressedWithoutModifiers(GLFW_KEY_M));
-        if (secondaryResult == MasterTitleSecondaryActions.Result.OPEN_MODS) {
-            openModManager();
-            return;
-        }
-        if (secondaryResult == MasterTitleSecondaryActions.Result.CONSUMED) {
-            return;
-        }
-
+        // Shortcuts remain optional; every action is also in the visible menu.
+        boolean modsShortcut = inputHandler.isKeyPressedWithoutModifiers(GLFW_KEY_M);
+        boolean openMods = modsShortcut && !modsShortcutHeld;
+        modsShortcutHeld = modsShortcut;
+        if (openMods) { openModManager(); return; }
         int recordKey = configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
-        boolean recordingMenuRequested = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
-        if (handleUserRecordingMenuRequest(recordingMenuRequested) || recordingMenuRequested) {
+        boolean recordingRequest = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
+        if (recordingRequest) {
+            if (!handleUserRecordingMenuRequest(true)) showActionError("Recordings");
+            return;
+        }
+        boolean timeRequest = inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.TIME_ATTACK_MENU_KEY));
+        if (timeRequest) {
+            if (!isEntryAvailable(selectedEntry()) || !handleTimeAttackMenuRequest(true)) showActionError("Time attack");
+            return;
+        }
+        if (inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isGamepadBackButtonPressed()) {
+            if (!openLaunchOptions()) showActionError("Launch options");
             return;
         }
 
-        boolean timeAttackMenuRequested = inputHandler.isKeyPressed(
-                configService.getInt(SonicConfiguration.TIME_ATTACK_MENU_KEY));
-        if (handleTimeAttackMenuRequest(timeAttackMenuRequested) || timeAttackMenuRequested) {
-            return;
-        }
-
-        if ((inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isGamepadBackButtonPressed())
-                && selectedEntry() instanceof MasterTitleEntry.Stock stock
-                && isEntryAvailable(selectedEntry())) {
-            GameEntry entry = stock.game();
-            launchConfigPanel = new LaunchConfigPanel(
-                    entry,
-                    launchProfileStore.load(entry),
-                    launchProfileStore,
-                    configService,
-                    font,
-                    renderer);
-            return;
-        }
-
-        if (leftPressed) {
-            if (setSelectedIndex(selectedIndex - 1)) {
-                playNavigateSound();
-            }
-        }
-        if (rightPressed) {
-            if (setSelectedIndex(selectedIndex + 1)) {
-                playNavigateSound();
-            }
-        }
-
-        // Confirm with Jump or Enter
-        if (confirmPressed) {
-            MasterTitleEntry entry = selectedEntry();
-            if (!isEntryAvailable(entry)) {
-                state = State.ERROR_DISPLAY;
-                errorFrameCounter = 0;
-                playErrorSound();
-            } else if (entry instanceof MasterTitleEntry.Standalone) {
-                standaloneActionOpen = true;
-                standaloneActionIndex = 0;
+        if (navigation.left() && cycleSelectedEntry(-1)) { playNavigateSound(); return; }
+        if (navigation.right() && cycleSelectedEntry(1)) { playNavigateSound(); return; }
+        if (!navigation.actions()) {
+            if (navigation.back()) { openQuitPrompt(); return; }
+            if (navigation.accept()) {
+                gameBrowserOpen = true;
+                gameBrowserIndex = selectedIndex;
                 playConfirmSound();
-            } else {
-                confirmLaunch(new MasterTitleEntry.Launch(entry, MasterTitleEntry.Action.NEW_GAME), false);
+                return;
             }
+            if (navigation.up() || navigation.down()) {
+                navigation.enter();
+                playNavigateSound();
+            }
+            return;
+        }
+        if (navigation.back()) { navigation.leave(); playCancelSound(); return; }
+        if (navigation.up() && navigation.move(-1)) { playNavigateSound(); return; }
+        if (navigation.down() && navigation.move(1)) { playNavigateSound(); return; }
+        if (!navigation.accept()) return;
+        switch (navigation.action()) {
+            case START -> startSelectedEntry();
+            case LAUNCH -> { if (!openLaunchOptions()) showActionError("Launch options"); }
+            case TIME_ATTACK -> { if (!isEntryAvailable(selectedEntry()) || !tryOpenTimeAttackMenu()) showActionError("Time attack"); }
+            case RECORDINGS -> { if (!tryOpenUserRecordingMenuForSelectedGame()) showActionError("Recordings"); }
+            case MODS -> openModManager();
+            case SETTINGS -> openSettings();
+            case TOOLS -> { toolsOpen = true; toolIndex = 0; playConfirmSound(); }
+            case QUIT -> openQuitPrompt();
+        }
+    }
+
+    private void updateGameBrowser() {
+        if (navigation.back()) { gameBrowserOpen = false; playCancelSound(); return; }
+        if (entries.isEmpty()) return;
+        int previous = gameBrowserIndex;
+        if (navigation.up()) gameBrowserIndex = Math.floorMod(gameBrowserIndex - 1, entries.size());
+        if (navigation.down()) gameBrowserIndex = (gameBrowserIndex + 1) % entries.size();
+        if (navigation.left()) gameBrowserIndex = Math.max(0, gameBrowserIndex - 6);
+        if (navigation.right()) gameBrowserIndex = Math.min(entries.size() - 1, gameBrowserIndex + 6);
+        if (gameBrowserIndex != previous) { frameCounter = 0; playNavigateSound(); }
+        if (navigation.accept()) {
+            setSelectedIndex(gameBrowserIndex);
+            gameBrowserOpen = false;
+            playConfirmSound();
+        }
+    }
+
+    private void drawGameBrowser() {
+        MenuStyle.page(font, viewportWidth, "BROWSE GAMES", "Choose a game to return to the hub");
+        int first = gameBrowserIndex / 6 * 6;
+        for (int i = first; i < Math.min(entries.size(), first + 6); i++) {
+            var entry = entries.get(i);
+            int y = 51 + (i - first) * 24;
+            if (i == gameBrowserIndex) MenuStyle.focusContent(font, 7, y, viewportWidth - 14, 23, 20);
+            String name = entry.menuLabel();
+            int columns = (viewportWidth - 26) / 9;
+            if (i == gameBrowserIndex && name.length() > columns) {
+                int overflow = name.length() - columns;
+                int offset = Math.min(overflow, Math.max(0, (frameCounter / 8) % (overflow + 30) - 15));
+                name = name.substring(offset, offset + columns);
+            }
+            MenuStyle.label(font, name, 13, y, viewportWidth - 26, 1, 1, 1);
+            boolean available = isEntryAvailable(entry);
+            MenuStyle.text(font, available ? "Available" : "ROM missing - configure in Settings",
+                    13, y + 11, viewportWidth - 26, available ? .6f : 1, .8f, available ? 1 : .3f);
+        }
+        if (entries.isEmpty()) MenuStyle.label(font, "No games available", 13, 63, viewportWidth - 26, 1, 1, 1);
+        MenuStyle.footer(font, viewportWidth, "Up/Down Game  L/R Page  " + (entries.isEmpty() ? 0 : gameBrowserIndex + 1) + "/" + entries.size(),
+                confirmHint() + " Select  " + backHint() + " Back");
+    }
+
+    private void openTraceCatalog(Path root) {
+        PixelFont loadedFont = ensurePickerFont();
+        loadCatalog("TRACE REPLAYS", () -> TraceCatalog.scan(root), entries -> {
+            tracePicker = new TestModeTracePicker(entries, loadedFont);
+            if (traceFailureAnnounced) {
+                tracePicker.markFailureFeedbackAnnounced();
+                traceFailureAnnounced = false;
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void loadCatalog(String title, java.util.concurrent.Callable<T> read,
+                                 java.util.function.Consumer<T> loaded) {
+        cancelCatalogLoad();
+        catalogLoadingTitle = title;
+        catalogLoaded = value -> loaded.accept((T) value);
+        catalogLoad = new MenuLoadTask<>(read);
+    }
+
+    private void cancelCatalogLoad() {
+        if (catalogLoad != null) catalogLoad.cancel();
+        catalogLoad = null;
+        catalogLoaded = null;
+    }
+
+    private void updateCatalogLoad() {
+        if (navigation.back()) {
+            cancelCatalogLoad();
+            configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            playCancelSound();
+            return;
+        }
+        if (!catalogLoad.done()) return;
+        var completed = catalogLoad;
+        var loaded = catalogLoaded;
+        catalogLoad = null;
+        catalogLoaded = null;
+        try { loaded.accept(completed.result()); childInputPending = true; }
+        catch (Exception failure) {
+            configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+            showUnavailableAction("Could not load catalog: " + cause.getMessage());
+        }
+    }
+
+    private boolean quitPrompt;
+    private boolean quitSelected;
+    private boolean quitRequested;
+
+    private void openQuitPrompt() {
+        quitPrompt = true;
+        quitSelected = false;
+        playConfirmSound();
+    }
+
+    private void updateQuitPrompt() {
+        if (navigation.back()) { quitPrompt = false; playCancelSound(); return; }
+        if (navigation.left() || navigation.right() || navigation.up() || navigation.down()) {
+            quitSelected = !quitSelected;
+            playNavigateSound();
+        } else if (navigation.accept()) {
+            quitPrompt = false;
+            if (quitSelected) {
+                quitRequested = true;
+                state = State.EXITING;
+                playConfirmSound();
+            } else playCancelSound();
+        }
+    }
+
+    boolean consumeQuitRequest() {
+        boolean requested = quitRequested;
+        quitRequested = false;
+        return requested;
+    }
+
+    private void showActionError(String action) {
+        if (selectedEntry() == null) { showUnavailableAction("No games are available. Check Mods and Settings."); return; }
+        if (selectedEntry() instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
+            launchErrorTitle = null;
+            launchErrorDetail = null;
+            state = State.ERROR_DISPLAY;
+            playErrorSound();
+        } else showUnavailableAction(selectedEntry() instanceof MasterTitleEntry.Standalone
+                ? action + " is not available for standalone games"
+                : "Could not open " + action.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private void openSettings() {
+        settingsScreen = new EngineSettingsScreen(configService, font);
+        playConfirmSound();
+        childInputPending = true;
+    }
+
+    private void updateTools() {
+        if (navigation.back()) { toolsOpen = false; playCancelSound(); return; }
+        int previous = toolIndex;
+        if (navigation.up()) toolIndex = Math.max(0, toolIndex - 1);
+        if (navigation.down()) toolIndex = Math.min(1, toolIndex + 1);
+        if (toolIndex != previous) playNavigateSound();
+        if (!navigation.accept()) return;
+        toolsOpen = false;
+        if (toolIndex == 0) {
+            Path root = Path.of(System.getProperty("user.dir"))
+                    .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR)).normalize();
+            openTraceCatalog(root);
+            playConfirmSound();
+        } else { helpOpen = true; playConfirmSound(); }
+    }
+
+    private boolean openLaunchOptions() {
+        if (!(selectedEntry() instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(stock)) return false;
+        launchConfigPanel = new LaunchConfigPanel(stock.game(), launchProfileStore.load(stock.game()),
+                launchProfileStore, configService, font, renderer);
+        playConfirmSound();
+        return true;
+    }
+
+    private void startSelectedEntry() {
+        MasterTitleEntry entry = selectedEntry();
+        if (entry == null) { showActionError("Start game"); return; }
+        if (!isEntryAvailable(entry)) {
+            launchErrorTitle = null;
+            launchErrorDetail = null;
+            state = State.ERROR_DISPLAY;
+            playErrorSound();
+        } else if (entry instanceof MasterTitleEntry.Standalone) {
+            standaloneActionOpen = true;
+            standaloneActionIndex = 0;
+            playConfirmSound();
+        } else confirmLaunch(new MasterTitleEntry.Launch(entry, MasterTitleEntry.Action.NEW_GAME), false);
+    }
+
+    private void showUnavailableAction(String detail) {
+        launchErrorTitle = "ACTION UNAVAILABLE";
+        launchErrorDetail = detail;
+        state = State.ERROR_DISPLAY;
+        playErrorSound();
+    }
+
+    /**
+     * Rescans the user's images. Availability comes from the ROM catalogue
+     * (size and header, never filename), so a game whose only image is a
+     * lock-on dump or a pair of separate cartridges is offered like any other.
+     */
+    private void refreshStockAvailability() {
+        romCatalogue = RomImageCatalogue.forCurrentWorkingDirectory(configService);
+        for (GameEntry game : GameEntry.values()) {
+            stockAvailability.put(game, romCatalogue.isAvailable(logicalRomFor(game)));
+        }
+    }
+
+    private static RomIdentity logicalRomFor(GameEntry game) {
+        return GameId.fromCode(game.gameId).romGame().identity();
+    }
+
+    private void refreshRomPreviews() {
+        refreshStockAvailability();
+        for (GameEntry game : GameEntry.values()) {
+            Optional<RomImageCatalogue.Resolution> resolution = romCatalogue.resolve(logicalRomFor(game));
+            boolean listed = entries.stream().anyMatch(entry -> entry instanceof MasterTitleEntry.Stock stock && stock.game() == game);
+            String source = resolution.isPresent() && listed ? resolution.get().changeToken() : null;
+            if (Objects.equals(source, previewSources.get(game))) continue;
+            RomPreviewState removed = romPreviews.remove(game);
+            if (removed != null) PngTextureLoader.deleteTexture(removed.textureId);
+            previewSources.remove(game);
+            if (renderer != null && source != null) loadRomPreview(game, resolution.get(), source);
         }
     }
 
     private void updateStandaloneActionChooser(InputHandler input) {
         List<MasterTitleEntry.Action> actions = standaloneActionsForTest();
-        boolean up = input.isKeyPressed(configService.getInt(SonicConfiguration.UP))
-                || input.logical().menuUp();
-        boolean down = input.isKeyPressed(configService.getInt(SonicConfiguration.DOWN))
-                || input.logical().menuDown();
-        if (up) standaloneActionIndex = Math.max(0, standaloneActionIndex - 1);
-        if (down) standaloneActionIndex = Math.min(actions.size() - 1, standaloneActionIndex + 1);
-        if (input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE)) {
-            standaloneActionOpen = false;
-            return;
-        }
-        boolean confirm = input.isKeyPressed(configService.getInt(SonicConfiguration.JUMP))
-                || input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)
-                || input.logical().menuAccept();
-        if (confirm) {
+        if (navigation.back()) { standaloneActionOpen = false; playCancelSound(); return; }
+        int previous = standaloneActionIndex;
+        if (navigation.up()) standaloneActionIndex = Math.max(0, standaloneActionIndex - 1);
+        if (navigation.down()) standaloneActionIndex = Math.min(actions.size() - 1, standaloneActionIndex + 1);
+        if (standaloneActionIndex != previous) playNavigateSound();
+        if (navigation.accept()) {
             confirmLaunch(new MasterTitleEntry.Launch(selectedEntry(), actions.get(standaloneActionIndex)), false);
             standaloneActionOpen = false;
         }
@@ -594,7 +801,7 @@ public class MasterTitleScreen {
     private void confirmLaunch(MasterTitleEntry.Launch launch, boolean programmatic) {
         selectedLaunch = launch;
         state = State.CONFIRMING;
-        playConfirmSound();
+        if (!programmatic) playConfirmSound();
         programmaticSelection = programmatic;
         gameSelected = true;
     }
@@ -604,11 +811,7 @@ public class MasterTitleScreen {
      */
     public void draw() {
         if (modManagerScreen != null) {
-            if (renderer != null) {
-                renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
-                        0f, 0f, 0f, 1f);
-            }
-            modManagerScreen.render();
+            drawNativePage(modManagerScreen::render);
             return;
         }
         if (renderer == null) return;
@@ -630,193 +833,323 @@ public class MasterTitleScreen {
         }
     }
 
+    private void drawNativePage(Runnable page) {
+        if (renderer == null || font == null) { page.run(); return; }
+        int margin = Math.max(0, (viewportWidth - SCREEN_W) / 2);
+        if (margin > 0) {
+            MenuStyle.fill(font, 0, 0, margin, SCREEN_H, .025f, .065f, .19f, 1);
+            MenuStyle.fill(font, viewportWidth - margin, 0, margin, SCREEN_H, .025f, .065f, .19f, 1);
+            MenuStyle.checkerboard(font, 0, margin);
+            MenuStyle.checkerboard(font, viewportWidth - margin, viewportWidth);
+        }
+        if (margin == 0 || currentProjection == null) { page.run(); return; }
+        float[] centered = new org.joml.Matrix4f()
+                .ortho2D(-margin, viewportWidth - margin, 0, SCREEN_H).get(new float[16]);
+        renderer.setProjectionMatrix(centered);
+        try { page.run(); }
+        finally { renderer.setProjectionMatrix(currentProjection); }
+    }
+
     private void drawContent() {
+        if (catalogLoad != null) {
+            MenuStyle.page(font, viewportWidth, catalogLoadingTitle, "Reading catalog...");
+            MenuStyle.label(font, "Loading" + ".".repeat((frameCounter / 20) % 4), 14, 84, viewportWidth - 28, 1, 1, 1);
+            MenuStyle.footer(font, viewportWidth, "You can cancel while files are read", backHint() + " Cancel");
+            return;
+        }
+        if (gameBrowserOpen) { drawGameBrowser(); return; }
 
         if (tracePicker != null) {
-            // Paint solid black behind the picker so the regular master-title
-            // artwork doesn't bleed through. Fill the full projection width.
-            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
-                    0f, 0f, 0f, 1f);
-            tracePicker.render();
+            drawNativePage(tracePicker::render);
             return;
         }
 
         if (raceLobbyScreen != null) {
-            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
-                    0f, 0f, 0f, 1f);
-            raceLobbyScreen.render();
+            drawNativePage(raceLobbyScreen::render);
             return;
         }
 
         if (serverBrowserScreen != null) {
-            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
-                    0f, 0f, 0f, 1f);
-            serverBrowserScreen.render();
+            drawNativePage(serverBrowserScreen::render);
             return;
         }
 
         if (userRecordingMenu != null) {
-            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
-                    0f, 0f, 0f, 1f);
-            userRecordingMenu.render();
+            drawNativePage(userRecordingMenu::render);
             return;
         }
 
         if (timeAttackMenu != null) {
-            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
-                    0f, 0f, 0f, 1f);
-            timeAttackMenu.render();
+            drawNativePage(timeAttackMenu::render);
             return;
         }
 
-        // 1. Background — fills the full projection width so it expands at widescreen.
-        //    At native 320 this is identical to the original drawTexture(bg, 0, 0, 320, 224).
-        renderer.drawTexture(bgTextureId, 0, 0, viewportWidth, SCREEN_H);
-
-        // 2. Clouds (behind emblem) — cloud x/y already tracks viewportWidth via update().
-        for (CloudSprite cloud : clouds) {
-            float glY = SCREEN_H - cloud.y - cloud.height;
-            renderer.drawTexture(cloud.textureId, cloud.x, glY, cloud.width, cloud.height,
-                1f, 1f, 1f, 0.85f);
+        if (settingsScreen != null) {
+            settingsScreen.render(viewportWidth);
+            return;
         }
-
-        // 3. Compute title text position.
-        //    Foreground elements are centered on viewportWidth/2.
-        //    At native 320: centerX(w, 320) == (320-w)/2 == existing literal. Byte-identical.
-        int scaledTitleW = titleLogoScaledWidth(titleTextWidth);
-        int scaledTitleH = titleLogoScaledHeight(titleTextHeight);
-        float titleX = centerX(scaledTitleW, viewportWidth);
-        float titleGlY = titleLogoY(scaledTitleH);
-
-        // 4. ROM-derived title preview, shown only when the selected ROM exists.
-        drawSelectedRomPreview();
-        drawRomPreviewUiMattes();
-
-        // 5. Title text "OpenGGF" (centered, top) - drawn after preview so it appears in front
-        renderer.drawTexture(titleTextId, titleX, titleGlY, scaledTitleW, scaledTitleH);
-
-        // All foreground text (subtitle + game menu + nav hints) shares the font atlas,
-        // so mega-batch into a single GL draw call.
-        font.beginMegaBatch();
-
-        // 6. Subtitle text, right-aligned to title's right edge - drawn after title (no overlap).
-        //    titleX is already centered on viewportWidth, so the right edge auto-follows.
-        int titleRightEdge = (int)(titleX + scaledTitleW)-8;
-        int subtitleY = (int)(SCREEN_H - titleGlY) - 6;
-        int line1X = titleRightEdge - font.measureWidth("Open-Source");
-        int line2X = titleRightEdge - font.measureWidth("Sonic Engine");
-        font.drawText("Open-Source", line1X, subtitleY-8, 0.8f, 0.8f, 0.8f, 0.9f);
-        font.drawText("Sonic Engine", line2X, subtitleY + 2, 0.8f, 0.8f, 0.8f, 0.9f);
-
-        // 7. Missing-ROM prompt occupies the old emblem area when no ROM preview is available.
-        drawSelectedMissingRomPrompt();
-        drawLaunchHoverLine();
-
-        // 7. Game selection menu at bottom — centered on viewportWidth.
-        drawGameMenu();
-        drawSecondaryActions();
-
-        // 8. Navigation hints — centered on viewportWidth.
-        font.drawTextCentered("< >  Select    Enter  Confirm", viewportWidth, 214,
-            0.6f, 0.6f, 0.7f, 0.8f);
-
-        font.endMegaBatch();
+        drawHub();
+        if (quitPrompt) {
+            font.beginMegaBatch();
+            MenuStyle.page(font, viewportWidth, "QUIT OPENGGF?", "Return to your desktop");
+            MenuStyle.focus(font, 14, quitSelected ? 112 : 82, viewportWidth - 28, 23);
+            MenuStyle.label(font, "Return to menu", 23, 88, viewportWidth - 46, 1, 1, 1);
+            MenuStyle.label(font, "Quit", 23, 118, viewportWidth - 46, 1, 1, 1);
+            MenuStyle.footer(font, viewportWidth, directionHint() + " Choose", confirmHint() + " Select  " + backHint() + " Back");
+            font.endMegaBatch();
+            return;
+        }
 
         if (launchConfigPanel != null) {
             renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
-                    0f, 0f, 0f, LAUNCH_PANEL_OVERLAY_ALPHA);
+                    0.02f, 0.07f, 0.23f, 1f);
             launchConfigPanel.render(viewportWidth);
             return;
         }
 
-        // 9. Error message overlay — semi-transparent overlay fills full width;
-        //    error text is centered on viewportWidth.
         if (state == State.ERROR_DISPLAY) {
-            // Semi-transparent black overlay using solid white texture tinted black
-            // (separate texture; not batched with font).
-            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H, 0f, 0f, 0f, 0.5f);
-
-            // Error text - second batch (overlay texture sits between the two batches).
             font.beginMegaBatch();
             MasterTitleEntry entry = selectedEntry();
-            if (launchErrorTitle != null) {
-                drawScaledCenteredText(launchErrorTitle, 90, 1f,
-                        1f, 0.3f, 0.3f, 1f);
-                drawScaledCenteredText(entry.displayName(), 105, 1f,
-                        0.8f, 0.8f, 0.8f, 1f);
-                drawScaledCenteredText(launchErrorDetail, 125, 1f,
-                        0.5f, 0.5f, 0.5f, 0.8f);
-            } else if (entry instanceof MasterTitleEntry.Stock stock) {
-                GameEntry game = stock.game();
-                font.drawTextCentered("ROM NOT FOUND", viewportWidth, 90, 1f, 0.3f, 0.3f, 1f);
-                font.drawTextCentered(game.displayName, viewportWidth, 105, 0.8f, 0.8f, 0.8f, 1f);
-                String romFile = configService.getString(game.romConfigKey);
-                if (romFile == null || romFile.isEmpty()) {
-                    romFile = "(not configured)";
-                } else if (romFile.length() > 35) {
-                    romFile = "..." + romFile.substring(romFile.length() - 32);
-                }
-                font.drawTextCentered(romFile, viewportWidth, 125, 0.5f, 0.5f, 0.5f, 0.8f);
-            }
+            MenuStyle.page(font, viewportWidth, "UNABLE TO START", entry == null ? "No game selected" : entry.displayName());
+            MenuStyle.panel(font, 9, 57, viewportWidth - 18, 132);
+            MenuStyle.label(font, launchErrorTitle == null ? "ROM NOT FOUND" : launchErrorTitle,
+                    17, 68, viewportWidth - 34, 1f, .35f, .35f);
+            String detail = launchErrorDetail;
+            if (detail == null && entry instanceof MasterTitleEntry.Stock stock)
+                detail = configService.getString(stock.game().romConfigKey);
+            if (detail == null || detail.isBlank()) detail = "No ROM path configured";
+            int columns = Math.max(1, (viewportWidth - 34) / 6);
+            for (int offset = 0, row = 0; offset < detail.length() && row < 5; offset += columns, row++)
+                MenuStyle.text(font, detail.substring(offset, Math.min(detail.length(), offset + columns)),
+                        17, 96 + row * 12, viewportWidth - 34, .85f, .9f, 1);
+            if (launchErrorTitle == null && entry instanceof MasterTitleEntry.Stock)
+                MenuStyle.text(font, "Check Files in Engine Settings", 17, 172, viewportWidth - 34, 1, .78f, .3f);
+            MenuStyle.footer(font, viewportWidth, "Your selection is preserved",
+                    confirmHint() + "/" + backHint() + " Back");
             font.endMegaBatch();
         }
     }
 
-    private void drawGameMenu() {
-        int menuY = 190;
-        List<String> labels = entries.stream().map(MasterTitleEntry::menuLabel).toList();
-        for (MenuItemLayout item : menuItemLayouts(
-                labels, selectedIndex, viewportWidth, font::measureWidth)) {
-            MasterTitleEntry entry = entries.get(item.entryIndex());
-            float[] color = menuTextColor(isEntryAvailable(entry),
-                    item.entryIndex() == selectedIndex, frameCounter);
-            font.drawText(item.text(), item.x(), menuY,
-                    color[0], color[1], color[2], color[3]);
+    private String confirmHint() { return menuInput == null ? "Enter" : MenuInput.confirmLabel(menuInput); }
+    private String backHint() { return menuInput == null ? "Esc" : MenuInput.backLabel(menuInput); }
+    private String directionHint() { return menuInput == null ? "Arrows" : MenuInput.directionLabel(menuInput); }
+
+    /** Native-pixel layout; preview art keeps its source aspect ratio at every width. */
+    static PreviewLayout hubLogoLayout(int sourceWidth, int sourceHeight, int viewportWidth) {
+        int paneWidth = Math.max(SCREEN_W, viewportWidth) / 2 - 18;
+        double scale = Math.min((double) paneWidth / Math.max(1, sourceWidth), 112.0 / Math.max(1, sourceHeight));
+        int width = Math.max(1, (int) Math.floor(sourceWidth * scale));
+        int height = Math.max(1, (int) Math.floor(sourceHeight * scale));
+        return new PreviewLayout(width, height, 9 + (paneWidth - width) / 2f,
+                SCREEN_H - 43 - (112 - height) / 2f - height);
+    }
+
+    private void drawHub() {
+        renderer.drawTexture(bgTextureId, 0, 0, viewportWidth, SCREEN_H);
+        for (CloudSprite cloud : clouds) {
+            renderer.drawTexture(cloud.textureId, cloud.x, SCREEN_H - cloud.y - cloud.height,
+                    cloud.width, cloud.height, 1f, 1f, 1f, 0.65f);
+        }
+        box(0, 0, viewportWidth / 2, SCREEN_H, 0.02f, 0.07f, 0.23f, 0.24f);
+        box(viewportWidth / 2, 0, viewportWidth - viewportWidth / 2, SCREEN_H, 0.02f, 0.07f, 0.23f, 0.86f);
+        MenuStyle.checkerboard(font, viewportWidth / 2, viewportWidth);
+        box(0, 0, viewportWidth, 30, 0.04f, 0.14f, 0.36f, 1f);
+        box(0, 29, viewportWidth, 1, 1f, 0.84f, 0.3f, 1f);
+        box(0, 205, viewportWidth, 19, 0.01f, 0.03f, 0.12f, 1f);
+        if (toolsOpen || helpOpen) {
+            drawToolsAndHelp();
+            return;
+        }
+        if (standaloneActionOpen) {
+            font.beginMegaBatch();
+            MenuStyle.page(font, viewportWidth, "START GAME", selectedEntry().menuLabel());
+            drawStandaloneActions();
+            textFitted(directionHint() + " Choose  " + confirmHint() + " Start  " + backHint() + " Back",
+                    9, 211, viewportWidth - 18, 1f, 0.5f, 0.91f, 1f);
+            font.endMegaBatch();
+            return;
+        }
+        // Keep OpenGGF branding and ROM-decoded game logos, never mockup artwork.
+        int logoW = Math.min(110, titleLogoScaledWidth(titleTextWidth));
+        int logoH = titleTextWidth == 0 ? 1 : Math.max(1, titleTextHeight * logoW / titleTextWidth);
+        renderer.drawTexture(titleTextId, 10, SCREEN_H - 6 - logoH, logoW, logoH);
+        RomPreviewState preview = selectedPreview();
+        if (preview != null) {
+            // Keep the original ROM texture. Engine draws this quad into the final
+            // window viewport: at 4x, source texels regain detail rather than enlarging
+            // an image reduced to the 320x224 menu grid.
+            updateSelectedRomPreviewTexture();
+            PreviewLayout layout = hubLogoLayout(preview.width, preview.height, viewportWidth);
+            renderer.drawTexture(preview.textureId, layout.x(), layout.y(), layout.width(), layout.height());
+        }
+        int leftWidth = viewportWidth / 2 - 18;
+        int actionX = viewportWidth / 2;
+        int actionWidth = viewportWidth - actionX - 9;
+        for (int i = 0; i < TitleHubNavigation.Action.values().length; i++) {
+            int y = 39 + i * 20;
+            box(actionX, y, actionWidth, 18, 0.05f, 0.16f, 0.38f, 1f);
+            if (navigation.actions() && navigation.selected() == i) focusBox(actionX, y, actionWidth, 18);
+        }
+        if (preview == null && selectedEntry() instanceof MasterTitleEntry.Stock) {
+            box(8, 69, leftWidth, 61, 0.04f, 0.10f, 0.24f, 0.96f);
+        }
+        font.beginMegaBatch();
+        textFitted(navigation.actions() ? "ACTION MENU" : "SELECT GAME", viewportWidth - 111, 10, 103,
+                1f, 0.5f, 0.91f, 1f);
+        if (preview == null) {
+            textFitted(selectedEntry() == null ? "NO GAMES AVAILABLE"
+                    : selectedEntry() instanceof MasterTitleEntry.Stock ? "ROM NOT FOUND" : "STANDALONE GAME",
+                    12, 75, leftWidth - 6, 0.8f, 0.9f, 0.9f, 1f);
+            if (selectedEntry() instanceof MasterTitleEntry.Stock stock) {
+                textFitted(expectedRomFilename(stock.game()), 12, 96, leftWidth - 6, 0.75f, 1f, 0.73f, 0.3f);
+                textFitted("Configure in Settings", 12, 116, leftWidth - 6, 0.62f, 0.65f, 0.8f, 1f);
+            }
+        }
+        drawGameCarousel();
+        for (TitleHubNavigation.Action action : TitleHubNavigation.Action.values()) {
+            boolean available = action == TitleHubNavigation.Action.MODS || action == TitleHubNavigation.Action.SETTINGS
+                    || action == TitleHubNavigation.Action.TOOLS || action == TitleHubNavigation.Action.QUIT || action == TitleHubNavigation.Action.START
+                    && isEntryAvailable(selectedEntry()) || selectedEntry() instanceof MasterTitleEntry.Stock
+                    && isEntryAvailable(selectedEntry());
+            float brightness = available && navigation.actions() ? 1f : 0.68f;
+            textFitted(action.label, actionX + 5, 43 + action.ordinal() * 20, actionWidth - 10,
+                    1f, brightness, brightness, brightness);
+        }
+        if (selectedEntry() instanceof MasterTitleEntry.Stock stock && isEntryAvailable(stock)) {
+            LaunchProfile profile = launchProfileStore.load(stock.game());
+            if (profile != null) {
+                int count = profile.enabledCount(stock.game());
+                boolean experimental = profile.isExperimental(LaunchProfile.Row.WIDESCREEN);
+                textFitted(count == 0 ? "Stock profile" : count + " changes", 12, 194, Math.max(0, leftWidth - carouselPosition().length() * 6 - 8),
+                        MenuStyle.COMPACT, 1f, experimental ? 0.3f : count > 0 ? 0.72f : 1f,
+                        experimental ? 0.3f : count > 0 ? 0.25f : 1f);
+            }
+        }
+        String footer = navigation.actions()
+                ? "L/R Game  U/D Actions  " + confirmHint() + " Open  " + backHint() + " Back"
+                : "L/R Game  U/D Actions  " + confirmHint() + " Browse";
+        textFitted(footer, 9, 211, viewportWidth - 18, 1f, 0.5f, 0.91f, 1f);
+        font.endMegaBatch();
+    }
+
+    private void drawGameCarousel() {
+        int x = 8;
+        int width = viewportWidth / 2 - 16;
+        MasterTitleEntry selected = selectedEntry();
+        MenuStyle.panel(font, x, 158, width, 20);
+        if (!navigation.actions()) MenuStyle.focus(font, x, 158, width, 20);
+        String name = selected == null ? "No games" : selected.menuLabel();
+        int nameWidth = width - 32;
+        String visible = carouselName(name, nameWidth / 9);
+        float shade = isEntryAvailable(selected) ? 1f : .5f;
+        MenuStyle.label(font, visible, x + (width - visible.length() * 9) / 2, 163,
+                nameWidth, shade, shade, shade);
+        if (entries.size() > 1) {
+            MenuStyle.label(font, "<", x + 4, 163, 9, .5f, .9f, 1);
+            MenuStyle.label(font, ">", x + width - 13, 163, 9, .5f, .9f, 1);
+            int neighborWidth = (width - 8) / 2;
+            drawCarouselNeighbor(Math.floorMod(selectedIndex - 1, entries.size()), x, 181, neighborWidth, false);
+            // With two games, the same neighbor is reached in either direction;
+            // show it once rather than inventing another catalog entry.
+            if (entries.size() > 2) drawCarouselNeighbor((selectedIndex + 1) % entries.size(),
+                    x + width - neighborWidth, 181, neighborWidth, true);
+        }
+        String position = carouselPosition();
+        MenuStyle.text(font, position, x + width - position.length() * 6, 194,
+                width, .7f, .85f, 1);
+    }
+
+    private String carouselPosition() {
+        return entries.isEmpty() ? "0 / 0" : (selectedIndex + 1) + " / " + entries.size();
+    }
+
+    private void drawCarouselNeighbor(int index, int x, int y, int width, boolean alignRight) {
+        MasterTitleEntry entry = entries.get(index);
+        String name = MenuStyle.fit(entry.menuLabel(), width);
+        float shade = isEntryAvailable(entry) ? .72f : .4f;
+        MenuStyle.text(font, name, alignRight ? x + width - name.length() * 6 : x, y,
+                width, shade, shade, shade);
+    }
+
+    private String carouselName(String name, int columns) {
+        if (name.length() <= columns) return name;
+        int overflow = name.length() - columns;
+        int step = (previewAnimationFrame / 8) % (overflow + 30);
+        int offset = Math.clamp(step - 15, 0, overflow);
+        return name.substring(offset, offset + columns);
+    }
+
+    private void drawToolsAndHelp() {
+        if (toolsOpen) focusBox(10, 49 + toolIndex * 27, viewportWidth - 20, 22);
+        font.beginMegaBatch();
+        font.drawText(toolsOpen ? "ADVANCED" : "CONTROLS / HELP", 10, 10, 1f, 1f, 1f, 1f);
+        String[] lines = toolsOpen ? new String[] { "Trace replays", "Controls / help" }
+                : new String[] { "Left/Right: choose game", "Up/Down: select action", confirmHint() + ": open action",
+                    backHint() + ": return one screen", "Settings: draft, then Apply" };
+        for (int i = 0; i < lines.length; i++) textFitted(lines[i], 17, 55 + i * 27,
+                viewportWidth - 34, 1f, 1f, 1f, 1f);
+        textFitted(toolsOpen ? directionHint() + " Menu  " + confirmHint() + " Open  " + backHint() + " Back"
+                : backHint() + " Back", 9, 211, viewportWidth - 18, 1f, 0.5f, 0.91f, 1f);
+        font.endMegaBatch();
+    }
+
+    private void textFitted(String text, int x, int y, int maxWidth, float preferredScale,
+                            float r, float g, float b) {
+        if (preferredScale >= 1f && text.length() * PixelFont.glyphWidth() <= maxWidth) {
+            font.drawText(text, x, y, 1f, r, g, b, 1f);
+        } else {
+            MenuStyle.text(font, text, x, y, maxWidth, r, g, b);
         }
     }
 
-    private void drawSecondaryActions() {
-        float[] color = secondaryActionTextColor(secondaryActions.isModsFocused(), frameCounter);
-        drawScaledCenteredText("MODS", 202, 0.7f, color[0], color[1], color[2], color[3]);
+    private void box(int x, int y, int width, int height, float r, float g, float b, float alpha) {
+        renderer.drawTexture(solidWhiteTextureId, x, SCREEN_H - y - height, width, height, r, g, b, alpha);
+    }
+
+    private void focusBox(int x, int y, int width, int height) {
+        box(x, y, width, 1, 0.5f, 0.91f, 1f, 1f);
+        box(x, y + height - 1, width, 1, 0.5f, 0.91f, 1f, 1f);
+        box(x, y, 1, height, 0.5f, 0.91f, 1f, 1f);
+        box(x + width - 1, y, 1, height, 0.5f, 0.91f, 1f, 1f);
     }
 
     private void loadRomPreviews() {
+        if (romCatalogue == null) refreshStockAvailability();
         for (MasterTitleEntry entry : entries) {
             if (!(entry instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(entry)) continue;
             GameEntry game = stock.game();
-            Path path = Path.of(configService.getString(game.romConfigKey));
-            MasterTitleRomPreview.loadSequenceFor(game, path).ifPresent(sequence -> {
-                RomPreviewState preview = new RomPreviewState();
-                preview.sequence = sequence;
-                MasterTitleRomPreview.Image firstFrame = sequence.imageAt(0);
-                preview.textureId = MasterTitleRomPreview.uploadTexture(firstFrame);
-                preview.width = firstFrame.width();
-                preview.height = firstFrame.height();
-                romPreviews.put(game, preview);
-            });
+            romCatalogue.resolve(logicalRomFor(game))
+                    .ifPresent(resolution -> loadRomPreview(game, resolution, resolution.changeToken()));
         }
     }
 
-    private void drawSelectedRomPreview() {
-        RomPreviewState preview = selectedPreview();
-        if (preview == null) return;
-        updateSelectedRomPreviewTexture();
-        PreviewLayout layout = romPreviewLayout(preview.width, preview.height, viewportWidth);
-        renderer.drawTexture(preview.textureId, layout.x(), layout.y(), layout.width(), layout.height());
-    }
-
-    private void drawRomPreviewUiMattes() {
-        if (selectedPreview() == null) return;
-        PreviewLayout bottom = bottomUiMatteLayout(viewportWidth);
-        drawMatte(bottom, BOTTOM_UI_MATTE_ALPHA);
-    }
-
-    private void drawMatte(PreviewLayout layout, float alpha) {
-        if (layout.height() <= 0 || layout.width() <= 0) {
-            return;
+    private void loadRomPreview(GameEntry game, RomImageCatalogue.Resolution resolution, String source) {
+        // Remember even a failed decode: unrelated Apply must not retry disk work.
+        previewSources.put(game, source);
+        Optional<Path> wholeImage = resolution.wholeImagePath();
+        Optional<MasterTitleRomPreview.PreviewSequence> decoded;
+        if (wholeImage.isPresent()) {
+            decoded = MasterTitleRomPreview.loadSequenceFor(game, wholeImage.get());
+        } else {
+            // A window of a lock-on dump or a composite has no file of its own:
+            // decode from the catalogue's in-memory view instead.
+            try {
+                decoded = MasterTitleRomPreview.loadSequenceFor(game,
+                        Rom.fromReader(romCatalogue.open(resolution.rom()), resolution.describe()));
+            } catch (IOException e) {
+                LOGGER.warning("Could not open " + resolution.describe() + " for its title preview: " + e.getMessage());
+                decoded = Optional.empty();
+            }
         }
-        renderer.drawTexture(solidWhiteTextureId, layout.x(), layout.y(), layout.width(), layout.height(),
-                0f, 0f, 0f, alpha);
+        decoded.ifPresent(sequence -> {
+            RomPreviewState preview = new RomPreviewState();
+            preview.sequence = sequence;
+            MasterTitleRomPreview.Image firstFrame = sequence.imageAt(0);
+            preview.textureId = MasterTitleRomPreview.uploadTexture(firstFrame);
+            preview.width = firstFrame.width();
+            preview.height = firstFrame.height();
+            romPreviews.put(game, preview);
+        });
     }
 
     private void updateSelectedRomPreviewTexture() {
@@ -829,39 +1162,20 @@ public class MasterTitleScreen {
         preview.frameToken = token;
     }
 
-    private void drawSelectedMissingRomPrompt() {
-        MasterTitleEntry selected = selectedEntry();
-        if (selected instanceof MasterTitleEntry.Standalone standalone) {
-            drawScaledCenteredText(standalone.displayName(), 98, 1f,
-                    1f, 0.9f, 0.9f, 1f);
-            if (standaloneActionOpen) drawStandaloneActions();
-            return;
-        }
-        if (isEntryAvailable(selected)) {
-            return;
-        }
-        GameEntry entry = ((MasterTitleEntry.Stock) selected).game();
-        font.drawTextCentered(MISSING_ROM_PROMPT, viewportWidth, 82, 1f, 0.25f, 0.25f, 1f);
-
-        String filename = missingRomFilenameLine(entry);
-        float filenameScale = Math.min(0.72f, (viewportWidth - 36f) / Math.max(1, font.measureWidth(filename)));
-        int filenameWidth = font.measureWidth(filename, filenameScale);
-        float filenameX = centerX(filenameWidth, viewportWidth);
-        font.drawText(filename, filenameX, 98, filenameScale, 1f, 0.55f, 0.55f, 1f);
-    }
-
     private void drawStandaloneActions() {
         List<MasterTitleEntry.Action> actions = standaloneActionsForTest();
         for (int i = 0; i < actions.size(); i++) {
             String label = (i == standaloneActionIndex ? "> " : "  ")
                     + (actions.get(i) == MasterTitleEntry.Action.NEW_GAME ? "NEW GAME" : "CONTINUE");
-            font.drawTextCentered(label, viewportWidth, 118 + i * 12,
-                    i == standaloneActionIndex ? 1f : 0.7f, 0.85f, 0.4f, 1f);
+            MenuStyle.panel(font, viewportWidth / 2 - 90, 76 + i * 28, 180, 23);
+            if (i == standaloneActionIndex) MenuStyle.focus(font, viewportWidth / 2 - 90, 76 + i * 28, 180, 23);
+            font.drawTextCentered(label, viewportWidth, 82 + i * 28, 1f, 1f, 1f, 1f);
         }
     }
 
     private void playNavigateSound() { audioSink.play(AudioCue.NAVIGATE); }
     private void playConfirmSound()  { audioSink.play(AudioCue.CONFIRM); }
+    private void playCancelSound()   { audioSink.play(AudioCue.CANCEL); }
     private void playErrorSound()    { audioSink.play(AudioCue.ERROR); }
 
     /**
@@ -911,9 +1225,10 @@ public class MasterTitleScreen {
         }
         if (this.state != State.ERROR_DISPLAY) {
             playErrorSound();
+            traceFailureAnnounced = configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
+            if (tracePicker != null) tracePicker.markFailureFeedbackAnnounced();
         }
         this.state = State.ERROR_DISPLAY;
-        this.errorFrameCounter = 0;
         this.gameSelected = false;
     }
 
@@ -929,43 +1244,8 @@ public class MasterTitleScreen {
         this.viewportWidth = Math.max(SCREEN_W, width);
     }
 
-    /**
-     * Returns the horizontal center of an element of {@code elementWidth} pixels
-     * within a viewport of {@code vpWidth} pixels.
-     *
-     * <p>At native width (vpWidth == 320) this collapses to the existing literals:
-     * {@code (320 - w) / 2}.
-     */
-    static float centerX(int elementWidth, int vpWidth) {
-        return (vpWidth - elementWidth) / 2f;
-    }
-
-    static PreviewLayout romPreviewLayout(int previewW, int previewH, int vpWidth) {
-        int width = Math.max(1, previewW);
-        int height = Math.max(1, previewH);
-        return new PreviewLayout(width, height, centerX(width, vpWidth), 0);
-    }
-
-    static PreviewLayout topUiMatteLayout(int vpWidth) {
-        int width = Math.max(SCREEN_W, vpWidth);
-        return new PreviewLayout(width, TOP_UI_MATTE_HEIGHT, 0, SCREEN_H - TOP_UI_MATTE_HEIGHT);
-    }
-
-    static PreviewLayout bottomUiMatteLayout(int vpWidth) {
-        int width = Math.max(SCREEN_W, vpWidth);
-        return new PreviewLayout(width, BOTTOM_UI_MATTE_HEIGHT, 0, 0);
-    }
-
-    static float titleLogoY(int titleHeight) {
-        return SCREEN_H - 2 - titleHeight;
-    }
-
     static int titleLogoScaledWidth(int sourceWidth) {
         return scaledTitleLogoDimension(sourceWidth);
-    }
-
-    static int titleLogoScaledHeight(int sourceHeight) {
-        return scaledTitleLogoDimension(sourceHeight);
     }
 
     private static int scaledTitleLogoDimension(int sourceDimension) {
@@ -981,102 +1261,8 @@ public class MasterTitleScreen {
         return entry.expectedRomFilename;
     }
 
-    static String missingRomPromptLine() {
-        return MISSING_ROM_PROMPT;
-    }
-
-    static String missingRomFilenameLine(GameEntry entry) {
-        return expectedRomFilename(entry);
-    }
-
-    static String launchHoverLine(int enabledCount) {
-        if (enabledCount <= 0) {
-            return "Stock launch - Tab to configure";
-        }
-        String noun = enabledCount == 1 ? " option enabled" : " options enabled";
-        return enabledCount + noun + " - Tab to configure";
-    }
-
-    static int scaledCenteredTextX(String text, int screenWidth, float scale) {
-        int textWidth = Math.round(text.length() * PixelFont.glyphWidth() * scale);
-        return Math.round((screenWidth - textWidth) / 2f);
-    }
-
-    static List<MenuItemLayout> menuItemLayouts(
-            List<String> labels, int selectedIndex, int viewportWidth) {
-        return menuItemLayouts(labels, selectedIndex, viewportWidth,
-                text -> text.length() * PixelFont.glyphWidth());
-    }
-
-    private static List<MenuItemLayout> menuItemLayouts(
-            List<String> labels, int selectedIndex, int viewportWidth,
-            ToIntFunction<String> measure) {
-        Objects.requireNonNull(labels, "labels");
-        Objects.requireNonNull(measure, "measure");
-        if (labels.isEmpty()) return List.of();
-        int selected = Math.max(0, Math.min(labels.size() - 1, selectedIndex));
-        int width = Math.max(1, viewportWidth);
-        int spacing = 20;
-        int totalWidth = spacing * (labels.size() - 1);
-        for (String label : labels) totalWidth += measure.applyAsInt(label);
-        if (totalWidth <= width) {
-            List<MenuItemLayout> result = new ArrayList<>(labels.size());
-            int cursor = (width - totalWidth) / 2;
-            for (int i = 0; i < labels.size(); i++) {
-                String label = labels.get(i);
-                int labelWidth = measure.applyAsInt(label);
-                result.add(new MenuItemLayout(i, label, cursor, labelWidth));
-                cursor += labelWidth + spacing;
-            }
-            return List.copyOf(result);
-        }
-
-        int available = Math.max(1, width - FITTED_TEXT_SIDE_PADDING * 2);
-        String visible = elideToWidth(labels.get(selected), available, measure);
-        int visibleWidth = Math.min(available, measure.applyAsInt(visible));
-        return List.of(new MenuItemLayout(
-                selected, visible, Math.max(0, (width - visibleWidth) / 2), visibleWidth));
-    }
-
-    private static String elideToWidth(String text, int maxWidth, ToIntFunction<String> measure) {
-        if (measure.applyAsInt(text) <= maxWidth) return text;
-        String suffix = "...";
-        if (measure.applyAsInt(suffix) > maxWidth) return "";
-        int low = 0;
-        int high = text.length();
-        while (low < high) {
-            int mid = (low + high + 1) >>> 1;
-            if (measure.applyAsInt(text.substring(0, mid) + suffix) <= maxWidth) low = mid;
-            else high = mid - 1;
-        }
-        return text.substring(0, low) + suffix;
-    }
-
-    static float[] menuTextColor(boolean available, boolean selected, int frameCounter) {
-        if (!available) {
-            if (selected) {
-                return new float[] { 0.72f, 0.72f, 0.72f, 0.85f };
-            }
-            return new float[] { 0.4f, 0.4f, 0.4f, 0.7f };
-        }
-        if (selected) {
-            float pulse = 0.5f + 0.5f * (float) Math.sin(frameCounter * 0.05);
-            float brightness = 1.0f + 0.3f * pulse;
-            return new float[] { brightness, brightness, brightness, 1.0f };
-        }
-        return new float[] { 0.8f, 0.8f, 0.8f, 1.0f };
-    }
-
-    static float[] secondaryActionTextColor(boolean focused, int frameCounter) {
-        if (!focused) {
-            return new float[] { 0.55f, 0.55f, 0.65f, 0.9f };
-        }
-        float pulse = 0.85f + 0.15f * (float) Math.sin(frameCounter * 0.08f);
-        return new float[] { pulse, 0.75f * pulse, 0.25f * pulse, 1.0f };
-    }
-
     private MasterTitleEntry selectedEntry() {
-        return entries.get(selectedIndex);
+        return entries.isEmpty() ? null : entries.get(selectedIndex);
     }
 
     private boolean isEntryAvailable(MasterTitleEntry entry) {
@@ -1104,6 +1290,33 @@ public class MasterTitleScreen {
                     && stock.game() == GameEntry.SONIC_2) return i;
         }
         return 0;
+    }
+
+    private boolean cycleSelectedEntry(int direction) {
+        return entries.size() > 1 && setSelectedIndex(Math.floorMod(selectedIndex + direction, entries.size()));
+    }
+
+    void bindEntrySource(java.util.function.Supplier<List<MasterTitleEntry>> source) {
+        entrySource = Objects.requireNonNull(source, "source");
+    }
+
+    /** Reconcile a host catalog snapshot by game identity, never by an obsolete slot. */
+    void replaceEntries(List<MasterTitleEntry> replacement) {
+        List<MasterTitleEntry> next = List.copyOf(replacement);
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (MasterTitleEntry entry : next) {
+            if (!ids.add(entry.gameId())) throw new IllegalArgumentException("Duplicate title game: " + entry.gameId());
+        }
+        if (entries.equals(next)) return;
+        String selectedId = getSelectedGameId();
+        int previousIndex = selectedIndex;
+        entries = next;
+        selectedIndex = Math.max(0, Math.min(previousIndex, entries.size() - 1));
+        for (int i = 0; i < entries.size(); i++) {
+            if (entries.get(i).gameId().equals(selectedId)) { selectedIndex = i; break; }
+        }
+        previewAnimationFrame = 0;
+        if (renderer != null) refreshRomPreviews();
     }
 
     boolean setSelectedIndex(int newIndex) {
@@ -1179,10 +1392,11 @@ public class MasterTitleScreen {
         } else {
             modManagerOpenHandler.run();
         }
+        playConfirmSound();
     }
 
     boolean isModsFocusedForTest() {
-        return secondaryActions.isModsFocused();
+        return navigation.actions() && navigation.action() == TitleHubNavigation.Action.MODS;
     }
 
     boolean isModManagerOpenForTest() {
@@ -1270,15 +1484,16 @@ public class MasterTitleScreen {
 
     public void setProjectionMatrix(float[] projectionMatrix) {
         if (renderer != null && projectionMatrix != null) {
+            currentProjection = projectionMatrix.clone();
             renderer.setProjectionMatrix(projectionMatrix);
         }
     }
 
     /**
-     * Returns the game ID ("s1", "s2", "s3k") of the selected entry.
+     * Returns the stable selected game ID, or null when the effective catalog is empty.
      */
     public String getSelectedGameId() {
-        return selectedEntry().gameId();
+        return selectedEntry() == null ? null : selectedEntry().gameId();
     }
 
     public boolean isProgrammaticSelection() {
@@ -1295,7 +1510,17 @@ public class MasterTitleScreen {
                 || !isEntryAvailable(stock)) return false;
         GameEntry entry = stock.game();
         try {
-            userRecordingMenu = userRecordingMenuFactory.create(entry.gameId, font);
+            if (userRecordingMenuFactory != null) {
+                userRecordingMenu = userRecordingMenuFactory.create(entry.gameId, font);
+                childInputPending = true;
+            } else {
+                Path root = Path.of(System.getProperty("user.dir", "."));
+                var identity = AppVersion.identity();
+                loadCatalog("RECORDINGS", () -> UserRecordingCatalog.scan(root, entry.gameId, identity),
+                        catalog -> userRecordingMenu = new UserRecordingMenu(entry.gameId, catalog, font,
+                                userRecordingPlaybackStarter));
+            }
+            playConfirmSound();
             return true;
         } catch (IOException ex) {
             LOGGER.warning("Failed to open recordings menu for " + entry.gameId + ": " + ex.getMessage());
@@ -1308,15 +1533,6 @@ public class MasterTitleScreen {
             return false;
         }
         return tryOpenUserRecordingMenuForSelectedGame();
-    }
-
-    private UserRecordingMenu createUserRecordingMenu(String gameId, PixelFont font) throws IOException {
-        Path root = Path.of(System.getProperty("user.dir", "."));
-        return new UserRecordingMenu(
-                gameId,
-                UserRecordingCatalog.scan(root, gameId, AppVersion.identity()),
-                font,
-                userRecordingPlaybackStarter);
     }
 
     /**
@@ -1344,6 +1560,8 @@ public class MasterTitleScreen {
         String initialGameId = selectedStock.game().gameId;
         try {
             timeAttackMenu = timeAttackMenuFactory.create(availableGameIds, initialGameId, font);
+            childInputPending = true;
+            playConfirmSound();
             return true;
         } catch (RuntimeException ex) {
             LOGGER.warning("Failed to open time attack menu: " + ex.getMessage());
@@ -1370,43 +1588,13 @@ public class MasterTitleScreen {
         return menu;
     }
 
-    private void drawLaunchHoverLine() {
-        if (!(selectedEntry() instanceof MasterTitleEntry.Stock stock)
-                || !isEntryAvailable(stock)) return;
-        GameEntry entry = stock.game();
-        int enabledCount = launchProfileStore.load(entry).enabledCount(entry);
-        if (enabledCount == 0) {
-            drawScaledCenteredText(launchHoverLine(enabledCount), LAUNCH_HOVER_Y, LAUNCH_HOVER_SCALE,
-                    0.55f, 0.55f, 0.55f, 0.88f);
-        } else {
-            drawScaledCenteredText(launchHoverLine(enabledCount), LAUNCH_HOVER_Y, LAUNCH_HOVER_SCALE,
-                    1f, 0.82f, 0.28f, 1f);
-        }
-    }
-
-    private void drawScaledCenteredText(String text, int y, float preferredScale,
-                                        float r, float g, float b, float a) {
-        float scale = fittedScale(text, preferredScale, viewportWidth);
-        int width = font.measureWidth(text, scale);
-        int x = Math.round((viewportWidth - width) / 2f);
-        font.drawText(text, x, y, scale, r, g, b, a);
-    }
-
-    private static float fittedScale(String text, float preferredScale, int viewportWidth) {
-        int preferredWidth = Math.round(text.length() * PixelFont.glyphWidth() * preferredScale);
-        int maxWidth = Math.max(1, viewportWidth - FITTED_TEXT_SIDE_PADDING * 2);
-        if (preferredWidth <= maxWidth) {
-            return preferredScale;
-        }
-        return preferredScale * maxWidth / preferredWidth;
-    }
-
     /**
      * Cleans up all GL resources.
      */
     private PixelFont ensurePickerFont() {
+        if (renderer == null) return font;
         if (pickerFont == null) {
-            pickerFont = new PixelFont();
+            pickerFont = new com.openggf.graphics.MenuPixelFont();
             try {
                 pickerFont.init("pixel-font-ns.png", renderer);
             } catch (IOException e) {
@@ -1419,6 +1607,7 @@ public class MasterTitleScreen {
     }
 
     public void cleanup() {
+        cancelCatalogLoad();
         if (font != null) font.cleanup();
         // pickerFont is only non-null AND distinct from font when the
         // no-shadow atlas loaded successfully. Clean it up separately.
@@ -1435,6 +1624,9 @@ public class MasterTitleScreen {
         userRecordingMenu = null;
         timeAttackMenu = null;
         raceLobbyScreen = null;
+        settingsScreen = null;
+        toolsOpen = false;
+        helpOpen = false;
         modManagerScreen = null;
         state = State.INACTIVE;
         LOGGER.info("Master title screen cleaned up");
@@ -1456,6 +1648,15 @@ public class MasterTitleScreen {
     @com.openggf.game.ModApi
     public interface ModManagerScreenFactory {
         ModManagerView create(PixelFont font);
+    }
+
+    /** Menu ownership is intentionally separate from the exported title-screen API. */
+    boolean blocksGlobalShortcuts() {
+        return state != State.ACTIVE || navigation.actions() || quitPrompt || childInputPending
+                || settingsScreen != null || launchConfigPanel != null || modManagerScreen != null
+                || timeAttackMenu != null || userRecordingMenu != null || raceLobbyScreen != null
+                || serverBrowserScreen != null || tracePicker != null || standaloneActionOpen
+                || toolsOpen || helpOpen || gameBrowserOpen || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 
     @com.openggf.game.ModApi

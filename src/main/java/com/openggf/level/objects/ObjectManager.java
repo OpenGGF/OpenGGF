@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.ModApi;
 import com.openggf.game.session.EngineServices;
 import static org.lwjgl.opengl.GL11.GL_LINES;
 import com.openggf.camera.Camera;
@@ -61,7 +62,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
-@com.openggf.game.ModApi
+@ModApi
 public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     static final int ANIM_ROLL = 0x02;
@@ -150,9 +151,11 @@ public class ObjectManager {
 
     // Pre-bucketed lists for O(n) rendering instead of O(n*buckets)
     @SuppressWarnings("unchecked")
-    private final List<ObjectInstance>[] lowPriorityBuckets = new ArrayList[BUCKET_COUNT];
+    private final List<ObjectRenderParts.RenderEntry>[] lowPriorityBuckets = new ArrayList[BUCKET_COUNT];
     @SuppressWarnings("unchecked")
-    private final List<ObjectInstance>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
+    private final List<ObjectRenderParts.RenderEntry>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
+    @SuppressWarnings("unchecked")
+    private final List<ObjectRenderParts.RenderEntry>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
     private final ObjectRenderBucketSnapshot renderBucketSnapshot =
             new ObjectRenderBucketSnapshot();
@@ -241,11 +244,6 @@ public class ObjectManager {
     // captureExecStartPlayerCentreY / getPlayerCentreYAtExecStart.
     private final java.util.Map<PlayableEntity, Integer> execStartPlayerCentreY =
             new java.util.IdentityHashMap<>(2);
-    private static final Comparator<ObjectInstance> RENDER_SLOT_DESCENDING = (a, b) -> {
-        int slotA = a instanceof AbstractObjectInstance aoiA ? aoiA.getSlotIndex() : Integer.MAX_VALUE;
-        int slotB = b instanceof AbstractObjectInstance aoiB ? aoiB.getSlotIndex() : Integer.MAX_VALUE;
-        return Integer.compare(slotB, slotA);
-    };
 
     public ObjectManager(List<ObjectSpawn> spawns, ObjectRegistry registry,
             int planeSwitcherObjectId, PlaneSwitcherConfig planeSwitcherConfig,
@@ -293,6 +291,7 @@ public class ObjectManager {
         for (int i = 0; i < BUCKET_COUNT; i++) {
             lowPriorityBuckets[i] = new ArrayList<>();
             highPriorityBuckets[i] = new ArrayList<>();
+            unifiedBuckets[i] = new ArrayList<>();
         }
     }
 
@@ -727,6 +726,7 @@ public class ObjectManager {
                     // S3K stays load-then-exec.
                     runTwoAxisLoadThenExecutePlacement(cameraX, false);
                 }
+                assignPendingPlayerSlotAllocations();
                 // S2: NO pre-exec load. ROM S2 is RunObjects (s2.asm:5095) then
                 // exactly one ObjectsManager (s2.asm:5112) = exec -> one load.
                 // The single S2 load runs in the post-block below
@@ -739,6 +739,7 @@ public class ObjectManager {
                 syncActiveSpawnsUnload();
                 cleanupDestroyedDynamicObjects();
                 syncActiveSpawnsLoad(true);
+                assignPendingPlayerSlotAllocations();
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             }
             flushPostExecDynamicSpawns();
@@ -1464,28 +1465,16 @@ public class ObjectManager {
         for (int i = 0; i < BUCKET_COUNT; i++) {
             lowPriorityBuckets[i].clear();
             highPriorityBuckets[i].clear();
+            unifiedBuckets[i].clear();
         }
 
-        // Bucket active objects
+        // Bucket active and dynamic objects; an owner of inline-drawn ROM children
+        // (MultiBucketRenderable) is listed in every bucket its parts occupy.
         for (ObjectInstance instance : activeObjects.values()) {
-            int bucket = RenderPriority.clamp(instance.getPriorityBucket());
-            int idx = bucket - RenderPriority.MIN;
-            if (instance.isHighPriority()) {
-                highPriorityBuckets[idx].add(instance);
-            } else {
-                lowPriorityBuckets[idx].add(instance);
-            }
+            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
-
-        // Bucket dynamic objects
         for (ObjectInstance instance : dynamicObjects) {
-            int bucket = RenderPriority.clamp(instance.getPriorityBucket());
-            int idx = bucket - RenderPriority.MIN;
-            if (instance.isHighPriority()) {
-                highPriorityBuckets[idx].add(instance);
-            } else {
-                lowPriorityBuckets[idx].add(instance);
-            }
+            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
 
         // ROM parity: lower sprite-table indices render in front. Objects execute and
@@ -1493,8 +1482,9 @@ public class ObjectManager {
         // painter's-algorithm order. Sort each bucket descending by slot so lower
         // slot indices appear on top.
         for (int i = 0; i < BUCKET_COUNT; i++) {
-            lowPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
-            highPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
+            lowPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
+            highPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
+            unifiedBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
         }
 
         renderBucketSnapshot.capture(activeObjects.values(), dynamicObjects);
@@ -1504,8 +1494,8 @@ public class ObjectManager {
         ensureBucketsPopulated();
         int targetBucket = RenderPriority.clamp(bucket);
         int idx = targetBucket - RenderPriority.MIN;
-        List<ObjectInstance>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
-        drawBucketInstancesWithPriority(buckets[idx], graphicsManager);
+        List<ObjectRenderParts.RenderEntry>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
+        drawBucketInstancesWithPriority(buckets[idx], targetBucket, graphicsManager);
     }
 
     /**
@@ -1523,26 +1513,24 @@ public class ObjectManager {
         int targetBucket = RenderPriority.clamp(bucket);
         int idx = targetBucket - RenderPriority.MIN;
 
-        // Draw low-priority objects first (they appear behind)
-        drawBucketInstances(lowPriorityBuckets[idx], false, callback);
-
-        // Draw high-priority objects second (they appear in front)
-        drawBucketInstances(highPriorityBuckets[idx], true, callback);
+        drawBucketInstances(unifiedBuckets[idx], targetBucket, callback);
     }
 
-    private void drawBucketInstances(List<ObjectInstance> instances, boolean highPriority, ObjectDrawCallback callback) {
-        if (instances.isEmpty()) {
+    private void drawBucketInstances(List<ObjectRenderParts.RenderEntry> entries, int bucket,
+                                     ObjectDrawCallback callback) {
+        if (entries.isEmpty()) {
             return;
         }
 
         enableVerticalWrapIfNeeded();
         try {
             renderCommands.clear();
-            for (ObjectInstance instance : instances) {
+            for (ObjectRenderParts.RenderEntry entry : entries) {
                 if (callback != null) {
-                    callback.beforeDraw(instance, highPriority);
+                    callback.beforeDraw(entry.instance(), entry.high());
                 }
-                objectCallbacks.run(instance, () -> instance.appendRenderCommands(renderCommands));
+                objectCallbacks.run(entry.instance(),
+                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket));
             }
 
             if (!renderCommands.isEmpty()) {
@@ -1559,7 +1547,7 @@ public class ObjectManager {
      * Callback interface for unified object drawing.
      * Called before each object is drawn to allow setting up shader uniforms.
      */
-    @com.openggf.game.ModApi
+    @ModApi
     public interface ObjectDrawCallback {
         /**
          * Called before drawing an object.
@@ -1588,38 +1576,31 @@ public class ObjectManager {
         // (The InstancedPatternRenderer bakes priority per-instance and doesn't
         // need the flush, but it's harmless — empty flushes are no-ops.)
 
-        if (!lowPriorityBuckets[idx].isEmpty()) {
-            gfx.flushPatternBatch();
-            gfx.setCurrentSpriteHighPriority(false);
-            gfx.beginPatternBatch();
-            drawBucketInstancesWithPriority(lowPriorityBuckets[idx], gfx);
-        }
-
-        if (!highPriorityBuckets[idx].isEmpty()) {
-            gfx.flushPatternBatch();
-            gfx.setCurrentSpriteHighPriority(true);
-            gfx.beginPatternBatch();
-            drawBucketInstancesWithPriority(highPriorityBuckets[idx], gfx);
-        }
+        drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
     }
 
-    private void drawBucketInstancesWithPriority(List<ObjectInstance> instances, GraphicsManager gfx) {
-        if (instances.isEmpty()) {
+    private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
+                                                 GraphicsManager gfx) {
+        if (entries.isEmpty()) {
             return;
         }
 
         enableVerticalWrapIfNeeded();
         try {
             renderCommands.clear();
-            for (ObjectInstance instance : instances) {
-                objectCallbacks.run(instance, () -> {
-                    int mask = instance.getTileOcclusionPaletteMask();
+            // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
+            // The cached lists use reverse order for ordinary painter drawing.
+            boolean collectingSat = gfx.isSpriteSatCollectionActive();
+            for (int i = 0; i < entries.size(); i++) {
+                ObjectRenderParts.RenderEntry entry = entries.get(collectingSat ? entries.size() - 1 - i : i);
+                objectCallbacks.run(entry.instance(), () -> {
+                    int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
                     if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
                         gfx.flushPatternBatch();
                         gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
                         gfx.beginPatternBatch();
                     }
-                    instance.appendRenderCommands(renderCommands);
+                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket);
                 });
             }
 
@@ -1893,7 +1874,7 @@ public class ObjectManager {
      *
      * <p>This is for fixed-slot setup paths, not ordinary {@code AllocateObject}
      * calls. For example, S3K's {@code SpawnLevelMainSprites} writes the AIZ
-     * intro controller directly to dynamic object slot 2 (absolute SST slot 6)
+     * intro controller directly to dynamic object slot 2 (absolute SST slot 5)
      * instead of scanning for the first free slot.
      */
     public <T extends ObjectInstance> T createDynamicObjectAtSlot(
@@ -2039,8 +2020,35 @@ public class ObjectManager {
         initialDispatch.processFixedObject(object);
     }
 
+    /**
+     * Reserves SSTs that the player's own slot allocated during a player step the
+     * engine runs before the object load (lightning-shield attracted rings).
+     */
+    private void assignPendingPlayerSlotAllocations() {
+        var rings = objectServices.ringManager();
+        if (rings != null) {
+            rings.assignPendingAttractedRingSlots();
+        }
+    }
+
+    /** ROM {@code AllocateObject} availability for allocations deferred past the object load. */
+    public boolean hasFreeDynamicSlotForDeferredAllocation(int alreadyDeferred) {
+        return slotAllocator.freeSlotCount() > alreadyDeferred;
+    }
+
     void flushPostExecDynamicSpawns() {
-        runtimeState.drainPostExecDynamicSpawns().forEach(this::addDynamicObjectNextFrame);
+        var spawns = runtimeState.drainPostExecDynamicSpawns();
+        if (spawns.isEmpty()) {
+            return;
+        }
+        // These spawns model AllocateObject calls from fixed SSTs after
+        // Dynamic_object_RAM; attracted rings deleted earlier in the pass have
+        // already cleared their SSTs.
+        var rings = objectServices.ringManager();
+        if (rings != null) {
+            rings.releaseAttractedRingsDeletingThisPass();
+        }
+        spawns.forEach(this::addDynamicObjectNextFrame);
     }
 
     /**
@@ -2465,6 +2473,11 @@ public class ObjectManager {
         placement.enablePermanentDestroyLatch();
     }
 
+    /** Package-private: {@code Seek_Object_Manager}, reached through {@link ObjectPlacementSeek}. */
+    void seekPlacementCursors(int cameraX) {
+        placement.seekCursors(cameraX);
+    }
+
     /**
      * Adjusts the ObjectPlacementController system's tracking state after a camera wrap-back.
      * <p>
@@ -2808,24 +2821,7 @@ public class ObjectManager {
     }
 
     public void markRemembered(ObjectSpawn spawn) {
-        // Look up the instance to check if it should stay active.
-        // activeObjects is an IdentityHashMap so try identity first.
-        ObjectInstance instance = activeObjects.get(spawn);
-        if (instance == null) {
-            // Fallback: scan by equals() in case the caller's spawn reference
-            // differs from the canonical key stored in the IdentityHashMap.
-            for (Map.Entry<ObjectSpawn, ObjectInstance> entry : activeObjects.entrySet()) {
-                if (entry.getKey().equals(spawn)) {
-                    instance = entry.getValue();
-                    break;
-                }
-            }
-        }
-        if (instance != null) {
-            placement.markRemembered(spawn, instance);
-        } else {
-            placement.markRemembered(spawn);
-        }
+        placement.markRemembered(spawn, activeObjects);
     }
 
     public void clearRemembered() {
@@ -2839,6 +2835,21 @@ public class ObjectManager {
      */
     public void removeFromActiveSpawns(ObjectSpawn spawn) {
         placement.removeFromActive(spawn);
+    }
+
+    /**
+     * Moves a placement's active-lifetime ownership to an already allocated child.
+     * Mirrors copying respawn_addr to a child and clearing it in a transformed
+     * parent. Both SST slots, execution order and rewind identities stay intact.
+     */
+    public boolean transferPlacementOwnership(ObjectInstance from, ObjectInstance to) {
+        boolean transferred = placement.transferPlacementOwnership(from, to,
+                activeObjects, instanceToSpawn, dynamicObjects);
+        if (transferred) {
+            bucketsDirty = true;
+            activeObjectsCacheDirty = true;
+        }
+        return transferred;
     }
 
     /**
@@ -4225,14 +4236,17 @@ public class ObjectManager {
                         return false;
                     }
                     objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
-                    if (adopted != null) {
-                        // Adopt at the captured slot; the construction spawn did not allocate
-                        // one (the slot allocator is already restored from the snapshot).
-                        int slot = entry.slotIndex();
-                        if (slot >= 0) {
-                            objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slot));
-                        }
-                    } else {
+                    // Both adopted children and generic recreations must own the
+                    // captured slot before callbacks and execOrder registration.
+                    // A spawn-only constructor leaves slotIndex at -1; waiting
+                    // for phase-2 field restore loses the slot lookup used to
+                    // rebind riding/standing contacts to moving dynamic objects.
+                    // The allocator already owns the snapshot reservation.
+                    int slot = entry.slotIndex();
+                    if (slot >= 0) {
+                        objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slot));
+                    }
+                    if (adopted == null) {
                         objectCallbacks.run(aoi, () -> ObjectConstructionContext.withRewindActiveRestore(() -> {
                             aoi.recreateConstructionChildrenForRewind();
                             return null;
@@ -4454,6 +4468,10 @@ public class ObjectManager {
             }
         }
         return owned.toLongArray();
+    }
+
+    void inheritRetainedSstContacts(ObjectManager previous, List<ObjectInstance> carried) {
+        solidContacts.inheritRetainedSstContacts(previous.solidContacts, carried);
     }
 
     /** Retains rewind identities when a transition carries the exact live SST occupants. */

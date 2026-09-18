@@ -71,6 +71,125 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ pyramid capture (2026-09-16): a positioned start at `$43B0,$9D4` skips
+`Obj_PathSwap` at `$4308,$918`, leaving Sonic at fresh-load low sprite priority.
+A follower can later cross a switch independently, producing a misleading
+leader/follower rendering difference. Starting above that switch at `$43B0,$8E0`
+and falling through it sets both priorities via production logic. Record live
+priority flags; do not force high priority or weaken background priority to repair
+a capture that omitted the entry interaction.
+
+SOZ allocation profiling (2026-09-16): aggregate JFR allocation samples include
+recorder/control threads, which can dominate with `HashMap$KeySet` allocations.
+Attribute stacks before calling them gameplay churn. Measure the gameplay thread
+with `ThreadMXBean` around loop and rendering separately, excluding screenshot
+readback/encoding and CSV writes, after a fixed warmup. Match controller route,
+rewind setting, viewport and sampled state before comparing. Bytes/frame is not
+a frame-time or GC-pause improvement. `GameplayAllocationTool` preserves this probe.
+
+SOZ controller-route rewind (2026-09-16): a composite gameplay snapshot does
+not own a standalone `HeadlessTestRunner`'s external button history. Before
+replaying an input edge after restoring the snapshot, call `primeInputState`
+with the input preceding the captured frame. Otherwise a just-pressed jump may
+become held input (or vice versa), producing false flight/glide and sprite-state
+divergences. Compare the full registered state and replay the same input; do not
+remove the input-edge fields from the comparison.
+
+BizHawk Lua API warning flood (SOZ, 2026-09-16): deprecated `bit.band` calls
+inside a per-frame probe spam the Lua console and can turn a short capture into
+a timeout. Use Lua's native `&` operator (and corresponding native bit operators),
+not deprecated compatibility helpers. A 1,200-frame SOZ probe timed out after
+45 seconds; after removing the repeated warning and reducing screenshots, it
+completed in about three seconds. Require a final completion marker as well as
+nonempty CSV output so a buffered partial run cannot look complete.
+
+SOZ full-route comparison (2026-09-16): a matching hardware-timed trace prefix
+does not establish the same prefix in a separately booted ordinary capture,
+even when both consume the same BK2 input rows. Measure each driver's live
+positions and milestones. The corrected trace matched Sonic through19410 while
+the ordinary capture had already taken a different route. Keep controller-route
+reachability evidence separate from trace parity and preserve each executed log.
+
+SOZ roster correction (2026-09-16): the capture CLI normalizes `none`, but direct
+`GameplayCaptureSession.Settings` requires a blank sidekick name for solo play.
+An unknown name can resolve to fallback Sonic and still produce plausible video.
+Assert live leader and follower identities in both the test and capture driver;
+requested configuration is not evidence of the roster actually running.
+
+SOZ completion (2026-09-15): the capture CLI's `--act` is one-based, while
+`GameplayCaptureSession.boot` takes a zero-based act. Assert the loaded act and
+its art before trusting a positioned capture. A wrong-act boss setup can render
+plausible terrain with missing boss sprites. Full rewind comparisons must compare
+terrain descriptor contents, not newly reconstructed Java object identities;
+retain checks for changed collision data and frame state.
+
+KiS2 act-entry investigation (2026-09-15): a correct title-card release row does
+not prove the following gap row is held. Setup-only admission can return before
+the one-shot source-loop flag is consumed, leaving one destination gameplay
+pass to execute before comparison starts. Sample the release, subsequent gap
+rows and first compared row together; an extra pass can remain invisible until
+a later moving-platform ride. Retire source-loop admission inside the title
+loop's own admission path. See the [KiS2 frontier investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+FBZ miniboss capture (2026-09-15): `GameplayCaptureTool --x/--y` reinitializes
+level events and executes a setup object update. That can select a different
+background state from a native position-only teleport and enqueue a one-time
+palette write before the next frame clears pending writes. Match the setup
+operations before diagnosing palette/event defects. A position-only setup with
+natural camera movement restored the expected sky and boss palette; both
+engines then landed Sonic on the plunger on frame 622. See the
+[miniboss comparison](../architecture/audits/2026-09-15-fbz1-miniboss-visual.md).
+
+FBZ fresh-load capture investigation (2026-09-14): a passing strict replay does
+not certify a separate capture driver. The GL capture initially retained the
+host title request and never left the start, while still producing an encoded
+video. Use the same production omitted-presentation boundary, iteration
+admission and native start-counter handling as replay; verify selected live
+trajectory fields before interpreting a clip. Explicit row windows must count
+elapsed VBlanks, including held loading rows, and a recording audio lease must
+survive the producer rebuild at a fresh level load. Review the actual frames,
+not only encoder success or requested row count.
+
+Slots glass investigation (2026-09-14): a runtime-only priority assertion does
+not cover the real bonus loop's post-physics overrides. Enter the bonus stage
+through `GameLoop`, reacquire the focused sprite after the coordinator replaces
+it, and check rendered overlap. Loading bonus-zone tiles in LEVEL mode does not
+activate the bonus runtime; inspect the mode and player state before trusting
+a capture. See `TestS3kSlotsGlassNative` and the
+[layering validation](../architecture/validation/2026-09-14-slots-glass-layering.md).
+
+FBZ visual investigation (2026-09-14): matching camera/VSRAM does not prove
+pixel sampling. Read back the actual shader uniforms and descriptor/lookup/atlas
+textures before changing scroll logic. Subtracting fragment-centre `0.5` before
+division and `floor` places samples on integer boundaries: GPU reciprocal rounding
+can turn `n` into `n - epsilon`, shifting rows even at native scale. Retain pixel
+centres through scaling and test the real shaders at fractional as well as integer
+viewports. A complete-run native background can also retain scratch RAM history
+that a cold level boot never had; do not copy reference RAM into gameplay to fit it.
+
+KiS2 chain investigation (2026-09-14): preparing a recorded roster does not
+install its built-in patch. Verify the resolved session module at the first
+production pass before attributing mass physics/art differences. Standalone
+and chain harnesses must share the recorded-team module resolution; a correct
+character name in metadata is not evidence of the active runtime owner.
+
+HCZ rewind investigation (2026-09-14): persistent dynamic visuals can share a
+fixed slot. The dormant insta-shield and active bubble shield both occupied
+slot 100 with different stable object identities. Deferred recreation reversed
+their insertion order without changing captured state. Compare each identity
+and every entry field, including slot, instead of collapsing the list into one
+value per slot. Suppressing a visual on restore would delete legitimate state;
+it is not a correction for a comparator that paired the wrong objects.
+
+SOZ donor-roster audit (2026-09-16): raw headless character overrides can bypass
+production launch availability. S1-donor Tails instantiated and passed lifecycle
+checks without playable art or an animation profile; its rolling status did not
+produce the roll animation required by touch attacks. Derive supported teams from
+the production launch policy and check each participant's renderer, animation
+profile/scripts and mappings before certifying interaction or reload coverage.
+A retained configuration string or an instantiated sprite is insufficient. Do not
+repair an unsupported debug combination by changing shared combat rules.
+
 | Rule | Signature | What it looks like |
 |---|---|---|
 | 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |
@@ -1249,6 +1368,15 @@ Detach properly (`setsid ... </dev/null`) and poll for an explicit `BUILD SUCCES
 `BUILD FAILURE` line before reading any total. An exit code from a wrapper is not the build's
 verdict, and a log that simply stops is not a result.
 
+The SOZ native probe exposed the same boundary in BizHawk (2026-09-15): a logged
+`NLua.Exceptions.LuaScriptException` was followed by process exit 0, while no
+observation file existed. The common native capture host now rejects logged Lua
+exceptions and supports required nonempty output files. Neither process success
+nor file presence certifies the observed gameplay. A standalone saved state must
+be detached from active movie playback before loading; inspect the load result
+and zone. The initial theory that the load merely returned no value was rejected:
+the zone remained wrong until `movie.stop()` preceded `savestate.load`.
+
 ## Thirty-ninth rule: create round worktrees copy-on-write
 
 Rounds want their own worktree, and often a second one for a same-tree control arm. A full
@@ -1388,6 +1516,14 @@ measurement failures of exactly the kind this document keeps cataloguing:
   look better, because the *control* arm was the contaminated one;
 - a contended suite that dies partway reports **fewer** failures than the baseline, which reads
   as improvement.
+
+The [2026-09-15 queue profiling](../architecture/research/2026-09-15-maven-resource-admission.md)
+measures the whole Maven descendant tree, not just the largest test JVM. Average CPU
+hides short startup/compilation bursts; instantaneous free memory before two JVMs grow
+is not evidence that both peaks fit. Reserve headroom atomically before admission,
+keep one worktree exclusive, and do not apply a single-worker measurement to custom
+heaps or multi-fork profiles. Sampled RSS includes shared pages, while sampled CPU can
+miss short-lived children; record those limits with the numbers.
 
 **Two to three concurrent suite-running rounds is the honest ceiling on a machine like this.**
 Beyond that you are not parallelising, you are queueing with extra steps, and degrading the one

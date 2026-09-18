@@ -10,6 +10,8 @@ import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.PlayerLandingRules;
 import com.openggf.game.rules.PlayerMovementRules;
+import com.openggf.game.rules.PlayerGroundPoseRules;
+import com.openggf.game.rules.PlayerAirMovementRules;
 import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.game.rules.SidekickCpuRules;
@@ -38,20 +40,21 @@ class TestPerGameRuleArchitectureGuard {
     private static final int MAX_RULE_COMPONENTS = 20;
     // Existing migration surfaces: keep each exact size frozen until a deliberate breaking split,
     // and do not let other groups grow this large.
-    // July 2026 merge audit: the ROM-wide sidekick hurt-radius restore gate was relocated out of
-    // movement rules and into SidekickCpuRules (its more accurate owner), so this stays at 22.
+    // Movement's air and ground-pose branches now have their own small groups,
+    // so PlayerMovementRules uses the ordinary twenty-component ceiling.
     // Mod API 0.7 publishes CollisionRules with the flat air fields plus nested AirCollisionRules, so
     // the three flat air fields are synchronized ABI aliases and only 18 values are independent.
     // Do not grow this record further; removing or decomposing the aliases requires an explicit
     // post-0.7 compatibility transition.
     private static final Map<Class<? extends Record>, Integer> FROZEN_RULE_COMPONENT_LIMITS = Map.of(
-            PlayerMovementRules.class, 22,
             CollisionRules.class, 21
     );
 
     private static final List<Class<? extends Record>> RULE_RECORDS = List.of(
             GameRules.class,
             PlayerMovementRules.class,
+            PlayerGroundPoseRules.class,
+            PlayerAirMovementRules.class,
             PlayerLandingRules.class,
             PlayerCapabilityRules.class,
             CollisionRules.class,

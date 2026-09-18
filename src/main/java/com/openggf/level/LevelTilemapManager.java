@@ -53,6 +53,7 @@ public class LevelTilemapManager {
 
     // --- Background tilemap data ---
     private byte[] backgroundTilemapData;
+    private long backgroundDescriptorRevision;
     private int backgroundTilemapWidthTiles;
     private int backgroundTilemapHeightTiles;
     private boolean backgroundTilemapDirty = true;
@@ -267,6 +268,14 @@ public class LevelTilemapManager {
             return;
         }
 
+        long descriptorRevision = zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundDescriptorOverride owner
+                ? owner.backgroundDescriptorRevision() : 0;
+        if (descriptorRevision != backgroundDescriptorRevision) {
+            backgroundDescriptorRevision = descriptorRevision;
+            backgroundTilemapDirty = true;
+            bgWindowShiftCandidate = false;
+        }
+
         boolean requiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
         boolean backgroundWrap = zoneFeatureProvider != null
                 && zoneFeatureProvider.bgWrapsHorizontally()
@@ -280,6 +289,13 @@ public class LevelTilemapManager {
         if (lastBackgroundWrap != null && lastBackgroundWrap != backgroundWrap) {
             backgroundTilemapDirty = true;
             bgWindowShiftCandidate = false;
+        }
+        if (requiresFullWidthBgTilemap && backgroundTilemapData != null
+                && backgroundTilemapWidthTiles * Pattern.PATTERN_WIDTH < getLayerLevelWidthPx((byte) 1)) {
+            // A retained VDP snapshot restores only 64 columns. It cannot serve
+            // a runtime that samples the full world map, even if that mode was
+            // already active before restore and its boolean did not change.
+            resetBgIncrementalShiftBaseline();
         }
         if (!backgroundTilemapDirty && backgroundTilemapData != null) {
             lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
@@ -310,7 +326,7 @@ public class LevelTilemapManager {
         // block/chunk/pattern rebuild loop. Any unproven precondition falls back
         // to the full rebuild below. The CPU array stays canonical; the GPU may
         // retain physical columns as a ring and upload only the entering tiles.
-        boolean shifted = bgWindowShiftCandidate
+        boolean shifted = backgroundDescriptorRevision == 0 && bgWindowShiftCandidate
                 && tryIncrementalBgWindowShift(blockLookup, zoneFeatureProvider, currentZone);
         bgWindowShiftCandidate = false;
         if (!shifted) {
@@ -637,6 +653,15 @@ public class LevelTilemapManager {
         backgroundTilemapWidthTiles = data.widthTiles;
         backgroundTilemapHeightTiles = data.heightTiles;
         retainedBackgroundPlaneAuthoritative = false;
+        if (backgroundDescriptorRevision != 0
+                && zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundDescriptorOverride owner) {
+            for (int y = 0; y < data.heightTiles; y++) for (int x = 0; x < data.widthTiles; x++) {
+                int offset = (y * data.widthTiles + x) * 4;
+                int descriptor = owner.backgroundDescriptorAt(params.xQueryOffset() + x * 8,
+                        params.yQueryOffset() + y * 8);
+                writeTilemapDescriptor(backgroundTilemapData, offset, descriptor);
+            }
+        }
 
         bgLastBuildValid = true;
         bgLastBuildLevel = geometry.level();
@@ -969,10 +994,16 @@ public class LevelTilemapManager {
         setForegroundRingCamera(cameraX, screenWidthPx, 0);
     }
 
+    /**
+     * Pushed from the gameplay step ({@code LevelForegroundPlane.drawAsYouMove}).
+     * A wrap offset is the native {@code Level_repeat_offset} of that step; it is
+     * retained, and summed with any later one, until the next reconcile consumes
+     * it, so a step without a draw does not lose the baseline translation.
+     */
     public void setForegroundRingCamera(int cameraX, int screenWidthPx, int worldWrapOffset) {
         this.foregroundRingCameraX = cameraX;
         this.foregroundRingScreenWidthPx = screenWidthPx;
-        this.foregroundRingWorldWrapOffset = Math.max(0, worldWrapOffset);
+        this.foregroundRingWorldWrapOffset += Math.max(0, worldWrapOffset);
     }
 
     /**
@@ -1001,6 +1032,9 @@ public class LevelTilemapManager {
         }
         foregroundRingLastLeftCol = Math.floorDiv(foregroundRingCameraX, chunkWidth) * chunkWidth;
         foregroundRingLastRightCol = rightCol;
+        // A fresh seed already stands at the wrapped camera; a pending native
+        // wrap offset would otherwise translate these baselines a second time.
+        foregroundRingWorldWrapOffset = 0;
     }
 
     /**
@@ -1492,6 +1526,17 @@ public class LevelTilemapManager {
 
     /** Writes one cell into an event-owned retained Plane-B image without invalidating it for rebuild. */
     public boolean setRetainedBackgroundTileDescriptorAtTilemapCell(int tileX, int tileY, int descriptor) {
+        if (backgroundTilemapData != null
+                && backgroundTilemapWidthTiles >= 64 && backgroundTilemapHeightTiles >= 32
+                && (backgroundTilemapWidthTiles != 64 || backgroundTilemapHeightTiles != 32)) {
+            // Event-owned writes address the physical VDP Plane B, not the
+            // source world cache. Keeping taller cache rows lets VScroll sample
+            // untouched source art instead of wrapping the retained 32 rows.
+            backgroundTilemapData = captureRetainedBackgroundVdpRing();
+            backgroundTilemapWidthTiles = 64;
+            backgroundTilemapHeightTiles = 32;
+            recomputeBgVdpWrapHeight();
+        }
         if (backgroundTilemapData == null
                 || tileX < 0 || tileY < 0
                 || tileX >= backgroundTilemapWidthTiles || tileY >= backgroundTilemapHeightTiles) return false;

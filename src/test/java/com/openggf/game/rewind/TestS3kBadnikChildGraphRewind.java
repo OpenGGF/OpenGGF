@@ -710,6 +710,8 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(Sonic3kObjectArtKeys.TENSION_BRIDGE_LRZ,
                 readObjectField(restoredFragment, "artKey"));
         assertTrue(restoredFragment.isHighPriority());
+        assertEquals(TENSION_BRIDGE_PRIORITY_BUCKET, restoredFragment.getPriorityBucket(),
+                "restore must keep the bucket sub_389DE copied from the bridge");
         assertEquals(0x184, restoredFragment.getX());
         assertEquals(0x132, restoredFragment.getY());
     }
@@ -1617,14 +1619,19 @@ class TestS3kBadnikChildGraphRewind {
         }
     }
 
+    private static final int TENSION_BRIDGE_PRIORITY_BUCKET = 4;
+
     private static ObjectInstance instantiateTensionBridgeFragment(
             int x, int y, int frameIndex, int delay, String artKey, boolean highPriority) {
         try {
             Class<?> cls = Class.forName(TENSION_BRIDGE_FRAGMENT);
+            // (x, y, frameIndex, delay, artKey, highPriority, priorityBucket): the bridge passes
+            // its own bucket, 4, which sub_389DE copies into each fragment (sonic3k.asm:75862).
             Constructor<?> ctor = cls.getDeclaredConstructor(
-                    int.class, int.class, int.class, int.class, String.class, boolean.class);
+                    int.class, int.class, int.class, int.class, String.class, boolean.class, int.class);
             ctor.setAccessible(true);
-            return (ObjectInstance) ctor.newInstance(x, y, frameIndex, delay, artKey, highPriority);
+            return (ObjectInstance) ctor.newInstance(x, y, frameIndex, delay, artKey, highPriority,
+                    TENSION_BRIDGE_PRIORITY_BUCKET);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct Tension Bridge fragment", e);
         }

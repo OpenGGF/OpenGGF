@@ -7,13 +7,13 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 
@@ -151,13 +151,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
 
     private List<PlayableEntity> participants(PlayableEntity updatePlayer) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
-        if (updatePlayer != null && !participants.contains(updatePlayer)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(updatePlayer);
-            withUpdatePlayer.addAll(participants);
-            return withUpdatePlayer;
-        }
-        return participants;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     /**
@@ -336,6 +330,14 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
             // Unflipped: set toggle to 0 (switch to fire palette)
             services().gameState().setWfzFireToggle(false);
         }
+    }
+
+    // Obj8B_Init move.b #5,priority(a0) (docs/s2disasm/s2.asm:47004). The ROM never calls DisplaySprite for Obj8B (s2.asm:46978-47080); the engine draws only a debug marker, so the byte is transcribed for the record.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(5);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

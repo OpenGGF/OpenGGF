@@ -5,8 +5,8 @@ import com.openggf.audio.GameAudioProfile;
 /**
  * Manages transient state for a single level execution, such as Rings and Time.
  * Typically reset when a level is loaded or restarted (except checkpoints?).
- * Rings are always reset on level load/respawn (unless specialized checkout
- * logic exists, but normally 0).
+ * Fresh levels reset rings; checkpoint loading may reinstate the saved ring
+ * and extra-life threshold bank according to the active game rules.
  */
 public class LevelGamestate implements LevelState {
     private final LevelTimer timer;

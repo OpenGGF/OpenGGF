@@ -83,4 +83,14 @@ class TestSpecialStageRewindCapability {
             return null;
         }
     }
+
+    @Test
+    void resultsExitFadeColourFollowsEachGame() {
+        // S1 SS_NormalExit and S2's results loop play the stage SFX and Pal_FadeToWhite; S3K's
+        // results object only sets Game_mode, and Level fades to black (sonic3k.asm loc_5FF6).
+        assertTrue(new MinimalSpecialStageProvider().resultsExitFadesToWhite());
+        assertTrue(new Sonic1SpecialStageProvider().resultsExitFadesToWhite());
+        assertTrue(new Sonic2SpecialStageProvider().resultsExitFadesToWhite());
+        assertFalse(new Sonic3kSpecialStageProvider().resultsExitFadesToWhite());
+    }
 }

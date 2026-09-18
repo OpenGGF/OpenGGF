@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -248,10 +249,18 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // ROM: The cutscene Knuckles appears in the post-boss arena area which
-        // has high-priority foreground tiles (waterfall). Knuckles must render
-        // in front of these tiles to be visible.
+        // ObjSlot_CutsceneKnux art make_art_tile(ArtTile_CutsceneKnux,1,1) sets bit 15
+        // (sonic3k.asm:134797).
         return true;
+    }
+
+    // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
+    // (sonic3k.asm:134800, 178886).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

@@ -61,7 +61,9 @@ public final class S3kCustomZonePaletteBridge implements CustomZonePaletteBridge
         this.creatorClaims = List.copyOf(Objects.requireNonNull(creatorClaims, "creatorClaims"));
         requirePaletteLine(hudPaletteLine);
         this.iconPaletteLine = hudPaletteLine;
-        this.hudUsedColors = deriveHudUsedColors(hudPaletteLine, hudStaticArt, hudLivesNumbers);
+        // S3K HUD_Lives updates tiles inside Map_HUD's line-1 name piece;
+        // the icon's independently supplied palette still owns only its piece.
+        this.hudUsedColors = deriveHudUsedColors(1, hudStaticArt, hudLivesNumbers);
         this.hudPaletteSupplier = Objects.requireNonNull(hudPaletteSupplier, "hudPaletteSupplier");
         validateCreatorClaims(ownerModId, creatorClaims, hudUsedColors);
     }

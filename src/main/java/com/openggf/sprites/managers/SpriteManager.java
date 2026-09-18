@@ -88,6 +88,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private final List<Sprite>[] lowPriorityBuckets = new ArrayList[BUCKET_COUNT];
 	@SuppressWarnings("unchecked")
 	private final List<Sprite>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
+	@SuppressWarnings("unchecked")
+	private final List<AbstractPlayableSprite>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
 	private final List<Sprite> nonPlayableSprites = new ArrayList<>();
 	private boolean bucketsDirty = true;
 	private boolean lastSidekickSuppressed = false;
@@ -145,6 +147,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		for (int i = 0; i < BUCKET_COUNT; i++) {
 			lowPriorityBuckets[i] = new ArrayList<>();
 			highPriorityBuckets[i] = new ArrayList<>();
+			unifiedBuckets[i] = new ArrayList<>();
 		}
 		testKey = configService.getInt(SonicConfiguration.TEST);
 		debugModeKey = configService.getInt(SonicConfiguration.DEBUG_MODE_KEY);
@@ -1410,19 +1413,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 			int targetBucket = RenderPriority.clamp(bucket);
 			int idx = targetBucket - RenderPriority.MIN;
 
-			// Draw low-priority sprites first (they appear behind)
-			for (Sprite sprite : lowPriorityBuckets[idx]) {
-				if (callback != null) {
-					callback.beforeDraw(sprite, false);
-				}
-				sprite.draw();
-			}
-
-			// Draw high-priority sprites second (they appear in front)
-			for (Sprite sprite : highPriorityBuckets[idx]) {
-				if (callback != null) {
-					callback.beforeDraw(sprite, true);
-				}
+			// Terrain priority does not change sprite-to-sprite ordering.
+			for (AbstractPlayableSprite sprite : unifiedBuckets[idx]) {
+				if (callback != null) callback.beforeDraw(sprite, sprite.isHighPriority());
 				sprite.draw();
 			}
 
@@ -1485,27 +1478,23 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean wrapEnabled = enableVerticalWrapIfNeeded();
 		try {
 			int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
-			if (!lowPriorityBuckets[idx].isEmpty()) {
+			List<AbstractPlayableSprite> instances = unifiedBuckets[idx];
+			boolean collectingSat = gfx.isSpriteSatCollectionActive();
+			boolean lowHookDrawn = false;
+			boolean highHookDrawn = false;
+			for (int i = 0; i < instances.size(); i++) {
+				AbstractPlayableSprite sprite = instances.get(collectingSat ? instances.size() - 1 - i : i);
+				boolean high = sprite.isHighPriority();
 				gfx.flushPatternBatch();
-				gfx.setCurrentSpriteHighPriority(false);
+				gfx.setCurrentSpriteHighPriority(high);
 				gfx.beginPatternBatch();
-				if (hook != null) {
-					hook.beforePriorityLayer(bucket, false);
-					gfx.setCurrentSpriteHighPriority(false);
+				if (hook != null && !(high ? highHookDrawn : lowHookDrawn)) {
+					hook.beforePriorityLayer(bucket, high);
+					if (high) highHookDrawn = true; else lowHookDrawn = true;
+					gfx.setCurrentSpriteHighPriority(high);
 					gfx.beginPatternBatch();
 				}
-				for (Sprite sprite : lowPriorityBuckets[idx]) sprite.draw();
-			}
-			if (!highPriorityBuckets[idx].isEmpty()) {
-				gfx.flushPatternBatch();
-				gfx.setCurrentSpriteHighPriority(true);
-				gfx.beginPatternBatch();
-				if (hook != null) {
-					hook.beforePriorityLayer(bucket, true);
-					gfx.setCurrentSpriteHighPriority(true);
-					gfx.beginPatternBatch();
-				}
-				for (Sprite sprite : highPriorityBuckets[idx]) sprite.draw();
+				sprite.draw();
 			}
 			if (bucket == RenderPriority.MIN && !nonPlayableSprites.isEmpty()) {
 				gfx.flushPatternBatch();
@@ -1567,6 +1556,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		for (int i = 0; i < BUCKET_COUNT; i++) {
 			lowPriorityBuckets[i].clear();
 			highPriorityBuckets[i].clear();
+			unifiedBuckets[i].clear();
 		}
 		nonPlayableSprites.clear();
 
@@ -1602,6 +1592,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private void addPlayableToRenderBucket(AbstractPlayableSprite playable) {
 		int bucket = RenderPriority.clamp(playable.getPriorityBucket());
 		int idx = bucket - RenderPriority.MIN;
+		unifiedBuckets[idx].add(playable);
 		if (playable.isHighPriority()) {
 			highPriorityBuckets[idx].add(playable);
 		} else {
@@ -1719,12 +1710,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 					playable.setLatchedSolidObjectInstance(null);
 					continue;
 				}
+				// Deleted owners are absent from the restored object set. Keep the
+				// captured release provenance even if their SST slot has been reused.
+				if (playable.isLatchedSolidObjectReleased()) {
+					continue;
+				}
 				ObjectInstance current = playable.getLatchedSolidObjectInstance();
-				if (isActiveObjectWithId(objectManager, current, activeObjects, objectId)) {
+				if (playable.getInteractSlotIndex() < 0
+						&& isActiveObjectWithId(objectManager, current, activeObjects, objectId)) {
 					continue;
 				}
 				ObjectInstance restored = activeObjectAtInteractSlot(objectManager, playable, activeObjects, objectId);
-				if (restored == null) {
+				if (restored == null && playable.getInteractSlotIndex() < 0) {
 					restored = nearestActiveObjectWithId(objectManager, playable, activeObjects, objectId);
 				}
 				playable.setLatchedSolidObjectInstance(restored);

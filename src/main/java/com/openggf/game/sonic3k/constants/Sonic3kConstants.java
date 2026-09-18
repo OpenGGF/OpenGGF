@@ -21,6 +21,25 @@ import com.openggf.level.Pattern;
  * </ul>
  */
 public class Sonic3kConstants {
+    /**
+     * Uncompressed Map_Ring in the S&K half; Obj_RingInit's pointer is at $01A538.
+     * make_art_tile(ArtTile_Ring,1,1) supplies palette line 1; pieces have offset 0.
+     */
+    /** AnPal_PalSOZ1: four frames of four sand colors, locked-on ROM. */
+    public static final int ANPAL_SOZ1_ADDR = 0x0030DA;
+    /** {@code AnPal_PalHPZ}: 10 x 2 colours (sonic3k.lst:8693). */
+    public static final int ANPAL_HPZ_ADDR = 0x003728;
+    public static final int ANPAL_HPZ_SIZE = 0x28;
+    public static final int ANPAL_SOZ1_SIZE = 32;
+    /** Five darkness banks used by AnPal_SOZ2. */
+    public static final int ANPAL_SOZ2_SAND_SIZE = 160;
+    public static final int ANPAL_SOZ2_LIGHT_ADDR = 0x00317A;
+    public static final int ANPAL_SOZ2_LIGHT_SIZE = 260;
+    public static final int ART_UNC_ANI_SOZ2_BG_ADDR = 0x0BFDC0;
+    public static final int ART_UNC_ANI_SOZ2_BG_SIZE = 7 * 0xC0;
+
+    public static final int MAP_RING_ADDR = 0x01A99A;
+
     /** Obj_FBZCloud stores exactly ten stable addresses at FBZ_cloud_addr. */
     public static final int FBZ_CLOUD_REWIND_SLOT_COUNT = 10;
 
@@ -71,6 +90,27 @@ public class Sonic3kConstants {
     public static final int ARTTILE_HPZ_ENTRY_TELEPORTER = 0x0488;
     public static final int ARTTILE_HPZ_SMALL_EMERALDS = 0x04AC;
     public static final int ARTTILE_HPZ_TELEPORTER = 0x052E;
+
+    // CutsceneKnux_HPZ ($82 subtype $28) fight and Master Emerald theft (sonic3k.lst).
+    // $44(a0) selects the DPLC set: 0 Map_Knuckles/PLC_Knuckles, 2 HPZ grab, 4 SSZ tired.
+    public static final int ART_UNC_HPZ_KNUCKLES_GRAB_ADDR = 0x172406;
+    public static final int ART_UNC_HPZ_KNUCKLES_GRAB_SIZE = 0x2680;
+    public static final int MAP_HPZ_KNUCKLES_GRAB_ADDR = 0x066F36;
+    public static final int DPLC_HPZ_KNUCKLES_GRAB_ADDR = 0x067078;
+    public static final int ART_UNC_SSZ_KNUCKLES_TIRED_ADDR = 0x17E274;
+    public static final int ART_UNC_SSZ_KNUCKLES_TIRED_SIZE = 0x0B40;
+    public static final int MAP_SSZ_KNUCKLES_TIRED_ADDR = 0x066B6A;
+    public static final int DPLC_SSZ_KNUCKLES_TIRED_ADDR = 0x066BDA;
+    public static final int ART_KOSM_HPZ_KNUX_DIZZY_ADDR = 0x174A86;
+    public static final int MAP_HPZ_KNUX_DIZZY_STARS_ADDR = 0x06731C;
+    public static final int ART_KOSM_KNUX_FINAL_BOSS_CRANE_ADDR = 0x1607D8;
+    public static final int MAP_KNUX_FINAL_BOSS_CRANE_ADDR = 0x067116;
+    public static final int MAP_LRZ3_PLATFORM_ADDR = 0x1874B4;
+    /** {@code byte_6669A}-{@code byte_668C7}: CutsceneKnuckles raw animation scripts. */
+    public static final int CUTSCENE_KNUX_RAW_SCRIPTS_ADDR = 0x06669A;
+    public static final int CUTSCENE_KNUX_RAW_SCRIPTS_SIZE = 0x668D0 - 0x6669A;
+    /** {@code AngleLookup_1}: 64-byte table read by {@code MoveSprite_AtAngleLookup}. */
+    public static final int ANGLE_LOOKUP_1_ADDR = 0x184D9C;
 
     // ===== Level sizes table =====
     // 8 bytes per act: dc.w xstart, xend, ystart, yend
@@ -1005,6 +1045,8 @@ public class Sonic3kConstants {
     // AniPLC_MHZ: 4 scripts (mushroom caps and foreground foliage, both acts)
     // Verified by table position immediately before AniPLC_LRZ1 at 0x028A6A.
     public static final int ANIPLC_MHZ_ADDR = 0x0289E8;
+    /** {@code AniPLC_HPZ} (sonic3k.lst:67357). */
+    public static final int ANIPLC_HPZ_ADDR = 0x028C40;
 
     // ArtUnc_AniAIZ2_FirstTree: Static tree art for AIZ2 near-spawn area (camera X < 0x1C0)
     // 0x460 bytes = 35 tiles, loaded to VRAM tile $0CA
@@ -1269,6 +1311,10 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_SS_RESULTS_ADDR = 0x15BABE;          // SS results text art (149 tiles, 4768 bytes decompressed)
     public static final int ART_KOSM_SS_RESULTS_SUPER_ADDR = 0x15B374;    // Super form art (Sonic)
     public static final int ART_KOSM_SS_RESULTS_SUPER_K_ADDR = 0x15B4F6;  // Super form art (Knuckles)
+    public static final int ART_KOSM_SS_RESULTS_HYPER_ADDR = 0x15B678;    // Hyper form art (Sonic)
+    public static final int ART_KOSM_SS_RESULTS_HYPER_K_ADDR = 0x15B7EA;  // Hyper form art (Knuckles)
+    /** Pal_SonicTails (sonic3k.asm:200557), one line; Obj_HPZSSEntryControl's Knuckles target line 2. */
+    public static final int PAL_SONIC_TAILS_ADDR = 0x0A8A3C;
 
     // ===== Special Stage Results VRAM Layout =====
     // Different from level results: character name at $4F1, Super art at $50F, text at $523, general at $5B8
@@ -1408,6 +1454,24 @@ public class Sonic3kConstants {
 
     // Map_FBZCollapsingBridge - FBZ bridge (3 frames)
     public static final int MAP_FBZ_COLLAPSING_BRIDGE_ADDR = 0x02108E;
+
+    // SOZ traversal mappings and shape/track tables from the locked-on ROM.
+    public static final int MAP_SOZ_FLOATING_PILLAR_ADDR = 0x0412E0;
+    public static final int MAP_SOZ_PUSH_SWITCH_ADDR = 0x041B56;
+    public static final int MAP_SOZ_DOOR_ADDR = 0x041C72;
+    public static final int SOZ_FLOATING_PILLAR_SHAPES_ADDR = 0x04116A;
+    public static final int MAP_SOZ_SOLID_SPRITES_ADDR = 0x041FC8;
+    public static final int MAP_SOZ_PUSHABLE_ROCK_ADDR = 0x040776;
+    public static final int SOZ_ROCK_RIDE_INFO_ADDR = 0x1E3FD8;
+    public static final int MAP_SOZ_BREAKABLE_SAND_ROCK_ADDR = 0x04182E;
+    public static final int MAP_SOZ_LIGHT_SWITCH_ADDR = 0x041090;
+    public static final int ART_UNC_SOZ_GHOSTS_ADDR = 0x16B4BC;
+    public static final int ART_UNC_SOZ_GHOSTS_SIZE = 5792;
+    public static final int MAP_SOZ_GHOSTS_ADDR = 0x1872B6;
+    public static final int DPLC_SOZ_GHOSTS_ADDR = 0x08F6DC;
+    public static final int MAP_SOZ_SWINGING_PLATFORM_ADDR = 0x0416C6;
+    public static final int MAP_SOZ_RAPEL_WIRE_ADDR = 0x04B1D0;
+    public static final int MAP_SOZ_SPRING_VINE_ADDR = 0x040B0C;
 
     // Map_SOZCollapsingBridge - SOZ bridge (3 frames)
     public static final int MAP_SOZ_COLLAPSING_BRIDGE_ADDR = 0x02127A;
@@ -1753,7 +1817,18 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_SANDWORM_ADDR = 0x16B038;
     public static final int MAP_SANDWORM_ADDR = 0x186D10;
     public static final int ART_KOSM_ROCKN_ADDR = 0x16B2BA;
+    // PLCKosM_SOZ VRAM destinations (sonic3k.constants.asm ArtTile_Skorp/Sandworm/Rockn)
+    public static final int ARTTILE_SKORP = 0x0536;
+    public static final int ARTTILE_SANDWORM = 0x0557;
+    public static final int ARTTILE_ROCKN = 0x0500;
     public static final int MAP_ROCKN_ADDR = 0x08F086;
+    // Obj_SOZMiniboss absolute LEAs at $76A5E/$76A6E and ObjDat at $773AC/$773CA.
+    public static final int ART_KOSM_SOZ_MINIBOSS_ADDR = 0x16CB5C;
+    public static final int ART_KOSM_SOZ_MINIBOSS_SAND_ADDR = 0x16E0EE;
+    public static final int MAP_SOZ_MINIBOSS_ADDR = 0x0774A6;
+    public static final int MAP_SOZ_MINIBOSS_DUST_ADDR = 0x077626;
+    public static final int PAL_SOZ_MINIBOSS_FADE_ADDR = 0x077412;
+    public static final int PAL_SOZ_MINIBOSS_MAIN_ADDR = 0x077432;
 
     // ===== LRZ Badnik Art =====
     public static final int ART_UNC_FIREWORM_ADDR = 0x16EFB2;
@@ -1770,6 +1845,31 @@ public class Sonic3kConstants {
     // ===== SSZ/DDZ Badnik Art =====
     public static final int ART_KOSM_EGG_ROBO_BADNIK_ADDR = 0x17B17E;
     public static final int MAP_EGG_ROBO_ADDR = 0x184F34;
+
+    // ===== DDZ (Doomsday) =====
+    /** {@code ArtKosM_DDZMisc}: missiles, asteroids, boss parts (queued at {@code ArtTile_DDZMisc}). */
+    public static final int ART_KOSM_DDZ_MISC_ADDR = 0x18322A;
+    /** {@code Map_DDZMissileAsteroid}. */
+    public static final int MAP_DDZ_MISSILE_ASTEROID_ADDR = 0x0832E2;
+    public static final int ARTTILE_DDZ_MISC = 0x02DB;
+    /** {@code ArtKosM_BossMasterEmerald} / {@code Map_BossMasterEmerald}. */
+    public static final int ART_KOSM_BOSS_MASTER_EMERALD_ADDR = 0x182BE6;
+    public static final int MAP_BOSS_MASTER_EMERALD_ADDR = 0x187B34;
+    /** {@code byte_832BF}: rocket body frames; {@code byte_832C3}: rocket flame; {@code byte_832D0}/{@code byte_832D9}: ship parts. */
+    public static final int DDZ_ANIM_ROCKET_ADDR = 0x0832BF;
+    public static final int DDZ_ANIM_ROCKET_FLAME_ADDR = 0x0832C3;
+    public static final int DDZ_ANIM_SHIP_PART_0_ADDR = 0x0832D0;
+    public static final int DDZ_ANIM_SHIP_PART_2_ADDR = 0x0832D9;
+    /** {@code Pal_DDZ}: palette lines 2-4 (96 bytes). */
+    public static final int PAL_DDZ_ADDR = 0x0A997C;
+    /** {@code byte_832A8}/{@code byte_832AE}: asteroid debris raw animations. */
+    public static final int DDZ_ANIM_DEBRIS_SMALL_ADDR = 0x0832A8;
+    public static final int DDZ_ANIM_DEBRIS_LARGE_ADDR = 0x0832AE;
+    /** {@code byte_832B4}: missile exhaust puff raw multi-delay animation. */
+    public static final int DDZ_ANIM_MISSILE_PUFF_ADDR = 0x0832B4;
+    /** Raw animation bytes {@code byte_832A8} through {@code byte_832E1}. */
+    public static final int DDZ_RAW_ANIM_BASE_ADDR = 0x0832A8;
+    public static final int DDZ_RAW_ANIM_SIZE = 0x3A;
 
     // ===== DEZ Badnik Art =====
     public static final int ART_KOSM_SPIKEBONKER_ADDR = 0x18008C;

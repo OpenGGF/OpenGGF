@@ -2,9 +2,46 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+Zone delivery: [methodology v2](../architecture/designs/2026-09-15-zone-methodology-v2.md)
+retains FBZ's route slices and adds early short native comparisons and compatibility
+checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-15-soz-methodology-v2.md).
+
+## Delivery skills
+
+- [S3K zone bring-up](../../.agents/skills/s3k-zone-bring-up/SKILL.md) is the
+  end-to-end entry point: inventory, playable slices, visual/native evidence,
+  compatibility and rewind, current acceptance status, media and integration.
+- [Gameplay capture](../../.agents/skills/gameplay-capture/SKILL.md) records an
+  individual ordinary gameplay scenario.
+- [BizHawk native reference capture](../../.agents/skills/bizhawk-native-reference-capture/SKILL.md)
+  runs a zone-specific Lua exporter in BizHawk for native screenshots and state
+  observations used as ROM corroboration or visual references.
+- [Gameplay highlights](../../.agents/skills/gameplay-highlights/SKILL.md) maintains
+  the unified source archive and curates a reproducible, act-ordered moving reel.
+  It also replaces outdated excerpts after follow-up fixes.
+
+These skills apply the methodology and current repository policy; plans retain
+per-task decisions and evidence. Highlights do not certify uninterrupted routes.
+
 ## Tools
 
-Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
+- `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
+
+- [Maven resource profiler](../../tools/testing/profile_maven.py): sample queued ordinary/guard runs for process-tree memory and CPU admission estimates (2026-09-15 Maven resource task).
+
+- [FBZ boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) supports `--sprite-publication` to compare the complete native CPU sprite table with the following consecutive frame’s VDP table; duplicate samples and gaps are explicit. The boundary exporter supplies the read-only CPU snapshots.
+
+- [FBZ cadence pixel comparator](../../tools/bizhawk/compare_fbz_cadence_pixels.py) pairs native VRAM/SAT/CRAM pixels with reconstructable actual-GPU source masks, retaining occlusions and unmatched source pixels; requires Pillow.
+
+- `FbzVisualCaptureTool` also records actual tilemap GPU uniforms and hash-bound descriptor, lookup and atlas readbacks, so camera-state acceptance can be separated from shader sampling defects. See [FBZ GPU sampling evidence](../architecture/research/s3k-zones/fbz-validation.md#gpu-sampling-and-retained-background-history-2026-09-14).
+
+- [Movie checkpoint exporter](../../tools/bizhawk/capture_movie_checkpoints.lua) and [trace checkpoint pixel comparator](../../tools/bizhawk/compare_trace_checkpoint_pixels.py) capture native PNG/VDP checkpoints (with a reusable zone-entry state) and compare them with a full-run trace capture in 3-bit colour, skipping lag rows (2026-09-17 SOZ pixel checkpoints).
+
+- [SOZ pushable-rock probe](../../tools/bizhawk/capture_soz_pushable_rock.lua) finishes the native entry jump, then records the positioned push/fall/track/stop sequence with the shared host (2026-09-15 SOZ methodology v2).
+
+- [Native reference capture](../../tools/bizhawk/README.md) runs explicit zone-owned Lua exporters/plans with an isolated BizHawk 2.11 configuration, source hashes and failed-export detection. The FBZ command remains a compatibility profile (2026-09-15 SOZ methodology v2).
+
+Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
 
 | Tool | Purpose | Invocation |
 |------|---------|------------|
@@ -15,6 +52,35 @@ Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote eac
 | `ZoneSpecNormalizerTool` | Normalizes an `s3k-zone-analysis` spec into the stable 13-section layout (palette cycling vs mutation kept separate; `(not analyzed)` placeholders for gaps). | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"` |
 | `TraceBenchmarkTool` | Replays a trace headlessly with no pacing and reports per-subsystem frame-time percentiles, for comparing JVMs or catching a performance regression. Writes a JSON report. Never quote its numbers without checking the trajectory digest matched. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceBenchmarkTool" "-Dexec.args=--trace aiz1 --json target/bench/temurin21-g1.json"` |
 | `BenchmarkCompareTool` | Renders a Markdown comparison from two or more benchmark reports; the first is the baseline. Pure post-processing, so it can run under any JVM. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.BenchmarkCompareTool" "-Dexec.args=--out target/bench/comparison.md target/bench/a.json target/bench/b.json"` |
+| `InputLogAuthorTool` | Compiles a short controller script (`60 R; 1 D+R; repeat 3 { 1 A ; 1 - }`) into a BizHawk `Input Log.txt` or minimal `.bk2`, then re-parses it with `Bk2MovieLoader` so the file is proven loadable. Skill: `bk2-input-authoring`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" "-Dexec.args=--inline '60 R; 1 A' --out target/capture/run.txt"` |
+| `GameplayCaptureTool` | Pictures or films any gameplay section: boots a zone/act on the production path (`HeadlessGameBoot` + `GameLoop.step()`), teleports the leader, drives it from an input log or `.bk2`, and writes PNG frames, `state.csv`, and an MP4. Widths, donors and teams are flags. Skill: `gameplay-capture`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C --input target/capture/run.txt --out-dir target/capture/fbz2"` |
+| `LevelTileUsageLocatorTool` | Lists the 128px layout cells (foreground and background) that place given 8x8 tiles or palette-line colours, so a capture can be aimed at AniPLC destination tiles or an AnPal-cycled colour that is off screen from the level start. Origin: HPZ bring-up demo captures. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.LevelTileUsageLocatorTool" "-Dexec.args=--game s3k --zone hpz --act 2 --tiles 0x2D0-0x2DB --colors 3:1,2"` |
+| `tools/bizhawk/capture_hpz_route_reference.lua` | Native BizHawk exporter for Hidden Palace questions: records RAM (camera, players, event words, palette line 4, emerald state) and framebuffer images for plan-declared movie windows, and saves native states at planned frames so later probes load a state instead of replaying a complete-run movie. Origin: HPZ bring-up. | `python3 tools/bizhawk/capture_native_references.py ... --exporter tools/bizhawk/capture_hpz_route_reference.lua --plan plan.lua --fixture-state <state> --require-output observations.csv --require-output done.txt` |
+| `tools/bizhawk/capture_ddz_route_reference.lua` | Native BizHawk exporter for Doomsday questions: records the DDZ controller/boss/body SST fields, autoscroll words (`_unkFA82..FAB8`), foreground-plane scroll and palette per frame; `plan.slots` logs every SST slot-occupancy change (load and allocation order) and `plan.boss_code` retargets the boss columns. Origin: DDZ bring-up (slot histories found the `Camera_X_pos_coarse_back` latch). | `python3 tools/bizhawk/capture_native_references.py ... --exporter tools/bizhawk/capture_ddz_route_reference.lua --plan plan.lua --fixture-state <state> --require-output observations.csv --require-output done.txt` |
+
+## Test harness helpers
+
+- `src/test/java/com/openggf/tests/route/` — shared route primitives for headless
+  route controllers: `InputProgram` (parse, derive from a BK2, and step pad runs),
+  `RouteSteering` (steer, walk with a speed cap, brake distance, ordinary crossing
+  budget), `ObjectLifetimeFrames` (spawn/despawn identity sets per frame),
+  `RecentFrameLog` (failure diagnostics) and `SidekickAudit` (CPU team contract:
+  identity, ownership, leader chain, death/respawn). Extracted from the FBZ2 native
+  route in commit 610464952; see
+  [live-state route controllers](../architecture/research/2026-09-13-live-state-route-controllers.md).
+  They overlap only the failure-diagnostics part of backlog item LTS-04, which stays
+  pending.
+- `LevelSolidityMapProbe` (test scope, opt-in `-Dopenggf.solidity.map=<out file>` plus
+  `openggf.solidity.game/zone/act/x0/x1/y0/y1/step`) writes an ASCII map of a level's
+  foreground solidity from the engine's terrain sensors, so a BK2 route (glide targets,
+  climbable faces, monitor perches) is authored against real terrain before any capture.
+  Pair it with `tools/traces/assemble_bk2_from_input_log.py`, which packages an
+  `InputLogAuthorTool` log as the BizHawk-keyed `.bk2` the TraceChaser headless harness
+  accepts. Both come from the first Knuckles in Sonic 2 fixture (2026-09-14).
+- `FbzRouteEvidenceProbe` (test scope, opt-in `-Dmse=off -Dopenggf.fbz.evidence=true`)
+  prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
+  matrix rows without asserting; diff the output before and after a route-controller
+  or primitives refactor to prove byte-identical behaviour.
 
 ## Docs
 
@@ -80,3 +146,20 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 `TraceTriageTool`. For performance work, start from
 [`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
 than the benchmark CLIs directly — the numbers are easy to misread.
+
+Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too.
+
+## Test harness helpers
+
+- `com.openggf.tests.route`: reviewed input-program, steering, object-lifetime,
+  recent-frame and CPU-team audit helpers imported from `435ec2e68` for the
+  route-controller continuation. `TestS3kAiz1RoutePilot` is the native AIZ1
+  representative route; `TestS3kAiz1RouteRewind` checks independently reached
+  live spots. The [AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md)
+  records their evidence and remaining coverage.
+
+- `tools/bizhawk/capture_fbz_boundary_fixture.lua`: declared-write native FBZ boundary6 pilot; records every redraw frame with RAM/VDP bytes and bounded failure, launched by the visual host with `--fixture-state` (2026-09-14 FBZ completion).
+
+- `FbzBoundaryFixtureCaptureTool` and [boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) reproduce declared native fixture setup through production frames and compare actual retained Plane-B descriptors, uploaded palettes and framebuffers; acceptance remains independently reviewed.
+
+- [Fresh native FBZ entry](../../tools/bizhawk/capture_fbz_fresh_entry.lua), launched by the visual host with `--fresh-entry-act 1|2`, uses the complete BK2 reset opening, AIZ vine cheat and ordinary title/level-select inputs; it never writes RAM. This removes retained cloud-history residue from complete-run FBZ states.

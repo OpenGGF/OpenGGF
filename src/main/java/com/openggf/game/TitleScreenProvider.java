@@ -15,6 +15,7 @@ public interface TitleScreenProvider {
         ONE_PLAYER,
         TWO_PLAYER,
         OPTIONS,
+        LEVEL_SELECT,
         OTHER
     }
 

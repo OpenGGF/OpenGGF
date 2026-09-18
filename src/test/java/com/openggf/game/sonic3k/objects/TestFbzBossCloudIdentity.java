@@ -48,7 +48,12 @@ class TestFbzBossCloudIdentity {
         ParallaxManager parallax = mock(ParallaxManager.class);
         Camera camera = mock(Camera.class);
         AtomicReference<SwScrlFbz.CloudPosition> current = new AtomicReference<>(
-                new SwScrlFbz.CloudPosition(0x10, 0x20, 1, 9, 0));
+                new SwScrlFbz.CloudPosition(0x90, 0xA0, 1, 9, 0));
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var renders = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        when(renderer.isReady()).thenReturn(true);
+        when(renders.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_CLOUD))
+                .thenReturn(renderer);
         when(parallax.getHandler(0)).thenReturn(handler);
         when(handler.cloudPositionAtAddressSlot(0)).thenAnswer(ignored -> current.get());
         when(camera.getX()).thenReturn((short) 0x1000);
@@ -57,16 +62,18 @@ class TestFbzBossCloudIdentity {
         cloud.setServices(new StubObjectServices() {
             @Override public ParallaxManager parallaxManager() { return parallax; }
             @Override public Camera camera() { return camera; }
+            @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return renders; }
         });
 
         cloud.update(0, null);
         assertEquals(0x1010, cloud.getX());
-        current.set(new SwScrlFbz.CloudPosition(0x44, 0x55, 1, 9, 0));
+        current.set(new SwScrlFbz.CloudPosition(0xC4, 0xD5, 1, 9, 0));
 
         cloud.appendRenderCommands(new ArrayList<>());
 
         assertEquals(0x1044, cloud.getX());
         assertEquals(0x255, cloud.getY());
         verify(handler, times(2)).cloudPositionAtAddressSlot(0);
+        verify(renderer).drawFrameIndex(0, 0x1044, 0x255, false, false);
     }
 }

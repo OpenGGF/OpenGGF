@@ -69,8 +69,11 @@ public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInsta
     private int signedOscillation(int offset,int bias){int d= com.openggf.game.OscillationManager.getByte(offset)-bias;return (spawn.renderFlags()&1)!=0?-d:d;}
     private int resolveLevelFrameCounter(int fallbackFrameCounter){
         ObjectServices objectServices=tryServices();
+        // loc_3A664 reads BYTE (Level_frame_counter+1): the low-byte
+        // address of the big-endian word, not the counter plus one.
+        // LevelFrameStep already advances that word before object dispatch.
         return objectServices!=null&&objectServices.levelManager()!=null
-                ? objectServices.levelManager().getFrameCounter()+1
+                ? objectServices.levelManager().getFrameCounter()
                 : fallbackFrameCounter;
     }
     private void updateRiderDrop(){

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.DeadzoneGeometry;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -113,6 +114,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private static final int WATER_EFFECT_ROUTINE_WINDUP = 6;
     private static final int WATER_EFFECT_ROUTINE_PULL = 8;
     private static final int WATER_EFFECT_ROUTINE_COOLDOWN = 10;
+    private static final int WATER_EFFECT_ROUTINE_DEFEATED = 12;
     private static final int WATER_EFFECT_CALLBACK_COMMAND = 0xF4;
     private static final int[] WATER_EFFECT_WINDUP_SCRIPT = {
             0x16, 7, 0x17, 7, 0x18, 7,
@@ -121,6 +123,16 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             0x16, 4, 0x17, 4, 0x18, 4,
             0x16, 3, 0x17, 3, 0x18, 3,
             0x16, 2, 0x17, 2, 0x18, 2,
+            WATER_EFFECT_CALLBACK_COMMAND
+    };
+    // byte_6AE16: decelerate the water animation instead of snapping to idle.
+    private static final int[] WATER_EFFECT_COOLDOWN_SCRIPT = {
+            0x16, 2, 0x17, 2, 0x18, 2,
+            0x16, 3, 0x17, 3, 0x18, 3,
+            0x16, 4, 0x17, 4, 0x18, 4,
+            0x16, 5, 0x17, 5, 0x18, 5,
+            0x16, 6, 0x17, 6, 0x18, 6,
+            0x16, 7, 0x17, 7, 0x18, 7,
             WATER_EFFECT_CALLBACK_COMMAND
     };
     private static final int[] WATER_EFFECT_PULL_SCRIPT = {1, 0x16, 0x17, 0x18, 0xFC};
@@ -244,6 +256,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private int waterEffectAnimFrame;
     private int waterEffectAnimTimer;
     private boolean waterEffectPullReady;
+    private boolean waterEffectCooldownEntry;
     private boolean vortexFinalPullPending;
     private boolean vortexTrackedP1;
     private boolean vortexTrackedP2;
@@ -271,6 +284,20 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     /** Players whose full-control state was acquired by this boss's vortex. */
     private final Map<PlayableEntity, Boolean> vortexControlledPlayers = new IdentityHashMap<>();
     private S3kBossExplosionController defeatExplosionController;
+    // A restored optional helper must not strand the defeat wait (and its bubble cleanup).
+    // The pointer remains deferred; this always-present value adapter owns its snapshot.
+    private final com.openggf.game.rewind.RewindStateful<S3kBossExplosionController.Snapshot> defeatExplosionRewind =
+            new com.openggf.game.rewind.RewindStateful<>() {
+                @Override
+                public S3kBossExplosionController.Snapshot captureRewindStateValue() {
+                    return defeatExplosionController == null ? null : defeatExplosionController.captureSnapshot();
+                }
+
+                @Override
+                public void restoreRewindStateValue(S3kBossExplosionController.Snapshot snapshot) {
+                    defeatExplosionController = snapshot == null ? null : S3kBossExplosionController.fromSnapshot(snapshot);
+                }
+            };
 
     private enum WaitCallback {
         NONE,
@@ -300,6 +327,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         WIND_UP_TO_ROUTINE_8,
         WIND_UP_ARM_SPEED_2,
         WIND_UP_TO_FULL_SPEED,
+        WIND_DOWN_HOLD_SPEED_2,
         WIND_DOWN_TO_SPEED_1,
         WIND_DOWN_RETURN_TO_INIT
     }
@@ -314,14 +342,27 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         private boolean front;
         private boolean hFlip;
         private boolean collisionArmed;
+        private boolean exhaustActive;
+        private boolean debris;
+        private boolean debrisDestroyed;
+        private boolean debrisVisible;
+        private boolean debrisFlickerBit;
+        private int debrisXFixed;
+        private int debrisYFixed;
+        private int debrisXVel;
+        private int debrisYVel;
         private int routine;
         private int speed;
         private int timer;
         private RocketSpeedCallback callback = RocketSpeedCallback.NONE;
 
-        private record RewindState(int phaseX, int phaseY, int x, int y, int frame,
+        private record RewindState(int subtype, boolean exhaustActive,
+                                   int phaseX, int phaseY, int x, int y, int frame,
                                    boolean front, boolean hFlip, boolean collisionArmed,
-                                   int routine, int speed, int timer, RocketSpeedCallback callback) {}
+                                   int routine, int speed, int timer, RocketSpeedCallback callback,
+                                   boolean debris, boolean debrisDestroyed, boolean debrisVisible,
+                                   boolean debrisFlickerBit, int debrisXFixed, int debrisYFixed,
+                                   int debrisXVel, int debrisYVel) {}
 
         /** Rewind codec construction path; captured fields are restored immediately. */
         private RocketState() {
@@ -335,12 +376,15 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
         @Override
         public RewindState captureRewindStateValue() {
-            return new RewindState(phaseX, phaseY, x, y, frame, front, hFlip, collisionArmed,
-                    routine, speed, timer, callback);
+            return new RewindState(subtype, exhaustActive, phaseX, phaseY, x, y, frame, front, hFlip, collisionArmed,
+                    routine, speed, timer, callback, debris, debrisDestroyed, debrisVisible,
+                    debrisFlickerBit, debrisXFixed, debrisYFixed, debrisXVel, debrisYVel);
         }
 
         @Override
         public void restoreRewindStateValue(RewindState state) {
+            subtype = state.subtype();
+            exhaustActive = state.exhaustActive();
             phaseX = state.phaseX();
             phaseY = state.phaseY();
             x = state.x();
@@ -353,6 +397,14 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             speed = state.speed();
             timer = state.timer();
             callback = state.callback();
+            debris = state.debris();
+            debrisDestroyed = state.debrisDestroyed();
+            debrisVisible = state.debrisVisible();
+            debrisFlickerBit = state.debrisFlickerBit();
+            debrisXFixed = state.debrisXFixed();
+            debrisYFixed = state.debrisYFixed();
+            debrisXVel = state.debrisXVel();
+            debrisYVel = state.debrisYVel();
         }
     }
 
@@ -450,7 +502,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             regions.add(new TouchResponseProvider.TouchRegion(state.x, state.y, coreFlags));
         }
 
-        if (!closedBody) {
+        if (isBodyEngineVisible()) {
             regions.add(new TouchResponseProvider.TouchRegion(
                     state.x, state.y + ENGINE_OFFSET_Y, ENGINE_COLLISION_FLAGS));
         }
@@ -502,7 +554,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
         vortexActive = false;
-        waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_DEFEATED;
         waterEffectAnimFrame = 0;
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
@@ -562,6 +614,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
         updateRocketOrbit();
         updateWaterEffect();
+        vortexBubbles.removeIf(AbstractObjectInstance::isDestroyed);
         updateCustomFlash();
         updateDynamicSpawn(state.x, state.y);
     }
@@ -578,7 +631,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         var camera = services().camera();
         int cameraX = camera.getX();
         int cameraY = camera.getY();
-        camera.setMinY((short) TRIGGER_MIN_Y);
+        // loc_69EDA only installs the vertical lock once; later X-lock waits retain it.
         if (!arenaYLocked && cameraY >= ARENA_LOCK_Y) {
             camera.setMinY((short) ARENA_LOCK_Y);
             camera.setMaxY((short) ARENA_LOCK_Y);
@@ -587,7 +640,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
         if (!arenaXLocked) {
             camera.setMinX((short) cameraX);
-            if (cameraX >= ARENA_LOCK_X) {
+            if (nativeFramedCameraX() >= ARENA_LOCK_X) {
                 camera.setMinX((short) ARENA_LOCK_X);
                 camera.setMaxX((short) ARENA_LOCK_X);
                 arenaXLocked = true;
@@ -739,7 +792,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         vortexFinalPullPending = false;
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
         crossedWaterThisPass = true;
-        services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
+        // loc_6A57C starts the fan; BossRotate belongs to the later pull loop.
+        services().playSfx(Sonic3kSfx.FAN_BIG.id);
         spawnVortexBubbleBatch();
         setWait(VORTEX_TIME, WaitCallback.END_VORTEX);
     }
@@ -747,14 +801,13 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private void endVortex() {
         vortexActive = false;
         waterEffectRoutine = WATER_EFFECT_ROUTINE_COOLDOWN;
-        waterEffectAnimFrame = 0;
-        waterEffectAnimTimer = 0;
+        // loc_6A5FA retains the current animation cursor/timer for its first step.
+        waterEffectCooldownEntry = true;
         waterEffectPullReady = false;
         vortexFinalPullPending = true;
         for (VortexBubbleChild bubble : vortexBubbles) {
             bubble.signalVortexEnd();
         }
-        vortexBubbles.clear();
         state.routine = ROUTINE_COOLDOWN;
         setWait(COOLDOWN_TIME, WaitCallback.START_POST_VORTEX_PAUSE);
     }
@@ -916,6 +969,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                 services().waterSystem().setDynamicWaterLocked(
                         services().featureZoneId(), services().featureActId(), true);
                 defeatHandoffStarted = true;
+                // Obj_EndSignControl sets parent bit 4; loc_6A636 then publishes
+                // water-child bit 4, consumed by every bubble's Child_Draw_Sprite2.
+                deleteVortexBubbles();
                 spawnChild(() -> new S3kBossDefeatSignpostFlow(
                         state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
             }
@@ -1160,6 +1216,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
     @Override
     public void onUnload() {
+        deleteVortexBubbles();
         releaseVortexPlayers();
     }
 
@@ -1280,6 +1337,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         rocket.timer = 0x3F;
         rocket.callback = RocketSpeedCallback.WIND_UP_TO_ROUTINE_8;
         rocket.collisionArmed = false;
+        rocket.exhaustActive = false;
         refreshRocketPosition(rocket);
     }
 
@@ -1314,6 +1372,13 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                 rocket.routine = 10;
                 rocket.speed = ROCKET_PHASE_STEP;
                 rocket.collisionArmed = true;
+                rocket.exhaustActive = true;
+            }
+            // loc_6A436 -> loc_6A3C4 -> loc_6A3DA: two separate $1F waits at speed 2.
+            case WIND_DOWN_HOLD_SPEED_2 -> {
+                rocket.speed = 2;
+                rocket.timer = 0x1F;
+                rocket.callback = RocketSpeedCallback.WIND_DOWN_TO_SPEED_1;
             }
             case WIND_DOWN_TO_SPEED_1 -> {
                 rocket.routine = rocket.subtype >= 4 ? 4 : 6;
@@ -1350,6 +1415,10 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     }
 
     private void updateRocketState(RocketState rocket) {
+        if (rocket.debris) {
+            updateRocketDebris(rocket);
+            return;
+        }
         switch (rocket.routine) {
             case 4, 8 -> {
                 advanceRocket(rocket, rocket.speed);
@@ -1362,13 +1431,56 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                 if (rocket.phaseX == rocketWindDownTarget(rocket)) {
                     rocket.routine = 8;
                     rocket.collisionArmed = false;
+                    rocket.exhaustActive = false;
                     rocket.speed = 2;
                     rocket.timer = 0x1F;
-                    rocket.callback = RocketSpeedCallback.WIND_DOWN_TO_SPEED_1;
+                    rocket.callback = RocketSpeedCallback.WIND_DOWN_HOLD_SPEED_2;
                 }
             }
             default -> refreshRocketPosition(rocket);
         }
+        if (state.defeated) {
+            // Child_DrawTouch_Sprite_FlickerMove -> loc_849D8: finish this
+            // orbit dispatch, install indexed velocity, then draw without moving.
+            rocket.debris = true;
+            rocket.debrisVisible = true;
+            rocket.debrisFlickerBit = !rocket.exhaustActive;
+            rocket.exhaustActive = false;
+            rocket.collisionArmed = false;
+            rocket.debrisXFixed = rocket.x << 16;
+            rocket.debrisYFixed = rocket.y << 16;
+            int velocity = switch (rocket.subtype) {
+                case 0 -> -0x400;
+                case 2 -> 0x400;
+                case 4 -> 0x300;
+                case 6 -> -0x400;
+                default -> throw new IllegalStateException("Invalid HCZ rocket subtype");
+            };
+            // Set_IndexedVelocity at byte offset $20 + 2*subtype, then render H-flip.
+            rocket.debrisXVel = rocket.hFlip ? -velocity : velocity;
+            rocket.debrisYVel = -0x300;
+        }
+    }
+
+    private void updateRocketDebris(RocketState rocket) {
+        if (rocket.debrisDestroyed) return;
+        // Obj_FlickerMove -> MoveSprite: move with old velocity, then apply $38 gravity.
+        rocket.debrisXFixed += rocket.debrisXVel << 8;
+        rocket.debrisYFixed += rocket.debrisYVel << 8;
+        rocket.debrisYVel = (short) (rocket.debrisYVel + 0x38);
+        rocket.x = rocket.debrisXFixed >> 16;
+        rocket.y = rocket.debrisYFixed >> 16;
+        int cameraX = services().camera().getX();
+        int cameraY = services().camera().getY();
+        int dx = ((rocket.x & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
+        int dy = (rocket.y - cameraY + 0x80) & 0xFFFF;
+        if (dx > 0x80 + viewportWidth() + 0xC0 || dy > 0x200) {
+            rocket.debrisDestroyed = true;
+            rocket.debrisVisible = false;
+            return;
+        }
+        rocket.debrisVisible = rocket.debrisFlickerBit;
+        rocket.debrisFlickerBit = !rocket.debrisFlickerBit;
     }
 
     private void advanceRocketOrbit(int phaseStep) {
@@ -1397,6 +1509,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         rocket.y = state.y + offsetY;
         int frameIndex = (rocket.phaseY >> 4) & 0x0F;
         rocket.frame = ROCKET_FRAMES[frameIndex];
+        // Render_Sprites consumes lower buckets first: $200 is in front of $280.
         rocket.front = frameIndex < 8;
     }
 
@@ -1423,10 +1536,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         switch (waterEffectRoutine) {
             case WATER_EFFECT_ROUTINE_WINDUP -> animateWaterEffectWindup();
             case WATER_EFFECT_ROUTINE_PULL -> animateWaterEffectPull();
-            case WATER_EFFECT_ROUTINE_COOLDOWN -> {
-                waterEffectFrame = WATER_EFFECT_BASE_FRAME;
-                waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
-            }
+            case WATER_EFFECT_ROUTINE_COOLDOWN -> animateWaterEffectCooldown();
+            case WATER_EFFECT_ROUTINE_DEFEATED -> { /* sub_6A960 freezes the displayed frame. */ }
             default -> waterEffectFrame = WATER_EFFECT_BASE_FRAME;
         }
     }
@@ -1452,6 +1563,27 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
     }
 
+    private void animateWaterEffectCooldown() {
+        // loc_6A5FA initially calls Animate_RawMultiDelay through $30 = byte_6ADEC;
+        // subsequent loc_6A618 calls explicitly use byte_6AE16. Preserve that first step.
+        int[] script = waterEffectCooldownEntry ? WATER_EFFECT_WINDUP_SCRIPT : WATER_EFFECT_COOLDOWN_SCRIPT;
+        waterEffectCooldownEntry = false;
+        if (--waterEffectAnimTimer >= 0) {
+            return;
+        }
+        waterEffectAnimFrame += 2;
+        int command = script[waterEffectAnimFrame];
+        if (command == WATER_EFFECT_CALLBACK_COMMAND) {
+            waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
+            waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+            waterEffectAnimFrame = 0;
+            waterEffectAnimTimer = 0;
+        } else {
+            waterEffectFrame = command;
+            waterEffectAnimTimer = script[waterEffectAnimFrame + 1];
+        }
+    }
+
     private void animateWaterEffectPull() {
         if (!vortexActive) {
             waterEffectFrame = WATER_EFFECT_BASE_FRAME;
@@ -1463,7 +1595,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
 
         waterEffectAnimFrame++;
-        int command = WATER_EFFECT_PULL_SCRIPT[waterEffectAnimFrame] & 0xFF;
+        int command = WATER_EFFECT_PULL_SCRIPT[1 + waterEffectAnimFrame] & 0xFF;
         if (command < 0x80) {
             waterEffectFrame = command;
             waterEffectAnimTimer = WATER_EFFECT_PULL_SCRIPT[0] & 0xFF;
@@ -1471,7 +1603,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
 
         waterEffectFrame = WATER_EFFECT_PULL_SCRIPT[1] & 0xFF;
-        waterEffectAnimFrame = 1;
+        waterEffectAnimFrame = 0;
         waterEffectAnimTimer = WATER_EFFECT_PULL_SCRIPT[0] & 0xFF;
     }
 
@@ -1482,7 +1614,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private void spawnVortexBubbleBatch() {
         int vortexCentreX = getWaterEffectX();
         int vortexCentreY = getWaterEffectY();
-        vortexBubbles.clear();
+        vortexBubbles.removeIf(AbstractObjectInstance::isDestroyed);
         var rng = services().rng();
         for (int i = 0; i < 0x1E; i++) {
             int bubbleX = vortexCentreX + (byte) rng.nextInt(256);
@@ -1491,9 +1623,20 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             VortexBubbleChild bubble = spawnChild(() -> new VortexBubbleChild(
                     bubbleX, bubbleY, bubbleFrame, vortexCentreX, vortexCentreY));
             if (bubble != null) {
+                bubble.owner = this;
                 vortexBubbles.add(bubble);
             }
         }
+    }
+
+    private void deleteVortexBubbles() {
+        if (vortexBubbles == null) {
+            return;
+        }
+        for (VortexBubbleChild bubble : vortexBubbles) {
+            bubble.setDestroyed(true);
+        }
+        vortexBubbles.clear();
     }
 
     /**
@@ -1503,15 +1646,17 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
      * Phase 3 ($1F frames): dying pull, then delete.
      */
     private static final class VortexBubbleChild extends com.openggf.level.objects.AbstractObjectInstance
-            implements com.openggf.game.rewind.RewindStateful<VortexBubbleChild.RewindState>,
-            SpawnCoordinateZeroScalarArgsRewindRecreatable {
+            implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
         private static final int PHASE_TIMER = 0x1F;
         private static final int PHASE_PULL = 0;
         private static final int PHASE_HOLD = 1;
         private static final int PHASE_DYING = 2;
         private int vortexX;
+        private HczMinibossInstance owner;
         private int vortexY;
         private int frame;
+        private int baseFrame;
+        private int priority = 5;
         private int phase;
         private int timer;
         private short xVel;
@@ -1519,9 +1664,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         private int ySub;
         private boolean vortexEnded;
 
-        private record RewindState(
-                int x, int y, int xSub, int ySub,
-                int phase, int timer, short xVel, boolean vortexEnded) {}
+        // These are live ObjectManager children, not RewindStateful value helpers.
+        // Default scalar capture restores their state; the parent's list captures
+        // object identities and relinks to recreated bubbles instead of stale instances.
 
         private VortexBubbleChild(ObjectSpawn spawn) {
             this(spawn.x(), spawn.y(), 0, 0, 0);
@@ -1532,6 +1677,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             this.vortexX = vortexX;
             this.vortexY = vortexY;
             this.frame = frame;
+            this.baseFrame = frame;
             this.phase = PHASE_PULL;
             this.timer = PHASE_TIMER;
             this.xVel = 0;
@@ -1543,24 +1689,28 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
         @Override
         public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
-            applyVortexPull();
             switch (phase) {
-                case PHASE_PULL -> {
-                    timer--;
-                    if (timer < 0) {
-                        phase = PHASE_HOLD;
+                case PHASE_PULL, PHASE_DYING -> {
+                    applyVortexPull();
+                    // byte_6AE46..52 / Animate_Raw: delay 0 alternates the chosen
+                    // bubble frame with blank frame $16, starting with the blank.
+                    frame = frame == baseFrame ? 0x16 : baseFrame;
+                    if (--timer < 0) {
+                        if (phase == PHASE_DYING) {
+                            setDestroyed(true);
+                        } else {
+                            phase = PHASE_HOLD;
+                            frame = baseFrame; // loc_6A6D2
+                        }
                     }
                 }
                 case PHASE_HOLD -> {
                     if (vortexEnded) {
+                        // loc_6A6FA installs the dying handler and returns without moving.
                         phase = PHASE_DYING;
                         timer = PHASE_TIMER;
-                    }
-                }
-                case PHASE_DYING -> {
-                    timer--;
-                    if (timer < 0) {
-                        setDestroyed(true);
+                    } else {
+                        applyVortexPull();
                     }
                 }
             }
@@ -1585,6 +1735,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                 if (!left) xAccel = -xAccel;
             }
             xVel = (short) (xVel + xAccel);
+            priority = xVel < 0 ? 6 : 2; // sub_6AA30: $300 behind, $100 in front.
 
             // ROM sub_6AA30 sign-extends the 8.8 velocity, shifts it by eight,
             // and adds it to the full 16.16 x_pos (sonic3k.asm:140301-140315).
@@ -1624,22 +1775,24 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
 
         @Override
-        public RewindState captureRewindStateValue() {
-            return new RewindState(
-                    getSpawn().x(), getSpawn().y(), xSub, ySub,
-                    phase, timer, xVel, vortexEnded);
+        public int getPriorityBucket() {
+            return priority;
         }
 
         @Override
-        public void restoreRewindStateValue(RewindState state) {
-            updateDynamicSpawn(state.x(), state.y());
-            xSub = state.xSub();
-            ySub = state.ySub();
-            phase = state.phase();
-            timer = state.timer();
-            xVel = state.xVel();
-            vortexEnded = state.vortexEnded();
+        public void onUnload() {
+            // Children execute after the owner: unlink on this removal boundary,
+            // before end-of-frame rewind capture can see a now-unregistered child.
+            if (owner != null && owner.vortexBubbles != null) {
+                owner.vortexBubbles.remove(this);
+            }
         }
+
+        @Override
+        public boolean isHighPriority() {
+            return true; // ObjDat3_6AD24: art_tile high-priority bit is set.
+        }
+
     }
 
     private void spawnRocketTouchChildren() {
@@ -1817,19 +1970,33 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     }
 
     private boolean isFightVisible() {
-        return state.routine >= ROUTINE_DESCEND && !defeatRenderComplete;
+        return state.routine >= ROUTINE_DESCEND && !defeatRenderComplete && !defeatHandoffStarted;
     }
 
     private boolean isWaterEffectVisible() {
-        if (state.routine == ROUTINE_DEFEATED || defeatRenderComplete) {
+        if (defeatHandoffStarted || defeatRenderComplete) {
             return false;
         }
         return state.routine >= ROUTINE_WAIT_TRIGGER || isCameraInTriggerWindow();
     }
 
+    /**
+     * HCZMiniboss_CameraRange and HCZMiniboss_CheckHorizontalCameraLock observe
+     * the ROM's 160-pixel follow offset. The render camera follows at half the
+     * viewport width; account for that framing when testing those native gates.
+     * Keep the actual camera/level-bound writes in world coordinates: shifting
+     * the physical arena would move its right edge beyond the ROM terrain.
+     */
+    private int nativeFramedCameraX() {
+        var camera = services().camera();
+        int focusExcess = Math.max(0, DeadzoneGeometry.rightEdge(camera.getWidth())
+                - DeadzoneGeometry.rightEdge(320));
+        return camera.getX() + focusExcess;
+    }
+
     private boolean isCameraInTriggerWindow() {
         var camera = services().camera();
-        int cameraX = camera.getX();
+        int cameraX = nativeFramedCameraX();
         int cameraY = camera.getY();
         return cameraX >= TRIGGER_MIN_X && cameraX <= TRIGGER_MAX_X
                 && cameraY >= TRIGGER_MIN_Y && cameraY <= TRIGGER_MAX_Y;
@@ -1952,11 +2119,6 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         return ENGINE_CHILD_OFFSETS[index + 1];
     }
 
-    private boolean isEngineChildFront(RocketState rocket) {
-        int index = (rocket.phaseY >> 4) & 0x0F;
-        return ENGINE_CHILD_PRIORITIES[index] >= 0x280;
-    }
-
     private int getWaterEffectX() {
         return spawn.x();
     }
@@ -1972,54 +2134,59 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             return;
         }
 
-        if (isWaterEffectVisible()) {
-            renderer.drawFrameIndex(waterEffectFrame, getWaterEffectX(), getWaterEffectY(), false, false);
-        }
-        if (!isFightVisible()) {
-            return;
-        }
-
-        // Rockets orbit the boss with a front/back split matching VDP priority:
-        // Back rockets (priority $200, phaseY index < 8) drawn BEHIND boss body.
-        // Front rockets (priority $280, phaseY index >= 8) drawn IN FRONT of boss body.
-        boolean showRocketExhaust = areRocketExhaustsVisible() && (lastVIntRunCount & 1) == 0;
-        for (RocketState rocket : rockets()) {
-            if (!rocket.front) {
-                if (showRocketExhaust) {
-                    renderer.drawFrameIndex(
-                            getEngineChildFrame(rocket),
-                            rocket.x + getEngineChildOffsetX(rocket),
-                            rocket.y + getEngineChildOffsetY(rocket),
-                            rocket.hFlip, false, 0);
+        var graphics = services().graphicsManager();
+        try {
+            // Render_Sprites emits ascending buckets and ascending slots into the SAT;
+            // painter rendering reverses both. Exhaust slots follow all rocket/engine slots.
+            for (int bucket = 5; bucket >= 3; bucket--) {
+                if (graphics != null) graphics.setCurrentSpriteSatBucket(bucket);
+                if (isFightVisible() || (state.defeated && !defeatRenderComplete)) {
+                    for (int i = rockets().length - 1; i >= 0; i--) {
+                        RocketState rocket = rockets()[i];
+                        int phaseIndex = (rocket.phaseY >>> 4) & 0xF;
+                        if (isRocketExhaustVisible(rocket)
+                                && ENGINE_CHILD_PRIORITIES[phaseIndex] / 0x80 == bucket) {
+                            renderer.drawFrameIndex(getEngineChildFrame(rocket),
+                                    rocket.x + getEngineChildOffsetX(rocket),
+                                    rocket.y + getEngineChildOffsetY(rocket), rocket.hFlip, false, 0);
+                        }
+                    }
+                    if (bucket == 5 && isBodyEngineVisible()) {
+                        renderer.drawFrameIndex(ENGINE_FRAME, state.x, state.y + ENGINE_OFFSET_Y,
+                                false, false, 0);
+                    }
+                    for (int i = rockets().length - 1; i >= 0; i--) {
+                        RocketState rocket = rockets()[i];
+                        if ((rocket.front ? 4 : 5) == bucket && !rocket.debrisDestroyed
+                                && (!rocket.debris || rocket.debrisVisible)) {
+                            renderer.drawFrameIndex(rocket.frame, rocket.x, rocket.y, rocket.hFlip, false);
+                        }
+                    }
                 }
-                renderer.drawFrameIndex(rocket.frame, rocket.x, rocket.y, rocket.hFlip, false);
-            }
-        }
-        renderer.drawFrameIndex(0, state.x, state.y, false, false);
-        if (!closedBody) {
-            renderer.drawFrameIndex(ENGINE_FRAME, state.x, state.y + ENGINE_OFFSET_Y, false, false, 0);
-        }
-        for (RocketState rocket : rockets()) {
-            if (rocket.front) {
-                if (showRocketExhaust) {
-                    renderer.drawFrameIndex(
-                            getEngineChildFrame(rocket),
-                            rocket.x + getEngineChildOffsetX(rocket),
-                            rocket.y + getEngineChildOffsetY(rocket),
-                            rocket.hFlip, false, 0);
+                if (bucket == 5) {
+                    if (isWaterEffectVisible()) {
+                        renderer.drawFrameIndex(waterEffectFrame, getWaterEffectX(), getWaterEffectY(), false, false);
+                    }
+                    if (isFightVisible()) {
+                        renderer.drawFrameIndex(0, state.x, state.y, false, false);
+                    }
                 }
-                renderer.drawFrameIndex(rocket.frame, rocket.x, rocket.y, rocket.hFlip, false);
             }
+        } finally {
+            if (graphics != null) graphics.setCurrentSpriteSatBucket(getPriorityBucket());
         }
     }
 
-    private boolean areRocketExhaustsVisible() {
-        for (RocketState rocket : rockets()) {
-            if (rocket.collisionArmed) {
-                return true;
-            }
-        }
-        return false;
+    private boolean isRocketExhaustVisible(RocketState rocket) {
+        // loc_6A3A0 clears this rocket's bit 6 only at full speed. Collision is
+        // armed 32 frames earlier; another rocket's state must never expose this exhaust.
+        return !state.defeated && rocket.exhaustActive && (lastVIntRunCount & 1) == 0;
+    }
+
+    private boolean isBodyEngineVisible() {
+        // loc_6A4C0 -> loc_6A47C gates BOTH Draw_And_Touch_Sprite and art
+        // on parent bit 6 and the even V_int_run_count half of the flicker.
+        return !state.defeated && !closedBody && (lastVIntRunCount & 1) == 0;
     }
 
     @Override

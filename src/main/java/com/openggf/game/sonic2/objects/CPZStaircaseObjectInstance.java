@@ -4,6 +4,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.MultiPieceSolidProvider;
@@ -513,6 +514,14 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     }
 
     // Oscillation is handled in appendRenderCommands() for visual effect only
+
+    // Obj78_LoadSubObject move.b #3,priority(a1) (docs/s2disasm/s2.asm:56105); Obj78_Init enters it with a1=a0 (s2.asm:56089-56091), so the parent step and the three child steps all get 3.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(3);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

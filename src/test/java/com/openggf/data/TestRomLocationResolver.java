@@ -177,6 +177,9 @@ class TestRomLocationResolver {
     void factoryFallsBackToProcessWorkingDirectoryWhenUserDirectoryIsUnavailable() {
         SonicConfigurationService configuration = configuration();
         configuration.setConfigValue(SonicConfiguration.SONIC_2_ROM, "sonic.gen");
+        // The process directory may hold real images; keep the scan empty so
+        // the literal configured value is what gets resolved here.
+        configuration.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, configDirectory.resolve("no-images").toString());
         Path expectedWorkingDirectory = Path.of("").toAbsolutePath().normalize();
         String originalUserDirectory = System.getProperty("user.dir");
         try {
@@ -195,6 +198,7 @@ class TestRomLocationResolver {
     void factoryFallsBackToProcessWorkingDirectoryWhenUserDirectoryIsBlank() {
         SonicConfigurationService configuration = configuration();
         configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, "sonic.gen");
+        configuration.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, configDirectory.resolve("no-images").toString());
         Path expectedWorkingDirectory = Path.of("").toAbsolutePath().normalize();
         String originalUserDirectory = System.getProperty("user.dir");
         try {

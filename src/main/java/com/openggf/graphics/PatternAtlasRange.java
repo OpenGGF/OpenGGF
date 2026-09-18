@@ -38,6 +38,8 @@ public enum PatternAtlasRange {
     MGZ_ZOOM_CUES(0x108000, 0x80000, "MGZ zoom-cue instance banks"),
     CONTINUE_SCREEN(0x188000, 0x10000, "Continue screen");
 
+    private static final PatternAtlasRange[] LOOKUP_VALUES = values();
+
     private final int base;
     private final int size;
     private final String category;
@@ -69,7 +71,7 @@ public enum PatternAtlasRange {
     }
 
     public static PatternAtlasRange forPatternId(int patternId) {
-        for (PatternAtlasRange range : values()) {
+        for (PatternAtlasRange range : LOOKUP_VALUES) {
             if (range.contains(patternId)) {
                 return range;
             }

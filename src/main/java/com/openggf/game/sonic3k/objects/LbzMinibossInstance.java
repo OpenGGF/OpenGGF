@@ -11,7 +11,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.MultiBucketRenderable;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -38,7 +40,8 @@ import java.util.List;
  * on the Knuckles route.
  */
 public final class LbzMinibossInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable,
+        MultiBucketRenderable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_INIT_WAIT = 0x02;
     private static final int ROUTINE_RISE_WAIT = 0x04;
@@ -277,8 +280,82 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         updateDynamicSpawn(getX(), getY());
     }
 
+    // ObjDat_LBZMiniboss priority $280 (sonic3k.asm:151903).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+    /**
+     * ROM: the centre child (ChildObjDat_7296E -> loc_72596) takes word_72962 priority $200 through
+     * SetUp_ObjAttributes3 at loc_725B6 (sonic3k.asm:151545-151547, 151906-151907) and never
+     * rewrites it.
+     */
+    private static final int CENTER_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x200);
+    /**
+     * ROM: each arm child (ChildObjDat_72976/ChildObjDat_7297C, subtypes 0..$A) first takes
+     * word_72968 priority $180 at loc_7261C (sonic3k.asm:151596-151597, 151909-151910) and then,
+     * still in the same init dispatch, loc_727B0 writes word_727E2[subtype] (sonic3k.asm:151737,
+     * 151749-151750). loc_727B0 is re-run on every angle-table reset with the same subtype, and the
+     * detached sub_72910 -> loc_7279E flight (sonic3k.asm:151878-151889) leaves priority alone, so
+     * the word is fixed per link for the child's life. Indexed by link (subtype / 2).
+     */
+    private static final int[] PANEL_PRIORITY_WORDS = {0x300, 0x380, 0x300, 0x380, 0x300, 0x280};
+    private static final int[] PANEL_PRIORITY_BUCKETS = panelPriorityBuckets();
+
+    private static int[] panelPriorityBuckets() {
+        int[] buckets = new int[PANEL_PRIORITY_WORDS.length];
+        for (int i = 0; i < buckets.length; i++) {
+            buckets[i] = RenderPriority.fromS3kWord(PANEL_PRIORITY_WORDS[i]);
+        }
+        return buckets;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat_LBZMiniboss art make_art_tile(ArtTile_LBZMiniboss,1,1) sets bit 15 (sonic3k.asm:151902).
+        return true;
+    }
+
+    @Override
+    public boolean isHighPriority(int bucket) {
+        // CreateChild1_Normal (sonic3k.asm:176933) and CreateChild4_LinkListRepeated
+        // (sonic3k.asm:177050) copy the parent's art_tile into every child, and SetUp_ObjAttributes3
+        // leaves art_tile alone, so the centre and arm children share the body's bit 15.
+        return true;
+    }
+
+    @Override
+    public int[] extraRenderBuckets() {
+        int mask = 0;
+        for (PanelState panel : panels) {
+            if (!panel.deleted && panel.priorityBucket() != PRIORITY_BUCKET) {
+                mask |= 1 << panel.priorityBucket();
+            }
+        }
+        if (mask == 0) {
+            return NO_EXTRA_BUCKETS;
+        }
+        int[] buckets = new int[Integer.bitCount(mask)];
+        int n = 0;
+        for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+            if ((mask & (1 << bucket)) != 0) {
+                buckets[n++] = bucket;
+            }
+        }
+        return buckets;
+    }
+
+    private static final int[] NO_EXTRA_BUCKETS = new int[0];
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        appendRenderCommands(commands, PRIORITY_BUCKET);
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands, int bucket) {
         if (isDestroyed()) {
             return;
         }
@@ -286,14 +363,22 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         if (bossRenderer == null) {
             return;
         }
-        if (bodyVisible) {
+        if (bodyVisible && bucket == PRIORITY_BUCKET) {
             bossRenderer.drawFrameIndex(bodyFrame, getX(), getY(), false, false, BODY_PALETTE_LINE);
         }
         for (PanelState panel : panels) {
-            if (!panel.deleted) {
+            if (!panel.deleted && panel.priorityBucket() == bucket) {
                 bossRenderer.drawFrameIndex(panel.frame, panel.x, panel.y, false, false, BODY_PALETTE_LINE);
             }
         }
+    }
+
+    public int getPanelPriorityBucketForTest(int index, boolean secondRing) {
+        return panelForTest(index, secondRing).priorityBucket();
+    }
+
+    public int getCenterPriorityBucketForTest() {
+        return panels.get(0).priorityBucket();
     }
 
     public int getRoutineForTest() {
@@ -751,6 +836,11 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 childWaitTimer = -1;
                 waitCallback = PanelWaitCallback.NONE;
             }
+        }
+
+        /** The ROM child slot's priority word as a bucket; see {@link #PANEL_PRIORITY_WORDS}. */
+        private int priorityBucket() {
+            return center ? CENTER_PRIORITY_BUCKET : PANEL_PRIORITY_BUCKETS[index];
         }
 
         private void update() {

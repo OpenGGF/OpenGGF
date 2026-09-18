@@ -8,6 +8,9 @@ import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.SkorpBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.SandwormBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance;
@@ -609,7 +612,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozQuicksandObjectInstance(spawn);
                     }
                     return new HCZCGZFanObjectInstance(spawn);
                 });
@@ -617,7 +620,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozSpawningSandBlocksObjectInstance(spawn);
                     }
                     return new HCZLargeFanObjectInstance(spawn);
                 });
@@ -625,7 +628,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozPathSwapObjectInstance(spawn);
                     }
                     return new HCZHandLauncherObjectInstance(spawn);
                 });
@@ -633,7 +636,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozPushableRockObjectInstance(spawn);
                     }
                     return new HCZConveyorBeltObjectInstance(spawn);
                 });
@@ -641,7 +644,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozSpringVineObjectInstance(spawn);
                     }
                     return new HCZConveyorSpikeObjectInstance(spawn);
                 });
@@ -649,15 +652,18 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozRisingSandWallObjectInstance(spawn);
                     }
                     return new HCZBlockObjectInstance(spawn);
                 });
+        registerStockZoneBound(0x8B, (spawn, registry) -> getCurrentZoneSet() == S3kZoneSet.SKL
+                ? new SozSpriteMaskObjectInstance(spawn)
+                : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.CNZ_BALLOON,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozLightSwitchObjectInstance(spawn);
                     }
                     return new CnzBalloonInstance(spawn);
                 });
@@ -665,7 +671,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozFloatingPillarObjectInstance(spawn);
                     }
                     return new CnzCannonInstance(spawn);
                 });
@@ -673,7 +679,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozSwingingPlatformObjectInstance(spawn);
                     }
                     return new CnzRisingPlatformInstance(spawn);
                 });
@@ -681,7 +687,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozBreakableSandRockObjectInstance(spawn);
                     }
                     return new CnzTrapDoorInstance(spawn);
                 });
@@ -689,7 +695,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozPushSwitchObjectInstance(spawn);
                     }
                     return new CnzLightBulbInstance(spawn);
                 });
@@ -697,7 +703,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozDoorObjectInstance(spawn);
                     }
                     return new CnzHoverFanInstance(spawn);
                 });
@@ -705,7 +711,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozSandCorkObjectInstance(spawn);
                     }
                     return new CnzCylinderInstance(spawn);
                 });
@@ -713,7 +719,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozRapelWireObjectInstance(spawn);
                     }
                     return new CnzVacuumTubeInstance(spawn);
                 });
@@ -721,7 +727,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozSolidSpritesObjectInstance(spawn);
                     }
                     return new CnzGiantWheelInstance(spawn);
                 });
@@ -813,7 +819,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczStalagtiteObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_ICE_CUBE,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_ICE_CUBE, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -821,7 +827,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczIceCubeObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_ICE_SPIKES,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_ICE_SPIKES, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -829,7 +835,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczIceSpikesObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_HARMFUL_ICE,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_HARMFUL_ICE, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -879,7 +885,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozLoopFallthroughObjectInstance(spawn);
                     }
                     return new HCZWaterWallObjectInstance(spawn);
                 });
@@ -970,7 +976,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SkorpBadnikInstance(spawn);
                     }
                     return new BlastoidBadnikInstance(spawn);
                 });
@@ -978,7 +984,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SandwormBadnikInstance(spawn);
                     }
                     return new BuggernautBadnikInstance(spawn);
                 });
@@ -986,7 +992,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new RocknBadnikInstance(spawn);
                     }
                     return new TurboSpikerBadnikInstance(spawn);
                 });
@@ -994,13 +1000,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozMinibossInstance(spawn);
                     }
                     return new MegaChopperBadnikInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.POINDEXTER,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) return new SozEndBossInstance(spawn);
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }
@@ -1103,16 +1110,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.FBZ_MINIBOSS,
                 (spawn, registry) -> {
                     if (getCurrentZoneSet() != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn,
-                                getPrimaryName(spawn.objectId(), getCurrentZoneSet()));
+                        return new SozHyudoroControllerObjectInstance(spawn);
                     }
                     return new FbzMinibossInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.FBZ2_SUBBOSS,
                 (spawn, registry) -> {
                     if (getCurrentZoneSet() != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn,
-                                getPrimaryName(spawn.objectId(), getCurrentZoneSet()));
+                        return new SozHyudoroArtTriggerObjectInstance(spawn);
                     }
                     return new Fbz2SubbossInstance(spawn);
                 });
@@ -1120,8 +1125,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn,
-                                getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SozHyudoroCapsuleObjectInstance(spawn);
                     }
                     return new FbzEndBossInstance(spawn);
                 });
@@ -1298,6 +1302,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (subtype == 0x20) {
                         return new CutsceneKnucklesMhz2Instance(spawn);
                     }
+                    if (subtype == 0x28) {
+                        return new CutsceneKnucklesHpzInstance(spawn);
+                    }
                     if (subtype == 0x30) {
                         return new CutsceneKnucklesSkIntroInstance(spawn);
                     }
@@ -1453,6 +1460,29 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new HPZSuperEmeraldObjectInstance(spawn));
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
+                (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
+
+        // The Doomsday Zone's SKL object set.
+        registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DDZ,
+                (spawn, registry) -> new DdzEndBossObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DDZ_ASTEROID,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DDZ,
+                (spawn, registry) -> new DdzAsteroidObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DDZ_MISSILE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DDZ,
+                (spawn, registry) -> new DdzMissileObjectInstance(spawn));
+
+        // Obj_HPZSSEntryControl and its children belong to the $1701
+        // sanctuary reached by SSEntryFlash_GoSS, as well as its engine alias.
+        registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA,
+                (spawn, registry) -> new HPZMasterEmeraldObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.HPZ_SUPER_EMERALD,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA,
+                (spawn, registry) -> new HPZSuperEmeraldObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA,
                 (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
 
         factories.forEach(this::registerSetOnly);

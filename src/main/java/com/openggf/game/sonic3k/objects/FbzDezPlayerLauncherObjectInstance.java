@@ -12,13 +12,19 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZDEZPlayerLauncher} ($78), sonic3k.asm $3B942-$3BA8A. */
 public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable,
+        RomObjectCodePointerProvider {
     private final int anchorX;
     private int x,xFixed,xVelocity,launchTimer,doubleTimer;
     private boolean returning,terminalOutwardEjectThisFrame;
     private boolean returnCompletedThisFrame;
     private boolean normalCallbackEligible = true;
     public FbzDezPlayerLauncherObjectInstance(ObjectSpawn spawn){super(spawn,"FBZDEZPlayerLauncher");anchorX=x=spawn.x();xFixed=x<<8;}
+    @Override public int romObjectCodePointerHighWord() {
+        // Obj_FBZDEZPlayerLauncher switches between loc_3B97A and loc_3BA4A;
+        // sub_13EFC reads their common high word from the stood-on SST.
+        return 0x0003;
+    }
     @Override public void update(int vIntRunCount,PlayableEntity ignored){
         stepMotion();
         updateDynamicSpawn(x,spawn.y());
@@ -35,7 +41,7 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
         // Sprite_OnScreen_Test2 reads the saved anchor at $44, never the moving
         // x_pos. The native-width limit remains exactly $280; widescreen extends
         // only the visible-screen term of $80 + screen width + $C0.
-        coarseXCull(anchorX,0x80+viewportWidth()+0xC0);
+        coarseXCullViewport(anchorX);
     }
     private void stepMotion(){
         terminalOutwardEjectThisFrame=false;

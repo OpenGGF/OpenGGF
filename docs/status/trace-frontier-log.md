@@ -109475,3 +109475,1328 @@ architecture), no skips**, and **613 structural guards, no skips**. The full
 suite completes with **17,126 tests, 7 failures, 32 errors, 108 skips**, with
 identical failing names/types/full messages to the preceding full run;
 see the audit for ROM/donor limitations and exact commands.
+
+
+## 2026-09-12 - FBZ baseline after release rollover
+
+- Base: `f177bbdb7df17b0c56d545b6e2f5d5b1f84a8964`; isolated worktree
+  `.worktrees/ai-fbz-baseline`, with no runtime edits.
+- Command: `mvn -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtest=TestS3kFbzCompleteRunTraceReplay
+  "-Ds3k.rom.path=$S3K_ROM"
+  -Dopenggf.surefire.reports=target/fbz-base-trace-reports test -B`.
+- Completed result: 1 test, 1 failure, 0 errors, 0 skips; trace report has
+  **5,666 errors, 0 warnings**. First error: **frame 34**,
+  `queue.s3k_kos_direct.busy`, expected `true`, actual `false`.
+- ROM SHA-1: `cfbf98c36c776677290a872547ac47c53d2761d6`.
+- This replaces the July FBZ outstanding-actions document's stale current
+  frontier claim. It does not establish a newly introduced regression: that
+  historical run used an earlier timing contract. The queue frontier remains
+  separate from the ordinary-input compatibility controller work.
+- Evidence archived outside the repo at
+  `$FBZ_EVIDENCE_ROOT/fbz-base-trace.log` and `base-trace.json`
+  (external task directory `fbz-20260912`). `S3K_ROM` names the verified
+  existing absolute ROM path; no alias or link was created.
+
+
+## 2026-09-12 — MHZ completion baseline
+
+- Worktree `.worktrees/feature-ai-mhz-completion`, branch
+  `feature/ai-mhz-completion`, baseline `10f844594b`. Fresh JDK 21 run:
+  `mvn -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dtest=TestS3kMhzZoneSliceTraceReplay -Ds3k.rom.path="<absolute root locked-on ROM>" test`.
+- Completed with one failed replay, zero skipped tests, 28,004 reported total
+  frames, 3,073 error spans, zero warnings and zero bootstrap errors.
+  First error: row 2,830 `g_speed`, expected `-00E0`, actual `0000`.
+  Context shows the engine entering hurt routine 4 and losing 44 rings near
+  Madmole at `(1060,0740)` while the ROM stays in routine 2. The hurt source
+  and object execution ordering require investigation; proximity is not proof.
+- Reports: `target/trace-reports/trace/s3k_mhz1-single-ec1a83b31fa42bc3.json`
+  and its `_context.txt`; log `target/mhz-baseline.log` in that worktree.
+  Missing advertised auxiliary schemas are listed in the report. No route
+  closure or boss/exit parity is claimed from this failed replay.
+- Next replay target is the earliest causal hurt disagreement, not a later
+  cascade. Separately confirmed boss-fragment parent-flip correction does not
+  explain this frontier.
+
+
+## 2026-09-12 — MHZ Madmole deferred-delete frontier advance
+
+- Candidate on `10f844594b` plus local edits in
+  `.worktrees/feature-ai-mhz-completion`, replicated as a diff into detached
+  `.worktrees/mhz-replay-validation` with independent Maven output.
+- Owning routines: `loc_8D6CA`, `loc_8D6D6`, `Go_Delete_Sprite` and
+  `Child_DrawTouch_Sprite`. Preserve the final submerged body position,
+  velocity, mapping and reserved slot until the deferred delete executes;
+  moving the still-collidable body onto the cap one pass early caused hurt.
+- Command: `mvn -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dtest=TestMadmoleBadnikInstance,TestS3kMhzZoneSliceTraceReplay,TestS3kSonicTailsMhzSegmentTraceReplay,TestS3kTailsFullChainMhzSegmentTraceReplay -Ds3k.rom.path="<absolute root locked-on ROM>" test`.
+  Completed: 33 Madmole checks pass; three replays fail; zero skipped.
+  MHZ zone slice improves from 3,073 errors / row 2,830 `g_speed` to 3,019
+  errors / row 6,958 `rings` (expected 2, actual 1). Log in validation tree:
+  `target/mhz-candidate.log`. Matching JSON/context use the same zone-slice
+  basename recorded above. No full-zone parity claim.
+- Entry-only alternate runs remain red: Sonic+Tails 12 errors, first row
+  1,276 `x`; Tails 164 errors, first row 0 `y_speed`.
+- Follow-up command with the same options and
+  `-Dtest=TestS3kSonicTailsMhz2SegmentTraceReplay,TestS3kTailsFullChainMhz2SegmentTraceReplay`
+  completed with two failures and no skips (`target/mhz-alternate.log`):
+  631 errors, first row 0 `tails_y_speed`; 577 errors, first row 0 `camera_y`.
+  Those bootstrap failures prevent attributing downstream agreement to this fix.
+- Next target: establish the cause of the scattered-ring count difference
+  at row 6,958; preserve alternate bootstrap gaps as independent requirements.
+
+
+## 2026-09-13 — HCZ1 boss local parity fixes; matched replay unchanged
+
+Direct `develop`, pinned pre-task base `b1f693fd0104e245f23b2560717da7809b41c56a`,
+working-tree changes in `HczMinibossInstance`: preserve arena Y lock, retain both
+rocket speed-2 slowdown waits, correct rocket depth, gate lower-engine drawing and
+touch on even V-int counts. [Audit and coverage limits](../architecture/audits/2026-09-13-hcz1-miniboss-parity.md).
+
+Command (both arms): `mvn -Dmse=off -Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay
+"-Ds3k.rom.path=<absolute root locked-on ROM>" test`.
+Both completed 29,302 frames, 2 tests / 1 failure / no errors or skips: **4,571
+comparison errors, first frame 9,482 `air` (expected 1, actual 0)**. The baseline
+arm used the pinned boss source and automatically restored the patch afterward.
+Complete normalized error arrays match (fingerprint in the audit). No new trace
+regression from this patch; the earlier historical HCZ1-clean claim does not
+represent this current baseline. Root cause of the inherited failure remains
+outside this local boss correction. The trace is still red; no frontier advancement
+or full HCZ1 certification is claimed.
+
+### HCZ1 visual/cleanup follow-up, same working tree and pinned base
+
+The initial depth inversion above was corrected after checking SAT ordering.
+The follow-up restores independent exhaust depth/activation, water and bubble
+animation, rocket defeat debris, and defeat-handoff cleanup with rewind.
+The first `-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay` invocation
+stopped at frame 9,374 with an invalid `vortexBubbles` rewind reference: pruning
+on the next parent update was too late. Bubble unload now unlinks the child on
+the removal boundary. The final invocation, using the same absolute ROM property
+above, completes all 29,302 frames: 2 tests / 1 failure / zero errors or skips.
+All 4,571 comparison errors, first frame 9,482 `air`, have the identical normalized
+fingerprint recorded in the audit and pinned baseline. No frontier movement;
+the inherited trace failure remains open.
+
+## 2026-09-14 — FBZ queue, animation operands and solid standing ownership
+
+Pinned develop base `435ec2e68c398bcc17af78e69f3e92b637bec90a`; investigation
+`.worktrees/ai-fbz-timing`, delivery `.worktrees/ai-fbz-completion`.
+The separately authorized manual FBZ validation budget preserves the concurrent
+KiS2 shared receipt. All runs use verified absolute S1/S2/S3K ROM paths, one
+alphabetical fork, and complete strict V5 comparisons, except the explicitly
+bounded temporary 6,000-row diagnostic used to isolate the snake checkpoint.
+No gameplay values were supplied from comparison rows.
+
+Command: `mvn -Dmse=off -B -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+test`, with `-Ds3k.rom.path=$S3K_ROM` and the
+corresponding absolute donor properties. Matched pre-change runs establish
+5,666 complete-run errors, first row 34 `queue.s3k_kos_direct.busy` true/false;
+independent Sonic+Tails recording 5,227 errors, first row 116
+`tails_x_sub` `$D000/$B800`.
+
+| Integrated correction | Complete errors / first row | Independent recording errors |
+| --- | --- | --- |
+| `ef13df370`: ROM FBZ enemy KosM batch submission | 5,654 / 508 animation | 5,226 |
+| `e8307ddc2`: cage animation word writes and chain hand steps | 5,642 / 2,641 Y | 5,104 |
+| `9fa8fc0a0`: platform low-byte clock address | 4,721 / 3,888 mapping frame | 5,090 |
+| `8eb04d603` (source `0597da5a1`): zone-owned tumble and stable snake standing key | 4,669 / 3,938 mapping frame (31/36) | 5,067 / 116 tails_x_sub, unchanged first field |
+
+| `c31bdbd7a` (source `54d9ff443`): moving-cage landing resets tumble state | **4,667 / 13,585 Y (`0647/0646`)** | **5,065 / 116 tails_x_sub**, unchanged |
+
+The final complete recording compares **44,152 rows** (the fixture's 44,281
+rows include the 129-row prefix); 4,541 physics and 126 animation errors,
+zero bootstrap errors or warnings. First physics error advances from row 5,857
+to **13,585 Y, expected `$0647`, actual `$0646`**. The independent recording
+compares **33,712 rows**, 4,754 physics and 311 animation errors. Both tests
+complete and fail strict comparison, with zero test skips; neither is green.
+
+ROM owners: `PLCKosM_FBZ` submits Blaster, TechnoSqueek and button art in order;
+`move.w #1,anim(a1)` writes animation 0 / previous animation 1;
+`(Level_frame_counter+1).w` selects the low byte instead of incrementing time;
+`Anim_Tumble` retains the negative angle in FBZ/DEZ (and left-facing MHZ);
+`loc_3B5FC` preserves the snake's SST standing bit across `MoveSprite2` before
+`SolidObjectFull`. A regenerated spawn key lost that standing bit and incorrectly
+reseated a jumping rider by one pixel. The existing instance-key capability
+fixes ownership without changing shared movement/collision algorithms.
+
+The prior focused invocation passes **63 tests**, zero failures/errors/skips,
+and the two complete replays retain the known comparison failures. Trace lane
+aggregate including baselines, temporary probes and failed fixture setup:
+743.86 seconds. The final 30 cage tests pass and both strict replays complete
+with known failures. All early cage mapping blips are gone; first animation
+error is row 15,234 `tails_animation_id` 0/$1A. The first physics error is a
+rolling landing on magnetic-platform slot 6 / native routine `$3B3FA`;
+that later owner remains open. See the
+[completion record](../architecture/plans/2026-09-14-fbz-completion.md) and
+[coverage matrices](../architecture/validation/levels/s3k-fbz-act1.md).
+
+
+### Continued FBZ correction evidence
+
+The earlier `$3B3FA` owner is a magnetic platform, not a disappearing platform.
+`dbc34c6d5` removes the extra increment from its fixed polarity prelude;
+`d5420f4ec` corrects flame/missile producer byte reads. `0a078cf87` restores the
+launcher companion's `$20` standing-balance width.
+
+`721f7787e` (source `d48dc91eb`) restores all 15 rotating-platform descriptor
+rows, masks, signed radius bytes and previous-render bounds. The route's actual
+bad contact at row 19,501 comes from **subtype 0's signed negative radii**, not
+from a row-9 placement; row 9 is descriptor coverage only. Native Act 1 contains
+six placements, three subtype 0 and three subtype `$C`; Act 2 contains none.
+
+`07254db72` (source `4eaa02e00`) preserves the offscreen full-solid push-release
+word during death. A native saved-state write probe identified PC `$01E0C2`,
+A0 `$B456` (slot 15, rotating platform) at row 15,557. Its write clears the push
+bit, so a post-write status byte without that bit does not disprove ownership.
+The first interpretation rejected this writer incorrectly; the instruction
+probe resolves the ambiguity. Kill_Character writes Death once in S1, S2 and
+S3K; the dead loop does not continually reclaim the animation byte.
+
+`190cbd408` (source `32fa1a5c9`) submits the miniboss art archive at native
+`loc_6EEA8`, `$1652B4` to VRAM `$A5C0`. The direct job's `$D000` destination is
+decompression scratch, not VRAM. This adds the missing producer but does not
+yet prove activation timing at row 19,793.
+
+On the timing worktree before the production initial-animation integration,
+245 focused tests pass with zero failures/errors/skips in 51.18 seconds:
+solid contact, animation profile, sidekick death/rewind, rotating family and
+miniboss/rewind. Latest complete strict replay is still **4,349 errors**, first
+**16,600 Tails animation 5/6**, summed mismatching field-rows 678,539. First main
+animation is 16,663; first main queue mismatch 19,793; first gameplay physics
+20,348 unexpected death, then position 20,349. This run establishes neither
+Act 1 completion nor Act 2 reload. Root's integrated pair on `190cbd408` plus the production setup-animation
+changes completes in 70.73 seconds: 2 tests, 2 comparison failures, zero errors
+or skips. It reproduces **4,349 / first 16,600** and **5,109 / first 116**,
+with zero warnings; moving setup animation into its production owner preserves
+these frontiers.
+
+Error spans are not mismatching-frame totals: after the producer clock repair,
+the independent recording increased from 5,050 to 5,109 spans while summed
+mismatching field-rows decreased from 738,724 to 727,909 (main 369,141 to 367,257).
+A bounded matched run identified removed wrong Tails recovery/speed intervals;
+span fragmentation must not be reported as 59 new bad frames. The independent
+first row 116 subpixel mismatch remains inherited and unresolved.
+
+
+### FBZ Act 1 normal arm cycle, 2026-09-14
+
+On `190cbd408` plus the setup and normal-arm/chain corrections in
+`.worktrees/ai-fbz-completion`, `mvn -Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+surefire:test` (absolute verified S3K ROM, one fork) completed both comparisons:
+4,663 errors / 0 warnings over 44,152 rows and 5,109 / 0 over 33,712 rows;
+two failing tests, zero errors/skips. First errors remain row 16,600
+`tails_animation_id` `$05/$06` and row 116 `tails_x_sub` `$D000/$B800`.
+
+The complete-run error groups increased from 4,349 to 4,663 and mismatching
+field-rows from 678,539 to 751,300. This is not a blanket improvement claim.
+The first main gameplay-physics error nevertheless advances from the unexpected
+death at 20,348 to `x_speed`/`g_speed` `$18/$00` at 22,227. A bounded live owner
+probe confirms Sonic alive at 20,350 and the left chain horizontal at native
+positions. The next boundary starts an engine-only direct Kos job `$0D6A64`
+to `$FFFFD000`, with player animation `$13` instead of `$00`; its timing and
+later cascades remain under investigation. The earlier 19,793 queue comparison
+still differs, although actual miniboss activation and archive `$1652B4` to
+VRAM `$A5C0` were independently observed at that exact row. No comparison
+rows hydrate gameplay, and Act 1 completion is still not certified.
+
+## 2026-09-14 — First Knuckles in Sonic 2 fixture: `kis2/ehz1` recorded, replay red at the prelude and at frame 284
+
+- Worktree `.worktrees/ai-kis2-trace-fixture`, branch `feature/ai-kis2-trace-fixture`
+  off develop `d193630d0`. Fixture `src/test/resources/traces/kis2/ehz1/`
+  (`kis2-ehz1.bk2`, 2532 input rows, `bk2_frame_offset` 714, 1817 trace rows,
+  `main_character` knuckles, `rom_checksum` the dump's file SHA-1
+  `6CD0537A3AEE0E012BB86D5837DDFF9342595004`, notes naming logical ROM KIS2).
+  The route runs EHZ1 from the title: hilltop glide into the x=0x4C0 ramp
+  (four rings), the pit log platform, a glide over the up-spring into the
+  x=0x940 totem face, a climb with Up, and the ring monitor at (0xBA0,0x293)
+  broken at trace frame 1446 (twelve rings). The physics rows prove the player
+  is Knuckles: jump y velocity −0x600 (Sonic 2 Sonic is −0x680), glide
+  animation 0x20, cling/climb mapping frames 0xB7/0xBD–0xBF.
+- Recording command (TraceChaser at `4fb6d0802` plus the local submodule commit
+  `9fd957b` "feat(headless): record Knuckles in Sonic 2 through the S2
+  recorder", patch kept in the task directory; not pushed):
+  `run.sh --mode trace --rom <abs>/kis2.gen --movie <abs>/kis2-ehz1.bk2 --output <task dir>`
+  through the vendored `docs/BizHawk-2.11-linux-x64` as `BIZHAWK_HOME`. The
+  harness identifies the lock-on image by SHA-1 and routes it to plain S2 trace
+  mode; there is no native load audit for the chip-resident program, so the
+  metadata has no `load_queue_state_per_frame`.
+- Replay command: `mvn -Dmse=off -Dsonic2.rom.path=<abs>/s2.gen -Ds3k.rom.path=<abs>/s3k.gen -Dtest=TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay test`
+  at the uncommitted candidate over `d193630d0`.
+- First attempt: the recorded team did not activate the `kis2` patch because
+  `SharedLevel.load` re-detects the root module from the ROM after the replay
+  bootstrap resolved it; the engine replayed Sonic (jump −0x680 at frame 150,
+  241 errors). `AbstractTraceReplayTest` now resolves the recorded team again
+  after the shared-level load (stock recordings are unchanged), and the KiS2
+  test fails fast unless the current module is the `kis2` patch and the main
+  sprite is Knuckles.
+- Result with the patch active: 1 test, 1 failure. 91 bootstrap errors and 300
+  comparison errors over 1817 rows. First bootstrap error frame 0
+  `player_history.pos` (expected 0x0068 slot 0x19, actual 0x003F) with every
+  `player_history.x`/`y` entry 0x0060/0x0290 recorded against 0x0040 in the
+  engine: the KiS2 pre-level prelude fills the position record differently
+  from the Sonic 2 model the engine seeds. First comparison error frame 284
+  `rings` (expected 1, actual 0: a ring the gliding ROM player collects at
+  x≈0x45A that the engine misses); first physics divergence frame 579
+  `x_speed` (expected 0x066C, actual 0x0600, running down the hill before the
+  pit) with the cascade from there. Frames 0–283 match on every physics field,
+  including the −0x600 jump, the glide and the ramp launch.
+- `TestS2Ehz1TraceReplay` is red before and after this change with the same
+  first error (frame 6 `dynamic_art.outstanding_transfer_ids`, 16388 errors,
+  see the 2026-09 entries above); the re-resolution is a no-op for it.
+- Rejected route approaches, kept so the next author does not repeat them:
+  the ledge monitor at (0x3C0,0x236) sits on a one-way platform 72 px above the
+  hilltop, unreachable by a full jump and ungrabbable; the pit's left side is
+  an open tunnel, not a wall; the pit's right wall carries downward spikes at
+  0x800–0x840 and hurts any jump from the pit floor at x ≥ 0x7F1; a post-spring
+  hop cannot glide. The pit log platform oscillates with a 252-frame period
+  (surface 0x25C–0x2DC, bottom at trace frame 1153 mod 252).
+
+
+### FBZ boss-defeat fallthrough restores the native sign delay
+
+On `a8419498b` plus the `BossDefeated_StopTimer` fallthrough correction,
+`mvn -Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestFbzAct1RouteHeadless#placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5+realConvertedEndSignControllerAllocatesExactWorkerPrefixAndRunsFirstTwoUpdates,TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+surefire:test` with the verified absolute ROM properties completed in 25.96 seconds.
+All five affected Act 1 lifecycle rows passed. Both strict recordings remain red:
+**4,548 errors / 0 warnings / 44,152 rows**, first 16,600 Tails animation `$05/$06`,
+and **5,109 / 0 / 33,712 rows**, first 116 Tails subpixel `$D000/$B800`; no skips.
+The first main gameplay-physics error advances again to **22,388 `air` 0/1**,
+with status `$08/$02`. Complete-run mismatching field-rows are 754,779; the
+independent recording remains 727,909. Later results/transition differences
+remain open, so neither the group count nor the farther clean main prefix is
+reported as full parity.
+
+The rejected explanation was a missing Tails bump caused solely by its earlier
+physics divergence. At native row 22,178 Tails bumps the sign; an engine probe
+showed Tails at nearly the same eligible pose, but the engine sign had arrived
+early. Source proved the actual omission: the tail jump falls through into
+`BossDefeated`, setting the `$3F` wait and awarding 100 native score units
+(1,000 displayed points). Restoring that effect removes the 22,227 early-results
+stop without tuning the sign's wait or consuming recorded gameplay values.
+
+
+### FBZ ending-pose support retained on the defeated plunger
+
+On `cac4ad87a` plus the plunger contact correction, the queued focused command
+`-Ptrace-replay-r7 -Dtest=TestFbzMinibossChildren,TestS3kFbzCompleteRunTraceReplay
+surefire:test` passed all 36 child/contact checks, with zero errors/skips.
+The complete 44,152-row recording remains red: **4,501 errors / 0 warnings**,
+first 16,600 Tails animation `$05/$06`, 758,829 mismatching field-rows. The
+first main gameplay-physics error advances to **22,397 `x` `$0102/$2F02`** and
+`camera_x` `$0062/$2E62`. The later remaining-items probe corrects the original
+"one-row" description: results art never becomes ready, so the Act 2 reload
+does not occur; row 22398 is an un-compared lag row. Later timing and transition
+differences remain open; these are not full-parity results.
+
+The real-contact regression lands on the actual plunger, applies the production
+signpost ending pose, and proves retained standing ownership and grounded Y on
+the next manager update. A newly arriving bit-7-controlled player is rejected.
+The existing object-managed support hook applies only after the plunger's
+stationary defeat drop, preserving ordinary active-phase movement. Merely allowing
+controlled solid evaluation was insufficient because the new-contact rejection
+still ran before the generic retained-ride branch; that rejected attempt did not
+move the trace. No shared collision algorithm or trace state was changed.
+
+The final independent confirmation on `38e2e75aa` used queued Maven,
+`-Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestS3kSonicTailsFbzSegmentTraceReplay surefire:test` with verified absolute
+ROM properties. It completed in 12.384 seconds: **5,109 errors / zero warnings /
+33,712 rows**, first row 116 Tails subpixel `$D000/$B800`, one failed JUnit test,
+zero errors/skips. Upstream reconciliation introduced no Java changes after
+`c84e63ab0`; both strict recordings remain red at the documented frontiers.
+
+
+## 2026-09-14 — KiS2 trace-readiness movement advances EHZ1 comparison
+
+- Candidate `ba3d9d592`, `.worktrees/kis2-trace-ready`; matched base
+  `5e3700a04` (Java tree unchanged from pre-task `ae767f351`).
+- Both commands: `python3 tools/testing/maven_queue.py -Dmse=off
+  -Dtest=TestKis2Ehz1TraceReplay test -B`, with absolute root S2 REV01 and S3K
+  ROM properties and separate fresh report directories. Both executed one test,
+  zero skips, 1,817 compared rows, zero warnings; both remain failing traces.
+- Base: 300 comparison errors, 91 bootstrap errors; first runtime error frame
+  284 rings expected 1 / actual 0. Candidate: 194 comparison errors, 91 bootstrap
+  errors; first runtime error remains the already-existing animation mismatch at
+  289 (`player_animation_id` expected $00 / actual $20, mapping $25 / $C0).
+  First runtime physics difference is now frame 1154 Y expected $022A / actual
+  $0223. The missed glide ring and frame-579 speed cap divergence no longer occur.
+- Bootstrap is unchanged: frame 0 `player_history.pos`, expected $0068 (slot $19),
+  actual $003F. Do not seed history from comparison rows. Further prelude and
+  wall/landing geometry work needs production ROM evidence and the new chain BK2.
+- Changes came from shipped-ROM movement/radius rules, not fixture-specific
+  patches. This is an improved failing trace, not complete KiS2 parity.
+
+- Reconciled candidate `50a4467e6` reran the same queued KiS2 EHZ1 command after
+  merging AIZ/HCZ/FBZ bootstrap and animation changes: unchanged 1,817 rows,
+  194 comparison errors, 91 bootstrap errors, zero warnings/skips (19.354 s).
+  The first bootstrap error and runtime frontier above remain unchanged.
+
+### FBZ remaining-items: physical art ownership and carried ending boundaries
+
+Against develop `51677cdd2`, `feature/ai-fbz-remaining` fixes the omitted
+`loc_6EEA8` canonical miniboss KosM parent, first-free results dispatch, and
+TITLE_OWNER enemy-art admission on the seamless reload (`46fe2152f`). The
+base's 4,501-error complete replay stalled in results; it did not recover after
+row 22397. Results fingerprints were correct with ordinals one behind. The
+native parent restores the reload at 22397, and the later policy correction
+retains the enemy batch for its actual title owner.
+
+Combining the parallel launcher/Tails corrections through `5ac5c5b51` yields
+3,502 errors, first 20795 `tails_y` `$05B0/$05AE`, versus the original first
+16600 animation mismatch. Native control-restoration writes and deferred
+Obj_TitleCardInit lower that to 3,493. Rebasing the horizontal camera easing
+targets then removes Sonic's post-results `$03DE` boundary clamp and reaches
+a different Act 2 path: 5,508 errors, still first 20795. Main X agrees until
+23035; camera first differs at 23014. Native title/worker handoff occurs at
+23011, engine title completion at 23021. These later boundaries remain open.
+
+Commands used the shared Maven queue, `-Dmse=off -B`, absolute main `s3k.gen`,
+`-Ptrace-replay-r7 -Dtest=TestS3kFbzCompleteRunTraceReplay test`, with bounded
+read-only title observers removed afterward. Each complete replay traversed
+44,152 rows, zero warnings and zero skips. Focused accompanying checks passed:
+53 boss/rewind, 26 sign/boss, 13 transition/PLC, 37 title/children and 12
+transition checks. The strict tests remain failed; no full-suite pass is claimed.
+See the dated FBZ completion plan for the submission and allocation evidence.
+
+FBZ remaining-items at `a9354be64` aligns retained title completion and the
+Act 2 camera handoff at frame 23,011. Later body/prison, push-release, chain
+hurt-entry and vertical-cage orbit fixes through `6583d90b3` produce **5,036
+errors**, first frame **22,868 main Y** (`$05A4` expected / `$05A8` actual),
+with the next main-position error at frame 26,451. The queued strict command
+above still completes 44,152 rows, zero warnings/skips and fails its strict
+assertion. The accompanying `TestFbzWireCages,TestFbzObjectRewind` selection
+passes 36 focused checks with zero skips; the full invocation takes 63 seconds.
+This is improved failing comparison, not full replay parity.
+
+The independent `TestS3kSonicTailsFbzSegmentTraceReplay` command uses the same
+queued Maven/profile/absolute-ROM setup and reaches **4,152 errors**, first
+frame **7,619 main x_speed**, with zero skips. Native control `$81`, secondary
+status `$02` and slot 96 `Obj_HyperSonicKnux_Trail_Main` identify Hyper Sonic;
+`Sonic_CheckTransform` / `Sonic_Transform` require seven Super Emeralds. The
+isolated segment metadata supplies no progression bootstrap contract, and the
+run walker keeps emerald metadata comparison-only. This prerequisite gap is
+not authority to hydrate gameplay from trace rows or patch FBZ acceleration.
+The independent frontier is attributed but remains red.
+
+FBZ remaining-items final source frontier at `d87e42bdd` (`.worktrees/ai-fbz-tails-parity`, integrated into `.worktrees/ai-fbz-remaining`): queued `-Dmse=off -Ptrace-replay-r7 -Dtest=TestFbzEndBossFormalCorrections,TestFbzFinalEggCapsule,TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay -Ds3k.rom.path=<verified absolute S3K ROM> surefire:test -B`, one fork, took 29.152 seconds. Complete: **16 grouped errors / 18 field rows, 44,144 comparison entries**, zero warnings/skips, first **44,230 SOZ X** (`$00C0/$0000`). All FBZ gameplay comparisons now agree; the fresh SOZ position/camera/terrain-queue boundary remains red. Independent: **4,152 grouped errors / 694,951 field rows, 33,712 comparison entries**, first **7,619 main x_speed**, unchanged Hyper prerequisite. Thirty-one distinct focused checks pass, zero skips (23 capsule plus eight formal checks; corrected fixture final rerun 0.973 seconds). Neither strict test passes.
+
+The final late-object input correction preserves P1's already-recorded history: native `Sonic_RecordPos` precedes `loc_86358`, which writes only logical control. Rewriting the current history sample advanced Tails RIGHT by one frame sixteen samples later. Existing `setLogicalInputState` now owns the late write; no CPU threshold changed. Door collision consumption, victory support/control restoration, results camera/control retention, shake clock/camera-copy handling and capsule code-bank identities moved the prior frontiers before this correction. See the completion record for their individual red/fixed commands.
+
+The final compiled root check on `14ce01d48` (`test`, profiles `fbz-routes,trace-replay-r7`, all three absolute ROMs) confirms the same complete 16/44,144 and independent 4,152/33,712 frontiers, zero warnings/skips. The combined 2:12 command additionally exposes ten old short-slice controller failures while all 13 complete Act2 routes pass; those are recorded independently in the Act2 matrix. No stale-class or skipped-test result is used for this confirmation.
+
+## 2026-09-14 — KiS2 user all-emeralds candidate capture
+
+- Movie `kis2-full-run-all-emeralds.bk2`: 268,301 input rows; scratch capture
+  has 36 segments, seven SS detours and 248,042 aligned physics rows.
+- On develop `ad68609e9`, queued `-Dmse=off -Dtest=TestKis2Ehz1TraceReplay
+  -Dopenggf.trace.candidate.dir=<candidate>/first-segment test -B` with verified
+  absolute S2/S3K ROM properties compared 3,180 rows: 466 errors, 91 bootstrap
+  errors, zero skips. First gameplay difference is row 156 `y_speed`,
+  expected `$0010`, actual `-$00F0`; history bootstrap mismatch remains.
+- `.worktrees/kis2-full-run` adds `TestKis2CompleteEmeraldRunChain`; queued
+  `-Dtest=TestKis2CompleteEmeraldRunChain -Dopenggf.trace.kis2.run.dir=<candidate>/full-run`
+  executed one test with zero skips, stopping before gameplay on
+  `trace_schema 5 segment omits dynamic-art capability`. No chain frontier
+  beyond manifest validation is claimed.
+- [Capture and prerequisite evidence](../architecture/research/trace/2026-09-14-kis2-full-run-candidate.md).
+  Candidate remains outside canonical fixtures; KiS2 converted-art DMA needs
+  explicit native and engine lifecycle support before valid chain publication.
+
+
+## 2026-09-14 — KiS2 full-run art-transfer prerequisite
+
+Worktree `feature/ai-kis2-full-run` (`d94ac94c2` plus prerequisite changes,
+base `51677cdd2`), TraceChaser `e0a2443` pushed on `main`. The native observer
+validates converted normal art as one RAM DMA, chip SS DPLCs, accepted tail-call
+closure and gap ledgers; Java models those production transfers and validates
+owner-specific callbacks. No trace state hydrates gameplay.
+
+The sealed all-emeralds capture has 36 segments, 248,042 rows and 79 art gap edges.
+Whole-file comparison preserves every original physics row and existing aux event.
+[Capture inventory, hashes, ROM evidence and validation](../architecture/research/trace/2026-09-14-kis2-full-run-candidate.md)
+record the exact candidate and baseline failures.
+
+Command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestKis2CompleteEmeraldRunChain
+-Dopenggf.trace.kis2.run.dir=$KIS2_CAPTURE_ROOT/full-run-art-audited
+-Dkis2.rom.path=<absolute lock-on dump> test -B`, with verified absolute S2/S3K
+properties. Result: one failure, zero skips. All segments and gap ledgers pass
+v5 validation; replay now reaches gameplay and stops in segment 0 when production
+enters `TITLE_CARD` before source closure, `loadGeneration=3`, EHZ1, **BK2 cursor
+2003**. This is the first reported structural stop, not a claim about the first
+physics mismatch. The missing dynamic-art capability is no longer the frontier.
+
+Corrected focused runtime/parser/SS/CLI tests: 101 passed, zero skips. Exact
+recorder-pin guards: 13 passed, zero skips. The combined broad run's five new SS
+initialization errors were corrected narrowly; two unrelated source-guard failures
+remain matched to the unchanged base. No full-suite green or chain parity is claimed.
+
+Implementation `8af9eb913` integrated without conflicts at `2d74e3de5`.
+The integrated runtime/parser/SS and required S3K selection passed 140 tests,
+zero failures/errors/skips (48.936 seconds). The capture and EHZ1 structural
+frontier above are unchanged; canonical publication remains pending approval.
+
+FBZ reconciled with incoming KiS2 at `246fe229f` (destination `13bb3b165`, pre-task base `51677cdd2`): queued compiled `test -Ptrace-replay-r7` selected both strict FBZ classes plus dynamic-art lifecycle/transfer, required S3K bootstrap/loading and results queue/rewind checks. All three absolute ROM properties were set. Result 129 tests:127 focused passes,2 strict failures,0 errors/skips,1:12. Complete unchanged16/44,144,first44,230 SOZ X; independent unchanged4,152/33,712,first7,619 Hyper x_speed; zero warnings. This includes the final global physical-results-queue gate on allocation retries.
+
+
+## 2026-09-14 — Approved KiS2 all-emeralds fixture published
+
+Installed the sealed 110-file capture under
+`src/test/resources/traces/kis2/runs/kis2-full-run-all-emeralds/` unchanged:
+36 segments, 248,042 physics rows, 23,905,326 stored bytes. Both source and
+canonical copies match every stored/logical hash in approved inventory
+`e9a3d82132e65a485ff14b61de5a517bf43846061d02a710949c7c8ea50f3c9b`.
+
+On base `f037a1218`, `.worktrees/kis2-fixture-publication`, queued Maven
+`-Dmse=off -Dtest=TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,TestTraceFixtureLagPolledInputGuard,TestTraceRunManifest,TestDynamicArtTransferTrace,TestKis2CompleteEmeraldRunChain test -B`
+with absolute `sonic2.rom.path`, `s3k.rom.path` and `kis2.rom.path` selected
+42 tests: **41 passed, one known chain failure, zero errors/skips**. No external
+fixture override was supplied. The complete v5 manifest/art ledger validated;
+segment 0 again lost production ownership before source closure in TITLE_CARD,
+load generation 3, EHZ1, **BK2 cursor 2003**. This structural stop is not a
+measurement of the earliest physics mismatch. Publication does not certify
+end-to-end parity. The default chain manifest is now required, not skip-optional.
+
+Integrated into `develop` at `5d54b85d5` without conflicts. Repeating the same
+focused command on the integrated tree produced the identical 41 passes and
+one EHZ1 cursor-2003 chain failure, zero errors/skips. All 110 integrated files
+again matched the approved stored/logical hashes.
+
+## 2026-09-14 — KiS2 patch launch, chip PLC queue and first glide frontier
+
+Pinned base `31a9a6bce`, `.worktrees/kis2-chain-frontier`. Chain launch now
+resolves the recorded team through the same patch-aware session helper as
+standalone replay. Solo teams keep the native title-card object prelude.
+The tier-two PLC lifecycle and rewind service read the chip's `ArtLoadCues`
+table at $33A3FC with physical source addresses. Shared Knuckles glide logic
+checks wall fit, preserves transformed floor angles and retains the glide
+animation register when entering the slide mapping frame.
+
+Queued command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestGlideWallGrabTerrain,TestPlayableSpriteMovement,TestKis2Ehz1TraceReplay,TestKis2CompleteEmeraldRunChain
+test -B`, with absolute verified S2, S3K and KiS2 ROM properties. Geometry and
+movement: 180 tests pass. KiS2 launch regression passes. Standalone EHZ1 remains
+red: 179 errors, zero warnings (baseline 194); 91 initial history errors in each.
+Full chain remains red, now at **BK2 cursor 9366**, in `TITLE_CARD` after the
+first special-stage interior. Initial EHZ1 completes **3,180 rows**, 92 errors,
+zero warnings: 91 player-history bootstrap differences and one `rings`
+mismatch at row **2462**, expected 43, actual 53. No position/velocity, PLC or
+dynamic-art differences remain in this first segment. Zero skipped tests.
+
+The original chain's 17,024 errors covered only 1,260 rows before its cursor-2003
+stop, so these are different-depth totals. Special-stage interiors retain their
+existing uncompared-gameplay policy; entering/returning does not certify SS
+physics parity. All published fixture bytes remain unchanged.
+
+[ROM evidence, rejected probe approach and validation record](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+Reconciled implementation `e8e088432` with develop `6897a6048` at `c2bc3af5d`.
+Queued `-Dtest=TestKis2CompleteEmeraldRunChain` repeats the same 92-error initial
+segment and cursor-9366 stop, one launch pass/one chain failure, zero skips.
+The bounded return diagnostic observes `EXIT_BACKGROUND`, card frame 86,
+state timer 9, leave pass 26, and an empty PLC queue. Investigate the final
+player/object pass and release handoff; this is not unfinished PLC work.
+
+Matched S2/S3K trace command on updated base `6897a6048` and reconciled KiS2
+runtime: queued `-Dtest=TestS3kKnucklesSuperEmeraldRunChain,TestS2Ehz1TraceReplay`
+(with the four required S3K loading/bootstrap/decoding/AIZ class names added on
+the current tree). Stock S2 remains 16,388 errors, zero warnings, first row 6
+`dynamic_art.outstanding_transfer_ids`, expected [2], actual []. S3K remains
+blocked at segment 0's giant ring: 12,679 base errors versus 12,616 current,
+zero warnings, same first row 446 `y_speed`, expected -$0448, actual $0448.
+No new test failure identity or earlier frontier; this does not certify the
+rest of either route. The required S3K checks pass 58 tests. All comparisons
+and required checks executed with zero skips.
+
+The independent short KiS2 EHZ1 report's first post-bootstrap difference is row
+289 `player_animation_id` ($00 vs $20); first position mismatch is row 1159
+`x` ($0938 vs $0940). This separate recording remains red despite the canonical
+first segment's matching positions and velocities.
+
+Combined validation on `73f07afd1`, base `8ce626087`, completed 20,372 ordinary
+tests: 20,353 passed, one inherited rewind-audit pin failure, zero errors and
+18 inspected baseline skips. The runner stopped before guards because this log
+and the evidence note were edited during the run; runtime/test/build inputs did
+not change. This is an incomplete combined run. Upstream's test-only audit
+correction `24cdc64e6` was then reconciled at `382d54d6b` without conflicts.
+
+Integrated runtime/accessor correction at `8fff63a70` on destination `24cdc64e6`.
+The pinned integration commit's queued post-integration command
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 24cdc64e6 --run`
+completed both lanes (`20260914T183031Z-9c8a025d`): **20,354 ordinary passes,
+18 inspected baseline skips, zero ordinary failures/errors**; **665 guard passes,
+two exact baseline failures, zero guard errors/skips**. Those failures are
+`TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+and `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`.
+The new runtime-access guard and corrected upstream rewind audit pass. No new
+failure remains; the KiS2 chain itself remains red at the recorded return frontier.
+
+
+### 2026-09-14 — KiS2 first two special-stage returns
+
+Candidate `.worktrees/kis2-special-return`, base `9aada6ce6`; queued Maven
+`-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestTitleCardManagerNativeExitTiming,TestTitleCardObjectExecution,TestKis2CompleteEmeraldRunChain test`
+with absolute S1/S2/S3K/KiS2 ROM properties. No skips. The locked title loop
+now releases immediately after its 26th object pass, and the existing load
+receipt wrapper observes synchronous special-stage returns. The former
+cursor-9366 overrun is gone. Segment 0 retains 92 errors (91 bootstrap); the
+first returned EHZ1 segment completes 1,316 rows with one ring error at row
+826 (95 expected, 85 actual), zero warnings. Both SS art ledgers are clean;
+both return gaps still have a first art edge 39 movie frames early.
+
+New stop: `seg3_ehz1` row 2522 / BK2 cursor 19304, dynamic-art publication
+serial unchanged after production. Its partial report has 1,524 errors,
+zero bootstrap errors/warnings; first physics mismatch row 2230 `x_sub`
+(expected $21F5, actual $F800). The earlier movement divergence is the next
+causal target. SS gameplay remains uncompared; this is not a full-chain pass.
+See [the investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
+for the intermediate missing-receipt failure and validation follow-up.
+
+## 2026-09-14 — HCZ1 viewport arena framing; matched native replay unchanged
+
+Task base `24cdc64e6697b7624e669abea2f37a35abed94b2`, matched arms in
+`.worktrees/ai-hcz-wide-arena`. The candidate changes only HCZ miniboss camera
+observations to native framing; the baseline arm restores that one source file
+from the pinned base. Both use:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+-Dtest=TestS3kHczZoneSliceTraceReplay -Ds3k.rom.path=<absolute existing S3K ROM> test`.
+
+Both complete 29,302 compared frames: **2 tests, 1 failure, no errors/skips**;
+4,699 divergences (3,973 physics, 726 animation), zero bootstrap errors/warnings.
+First physics error is frame 9,482 `air` (expected 1, actual 0); first animation
+error is frame 9,486 `player_animation_id` (expected `0000`, actual `0005`).
+All normalized report records match byte-for-byte, SHA-256
+`92bab98520aefb2caf2c32c342b4593b0a3eb1246047ded02f7a9cff3732c98b`.
+Candidate Maven time: 33.583 seconds; baseline: 1:04 (queue waiting excluded).
+The earlier 4,571-error historical count does not describe this updated base.
+No native trace regression is attributable to the camera fix; the inherited
+trace remains red. The candidate source was restored and consumed diagnostics
+were deleted. Full-route viewport/donor evidence is recorded separately in the
+[handover](../architecture/plans/2026-09-14-route-controller-handover.md#full-route-viewportdonor-completion-follow-up).
+
+
+KiS2 return-fix integration `aa3ccf04a` on `2c7630066` completed queued
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 2c76300668aaab6a7a962782294f3f2b6f8ba67a --run`
+in `.worktrees/kis2-special-return`: 20,393 ordinary passes, 18 inspected
+baseline skips, zero ordinary failures/errors; 665 guard passes and the same
+two baseline failures, zero guard errors/skips. The earlier candidate run on
+`c85e17571` also had zero ordinary failures and those same guards. No new
+failure. The chain remains red at the frontier above. The next native lead
+is the wall-grab `x_pos -> x_sub` anchor store at row 2230, documented in the
+investigation; it is not yet implemented.
+
+
+## 2026-09-15 — KiS2 native wall anchor and ledge holds
+
+Base `dedd18877`, candidate `.worktrees/kis2-wall-anchor`, matched baseline
+`.worktrees/kis2-wall-baseline`. Command: `python3 tools/testing/maven_queue.py
+-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestKis2MovementRules,TestPlayableSpriteMovement,TestAbstractPlayableSpriteRewindCapture,TestKis2CompleteEmeraldRunChain,TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kKnucklesSuperEmeraldRunChain test`
+with absolute existing KiS2/S2/S3K ROM properties. Candidate: 211 tests,
+207 passes, four red traces, zero errors/skips. All 206 movement/rewind checks
+pass. Baseline control traces use the same trace classes and ROMs.
+
+Native `x_pos -> x_sub` wall anchoring, displacement/carry detachment, and
+six-slot ledge holds remove the segment-4 row-2230 fraction divergence and
+subsequent row-2255 ledge cascade. Segments 4 and 6 now complete 2,525 and
+2,392 rows respectively with zero compared errors. The chain reaches the third
+SS return and stops on the missing `level_advance` boundary after segment 6
+(`seg4_ehz1`, BK2 offset 26,145). The old row-2522 art-publication stop is gone.
+The third SS art ledger compares 6,663 rows without errors; SS physics is
+uncompared. All three exercised return submission gaps are 39 movie frames early.
+Segment 0 retains 92 errors (91 bootstrap plus row-2462 rings 43/53); segment 2
+retains one error (row-826 rings 95/85).
+
+Short KiS2: 179 -> 93 errors, zero warnings; 91 bootstrap plus animation/map
+records beginning row 289 ($00/$20; $25/$C0). Matched stock S2 and S3K control
+reports are identical: 16,388 and 12,616 errors respectively; first errors remain
+S2 row 6 transfer IDs `[2]`/`[]` and S3K row 446 Y speed -$0448/+$0448.
+See the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
+for native evidence, rejected assumptions, and broad validation follow-up.
+
+### 2026-09-14 — FBZ complete recording closes at fresh SOZ initialization
+
+Pinned base `6897a604895a4822e85b766859624a95c42bd4b6`, uncommitted source in
+`.worktrees/ai-fbz-native-loading`. Queued command:
+`test -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSonic3kTitleCardKosQueue,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute S3K ROM>`.
+Completed 11 tests, all passing, zero skips, Maven 1:04. Strict recording:
+**44,134 comparison entries; zero errors/warnings; no first-error frame or
+field**. Matched pristine-base check: 16 grouped errors / 44,144 entries,
+first 44,230 main X (`$00C0` expected, `$0000` actual), zero warnings/skips.
+The count change removes unmatched timing-completion entries, not fixture rows.
+
+Production now honors the ROM's fresh-title Nemesis workload, explicit title
+loop preparation despite a held gameplay counter, initialization-only loop
+tail, and terrain parents' late-producer boundary. No trace data hydrates
+production state. The independent Hyper recording remains a separate authentic
+progression prerequisite gap (last measured 4,152 errors, first 7,619 main
+`x_speed`); it was not rerun by this command. Broad validation and integration
+are outstanding. See the dated FBZ completion plan for rejected iterations.
+
+
+### 2026-09-14 — FBZ background-origin follow-up and Hyper prerequisite
+
+Same pinned base `6897a604895a4822e85b766859624a95c42bd4b6`, uncommitted
+`.worktrees/ai-fbz-native-loading`. Queued `test -Dmse=off -Ptrace-replay-r7
+-Dsurefire.forkCount=1
+-Dtest=TestFbzAct1LayoutMutations,TestFbzEventsAct1,TestFbzFramePhaseOrdering,TestFbzTransitionRewind,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute ROM>`: 30 passes, zero failures/errors/skips,
+35.316 seconds Maven. Complete strict FBZ remains passing, no first error.
+
+Separate queued `test -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain
+-Ds3k.rom.path=<verified absolute ROM>`: prefix passes, chain fails, zero
+errors/skips, Maven 1:25. First reported boundary failure is
+`uncompared-interior physical walk exceeded destination 8817`; the run never
+reaches FBZ offset 302654. No new matched baseline was run and no emerald
+state was injected. Independent Hyper acceptance remains open.
+
+### 2026-09-15 — FBZ retained sprite/HUD publication preserves the strict frontier
+
+Uncommitted `.worktrees/ai-fbz-native-loading`, reconciled onto destination
+`dedd18877` (original task pin `6897a6048`). Queued `-Dmse=off
+-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSpritePresentation,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestHudRenderManager,TestS3kFbzCompleteRunTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+-Ds3k.rom.path=<verified absolute ROM> test exec:java`, followed by the B1
+fixture capture, passes 97 tests, zero failures/errors/skips, Maven 1:10.
+The complete strict replay still passes (17.270 s body), no first error.
+All fourteen settled boundary afterstates match after the separate SAT and HUD
+numeric publications. Intermediate redraws and independent Hyper progression
+remain open; broad validation/integration are not yet claimed.
+
+
+Wall/ledge implementation `f9e17bcc7` integrated without conflicts as
+`5fed74d42`, retaining upstream FBZ miniboss changes. Candidate and integrated
+queued full selections used `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base dedd18877da190e65aeb74970929e2f2b4ece6c3 --run`
+in `.worktrees/kis2-wall-anchor`: respectively 20,419 and 20,421 ordinary
+tests, zero failures/errors and the same 18 baseline skips. Both ran 667 guards
+with the two identical baseline failures (stale build guidance; existing
+assertion-free FBZ/solidity probes), zero errors/skips. The integrated KiS2
+runtime matches the focused replay candidate; no new failure was observed.
+
+
+## 2026-09-15 — KiS2 EHZ1 act advance is observed; EHZ2 frontier exposed
+
+Base `2b2bf8e28`, `.worktrees/kis2-act-transition`. The EHZ1 transition did load
+EHZ2, with an empty PLC queue, but published `ORDINARY` instead of
+`LEVEL_ADVANCE`. The common results-driven load owner now uses the existing cause
+classification wrapper; gameplay and fixture data are unchanged.
+
+Queued `-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1` selection:
+`TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestKis2CompleteEmeraldRunChain,TestS1CompleteEmeraldRunChain,TestS2CompleteEmeraldRunChain`,
+with existing absolute S1/S2/KiS2 ROM paths: 56 tests, 53 passes, three red chains,
+no errors/skips. Matched S1/S2 normalized reports are identical before/after.
+All 35 selected hardware-timing/trace-invariant guards pass. Validation is focused
+under the bounded observation-change exception, not a full-suite pass.
+
+KiS2 reaches segment 7 (`seg5_ehz2`): all 3,561 rows compared, 13,978 errors,
+zero warnings/bootstrap errors; first mismatch row 50 PLC busy false/true. The
+chain stops on its missing starpost-special exit. The preceding act-change gap
+already differs: ten art edges versus two, first edge 28,558 versus 28,683 and
+mapping $07 versus $56. Investigate that earlier load/title-card publication
+before treating the EHZ2 cascade as an independent queue bug. EHZ1 segments 4/6
+remain zero-error, and prior ring/return-art gaps remain open. Full evidence and
+integration follow-up are in the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+
+Act-load classification implementation `c53b27aca` integrated as `94a41febd`,
+retaining upstream FBZ fresh-load/publication work without conflicts. The same
+focused command on the integrated tree completes 56 tests: 53 passes, the same
+three red chains, zero errors/skips; all normalized candidate/integrated chain
+reports match. All 35 selected authority guards pass. Further read-only evidence
+identifies the EHZ2 row-50 work as the same standard-water/animal PLCs that the
+ROM submits at row 52 in each EHZ1/EHZ2 entry. Investigate act-entry/title-card
+pass ordering; this is not evidence of missing chip PLC assets.
+
+
+### 2026-09-15 — FBZ retained presentation delivered, strict replay remains closed
+
+Presentation source `892292047`, integration `562e35e37`, final runtime
+`94a41febd` (incoming observation-only act-load classification). Isolated
+`.worktrees/ai-fbz-native-loading` queued `-Dmse=off -Ptrace-replay-r7
+-Dtest=TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestS3kFbzCompleteRunTraceReplay test`
+with absolute S1/S2/S3K ROM paths passed 53 cases, zero failures/errors/skips,
+Maven 37.660 s. Complete FBZ strict replay passes (18.260 s body), no first
+error. Post-integration ordinary checks completed 20,449 cases with zero
+failures/errors and 18 inspected skips; isolated guards retain exactly two
+baseline failures. The concurrent-main fingerprint stop and bounded incoming
+merge validation are recorded in the
+[completion plan](../architecture/plans/2026-09-14-fbz-completion.md#post-integration-validation-and-delivery).
+Fourteen settled native boundary pairs match; intermediate redraws, independent
+Hyper progression and the S1 full-act route remain open.
+
+
+### 2026-09-15 — KiS2 EHZ2 entry clears; chain reaches segment 11
+
+Base `59d5b8881`, `.worktrees/kis2-ehz2-frontier`. Direct results advances now
+retain the locked title-card owner in headless play. Title-card admission also
+retires the transition gap's source-loop flag on setup-only rows, preventing
+one extra destination gameplay pass. Both regressions failed before their fixes.
+No title duration, chip PLC data, fixture or gameplay state was fitted to the run.
+
+Queued `-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestLevelAdvanceLoadReceipt,TestGameLoopFreezeContractWiring,TestLevelIterationAdmissionController,TestKis2CompleteEmeraldRunChain`
+with absolute KiS2/S2 ROM paths: 15 tests, 14 passes, one red chain, zero
+errors/skips. Segment 7 `seg5_ehz2` improves from 13,978 errors (first row 50
+queue busy) to zero across all 3,561 rows; its act-entry art gap matches too.
+The chain crosses two more interiors (12,871 zero-error art ledger rows;
+interior physics remains uncompared) and stops at segment 11 `seg7_ehz2`,
+expected starpost-special boundary cursor 48882 instead of 32271.
+
+Newly reached segment 9 has 6,140 errors, first row 200 Y `$0376`/`$0375`,
+with glide `$20`/`$B8` versus climb `$21`/`$CA`. It still reaches its special
+stage. Segment 11 has 28,200 errors, first row 212 Y speed `$0528`/`-$0528`,
+and misses the next entry. EHZ1 and the existing return-art timing differences
+remain open. See the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
+for intermediate candidates, exact boundaries and final validation follow-up.
+
+
+Implementation `36479a2fc` reconciles updated develop without conflicts as
+`d31238136`. Probe-free KiS2/S1/S2 chain and load checks complete 43 tests:
+40 passes, three red chains, no errors/skips (1:12). Every KiS2 report matches
+the measured candidate, and every stock S1/S2 report matches the pre-task
+baseline. Separate `-Ptrace-replay-r7` FBZ/AIZ/loading/bootstrap/decoder checks
+pass all 59 tests, no errors/skips (37.194 s); full FBZ replay remains green.
+Combined ordinary/guard validation follows on the frozen reconciled tree.
+
+
+Candidate `0d0965c8b` completed the full change-based selection against
+`59d5b8881`: 20,467 ordinary tests, zero failures/errors, 18 inspected skips;
+668 guards with exactly the two inherited direct-Maven/diagnostic failures,
+matching baseline class/test identities and full messages. Command:
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base 59d5b8881 --run`.
+Elapsed ordinary/guards: 729.31/172.20 seconds. No new or worsened failure;
+this is an ordinary-suite pass with inherited red guards, not all gates green.
+
+
+Integrated as `316788395` and verified on the identical frozen task tree.
+The same category command completes 20,488 ordinary tests with zero failures/errors,
+18 skips; 668 guards retain exactly the incoming base's three failures (the two
+above plus quicksand rewind-annotation triage). Upstream's inventory correction
+passes. All failure messages and skip reasons were matched, not just totals.
+The queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestKis2CompleteEmeraldRunChain` command with absolute KiS2/S2 ROM properties
+completes two tests, one expected chain failure, no errors/skips (27.176 s).
+All 15 normalized reports match the clean candidate: segment 7 zero-error,
+segment 9 first error row 200 Y, segment 11 first error row 212 Y speed, stop
+at cursor 48,882. Diagnostics acknowledged and deleted. Commands and full counts
+are recorded in the linked investigation.
+
+
+### 2026-09-15 — Moving-camera scroll publication preserves complete FBZ replay
+
+On `bugfix/ai-s3k-presentation-camera`, based on `316788395`, the shared S3K
+presentation correction pairs terrain scroll with retained SAT geometry.
+Queued `-Dmse=off -Ptrace-replay-r7
+-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestFbzRetainedPlaneNativeRows,TestS3kFbzCompleteRunTraceReplay test -B`
+with explicit absolute S1/S2/S3K ROM paths passes 61 tests, zero failures/errors/
+skips in 36.804 seconds. Complete FBZ replay passes in 16.42 seconds: no first
+error frame/field. This does not close the separate Hyper prerequisite frontier.
+The [MHZ camera audit](../architecture/audits/2026-09-15-s3k-presentation-camera.md)
+records the baseline failure and moving-camera visual evidence.
+
+
+Moving-camera delivery verification: implementation `ca44ebed2` and oracle
+correction `d254f5a27` integrate as `2f3797ceb`; later SOZ integration
+`b247c5fad` preserves the presentation code. Queued
+`-Dmse=off -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kMovingCameraPresentation,TestFbzBossPlanePixels
+-Ds3k.rom.path=<absolute verified S3K ROM> test -B` passes all seven tests,
+zero failures/errors/skips (1:04 including compilation). Complete FBZ strict
+replay passes in 16.15 seconds; no first error frame/field. The combined develop
+ordinary suite passes 20,521 tests with 19 inspected skips; two exact inherited
+guard failures remain. Full evidence and the camera-phase oracle correction
+are in the linked MHZ audit.
+
+
+## 2026-09-15 — KiS2 signed-width walls, Coconuts init and wall jumps
+
+Task `.worktrees/kis2-wall-frontier`, branch `bugfix/ai-kis2-wall-frontier`,
+base `b8d0ae91b`. Native wall probes now use the live LRB solidity bit and
+signed-width player sensor; wall releases/glides publish their native animation
+registers; wall jumps preserve native position during the visual shape change.
+Coconuts retains its init-only object pass before idle timer/range decisions,
+including rewind. No recorded physics, aux, timing or manifest bytes changed.
+
+Queued command: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1
+-Dtest=TestKis2CompleteEmeraldRunChain,TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kKnucklesSuperEmeraldRunChain test`
+with existing absolute `kis2.rom.path`, `sonic2.rom.path`, `s3k.rom.path`.
+Five tests, four pre-existing red trace assertions, zero errors/skips; 39.194
+seconds. Focused movement/animation/Coconuts validation: 248 tests pass,
+zero errors/skips; additional sensor/wall-alignment and live object rewind
+checks pass. These are focused checks, not broad delivery validation.
+
+- Segment 9 (`seg6_ehz2`): **6,140 → 0 errors**, all 1,177 rows compared.
+- Segment 11 (`seg7_ehz2`): **28,200 → 1,889 errors**; first non-camera
+  difference moves from row 212 Y-speed sign to row 1590 X `$220A`/`$2206`.
+- Chain crosses the sixth special stage and reaches segment 13 (`seg8_ehz2`),
+  **cursor 48,882 → 58,451 (+9,569 movie frames)**. Its partial report has
+  7,203 errors, first row 957 X speed -$0448/-$0200; a title card takes source
+  ownership before closure at cursor 58,451. This is the next causal frontier.
+- Segments 4, 6, 7 and 9 remain clean. Segment 0 retains 91 bootstrap plus
+  one ring timing error; segment 2 retains its one ring timing error.
+- All six SS interior art ledgers are clean; SS gameplay remains uncompared.
+  Return art submissions remain 39/39/39/37/38/38 frames early, with later
+  gameplay art differences propagating through the ledger.
+- Independent short KiS2 remains 93 errors (91 bootstrap), first post-bootstrap
+  row 289 animation; stock S2 remains 16,388 errors, first row 6 transfer IDs;
+  S3K Knuckles remains 12,616 errors, first physics row 446 Y-speed sign.
+
+See the [native evidence and rejected paths](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b).
+
+Integration verification (`c8138d304`, 2026-09-15): queued change-based full
+selection against `342f01cb4` completed 20,543 ordinary tests with zero
+failures/errors and 19 baseline-identical skips; 668 guards retain the two
+exact baseline failures (obsolete direct-Maven guidance and assertion-free
+FBZ/solidity probes). Final queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestKis2CompleteEmeraldRunChain` with absolute KiS2/S2 ROM properties
+completed two tests, one known chain assertion, zero errors/skips. All 17
+canonical reports exactly match the candidate: segment 13, cursor **58,451**,
+first error row **957 `x_speed` -$0448/-$0200**, 7,203 partial-report errors.
+No fixture payload was changed.
+
+### 2026-09-15 — KiS2 glide attacks reach the CPZ1 exit window
+
+Worktree `.worktrees/kis2-speed-frontier`, base `d92fea6f1`. Queued canonical
+`TestKis2CompleteEmeraldRunChain` baseline (`-Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1`, absolute KiS2/S2 ROM properties) reproduced segment 13
+row 957 `x_speed` -$0448/-$0200 and the source-ownership stop at cursor 58,451.
+A read-only setter stack probe identified hurt knockback: glide/slide attack
+admission was incorrectly gated by elemental-shield availability. The shipped
+KiS2 `Touch_Enemy` admits flags 1/3; `Touch_Enemy_Part2` additionally exits flag-1
+gliding on an ordinary boss rebound, but preserves sliding and skips that exit
+in its multi-sprite branch. Both responses now have semantic rules.
+
+The combined command adds `TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay,
+TestS3kKnucklesSuperEmeraldRunChain,TestTouchResponseManager,TestCrossGameRuleComposer`
+and the absolute S3K ROM property: 83 tests, four known trace assertions, zero
+errors/skips, 46.725 s. All four independent control payloads match the prior
+delivered controls exactly. Segment 13 now completes 3,222 rows with 1,068
+errors, first row 1963 `dynamic_art.edges` [622]/[]. Segment 14 (`seg9_cpz1`)
+completes all 5,574 rows with 57,715 errors, first row 1112 Y $01CA/$01B5; its
+following `level_advance` boundary is not observed. The final focused replay
+reports mode LEVEL at BK2 cursor **65,856**, **7,405 movie frames** beyond the
+former 58,451 stop. No fixture payloads changed. Integrated at `3808306ad`: final
+four-class replay has five tests, four known trace assertions, zero errors/skips
+(43.122 s), with all 22 report payloads unchanged. Queued category validation
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base e949e124c --run`
+passes 20,645 ordinary tests with 19 baseline skips; 668 guards retain the exact
+three baseline failures (build guidance, migrated README, assertion-free probes).
+No new or worsened failure remains. See the
+[causal evidence](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#glide-attack-continuation-2026-09-15-base-d92fea6f1).
+
+
+### 2026-09-15 — SOZ completion ordinary-route ownership check
+
+At `6f10f848e` in `.worktrees/soz-completion`, queued Maven
+`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsSozSegmentTraceReplay -Ds3k.rom.path="$S3K_ROM" test -B`
+completed with one test error, zero skips (51.135s). It aborted at trace index1814,
+ROM frame1814, `FULL_LEVEL_FRAME`: `SkorpBadnikInstance.Tail.owner` retained a
+Skorp no longer registered in the rewind identity table. This is an ownership
+failure, not a completed parity measurement; no aggregate mismatch count is
+claimed. The short family tests had not included this retirement boundary.
+
+
+Follow-up on the same completion branch repairs Skorp retirement and equivalent
+Sandworm/Rockn child references. The three direct retirement/replay checks pass;
+the remaining26 badnik/breadth/inventory/art checks passed in the preceding run.
+The initial test attempted a full snapshot between object removal and collision
+list retirement; that is not a valid completed-frame boundary. It now validates
+reference closure immediately and captures the composite after the next frame.
+
+Queued Maven `-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSozBossWallState,TestS3kSonicTailsSozSegmentTraceReplay` with explicit ROM
+completed in55.206s: wall checks3 passed, trace failed without a closure exception.
+Report:17646 compared frames,4299 error spans,0 warnings,0 bootstrap errors;
+first frame0 `tails_y_speed` expected0038/actual0000, with leader gravity and
+animation mismatches at the same boundary. Eight advertised aux schemas are
+unverified, so this is physics/animation coverage only. Source inspection found
+an omitted SOZ1 entry owner: `SpawnLevelMainSprites` loc695A creates
+`Obj_LevelIntro_PlayerFallIntoGround` and initializes both players airborne with
+animation2. That production intro, not trace-state seeding, is the next target.
+
+## 2026-09-15 — SOZ cold-entry controller investigation
+
+- Worktree `.worktrees/soz-completion`, candidate over `9dd12ced0`.
+- Queued command: `python3 tools/testing/maven_queue.py -Dmse=off
+  -Ptrace-replay-r7 -Dsurefire.forkCount=1
+  -Dtest=TestSozFallingIntro,TestS3kSonicTailsSozSegmentTraceReplay
+  -Ds3k.rom.path="$S3K_ROM" test -B`. Completed in53.248s;3tests,
+  2failures,0errors,0skips. One was fixture config leakage, subsequently fixed
+  and both intro tests passed separately.
+- Replay reports3991errors,0warnings; first frame0 `y_sub` expected0000,
+  actual3800, with `y_speed` expected0038,actual0070. Companion later advances
+  twice per frame. Native source now explains the missing sand intro; initial
+  dispatch and companion movement suppression remain under investigation.
+- Eight advertised auxiliary schemas remain unverified. No fixture or recorded
+  gameplay values were changed or used to drive the engine.
+
+### SOZ cold entry and first terrain owner
+
+- Completion candidate after `04cbcd574` and arena merge64b7e4be9, queued
+  `-Ptrace-replay-r7 -Dtest=TestSozScreenEvents,TestSozAct1ArenaProduction,TestS3kSonicTailsSozSegmentTraceReplay`
+  with explicit S3KROM:12tests,11pass,1trace failure,0skips (57.851s).
+  Wall resource validation now waits on actual queue completion and replays the
+  same counted duration; the integrated final boss legitimately adds queue work.
+- Replay:3417errors,0warnings,0bootstrap errors,17646frames. First error is
+  frame63 `tails_cpu_ctrl2_pressed`, expected0000actual0010. P1/P2 initial
+  gravity and positions now match. The first physical divergence is1419:
+  `g_speed`040C vs03CC, Y0631vs062C, animation19vs00. Disassembly identifies
+  the missing terrain-driven `sub_730C` sand slide, distinct from placed quicksand.
+- Intro now uses direct `clearLogicalInputState` plus the existing CPU logical
+  latch clear: ordinary input publication intentionally ignores writes under
+  a control lock. Six intro/sidekick/art checks pass,0skips (53.335s); the trace
+  has not yet been rerun after this final logical-latch change.
+- Fresh diagnostic rebuild showed prior P1 extra-step output came from stale
+  compiled classes during an overlapping edit/compile, not a further production
+  ordering defect. Temporary dispatch instrumentation was removed.
+
+### SOZ slide phase and pillar contact follow-up
+
+- Candidate7a94f4fae, queued `-Ptrace-replay-r7
+  -Dtest=TestS3kSonicTailsSozSegmentTraceReplay` with explicit S3K ROM:
+  2975errors,0warnings,0bootstrap errors across17646frames (56.220s).
+  First error moved to1419 `camera_y`, expected05CC actual05CF; player
+  slide motion matches there. Native LevelLoop places `sub_730C` after camera
+  scrolling; the loop-tail correction is prepared in36af09e67.
+- First companion difference1547 is `tails_g_speed`, expected0 actual058D.
+  Native `loc_1E042` admits zero x_vel on left pillar penetration. A focused
+  solid-contact regression reproduced that missing semantic override and now
+  passes; the combined trace rerun is pending. Eight advertised auxiliary
+  schemas remain unverified; recorded gameplay remains comparison-only.
+
+- Combined slide-order/pillar candidate44d853536 rerun completed in58.797s:
+  2840errors,0warnings,0bootstrap errors,17646frames. First mismatch moved
+  to2312 `player_mapping_frame` (96vs92), wire capture; first physics
+  difference2336 `status_byte` (0Dvs05), collapsing-bridge standing admission.
+  The earlier frame1419 camera and1547 companion ground-speed differences
+  are absent. Source-backed capture-frame and positive-control contact fixes
+  are under focused verification; this remains a failing trace.
+
+- Candidateb6b4e37d1 (wire capture24556719d plus bridge91db399e5), same
+  queued replay command and ROM:2834errors,0warnings,0bootstrap errors,
+  17646frames,57.721s. First error is now2396 `camera_y` (09A1vs099B),
+  accompanied by `air`0vs1/status05vs07. Earlier wire capture/bridge admission
+  differences are absent. `loc_4B0DE` masks status withFC on horizontal flip;
+  the missing air-bit clear is the next focused correction.
+
+- Candidate4c3fff7e9: queued `-Ptrace-replay-r7
+  -Dtest=TestSozSwingAndWireProduction,TestS3kSonicTailsSozSegmentTraceReplay`
+  with absolute S3K ROM,5tests:4production passes/1trace failure,0skips,
+  60s. Wire production recreation now passes. Replay first divergence moves
+  to3480 `tails_y_speed` (-06C8vs-0660),3123total errors,0warnings,
+  0bootstrap errors,17646frames. Total count increased with the changed downstream
+  route, while the exact matching prefix extends through3479. CPU boundary death
+  uses DEAD_FALLING while generic dead=false; quicksand acquisition must still
+  reject native routine6 before its ascending+$68 force.
+
+- Candidate727087017, same standalone emerald-run replay:2892errors,
+  0warnings,0bootstrap errors,17646frames,25.450s. First mismatch4868
+  `player_animation_id` (1Fvs02) is `Sonic_Transform`, after52rings; physics
+  matched through4868 and all compared fields through4867. Metadata provides
+  no prior-campaign emerald progression, while the recording requests a
+  transformation. No emeralds were supplied from comparison rows or inferred
+  from the fixture name. This segment remains red at its progression boundary.
+- Selected existing `soz_completerun` (59507rows, BK2offset282195) as an
+  independent ordinary-input frontier. Its recorded Sonic animation never
+  enters1F. Added `TestS3kSozCompleteRunTraceReplay` without row trims or
+  changed tolerances; queued full recording comparison is pending.
+
+- Independent `soz_completerun` on727087017 plus new harness:9763errors,
+  0warnings,0skips,39.673s. First reported error34 is direct Kos queue busy
+  timing (truevsfalse); those queue comparisons remain enabled. First player
+  state error2312 is Tails y-speed0038vs0000/air1vs0 after flight recovery.
+  Native loc_13D34 (S2 loc_1BC68 tail) copies live leader collision bits and
+  art priority at handoff; engine omitted those copies. First main-player
+  position difference is6242 Y0A90vs0A91. Investigating the handoff first;
+  no queue comparison or later rows were removed.
+
+- Recovery collision/art handoff regression failed before the fix (expected
+  top bit14, actual12), then all18 `TestSidekickCpuControllerFlightAutoRecovery`
+  tests passed,0skips,52.981s in `soz-completion` on727087017 plus the fix.
+  Both S2/S3K and both collision-plane directions are covered. The same queued
+  independent trace command after the fix still reports9763errors,0warnings,
+  0skips,59336compared frames,39.192s, with unchanged first queue34 and
+  Tails2312/main-player6242 frontiers. The missing copy is a proven source
+  discrepancy, but this experiment rejects it as the cause of this frontier.
+
+- `b52f3f52d` in `soz-sand-mechanisms`, integrated into `soz-completion`:
+  the recovery2312 mismatch came from stale engine grounding support, not
+  terrain. The pre-fix production regression failed on retained support.
+  Queued `-Dmse=off -Dtest=TestSozRecoverySupportProduction,TestSidekickCpuControllerFlightAutoRecovery,TestObjectSolidContactController,TestSolidObjectManager test -B`
+  with the absolute main-workspace S3K ROM:107tests,0skips,52.842s.
+  Final `-Dtest=TestSozRecoverySupportProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+  with the same queued Maven/ROM flags:59tests,0skips,20.650s.
+  Recovery clears engine support and common status flags while preserving
+  native interaction/object-standing bytes; forced recreation/replay passes.
+- Same independent full-trace command (`-Ptrace-replay-r7
+  -Dtest=TestS3kSozCompleteRunTraceReplay`, absolute S3K ROM), clean candidate
+  source:59336compared rows,13159errors (10326physics,2833animation),0warnings,
+  0skips. First overall error remains queue34. All compared player fields match through
+  5669; first Tails error5670 is premature despawn (native133A/AD2 CPU6,
+  engine7F00/0 CPU2), and first P1 error is y-speed7291, formerly6241.
+  Total errors increase because the downstream trajectory changes; this is
+  prefix improvement, not an overall green run. Final trace elapsed time was
+  not retained and is not inferred from earlier invocations. No rows or queue
+  comparisons were removed. Investigating the next source-owned boundary.
+
+- `05fd83228` fixes live SST slot reads in companion despawn checks. Queued
+  `-Dtest=TestS3kLiveInteractSlotProduction,TestSidekickCpuDespawnParity,TestSozRecoverySupportProduction,TestSidekickCpuControllerFlightAutoRecovery`
+  with `-Dmse=off` and the absolute S3K ROM:88passed,0skips,49.839s. Same-word
+  replacement, changed-word, empty-slot and zero-equal branches include forced
+  replay. Unknown live code providers remain unknown, rather than guessed empty.
+  The same independent full trace reports59336frames,12970errors (10158physics,
+  2812animation),0warnings/0skips, Maven1:07 (test17.11s). Queue34 remains;
+  first player mismatch moves to Tails mapping5977 (8vs7), first physics Tails6423
+  (g-speed-3vsA5,y-speed540vs0,air1vs0,status2vs8). P1 first y-speed remains7291.
+- Cold controller capture and native object rows identify P1's7291 missed landing:
+  native sliding sand block at`136D/848` receives the player, whereas the engine
+  spawner at`13A6/8B7` emits a falling child far below it. `loc_402CC/402EE` use
+  Oscillating_table+$16; the engine API excludes the control word and needs$14.
+  Root regression on current SOZ tree fails before fix (expected403,actual4FF),
+  1failure/0skips,18.440s. Queued `-Dtest=TestSozSandMechanisms,TestSozSandMechanismsProduction`
+  with explicit S3K ROM after fix:20passed,0skips,55.420s. Full trace movement
+  remains to be measured; no gameplay state was supplied from comparison rows.
+
+- `37170aaad`, measured at integrated `a66e14bf5` in `soz-completion`:
+  `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7
+  -Dtest=TestS3kSozCompleteRunTraceReplay
+  "-Ds3k.rom.path=$SOZ_ROM"
+  test -B` (`SOZ_ROM` is the discovered absolute main-workspace S3K ROM path)
+  completes in1:13,1failed test/0skips,59336compared frames,
+  10506errors (9388physics/1118animation),0warnings/bootstrap errors. Queue34
+  remains first overall; Tails mapping5977 remains and first Tails physics moves
+  to9046. P1/camera kinematics match through19410; ring count differs at13343
+  (3expected/4actual). First P1 movement mismatch19411 is a spring-vine landing
+  at`$3498/$9C0`: expected y`$9AD`,actual`$9B0`, y-speed`$14E`versus0.
+  This is a longer exact movement prefix, not a passing full trace. The ordinary
+  capture driver has a separately measured trajectory and cannot inherit this
+  hardware-timed replay's matching prefix; its cold route remains independently
+  controlled and validated.
+
+- Spring-vine19411 source diagnosis: `loc_1E45A` rejects exact zero overlap
+  through its unsigned `CMP.W #-$10 / BLO`, admitting only1..16. The optional
+  direct-top classifier admitted0. The expanded production-solid regression
+  fails before the fix at overlap0 (1failure/0skips,51.698s). The corrected
+  classifier is exercised at overlaps-1/0/1/15/16/17, three radii and grounded/
+  airborne entry. Queued `-Dmse=off
+  -Dtest=TestSolidObjectManager,TestSozSpringVine,TestSozAct1SpringVineRoute`
+  with the absolute S3K ROM passes99tests,0skips,54.927s. Generic slope
+  classification and continued riding are unchanged. The full trace after this
+  correction remains to be measured.
+
+- `5d67103dc`, same independent trace command in `soz-completion`: the replay
+  aborts with `S3K KosM module FIFO is full` while `Sonic3kStarPostObjectInstance`
+  submits bonus-star art. Maven reports1test error/0skips,29.200s. The partial
+  report contains22525compared frames through22567,2995divergences
+  (2648physics/347animation),0warnings/bootstrap errors. There are no P1
+  position/speed/angle/air/camera mismatches in those compared frames; ring13343
+  and mapping21749 differ. Tails mapping5977 and queue34 remain. This is an
+  incomplete replay, not a reduction of the full59336-frame error total. The
+  four-entry module queue rejects a further submission after the existing timing
+  divergence; capacity and comparison admission were not relaxed to finish the
+  recording. Ordinary controller cold-route validation remains independent.
+
+### 2026-09-16 — AIZ replays measured around the forest-ring fix
+
+- `5286a09c9` (unmodified develop, `.worktrees/lead-verify-aiz-baseline`) and the
+  same tree plus `bugfix/ai-aiz2-forest-ring-live-camera`:
+  `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+  -Dtest=TestS3kAizTraceReplay,TestS3kAizZoneSliceTraceReplay
+  "-Ds3k.rom.path=<absolute S3K ROM>" -DfailIfNoTests=false test` reports
+  17 tests, 4 failures, 0 skips on both trees, with identical errors:
+  `TestS3kAizTraceReplay.replayMatchesTrace` first error frame 5497 `camera_x`
+  (expected `$0010`, actual `$0012`, 59 errors);
+  `TestS3kAizZoneSliceTraceReplay` first error frame 6302 `camera_x` (same
+  values, 101 errors); `aiz2ReloadResumeAppliesRomCameraLock` and
+  `aiz2FireRevealReleasesReloadCameraLockOnRomFrame` fail on the same AIZ2
+  reload camera lock (`$0010` expected, `$000C`/`$002D` observed). These predate
+  and are unchanged by the forest-ring fix, whose code is gated on the
+  post-bombing forest loop and cannot run at frame 5497. The last recorded
+  `TestS3kAizTraceReplay` frontier here was frame 20713, so develop currently
+  carries an unattributed AIZ2 reload camera-lock regression; the owning commit
+  was not bisected in this task.
+
+### 2026-09-17 — Sonic + Tails HPZ segment blocked by the LRZ3 prefix
+
+- `84c9e38d8` (`.worktrees/ai-hpz-bring-up`, HPZ bring-up branch):
+  `python3 tools/testing/maven_queue.py -Dmse=off -B -Ptrace-replay
+  -Dtest=TestS3kSonicTailsHpz222SegmentTraceReplay "-Ds3k.rom.path=<absolute S3K ROM>" test`
+  reports 1 test, 1 failure, 0 skips: 1902 errors, 0 warnings, first error frame 0
+  `camera_y` (expected `$02F0`, actual `$030C`); previously 1913 at the same first error.
+  The report's latest zone/act state stays at frame 0 (`$16` act 0): the segment starts in the
+  LRZ3 boss arena and the engine never reaches the ROM's `$1601` entry at row `$1E46`
+  (LRZ3 has no events or boss yet). The 871 errors at rows `>= $1E46` are therefore the LRZ3
+  dependency, not Hidden Palace divergences. HPZ strict replay stays blocked until LRZ3 hands
+  off to `$1601`; HPZ acceptance uses cold controller routes and native probes meanwhile.
+
+### 2026-09-16 — SOZ LoadEnemyArt batch submitted
+
+- Branch `bugfix/ai-soz-recorded-routes` (`.worktrees/soz-recorded-routes`), on top of
+  `939d4a137`, against base `4a9962069` (`.worktrees/soz-base-attrib`). Both trees ran
+  `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3k*TraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" -Dsurefire.failIfNoSpecifiedTests=false test -B`
+  with fresh `target/trace-reports` (61 tests; base 20 failures/2 errors, branch
+  21 failures/1 error, 0 skips). Every non-SOZ report is identical, including the
+  AIZ frames 5497/6302 and zero-error FBZ/bonus/special-stage results.
+- `Sonic3kObjectArtProvider.scheduleEnemyKosArt` had no SOZ case, so the engine never
+  submitted `PLCKosM_SOZ` (Skorp, Sandworm, Rockn; `sonic3k.asm:64333-64334,
+  64417-64421`) that the recording queues at row 34. Every later Kosinski ordinal
+  lagged by three, and the star-post bonus-art job then waited on a recorded
+  completion that could not match.
+- `TestS3kSozCompleteRunTraceReplay`: base aborts after 22525 compared frames
+  (2995 errors, first error frame 34 `queue.s3k_kos_direct.busy`). Branch replays all
+  59336 frames without the `KosM module FIFO is full` abort: 13591 errors, first
+  error frame 5977 `tails_mapping_frame` (expected `$08`, actual `$07`). Inside the
+  base's 22525-frame window error groups fall 2985 -> 2604 (physics 2638 -> 2257,
+  animation unchanged at 347). The full-run total is not comparable with the
+  earlier partial count.
+- Same branch also carries Knuckles-only wall side-contact breaks, the Tails flight
+  activation frame and the Sandworm `Obj_WaitOffscreen` handshake; none moved a
+  non-SOZ S3K replay.
+
+### 2026-09-16 — SOZ results keep Ring_count until the Act 2 title card
+
+- `bugfix/ai-soz-recorded-routes` after `8247c211e`. `loc_2DD06` deletes the Act 1
+  results owner for zones `$08`/`$0B` without `Obj_TitleCard`, so `Ring_count` is not
+  cleared until the later `Obj_TitleCardWait` (`sonic3k.asm:62708-62730, 62220-62235`);
+  the engine reset it when results ended. Recorded Tails SOZ1 kept 88 rings from row
+  17771 to 18198; the engine now clears at 18192 (six rows early, the shared in-level
+  title-card timing model, not changed here).
+- `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestS3kSozCompleteRunTraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" test -B`: 59336 frames, 13244 errors (was 13591),
+  first error unchanged at frame 5977 `tails_mapping_frame`.
+
+### 2026-09-16 — SOZ CPU Tails despawn parity (still sprites, off-screen monitor)
+
+- `bugfix/ai-soz-recorded-routes` after `dab958c0e`, same focused and sweep commands as
+  the SOZ entries above (fresh `target/trace-reports`, 61 S3K replay tests).
+- Row 9046: the sand sets Tails' `Status_OnObj` without updating `interact`; the stale
+  slot now holds `Obj_AnimatedStillSprite` (word `$0002`) against the `$0004`
+  `Tails_CPU_interact` latch, so `sub_13EFC` despawns Tails. `StillSpriteInstance` and
+  `AnimatedStillSpriteInstance` did not publish a code word and were treated as unknown.
+  `TestS3kSozCompleteRunTraceReplay`: 13244 -> 10766 errors; the next Tails despawn
+  separation moved to row 18642.
+- Row 18642: off-screen CPU Tails lands on a monitor. `SolidObject_Monitor_Tails` reaches
+  `SolidObject_cont` without `SolidObjectFull`'s Player_2 render gate
+  (`sonic3k.asm:40486-40500, 40588-40596`); the S3K monitor now bypasses the engine's
+  off-screen full-solid gate as the S2 monitor already did. 10766 -> 10483 errors.
+- First physics divergence is now row 28940 (end of Act 1 results: `camera_x` `$4180` vs
+  `$4198`); first overall error unchanged at 5977 `tails_mapping_frame`. All other S3K
+  replay reports are identical to the previous branch sweep.
+
+### 2026-09-16 — SOZ1 results exit: gradual camera bounds and lower-slot control restore
+
+- `bugfix/ai-soz-recorded-routes` after `06d52d8dd`; same focused and sweep commands.
+- `Obj_LevelResults` never writes camera bounds; SOZ1's golem opens them with
+  `Obj_DecLevStartXGradual`/`Obj_IncLevEndXGradual`. The engine restored level bounds
+  on results exit, so the camera jumped (Tails route rows 17771-17795, `soz_completerun`
+  row 28940). SOZ Act 1 is now a boss-owned gradual expansion.
+- The results owner restored player control in its own pass; SOZ1's
+  `Obj_EndSignControlAwaitStart` is in a lower slot (8 vs 12) and restores on the next
+  pass, so the ROM player never obeys the held input at row 28941. The results owner
+  now defers to any live lower-slot EndSignControl owner. `TestS3kSozCompleteRunTraceReplay`:
+  10483 -> 9164 errors; first physics divergence row 28941 -> 29093 (CPU Tails
+  `x_speed` on the walk to the pyramid). Other S3K replay reports unchanged.
+
+### 2026-09-17 — SOZ2 SST slot parity: 3 -> 0 errors (soz_completerun green)
+
+- `bugfix/ai-soz2-sst-parity` from develop `88ee4775f` to `bddbce125`: Camera_Y object
+  strip scan (`3a4858127`), first-free starpost children and bonus-star range delete
+  (`ed964eea5`), push switch own-checkpoint rider unseat (`3bdd0a2a8`), attracted-ring slot
+  order around the object load and spark release (`bddbce125`). `soz_completerun` 3 -> 0;
+  `TestS3kSozCompleteRunTraceReplay` passes.
+- Sweep: `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.**.Test*TraceReplay" <S1/S2/S3K ROM paths>
+  -Dsurefire.failIfNoSpecifiedTests=false test -B` on develop `88ee4775f` and the branch:
+  only `TestS3kSozCompleteRunTraceReplay` changed status (FAIL -> PASS). Report totals that
+  moved: `s3k_soz1-single-c203004eb0b074c1` 3 -> 0, `s3k_mhz1-single-ec1a83b31fa42bc3`
+  3132 -> 3199 (first error unchanged at row 6958 `rings`; new divergence row 11644 Tails
+  hurt, from the first-free starpost children) and `s3k_soz1-single-83fff36367af0f2e`
+  553 -> 554 (first error unchanged at row 0 `camera_y`).
+
+### 2026-09-17 — SOZ last animation residue: 27 -> 3 errors
+
+- `bugfix/ai-soz-last-residue` from develop `832554260` to `581000f11`: headroom check
+  preloads the angle registers (`a13af0437`), Rock'n shell instance latch key
+  (`85bcdbc19`), duck after a brake to zero (`581000f11`). `soz_completerun` 27 -> 3; the
+  first error is now row 45256 `rings` (SOZ2 SST load/allocation parity).
+- Sweep: `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.**.Test*TraceReplay" <S1/S2/S3K ROM paths>
+  -Dsurefire.failIfNoSpecifiedTests=false test -B` on develop `832554260` and the branch:
+  no class changed status; the only report totals that moved were
+  `s3k_soz1-single-c203004eb0b074c1` (27 -> 3) and `s3k_soz1-single-bed5e8410f08c843`
+  (2906 -> 2746, first error unchanged at row 4868).
+
+### 2026-09-17 — SOZ camera wrap gate: 29 -> 27 errors
+
+- `bugfix/ai-modapi-body-edit-hook`: `32fcfffe6` lets the policy hooks accept body-only
+  edits to `@ModApi` classes; `ca2b99220` gates `Camera`'s wrap-crossing player write on
+  `CameraRules.playerControlAppliesVerticalWrapMask`. `soz_completerun` 29 -> 27; row
+  51860 `y` cleared, so the first physics error is row 45256 `rings` (SST slot phase).
+  `TestS1Lz3CompleteRunTraceReplay`, `TestS1Credits03Lz3TraceReplay` and
+  `TestS1Credits06Sbz2TraceReplay` stay green; both MGZ traces keep their totals.
+
+### 2026-09-17 — SOZ end-boss escape, capsule and residue: 65 -> 29 errors
+
+- `bugfix/ai-soz-open-residue` from develop `861a2ac7b` to `b9e996a48`, same focused
+  command as below. `soz_completerun` 65 -> 29 errors; per-commit table and rejected
+  attempts in the SOZ plan ("Replay follow-up: end-boss escape, capsule and residue").
+  First error still row 5977 `tails_mapping_frame`; first physics error row 45256
+  `rings` (SST slot phase), then row 51860 `y` (camera wrap gate, not merged). No
+  physics error remains after row 50720.
+- S3K sweep on develop `861a2ac7b` (worktree at `8da176b27`) and on the branch at
+  `b9e996a48`: the only per-class change was `TestS3kSozCompleteRunTraceReplay`
+  (FAIL/65 -> FAIL/29); CNZ, ICZ, MGZ and MHZ capsule and spring traces kept their
+  totals.
+
+### 2026-09-17 — SOZ2 route through the end boss: 9164 -> 65 errors
+
+- `bugfix/ai-soz-recorded-routes` from `0ff2ebf25` to `8d2b4945b`. Focused command:
+  `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestS3kSozCompleteRunTraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" test -B` (fresh `target/trace-reports`).
+- Per-commit errors, physics frontiers and native causes are tabulated in the SOZ plan
+  ("Replay follow-up: SOZ2 through the end boss"). `soz_completerun` now runs 59336
+  frames with 65 errors; the first error is still the animation-only row 5977
+  `tails_mapping_frame`, and the first physics divergence is row 45256 `rings` (lost-ring
+  floor phase from SST slot order), then row 51860 `y` (camera wrap write, blocked by the
+  `@ModApi` pin policy) and row 59238 (boss escape subpixel).
+- S3K sweep: `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3k*TraceReplay" "-Ds3k.rom.path=<ROM>"
+  -Dsurefire.failIfNoSpecifiedTests=false test -B` on develop `70aa0a0b7` (61 classes:
+  20 failures, 2 errors) and on the branch at `27d0d4bc5` (21 failures, 1 error). The
+  only per-class change was `TestS3kSozCompleteRunTraceReplay` (ERROR -> FAIL with a
+  complete report); every other class kept its status and error total, including the
+  shared spring, object-load band, Blastoid and capsule-rewind changes.
+
+
+## 2026-09-17 — Doomsday zone0c: seeded route exact to the exit; strict replay blocked at bootstrap
+
+- Worktree `.worktrees/ai-ddz-bring-up`, branch `feature/ai-ddz-bring-up`, `42653d028` plus the
+  uncommitted DDZ lifecycle/explosion-art follow-up.
+- Strict replay: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments
+  -Dtest=TestS3kSonicTailsZone0cSegmentTraceReplay -Ds3k.rom.path=<abs>/s3k.gen test`.
+  Result: FAIL, 674 errors, first error frame 0 `y` (expected `$00C0`, actual `$0080`). Before
+  the bring-up the segment had 411 errors from frame 0 `x` (no flight controller). The blocker is
+  the replay bootstrap: it positions Player 1 from metadata start (already moved by the
+  controller's init pass) and derives the camera from it, and seeds neither the camera X fraction
+  nor the full `V_int_run_count` that the movie inherited from Sky Sanctuary.
+- Ordinary-input frontier: `TestS3kDdzColdRoutes` (complete-run BK2 from movie frame 514214,
+  declared `V_int_run_count` 512489 and camera fraction `$2700`, physics rows compared only)
+  matches player x/y, camera x/y and rings on all 10058 gameplay rows through both boss phases,
+  two wraps and the `$D01` request. `GameplayCaptureTool` on the production loop with the same
+  seeds (`--settle 1`) matches the same rows.
+- Fixes that moved it (plan evidence, `docs/architecture/plans/2026-09-17-ddz-bring-up.md`):
+  `Seek_Object_Manager` cursor seek on the wrap (first error 8248 -> 8249), the
+  `Camera_X_pos_coarse_back` latch for DDZ delete checks (slot history probe, row 173 -> exit).

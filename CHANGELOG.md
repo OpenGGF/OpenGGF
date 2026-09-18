@@ -5,21 +5,12 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`next` / 0.8)
 
-Work promoted from `next` is recorded in [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
-
-- **Native builds no longer crash on Sonic 3 & Knuckles.** GraalVM native-image
-  embeds only the classpath resources its `resource-config.json` names, and the S3K
-  load-time manifests had never been listed there. In a native build the manifest
-  lookup returned a null stream and the S3K game module threw while building its
-  load-time profile, so the game failed to start under the default `FAST` load-time
-  simulation. The window icon set, the bundled track-validation profiles and the mod
-  SDK templates were missing from the same file and are now embedded as well. A
-  structural guard fails whenever a runtime resource under `src/main/resources` is
-  unreachable from that config, so the drift cannot reach a shipped bundle again.
+No 0.8-only release entries yet. Work promoted from `next` is recorded in
+[CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 
 ## Release files
 
-- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.md)
+- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.md) — including the controller-accessible title hub, engine settings, and shared UI improvements.
 
 - [0.6.20260911](CHANGELOG.0.6.md)
 - [0.5.20260411](CHANGELOG.0.5.md)

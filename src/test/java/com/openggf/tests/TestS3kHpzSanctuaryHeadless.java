@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.GameServices;
-import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.objects.HPZSSEntryControlObjectInstance;
 import com.openggf.game.sonic3k.objects.HPZSanctuaryFallingCrystalObjectInstance;
 import com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance;
@@ -10,12 +10,14 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -27,10 +29,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kHpzSanctuaryHeadless {
 
-    @Test
-    void sanctuaryWithoutChaosEmeraldsUnlocksWithoutConversionPan() {
+    @ParameterizedTest
+    @ValueSource(ints = {0x17})
+    void sanctuaryPublishesEverySceneSpriteRenderer(int zone) {
+        HeadlessTestFixture.builder().withZoneAndAct(zone, 1).build();
+        var art = GameServices.module().getObjectArtProvider();
+        for (String key : List.of(Sonic3kObjectArtKeys.HPZ_MASTER_EMERALD,
+                Sonic3kObjectArtKeys.HPZ_GRAY_EMERALD,
+                Sonic3kObjectArtKeys.HPZ_SMALL_EMERALDS,
+                Sonic3kObjectArtKeys.HPZ_ENTRY_TELEPORTER)) {
+            assertNotNull(art.getRenderer(key), "Missing sanctuary renderer: " + key);
+            var sheet = art.getSheet(key);
+            assertNotNull(sheet, "Missing sanctuary sheet: " + key);
+            assertTrue(sheet.getPatterns().length > 0, "Missing ROM art: " + key);
+            assertTrue(sheet.getFrameCount() > 0, "Missing ROM mappings: " + key);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0x17})
+    void sanctuaryWithoutChaosEmeraldsUnlocksWithoutConversionPan(int zone) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                .withZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1)
+                .withZoneAndAct(zone, 1)
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
 
@@ -44,10 +64,11 @@ public class TestS3kHpzSanctuaryHeadless {
                 "the seven-small-Emerald ceremony only exists for state-1 conversion");
     }
 
-    @Test
-    void freshSanctuaryStartsItsCeremonyAtTheSpawnCameraAndRestoresSonic() {
+    @ParameterizedTest
+    @ValueSource(ints = {0x17})
+    void freshSanctuaryStartsItsCeremonyAtTheSpawnCameraAndRestoresSonic(int zone) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                .withZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1)
+                .withZoneAndAct(zone, 1)
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
         ObjectManager objects = GameServices.level().getObjectManager();
@@ -107,10 +128,11 @@ public class TestS3kHpzSanctuaryHeadless {
                 "the restored Sonic mapping/DPLC frame must contain drawable pieces");
     }
 
-    @Test
-    void everyPedestalSurvivesAWalkAcrossTheSanctuaryAndBack() {
+    @ParameterizedTest
+    @ValueSource(ints = {0x17})
+    void everyPedestalSurvivesAWalkAcrossTheSanctuaryAndBack(int zone) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                .withZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1)
+                .withZoneAndAct(zone, 1)
                 .build();
         GameServices.gameState().restoreS3kEmeraldProgress(
                 List.of(2, 2, 2, 2, 2, 2, 2), true);

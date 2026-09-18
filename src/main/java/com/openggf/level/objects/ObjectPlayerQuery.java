@@ -10,7 +10,6 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -97,18 +96,66 @@ public final class ObjectPlayerQuery {
                                  C context, PlayerVisitor<? super C> visitor) {
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(visitor, "visitor");
-        PlayableEntity main=mainPlayerOrNull();
-        List<? extends PlayableEntity> sidekicks=rawSidekicks();
-        if(policy==ObjectPlayerParticipationPolicy.NEAREST_ENGINE_PLAYER){PlayableEntity nearest=nearestUnique(main,sidekicks,referenceX,referenceY);if(nearest!=null)visitor.visit(context,nearest);return;}
-        if(main!=null)visitor.visit(context,main);
-        if(policy==ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE)return;
-        int limit=policy==ObjectPlayerParticipationPolicy.NATIVE_P1_P2?1:Integer.MAX_VALUE,added=0;
-        for(int i=0;i<sidekicks.size()&&added<limit;i++){PlayableEntity candidate=sidekicks.get(i);if(candidate==null||candidate==main||duplicateBefore(sidekicks,i,candidate))continue;visitor.visit(context,candidate);added++;}
+        PlayableEntity main = mainPlayerOrNull();
+        List<? extends PlayableEntity> sidekicks = rawSidekicks();
+        if (policy == ObjectPlayerParticipationPolicy.NEAREST_ENGINE_PLAYER) {
+            PlayableEntity nearest = nearestUnique(main, sidekicks, referenceX, referenceY);
+            if (nearest != null) {
+                visitor.visit(context, nearest);
+            }
+            return;
+        }
+        if (main != null) {
+            visitor.visit(context, main);
+        }
+        if (policy == ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE) {
+            return;
+        }
+        int limit = policy == ObjectPlayerParticipationPolicy.NATIVE_P1_P2 ? 1 : Integer.MAX_VALUE;
+        int added = 0;
+        for (int i = 0; i < sidekicks.size() && added < limit; i++) {
+            PlayableEntity candidate = sidekicks.get(i);
+            if (candidate == null || candidate == main || duplicateBefore(sidekicks, i, candidate)) {
+                continue;
+            }
+            visitor.visit(context, candidate);
+            added++;
+        }
     }
 
-    private static boolean duplicateBefore(List<? extends PlayableEntity> players,int end,PlayableEntity candidate){for(int i=0;i<end;i++)if(players.get(i)==candidate)return true;return false;}
-    private static PlayableEntity nearestUnique(PlayableEntity main,List<? extends PlayableEntity> sidekicks,int x,int y){PlayableEntity nearest=main;long best=main==null?Long.MAX_VALUE:distanceSquared(main,x,y);for(int i=0;i<sidekicks.size();i++){PlayableEntity candidate=sidekicks.get(i);if(candidate==null||candidate==main||duplicateBefore(sidekicks,i,candidate))continue;long distance=distanceSquared(candidate,x,y);if(distance<best){nearest=candidate;best=distance;}}return nearest;}
-    private static long distanceSquared(PlayableEntity player,int x,int y){long dx=(long)player.getCentreX()-x,dy=(long)player.getCentreY()-y;return dx*dx+dy*dy;}
+    private static boolean duplicateBefore(
+            List<? extends PlayableEntity> players, int end, PlayableEntity candidate) {
+        for (int i = 0; i < end; i++) {
+            if (players.get(i) == candidate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static PlayableEntity nearestUnique(
+            PlayableEntity main, List<? extends PlayableEntity> sidekicks, int x, int y) {
+        PlayableEntity nearest = main;
+        long best = main == null ? Long.MAX_VALUE : distanceSquared(main, x, y);
+        for (int i = 0; i < sidekicks.size(); i++) {
+            PlayableEntity candidate = sidekicks.get(i);
+            if (candidate == null || candidate == main || duplicateBefore(sidekicks, i, candidate)) {
+                continue;
+            }
+            long distance = distanceSquared(candidate, x, y);
+            if (distance < best) {
+                nearest = candidate;
+                best = distance;
+            }
+        }
+        return nearest;
+    }
+
+    private static long distanceSquared(PlayableEntity player, int x, int y) {
+        long dx = (long) player.getCentreX() - x;
+        long dy = (long) player.getCentreY() - y;
+        return dx * dx + dy * dy;
+    }
 
     public NearestPlayerX nearestByRomX(ObjectPlayerParticipationPolicy policy, int referenceX) {
         return nearestByRomX(policy, referenceX, player -> true);
@@ -136,18 +183,7 @@ public final class ObjectPlayerQuery {
     }
 
     private List<PlayableEntity> nearestEnginePlayer(int referenceX, int referenceY) {
-        List<PlayableEntity> players = uniquePlayers(mainPlayerOrNull(), rawSidekicks(), Integer.MAX_VALUE);
-        PlayableEntity nearest = null;
-        long nearestDistance = Long.MAX_VALUE;
-        for (PlayableEntity player : players) {
-            long dx = (long) player.getCentreX() - referenceX;
-            long dy = (long) player.getCentreY() - referenceY;
-            long distance = dx * dx + dy * dy;
-            if (distance < nearestDistance) {
-                nearest = player;
-                nearestDistance = distance;
-            }
-        }
+        PlayableEntity nearest = nearestUnique(mainPlayerOrNull(), rawSidekicks(), referenceX, referenceY);
         return nearest == null ? List.of() : List.of(nearest);
     }
 
@@ -173,30 +209,18 @@ public final class ObjectPlayerQuery {
     private static List<PlayableEntity> uniquePlayers(PlayableEntity main,
                                                       List<? extends PlayableEntity> sidekicks,
                                                       int sidekickLimit) {
-        ArrayList<PlayableEntity> players = new ArrayList<>();
-        IdentityHashMap<PlayableEntity, Boolean> seen = new IdentityHashMap<>();
-        addIfPresent(players, seen, main);
+        // Teams are small. Identity scans avoid a map and its backing array on
+        // every object query while retaining identity (not equals) semantics.
+        ArrayList<PlayableEntity> players = new ArrayList<>(1 + Math.min(sidekicks.size(), sidekickLimit));
+        if (main != null) players.add(main);
         int addedSidekicks = 0;
-        for (PlayableEntity sidekick : sidekicks) {
-            if (addedSidekicks >= sidekickLimit) {
-                break;
-            }
-            if (addIfPresent(players, seen, sidekick)) {
-                addedSidekicks++;
-            }
+        for (int i = 0; i < sidekicks.size() && addedSidekicks < sidekickLimit; i++) {
+            PlayableEntity candidate = sidekicks.get(i);
+            if (candidate == null || candidate == main || duplicateBefore(sidekicks, i, candidate)) continue;
+            players.add(candidate);
+            addedSidekicks++;
         }
         return players;
-    }
-
-    private static boolean addIfPresent(List<PlayableEntity> players,
-                                        IdentityHashMap<PlayableEntity, Boolean> seen,
-                                        PlayableEntity player) {
-        if (player == null || seen.containsKey(player)) {
-            return false;
-        }
-        players.add(player);
-        seen.put(player, Boolean.TRUE);
-        return true;
     }
 
     private static PlayableEntity resolveMainPlayer(ObjectServices services) {

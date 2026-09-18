@@ -573,7 +573,9 @@ class TestBuildToolingGuard {
         NodeList argLines = pom.getElementsByTagName("argLine");
         for (int i = 0; i < argLines.getLength(); i++) {
             assertTrue(argLines.item(i).getTextContent().contains(
-                            "-Djava.io.tmpdir=\"${openggf.test.tmpdir}\""),
+                            "-Djava.io.tmpdir=\"${openggf.test.tmpdir}\"")
+                            || argLines.item(i).getTextContent().contains(
+                            "-Djava.io.tmpdir=\"${openggf.test.tmpdir}/fork-${surefire.forkNumber}\""),
                     "Surefire argLine must quote the target-local test temp path: "
                             + argLines.item(i).getTextContent().trim());
             assertTrue(argLines.item(i).getTextContent().contains(
@@ -735,6 +737,88 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void concurrentProfileMustIsolateProcessesAndRetainSerialJupiter() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element concurrent = profileById(pom, "test-concurrent");
+        assertNotNull(concurrent);
+        assertEquals("2", directChild(directChild(concurrent, "properties"),
+                "surefire.forkCount").getTextContent().trim());
+        assertEquals("false", concurrent.getElementsByTagName(
+                "junit.jupiter.execution.parallel.enabled").item(0).getTextContent().trim());
+        assertTrue(concurrent.getElementsByTagName("argLine").item(0).getTextContent()
+                .contains("/fork-${surefire.forkNumber}"));
+        Element guards = profileById(pom, "guards");
+        assertTrue((concurrent.compareDocumentPosition(guards) & Node.DOCUMENT_POSITION_FOLLOWING) != 0,
+                "guards must override concurrent capacity when profiles are combined");
+        String text = Files.readString(Path.of("pom.xml"));
+        for (int fork : List.of(1, 2)) {
+            assertTrue(text.contains("<mkdir dir=\"${openggf.test.tmpdir}/fork-" + fork + "\"/>"),
+                    "fork temp directories must exist before Surefire starts");
+        }
+    }
+
+    @Test
+    void publicAudioResourcesMustExcludeCapturedReferenceBodies() throws Exception {
+        Path resources = Path.of("src/test/resources");
+        var manifest = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                resources.resolve("audio/contracts/external-fixtures-v1.json").toFile());
+        for (var file : manifest.path("files")) {
+            String member = file.path("path").asText();
+            if (!member.startsWith("audio/")) continue; // shared gameplay input movies are not audio payloads
+            if (member.equals("audio/nuked-opn2/port/expected.txt")) continue; // separate synthetic expectations
+            assertFalse(Files.exists(resources.resolve(member)),
+                    "captured audio payload must remain external: " + member);
+        }
+        Path port = resources.resolve("audio/nuked-opn2/port");
+        try (Stream<Path> scripts = Files.list(port)) {
+            assertFalse(scripts.map(path -> path.getFileName().toString())
+                    .anyMatch(name -> name.matches("(?:s1|s2|s3k)-.*")),
+                    "captured game scripts must not become public resources again");
+        }
+        assertEquals(580, Files.readAllLines(port.resolve("expected.txt")).size(),
+                "retain the independently pinned synthetic chip cases");
+        String pom = Files.readString(Path.of("pom.xml"));
+        assertTrue(pom.contains("dir=\"${project.build.directory}/test-classes\" erroronmissingdir=\"false\""));
+        for (String retired : List.of("audio/parity/**", "audio/nuked-opn2/port/s1-*.txt.gz",
+                "audio/nuked-opn2/port/s2-*.txt.gz", "audio/nuked-opn2/port/s3k-*.txt.gz",
+                "audio/nuked-opn2/port/expected.txt")) {
+            assertTrue(pom.contains("<include name=\"" + retired + "\"/>"),
+                    "existing build trees must retire copied game references: " + retired);
+        }
+    }
+
+    @Test
+    void exhaustiveFbzRoutesHaveAnExplicitLane() throws Exception {
+        Document pom = parsePom("pom.xml");
+        assertTrue(property(pom, "surefire.excludedGroups").contains("fbz-route"));
+        Element smoke = profileById(pom, "smoke");
+        assertTrue(smoke.getElementsByTagName("surefire.excludedGroups").item(0)
+                .getTextContent().contains("fbz-route"));
+        Element routes = profileById(pom, "fbz-routes");
+        assertNotNull(routes);
+        assertEquals("fbz-route", routes.getElementsByTagName("groups").item(0)
+                .getTextContent().trim());
+        assertFalse(routes.getElementsByTagName("excludedGroups").item(0)
+                .getTextContent().contains("fbz-route"));
+    }
+
+    @Test
+    void deeperAudioLanesMustBeExplicit() throws Exception {
+        Document pom = parsePom("pom.xml");
+        String excluded = property(pom, "surefire.excludedGroups");
+        assertTrue(excluded.contains("audio-reference"));
+        assertTrue(excluded.contains("audio-stress"));
+        assertTrue(excluded.contains("audio-local-wave"));
+        for (String lane : List.of("audio-reference", "audio-stress", "audio-local-wave")) {
+            Element profile = profileById(pom, lane);
+            assertNotNull(profile);
+            assertEquals(lane, profile.getElementsByTagName("groups").item(0).getTextContent().trim());
+            assertFalse(profile.getElementsByTagName("excludedGroups").item(0)
+                    .getTextContent().contains(lane), "explicit lane must actually execute");
+        }
+    }
+
+    @Test
     void ordinarySurefireShouldUseSharedAlphabeticalRunOrder() throws Exception {
         Document pom = parsePom("pom.xml");
         Element projectProperties = directChild(pom.getDocumentElement(), "properties");
@@ -867,7 +951,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap() throws Exception {
+    void supportedDocumentationMustUseQueuedMavenAndExplicitHookBootstrap() throws Exception {
         Path agentsPath = Path.of("AGENTS.md");
         Path claudePath = Path.of("CLAUDE.md");
         String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
@@ -880,16 +964,19 @@ class TestBuildToolingGuard {
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
             violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
         }
+        // Local Maven goes through the shared queue wrapper (tools/testing/maven_queue.py),
+        // never bare mvn: direct mvn bypasses admission and the worktree slot.
         for (String requiredText : List.of(
-                "mvn package",
-                "mvn test",
-                "mvn \"-Dtest=TestCollisionLogic\" test",
-                "mvn -Dmse=off -Pguards test -B",
+                "python3 tools/testing/run_categories.py --list",
+                "python3 tools/testing/run_categories.py --base <pre-task-commit> --run",
+                "python3 tools/testing/maven_queue.py -Dmse=off package",
+                "python3 tools/testing/maven_queue.py -Dmse=off \"-Dtest=TestCollisionLogic\" test",
+                "python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B",
                 "Maven output belongs in the current worktree's `target/` directory.",
                 "Do not share or\n  copy build trees.",
-                "Concurrent Maven runs need separate worktrees.")) {
+                "Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.")) {
             if (!agents.contains(requiredText)) {
-                violations.add("AGENTS.md/CLAUDE.md do not contain required direct-Maven guidance: "
+                violations.add("AGENTS.md/CLAUDE.md do not contain required queued-Maven guidance: "
                         + requiredText);
             }
         }
@@ -1382,7 +1469,7 @@ class TestBuildToolingGuard {
         if (!ci.contains("pull_request:\n    branches:\n      - next\n      - develop")) {
             violations.add(".github/workflows/ci.yml must validate pull requests targeting next and develop");
         }
-        // Every branch push reaches the destination-aware smoke suite.
+        // Every branch push reaches smoke; release destinations are checked only on integration branches.
         if (!ci.contains("push:\n    branches:\n      - '**'")) {
             violations.add(".github/workflows/ci.yml must validate pushes on every branch");
         }
@@ -1395,8 +1482,11 @@ class TestBuildToolingGuard {
 
         assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run tests (pull request)",
                 "github.event_name == 'pull_request'", "github.base_ref", violations);
-        assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run smoke suite (push)",
-                "github.event_name == 'push'", "github.ref_name", violations);
+        String pushSmoke = workflowStep(ci, "Run smoke suite (push)");
+        if (pushSmoke == null || !pushSmoke.contains("github.event_name == 'push'")
+                || !hasCanonicalPushDestinationDispatch(pushSmoke)) {
+            violations.add("CI push smoke must validate master/develop/next destinations and omit feature refs");
+        }
         assertMavenStepOmitsDestination(ci, ".github/workflows/ci.yml", "Run tests (manual)",
                 violations);
 
@@ -3699,9 +3789,18 @@ class TestBuildToolingGuard {
     @Test
     void shellAndPowerShellGrandfatherOnlyExactHistoricFrontierOccurrences(
             @TempDir Path temporaryDirectory) throws Exception {
-        String baseline = gitOutput(
+        String publishedBaseline = gitOutput(
                 Path.of(".").toAbsolutePath(), "show",
                 FRONTIER_GRANDFATHER_BASELINE + ":" + FRONTIER_LOG_PATH);
+        // Exercise every real grandfathered line/count without rescanning the
+        // unrelated 54,000-line narrative for each introduced historical line.
+        // The separate published-prefix test keeps full-size integration coverage.
+        String baseline = "portable header\nportable context\n"
+                + String.join("\n", publishedBaseline.lines()
+                        .filter(TestBuildToolingGuard::containsMachineLocalHome).toList()) + "\n";
+        Path policies = writeCompactGrandfatherPolicy(temporaryDirectory, publishedBaseline, baseline);
+        Path shellPolicy = policies.resolve("validate-policy.sh");
+        Path powerShellPolicy = policies.resolve("validate-policy.ps1");
         String historicLine = baseline.lines()
                 .filter(TestBuildToolingGuard::containsMachineLocalHome)
                 .findFirst()
@@ -3712,9 +3811,9 @@ class TestBuildToolingGuard {
         writeAndStage(exactRepository, FRONTIER_LOG_PATH, "portable baseline\n");
         commit(exactRepository, "neutralized frontier");
         writeAndStage(exactRepository, FRONTIER_LOG_PATH, baseline + "portable append\n");
-        assertPolicyAccepts(runPolicy(exactRepository, "pre-commit"));
+        assertPolicyAccepts(runPolicy(exactRepository, shellPolicy, "pre-commit"));
         if (powershell != null) {
-            assertPolicyAccepts(runPowerShellPolicy(exactRepository, powershell, "pre-commit"));
+            assertPolicyAccepts(runPowerShellPolicy(exactRepository, powershell, powerShellPolicy, "pre-commit"));
         }
 
         Path alteredRepository = newRepository(temporaryDirectory, "grandfather-altered");
@@ -3722,18 +3821,18 @@ class TestBuildToolingGuard {
         commit(alteredRepository, "neutralized frontier");
         writeAndStage(alteredRepository, FRONTIER_LOG_PATH,
                 baseline.replaceFirst(Pattern.quote(historicLine), historicLine + "-altered"));
-        assertPolicyRejects(runPolicy(alteredRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        assertPolicyRejects(runPolicy(alteredRepository, shellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         if (powershell != null) {
-            assertPolicyRejects(runPowerShellPolicy(alteredRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+            assertPolicyRejects(runPowerShellPolicy(alteredRepository, powershell, powerShellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         }
 
         Path replayRepository = newRepository(temporaryDirectory, "grandfather-replay");
         writeAndStage(replayRepository, FRONTIER_LOG_PATH, "portable baseline\n");
         commit(replayRepository, "neutralized frontier");
         writeAndStage(replayRepository, FRONTIER_LOG_PATH, baseline + historicLine + "\n");
-        assertPolicyRejects(runPolicy(replayRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        assertPolicyRejects(runPolicy(replayRepository, shellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         if (powershell != null) {
-            assertPolicyRejects(runPowerShellPolicy(replayRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+            assertPolicyRejects(runPowerShellPolicy(replayRepository, powershell, powerShellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         }
 
         Path deletedRepository = newRepository(temporaryDirectory, "grandfather-deletion");
@@ -3741,19 +3840,19 @@ class TestBuildToolingGuard {
         commit(deletedRepository, "historic frontier");
         String deleted = baseline.replaceFirst(Pattern.quote(historicLine + "\n"), "");
         writeAndStage(deletedRepository, FRONTIER_LOG_PATH, deleted);
-        assertPolicyRejects(runPolicy(deletedRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        assertPolicyRejects(runPolicy(deletedRepository, shellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         if (powershell != null) {
-            assertPolicyRejects(runPowerShellPolicy(deletedRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+            assertPolicyRejects(runPowerShellPolicy(deletedRepository, powershell, powerShellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         }
 
         Path replayAfterDeletionRepository = newRepository(temporaryDirectory, "grandfather-replay-after-deletion");
         writeAndStage(replayAfterDeletionRepository, FRONTIER_LOG_PATH, baseline);
         commit(replayAfterDeletionRepository, "historic frontier");
         writeAndStage(replayAfterDeletionRepository, FRONTIER_LOG_PATH, deleted + historicLine + "\n");
-        assertPolicyRejects(runPolicy(replayAfterDeletionRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        assertPolicyRejects(runPolicy(replayAfterDeletionRepository, shellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         if (powershell != null) {
             assertPolicyRejects(runPowerShellPolicy(
-                    replayAfterDeletionRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+                    replayAfterDeletionRepository, powershell, powerShellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         }
 
         int firstBreak = baseline.indexOf('\n');
@@ -3765,9 +3864,9 @@ class TestBuildToolingGuard {
         writeAndStage(reorderedRepository, FRONTIER_LOG_PATH, baseline);
         commit(reorderedRepository, "historic frontier");
         writeAndStage(reorderedRepository, FRONTIER_LOG_PATH, reordered);
-        assertPolicyRejects(runPolicy(reorderedRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        assertPolicyRejects(runPolicy(reorderedRepository, shellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         if (powershell != null) {
-            assertPolicyRejects(runPowerShellPolicy(reorderedRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+            assertPolicyRejects(runPowerShellPolicy(reorderedRepository, powershell, powerShellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         }
 
         Path wrongPathRepository = newRepository(temporaryDirectory, "grandfather-wrong-path");
@@ -3775,17 +3874,65 @@ class TestBuildToolingGuard {
         writeAndStage(wrongPathRepository, wrongPath, "portable baseline\n");
         commit(wrongPathRepository, "portable audit");
         writeAndStage(wrongPathRepository, wrongPath, historicLine + "\n");
-        assertPolicyRejects(runPolicy(wrongPathRepository, "pre-commit"), wrongPath);
+        assertPolicyRejects(runPolicy(wrongPathRepository, shellPolicy, "pre-commit"), wrongPath);
         if (powershell != null) {
-            assertPolicyRejects(runPowerShellPolicy(wrongPathRepository, powershell, "pre-commit"), wrongPath);
+            assertPolicyRejects(runPowerShellPolicy(wrongPathRepository, powershell, powerShellPolicy, "pre-commit"), wrongPath);
         }
 
         Path newFileRepository = newRepository(temporaryDirectory, "grandfather-new-file");
         writeAndStage(newFileRepository, FRONTIER_LOG_PATH, historicLine + "\n");
-        assertPolicyRejects(runPolicy(newFileRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        assertPolicyRejects(runPolicy(newFileRepository, shellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         if (powershell != null) {
-            assertPolicyRejects(runPowerShellPolicy(newFileRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+            assertPolicyRejects(runPowerShellPolicy(newFileRepository, powershell, powerShellPolicy, "pre-commit"), FRONTIER_LOG_PATH);
         }
+    }
+
+    @Test
+    void shellAndPowerShellPreservePublishedFrontierPrefixOnAppendAndTamper(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String baseline = gitOutput(Path.of(".").toAbsolutePath(), "show",
+                FRONTIER_GRANDFATHER_BASELINE + ":" + FRONTIER_LOG_PATH);
+        String historicLine = baseline.lines()
+                .filter(TestBuildToolingGuard::containsMachineLocalHome).findFirst().orElseThrow();
+        String powershell = availablePowerShell();
+        Path repository = newRepository(temporaryDirectory, "published-frontier");
+        writeAndStage(repository, FRONTIER_LOG_PATH, baseline);
+        commit(repository, "published frontier");
+
+        // Normal full-size appends must preserve the real manifest's byte prefix.
+        // Restoring historical lines from a neutral parent is covered by the compact matrix.
+        writeAndStage(repository, FRONTIER_LOG_PATH, baseline + "portable append\n");
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+        if (powershell != null) {
+            assertPolicyAccepts(runPowerShellPolicy(repository, powershell, "pre-commit"));
+        }
+
+        writeAndStage(repository, FRONTIER_LOG_PATH,
+                baseline.replaceFirst(Pattern.quote(historicLine), historicLine + "-altered"));
+        assertPolicyRejects(runPolicy(repository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(repository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+    }
+
+    private static Path writeCompactGrandfatherPolicy(
+            Path temporaryDirectory, String publishedBaseline, String compactBaseline) throws Exception {
+        Path policies = Files.createDirectories(temporaryDirectory.resolve("compact-policy"));
+        Files.copy(POLICY_SCRIPT, policies.resolve("validate-policy.sh"));
+        Files.copy(POWERSHELL_POLICY_SCRIPT, policies.resolve("validate-policy.ps1"));
+        String manifest = Files.readString(MACHINE_LOCAL_PATH_GRANDFATHER);
+        String publishedPrefix = "# baseline-prefix\t"
+                + publishedBaseline.getBytes(StandardCharsets.UTF_8).length + "\t"
+                + sha256(publishedBaseline) + "\t" + FRONTIER_LOG_PATH;
+        String compactPrefix = "# baseline-prefix\t"
+                + compactBaseline.getBytes(StandardCharsets.UTF_8).length + "\t"
+                + sha256(compactBaseline) + "\t" + FRONTIER_LOG_PATH;
+        assertTrue(manifest.contains(publishedPrefix), "fixture must start from the verified published prefix");
+        // Only the prefix bytes change. Keep all real path/hash/count allowances,
+        // including duplicate occurrences, and execute byte-identical policy scripts.
+        Files.writeString(policies.resolve(MACHINE_LOCAL_PATH_GRANDFATHER.getFileName()),
+                manifest.replace(publishedPrefix, compactPrefix));
+        return policies;
     }
 
     @Test
@@ -3951,11 +4098,11 @@ class TestBuildToolingGuard {
         assertTrue(modules.contains("url = https://github.com/OpenGGF/TraceChaser.git"));
         assertFalse(modules.substring(modules.indexOf("[submodule \"tools/tracechaser\"]"))
                 .contains("branch ="), "TraceChaser must never float on a branch");
-        assertEquals("160000 4fb6d0802cc6ad27f07dd845a1b98ea84d2c7b0e 0\ttools/tracechaser",
+        assertEquals("160000 e0a2443e086ca657a49227c5467eeecd06e40ece 0\ttools/tracechaser",
                 gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
 
         String pom = Files.readString(Path.of("pom.xml"));
-        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration</surefire.excludedGroups>"));
+        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>"));
         assertTrue(pom.contains("<excludedGroups>${surefire.excludedGroups}</excludedGroups>"));
         assertTrue(pom.contains("<id>tracechaser-integration</id>"));
         for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
@@ -4199,8 +4346,16 @@ class TestBuildToolingGuard {
         Path unrelatedRepository = newRepository(temporaryDirectory, "unreachable-cutover");
         createInitialCommit(unrelatedRepository);
         String unrelatedTip = gitOutput(unrelatedRepository, "rev-parse", "HEAD").trim();
-        git(unrelatedRepository, "fetch", "--no-tags",
-                Path.of(".").toAbsolutePath().normalize().toString(), RESOURCE_POLICY_CUTOVER);
+        // Borrow immutable objects without fetching/packing the project's history.
+        // Only this fixture gets the alternate; its independent root and refs stay local.
+        String sourceObjects = gitOutput(Path.of("."), "rev-parse",
+                "--path-format=absolute", "--git-path", "objects").trim();
+        Files.writeString(unrelatedRepository.resolve(".git/objects/info/alternates"), sourceObjects + "\n");
+        assertEquals(RESOURCE_POLICY_CUTOVER,
+                gitOutput(unrelatedRepository, "rev-parse", "--verify", RESOURCE_POLICY_CUTOVER + "^{commit}").trim());
+        assertEquals(1, run(unrelatedRepository,
+                List.of("git", "merge-base", "--is-ancestor", RESOURCE_POLICY_CUTOVER, unrelatedTip), null).exitCode(),
+                "fixture must contain the cutover object without making it an ancestor of its tip");
         ProcessResult unrelatedResult = runPolicy(
                 unrelatedRepository, "ci-push", ALL_ZERO_OID, unrelatedTip, "feature/unreachable-cutover");
         assertTrue(unrelatedResult.exitCode() != 0,
@@ -4514,6 +4669,10 @@ class TestBuildToolingGuard {
         git(repository, "commit", "-m", subject);
     }
 
+    private static ProcessResult runPolicy(Path repository, Path script, String mode) throws Exception {
+        return run(repository, List.of("sh", script.toString(), mode), null);
+    }
+
     private static ProcessResult runPolicy(Path repository, String mode, String... arguments) throws Exception {
         return runPolicy(repository, Map.of(), mode, arguments);
     }
@@ -4557,6 +4716,11 @@ class TestBuildToolingGuard {
             String powershell,
             String mode,
             String... arguments) throws Exception {
+        return runPowerShellPolicy(repository, powershell, POWERSHELL_POLICY_SCRIPT, mode, arguments);
+    }
+
+    private static ProcessResult runPowerShellPolicy(
+            Path repository, String powershell, Path script, String mode, String... arguments) throws Exception {
         List<String> command = new ArrayList<>(List.of(
                 powershell,
                 "-NoLogo",
@@ -4564,7 +4728,7 @@ class TestBuildToolingGuard {
                 "-ExecutionPolicy",
                 "Bypass",
                 "-File",
-                POWERSHELL_POLICY_SCRIPT.toString(),
+                script.toString(),
                 mode));
         command.addAll(List.of(arguments));
         return run(repository, command, null);
@@ -5122,11 +5286,23 @@ class TestBuildToolingGuard {
                     && !step.contains("-DmodApi.destinationBranch=\"${{ github.base_ref }}\"")) {
                 violations.add(file + " " + name + " is a PR Maven test path without github.base_ref");
             }
-            if (step.contains("github.event_name == 'push'")
+            boolean canonicalCiPush = file.equals(".github/workflows/ci.yml")
+                    && name.equals("- name: Run smoke suite (push)")
+                    && hasCanonicalPushDestinationDispatch(step);
+            if (step.contains("github.event_name == 'push'") && !canonicalCiPush
                     && !step.contains("-DmodApi.destinationBranch=\"${{ github.ref_name }}\"")) {
                 violations.add(file + " " + name + " is a push Maven test path without github.ref_name");
             }
         }
+    }
+
+    /** Only the all-branch CI push path may omit a destination for feature refs. */
+    private static boolean hasCanonicalPushDestinationDispatch(String step) {
+        return step.contains("destination_args=()")
+                && step.contains("case \"$GITHUB_REF_NAME\" in")
+                && step.contains("master|develop|next)")
+                && step.contains("destination_args=(\"-DmodApi.destinationBranch=$GITHUB_REF_NAME\")")
+                && step.contains("mvn -Dmse=off -Psmoke test -B \"${destination_args[@]}\"");
     }
 
     private static String sourceForInventory(Path file) throws IOException {

@@ -2694,6 +2694,63 @@ public class TestPlayableSpriteMovement {
                                 "each active charge's $0900 word re-arms the later animation clear");
         }
 
+        @org.junit.jupiter.params.ParameterizedTest
+        @org.junit.jupiter.params.provider.CsvSource({
+                "start,false", "hold,false", "release,false",
+                "start,true", "hold,true", "release,true"})
+        void spindashDispatchKeepsBackgroundFloorAndWallTail(String phase, boolean fatal) throws Exception {
+                mockSprite = new Sonic("sonic", (short) 0, (short) 0);
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                        .setDuckAnimId(8).setSpindashAnimId(9).setRollAnimId(2));
+                mockSprite.setAnimationId(8);
+                mockSprite.setSpindash(!phase.equals("start"));
+                mockSprite.setAir(false);
+                mockSprite.setCentreX((short) 0x128);
+                mockSprite.setCentreY((short) 0x100);
+                GameServices.camera().setMinX((short) 0);
+                GameServices.camera().setMaxX((short) 0x7FFF);
+                GameServices.camera().setMaxY((short) 0x7FFF);
+                var level = mock(LevelManager.class);
+                var desc = mock(com.openggf.level.ChunkDesc.class);
+                when(desc.isSolidityBitSet(org.mockito.ArgumentMatchers.anyInt())).thenReturn(true);
+                byte[] full = new byte[16]; java.util.Arrays.fill(full, (byte) 16);
+                var tile = new com.openggf.level.SolidTile(7, full, full, (byte) 0);
+                when(level.getSolidTileForChunkDesc(org.mockito.ArgumentMatchers.eq(desc),
+                        org.mockito.ArgumentMatchers.anyInt())).thenReturn(tile);
+                when(level.getChunkDescAt(org.mockito.ArgumentMatchers.anyByte(),
+                        org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyBoolean())).thenAnswer(call -> {
+                    int layer = (byte) call.getArgument(0), x = call.getArgument(1);
+                    int left = fatal ? 0x100 : 0x110;
+                    return layer == 1 && x >= left && x < left + 16 ? desc : null;
+                });
+                GroundSensor.setLevelManager(level);
+                var collision = new CollisionSystem(new TerrainCollisionManager()) {
+                    @Override public void resolveGroundAttachment(FrameCollisionPlan plan,
+                            AbstractPlayableSprite player, int threshold, BooleanSupplier support) {
+                        player.setAir(false); // independent stable object support; real BG probes remain active
+                    }
+                };
+                installRuntimeCollisionSystem(collision);
+                TestEnvironment.activeGameplayMode().attachBackgroundPlaneCollisionProvider(
+                        () -> new com.openggf.physics.BackgroundPlaneCollisionProvider.State(true, 0x20, 0));
+                manager = new PlayableSpriteMovement(mockSprite, collision, GameServices.gameState());
+                setMovementField("inputDown", !phase.equals("release"));
+                setMovementField("inputJumpPress", phase.equals("start"));
+                Method dispatch = PlayableSpriteMovement.class.getDeclaredMethod("modeNormal");
+                dispatch.setAccessible(true);
+                try {
+                    dispatch.invoke(manager);
+                    assertEquals(fatal, mockSprite.getDead(),
+                            "SonicKnux_Spindash start and update/release tails test sub_F846");
+                    assertEquals(fatal ? 0x128 : 0x125, mockSprite.getCentreX(),
+                            "the nonfatal spindash tail must apply CheckRightWallDist -3 without movement");
+                } finally {
+                    GroundSensor.setLevelManager(null);
+                }
+        }
+
         @Test
         public void s2SpindashChargePulseRepublishesSpindashAnimation() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
@@ -3646,28 +3703,6 @@ public class TestPlayableSpriteMovement {
                 assertTrue(!mockSprite.isJumping(), "resetOnFloor should clear jumping flag");
         }
 
-        /**
-         * Test ROM angle boundaries for steep detection.
-         * Steep: ((angle + 0x20) & 0x40) != 0
-         * This means: 0x20-0x5F (32-95) and 0xA0-0xDF (160-223)
-         */
-        @Test
-        public void testSteepAngleBoundaries() {
-                // Test the formula: ((angle + 0x20) & 0x40) != 0
-
-                // Boundary cases that should be steep
-                assertTrue(((0x20 + 0x20) & 0x40) != 0, "0x20 should be steep");
-                assertTrue(((0x5F + 0x20) & 0x40) != 0, "0x5F should be steep");
-                assertTrue(((0xA0 + 0x20) & 0x40) != 0, "0xA0 should be steep");
-                assertTrue(((0xDF + 0x20) & 0x40) != 0, "0xDF should be steep");
-
-                // Boundary cases that should NOT be steep
-                assertTrue(((0x1F + 0x20) & 0x40) == 0, "0x1F should NOT be steep");
-                assertTrue(((0x60 + 0x20) & 0x40) == 0, "0x60 should NOT be steep");
-                assertTrue(((0x9F + 0x20) & 0x40) == 0, "0x9F should NOT be steep");
-                assertTrue(((0xE0 + 0x20) & 0x40) == 0, "0xE0 should NOT be steep");
-        }
-
         private static final class LandingProbeCollisionSystem extends CollisionSystem {
                 private final LandingProbe probe;
 
@@ -3802,29 +3837,6 @@ public class TestPlayableSpriteMovement {
                 Field field = com.openggf.game.session.GameplayModeContext.class.getDeclaredField("collisionSystem");
                 field.setAccessible(true);
                 field.set(gameplayMode, collisionSystem);
-        }
-
-        /**
-         * Test ROM angle boundaries for flat detection.
-         * Flat: ((angle + 0x10) & 0x20) == 0 AND not steep
-         * This means: 0x00-0x0F (0-15) and 0xF0-0xFF (240-255)
-         */
-        @Test
-        public void testFlatAngleBoundaries() {
-                // Test the formula for flat: ((angle + 0x10) & 0x20) == 0
-                // (This only applies when not steep)
-
-                // Boundary cases that should be flat (assuming not steep)
-                assertTrue(((0x00 + 0x10) & 0x20) == 0, "0x00 should be flat");
-                assertTrue(((0x0F + 0x10) & 0x20) == 0, "0x0F should be flat");
-                assertTrue(((0xF0 + 0x10) & 0x20) == 0, "0xF0 should be flat");
-                assertTrue(((0xFF + 0x10) & 0x20) == 0, "0xFF should be flat");
-
-                // Boundary cases that should NOT be flat
-                assertTrue(((0x10 + 0x10) & 0x20) != 0, "0x10 should NOT be flat");
-                assertTrue(((0x1F + 0x10) & 0x20) != 0, "0x1F should NOT be flat");
-                assertTrue(((0xE0 + 0x10) & 0x20) != 0, "0xE0 should NOT be flat");
-                assertTrue(((0xEF + 0x10) & 0x20) != 0, "0xEF should NOT be flat");
         }
 
         // ========================================
@@ -4485,102 +4497,6 @@ public class TestPlayableSpriteMovement {
                                 "MoveRight must observe post-slope inertia and restart Walk at script frame zero");
         }
 
-        /**
-         * Test ROM-accurate speed-dependent threshold calculation.
-         * ROM: threshold = min(abs(xSpeed >> 8) + 4, 14)
-         */
-        @Test
-        public void testSpeedDependentThreshold() {
-                // Test cases: xSpeed -> expected threshold
-                // Speed 0 -> threshold 4
-                assertEquals(4, Math.min(Math.abs(0 >> 8) + 4, 14), "Threshold at speed 0");
-
-                // Speed 256 (1 pixel) -> threshold 5
-                assertEquals(5, Math.min(Math.abs(256 >> 8) + 4, 14), "Threshold at speed 256");
-
-                // Speed 2560 (10 pixels) -> threshold 14 (capped)
-                assertEquals(14, Math.min(Math.abs(2560 >> 8) + 4, 14), "Threshold at speed 2560");
-
-                // Speed -512 (-2 pixels) -> threshold 6
-                assertEquals(6, Math.min(Math.abs(-512 >> 8) + 4, 14), "Threshold at speed -512");
-        }
-
-        // ========================================
-        // ARITHMETIC SHIFT VS DIVISION TESTS
-        // ========================================
-
-        /**
-         * Test that right shift (>>8) behaves correctly for negative values.
-         * This is critical for ROM accuracy: 68000 ASR rounds toward -infinity,
-         * while Java / rounds toward zero.
-         *
-         * Examples:
-         * -1 >> 8 = -1 (correct, rounds toward -infinity)
-         * -1 / 256 = 0 (incorrect, rounds toward zero)
-         *
-         * -255 >> 8 = -1 (correct)
-         * -255 / 256 = 0 (incorrect)
-         */
-        @Test
-        public void testArithmeticShiftVsDivisionForNegativeValues() {
-                // Test case 1: -1
-                assertEquals(-1, -1 >> 8, ">>8 rounds -1 toward -infinity");
-                assertEquals(0, -1 / 256, "/256 rounds -1 toward zero");
-
-                // Test case 2: -255
-                assertEquals(-1, -255 >> 8, ">>8 rounds -255 toward -infinity");
-                assertEquals(0, -255 / 256, "/256 rounds -255 toward zero");
-
-                // Test case 3: -256
-                assertEquals(-1, -256 >> 8, ">>8 for -256");
-                assertEquals(-1, -256 / 256, "/256 for -256");
-
-                // Test case 4: -257
-                assertEquals(-2, -257 >> 8, ">>8 rounds -257 toward -infinity");
-                assertEquals(-1, -257 / 256, "/256 rounds -257 toward zero");
-
-                // Test case 5: positive values should be the same
-                assertEquals(0, 255 >> 8, ">>8 for 255");
-                assertEquals(0, 255 / 256, "/256 for 255");
-
-                assertEquals(1, 256 >> 8, ">>8 for 256");
-                assertEquals(1, 256 / 256, "/256 for 256");
-        }
-
-        /**
-         * Test boundary prediction with negative position/speed.
-         * This verifies the fix for using >>8 instead of /256.
-         */
-        @Test
-        public void testBoundaryPredictionWithNegativeSpeed() {
-                // Scenario: sprite at x=100, moving left slowly
-                // xTotal = 100*256 + 0 + (-255) = 25600 - 255 = 25345
-                // predictedX should be 25345 >> 8 = 99 (correct)
-                // NOT 25345 / 256 = 99 (same in this case)
-
-                int xTotal1 = 100 * 256 + 0 + (-255);
-                assertEquals(99, xTotal1 >> 8, "Positive total with >>8");
-                assertEquals(99, xTotal1 / 256, "Positive total with /256");
-
-                // Scenario: sprite near left boundary, moving left
-                // xTotal = 1*256 + 0 + (-512) = 256 - 512 = -256
-                // predictedX should be -256 >> 8 = -1 (correct)
-                // NOT -256 / 256 = -1 (same in this case)
-
-                int xTotal2 = 1 * 256 + 0 + (-512);
-                assertEquals(-1, xTotal2 >> 8, "Negative total with >>8");
-                assertEquals(-1, xTotal2 / 256, "Negative total with /256");
-
-                // Scenario: edge case with non-multiple of 256
-                // xTotal = 0*256 + 0 + (-1) = -1
-                // predictedX should be -1 >> 8 = -1 (rounds toward -infinity)
-                // NOT -1 / 256 = 0 (rounds toward zero) - THIS IS THE BUG!
-
-                int xTotal3 = 0 * 256 + 0 + (-1);
-                assertEquals(-1, xTotal3 >> 8, "Edge case -1 with >>8 (correct)");
-                assertEquals(0, xTotal3 / 256, "Edge case -1 with /256 (wrong)");
-        }
-
         // ========================================
         // GROUND MODE TRANSITION TESTS
         // ========================================
@@ -4686,65 +4602,6 @@ public class TestPlayableSpriteMovement {
         }
 
         // ========================================
-        // WALL COLLISION PREDICTION TESTS
-        // ========================================
-
-        /**
-         * Test that wall collision prediction uses speed directly without subpixels.
-         * ROM: Uses integer velocity (x_vel >> 8) directly for projection,
-         * not (x_vel + subpixel) >> 8.
-         */
-        @Test
-        public void testWallCollisionProjectionWithoutSubpixels() {
-                // Verify the correct formula: projectedDx = xSpeed >> 8
-                short xSpeed = 512; // 2 pixels per frame
-
-                // Correct (ROM-accurate): just shift the speed
-                short correctProjection = (short)(xSpeed >> 8);
-                assertEquals(2, correctProjection, "Correct projection should be 2");
-
-                // Previous incorrect behavior would add subpixels first
-                // This is wrong because it can cause 1-pixel errors
-                byte xSubpixel = (byte)200; // Near full subpixel
-                short incorrectProjection = (short)((xSpeed + (xSubpixel & 0xFF)) >> 8);
-                assertEquals(2, incorrectProjection, "Incorrect projection would be 2 (same here)");
-
-                // Edge case where the bug manifests:
-                xSpeed = 56; // Less than 1 pixel per frame
-                xSubpixel = (byte)200;
-
-                correctProjection = (short)(xSpeed >> 8);
-                assertEquals(0, correctProjection, "Correct projection for slow speed");
-
-                incorrectProjection = (short)((xSpeed + (xSubpixel & 0xFF)) >> 8);
-                assertEquals(1, incorrectProjection, "Incorrect projection would be 1 (off by 1 pixel)");
-        }
-
-        /**
-         * Test that Y projection for wall collision is also subpixel-free.
-         */
-        @Test
-        public void testWallCollisionYProjectionWithoutSubpixels() {
-                // Verify the correct formula: projectedDy = ySpeed >> 8
-                short ySpeed = -384; // Moving up ~1.5 pixels per frame
-
-                // Correct (ROM-accurate): just shift the speed
-                short correctProjection = (short)(ySpeed >> 8);
-                assertEquals(-2, correctProjection, "Correct Y projection should be -2");
-
-                // Edge case with subpixels
-                ySpeed = -56;
-                byte ySubpixel = (byte)200;
-
-                correctProjection = (short)(ySpeed >> 8);
-                assertEquals(-1, correctProjection, "Correct Y projection for slow upward speed");
-
-                // Previous buggy behavior
-                short incorrectProjection = (short)((ySpeed + (ySubpixel & 0xFF)) >> 8);
-                assertEquals(0, incorrectProjection, "Incorrect Y projection would be 0 (off by 1 pixel)");
-        }
-
-        // ========================================
         // SPEED THRESHOLD FOR GROUND ATTACHMENT TESTS
         // ========================================
 
@@ -4776,24 +4633,6 @@ public class TestPlayableSpriteMovement {
                 // The fix for spindash is to ensure xSpeed is set BEFORE this check
                 int positiveThreshold = Math.min(threshold + 4, 14);
                 assertEquals(4, positiveThreshold, "Attachment threshold is 4 pixels with zero xSpeed");
-        }
-
-        /**
-         * Test that without gSpeed fallback, threshold would be dangerously tight.
-         * This test documents the bug that was causing loop fall-through.
-         */
-        @Test
-        public void testSpeedThresholdWithoutFallbackWouldBeTooTight() {
-                // If we ONLY used xSpeed (the buggy behavior):
-                short xSpeed = 0;  // Zero due to velocity decomposition
-                int buggySpeedPixels = Math.abs(xSpeed >> 8);  // = 0
-                int buggyThreshold = Math.min(buggySpeedPixels + 4, 14);  // = 4
-
-                assertEquals(4, buggyThreshold, "Without fallback, threshold would be only 4 pixels");
-
-                // 4 pixels is too tight for curved surfaces like loops
-                // Normal terrain distance on curves can be 5-10 pixels
-                // This would cause false "too far from terrain" and launch Sonic out
         }
 
         /**
@@ -4945,6 +4784,39 @@ public class TestPlayableSpriteMovement {
                 // Threshold should be based on xSpeed (for GROUND mode)
                 int expectedThreshold = Math.abs(xSpeed >> 8);
                 assertEquals(expectedThreshold, threshold, "Threshold should be based on xSpeed");
+        }
+
+        @Test
+        public void glideFloorKeepsTheTransformedAngleOfTheWinningFoot() throws Exception {
+                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(110, 210))
+                                        .thenReturn(new TerrainCheckResult(-2, (byte) 8, 1));
+                        terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(90, 210))
+                                        .thenReturn(new TerrainCheckResult(4, (byte) 0, 2));
+                        Method method = PlayableSpriteMovement.class.getDeclaredMethod(
+                                        "checkGlideFloorDist", int.class, int.class, int.class, int.class);
+                        method.setAccessible(true);
+                        TerrainCheckResult hit = (TerrainCheckResult) method.invoke(manager, 100, 200, 10, 10);
+                        assertNotNull(hit);
+                        assertEquals(-2, hit.distance());
+                        assertEquals(8, hit.angle(), "FindFloor applies the tile flips before returning its angle");
+                }
+        }
+
+        @Test
+        public void knucklesGlideSlideKeepsTheGlideAnimationId() throws Exception {
+                mockSprite.setAir(true);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setDoubleJumpFlag(1);
+                mockSprite.setForcedAnimationId(0x20);
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("glideHitFloor");
+                method.setAccessible(true);
+                method.invoke(manager);
+                assertEquals(3, mockSprite.getDoubleJumpFlag());
+                assertTrue(mockSprite.getAir());
+                assertEquals(0xCC, mockSprite.getMappingFrame());
+                assertEquals(0x20, mockSprite.getForcedAnimationId(),
+                                "Knuckles_BeginSlide only replaces the mapping frame");
         }
 
         @Test
@@ -5133,7 +5005,7 @@ public class TestPlayableSpriteMovement {
         private void prepareWallClimbProbe(int centreY, int mappingFrame) throws Exception {
                 mockSprite.setCentreX((short) 0x0100);
                 mockSprite.setCentreY((short) centreY);
-                mockSprite.setWallClimbX(mockSprite.getX());
+                mockSprite.setSubpixelRaw(mockSprite.getCentreX() & 0xFFFF, mockSprite.getYSubpixelRaw());
                 mockSprite.setDoubleJumpFlag(4);
                 mockSprite.setDoubleJumpProperty((byte) 0);
                 mockSprite.setObjectMappingFrameControl(true);

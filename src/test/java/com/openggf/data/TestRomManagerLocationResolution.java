@@ -125,14 +125,92 @@ class TestRomManagerLocationResolution {
         assertTrue(RomManager.isConfiguredRomMissing(failure));
     }
 
+    /**
+     * A blank key means "find it in the catalogue". With nothing to find the
+     * legacy unconfigured-ROM failure stands; the working directory is an empty
+     * temp directory because the process directory may hold real images.
+     */
     @Test
-    void activeRomBlankConfigurationRetainsExistingFailure() {
+    void activeRomBlankConfigurationRetainsExistingFailure() throws Exception {
+        Path workingDirectory = Files.createDirectory(temporaryDirectory.resolve("blank-active-working-directory"));
         configureDefaultS2("");
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", workingDirectory.toString());
 
-        IOException failure = assertThrows(IOException.class, () -> RomManager.getInstance().getRom());
+            IOException failure = assertThrows(IOException.class, () -> RomManager.getInstance().getRom());
 
-        assertEquals("ROM filename not configured (DEFAULT_ROM not set or per-game ROM key empty)",
-                failure.getMessage());
+            assertEquals("ROM filename not configured (DEFAULT_ROM not set or per-game ROM key empty)",
+                    failure.getMessage());
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
+    }
+
+    @Test
+    void activeRomBlankConfigurationServesAnImageFoundByTheCatalogueScan() throws Exception {
+        Path workingDirectory = Files.createDirectory(temporaryDirectory.resolve("blank-scan-working-directory"));
+        byte[] image = new byte[0x80000];
+        image[0] = 0x56;
+        byte[] title = "SONIC THE HEDGEHOG".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        System.arraycopy(title, 0, image, 0x120, title.length);
+        Files.write(workingDirectory.resolve("Any Name At All.gen"), image);
+        configuration.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s1");
+        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "");
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", workingDirectory.toString());
+
+            assertEquals(0x56, Byte.toUnsignedInt(RomManager.getInstance().getRom().readByte(0)));
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
+    }
+
+    @Test
+    void activeRomAbsentDefaultHintWithEmptyCatalogueIsClassifiedAsMissing() throws Exception {
+        // The ROM-less CI runner: default keys, no images anywhere. Zone-event code
+        // such as Sonic3kFBZEvents tolerates the failure only when
+        // RomManager.isConfiguredRomMissing() recognises it.
+        Path workingDirectory = Files.createDirectory(temporaryDirectory.resolve("romless-working-directory"));
+        configuration.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s3k");
+        String hint = String.valueOf(configuration.getDefaultValue(SonicConfiguration.SONIC_3K_ROM));
+        configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, hint);
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", workingDirectory.toString());
+
+            IOException failure = assertThrows(IOException.class, () -> RomManager.getInstance().getRom());
+
+            assertEquals("ROM file does not exist: " + hint, failure.getMessage());
+            assertTrue(RomManager.isConfiguredRomMissing(failure));
+            IOException secondary = assertThrows(IOException.class,
+                    () -> RomManager.getInstance().getSecondaryRom("s3k"));
+            assertEquals("Failed to open secondary ROM: " + hint, secondary.getMessage());
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
+    }
+
+    @Test
+    void activeRomDefaultHintAbsentFallsBackToTheCatalogueScan() throws Exception {
+        Path workingDirectory = Files.createDirectory(temporaryDirectory.resolve("hint-scan-working-directory"));
+        byte[] image = new byte[0x80000];
+        image[0] = 0x57;
+        byte[] title = "SONIC THE HEDGEHOG".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        System.arraycopy(title, 0, image, 0x120, title.length);
+        Files.write(workingDirectory.resolve("Any Name At All.gen"), image);
+        configuration.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s1");
+        assertEquals("s1.gen", configuration.getString(SonicConfiguration.SONIC_1_ROM),
+                "this test relies on the built-in default hint");
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", workingDirectory.toString());
+
+            assertEquals(0x57, Byte.toUnsignedInt(RomManager.getInstance().getRom().readByte(0)));
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
     }
 
     @Test
@@ -174,13 +252,21 @@ class TestRomManagerLocationResolution {
         }
     }
 
+    /** Blank key, empty working directory: the legacy unconfigured failure stands. */
     @Test
-    void secondaryRomBlankConfigurationRetainsExistingFailure() {
+    void secondaryRomBlankConfigurationRetainsExistingFailure() throws Exception {
+        Path workingDirectory = Files.createDirectory(temporaryDirectory.resolve("blank-secondary-working-directory"));
         configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "");
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", workingDirectory.toString());
 
-        IOException failure = assertThrows(IOException.class, () -> RomManager.getInstance().getSecondaryRom("s1"));
+            IOException failure = assertThrows(IOException.class, () -> RomManager.getInstance().getSecondaryRom("s1"));
 
-        assertEquals("No ROM configured for game: s1", failure.getMessage());
+            assertEquals("No ROM configured for game: s1", failure.getMessage());
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
     }
 
     @Test

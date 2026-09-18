@@ -117,7 +117,22 @@ class TestRemainingRewindTailInventory {
         // standalone object classes probe cleanly, and the parent-dependent
         // Sonic 2 Obj11 bridge segment has focused graph coverage.
         // The three game-over card implementations from develop pass the isolated sweep.
-        return new TailInventory(1009, 789, 220, 0, buckets);
+        // MHZ1's independent defeat-explosion controller also passes the isolated sweep.
+        // SOZ quicksand passes the isolated sweep; no remaining-tail category grows.
+        // SOZ doors, push switches and floating pillars all pass the isolated sweep.
+        // Full SOZ bring-up: 39 additional isolated passes and four graph-covered
+        // children. Rockn Shell/Legs and Sandworm Segment require their real owners;
+        // TestSozBadnikProduction explicitly recreates those child types.
+        // MHZ Madmole's body is its own ROM child object; TestMadmoleParentChildRewind
+        // recreates it with its cap (graph-covered).
+        // The SOZ event-allocated title-card SST occupant passes the isolated sweep.
+        // Hidden Palace bring-up: 21 object classes; 11 pass the isolated sweep and ten need their
+        // real owners or scripted arguments (teleporter beam and route helper, ship child, crane,
+        // crane parts, sparks, debris, camera gradual, boss music, Knuckles dust), recreated by the
+        // HPZ compatibility, fight and native-sequence graph tests.
+        // Doomsday bring-up: 23 object classes, all passing the isolated sweep through their
+        // private ObjectSpawn probe constructors.
+        return new TailInventory(1109, 874, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

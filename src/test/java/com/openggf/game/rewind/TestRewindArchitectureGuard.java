@@ -35,6 +35,12 @@ class TestRewindArchitectureGuard {
     private static final Map<String, Integer> OBJECT_REWIND_OVERRIDE_BASELINE = Map.ofEntries(
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#captureRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#restoreRewindState", 2),
+            // Explosion construction factories cannot be derived from placement or services.
+            // The typed extra preserves their exact configuration and all explosion scalars;
+            // context-aware overrides retain generic capture for subtype state. Focused
+            // recreation tests cover custom child order, once-only effects and S1 subtype state.
+            Map.entry("src/main/java/com/openggf/level/objects/ExplosionObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/level/objects/ExplosionObjectInstance.java#restoreRewindState", 1),
             // Shared badnik base keeps the no-arg compatibility overrides and
             // adds context-aware overloads so default badnik compact sidecars can
             // resolve captured player/object references through the restore table.
@@ -79,8 +85,28 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#restoreRewindState", 1),
+            // HPZ ($1601) teleporter graph and Knuckles-fight children keep object links in
+            // ObjectRefId sidecars: generic capture lost the teleporter's beam link on replay.
+            // TestS3kHpzCompatibilityMatrix and TestS3kHpzKnucklesFightHeadless prove restore
+            // and forward replay.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SSZHPZTeleporterObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SSZHPZTeleporterObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/TeleporterBeamObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/TeleporterBeamObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzTeleporterRouteHelperObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzTeleporterRouteHelperObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzShipSparkOrbiterObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzShipSparkOrbiterObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzKnucklesDustObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzKnucklesDustObjectInstance.java#restoreRewindState", 1),
             // Hyper stars keep player identity in a typed sidecar; the focused
             // player-reference graph test swaps the live main player on restore.
+            // DDZ parent3 links travel as ObjectRefId sidecars (same triage as the HPZ cutscene children);
+            // TestS3kDdzColdRoutes restores the boss graph mid-fight, at the wrap and during the exit.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#restoreRewindState", 1)
     );
@@ -93,6 +119,12 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/level/objects/ShieldObjectInstance.java#@RewindTransient", 3),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1),
+            // HPZ Knuckles-fight object links are restored by ObjectRefId sidecars.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#@RewindTransient", 1),
+            // DDZ parent3 link, restored by the ObjectRefId sidecar in AbstractDdzObjectInstance.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzKnucklesDustObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzShipSparkOrbiterObjectInstance.java#@RewindTransient", 2),
             // Structural parent pointers on inner particle/support child classes: the parent
             // reference is object-graph structure rebuilt when the parent re-spawns its
             // children, not rewindable state. Same triage precedent as the entries above.
@@ -154,7 +186,11 @@ class TestRewindArchitectureGuard {
             // Focused graph tests cover recreation and relinking.
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ARZRotPformsObjectInstance.java#@RewindTransient", 5),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/EggPrisonObjectInstance.java#@RewindTransient", 4),
-            Map.entry("src/main/java/com/openggf/game/sonic2/objects/bosses/Sonic2OOZBossInstance.java#@RewindTransient", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/bosses/Sonic2OOZBossInstance.java#@RewindTransient", 1),
+            // SOZ quicksand halfExtent/variant are immutable subtype decodes.
+            // Spawn recreation reconstructs both; cooldown/ownership remains captured
+            // by the participant table and cold-route rewind checks.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SozQuicksandObjectInstance.java#@RewindTransient", 2)
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(

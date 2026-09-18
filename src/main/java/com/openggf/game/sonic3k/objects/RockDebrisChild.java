@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -42,6 +43,17 @@ public class RockDebrisChild extends GravityDebrisChild implements SpawnDefaultA
         super(spawn, "RockDebris", xVel, yVel, GRAVITY);
         this.mappingFrame = mappingFrame;
         this.artKey = artKey;
+    }
+
+    // Parent Obj_AIZLRZEMZRock writes priority $200 (sonic3k.asm:43858). BreakObjectToPieces
+    // keeps piece 0 in the parent slot (a1=a0) and copies only the HIGH byte of that word into
+    // each freshly allocated piece (move.b priority(a0),priority(a1), sonic3k.asm:45811), so
+    // later pieces get $0200: for this parent both paths are bucket 4.
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x200 & 0xFF00);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

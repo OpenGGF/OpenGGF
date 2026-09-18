@@ -39,7 +39,7 @@ public final class FbzSpinningPoleObjectInstance
     if (leader != null && players.flag(players.slot(leader), 0) &&
         services().camera() != null)
       services().camera().requestForcedScroll(spawn.x(), leader.getCentreY());
-    coarseXCull(spawn.x(), 0x280);
+    coarseXCullViewport(spawn.x());
   }
   private void updatePlayer(AbstractPlayableSprite p, int i) {
     if (!players.flag(i, 0)) {
@@ -85,14 +85,17 @@ public final class FbzSpinningPoleObjectInstance
       cleanup(p, i);
       return;
     }
+    int held = p.getLogicalInputState();
+    if ((held & AbstractPlayableSprite.INPUT_UP) != 0 && p.getCentreY() > spawn.y() - height)
+      NativePositionOps.addYPosPreserveSubpixel(p, -1);
+    if ((held & AbstractPlayableSprite.INPUT_DOWN) != 0 && p.getCentreY() < spawn.y())
+      NativePositionOps.addYPosPreserveSubpixel(p, 1);
+    // sub_3BFA0 applies both held vertical inputs before loc_3BFEC tests
+    // jump presses, so the release frame includes its final one-pixel climb.
     if (p.isLogicalJumpPressActive()) {
       launch(p, i);
       return;
     }
-    if (p.isUpPressed() && p.getCentreY() > spawn.y() - height)
-      NativePositionOps.addYPosPreserveSubpixel(p, -1);
-    if (p.isDownPressed() && p.getCentreY() < spawn.y())
-      NativePositionOps.addYPosPreserveSubpixel(p, 1);
     players.set(i, 2, (players.get(i, 2) + 8) & 0xFF);
     position(p, i);
   }
@@ -106,7 +109,7 @@ public final class FbzSpinningPoleObjectInstance
     NativePositionOps.writeXPosPreserveSubpixel(p, spawn.x() + x);
   }
   private void launch(AbstractPlayableSprite p, int i) {
-    p.setXSpeed((short)(p.isLeftPressed() ? -0x1000 : 0x1000));
+    p.setXSpeed((short)((p.getLogicalInputState() & AbstractPlayableSprite.INPUT_LEFT) != 0 ? -0x1000 : 0x1000));
     p.setYSpeed((short)-0x100);
     p.setAnimationId(2);
     int nativeY = p.getCentreY();

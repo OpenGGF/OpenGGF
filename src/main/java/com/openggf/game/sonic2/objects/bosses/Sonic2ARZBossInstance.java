@@ -138,6 +138,13 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
+    protected com.openggf.level.objects.TouchAttackBouncePolicy getAttackBouncePolicy() {
+        // Obj89_Init sets render_flags.multi_sprite and boss_hitcount2:
+        // Touch_Enemy returns after velocity reflection, before KiS2's glide exit.
+        return com.openggf.level.objects.TouchAttackBouncePolicy.BOSS_REFLECT;
+    }
+
+    @Override
     protected int getInitialHitCount() {
         return 8;
     }

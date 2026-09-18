@@ -335,11 +335,21 @@ public abstract class AbstractTraceReplayTest {
         // 3. Validate test configuration matches metadata
         validateMetadata(meta);
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
+        TraceReplayTestSession.reopenForRecordedTeam(meta);
 
         // 4. Load level and create fixture
         SharedLevel sharedLevel = requiresFreshLevelLoad
                 ? null
                 : SharedLevel.load(game(), zone(), act());
+        if (sharedLevel != null) {
+            // SharedLevel.load detects the root module from the ROM and reopens
+            // the session on it, which discards the module resolved for the
+            // recorded team above. Resolve again so a built-in patch that the
+            // recorded team activates (Knuckles in Sonic 2) owns the level the
+            // fixture reloads; stock recordings resolve to the root module and
+            // leave the session untouched.
+            TraceReplayTestSession.reopenForRecordedTeam(meta);
+        }
         // Hoisted so the finally block can always regenerate the report, even when
         // the run short-circuits via fail() (e.g. input-alignment) before the
         // normal report-write at step 7. Previously such failures left a STALE

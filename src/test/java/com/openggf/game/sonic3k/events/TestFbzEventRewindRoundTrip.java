@@ -112,6 +112,35 @@ class TestFbzEventRewindRoundTrip {
         }
     }
 
+    @Test
+    void bossNormalizationTranslatesPublishedCameraCopiesExactlyOnce() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        try {
+            GameServices.level().setLevel(new TinyFbzLevel());
+            var events = new Sonic3kFBZEvents();
+            events.init(1);
+            GameServices.zoneRuntimeRegistry().install(new FbzZoneRuntimeState(
+                    1, PlayerCharacter.SONIC_ALONE, events));
+            var camera = GameServices.camera();
+            camera.setX((short) 0x32B8);
+            camera.setY((short) 0x003C);
+            camera.setXCopy((short) 0x32B8);
+            camera.setYCopy((short) 0x003E); // ScreenEvent's prior shake sample.
+            events.setBossBackgroundState(16, 0x045C, 0x05D0);
+            events.setBossLoadPositionAdjustmentPending(true);
+
+            events.updateAct2BackgroundEvent(0, 0, false);
+
+            assertEquals(0x2E5C, camera.getX());
+            assertEquals(0x060C, camera.getY());
+            assertEquals(0x2E5C, camera.getXCopy());
+            assertEquals(0x060E, camera.getYCopy(),
+                    "loc_53134 translates each published word once and preserves shake");
+        } finally {
+            TestEnvironment.resetAll();
+        }
+    }
+
     private static final class TinyFbzLevel implements Level {
         private final Map map = new Map(2, 1, 1);
 

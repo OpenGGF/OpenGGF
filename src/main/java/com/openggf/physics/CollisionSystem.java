@@ -487,8 +487,11 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     public boolean hasFatalPostMovementBackgroundFloorOverlap(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
         requireTerrainOnlyPlan(plan, "hasFatalPostMovementBackgroundFloorOverlap");
-        var gameState = GameServices.gameStateOrNull();
-        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+        var background = GameServices.backgroundPlaneCollisionOrNull();
+        // Sonic_MdNormal / Tails_Stand_Path test the same native flag that
+        // FindFloor/FindWall consume. A zone runtime may own that state instead
+        // of the legacy GameStateManager mirror, so both paths use its provider.
+        if (sprite == null || background == null || !background.state().active()) {
             return false;
         }
 
@@ -506,8 +509,11 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     public void resolvePostMovementBackgroundWallClamp(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
         requireTerrainOnlyPlan(plan, "resolvePostMovementBackgroundWallClamp");
-        var gameState = GameServices.gameStateOrNull();
-        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+        var background = GameServices.backgroundPlaneCollisionOrNull();
+        // Sonic_MdNormal / Tails_Stand_Path test the same native flag that
+        // FindFloor/FindWall consume. A zone runtime may own that state instead
+        // of the legacy GameStateManager mirror, so both paths use its provider.
+        if (sprite == null || background == null || !background.state().active()) {
             return;
         }
 
@@ -756,21 +762,38 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         int quadrant = (overheadAngle + 0x20) & 0xC0;
         var levelManager = sprite.currentLevelManager();
         if (levelManager != null && levelManager.getCurrentLevel() != null) {
-            return scanCalcRoomOverHead(sprite, quadrant);
+            return scanCalcRoomOverHead(sprite, overheadAngle, quadrant);
         }
 
         return fallbackSensorHeadroomDistance(sprite, quadrant);
     }
 
-    private int scanCalcRoomOverHead(AbstractPlayableSprite sprite, int quadrant) {
+    private int scanCalcRoomOverHead(AbstractPlayableSprite sprite, int overheadAngle, int quadrant) {
+        // CalcRoomOverHead / Sonic_CalcHeadroom preload both angle registers with the
+        // overhead angle before probing (S3K sonic3k.asm:19811-19819, S2 s2.asm:44016-44017,
+        // S1 Sonic Collision.asm:87-88). An empty probe leaves that byte, which the
+        // player tail then copies to next_tilt/tilt, so a jump from a ledge does not keep
+        // the grounded edge sentinel 3.
+        primaryAngleOutput = overheadAngle & 0xFF;
+        secondaryAngleOutput = overheadAngle & 0xFF;
         CalcRoomOverHeadProbe[] probes = describeCalcRoomOverHeadProbes(sprite, quadrant);
         if (probes.length == 0) {
             return Integer.MAX_VALUE;
         }
 
+        // Floor/ceiling helpers write the +x_radius probe to Primary_Angle and the
+        // -x_radius probe to Secondary_Angle; the wall helpers use Primary_Angle for
+        // both (sonic3k.asm:20242-20274, CheckLeftCeilingDist/CheckRightCeilingDist).
+        boolean pairedRegisters = quadrant == 0x00 || quadrant == 0x80;
         int minDistance = Integer.MAX_VALUE;
-        for (CalcRoomOverHeadProbe probe : probes) {
-            int distance = scanHeadroomProbe(sprite, probe);
+        for (int i = 0; i < probes.length; i++) {
+            SensorResult result = scanHeadroomProbeResult(sprite, probes[i]);
+            if (pairedRegisters && i == 1) {
+                applySecondaryAngleWrites(result);
+            } else {
+                applyPrimaryAngleWrites(result);
+            }
+            int distance = result != null ? result.distance() : Integer.MAX_VALUE;
             minDistance = Math.min(minDistance, distance);
         }
         return minDistance;
@@ -820,16 +843,15 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         };
     }
 
-    private int scanHeadroomProbe(AbstractPlayableSprite sprite, CalcRoomOverHeadProbe probe) {
+    private SensorResult scanHeadroomProbeResult(AbstractPlayableSprite sprite, CalcRoomOverHeadProbe probe) {
         calcRoomProbe.sprite = sprite;
-        SensorResult result = calcRoomProbe.scanWorld(
+        return calcRoomProbe.scanWorld(
                 probe.globalDirection(),
                 (short) probe.worldOffsetX(),
                 (short) probe.worldOffsetY(),
                 (short) probe.dx(),
                 (short) probe.dy(),
                 probe.solidityBit());
-        return result != null ? result.distance() : Integer.MAX_VALUE;
     }
 
     private int fallbackSensorHeadroomDistance(AbstractPlayableSprite sprite, int quadrant) {

@@ -5,16 +5,473 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@org.junit.jupiter.api.parallel.Isolated
 class TestFbzMinibossChildren {
+    @Test
+    void plungerUsesTheSeparateLevelBackedSpringArtwork() {
+        var services = mock(com.openggf.level.objects.ObjectServices.class);
+        var renderManager = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        when(services.renderManager()).thenReturn(renderManager);
+        when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_EGG_CAPSULE))
+                .thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        var boss = new FbzMinibossInstance(new ObjectSpawn(0x2F00, 0x5E0, 0xAA, 0, 0, true, 0));
+        var plunger = new FbzMinibossPlungerChild(boss);
+        plunger.setServices(services);
+        plunger.appendRenderCommands(new java.util.ArrayList<>());
+        // loc_6EFF6 -> ObjDat_FBZSpringPlunger: Map_FBZEggCapsule frame 5,
+        // art_tile 0 (level-backed palette and low tile priority).
+        verify(renderer).drawFrameIndex(5, 0x2F00, 0x5BC, false, false);
+        assertFalse(plunger.isHighPriority());
+    }
+
+    @Test
+    void closedFaceUsesNeutralEyesAndChildrenInheritCapsuleTilePriority() {
+        var boss = new FbzMinibossInstance(new ObjectSpawn(0x2F00, 0x5E0, 0xAA, 0, 0, true, 0));
+        var face = new FbzMinibossAimerChild(boss);
+        face.update(0, null);
+        // loc_6F07C -> word_6FA58 installs frame 8. The octant frames
+        // 9..16 belong only to loc_6F0B8 after the opening delay.
+        assertEquals(8, face.mappingFrame());
+        assertTrue(face.isHighPriority(), "CreateChild1_Normal inherits art_tile $A52E");
+        for (int index = 0; index < 3; index++) {
+            assertTrue(new FbzMinibossCoverChild(boss, index, 0, -8).isHighPriority());
+        }
+    }
+
+    @Test
+    void circularChainCarriesParentFractionsThroughAllFiveLinks() throws Exception {
+        var arm = FbzMinibossArmChild.forTest(
+                new FbzMinibossInstance(new ObjectSpawn(0x1000, 0x700, 0xAA, 0, 0, false, 0)), 0);
+        setInt(arm, "xFixed", 0x100080);
+        setInt(arm, "yFixed", 0x70080);
+        int expectedX = 0x100080;
+        int expectedY = 0x70080;
+        var links = arm.createLinksForTest();
+        for (int i = 0; i < links.length; i++) {
+            var link = links[i];
+            setState(link, "STAGGER");
+            setInt(link, "stagger", 10);
+            setInt(link, "angle", 0x20);
+            link.update(0, null);
+            // GetSineCosine($20) returns $B5 for both words; native shifts
+            // by four (ordinary links) or three (the terminal).
+            int displacement = 0xB5 * (i == 4 ? 32 : 16);
+            expectedX += displacement;
+            expectedY += displacement;
+            assertEquals(expectedX, getInt(link, "xFixed"));
+            assertEquals(expectedY, getInt(link, "yFixed"));
+            assertEquals(expectedX >> 8, link.getX());
+            assertEquals(expectedY >> 8, link.getY());
+        }
+    }
+
+    @Test
+    void outwardAttackWaitsWhilePlayerIsJumping() throws Exception {
+        var boss = new FbzMinibossInstance(new ObjectSpawn(0x1000, 0x700, 0xAA, 0, 0, false, 0));
+        var arm = FbzMinibossArmChild.forTest(boss, 0);
+        setState(arm, "PATROL");
+        setInt(arm, "timer", 0);
+        var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 0xF00);
+        when(player.isJumping()).thenReturn(true);
+        arm.update(0, player);
+        assertEquals("PATROL", stateName(arm), "loc_6F2E4 tests Player_1+$40 before aiming");
+        assertFalse(boss.rootBit(FbzMinibossInstance.ROOT_OUTWARD_BUSY));
+
+        when(player.isJumping()).thenReturn(false);
+        setInt(arm, "timer", 0);
+        arm.update(1, player);
+        assertEquals("OUTWARD_ARMED", stateName(arm));
+        assertTrue(boss.rootBit(FbzMinibossInstance.ROOT_OUTWARD_BUSY));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,-67,-65,false", "0,-66,-64,true", "0,-65,-64,true",
+            "1,67,65,false", "1,66,64,true", "1,65,64,true"})
+    void normalAttackAlignmentClampsAtOrAcrossTheUnsignedTarget(
+            int side, int initialAngle, int expectedAngle, boolean reached) throws Exception {
+        FbzMinibossArmChild arm  =  FbzMinibossArmChild.forTest(
+                boss(new QueryServices(null, List.of())), side);
+        FbzMinibossChainLink terminal  =  arm.createLinksForTest()[4];
+        setState(terminal, "NORMAL_ALIGN");
+        setInt(terminal, "angle", initialAngle);
+        terminal.update(0, null);
+        assertEquals(expectedAngle, getInt(terminal, "angle"));
+        assertEquals(reached ? "NORMAL_WAIT_PARENT" : "NORMAL_ALIGN", stateName(terminal));
+        assertEquals(reached, arm.controlBit(FbzMinibossArmChild.ARM_TERMINAL_EDGE),
+                "loc_6F5B8 publishes completion only after sub_6F830 clamps the terminal link");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,-67,-65", "0,-66,-64", "0,-65,-64",
+            "1,67,65", "1,66,64", "1,65,64"})
+    void normalArmUsesTheSameUnsignedClampAsItsLinks(int side, int before, int expected) throws Exception {
+        var arm = FbzMinibossArmChild.forTest(boss(new QueryServices(null, List.of())), side);
+        setState(arm, "NORMAL_SWING");
+        setInt(arm, "angle", before);
+        arm.update(0, null);
+        assertEquals(expected, getInt(arm, "angle"));
+        if (expected == (side == 0 ? -64 : 64)) {
+            arm.update(1, null);
+            assertEquals(expected, getInt(arm, "angle"),
+                    "the clamped arm holds until its terminal link completes");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,-99,-97,false", "0,-98,-96,true", "0,-97,-96,true",
+            "1,99,97,false", "1,98,96,true", "1,97,96,true"})
+    void recycleClampsEveryLinkButOnlyTheTerminalPublishesArmReadiness(
+            int side, int before, int expected, boolean reached) throws Exception {
+        for (int index : new int[] {0, 4}) {
+            var arm = FbzMinibossArmChild.forTest(boss(new QueryServices(null, List.of())), side);
+            var link = arm.createLinksForTest()[index];
+            setState(link, "RECYCLE_OR_RESET");
+            setInt(link, "angle", before);
+            link.update(0, null);
+            assertEquals(expected, getInt(link, "angle"));
+            assertEquals(reached && index == 4, arm.controlBit(FbzMinibossArmChild.ARM_PATROL_READY));
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,-125,-127,false", "0,-126,-128,true", "0,-127,-128,true",
+            "1,125,127,false", "1,126,-128,false", "1,127,-128,true", "1,-128,-128,true"})
+    void outwardAlignmentPreservesTheNativeAsymmetricEqualityBranch(
+            int side, int before, int expected, boolean reached) throws Exception {
+        var arm = FbzMinibossArmChild.forTest(boss(new QueryServices(null, List.of())), side);
+        var terminal = arm.createLinksForTest()[4];
+        setState(terminal, "OUTWARD_ALIGN");
+        setInt(terminal, "angle", before);
+        terminal.update(0, null);
+        assertEquals(expected, getInt(terminal, "angle"));
+        assertEquals(reached ? "OUTWARD_WAIT_PARENT" : "OUTWARD_ALIGN", stateName(terminal));
+        assertEquals(reached, arm.controlBit(FbzMinibossArmChild.ARM_TERMINAL_EDGE));
+    }
+
+    @Test
+    void normalAttackHoldReleasesTheChainBeforeRecycleCanRestartTheArm() throws Exception {
+        var boss = boss(new QueryServices(null, List.of()));
+        var arm = FbzMinibossArmChild.forTest(boss, 0);
+        var links = arm.createLinksForTest();
+        var terminal = links[4];
+        setState(arm, "NORMAL_HOLD");
+        setInt(arm, "angle", -64);
+        setInt(arm, "timer", 1);
+        arm.setControlBit(FbzMinibossArmChild.ARM_TERMINAL_EDGE);
+        setState(terminal, "NORMAL_FAN");
+        setInt(terminal, "angle", 0x3A);
+        setInt(links[3], "angleStep", 2);
+
+        arm.update(0, null);
+        terminal.update(0, null);
+        assertEquals(-64, getInt(arm, "angle"), "Obj_Wait never advances the arm angle");
+        assertEquals("RECYCLE_WAIT", stateName(terminal));
+        assertTrue(boss.rootBit(FbzMinibossInstance.ROOT_ARM_RETURNED));
+        assertFalse(arm.controlBit(FbzMinibossArmChild.ARM_PATROL_READY),
+                "fan impact publishes root state, not arm recycle readiness");
+
+        arm.update(1, null);
+        assertEquals("WAIT_CHAIN_RETURN", stateName(arm));
+        assertEquals(-64, getInt(arm, "angle"));
+        assertFalse(arm.controlBit(FbzMinibossArmChild.ARM_TERMINAL_EDGE));
+        assertFalse(boss.rootBit(FbzMinibossInstance.ROOT_ARM_RETURNED));
+        terminal.update(1, null);
+        assertEquals("RECYCLE_OR_RESET", stateName(terminal));
+        for (int frame = 2; frame < 54; frame++) {
+            arm.update(frame, null);
+            assertEquals("WAIT_CHAIN_RETURN", stateName(arm));
+            terminal.update(frame, null);
+        }
+        assertEquals(-96, getInt(terminal, "angle"));
+        assertTrue(arm.controlBit(FbzMinibossArmChild.ARM_PATROL_READY));
+        arm.update(54, null);
+        assertEquals("PATROL", stateName(arm));
+    }
+
+    private static Object[] states(Object object) {
+        return Arrays.stream(object.getClass().getDeclaredClasses())
+                .filter(type -> type.getSimpleName().equals("State"))
+                .findFirst().orElseThrow().getEnumConstants();
+    }
+
+    private static void setState(Object object, String name) throws Exception {
+        Object[] values = states(object);
+        for (int index = 0; index < values.length; index++) {
+            if (values[index].toString().equals(name)) {
+                setInt(object, "stateOrdinal", index);
+                return;
+            }
+        }
+        throw new IllegalArgumentException(name);
+    }
+
+    private static String stateName(Object object) throws Exception {
+        return states(object)[getInt(object, "stateOrdinal")].toString();
+    }
+
+    private static void setInt(Object object, String name, int value) throws Exception {
+        var field = object.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(object, value);
+    }
+
+    private static int getInt(Object object, String name) throws Exception {
+        var field = object.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(object);
+    }
+
+    @Test
+    void sidekickEndingPoseKeepsPrisonRideAndReleasesEarlierPlungerPush() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var camera = new com.openggf.camera.Camera();
+            camera.setX((short) 0x2E20);
+            camera.setY((short) 0x540);
+            var main = new PlungerContactPlayer();
+            var tails = new PrisonContactTails();
+            main.setCentreX((short) 0x2E30);
+            tails.setCentreX((short) 0x2E30);
+            var query = new ObjectPlayerQuery(() -> main, () -> List.of(tails));
+            var services = new TestObjectServices() {
+                @Override public com.openggf.camera.Camera camera() { return camera; }
+                @Override public ObjectPlayerQuery playerQuery() { return query; }
+            };
+            var manager = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                    0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            manager.reset(0x2E20);
+            var boss = boss(services);
+            var defeated = FbzMinibossInstance.class.getDeclaredField("defeated");
+            defeated.setAccessible(true);
+            defeated.setBoolean(boss, true);
+            var plunger = manager.createDynamicObject(() -> new FbzMinibossPlungerChild(boss));
+            var prison = manager.createDynamicObject(() -> new FbzMinibossPrisonChild(boss));
+            manager.update(0x2E20, main, List.of(tails), 0, false, true, false);
+            tails.setCentreX((short) (prison.getX() - 0x1B));
+            tails.setCentreY((short) (prison.getY() - 0x20 - tails.getYRadius() + 1));
+            tails.setAir(true);
+            tails.setYSpeed((short) 0x100);
+            manager.processImmediateInlineSolidCheckpoint(prison, tails, List.of());
+            assertTrue(manager.isRidingObject(tails, prison));
+            tails.setXSpeed((short) 0xC);
+            tails.setGSpeed((short) 0xC);
+            manager.update(0x2E20, main, List.of(tails), 1, false, true, false);
+            assertTrue(manager.hasObjectPushingBit(tails));
+            assertTrue(manager.isRidingObject(tails, prison));
+            int heldY = tails.getCentreY();
+
+            var replacement = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                    0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            replacement.reset(0x2E20);
+            replacement.addDynamicObject(plunger);
+            replacement.addDynamicObject(prison);
+            com.openggf.level.objects.ObjectTransitionContacts.inherit(replacement, manager, List.of(plunger, prison));
+            assertTrue(replacement.hasObjectPushingBit(tails));
+            assertTrue(replacement.isRidingObject(tails, prison));
+            manager = replacement;
+
+            S3kSignpostInstance.applySidekickEndingPose(tails);
+            manager.update(0x2E20, main, List.of(tails), 2, false, true, false);
+            assertFalse(manager.hasObjectPushingBit(tails), "plunger loc_1E0A2 still consumes its P2 push bit");
+            assertEquals(0, tails.getAnimationId(), "the push-release animation word follows ending pose publication");
+            assertTrue(manager.hasObjectStandingBit(tails, prison));
+            assertTrue(manager.isRidingObject(tails, prison));
+            assertTrue(tails.isOnObject());
+            assertFalse(tails.getAir());
+            assertEquals(heldY, tails.getCentreY(), "signed MvSonicOnPtfm preserves position while retaining support");
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+            com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    private static final class PrisonContactTails extends com.openggf.sprites.playable.Tails {
+        private PrisonContactTails() {
+            super("FBZ_PRISON_TAILS", (short) 0, (short) 0);
+            setGameRulesForTest(com.openggf.game.rules.GameRules.SONIC_3K);
+            setWidth(18);
+            setHeight(30);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false", "true"})
+    void endingPoseRetainsExistingPlungerSupportButCannotCreateANewContact(boolean reload) throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var camera = new com.openggf.camera.Camera();
+            camera.setX((short) 0x2E20);
+            camera.setY((short) 0x0540);
+            var holder = new com.openggf.level.objects.ObjectManager[1];
+            var player = new PlungerContactPlayer();
+            var query = new ObjectPlayerQuery(() -> player, List::of);
+            var services = new TestObjectServices() {
+                @Override public com.openggf.level.objects.ObjectManager objectManager() { return holder[0]; }
+                @Override public com.openggf.camera.Camera camera() { return camera; }
+                @Override public ObjectPlayerQuery playerQuery() { return query; }
+            };
+            var manager = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                    0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            holder[0] = manager;
+            manager.reset(0x2E20);
+            var boss = boss(services);
+            var defeated = FbzMinibossInstance.class.getDeclaredField("defeated");
+            defeated.setAccessible(true);
+            defeated.setBoolean(boss, true);
+            var plunger = manager.createDynamicObject(() -> new FbzMinibossPlungerChild(boss));
+            player.setCentreX((short) 0x2E30);
+            player.setCentreY((short) 0x0560);
+            manager.update(0x2E20, player, List.of(), 0, false, true, false);
+
+            player.setCentreX((short) plunger.getX());
+            player.setCentreY((short) (plunger.getY() - 8 - 19 + 1));
+            player.setAir(true);
+            player.setYSpeed((short) 0x100);
+            manager.update(0x2E20, player, List.of(), 1, false, true, false);
+            assertTrue(manager.isRidingObject(player, plunger));
+            assertTrue(manager.hasObjectStandingBit(player, plunger));
+            assertFalse(player.getAir());
+            int standingY = player.getCentreY();
+
+            S3kSignpostInstance.applyMainPlayerEndingPose(player);
+            manager.update(0x2E20, player, List.of(), 2, false, true, false);
+            assertTrue(manager.isRidingObject(player, plunger), "the native standing branch precedes bit-7 rejection");
+            assertTrue(manager.hasObjectStandingBit(player, plunger));
+            assertTrue(player.isOnObject());
+            assertFalse(player.getAir());
+            assertEquals(standingY, player.getCentreY());
+
+            if (reload) {
+                var replacement = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                        0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+                replacement.reset(0);
+                holder[0] = replacement;
+                replacement.addDynamicObject(plunger);
+                plunger.offsetNativePositionWordsPreserveSubpixel(-0x2E00, 0x20);
+                player.setCentreXPreserveSubpixel((short) (player.getCentreX() - 0x2E00));
+                player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 0x20));
+                com.openggf.level.objects.ObjectTransitionContacts.inherit(replacement, manager, List.of(plunger));
+                assertTrue(replacement.isRidingObject(player, plunger));
+                assertTrue(replacement.hasObjectStandingBit(player, plunger));
+                int rebasedX = player.getCentreX();
+                com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+                replacement.processImmediateInlineSolidCheckpoint(plunger, player, List.of());
+                assertEquals(rebasedX, player.getCentreX(), "the old world's ride baseline must not apply its offset twice");
+                assertEquals(plunger.getY() - 0xD - player.getYRadius(), player.getCentreY(),
+                        "the first released checkpoint must take continued riding, not a fresh top landing");
+                manager = replacement;
+            }
+
+            var newcomer = new PlungerContactPlayer();
+            newcomer.setCentreX((short) plunger.getX());
+            newcomer.setCentreY((short) (plunger.getY() - 8 - 19 + 1));
+            newcomer.setAir(true);
+            S3kSignpostInstance.applyMainPlayerEndingPose(newcomer);
+            manager.update(0x2E20, newcomer, List.of(), 3, false, true, false);
+            assertFalse(manager.isRidingObject(newcomer, plunger));
+            assertFalse(manager.hasObjectStandingBit(newcomer, plunger));
+            assertTrue(newcomer.getAir(), "a bit-7 player cannot acquire new plunger support");
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+            com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"-32,true,false", "27,true,false", "31,true,false", "32,false,false",
+            "-32,true,true", "27,true,true", "31,true,true", "32,false,true"})
+    void bodyLandingReadsNativeWidthRatherThanCollisionPadding(int offsetX, boolean lands, boolean prison) {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var camera = new com.openggf.camera.Camera();
+            camera.setX((short) 0x2E20);
+            camera.setY((short) 0x0540);
+            com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(
+                    0x2E20, 0x0540, 0x2F60, 0x0620, 0);
+            var player = new PlungerContactPlayer();
+            var services = new TestObjectServices().withCamera(camera);
+            var manager = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                    0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            manager.reset(0x2E20);
+            com.openggf.level.objects.AbstractObjectInstance body = prison
+                    ? manager.createDynamicObject(() -> new FbzMinibossPrisonChild(boss(services)))
+                    : manager.createDynamicObject(() -> boss(services));
+            // Exercise an established boss slot after its first render cycle,
+            // as the ordinary ObjectManager frame-start snapshot does.
+            body.snapshotPreUpdatePosition();
+            player.setRolling(true);
+            player.applyRollingRadii(false);
+            player.setCentreX((short) (body.getX() + offsetX));
+            player.setCentreY((short) (body.getY() - 0x20 - player.getYRadius() - 4));
+            player.setAir(true);
+            player.setYSpeed((short) 0x338);
+
+            manager.processImmediateInlineSolidCheckpoint(body, player, List.of());
+
+            assertEquals(lands, manager.isRidingObject(player, body));
+            assertEquals(lands, manager.hasObjectStandingBit(player, body));
+            assertEquals(!lands, player.getAir());
+            assertEquals(0x20, body.getBalanceWidthPixels());
+            assertEquals(0x0006, ((com.openggf.level.objects.RomObjectCodePointerProvider) body).romObjectCodePointerHighWord());
+            if (lands) {
+                assertFalse(player.getRolling());
+                assertEquals(0, player.getYSpeed());
+                // A later CPU jump consumes an established standing bit, not
+                // the same-frame landing preservation path.
+                manager.updateSolidContacts(player);
+                player.setRolling(true);
+                player.applyRollingRadii(false);
+                player.setCentreX((short) (body.getX() - 0x1B));
+                player.setCentreY((short) (body.getY() - 0x20 - player.getYRadius() + 5));
+                int jumpX = player.getCentreX();
+                int jumpY = player.getCentreY();
+                manager.clearRidingObjectForJump(player);
+                player.setAir(true);
+                player.setOnObject(false);
+                player.setXSpeed((short) 0xC);
+                player.setYSpeed((short) -0x680);
+                manager.processImmediateInlineSolidCheckpoint(body, player, List.of());
+                assertEquals(jumpX, player.getCentreX(), "the stale standing bit prevents a fresh side push");
+                assertEquals(jumpY, player.getCentreY());
+                assertEquals(0xC, player.getXSpeed());
+                assertEquals(-0x680, player.getYSpeed());
+                assertFalse(manager.hasObjectStandingBit(player, body));
+            }
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+            com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    private static final class PlungerContactPlayer extends com.openggf.sprites.playable.Sonic {
+        private PlungerContactPlayer() {
+            super("FBZ_PLUNGER_CONTACT", (short) 0, (short) 0);
+            setGameRulesForTest(com.openggf.game.rules.GameRules.SONIC_3K);
+            setWidth(20);
+            setHeight(38);
+        }
+    }
+
     @Test
     void initialTableHasSevenExactStableRolesAndTwoIndependentFiveLinkArms() {
         assertArrayEquals(new String[] {

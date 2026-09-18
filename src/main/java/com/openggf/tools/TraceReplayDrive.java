@@ -7,11 +7,12 @@ import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
-import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
@@ -57,6 +58,16 @@ final class TraceReplayDrive {
                                       TraceExecutionPhase phase, int driveTraceIndex) {
         frameDriver.beginTraceRow(
                 driveTraceIndex, trace.getFrame(driveTraceIndex).frame());
+        TraceFrame previous = driveTraceIndex == replayStart.startingTraceIndex()
+                && replayStart.hasSeededTraceState()
+                ? trace.getFrame(replayStart.seededTraceIndex())
+                : driveTraceIndex > 0 ? trace.getFrame(driveTraceIndex - 1) : null;
+        TraceFrame current = trace.getFrame(driveTraceIndex);
+        // The capture and strict replay share the same iteration-admission
+        // contract. These hints choose existing loop ownership, never state.
+        TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, current);
+        TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay(current,
+                driveTraceIndex + 1 < trace.frameCount() ? trace.getFrame(driveTraceIndex + 1) : null);
         // The admitted-gameplay callback below begins palette ownership after
         // SETUP_ONLY classification but before the ordinary level step. The
         // headless replay driver omits this because trace tests never render;
@@ -74,10 +85,7 @@ final class TraceReplayDrive {
             // Level_frame_counter natively.
             if (driveTraceIndex == replayStart.startingTraceIndex()
                     && TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
-                SpriteManager handoffSprites = GameServices.spritesOrNull();
-                if (handoffSprites != null) {
-                    handoffSprites.setFrameCounter(handoffSprites.getFrameCounter() + 1);
-                }
+                TraceReplaySessionBootstrap.applyS3kCompleteRunHandoffNativePostRowEffects(trace);
             }
             return DriveOutcome.CONSUMED_WITHOUT_GAMEPLAY;
         }
@@ -141,6 +149,16 @@ final class TraceReplayDrive {
         var camera = GameServices.camera();
         graphicsManager.flushWithCamera(camera.getXWithShake(), camera.getYWithShake(),
                 (short) presentationWidth, camera.getHeight());
+        // Engine.drawLevel keeps the active title overlay above the scene;
+        // explicit loading clips must retain that presentation as well.
+        var title = GameServices.module().getTitleCardProvider();
+        if (title != null && title.isOverlayActive()) {
+            graphicsManager.resetForFixedFunction();
+            title.draw();
+            graphicsManager.flushScreenSpace();
+        }
+        var ui = graphicsManager.getUiRenderPipeline();
+        if (ui != null) ui.renderFadePass();
         PerformanceProfiler profiler = GameServices.profiler();
         profiler.beginSection("render.gpu_wait");
         glFinish();

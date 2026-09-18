@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.physics.Direction;
 import com.openggf.game.PlayableEntity;
 import com.openggf.sprites.Sprite;
@@ -231,5 +232,16 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             int deleteRoutineDelay,
             boolean dplcPreloaded
     ) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
+    }
+
+    /**
+     * Skid dust bucket: S2 Obj08 {@code move.b #1,priority(a0)} (s2.asm:42725),
+     * S3K Obj_DashDust {@code move.w #$80,priority(a0)} (sonic3k.asm:33971).
+     */
+    private static final int DUST_PRIORITY_BUCKET = RenderPriority.bucket(1);
+
+    @Override
+    public int getPriorityBucket() {
+        return DUST_PRIORITY_BUCKET;
     }
 }

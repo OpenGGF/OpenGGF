@@ -46,7 +46,7 @@ public final class FbzEggPrisonInstance extends AbstractObjectInstance
             return;
         }
         if (triggered && !opened) openPrefixOnce();
-        coarseXCull(spawn.x(), 0x280);
+        coarseXCullViewport(spawn.x());
     }
 
     private FbzEggPrisonButtonInstance spawnButtonPrefixOnce() {

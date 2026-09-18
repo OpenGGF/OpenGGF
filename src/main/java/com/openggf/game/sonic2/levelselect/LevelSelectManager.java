@@ -212,6 +212,15 @@ public class LevelSelectManager implements LevelSelectProvider {
             rightHoldTimer = 0;
         }
 
+        if (isSoundTestSelected() && usesControllerSoundTestButtons()) {
+            int actions = input.logical().player1().actionPressedMask();
+            if ((actions & com.openggf.control.InputActionMasks.ACTION_A) != 0)
+                soundTestValue = (soundTestValue + 16) & 0x7F;
+            if ((actions & (com.openggf.control.InputActionMasks.ACTION_B
+                    | com.openggf.control.InputActionMasks.ACTION_C)) != 0) handleSelect();
+            return;
+        }
+
         // Handle start/jump to select
         if (input.isKeyPressed(jumpKey) || input.logical().menuAccept()) {
             handleSelect();
@@ -270,6 +279,9 @@ public class LevelSelectManager implements LevelSelectProvider {
         LOGGER.fine("Level select moved right to index " + selectedIndex);
     }
 
+    protected boolean usesControllerSoundTestButtons() { return false; }
+    protected void onSoundTestPlayed(int value) { }
+
     private void handleSelect() {
         int zoneAct = LevelSelectConstants.LEVEL_ORDER[selectedIndex];
 
@@ -285,6 +297,7 @@ public class LevelSelectManager implements LevelSelectProvider {
             } else {
                 LOGGER.fine("No mapped sound for sound test value: 0x" + Integer.toHexString(soundTestValue));
             }
+            onSoundTestPlayed(soundTestValue);
         } else {
             // Signal exit - GameLoop will handle the fade
             state = State.EXITING;

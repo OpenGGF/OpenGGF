@@ -59,9 +59,10 @@ out vec4 FragColor;
 
 void main()
 {
-    // Pixel-center aligned viewport coordinates.
-    float viewportX = gl_FragCoord.x - ViewportOffsetX - 0.5;
-    float viewportY = gl_FragCoord.y - ViewportOffsetY - 0.5;
+    // Preserve fragment centres through scaling before floor (GPU division can
+    // round exact integer boundaries down to the preceding scanline).
+    float viewportX = gl_FragCoord.x - ViewportOffsetX;
+    float viewportY = gl_FragCoord.y - ViewportOffsetY;
 
     if (viewportX < 0.0 || viewportY < 0.0 || viewportX >= ScreenWidth || viewportY >= ScreenHeight) {
         discard;
@@ -71,7 +72,7 @@ void main()
     // game pixels so per-scanline sampling stays stable under integer upscaling.
     float activeDisplayWidth = ActiveDisplayWidth > 0.0 ? ActiveDisplayWidth : ScreenWidth;
     float gameX = floor((viewportX * activeDisplayWidth) / ScreenWidth);
-    float gameY = floor(((ScreenHeight - 1.0 - viewportY) * 224.0) / ScreenHeight);  // Y=0 at top
+    float gameY = floor(((ScreenHeight - viewportY) * 224.0) / ScreenHeight);  // Y=0 at top
 
     // Get the scroll value for this scanline
     float hScrollThis = 0.0;

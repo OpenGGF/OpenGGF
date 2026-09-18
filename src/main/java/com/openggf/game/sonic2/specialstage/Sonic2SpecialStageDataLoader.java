@@ -63,6 +63,32 @@ public class Sonic2SpecialStageDataLoader {
         this.rom = rom;
     }
 
+    /** Presentation data follows the same session-owned ROM loader as gameplay data. */
+    public com.openggf.level.Palette[] getPalettes(int stageIndex) {
+        return Sonic2SpecialStagePalette.createPalettes(stageIndex);
+    }
+
+    public Sonic2SpecialStageSpriteMappings.SpriteFrame getMainPlayerFrame(int frame) {
+        return Sonic2SpecialStageSpriteMappings.getSonicFrame(frame);
+    }
+
+    public com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.ResultsPiece[] getResultsFrame(int frame) {
+        return com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.getFrame(frame);
+    }
+
+    public com.openggf.game.sonic2.objects.SplitNameResultsMessages createResultsMessages(
+            boolean gotEmerald, boolean allEmeralds) { return null; }
+
+    public com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.ResultsPiece[] getResultsObjectFrame(int frame) {
+        return getResultsFrame(frame);
+    }
+
+    public void patchResultsPatterns(Pattern[] patterns, int vramBase, Pattern[] titleCard2) { }
+
+    public int getBombPaletteLine() { return 1; }
+
+    public boolean showMainPlayerHudName() { return true; }
+
     /**
      * ROM-decoded special-stage player DPLC plans. Tile sources are normalized
      * to {@link Sonic2SpecialStageConstants#PLAYER_DPLC_RAM_BASE}, matching the
@@ -78,6 +104,9 @@ public class Sonic2SpecialStageDataLoader {
             tailsTails = List.copyOf(tailsTails);
         }
     }
+
+    /** Semantic owner of the main player's ROM-backed art bank. */
+    public String mainPlayerDynamicArtOwner() { return "ss-sonic"; }
 
     /**
      * Decodes and caches Obj09's special-stage DPLC records and their source

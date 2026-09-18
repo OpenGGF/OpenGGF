@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.S3kEmeraldProgression;
 import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -44,12 +45,19 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
     private boolean completionInitialized;
     private boolean completedAtSpawn;
     private boolean glowSpawned;
+    private boolean paletteCycleDelayWritten;
     private Boolean onScreenOverrideForTest;
+    /** {@code x_pos}/{@code y_pos}: the Hidden Palace crane carries the emerald ({@code loc_6510C}). */
+    private int x = X;
+    private int y = Y;
+    /** {@code art_tile} bit 15, set by the crane's {@code loc_650D4}. */
+    private boolean highPriority;
 
     private record RewindExtra(int scriptByteOffset, int rotationTimer,
                                int currentColorIndex,
                                boolean completionInitialized, boolean completedAtSpawn,
-                               boolean glowSpawned, ObjectRefId parentId)
+                               boolean glowSpawned, boolean paletteCycleDelayWritten,
+                               ObjectRefId parentId, int x, int y, boolean highPriority)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HPZMasterEmeraldObjectInstance(ObjectSpawn spawn) {
@@ -93,6 +101,16 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
             return;
         }
         latchCompletion();
+        if (!paletteCycleDelayWritten) {
+            paletteCycleDelayWritten = true;
+            // Obj_HPZMasterEmerald init: move.w #8000-1,(Palette_cycle_counter1).w
+            // (sonic3k.asm:197497) holds AnPal_HPZ off while the altar owns line 4.
+            var registry = services().zoneRuntimeRegistry();
+            if (registry != null) {
+                S3kRuntimeStates.currentHpz(registry)
+                        .ifPresent(state -> state.setPaletteCycleCounter1(8000 - 1));
+            }
+        }
         if (parentRef != null) {
             progression = parentRef.progressionForChild();
             runtime = parentRef.runtimeForChild();
@@ -183,7 +201,8 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
                 .map(table -> table.encodeObject(parentRef)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(
                 new RewindExtra(scriptByteOffset, rotationTimer, currentColorIndex,
-                        completionInitialized, completedAtSpawn, glowSpawned, parentId));
+                        completionInitialized, completedAtSpawn, glowSpawned,
+                        paletteCycleDelayWritten, parentId, x, y, highPriority));
     }
 
     @Override
@@ -197,6 +216,10 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
             completionInitialized = extra.completionInitialized();
             completedAtSpawn = extra.completedAtSpawn();
             glowSpawned = extra.glowSpawned();
+            paletteCycleDelayWritten = extra.paletteCycleDelayWritten();
+            x = extra.x();
+            y = extra.y();
+            highPriority = extra.highPriority();
             if (extra.parentId() != null) {
                 parentRef = (HPZSSEntryControlObjectInstance) context.requireIdentityTable()
                         .resolveObject(extra.parentId(), true);
@@ -206,9 +229,22 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
         }
     }
 
-    @Override public int getX() { return X; }
-    @Override public int getY() { return Y; }
-    @Override public int getOutOfRangeReferenceX() { return X; }
+    @Override public int getX() { return x; }
+    @Override public int getY() { return y; }
+    @Override public int getOutOfRangeReferenceX() { return x; }
+    @Override public boolean isHighPriority() { return highPriority; }
+
+    /** {@code loc_6510C}: {@code move.w x_pos(a0),x_pos(a1)} and the {@code _unkFABD} Y. */
+    void setCarriedPosition(int carriedX, int carriedY) {
+        x = carriedX & 0xFFFF;
+        y = carriedY & 0xFFFF;
+        updateDynamicSpawn(x, y);
+    }
+
+    /** {@code bset #7,art_tile(a2)}. */
+    void setHighPriority(boolean value) {
+        highPriority = value;
+    }
     @Override public int getPriorityBucket() { return 4; }
     int mappingFrameForTest() { return MAPPING_FRAME; }
     int renderPaletteLineForTest() { return PALETTE_LINE; }
@@ -217,7 +253,7 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.HPZ_MASTER_EMERALD);
         if (renderer != null) {
-            renderer.drawFrameIndex(MAPPING_FRAME, X, Y, false, false, PALETTE_LINE);
+            renderer.drawFrameIndex(MAPPING_FRAME, x, y, false, false, PALETTE_LINE);
         }
     }
 

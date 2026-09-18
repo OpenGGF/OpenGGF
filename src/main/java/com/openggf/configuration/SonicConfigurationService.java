@@ -489,6 +489,24 @@ public class SonicConfigurationService {
 		invalidateResolvedCaches();
 	}
 
+	/** Persisted preferences, deliberately excluding session/derived overlays. */
+	Map<SonicConfiguration, Object> settingsSnapshot() {
+		Map<SonicConfiguration, Object> values = new EnumMap<>(SonicConfiguration.class);
+		for (SonicConfiguration key : ConfigCatalog.emitOrder()) {
+			values.put(key, config.getOrDefault(key.name(), defaults.get(key.name())));
+		}
+		return values;
+	}
+
+	/** Publish a validated settings patch before making it visible to readers. */
+	void applySettings(Map<SonicConfiguration, Object> changes) throws IOException {
+		Map<String, Object> candidate = new HashMap<>(config);
+		changes.forEach((key, value) -> candidate.put(key.name(), value));
+		writeStringAtomically(resolveConfigFile().toPath(), new ConfigYamlWriter().write(candidate));
+		config = candidate;
+		invalidateResolvedCaches();
+	}
+
 	public void setSessionOverride(SonicConfiguration key, Object value) {
 		sessionOverrides.put(key.name(), value);
 		invalidateResolvedCaches();
@@ -787,6 +805,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.SONIC_1_ROM, "s1.gen");
 		putDefault(SonicConfiguration.SONIC_2_ROM, "s2.gen");
 		putDefault(SonicConfiguration.SONIC_3K_ROM, "s3k.gen");
+		putDefault(SonicConfiguration.ROMS_DIRECTORY, ".");
+		putDefault(SonicConfiguration.ROMS_PREFER_COMPOSITE, false);
 		// Migrate renamed config key: S3K_SKIP_AIZ1_INTRO → S3K_SKIP_INTROS
 		if (config.containsKey("S3K_SKIP_AIZ1_INTRO")) {
 			if (!config.containsKey(SonicConfiguration.S3K_SKIP_INTROS.name())) {

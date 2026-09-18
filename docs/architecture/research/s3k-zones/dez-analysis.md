@@ -1,15 +1,49 @@
 # S3K DEZ Zone Analysis
 
+> **Corrections 2026-09-17** (made at `9cba6dbb6` while hardening the
+> [S3K DEZ bring-up plan](../../plans/2026-09-17-s3k-dez-bring-up.md); each was checked against
+> `docs/skdisasm` revision `1a454a0e`):
+>
+> 1. **Knuckles access.** `LevelSelect_CheckKnuckles` (sonic3k.asm:10174) denies Knuckles only
+>    `$A00`, `$C00`, `$1600` and `$1700`. `$B00` and `$B01` are selectable, and the ROM carries
+>    Knuckles reverse-gravity code (glide, slide, wall climb, ledge climb). His story never reaches
+>    DEZ. Project decision: Knuckles reaches `$B00`/`$B01` from level select only.
+> 2. **`AniPLC_DEZ` has no triggers.** The first `zoneanimdecl` argument is the global frame
+>    **duration** (`sonic3k.macros.asm:167`; `AnimateTiles_DoAniPLC` reloads the counter from it, `-1`
+>    selects per-frame durations). Nothing reads `Level_trigger_array`. The per-frame byte lists are
+>    **tile offsets into the art**, not durations. Script 7's `$84` is a real count of 132 one-byte
+>    entries (tile offsets `0,5,…,$28` alternating with the blank frame at `$2D`); 10 offsets × 5
+>    tiles = the 1,600-byte art file.
+> 3. **Reverse gravity has 116 references**, not "~20+"
+>    ([reference table](s3k-reverse-gravity-references.md)). Writers are `$58`, `$59`, `$5B`, the
+>    debug cheat and the clearer object `loc_7FC3E` that the act 2 boss spawns at defeat (it clears the flag
+>    every frame until `$1700` loads); every writer responds to Player 1 only; `Obj_DEZGravityRoom`, `Hub` and `Puzzle` never touch the flag.
+>    `Obj_DEZGravitySwitch` is a pressed solid that toggles the flag after 4 frames, not a crossing test.
+> 4. **The act-change signal** is `Obj_LevelResultsCreate` (`st (Events_fg_5).w`, sonic3k.asm:62621)
+>    for every act 1 except AIZ and ICZ; no DEZ object sets it.
+> 5. **Both bosses are placed objects** (`$A6` once in act 1, `$A7` once in act 2); counts and
+>    subtypes are in the [placement inventory](dez-object-inventory.md).
+> 6. **Line citations in this document are about 5 lines low** against the current submodule
+>    (`DEZ1_ScreenInit` is 118623, `Obj_DEZGravitySwitch` 94800, `AniPLC_DEZ` 56079). They were not
+>    re-pointed one by one: find the label, do not trust the number.
+> 7. **`$1700` arena word.** `Events_bg+$00` runs `$6C0 → $2C0 → $6C0 → 0` (`loc_810A0`, `loc_80058`,
+>    `loc_8011E`), and BG stage 2 (`loc_5A61A`) tests `≠ $2C0`, not `≠ $6C0`.
+> 8. **`loc_7E44C`** (landing Y `$3AC`/`$3B0`) is the miniboss's post-act-change transport helper in
+>    act 2 coordinates, not the miniboss landing. `Events_fg_4` write 1 (`loc_7DFB8`) is mid-fight in
+>    act 1; write 2 (`loc_7E342`) follows the act change and drives `DEZ2_ScreenEvent` stage 0.
+> 9. **`$1700` start.** `loc_7FD9E` places P1 at `$30,$CD` and P2 at `$10,$CD` with `object_control
+>    $81` and `x_vel = ground_vel = $600`; the Start Location file is overwritten.
+
 ## Summary
 
 - **Zone:** Death Egg Zone (DEZ)
-- **Zone Index:** 0x0A (acts 1 and 2), 0x17 (act 3 / Final Boss)
+- **Zone Index:** 0x0B (acts 1 and 2; level-select `$B00`/`$B01`, `sonic3k.asm:10158-10159`), 0x17 (act 3 / Final Boss)
 - **Zone Set:** SKL (zones 7-13: MHZ-DDZ)
 - **Acts:** 1, 2, and 3 (Final Boss arena, zone $17 act 0)
 - **Water:** No
 - **Palette Cycling:** Yes (1 DEZ1-only channel + 2 shared DEZ1/DEZ2 channels = 3 channels total)
 - **Animated Tiles:** Yes (8 AniPLC scripts, shared between Act 1 and Act 2)
-- **Character Branching:** No -- Sonic/Tails and Knuckles share the same start positions, event routines, and layout. Knuckles does not reach Act 3 (goes to Mecha Sonic boss in Sky Sanctuary instead).
+- **Character Branching:** No -- DEZ is a Sonic/Tails story zone. Knuckles' story ends in Sky Sanctuary (`$A01`), so no story route reaches DEZ, but the ROM level select allows Knuckles into `$B00`/`$B01` (it denies only `$A00`, `$C00`, `$1600`, `$1700`) and he has reverse-gravity code. Project scope: Knuckles plays acts 1-2 from level select only.
 - **Parallax:** Minimal -- both acts use `PlainDeformation` (flat BG scroll with no multi-layer deformation). Act 3 has a custom deform with `ApplyDeformation2` and `ShakeScreen_Setup`.
 - **Seamless Transition:** Yes -- Act 1 transitions seamlessly to Act 2 via `DEZ1_BackgroundEvent`.
 - **Unique Mechanics:** Reverse gravity (`Reverse_gravity_flag`), light tunnel transport, gravity switching objects, teleporters, hover machines, conveyor belts/pads, energy bridges, bumper walls, gravity puzzles.
@@ -164,7 +198,7 @@ Complex initialization:
 |-------|--------|---------|--------|-------|
 | 0 | $00 | `Events_fg_5 != 0` | Clears `Events_fg_5`. Modifies chunk at layout offset `8(a3)`: sets byte $0E to $1A. Refreshes plane area ($15 = 21 rows). Advances state. | Arena layout modification -- likely opening/expanding the boss area. |
 | 1 | $04 | `Screen_shake_flag != 0` | Spawns `Obj_5A922` with params ($13, $2D0). Sets `Events_bg+$16 = $2C0`. Advances state. | Screen shake triggered by boss -- spawns debris/effect object. |
-| 2 | $08 | `Events_bg+$00 != $6C0` | Calls `Reset_TileOffsetPositionEff`. Sets up delayed draw at row $F0 with $F rows. Records `_unkEE8E` to `Events_bg+$0C`. Advances state. | Arena boundary changed from initial $6C0 -- triggers BG redraw. |
+| 2 | $08 | `Events_bg+$00 != $2C0` (fires on the `$6C0` rewrite by `loc_80058`) | Calls `Reset_TileOffsetPositionEff`. Sets up delayed draw at row $F0 with $F rows. Records `_unkEE8E` to `Events_bg+$0C`. Advances state. | Arena boundary changed from initial $6C0 -- triggers BG redraw. |
 | 3 | $0C | `Draw_PlaneVertBottomUp` complete (negative return) | Clears `Events_bg+$0C`. Advances state. | BG plane reconstruction in progress. |
 | 4 | $10 | `Events_bg+$00 != $2C0` | Sets up delayed draw at row $F0 with $F rows. Spawns `Obj_5A94C` with position based on camera X (aligned to $20). Sets `Events_bg+$16` = aligned camera X. Advances state. When `Events_bg+$00 == $2C0`, jumps to stage 7 (sets up final redraw). | Arena shrinking to $2C0. Spawns additional object during arena change. |
 | 5 | $14 | `Events_bg+$00 != 0` AND `Events_fg_5 != 0` | Clears `Events_fg_5`. Dispatches via `Events_bg+$0A` sub-index (4 states cycling through chunk modifications). Writes chunk modification bytes to layout. Draws tile rows across the arena area. | Progressive arena chunk modifications during boss fight. Sub-index cycles through: ($603, $903, $603, $807) -- pairs of chunk IDs for two layout planes at offsets `8(a3)` and `$C(a3)`. |
@@ -200,20 +234,19 @@ Complex initialization:
 
 ### Act 1 Miniboss (`Obj_DEZMiniboss`)
 
-- **Object:** `Obj_DEZMiniboss` at line 167659
+- **Object:** `Obj_DEZMiniboss` at line 167664
 - **Spawn trigger:** Object-based (placed in object layout, uses `Check_CameraInRange` with bounds from `word_7DDA4`)
 - **Music:** Changes to `mus_Miniboss`
 - **PLC load:** PLC $7B (loads `ArtNem_RobotnikShip` and `ArtNem_BossExplosion` via `PLC_78_79_7A_7B`)
 - **Art load:** `ArtKosM_DEZMinibossMisc` queued to VRAM at `ArtTile_DEZMiniboss` ($0400)
 - **Palette:** `Pal_DEZMiniboss1` loaded to palette line 1. `Pal_DEZMiniboss2` loaded later (at line 168278)
 - **Object data:** Uses `ObjDat_DEZMiniboss` (mappings: `Map_DEZMiniboss`, art tile: `ArtTile_DEZMiniboss` with palette 1, priority)
-- **Defeat behavior:** Boss flag cleared, music restored to `mus_DEZ2` (line 169744). Camera max X unlocked via `Obj_IncLevEndXGradual` at X=$3620. When player passes camera right edge, triggers `StartNewLevel` with `d0 = $1700` (DEZ3 Final Boss zone).
-- **Ring/timer preservation:** `Act3_flag` set, `Ring_count` -> `Act3_ring_count`, `Timer` -> `Act3_timer`
+- **Defeat behavior:** Spawns the act results via `Obj_EndSignControl` (line 168091) and releases the vertical camera limits (`Obj_DecLevStartYGradual` / `Obj_IncLevEndYGradual`, lines 168179-168185). It does **not** hand off to DEZ3; an earlier revision attributed the `$1700` handoff to this object, but that code belongs to `Obj_DEZEndBoss` (below).
 - **Confidence:** HIGH
 
 ### Act 2 Boss (`Obj_DEZEndBoss`)
 
-- **Object:** `Obj_DEZEndBoss` at line 169543
+- **Object:** `Obj_DEZEndBoss` at line 169548
 - **Spawn trigger:** Object-based (`Check_CameraInRange` with bounds at `word_7F0BE`: Y range $198-$498, X range $33E0-$3480)
 - **Arena bounds:** Y range $218-$288, X range $3400-$34E0 (from `word_7F0C6`)
 - **Music:** Changes to `mus_EndBoss`
@@ -223,7 +256,7 @@ Complex initialization:
 - **Hit points:** 8 (`collision_property = 8`)
 - **Movement:** Oscillating Y velocity ($100 initial), plays `sfx_WaveHover` every 64 frames
 - **6-phase routine:** Init, approach, attack pattern 1, retreat, attack pattern 2, retreat (via `off_7F102` at line 169594)
-- **Defeat behavior:** Sets `Events_fg_5`, starts act clear sequence
+- **Defeat behavior:** Boss flag cleared, music restored to `mus_DEZ2` (line 169749). Camera max X unlocked via `Obj_IncLevEndXGradual` at X=$3620. When the player passes the trigger X, sets `Act3_flag`, saves `Ring_count` -> `Act3_ring_count` and `Timer` -> `Act3_timer`, and calls `StartNewLevel` with `d0 = $1700` (lines 169778-169786, DEZ3 Final Boss zone)
 - **Confidence:** HIGH
 
 ### Act 3 Final Boss (`Obj_DEZ3_Boss`)
@@ -285,15 +318,15 @@ DEZ3 uses a more complex deformation:
 
 **Disassembly location:** `sonic3k.asm` line 56074
 
-Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniPLC_DEZ` script table. The `zoneanimdecl` format is: `trigger_byte, art_address, vram_tile, num_frames, tiles_per_frame`.
+Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniPLC_DEZ` script table. The `zoneanimdecl` format is: `duration, art_address, vram_tile, num_frames, tiles_per_frame` (`sonic3k.macros.asm:167`). `duration` is the global hold reload (a frame lasts `duration + 1` passes); `-1` means each frame entry is an `(offset, duration)` pair. There is no trigger: every script runs always.
 
 #### Script 0: Electrical arc A
 - **Source art:** `ArtUnc_AniDEZ__0` (128 bytes = 2 frames x 2 tiles x 32 bytes/tile)
 - **Destination VRAM tile:** $0E4
 - **Frame count:** 2
 - **Tiles per frame:** 2
-- **Trigger:** `Level_trigger_array[0]` (trigger byte = 0)
-- **Frame durations:** 0, 2 (2-frame cycle)
+- **Global duration:** 0 (each frame held 1 passes; no trigger exists)
+- **Frame tile offsets:** 0, 2 (2-frame cycle)
 - **Confidence:** HIGH
 
 #### Script 1: Large electrical effect
@@ -301,8 +334,8 @@ Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniP
 - **Destination VRAM tile:** $1F4
 - **Frame count:** 6
 - **Tiles per frame:** $1E (30)
-- **Trigger:** `Level_trigger_array[1]` (trigger byte = 1)
-- **Frame durations:** 0, $1E, $3C, 0, $1E, $3C (offsets into art data, not timing -- 6 frames)
+- **Global duration:** 1 (each frame held 2 passes; no trigger exists)
+- **Frame tile offsets:** 0, $1E, $3C, 0, $1E, $3C (offsets into art data, not timing -- 6 frames)
 - **Note:** Art file is 2880 bytes = 30 tiles x 32 bytes x 3 unique frames (durations cycle through 3 offsets twice)
 - **Confidence:** HIGH
 
@@ -311,8 +344,8 @@ Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniP
 - **Destination VRAM tile:** $0EC
 - **Frame count:** 8
 - **Tiles per frame:** 4
-- **Trigger:** `Level_trigger_array[3]` (trigger byte = 3)
-- **Frame durations:** 0, 4, 8, $C, $10, $14, $18, $1C (sequential 4-tile offsets)
+- **Global duration:** 3 (each frame held 4 passes; no trigger exists)
+- **Frame tile offsets:** 0, 4, 8, $C, $10, $14, $18, $1C (sequential 4-tile offsets)
 - **Confidence:** HIGH
 
 #### Script 3: Flashing lights (always active)
@@ -320,7 +353,7 @@ Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniP
 - **Destination VRAM tile:** $05F
 - **Frame count:** 4
 - **Tiles per frame:** 6
-- **Trigger:** Always active (trigger byte = -1)
+- **Global duration:** -1 (per-frame durations below)
 - **Frame durations:** {0, 9}, {6, 4}, {$C, 9}, {6, 4} -- paired values (offset, duration). Durations: 9, 4, 9, 4 frames.
 - **Note:** This script uses variable per-frame durations (duration bytes interleaved with frame offsets)
 - **Confidence:** HIGH
@@ -330,8 +363,8 @@ Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniP
 - **Destination VRAM tile:** $04B
 - **Frame count:** 4
 - **Tiles per frame:** 2
-- **Trigger:** `Level_trigger_array[4]` (trigger byte = 4)
-- **Frame durations:** 0, 2, 4, 2 (4-frame cycle, frame 3 repeats frame 1)
+- **Global duration:** 4 (each frame held 5 passes; no trigger exists)
+- **Frame tile offsets:** 0, 2, 4, 2 (4-frame cycle, frame 3 repeats frame 1)
 - **Confidence:** HIGH
 
 #### Script 5: Small machinery animation B
@@ -339,8 +372,8 @@ Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniP
 - **Destination VRAM tile:** $06B
 - **Frame count:** 6
 - **Tiles per frame:** 3
-- **Trigger:** `Level_trigger_array[4]` (trigger byte = 4, shared with script 4)
-- **Frame durations:** 0, 3, 6, 0, 3, 6 (6-frame cycle, repeats 3-frame pattern twice)
+- **Global duration:** 4 (each frame held 5 passes; no trigger exists)
+- **Frame tile offsets:** 0, 3, 6, 0, 3, 6 (6-frame cycle, repeats 3-frame pattern twice)
 - **Confidence:** HIGH
 
 #### Script 6: Background machinery glow
@@ -348,19 +381,20 @@ Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniP
 - **Destination VRAM tile:** $028
 - **Frame count:** 2
 - **Tiles per frame:** 8
-- **Trigger:** `Level_trigger_array[1]` (trigger byte = 1, shared with script 1)
-- **Frame durations:** 0, 8 (2-frame cycle)
+- **Global duration:** 1 (each frame held 2 passes; no trigger exists)
+- **Frame tile offsets:** 0, 8 (2-frame cycle)
 - **Confidence:** HIGH
 
 #### Script 7: Large scrolling conveyor/machinery
 - **Source art:** `ArtUnc_AniDEZ__7` (1600 bytes)
 - **Destination VRAM tile:** $26D
-- **Frame count:** $84 (132 -- but this is likely wrong, as the actual number of frames is limited by art data)
+- **Frame count:** $84 (132 one-byte entries; verified against the table at sonic3k.asm:56128-56260)
 - **Tiles per frame:** 5
-- **Trigger:** `Level_trigger_array[0]` (trigger byte = 0, shared with script 0)
-- **Frame durations:** 0, $2D, 0, $2D, 0, $2D, 0, $2D (8 entries cycling through 2 art offsets)
+- **Global duration:** 0 (each frame held 1 passes; no trigger exists)
+- **Frame tile offsets:** 0, $2D, 0, $2D, 0, $2D, 0, $2D (8 entries cycling through 2 art offsets)
 - **Note:** Art size is 1600 bytes = 10 unique tile sets x 5 tiles x 32 bytes. The $84 frame count with wraparound and the 8-entry duration table creates a long cyclic animation. With 10 unique 5-tile frames at 32 bytes each, actual unique frames = 1600/(5*32) = 10.
-- **Confidence:** MEDIUM (the $84 frame count vs. art data size needs verification -- may use modular indexing)
+- **Sequence:** 12 entries each of `0,$2D`, `5,$2D`, `$A,$2D`, `$F,$2D`, `$14,$2D`, `$19,$2D`, `$1E,$2D`, `$23,$2D`, then 36 entries of `$28,$2D`: a light that steps along eight positions, blinking against the blank frame `$2D`, one entry per pass (duration 0).
+- **Confidence:** HIGH
 
 ## Palette Cycling
 
@@ -473,7 +507,7 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
 | `Obj_DEZTunnelControl` | Light Tunnel Control | Controls player movement through light tunnels | Line 94366. Complex waypoint-based path following with circle/sine movement modes. |
 | `Obj_DEZTransRingSpawner` | Transporter Ring Spawner | Spawns rings along tunnel path | Line 94717 |
 | `Obj_DEZTransRing` | Transporter Ring | Visual ring in tunnel | Line 94778. Uses `ArtTile_DEZMisc+$38` |
-| `Obj_DEZGravitySwitch` | Gravity Switch | Toggles reverse gravity | Line 94795. Uses `ArtTile_DEZMisc+$143`. Sets/clears `Reverse_gravity_flag` based on player crossing and `render_flags` bit 0. |
+| `Obj_DEZGravitySwitch` | Gravity Switch | Toggles reverse gravity | Line 94795. Uses `ArtTile_DEZMisc+$143`. A solid button: a top or bottom press (`SolidObjectFull` bits `$14`) zeroes the players' motion, and 4 frames later `eori.b #1` toggles `Reverse_gravity_flag`, then a 20-frame rearm. `render_flags` bit 1 picks the press direction. |
 | `Obj_DEZTeleporter` | Teleporter | Teleports player to new position | Line 94908 |
 | `Obj_DEZGravityTube` | Gravity Tube | Tube transport with gravity control | Line 95165 |
 | `Obj_DEZGravitySwap` | Gravity Swap | Directional gravity reversal trigger | Line 95467. Triggers on player X crossing, sets `Reverse_gravity_flag` based on render flags. |
@@ -484,8 +518,8 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
 | `Obj_DEZGravityPuzzle` | Gravity Puzzle | Gravity-based puzzle mechanism | Line 96082. Uses `ArtTile_DEZMisc2+$31` |
 | `Obj_FBZDEZPlayerLauncher` | Player Launcher | Tube launcher (shared FBZ/DEZ) | Line 79389. Uses `ArtTile_DEZMisc2` |
 | `Map_HCZCNZDEZDoor` | Door | Sliding door (shared HCZ/CNZ/DEZ) | Line 66163. Uses `ArtTile_DEZMisc+$1E` |
-| `Obj_DEZMiniboss` | Act 1 Miniboss | DEZ Act 1 boss | Line 167659 |
-| `Obj_DEZEndBoss` | Act 2 Boss | DEZ Act 2 end boss | Line 169543 |
+| `Obj_DEZMiniboss` | Act 1 Miniboss | DEZ Act 1 boss | Line 167664 |
+| `Obj_DEZEndBoss` | Act 2 Boss | DEZ Act 2 end boss | Line 169548 |
 | `Obj_DEZ3_Boss` | Final Boss | Robotnik giant mech (Act 3) | Line 170909. 12-phase fight. |
 | `Obj_DEZ3_Boss_Fireball` | Final Boss Fireball | Projectile from final boss | Line 171996 |
 
@@ -500,7 +534,7 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
 
 - **Water:** Not present. DEZ is entirely dry. No water level, no waterline deformation, no underwater palette.
 
-- **Reverse Gravity:** DEZ is the primary zone using the `Reverse_gravity_flag` system. Multiple objects (`Obj_DEZGravitySwitch`, `Obj_DEZGravitySwap`, `Obj_DEZGravityRoom`) toggle this flag. When set, the physics engine inverts gravity for the player. This flag is checked extensively throughout the player movement code (~20+ references in `sonic3k.asm`). Gravity is restored to normal (flag cleared) when the player crosses a gravity switch in the opposite direction.
+- **Reverse Gravity:** DEZ is the primary zone using the `Reverse_gravity_flag` system. `Obj_DEZGravitySwitch`, `Obj_DEZGravitySwap` and `Obj_DEZTeleporter` write this flag (`Obj_DEZGravityRoom`, `Hub` and `Puzzle` do not reference it). When set, the physics engine inverts gravity for the player. This flag is checked extensively throughout the player movement code (116 references in `sonic3k.asm`; see the [reference table](s3k-reverse-gravity-references.md)). Gravity is restored to normal (flag cleared) when the player crosses a gravity switch in the opposite direction.
 
 - **Light Tunnel Transport:** The `Obj_DEZTunnelLauncher` / `Obj_DEZTunnelControl` system provides a unique transport mechanic:
   - Launcher captures the player, spawns a `Obj_DEZTunnelControl` child
@@ -510,7 +544,7 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
   - `Obj_DEZTransRingSpawner` creates visual ring effects along the path
 
 - **Seamless Act Transition (Act 1 -> Act 2):**
-  - Triggered via `Events_fg_5` signal (set by an object, likely the miniboss or an end-of-act trigger)
+  - Triggered via `Events_fg_5` signal (set by `Obj_LevelResultsCreate`, sonic3k.asm:62621, as for every act 1 except AIZ and ICZ)
   - Stage 0: Queues DEZ2 art (16x16 blocks via Kos, 8x8 patterns via KosinskiM, PLC $38 for Nemesis art)
   - Stage 1: Waits for art loading completion, then performs full level reload: changes `Current_zone_and_act` to $B01, clears state variables, calls `Load_Level`/`LoadSolids`, copies DEZ2 palette, offsets all positions (X-=$3600, Y+=$400), reconstructs BG plane
   - This is simpler than the AIZ act transition (no fire sequence, no progressive tile reveals)
@@ -523,7 +557,7 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
 
 - **DEZ3 Arena System:**
   - The final boss arena is dynamically managed through `Events_bg+$00` (arena size)
-  - Arena shrinks during the fight: $6C0 -> $2C0 -> 0
+  - Arena word during the fight: $6C0 -> $2C0 -> $6C0 -> 0
   - Each shrink triggers BG plane reconstruction and chunk modifications
   - Camera X wraps at $1FF (`HScroll_table+$004 = Camera_X & $1FF`) creating a circular arena effect
   - Screen shake via `ShakeScreen_Setup` during boss attacks
@@ -562,7 +596,7 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
   - Act 2: Sonic ($0140, $03AC), Knuckles ($0140, $03AC) -- identical
   - Act 3 Boss: Sonic ($0060, $0070)
 
-- **Character Branching:** Minimal for DEZ compared to other zones. Sonic/Tails and Knuckles share the same start positions and level layouts. The primary character difference is at the game progression level: Knuckles' story does not include DEZ3 (the Final Boss), proceeding instead to Mecha Sonic in Sky Sanctuary.
+- **Character Branching:** DEZ is played only by Sonic and Tails. Knuckles' story finishes at Sky Sanctuary before DEZ, so the identical Knuckles start entries are table defaults, not a route. Sonic-vs-Tails differences are the miniboss landing Y (`Player_mode` check near line 168258) and the ending branch after DEZ3.
 
 - **No chunk adjustments:** Unlike AIZ, DEZ has no `Adjust_*Chunks` routines.
 
@@ -575,7 +609,7 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
 ### Priority Order
 1. **Parallax (Deform)** -- Trivial for Acts 1/2 (`PlainDeformation` is the default). Act 3 requires custom deform with arena-relative BG positioning.
 2. **Palette Cycling (AnPal)** -- 3 channels with well-defined counter/step/limit patterns. Critical for visual correctness: blinking lights and energy conduit effects.
-3. **Animated Tiles (AniPLC)** -- 8 scripts with trigger conditions. Standard `AnimateTiles_DoAniPLC` driver.
+3. **Animated Tiles (AniPLC)** -- 8 always-running scripts. Standard `AnimateTiles_DoAniPLC` driver.
 4. **Events (Screen/Background)** -- Act 1/2 events are simple chunk modifications and seamless transition. Act 3 events are complex multi-stage arena management.
 5. **Act Transitions** -- DEZ1->DEZ2 seamless transition is simpler than AIZ's fire transition but still requires art loading, level reload, and position offsetting. DEZ2->DEZ3 is a full level change via `StartNewLevel`.
 
@@ -583,11 +617,10 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
 - Seamless Act 1->2 transition requires Kos/KosinskiM queuing and completion detection
 - DEZ2 ScreenEvent stage 0 is only reached during seamless transition (init sets stage to 1)
 - DEZ3 arena management depends on boss object driving `Events_fg_5`, `Screen_shake_flag`, and `Events_bg+$00`
-- AniPLC scripts 0, 2, 4, 5 depend on `Level_trigger_array` entries being set by trigger objects in the level
 - Palette cycling channel 0 (energy conduit) is Act 1 only -- channel selection is implicit from the zone dispatch table
 
 ### Known Risks
 - **DEZ3 arena management:** The circular arena with shrinking boundaries, dynamic chunk modifications, and boss-driven state transitions is the most complex feature. The camera X wrapping at $1FF and the BG position computation relative to boss position requires careful implementation. Confidence: MEDIUM.
 - **Light tunnel system:** The waypoint-based player transport with multiple movement modes (normal, circle, sine) is complex but self-contained in the object code. Confidence: MEDIUM (requires accurate waypoint path parsing).
-- **Reverse gravity:** The `Reverse_gravity_flag` affects player physics engine-wide (~20+ call sites). Implementation requires physics system support, not just zone-level code. Confidence: MEDIUM.
+- **Reverse gravity:** The `Reverse_gravity_flag` affects player physics engine-wide (116 references). Implementation requires physics system support, not just zone-level code. Confidence: MEDIUM.
 - **Seamless transition art loading:** The Kos/KosinskiM queue completion check (`Kos_modules_left == 0`) gates the level reload. If art loading is incomplete, the transition stalls. Confidence: HIGH (pattern is well-established from other zones).

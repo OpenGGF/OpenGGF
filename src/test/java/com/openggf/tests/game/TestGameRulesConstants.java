@@ -72,7 +72,7 @@ class TestGameRulesConstants {
         short[] superTable = new short[]{4, 5, 6};
 
         PlayerCapabilityRules rules = new PlayerCapabilityRules(true, spindashTable, true, true,
-                false, true, true, superTable);
+                false, true, true, superTable, true);
 
         spindashTable[0] = 99;
         superTable[0] = 99;
@@ -98,7 +98,7 @@ class TestGameRulesConstants {
                 first.tailsFlightEnabled(),
                 first.jumpRepressClearsRollJumpBeforeAbility(),
                 first.lightningShieldEnabled(),
-                first.superSpindashSpeedTable());
+                first.superSpindashSpeedTable(), first.glideAttacksEnabled());
 
         assertEquals(first, second);
         assertEquals(first.hashCode(), second.hashCode());

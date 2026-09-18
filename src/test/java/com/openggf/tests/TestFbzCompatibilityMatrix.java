@@ -24,9 +24,13 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.spawn.PlacementViewportWidth;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Sonic;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -51,10 +55,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Cross-cutting FBZ compatibility audit.
  *
- * <p>Each matrix row first executes the real synchronous FBZ1 -> FBZ2 reload,
- * then reboots a fresh production session for the cold-start FBZ2 mechanical
- * route through traversal, both bosses, capsule, exit, and the Sandopolis Act
- * 0 request. The complete-run BK2 trace, not this direct Act-2 route, is the
+ * <p>Synchronous reloads, local interactions and checkpoint slices execute
+ * independently of the complete routes. The ordinary suite retains a native
+ * Sonic/Tails route; the fbz-routes profile selects all eleven complete routes
+ * through traversal, both bosses, capsule, exit and the Sandopolis Act 0 request.
+ * The complete-run BK2 trace, not this direct Act-2 route, is the
  * oracle for inherited magnetic cadence.</p>
  */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -62,16 +67,7 @@ class TestFbzCompatibilityMatrix {
     private static final int PLANE_TRIGGER_X = 0x2E80;
     private static final int BOSS_CAMERA_MAX_X = 0x32B8;
     private static final int BOSS_REBASED_CAMERA_X = BOSS_CAMERA_MAX_X - 0x45C;
-    private static final List<InputRun> STARPOST_6_TO_BOSS = List.of(
-            new InputRun(600, 0x00),
-            new InputRun(300, 0x08),
-            new InputRun(20, 0x18),
-            new InputRun(300, 0x08),
-            new InputRun(800, 0x00),
-            new InputRun(60, 0x08),
-            new InputRun(2140, 0x00),
-            new InputRun(20, 0x18),
-            new InputRun(100, 0x08));
+
 
     @ParameterizedTest(name = "multi-sidekick synchronous transition preflight: {0}")
     @MethodSource("teamCases")
@@ -117,14 +113,30 @@ class TestFbzCompatibilityMatrix {
         }
     }
 
+    @Test
+    @Tag("slow-suite")
+    void nativePairCompletesRepresentativeRoute() throws Exception {
+        verifyConfiguredTeamCompleteRoute(teamCases()
+                .filter(team -> team.sidekicks().equals("tails")).findFirst().orElseThrow());
+    }
+
+    @Tag("fbz-route")
     @ParameterizedTest(name = "multi-sidekick complete route: {0}")
     @MethodSource("teamCases")
     void configuredTeamSurvivesSharedPlaneAndBossState(TeamCase team) throws Exception {
+        verifyConfiguredTeamCompleteRoute(team);
+    }
+
+    private static void verifyConfiguredTeamCompleteRoute(TeamCase team) throws Exception {
         try (ConfigurationScope ignored = ConfigurationScope.open()) {
-            configureNative(team.sidekicks(), WidescreenAspect.NATIVE_4_3);
-            assertSynchronousMagneticTransitionCompatibility(
-                    team.label(), 320, "off",
-                    transition -> assertTeamGraph(transition.sprite(), team));
+            boolean nativePair = team.sidekicks().equals("tails");
+            boolean donorOff = team.sidekicks().isBlank();
+            // The solo row also owns the donor-off setup/reset contract.
+            if (donorOff) configureCompatibility("", WidescreenAspect.NATIVE_4_3, "off", null);
+            else configureNative(team.sidekicks(), WidescreenAspect.NATIVE_4_3);
+            assertFalse(CrossGameFeatureProvider.isActive());
+            // The matching standalone preflight covers this configuration's
+            // synchronous transition. This route starts from a fresh session.
             restartFreshGameplaySession();
             List<AbstractPlayableSprite> routedSidekicks = new ArrayList<>();
             AbstractPlayableSprite[] routedMain = new AbstractPlayableSprite[1];
@@ -133,14 +145,37 @@ class TestFbzCompatibilityMatrix {
                         routedMain[0] = start.sprite();
                         routedSidekicks.addAll(GameServices.sprites().getSidekicks());
                         assertTeamGraph(start.sprite(), team);
+                        if (nativePair) {
+                            assertInstanceOf(Sonic.class, start.sprite());
+                            assertInstanceOf(Tails.class, GameServices.sprites().getSidekicks().getFirst());
+                            assertEquals(320, start.camera().getWidth() & 0xFFFF);
+                            GameServices.graphics().setViewport(0, 0, 320, 224);
+                        }
+                        if (donorOff) {
+                            assertEquals(320, start.camera().getWidth() & 0xFFFF);
+                            assertSame(GameServices.module().getRules(), start.sprite().getGameRules());
+                        }
                     });
             assertMandatoryRouteCompatibility(completion, team.label());
             assertEquals(completion.frames(), completion.sidekickAuditFrames(),
                     "every complete-route frame must audit the configured team");
             assertTrue(completion.sidekickIdentityOrderPreserved(),
                     "sidekick identity/order changed during the complete route");
-            assertTrue(completion.sidekickAliveEveryFrame(),
-                    "a configured sidekick was dead during the complete route");
+            // CPU sidekick deaths are shipped behaviour (the ROM's own Tails dies
+            // three times in fbz_completerun act 2 and Tails_CPU_Control respawns
+            // it each time); the contract is that every death respawns, and that
+            // the team is alive at the end boss and at the SOZ exit.
+            assertTrue(completion.sidekickRespawnedAfterEveryDeath(),
+                    "a configured sidekick stayed dead beyond the CPU respawn window "
+                            + "(longest streak " + completion.sidekickLongestDeadStreak()
+                            + " frames, first death " + completion.sidekickDeathEvidence() + ")");
+            assertTrue(completion.sidekickAliveAtBossEntry(),
+                    "a configured sidekick had not respawned when the end boss allocated"
+                            + " (first death " + completion.sidekickDeathEvidence() + ")");
+            assertTrue(completion.sidekickAliveAtExit(),
+                    "a configured sidekick was dead or despawned at the SOZ exit request"
+                            + " (deaths " + completion.sidekickDeaths()
+                            + ", first " + completion.sidekickDeathEvidence() + ")");
             assertTrue(completion.sidekickControllerEveryFrame(),
                     "a sidekick lost CPU-controller ownership during the complete route");
             assertTrue(completion.sidekickLeaderChainEveryFrame(),
@@ -152,33 +187,25 @@ class TestFbzCompatibilityMatrix {
             assertTeamGraph(routedMain[0], team);
             assertFalse(routedMain[0].getDead(), "P1 died before the SOZ request");
 
-            Evidence optional = FbzCompatibilityInteractionProbe.run(320);
-            assertOptionalInteractionCompatibility(optional, team.label());
-
-            // Authority isolation is a separate production fixture after the
-            // fresh cold-start mechanical route.
-            restartFreshGameplaySession();
-            HeadlessTestFixture fixture = buildAct2Fixture();
-            assertTeamGraph(fixture.sprite(), team);
-            assertExtraSidekicksCannotTriggerPlaneEvent(fixture);
-            fixture = buildAct2Fixture();
-            assertTeamGraph(fixture.sprite(), team);
-
-            RouteSliceEvidence evidence = runStarpost6ToBoss(fixture);
-            assertRouteSliceReachedBossAlive(fixture, evidence, team.label());
-            assertTeamGraph(fixture.sprite(), team);
+            if (nativePair) assertViewportCompletion(completion, 320);
+            if (donorOff) {
+                assertFalse(completion.s1DonationUpperLoopAssistConsumed(),
+                        "off must not consume the S1-only upper-loop assist");
+                assertFalse(completion.s1DonationLowerLoopAssistConsumed(),
+                        "off must not consume the S1-only lower-loop assist");
+            }
         }
     }
 
+    @Tag("fbz-route")
     @ParameterizedTest(name = "widescreen complete route: {0}px")
-    @MethodSource("widthCases")
+    @MethodSource("additionalWidthCases")
     void viewportKeepsWorldThresholdsCullingAndBossContainment(
             WidescreenAspect aspect, int width) throws Exception {
         try (ConfigurationScope ignored = ConfigurationScope.open()) {
             configureNative("tails", aspect, width);
-            assertSynchronousMagneticTransitionCompatibility(width + "px", width, "off",
-                    transition -> assertEquals(width,
-                            transition.camera().getWidth() & 0xFFFF));
+            // The matching standalone preflight covers this configuration's
+            // synchronous transition. This route starts from a fresh session.
             restartFreshGameplaySession();
             RouteCompletionEvidence completion = TestFbzAct2TraversalPreboss
                     .runNativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones(start -> {
@@ -186,73 +213,13 @@ class TestFbzCompatibilityMatrix {
                         GameServices.graphics().setViewport(0, 0, width, 224);
                     });
             assertMandatoryRouteCompatibility(completion, width + "px");
-            Evidence optional = FbzCompatibilityInteractionProbe.run(width);
-            assertOptionalInteractionCompatibility(optional, width + "px");
-            assertTrue(completion.minScreenX() <= 16,
-                    "the complete route must exercise the authored left horizontal extreme");
-            int placementLoadAhead = Math.max(0x280, width + 0x80);
-            assertTrue(completion.maxPlacedSpawnScreenX() >= placementLoadAhead - 0x80
-                            && completion.maxPlacedSpawnScreenX() < placementLoadAhead + 0x80,
-                    "canonical placement must materialize inside the viewport-scaled right "
-                            + "load-ahead chunks; actual=" + completion.maxPlacedSpawnScreenX());
-            assertTrue(completion.minPlacedDespawnScreenX() >= -0x180
-                            && completion.minPlacedDespawnScreenX() <= -0x80,
-                    "the same canonical placement must cull inside the ROM left unload chunks; "
-                            + "actual=" + completion.minPlacedDespawnScreenX());
-            assertTrue(completion.maxScreenX() >= 320 - 24,
-                    "the boss route must exercise the ROM-authored right player boundary");
-            assertTrue(completion.maxPlayerX() >= BOSS_CAMERA_MAX_X + 320 - 24,
-                    "the route must reach the fixed native right world edge at every width");
-
-            restartFreshGameplaySession();
-            HeadlessTestFixture fixture = buildAct2Fixture();
-            GameServices.graphics().setViewport(0, 0, width, 224);
-
-            assertEquals(width, PlacementViewportWidth.current());
-            assertEquals(width, fixture.camera().getWidth() & 0xFFFF);
-            assertEquals(width, GameServices.graphics().getViewportWidth());
-
-            RouteSliceEvidence evidence = runStarpost6ToBoss(fixture);
-            assertRouteSliceReachedBossAlive(fixture, evidence, width + "px");
-            assertTrue(evidence.observedWaitingBelowWorldTrigger(),
-                    "viewport width must not activate the plane event before P1 reaches world X $2E80");
-            assertTrue(evidence.observedTriggerAtOrBeyondWorldThreshold(),
-                    "the production event must still activate at world X $2E80");
-            assertTrue(evidence.controllerObserved() && evidence.pillarObserved(),
-                    "viewport-scaled placement/culling must retain both persistent pre-boss objects");
-            assertTrue(evidence.arenaWorldBoundaryObserved(),
-                    "the ROM $32B8 arena boundary must be observed independently of viewport width");
-            assertTrue(evidence.exactArenaWorldLockObserved(),
-                    "the arena must lock at the exact ROM $32B8 world coordinate; "
-                            + evidence.diagnostic());
-
-            int cameraLeft = fixture.camera().getX() & 0xFFFF;
-            int cameraRight = cameraLeft + width;
-            assertEquals(evidence.cameraMinX(), evidence.cameraMaxX(),
-                    "the boss arena must converge to a closed horizontal lock; "
-                            + evidence.diagnostic());
-            assertEquals(BOSS_REBASED_CAMERA_X, evidence.cameraMaxX(),
-                    "the $45C boss-load rebase must preserve the exact $32B8 world lock; "
-                            + evidence.diagnostic());
-            assertTrue(evidence.maxPlayerX() <= BOSS_CAMERA_MAX_X + 320 - 24 + 1,
-                    "P1 must remain inside the ROM-authored world edge instead of escaping into "
-                            + "widescreen-only void; " + evidence.diagnostic());
-            assertTrue(evidence.stage8Frame() > evidence.triggerFrame()
-                            && evidence.stage12Frame() > evidence.stage8Frame(),
-                    "the carrier, arena lock, and plane-refresh stages must finish in order; "
-                            + evidence.diagnostic());
-            assertTrue(cameraLeft >= GameServices.level().getCurrentLevel().getMinX());
-            assertTrue(cameraRight <= GameServices.level().getCurrentLevel().getMaxX() + width,
-                    "the visible right extreme must not wrap outside the level's world range");
-            assertTrue((fixture.sprite().getCentreY() & 0xFFFF)
-                            < (fixture.camera().getMaxY() & 0xFFFF) + 224,
-                    "neither horizontal camera extreme may expose a lethal fall below the arena");
-
+            assertViewportCompletion(completion, width);
         }
     }
 
+    @Tag("fbz-route")
     @ParameterizedTest(name = "donated complete mandatory route: {0}")
-    @MethodSource("donationCases")
+    @MethodSource("activeDonationCases")
     void donatedMovementProfileCanReachTheMandatoryBossEntryWithoutSpindash(
             String donor, Path donorRom) throws Exception {
         assertTrue(donor.equals("off") || donorRom != null,
@@ -266,16 +233,8 @@ class TestFbzCompatibilityMatrix {
                 assertEquals(donor, CrossGameFeatureProvider.getInstance().getDonorGameId());
             }
 
-            assertSynchronousMagneticTransitionCompatibility(
-                    "donor=" + donor, 320, donor, transition -> {
-                        if (donor.equals("off")) {
-                            assertSame(GameServices.module().getRules(),
-                                    transition.sprite().getGameRules());
-                        } else {
-                            assertNotSame(GameServices.module().getRules(),
-                                    transition.sprite().getGameRules());
-                        }
-                    });
+            // The matching standalone preflight covers this configuration's
+            // synchronous transition. This route starts from a fresh session.
             restartFreshGameplaySession();
 
             RouteCompletionEvidence completion = TestFbzAct2TraversalPreboss
@@ -299,17 +258,149 @@ class TestFbzCompatibilityMatrix {
                 assertFalse(completion.s1DonationLowerLoopAssistConsumed(),
                         donor + " must not consume the S1-only lower-loop assist");
             }
-            // Mandatory traversal follows the authored lower route. Upper
-            // optional branches (including the placed $09C8 $E5 crane) are
-            // exercised below through exact production-object probes instead
-            // of being misclassified as boss-entry requirements.
-            Evidence optional = FbzCompatibilityInteractionProbe.run(320);
-            assertOptionalInteractionCompatibility(optional, "donor=" + donor);
             if (donor.equals("s1")) {
                 assertFalse(completion.spindashObserved(),
                         "the S1-donated complete route must not depend on unavailable spindash");
             }
         }
+    }
+
+    @ParameterizedTest(name = "team event authority: {0}")
+    @MethodSource("teamCases")
+    void configuredTeamRetainsPlaneEventAuthority(TeamCase team) throws Exception {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureTeam(team);
+            HeadlessTestFixture fixture = buildAct2Fixture();
+            assertTeamGraph(fixture.sprite(), team);
+            assertExtraSidekicksCannotTriggerPlaneEvent(fixture);
+        }
+    }
+
+    @ParameterizedTest(name = "team checkpoint-to-boss slice: {0}")
+    @MethodSource("teamCases")
+    void configuredTeamKeepsBossSliceOwnership(TeamCase team) throws Exception {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureTeam(team);
+            HeadlessTestFixture fixture = buildAct2Fixture();
+            assertTeamGraph(fixture.sprite(), team);
+            RouteSliceEvidence evidence = runStarpost6ToBoss(fixture);
+            assertRouteSliceReachedBossAlive(fixture, evidence, team.label());
+            assertTeamGraph(fixture.sprite(), team);
+        }
+    }
+
+    @ParameterizedTest(name = "viewport checkpoint-to-boss slice: {0}px")
+    @MethodSource("widthCases")
+    void viewportKeepsBossSliceThresholdsAndContainment(WidescreenAspect aspect, int width)
+            throws Exception {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureNative("tails", aspect, width);
+            assertViewportBossSlice(width);
+        }
+    }
+
+    @ParameterizedTest(name = "team local interactions: {0}")
+    @MethodSource("teamCases")
+    void configuredTeamOptionalInteractions(TeamCase team) throws Exception {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureTeam(team);
+            assertOptionalInteractionCompatibility(FbzCompatibilityInteractionProbe.run(320), team.label());
+        }
+    }
+
+    @ParameterizedTest(name = "viewport local interactions: {0}px")
+    @MethodSource("additionalWidthCases")
+    void viewportOptionalInteractions(WidescreenAspect aspect, int width) {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureNative("tails", aspect, width);
+            assertOptionalInteractionCompatibility(FbzCompatibilityInteractionProbe.run(width), width + "px");
+        }
+    }
+
+    @ParameterizedTest(name = "donor local interactions: {0}")
+    @MethodSource("activeDonationCases")
+    void donatedOptionalInteractions(String donor, Path donorRom) throws Exception {
+        assertNotNull(donorRom, "Required " + donor + " donor ROM is unavailable");
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureCompatibility("", WidescreenAspect.NATIVE_4_3, donor, donorRom);
+            assertTrue(CrossGameFeatureProvider.isActive());
+            assertEquals(donor, CrossGameFeatureProvider.getInstance().getDonorGameId());
+            assertOptionalInteractionCompatibility(FbzCompatibilityInteractionProbe.run(320), "donor=" + donor);
+        }
+    }
+
+    private static void configureTeam(TeamCase team) throws Exception {
+        // Solo also exercises the native donor-off bootstrap contract.
+        if (team.sidekicks().isBlank()) {
+            configureCompatibility("", WidescreenAspect.NATIVE_4_3, "off", null);
+        } else {
+            configureNative(team.sidekicks(), WidescreenAspect.NATIVE_4_3);
+        }
+    }
+
+    private static void assertViewportCompletion(RouteCompletionEvidence completion, int width) {
+        assertTrue(completion.minScreenX() <= 16,
+                "the complete route must exercise the authored left horizontal extreme");
+        int placementLoadAhead = Math.max(0x280, width + 0x80);
+        assertTrue(completion.maxPlacedSpawnScreenX() >= placementLoadAhead - 0x80
+                        && completion.maxPlacedSpawnScreenX() < placementLoadAhead + 0x80,
+                "canonical placement must materialize inside the viewport-scaled right "
+                        + "load-ahead chunks; actual=" + completion.maxPlacedSpawnScreenX());
+        assertTrue(completion.minPlacedDespawnScreenX() >= -0x180
+                        && completion.minPlacedDespawnScreenX() <= -0x80,
+                "the same canonical placement must cull inside the ROM left unload chunks; "
+                        + "actual=" + completion.minPlacedDespawnScreenX());
+        assertTrue(completion.maxScreenX() >= 320 - 24,
+                "the boss route must exercise the ROM-authored right player boundary");
+        assertTrue(completion.maxPlayerX() >= BOSS_CAMERA_MAX_X + 320 - 24,
+                "the route must reach the fixed native right world edge at every width");
+
+    }
+
+    private static void assertViewportBossSlice(int width) throws Exception {
+        restartFreshGameplaySession();
+        HeadlessTestFixture fixture = buildAct2Fixture();
+        GameServices.graphics().setViewport(0, 0, width, 224);
+
+        assertEquals(width, PlacementViewportWidth.current());
+        assertEquals(width, fixture.camera().getWidth() & 0xFFFF);
+        assertEquals(width, GameServices.graphics().getViewportWidth());
+
+        RouteSliceEvidence evidence = runStarpost6ToBoss(fixture);
+        assertRouteSliceReachedBossAlive(fixture, evidence, width + "px");
+        assertTrue(evidence.observedWaitingBelowWorldTrigger(),
+                "viewport width must not activate the plane event before P1 reaches world X $2E80");
+        assertTrue(evidence.observedTriggerAtOrBeyondWorldThreshold(),
+                "the production event must still activate at world X $2E80");
+        assertTrue(evidence.controllerObserved() && evidence.pillarObserved(),
+                "viewport-scaled placement/culling must retain both persistent pre-boss objects");
+        assertTrue(evidence.arenaWorldBoundaryObserved(),
+                "the ROM $32B8 arena boundary must be observed independently of viewport width");
+        assertTrue(evidence.exactArenaWorldLockObserved(),
+                "the arena must lock at the exact ROM $32B8 world coordinate; "
+                        + evidence.diagnostic());
+
+        int cameraLeft = fixture.camera().getX() & 0xFFFF;
+        int cameraRight = cameraLeft + width;
+        assertEquals(evidence.cameraMinX(), evidence.cameraMaxX(),
+                "the boss arena must converge to a closed horizontal lock; "
+                        + evidence.diagnostic());
+        assertEquals(BOSS_REBASED_CAMERA_X, evidence.cameraMaxX(),
+                "the $45C boss-load rebase must preserve the exact $32B8 world lock; "
+                        + evidence.diagnostic());
+        assertTrue(evidence.maxPlayerX() <= BOSS_CAMERA_MAX_X + 320 - 24 + 1,
+                "P1 must remain inside the ROM-authored world edge instead of escaping into "
+                        + "widescreen-only void; " + evidence.diagnostic());
+        assertTrue(evidence.stage8Frame() > evidence.triggerFrame()
+                        && evidence.stage12Frame() > evidence.stage8Frame(),
+                "the carrier, arena lock, and plane-refresh stages must finish in order; "
+                        + evidence.diagnostic());
+        assertTrue(cameraLeft >= GameServices.level().getCurrentLevel().getMinX());
+        assertTrue(cameraRight <= GameServices.level().getCurrentLevel().getMaxX() + width,
+                "the visible right extreme must not wrap outside the level's world range");
+        assertTrue((fixture.sprite().getCentreY() & 0xFFFF)
+                        < (fixture.camera().getMaxY() & 0xFFFF) + 224,
+                "neither horizontal camera extreme may expose a lethal fall below the arena");
     }
 
     private static HeadlessTestFixture buildAct2Fixture() {
@@ -444,8 +535,16 @@ class TestFbzCompatibilityMatrix {
                 label + " did not audit the configured team on every route frame");
         assertTrue(evidence.sidekickIdentityOrderPreserved(),
                 label + " changed sidekick identity/order during the complete route");
-        assertTrue(evidence.sidekickAliveEveryFrame(),
-                label + " observed a dead sidekick during the complete route");
+        assertTrue(evidence.sidekickRespawnedAfterEveryDeath(),
+                label + " left a sidekick dead beyond the CPU respawn window (longest streak "
+                        + evidence.sidekickLongestDeadStreak() + " frames, first death "
+                        + evidence.sidekickDeathEvidence() + ")");
+        assertTrue(evidence.sidekickAliveAtBossEntry(),
+                label + " had a sidekick still dead when the end boss allocated (first death "
+                        + evidence.sidekickDeathEvidence() + ")");
+        assertTrue(evidence.sidekickAliveAtExit(),
+                label + " had a sidekick dead or despawned at the SOZ exit request (deaths "
+                        + evidence.sidekickDeaths() + ", first " + evidence.sidekickDeathEvidence() + ")");
         assertTrue(evidence.sidekickControllerEveryFrame(),
                 label + " observed a sidekick without CPU-controller ownership");
         assertTrue(evidence.sidekickLeaderChainEveryFrame(),
@@ -531,27 +630,25 @@ class TestFbzCompatibilityMatrix {
     private static RouteSliceEvidence runStarpost6ToBoss(HeadlessTestFixture fixture) {
         restartAtCheckpoint6(fixture);
 
-        boolean controllerObserved = false;
-        boolean pillarObserved = false;
-        boolean waitingBelowWorldTrigger = false;
-        boolean triggerAtOrBeyondWorldThreshold = false;
-        boolean arenaWorldBoundaryObserved = false;
-        boolean exactArenaWorldLockObserved = false;
-        boolean spindashObserved = false;
-        FbzEndBossInstance boss = null;
         ObjectManager objects = GameServices.level().getObjectManager();
-        int frames = 0;
-        int triggerFrame = -1;
-        int stage8Frame = -1;
-        int stage12Frame = -1;
-        int maxPlayerX = 0;
-        int maxPlayerY = 0;
+        class SliceObservation {
+            boolean controllerObserved = false;
+            boolean pillarObserved = false;
+            boolean waitingBelowWorldTrigger = false;
+            boolean triggerAtOrBeyondWorldThreshold = false;
+            boolean arenaWorldBoundaryObserved = false;
+            boolean exactArenaWorldLockObserved = false;
+            boolean spindashObserved = false;
+            FbzEndBossInstance boss = null;
+            int frames = 0;
+            int triggerFrame = -1;
+            int stage8Frame = -1;
+            int stage12Frame = -1;
+            int maxPlayerX = 0;
+            int maxPlayerY = 0;
 
-        outer:
-        for (InputRun run : STARPOST_6_TO_BOSS) {
-            for (int frame = 0; frame < run.frames(); frame++) {
+            void afterFrame() {
                 frames++;
-                stepMask(fixture, run.mask());
                 int playerX = fixture.sprite().getCentreX() & 0xFFFF;
                 int playerY = fixture.sprite().getCentreY() & 0xFFFF;
                 maxPlayerX = Math.max(maxPlayerX, playerX);
@@ -586,19 +683,17 @@ class TestFbzCompatibilityMatrix {
                 List<FbzEndBossInstance> bosses = objects.activeObjectsOfType(FbzEndBossInstance.class);
                 if (!bosses.isEmpty()) {
                     boss = bosses.getFirst();
-                    break outer;
-                }
-                if (fixture.sprite().getDead()) {
-                    break outer;
                 }
             }
         }
+        SliceObservation observation = new SliceObservation();
+        TestFbzAct2TraversalPreboss.runOrdinaryPlaneApproach(fixture, observation::afterFrame);
         FbzZoneRuntimeState runtime = assertInstanceOf(
                 FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
-        return new RouteSliceEvidence(controllerObserved, pillarObserved,
-                waitingBelowWorldTrigger, triggerAtOrBeyondWorldThreshold,
-                arenaWorldBoundaryObserved, exactArenaWorldLockObserved,
-                spindashObserved, boss, frames,
+        return new RouteSliceEvidence(observation.controllerObserved, observation.pillarObserved,
+                observation.waitingBelowWorldTrigger, observation.triggerAtOrBeyondWorldThreshold,
+                observation.arenaWorldBoundaryObserved, observation.exactArenaWorldLockObserved,
+                observation.spindashObserved, observation.boss, observation.frames,
                 fixture.sprite().getCentreX() & 0xFFFF,
                 fixture.sprite().getCentreY() & 0xFFFF,
                 fixture.camera().getX() & 0xFFFF,
@@ -607,7 +702,7 @@ class TestFbzCompatibilityMatrix {
                 fixture.camera().getMaxX() & 0xFFFF,
                 runtime.act2ForegroundStage(),
                 objects.occupiedDynamicSlotIds().size(),
-                triggerFrame, stage8Frame, stage12Frame, maxPlayerX, maxPlayerY,
+                observation.triggerFrame, observation.stage8Frame, observation.stage12Frame, observation.maxPlayerX, observation.maxPlayerY,
                 objects.activeObjectsOfType(FbzEndBossEventControlInstance.class).stream()
                         .findFirst().map(FbzEndBossEventControlInstance::getX).orElse(-1),
                 objects.activeObjectsOfType(FbzEndBossEventControlInstance.class).stream()
@@ -695,6 +790,16 @@ class TestFbzCompatibilityMatrix {
                 Arguments.of(WidescreenAspect.SUPER_32_9, 800));
     }
 
+    // Native 320/Sonic+Tails and donor-off/Sonic are exercised by teamCases.
+    // All synchronous preflights retain the complete original matrix.
+    private static Stream<Arguments> additionalWidthCases() {
+        return widthCases().filter(row -> (int) row.get()[1] != 320);
+    }
+
+    private static Stream<Arguments> activeDonationCases() {
+        return donationCases().filter(row -> !row.get()[0].equals("off"));
+    }
+
     private static Stream<Arguments> donationCases() {
         java.io.File s1Rom = RomTestUtils.ensureSonic1RomAvailable();
         java.io.File s2Rom = RomTestUtils.ensureSonic2RomAvailable();
@@ -704,7 +809,6 @@ class TestFbzCompatibilityMatrix {
                 Arguments.of("s2", s2Rom == null ? null : s2Rom.toPath()));
     }
 
-    private record InputRun(int frames, int mask) { }
 
     private record RouteSliceEvidence(
             boolean controllerObserved,

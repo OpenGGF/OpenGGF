@@ -17,6 +17,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
+import com.openggf.level.objects.MultiBucketRenderable;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -51,7 +52,8 @@ import java.util.Map;
  * egg-capsule handoff after defeat.
  */
 public final class IczEndBossInstance extends AbstractBossInstance
-        implements MultiPieceSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements MultiPieceSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
+        MultiBucketRenderable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_DESCEND = 0x02;
     private static final int ROUTINE_SWING = 0x04;
@@ -1548,13 +1550,118 @@ public final class IczEndBossInstance extends AbstractBossInstance
         return Sonic3kSfx.EXPLODE.id;
     }
 
+    // loc_71C36 ObjDat3_72306 priority $280 (sonic3k.asm:150619-150620, 151276).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+    // The ROM child SSTs are drawn inline from this owner, each in its own
+    // priority list (MultiBucketRenderable). ChildObjDat_7233E body children
+    // (151299-151306) come from CreateChild1_Normal (150631-150632), which
+    // copies the parent art word (176933): bit 15 set.
+    //  - top    loc_71E4A: word_72312 priority $200 (150782-150783, 151279)
+    //  - middle loc_71ECA: word_72318 priority $280 (150835-150836, 151282)
+    //  - bottom loc_71F7A: word_7231E priority $280 (150905-150906, 151285)
+    //  None rewrites priority; loc_849D8 (178121-178126) only hands them to
+    //  Obj_FlickerMove (178995-179010) once the parent is defeated.
+    // Frost puffs loc_72020 / ObjDat3_72324 (150967-150968): art
+    // make_art_tile(ArtTile_ICZEndBoss,1,1) (151289) bit 15 set, priority $80
+    // (151290); loc_7205E/loc_72092 (150985-151018) draw without rewriting it.
+    // Robotnik ship ChildObjDat_72336 (151295-151297, created 150625-150626):
+    // Obj_RobotnikShipInit ObjDat_RobotnikShip priority $280 (136411-136412,
+    // 136658), then Child_SyncDraw (136413) copies the parent's art bit 15
+    // (138846-138849): set. Obj_RobotnikHeadInit ObjDat_RobotnikHead $280
+    // (136048-136050, 136648) syncs bit 15 from the ship: set. The escape flame
+    // Obj_RobotnikShipFlame ObjDat3_RoboShipFlame $280 (136588-136589, 136661)
+    // inherits the ship art word through CreateChild1_Normal (176933): set.
+    private static final int TOP_CHILD_BUCKET = RenderPriority.fromS3kWord(0x200);
+    private static final int MIDDLE_CHILD_BUCKET = RenderPriority.fromS3kWord(0x280);
+    private static final int BOTTOM_CHILD_BUCKET = RenderPriority.fromS3kWord(0x280);
+    private static final int FROST_PUFF_BUCKET = RenderPriority.fromS3kWord(0x80);
+    private static final int ROBOTNIK_SHIP_BUCKET = RenderPriority.fromS3kWord(0x280);
+    private static final boolean PARTS_HIGH_PRIORITY = true;
+    private static final int[] NO_EXTRA_BUCKETS = new int[0];
+    private static final int[][] EXTRA_BUCKETS_BY_MASK =
+            new int[1 << (RenderPriority.MAX - RenderPriority.MIN + 1)][];
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat3_72306 art make_art_tile(ArtTile_ICZEndBoss,1,1) sets bit 15 (sonic3k.asm:151275).
+        return true;
+    }
+
+    @Override
+    public boolean isHighPriority(int bucket) {
+        // Every inline part carries art bit 15 (see the citations above), so all
+        // of this owner's lists agree with the body's word.
+        return PARTS_HIGH_PRIORITY;
+    }
+
+    @Override
+    public int[] extraRenderBuckets() {
+        if (!arenaGateInitialized) {
+            return NO_EXTRA_BUCKETS;
+        }
+        int mask = 0;
+        if (robotnikShipVisible) {
+            mask |= bucketBit(ROBOTNIK_SHIP_BUCKET);
+        }
+        if (!defeatHandoffComplete) {
+            if (structuralChildren != null) {
+                mask |= bucketBit(TOP_CHILD_BUCKET) | bucketBit(MIDDLE_CHILD_BUCKET)
+                        | bucketBit(BOTTOM_CHILD_BUCKET);
+            }
+            if (effectChildren != null) {
+                for (EffectChild child : effectChildren) {
+                    if (child.isVisible()) {
+                        mask |= bucketBit(FROST_PUFF_BUCKET);
+                        break;
+                    }
+                }
+            }
+        }
+        mask &= ~bucketBit(PRIORITY_BUCKET);
+        return extraBucketsForMask(mask);
+    }
+
+    private static int bucketBit(int bucket) {
+        return 1 << (bucket - RenderPriority.MIN);
+    }
+
+    private static int[] extraBucketsForMask(int mask) {
+        if (mask == 0) {
+            return NO_EXTRA_BUCKETS;
+        }
+        int[] buckets = EXTRA_BUCKETS_BY_MASK[mask];
+        if (buckets == null) {
+            buckets = new int[Integer.bitCount(mask)];
+            int count = 0;
+            for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+                if ((mask & bucketBit(bucket)) != 0) {
+                    buckets[count++] = bucket;
+                }
+            }
+            EXTRA_BUCKETS_BY_MASK[mask] = buckets;
+        }
+        return buckets;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        appendRenderCommands(commands, getPriorityBucket());
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands, int bucket) {
         if (!arenaGateInitialized) {
             return;
         }
         if (defeatHandoffComplete) {
-            renderRobotnikShip();
+            if (bucket == ROBOTNIK_SHIP_BUCKET) {
+                renderRobotnikShip();
+            }
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ICZ_END_BOSS);
@@ -1562,24 +1669,51 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return;
         }
 
-        boolean flipped = (state.renderFlags & 1) != 0;
-        if (structuralChildren != null) {
-            drawStructuralChild(renderer, BOTTOM_CHILD_INDEX);
+        if (bucket == FROST_PUFF_BUCKET) {
+            drawFrostPuffs(renderer);
         }
-        renderer.drawFrameIndexWithPaletteBase(mappingFrame, state.x, state.y, flipped, false, BODY_PALETTE_BASE);
+        // Draw_Sprite appends in Process_Sprites slot order and lower sprite-table
+        // entries win. loc_71C36 allocates the ship before the three body children
+        // (150625-150632), so within a shared list the parent is on top, then the
+        // ship group, then top, middle and bottom. Painter's order therefore runs
+        // bottom, middle, ship, body; the top child sits in its own $200 list.
         if (structuralChildren != null) {
-            drawStructuralChild(renderer, MIDDLE_CHILD_INDEX);
+            if (bucket == BOTTOM_CHILD_BUCKET) {
+                drawStructuralChild(renderer, BOTTOM_CHILD_INDEX);
+            }
+            if (bucket == MIDDLE_CHILD_BUCKET) {
+                drawStructuralChild(renderer, MIDDLE_CHILD_INDEX);
+            }
+        }
+        if (bucket == ROBOTNIK_SHIP_BUCKET) {
+            renderRobotnikShip();
+        }
+        if (bucket == PRIORITY_BUCKET) {
+            boolean flipped = (state.renderFlags & 1) != 0;
+            renderer.drawFrameIndexWithPaletteBase(mappingFrame, state.x, state.y, flipped, false,
+                    BODY_PALETTE_BASE);
+        }
+        if (structuralChildren != null && bucket == TOP_CHILD_BUCKET) {
             drawStructuralChild(renderer, 0);
         }
-        for (EffectChild child : effectChildren) {
+    }
+
+    private void drawFrostPuffs(PatternSpriteRenderer renderer) {
+        if (effectChildren.isEmpty()) {
+            return;
+        }
+        // Frost puffs share one list; the lowest native slot is drawn on top, so
+        // paint in descending slot order (folded children without a slot first).
+        List<EffectChild> drawOrder = new ArrayList<>(effectChildren);
+        drawOrder.sort((left, right) -> Integer.compare(
+                nativeEffectExecutionSlot(right), nativeEffectExecutionSlot(left)));
+        for (EffectChild child : drawOrder) {
             if (!child.isVisible()) {
                 continue;
             }
             renderer.drawFrameIndexWithPaletteBase(child.frame, child.x, child.y, child.flipX, child.flipY,
                     BODY_PALETTE_BASE);
         }
-
-        renderRobotnikShip();
     }
 
     private void drawStructuralChild(PatternSpriteRenderer renderer, int index) {
@@ -1600,15 +1734,23 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return;
         }
         boolean flipped = robotnikShipFlipX();
-        shipRenderer.drawFrameIndex(robotnikShipFrame, robotnikShipX, robotnikShipY, flipped, false,
-                ROBOTNIK_SHIP_PALETTE_LINE);
-        shipRenderer.drawFrameIndex(robotnikHeadFrame, robotnikShipX, robotnikShipY + ROBOTNIK_HEAD_Y_OFFSET,
-                flipped, false, ROBOTNIK_SHIP_PALETTE_LINE);
+        // ChildObjDat_72336 allocates Obj_RobotnikShip4 (151295-151298); its
+        // Obj_RobotnikShipInit creates the head with Child1_MakeRoboHead
+        // (136415-136416) and Obj_RobotnikShipReady later creates the flame with
+        // Child1_MakeRoboShipFlame (136465-136466), each through
+        // CreateChild1_Normal / AllocateObjectAfterCurrent (176924-176929). All
+        // three carry priority $280 (136645-136662), so within the list the
+        // lower slot wins: ship in front of head in front of flame. Painter's
+        // order therefore runs flame, head, ship.
         if (robotnikShipFlameVisible) {
             int flameDx = flipped ? -ROBOTNIK_SHIP_FLAME_DX : ROBOTNIK_SHIP_FLAME_DX;
             shipRenderer.drawFrameIndex(ROBOTNIK_SHIP_FLAME_FRAME, robotnikShipX + flameDx, robotnikShipY,
                     flipped, false, ROBOTNIK_SHIP_PALETTE_LINE);
         }
+        shipRenderer.drawFrameIndex(robotnikHeadFrame, robotnikShipX, robotnikShipY + ROBOTNIK_HEAD_Y_OFFSET,
+                flipped, false, ROBOTNIK_SHIP_PALETTE_LINE);
+        shipRenderer.drawFrameIndex(robotnikShipFrame, robotnikShipX, robotnikShipY, flipped, false,
+                ROBOTNIK_SHIP_PALETTE_LINE);
     }
 
     private boolean robotnikShipFlipX() {
@@ -1830,6 +1972,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
             super.update(vIntRunCount, player);
         }
 
+        // loc_720F2 word_72330 priority $180 (sonic3k.asm:151293); CreateChild1_Normal copied the
+        // boss's art_tile, so the inherited high-priority flag stands.
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
+        }
+
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             if (!visible) {
@@ -1917,12 +2068,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
             if (renderer == null || !renderer.isReady()) {
                 return;
             }
-            renderer.drawFrameIndex(ESCAPE_FRAME, x, y, true, false, ROBOTNIK_SHIP_PALETTE_LINE);
-            renderer.drawFrameIndex(HEAD_FRAME_ANGRY, x, y + HEAD_Y_OFFSET, true, false,
-                    ROBOTNIK_SHIP_PALETTE_LINE);
+            // Same slot order as renderRobotnikShip(): the escaping ship keeps its
+            // head (slot ship+1) and flame (allocated after the head) children,
+            // so paint flame, head, ship.
             if (flyingRight) {
                 renderer.drawFrameIndex(FLAME_FRAME, x - FLAME_DX, y, true, false, ROBOTNIK_SHIP_PALETTE_LINE);
             }
+            renderer.drawFrameIndex(HEAD_FRAME_ANGRY, x, y + HEAD_Y_OFFSET, true, false,
+                    ROBOTNIK_SHIP_PALETTE_LINE);
+            renderer.drawFrameIndex(ESCAPE_FRAME, x, y, true, false, ROBOTNIK_SHIP_PALETTE_LINE);
         }
     }
 

@@ -5,7 +5,6 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.CompositeSnapshot;
-import com.openggf.game.rewind.DeletedDynamicRewindCodecs;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
@@ -78,42 +77,6 @@ class TestS3kSelfContainedTransientRewind {
     }
 
     @Test
-    void phase2BatchCandidatesHaveNoExplicitDynamicCodec() {
-        assertNoRegisteredS3kDynamicCodec(S3kSignpostSparkleChild.class);
-        assertNoRegisteredS3kDynamicCodec(S3kAirCountdownObjectInstance.class);
-        assertNoRegisteredS3kDynamicCodec(CaterkillerJrBodyInstance.class);
-        assertNoRegisteredS3kDynamicCodec(AizBgTreeInstance.class);
-        assertNoRegisteredS3kDynamicCodec(Aiz2BossEndSequenceController.class);
-        assertNoRegisteredS3kDynamicCodec(CutsceneKnucklesLbz1ThrownBomb.class);
-        assertNoRegisteredS3kDynamicCodec(S3kBadnikProjectileInstance.class);
-        assertNoRegisteredS3kDynamicCodec(MhzShipSequenceControllerInstance.class);
-        assertNoRegisteredS3kDynamicCodec(S3kBossDefeatSignpostFlow.class);
-        assertNoRegisteredS3kDynamicCodec(Aiz2EndEggCapsuleInstance.class);
-        assertNoRegisteredS3kDynamicCodec(HczEndBossEggCapsuleInstance.class);
-        assertNoRegisteredS3kDynamicCodec(IczEndBossEggCapsuleInstance.class);
-        assertNoRegisteredS3kDynamicCodec(MhzEndBossEggCapsuleInstance.class);
-        assertNoRegisteredS3kDynamicCodec(Mgz2EndEggCapsuleInstance.class);
-        assertNoRegisteredS3kDynamicCodec(S3kSignpostInstance.class);
-        assertNoRegisteredS3kDynamicCodec(HczEndBossGeyserCutscene.class);
-        assertNoRegisteredS3kDynamicCodec(Mgz2CapsuleAnimalInstance.class);
-        assertNoRegisteredS3kDynamicCodec(Mgz2ResultsScreenObjectInstance.class);
-        assertNoRegisteredS3kDynamicCodec(AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class);
-        assertNoRegisteredS3kDynamicCodec(classForName(MGZ_HEAD_TRIGGER_STONE_CHIP_CLASS));
-        assertNoRegisteredS3kDynamicCodec(classForName(MGZ_CEILING_SPIRE_CLASS));
-        assertNoRegisteredS3kDynamicCodec(classForName(BLASTOID_PROJECTILE_CLASS));
-        assertNoRegisteredS3kDynamicCodec(classForName(SNALE_BLASTER_PROJECTILE_CLASS));
-        assertNoRegisteredS3kDynamicCodec(classForName(SPIKER_SPIKE_PROJECTILE_CLASS));
-        assertNoRegisteredS3kDynamicCodec(classForName(ICZ_END_BOSS_ESCAPE_SHIP_CLASS));
-        assertNoRegisteredS3kDynamicCodec(FireShieldObjectInstance.class);
-        assertNoRegisteredS3kDynamicCodec(LightningShieldObjectInstance.class);
-        assertNoRegisteredS3kDynamicCodec(BubbleShieldObjectInstance.class);
-        assertNoRegisteredS3kDynamicCodec(InstaShieldObjectInstance.class);
-        assertNoRegisteredS3kDynamicCodec(Sonic3kInvincibilityStarsObjectInstance.class);
-        assertNoRegisteredS3kDynamicCodec(classForName(AIZ2_HIGH_PRIORITY_ANIMAL_CLASS));
-        assertNoRegisteredS3kDynamicCodec(classForName(AIZ2_RESULTS_SCREEN_CLASS));
-    }
-
-    @Test
     void playerBoundFireShieldRestoresThroughSessionSnapshot() throws Exception {
         assertElementalShieldRestoresThroughSessionSnapshot(
                 ShieldType.FIRE, FireShieldObjectInstance.class, true);
@@ -161,10 +124,10 @@ class TestS3kSelfContainedTransientRewind {
         }
 
         int capturedSlot = capturedShield.getSlotIndex();
-        int capturedAnim = intField(capturedShield, "currentAnimId");
-        int capturedFrame = intField(capturedShield, "frameIndex");
-        int capturedDelay = intField(capturedShield, "delayCounter");
-        int capturedMapping = intField(capturedShield, "currentMappingFrame");
+        int capturedAnim = animationStateField(capturedShield, "currentAnimId");
+        int capturedFrame = animationStateField(capturedShield, "frameIndex");
+        int capturedDelay = animationStateField(capturedShield, "delayCounter");
+        int capturedMapping = animationStateField(capturedShield, "currentMappingFrame");
 
         CompositeSnapshot snapshot = registry.capture();
         assertNotNull(snapshot, "capture() must return a snapshot");
@@ -175,10 +138,10 @@ class TestS3kSelfContainedTransientRewind {
                 player.getPowerUpSpawner().createInstaShield(player),
                 "diverge step should create a replacement through the production spawner");
         player.setInstaShieldObject(replacement);
-        setIntField(replacement, "currentAnimId", 0);
-        setIntField(replacement, "frameIndex", 99);
-        setIntField(replacement, "delayCounter", 98);
-        setIntField(replacement, "currentMappingFrame", 97);
+        setAnimationStateField(replacement, "currentAnimId", 0);
+        setAnimationStateField(replacement, "frameIndex", 99);
+        setAnimationStateField(replacement, "delayCounter", 98);
+        setAnimationStateField(replacement, "currentMappingFrame", 97);
         assertEquals(0, countLive(objectManager, InstaShieldObjectInstance.class),
                 "diverge step must remove the captured insta-shield from ObjectManager");
 
@@ -193,13 +156,13 @@ class TestS3kSelfContainedTransientRewind {
                 "restored player insta-shield link must point at the live ObjectManager object");
         assertEquals(capturedSlot, restoredShield.getSlotIndex(),
                 "restored insta-shield must consume the captured dynamic slot");
-        assertEquals(capturedAnim, intField(restoredShield, "currentAnimId"),
+        assertEquals(capturedAnim, animationStateField(restoredShield, "currentAnimId"),
                 "restored insta-shield must keep captured animation id");
-        assertEquals(capturedFrame, intField(restoredShield, "frameIndex"),
+        assertEquals(capturedFrame, animationStateField(restoredShield, "frameIndex"),
                 "restored insta-shield must keep captured animation frame index");
-        assertEquals(capturedDelay, intField(restoredShield, "delayCounter"),
+        assertEquals(capturedDelay, animationStateField(restoredShield, "delayCounter"),
                 "restored insta-shield must keep captured animation delay counter");
-        assertEquals(capturedMapping, intField(restoredShield, "currentMappingFrame"),
+        assertEquals(capturedMapping, animationStateField(restoredShield, "currentMappingFrame"),
                 "restored insta-shield must keep captured mapping frame");
         assertFalse(restoredShield.isDestroyed(), "restored insta-shield must remain live");
         assertSame(player, shieldPlayer(restoredShield),
@@ -363,7 +326,7 @@ class TestS3kSelfContainedTransientRewind {
         }
 
         int capturedSlot = capturedShield.getSlotIndex();
-        int capturedAnim = intField(capturedShield, "currentAnimId");
+        int capturedAnim = animationStateField(capturedShield, "currentAnimId");
         assertEquals(1, countLive(objectManager, shieldClass),
                 "precondition: exactly one " + shieldType + " shield fixture is live before capture");
 
@@ -386,7 +349,7 @@ class TestS3kSelfContainedTransientRewind {
                 "restored player shield link must point at the live ObjectManager shield");
         assertEquals(capturedSlot, restoredShield.getSlotIndex(),
                 "restored shield must consume the captured dynamic slot");
-        assertEquals(capturedAnim, intField(restoredShield, "currentAnimId"),
+        assertEquals(capturedAnim, animationStateField(restoredShield, "currentAnimId"),
                 "restored shield must keep captured animation state");
         assertEquals(shieldType, player.getShieldType(),
                 "restored player state must still request the captured shield type");
@@ -816,12 +779,6 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, classForName(SPIKER_SPIKE_PROJECTILE_CLASS), capturedState);
     }
 
-    private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {
-        boolean hasCodec = DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(type.getName());
-        assertFalse(hasCodec, type.getSimpleName()
-                + " must restore through RewindRecreatable generic recreate, not an explicit S3K dynamic codec");
-    }
-
     private static <T extends AbstractObjectInstance> void assertSimpleStateRoundTrip(
             ObjectManager objectManager,
             Class<T> type,
@@ -926,6 +883,40 @@ class TestS3kSelfContainedTransientRewind {
         Field field = instance.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(instance, value);
+    }
+
+    private static int animationStateField(Object shield, String fieldName) throws Exception {
+        ShieldAnimationArtLifecycle lifecycle = animationLifecycle(shield);
+        return switch (fieldName) {
+            case "currentAnimId" -> lifecycle.animationId();
+            case "frameIndex" -> lifecycle.frameIndex();
+            case "delayCounter" -> lifecycle.delayCounter();
+            case "currentMappingFrame" -> lifecycle.mappingFrame();
+            default -> throw new IllegalArgumentException("Unknown shield animation field: " + fieldName);
+        };
+    }
+
+    private static void setAnimationStateField(Object shield, String fieldName, int value) throws Exception {
+        ShieldAnimationArtLifecycle lifecycle = animationLifecycle(shield);
+        ShieldAnimationArtLifecycle.RewindState state = lifecycle.captureRewindStateValue();
+        ShieldAnimationArtLifecycle.RewindState replacement = switch (fieldName) {
+            case "currentAnimId" -> new ShieldAnimationArtLifecycle.RewindState(
+                    value, state.frameIndex(), state.delayCounter(), state.mappingFrame());
+            case "frameIndex" -> new ShieldAnimationArtLifecycle.RewindState(
+                    state.animationId(), value, state.delayCounter(), state.mappingFrame());
+            case "delayCounter" -> new ShieldAnimationArtLifecycle.RewindState(
+                    state.animationId(), state.frameIndex(), value, state.mappingFrame());
+            case "currentMappingFrame" -> new ShieldAnimationArtLifecycle.RewindState(
+                    state.animationId(), state.frameIndex(), state.delayCounter(), value);
+            default -> throw new IllegalArgumentException("Unknown shield animation field: " + fieldName);
+        };
+        lifecycle.restoreRewindStateValue(replacement);
+    }
+
+    private static ShieldAnimationArtLifecycle animationLifecycle(Object shield) throws Exception {
+        Field field = shield.getClass().getDeclaredField("animationLifecycle");
+        field.setAccessible(true);
+        return (ShieldAnimationArtLifecycle) field.get(shield);
     }
 
     private static void setIntFieldInHierarchy(Object instance, String fieldName, int value) throws Exception {

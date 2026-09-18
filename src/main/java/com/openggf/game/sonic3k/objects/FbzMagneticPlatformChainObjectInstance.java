@@ -38,13 +38,17 @@ public final class FbzMagneticPlatformChainObjectInstance extends AbstractObject
 
     @Override public int getPriorityBucket() { return 4; }
     @Override public int getX() { return parent == null ? spawn.x() : parent.getX(); }
-    @Override public int getY() { return parent == null ? spawn.y() : parent.getY() - 0x70; }
+    // The ROM leaves the multi-sprite culling anchor at its original position.
+    @Override public int getY() { return spawn.y(); }
+    @Override public int getOnScreenHalfHeight() { return 0x80; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_MAGNETIC_PLATFORM);
         if (renderer == null || !renderer.isReady() || parent == null) return;
-        renderer.drawFrameIndex(0, spawn.x(), spawn.y(), false, false);
+        // Obj_FBZMagneticPlatform puts frame 3 in sub2 at original platform Y+$C.
+        // The helper's own Y (original Y-$70) is a culling anchor, not a drawn platform.
+        renderer.drawFrameIndex(3, spawn.x(), spawn.y() + 0x7C, false, false);
         int pieces = visiblePieces() - 1;
         int linkY = parent.getY() + 0x18;
         int displacement = parent.displacement();

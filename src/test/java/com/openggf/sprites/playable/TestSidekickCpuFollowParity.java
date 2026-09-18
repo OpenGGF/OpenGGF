@@ -365,6 +365,33 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void immediateEndingPoseUnlockLeavesLogicalInputUntilTheNextPlayerSlot() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.setController2Input(AbstractPlayableSprite.INPUT_LEFT, 0);
+        controller.update(0x4CC0);
+        controller.setController2SignedLocked(true);
+        controller.setController2Input(0, 0);
+        tails.setObjectControlled(true);
+        tails.setObjectControlAllowsCpu(false);
+        tails.setAnimationId(0x13);
+        controller.setController2SignedLocked(false);
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_LEFT,
+                "Check_TailsEndPose does not write Ctrl_2_logical in the object slot");
+
+        controller.update(0x4CC1);
+        controller.recordDiagnosticPostPhysics();
+
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput());
+        assertEquals(0x13, tails.getAnimationId(),
+                "the next CPU pass must not delay or overwrite the object-owned pose");
+    }
+
+    @Test
     void followRightStillNudgesPositionWhenDxIsBelowThreshold() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -1855,8 +1882,9 @@ class TestSidekickCpuFollowParity {
                                 + "the delayed RIGHT input but still lets ROM FollowRight apply its +1 x_pos nudge."));
     }
 
-    @Test
-    void s3kAgedLocalPushGraceBelowTargetBypassesFollowSteeringNearAizSpikedLogs() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void s3kFollowSteeringReadsCurrentPushRatherThanAgedLocalGrace(boolean pushing) throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
@@ -1881,18 +1909,15 @@ class TestSidekickCpuFollowParity {
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
         setNormalPushingGraceFrames(controller, 12);
 
-        tails.setPushing(false);
+        tails.setPushing(pushing);
         controller.update(0x29E4);
 
         SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
         Assertions.assertAll(
-                () -> assertEquals("grace_push_bypass", diagnostics.followBranch(),
-                        "AIZ2 F10724 has stale local push grace with the delayed target at/below Tails. "
-                                + "ROM still sees live Status_Push and branches through loc_13DD0."),
-                () -> assertTrue(diagnostics.skipFollowSteering()),
-                () -> assertFalse(controller.getInputRight(),
-                        "The preserved Ctrl_2 sample is zero, so Tails must not manufacture "
-                                + "a FollowRight acceleration pulse before physics."));
+                () -> assertEquals(pushing, diagnostics.skipFollowSteering(),
+                        "loc_13DD0 branches only on current Status_Push when delayed Push is clear"),
+                () -> assertEquals(!pushing, controller.getInputRight(),
+                        "cleared Push reaches native FollowRight regardless of an old engine grace counter"));
     }
 
     @Test

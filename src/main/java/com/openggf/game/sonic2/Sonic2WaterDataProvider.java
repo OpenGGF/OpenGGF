@@ -39,6 +39,27 @@ public class Sonic2WaterDataProvider implements WaterDataProvider {
     private static final int CPZ_UNDERWATER_PALETTE_ADDR = 0x2E62;
     private static final int ARZ_UNDERWATER_PALETTE_ADDR = 0x2FA2;
 
+    /**
+     * Replacement for the {@code PalPtr_CPZ_U} / {@code PalPtr_ARZ_U} data a
+     * game patch supplies from its own cart. Returns {@code null} to keep the
+     * stock Sonic 2 palette for that zone and act.
+     */
+    @FunctionalInterface
+    public interface UnderwaterPaletteSource {
+        Palette[] underwaterPalette(int zoneId, int actId);
+    }
+
+    private final UnderwaterPaletteSource paletteOverride;
+
+    public Sonic2WaterDataProvider() {
+        this(null);
+    }
+
+    /** A provider whose underwater palettes come from {@code paletteOverride} where it answers. */
+    public Sonic2WaterDataProvider(UnderwaterPaletteSource paletteOverride) {
+        this.paletteOverride = paletteOverride;
+    }
+
     @Override
     public boolean hasWater(int zoneId, int actId, PlayerCharacter character) {
         // Water_flag is set for CPZ Act 2, ARZ, and HPZ only (s2.asm Level_InitWater).
@@ -62,6 +83,12 @@ public class Sonic2WaterDataProvider implements WaterDataProvider {
 
     @Override
     public Palette[] getUnderwaterPalette(Rom rom, int zoneId, int actId, PlayerCharacter character) {
+        if (paletteOverride != null) {
+            Palette[] patched = paletteOverride.underwaterPalette(zoneId, actId);
+            if (patched != null) {
+                return patched;
+            }
+        }
         int paletteAddr;
         if (zoneId == ZONE_CPZ) {
             paletteAddr = CPZ_UNDERWATER_PALETTE_ADDR;

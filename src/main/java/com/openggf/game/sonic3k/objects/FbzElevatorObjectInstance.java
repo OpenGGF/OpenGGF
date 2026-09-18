@@ -58,19 +58,16 @@ public final class FbzElevatorObjectInstance extends AbstractObjectInstance
     @Override public boolean checksOutOfRangeAfterRoutine() { return true; }
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     @Override public boolean isCustomOutOfRange(int cameraX) {
-        return coarseOutOfRange(getCentreX(), cameraX);
+        return isCoarseXOutOfRange(getCentreX(), cameraX, coarseXCullRange());
     }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
 
-    static boolean coarseOutOfRange(int objectX, int cameraX) {
-        int coarseBack = (cameraX - 0x80) & 0xFF80;
-        return (((objectX & 0xFF80) - coarseBack) & 0xFFFF) > 0x280;
-    }
 
     /** Dynamically allocated {@code loc_3CA92} car SST. */
     public static final class Car extends AbstractObjectInstance
-            implements SlopedSolidProvider, SpawnRewindRecreatable {
+            implements SlopedSolidProvider, SpawnRewindRecreatable,
+            com.openggf.level.objects.RomObjectCodePointerProvider {
         private static final byte[] SLOPE = {
                 0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x11,0x12,0x12,
                 0x13,0x13,0x13,0x14,0x14,0x14,0x15,0x15,0x15,0x16,
@@ -120,11 +117,16 @@ public final class FbzElevatorObjectInstance extends AbstractObjectInstance
         public int travelTimer() { return travelTimer; }
         public int yVelocity() { return yVelocity; }
 
+        @Override public int romObjectCodePointerHighWord() {
+            // Each live car runs loc_3CA92; sub_13EFC reads the high word
+            // of that code pointer through the player's interact address.
+            return 0x0003;
+        }
         @Override public boolean requiresSameFrameUpdate() { return true; }
         @Override public boolean checksOutOfRangeAfterRoutine() { return true; }
         @Override public boolean usesCustomOutOfRangeCheck() { return true; }
         @Override public boolean isCustomOutOfRange(int cameraX) {
-            return coarseOutOfRange(getCentreX(), cameraX);
+            return isCoarseXOutOfRange(getCentreX(), cameraX, coarseXCullRange());
         }
         @Override public int getOnScreenHalfWidth() { return 0x30; }
         @Override public int getOnScreenHalfHeight() { return 0x20; }

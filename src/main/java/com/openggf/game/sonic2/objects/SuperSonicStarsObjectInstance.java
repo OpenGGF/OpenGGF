@@ -71,6 +71,11 @@ public class SuperSonicStarsObjectInstance extends AbstractObjectInstance implem
         return new SuperSonicStarsObjectInstance(focusedPlayer);
     }
 
+    /** Identifies the owning playable without retaining controller-side object references. */
+    public boolean isOwnedBy(AbstractPlayableSprite candidate) {
+        return player == candidate;
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;

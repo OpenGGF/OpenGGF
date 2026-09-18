@@ -14,7 +14,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
+import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
@@ -38,27 +38,29 @@ class TestMasterTitleScreenAudio {
         MasterTitleScreen screen = activeScreen(true);
         InputHandler input = new InputHandler();
 
-        pressFrame(screen, input, GLFW_KEY_RIGHT);
+        pressFrame(screen, input, GLFW_KEY_DOWN);
         pressFrame(screen, input, GLFW_KEY_ENTER);
         // CONFIRMING consumes another press without replaying the cue.
         pressFrame(screen, input, GLFW_KEY_ENTER);
 
         MasterTitleScreen missingRomScreen = activeScreen(false);
+        pressFrame(missingRomScreen, input, GLFW_KEY_DOWN);
         pressFrame(missingRomScreen, input, GLFW_KEY_ENTER);
 
-        assertEquals(List.of("UI_NAVIGATE", "UI_CONFIRM", "UI_ERROR"),
+        assertEquals(List.of("UI_NAVIGATE", "UI_CONFIRM", "UI_NAVIGATE", "UI_ERROR"),
                 emittedSfxNames());
     }
 
     @Test
-    void navigationAtSelectionBoundaryDoesNotEmitAFalseCue() {
+    void carouselWrapEmitsOneNavigationCue() {
         MasterTitleScreen screen = activeScreen(true);
         screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_3K.ordinal());
         InputHandler input = new InputHandler();
 
         pressFrame(screen, input, GLFW_KEY_RIGHT);
 
-        assertEquals(List.of(), emittedSfxNames());
+        assertEquals("s1", screen.getSelectedGameId());
+        assertEquals(List.of("UI_NAVIGATE"), emittedSfxNames());
     }
 
     @Test
@@ -68,6 +70,62 @@ class TestMasterTitleScreenAudio {
         screen.showRomLoadError("s2");
         screen.showRomLoadError("s2");
 
+        assertEquals(List.of("UI_ERROR"), emittedSfxNames());
+    }
+
+    @Test
+    void openingAndCancellingLaunchOptionsUseConfirmAndCancelOnce() {
+        MasterTitleScreen screen = activeScreen(true);
+        InputHandler input = new InputHandler();
+        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_ENTER);
+        pressFrame(screen, input, GLFW_KEY_ESCAPE);
+        pressFrame(screen, input, GLFW_KEY_ESCAPE);
+        assertEquals(List.of("UI_NAVIGATE", "UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL", "UI_CANCEL"),
+                emittedSfxNames());
+    }
+
+    @Test
+    void settingsAndToolsEnterWithConfirmationAndBackWithCancel() {
+        MasterTitleScreen screen = activeScreen(true);
+        InputHandler input = new InputHandler();
+        pressFrame(screen, input, GLFW_KEY_DOWN);
+        for (int i = 0; i < 5; i++) pressFrame(screen, input, GLFW_KEY_DOWN);
+        audio.resetState();
+        pressFrame(screen, input, GLFW_KEY_ENTER);
+        pressFrame(screen, input, GLFW_KEY_ESCAPE);
+        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_ENTER);
+        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_ENTER);
+        pressFrame(screen, input, GLFW_KEY_ESCAPE);
+        assertEquals(List.of("UI_CONFIRM", "UI_CANCEL", "UI_NAVIGATE", "UI_CONFIRM",
+                "UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL"), emittedSfxNames());
+    }
+
+    @Test
+    void acknowledgingMissingRomUsesCancelWithoutRepeatingError() {
+        MasterTitleScreen screen = activeScreen(false);
+        InputHandler input = new InputHandler();
+        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_ENTER);
+        pressFrame(screen, input, GLFW_KEY_ESCAPE);
+        assertEquals(List.of("UI_NAVIGATE", "UI_ERROR", "UI_CANCEL"), emittedSfxNames());
+    }
+
+    @Test
+    void programmaticLaunchDoesNotReplayThePickersConfirmation() {
+        MasterTitleScreen screen = activeScreen(true);
+        screen.selectEntry(MasterTitleScreen.GameEntry.SONIC_2);
+        assertEquals(List.of(), emittedSfxNames());
+    }
+
+    @Test
+    void unavailableLaunchOptionsShortcutReportsOneError() {
+        MasterTitleScreen screen = activeScreen(false);
+        pressFrame(screen, new InputHandler(), GLFW_KEY_TAB);
         assertEquals(List.of("UI_ERROR"), emittedSfxNames());
     }
 
@@ -85,8 +143,10 @@ class TestMasterTitleScreenAudio {
     private static void pressFrame(MasterTitleScreen screen, InputHandler input, int key) {
         input.handleKeyEvent(key, GLFW_PRESS);
         screen.update(input);
+        screen.update(input); // A held key must not replay the transition cue.
         input.handleKeyEvent(key, GLFW_RELEASE);
         input.update();
+        screen.update(input);
     }
 
     private List<String> emittedSfxNames() {

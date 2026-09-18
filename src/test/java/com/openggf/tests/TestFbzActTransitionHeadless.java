@@ -51,6 +51,30 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzActTransitionHeadless {
     @Test
+    void seamlessReloadLeavesEnemyKosBatchForTheLaterTitleOwner() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0)
+                .startPosition((short) 0x2EE1, (short) 0x0540)
+                .startPositionIsCentre().build();
+        var manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        var events = manager.getFbzEvents();
+        events.setEventsFg5(true);
+        events.updateAct1BackgroundEvent(fixture.sprite().getCentreX(),
+                fixture.sprite().getCentreY(), false);
+        var provider = (com.openggf.game.sonic3k.Sonic3kObjectArtProvider)
+                GameServices.level().getObjectRenderManager().getArtProvider();
+        var pending = provider.capture();
+        assertEquals(com.openggf.game.RuntimeArtAdmissionOwnerKind.TITLE_OWNER,
+                pending.runtimeArtAdmissionOwnerKind());
+        assertFalse(pending.runtimeArtAdmissionConsumed());
+        assertFalse(pending.kosSubmissionArmed());
+        assertTrue(pending.pendingKosOrdinals().isEmpty(),
+                "Load_Level must not submit the later LoadEnemyArt batch");
+        assertEquals(3, pending.pendingKosModules().size(),
+                "the title must retain all three ROM FBZ enemy-art entries");
+    }
+
+    @Test
     void synchronousReloadCarriesRomGlobalMagneticStateAndConsumesOneShotContext()
             throws Exception {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -738,8 +762,9 @@ class TestFbzActTransitionHeadless {
         assertEquals(0x00A0, camera.getMaxX() & 0xFFFF);
         assertEquals(0x0540, camera.getMinY() & 0xFFFF);
         assertEquals(0x0540, camera.getMaxY() & 0xFFFF);
-        assertEquals(0x2D10, camera.getMinXTarget() & 0xFFFF);
-        assertEquals(0x2FB0, camera.getMaxXTarget() & 0xFFFF);
+        assertEquals(0xFF10, camera.getMinXTarget() & 0xFFFF,
+                "the engine horizontal easing target shares the rebased world coordinate system");
+        assertEquals(0x01B0, camera.getMaxXTarget() & 0xFFFF);
         assertEquals(0x0520, camera.getMinYTarget() & 0xFFFF);
         assertEquals(0x0560, camera.getMaxYTarget() & 0xFFFF);
         assertTrue(level.isTransitionRingInitializationPendingForRewind(),

@@ -261,6 +261,52 @@ public class InstancedPatternRenderer {
         return true;
     }
 
+    /**
+     * Adds pixel rows {@code [rowStart, rowEnd)} (screen order, 0 = tile top) of an
+     * 8x8 tile whose top is at {@code y}. V is interpolated along the same top/bottom
+     * mapping {@link #addPattern} uses, so rows 0-8 reproduce it exactly. Takes the
+     * tile attributes as primitives to keep this layer free of level types.
+     */
+    public boolean addPatternRows(PatternAtlas.Entry entry, int paletteIndex, boolean hFlip, boolean vFlip,
+            boolean piecePriority, int x, int y, int rowStart, int rowEnd) {
+        if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH
+                || entry.atlasIndex() != batchAtlasIndex
+                || batchUsePriorityShader != (graphicsManager.isUseSpritePriorityShader() && instancedPriorityShader != null)
+                || batchUseWaterShader != (graphicsManager.getShaderProgram() instanceof WaterShaderProgram)
+                || batchUnderwaterPalette != graphicsManager.isUseUnderwaterPaletteForBackground()
+                || batchGhostEffectActive != graphicsManager.isGhostRenderEffectActive()
+                || batchGhostAlpha != graphicsManager.getGhostRenderAlpha()) {
+            return false;
+        }
+        if (rowStart >= rowEnd) {
+            return true;
+        }
+        int screenY = batchDisplayHeight - y - rowEnd;
+        float u0 = hFlip ? entry.u1() : entry.u0();
+        float u1 = hFlip ? entry.u0() : entry.u1();
+        // addPattern puts entry.v0 on the top edge unless the tile is V-flipped.
+        float vTop = vFlip ? entry.v1() : entry.v0();
+        float vBottom = vFlip ? entry.v0() : entry.v1();
+
+        GraphicsManager gm = graphicsManager;
+        float highPriority = piecePriority
+                ? 0.0f : gm.getCurrentSpriteTileOcclusionPaletteMask();
+
+        int offset = instanceCount * FLOATS_PER_INSTANCE;
+        instanceData[offset] = x;
+        instanceData[offset + 1] = screenY;
+        instanceData[offset + 2] = 8f;
+        instanceData[offset + 3] = rowEnd - rowStart;
+        instanceData[offset + 4] = u0;
+        instanceData[offset + 5] = vTop + (vBottom - vTop) * (rowEnd / 8.0f);
+        instanceData[offset + 6] = u1;
+        instanceData[offset + 7] = vTop + (vBottom - vTop) * (rowStart / 8.0f);
+        instanceData[offset + 8] = paletteIndex;
+        instanceData[offset + 9] = highPriority;
+        instanceCount++;
+        return true;
+    }
+
     public boolean addStripPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc,
             int x, int y, int stripIndex) {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH

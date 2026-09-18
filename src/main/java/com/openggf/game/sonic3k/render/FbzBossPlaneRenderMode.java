@@ -41,6 +41,9 @@ public final class FbzBossPlaneRenderMode implements AdvancedRenderMode {
         FbzZoneRuntimeState state = stateSupplier.get();
         if (state == null || state.planeAssignmentMode() != Sonic3kFBZEvents.PlaneAssignmentMode.REVERSED) return;
         builder.reversePlaneAssignment()
+                // PlainDeformation_Flipped places the moving terrain's X in
+                // the high (physical Plane A) word, independently of camera X.
+                .enablePerLineForegroundScroll()
                 .setForegroundVScrollOverride((short) foregroundVScroll.getAsInt())
                 .setBackgroundVScrollOverride((short) backgroundVScroll.getAsInt());
     }

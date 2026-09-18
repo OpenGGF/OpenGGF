@@ -40,7 +40,23 @@ public final class FbzExitDoorInstance extends AbstractObjectInstance
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {
+        if (!flying && poweredCollisionProperty != 0) {
+            // loc_70C3C consumes Check_PlayerCollision in this object's SST slot.
+            // Earlier slots (including AutoSpin) must see the unshifted player.
+            poweredCollisionProperty = 0;
+            flying = true;
+            xVelocity = 0x800;
+            PlayableEntity main = player;
+            if (tryServices() != null && services().playerQuery() != null) {
+                PlayableEntity queried = services().playerQuery().mainPlayerOrNull();
+                if (queried != null) main = queried;
+            }
+            if (main instanceof AbstractPlayableSprite sprite) NativePositionOps.addXPosPreserveSubpixel(sprite, -8);
+            else if (main != null) main.setCentreX((short) (main.getCentreX() - 8));
+            if (tryServices() != null) services().playSfx(Sonic3kSfx.FLOOR_THUMP.id);
+        }
         if (flying) {
+            // loc_70C4A falls through into loc_70C66 on the recognition dispatch.
             SubpixelMotion.State motion = new SubpixelMotion.State(
                     currentX, currentY, xSub, ySub, xVelocity, yVelocity);
             SubpixelMotion.objectFallXY(motion, 0x20);
@@ -49,22 +65,14 @@ public final class FbzExitDoorInstance extends AbstractObjectInstance
             xSub = motion.xSub;
             ySub = motion.ySub;
             yVelocity = motion.yVel;
-            return; // loc_70C66 draws persistently after the hit.
         }
     }
 
     @Override public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
         if (flying || result.category() != TouchCategory.SPECIAL) return;
-        flying = true;
-        xVelocity = 0x800;
-        PlayableEntity main = player;
-        if (tryServices() != null && services().playerQuery() != null) {
-            PlayableEntity queried = services().playerQuery().mainPlayerOrNull();
-            if (queried != null) main = queried;
-        }
-        if (main instanceof AbstractPlayableSprite sprite) NativePositionOps.addXPosPreserveSubpixel(sprite, -8);
-        else main.setCentreX((short) (main.getCentreX() - 8));
-        if (tryServices() != null) services().playSfx(Sonic3kSfx.FLOOR_THUMP.id);
+        // The door only consumes nonzero collision_property and always shifts
+        // Player_1; Check_PlayerCollision's selected player pointer is unused.
+        poweredCollisionProperty |= 1;
     }
 
     @Override public int getCollisionFlags() { return !flying ? 0xD7 : 0; }

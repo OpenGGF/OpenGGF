@@ -8,7 +8,7 @@
 - **Acts:** 1 (desert exterior) and 2 (pyramid interior with seamless transition from Act 1)
 - **Water:** No (quicksand objects only, not the water subsystem)
 - **Palette Cycling:** Yes (1 channel Act 1; Act 2 uses a 900-frame darkness timer plus 4-frame fade steps driven by `SOZ_darkness_level` and `Palette_cycle_counters`)
-- **Animated Tiles:** Yes (1 custom handler Act 1 -- parallax-driven BG tile cycling; 1 custom handler Act 2 -- darkness-aware torch animation; SOZ still shares `AniPLC_LRZ1` in the generic animation slot)
+- **Animated Tiles:** Yes (1 custom handler Act 1 -- parallax-driven BG tile cycling; 1 custom handler Act 2 -- darkness-aware torch animation; the table names `AniPLC_LRZ1`, but neither SOZ handler executes it)
 - **Character Branching:** Minimal -- Knuckles uses different start locations; ghost capsule behavior branches on character. No chunk adjustments or separate resize paths.
 - **Dynamic Resize:** `No_Resize` in `LevelResizeArray` -- all camera boundary management and event logic is handled through `SOZ1_BackgroundEvent` / `SOZ2_BackgroundEvent` instead of the standard `Dynamic_resize_routine`.
 - **Extended Y Wrap (Act 2):** Act 2 uses `Screen_Y_wrap_value=$7FF`, `Camera_Y_pos_mask=$7F0`, `Layout_row_index_mask=$3C` for double-height level layout (2048px Y wrap vs standard 1024px).
@@ -32,7 +32,7 @@ SOZ1 does NOT use `Dynamic_resize_routine`. All event logic is in the background
 | 2 | $08 | Conditions not met | Calls `sub_55D94` (sand shake update). Draws BG, applies deformation, calls `ShakeScreen_Setup`. | Normal frame while waiting for transition trigger. |
 | 3 | $0C | `Events_bg+$06` countdown | Phase 1 fade-to-black: decrements `Events_bg+$06`. When it reaches 0, sets `Events_bg+$02=$FF` (flag). While `Events_bg+$02==0`, calls `Pal_ToBlack` every other frame, decrementing `Events_bg+$04` ($15 steps). When `Events_bg+$04 < 0`, advances to $10. | First $10 frames are delay, then 21 fade steps at half-speed (every other frame). |
 | 4 | $10 | `Events_bg+$06` countdown | Phase 2 fade-to-black: sets `Palette_fade_info=$401F` (palette lines 2-3), `Events_bg+$04=$15`, `Events_bg+$06=8`. Same Pal_ToBlack logic. When complete, advances to $14. | Fades the additional palette lines to black. |
-| 5 | $14 | `Kos_modules_left == 0` | Act transition: sets `Current_zone_and_act=$801` (SOZ Act 2). Clears `Dynamic_resize_routine`, `Object_load_routine`, `Rings_manager_routine`, `Boss_flag`, `Respawn_table_keep`. Calls `Clear_Switches`, `Load_Level`, `LoadSolids`. Loads palette 3 (Sonic/Tails) or 5 (Knuckles). Loads palette $1B (SOZ2 zone palette) twice (normal + immediate). Calls `sub_55EFC` (darkness init). Clears palette lines 3-4 to black. Repositions players to ($140, $3AC). Sets camera to ($A0, $34C) and locks all boundaries. Clears event state. | Queues `SOZ2_16x16_Secondary_Kos`, `ArtKosM_SOZ2_Secondary` at VRAM $315, and PLC $2C before this stage. Seamless transition -- no title card. |
+| 5 | $14 | `Kos_modules_left == 0` | Act transition: sets `Current_zone_and_act=$801` (SOZ Act 2). Clears `Dynamic_resize_routine`, `Object_load_routine`, `Rings_manager_routine`, `Boss_flag`, `Respawn_table_keep`. Calls `Clear_Switches`, `Load_Level`, `LoadSolids`. Loads palette 3 (Sonic/Tails) or 5 (Knuckles). Loads palette $1B (SOZ2 zone palette) twice (normal + immediate). Calls `sub_55EFC` (darkness init). Clears palette lines 3-4 to black. Repositions players to ($140, $3AC). Sets camera to ($A0, $34C) and locks all boundaries. Clears event state. | Queues `SOZ2_16x16_Secondary_Kos`, `ArtKosM_SOZ2_Secondary` at VRAM $315, and PLC $2C before this stage. Seamless reload; the Act 2 background event subsequently allocates its title card during fade-in. |
 
 **Boss arena trigger (`sub_55E96`, line 113975):**
 - Only when `Camera_max_Y_pos == $960` AND Camera Y >= $960
@@ -186,11 +186,17 @@ Three objects are spawned by SOZ1_BackgroundEvent stage 1:
 
 **Description:** SOZ Act 1 uses per-line FG and BG deformation via the shared `AIZ2_SOZ1_LRZ3_FGDeformDelta` sine table (line 105635). This creates a heat-shimmer/mirage effect on the desert background. The BG scroll uses a multi-tier accumulation system via `sub_55D56`.
 
-**FG deformation (`sub_55E4C`, line 113938):**
-- 112 scanlines ($70) of per-line deformation
-- Each line gets a delta from `AIZ2_SOZ1_LRZ3_FGDeformDelta` indexed by `(Camera_Y * 2 + Level_frame_counter / 2) & $3E`
-- FG scroll = Camera X (negated) + delta
-- BG scroll = Camera BG X (negated) + delta (same delta applied to both planes)
+**Normal desert deformation (`loc_55DF2`):**
+- 224 scanlines: `d1=$DF` is the inclusive loop extent, not a 112-line effect.
+- FG wave byte offset is `(Camera_Y * 2 + asr.w(Level_frame_counter,1)) & $3E`.
+- BG uses its own wave byte offset with `Camera_Y_pos_BG_copy`, then consumes
+  successive ROM words while applying `word_560DC` bands.
+- FG scroll = negated camera X + FG delta; BG scroll = negated band X + BG delta.
+
+**Arena deformation (`sub_55E4C`):**
+- `$70` loop iterations write two lines each: also 224 scanlines.
+- This branch uses one FG-camera-derived delta stream for both planes and a
+  single BG X. Do not substitute it for the normal desert banded path.
 
 **BG scroll bands (`word_560DC` draw array, line 114206):**
 
@@ -207,7 +213,7 @@ Three objects are spawned by SOZ1_BackgroundEvent stage 1:
 **BG X accumulation (`sub_55D56`, line 113833):**
 - Base BG X = Camera X / 16 (with 16.16 fixed-point precision)
 - `Events_bg+$10` = Camera X / 32
-- 7 entries filled in `HScroll_table` with halving accumulation from the BG X position
+- 7 entries filled in `HScroll_table` with a constant Camera X / 64 increment, preserving 16.16 fractions until each word is written
 - This creates 7 speed tiers for the background layers, slower further from camera
 
 **BG Y scroll:** Camera Y / 16
@@ -325,21 +331,21 @@ $1268, $1260, $1260, $125C, $1254, $1248, $1248, $1248
 
 **DMA transfers:**
 - **Transfer 1:** From `ArtUnc_AniSOZ1_BG` + computed offset, to VRAM tile $330, size from `word_281B8[split*2]`
-- **Transfer 2:** From `ArtUnc_AniSOZ1_BG` + base offset, to VRAM tile $330+transfer1_size, size from `word_281B8[split*2+1]`
-- **Transfer 3:** From `ArtUnc_AniSOZ1_BG2` + `(offset * $C0)`, to VRAM tile $33C, size $60 (3 tiles)
+- **Transfer 2:** From `ArtUnc_AniSOZ1_BG` + base offset, to the byte address immediately after transfer 1 (`$6600 + 2 * firstWordCount`), size from `word_281B8[split*2+1]`
+- **Transfer 3:** From `ArtUnc_AniSOZ1_BG2` + `(offset * $C0)`, to VRAM tile $33C, size $60 words = $C0 bytes (6 tiles)
 
 **Split table (`word_281B8`, line 54928):**
 
 | Split Index | First Size | Second Size |
 |-------------|-----------|------------|
-| 0 | $C0 (6 tiles) | $00 (0 tiles) |
-| 1 | $90 (4.5 tiles) | $30 (1.5 tiles) |
-| 2 | $60 (3 tiles) | $60 (3 tiles) |
-| 3 | $30 (1.5 tiles) | $90 (4.5 tiles) |
+| 0 | $C0 words (12 tiles) | $00 words (0 tiles) |
+| 1 | $90 words (9 tiles) | $30 words (3 tiles) |
+| 2 | $60 words (6 tiles) | $60 words (6 tiles) |
+| 3 | $30 words (3 tiles) | $90 words (9 tiles) |
 
 **Trigger:** Always active (position-driven, not timer-driven)
 **Source art:** `ArtUnc_AniSOZ1_BG` (main BG patterns), `ArtUnc_AniSOZ1_BG2` (secondary BG patterns)
-**Destination VRAM:** Tiles $330-$33B (main), $33C-$33E (secondary)
+**Destination VRAM:** Tiles $330-$33B (main), $33C-$341 (secondary)
 
 **Confidence:** HIGH
 
@@ -351,32 +357,33 @@ $1268, $1260, $1260, $125C, $1254, $1248, $1248, $1248
 
 **Mechanism:**
 1. Decrements `Anim_Counters`. When < 0, resets to 7 (8-frame period)
-2. Increments frame counter `Anim_Counters+1`, wraps at 2 (so 2 frames of animation)
-3. Combines frame with darkness level: `index = (Palette_cycle_counters+$06 & 6)` -> maps to 0, 3, 6 via `d1 + d1/2` computation. When `index == 6` (maximum darkness), frame offset is not added
+2. Reads the old frame byte, increments it, then resets the stored byte if the old value is at least 2. The selected sequence is 0, 1, 2 (three frames).
+3. Combines frame with darkness level: `index = (Palette_cycle_counters+$06 & 6)` -> maps masked values 0, 2, 4, 6 to 0, 3, 6, 9 via `d1 + d1/2` computation. When the computed index is 6, the frame offset is not added; verify reachable fade-accumulator values through the palette owner
 4. Final DMA index = `computed_index * $C0` ($C0 = 192 bytes = 6 tiles * 32 bytes)
 
 **DMA transfer:**
 - From `ArtUnc_AniSOZ2_BG` + computed offset
 - To VRAM $6600
-- Size $60 (3 tiles)
+- Size $60 words = $C0 bytes (6 tiles)
 
-**Frame count:** 2 base frames x up to 4 darkness variants = 7 total visual states; the max-darkness case uses a single frame because the computed index is pinned
+**Frame selection:** Three-frame groups; computed base 6 is pinned to a single source frame. Enumerate reachable intensity groups from the palette/event state, not a guessed Cartesian frame count.
 **Timer period:** 8 frames
-**Trigger:** Always active, but can be gated by `Anim_Counters = $7F` (set during boss arena to disable)
+**Trigger:** Signed-byte timer underflow. Boss event paths repeatedly write `Anim_Counters = $7F` to inhibit updates; a single write alone delays animation rather than permanently disabling it.
 **Source art:** `ArtUnc_AniSOZ2_BG`
 **Destination VRAM:** $6600
 
 **Confidence:** HIGH
 
-### AniPLC Scripts (shared with LRZ1)
+### Unused AniPLC pointer (LRZ1)
 
-SOZ does not define its own zone-specific AniPLC routine here. In the `Offs_AniFunc` table, both SOZ entries point at `AniPLC_LRZ1` (`sonic3k.asm` lines 53869 and 53871), and the same shared script is also used by LRZ1.
-
-`AniPLC_LRZ1` is a plain `zoneanimstart` block with two declarations:
-- `ArtUnc_AniLRZ1_0` -> VRAM tile `$354`
-- `ArtUnc_AniLRZ1_1` -> VRAM tile `$350`
-
-That makes it a shared art-loading dependency for the SOZ/LRZ1 animation slot, not a SOZ-specific animation system. The visible SOZ-specific animated behavior still comes from `AnimateTiles_SOZ1` and `AnimateTiles_SOZ2`.
+`Offs_AniPLC` names `AniPLC_LRZ1` for both SOZ acts. This is **not an
+executed dependency**: `Animate_Tiles` loads its address into A2, then jumps
+through `Offs_AniFunc`. Both `AnimateTiles_SOZ1` and `AnimateTiles_SOZ2` return
+without calling `AnimateTiles_DoAniPLC`. The list's two four-tile transfers
+(`ArtUnc_AniLRZ1_0` to `$354`, `ArtUnc_AniLRZ1_1` to `$350`) belong to Lava Reef.
+Running them in Sandopolis replaces static desert art with purple flame shapes.
+The previous catalogue incorrectly inferred execution from the pointer alone;
+follow the custom handler's control flow before registering scripts.
 
 **Confidence:** HIGH
 
@@ -395,7 +402,7 @@ That makes it a shared art-loading dependency for the SOZ/LRZ1 animation slot, n
 - **Limit:** $20 (wraps at $20, so 4 frames: offsets 0, 8, $10, $18)
 - **Timer:** `Palette_cycle_counters+$0A`, period = 6 frames (reset to 5)
 - **Table:** `AnPal_PalSOZ1` at line 4302 (16 words = 4 frames x 4 colors)
-- **Destination:** `Normal_palette_line_3+$18` (4 words) and `Normal_palette_line_3+$1C` (4 words) = Palette line 2 (index 3), colors 12-15
+- **Destination:** two longwords at `Normal_palette_line_3+$18` and `+$1C` = four words total, zero-based palette index 2, colors 12–15
 - **Conditional:** Always active
 - **Color values (4 frames):**
 
@@ -422,8 +429,8 @@ That makes it a shared art-loading dependency for the SOZ/LRZ1 animation slot, n
 - **Darkness level:** `SOZ_darkness_level`, byte, range 0-5
 - When the timer expires and the level is still below 5, the level increments by 1
 - Only even-numbered levels start a fade pulse: `Palette_cycle_counters+$00 = 2` and `Palette_cycle_counters+$08 = 0`
-- `Palette_cycle_counters+$06` is the active step counter. `sub_55EFC` seeds it to 4; `AnPal_SOZ2` increments it while darkening and decrements it while brightening, then masks it with `& 6` to pick the 26-color slice from `AnPal_PalSOZ2_Light`
-- Darkness level 0 = full brightness, 5 = terminal darkness used after the Act 1 -> Act 2 transition and while the boss arena is darkened back down
+- `Palette_cycle_counters+$06` is the active step counter. `sub_55EFC` seeds it to 4; `AnPal_SOZ2` increments it while darkening and decrements it while brightening, uses `+$02` as the 26-color slice offset into `AnPal_PalSOZ2_Light`. Only the torch owner masks the step counter with `& 6`
+- Darkness level 0 = full brightness, 5 = terminal darkness used after the Act 1 -> Act 2 transition. Boss entry reverses the current fade and holds the timer; it does not first darken the room
 
 #### Channel 0: Darkness palette transition
 
@@ -447,7 +454,7 @@ That makes it a shared art-loading dependency for the SOZ/LRZ1 animation slot, n
 | 3 | $88A,$668,$646,$424,$224,$202,$000,$444,$222,$200,$040 | $8CE,$888,$666,$446,$222,$022,$022,$EEE,$468,$224,$002,$26A,$6EE,$48C,$26C |
 | 4 | $C46,$824,$804,$402,$202,$200,$000,$422,$402,$200,$040 | $6AE,$664,$422,$402,$200,$000,$000,$EEE,$466,$224,$000,$046,$6EE,$48C,$26A |
 
-**Note:** Level 0 is the initial `AnPal_PalSOZ2_Light` entry. `AnPal_PalSOZ2_Light_2` (line 4330) starts at level 0's line-4 data. The total table spans from the initial bright colors through 5 darkness steps.
+**Note:** Level 0 is the initial `AnPal_PalSOZ2_Light` entry. `AnPal_PalSOZ2_Light_2` (line 4330) starts at level 0's line-4 data. The table contains five brightness slices (steps 0–4), totaling 260 bytes.
 
 #### Channel 1: Sand shimmer (darkness-aware)
 
@@ -507,13 +514,13 @@ The same reset is performed during:
 | 58 | `Obj_SOZPathSwap` | SOZ-specific path switcher | At line 40023. |
 | 59 | `Obj_SOZLoopFallthrough` | Loop fallthrough trigger | Catches player falling at y_vel >= $800, puts into spin state, applies gravity until past target Y. |
 | 62 | `Obj_SOZPushableRock` | Pushable rock | Moved by player contact. |
-| 63 | `Obj_SOZSpringVine` | Spring-loaded vine | Bounces player like a spring but with vine visual. |
+| 63 | `Obj_SOZSpringVine` | Spring-loaded vine | Shared P2-before-P1 tension deforms a 96-byte pixel slope and eight-piece display child. Crossing directional X $3C launches without a jump-button gate; controller is invisible. |
 | 64 | `Obj_SOZRisingSandWall` | Rising sand wall | Sand wall that rises up. |
 | 65 | `Obj_SOZLightSwitch` | Light switch (Act 2) | Grabable switch -- player hangs from handle, pulls it down. Resets `SOZ_darkness_level` to 0 and restarts 15-second timer. Uses multi-sprite (main body + handle). |
 | 66 | `Obj_SOZFloatingPillar` | Floating sand pillar | Solid platform. Art tile $001, palette 2. |
 | 67 | `Obj_SOZSwingingPlatform` | Swinging platform | Pendulum-motion solid platform. |
 | 68 | `Obj_SOZBreakableSandRock` | Breakable sand rock | Destroyed by spin attack. |
-| 69 | `Obj_SOZPushSwitch` | Push switch | Floor-mounted switch activated by player weight. |
+| 69 | `Obj_SOZPushSwitch` | Push switch | Horizontal analog push switch; four eligible passes per displacement pixel, shared trigger byte and retained offscreen decay. |
 | 70 | `Obj_SOZDoor` | Door | Activated by switches. |
 | 71 | `Obj_SOZSandCork` | Sand cork | Blocks sand flow; can be removed. |
 | 72 | `Obj_SOZRapelWire` | Rappel wire | Swing wire with multiple chain segments. Player grabs and swings. |
@@ -537,6 +544,33 @@ SOZ does NOT use the engine's water subsystem (`DynamicWaterHeight` / `WaterTran
 - **$40 (slide):** Sand slide -- player moves diagonally
 - **$80 (waterfall):** Sand pours downward
 - **$C0 (deep):** Deep quicksand with faster sinking
+
+### Grounded layout sand slides (`sub_730C`)
+
+`sub_714E` dispatches SOZ to `sub_730C` after camera scrolling and screen events, for both native
+playable slots and both acts. This terrain handler is separate from object `$38`.
+It samples the foreground 128-pixel layout chunk at `(x_pos, y_pos+$14)` and searches
+the 17 ROM IDs at `$74AC`: `$0F,$13,$14,$15,$16,$17,$35,$6C,$6D,$76,$77,$7E,$7F,$85,$8A,$8C,$90`.
+The corresponding signed target/mode pairs at `$74BD` select speeds ±8 or ±6,
+left/right half-chunk admission, or ±8 from `top_solid_bit` (`$C` selects negative).
+`loc_7398` changes ground velocity by `$40`, tests the previous signed high byte,
+and damps opposing entry velocity (halves it for ±6, clears it for ±8).
+
+`loc_7402` writes animation `$19`, adds the old Y radius minus `$0E` to Y,
+sets radii `(7,$0E)`, clears roll/roll-jump, and sets secondary-status bit 7.
+The quiet skid sound is gated by `V_int_run_count & $0F == 0`. Airborne/on-object
+or nonmatching terrain exits at `loc_734A`: clear slide, set movement lock 5;
+only grounded exits restore default radii and animation 0, with no Y adjustment.
+The runtime uses the existing loop-tail per-playable feature update and captured
+player fields; ROM table bytes are immutable assets, not runtime state.
+`LevelLoop` orders `Process_Sprites`, `DeformBgLayer`, `ScreenEvents`, then
+`Handle_Onscreen_Water_Height`; the initial dispatch in `1bd8dfcb5` immediately after objects was
+rejected because it made the camera consume the same-frame radius/Y adjustment.
+The camera must track the pre-slide position without an artificial camera offset.
+
+This missing owner explained the ordinary SOZ1 trace's first physical divergence
+at frame 1419 (Y +5, ground velocity +$40, animation `$19`); those observations
+identify the source branch and are not inputs or constants in gameplay code.
 
 ### Screen Shake
 Present in both acts:
@@ -582,7 +616,7 @@ This is SOZ's signature mechanic. The system is not a one-shot fade; it is a two
 6. `Palette_cycle_counters+$08`: per-step fade timer (4-frame period)
 
 **Flow:**
-1. `sub_55EFC` seeds Act 2 with the dark baseline, sets `SOZ_darkness_level=5`, copies the darkest palette slice into `Normal_palette_line_3/4` and `Target_palette_line_3/4`, sets `Palette_cycle_counter1=(30*60)-1`, and initializes `Palette_cycle_counters+$06=4`, `+$02=$D0`, `+$00=0`
+1. During the seamless Act 1 → 2 transition only, `sub_55EFC` seeds Act 2 with the dark baseline, sets `SOZ_darkness_level=5`, copies the darkest palette slice into `Normal_palette_line_3/4` and `Target_palette_line_3/4`, sets `Palette_cycle_counter1=(30*60)-1`, and initializes `Palette_cycle_counters+$06=4`, `+$02=$D0`, `+$00=0`
 2. Every 900 frames, `AnPal_SOZ2` increments `SOZ_darkness_level` if it is still below 5
 3. Only even-numbered levels start a fade pulse: `Palette_cycle_counters+$00=2` and `Palette_cycle_counters+$08=0`
 4. Each fade tick (every 4 frames) advances or rewinds the table slice by $34 bytes and copies 26 colors from `AnPal_PalSOZ2_Light` into palette lines 3 and 4
@@ -595,7 +629,7 @@ This is SOZ's signature mechanic. The system is not a one-shot fade; it is a two
 - Level 2: first fade pulse
 - Level 3: steady dim state
 - Level 4: second fade pulse
-- Level 5: terminal darkness used by the Act 2 intro and the boss arena before the fight is lit back up
+- Level 5: terminal darkness used by seamless Act 2 entry; cold level-select entry starts with zeroed counters
 
 **Interaction with ghosts:** `Hyudoro_ctr` checks `SOZ_darkness_level`; ghosts only spawn when the level is above 0, and the max ghost count increases with darkness. Ghosts only deal damage when `SOZ_darkness_level > 0`.
 
@@ -636,7 +670,7 @@ The transition is a multi-phase process spanning SOZ1_BackgroundEvent stages 2-5
 1. **Stage $08 (trigger):** Requires `Events_fg_5 == $55` (set by door completion) AND both players past coordinates
 2. **Stage $0C (fade phase 1):** 16-frame delay, then 21 `Pal_ToBlack` steps on palette lines 0-1 (every other frame)
 3. **Stage $10 (fade phase 2):** 8-frame delay, then 21 `Pal_ToBlack` steps on palette lines 2-3
-4. **Stage $14 (reload):** Waits for the Kos queue to clear, sets `Current_zone_and_act=$801`, reloads level data/solids/palettes, applies `sub_55EFC`, clears palette lines 3-4 to black, moves both players to ($140, $3AC), and locks the camera to ($A0, $34C)
+4. **Stage $14 (reload):** Waits for the Kos queue to clear, sets `Current_zone_and_act=$801`, reloads level data/solids/palettes, applies `sub_55EFC`, clears palette lines 3-4 to black, moves P1 to ($140, $3AC) and preserves P2’s position relative to P1, and locks the camera to ($A0, $34C)
 
 Between stages $10 and $14, the code queues `SOZ2_16x16_Secondary_Kos`, `ArtKosM_SOZ2_Secondary`, and PLC $2C for the Act 2 art.
 
@@ -676,3 +710,47 @@ This allows the pyramid interior to extend vertically beyond the normal 1024px l
 - **Darkness palette system:** The bidirectional fade with variable-length table indexing (`$34` bytes per step, driven by `Palette_cycle_counters+$06` which can go negative during brightening) requires careful counter management. Confidence: MEDIUM.
 - **Extended Y wrap:** Non-standard `Screen_Y_wrap_value=$7FF` may expose edge cases in tile drawing routines that assume $3FF. Confidence: MEDIUM.
 - **Rising sand special event:** Uses `Special_events_routine=$10` to hook into the global `SpecialEvents` system, creating per-frame BG collision with `Background_collision_flag` and camera Y offset. Interactions with normal collision system need testing. Confidence: LOW-MEDIUM.
+
+### Breakable sand-rock implementation note (2026-09-15)
+
+SKL `$44`, `Obj_SOZBreakableSandRock` `$41702`, is implemented for both acts.
+The parent itself animates five mapping frames (`$4182E`); it does not spawn
+fragments. Rolling is sampled before SolidObjectFull and the post-call standing
+mask includes retained offscreen P2 bits. See the placed inventory and act matrices
+for the distinction between bindings, positioned behavior checks and cold routes.
+
+
+### Pushable-rock implementation note (2026-09-15)
+
+SKL `$3E` uses `Obj_SOZPushableRock` at `$40546` and mapping `$40776`.
+`SOZRockRideInfo` at `$1E3FD8` supplies alternating Y/X targets through ROM pointers.
+The new production binding preserves pre-solid player pushing status, native
+P1-before-P2 priority, signed word push timer, trailing-edge floor probe, strict
+Y overshoot and retained horizontal velocity across later falls. The initial
+zero-X-velocity fall must not carry the preceding push. Subtype `$87`'s global
+SOZPushSwitch link was deferred at that delivery (implemented in the connected-mechanism continuation); ordinary rock
+mechanics alone do not certify that interaction. Evidence is in the
+[v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md).
+
+### V2 loop exits and static solids (2026-09-15)
+
+The `$3B` and `$49` placed families now have source-derived implementations.
+See the [inventory](soz-object-inventory.md#loop-exits-and-solid-terrain-sprites)
+for the exact control/solid contracts and remaining placeholder counts. These
+positioned interactions extend local coverage; complete act traversal remains open.
+
+## Normal Act 1 presentation implementation status (2026-09-15)
+
+`SwScrlSoz` binds normal desert scrolling and ROM-backed shimmer/bands.
+SOZ1 also registers the foreground heat-haze render mode; calculating the FG
+scroll words alone does not enable their consumption by the tile renderer.
+`AnimateTiles_SOZ1`'s secondary copy and channel range cover all six tiles through
+`$341`, and its phase uses the current camera calculation. `AnPal_SOZ1` is
+registered for Act 1, targeting zero-based palette2 colors12–15; its prior
+destination prose above has been corrected. See the [execution record](../../plans/2026-09-15-soz-methodology-v2.md#normal-act-1-desert-presentation-implementation)
+for measured native fields, regression results and unmatched pixel boundaries.
+Act 1 arena/transition presentation and Act 2's event-selected backgrounds remain open.
+The completion campaign implements Act 2 normal half-speed scrolling, shared
+`AnPal_SOZ2` fade/sand clocks and `AnimateTiles_SOZ2` torch banks. Cold entry
+starts with zeroed counters; only `sub_55EFC` initializes seamless entry at
+darkness5/step4. Switch and boss event wiring are separate remaining obligations.

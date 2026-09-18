@@ -11,8 +11,6 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SolidContact;
-import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -37,9 +35,10 @@ import java.util.List;
  * is applied here.
  */
 public final class CnzTrapDoorInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider {
 
-    private static final int PRIORITY = 0x80;
+    /** ROM {@code move.w #$80,priority(a0)} at Obj_CNZTrapDoor init: bucket 1. */
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
     // ROM: move.w #$20,d1 / move.w #9,d3 / jsr SolidObjectTop
     private static final SolidObjectParams SOLID_PARAMS =
@@ -172,12 +171,6 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
-        // ROM parity is handled in update() by checking Player_1 and Player_2 each frame.
-        // Solid contact only needs the regular top-solid collision response.
-    }
-
-    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         ObjectRenderManager renderManager = getRenderManager();
         if (renderManager == null) {
@@ -194,7 +187,7 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(PRIORITY);
+        return PRIORITY_BUCKET;
     }
 
     int getRenderFrameForTest() {

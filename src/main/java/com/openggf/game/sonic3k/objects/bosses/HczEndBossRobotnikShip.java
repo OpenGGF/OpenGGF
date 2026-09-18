@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -32,7 +33,9 @@ import java.util.logging.Logger;
  *
  * <p>The Eggman head (Obj_RobotnikHead, line 136028) is rendered inline at
  * offset (0, -0x1C) from the ship position. It animates frames 0–1 at delay 5,
- * shows frame 2 when the boss is hurt, and frame 3 when defeated.
+ * shows frame 2 when the boss is hurt, and frame 3 when defeated. It is drawn
+ * before the ship because its SST slot follows the ship's (see
+ * {@link #appendRenderCommands}).
  */
 public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossRobotnikShip.class.getName());
@@ -111,7 +114,10 @@ public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindR
     // =========================================================================
 
     public HczEndBossRobotnikShip(HczEndBossInstance boss) {
-        super(boss, "HCZEndBossRobotnikShip", 3, 0);
+        // HCZEndBoss_ShipChild -> Obj_RobotnikShip2: Obj_RobotnikShipInit applies ObjDat_RobotnikShip
+        // priority $280 (sonic3k.asm:136655-136658); its art make_art_tile(ArtTile_RobotnikShip,0,0)
+        // leaves bit 15 clear, matching the default isHighPriority().
+        super(boss, "HCZEndBossRobotnikShip", RenderPriority.fromS3kWord(0x280), 0);
         this.boss = boss;
         this.routine = ROUTINE_INIT;
         this.headAnimCounter = 0;
@@ -306,10 +312,17 @@ public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindR
             return;
         }
 
-        shipRenderer.drawFrameIndex(shipFrame, currentX, currentY, shipFacingRight, false);
-
+        // Obj_RobotnikShipInit allocates the head with Child1_MakeRoboHead /
+        // CreateChild1_Normal (sonic3k.asm:136415-136416, 176924-176929), i.e.
+        // AllocateObjectAfterCurrent: the head lands in a later slot than the
+        // ship. Both use priority $280 (ObjDat_RobotnikShip 136655-136658,
+        // ObjDat_RobotnikHead 136645-136648) and Draw_Sprite appends in
+        // Process_Sprites slot order, where the lower sprite-table entry wins,
+        // so the ship is in front of the head. Painter's order: head, then ship.
         int headX = currentX + HEAD_OFFSET_X;
         int headY = currentY + HEAD_OFFSET_Y;
         shipRenderer.drawFrameIndex(getHeadFrame(), headX, headY, shipFacingRight, false);
+
+        shipRenderer.drawFrameIndex(shipFrame, currentX, currentY, shipFacingRight, false);
     }
 }

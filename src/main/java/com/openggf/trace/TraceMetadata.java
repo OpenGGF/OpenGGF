@@ -462,12 +462,12 @@ public record TraceMetadata(
      * The ROM {@code V_int_run_count} free-running VBlank counter
      * (sonic3k.constants.asm:790, {@code ds.l 1}) captured once at segment-arm
      * time, or {@code null} for traces recorded before the v6.32-s3k recorder
-     * or for non-bonus segments. {@code Slots_CycleOptions}
-     * (sonic3k.asm:99614-99946) reads this counter's low byte/word to seed the
-     * reel words/targets on each slots bonus-stage cycle, so replay primes the
-     * bonus-stage counter base from this recorded value instead of the
-     * engine's per-session approximation (see
-     * {@code S3kSlotBonusStageRuntime}).
+     * or for non-bonus segments. The recorder reads it one V-int before row
+     * zero, so it precedes row zero's {@code vblank_counter} (the same
+     * longword's low word) by exactly one. Replay does not seed from it: the
+     * object clock seeded from {@code initialVblankCounter - 1} already is
+     * {@code V_int_run_count}; the bootstrap only checks that the two agree
+     * ({@code TraceReplaySessionBootstrap#requireRecordedVIntRunCountAgreesWithRowZero}).
      */
     public Long recordedVIntRunCount() {
         return vIntRunCount != null ? (vIntRunCount.longValue() & 0xFFFFFFFFL) : null;

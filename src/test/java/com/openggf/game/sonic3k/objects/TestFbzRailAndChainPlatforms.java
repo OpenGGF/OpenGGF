@@ -64,11 +64,89 @@ class TestFbzRailAndChainPlatforms {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x83, 0x84, 0x88, 0xC3, 0xC7, 0xC8})
+    void horizontalGrabRegionsNeverDrawVerticalChainArt(int subtype) {
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var renders = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var level = mock(LevelManager.class);
+        when(level.getObjectRenderManager()).thenReturn(renders);
+        when(renders.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_CHAIN_LINK))
+                .thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        var chain = new FbzChainLinkObjectInstance(spawn(0x72, subtype));
+        chain.setServices(new TestObjectServices().withLevelManager(level));
+        chain.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verifyNoInteractions(renderer);
+    }
+
+    @Test void verticalHandleKeepsItsMappingAndFollowsTheDescendingPlayer() {
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var renders = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var level = mock(LevelManager.class);
+        when(level.getObjectRenderManager()).thenReturn(renders);
+        when(renders.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_CHAIN_LINK))
+                .thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        var player = new TestSprite("sonic");
+        player.setCentreX((short) 0x1000);
+        player.setCentreY((short) 0x892);
+        var services = new PlayersServices(player, List.of());
+        services.withLevelManager(level);
+        var chain = new FbzChainLinkObjectInstance(spawn(0x72, 0x1B));
+        chain.setServices(services);
+        chain.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(renderer).drawFrameIndex(0, 0x1000, 0x800, false, false);
+        chain.update(0, null);
+        for (int frame = 1; frame <= 8; frame++) chain.update(frame, null);
+        assertTrue(chain.stateForParticipant(0).grabbed());
+        assertEquals(0x8AC, player.getCentreY());
+        chain.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(renderer).drawFrameIndex(2, 0x1000, 0x810, false, false);
+    }
+
     @Test void grabJumpUsesExactReleaseVelocityAndCooldown() {
         assertEquals(-0x380, FbzChainLinkObjectInstance.RELEASE_Y_VELOCITY);
         assertEquals(0x200, FbzChainLinkObjectInstance.RELEASE_X_VELOCITY);
         assertEquals(0x12, FbzChainLinkObjectInstance.JUMP_COOLDOWN);
         assertEquals(0x3C, FbzChainLinkObjectInstance.DIRECTIONAL_JUMP_COOLDOWN);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x1B, 0x83})
+    void chainEntryRejectsHurtDeathAndDebugWithoutChangingRecoil(int subtype) {
+        for (int state = 0; state < 4; state++) {
+            TestSprite player = new TestSprite("sonic");
+            player.setHurt(state == 1);
+            player.setDead(state == 2);
+            player.setDebugMode(state == 3);
+            player.setAir(true);
+            player.setCentreX((short) 0x1002);
+            player.setCentreY((short) ((subtype & 0x80) == 0 ? 0x89F : 0x803));
+            player.setXSpeed((short) -0x200);
+            player.setYSpeed((short) -0x30);
+            player.setSubpixelRaw(0x1234, 0x5678);
+            int x = player.getCentreX(), y = player.getCentreY();
+            var chain = new FbzChainLinkObjectInstance(spawn(0x72, subtype));
+            var services = new PlayersServices(player, List.of());
+            chain.setServices(services);
+            chain.update(0, null);
+            if (state == 0) {
+                assertTrue(chain.stateForParticipant(0).grabbed(), "healthy entry remains eligible");
+                assertSame(chain, player.getLatchedSolidObjectInstance());
+            } else {
+                assertFalse(chain.stateForParticipant(0).grabbed(), "native routine/debug gate " + state);
+                assertFalse(player.isObjectControlled());
+                assertNull(player.getLatchedSolidObjectInstance());
+                assertEquals(x, player.getCentreX());
+                assertEquals(y, player.getCentreY());
+                assertEquals(-0x200, player.getXSpeed());
+                assertEquals(-0x30, player.getYSpeed());
+                assertEquals(0x1234, player.getXSubpixelRaw());
+                assertEquals(0x5678, player.getYSubpixelRaw());
+                assertEquals(0, services.grabSfxCount);
+            }
+        }
     }
 
     @Test void threePlayersGrabIndependentlyAndChainStaysAliveWhileAnyOwnerRemains() {
@@ -155,17 +233,19 @@ class TestFbzRailAndChainPlatforms {
                 "loc_3A616 loads $44(a0) before jumping to loc_1B666; current x_pos is not the cull key");
     }
 
-    @Test void mode3ReadsRomVisibleLevelFrameCounterInsteadOfObjectVblankClock() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x0050, 0x1250, 0xFF50})
+    void mode3ReadsLowByteOfCurrentLevelCounterInsteadOfIncrementingIt(int levelCounter) {
         LevelManager levelManager=mock(LevelManager.class);
-        when(levelManager.getFrameCounter()).thenReturn(0x50);
+        when(levelManager.getFrameCounter()).thenReturn(levelCounter);
         var platform=new FbzFloatingPlatformObjectInstance(spawn(0x71,0x30));
         platform.setServices(new TestObjectServices().withLevelManager(levelManager));
 
         platform.update(0x91,null);
 
-        int romVisibleCounter=0x51;
+        int romVisibleCounter=0x50;
         assertEquals(0x1000+(com.openggf.physics.TrigLookupTable.sinHex(romVisibleCounter)>>2),platform.getX(),
-                "loc_3A664 reads (Level_frame_counter+1).w, not ObjectManager's free-running VBla clock");
+                "loc_3A664 reads the low-byte address, not counter+1 or the object VBlank clock");
         assertEquals(0x800+(com.openggf.physics.TrigLookupTable.cosHex(romVisibleCounter)>>2),platform.getY());
     }
 
@@ -227,6 +307,25 @@ class TestFbzRailAndChainPlatforms {
         chain.update(26,null);
         assertFalse(chain.stateForParticipant(0).grabbed(),
                 "loc_3ACEA excludes the configured endpoint cell even after cooldown is overwritten");
+    }
+
+    @Test void horizontalHandStepsWriteAnimationByteOnlyOnTimedAdvance() {
+        TestSprite player = new TestSprite("sonic");
+        player.setCentreX((short) 0x1000);
+        player.setCentreY((short) 0x800);
+        var chain = new FbzChainLinkObjectInstance(spawn(0x72, 0x83));
+        chain.setServices(new PlayersServices(player, List.of()));
+        chain.update(0, null);
+        player.getAnimationManager().publishPreviousAnimationId(0x14);
+        player.setDirectionalInputPressed(false, false, false, true);
+        for (int frame = 1; frame <= 25; frame++) {
+            chain.update(frame, null);
+            if (frame == 1) player.setDirectionalInputPressed(false, false, false, false);
+            assertEquals(frame < 25 ? 0 : 0x14, player.getAnimationId(),
+                    "loc_3ABBE selects walk through the first three hand steps");
+            assertEquals(0x14, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                    "the hand-step byte write must not overwrite prev_anim");
+        }
     }
 
     @Test void horizontalHandCycleClearsItsStepTimerBeforeALaterDirectionStarts() {

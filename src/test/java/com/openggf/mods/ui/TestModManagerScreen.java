@@ -104,6 +104,9 @@ class TestModManagerScreen {
         assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("OGG decode failed")));
         screen.render();
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("MOD MANAGER")));
+        press(screen, Action.RIGHT); // visible actions for the selected addon
+        press(screen, Action.ACCEPT); // Details
+        screen.render();
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("OGG decode failed")));
     }
 
@@ -150,7 +153,7 @@ class TestModManagerScreen {
         }
         assertEquals(20, screen.selectedIndex());
         assertTrue(screen.scrollOffset() > 0);
-        assertEquals(18, screen.visibleRows().size());
+        assertEquals(ModManagerScreen.MAX_VISIBLE_ROWS, screen.visibleRows().size());
 
         screen.update(menu(down));
         screen.update(menu(down));
@@ -298,8 +301,8 @@ class TestModManagerScreen {
         assertTrue(screen.restartRequired());
         assertTrue(catalog.effective().orderedEnabled().isEmpty());
 
-        press(screen, Action.BACK);
-        assertTrue(screen.closeRequested());
+        applyFromList(screen);
+        assertFalse(screen.closeRequested());
         ModState persisted = new ModStateStore(temp.resolve("trust").toAbsolutePath().normalize())
                 .load().state();
         assertTrue(persisted.entries().getFirst().trustsSha256(code.sha256()));
@@ -477,13 +480,16 @@ class TestModManagerScreen {
     }
 
     @Test
-    void backSavesAndClosesOnSuccessButFailureBannerKeepsScreenOpen() throws Exception {
+    void explicitApplySavesWithoutClosingAndFailureKeepsDraftOpen() throws Exception {
         ModDescriptor mod = descriptor("pack-one", "One", List.of(), List.of());
         ModCatalog catalog = catalog(List.of(mod));
         ModManagerScreen success = screen(catalog, state(false, "pack-one"),
                 new ModRuntimeFindingStore(), null, temp.resolve("success"));
         press(success, Action.ACCEPT);
-        press(success, Action.BACK);
+        applyFromList(success);
+        assertFalse(success.closeRequested());
+        press(success, Action.BACK); // Actions to list.
+        press(success, Action.BACK); // Clean close.
         assertTrue(success.closeRequested());
         assertTrue(Files.exists(temp.resolve("success/modstate.json")));
 
@@ -492,7 +498,8 @@ class TestModManagerScreen {
         ModManagerScreen failure = screen(catalog, state(false, "pack-one"),
                 new ModRuntimeFindingStore(), null, invalidRoot);
         press(failure, Action.ACCEPT);
-        press(failure, Action.BACK);
+        applyFromList(failure);
+        assertTrue(enabled(failure, "pack-one"));
         assertFalse(failure.closeRequested());
         assertTrue(failure.bannerLines().stream().anyMatch(line -> line.startsWith("Save failed:")));
     }
@@ -541,7 +548,7 @@ class TestModManagerScreen {
     }
 
     @Test
-    void conventionalEscapeBackSavesOnceThroughLiveInputHandler() {
+    void cleanEscapeBackClosesWithoutWritingThroughLiveInputHandler() {
         ModDescriptor mod = descriptor("pack-one", "One", List.of(), List.of());
         ModManagerScreen screen = screen(catalog(List.of(mod)), state(false, "pack-one"),
                 new ModRuntimeFindingStore(), null, temp.resolve("escape"));
@@ -554,7 +561,7 @@ class TestModManagerScreen {
         host.update(input);
 
         assertTrue(screen.closeRequested());
-        assertTrue(Files.exists(temp.resolve("escape/modstate.json")));
+        assertFalse(Files.exists(temp.resolve("escape/modstate.json")));
     }
 
     @Test
@@ -581,7 +588,10 @@ class TestModManagerScreen {
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("second.jar")));
 
         screen.select(0);
-        press(screen, Action.RIGHT);
+        press(screen, Action.RIGHT); // actions
+        press(screen, Action.RIGHT); // Order
+        press(screen, Action.ACCEPT);
+        press(screen, Action.DOWN);
         assertEquals(2, screen.rows().size());
         assertTrue(screen.statusMessage().contains("Duplicate"));
         screen.select(1);
@@ -812,6 +822,113 @@ class TestModManagerScreen {
         host.update(input);
     }
 
+    @Test
+    void visibleDetailsAndOrderActionsPreserveTheSelectedModAndSaveFlow() {
+        List<ModDescriptor> mods = List.of(descriptor("pack-a", "A", List.of(), List.of()),
+                descriptor("pack-b", "B", List.of(), List.of()),
+                descriptor("pack-c", "C", List.of(), List.of()));
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog(mods), state(false, false, false, "pack-a", "pack-b", "pack-c"),
+                new ModRuntimeFindingStore(), font, temp.resolve("visible-actions"));
+        press(screen, Action.DOWN);
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+        screen.render();
+        assertTrue(font.drawn.contains("MOD DETAILS"));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Id: pack-b")));
+        assertEquals(1, screen.selectedIndex());
+        press(screen, Action.BACK);
+        assertFalse(screen.closeRequested());
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+        press(screen, Action.DOWN);
+        assertEquals(List.of("pack-a", "pack-c", "pack-b"), pendingIds(screen));
+        press(screen, Action.BACK);
+        press(screen, Action.RIGHT);
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+        assertFalse(screen.closeRequested());
+        assertTrue(Files.exists(temp.resolve("visible-actions/modstate.json")));
+    }
+
+    @Test
+    void longDetailsAndManyNoticesStayOnNativeGridAndRemainReadableByPaging() {
+        List<ModFinding> findings = new ArrayList<>();
+        for (int i = 0; i < 35; i++) findings.add(finding(ModFindingSeverity.WARNING, "LONG_" + i,
+                "A long explanation with exact useful information ".repeat(3) + "END_MARKER_" + i));
+        ModDescriptor mod = descriptor("pack-verbose", "A very long mod name ".repeat(8), List.of(), findings);
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog(List.of(mod)), state(false, "pack-verbose"),
+                new ModRuntimeFindingStore(), font, temp.resolve("verbose"));
+        screen.render();
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+        for (int i = 0; i < 300; i++) press(screen, Action.DOWN);
+        screen.render();
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("END_MARKER_34")),
+                "Wrapping must retain the final text, not permanently truncate it");
+        for (RenderedLine line : font.lines) {
+            int advance = line.scale() < 1 ? 6 : 9;
+            int height = line.scale() < 1 ? 8 : 10;
+            assertTrue(line.x() >= 0 && line.x() + line.value().length() * advance <= 320,
+                    () -> "Horizontal overflow: " + line);
+            assertTrue(line.y() >= 0 && line.y() + height <= 224,
+                    () -> "Vertical overflow: " + line);
+            assertTrue(line.scale() == 1f || line.scale() == 2f / 3f,
+                    "Only native menu font sizes are used");
+        }
+    }
+
+    @Test
+    void adaptiveLabelsAndDetailsBackDoNotSaveOrToggle() {
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
+                state(false, "pack-one"), new ModRuntimeFindingStore(), font, temp.resolve("labels"));
+        screen.update(new ModManagerScreen.MenuInput() {
+            @Override public String confirmLabel() { return "A"; }
+            @Override public String backLabel() { return "B"; }
+            @Override public String directionLabel() { return "D-Pad"; }
+        });
+        screen.render();
+        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("A Toggle")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("B Back")));
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+        press(screen, Action.BACK);
+        assertFalse(screen.closeRequested());
+        assertFalse(enabled(screen, "pack-one"));
+        assertFalse(Files.exists(temp.resolve("labels/modstate.json")));
+    }
+
+    @Test
+    void dirtyBackDefaultsToKeepAndExplicitDiscardRestoresLastSavedDraft() {
+        var root = temp.resolve("discard");
+        var screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
+                state(false, "pack-one"), new ModRuntimeFindingStore(), null, root);
+        press(screen, Action.ACCEPT); // Enable draft.
+        press(screen, Action.BACK);
+        press(screen, Action.ACCEPT); // Default Keep editing.
+        assertFalse(screen.closeRequested());
+        assertTrue(enabled(screen, "pack-one"));
+        assertFalse(Files.exists(root.resolve("modstate.json")));
+        applyFromList(screen);
+        press(screen, Action.BACK); // Actions to list.
+        press(screen, Action.ACCEPT); // Disable a new unsaved draft.
+        assertFalse(enabled(screen, "pack-one"));
+        press(screen, Action.BACK);
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT); // Explicit Discard.
+        assertTrue(screen.closeRequested());
+        assertTrue(enabled(screen, "pack-one"), "Discard restores saved enabled state, not startup");
+        assertTrue(new ModStateStore(root.toAbsolutePath().normalize()).load().state().entries().getFirst().enabled());
+    }
+
+    private static void applyFromList(ModManagerScreen screen) {
+        press(screen, Action.RIGHT); // Actions, Details.
+        press(screen, Action.LEFT); // Wrap to Apply.
+        press(screen, Action.ACCEPT);
+    }
+
     private static ModManagerScreen.MenuInput menu(LogicalInputSnapshot input) {
         return menu(input, false);
     }
@@ -829,6 +946,30 @@ class TestModManagerScreen {
         };
     }
 
+    @Test
+    void sixPrimaryRowsKeepBalancedFocusPaddingInsideTheListPanel() {
+        String[] ids = {"pack-a", "pack-b", "pack-c", "pack-d", "pack-e", "pack-f"};
+        List<ModDescriptor> mods = java.util.Arrays.stream(ids)
+                .map(id -> descriptor(id, id, List.of(), List.of())).toList();
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog(mods), state(new boolean[6], ids),
+                new ModRuntimeFindingStore(), font, temp.resolve("alignment"));
+        for (int selected = 0; selected < 6; selected++) {
+            font.lines.clear();
+            font.focus.clear();
+            screen.render();
+            List<RenderedLine> rows = font.lines.stream()
+                    .filter(line -> line.x() == 12 && line.scale() == 1 && line.value().startsWith("[OFF]")).toList();
+            assertEquals(6, rows.size());
+            FocusRect focus = font.focus.getFirst();
+            RenderedLine selectedLine = rows.get(selected);
+            assertEquals(2, selectedLine.y() - focus.y());
+            assertEquals(2, focus.y() + focus.height() - selectedLine.y() - 10);
+            assertTrue(focus.y() >= 48 && focus.y() + focus.height() <= 136);
+            if (selected < 5) press(screen, Action.DOWN);
+        }
+    }
+
     private static ModManagerScreen.TextSink textSink(PixelFont font) {
         return new ModManagerScreen.TextSink() {
             @Override public void begin() { font.beginMegaBatch(); }
@@ -837,13 +978,21 @@ class TestModManagerScreen {
                 font.drawText(text, x, y, scale, r, g, b, a);
             }
             @Override public void end() { font.endMegaBatch(); }
+            @Override public void focus(int x, int y, int width, int height) {
+                if (font instanceof RecordingFont recording) recording.focus.add(new FocusRect(y, height));
+            }
         };
     }
 
     private enum Action { UP, DOWN, LEFT, RIGHT, ACCEPT, BACK }
 
+    private record RenderedLine(String value, int x, int y, float scale) { }
+    private record FocusRect(int y, int height) { }
+
     private static final class RecordingFont extends PixelFont {
         private final List<String> drawn = new ArrayList<>();
+        private final List<RenderedLine> lines = new ArrayList<>();
+        private final List<FocusRect> focus = new ArrayList<>();
 
         @Override
         public void beginMegaBatch() { }
@@ -855,6 +1004,7 @@ class TestModManagerScreen {
         public void drawText(String text, int x, int y, float scale,
                              float r, float g, float b, float a) {
             drawn.add(text);
+            lines.add(new RenderedLine(text, x, y, scale));
         }
     }
 

@@ -39,6 +39,7 @@ public final class S3kPaletteOwners {
     public static final String MGZ_END_BOSS = "s3k.mgz.endBoss";
     public static final String MGZ_POST_BOSS_FADE = "s3k.mgz.postBossFade";
     public static final String MHZ1_CUTSCENE_RESTORE = "s3k.mhz1.cutsceneRestore";
+    public static final String SOZ_ZONE_CYCLE = "s3k.soz.zoneCycle";
     public static final String LBZ_ZONE_CYCLE = "s3k.lbz.zoneCycle";
     public static final String LBZ_MINIBOSS = "s3k.lbz.miniboss";
     public static final String BPZ_ZONE_CYCLE = "s3k.bpz.zoneCycle";
@@ -98,6 +99,8 @@ public final class S3kPaletteOwners {
     public static final String HPZ_ZONE_CYCLE = "s3k.hpz.zoneCycle";
     public static final String HPZ_MASTER_EMERALD = "s3k.hpz.masterEmerald";
     public static final String HPZ_PALETTE_CONTROL = "s3k.hpz.paletteControl";
+    /** {@code CutsceneKnux_HPZ} loads {@code Pal_CutsceneKnux} into line 2. */
+    public static final String HPZ_CUTSCENE_KNUCKLES = "s3k.hpz.cutsceneKnuckles";
 
     /**
      * Below {@link #PRIORITY_ZONE_CYCLE} so the CNZ AnPal color cycling (applied

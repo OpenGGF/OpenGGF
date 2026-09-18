@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -73,6 +74,20 @@ public class MhzShipPropellerInstance extends AbstractObjectInstance implements 
         if (advanceFrame) {
             animationIndex = (animationIndex + 1) % ANIMATION_FRAMES.length;
         }
+    }
+
+    // loc_55814 writes priority $380 (sonic3k.asm:113467).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x380);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // loc_55814 art make_art_tile(ArtTile_MHZShipPropeller,1,1) sets bit 15 (sonic3k.asm:113468).
+        return true;
     }
 
     @Override

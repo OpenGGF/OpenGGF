@@ -262,6 +262,19 @@ final class MasterTitleRomPreview {
             if (!rom.open(romPath.toString())) {
                 return Optional.empty();
             }
+            return loadSequenceFor(entry, rom);
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Failed to build master-title ROM preview for " + entry.gameId, e);
+            return Optional.empty();
+        }
+    }
+
+    /** Decodes the title preview from an already open ROM (file-backed or a catalogue view). */
+    static Optional<PreviewSequence> loadSequenceFor(MasterTitleScreen.GameEntry entry, Rom rom) {
+        if (entry == null || rom == null || !rom.isOpen()) {
+            return Optional.empty();
+        }
+        try {
             PreviewSequence sequence = switch (entry) {
                 case SONIC_1 -> loadSonic1Sequence(rom);
                 case SONIC_2 -> loadSonic2Sequence(rom);

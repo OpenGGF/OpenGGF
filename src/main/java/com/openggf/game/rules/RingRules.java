@@ -1,6 +1,8 @@
 package com.openggf.game.rules;
 
-@com.openggf.game.ModApi
+import com.openggf.game.ModApi;
+
+@ModApi
 public record RingRules(
         int ringFloorCheckMask,
         int ringFloorCheckCounterPhase,
@@ -10,7 +12,8 @@ public record RingRules(
         int ringCollisionWidth,
         int ringCollisionHeight,
         boolean stageRingsUseObjectTouchCollection,
-        boolean stageRingSweepUsesRawCameraWindow) {
+        boolean stageRingSweepUsesRawCameraWindow,
+        boolean checkpointRestoresSavedRings) {
 
     /** Compatibility name retained for the develop trace-fleet fixes. */
     public int lostRingRenderYMargin() {

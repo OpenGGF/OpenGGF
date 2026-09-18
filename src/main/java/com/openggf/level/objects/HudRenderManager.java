@@ -5,6 +5,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.Palette;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -37,12 +38,32 @@ public class HudRenderManager {
     // Icon/flash palette and HUD text palette — configurable per game
     private PatternDesc iconPatternDesc = new PatternDesc(0x8000);
     private PatternDesc hudPatternDesc = new PatternDesc(0xA000);
+    private PatternDesc livesNumberPatternDesc = iconPatternDesc;
     private int iconPaletteLine;
     private Palette livesPaletteOverride;
     private Palette lastAppliedLivesPaletteOverride;
     private Supplier<Palette> livesPaletteOverrideSupplier;
     private boolean routeLivesPaletteOverrideThroughOwnership;
     private boolean bonusStageHudLayout;
+    private com.openggf.game.internal.HudWarningPolicyProvider warningPolicy;
+    private java.util.function.IntSupplier warningClock;
+
+    void setWarningPolicy(com.openggf.game.internal.HudWarningPolicyProvider policy,
+                          java.util.function.IntSupplier clock) {
+        this.warningPolicy = policy;
+        this.warningClock = clock;
+    }
+
+    private boolean flashCycle(LevelState state) {
+        return warningPolicy == null ? state.getFlashCycle()
+                : warningPolicy.isFlashFrame(warningClock.getAsInt());
+    }
+
+    private boolean timerWarning(LevelState state) {
+        return warningPolicy == null ? state.shouldFlashTimer()
+                : warningPolicy.isTimerWarning(state.getElapsedSeconds());
+    }
+
     private HudProfile profile = HudProfile.stock();
     private int viewportWidth = 320;
 
@@ -63,6 +84,12 @@ public class HudRenderManager {
         this.hudPatternDesc = new PatternDesc(0x8000 | (textPalLine << 13));
         this.iconPatternDesc = new PatternDesc(0x8000 | (flashPalLine << 13));
         this.iconPaletteLine = flashPalLine;
+        this.livesNumberPatternDesc = iconPatternDesc;
+    }
+
+    void setLivesNumberPaletteLine(int paletteLine) {
+        if (paletteLine < 0 || paletteLine > 3) throw new IllegalArgumentException("HUD palette line must be 0-3");
+        livesNumberPatternDesc = new PatternDesc(0x8000 | (paletteLine << 13));
     }
 
     public void setBonusStageHudLayout(boolean enabled) {
@@ -156,6 +183,21 @@ public class HudRenderManager {
         }
 
         return count;
+    }
+
+    private String vblankTimeDisplay;
+
+    /** Presentation-only projection of UpdateHUD; does not advance the gameplay timer. */
+    void drawForCounterPublication(LevelState state, PlayableEntity player, boolean advanceTimer) {
+        if (state == null) return;
+        var timer = new com.openggf.game.LevelTimer();
+        // ROM UpdateHUD increments Timer during VBlank before rewriting numeric
+        // tiles. The existing level-state owner advances later in this engine
+        // loop; present that same increment without a second gameplay update.
+        timer.setTotalFrames(state.getTimerFrames() + (advanceTimer && !state.isTimerPaused() ? 1 : 0));
+        vblankTimeDisplay = timer.getDisplayTime();
+        try { draw(state, player); }
+        finally { vblankTimeDisplay = null; }
     }
 
     public void draw(LevelState levelGamestate) {
@@ -258,8 +300,8 @@ public class HudRenderManager {
             return staticHudArt.debugScoreFrame();
         }
         boolean flash = switch (row.warning()) {
-            case TIMER_FLASH -> levelState.shouldFlashTimer() && levelState.getFlashCycle();
-            case ZERO_FLASH -> metricIsZero(row.metric(), levelState) && levelState.getFlashCycle();
+            case TIMER_FLASH -> timerWarning(levelState) && flashCycle(levelState);
+            case ZERO_FLASH -> metricIsZero(row.metric(), levelState) && flashCycle(levelState);
             case NONE -> false;
         };
         return switch (row.label()) {
@@ -280,24 +322,31 @@ public class HudRenderManager {
     }
 
     private void drawMetric(HudRow row, LevelState levelState, int hudOrigin) {
-        switch (row.metric()) {
-            case SCORE -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
-                    gameState.getScore(), row.maxDigits(), hudOrigin);
-            case TIME -> drawTime(row.valueRightX(), row.valueY(), levelState.getDisplayTime(), hudOrigin);
-            case RINGS -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
-                    levelState.getRings(), row.maxDigits(), hudOrigin);
-            case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY(),
-                    row.maxDigits(), hudOrigin);
-        }
+        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD_COUNTERS);
+        try {
+            switch (row.metric()) {
+                case SCORE -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
+                        gameState.getScore(), row.maxDigits(), hudOrigin);
+                case TIME -> drawTime(row.valueRightX(), row.valueY(),
+                        vblankTimeDisplay != null ? vblankTimeDisplay : levelState.getDisplayTime(), hudOrigin);
+                case RINGS -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
+                        levelState.getRings(), row.maxDigits(), hudOrigin);
+                case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY(),
+                        row.maxDigits(), hudOrigin);
+            }
+        } finally { SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD); }
     }
 
     private void drawBonusStageHud(LevelState levelGamestate) {
-        drawStaticFrame(selectRingsFrame(levelGamestate.getRings(), levelGamestate.getFlashCycle()), 16, 8, 0);
+        drawStaticFrame(selectRingsFrame(levelGamestate.getRings(), flashCycle(levelGamestate)), 16, 8, 0);
         drawRings(levelGamestate.getRings(), 8, 0);
     }
 
     private void drawRings(int rings, int y, int hudOrigin) {
-        drawNumberRightAligned(64, y, rings, 3, hudOrigin);
+        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD_COUNTERS);
+        try {
+            drawNumberRightAligned(64, y, rings, 3, hudOrigin);
+        } finally { SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD); }
     }
 
     private void drawLives(int lives, int numDrawX, int line2Y, int maxDigits, int hudOrigin) {
@@ -310,7 +359,7 @@ public class HudRenderManager {
         int digitCount = numberToDigits(saturateNumeric(lives, maxDigits), numericDigits);
         for (int i = 0; i < digitCount; i++) {
             int digit = numericDigits[i];
-            renderSafe(livesNumbersPatternIndex + digit, iconPatternDesc,
+            renderSafe(livesNumbersPatternIndex + digit, livesNumberPatternDesc,
                     hudOrigin + numDrawX + camX + (i * 8), line2Y + camY);
         }
     }
@@ -417,19 +466,22 @@ public class HudRenderManager {
      * @param yCoord Y coordinate to display (will be masked to 16-bit)
      */
     private void drawSmallHexCoordinates(int x, int y, int xCoord, int yCoord, int hudOrigin) {
-        int camX = camera.getXWithShake();
-        int camY = camera.getYWithShake();
+        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD_COUNTERS);
+        try {
+            int camX = camera.getXWithShake();
+            int camY = camera.getYWithShake();
 
-        for (int i = 0; i < 4; i++) {
-            int nibble = (xCoord >> (12 - i * 4)) & 0xF;
-            drawSmallHexDigit(hudOrigin + x + camX + (i * 8), y + camY, nibble);
-        }
+            for (int i = 0; i < 4; i++) {
+                int nibble = (xCoord >> (12 - i * 4)) & 0xF;
+                drawSmallHexDigit(hudOrigin + x + camX + (i * 8), y + camY, nibble);
+            }
 
-        int yStartX = x + 32;
-        for (int i = 0; i < 4; i++) {
-            int nibble = (yCoord >> (12 - i * 4)) & 0xF;
-            drawSmallHexDigit(hudOrigin + yStartX + camX + (i * 8), y + camY, nibble);
-        }
+            int yStartX = x + 32;
+            for (int i = 0; i < 4; i++) {
+                int nibble = (yCoord >> (12 - i * 4)) & 0xF;
+                drawSmallHexDigit(hudOrigin + yStartX + camX + (i * 8), y + camY, nibble);
+            }
+        } finally { SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD); }
     }
 
     /**

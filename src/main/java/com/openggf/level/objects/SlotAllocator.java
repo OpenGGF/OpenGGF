@@ -38,6 +38,11 @@ public final class SlotAllocator {
         return used.nextClearBit(0) < layout.dynamicSlotCount();
     }
 
+    /** Number of dynamic slots currently free. */
+    public int freeSlotCount() {
+        return layout.dynamicSlotCount() - used.cardinality();
+    }
+
     /** ROM FindFreeObj without consuming the slot. Returns -1 when the pool is full. */
     public int firstFreeSlot() {
         int bit = used.nextClearBit(0);

@@ -1,8 +1,9 @@
 package com.openggf.game.zone;
 
+import com.openggf.game.ModApi;
 import com.openggf.physics.BackgroundPlaneCollisionProvider;
 
-@com.openggf.game.ModApi
+@ModApi
 public interface ZoneRuntimeState {
     String gameId();
     int zoneIndex();
@@ -30,6 +31,9 @@ public interface ZoneRuntimeState {
     default BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
         return null;
     }
+
+    /** Native background layout Y mask (power of two minus one); FFFF preserves existing sampling. */
+    default int backgroundLayoutYMask() { return 0xFFFF; }
 
     /**
      * Whether this runtime's native seamless-transition dispatch advances the

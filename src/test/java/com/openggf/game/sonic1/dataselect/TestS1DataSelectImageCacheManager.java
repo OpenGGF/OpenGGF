@@ -220,7 +220,7 @@ public class TestS1DataSelectImageCacheManager {
                     () -> "constructor-sha",
                     mapper);
 
-            assertNull(readInFlight(manager));
+            assertFalse(manager.isGenerationRunning());
             blocked.complete(new RgbaImage(1, 1, new int[] {0xFFFFFFFF}));
             manager.awaitGenerationIfRunning();
         }
@@ -400,12 +400,22 @@ public class TestS1DataSelectImageCacheManager {
         assertFalse(Files.exists(cacheRoot.resolve("manifest.json")));
     }
 
-    private CompletableFuture<Void> readInFlight(S1DataSelectImageCacheManager manager) throws Exception {
-        var field = S1DataSelectImageCacheManager.class.getDeclaredField("inFlight");
-        field.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        CompletableFuture<Void> future = (CompletableFuture<Void>) field.get(manager);
-        return future;
+    @Test
+    void loadingRereadsManifestAfterValidation() throws Exception {
+        writeManifest("sha-valid", writeZoneSet());
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        S1DataSelectImageCacheManager manager = new S1DataSelectImageCacheManager(
+                tempDir, config, () -> {
+                    calls.incrementAndGet();
+                    try {
+                        writeManifest("sha-valid", Map.of());
+                    } catch (IOException e) {
+                        throw new java.io.UncheckedIOException(e);
+                    }
+                    return "sha-valid";
+                }, mapper);
+        assertTrue(manager.loadCachedPreviews().isEmpty());
+        assertEquals(1, calls.get());
     }
 
     private void writeManifest(String romSha256, Map<String, String> zones) throws IOException {

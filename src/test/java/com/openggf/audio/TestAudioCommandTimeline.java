@@ -220,20 +220,18 @@ class TestAudioCommandTimeline {
 
     @Test
     void rewindControllerDiscardsFutureAudioCommandsAfterBranchRestore() {
-        audio.beginCommandTimelineFrame(1);
-        audio.playSfx("one");
-        audio.beginCommandTimelineFrame(2);
-        audio.playSfx("two");
-        audio.beginCommandTimelineFrame(3);
-        audio.playSfx("three");
-
         RewindRegistry registry = new RewindRegistry();
         registry.register(new CounterSnap());
         RewindController controller = new RewindController(
                 registry,
                 new InMemoryKeyframeStore(),
                 new FixedInputSource(10),
-                input -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
+                input -> {
+                    // Commands belong to forward frames, not the controller's
+                    // already-captured initial audio state.
+                    audio.playSfx(new String[]{"one", "two", "three"}[input.frameIndex()-1]);
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+                },
                 1,
                 audio);
         controller.step();

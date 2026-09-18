@@ -529,8 +529,9 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
             int delay = FRAGMENT_DELAYS[i % FRAGMENT_DELAYS.length];
             String fragArtKey = resolveArtKey();
             boolean highPri = isHighPriority();
+            int fragBucket = getPriorityBucket();
             spawnChild(() -> new BridgeFragment(fragX, fragY, frame, delay,
-                    fragArtKey, highPri));
+                    fragArtKey, highPri, fragBucket));
         }
     }
 
@@ -604,19 +605,21 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
         private int delay;
         private String artKey;
         private boolean highPri;
+        private int priorityBucket;
 
         private BridgeFragment(int x, int y, int frameIndex, int delay,
-                               String artKey, boolean highPri) {
+                               String artKey, boolean highPri, int priorityBucket) {
             super(new ObjectSpawn(x, y, Sonic3kObjectIds.TENSION_BRIDGE, 0, 0, false, 0),
                     "TensionBridgeFragment", 0, 0, FRAGMENT_GRAVITY);
             this.frameIndex = frameIndex;
             this.delay = delay;
             this.artKey = artKey;
             this.highPri = highPri;
+            this.priorityBucket = priorityBucket;
         }
 
         private BridgeFragment() {
-            this(0, 0, 0, 0, Sonic3kObjectArtKeys.TENSION_BRIDGE_HCZ, false);
+            this(0, 0, 0, 0, Sonic3kObjectArtKeys.TENSION_BRIDGE_HCZ, false, 0);
         }
 
         @Override
@@ -630,12 +633,21 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
                     0,
                     0,
                     Sonic3kObjectArtKeys.TENSION_BRIDGE_HCZ,
-                    false);
+                    false,
+                    0);
         }
 
         @Override
         public boolean isHighPriority() {
+            // sub_389DE copies art_tile(a3) from the bridge (sonic3k.asm:75861).
             return highPri;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            // sub_389DE copies priority(a3) from the bridge on both fragment paths
+            // (sonic3k.asm:75862, 75865), so each fragment keeps the parent's bucket.
+            return priorityBucket;
         }
 
         @Override

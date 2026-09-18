@@ -75,6 +75,13 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
             pushParticipants.flag(pushParticipants.slot(player), PUSH_CONTACT, true);
         }
         super.onSolidContact(player, contact, frameCounter);
+        if (isSideways() && !isUpsideDown() && contact.touchSide()) {
+            // loc_240E2 clears this participant's object-side push bit after
+            // sub_24280, even when invulnerability prevents damage. Leaving it
+            // live lets a later SolidObject miss publish a spurious Walk word
+            // over the hurt animation (sonic3k.asm:49064,49071).
+            services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
+        }
     }
 
     @Override

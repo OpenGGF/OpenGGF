@@ -17,11 +17,10 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class SpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable {
     // Subtype constants (shifted >> 3 & 0xE) - matches ROM Obj41_Index
     private static final int TYPE_UP = 0;
     private static final int TYPE_HORIZONTAL = 2;
@@ -96,11 +95,6 @@ public class SpringObjectInstance extends BoxObjectInstance
                 renderManager != null ? renderManager.getSpringAnimations() : null,
                 idleAnimId,
                 mappingFrame);
-    }
-
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        // Manual checkpoints drive spring activation from update().
     }
 
     @Override
@@ -549,7 +543,6 @@ public class SpringObjectInstance extends BoxObjectInstance
      */
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return true;
     }
 
@@ -691,13 +684,7 @@ public class SpringObjectInstance extends BoxObjectInstance
 
     private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
-        if (updatePlayer != null && !participants.contains(updatePlayer)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(updatePlayer);
-            withUpdatePlayer.addAll(participants);
-            return withUpdatePlayer;
-        }
-        return participants;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     @Override

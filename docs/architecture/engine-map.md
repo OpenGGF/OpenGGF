@@ -37,6 +37,11 @@ Companion references:
 ## Entry point and packages
 
 `com.openggf.Engine` — GLFW window with a manual timing loop (`display()` → `update()` → `draw()`).
+`GameLoopDebugShortcuts` owns debug modifier resolution, checkpoint teleport,
+preview-position logging and special-stage completion requests. It receives the
+current mode/provider and a results callback; `GameLoop` retains provider-aware
+reward publication and the fade/results transition.
+
 Running the engine needs LWJGL (OpenGL/OpenAL/GLFW bindings) and JOML, both already in `pom.xml`.
 
 Package names under `src/main/java/com/openggf` are mostly self-describing. The
@@ -55,6 +60,12 @@ non-obvious placements:
 | `physics` | Sensors, terrain collision, unified `CollisionSystem` |
 | `tools` | Compression utilities (Kosinski, Nemesis, Saxman), `ObjectDiscoveryTool`, disassembly tools incl. `RomOffsetFinder` |
 | `LevelFrameStep` | Lives at the `com.openggf` package **root**, not under `level` |
+
+`RewindRecreateConstructors` owns the permitted default-argument types and
+placeholder values used by the four default-argument marker interfaces. The
+markers retain their own constructor prefixes and diagnostic identities.
+`DplcStaticFlattener` owns plain static DPLC mapping, including S3K object art;
+destination-relative mixed-bank CNZ cannon mapping remains in its S3K owner.
 
 ## Two-tier service architecture
 
@@ -161,7 +172,7 @@ the collaborator that owns it:
 | `LevelActTransitionExecutor` | ROM-aligned in-place act-transition reload choreography |
 | `LevelLoadPreparer` | One level build running ahead of a seamless transition on a daemon thread; the install always joins it, so it changes timing only. Games opt in through `PreparableLevelLoader` (S3K: `Sonic3k.prepareLevelBuild`/`installPreparedLevel`) |
 | `LevelTilemapPrebuilder` | Builds FG/BG tilemaps for a not-yet-installed level over its own `LevelGeometry.forLevel` and `LevelLayoutLookup.blockAt`; the live manager adopts them via `adoptPrebuiltTilemaps` and `swapToPrebuiltTilemaps` |
-| `LevelLostRingSpawnCoordinator` | Lost-ring scattering, the deferred spawn queue, and its dynamic-slot reservations |
+| `LevelLostRingSpawnCoordinator` | Lost-ring scattering, deferred spawn timing and dynamic-slot reservations; resets release reservations, and its level-scoped rewind adapter restores queued owners by sprite code and reclaims external reservations after subsystem restore |
 | `LevelTransitionCoordinator` | Transition request/consume state for acts, warps, title cards, respawns |
 | `LevelDebugRenderer` | Debug overlay rendering (collision, chunks, paths) |
 | `LevelGeometry` *(record)* | Immutable level dimension/boundary data |
@@ -293,7 +304,7 @@ game.
 
 | Class | Purpose |
 |---|---|
-| `SidekickCpuController` | Per-sidekick AI state machine (INIT, SPAWNING, APPROACHING, NORMAL, PANIC); holds `leader` for daisy-chain following and `getEffectiveLeader()` for chain healing |
+| `SidekickCpuController` | Per-sidekick AI state machine (INIT, SPAWNING, APPROACHING, NORMAL, PANIC); holds `leader` for daisy-chain following and `getEffectiveLeader()` for chain healing; `SidekickNormalStepDiagnosticRecorder` builds/formats scalar observations while the controller retains decisions, diagnostic snapshot storage and native ending-pose writes |
 | `SidekickRespawnStrategy` | Interface for per-character respawn behaviour during APPROACHING |
 | `TailsRespawnStrategy` | Flies in from above (ROM-accurate). Default strategy |
 | `KnucklesRespawnStrategy` | Glides in from screen edge, drops when X-aligned or after 3s timeout |
@@ -409,6 +420,12 @@ through `writeSlotAsync` (snapshot encoded on the frame, file written by the sin
 flows through `StartupRouteResolver` → `TitleActionRoute.DATA_SELECT` → controller →
 `DataSelectAction` → `Engine.launchGameplayFromDataSelect()`.
 
+S1 and S2 preview cache managers retain their game-specific capture targets,
+manifests and image-generation policy. `DataSelectPreviewCapture` owns the
+render-thread level load, camera/parallax/object placement synchronization and
+framebuffer readback. `PreviewCacheGenerationTask` owns one background job,
+failure reporting and retry isolation for both managers.
+
 ## Special stages
 
 S2 special stage code lives in `com.openggf.game.sonic2.specialstage`
@@ -506,3 +523,54 @@ checklist, and delegation prompt templates:
 `ObjectDiscoveryTool` (`com.openggf.tools`) enumerates placed objects; for S3K it uses
 composite `"objectId:name"` keys so same-ID-different-name objects across zone sets get
 separate entries.
+
+## Object presentation collaborators
+
+S3K `NativePlayerSlots` resolves native P1/P2 identity and update-player fallback
+for pulley and conveyor mechanics without widening `ObjectPlayerQuery`'s Mod API.
+The lowering grapple keeps its live extended-participant ownership path.
+`ShieldAnimationArtLifecycle` composes shield cursor playback and lazy DPLC
+binding; it advances before publishing and switches animations immediately.
+Concrete shields retain ability, orientation, priority and lifetime decisions.
+The cursor is rewind state; the renderer binding is invalidated after restore.
+
+S2 `CpzBossPresentation` shares pipe-family animation stepping and art rendering.
+Each CPZ boss child keeps its own scheduling, motion, spawning, lifetime and
+priority; the helper owns no gameplay state or RNG.
+
+Canonical `game.profiles` helpers own solid-provider forwarding and ordinary
+touch-profile construction. Public adapter records retain their declared methods,
+components and identities. Compatibility mapping preserves provider getter order;
+the level-owned `FORCE_ENEMY` decode branch stays local because the canonical
+enum has no equivalent.
+
+## Shared support operations
+
+`SavePayloadReader` owns permissive data-select payload decoding; Engine's
+caller-supplied team fallback remains separate. `SolidWireCommands` appends SOLID
+fallback geometry; `DebugRenderContext` retains alpha-blended overlay commands.
+`SolidColorTexture` creates independent white textures whose callers own disposal.
+`StereoPcmWavWriter` serves the FM/PSG render tools.
+
+S2's package-private `Sonic2PlayerParticipants` owns prepend-if-absent plumbing;
+objects retain queries, policies and null/type gates. `IndexedPaletteUsage` shares
+reachable-art traversal while each mod validator owns domain validation and fault
+attribution. `SolidProfileDecoder` constructs copied profiles from height, width
+and angle arrays without adding validation.
+
+`SmpsSequencerConfig` keeps frozen settings in private shared storage. Internal
+`SmpsConfigBinding` snapshots end flags before lazily resolving the session handler;
+no caller enumerates every configuration field when rebinding. The copy-coverage
+guard checks public accessors independently of this representation.
+
+`PreviewCacheFiles` owns donated-preview version/hash/zone/PNG checks and image
+loading. Game managers retain manifest types, rereads and lazy suppliers;
+`PreviewImageFiles` owns scaling and file replacement while generators retain
+capture coordinates and publication order. Raw uncompressed S2/S3K object art
+uses `PatternDecompressor.fromBytes` after caller-specific validation.
+
+`FmVoiceOperatorOrder` swaps middle operators on caller-owned voice copies;
+address resolution and copy/bounds semantics remain in music/SFX owners.
+HScrollBuffer and VScrollBuffer each share one private native upload tail between
+their array/view paths. `CompleteRunAudioFiles` shares path and digest checks,
+leaving producer ordering, snapshot ownership and publication in their callers.

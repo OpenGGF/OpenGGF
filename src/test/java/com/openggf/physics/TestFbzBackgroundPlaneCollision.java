@@ -66,6 +66,108 @@ class TestFbzBackgroundPlaneCollision {
         SessionManager.clear();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void groundedWallTailUsesSemanticCollisionActivityRatherThanLegacyFlag(boolean active) {
+        GameServices.gameState().setBackgroundCollisionFlag(!active);
+        TestEnvironment.activeGameplayMode().attachBackgroundPlaneCollisionProvider(
+                () -> new BackgroundPlaneCollisionProvider.State(active, 0x20, 0));
+        when(level.getChunkDescAt(anyByte(), anyInt(), anyInt(), anyBoolean())).thenAnswer(invocation -> {
+            int layer = (byte) invocation.getArgument(0);
+            int x = invocation.getArgument(1);
+            return layer == 1 && x >= 0x110 && x < 0x120 ? bgTile : null;
+        });
+        sprite.setCentreX((short) 0x128);
+        sprite.setXSpeed((short) 0x123);
+        sprite.setGSpeed((short) 0x234);
+        var collision = new CollisionSystem(new TerrainCollisionManager());
+
+        collision.resolvePostMovementBackgroundWallClamp(FrameCollisionPlan.terrainOnly(), sprite);
+
+        assertEquals(active ? 0x125 : 0x128, sprite.getCentreX(),
+                "CheckRightWallDist at BG $112 returns -3; the native tail changes x_pos only");
+        assertEquals(0x123, sprite.getXSpeed());
+        assertEquals(0x234, sprite.getGSpeed());
+        if (!active) {
+            org.mockito.Mockito.verify(level, org.mockito.Mockito.never())
+                    .getChunkDescAt(anyByte(), anyInt(), anyInt(), anyBoolean());
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void groundedFatalFloorTailUsesTheSameSemanticCollisionActivity(boolean active) {
+        GameServices.gameState().setBackgroundCollisionFlag(!active);
+        TestEnvironment.activeGameplayMode().attachBackgroundPlaneCollisionProvider(
+                () -> new BackgroundPlaneCollisionProvider.State(active, 0x20, 0));
+        sprite.setCentreY((short) 0x108);
+        var collision = new CollisionSystem(new TerrainCollisionManager());
+
+        assertEquals(active, collision.hasFatalPostMovementBackgroundFloorOverlap(
+                FrameCollisionPlan.terrainOnly(), sprite),
+                "sub_F846 tests the active background floor before either wall correction");
+        assertEquals(0x108, sprite.getCentreY(), "the overlap query performs no position write");
+        if (!active) {
+            org.mockito.Mockito.verify(level, org.mockito.Mockito.never())
+                    .getChunkDescAt(anyByte(), anyInt(), anyInt(), anyBoolean());
+        }
+    }
+
+    @Test
+    void defaultMaskPreservesLegacyObjectProbeCoordinates() {
+        var collision = new BackgroundPlaneCollisionProvider.State(true, 0, 0x200);
+        GameServices.zoneRuntimeRegistry().install(new ZoneRuntimeState() {
+            @Override public String gameId() { return "test"; }
+            @Override public int zoneIndex() { return 0; }
+            @Override public int actIndex() { return 0; }
+            @Override public BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
+                return collision;
+            }
+        });
+        var layout = mock(com.openggf.level.Level.class);
+        when(level.getCurrentLevel()).thenReturn(layout);
+        when(layout.hasBackgroundCollisionRowAt(anyInt())).thenReturn(true);
+        BackgroundPlaneCollisionProvider legacy = () -> collision;
+        for (int y : new int[]{-0x100, 0, 0x100, 0x8000}) {
+            var expected = ObjectTerrainUtils.checkFloorDist(level, legacy, false, 0x100, y);
+            var actual = ObjectTerrainUtils.checkFloorDist(level, GameServices.backgroundPlaneCollision(), false, 0x100, y);
+            assertEquals(expected.distance(), actual.distance());
+            assertEquals(expected.foundSurface(), actual.foundSurface());
+        }
+        org.mockito.Mockito.verify(level, org.mockito.Mockito.atLeastOnce())
+                .getChunkDescAt((byte) 1, 0x100, -0x100);
+    }
+
+    @Test
+    void maskedBackgroundRowsReachPlayerAndObjectProbesBeforeAbsentRowRejection() {
+        GameServices.zoneRuntimeRegistry().install(new ZoneRuntimeState() {
+            @Override public String gameId() { return "test"; }
+            @Override public int zoneIndex() { return 0; }
+            @Override public int actIndex() { return 0; }
+            @Override public int backgroundLayoutYMask() { return 0x7FF; }
+            @Override public BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
+                return new BackgroundPlaneCollisionProvider.State(true,0x20,-0x800);
+            }
+        });
+        var layout=mock(com.openggf.level.Level.class);
+        when(level.getCurrentLevel()).thenReturn(layout);
+        when(layout.hasBackgroundCollisionRowAt(anyInt())).thenAnswer(call -> (int)call.getArgument(0)<0x800);
+        when(level.getChunkDescAt(anyByte(),anyInt(),anyInt())).thenAnswer(call -> {
+            int layer=(byte)call.getArgument(0),x=call.getArgument(1),y=call.getArgument(2);
+            return layer==1&&x>=0xE0&&x<0x100&&y>=0x100&&y<0x120?bgTile:null;
+        });
+        for(var direction:new Direction[]{Direction.DOWN,Direction.UP,Direction.RIGHT}) {
+            var result=new GroundSensor(sprite,direction,(byte)0,(byte)0,true).scanWorld(
+                    direction,(short)0,(short)0,(short)0,(short)0,
+                    direction==Direction.DOWN?sprite.getTopSolidBit():sprite.getLrbSolidBit());
+            assertNotNull(result);assertEquals(7,result.tileId());
+        }
+        var provider=GameServices.backgroundPlaneCollision();
+        assertTrue(ObjectTerrainUtils.checkFloorDist(level,provider,false,0x100,0x100).foundSurface());
+        assertTrue(ObjectTerrainUtils.checkRightWallDist(level,provider,false,0x100,0x100).foundSurface());
+        org.mockito.Mockito.verify(layout,org.mockito.Mockito.atLeastOnce()).hasBackgroundCollisionRowAt(0x100);
+    }
+
     @Test
     void scanWorldUsesExplicitBackgroundPlaneForFloorCeilingAndWall() {
         GroundSensor sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
@@ -116,7 +218,7 @@ class TestFbzBackgroundPlaneCollision {
     }
 
     @Test
-    void signedNonAlignedWallDiffsUseOrientationAwareProductionTranslation() {
+    void signedNonAlignedWallDiffsTranslateWorldPointsBeforeTheWallScan() {
         GameServices.zoneRuntimeRegistry().install(new ZoneRuntimeState() {
             @Override public String gameId() { return "s3k"; }
             @Override public int zoneIndex() { return 4; }
@@ -140,14 +242,18 @@ class TestFbzBackgroundPlaneCollision {
                 mode.getTerrainCollisionManager(), mode.getCollisionSystem(), mode.getSpriteManager(), level);
         mode.attachBackgroundPlaneCollisionProvider(mode.createDefaultBackgroundPlaneCollisionProvider());
 
+        // Native LEFT callers mirror inside FindWall; the provider receives
+        // the physical world point $110 and translates it to BG $10D.
+        sprite.setCentreX((short) 0x110);
         SensorResult sensorResult = new GroundSensor(sprite, Direction.LEFT, (byte) 0, (byte) 0, true)
                 .scanWorld(Direction.LEFT, (short) 0, (short) 0,
                         (short) 0, (short) 0, sprite.getLrbSolidBit());
         TerrainCheckResult objectResult = ObjectTerrainUtils.checkLeftWallDist(
-                level, mode.getBackgroundPlaneCollisionProvider(), false, 0x100, 0x100);
+                level, mode.getBackgroundPlaneCollisionProvider(), false, 0x110, 0x100);
 
         assertNotNull(sensorResult);
         assertEquals(7, sensorResult.tileId());
+        assertEquals(-3, sensorResult.distance(), "BG $10D is three pixels inside the wall's right edge");
         assertTrue(objectResult.foundSurface());
         assertEquals(7, objectResult.tileIndex());
 
@@ -159,6 +265,7 @@ class TestFbzBackgroundPlaneCollision {
                 return new BackgroundPlaneCollisionProvider.State(true, -3, 0);
             }
         });
+        sprite.setCentreX((short) 0x100);
         SensorResult rightSensor = new GroundSensor(sprite, Direction.RIGHT, (byte) 0, (byte) 0, true)
                 .scanWorld(Direction.RIGHT, (short) 0, (short) 0,
                         (short) 0, (short) 0, sprite.getLrbSolidBit());

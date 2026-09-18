@@ -33,6 +33,9 @@ class TestS3kCustomZonePaletteBridge {
         assertThrows(ModZoneRegistrationException.class,
                 () -> S3kCustomZonePaletteBridge.validateCreatorClaims("sample",
                         List.of(new ModPaletteClaim(1, 5, 0x0EEE))));
+        assertThrows(ModZoneRegistrationException.class,
+                () -> S3kCustomZonePaletteBridge.validateCreatorClaims("sample",
+                        List.of(new ModPaletteClaim(1, 12, 0x0EEE))));
         assertDoesNotThrow(() -> S3kCustomZonePaletteBridge.validateCreatorClaims("sample",
                 List.of(new ModPaletteClaim(1, 2, 0x0EEE))));
     }
@@ -40,12 +43,11 @@ class TestS3kCustomZonePaletteBridge {
     @Test
     void mixedLivesFrameKeepsLineZeroOverrideSeparateFromFixedLineOneHostColors() {
         Palette character = paletteWithColor(5, 0x000E);
-        character.getColor(9).fromSegaFormat(new byte[]{0x0E, 0x00}, 0);
         Palette override = paletteWithColor(5, 0x0E00);
         S3kCustomZonePaletteBridge bridge = new S3kCustomZonePaletteBridge(
                 "sample", "sample:level", character,
                 List.of(new ModPaletteClaim(1, 2, 0x0EEE)),
-                0, mixedHudArt(5, 5), new Pattern[]{patternWithColor(9)}, () -> override);
+                0, mixedHudArt(5, 5), new Pattern[]{patternWithColor(12)}, () -> override);
         PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
         Palette[] palettes = blankPalettes();
 
@@ -54,9 +56,11 @@ class TestS3kCustomZonePaletteBridge {
         registry.resolveInto(palettes, null, null, palettes[0]);
 
         assertEquals("host:s3k-hud", registry.ownerAt(PaletteSurface.NORMAL, 0, 5));
-        assertEquals("host:s3k-hud", registry.ownerAt(PaletteSurface.NORMAL, 0, 9));
+        assertEquals("host:s3k-hud", registry.ownerAt(PaletteSurface.NORMAL, 1, 12));
         assertEquals("host:s3k-hud", registry.ownerAt(PaletteSurface.NORMAL, 1, 5));
         assertEquals("sample:level", registry.ownerAt(PaletteSurface.NORMAL, 1, 2));
+        assertEquals(0x0EAA, segaWord(palettes[1].getColor(12)),
+                "life digits inherit the name piece's line 1, not the icon override");
         assertEquals(0x0E00, segaWord(palettes[0].getColor(5)),
                 "the live icon override applies only to line 0");
         assertEquals(0x00EE, segaWord(palettes[1].getColor(5)),
@@ -158,11 +162,10 @@ class TestS3kCustomZonePaletteBridge {
     }
 
     @Test
-    void realS3kNullOverrideClaimsColorsUsedByLivesArtFromCharacterPalette() {
+    void realS3kNullOverrideUsesCharacterIconAndFixedLineOneDigits() {
         Sonic3kObjectArtProvider hudProvider = new Sonic3kObjectArtProvider();
         Palette character = paletteWithColor(5, 0x00E0);
-        character.getColor(7).fromSegaFormat(new byte[]{0x0E, 0x00}, 0);
-        Pattern livesNumber = patternWithColor(7);
+        Pattern livesNumber = patternWithColor(12);
         S3kCustomZonePaletteBridge bridge = new S3kCustomZonePaletteBridge(
                 "sample", "sample:level", character,
                 List.of(new ModPaletteClaim(1, 3, 0x000E)),
@@ -176,9 +179,9 @@ class TestS3kCustomZonePaletteBridge {
         registry.resolveInto(palettes, null, null, palettes[0]);
 
         assertEquals("host:s3k-hud", registry.ownerAt(PaletteSurface.NORMAL, 0, 5));
-        assertEquals("host:s3k-hud", registry.ownerAt(PaletteSurface.NORMAL, 0, 7));
+        assertEquals("host:s3k-hud", registry.ownerAt(PaletteSurface.NORMAL, 1, 12));
         assertEquals(0x00E0, segaWord(palettes[0].getColor(5)));
-        assertEquals(0x0E00, segaWord(palettes[0].getColor(7)));
+        assertEquals(0x0EAA, segaWord(palettes[1].getColor(12)));
         assertEquals("sample:level", registry.ownerAt(PaletteSurface.NORMAL, 1, 3));
     }
 

@@ -2,6 +2,10 @@
 
 OpenGGF's documentation is organized by audience and purpose.
 
+Level implementation and validation: [zone and act test standard](guide/contributing/level-test-standard.md),
+[coverage backlog](status/level-test-coverage.md), and
+[standardisation plan](architecture/plans/2026-09-13-level-test-standardisation.md).
+
 Maintainers publishing a release should start with
 [Publishing a GitHub release](project/release-publishing.md): a push to
 `master` automatically publishes after validation and builds succeed.

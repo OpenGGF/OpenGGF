@@ -1,5 +1,97 @@
 # GamePatch Framework + Knuckles in Sonic 2 (Lock-On) — Design
 
+> **2026-09-14 presentation continuation.** The current implementation work and
+> validation matrix are in [the completion plan](../plans/2026-09-14-kis2-presentation-super.md).
+> It adds chip-backed title, special-stage/results, ending/continue-player and
+> Super Knuckles paths. Earlier missing/deferred status below is historical;
+> the known-discrepancies entry records remaining fidelity limits.
+> The [full-run trace follow-up](../research/trace/2026-09-14-kis2-full-run-candidate.md)
+> records the converted-art transfer prerequisite and the all-emeralds capture.
+
+
+> **2026-09-13 amendment (status and ROM premise).** Re-established per the 0.8
+> roadmap before scheduling implementation.
+>
+> **Delivered.** The framework half shipped on `develop` through mod-support
+> Phase 0: `com.openggf.game.patch` (`GamePatch`, `PatchContext`,
+> `DelegatingGameModule` + `TestDelegatingGameModuleCoversInterface`,
+> `ModuleResolutionService` with `PatchOwner`/`PatchEnablement`,
+> `LogicalRom.SK` + `LogicalRomResolver`, `GameplayLaunchRequest`,
+> `GameplayTeamAvailability`), the `LaunchProfile` availability union, and
+> resolution at `Engine`, `HeadlessGameBoot`, `GameLoop` (deterministic launches)
+> and the time-attack harness. `TraceReplaySessionBootstrap` is **not** wired and
+> must be. The built-in list in `EngineContext` is empty: no `Kis2GamePatch`, no
+> `docs/kis2/BRANCH_DIFFS.md`. Knuckles in Sonic 2 today is S3K donation only
+> (S3K art and icons on stock Sonic physics and stock layouts).
+>
+> **ROM premise corrected.** Decision 5 assumed the combined S3K image supplies all
+> KiS2 data. It does not. KiS2 runs from three chips: the S&K ROM, the S2 ROM, and
+> a 256 KiB chip on the S&K cartridge mapped at `$300000` (`s2.asm` is assembled
+> with `phase $300000`; emulators load it as a separate image). The S3K image holds
+> only the S&K half. Verified against the local images on 2026-09-13:
+>
+> | Data | Where it lives |
+> |---|---|
+> | KiS2 object-layout pointer table (`Off_Objects_KiS2`, `$DF370`) and 15 of 18 act layouts | S&K half |
+> | HPZ, DEZ, SCZ layouts (pointers into `$2E....`) | S2 cart, stock data |
+> | CNZ 1 and 2 layouts (pointers into `$33F...`) | the chip |
+> | Knuckles art, mappings, DPLC (`$1200E0`, `$14A8D6`, `$14BD0A`), ending image (`$DEA00`), S2-compatible and Super Knuckles palettes | S&K half |
+> | Monitor and signpost Knuckles patches, lives counter, continue icon, title-screen art and text, special-stage Knuckles frames, title-card font, KiS2 title/underwater/SS/ending palettes, merged shield+stars art, changed `hud_a`/`obj09`/`obj5E`/`obj6F`/`objCF` and new `obj0E_*` mappings, all KiS2 code | the chip |
+>
+> The lock-on program targets S2 **REV01** (the revision OpenGGF uses).
+>
+> **Two fidelity tiers replace decision 5.** Tier one needs the existing S3K and S2
+> images: Knuckles physics, glide/climb, player art, the S&K-side layouts, the
+> ending image. Tier two needs the user-supplied "Sonic & Knuckles + Sonic 2"
+> lock-on dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`, SHA-1
+> `6CD0537A3AEE0E012BB86D5837DDFF9342595004`): everything on the chip, plus CNZ.
+> The dump is served as logical ROMs `KIS2` and `KIS2_CHIP` by
+> [ROM image normalisation](2026-09-13-rom-image-normalisation-design.md), which
+> precedes tier two. The patch reads every address through the lock-on address
+> space so the layout table's three-way pointers resolve without carve-outs. Tier
+> one without the dump falls back to stock S2 art for chip-only assets and stock
+> CNZ layouts, and records that in `docs/status/known-discrepancies.md`.
+>
+> **Scope refinements from the branch diff at s2disasm `c336fed`** (4,237 added
+> lines in `s2.asm`, 388 `gameRevision=3` blocks): all 18 act layouts differ, so
+> placement overrides are mandatory, not conditional. 32 blocks tagged
+> `KiS2 (bugfix)` are shipped KiS2 behaviour, modelled as KiS2 rules, never as
+> `fixBugs` toggles (invariant 7). The glide/climb block is a near-verbatim S3K
+> port; the catalogue records deviations only (for example `Disable_wall_grab` is
+> read but never written in KiS2). 2P, Tails and the options menu are removed in
+> KiS2; the engine has no 2P mode, and the patch's faithful roster default covers
+> Tails. Trace fixtures for KiS2 require the lock-on dump in BizHawk (its
+> Genesis Plus GX core loads the chip as `sk2chip.bin` firmware).
+>
+> **Implementation notes (2026-09-14, tier two).** Commit `598d8e933`
+> (`feature/ai-kis2-tier-two`) delivers the in-level half of tier two:
+>
+> - **Optional prerequisite.** `GamePatch.optionalRomPrerequisites()` (a
+>   default method; the 0.7 candidate pin was regenerated in place) lets
+>   `Kis2GamePatch` name `KIS2` without gating resolution. `Kis2GameModule`
+>   probes `PatchContext.openLogicalRom(KIS2)` once; a failure selects tier
+>   one. Rejected: a second `PatchContext` source for optional ROMs (a
+>   constructor change to a pinned type for no gain over catching the open).
+> - **Addresses.** Every chip asset was located on the dump by matching the
+>   branch binaries at `c336fed` byte for byte (all unique inside the chip)
+>   and recorded in `docs/kis2/BRANCH_DIFFS.md` §Chip addresses as lock-on
+>   addresses resolved through `LockOnAddressSpace.tierTwo`. The chip's
+>   `Pal_BGND` line 0 proved byte-identical to S&K `Pal_KnuxEndPose`, closing
+>   the catalogue's open question; tier two still reads it from the chip.
+> - **Seams.** `Sonic2ArtOverlays` (life icon plus generic `SheetPatch` tile
+>   overwrites applied after the zone's PLC loads) mirrors the patched
+>   `plreq` entries; `Sonic2WaterDataProvider.UnderwaterPaletteSource` and
+>   the `Sonic2ContinueScreenProvider` icon supplier are the other two
+>   patch-facing constructors. Shared code carries no game or zone names;
+>   the kis2 package keys the palette source on the ROM zone ids the
+>   `PalPtr_*` table serves.
+> - **Out of scope here.** Title, special stage, results, ending, Super
+>   Knuckles and the continue screen's Knuckles player object stay
+>   catalogued (`docs/status/known-discrepancies.md`).
+>
+> **Design text below is retained as approved; where it conflicts with this
+> amendment or the plan's 2026-07-10 amendment, the amendments win.**
+
 **Date:** 2026-06-12
 **Status:** Approved (brainstorming session)
 **Roadmap anchor:** `ROADMAP.md` v0.7 — "Native Knuckles in Sonic 2 support without S3K donation."

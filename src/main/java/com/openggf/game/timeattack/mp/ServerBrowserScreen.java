@@ -1,6 +1,10 @@
 package com.openggf.game.timeattack.mp;
 
+import com.openggf.game.MenuFeedback;
+import static com.openggf.game.MenuFeedback.Cue.*;
 import com.openggf.control.InputHandler;
+import com.openggf.control.MenuInput;
+import com.openggf.game.MenuStyle;
 import com.openggf.graphics.PixelFont;
 import com.openggf.net.client.MasterClient;
 import com.openggf.net.protocol.ControlMessage;
@@ -8,21 +12,18 @@ import com.openggf.net.protocol.ControlMessage;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_C;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_R;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
 
 /** Master-title room browser backed by an admitted master-server connection. */
 @com.openggf.game.ModApi
 public final class ServerBrowserScreen {
-    private static final float SCALE = 0.5f;
-    private static final int LINE_HEIGHT = 12;
+    private static final int VISIBLE_ROOMS = 4;
+    private enum Focus { ROOMS, CREATE, REFRESH, PAGE }
+    private Focus focus = Focus.ROOMS;
+    private InputHandler menuInput;
     private static final long REFRESH_INTERVAL_MILLIS = 2000;
 
     @com.openggf.game.ModApi
@@ -36,10 +37,14 @@ public final class ServerBrowserScreen {
     private final String gameId;
     private final PixelFont font;
     private final Actions actions;
-    private volatile List<ControlMessage.RoomSummary> rooms = List.of();
-    private volatile String status = "Loading rooms...";
-    private volatile boolean refreshInFlight;
+    private List<ControlMessage.RoomSummary> rooms = List.of();
+    private String status = "Loading rooms...";
+    private boolean refreshInFlight;
+    private volatile boolean active = true;
+    private record RefreshResult(ControlMessage.RoomListResult result, Throwable error) {}
+    private final AtomicReference<RefreshResult> pendingRefresh = new AtomicReference<>();
     private int selected;
+    private boolean selectedRoomClosed;
     private int page;
     private int totalPages;
     private String createRouting = "RELAY";
@@ -55,6 +60,8 @@ public final class ServerBrowserScreen {
     }
 
     public void update(InputHandler input) {
+        if (!active) return;
+        applyPendingRefresh();
         long now = System.currentTimeMillis();
         if (!client.isOpen()) {
             status = "Master connection lost";
@@ -62,71 +69,91 @@ public final class ServerBrowserScreen {
                 || now - lastRefreshAt >= REFRESH_INTERVAL_MILLIS) {
             refresh(now);
         }
-        if (input.isKeyPressed(GLFW_KEY_ESCAPE) || input.logical().menuBack()) {
-            actions.back();
-            return;
+        menuInput = input;
+        if (MenuInput.back(input)) { deactivate(); MenuFeedback.emit(CANCEL); actions.back(); return; }
+        Focus beforeFocus = focus;
+        int beforeSelected = selected, beforePage = page;
+        String beforeRouting = createRouting;
+        if (MenuInput.up(input)) move(-1);
+        if (MenuInput.down(input)) move(1);
+        int delta = MenuInput.left(input) ? -1 : MenuInput.right(input) ? 1 : 0;
+        if (delta != 0) {
+            if (focus == Focus.CREATE) createRouting = createRouting.equals("RELAY") ? "DIRECT" : "RELAY";
+            else if (focus == Focus.PAGE || focus == Focus.ROOMS) changePage(delta, now);
         }
-        if (input.isKeyPressed(GLFW_KEY_UP) || input.logical().menuUp()) {
-            selected = Math.max(0, selected - 1);
+        if (beforeFocus != focus || beforeSelected != selected || beforePage != page || !beforeRouting.equals(createRouting)) {
+            if (selectedRoomClosed) { selectedRoomClosed = false; status = roomStatus(); }
+            MenuFeedback.emit(NAVIGATE);
         }
-        if (input.isKeyPressed(GLFW_KEY_DOWN) || input.logical().menuDown()) {
-            selected = Math.min(Math.max(0, rooms.size() - 1), selected + 1);
-        }
-        if (input.isKeyPressed(GLFW_KEY_LEFT) || input.logical().menuLeft()) {
-            if (page > 0) {
-                page--;
-                refresh(now);
-            } else {
-                createRouting = createRouting.equals("RELAY") ? "DIRECT" : "RELAY";
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_R)) manualRefresh(now);
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_C)) { actions.create(createRouting); MenuFeedback.emit(CONFIRM); return; }
+        if (MenuInput.accept(input)) {
+            switch (focus) {
+                case ROOMS -> {
+                    List<ControlMessage.RoomSummary> snapshot = rooms;
+                    if (selected < snapshot.size()) { actions.join(snapshot.get(selected)); MenuFeedback.emit(CONFIRM); }
+                    else MenuFeedback.emit(ERROR);
+                }
+                case CREATE -> { actions.create(createRouting); MenuFeedback.emit(CONFIRM); }
+                case REFRESH -> manualRefresh(now);
+                case PAGE -> { int previousPage = page; changePage(1, now); if (previousPage != page) MenuFeedback.emit(NAVIGATE); }
             }
-        }
-        if (input.isKeyPressed(GLFW_KEY_RIGHT) || input.logical().menuRight()) {
-            if (page + 1 < totalPages) {
-                page++;
-                refresh(now);
-            } else {
-                createRouting = createRouting.equals("RELAY") ? "DIRECT" : "RELAY";
-            }
-        }
-        if (input.isKeyPressed(GLFW_KEY_R)) {
-            refresh(now);
-        }
-        if (input.isKeyPressed(GLFW_KEY_C)) {
-            actions.create(createRouting);
-        }
-        if ((input.isKeyPressed(GLFW_KEY_ENTER) || input.logical().menuAccept())
-                && selected < rooms.size()) {
-            actions.join(rooms.get(selected));
         }
     }
 
+    private void manualRefresh(long now) {
+        if (!client.isOpen()) { MenuFeedback.emit(ERROR); return; }
+        if (refreshInFlight) return;
+        refresh(now);
+        MenuFeedback.emit(CONFIRM);
+    }
+
+    private void move(int delta) {
+        int count = rooms.size();
+        int current = focus == Focus.ROOMS ? Math.min(selected, Math.max(0, count - 1))
+                : count + focus.ordinal() - 1;
+        int next = Math.floorMod(current + delta, count + 3);
+        if (next < count) { focus = Focus.ROOMS; selected = next; }
+        else focus = Focus.values()[next - count + 1];
+    }
+
+    private void changePage(int delta, long now) {
+        int next = Math.clamp(page + delta, 0, Math.max(0, totalPages - 1));
+        if (next != page && !refreshInFlight) { page = next; selected = 0; rooms = List.of(); status = "Loading rooms..."; refresh(now); }
+    }
+
     public void render() {
-        if (font == null) {
-            return;
+        if (font == null) return;
+        MenuStyle.page(font, 320, "TIME ATTACK ROOMS", gameId.toUpperCase());
+        List<ControlMessage.RoomSummary> snapshot = rooms;
+        int first = selected / VISIBLE_ROOMS * VISIBLE_ROOMS;
+        if (snapshot.isEmpty()) text("No rooms. Create one below.", 10, 46, 300, .7f, .8f, .9f);
+        for (int i = first; i < Math.min(snapshot.size(), first + VISIBLE_ROOMS); i++) {
+            int y = 47 + (i - first) * 22;
+            ControlMessage.RoomSummary room = snapshot.get(i);
+            if (focus == Focus.ROOMS && i == selected) MenuStyle.focusContent(font, 7, y, 306, 22, 19);
+            MenuStyle.label(font, room.name(), 12, y, 234, 1, 1, 1);
+            MenuStyle.label(font, room.playerCount() + "/" + room.maxPlayers(), 258, y, 54, 1, 1, 1);
+            text(room.routing() + " / " + (room.verified() ? "VERIFIED" : "UNVERIFIED TIMES"),
+                    12, y + 11, 294, room.verified() ? .6f : 1, .8f, room.verified() ? 1 : .3f);
         }
-        font.beginMegaBatch();
-        try {
-            int y = 8;
-            font.drawText("TIME ATTACK ROOMS - " + gameId.toUpperCase(),
-                    8, y, SCALE, 1f, 1f, 1f, 1f);
-            y += LINE_HEIGHT;
-            for (int index = 0; index < rooms.size() && y < 170; index++) {
-                ControlMessage.RoomSummary room = rooms.get(index);
-                String prefix = index == selected ? "> " : "  ";
-                String trust = room.verified() ? "VERIFIED" : "UNVERIFIED";
-                String line = prefix + room.name() + "  " + room.playerCount() + "/"
-                        + room.maxPlayers() + "  " + room.routing() + "  " + trust;
-                float brightness = index == selected ? 1f : 0.68f;
-                font.drawText(line, 8, y, SCALE, brightness, brightness, brightness, 1f);
-                y += LINE_HEIGHT;
-            }
-            font.drawText(status, 8, 178, SCALE, 0.75f, 0.75f, 0.75f, 1f);
-            font.drawText("ENTER JOIN  C CREATE " + createRouting
-                            + "  LEFT/RIGHT PAGE/MODE  R REFRESH  ESC BACK",
-                    8, 202, SCALE, 0.65f, 0.65f, 0.65f, 1f);
-        } finally {
-            font.endMegaBatch();
-        }
+        action(Focus.CREATE, "CREATE ROOM  < " + createRouting + " >", 147);
+        action(Focus.REFRESH, "REFRESH ROOMS", 165);
+        action(Focus.PAGE, "PAGE  < " + (page + 1) + " / " + Math.max(1, totalPages) + " >", 183);
+        String confirm = menuInput == null ? "Enter" : MenuInput.confirmLabel(menuInput);
+        String back = menuInput == null ? "Esc" : MenuInput.backLabel(menuInput);
+        MenuStyle.footer(font, 320, MenuStyle.fit(status, 138) + "  "
+                        + (menuInput == null ? "Left/Right" : MenuInput.horizontalLabel(menuInput)) + " Page/Route",
+                confirm + " Select  " + back + " Back");
+    }
+
+    private void action(Focus item, String label, int y) {
+        if (focus == item) MenuStyle.focusLabel(font, 7, y, 306, 16);
+        MenuStyle.label(font, label, 12, y, 294, 1, 1, 1);
+    }
+
+    private void text(String value, int x, int y, int maxWidth, float r, float g, float b) {
+        MenuStyle.text(font, value, x, y, maxWidth, r, g, b);
     }
 
     private void refresh(long now) {
@@ -136,18 +163,45 @@ public final class ServerBrowserScreen {
         refreshInFlight = true;
         lastRefreshAt = now;
         client.listRooms(gameId, page).whenComplete((result, error) -> {
-            refreshInFlight = false;
-            if (error != null) {
-                Throwable cause = error instanceof CompletionException && error.getCause() != null
-                        ? error.getCause() : error;
-                status = "Refresh failed: " + cause.getMessage();
-                return;
-            }
-            rooms = result.rooms();
-            totalPages = result.totalPages();
-            selected = Math.min(selected, Math.max(0, rooms.size() - 1));
-            status = rooms.isEmpty() ? "No rooms found"
-                    : "Page " + (result.page() + 1) + "/" + Math.max(1, totalPages);
+            // Publish one immutable result; only update() may change visible UI state.
+            if (active) pendingRefresh.set(new RefreshResult(result, error));
         });
+    }
+
+    private void deactivate() {
+        active = false;
+        pendingRefresh.set(null);
+    }
+
+    private void applyPendingRefresh() {
+        RefreshResult completion = pendingRefresh.getAndSet(null);
+        if (completion == null) return;
+        refreshInFlight = false;
+        if (completion.error() != null) {
+            Throwable error = completion.error();
+            Throwable cause = error instanceof CompletionException && error.getCause() != null
+                    ? error.getCause() : error;
+            status = "Refresh failed: " + cause.getMessage();
+            MenuFeedback.emit(ERROR);
+            return;
+        }
+        String selectedId = selected < rooms.size() ? rooms.get(selected).roomId() : null;
+        ControlMessage.RoomListResult result = completion.result();
+        rooms = List.copyOf(result.rooms());
+        int matched = -1;
+        for (int i = 0; i < rooms.size(); i++) {
+            if (rooms.get(i).roomId().equals(selectedId)) { matched = i; break; }
+        }
+        selected = matched >= 0 ? matched : Math.min(selected, Math.max(0, rooms.size() - 1));
+        if (selectedId != null && matched < 0 && focus == Focus.ROOMS) {
+            focus = Focus.REFRESH;
+            selectedRoomClosed = true;
+        } else if (rooms.isEmpty() && focus == Focus.ROOMS) focus = Focus.CREATE;
+        totalPages = result.totalPages();
+        status = selectedRoomClosed ? "Selected room closed" : roomStatus();
+    }
+
+    private String roomStatus() {
+        return rooms.isEmpty() ? "No rooms found" : "Page " + (page + 1) + "/" + Math.max(1, totalPages);
     }
 }

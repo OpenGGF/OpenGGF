@@ -50,10 +50,10 @@ public final class RewindSnapshotDiff {
 
     /**
      * Object-manager diff: compares slots / childSpawns / dynamicObjects by
-     * slot identity rather than list position. The {@code activeObjects}
+     * captured identity rather than list position. The {@code activeObjects}
      * IdentityHashMap that backs {@code slots()} has unspecified iteration
      * order, so two captures of the same logical state may produce slot lists
-     * in different order. Bucketing by slotIndex makes the diff order-stable.
+     * in different order. Active entries use slots; dynamics use stable object ids.
      */
     private static void collectObjectManagerDiffs(String path, Object av, Object bv,
                                                     List<String> diffs) {
@@ -123,54 +123,30 @@ public final class RewindSnapshotDiff {
                 diffs.add(path + ".childSpawns[" + p + "].reservedSlots differs");
             }
         }
-        // Dynamic objects: bucket by slotIndex so insertion-order divergence
-        // (e.g. Shield re-spawned by post-restore callback after generic restore
-        // for non-deferred dynamics) doesn't masquerade as content divergence.
-        // Both runs may legitimately end up with the same {slot -> instance}
-        // set in different list positions; only true content/slot/membership
-        // divergence is reported.
-        if (!fieldContentEqual(oa.dynamicObjects(), ob.dynamicObjects())) {
-            Map<Integer, ObjectManagerSnapshot.DynamicObjectEntry> aDyn = new HashMap<>();
-            for (var de : oa.dynamicObjects()) aDyn.put(de.slotIndex(), de);
-            Map<Integer, ObjectManagerSnapshot.DynamicObjectEntry> bDyn = new HashMap<>();
-            for (var de : ob.dynamicObjects()) bDyn.put(de.slotIndex(), de);
-            if (aDyn.size() != oa.dynamicObjects().size()
-                    || bDyn.size() != ob.dynamicObjects().size()) {
-                diffs.add(path + ".dynamicObjects: duplicate slotIndex detected");
-            }
-            java.util.Set<Integer> allDyn = new java.util.TreeSet<>();
-            allDyn.addAll(aDyn.keySet());
-            allDyn.addAll(bDyn.keySet());
-            for (int slotIdx : allDyn) {
-                if (diffs.size() >= 20) break;
-                var ea = aDyn.get(slotIdx);
-                var eb = bDyn.get(slotIdx);
-                if (ea == null) {
-                    diffs.add(path + ".dynamic[" + slotIdx + "] missing in A (B=" + eb + ")");
-                    continue;
-                }
-                if (eb == null) {
-                    diffs.add(path + ".dynamic[" + slotIdx + "] missing in B (A=" + ea + ")");
-                    continue;
-                }
-                if (!ea.className().equals(eb.className())) {
-                    diffs.add(path + ".dynamic[" + slotIdx + "].className: A="
-                            + ea.className() + " B=" + eb.className());
-                    continue;
-                }
-                if (!java.util.Objects.equals(ea.ownerModId(), eb.ownerModId())) {
-                    diffs.add(path + ".dynamic[" + slotIdx + "].ownerModId: A="
-                            + ea.ownerModId() + " B=" + eb.ownerModId());
-                    continue;
-                }
-                if (!fieldContentEqual(ea.spawn(), eb.spawn())) {
-                    collectDiffs(path + ".dynamic[" + slotIdx + "].spawn",
-                            ea.spawn(), eb.spawn(), diffs);
-                }
-                if (!fieldContentEqual(ea.state(), eb.state())) {
-                    collectDiffs(path + ".dynamic[" + slotIdx + "].state",
-                            ea.state(), eb.state(), diffs);
-                }
+        // Multiple persistent visuals can share a fixed SST slot (for example,
+        // the dormant insta-shield and active elemental shield). Restore defers
+        // player-bound visuals, so their insertion order can change. Pair every
+        // captured identity, retaining slot and all other fields as compared state.
+        Map<Object, ObjectManagerSnapshot.DynamicObjectEntry> aDyn = indexDynamicObjects(oa);
+        Map<Object, ObjectManagerSnapshot.DynamicObjectEntry> bDyn = indexDynamicObjects(ob);
+        if (aDyn.size() != oa.dynamicObjects().size()
+                || bDyn.size() != ob.dynamicObjects().size()) {
+            diffs.add(path + ".dynamicObjects: duplicate object identity detected");
+        }
+        java.util.Set<Object> allDynamicIds = new java.util.LinkedHashSet<>(aDyn.keySet());
+        allDynamicIds.addAll(bDyn.keySet());
+        for (Object id : allDynamicIds) {
+            if (diffs.size() >= 20) break;
+            var ea = aDyn.get(id);
+            var eb = bDyn.get(id);
+            int slot = ea != null ? ea.slotIndex() : eb.slotIndex();
+            String entryPath = path + ".dynamic[" + slot + "][" + id + "]";
+            if (ea == null) {
+                diffs.add(entryPath + " missing in A (B=" + eb + ")");
+            } else if (eb == null) {
+                diffs.add(entryPath + " missing in B (A=" + ea + ")");
+            } else if (!fieldContentEqual(ea, eb)) {
+                collectDiffs(entryPath, ea, eb, diffs);
             }
         }
         if (!fieldContentEqual(oa.placement(), ob.placement())) {
@@ -453,9 +429,35 @@ public final class RewindSnapshotDiff {
         // Epoch is a restore-side copy-on-write generation counter. Multiple
         // seeks can legitimately advance it beyond the original forward run
         // while the level content remains identical.
-        return Arrays.equals(la.blocks(), lb.blocks())
-            && Arrays.equals(la.chunks(), lb.chunks())
-            && Arrays.equals(la.mapData(), lb.mapData());
+        return equalTerrain(la.blocks(), lb.blocks())
+            && equalTerrain(la.chunks(), lb.chunks())
+            && Arrays.equals(la.mapData(), lb.mapData())
+            && la.frameCounter() == lb.frameCounter()
+            && la.hasLevelHudState() == lb.hasLevelHudState()
+            && la.levelRings() == lb.levelRings()
+            && la.levelRingExtraLifeFlags() == lb.levelRingExtraLifeFlags()
+            && la.levelTimerFrames() == lb.levelTimerFrames()
+            && la.levelTimerPaused() == lb.levelTimerPaused()
+            && la.respawnRequested() == lb.respawnRequested()
+            && Objects.equals(la.checkpointState(), lb.checkpointState())
+            && la.transitionRingInitializationPending() == lb.transitionRingInitializationPending()
+            && la.pendingInitialProcessSpritesLifecycle() == lb.pendingInitialProcessSpritesLifecycle();
+    }
+
+    private static boolean equalTerrain(Object[] a, Object[] b) {
+        if (a == b) return true;
+        if (a == null || b == null || a.length != b.length) return false;
+        for (int i = 0; i < a.length; i++) {
+            if (a[i] == b[i]) continue;
+            // Mutation replay replaces descriptor objects under copy-on-write. Identity
+            // differs legitimately; every ROM descriptor and collision index must agree.
+            if (a[i] instanceof com.openggf.level.Chunk ca && b[i] instanceof com.openggf.level.Chunk cb) {
+                if (!Arrays.equals(ca.saveState(), cb.saveState())) return false;
+            } else if (a[i] instanceof com.openggf.level.Block ba && b[i] instanceof com.openggf.level.Block bb) {
+                if (!Arrays.equals(ba.saveState(), bb.saveState())) return false;
+            } else return false;
+        }
+        return true;
     }
 
     /**
@@ -496,22 +498,24 @@ public final class RewindSnapshotDiff {
             int[] bv = bChild.get(p);
             if (!Arrays.equals(av, bv)) return false;
         }
-        // DynamicObjects: bucket by slotIndex so insertion-order divergence
-        // doesn't masquerade as content divergence (mirrors collectObjectManagerDiffs).
-        Map<Integer, ObjectManagerSnapshot.DynamicObjectEntry> aDyn = new HashMap<>();
-        for (var de : oa.dynamicObjects()) aDyn.put(de.slotIndex(), de);
-        Map<Integer, ObjectManagerSnapshot.DynamicObjectEntry> bDyn = new HashMap<>();
-        for (var de : ob.dynamicObjects()) bDyn.put(de.slotIndex(), de);
-        if (!aDyn.keySet().equals(bDyn.keySet())) return false;
-        for (int slot : aDyn.keySet()) {
-            var ea = aDyn.get(slot);
-            var eb = bDyn.get(slot);
-            if (!ea.className().equals(eb.className())) return false;
-            if (!java.util.Objects.equals(ea.ownerModId(), eb.ownerModId())) return false;
-            if (!fieldContentEqual(ea.spawn(), eb.spawn())) return false;
-            if (!fieldContentEqual(ea.state(), eb.state())) return false;
-        }
+        Map<Object, ObjectManagerSnapshot.DynamicObjectEntry> aDyn = indexDynamicObjects(oa);
+        Map<Object, ObjectManagerSnapshot.DynamicObjectEntry> bDyn = indexDynamicObjects(ob);
+        if (aDyn.size() != oa.dynamicObjects().size()
+                || bDyn.size() != ob.dynamicObjects().size()) return false;
+        if (!fieldContentEqual(aDyn, bDyn)) return false;
         return fieldContentEqual(oa.placement(), ob.placement())
                 && fieldContentEqual(oa.solidContactRiding(), ob.solidContactRiding());
+    }
+
+    private static Map<Object, ObjectManagerSnapshot.DynamicObjectEntry> indexDynamicObjects(
+            ObjectManagerSnapshot snapshot) {
+        Map<Object, ObjectManagerSnapshot.DynamicObjectEntry> indexed = new java.util.LinkedHashMap<>();
+        for (var entry : snapshot.dynamicObjects()) {
+            // Older snapshots lack stable identities and retain the unique-slot
+            // contract. Ambiguous legacy duplicates are rejected by the size check.
+            Object key = entry.objectId() != null ? entry.objectId() : entry.slotIndex();
+            indexed.put(key, entry);
+        }
+        return indexed;
     }
 }

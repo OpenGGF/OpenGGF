@@ -24,6 +24,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -345,7 +346,12 @@ final class ObjectTouchResponseController {
         currentPlayer = player;
         int playerWidth = 0x10; // Normal width
         PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull(player);
+        // TouchResponse branches to Touch_NoInstaShield unless character_id is
+        // Sonic, so Tails flight and Knuckles glide (double_jump_flag=1) keep the
+        // normal box and vulnerability.
         if (capabilityRules != null && capabilityRules.instaShieldEnabled()
+                && player instanceof AbstractPlayableSprite abilitySprite
+                && abilitySprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD
                 && player.getDoubleJumpFlag() == 1
                 && player.getShieldType() == null
                 && player.getInvincibleFrames() == 0) {
@@ -705,6 +711,20 @@ final class ObjectTouchResponseController {
         if (!isCandidateForActor(isSidekick, profile)) {
             return false;
         }
+        // Touch_Boss is the multi-sprite path. KiS2 retains its shipped $4D
+        // mapping test here although TouchResponse changes to Knuckles' $9C.
+        // fixBugs=0 tests mapping_frame; the fixed branch would test anim.
+        ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
+        if (!instaShieldActive && rules != null
+                && rules.bossDuckTouchBoxMappingFrame() != rules.duckTouchBoxMappingFrame()) {
+            int baseYRadius = Math.max(1, player.getYRadius() - 3);
+            playerY = player.getCentreY() - baseYRadius;
+            playerHeight = baseYRadius * 2;
+            if (rules.isBossDuckTouchBoxMappingFrame(player.getMappingFrame())) {
+                playerY += ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT;
+                playerHeight = ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT;
+            }
+        }
         for (TouchResponseProvider.TouchRegion region : regions) {
             int flags = region.collisionFlags();
             if (flags == 0) {
@@ -867,7 +887,7 @@ final class ObjectTouchResponseController {
                     // byte (incl. 0xFF/-1 always-bounce) negates both velocities.
                     if ((hpBeforeHit & 0xFF) != 0) {
                         // S3K boss-hit path also negates ground_vel; S1 also halves.
-                        applyBossBounce(sidekick);
+                        applyBossBounce(sidekick, profile);
                     } else if (!wasAlreadyDestroyed) {
                         // Touch_EnemyNormal bounce: fires when this player's pass kills
                         // the instance. Objects that handle their own bounce (like Crawl
@@ -891,7 +911,7 @@ final class ObjectTouchResponseController {
                         objectCallbacks.run(instance,
                                 () -> attackable.onPlayerAttack(sidekick, result));
                     }
-                    applyBossBounce(sidekick);
+                    applyBossBounce(sidekick, profile);
                 } else {
                     applySidekickHurt(sidekick, instance, result);
                 }
@@ -1100,7 +1120,7 @@ final class ObjectTouchResponseController {
                     // 0xFF always-bounce value, treated as nonzero by all 3 ROMs.
                     if ((hpBeforeHit & 0xFF) != 0) {
                         // S3K boss-hit path also negates ground_vel; S1 also halves.
-                        applyBossBounce(player);
+                        applyBossBounce(player, profile);
                     } else if (!wasAlreadyDestroyed) {
                         // Touch_KillEnemy: position-based bounce only when onPlayerAttack
                         // destroyed the instance. Objects like Crawl that handle their own
@@ -1124,7 +1144,7 @@ final class ObjectTouchResponseController {
                         objectCallbacks.run(instance,
                                 () -> attackable.onPlayerAttack(player, result));
                     }
-                    applyBossBounce(player);
+                    applyBossBounce(player, profile);
                 } else {
                     applyHurt(player, instance, result);
                 }
@@ -1144,8 +1164,16 @@ final class ObjectTouchResponseController {
         }
 
         PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull(player);
-        if (capabilityRules != null && capabilityRules.elementalShieldsEnabled()) {
-            return isS3kAbilityAttack(player, target);
+        if (capabilityRules != null) {
+            // KiS2 Touch_Enemy and S3K Touch_EnemyNormal accept glide/slide.
+            // Elemental-shield availability does not own this character attack.
+            if (player instanceof Knuckles && capabilityRules.glideAttacksEnabled()) {
+                int flag = player.getDoubleJumpFlag();
+                return flag == 1 || flag == 3;
+            }
+            if (capabilityRules.elementalShieldsEnabled()) {
+                return isS3kAbilityAttack(player, target);
+            }
         }
 
         return false;
@@ -1166,10 +1194,6 @@ final class ObjectTouchResponseController {
     }
 
     private boolean isS3kAbilityAttack(PlayableEntity player, ObjectInstance target) {
-        if (player instanceof Knuckles) {
-            int flag = player.getDoubleJumpFlag();
-            return flag == 1 || flag == 3;
-        }
         if (player instanceof Tails tails) {
             return player.getDoubleJumpFlag() != 0
                     && !tails.isInWater()
@@ -1214,9 +1238,10 @@ final class ObjectTouchResponseController {
      * negates THEN halves both via {@code asr.w} ({@code neg / neg / asr / asr}),
      * gated by {@code bossHitHalvesBounceVelocity}.
      * S3K additionally negates ground velocity ({@code bossHitNegatesGroundSpeed}).
-     * Does not set air flag - ROM only modifies velocities here.
+     * KiS2 ordinary boss hits also leave active glide; multi-sprite hits retain it.
+     * None of these paths sets the air flag.
      */
-    private void applyBossBounce(PlayableEntity player) {
+    private void applyBossBounce(PlayableEntity player, TouchResponseProfile profile) {
         int negX = -player.getXSpeed();
         int negY = -player.getYSpeed();
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
@@ -1229,6 +1254,22 @@ final class ObjectTouchResponseController {
         player.setYSpeed((short) negY);
         if (rules != null && rules.bossHitNegatesGroundSpeed()) {
             player.setGSpeed((short) -player.getGSpeed());
+        }
+        if (rules != null && rules.bossHitEndsActiveGlide()
+                && (profile == null || profile.attackBouncePolicy() != TouchAttackBouncePolicy.BOSS_REFLECT)
+                && player instanceof AbstractPlayableSprite sprite
+                && sprite.getDoubleJumpFlag() == 1) {
+            // KiS2 gameRevision=3 Touch_Enemy_Part2: only the ordinary
+            // collision_property rebound exits active glide; the multi-sprite
+            // boss_hitcount2 branch returns before these writes. Sliding stays active.
+            sprite.setDoubleJumpFlag(2);
+            sprite.setAnimationId(0x21);
+            sprite.setForcedAnimationId(0x21);
+            sprite.setObjectMappingFrameControl(false);
+            // ROM clears x_flip, then sets it when the reflected x_vel is >= 0.
+            sprite.setDirection((short) negX < 0
+                    ? com.openggf.physics.Direction.RIGHT : com.openggf.physics.Direction.LEFT);
+            sprite.restoreDefaultRadii();
         }
     }
 

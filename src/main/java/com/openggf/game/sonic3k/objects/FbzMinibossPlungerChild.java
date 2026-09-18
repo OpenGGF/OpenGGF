@@ -64,6 +64,22 @@ final class FbzMinibossPlungerChild extends AbstractObjectInstance
     }
     @Override public SolidObjectParams getSolidParams() { return SOLID_PARAMS; }
     @Override public boolean usesInclusiveRightEdge() { return true; }
+    @Override public boolean allowsObjectControlledSolidContacts() {
+        // loc_6F056 -> sub_6F796 -> SolidObjectFull_1P services its existing
+        // standing bit before the signed object_control new-contact gate.
+        // Set_PlayerEndingPose must therefore retain the plunger's rider.
+        return true;
+    }
+    @Override public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        return true;
+    }
+    @Override public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        // After loc_6F04A applies the eight-pixel defeat drop, loc_6F056
+        // leaves the plunger stationary and only calls SolidObjectFull. Its
+        // known standing bit survives Set_PlayerEndingPose's signed control
+        // byte; no carry coordinate needs replacing in this stationary phase.
+        return defeatDropApplied && player.isObjectControlled();
+    }
     @Override public boolean skipsCpuSidekickWhenRenderFlagOffScreen() { return true; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public FbzMinibossPlungerChild recreateForRewind(RewindRecreateContext ctx) {
@@ -85,7 +101,9 @@ final class FbzMinibossPlungerChild extends AbstractObjectInstance
     }
     @Override public int getPriorityBucket() { return 5; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.FBZ_MINIBOSS);
-        if (r != null && r.isReady()) r.drawFrameIndex(8, x, y, false, false);
+        // loc_6EFF6 installs ObjDat_FBZSpringPlunger, not the miniboss's
+        // eye mappings: frame 5 of the level-backed Map_FBZEggCapsule.
+        PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.FBZ_EGG_CAPSULE);
+        if (r != null && r.isReady()) r.drawFrameIndex(5, x, y, false, false);
     }
 }

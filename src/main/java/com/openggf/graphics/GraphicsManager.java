@@ -57,6 +57,12 @@ public class GraphicsManager {
 	// Last palette handed to cachePaletteTexture per line, so a palette fade change
 	// can re-upload the affected lines without asking their owners to write again.
 	private PaletteView[] lastCachedPaletteLines = new PaletteView[0];
+	private boolean paletteUploadLatched;
+	// Held as PaletteView so the latch state stays in the graphics layer's own types.
+	private PaletteView[] pendingUnderwaterPalettes;
+	private PaletteView pendingUnderwaterLine0;
+	private boolean underwaterUploadPending;
+	private final boolean[] pendingPaletteUploads = new boolean[64];
 	private final PaletteFadePresentation paletteFadePresentation = new PaletteFadePresentation();
 	private Integer combinedPaletteTextureId;
 	private int currentPaletteTextureHeight = 0;
@@ -184,6 +190,7 @@ public class GraphicsManager {
 	 * This enables testing game logic without requiring an OpenGL context.
 	 */
 	private boolean headlessMode = false;
+	SpritePresentation.Builder spritePresentationBuilder;
 
 	/**
 	 * When true, the batch renderer will use the underwater palette texture
@@ -215,6 +222,22 @@ public class GraphicsManager {
 	private boolean waterEnabled = false;
 
 	public void registerCommand(GLCommandable command) {
+		if (spritePresentationBuilder != null) {
+			try {
+				SpritePresentation.Geometry geometry;
+				if (command instanceof GLCommand primitive) {
+					geometry = primitive.preparePrimitive(spritePresentationBuilder.cameraX, spritePresentationBuilder.cameraY);
+				} else if (command instanceof GLCommandGroup group) {
+					geometry = group.prepareGroup(spritePresentationBuilder.cameraX, spritePresentationBuilder.cameraY);
+				} else {
+					throw new IllegalStateException("GPU command submitted during CPU sprite preparation: "
+							+ command.getClass().getName());
+				}
+				spritePresentationBuilder.primitives.add(new SpritePresentation.Primitive(
+						spritePresentationBuilder.tiles.size(), spritePresentationBuilder.layer, geometry));
+			} finally { command.discard(); }
+			return;
+		}
 		if (commandCaptureTarget != null) {
 			commandCaptureTarget.add(command);
 			return;
@@ -285,6 +308,10 @@ public class GraphicsManager {
 	}
 
 	public void renderPatternWithIdScaled(int patternId, PatternDesc desc, float x, float y, float width, float height) {
+		if (spritePresentationBuilder != null) {
+			spritePresentationBuilder.add(this, patternId, desc, x, y, width, height);
+			return;
+		}
 		if (headlessMode) {
 			return;
 		}
@@ -501,6 +528,7 @@ public class GraphicsManager {
 	 * Uses shake-adjusted camera positions so sprites shake in sync with FG tiles.
 	 */
 	public void flush() {
+		if (spritePresentationBuilder != null) return;
 		Camera cam = getCamera();
 		flushWithCamera(cam.getXWithShake(), cam.getYWithShake(), cam.getWidth(), cam.getHeight());
 	}
@@ -686,7 +714,62 @@ public class GraphicsManager {
 
 	public void cachePaletteTexture(Palette palette, int paletteId) {
 		rememberCachedPaletteLine(palette, paletteId);
+		if (paletteId >= 0 && paletteId < pendingPaletteUploads.length) {
+			pendingPaletteUploads[paletteId] = false;
+		}
 		uploadPaletteLine(palette, paletteId);
+	}
+
+	/** Level-pipeline palette write: deferred to the next V-int publication while latched. */
+	void cacheLatchablePaletteTexture(PaletteView palette, int paletteId) {
+		rememberCachedPaletteLine(palette, paletteId);
+		boolean inRange = paletteId >= 0 && paletteId < pendingPaletteUploads.length;
+		if (paletteUploadLatched && inRange) {
+			pendingPaletteUploads[paletteId] = true;
+			return;
+		}
+		if (inRange) {
+			pendingPaletteUploads[paletteId] = false;
+		}
+		uploadPaletteLine(palette, paletteId);
+	}
+
+	/**
+	 * Hardware CRAM is written from {@code Normal_palette} in V-int, together with the sprite
+	 * table and scroll buffers. While latched, palette line writes wait for the next publication
+	 * instead of reaching the GPU on the frame the game logic wrote them.
+	 */
+	void setPaletteUploadLatched(boolean latched) {
+		flushPendingPaletteUploads();
+		paletteUploadLatched = latched;
+	}
+
+	boolean isPaletteUploadLatched() {
+		return paletteUploadLatched;
+	}
+
+	void flushPendingPaletteUploads() {
+		if (underwaterUploadPending) {
+			underwaterUploadPending = false;
+			boolean latched = paletteUploadLatched;
+			paletteUploadLatched = false;
+			try {
+				replayPendingUnderwaterUpload();
+			} finally {
+				paletteUploadLatched = latched;
+				pendingUnderwaterPalettes = null;
+				pendingUnderwaterLine0 = null;
+			}
+		}
+		for (int id = 0; id < pendingPaletteUploads.length; id++) {
+			if (!pendingPaletteUploads[id]) {
+				continue;
+			}
+			pendingPaletteUploads[id] = false;
+			if (id < lastCachedPaletteLines.length && lastCachedPaletteLines[id] != null) {
+				uploadPaletteLine(lastCachedPaletteLines[id], id);
+			}
+		}
 	}
 
 	private void uploadPaletteLine(PaletteView palette, int paletteId) {
@@ -820,22 +903,18 @@ public class GraphicsManager {
 	 * This allows using pattern IDs beyond the 11-bit limit of PatternDesc.
 	 */
 	public void renderPatternWithId(int patternId, PatternDesc desc, int x, int y) {
-		if (headlessMode) {
-			return;
-		}
 
 		// Vertical wrap Y adjustment (emulates VDP modular sprite Y coordinates).
 		// When enabled, wraps the world Y to the nearest equivalent position within
 		// VERTICAL_WRAP_RANGE of the camera, so objects on the "wrong side" of a
 		// wrap boundary render at the correct screen position.
-		if (verticalWrapAdjustEnabled && verticalWrapRange > 0) {
-			int diff = y - verticalWrapCameraY;
-			diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
-			if (diff > verticalWrapRange / 2) {
-				diff -= verticalWrapRange;
-			}
-			y = verticalWrapCameraY + diff;
+		y = adjustVerticalWrapY(y);
+
+		if (spritePresentationBuilder != null) {
+			spritePresentationBuilder.add(this, patternId, desc, x, y, 8, 8);
+			return;
 		}
+		if (headlessMode) return;
 
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
@@ -879,6 +958,67 @@ public class GraphicsManager {
 				restartPatternBatch(false, true, 0);
 			}
 		}
+	}
+
+	private int adjustVerticalWrapY(int y) {
+		if (verticalWrapAdjustEnabled && verticalWrapRange > 0) {
+			int diff = y - verticalWrapCameraY;
+			diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
+			if (diff > verticalWrapRange / 2) {
+				diff -= verticalWrapRange;
+			}
+			y = verticalWrapCameraY + diff;
+		}
+		return y;
+	}
+
+	/**
+	 * Renders pixel rows {@code [rowStart, rowEnd)} (screen order, 0 = tile top) of
+	 * an 8x8 pattern whose top is at {@code y}, for a VDP sprite mask that hides
+	 * single scanlines. Callers pass whole tiles through {@link #renderPatternWithId}.
+	 * {@code descriptor} is only handed to the presentation builder's decoder.
+	 */
+	void renderPatternRowsWithId(int patternId, Object descriptor, int paletteIndex, boolean hFlip, boolean vFlip,
+			boolean priority, int x, int y, int rowStart, int rowEnd) {
+		rowStart = Math.max(0, rowStart);
+		rowEnd = Math.min(8, rowEnd);
+		if (rowStart >= rowEnd) {
+			return;
+		}
+		y = adjustVerticalWrapY(y);
+		if (spritePresentationBuilder != null) {
+			spritePresentationBuilder.addRows(this, patternId, descriptor, x, y, rowStart, rowEnd);
+			return;
+		}
+		if (headlessMode) return;
+
+		ensurePatternAtlas();
+		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
+		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
+		if (entry == null || paletteTextureId == null) {
+			return;
+		}
+		boolean restartInstancedAfterDirect = false;
+		boolean restartBatchedAfterDirect = false;
+		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+			if (instancedPatternRenderer.addPatternRows(entry, paletteIndex, hFlip, vFlip, priority, x, y, rowStart, rowEnd)) {
+				return;
+			}
+			flushPatternBatch();
+			restartPatternBatch(true, false, entry.atlasIndex());
+			if (instancedPatternRenderer.addPatternRows(entry, paletteIndex, hFlip, vFlip, priority, x, y, rowStart, rowEnd)) {
+				return;
+			}
+			flushPatternBatch();
+			restartInstancedAfterDirect = true;
+		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+			// The page-0 batcher only draws whole tiles; keep order by flushing first.
+			flushPatternBatch();
+			restartBatchedAfterDirect = true;
+		}
+		registerCommand(PatternRenderCommand.obtainRows(entry, paletteTextureId, paletteIndex, hFlip, vFlip, priority,
+				x, y, rowStart, rowEnd, this));
+		restartPatternBatch(restartInstancedAfterDirect, restartBatchedAfterDirect, entry.atlasIndex());
 	}
 
 	public void beginGhostRenderEffect(float alpha) {
@@ -984,6 +1124,7 @@ public class GraphicsManager {
 	 * Begin a new pattern batch. Call before rendering patterns for a frame/layer.
 	 */
 	public void beginPatternBatch() {
+		if (spritePresentationBuilder != null) return;
 		if (headlessMode) {
 			return;
 		}
@@ -1006,6 +1147,7 @@ public class GraphicsManager {
 	 * submitted. This queues the batch command for execution in the proper order.
 	 */
 	public void flushPatternBatch() {
+		if (spritePresentationBuilder != null) return;
 		if (headlessMode) {
 			return;
 		}
@@ -1343,9 +1485,21 @@ public class GraphicsManager {
 		underwaterPaletteUploadOps = Objects.requireNonNull(uploadOps);
 	}
 
+	private void replayPendingUnderwaterUpload() {
+		cacheUnderwaterPaletteTexture((com.openggf.level.Palette[]) pendingUnderwaterPalettes,
+				(com.openggf.level.Palette) pendingUnderwaterLine0);
+	}
+
 	public Integer cacheUnderwaterPaletteTexture(Palette[] palettes, Palette normalLine0) {
 		if (headlessMode && underwaterPaletteUploadOps == OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS) {
 			return null;
+		}
+		if (paletteUploadLatched && underwaterPaletteTextureId != null) {
+			// Water_palette reaches CRAM in the same V-int as Normal_palette.
+			pendingUnderwaterPalettes = palettes;
+			pendingUnderwaterLine0 = normalLine0;
+			underwaterUploadPending = true;
+			return underwaterPaletteTextureId;
 		}
 		int totalLines = RenderContext.getTotalPaletteLines();
 		Palette underwaterLine0 = (palettes != null && palettes.length > 0) ? palettes[0] : null;
@@ -1912,6 +2066,14 @@ public class GraphicsManager {
 		return currentSpriteTileOcclusionPaletteMask;
 	}
 
+	void cancelSpritePresentationCollection() {
+		spriteSatCollectionActive = false;
+		spriteMaskRequested = false;
+		spriteSatEntries.clear();
+		currentSpriteSatDebugSource = null;
+		currentSpriteSatBucket = RenderPriority.MIN;
+	}
+
 	public void beginSpriteSatCollection() {
 		spriteSatCollectionActive = true;
 		spriteMaskRequested = false;
@@ -1938,7 +2100,7 @@ public class GraphicsManager {
 				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
 				false, false, false, currentSpriteHighPriority,
 				SpriteMaskReplayRole.NORMAL, 0, widthTiles, 0, heightTiles,
-				currentSpriteSatDebugSource));
+				spritePresentationBuilder == null ? currentSpriteSatDebugSource : spritePresentationBuilder.layer.name()));
 	}
 
 	public void setCurrentSpriteSatDebugSource(String debugSource) {
@@ -1953,9 +2115,11 @@ public class GraphicsManager {
 		if (!spriteSatCollectionActive || piece == null) {
 			return;
 		}
-		SpritePieceRenderer.PreparedPiece taggedPiece = currentSpriteSatDebugSource == null
+		String presentationSource = spritePresentationBuilder == null ? currentSpriteSatDebugSource
+				: spritePresentationBuilder.layer.name();
+		SpritePieceRenderer.PreparedPiece taggedPiece = presentationSource == null
 				? piece
-				: piece.withDebugSource(currentSpriteSatDebugSource);
+				: piece.withDebugSource(presentationSource);
 		spriteSatEntries.add(SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket));
 	}
 
@@ -1971,6 +2135,7 @@ public class GraphicsManager {
 		// `spriteSatEntries` itself (no defensive copy). The replay below consumes
 		// the processed list synchronously, so the live buffer is cleared in the
 		// finally block only after the replay finished with it.
+		// Lower SAT indices win overlap: mask in native order, replay in reverse painter order.
 		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(spriteSatEntries, applyMask);
 
 		spriteSatCollectionActive = false;
@@ -1980,6 +2145,20 @@ public class GraphicsManager {
 
 		try {
 			if (processedEntries.isEmpty()) {
+				return;
+			}
+
+			if (spritePresentationBuilder != null) {
+				for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+					for (int i = processedEntries.size() - 1; i >= 0; i--) {
+						SpriteSatEntry entry = processedEntries.get(i);
+						if (entry.priorityBucket() != bucket) continue;
+						if (entry.debugSource() != null)
+							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.debugSource());
+						setCurrentSpriteHighPriority(entry.globalHighPriority());
+						appendBatchedReplayCommands(entry, -1);
+					}
+				}
 				return;
 			}
 
@@ -2040,7 +2219,7 @@ public class GraphicsManager {
 			satReplayBatchOpen = false;
 			int paletteTexId = paletteTextureId;
 			for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-				for (int i = 0, n = processedEntries.size(); i < n; i++) {
+				for (int i = processedEntries.size() - 1; i >= 0; i--) {
 					SpriteSatEntry processedEntry = processedEntries.get(i);
 					if (processedEntry.priorityBucket() == bucket) {
 						appendBatchedReplayCommands(processedEntry, paletteTexId);
@@ -2059,34 +2238,72 @@ public class GraphicsManager {
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
 		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
+					// CPU preparation uses this same tile decoder before any atlas lookup.
+					// A sprite-mask band can hide single scanlines of this tile.
+					int rowStart = entry.visibleTileRowStart(drawY);
+					int rowEnd = entry.visibleTileRowEnd(drawY);
+					if (rowStart >= rowEnd) {
+						return;
+					}
+					if (spritePresentationBuilder != null) {
+						prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+						if (rowStart == 0 && rowEnd == 8) {
+							renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
+						} else {
+							renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
+									entry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+						}
+						return;
+					}
 					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
 					if (atlasEntry == null) {
 						return;
 					}
 					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-					if (addToSatReplayBatch(atlasEntry, paletteIndex, drawX, drawY)) {
+					if (addToSatReplayBatch(entry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY,
+							rowStart, rowEnd)) {
 						return;
 					}
 					// Unsupported state: flush first so draw order is preserved, then draw direct.
 					flushSatReplayBatch();
-					registerCommand(PatternRenderCommand.obtain(atlasEntry, paletteTextureId,
-							reusableReplayDesc, drawX, drawY, this));
+					registerCommand(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
+							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
 				});
 	}
 
-	private boolean addToSatReplayBatch(PatternAtlas.Entry atlasEntry, int paletteIndex, int drawX, int drawY) {
+	private boolean addToSatReplayBatch(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,
+			boolean pieceHFlip, boolean pieceVFlip, int drawX, int drawY, int rowStart, int rowEnd) {
 		if (!satReplayBatchOpen) {
 			instancedPatternRenderer.beginBatch(atlasEntry.atlasIndex());
 			satReplayBatchOpen = true;
 		}
-		if (instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY)) {
+		if (addSatReplayTile(satEntry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd)) {
 			return true;
 		}
 		// Batch full: flush and retry once in a fresh batch.
 		flushSatReplayBatch();
 		instancedPatternRenderer.beginBatch(atlasEntry.atlasIndex());
 		satReplayBatchOpen = true;
-		return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
+		return addSatReplayTile(satEntry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd);
+	}
+
+	private boolean addSatReplayTile(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,
+			boolean pieceHFlip, boolean pieceVFlip, int drawX, int drawY, int rowStart, int rowEnd) {
+		if (rowStart == 0 && rowEnd == 8) {
+			return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
+		}
+		return instancedPatternRenderer.addPatternRows(atlasEntry, paletteIndex, pieceHFlip, pieceVFlip,
+				satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+	}
+
+	private PatternRenderCommand obtainReplayCommand(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry,
+			int paletteTextureId, int paletteIndex, boolean pieceHFlip, boolean pieceVFlip,
+			int drawX, int drawY, int rowStart, int rowEnd) {
+		if (rowStart == 0 && rowEnd == 8) {
+			return PatternRenderCommand.obtain(atlasEntry, paletteTextureId, reusableReplayDesc, drawX, drawY, this);
+		}
+		return PatternRenderCommand.obtainRows(atlasEntry, paletteTextureId, paletteIndex, pieceHFlip, pieceVFlip,
+				satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd, this);
 	}
 
 	private void flushSatReplayBatch() {
@@ -2114,7 +2331,8 @@ public class GraphicsManager {
 			return reusableReplayCommands;
 		}
 		for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-			for (SpriteSatEntry processedEntry : processedEntries) {
+			for (int i = processedEntries.size() - 1; i >= 0; i--) {
+				SpriteSatEntry processedEntry = processedEntries.get(i);
 				if (processedEntry.priorityBucket() == bucket) {
 					appendDirectReplayCommands(processedEntry, paletteTextureId, reusableReplayCommands);
 				}
@@ -2146,8 +2364,14 @@ public class GraphicsManager {
 					if (atlasEntry == null) {
 						return;
 					}
+					int rowStart = entry.visibleTileRowStart(drawY);
+					int rowEnd = entry.visibleTileRowEnd(drawY);
+					if (rowStart >= rowEnd) {
+						return;
+					}
 					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-					replayCommands.add(PatternRenderCommand.obtain(atlasEntry, paletteTextureId, reusableReplayDesc, drawX, drawY, this));
+					replayCommands.add(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
+							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
 				});
 	}
 
@@ -2281,6 +2505,7 @@ public class GraphicsManager {
 	 * have been removed for OpenGL 4.1 core profile compatibility.
 	 */
 	public void enqueueDebugLineState() {
+		if (spritePresentationBuilder != null) return;
 		ShaderProgram debugShader = getDebugShaderProgram();
 		int programId = debugShader != null ? debugShader.getProgramId() : 0;
 		registerCommand(new GLCommand(GLCommand.CommandType.USE_PROGRAM, programId));
@@ -2293,6 +2518,7 @@ public class GraphicsManager {
 	 * Texturing is now controlled entirely through shaders.
 	 */
 	public void enqueueDefaultShaderState() {
+		if (spritePresentationBuilder != null) return;
 		ShaderProgram shader = getShaderProgram();
 		if (shader != null) {
 			int programId = shader.getProgramId();

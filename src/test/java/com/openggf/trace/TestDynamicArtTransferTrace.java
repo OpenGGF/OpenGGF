@@ -51,6 +51,59 @@ class TestDynamicArtTransferTrace {
             """.replaceAll("\\s+", "");
 
     @Test
+    void carriesKis2RamSubmissionAcrossRunGapIntoSegmentCompletion() {
+        var requests = List.of(new DynamicArtTransfer.Request(-1, -1, 0xFFF100, 0xF000, 96));
+        var submission = new DynamicArtTransfer.GapEdge(0, 1, "submitted", "knuckles",
+                "run_gap", 3, 10, 0, 0x3011B4, requests);
+        var gap = new DynamicArtTransfer.GapTransition(submission,
+                DynamicArtTransfer.ledgerHash(List.of()), List.of(submission.submissionDescriptor()));
+        var identity = new DynamicArtTransfer.LifecycleIdentity();
+        var opening = DynamicArtTransfer.validateGaps(List.of(gap), List.of(), "s2", identity);
+        var completion = new DynamicArtTransfer.SegmentEdge(1, 1, "completed", "knuckles",
+                "run_gap", 3, 0, 0, 0, false, 0x3011B6, requests);
+        var envelope = new TraceEvent.DynamicArtTransferState(0, List.of(completion), List.of());
+        assertTrue(DynamicArtTransfer.validateSegment(List.of(envelope),
+                new StoredPhysicsFrameDomain(List.of(0)), "s2", identity, opening).isEmpty());
+    }
+
+    @Test
+    void validatesKis2RamTransfersWithOwnerSpecificCallbackSites() {
+        String request = RAM_REQUEST.replace("51200", Integer.toString(0xFFF100));
+        for (String owner : List.of("knuckles", "ss-knuckles")) {
+            int submitPc = owner.equals("knuckles") ? 0x3011B4 : 0x32CD38;
+            var submitted = (TraceEvent.DynamicArtTransferState) TraceEvent.parseJsonLine(
+                    envelope(0, edge(0, 1, "submitted", owner, "segment", 3,
+                            0, 0, 0, false, submitPc, request), "[1]"), new ObjectMapper());
+            var completed = (TraceEvent.DynamicArtTransferState) TraceEvent.parseJsonLine(
+                    envelope(1, edge(1, 1, "completed", owner, "segment", 3,
+                            1, 0, 1, false, 0x3011B6, request), "[]"), new ObjectMapper());
+            assertTrue(DynamicArtTransfer.validateSegment(List.of(submitted, completed),
+                    new StoredPhysicsFrameDomain(List.of(0, 1)), "s2",
+                    new DynamicArtTransfer.LifecycleIdentity()).isEmpty());
+            assertThrows(IllegalArgumentException.class,
+                    () -> DynamicArtTransfer.validateSegment(List.of(submitted),
+                            new StoredPhysicsFrameDomain(List.of(0)), "s1",
+                            new DynamicArtTransfer.LifecycleIdentity()));
+            for (int wrongPc : List.of(0x14AA, owner.equals("knuckles") ? 0x32CD38 : 0x3011B4)) {
+                var wrong = (TraceEvent.DynamicArtTransferState) TraceEvent.parseJsonLine(
+                        envelope(0, edge(0, 1, "submitted", owner, "segment", 3,
+                                0, 0, 0, false, wrongPc, request), "[1]"), new ObjectMapper());
+                assertThrows(IllegalArgumentException.class,
+                        () -> DynamicArtTransfer.validateSegment(List.of(wrong),
+                                new StoredPhysicsFrameDomain(List.of(0)), "s2",
+                                new DynamicArtTransfer.LifecycleIdentity()));
+            }
+        }
+        var stockOwnerAtChipPc = (TraceEvent.DynamicArtTransferState) TraceEvent.parseJsonLine(
+                envelope(0, edge(0, 1, "submitted", "sonic", "segment", 3,
+                        0, 0, 0, false, 0x3011B4, request), "[1]"), new ObjectMapper());
+        assertThrows(IllegalArgumentException.class,
+                () -> DynamicArtTransfer.validateSegment(List.of(stockOwnerAtChipPc),
+                        new StoredPhysicsFrameDomain(List.of(0)), "s2",
+                        new DynamicArtTransfer.LifecycleIdentity()));
+    }
+
+    @Test
     void parsesNativeEnvelopeAndReproducesDescriptorFingerprint()
             throws Exception {
         TraceEvent event = TraceEvent.parseJsonLine(envelope(7,

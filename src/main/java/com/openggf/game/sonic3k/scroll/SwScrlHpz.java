@@ -1,7 +1,8 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.game.GameServices;
-import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
@@ -14,10 +15,13 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  *
  * <p>Ports {@code HPZ_BackgroundInit} / {@code HPZ_BackgroundEvent} and their two
  * scroll-parameter subroutines {@code sub_5A32C} / {@code sub_5A334}
- * (sonic3k.asm:120069-120280). Both subroutines converge on {@code loc_5A33C},
+ * (sonic3k.asm:120069-120280). The giant-ring sanctuary ({@code $1701}) runs the
+ * {@code HPZS_BackgroundInit} / {@code HPZS_BackgroundEvent} variants
+ * (sonic3k.asm:120829-120855), which call {@code sub_5A334} unconditionally and
+ * share the draw and deform tables. Both subroutines converge on {@code loc_5A33C},
  * which derives:
  * <ul>
- *   <li>{@code Camera_Y_pos_BG_copy} = 3/16 of (camera Y - shake + Y offset), with
+ *   <li>{@code Camera_Y_pos_BG_copy} = 3/16 of (camera Y copy - shake + Y offset), with
  *       the shake added back afterwards;</li>
  *   <li>{@code HScroll_table} words 0 and 4 = 3/16 of (camera X - X offset);</li>
  *   <li>{@code HScroll_table} words 13 down to 5 = a descending gradient from 3/4
@@ -36,8 +40,19 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * <p>{@code ApplyDeformation} is entered with {@code a5 = HScroll_table+$008}
  * (word 4), so the topmost band scrolls at the full 3/16 rate and the bands below
  * it walk the 1/4-to-3/4 gradient.
+ *
+ * <p>{@code HPZ_BGDrawArray} fills the background nametable in two bands split at
+ * plane Y {@code $200}: rows below it from {@code HScroll_table} word 2 (equal to
+ * the scroll word 13, so the ring buffer matches this handler's infinite plane),
+ * rows above it from word 0. In the sanctuary the split is pixel-identical: camera Y is pinned to
+ * {@code $320}, so BG Y is {@code $1E6} and only plane rows {@code $1E6-$1FF} (lines
+ * 0-25) use the upper band; they lie in BG layout row 3, whose chunks repeat
+ * every 512 px, and the upper-band origin differs from the scroll by {@code $400},
+ * two whole periods. On the playable act the visible rows sit in deform band 0 and the layout's
+ * clouds are not 512-periodic, so {@link #getBgPeriodWidth()} widens the engine window to the
+ * rightmost visible column instead of modelling the nametable ring.
  */
-public class SwScrlHpz extends AbstractZoneScrollHandler {
+public class SwScrlHpz extends SwScrlS3kDefault {
 
     /** {@code HPZ_BGDeformArray}: nine finite bands followed by the remainder band. */
     private static final int[] HPZ_BG_DEFORM =
@@ -70,6 +85,17 @@ public class SwScrlHpz extends AbstractZoneScrollHandler {
 
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(GRADIENT_TOP_INDEX + 1);
+    /**
+     * ROM {@code V_scroll_value} = {@code Camera_Y_pos_copy} after
+     * {@code HPZS_ScreenEvent} added {@code Screen_shake_offset} to it
+     * (sonic3k.asm:120823-120825, 102254). Zero selects the parallax manager's
+     * plain camera Y, which is also what an unshaken frame produces.
+     */
+    private short foregroundVscroll;
+
+    private static final int DEFAULT_BG_PERIOD_WIDTH = 512;
+    private static final int MAX_BG_PERIOD_WIDTH = 8192;
+    private int currentBgPeriodWidth = DEFAULT_BG_PERIOD_WIDTH;
 
     @Override
     public void update(int[] horizScrollBuf,
@@ -77,6 +103,13 @@ public class SwScrlHpz extends AbstractZoneScrollHandler {
                        int cameraY,
                        int frameCounter,
                        int actId) {
+        // ScreenEvents assigns HPZS_BackgroundEvent to $1701; $1700 is
+        // DEZ3. Keep the existing fallback for the paired boss act.
+        if (actId == 0) {
+            foregroundVscroll = 0;
+            super.update(horizScrollBuf, cameraX, cameraY, frameCounter, actId);
+            return;
+        }
         resetScrollTracking();
         composer.reset();
 
@@ -85,7 +118,12 @@ public class SwScrlHpz extends AbstractZoneScrollHandler {
         int xOffset = farFraming ? FAR_X_OFFSET : NEAR_X_OFFSET;
         int yOffset = farFraming ? FAR_Y_OFFSET : NEAR_Y_OFFSET;
 
-        short bgY = backgroundY(cameraY, yOffset);
+        // HPZS_ScreenEvent: Camera_Y_pos_copy = Camera_Y_pos + Screen_shake_offset.
+        int screenShakeOffset = screenShakeOffset();
+        int cameraYCopy = (short) (cameraY + screenShakeOffset);
+        foregroundVscroll = (short) cameraYCopy;
+
+        short bgY = backgroundY(cameraYCopy, screenShakeOffset, yOffset);
         composer.setVscrollFactorBG(bgY);
         buildHScrollTable(cameraX, xOffset);
 
@@ -99,6 +137,7 @@ public class SwScrlHpz extends AbstractZoneScrollHandler {
                 NEGATE_WORD);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
+        currentBgPeriodWidth = requiredBgPeriodWidth(horizScrollBuf, viewportWidth());
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
@@ -125,19 +164,66 @@ public class SwScrlHpz extends AbstractZoneScrollHandler {
     }
 
     /**
-     * ROM {@code loc_5A33C}: {@code Camera_Y_pos_BG_copy} is 3/16 of the offset
-     * camera Y with {@code Screen_shake_offset} removed before scaling and added
-     * back afterwards.
-     *
-     * <p>The sanctuary's {@code Screen_shake_flag} countdown is not modelled yet
-     * (the falling-crystal ceremony only publishes a boolean), so the shake term
-     * is zero here; it folds in at exactly these two points once the ROM counter
-     * exists.
+     * {@code Draw_BG} keeps the 512 px nametable filled with the layout columns the camera is over,
+     * and the Hidden Palace background is not periodic at 512 px (the clouds only occupy layout
+     * columns 1-6). The engine samples its prebuilt plane modulo this width, so the width must reach
+     * the rightmost visible background column (and cover every deform band at once), or the view
+     * past X 512 wraps onto the empty chunks at column 0.
      */
-    private short backgroundY(int cameraY, int yOffset) {
-        int shakeY = 0;
-        int scaled = (((short) (cameraY - shakeY + yOffset)) << 16) >> 4;
-        return (short) (((scaled * 3) >> 16) + shakeY);
+    @Override
+    public int getBgPeriodWidth() {
+        return currentBgPeriodWidth;
+    }
+
+    static int requiredBgPeriodWidth(int[] packedHScroll, int viewportWidth) {
+        int maxRight = Integer.MIN_VALUE;
+        for (int packed : packedHScroll) {
+            // Packed low word is the negated background scroll: background X = -word.
+            int bgX = -(short) packed;
+            maxRight = Math.max(maxRight, bgX + Math.max(320, viewportWidth));
+        }
+        int width = DEFAULT_BG_PERIOD_WIDTH;
+        while (width < maxRight && width < MAX_BG_PERIOD_WIDTH) {
+            width <<= 1;
+        }
+        return width;
+    }
+
+    private static int viewportWidth() {
+        return GameServices.hasRuntime() && GameServices.cameraOrNull() != null
+                ? GameServices.camera().getWidth() & 0xFFFF : 320;
+    }
+
+    @Override
+    public short getVscrollFactorFG() {
+        return foregroundVscroll;
+    }
+
+    /**
+     * ROM {@code Screen_shake_offset} as this frame's {@code HPZS_ScreenEvent} /
+     * {@code HPZS_BackgroundEvent} read it. The sanctuary runtime state owns the
+     * {@code Screen_shake_flag} countdown ({@code ShakeScreen_Setup}); outside a
+     * gameplay runtime there is no shake.
+     */
+    protected int screenShakeOffset() {
+        if (!GameServices.hasRuntime()) {
+            return 0;
+        }
+        return S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry())
+                .map(HpzZoneRuntimeState::appliedScreenShakeOffset)
+                .orElse(0);
+    }
+
+    /**
+     * ROM {@code loc_5A33C} (sonic3k.asm:120204-120216): {@code Camera_Y_pos_BG_copy}
+     * is 3/16 of the offset {@code Camera_Y_pos_copy} with {@code Screen_shake_offset}
+     * removed before scaling ({@code sub.w d4,d0}) and added back afterwards
+     * ({@code add.w d4,d0}), so the background shakes 1:1 with the foreground
+     * instead of at 3/16 amplitude.
+     */
+    private short backgroundY(int cameraYCopy, int screenShakeOffset, int yOffset) {
+        int scaled = (((short) (cameraYCopy - screenShakeOffset + yOffset)) << 16) >> 4;
+        return (short) (((scaled * 3) >> 16) + screenShakeOffset);
     }
 
     /**

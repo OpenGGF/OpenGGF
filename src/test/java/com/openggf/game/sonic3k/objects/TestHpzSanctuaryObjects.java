@@ -48,7 +48,8 @@ class TestHpzSanctuaryObjects {
         assertTrue(pedestal(0, progression, runtime).isDestroyed());
         assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY,
                 pedestal(1, progression, runtime).display());
-        assertFalse(pedestal(1, progression, runtime).isSelectable());
+        assertTrue(pedestal(1, progression, runtime).isSelectable(),
+                "loc_907A8 sets the $38 selection bit for state 1 as well as state 2");
         assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY,
                 pedestal(2, progression, runtime).display());
         assertTrue(pedestal(2, progression, runtime).isSelectable());
@@ -284,36 +285,61 @@ class TestHpzSanctuaryObjects {
         HPZSuperEmeraldObjectInstance pedestal = new HPZSuperEmeraldObjectInstance(
                 new ObjectSpawn(0, 0, 0xB4, 3, 0, false, 0), controller);
         HPZSuperEmeraldReturnEffectObjectInstance effect =
-                new HPZSuperEmeraldReturnEffectObjectInstance(controller);
+                new HPZSuperEmeraldReturnEffectObjectInstance(controller, 3, false);
         ObjectServices services = mock(ObjectServices.class);
         effect.setServices(services);
 
         assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY, pedestal.display());
+        assertEquals(0x1500 + 0xA0, effect.getX(), "word_2E398[3] + $A0");
+        assertEquals(0x350, effect.getY(), "word_2E398+$10 for stage 3");
         effect.update(0, null);
-        assertEquals(0xE000, effect.displayRadiusForTest());
+        // loc_2ED2A draws with the radius from before the subtraction.
+        assertEquals(0xDF00, effect.radiusForTest());
+        assertEquals(0xE0, effect.offsetXForTest(0), "cos 0 = $100: $100*$E000>>16");
+        assertEquals(0, effect.offsetYForTest(0));
         assertArrayEquals(new int[]{1, 2, 3, 4, 5, 6, 7, 8},
                 java.util.stream.IntStream.range(0, 8)
                         .map(effect::mappingFrameForTest).toArray());
-        verify(services).playSfx(
-                com.openggf.game.sonic3k.audio.Sonic3kSfx.SIGNPOST.id);
-        for (int i = 1; i < 225; i++) {
+        for (int i = 1; i < 224; i++) {
             effect.update(i, null);
         }
+        assertTrue(effect.drawsCurrentFrameForTest(), "radius $100 still draws");
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY, pedestal.display());
 
-        assertTrue(runtime.transformationActive());
+        effect.update(224, null);
+        assertTrue(effect.hasCollapsed());
         assertFalse(effect.drawsCurrentFrameForTest(),
                 "loc_2EDAE deletes on borrow without drawing a center frame");
-        assertEquals(HPZSuperEmeraldObjectInstance.Display.COLORED, pedestal.display());
-        verify(services).playSfx(
-                com.openggf.game.sonic3k.audio.Sonic3kSfx.SUPER_EMERALD.id);
-        verify(services, never()).playSfx(
-                com.openggf.game.sonic3k.audio.Sonic3kSfx.PERFECT.id);
-        effect.update(225, null);
-        assertFalse(runtime.transformationActive());
-        assertEquals(HPZSuperEmeraldObjectInstance.Display.COLORED, pedestal.display());
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.COLORED, pedestal.display(),
+                "the borrow frame clears _unkFAC0");
+        assertTrue(runtime.transformationActive(),
+                "_unkFAC1 belongs to the results Hyper message, not the stars");
+        verify(services, never()).playSfx(anyInt());
         assertEquals(7, pedestal.mappingFrameForTest(1));
-        verify(services).playSfx(
-                com.openggf.game.sonic3k.audio.Sonic3kSfx.PERFECT.id);
+    }
+
+    @Test
+    void expandingStarsGrowFromTheMasterEmeraldUntilTheRadiusCarries() {
+        HPZSuperEmeraldReturnEffectObjectInstance effect =
+                new HPZSuperEmeraldReturnEffectObjectInstance(null, 5, true);
+
+        assertEquals(0x1640, effect.getX());
+        assertEquals(0x340, effect.getY());
+        effect.update(0, null);
+        assertTrue(effect.drawsCurrentFrameForTest(), "radius 0 + $100 does not carry");
+        assertEquals(0, effect.offsetXForTest(0));
+        for (int i = 1; i < 255; i++) {
+            effect.update(i, null);
+        }
+        assertTrue(effect.drawsCurrentFrameForTest(), "radius $FE00 still draws");
+        // Lane 0 has turned 254*2 = $1FC -> angle $FC; mulu by $FE00, swap.
+        assertEquals(HPZSuperEmeraldReturnEffectObjectInstance.scale(
+                com.openggf.physics.TrigLookupTable.cosHex(0xFC), 0xFE00),
+                effect.offsetXForTest(0));
+        effect.update(255, null);
+        assertTrue(effect.isFinished(), "loc_2EDBC: $FF00 + $100 carries");
+        assertFalse(effect.drawsCurrentFrameForTest());
+        assertFalse(effect.hasCollapsed(), "the expanding ring never signals the results object");
     }
 
     @Test
@@ -538,9 +564,24 @@ class TestHpzSanctuaryObjects {
         when(services.gameState()).thenReturn(gsm);
         crystal.setServices(services);
 
-        for (int i = 0; i < 24; i++) crystal.update(i, null);
-        assertEquals(8, crystal.screenShakeTimerForTest());
-        assertTrue(gsm.isScreenShakeActive());
+        com.openggf.game.zone.ZoneRuntimeRegistry registry =
+                new com.openggf.game.zone.ZoneRuntimeRegistry();
+        com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState hpz =
+                new com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState(
+                        com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1,
+                        com.openggf.game.PlayerCharacter.SONIC_ALONE);
+        registry.install(hpz);
+        when(services.zoneRuntimeRegistry()).thenReturn(registry);
+
+        for (int i = 0; i < 23; i++) crystal.update(i, null);
+        assertEquals(0, hpz.screenShake().flag(), "no shake before the crystal lands");
+        crystal.update(23, null);
+        // loc_90CF4: move.w #8,(Screen_shake_flag).w (sonic3k.asm:198089).
+        assertEquals(8, hpz.screenShake().flag());
+        assertEquals(0, hpz.screenShake().offset(),
+                "the object only writes the flag; ShakeScreen_Setup produces the offset");
+        assertFalse(gsm.isScreenShakeActive(),
+                "the sanctuary shake is the ROM countdown, not the generic boolean");
         verify(services).playSfx(
                 com.openggf.game.sonic3k.audio.Sonic3kSfx.BOSS_LASER.id);
     }

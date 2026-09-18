@@ -31,6 +31,15 @@ class TestFbzFinalEggCapsule {
         GraphicsManager.getInstance().resetState();
     }
 
+    @Test
+    void capsuleBalanceUsesObjectDataWidthWithoutFullSolidPadding() {
+        var capsule = new FbzEndEggCapsuleInstance(0x307C, 0x660);
+        assertEquals(0x20, capsule.getBalanceWidthPixels(),
+                "ObjDat_EggCapsule width_pixels=$20 is Sonic_Move's balance operand");
+        assertEquals(0x2B, capsule.getSolidParams().halfWidth(),
+                "SolidObjectFull retains its separate $B contact padding");
+    }
+
     @Test void finalResultsCapsuleOwnsADedicatedRealSstGraph() {
         assertFalse(AbstractS3kUprightEggCapsuleInstance.class.isAssignableFrom(FbzEndEggCapsuleInstance.class),
                 "FBZ must not widen the collapsed shared upright capsule");
@@ -378,10 +387,102 @@ class TestFbzFinalEggCapsule {
         dead.set(false);
         capsule.update(70,h.player);
         assertTrue(capsule.tailsEndingPoseAppliedForTest());
-        InOrder order = inOrder(controller);
+        InOrder order = inOrder(controller, p2);
         order.verify(controller).setController2SignedLocked(true);
         order.verify(controller).setController2SignedLocked(false);
-        order.verify(controller).queueNativeEndingPoseForNextPlayerSlot();
+        order.verify(p2).setAnimationId(com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.VICTORY);
+        verify(controller, never()).queueNativeEndingPoseForNextPlayerSlot();
+        verify(p2).setXSpeed((short) 0);
+        verify(p2).setYSpeed((short) 0);
+        verify(p2).setGSpeed((short) 0);
+        verify(p2, never()).setControlLocked(false);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void endingPoseRetainsExistingCapsuleSupportButRejectsNewSignedContacts(boolean onButton) throws Exception {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var player = fixture.sprite();
+        var capsule = manager.createDynamicObject(() -> new FbzEndEggCapsuleInstance(0x307C, 0x660));
+        AbstractObjectInstance support = onButton
+                ? manager.createDynamicObject(() -> new FbzEndEggCapsuleButtonInstance(
+                        new ObjectSpawn(0x307C, 0x63C, 0, 0, 0, false, 0), capsule))
+                : capsule;
+        int halfHeight = onButton ? 4 : 0x18;
+        fixture.camera().setX((short) 0x2F80);
+        fixture.camera().setY((short) 0x600);
+        com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+        AbstractObjectInstance.updateCameraBounds(0x2F80, 0x600, 0x30C0, 0x6E0, 0);
+        player.setAir(true);
+        player.setRolling(false);
+        player.setCentreX((short) support.getX());
+        player.setCentreY((short) (support.getY() - halfHeight - player.getYRadius() + 2));
+        player.setYSpeed((short) 0x100);
+        support.snapshotPreUpdatePosition();
+        assertTrue(support.isWithinSolidContactBounds(), "visible support");
+        assertFalse(player.getDead());
+        assertFalse(player.isDebugMode());
+        manager.processImmediateInlineSolidCheckpoint(support, player, List.of());
+        assertTrue(manager.isRidingObject(player, support), () -> "ordinary landing establishes the real support: x="
+                + player.getCentreX() + " y=" + player.getCentreY() + " radius=" + player.getYRadius()
+                + " air=" + player.getAir() + " controlled=" + player.isObjectControlled());
+        var pose = FbzEndEggCapsuleInstance.class.getDeclaredMethod("setEndingPose", AbstractPlayableSprite.class);
+        pose.setAccessible(true);
+        pose.invoke(capsule, player);
+        int x = player.getCentreX();
+        int y = player.getCentreY();
+        for (int frame = 0; frame < 3; frame++) {
+            manager.processImmediateInlineSolidCheckpoint(support, player, List.of());
+            assertTrue(manager.isRidingObject(player, support), "signed control retains the standing-bit branch");
+            assertFalse(player.getAir());
+            assertEquals(x, player.getCentreX());
+            assertEquals(y, player.getCentreY(), "MvSonicOnPtfm rejects signed-control position writes");
+        }
+        var newcomer = new com.openggf.sprites.playable.Sonic("CAPSULE_NEW_CONTACT", (short) 0, (short) 0) {
+            { setGameRulesForTest(com.openggf.game.rules.GameRules.SONIC_3K); }
+        };
+        newcomer.setCentreX((short) support.getX());
+        newcomer.setCentreY((short) (support.getY() - halfHeight - newcomer.getYRadius() + 2));
+        newcomer.setAir(true);
+        pose.invoke(capsule, newcomer);
+        int newcomerY = newcomer.getCentreY();
+        manager.processImmediateInlineSolidCheckpoint(support, newcomer, List.of());
+        assertFalse(manager.isRidingObject(newcomer, support), "signed control cannot create a new contact");
+        assertTrue(newcomer.getAir());
+        assertEquals(newcomerY, newcomer.getCentreY());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void landedSidekickRefreshesCapsuleBodyAndButtonCodeBank(boolean onButton) {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var capsule = manager.createDynamicObject(() -> new FbzEndEggCapsuleInstance(0x307C, 0x660));
+        AbstractObjectInstance support = onButton
+                ? manager.createDynamicObject(() -> new FbzEndEggCapsuleButtonInstance(
+                        new ObjectSpawn(0x307C, 0x63C, 0, 0, 0, false, 0), capsule))
+                : capsule;
+        var tails = new com.openggf.sprites.playable.Tails("tails_capsule", (short) 0, (short) 0);
+        tails.setCpuControlled(true);
+        var cpu = new SidekickCpuController(tails, fixture.sprite());
+        fixture.camera().setX((short) 0x2F80);
+        fixture.camera().setY((short) 0x600);
+        AbstractObjectInstance.updateCameraBounds(0x2F80, 0x600, 0x30C0, 0x6E0, 0);
+        tails.setAir(true);
+        tails.setCentreX((short) support.getX());
+        tails.setCentreY((short) (support.getY() - (onButton ? 4 : 0x18) - tails.getYRadius() + 2));
+        tails.setYSpeed((short) 0x100);
+        support.snapshotPreUpdatePosition();
+
+        manager.processImmediateInlineSolidCheckpoint(support, fixture.sprite(), List.of(tails));
+
+        assertTrue(manager.isRidingObject(tails, support));
+        cpu.refreshS3kInteractLatchFromCurrentRide();
+        assertEquals(8, cpu.getDiagnosticInteractId(),
+                "sub_13EFC reads Obj_EggCapsule / loc_86754's native code-pointer high word");
     }
 
     @Test void capsuleDoesNotConsumeResultsOwnedExitFlags() {
@@ -443,6 +544,9 @@ class TestFbzFinalEggCapsule {
         when(camera.getY()).thenReturn((short) 0x600);
         when(camera.getWidth()).thenReturn((short) 320);
         when(camera.getHeight()).thenReturn((short) 224);
+        // The Sprite_CheckDelete range is width-driven from the shared bounds
+        // snapshot; pin it to the native window this harness mocks.
+        AbstractObjectInstance.updateCameraBounds(0x2F80, 0x600, 0x2F80 + 320, 0x600 + 224, 0);
         GameStateManager gameState = new GameStateManager();
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 0x12345678L);
         RecordingServices services = new RecordingServices(holder,player,nativeP2,camera,gameState,rng);

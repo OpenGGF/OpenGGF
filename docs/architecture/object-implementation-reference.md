@@ -7,6 +7,12 @@ inventory behind them.
 
 See also: [Engine map](engine-map.md), [AGENTS_S3K.md](../../AGENTS_S3K.md).
 
+New or changed object/boss work must cover its affected obligations in the
+[zone and act testing standard](../guide/contributing/level-test-standard.md),
+including interaction breadth and applicable rewind capture/restore/replay spots.
+Update the owning act's matrix and [backlog](../status/level-test-coverage.md);
+object-local tests do not substitute for production registration/lifecycle evidence.
+
 ## Registration and lifecycle
 
 Objects use a factory pattern with game-specific registries. `ObjectRegistry` creates an

@@ -139,6 +139,10 @@ public final class ConfigCatalog {
         put(SONIC_1_ROM, of("roms", "sonic1", STRING, "Filename of the Sonic 1 ROM"));
         put(SONIC_2_ROM, of("roms", "sonic2", STRING, "Filename of the Sonic 2 ROM"));
         put(SONIC_3K_ROM, of("roms", "sonic3k", STRING, "Filename of the Sonic 3&K ROM"));
+        put(ROMS_DIRECTORY, of("roms", "directory", STRING,
+                "Directory scanned for ROM images (*.gen, *.bin, *.md); images are identified by size and header"));
+        put(ROMS_PREFER_COMPOSITE, of("roms", "preferComposite", BOOL,
+                "Prefer separate Sonic 3 and Sonic & Knuckles images over a single lock-on dump"));
         put(DEFAULT_ROM, ofEnum("roms", "default", "Which game to load by default",
                 Set.of("s1", "s2", "s3k")));
 
@@ -340,7 +344,7 @@ public final class ConfigCatalog {
         put(FRAME_STEP_KEY, of("debug.keys", "frameStep", KEY,
                 "Step forward one frame while paused; the gamepad right bumper (RB/R1) also steps a frame"));
         put(DEBUG_LAST_CHECKPOINT_KEY, of("debug.keys", "lastCheckpoint", KEY,
-                "Teleport to the last checkpoint"));
+                "Reload at the furthest-right checkpoint"));
         put(LEVEL_SELECT_KEY, of("debug.keys", "levelSelect", KEY, "Open the level select screen"));
         put(SUPER_SONIC_DEBUG_KEY, of("debug.keys", "superSonic", KEY, "Toggle Super Sonic debug mode"));
         put(GIVE_EMERALDS_KEY, of("debug.keys", "giveEmeralds", KEY, "Give all chaos emeralds"));

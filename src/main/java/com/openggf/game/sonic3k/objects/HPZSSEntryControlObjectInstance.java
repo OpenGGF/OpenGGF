@@ -44,6 +44,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     private boolean freshLockApplied;
     private boolean finalPanStarted;
     private boolean conversionSequenceStarted;
+    /** The controller was loaded behind {@code SpecialStage_Results} with {@code HPZ_special_stage_completed} set. */
+    private boolean resultsBackdrop;
 
     private record RewindExtra(
             S3kSanctuaryRuntimeState.Snapshot runtime,
@@ -59,7 +61,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             boolean playersLocked,
             boolean freshLockApplied,
             boolean finalPanStarted,
-            boolean conversionSequenceStarted)
+            boolean conversionSequenceStarted,
+            boolean resultsBackdrop)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HPZSSEntryControlObjectInstance(ObjectSpawn spawn) {
@@ -103,11 +106,53 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         }
     }
 
+    /**
+     * Rebuilds this controller as {@code SpecialStage_Results} leaves it: {@code loc_2E226}
+     * sets {@code HPZ_special_stage_completed} after {@code Load_Sprites}, so the first
+     * {@code Obj_HPZSSEntryControl} pass takes {@code loc_909EA}, allocates all seven
+     * pedestals and deletes itself (sonic3k.asm:197781-197792). A cleared stage also left
+     * {@code _unkFAC0} = stage|$80 and {@code _unkFAC1} = $FF (sonic3k.asm:63187-63192);
+     * the runtime's pedestal-transform and return-transform flags model those two bytes.
+     * Must be called before the controller's first update.
+     */
+    public void hostSpecialStageResults(int stageIndex, boolean succeeded) {
+        if (progression == null) {
+            progression = S3kEmeraldProgression.from(services().gameState());
+        }
+        reentry = true;
+        resultsBackdrop = true;
+        runtime = new S3kSanctuaryRuntimeState(progression, true, stageIndex, succeeded);
+    }
+
+    public boolean isHostingSpecialStageResults() {
+        return resultsBackdrop;
+    }
+
+    /**
+     * loc_2E9D8 {@code clr.b (_unkFAC1).w}: the Hyper message has arrived, releasing the
+     * Master Emerald's {@code loc_9071A} palette rotation.
+     */
+    public void completeResultsReturnTransformation() {
+        ensureState();
+        runtime.completeReturnTransformation();
+    }
+
+    /** {@code _unkFAC1} as the results reveal sees it. */
+    public boolean resultsReturnTransformationActive() {
+        ensureState();
+        return runtime.transformationActive();
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         ensureState();
         if (!childrenSpawned) {
             spawnInitialChildren();
+        }
+        if (resultsBackdrop) {
+            // loc_909F4 ends in Delete_Current_Sprite; the engine keeps the controller
+            // inert because its children read the shared runtime through it.
+            return;
         }
         if (!reentry && !freshLockApplied && player instanceof AbstractPlayableSprite sprite) {
             applyFreshLockToParticipants(sprite);
@@ -392,9 +437,6 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             spawnChild(() -> new HPZSuperEmeraldObjectInstance(
                     dynamicSpawn(0, 0, 0xB4, index), this));
         }
-        if (runtime.transformationActive()) {
-            spawnChild(() -> new HPZSuperEmeraldReturnEffectObjectInstance(this));
-        }
     }
 
     S3kEmeraldProgression progressionForChild() {
@@ -486,7 +528,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
                         exitBandArmed, exitRequested, introSignal, introCrystalSpawned,
                         conversionTimer, conversionSpawnCursor, cameraTargetX,
                         playersLocked, freshLockApplied, finalPanStarted,
-                        conversionSequenceStarted));
+                        conversionSequenceStarted, resultsBackdrop));
     }
 
     @Override
@@ -508,6 +550,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             freshLockApplied = extra.freshLockApplied();
             finalPanStarted = extra.finalPanStarted();
             conversionSequenceStarted = extra.conversionSequenceStarted();
+            resultsBackdrop = extra.resultsBackdrop();
         }
     }
 }

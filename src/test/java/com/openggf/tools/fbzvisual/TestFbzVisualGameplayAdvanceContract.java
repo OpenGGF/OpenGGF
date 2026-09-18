@@ -37,6 +37,45 @@ class TestFbzVisualGameplayAdvanceContract {
     }
 
     @Test
+    void productionSetupAndTitleIterationsDoNotConsumeRequestedGameplayFrames() {
+        class Stepper implements HiddenGlCaptureSession.GameplayStepper {
+            int iterations;
+            int frame;
+            public GameMode mode() {
+                return iterations == 2 || iterations == 3 ? GameMode.TITLE_CARD : GameMode.LEVEL;
+            }
+            public int frame() { return frame; }
+            public boolean setupPending() { return iterations < 4; }
+            public void step() { if (++iterations > 4) frame++; }
+        }
+        Stepper stepper = new Stepper();
+        HiddenGlCaptureSession.advanceGameplayFrames(2, stepper);
+        org.junit.jupiter.api.Assertions.assertEquals(6, stepper.iterations);
+        org.junit.jupiter.api.Assertions.assertEquals(2, stepper.frame);
+    }
+
+    @Test
+    void unknownNoOpAndNonReleasingSetupCannotBecomeGameplayEvidence() {
+        HiddenGlCaptureSession.GameplayStepper noOp = new HiddenGlCaptureSession.GameplayStepper() {
+            public GameMode mode() { return GameMode.LEVEL; }
+            public int frame() { return 0; }
+            public boolean setupPending() { return false; }
+            public void step() { }
+        };
+        assertThrows(IllegalStateException.class,
+                () -> HiddenGlCaptureSession.advanceGameplayFrames(1, noOp));
+        HiddenGlCaptureSession.GameplayStepper stuck = new HiddenGlCaptureSession.GameplayStepper() {
+            public GameMode mode() { return GameMode.TITLE_CARD; }
+            public int frame() { return 0; }
+            public boolean setupPending() { return true; }
+            public void step() { }
+        };
+        assertTrue(assertThrows(IllegalStateException.class,
+                () -> HiddenGlCaptureSession.advanceGameplayFrames(1, stuck))
+                .getMessage().contains("1024"));
+    }
+
+    @Test
     void nativeStartUsesReviewedAmendmentInsteadOfAssumingFrameOneTimers() throws Exception {
         Map<String, Object> pre = nativeStartState(0, 0);
         Map<String, Object> post = nativeStartState(37, 5);

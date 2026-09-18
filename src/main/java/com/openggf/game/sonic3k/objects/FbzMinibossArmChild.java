@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -97,9 +98,11 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
             case PATROL -> updatePatrol(player);
             case NORMAL_SWING -> updateNormalSwing();
             case NORMAL_HOLD -> {
-                updatePatrolAngle();
+                // Routine $E dispatches Obj_Wait only; loc_6F360 releases
+                // the arm's bit 3 before clearing the root's returned bit.
                 if (waitExpired()) {
                     stateOrdinal = State.WAIT_CHAIN_RETURN.ordinal();
+                    clearControlBit(ARM_TERMINAL_EDGE);
                     boss.clearRootBit(FbzMinibossInstance.ROOT_ARM_RETURNED);
                 }
             }
@@ -172,7 +175,8 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
             PlayableEntity queried = services().playerQuery().mainPlayerOrNull();
             if (queried != null) p1 = queried;
         }
-        if (p1 == null) return;
+        // loc_6F2E4 tests Player_1+$40 (jumping), not object_control at $2E.
+        if (p1 == null || (p1 instanceof AbstractPlayableSprite sprite && sprite.isJumping())) return;
         int playerX = p1.getCentreX();
         boolean facesPlayer = side == 0 ? playerX < boss.getX() : playerX >= boss.getX();
         if (facesPlayer && boss.claimOutwardAttack(this)) {
@@ -191,7 +195,9 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
         int target = side == 0 ? -0x40 : 0x40;
         int step = side == 0 ? 2 : -2;
         angle = signedByte(angle + step);
-        if (angle == target) angle = target;
+        // loc_6F338 calls sub_6F830 until the terminal link signals completion.
+        // Its unsigned bound clamps every pass, including odd-angle overshoot.
+        if (side == 0 ? (angle & 0xFF) >= 0xC0 : (angle & 0xFF) <= 0x40) angle = target;
     }
 
     private void updateOutwardArmed() {
@@ -209,6 +215,9 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
         }
         angle = signedByte(angle + angleStep);
     }
+
+    int nativeXFixed() { return xFixed; }
+    int nativeYFixed() { return yFixed; }
 
     private boolean waitExpired() { return --timer < 0; }
 

@@ -226,6 +226,7 @@ class TestFbz2SubbossRewind {
                 new ObjectSpawn(0x2B40,0x5F0,0xAB,0,0,true,417)));
         h.step(0);
         Fbz2SubbossLaserChild laser=h.manager.createDynamicObject(()->new Fbz2SubbossLaserChild(root));
+        laser.update(0,h.player); // loc_70192 setup-only dispatch
         for(int call=1;call<=302;call++)laser.update(call,h.player);
         assertTrue(h.manager.activeObjectsOfType(Fbz2SubbossRumbleController.class).isEmpty());
         assertTrue(h.manager.activeObjectsOfType(Fbz2SubbossExplosionController.class).isEmpty());

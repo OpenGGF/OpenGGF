@@ -20,6 +20,14 @@ abstract class AbstractFbz2SubbossChild extends AbstractObjectInstance {
     Fbz2SubbossInstance root() { return root; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
+    // CreateChild1/3_Normal retain ObjDat_FBZ2Subboss's art_tile bit 15;
+    // SetUp_ObjAttributes3 changes the SAT bucket, not the VDP priority bit.
+    // The Robotnik/EggRobo child installs the same high bit via ObjDat3_703BC.
+    @Override public boolean isHighPriority() { return true; }
+    // These child routines use Draw_Sprite while attached. Their own event/escape
+    // branches delete them; a generic distance check can remove the control panel
+    // and Robotnik before the approaching camera reaches their side of the room.
+    @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     public void offsetNativePositionWordsPreserveSubpixel(int dx, int dy) {
         x = (x + dx) & 0xFFFF; y = (y + dy) & 0xFFFF;
     }

@@ -547,6 +547,21 @@ public final class ObjectSolidContactController {
     // Engine-side push ownership for the synthetic off-screen release above.
     // Not a native predicate: it decides whether that gate is standing in for a
     // solid whose tail the ROM still runs.
+    private void clearPushAfterSignedControlRejection(PlayableEntity player,
+            ObjectInstance instance, SolidObjectProvider provider) {
+        // A dispatched native full-solid helper branches from its signed
+        // object_control gate to the ordinary no-contact push release.
+        // S3K loc_1DFFE -> loc_1E0A2 still reads this object's pushing bit;
+        // controller ownership does not suppress that tail's animation word.
+        if (!instance.isSkipSolidContactThisFrame()
+                && isSignedObjectControlNewSolidContactRejected(player, instance)
+                && clearObjectPushingBit(player, instance)) {
+            publishSolidPushReleaseAnimationWord(player, instance);
+            player.setPushing(false);
+            provider.setPlayerPushing(player, false);
+        }
+    }
+
     private boolean offscreenReleaseStillOwnsWalkRunWord(PlayableEntity player, ObjectInstance instance) {
         if (!(player instanceof AbstractPlayableSprite sprite)) {
             return false;
@@ -785,6 +800,46 @@ public final class ObjectSolidContactController {
         objectStandingBitSnapshot.clear();
         standingBitEstablishedThisFrame.clear();
         controllerAirborneReleaseSupports.clear();
+    }
+
+    void inheritRetainedSstContacts(ObjectSolidContactController previous,
+            Collection<? extends ObjectInstance> carried) {
+        Set<Object> retainedKeys = new HashSet<>();
+        Set<ObjectInstance> retainedObjects = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (ObjectInstance object : carried) {
+            retainedObjects.add(object);
+            retainedKeys.add(airUnseatLatchKeyFor(object));
+        }
+        inheritRetainedLatchBits(previous.objectStandingBitSet, objectStandingBitSet, retainedKeys);
+        inheritRetainedLatchBits(previous.objectPushingBitSet, objectPushingBitSet, retainedKeys);
+        for (var entry : previous.ridingStates.entrySet()) {
+            RidingState ride = entry.getValue();
+            if (!retainedObjects.contains(ride.object)) {
+                continue;
+            }
+            // Native continued riding takes its movement baseline from the
+            // retained object's position at its next execution. The transition
+            // coordinate scan has already rebased that position; carrying the
+            // old manager's world coordinate would apply the offset twice.
+            int x = ride.object.getX();
+            int y = ride.object.getY();
+            if (ride.pieceIndex >= 0 && ride.object instanceof MultiPieceSolidProvider multi) {
+                x = multi.getPieceX(ride.pieceIndex);
+                y = multi.getPieceY(ride.pieceIndex);
+            }
+            putRidingState(entry.getKey(), ride.object, x, y, ride.pieceIndex);
+        }
+    }
+
+    private static void inheritRetainedLatchBits(Map<PlayableEntity, Set<Object>> source,
+            Map<PlayableEntity, Set<Object>> target, Set<Object> retainedKeys) {
+        for (var entry : source.entrySet()) {
+            for (Object key : entry.getValue()) {
+                if (retainedKeys.contains(standingBitOwnerOf(key))) {
+                    target.computeIfAbsent(entry.getKey(), player -> new HashSet<>()).add(key);
+                }
+            }
+        }
     }
 
     ObjectManagerSnapshot.SolidContactState captureRewindState() {
@@ -1579,7 +1634,9 @@ public final class ObjectSolidContactController {
             return null;
         }
         if (player.getDead()) {
-            clearDeadPlayerStaleStandingBit(player, instance);
+            if (!clearDeadPlayerStaleStandingBit(player, instance)) {
+                clearDeadPlayerOffscreenPush(player, instance);
+            }
             ridingStates.remove(player);
             return null;
         }
@@ -1838,6 +1895,7 @@ public final class ObjectSolidContactController {
             return null;
         }
         if (blocksSolidContacts(player, instance)) {
+            clearPushAfterSignedControlRejection(player, instance, provider);
             return null;
         }
         if (instance.isSkipSolidContactThisFrame()) {
@@ -3084,8 +3142,11 @@ public final class ObjectSolidContactController {
             return;
         }
         SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
-        if (blocksSolidContacts(player, instance)
-                || (instance.isSkipSolidContactThisFrame() && instance != ridingObject)) {
+        if (blocksSolidContacts(player, instance)) {
+            clearPushAfterSignedControlRejection(player, instance, provider);
+            return;
+        }
+        if (instance.isSkipSolidContactThisFrame() && instance != ridingObject) {
             return;
         }
         if (provider instanceof MultiPieceSolidProvider multiPiece) {
@@ -4030,7 +4091,7 @@ public final class ObjectSolidContactController {
             // rather than a signed -1.
             sampleX = ((~sampleX) + width2) & 0xFFFF;
         }
-        sampleX = sampleX >>> 1;
+        sampleX = sampleX >>> slopedAdapter.provider().getSlopeSampleShift();
         Integer slopeSampleValue = slopedAdapter.provider().sampleSlopeByte(sampleX);
         if (slopeSampleValue == null) {
             return null;
@@ -4059,7 +4120,13 @@ public final class ObjectSolidContactController {
         }
         int relY = playerCenterY - baseY + 4 + verticalOverlapCompensation;
 
-        if (relY < minRelY || relY >= maxTop * 2) {
+        Integer directTopLimit = topSolidOnly && !riding
+                ? slopedAdapter.provider().getDirectTopLandingOverlapLimit() : null;
+        // S3K loc_1E45A: BHI rejects a positive surface-minus-feet result;
+        // CMP.W #-$10 / BLO also rejects zero. Only overlaps 1..16 land.
+        if (directTopLimit != null) minRelY = 1;
+        int verticalLimit = directTopLimit != null ? directTopLimit : maxTop * 2;
+        if (relY < minRelY || relY >= verticalLimit) {
             return null;
         }
 
@@ -4142,9 +4209,13 @@ public final class ObjectSolidContactController {
             absDistX = distX;
         }
 
+        Integer directTopLimit = topSolidOnly && !sticky && instance instanceof SlopedSolidProvider sloped
+                ? sloped.getDirectTopLandingOverlapLimit() : null;
         int distY;
         int absDistY;
-        if (relY <= maxTop) {
+        // Direct top helpers compare feet-relative overlap, even when it exceeds
+        // the radius of a rolling player; they have no bottom-contact branch.
+        if (directTopLimit != null || relY <= maxTop) {
             distY = relY;
             absDistY = distY;
         } else {
@@ -4162,7 +4233,7 @@ public final class ObjectSolidContactController {
 
         // Sonic 1 top-solid objects use PlatformObject/SlopeObject semantics:
         // top-landing is resolved purely by X-range + top Y-window (no side-priority compare).
-        if (topSolidOnly && usesUnifiedCollisionModel(player)) {
+        if (topSolidOnly && (directTopLimit != null || usesUnifiedCollisionModel(player))) {
             if (player.getYSpeed() < 0) {
                 return null;
             }
@@ -4194,7 +4265,8 @@ public final class ObjectSolidContactController {
             }
             boolean rejectsZeroDistanceTopLanding = detectionDistY == 0
                     && rejectsZeroDistanceTopSolidLanding(instance);
-            if (detectionDistY < 0 || detectionDistY >= 0x10 || rejectsZeroDistanceTopLanding) {
+            int overlapLimit = directTopLimit != null ? directTopLimit : 0x10;
+            if (detectionDistY < 0 || detectionDistY >= overlapLimit || rejectsZeroDistanceTopLanding) {
                 if (rejectsZeroDistanceTopLanding) {
                     notifyZeroDistanceTopSolidLandingRejected(instance, player);
                 }
@@ -4652,7 +4724,9 @@ public final class ObjectSolidContactController {
         // ROM: SolidObject_InsideBottom (s2.asm:35307-35333)
         // When y_vel == 0 and player is on ground, the ROM branches to SolidObject_Squash
         // which checks horizontal overlap and kills the player if sandwiched.
-        if (player.getYSpeed() == 0 && !player.getAir()) {
+        if (!player.getAir() && (player.getYSpeed() == 0
+                || (instance instanceof SolidObjectProvider provider
+                    && provider.groundedBottomContactAlwaysSquashes()))) {
             // ROM: SolidObject_Squash (s2.asm:35336-35361)
             // mvabs.w d0,d4; cmpi.w #$10,d4; blo.w SolidObject_LeftRight
             // If player is near the horizontal edge (absDistX < 16), push sideways instead.
@@ -4839,6 +4913,34 @@ public final class ObjectSolidContactController {
     private void notifyZeroDistanceTopSolidLandingRejected(ObjectInstance instance, PlayableEntity player) {
         if (instance instanceof SolidObjectProvider provider) {
             provider.onRejectedZeroDistanceTopSolidLanding(player);
+        }
+    }
+
+    private void clearDeadPlayerOffscreenPush(PlayableEntity player, ObjectInstance instance) {
+        if (!(instance instanceof SolidObjectProvider provider)) {
+            return;
+        }
+        SolidRoutineProfile profile = provider.getSolidRoutineProfile();
+        if (!isSolidObjectOffscreenGateEnabled(player)
+                || profile.bypassesOffscreenSolidGate()
+                || profile.topSolidOnly()
+                || profile.monitorSolidity()
+                || instance instanceof SlopedSolidProvider
+                || !provider.isSolidFor(player)
+                || suppressesSolidPassThisFrame(instance, player)
+                || shouldSkipOffscreenSidekickFullSolid(player, instance, profile)
+                || instance.isWithinSolidContactBounds()) {
+            return;
+        }
+        // Retail SolidObjectFull checks the object's render bounds before
+        // routine >= 6. Its offscreen loc_1DF88 -> loc_1E0A2 tail still writes
+        // WORD #1 to anim when this object's push bit survives Kill_Character
+        // (sonic3k.asm:41287-41316,41517-41528; FixBugs=0).
+        // S1 SolidObject and S2 SolidObject_OnScreenTest use the same ordering.
+        if (clearObjectPushingBit(player, instance)) {
+            publishSolidPushReleaseAnimationWord(player, instance);
+            player.setPushing(false);
+            provider.setPlayerPushing(player, false);
         }
     }
 
@@ -5050,12 +5152,12 @@ public final class ObjectSolidContactController {
         } else if (relX >= width2) {
             relX = width2 - 1;
         }
-        // ROM: lsr.w #1,d0 — shift BEFORE flip (matches SlopeObject2/MvSonicOnSlope)
-        int sampleX = relX >> 1;
+        // Sloped2 shifts before flip; full-resolution Sloped omits the shift.
+        int sampleShift = sloped.getSlopeSampleShift();
+        int sampleX = relX >> sampleShift;
         if (sloped.isSlopeFlipped()) {
-            // ROM: not.w d0 / add.w d1,d0 — where d1 = halfWidth
-            // not.w gives ~sampleX = -sampleX - 1, then + halfWidth
-            sampleX = halfWidth - sampleX - 1;
+            // NOT.W then add the table width: width - sampleX - 1.
+            sampleX = (width2 >> sampleShift) - sampleX - 1;
         }
         if (sampleX < 0) {
             sampleX = 0;

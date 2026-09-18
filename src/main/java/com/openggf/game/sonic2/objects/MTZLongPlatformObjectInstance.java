@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -25,7 +26,6 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.LazyMappingHolder;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -291,6 +291,14 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears
         // its respawn bit from objoff_34; getOutOfRangeReferenceX exposes that
         // anchor to the shared ObjectManager out_of_range path.
+    }
+
+    // Obj65_Init move.b #4,priority(a0): docs/s2disasm/s2.asm:52863.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override
@@ -645,13 +653,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
 
     private List<PlayableEntity> proximityParticipants(AbstractPlayableSprite updatePlayer) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(PROXIMITY_PARTICIPANTS);
-        if (updatePlayer == null || participants.contains(updatePlayer)) {
-            return participants;
-        }
-        ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-        withUpdatePlayer.add(updatePlayer);
-        withUpdatePlayer.addAll(participants);
-        return withUpdatePlayer;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     /**

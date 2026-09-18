@@ -1,6 +1,7 @@
 package com.openggf.util;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomChannel;
 import com.openggf.data.RomByteReader;
 import com.openggf.level.Pattern;
 import com.openggf.data.compression.KosinskiReader;
@@ -80,11 +81,8 @@ public final class PatternDecompressor {
      * @throws IOException on decompression failure
      */
     public static Pattern[] nemesis(Rom rom, int address) throws IOException {
-        synchronized (rom) {
-            var channel = rom.getFileChannel();
-            channel.position(address);
-            byte[] data = NemesisReader.decompress(channel);
-            return fromBytes(data);
+        try (var channel = RomChannel.at(rom, address)) {
+            return fromBytes(NemesisReader.decompress(channel));
         }
     }
 
@@ -136,11 +134,8 @@ public final class PatternDecompressor {
      * @throws IOException on decompression failure
      */
     public static Pattern[] kosinski(Rom rom, int address) throws IOException {
-        synchronized (rom) {
-            var channel = rom.getFileChannel();
-            channel.position(address);
-            byte[] data = KosinskiReader.decompress(channel);
-            return fromBytes(data);
+        try (var channel = RomChannel.at(rom, address)) {
+            return fromBytes(KosinskiReader.decompress(channel));
         }
     }
 
@@ -153,11 +148,8 @@ public final class PatternDecompressor {
      * @throws IOException on decompression failure
      */
     public static Pattern[] kosinskiModuled(Rom rom, int address) throws IOException {
-        synchronized (rom) {
-            var channel = rom.getFileChannel();
-            channel.position(address);
-            byte[] data = KosinskiReader.decompressModuled(channel);
-            return fromBytes(data);
+        try (var channel = RomChannel.at(rom, address)) {
+            return fromBytes(KosinskiReader.decompressModuled(channel));
         }
     }
 

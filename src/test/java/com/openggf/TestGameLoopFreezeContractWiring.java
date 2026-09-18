@@ -169,6 +169,29 @@ class TestGameLoopFreezeContractWiring {
     }
 
     @Test
+    void titleCardGapRowsCannotLeaveASourceGameplayPassForTheDestination() {
+        for (boolean released : new boolean[] {false, true}) {
+            GameplayModeContext gameplay = install(new Sonic2GameModule());
+            TraceRunFrameDriver driver = new TraceRunFrameDriver();
+            gameplay.installTraceRunFrameDriver(driver);
+            gameplay.beginRunTransitionGap();
+            var admission = new LevelIterationAdmissionController();
+            executeDriverRow(driver, sharedGapRow(0), () -> {
+                assertEquals(LevelFrameResult.SETUP_ONLY, admission.admit(
+                        GameMode.TITLE_CARD, () -> released,
+                        () -> LevelFrameResult.SETUP_ONLY,
+                        mock(LevelManager.class), gameplay, false,
+                        mock(com.openggf.game.recording.UserRecordingRuntimeControls.class),
+                        () -> { }, () -> { }, () -> { }));
+            });
+            executeDriverRow(driver, sharedGapRow(1), () ->
+                    assertFalse(TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop(
+                                    GameMode.LEVEL, false),
+                            "A title-card iteration already belongs to the destination load"));
+        }
+    }
+
+    @Test
     void suppressedLevelRowDoesNotAdvanceOrStartAnInLevelTitleOverlay() throws Exception {
         GameplayModeContext gameplay = install(new Sonic2GameModule());
         LevelManager level = mock(LevelManager.class);

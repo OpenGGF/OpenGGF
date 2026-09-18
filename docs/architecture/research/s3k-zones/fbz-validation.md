@@ -11,6 +11,72 @@ an aggregate report generator is separate tooling work; passing those Java tests
 does not certify the historical 32 evidence groups below. A FAIL means required
 evidence is absent or a named comparison failed; it is not a gameplay waiver.
 
+## Current bounded whole-frame acceptance (2026-09-14 candidate)
+
+On pinned base `6897a6048` plus uncommitted `ai-fbz-native-loading` changes,
+**11 of the 14 established boundary afterstates now match the entire 320×224
+frame**, with zero retained Plane-B and palette differences: B1 both ways,
+B3 both ways, B4 reverse, B5 both ways, B6 both ways and Act 2 both ways.
+B5/Act 2 retain their declared one-time control prerequisite. B6 now uses the
+same fresh native entry as the other Act 1 fixtures, eliminating inherited
+score/lives differences without editing gameplay state to match screenshots.
+Root recomputed the measurements and inspected the native/engine frame pairs.
+
+The three remaining afterstates are B2 forward/reverse (984/966 world pixels)
+and B4 forward (366), retaining the separately identified SAT presentation gap.
+Before/mid-redraw samples and other frozen event checkpoints remain incomplete;
+this is not whole-zone visual certification. Evidence under the external
+`fbz-native-loading-20260914` task directory: `boundary-hud-clock-comparison.json`,
+`boundary6-fresh-hud-clock-comparison.json`, and `boundary-whole-frame-review.json`.
+The dated [completion plan](../../plans/2026-09-14-fbz-completion.md) records
+source ownership, commands, focused validation and rejected measurements.
+
+## GPU sampling and retained background history (2026-09-14)
+
+The remaining-visual worktree based on `51677cdd2` isolated two different causes.
+Actual GPU uniform and descriptor/lookup/atlas readback proved foreground camera
+and VScroll `$070C` were correct. The old shader subtracted `0.5` before scaling
+and flooring: on Radeon RX 9070 XT/radeonsi ACO, reciprocal rounding sampled the
+previous row at 223 of 224 native rows (also 223 of 448 double-size rows).
+Keeping fragment centres through the conversion fixes both foreground and
+background shaders without changing camera, viewport offsets or ROM assets.
+`TestShaderPixelCentreSampling` exercises both actual shaders at 320x224,
+640x448, 960x672 and fractional 528x370 viewports, including offset boundaries.
+The focused native-display command
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Dtest=TestShaderPixelCentreSampling,TestForegroundWindowRendering,TestTilemapGpuRendererPerLineSampling test`
+completed 4 tests, no failures/errors/skips (19.020 seconds). Packaging with
+`-DskipTests package` took 38.210 seconds and is not another test pass.
+
+The corrected paired start artifact SHA-256 is
+`FAE0C144C10AFB3DF9470E8B6DFC23FBFB0B147D3CDEBDD24434CEACF7BAA602`.
+Its state acceptance completed in 1.066284 seconds at LFC 35. Preserved external
+artifacts are under `fbz-remaining-20260914/visual/start-centre-corrected` in the
+shared task scratch directory. The PNG SHA-256 is
+`4ED9FE4829B891F4511F7B514777EBE4AF60EC4CA128C9ECF6F220781A5D77A8`.
+Against native crop `(14,8,320,224)`, terrain `(180,120,120,20)` matches
+2400/2400 pixels at identical coordinates, versus 944/2400 before correction.
+Comparison recovers Genesis 3-bit RGB as `round(native/34)` and
+`round(engine*7/255)`; no image translation is accepted. The root delivery agent independently reproduced this bounded terrain
+comparison from both preserved PNGs; it is accepted for this rectangle, not
+whole-frame or checkpoint PASS.
+
+The sky phase is separately history-dependent. A read-only native savestate
+probe at movie frame 237948 measured `HScroll_table+$1FC` (`$A9FC`) as
+`$440A3CB0`; fresh engine LFC 35 reads `$0001DC00` and advances to `$0001EA00`.
+ROM `Level`/`Clear_DisplayData` do not clear this scratch table, and
+`FBZ1_BackgroundInit` calls `FBZ_Deform` without clearing its tail. Outdoor
+`FBZ_Deform` reads that retained long and increments it by `$E00`. The complete
+movie's preceding-zone history differs from a cold level load. Matching camera,
+LFC and animation bytes therefore never established matching cloud history.
+No native RAM value was injected into gameplay. The exact-start state receipt
+remains state acceptance only; global cloud/pixel parity remains unaccepted.
+
+`FbzVisualCaptureTool` now preserves actual last-draw tilemap uniforms and
+hash-bound descriptor, lookup and atlas GPU bytes under its explicit output
+root. Readback restores GL texture binding and pack alignment; these internal
+provenance helpers add no Mod API signatures. The durable GPU regression replaces
+the temporary arithmetic probe. The frozen manifest remains unchanged.
+
 ## Deterministic engine GL capture
 
 `FbzVisualCaptureTool` boots the requested FBZ act in a hidden real OpenGL
@@ -21,24 +87,31 @@ receipt. All 21 native checkpoint ids in the frozen manifest have explicit
 executors; an unknown id or any failed precondition/readback emits a rejected
 receipt and no image.
 
-After `mvn package`, this PowerShell example captures the exact native start:
+After `mvn package`, run this PowerShell example from the checkout root to
+request the exact native start. The committed amendment now contains the
+independently reviewed native LFC-35 state. Successful publication proves this
+state contract; pixel acceptance is separately limited to the terrain rectangle
+documented above. It does not certify whole-frame cloud parity.
 
 ```powershell
-$artifact = Resolve-Path target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+$artifactProperties = ConvertFrom-StringData (Get-Content target/openggf-artifact.properties -Raw)
+$artifact = Resolve-Path "target/$($artifactProperties.finalName)-jar-with-dependencies.jar"
 $expectedS3kSha1 = 'CFBF98C36C776677290A872547AC47C53D2761D6'
 $rom = Get-ChildItem -Path . -Filter *.gen -File |
   Where-Object { (Get-FileHash $_.FullName -Algorithm SHA1).Hash -eq $expectedS3kSha1 } |
   Select-Object -First 1 -ExpandProperty FullName
+if (-not $rom) { throw 'No locked-on S3K ROM with the expected SHA-1 found in the checkout root' }
 $artifactHash = (Get-FileHash $artifact -Algorithm SHA256).Hash
-$amendment = Resolve-Path docs/s3k-zones/fbz-visual-evidence-amendment-proposal.json
+$amendment = Resolve-Path docs/architecture/research/s3k-zones/fbz-visual-evidence-amendment-proposal.json
 $amendmentHash = (Get-FileHash $amendment -Algorithm SHA256).Hash
+$outputRoot = New-Item -ItemType Directory -Force target/fbz-validation
 
 java -cp $artifact com.openggf.tools.fbzvisual.FbzVisualCaptureTool `
   --workspace (Resolve-Path .) `
   --rom $rom `
   --artifact $artifact `
   --artifact-sha256 $artifactHash `
-  --manifest (Resolve-Path docs/s3k-zones/fbz-visual-checkpoints.json) `
+  --manifest (Resolve-Path docs/architecture/research/s3k-zones/fbz-visual-checkpoints.json) `
   --manifest-sha256 D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD `
   --evidence-amendment $amendment `
   --evidence-amendment-sha256 $amendmentHash `
@@ -47,7 +120,7 @@ java -cp $artifact com.openggf.tools.fbzvisual.FbzVisualCaptureTool `
   --framebuffer-width 320 `
   --framebuffer-height 224 `
   --native-crop-x 0 `
-  --output-root (Resolve-Path target/fbz-validation) `
+  --output-root $outputRoot.FullName `
   --input-schedule-source none:idle-one-frame `
   --input-schedule-sha256 AF69953468AA1D1DAE65A3435271BA1189DC51DCC9DAEDBF3FDD3A7ECD9D8837 `
   --savestate-source none:native-load `
@@ -63,10 +136,15 @@ Compatibility-mode image capture remains fail closed until each mode's feature
 configuration and receipt fields are implemented; native evidence must go green
 first.
 
-The PowerShell capture and validation entrypoints accept `-Rom <path>`. When it
-is omitted they first honor `SONIC_3K_ROM_PATH`, then hash-match root-level
-`*.gen` files against the locked-on SHA-1; they never assume a filename or pick
-the first ROM in the directory.
+The Java CLI requires an explicit `--rom <path>`; it does not discover a ROM
+or read `SONIC_3K_ROM_PATH`. The example above discovers the ROM by hash and
+selects the artifact using the POM-derived `target/openggf-artifact.properties`
+written during packaging. For a ROM outside the checkout, set `$rom` to its
+resolved absolute path and verify its SHA-1 before invoking the CLI.
+The emulator-side exporter is
+[`tools/bizhawk/capture_fbz_visual_references.lua`](../../../../tools/bizhawk/capture_fbz_visual_references.lua);
+the historical PowerShell host and aggregate validator are not available in
+the checkout.
 
 ### Superseded reference warning
 
@@ -78,10 +156,172 @@ hashes are preserved, but they must be reported as `SUPERSEDED`/`FAIL`, never
 `fbz-visual-evidence-amendment-proposal.json`; it requires a fresh BizHawk
 capture, exact observed RAM state, versioned replacement paths, and independent
 spec review before the frozen manifest or reference acceptance changes.
-The amendment deliberately remains `awaiting-fresh-independent-review`, so the
-capture tool rejects publication until the exact first-visible state and each
-AniPLC visible-region review are populated and hash-bound. This is the intended
-fail-closed state before fresh BizHawk recapture.
+The amendment records the fresh native start state and reviewed destination
+rectangles with explicit approval scopes. The five cadence series remain native
+candidates: their 30 frames are hash-bound, but engine placement and service-phase
+comparison are still pending. The $210 script has identical source offsets and
+must retain art through index changes; $230 is visibly placed in Act2 only. Its
+last native frame has two occluded pixels, explicitly preserved in the proposal.
+The engine cadence executor still needs these applicability and stable-art
+contracts before it can certify all five series; native region approval alone
+does not satisfy that obligation.
+
+### Native exporter observations (2026-09-14 FBZ completion)
+
+A bounded investigation used official BizHawk 2.11 Linux/GPGX, the verified
+locked-on ROM, and `s3k-complete-sonic-tails.bk2` (SHA-256
+`82EABFBC65E33C160CE209BAA1CA3F967CB677FE22350BC100625D8C41A8E1BF`).
+The sandbox could not reach X11; a read-only host socket check proved X0
+accessible outside it. Subsequent launches used that display with external
+configuration/output and no ROM/RAM writes. Native invocation time totaled
+276.557 seconds. External evidence and hashes are in
+`$FBZ_EVIDENCE_ROOT/native-reference/diagnostic-summary.json`.
+These are diagnostics, not approved checkpoint replacements.
+
+The original display gate was invalid. `sonic3k.constants.asm` places
+`VDP_reg_1_command` at `$F60E` after the six-byte `_tempF608` reserve, not `$F60C`.
+`Init_VDP` stores a command template there; display-enabling routines OR `$40`
+into `d0` and write the hardware without updating that template. Correcting only
+the address still rejected every frame. The exporter records the template and keeps `display_enabled: null`: no live
+VDP bit is claimed. Installed Genesis Lua APIs expose layer settings, not a
+verified live VDP register reader; emulator register APIs expose CPU registers.
+Without a configured framebuffer probe, readiness remains explicitly unverified
+and cannot pass.
+
+Installed `BizHawk.Client.Common.dll` metadata declares
+`MemoryLuaLibrary.HashRegion(addr, count, domain)`. Its `MemoryApi.HashRegion`
+implementation calls `SHA256Checksum.ComputeDigestHex`, so the third argument
+must name `VRAM`, not `SHA256`. The exporter restores the previous domain on
+success or failure. Title-card ownership also needs its routine pointer:
+native slot `$B250` is later reused by `Obj_FBZFloatingPlatform` update
+`loc_3A5DA` (`$0003A5DA`), not `Obj_TitleCard` (`$0002D690` in this ROM).
+The reused slot's raw child-count-offset word remains recorded but does not
+indicate active title children. `Obj_TitleCardWait2` waits for its children
+before `Delete_Current_Sprite` releases the slot.
+
+The first measured state satisfying the other native-start predicates is BK2
+237948 (trace 34, `Level_frame_counter=$0023`). Player centre is `$0060/$076C`,
+camera `$0000/$070C`, and animation bytes are
+`1C 01 04 05 00 02 04 01 04 05 00 00 00 00 00 00`.
+The first investigation captured only sparse diagnostics. A further authorized
+116.509-second native run captured the exact frame and five six-image cadence
+sequences under `native-reference/framebuffer-v1`. The exact-start PNG SHA-256 is
+`EA9A56D5A7F3DE1C63D5A0A0BD4E4268FB7B73ACFCC62FF17F0102E7DDCEEA0C`.
+Every sidecar binds its current-frame probe PNG hash; host provenance binds the
+ROM, movie, exporter and emulator. The frozen manifest and pending amendment
+remain unchanged until independent review and paired engine comparison.
+
+The focused regression executes actual Lua observation/publication functions
+with BizHawk API stubs: address correctness, unknown display for either template
+bit value, rejected publication, reused title slot, and hash-domain restoration
+including failures. It reproduced the original wrong-address failure and passed
+against the repaired exporter. Run from the checkout:
+
+```bash
+mkdir -p target/fbz-lua-contract
+lua5.4 src/test/resources/bizhawk/fbz_visual_exporter_contract_test.lua \
+  tools/bizhawk/capture_fbz_visual_references.lua target/fbz-lua-contract
+```
+
+`TestFbzVisualExporterGuard` invokes the same regression through `LUA_BIN`
+(default `lua`) in the guards profile, whose CI job provisions Lua. The ordinary
+tooling-contract test remains Java-only. The same guard invokes the Python
+predicate tests, which need only the standard library; decoding actual native
+PNGs in the host requires Pillow.
+
+### Reproducible Linux native capture
+
+Use `tools/bizhawk/capture_fbz_visual_references.py` with Mono, `monodis`, Python
+and Pillow installed, and an accessible X display. The launcher verifies exact
+managed version 2.11.0.0 and the locked-on ROM SHA-1, creates a new external output
+directory, copies configuration with private writable paths, and bounds the native
+process. It never changes the installed emulator configuration or movie/ROM.
+
+```bash
+python3 tools/bizhawk/capture_fbz_visual_references.py \
+  --bizhawk-home /absolute/BizHawk-2.11-linux-x64 \
+  --rom /absolute/discovered-locked-on.gen \
+  --movie /absolute/s3k-complete-sonic-tails.bk2 \
+  --output /absolute/external-task/native-reference-new --timeout 180
+```
+
+The framebuffer probe observes the exact emulated frame without advancing it.
+Installed GPGX `render_line` tests `reg[1] & $40`; the blank branch fills each
+scanline with one backdrop index. The probe therefore excludes borders and
+requires horizontal pixel variation on separated rows spanning at least half the
+active height, rejecting blank frames, vertical palette gradients, and small
+upper overlays. Separate Lua gates require title-card ownership gone, fade zero,
+and emulator/debug overlays disabled. Rendering begins before the observation
+window. Same-frame rereads reuse the verified PNG hash, and published images are
+independently checked against it. `verified-framebuffer-content` describes this
+pixel observation; `display_enabled` remains null because no register was read.
+This predicate establishes visible content, not semantic palette/art correctness.
+
+Act 1's `$210-$22F` channel has offsets `[0, 0]` in the ROM's `AniPLC_FBZ1`
+script, so its timer advances while identical art is uploaded. Requiring changed
+pixels/VRAM for that channel is incompatible with the ROM and needs an explicit
+reviewed stable-art contract. Other channels show native VRAM changes one frame
+after the timer/index advance because the queued transfer is serviced later.
+The first start-window cadence sets contain moving clouds; changing whole-PNG
+hashes alone do not prove the animated destination tiles are visible. Each
+channel still needs an independently identified region, with the stable `$210`
+case distinguished from actual changing art.
+
+The later native placement pass sampled 127 states over the first 16,000 FBZ
+frames in 135.131 seconds, preserving PNG/RAM/VRAM/CRAM/VSRAM and native states
+under external `route-samples-v1`. Exact GPGX palette decoding and the live
+plane-A/B name tables, line scroll, vertical scroll and linked sprite table
+established visible owners: `$200` spike tips, `$208` propeller shaft, `$210`
+static violet mesh and `$238` hanging mesh. Independently reviewed native-320
+regions were respectively `(155,155,16,32)`, `(152,140,16,40)`,
+`(16,80,128,80)`, `(90,80,64,64)`. A 5.724-second state-resume capture produced
+four natural six-frame series under `mapped-cadences-v1`; the pixel mapper checks
+actual ROM palette indices against the sampled PNG, accounting for the current
+name-table/scroll/SAT placement rather than treating cloud motion as animation.
+These are native candidates, not paired-engine PASS results.
+
+ROM archive analysis explains the missing fifth placement. Shared FBZ blocks at
+`$194400` and chunks at `$1974A2` decompress to 4,392 and 32,768 bytes.
+Destination tiles `$230–$237` occur in blocks 397–400 and chunks
+`$1B/$48/$B1/$C3/$CB`. The original Act 1 foreground/background layouts contain
+none of these chunks; Act 2 has 33 foreground placements, including
+`x=$680,y=$800–$980`. Thus Act 1's scheduled `$230` uploads cannot supply a
+visible original-layout region. Any acceptance change must explicitly move that
+placement proof to Act 2 rather than invent Act 1 pixels.
+
+A further 5.873-second native state-resume pass reached Act 2's column at
+camera `$089B/$064C` and captured channel `$230` on BK2 frames
+262703–262708, under external `act2-channel230-v1`. Candidate region
+`(20,55,32,40)` maps exactly to 1,280 channel pixels for the first five frames;
+the sixth has two occluded pixels. Timer/index advance at 262704 leaves the
+region and VRAM unchanged; both change at the queued VBlank commit 262705.
+`native-cadence-candidate-summary.json` ties all five channel candidates to
+per-frame PNG/RAM/VRAM and placed-pixel counts. Camera motion changes the `$210`
+rectangle while its placed ROM art stays static; acceptance must compare tile
+identity in world space, not require a stationary screen rectangle.
+
+Paired-start execution exposed missing production setup work. `loc_6468` runs
+`Animate_Tiles` after initial `Process_Sprites`/`Render_Sprites` and before
+`LevelLoop` increments `Level_frame_counter`. Native BK2 frame 237914 has LFC 1
+and script timers `[62,6,0,6,6]`; the engine had `[63,7,1,7,7]` and remained one
+animation call behind at matching LFC 35. The initial object lifecycle now invokes
+an optional semantic animation setup owner, implemented by S3K, without advancing
+palette cycling, gameplay clocks or `ChangeRingFrame`. Replay's former extra
+setup tick is removed; any additional structural handoff animation follows the
+production setup call. MHZ's existing preseeded cap counter is preserved. The
+visual executor observes the amendment's `[63,7,1,7,7]` first-animation phase at
+LFC zero, then advances ordinary production frames to the accepted visible state.
+
+The paired engine start subsequently accepted the exact LFC-35 state. Pixel
+parity remains unaccepted: GPGX expands the 3-bit channels to `[0,34,...,238]`,
+while `Palette.Color.fromSegaFormat` expands them to `[0,36,73,...,255]`.
+Recovering each host's 3-bit channel values distinguishes this encoding choice
+from a ROM palette error. In region `(180,120,120,20)`, 944 of 2,400 normalized
+pixels match at the same coordinates; shifting the engine sample down one row
+matches 2,400/2,400. That shift is diagnostic, not an accepted comparison rule.
+Native start VSRAM is FG `$070C`, BG `$0011`, with camera/copy Y `$070C`.
+The state probe now records the engine's actual foreground/background VScroll
+owners separately from camera position to diagnose the remaining discrepancy.
 
 <!-- FBZ-VALIDATION:native-pre-compat:BEGIN -->
 ## Native pre-compatibility validation
@@ -152,3 +392,588 @@ fail-closed state before fresh BizHawk recapture.
 - A checkpoint passes only when its immutable `refs/fbz` reference, engine PNG, and named comparison sidecar all exist and the sidecar records `PASS`. Missing evidence is a deterministic FAIL; required checkpoints are never downgraded to LIKELY or SKIP.
 - BizHawk/BK2 is not used by this runner. Complete-run movie capture remains the separate late Task 20 activity.
 <!-- FBZ-VALIDATION:native-pre-compat:END -->
+
+### Candidate cadence instrument and service domains
+
+The hash-bound amendment now supplies independent capture-placement intents;
+$230 boots Act2. The instrument admits production title/fade/setup, reapplies
+only the declared placement pose, and seeks timer zero by ordinary idle steps.
+Six frames include a zero-step control, natural expiry and following service
+frames. No reference physics, event or counter values initialize the engine.
+The reviewed native rectangles are not assumed to remain the engine's visible
+owner after placement: paired pixel masks still require independent checking.
+
+`FbzVisualCadenceRomContract` reads the verified ROM's per-act AniPLC declarations
+and hashes the exact source bytes per frame. The verifier separately checks
+timer/index continuity and immediate-submission versus next-VBlank publication
+domains; identical source payloads require no artificial pixel change. ROM
+`LevelLoop` waits on VBlank before `Animate_Tiles`; `AnimateTiles_DoAniPLC` changes
+counters and calls `Add_To_DMA_Queue`, while the next VInt's `Process_DMA_Queue`
+writes the VDP registers. This source chain, not an observed frame offset alone,
+defines the service-phase expectation.
+
+Candidate engine receipts name `pattern_hash_domain` explicitly as level-pattern
+bytes after animation. The legacy `vram_sha256` field is retained for readers,
+but does not describe native VRAM. A submitted-payload match is never sufficient
+for visible/presentation parity. Candidate series are preserved separately and
+the checkpoint remains rejected until paired acceptance is established. The
+main PNG is now published only after cadence validation, avoiding a misleading
+accepted main image when its cadence subsequently fails.
+
+Focused `TestFbzVisualCadenceContract,TestFbzVisualEvidenceToolingContract,TestFbzVisualGameplayAdvanceContract`
+completed 13 tests with no failures/errors/skips (50.075 seconds, including
+compilation). This proves the instrument's logical contracts, not five accepted
+paired AniPLC visual checkpoints.
+
+### S3K queued AniPLC publication correction
+
+`Sonic3kPatternAnimator` now owns immutable queued ROM payloads, dispatched by
+`Sonic3kLevelInitProfile` through the internal `QueuedPatternDmaPublication` port.
+`LevelFrameStep` reuses the existing exactly-once physical lifecycle token and
+passes its claimed semantic phase and existing explicit DMA-handler declaration.
+S3K ordinary 8, title C, pause 10-to-8, fade 12 and special 1C handlers drain; lag 0
+does not. Initial reasoning excluding fade 12 was rejected after following its
+`Do_ControllerPal` call to `Process_DMA_Queue`. No new reference input or public
+Mod API is introduced. The generic S1/S2 script tick remains immediate.
+
+Publication updates Level patterns, GPU atlas and affected object-renderer
+atlases together. Rewind includes original/presented destinations from animator
+construction, plus pending payloads. Independent review caught the empty-before-
+first-submission snapshot hole; destination preregistration and a regression now
+cover that boundary. Contiguous restored tiles are batched for renderer refresh.
+The first queue/profile/rewind run passed 29 tests (49.540 seconds); AIZ/HCZ and
+required bootstrap/loading/decoding consumers passed 77 tests (51.644 seconds);
+the pre-submission rewind correction passed 20 tests (49.891 seconds), all with
+zero skips. The phase-aware bridge passed 13 tests (50.241 seconds), including
+lag retention, legal fade/title/ordinary service and exactly-once token dispatch;
+these focused checks do not certify a broad suite or the visual matrix.
+
+The destination pixel instrument now reads actual uploaded GPU palette, lookup,
+atlas and foreground descriptors. It resolves world placement and flip bits,
+reports opaque destination pixels versus exact framebuffer matches, and retains
+occlusion counts. Upright spikes require a separate sprite owner: the ROM-backed
+`buildFbzSpikesSheet` maps level $200-$207 to sheet 8-15. The instrument uses active
+spike poses and mapping pieces with their actual sprite-atlas entries. No
+background cloud motion or CPU-only art hash can satisfy that owner comparison.
+
+
+The paired tool now records an eight-byte source-pixel mask for every opaque
+placed sample: big-endian x/y/tile words, match-bit plus flipped tile-local
+coordinate, and palette/nibble byte. The uploaded palette is recorded per frame.
+`tools/bizhawk/compare_fbz_cadence_pixels.py` independently decodes native
+VRAM/name tables/SAT/CRAM and rechecks the engine mask against its PNG. It compares
+actual normalized RGB only for common source tile/local/palette/nibble keys,
+retaining nonmatches, occlusions and unrepresented native pixels. Equal producer
+hashes alone cannot satisfy this check. The standalone synthetic test checks a
+complete source-pixel pair, corrupt framebuffer rejection and mismatched
+presentation rejection. It requires Pillow; it is not an ordinary engine test.
+
+For $208/$238, the instrument may seek the reviewed native timer-zero cursor
+(indices 3/7 respectively) by ordinary stepping for at most one complete ROM
+cycle. The amendment records this capture selection; observations record actual
+steps and ROM-derived bound. No animation or gameplay state is written to obtain
+that cursor. The other three channels use the first naturally reached zero.
+
+
+### Paired opaque-source pixels (2026-09-14; bounded independent acceptance)
+
+Artifact `18CAE3F037ECEFC6610A9BE7060A4557304FCF016447620E69AAB3F99CC9FA1A`
+produced all 30 phase-aligned frames. Every comparable native opaque pixel has
+an equal engine pixel at the same ROM tile-local/palette/nibble key; none is
+unrepresented. This is source-local appearance and service correspondence,
+not same screen coordinates or identical full rectangles.
+
+| Destination | Equal/comparable pixels, frames 0–5 | Native exclusions |
+|---|---|---|
+| $200 | 552, 552, 552, 552, 552, 568 | Transparent pixels excluded |
+| $208 | 560 each | Transparent pixels excluded |
+| $210 | 2550, 2370, 2040, 1720, 1470, 1320 | Transparent background excluded; ROM art remains static |
+| $230 (Act2) | 1280, 1280, 1280, 1280, 1280, 1278 | Final two occluded pixels excluded |
+| $238 | 2784, 2744, 2744, 2800, 2824, 2832 | Transparent background excluded |
+
+The amendment stores comparison/artifact/PNG/mask/receipt hashes and every
+frame's native and engine opaque/matched/excluded counts. External evidence is
+`${TASK_SCRATCH}/fbz-remaining-20260914/visual/cadence-paired-mask-XXX/`;
+`paired-source-pixels/comparison.json` names both source masks and PNGs. The
+capture CLI deliberately returns 5 after preserving candidates; independent
+review of the named evidence, rather than a fresh capture's existence, owns
+acceptance. The frozen manifest and unrelated checkpoint failures remain intact.
+
+Final tool checks: nine focused Java tests passed without skips (50.273s),
+including flipped source-coordinate and occlusion-mask reconstruction. Standalone
+Python pairing safety test passed (0.229s). Final package completed in 37.041s;
+five capture invocations consumed 5.528684s. Earlier cursor build failed checked
+IOException handling (31.874s), was repaired, then packaged successfully (69s).
+The exact start after runtime publication correction remained accepted with
+identical PNG SHA `4ED9FE4829B891F4511F7B514777EBE4AF60EC4CA128C9ECF6F220781A5D77A8`
+and the already reviewed 2400/2400 terrain pixels; no new whole-frame claim.
+
+
+Root independently accepted this bounded result after inspecting the five
+native/engine pairs in `root-paired-review.png`, reviewing the SAT/name-table and
+actual-GPU mask implementations, and independently reproducing all 30 receipt
+hashes, framebuffer-match flags and source-local RGB equality with a separate
+Python implementation. Implementation commits are `dac3f5e01` (publication) and
+`04a9e17eb` (capture/comparison). Acceptance covers only opaque source-local
+tile/local/palette/nibble appearance at the matching presented payload phase;
+all eligible native pixels are represented. Transparent/retained background,
+differing camera/placement/geometry, HUD/occluded pixels, whole frames and frozen
+checkpoints remain excluded. The contact sheet does not establish native route
+visual parity. The historical frozen-checkpoint matrix above therefore remains
+unchanged; these five bounded source-pixel comparisons are accepted evidence,
+not five whole-checkpoint PASS claims.
+
+### Frozen boundary equality pilot (2026-09-14 remaining work)
+
+`capture_fbz_boundary_fixture.lua` is an explicit native setup instrument. It
+allowlists only boundary6's declared player position, event words, and LFC;
+subsequent physics, camera, event checks, redraw and VBlank remain native.
+It never supplies captured RAM to the engine. The Python host's
+`--fixture-state` records the native saved-state path and SHA-256.
+
+Official BizHawk2.11, the verified locked-on ROM and saved state
+`route-samples-v1/sample-237948.State` reproduced **FAIL** for the frozen
+boundary6 recipe in both directions. At the specified stationary player
+`x=$100,y=$640`, `Events_routine_bg` alternates `$08/$04` and the outdoor flag
+alternates `$FF00/$0000` for all 40 observed frames per direction. It never
+reaches the required normal-stage capture boundary. Evidence is external:
+`fbz-remaining-20260914/visual/boundary6-native-pilot-v2/fixture.jsonl`,
+`forward-01..40` and `reverse-01..40` PNG/VRAM/CRAM/VSRAM files, plus `host.json`.
+The completed capture took 3.420 seconds; an earlier forward-only failure left
+Lua open until the 15-second host timeout (15.027 seconds). That attempt is not
+reported as a successful capture.
+
+`FBZ1_BGChange6` admits indoor→outdoor at `y >= $640`; `loc_52CB2` admits
+outdoor→indoor at `y <= $640`. Both active redraw handlers call
+`FBZ1_CheckBGChange` again, and `loc_52CD8` resets the delayed row count on every
+flip. Source inspection establishes the same equality overlap for all six
+Act1 boundaries and the Act2 `$A40` boundary; only boundary6 has this fresh
+native execution evidence. The followup, pending at this pilot stage, in
+`fbz-visual-manifest-amendment-proposal.json` gives exact safe-side changes
+and separately corrects `$230` visible-art applicability to Act2. The frozen
+manifest was unchanged until the independent review recorded below.
+
+This pilot also exposes limits of the current engine boundary instrument:
+its logical redraw loop calls `updateAct1Frame` directly and renders only after
+the loop, so it cannot establish per-frame VBlank or changing plane-column
+presentation. The native camera eased from `$070C` toward `$05E0` after the
+setup position write; it was not forced to match engine camera state. No
+paired palette, plane-column or visible-geometry PASS is claimed. A reviewed
+recipe correction and actual production-frame engine sampling are prerequisites
+for that comparison. The existing 30 source-local AniPLC pixel results remain
+bounded evidence, not frozen checkpoint acceptance.
+
+Instrument check (no ROM/emulator required):
+`lua tools/bizhawk/test_fbz_boundary_fixture.lua tools/bizhawk/capture_fbz_boundary_fixture.lua`
+passed 2 scenarios: bounded alternating failure and completion, with the exact
+12 declared writes and neutral input. Lua syntax and Python host compilation
+also passed; no Maven or engine capture was run for this failed native pilot.
+
+
+### Boundary6 retained-plane correction and paired acceptance (2026-09-14)
+
+Independent root source review approved the minimal recipe amendment: use safe
+sides of all seven inclusive boundary comparisons, and place the `$230` cadence
+recipe in its ROM-backed Act2 owner. The stable checkpoint ID is retained.
+Active manifest SHA-256 is
+`BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8`;
+historical receipts retain their original `D13D037B...90DC40DD` binding. An
+amended recipe does not establish a checkpoint PASS.
+
+The reusable native fixture and production engine fixture now both start from
+the reviewed LFC35 entry, position at `$100/$63F`, and observe 80 ordinary
+gameplay advances before installing the declared event words and LFC zero.
+This lets native foreground layout-copy and camera owners establish matching
+history; no captured RAM is supplied to the engine. The pilot's apparent
+outdoor cloud mismatch was rejected as an attribution: its setup histories
+had different foreground layouts. The matched protocol instead isolated
+retained Plane-B corruption. `Setup_TileRowDraw`/`Setup_TileColumnDraw` subtract
+one before DBF, making their `$20`/`$10` arguments 32/16 blocks. The old FBZ
+copier wrote 33/17. Native vertical redraw also clips the delayed row against
+the masked camera window: outdoor `$100` is outside `$000..$0F0` and must
+consume the redraw step without writing. The production FBZ owner now follows
+both rules. A ROM-backed regression checks the entire retained ring before
+and after that skipped row, the next legal row, and two restore/replay cycles.
+
+Final external evidence under `${TASK_SCRATCH}/fbz-remaining-20260914/visual/`:
+`boundary6-native-safe-v6`, `boundary6-engine-safe-v4` and
+`boundary6-comparison-v4.json`. Both `forward-after-01` (LFC17, outdoor) and
+`after-01` (LFC34, indoor) have **46,080/46,080 exact same-coordinate gameplay
+pixels** in `[0,64,320,144]`, **2,048/2,048 retained Plane-B descriptors**, and
+**64/64 palette entries**. Camera, player and both VScroll words match. There
+is no actor exclusion. Native channels are converted by `/34`, engine channels
+by `round(channel*7/255)`; neither coordinates nor phases are fitted by image
+similarity. Each capture occurs one ordinary frame after redraw reaches normal.
+
+Root independently viewed both final native/engine pairs and reproduced these
+measurements with separate Pillow/struct code. Root accepts this **bounded
+world-presentation pair**, not the entire frozen visual gate. Each full frame
+still differs at 384 HUD pixels: score digits, the flashing ring-label glyph
+and lives/progression display (tile columns 3 at rows3/4, 8–12 at rows1/2,
+6–7 at row26). These HUD regions remain excluded. Before/mid-redraw samples,
+other boundaries, whole frames and remaining frozen checkpoints are not
+accepted by these two afterstates.
+
+Final native PNG hashes, forward then reverse:
+`ADACDEB590283CCB0EC829BD655588C3F80B08488B4F7C5B3478809D5FFCABFB`,
+`3A4000D3AD82B38040D3580CBA08149974F5C6CB0D491485BA8F4FD01380AFB0`.
+Engine PNG hashes:
+`C22A81F22EA8AD2E0B1EDB2EEB074FD64F64B1E5A41CA29D771C5E5BD45F6F28`,
+`D30B98060E84FD88A4A3F86E201F6B0F81445C356EBA95530952432000CC8EED`.
+Native saved state SHA-256:
+`0AC65D13CEF3273AB614E2B3ACE83F693A9F34F06E2A559B371752C1628E67A5`.
+Engine artifact SHA-256:
+`0D4DBF55238375AEF5C53410EAC8A6366D02D1DC0D39702E021DDDD32B1EED05`.
+The artifact includes integrated `917344e02` and CPU `aa52e3aef`, plus this
+retained-plane change. Final native/engine execution cost 4.772/1.602139 seconds.
+
+Focused validation through `tools/testing/maven_queue.py -Dmse=off`, with all
+three absolute ROM properties, selected `TestFbzRetainedPlaneNativeRows`,
+`TestFbzAct1RomRuntimeLifecycle`, `TestFbzEventsAct1`, `TestFbzAct1LayoutMutations`,
+`TestFbzPlaneTransition`, `TestFbzVisualManifestContract`,
+`TestFbzVisualEvidenceToolingContract`, `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver` and
+`TestSonic3kDecodingUtils`: **105 passed, zero failures/errors/skips**, 51.414s.
+Final package completed in 19.676s. Lua fixture tests passed both scenarios;
+Python descriptor tests passed both cases, and an independent exhaustive
+65,536-word packed-descriptor roundtrip passed. This is focused validation;
+aggregate delivery checks belong to the parent task.
+
+
+### Remaining boundary pilots and fresh native entry (2026-09-14)
+
+The boundary tools accept `--boundary-checkpoint` (native host) and an optional
+checkpoint positional argument (engine). Coordinates, axis and event region
+come from the approved hash-bound manifest. Act1's camera prelude now observes
+at least 80 gameplay advances **and** native standing tracker centring at
+player minus 160/96, bounded at 480. Distant recipes need more than boundary6's
+80 frames: boundaries1–4 converge at LFC146/235/290/317 from LFC35 in both
+runtimes. Holding an offscreen camera after 80 frames was rejected. Boundary5
+fails its initial stationary-position prerequisite: its first native frame
+sets airborne status, then terrain resolution moves `$2100/$241` to
+`$2135/$26C` by LFC115. No repeated position or control writes stabilize it.
+
+Root independently viewed native/engine boundary1 and3 indoor `after-01`
+frames and reproduced zero differences for the defined 46,080-pixel gameplay
+rectangle, 2,048 Plane-B descriptors and 64 palette entries. This bounded
+acceptance uses `boundary1/3-native-v2`, `boundary1/3-engine-v2`, and their
+`comparison-v2.json` files under the external visual task directory. Boundary1
+still has 1,090 whole-frame differences, including bottom ring-animation pixels
+outside the rectangle; these are **not all HUD**. Boundary3 has 384 outside-region
+HUD differences. Other phases and whole checkpoint claims remain open.
+
+Boundary4 exposed another source-backed column defect. Native
+`FBZ1BGE_ChangeLeftRight`/`ChangeRightLeft` supplies d1=0 outdoors and
+`Camera_Y_pos_BG_copy` indoors; `Setup_TileColumnDraw` aligns this to16px blocks.
+The engine had passed bobbed outdoor Y and unaligned indoor Y. This explained
+exactly bad retained rows0/1 outdoors and row8 indoors. The FBZ surface now
+uses zero outdoors and `sy & $FFF0` indoors. A full-ring ROM-derived regression
+covers both source modes and two restore/replay cycles, with the normal row
+owner established separately. Both focused tests passed without skips, 18.591s;
+the first test setup missed that normal-row owner (one failure, 48.161s), and
+was corrected. Package 20.252s; actual GPU recapture 1.537088s. The new
+`boundary4-engine-v3` against `boundary4-native-v2` has zero retained-plane
+and palette differences in both afterstates. Its indoor gameplay rectangle
+is exact; its outdoor 366 differing pixels are confined to the player region
+`x135..186,y77..107`, so an earlier cloud attribution is rejected.
+
+Outdoor boundaries1–3 initially retained all 224 different BG HScroll words
+at native VRAM `$F000`, with identical FG words, camera, palette and plane.
+The per-band differences were identical across recipes, matching the known
+`HScroll_table+$1FC` history residue. The replacement prerequisite is an
+actual fresh native entry, not writing that accumulator. The complete BK2
+starts with A9FC zero and reaches an AIZ vine at frame 3517 (control 3, anim$14).
+Ordinary Left×3, Right×3, Up×3 invokes
+`AIZRideVineHandle_CheckButtonSequence`, setting the legitimate level-select
+flag. Pause then A returns through `Pause_Game` to the title. Title menu 2
+opens level select; `LS_Level_Order` indices 14/15 load FBZ1/2. The title cheat
+routine is dummied with RTS in the locked-on ROM, so a title Up/Down cheat was
+not used. Start additionally waits for `Reserved_object_3` at `$B094`
+(`loc_41D4`); the selection object alone can accept navigation earlier.
+`capture_fbz_fresh_entry.lua` preserves the entire input/state sequence and
+fresh LFC35 state/PNG, without RAM writes or a modified ROM.
+
+Fresh Act1 evidence `fresh-fbz-selection-v2/fbz1-lfc35.State` SHA-256
+`889AE0AAF575E26255A0E12792AC75E14328BF7C1BDD17ABE1BB7FC4FAA86728`
+reaches LFC35 with A9FC 129,024 (36×$E00), rather than complete-run residue.
+Fresh Act2 `fresh-fbz2-selection-v2` reaches native frame 4416/LFC35 with
+A9FC zero and Sonic+Tails option 0. Loading a derived state while a BK2 is
+playing is rejected by BizHawk when it has no movie input log: the fixture
+now stops playback before loading, and fails/returns cleanly if load fails.
+The first such rejected fresh B1 load consumed 20.184s; no fixture writes ran.
+
+Fresh boundary comparisons (`boundary1..4-native-fresh-v4`, existing engine
+v2 for1–3/v3 for4) remove the large cloud discrepancy. Boundary3 has zero
+gameplay/plane/palette differences in **both** afterstates (74 whole-frame
+pixels remain outside the rectangle). Boundary1 outdoor has 9 differences at
+ring tips on y207, indoor zero; boundary2 retains 2,178/2,224 gameplay differences
+around its visible object assembly; boundary4 retains 366/zero gameplay
+pixels, with exact plane/palette both ways. These fresh measurements await
+independent phase-specific acceptance; no mask is narrowed to manufacture PASS.
+
+Implementation iteration costs: generalized-tool packages 67s and52.742s;
+initial native1–5 pilots 19.799s; centred native1–4 repeats 28.853s; engine1–4
+captures 5.764571s; fresh native1–4 captures 26.695s. Fresh vine discovery 3.921s,
+first title-not-ready attempt 1.967s, successful Act1 selection 2.067s;
+Act2 menu-ready-only rejection 1.917s, corrected banner-ready selection 2.319s.
+Standalone Lua fixture guards cover six vertical/horizontal success/failure
+scenarios; the Python host guard has seven passing tests. These are focused
+measurements and checks, not aggregate delivery validation.
+
+The promoted fresh-entry script also completed directly from the BK2 reset
+start without a saved-state input: `fresh-fbz1-selection-v3`, native frame 4408,
+FBZ1 LFC35, A9FC 129,024, Sonic+Tails; execution 4.271s.
+
+
+### Fresh boundary object evidence (2026-09-14 follow-up)
+
+Independent root review accepted the fresh boundary3 outdoor `forward-after-01`
+world afterstate: separate Pillow/descriptor recomputation found zero of 46,080
+world pixels, zero of 2,048 Plane-B descriptors and zero of 64 palette colours
+different. The 74 whole-frame differences remain outside the world rectangle
+(bounds x24..63, y25..215). The reviewer inspected
+`root-fresh-b3-outdoor-review.png`; this does not accept unmeasured phases.
+
+`Obj_FBZBentPipe` uses `ori.b #4,render_flags`, preserving placement flip bits.
+FBZ1 object-position entries at offsets $264/$270 have raw Y $2317/$232F and
+therefore horizontal flips. The renderer previously discarded both flips.
+`TestFbzBentPipeRendering` verifies all four orientations; the correction changes
+presentation only. Fresh native boundary2 versus `boundary2-engine-v5` removes
+1,194/1,258 mismatched world pixels from the two afterstates. Remaining counts
+are 984/966, so neither complete afterstate is accepted. Subsequent SAT decoding
+identifies these as snake-platform segment pixels, correcting the initial
+visual attribution to stage rings.
+
+Boundary4's remaining 366 forward pixels are a separate presentation-boundary
+gap. `boundary4-native-player-v5` and `boundary4-engine-v5` agree on CPU Sonic
+animation/mapping/index/timer: prelude 5/188/53/1, forward 6/166/3/7, reverse
+5/186/3/1. Native VDP SAT at $F800 nevertheless presents mapping165: pieces
+at (139,76), (131,100), (139,108), with sizes $F/$0/$8 and tiles $680/$690/$691.
+These match ROM `Map_Sonic` frame165, while the engine presents CPU frame166.
+Changing animation counters or excluding Sonic would hide the actual retained
+sprite-presentation boundary. No such workaround was applied. Plane, palette
+and all 224 background scroll words match; reverse world pixels match too.
+
+The Act2 fixture now supports its actual EEC0 stage owner and normal stage4.
+The uncontrolled fresh Act2 pilot (`boundary-act2-native-fresh-v1`) fails the
+480-frame placement prerequisite: declared (4096,2623) becomes (4149,2668).
+The earlier uncontrolled boundary5 similarly moved from (8448,577) to
+(8501,620). These are retained setup failures, not accepted traversal or visual
+proof. A separately declared controlled visual setup is required before retry.
+
+Focused pipe regression: one test, zero failures/skips, 48.439s. The executable
+package completed in 50.875s; paired B2/B4 engine captures took 2.932321s.
+Native B4 player-field observation took 9.031s; the failed Act2 prerequisite
+pilot took 12.333s. Lua fixture guards pass eight scenarios and Python host
+guards pass seven tests. These costs belong to the existing FBZ task accounting.
+
+
+### Controlled B5 / Act2 boundary prerequisites (2026-09-14)
+
+Independent root review authorized the minimal controlled visual setup after
+both uncontrolled positions demonstrably moved. Only B5 and the Act2 boundary
+now declare native `object_control=$01` once before the camera prelude. Native
+`loc_10BFC` skips Sonic_Modes on bit0 while clear bit1 retains Animate_Sonic and
+DPLC. The engine applies its existing movement-suppressed, CPU-allowed semantic
+once; it does not claim to expose an arbitrary raw native control byte. Ordinary
+neutral frame execution owns all subsequent camera, event and redraw work.
+This is controlled visual evidence, **not traversal proof**.
+
+The new active manifest SHA-256 is
+`261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1`.
+Stable checkpoint IDs and all coordinates remain unchanged. Previous binding
+`BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8`
+remains historical for earlier boundary evidence; no prior receipt is rebound.
+The amendment and active Java/Lua/Python/branch contracts carry the new hash.
+
+`boundary5-native-controlled-v1` and `boundary-act2-native-controlled-v1`
+complete both directions. The matching engine directories use the same names
+with `native` replaced by `engine`; actual artifact SHA-256 is
+`060FCA4C5692B4314CFF91ADF8E3E6813822F065A1FA663D757D42F70AF80340`.
+Native and engine prerequisites agree at LFC381 for B5 and LFC220 for Act2,
+including player/camera centres and declared control. Both afterstates occur
+at LFC17/34 with those controls still observed. Each of the four samples has
+zero of 46,080 world pixels, zero of 2,048 Plane-B descriptors and zero of 64
+palette colours different. Each whole frame retains 381 differences outside
+the fixed world rectangle. The `comparison-controlled-v1.json` files preserve
+actual hashes, geometry and no actor exclusions. Independent root review reproduced all four pixel/descriptor/palette results
+and viewed `root-controlled-b5-act2-review.png`, accepting only these bounded
+world afterstates with initial control1. Before/mid redraw phases and
+whole-frame/HUD parity remain unaccepted.
+
+The Lua guard proves exactly one byte write for the controlled fixture and
+zero for ordinary fixtures (eight scenarios). The Python host guard passes
+seven tests. Focused Java contracts pass seven tests/zero skips in 49.351s;
+the added control-scope regression passes with the other three manifest tests
+in the 38.410s package build. A corrected duplicate diagnostic insertion caused
+the preceding compile failure (31.301s); no test ran in that failed build.
+Native B5/Act2 invocations took 10.230s/6.374s; engine captures took
+1.674171s/1.499333s. These remain part of the same FBZ validation accounting.
+
+
+### Retained stage-ring clock (2026-09-14)
+
+The stage-ring difference in B1 exposes independent ROM state: instructions at
+$77D2 decrement byte $FEB2; expiry reloads7 and increments $FEB3 modulo4.
+`ChangeRingFrame` runs after the ordinary object/event loop. The existing
+`Sonic3kGlobalAnimationState` already owns this dispatch for the adjacent vine
+word, so it now also owns the ring timer/frame. The combined animator snapshot
+stores both bytes; S3K ring rendering/bounds read an internal semantic provider.
+S1/S2 retain their existing counter-derived selection. `loc_60DE` clears these
+bytes before fresh setup objects while excluding `AIZ_vine_angle`; the fresh
+profile performs that reset, and seamless core-only replacements retain them.
+No native output or fitted clock offset feeds the engine.
+
+The initial focused selection passed65 tests/zero skips in50.528s, including
+actual combined-animator restore/forward replay twice, real FBZ1→2 animator
+replacement, byte expiry/wrap, vine ownership, AniPLC VBlank lifecycle and
+required S3K bootstrap gates. The subsequent actual repeated fresh-load test
+and shared RingManager suite passed38 tests/zero skips in38.365s including
+packaging. Fresh B1/B2 engine captures took1.350260s/1.265708s; artifact SHA-256
+`C1899FB7C1A22E1C1D9F6EFE60AED044C77D877E068A73B23D7290B462864625`.
+
+`boundary1-engine-ring-v1` versus `boundary1-native-fresh-v4` now has zero world,
+Plane-B and palette differences in both afterstates; each whole frame retains
+74 outside-world differences. Independent root review reproduced both pairs
+and viewed `root-b1-ring-review.png`, accepting only these bounded world
+afterstates, not whole-frame parity.
+`boundary2-engine-ring-v1` still has 984/966 world differences, proving the earlier
+visual attribution of B2 to stage rings was wrong. Native SAT pieces15..18
+use attributes$246B, size$A, x183/153/123/93 and y172: these are FBZ snake-platform
+segments (`ArtTile_FBZMisc+$F2`), not rings. That presentation gap remains open.
+The unchanged B4 CPU/SAT mapping disagreement remains open too.
+
+
+A bounded read-only native object-table probe resolves B2's remaining owner.
+`boundary2-native-objects-v1` reproduces both earlier native PNG hashes exactly
+and records current RAM alongside actual VDP SAT (6.574s). Forward CPU slots
+$B456/$B65C/$B6A6/$B6F0 have x3235/3205/3175/3145, y791, mapping0. With camera
+3039/607 and ROM mapping offset−12, current sprite lefts are184/154/124/94;
+VDP SAT entries15–18 instead contain183/153/123/93, y172, attributes$246B and
+size$A. Reverse current lefts205/175/145/115 similarly precede presented
+204/174/144/114, y170. Engine geometry uses the current positions. Native
+`Obj_FBZSnakePlatformMove` calls `MoveSprite2` before rendering and the $140
+velocity accounts for this one-pixel presentation boundary. Thus B2 and B4
+both expose retained sprite-table presentation; no local snake movement,
+coordinate offset, animation adjustment or image-dependent exclusion was added.
+
+Object-table observation SHA-256: forward `3B5A4E4F2DECBDFE51C729A38E922780833776805CB67C6714AA89E9ECEA9E0A`; reverse `8B3D3D274FB9A15C09B6554EBB00B705511119ACAD9BDBCA48683CA90D111DD6`.
+
+Root independently accepted the B4 reverse afterstate as well: `boundary4-native-fresh-v4/after-01` against `boundary4-engine-v3/after-01`. Recomputed differences are zero in the declared 320×144 world rectangle, zero Plane-B words and zero palette entries; 381 whole-frame pixels differ outside that rectangle. Root viewed `root-b4-reverse-review.png`. This brings the accepted bounded afterstates to eleven. B4 forward and both B2 directions retain the SAT presentation gaps above; no whole-frame or whole-zone visual parity is claimed.
+
+
+### B1 whole-frame HUD correction (2026-09-14 follow-up)
+
+In `.worktrees/ai-fbz-native-loading`, based on `6897a6048`, the fresh
+`boundary1-engine-hud-v1` capture matches `boundary1-native-fresh-v4` in both
+settled afterstates across the **entire 320×224 frame**: zero pixels, zero
+Plane-B descriptors and zero palette entries differ under the existing
+canonical channel comparison. No actor exclusion, translation or new pixel
+rule was introduced. The two engine PNG SHA-256 values are
+`FF8DB986A8AA1A72485FFEFBCBAA3A349465C74C280D177F248398102B734262` and
+`A24D0EB53966B939F86D6BBA350620AD01A0086A88FB34F75F0C1FA5E8ECE026`.
+Comparison receipt SHA-256:
+`99971340ADBF2825C0FB4E8A0B75EAE46C30E99C95E894DEF3B87D9D5A99B6FA`.
+Root inspected the forward framebuffer and recomputed both comparisons.
+
+The previous 74 differences were 50 pixels in TIME's dedicated I glyph and
+24 life-count pixels using the wrong palette. `Map_HUD` selects contiguous
+TIME tiles `$10..$17`; `HUD_Lives` writes into the line-1 name piece. The
+implementation preserves the generic S1/S2 defaults and gives S3K these own
+mapping/palette choices. The custom-zone bridge also reserves digit color 12
+on line 1, using canonical `Pal_AIZ` word `$0EAA`. Its ROM-art contract check
+and actual Flappy integration are covered by the focused checks below.
+
+Queued `compile exec:java -Dexec.mainClass=com.openggf.tools.fbzvisual.FbzBoundaryFixtureCaptureTool`
+with the verified ROM, reviewed manifest and `fbz1-boundary-1-outdoor` took
+1.880 seconds. `compare_fbz_boundary_fixture.py` produced the receipt above.
+The external `fbz-native-loading-20260914/boundary1-redraw-comparison.mp4`
+shows original ordered forward samples with a one-second setup hold and a
+one-second final hold (137 frames at 60 Hz, no audio). Its SHA-256 is
+`DE5E2D3EF493A93F02B0EC291B4DA63B2B308EA72F90BED49626B617BB1FF202`.
+The intermediate redraw images still disagree and are **not accepted**.
+This closes B1's two settled whole-frame obligations, not all visual coverage.
+
+Focused `test` of HUD factories/renderers, custom-zone palette bridge,
+required S3K loading/bootstrap gates, PLC driver parity and frame-window parser
+ran111 tests in53.183 seconds:110 passed, one synthetic custom-zone fixture
+used an impossible line-1 digit color7. Correcting that fixture retained its
+null-override icon-fallback assertion and checked real digit color12 on line1.
+The subsequent `-Dtest=TestS3kCustomZonePaletteBridge,TestSampleFlappyIntegration`
+run passed22 tests, zero skips, in20.438 seconds. These are focused results;
+combined delivery validation and integration remain pending.
+
+
+### Physical Plane-B sampling follow-up (2026-09-14 candidate)
+
+After the CPU rounded-origin correction, actual GPU readback exposed an
+unconverted64x192 source cache behind native64x32 event-owned row writes.
+The candidate now adopts the physical ring when row writes take ownership.
+42 focused row/event/rewind/strict-recording tests pass, zero failures/errors/
+skips; broad verification and integration remain pending.
+
+`boundary1-engine-physical-ring-v1` against `boundary1-native-fresh-v4` retains
+zero whole-frame, palette and ring differences in both settled afterstates.
+At reverse-08, world differences fall from11,015 to0, with2 whole-frame pixels
+remaining; reverse-16 remains0 whole-frame pixels. Forward-08 still differs
+by14 world pixels, forward-16 by1,021, and the first reverse frame by29,197.
+These measurements do not close the entire ordered-redraw or SAT obligation.
+The updated `boundary1-reverse-physical-ring-comparison.mp4` has native left,
+engine right and one-second intro/tail holds; first/middle/final frames were
+inspected. Exact commands, checksums and evidence names are in the dated
+[completion plan](../../plans/2026-09-14-fbz-completion.md).
+
+
+### CPU sprite preparation versus VDP publication (2026-09-15)
+
+The new read-only native SAT snapshots establish the publication relationship
+across B2 and B4: **552 consecutive emulator-frame pairs, zero mismatches**
+between the previous CPU table and current VDP table, comparing all 640 bytes.
+Duplicate samples are excluded explicitly; neither capture has a sample gap.
+459 current CPU tables differ from the simultaneously displayed table. The
+new afterstate PNGs exactly match the earlier references, preserving existing
+pixel results (B2 984/966 and B4 366/0 whole-frame mismatches).
+See the [commands, hashes and limitations](../../plans/2026-09-14-fbz-completion.md#native-sprite-table-publication-measured-2026-09-15).
+This confirms native publication ownership; the engine presentation fix and
+whole-zone visual acceptance remain open.
+
+### Retained presentation verified (2026-09-15 candidate)
+
+The reconciled candidate at destination `dedd18877` now prepares sprites at
+`Render_Sprites`, publishes at the owning VBlank, and retains both tables for
+rewind. HUD numbers have their separate `UpdateHUD` publication; virtual player
+DPLC banks retain immutable art versions. **All fourteen settled afterstates
+match:** B1–B6 and the controlled Act 2 boundary, both directions, with zero
+whole-frame pixels, Plane-B descriptors or palette entries differing. Root
+reviewed both seven-row native/engine contact sheets.
+
+Final receipt `boundary-all-sprite-publication-review-v2.json`, SHA-256
+`b8e7df1ee299f069a562493f6e295d19765cb2b78c0d5ae2bb46b4d13c7153a9`.
+Reviewed video `boundary2-sprite-publication-fixed-comparison-v2.mp4`, SHA-256
+`eb9ac2f33fb4b03ab12f3b0fedc689271c2513c98f197b169e6a72d860a298eb`,
+137 frames at 60 Hz, 1280×488, one-second intro/tail holds, no audio.
+Its JSON receipt hashes every ordered input frame. Artifacts remain in the
+external task directory named in the completion plan.
+
+Final focused test-plus-B1-capture invocation passed **97 tests**, no failures,
+errors or skips, Maven 1:10; this includes the actual full-registry restore and
+forward-replay comparison, HUD rollover/pause, required S3K loading/AIZ checks,
+and the full strict FBZ recording (17.270 s test body). The earlier dedicated
+SAT/mapping checks also passed. All six other v2 captures exited successfully.
+
+These settled pairs do not certify intermediate redraws or the whole zone.
+B4 forward-08/16 retain 29/59 differing pixels around the floor strip and HUD
+background; the first B2 frame retains its background/palette publication
+mismatch. Controlled B5/Act2 prerequisites and other missing recipes remain
+explicit. Combined delivery validation and integration are still pending here.
+
+
+Final integration: presentation source `892292047` merged as `562e35e37`.
+The post-integration ordinary lane completed 20,449 tests with zero failures /
+errors and 18 inspected skips. Concurrent receipt-classification integration
+changed the runner fingerprint before guards; isolated full guards at
+`94a41febd` completed 667 cases with only the two exact inherited failures.
+The final focused incoming-merge/complete-FBZ replay check passed 53 tests,
+no skips. See [commands, provenance and limits](../../plans/2026-09-14-fbz-completion.md#post-integration-validation-and-delivery).
+All 36 fresh B2 v3 PNGs match reviewed v2 pixels; the existing video remains
+representative. Intermediate redraw and whole-zone coverage limits above remain.

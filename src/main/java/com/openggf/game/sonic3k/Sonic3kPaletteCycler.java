@@ -66,10 +66,18 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
 
     @Override
     public void update() {
+        update(true);
+    }
+
+    /**
+     * @param animate false while {@code Palette_fade_timer} spends the frame on the fade: no
+     *                AnPal cycle advances, but other palette owners still resolve
+     */
+    void update(boolean animate) {
         if (localPaletteRegistry) {
             paletteRegistry.beginFrame();
         }
-        if (cycles != null && !cycles.isEmpty()) {
+        if (animate && cycles != null && !cycles.isEmpty()) {
             // ROM: AnimatePalettes dispatches to AnPal_* every frame unconditionally,
             // regardless of fire transition state. Never suspend palette cycling.
             for (PaletteCycle cycle : cycles) {
@@ -141,6 +149,18 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 loadLbzCycles(reader, list, actIndex);
                 break;
 
+            case 0x08: // AnPal_SOZ1 / AnPal_SOZ2 shared light and sand counters.
+                if (actIndex == 0) {
+                    list.add(new Soz1Cycle(reader.slice(Sonic3kConstants.ANPAL_SOZ1_ADDR,
+                            Sonic3kConstants.ANPAL_SOZ1_SIZE)));
+                } else {
+                    list.add(new Soz2Cycle(reader.slice(Sonic3kConstants.ANPAL_SOZ1_ADDR,
+                                    Sonic3kConstants.ANPAL_SOZ2_SAND_SIZE),
+                            reader.slice(Sonic3kConstants.ANPAL_SOZ2_LIGHT_ADDR,
+                                    Sonic3kConstants.ANPAL_SOZ2_LIGHT_SIZE)));
+                }
+                break;
+
             case 0x09: // LRZ — AnPal_LRZ1 / AnPal_LRZ2 lava + crystal colors
                 loadLrzCycles(reader, list, actIndex);
                 break;
@@ -162,6 +182,18 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
 
             case 0x14:
                 loadPachinkoCycles(reader, list);
+                break;
+            // OffsAnPal entries 45 ($1601 Hidden Palace) and 47 ($1701 sanctuary)
+            // are AnPal_HPZ; entries 44 (LRZ3) and 46 (DEZ3) are not
+            // (sonic3k.asm:3161-3164).
+            case 0x16, 0x17:
+                if (actIndex == 1) {
+                    byte[] hpzData = safeSlice(reader, Sonic3kConstants.ANPAL_HPZ_ADDR,
+                            Sonic3kConstants.ANPAL_HPZ_SIZE);
+                    if (hpzData.length >= Sonic3kConstants.ANPAL_HPZ_SIZE) {
+                        list.add(new HpzCycle(hpzData));
+                    }
+                }
                 break;
             case 0x15:
                 loadSlotsCycles(reader, list);
@@ -354,7 +386,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                                                     Level level,
                                                     int paletteIndex) {
         if (registry == null && graphics != null && graphics.isGlInitialized()) {
-            graphics.cachePaletteTexture(level.getPalette(paletteIndex), paletteIndex);
+            com.openggf.graphics.PaletteUploadPresentation.cacheLevelPalette(graphics, level.getPalette(paletteIndex), paletteIndex);
         }
     }
 
@@ -1089,6 +1121,66 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         }
     }
 
+    /** AnPal_SOZ1 ($2546): signed word timer; consume offset before adding eight. */
+    private static class Soz1Cycle extends PaletteCycle {
+        private final byte[] tableData;
+        private int timer;
+        private int offset;
+
+        Soz1Cycle(byte[] tableData) { this.tableData = tableData; }
+
+        @Override void tick(Level level, PaletteOwnershipRegistry registry) {
+            if (GameServices.hasRuntime()) {
+                var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+                if (state != null && state.eventPaletteFadeHeld()) return;
+            }
+            timer = (short) (timer - 1);
+            if (timer >= 0) return;
+            timer = 5;
+            int source = offset;
+            offset = (offset + 8) & 0x1F;
+            GraphicsManager gm = GameServices.graphics();
+            S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                    S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                    2, 12, slice(tableData, source, 8));
+            cacheFallbackPaletteTexture(registry, gm, level, 2);
+        }
+    }
+
+    /** AnPal_SOZ2: the runtime also exposes these counters to switches and torches. */
+    private static class Soz2Cycle extends PaletteCycle {
+        private final byte[] sandData;
+        private final byte[] lightData;
+
+        Soz2Cycle(byte[] sandData, byte[] lightData) {
+            this.sandData = sandData;
+            this.lightData = lightData;
+        }
+
+        @Override void tick(Level level, PaletteOwnershipRegistry registry) {
+            if (!GameServices.hasRuntime()) return;
+            var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+            if (state == null || state.actIndex() != 1 || state.eventPaletteFadeHeld()) return;
+            var update = state.lighting().tickPalette();
+            GraphicsManager gm = GameServices.graphics();
+            if (update.lightOffset() >= 0) {
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                        S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        2, 1, slice(lightData, update.lightOffset(), 22));
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                        S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        3, 1, slice(lightData, update.lightOffset() + 22, 30));
+                cacheFallbackPaletteTexture(registry, gm, level, 3);
+            }
+            if (update.sandOffset() >= 0) {
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                        S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        2, 12, slice(sandData, update.sandOffset(), 8));
+                cacheFallbackPaletteTexture(registry, gm, level, 2);
+            }
+        }
+    }
+
     // ========== LBZ Cycle ==========
     // ROM: AnPal_LBZ1 / AnPal_LBZ2 (shared logic at loc_2516, sonic3k.asm line 3448)
     // Single channel, timer period 4 (reset to 3), counter0 step +6, wrap at 0x12 (18 bytes).
@@ -1509,6 +1601,38 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 cacheFallbackPaletteTexture(registry, gm, level, 2);
                 dirty = false;
             }
+        }
+    }
+
+    // ========== HPZ Palette Cycle ==========
+    // ROM: AnPal_HPZ (sonic3k.asm:3934-3951). Counters live in HpzZoneRuntimeState
+    // because Obj_HPZMasterEmerald and the HPZ teleporter write them.
+    private static class HpzCycle extends PaletteCycle {
+        private final byte[] hpzData; // AnPal_PalHPZ: 10 frames x 4 bytes
+
+        HpzCycle(byte[] hpzData) {
+            this.hpzData = hpzData;
+        }
+
+        @Override
+        void tick(Level level, PaletteOwnershipRegistry registry) {
+            if (!GameServices.hasRuntime()) {
+                return;
+            }
+            var state = S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry()).orElse(null);
+            if (state == null) {
+                return;
+            }
+            int offset = state.tickPaletteCycle();
+            if (offset < 0) {
+                return;
+            }
+            // move.l (a0,d0.w),(Normal_palette_line_4+$2).w -> line 4 colors 1-2
+            GraphicsManager gm = GameServices.graphics();
+            S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                    S3kPaletteOwners.HPZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                    3, 1, slice(hpzData, offset, 4));
+            cacheFallbackPaletteTexture(registry, gm, level, 3);
         }
     }
 

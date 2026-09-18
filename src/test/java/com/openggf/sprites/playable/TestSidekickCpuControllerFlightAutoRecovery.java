@@ -71,6 +71,44 @@ class TestSidekickCpuControllerFlightAutoRecovery {
     }
 
     @Test
+    void normalHandoffCopiesLiveLeaderCollisionPlaneAndArtPriority() {
+        for (var rules : new GameRules[]{GameRules.SONIC_2, GameRules.SONIC_3K}) {
+            for (boolean secondary : new boolean[]{true, false}) {
+                var sonic = sonicAt(0x1000, 0x400);
+                sonic.useGameRules(rules);
+                var tails = new TestableSprite("tails_p2");
+                tails.useGameRules(rules);
+                tails.setCpuControlled(true);
+                tails.setCentreX((short) 0x1000);
+                tails.setCentreY((short) 0x400);
+                sonic.setTopSolidBit((byte) (secondary ? 0xE : 0xC));
+                sonic.setLrbSolidBit((byte) (secondary ? 0xF : 0xD));
+                sonic.setHighPriority(secondary);
+                tails.setTopSolidBit((byte) (secondary ? 0xC : 0xE));
+                tails.setLrbSolidBit((byte) (secondary ? 0xD : 0xF));
+                tails.setHighPriority(!secondary);
+                tails.setRollingFlagPreserveRadii(true);
+                tails.applyCustomRadii(7,14);
+                tails.setPushing(true);
+                tails.setOnObject(true);
+                var cpu = new SidekickCpuController(tails, sonic);
+                cpu.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+                cpu.update(1);
+                assertEquals(SidekickCpuController.State.NORMAL, cpu.getState());
+                assertEquals(sonic.getTopSolidBit(), tails.getTopSolidBit());
+                assertEquals(sonic.getLrbSolidBit(), tails.getLrbSolidBit());
+                assertEquals(sonic.isHighPriority(), tails.isHighPriority());
+                assertFalse(tails.getRolling());
+                assertFalse(tails.getPushing());
+                assertFalse(tails.isOnObject());
+                assertTrue(tails.getAir());
+                assertEquals(7,tails.getXRadius());
+                assertEquals(14,tails.getYRadius());
+            }
+        }
+    }
+
+    @Test
     void flightSteersXByDistanceOver16ClampedTo0xC() {
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -214,7 +252,17 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "ROM Tails_FlySwim_Unknown loc_13C3A ORs Status_InAir every on-screen frame");
         assertEquals(0x21, tails.getAnimationId(),
                 "Tails_Set_Flying_Animation selects the ascending flight byte from negative y_vel");
-        assertEquals(0x21, tails.getForcedAnimationId());
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "The CPU publishes the animation byte without owning later object writes");
+
+        // A later object slot writes Spring, then the next off-screen CPU pass
+        // branches directly to loc_13C50 without Tails_Set_Flying_Animation.
+        tails.setAnimationId(0x10);
+        tails.setRenderFlagOnScreen(false);
+        controller.update(11);
+        assertEquals(0x10, tails.getAnimationId());
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "A persistent flight override would erase the later spring/cage animation");
     }
 
     @Test

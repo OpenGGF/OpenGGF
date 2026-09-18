@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -80,6 +81,14 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
         if (!spriteOnScreenTestPasses()) {
             setDestroyedByOffscreen();
         }
+    }
+
+    // Obj_LBZPlayerLauncher writes priority $80 (sonic3k.asm:51821).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override
@@ -291,6 +300,14 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
             }
             updateSegmentPositions();
             updateDynamicSpawn(segmentX[CHILD_SPRITE_COUNT], segmentY[CHILD_SPRITE_COUNT]);
+        }
+
+        // loc_2629C writes priority $80 on the arm SST (sonic3k.asm:51946).
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
         }
 
         @Override

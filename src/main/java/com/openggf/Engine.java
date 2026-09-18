@@ -437,14 +437,24 @@ public class Engine {
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel,
 				this::exportCurrentEditorLevel);
 
+        com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
+                .setHostActions(this::toggleEditorPlaytestMode, this::startGameplayFromBeginning);
+        com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
+                .setFeedback(cue -> audioManager.playSfx(MasterTitleScreen.AudioCue.valueOf(cue.name()).sfxName()));
+
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
+            com.openggf.editor.EditorCommandPalette.forController(levelEditorController).close();
 			// Keep projection at 320 for both modes
 			projectionWidth = realWidth;
 		});
 		gameLoop.setEditorInputHandler(editorInputHandler);
-		gameLoop.setEditorPlaytestToggleHandler(this::toggleEditorPlaytestMode);
-		gameLoop.setEditorFreshStartHandler(this::startGameplayFromBeginning);
+		gameLoop.setEditorPlaytestToggleHandler(() -> {
+            if (!com.openggf.editor.EditorCommandPalette.forController(levelEditorController).isOpen()) toggleEditorPlaytestMode();
+        });
+		gameLoop.setEditorFreshStartHandler(() -> {
+            if (!com.openggf.editor.EditorCommandPalette.forController(levelEditorController).isOpen()) startGameplayFromBeginning();
+        });
 
 		instance = this;
 	}
@@ -674,6 +684,7 @@ public class Engine {
 
 	private void installEditorTextInputCallback() {
 		glfwSetCharCallback(window, (windowHandle, codepoint) -> {
+			com.openggf.control.MenuInput.handleCharEvent(inputHandler, codepoint);
 			if (getCurrentGameMode() == GameMode.EDITOR) {
 				editorInputHandler.handleTextInputCodepoint(codepoint);
 			}
@@ -1449,7 +1460,7 @@ public class Engine {
 		nativeModNoticeScreen = new com.openggf.game.NativeModNoticeScreen(
 				graphicsManager.getFadeManager(),
 				com.openggf.mods.NativeUnsupportedMods.noticeLines(
-						names, com.openggf.game.NativeModNoticeScreen.MAX_VISIBLE_MOD_LINES));
+						names, Integer.MAX_VALUE));
 		nativeModNoticeScreen.initialize();
 		gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
 		gameLoop.setGameMode(GameMode.NATIVE_MOD_NOTICE);
@@ -1726,6 +1737,7 @@ public class Engine {
 						configService, moduleResolutionService, preparedLaunch),
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
+		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
 		}
@@ -1748,9 +1760,9 @@ public class Engine {
 		// This menu's reader is distinct from the in-game async writer.
 		com.openggf.game.save.SessionSaveRequests.flushPendingSaves();
 		List<com.openggf.game.MasterTitleEntry> entries = new ArrayList<>();
-		entries.add(new com.openggf.game.MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_1));
-		entries.add(new com.openggf.game.MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2));
-		entries.add(new com.openggf.game.MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_3K));
+		for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
+			entries.add(new com.openggf.game.MasterTitleEntry.Stock(game));
+		}
 		SaveManager saves = new SaveManager(com.openggf.game.save.SavePaths.root());
 		for (com.openggf.mods.ModDescriptor descriptor
 				: ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
@@ -2955,13 +2967,12 @@ public class Engine {
 				&& inputHandler != null
 				&& inputHandler.isKeyPressed(
 						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
-		boolean displayShaderPickerHandledInput = updateDisplayShaderInput();
-		if (displayColorProfileController != null && !displayShaderPickerHandledInput) {
-			displayColorProfileController.update(inputHandler);
-		}
-		if (displayShaderController != null && !displayShaderPickerHandledInput) {
-			displayShaderController.update(inputHandler);
-		}
+		boolean displayShaderPickerHandledInput = com.openggf.game.TitleInputOwnership.routeDisplay(
+				getCurrentGameMode(), masterTitleScreen,
+				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
+				this::updateDisplayShaderInput,
+				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
+				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
 		if (!displayShaderPickerHandledInput) {
 			update();
 		} else if (inputHandler != null) {
@@ -3310,9 +3321,10 @@ public class Engine {
 		if (inputHandler == null) {
 			return;
 		}
-		if (!shouldToggleLiveCapture(
-				configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
-				liveCaptureChord, inputHandler)) {
+		if (!com.openggf.game.TitleInputOwnership.routeCapture(getCurrentGameMode(), masterTitleScreen,
+				() -> shouldToggleLiveCapture(
+						configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
+						liveCaptureChord, inputHandler))) {
 			return;
 		}
 		switch (liveCaptureController.state()) {
@@ -3934,6 +3946,7 @@ public class Engine {
 		resetCameraForScreenSpaceIfPresent();
 		if (nativeModNoticeScreen != null) {
 			nativeModNoticeScreen.setProjectionMatrix(getProjectionMatrixBuffer());
+			nativeModNoticeScreen.setViewportWidth((int) realWidth);
 			nativeModNoticeScreen.draw();
 		}
 	}
@@ -3983,8 +3996,14 @@ public class Engine {
 		if (resultsScreen == null) {
 			return;
 		}
-		camera.setX((short) 0);
-		camera.setY((short) 0);
+		if (resultsScreen instanceof LevelBackdropResultsScreen backdrop && backdrop.drawsLevelBackdrop()) {
+			backdrop.prepareLevelBackdropDraw();
+			levelManager.drawWithRenderOptions(spriteManager, LevelManager.LevelRenderOptions.previewCapture());
+			graphicsManager.flush();
+		} else {
+			camera.setX((short) 0);
+			camera.setY((short) 0);
+		}
 		applyViewportWidth(resultsScreen, (int) projectionWidth);
 
 		graphicsManager.beginPatternBatch();

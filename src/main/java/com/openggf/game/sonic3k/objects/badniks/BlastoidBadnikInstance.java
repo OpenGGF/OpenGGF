@@ -175,7 +175,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
             // Obj_Blastoid (sonic3k.asm:183570-183578) still runs
             // Blastoid_CheckPlayerTouch and Sprite_CheckDeleteTouch after the
             // routine returns, so the tail work happens on the Init dispatch too.
-            processPendingTouch();
+            processPendingTouch(vIntRunCount);
             publishedTouchResponseListEntryThisFrame = true;
             return;
         }
@@ -187,7 +187,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
         // Obj_Blastoid calls Check_PlayerCollision after its state routine.
         // Touch_Special has already latched the player selector in the
         // collision property during the player pass.
-        processPendingTouch();
+        processPendingTouch(vIntRunCount);
         // Obj_Blastoid's normal tail is Sprite_CheckDeleteTouch, which adds
         // the object to Collision_response_list after the wait routine has
         // returned. The list is built from this per-pass publication state.
@@ -261,7 +261,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
      * property and {@code sub_879A8} immediately tests attack state before
      * either defeating the Blastoid or calling {@code HurtCharacter_Directly}.
      */
-    private void processPendingTouch() {
+    private void processPendingTouch(int vIntRunCount) {
         int property = collisionProperty & 0xFF;
         if (property == 0) {
             return;
@@ -285,7 +285,15 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
 
+        // HurtCharacter_Directly runs HurtCharacter, which spills Player_1's rings.
+        if (player.isCpuControlled()) {
+            player.applyHurt(currentX, com.openggf.game.DamageCause.NORMAL);
+            return;
+        }
         boolean hadRings = player.getRingCount() > 0;
+        if (hadRings && !player.hasShield()) {
+            services().spawnLostRings(player, vIntRunCount);
+        }
         player.applyHurtOrDeath(currentX, com.openggf.game.DamageCause.NORMAL, hadRings);
     }
 

@@ -248,4 +248,21 @@ class TestObjectScaffoldTool {
         assertEquals(Game.S3K, Game.parse("sonic3k"));
         assertThrows(IllegalArgumentException.class, () -> Game.parse("megadrive"));
     }
+
+    @Test
+    void everyScaffoldStatesItsSpriteBucketLoudly() {
+        // A scaffold must never compile into a silent bucket 0 (front-most); the
+        // placeholder throws until the ROM priority is transcribed.
+        String s3kBadnik = ObjectScaffoldTool.generateInstance(ObjectScaffoldTool.Game.S3K, "FooBadnikInstance", "0x8A", true);
+        assertTrue(s3kBadnik.contains("/* priorityBucket     */ romPriorityBucket()"), "S3K badnik passes the placeholder bucket");
+        assertTrue(s3kBadnik.contains("fill the ROM sprite priority word"), "S3K badnik placeholder throws");
+        for (String src : new String[] {
+                ObjectScaffoldTool.generateInstance(ObjectScaffoldTool.Game.S1, "FooObjectInstance", "0x12", false),
+                ObjectScaffoldTool.generateInstance(ObjectScaffoldTool.Game.S2, "FooBadnikInstance", "0x12", true),
+                ObjectScaffoldTool.generateInstance(ObjectScaffoldTool.Game.S3K, "FooObjectInstance", "0x12", false)}) {
+            assertTrue(src.contains("public int getPriorityBucket()"), "scaffold overrides getPriorityBucket");
+            assertTrue(src.contains("fill the ROM sprite priority bucket"), "scaffold bucket placeholder throws");
+            assertTrue(src.contains("import com.openggf.graphics.RenderPriority;"), "scaffold imports RenderPriority");
+        }
+    }
 }

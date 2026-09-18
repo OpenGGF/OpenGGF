@@ -166,12 +166,57 @@ display shader application must be gated off for trace capture.
 
 Paths are relative to the working directory (where the JAR is launched).
 
+The engine builds a catalogue of every image it can see: the files named by the
+three per-game keys plus every `*.gen`, `*.bin` or `*.md` file in
+`roms.directory`. Each image is identified by its size and the cartridge header
+titles at `0` and `0x200000`, never by its filename, so nothing needs renaming.
+A game boots when any combination of your images contains its bytes: a lock-on
+dump serves the games it contains, and Sonic 3 & Knuckles can be assembled from a
+separate Sonic 3 image and a separate Sonic & Knuckles image. The assembled view
+lives in memory only; the engine never writes, joins, patches or downloads a file.
+
+The per-game keys are explicit overrides. A key that names an existing file is
+served as configured (as the window that contains the game, or whole when the
+layout is not recognised). A key that names a missing file fails closed with that
+value in the error; the engine never silently substitutes another image. The
+built-in default names (`s1.gen`, `s2.gen`, `s3k.gen`) are only hints: when the
+hinted file is absent, or the key is blank, the directory scan applies. Among
+scanned images an image whose hash matches the identity table below wins, then
+the first image in name order.
+An image whose header matches but whose hash is unknown is still used and is
+logged as unverified; a hash mismatch never blocks boot. Hashing happens only
+when an image is opened or a tie must be broken, so a folder of unrelated images
+costs a few header reads at startup.
+
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `DEFAULT_ROM` | `roms.default` | string | `"s2"` | Which game to boot: `"s1"`, `"s2"`, or `"s3k"`. Selects the corresponding ROM key below. |
-| `SONIC_1_ROM` | `roms.sonic1` | string | `"s1.gen"` | Filename of the Sonic 1 ROM. Expected: World REV01, CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`. |
-| `SONIC_2_ROM` | `roms.sonic2` | string | `"s2.gen"` | Filename of the Sonic 2 ROM. Expected: World REV01, CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. |
-| `SONIC_3K_ROM` | `roms.sonic3k` | string | `"s3k.gen"` | Filename of the Sonic 3&K locked-on ROM. Expected: CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. |
+| `SONIC_1_ROM` | `roms.sonic1` | string | `"s1.gen"` | Explicit image for Sonic 1. May name any image that contains it, including an S&K + Sonic 1 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
+| `SONIC_2_ROM` | `roms.sonic2` | string | `"s2.gen"` | Explicit image for Sonic 2. May name any image that contains it, including an S&K + Sonic 2 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
+| `SONIC_3K_ROM` | `roms.sonic3k` | string | `"s3k.gen"` | Explicit image for Sonic 3 & Knuckles: a 4 MiB lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies (including the Sonic 3 + Sonic & Knuckles composite); any other missing file is an error. |
+| `ROMS_DIRECTORY` | `roms.directory` | string | `"."` | Directory scanned for images (`*.gen`, `*.bin`, `*.md`), relative to the working directory. |
+| `ROMS_PREFER_COMPOSITE` | `roms.preferComposite` | bool | `false` | When true, a Sonic 3 & Knuckles assembled from separate Sonic 3 and Sonic & Knuckles images is preferred over a single lock-on dump. |
+
+### Image identity
+
+Images are recognised by exact size and header; the hashes below mark the dumps
+the engine is verified against. Lock-on dumps are verified per half, so a lock-on
+dump whose halves match the standalone rows verifies without a row of its own.
+
+| Image | Size | Layout | Verified dump |
+|-------|------|--------|---------------|
+| Sonic 1 | 524,288 bytes (512 KiB) | Sonic 1 at `0` | World REV01: CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 | 1,048,576 bytes (1 MiB) | Sonic 2 at `0` | World REV01: CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 3 | 2,097,152 bytes (2 MiB) | Sonic 3 at `0` | CRC32 `9BC192CE`, SHA-1 `75E9C4705259D84112B3E697A6C00A0813D47D71` |
+| Sonic & Knuckles | 2,097,152 bytes (2 MiB) | S&K at `0` | CRC32 `0658F691`, SHA-1 `88D6499D874DCB5721FF58D76FE1B9AF811192E3` |
+| Sonic 3 & Knuckles (lock-on) | 4,194,304 bytes (4 MiB) | S&K at `0`, Sonic 3 at `0x200000` | CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| S&K + Sonic 1 (lock-on) | 2,621,440 bytes (2.5 MiB) | S&K at `0`, Sonic 1 at `0x200000` | Verified per half against the S&K and Sonic 1 rows |
+| S&K + Sonic 2 (lock-on) | 3,407,872 bytes (3.25 MiB) | S&K at `0`, Sonic 2 at `0x200000`, 256 KiB Knuckles in Sonic 2 chip at `0x300000` | MD5 `3E5E4B18D035775B916A06F2B3DC5031`, SHA-1 `6CD0537A3AEE0E012BB86D5837DDFF9342595004`, CRC32 `2AC1E7C6` |
+
+The S&K + Sonic 2 dump is the only source of the Knuckles in Sonic 2 chip; the
+engine identifies it by the size and hashes above and has no other way to obtain
+it. The catalogue only exposes the dump's windows to the engine; Knuckles in Sonic 2
+playability is tracked by the KiS2 patch design, not by this table.
 
 ---
 
@@ -207,12 +252,91 @@ Paths are relative to the working directory (where the JAR is launched).
 
 ## Launch Profiles
 
-The master title screen stores per-game launch defaults under `launch.s1`, `launch.s2`,
-and `launch.s3k`. Select a game on the master title screen and press `Tab` to open the
-launch profile panel; stock games show the hover line `Stock launch - Tab to configure`.
-The panel uses the configured `UP`/`DOWN` bindings to choose a row and the configured
-`LEFT`/`RIGHT` bindings to change that row. Hardcoded `Backspace` resets the profile
-to stock; hardcoded `Tab` or `Esc` closes and saves it.
+The master title stores per-game launch defaults under `launch.s1`, `launch.s2`,
+and `launch.s3k`. Left/right changes games from either hub pane. Up/down enters
+the action list from the game pane, then chooses an action within it.
+`Enter` opens **Browse Games** from game selection and opens the selected action
+from the action pane. Browse Games is a full-width, paginated catalog with availability
+labels; confirming selects a game without launching it. `Esc` (controller B) backs out. Opening a menu screen plays
+the confirmation cue; backing out plays a distinct cancel cue. These cues also apply inside nested menus,
+with errors reserved for rejected actions and failed operations. The game carousel wraps at either end, shows its position in the effective catalog,
+and preserves game identity when catalog entries change. Pending mod changes still
+follow the existing restart rules. Choose **Launch Options** to edit the selected game's profile.
+The original ROM-backed animated game logos remain, proportionally scaled into
+the left pane. Their original textures are drawn directly into the window
+viewport, so a larger window recovers source detail instead of enlarging a
+pre-reduced thumbnail. The default logical resolution remains 320x224.
+Primary text keeps the original 9x10 pixel font; supplementary details use a
+native small font in 6x8 cells, including lowercase descenders. Neither is
+fractionally resampled. The game pane shows the sky and the game carousel;
+missing ROMs are dimmed. Checkerboards and cyan focus frames connect menu pages.
+**Quit** opens a confirmation with **Return to menu** selected by default;
+`Esc`/B from the game pane also opens it. Error pages wait for `Enter`/A or
+`Esc`/B rather than dismissing on a timer.
+
+In the launch panel, arrows/D-pad choose a row and change its value. `Enter`/A
+saves, `Esc`/B cancels draft edits, and the optional `Tab` or controller
+Back/Select shortcut closes and saves. The visible **Stock**, **Save**, and
+**Cancel** buttons are reached with up/down; left/right moves between those
+buttons. **Stock** restores the stock draft (`Backspace` remains a shortcut).
+Stock values are white, non-default/non-stock values amber, and experimental
+values red; a separate cyan cursor marks selection. Prompts follow the last
+intentional keyboard/controller input rather than the presence of a controller.
+
+### Engine settings from the title
+
+Choose **Settings** for persisted engine preferences. The category rail stays
+visible; confirm enters the selected category, Back returns to the rail, and
+up/down moves through paginated fields. Left/right changes booleans, enums and
+numbers; confirm opens a value picker or text editor. Text editing supports
+ordinary keyboard typing and an onscreen keyboard with all printable ASCII,
+case/symbol pages, cursor movement, deletion, and default restoration. Down moves
+from the text field onto the keypad; Up from its top row returns to the field.
+Arrows and D-pad move the same focus. Enter/A chooses the highlighted key on the
+keypad or accepts the value in the text field; the keypad also has an **OK** key.
+Typing directly returns focus to the field. Switching input devices changes
+prompts without moving focus. This editor is shared with recording target frames,
+join addresses, and lobby chat. Key
+bindings also offer physical key/chord capture. Values and categories with non-default settings remain
+amber, including after saving. **Apply** writes the draft atomically; save errors
+retain the draft for retry. **Cancel** asks before discarding unsaved edits.
+
+**Details** (`F1` or the controller's north button) opens manually scrollable help,
+the complete value/error, and when the setting takes effect. Input bindings take
+effect after Apply; other settings describe their next-use or restart boundary.
+Unchanged ROM previews are retained after Apply. Current launch/session overrides
+remain authoritative until the next launch. YAML remains an optional editing route.
+
+Number fields use a numeric keypad; join addresses prioritize address punctuation.
+For path fields, Up from the text field opens a controller browser. The browser
+loads folders asynchronously and can be cancelled; **Use this folder** selects a
+directory, while selecting a file returns its path. Type directly to enter a new
+path. Unsupported font characters appear as `[U+...]` identities while stored text
+remains unchanged. Details shows the full representation without truncation.
+
+Hold a direction to repeat after a short delay; confirmation and Back never repeat.
+Prompts use Xbox A/B/Y, PlayStation Cross/Circle/Triangle, or physical button
+positions South/East/North for unrecognized controllers.
+
+Mods also keeps a draft: **Apply** saves without leaving, while Back asks before
+discarding unsaved changes. Applied mod changes still require a restart. Trace and
+recording catalogs load in the background with a visible Cancel action.
+
+**Advanced > Trace replays** opens the trace catalog without enabling test mode.
+Time Attack, Recordings, and Mods also have visible action-menu entries;
+existing function-key shortcuts remain optional accelerators. Global display and
+capture shortcuts remain available in game selection, but yield to the action
+menu and its child pages so typing or rebinding a key cannot change unrelated
+settings. Playback shortcuts do not run on the master title.
+
+Recordings has a separate options page for the target frame, pause-on-desync,
+fast-forward, playback, and full recording details. Time Attack exposes a
+visible **Start Run**, **Create LAN Room**, **Join LAN Room**, or **Browse Rooms** action; network addresses and lobby chat support the same
+keyboard/controller editor. Room creation, refresh, paging, and lobby actions
+are visible choices. Mods exposes **Details**, **Order**, **Notices**, and
+**Save + Back**, with paginated findings and confirmations. Trace replay lists,
+loading/failure pages, standalone New Game/Continue, and help share the same
+native typography and keyboard/controller navigation.
 
 Profiles are persistent defaults for future manual launches, but applying a profile is
 session-only. A launch can temporarily override live rewind, cross-game donation, debug
@@ -228,9 +352,10 @@ previous launch. When `crossGameSource` is `"s3k"`, the launch panel hides
 selection. When character rows are shown, their options follow the active donor:
 Sonic is always available, Tails requires Sonic 2 or Sonic 3&K data, and Knuckles
 requires Sonic 3&K data; hand-edited saved values outside that donor set are clamped
-before launch. `aspect: "global"` inherits the normal `display.aspect` setting and does not
-resize the window; pinned aspect values such as `"WIDE_16_9"` apply only for that game
-session and resize back when returning to the master title. In the launch panel, pinned
+before launch. `aspect: "global"` inherits the normal `display.aspect` setting; pinned
+aspect values such as `"WIDE_16_9"` apply only for that game session. They change the
+logical projection within the existing window, restoring the global projection
+when returning to the master title. In the launch panel, pinned
 16:10 and 16:9 aspects are amber non-standard choices. The 21:9 preset remains a
 best-effort smoke tier, while 32:9 is exploratory; both remain red choices so the panel
 does not imply the same support level as 16:10/16:9.
@@ -807,7 +932,7 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `NEXT_ACT` | `debug.keys.nextAct` | `266` | PAGE_UP | Skip to the next act within the current zone. |
 | `NEXT_ZONE` | `debug.keys.nextZone` | `267` | PAGE_DOWN | Skip to the first act of the next zone. |
 | `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). The gamepad north face button (Y/Triangle) on the primary connected pad also toggles it, unconditionally (not remappable). |
-| `DEBUG_LAST_CHECKPOINT_KEY` | `debug.keys.lastCheckpoint` | `67` | C | Teleport the player to the most recently activated checkpoint. |
+| `DEBUG_LAST_CHECKPOINT_KEY` | `debug.keys.lastCheckpoint` | `67` | C | Reload at the furthest-right checkpoint, initializing destination events without losing a life. |
 | `LEVEL_SELECT_KEY` | `debug.keys.levelSelect` | `298` | F9 | Open the level select screen at runtime. |
 | `TEST` | `debug.keys.test` | `84` | T | Generic test button used during development. |
 
@@ -991,7 +1116,7 @@ debug:
     nextZone: PAGE_DOWN   # Advance to the next zone
     debugMode: D   # Toggle debug movement mode
     frameStep: Q   # Step forward one frame while paused
-    lastCheckpoint: C   # Teleport to the last checkpoint
+    lastCheckpoint: C   # Reload at the furthest-right checkpoint
     levelSelect: F9   # Open the level select screen
     superSonic: U   # Toggle Super Sonic debug mode
     giveEmeralds: E   # Give all chaos emeralds
