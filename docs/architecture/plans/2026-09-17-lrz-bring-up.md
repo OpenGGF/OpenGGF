@@ -2106,3 +2106,37 @@ background art gap, and slice 5's clip. **No matrix row may be recorded for the 
 still has no clip, no route rewind spot and no native comparison.
 
 **Media.** Clips `09`-`28` unchanged; no new clip this round.
+
+### 2026-09-18 - The independent review still does not deliver, and that is now a measured fact
+
+Three reviewer subagents have now been spawned for this campaign across two rounds -- one in the
+sixth handover's round, two in this one -- and **none of them delivered a report**. All three did
+real work before stopping: this round's two burned 193k and 81k tokens over 41 and 13 tool calls
+respectively. Each was resumed by message (three times, three times and once) with progressively
+shorter and more explicit instructions, including "no more tool calls, just write the text" and an
+explicit 15-call budget with "an incomplete report delivered is worth far more than a complete one
+you never send". None produced output.
+
+**Treat an independent review as a step that may silently not happen**, and plan the round so the
+work is not gated on it. The failure is invisible from inside: the spawn returns, the agent works,
+and the absence only shows up as a missing report -- which looks exactly like a review that found
+nothing.
+
+**What was done instead, and what it is not.** The four highest-risk claims in `d48420e24` were
+re-read against the disassembly a second time by hand and all four hold: `sub_78C14`'s gate is
+`collision_flags` being **non**-zero (sonic3k.asm:160641-160670), and since `$20` seeds to `$20`,
+an even number, bit 0 is clear on the first flash frame, so the shipped `2*2` really does put the
+**bugged** `word_78CB2` window first; `word_78CA6`'s six `Normal_palette_line_2` byte offsets
+`$06 $08 $10 $18 $1A $1C` are colour indices 3, 4, 8, 12, 13, 14 (sonic3k.asm:160685-160687);
+`loc_78768`'s `cmpi.b #6,anim_frame(a0) / bhs.s` puts `sub_78C14` on the `< 6` side and
+`sub_78CCA` plus `clr.b collision_flags(a0)` on the `>= 6` side (sonic3k.asm:160218-160226); and
+`MoveSprite_AtAngleLookup` with `$3C = $80` selects `AtAngle_80_BF` through `lsr.w #5 / andi.w #6`
+and reads `AngleLookup_2[0] = 0` and, via `not.w d0` against `a3 = a2 + $40`,
+`AngleLookup_2[$3F] = $18`, both negated, giving `(0, -$18)` (sonic3k.asm:178504-178562,
+201856-201859) -- and the Java switch's four sign patterns match the four `AtAngle_*` routines.
+
+**This is a second reading, not a second pair of eyes.** It catches a transcription slip; it cannot
+catch a misreading the same author would make twice, which is the specific failure the deliberate
+breaks exist for and the reason the work order asks for a reviewer at all. The routine-table and
+continuation-chain constants remain unreviewed by anyone but their author, as the sixth handover
+already recorded.
