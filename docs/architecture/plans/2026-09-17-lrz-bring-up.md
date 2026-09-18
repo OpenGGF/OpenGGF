@@ -366,9 +366,9 @@ Still open:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 0-2 complete, slice 3a started and slice 3b complete (placeholder baseline 171 / 255 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, `Obj_LRZDashElevator` (`$1E`, 6 placements), and slice 3b's `Obj_LRZDoor` (`$19`, 15 + 11), `Obj_LRZBigDoor` (`$1A`, 1), `Obj_LRZButtonHorizontal` (`$1C`, 10 + 11) and `Obj_LRZShootingTrigger` (`$1D`, 2) with its projectile child. **Slice 3a remains open on `$15` corkscrew and `$16` wall ride; 3c and 3d are untouched.** Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
-| Cold-reachable | Not started |
-| Rewind-verified | `LrzZoneRuntimeState` capture/restore round trips only (`TestS3kLrzScrollRegistrationHeadless`, and the rock window pointers in `TestLrzRockSpriteRenderer`) plus the animator's counter blob; no route spots yet |
+| Implemented | Slices 0-2 complete, slice 3a two-thirds done and slice 3b complete (placeholder baseline 170 / 255 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, `Obj_LRZDashElevator` (`$1E`, 6 placements), and slice 3b's `Obj_LRZDoor` (`$19`, 15 + 11), `Obj_LRZBigDoor` (`$1A`, 1), `Obj_LRZButtonHorizontal` (`$1C`, 10 + 11) and `Obj_LRZShootingTrigger` (`$1D`, 2) with its projectile child, and slice 3a's `Obj_LRZCorkscrew` (`$15`, 1). **Slice 3a remains open on the `$16` wall ride; 3c and 3d are untouched.** Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
+| Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). Frontier **x 1909** of about 11,000, stalled on phase rather than content; the native input column reaches x 2357 unaided. Nothing cold-reached in act 2 or the boss act |
+| Rewind-verified | Before/active/after spots with forward replay for the `$19` door, the `$1C` button latch and the `$15` corkscrew ride (`TestLrzDoorButtonRewindSpots`, `TestLrzCorkscrewRewindSpot`), each broken on purpose once. Plus `LrzZoneRuntimeState` capture/restore round trips (`TestS3kLrzScrollRegistrationHeadless`, and the rock window pointers in `TestLrzRockSpriteRenderer`) plus the animator's counter blob; no route spots yet |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
 | Visually matched | Act 1 parallax, the act-1 lava block, the act-1 rock sprites (320 and 400), the act-1 animated background lava and the act-1 dash elevator inspected as before/after clips; act 2's background is still blocked by the direct-`$901` art gap, which slice 2 proved is not the animated-tile DMA |
 
@@ -882,7 +882,9 @@ and one derived from the native input; inputs preserved in `~/Videos/OGGF/lrz-br
 | v3 spindash from a standing start | x 1141 | the `$19` door subtype `$04` at `($490,$500)`, correctly shut | **the slice 3b object, working** |
 | v4 back off and jump right | x 1141 | no ledge to the left; he falls | input |
 | v5 native door manoeuvre | **x 1573** | the `$08` spikes at `($640,$538)` | input |
-| native input column, 12000 rows | **x 2357** at frame 2318 | open-loop drift, then death at frame 4659 | measurement, see below |
+| v6 v5 + a jump over the spikes | **x 1845** | terrain at x 1845; native is airborne over it | input |
+| v7 v6 + native's second jump | **x 1909** | the vertical climb from x 1877 | input, and see the conclusion |
+| native input column, 12000 rows | **x 2357** at frame 2318 | the two located divergences below | measurement |
 
 Three things worth keeping from this:
 
@@ -912,6 +914,19 @@ and jumps up-left onto the `$1C` button at frame 400, lands at 430, and is throu
 frame 460. Frames 385 and 450 were extracted and compared before publishing: in the first the
 sandstone column is down and blocking him, in the second it has risen into the ceiling with only
 its bottom edge showing.
+
+**Why the hand-authored route stops at x 1909, and what that costs.** Each extension so far has
+been a navigation fix copied from the native input: a spindash for the `$05` push-break rock, the
+turn-and-jump-left onto the `$1C` button, a jump over the `$08` spikes at `($640,$538)`, then
+native's second jump at its row 896. Past x 1877 the act turns into a vertical climb - native jumps
+at rows 940, 988 and 1042, gaining about 60 px each time - and copying that sequence stops working,
+because each jump has to *land where native lands*. It does not: at x 1845 native is airborne at
+y 1292 while the engine is grounded at 1328, and at x 1909 native is near y 1198 while the engine
+sits at 1260. There is no placed object anywhere in x 1830-2150 between y 1100 and 1500, so nothing
+here is a missing class - **the route is stalled by phase, not by content**, and the phase is the
+two divergences measured below. Extending it further by hand would mean re-timing every jump against
+an engine that is one frame out from the act's third frame; the economical order is to close those
+two first and then replay the native input, which already reaches x 2357 unaided.
 
 **Two located divergences, not "drift" (measured 2026-09-18 at `f75a47ae5`).** Replaying the
 recorded input frame for frame and comparing against the same fixture's own rows turns the vague
@@ -1000,3 +1015,42 @@ accelerates by `$10` a frame to `$1000`, the wall ride floors it at `+-$400` and
 bit 0 to pick the direction. Both carry a live `FixBugs = 0` branch: `addq.b
 #p2_standing_bit-p1_standing_bit,d6` leaves `d6` dirty after Player 1's `Perform_Player_DPLC`, so
 Player 2 behaves erratically on a shared ride, and the shipped behaviour is the dirty one.
+
+
+## Handover, 2026-09-18
+
+**Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`): `d2c58f148` slice 3b,
+`b789c0006` + `42b016940` + `7e2ea0572` its evidence and clips, `b79e84b00` the shot palette fix,
+`cf31acb88` rewind spots and the cold route, `9b0608d96` + `f75a47ae5` the corkscrew, `6ab6aef8d`
+the located divergences. Tree clean; nothing pushed or merged.
+
+**Census: 170 / 255 / 8** placeholders of 609 / 455 / 35 (was 239 / 281 / 14 at `035e48a58`).
+
+**Rows that remain in slice 3**, all act 1 unless noted:
+
+| Sub-slice | Rows | Placements |
+| --- | --- | ---: |
+| 3a remainder | `$16` wall ride | 1 + 1 act 2 |
+| 3c | `$17` (11), `$18` five subtypes (15), `$1B` eleven subtypes (27), `$1F` three (7), `$20` three (2+10 act 2... see inventory), `$21` ten (15), `$22` two (6) | 81 act 1 |
+| 3d | `$9C` subtypes 0 and 2 | 2 |
+
+`$16 Obj_LRZWallRide` is the cheapest next class: it shares `sub_42636` and the whole
+capture/ride/eject shape with `$15`, which is now implemented and tested, and its only real
+difference is that `status` bit 0 selects a leftward ride with the speed floor at `-$400`
+(sonic3k.asm:87693-87786). The read-ahead for both is in the slice 3b entry above.
+
+**The route's first blocker is not a missing class.** It is phase: at x 1909 the engine is grounded
+at y 1260 where native is near 1198, there is no placed object anywhere in x 1830-2150 between
+y 1100 and 1500, and the vertical climb past x 1877 needs jumps that land where native lands. The
+two divergences in the [trace frontier log](../../status/trace-frontier-log.md) - the falling intro
+one frame late from frame 3, and `$31 Obj_LRZCollapsingBridge` eight frames late at frame 156 - are
+the cause, and closing them is worth more to the route than any further hand-authored input.
+
+**Media.** Clips `09` (rock sprites re-cut), `10` (button opens door), `11` (big door), `12`
+(shooting trigger and door), `13` (cold route opening the door), `14` (corkscrew) in
+`~/Videos/OGGF/lrz-bring-up/`, with every `raw-NN-*` kept and all route and demo inputs under
+`inputs/`.
+
+**Owed on what has landed:** wide-viewport and donor rows for every slice 3a/3b class, a cold-route
+spot for `$1A` and `$1D`, `sub_42EC0` exercised on a route rather than only in a unit test, act 2's
+door and button skins exercised at all, and the dash elevator's mid-ride rewind spot.
