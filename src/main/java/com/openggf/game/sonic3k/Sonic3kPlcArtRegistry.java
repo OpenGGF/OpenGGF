@@ -2590,6 +2590,15 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 null
         ));
+        // Lava fall drops (SKL object $1F's children): make_art_tile($0D3,2,0)
+        // (sonic3k.asm:88797). $0D3 is ArtTile_LRZMisc.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_LAVA_FALL,
+                Sonic3kConstants.MAP_LRZ_LAVA_FALL_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                2,
+                null
+        ));
         // Falling spike (SKL object $18): make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:87948).
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.LRZ_FALLING_SPIKE,

@@ -294,6 +294,8 @@ public final class Sonic3kObjectArtKeys {
      * map are drawn on palette line 0 rather than the launcher's 3.
      */
     public static final String LRZ_FIREBALL = "lrz_fireball";
+    /** The drops {@code Obj_LRZLavaFall} allocates: {@code Map_LRZLavaFall} on palette line 2. */
+    public static final String LRZ_LAVA_FALL = "lrz_lava_fall";
     public static final String LRZ2_BUTTON = "lrz2_button";
     /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_DOOR = "lrz_door";

@@ -1501,6 +1501,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_PIPE_PLUG,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzFireballLauncherObjectInstance(spawn));
+        // Id $1F is Obj_LRZLavaFall in the SKL set (sonic3k.asm:88770); the S3KL set spends it on
+        // Obj_LBZLoweringGrapple.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_LOWERING_GRAPPLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzLavaFallObjectInstance(spawn));
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZMasterEmeraldObjectInstance(spawn));
