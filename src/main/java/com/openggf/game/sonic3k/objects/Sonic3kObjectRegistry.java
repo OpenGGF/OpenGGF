@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.FirewormBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.IwamodokiBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.JawzBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance;
@@ -1518,6 +1519,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_GATE_LASER,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzSmashingSpikePlatformObjectInstance(spawn));
+        // Id $99 is Obj_Fireworm in the SKL set (sonic3k.asm:196192); the S3KL set spends it on
+        // Obj_HCZMiniboss, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.HCZ_MINIBOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new FirewormBadnikInstance(spawn));
         // Id $9A is Obj_Iwamodoki in the SKL set (sonic3k.asm:188040); the S3KL set spends it on
         // Obj_HCZEndBoss, which is the name the id constant carries.
         registerStockRomZoneBound(Sonic3kObjectIds.HCZ_END_BOSS,

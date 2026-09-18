@@ -2522,6 +2522,18 @@ public final class Sonic3kPlcArtRegistry {
         }
 
         // Standalone badniks (both acts)
+        // The Fireworm's head is the one part with dynamic art: SetUp_ObjAttributesSlotted
+        // reserves two VRAM slots and loc_8F7A4 runs Perform_DPLC from DPLCPtr_Fireworm every
+        // frame (sonic3k.asm:196238-196239). make_art_tile(ArtTile_Fireworm,1,1): palette 1.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.FIREWORM,
+                Sonic3kConstants.ART_UNC_FIREWORM_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_FIREWORM_SIZE,
+                Sonic3kConstants.MAP_FIREWORM_ADDR,
+                1,
+                Sonic3kConstants.DPLC_FIREWORM_ADDR
+        ));
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.FIREWORM_SEGMENTS,
                 Sonic3kConstants.ART_KOSM_FIREWORM_SEGMENTS_ADDR,

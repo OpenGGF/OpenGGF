@@ -1920,6 +1920,19 @@ public class Sonic3kConstants {
     public static final int DDZ_RAW_ANIM_BASE_ADDR = 0x0832A8;
     public static final int DDZ_RAW_ANIM_SIZE = 0x3A;
 
+    /**
+     * {@code byte_8FA40} through the end of {@code byte_8FA56}: the Fireworm's three raw
+     * animation scripts, which end where {@link #MAP_FIREWORM_SEGMENTS_ADDR} begins.
+     */
+    public static final int LRZ_FIREWORM_RAW_ANIM_BASE_ADDR = 0x08FA40;
+    public static final int LRZ_FIREWORM_RAW_ANIM_SIZE = 0x1C;
+    /** {@code byte_8FA40}: the swim loop the head and every segment run in routine 6. */
+    public static final int LRZ_FIREWORM_ANIM_SWIM_ADDR = 0x08FA40;
+    /** {@code byte_8FA4D}: the turn-around loop, whose third entry flips the sprite. */
+    public static final int LRZ_FIREWORM_ANIM_TURN_ADDR = 0x08FA4D;
+    /** {@code byte_8FA56}: the flame's four-frame flicker. */
+    public static final int LRZ_FIREWORM_ANIM_FLAME_ADDR = 0x08FA56;
+
     // ===== DEZ Badnik Art =====
     public static final int ART_KOSM_SPIKEBONKER_ADDR = 0x18008C;
     public static final int MAP_SPIKEBONKER_ADDR = 0x184E5C;

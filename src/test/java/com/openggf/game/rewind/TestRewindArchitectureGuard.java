@@ -124,7 +124,16 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#restoreRewindState", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#restoreRewindState", 1),
+            // 2026-09-18 Lava Reef, the Fireworm. The head owns the list of the four segments it
+            // created (ChildObjDat_8FA16); each segment reads the head's status bit 7 to decide
+            // whether it is still publishing a hurt region (Child_DrawTouch_Sprite_FlickerMove,
+            // sonic3k.asm:178136-178141). A list of live objects is not a scalar and a restore
+            // cannot rebuild it, so it travels as ObjectRefId sidecars and each restored segment
+            // is re-attached to this head. Without it a restored chain would keep hurting after
+            // the head was destroyed.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormHeadInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormHeadInstance.java#restoreRewindState", 1)
     );
 
     private static final Map<String, Integer> OBJECT_REWIND_ANNOTATION_BASELINE = Map.ofEntries(
@@ -160,6 +169,13 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterBadnikInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#@RewindTransient", 1),
+            // 2026-09-18 Lava Reef, the Fireworm. Two dispositions per class, neither rewindable
+            // state: `scripts` is a read-only window of ROM bytes (byte_8FA40..byte_8FA56) that
+            // reloads itself on demand, and the head's `segments` list is the object-graph link
+            // triaged with the override entries above.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormFlameInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormHeadInstance.java#@RewindTransient", 2),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#@RewindTransient", 1),
             // Checkpoint/starpost orbit children keep ROM parent pointers as
             // structural live links. Rewind recreates them only when a matching
             // live parent exists, then reapplies captured scalar orbit state.

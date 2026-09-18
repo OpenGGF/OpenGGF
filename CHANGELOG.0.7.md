@@ -399,6 +399,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   cloud that drifts, settles on the ground and, if it catches you, clings on - dragging your speed
   down an eighth a frame and taking a ring a second until you shake it off by rocking left and
   right, or blow it apart with a spindash.
+  The zone's fire worms are in, 29 of them across the two acts: swim within a few steps of one and
+  a head rises out of the lava, sets off toward you a pixel a frame and grows a four-segment tail
+  behind it, each segment falling in eleven frames after the one in front and carrying its own
+  flame. The chain swims up and down for eight strokes, then the head turns and the whole worm
+  works its way back the other way. Only the head can be hit; the body and the flames only hurt.
   Lava Reef's bomb badniks are in, 66 of them across the two acts: each one is a solid block you
   can stand on until a player comes within a few steps, when its fuse lights, flickers faster and
   faster, and it blows itself apart into four fragments that arc away and fall.
