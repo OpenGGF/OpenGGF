@@ -196,7 +196,10 @@ public final class FirewormHeadInstance extends AbstractS3kBadnikInstance
             if (id == null) {
                 continue;
             }
-            Object resolved = context.requireIdentityTable().resolveObject(id, true);
+            // Not required: a segment can have been deleted between the capture and the restore
+            // (Go_Delete_SpriteSlotted2 at loc_8F7DA takes the whole chain off screen), and a
+            // missing link must leave the list shorter, not throw.
+            Object resolved = context.requireIdentityTable().resolveObject(id, false);
             if (resolved instanceof FirewormSegmentInstance segment) {
                 segment.attachHead(this);
                 segments.add(segment);
