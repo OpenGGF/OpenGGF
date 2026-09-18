@@ -24,8 +24,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The small floating platforms dip under a standing player, the tall columns break into eight
   falling pieces when one is stood on, and the flat bridge sections crumble away from under the
   player four pieces at a time — except the one section the cartridge marks permanent — and the
-  sloped walkways break into eight, sliding along their own slope as they go. The recreated Green Hill and Metropolis arenas,
-  their bosses and the Death Egg launch are still to come.
+  sloped walkways break into eight, sliding along their own slope as they go. The rest of
+  the act's traversal is in too: the little clouds squash under a standing player and throw
+  them up and back in a puff of four, the horizontal bars catch a player from above and swing
+  them before flinging them where they are steering, the short posts spin a player in place
+  and their invisible carriers walk them round in a circle, the swinging and rotating arms
+  carry a player at the tip of a jointed arc, and the retracting springs fold away until
+  somebody comes at them and then fire them along the deck. The recreated Green Hill and
+  Metropolis arenas, their bosses and the Death Egg launch are still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,

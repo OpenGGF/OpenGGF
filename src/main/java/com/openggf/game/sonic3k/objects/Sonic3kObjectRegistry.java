@@ -1485,6 +1485,21 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.SSZ_COLLAPSING_BRIDGE_DIAGONAL,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
                 (spawn, registry) -> new SszCollapsingBridgeDiagonalObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_BOUNCY_CLOUD,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszBouncyCloudObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_ELEVATOR_BAR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszElevatorBarObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_ROTATING_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszRotatingPlatformObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_SWINGING_CARRIER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszSwingingCarrierObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_RETRACTING_SPRING,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszRetractingSpringObjectInstance(spawn));
 
         // The Doomsday Zone's SKL object set.
         registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,

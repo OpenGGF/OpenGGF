@@ -5896,6 +5896,24 @@ renders; see `05-ssz-cloud-band-before-after.mp4`.
   capture with the camera below wrapped `Camera_Y $800`, at 320 and at a wide viewport, with the
   act-1 matrix's plain-mode background row carrying the frame numbers.
 
+## Sky Sanctuary Carried-Player Pose Writes the Facing Bit the ROM Leaves Alone
+
+`loc_460A6` writes `byte_468C4`'s low two bits straight into the carried player's `render_flags`,
+which is a draw-time flip only: `status(a1)`'s facing bit is untouched, so a player released from a
+spinning post keeps whichever way they were facing when they stepped on. This engine derives a
+playable's horizontal flip from `Direction`, so `SszCarriedPlayerPose` applies the table's X-flip
+bit through `setDirection` instead, which also moves the status facing bit.
+
+- **Location** — `SszCarriedPlayerPose.apply`
+  (`src/main/java/com/openggf/game/sonic3k/objects/`), used by `Obj_SSZRotatingPlatform` (`$76`)
+  and its `loc_45F10` carrier.
+- **Symptom** — a player who leaves a `$76` post faces whichever way the last pose row drew them,
+  rather than the way they arrived. Nothing reads the bit while they are held, because they are
+  under `object_control 3` throughout; only the frame after the release can differ.
+- **Removal condition** — a playable render-flip channel that is independent of `Direction`, so the
+  pose table can set the draw flip without the status bit, with a `$76` release at 320 and wide
+  showing the arrival facing preserved.
+
 ## Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss
 
 - **Location** — `SSZHPZTeleporterObjectInstance` (`src/main/java/com/openggf/game/sonic3k/objects/`)

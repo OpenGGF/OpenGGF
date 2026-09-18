@@ -2678,6 +2678,35 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_SSZ_MISC + 0x3C,
                 3,
                 null));
+        // Obj_SSZBouncyCloud and its loc_45304 puffs: make_art_tile(ArtTile_SSZMisc+$102,3,1).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_BOUNCY_CLOUD,
+                Sonic3kConstants.MAP_SSZ_BOUNCY_CLOUD_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x102,
+                3,
+                null));
+        // Obj_SSZElevatorBar, Obj_SSZSwingingCarrier and its arc and rider bar all draw
+        // Map_SSZElevatorBar; the hub and rider use palette 3 at the same tile base.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_ELEVATOR_BAR,
+                Sonic3kConstants.MAP_SSZ_ELEVATOR_BAR_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x74,
+                2,
+                null));
+        // Obj_SSZRotatingPlatform: make_art_tile(ArtTile_SSZMisc+$AA,2,0).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_ROTATING_PLATFORM,
+                Sonic3kConstants.MAP_SSZ_ROTATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0xAA,
+                2,
+                null));
+        // Obj_SSZRetractingSpring: make_art_tile(ArtTile_SSZMisc+$CE,0,0).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_RETRACTING_SPRING,
+                Sonic3kConstants.MAP_SSZ_RETRACTING_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0xCE,
+                0,
+                null));
     }
 
     /**

@@ -395,6 +395,14 @@ public final class Sonic3kObjectArtKeys {
     public static final String SSZ_CUTSCENE_BRIDGE = "ssz_cutscene_bridge";
     /** loc_57BB2: Map_SSZRoamingClouds over make_art_tile(ArtTile_SSZMisc+$3C,3,1). */
     public static final String SSZ_ROAMING_CLOUD = "ssz_roaming_cloud";
+    /** Obj_SSZBouncyCloud and its loc_452DA puffs: make_art_tile(ArtTile_SSZMisc+$102,3,1). */
+    public static final String SSZ_BOUNCY_CLOUD = "ssz_bouncy_cloud";
+    /** Obj_SSZElevatorBar and Obj_SSZSwingingCarrier: make_art_tile(ArtTile_SSZMisc+$74,2,0). */
+    public static final String SSZ_ELEVATOR_BAR = "ssz_elevator_bar";
+    /** Obj_SSZRotatingPlatform: make_art_tile(ArtTile_SSZMisc+$AA,2,0). */
+    public static final String SSZ_ROTATING_PLATFORM = "ssz_rotating_platform";
+    /** Obj_SSZRetractingSpring: make_art_tile(ArtTile_SSZMisc+$CE,0,0). */
+    public static final String SSZ_RETRACTING_SPRING = "ssz_retracting_spring";
     /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */
     public static final String SSZ_FLOATING_PLATFORM = "ssz_floating_platform";
     /**

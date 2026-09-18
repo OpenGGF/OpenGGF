@@ -58,6 +58,14 @@ class TestRewindArchitectureGuard {
             // per-object round trip in TestEveryObjectRewindRoundTrip.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCollapsingColumnDebrisObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCollapsingColumnDebrisObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszRotatingPlatformObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszRotatingPlatformObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierArcObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierArcObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierBarObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierBarObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#captureRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#restoreRewindState", 2),
             // Explosion construction factories cannot be derived from placement or services.

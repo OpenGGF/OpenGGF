@@ -2038,6 +2038,27 @@ public class Sonic3kConstants {
     public static final int SSZ_ROAMING_CLOUD_TABLE_ADDR = 0x058758;
     /** {@code Map_SSZRoamingClouds} (sonic3k.lst:136614). */
     public static final int MAP_SSZ_ROAMING_CLOUDS_ADDR = 0x058780;
+    /** {@code Map_SSZBouncyCloud} (sonic3k.lst:109129), shared by the cloud and its four puffs. */
+    public static final int MAP_SSZ_BOUNCY_CLOUD_ADDR = 0x046A44;
+    /**
+     * {@code byte_46698} (sonic3k.lst): the seven-entry sag ramp the cloud reads while its bounce
+     * counter runs down; {@code byte_4669F} is the eighth byte, the {@code $A} written on landing.
+     */
+    public static final int SSZ_BOUNCY_CLOUD_SAG_TABLE_ADDR = 0x046698;
+    /** {@code byte_466A0}: forty signed bytes of post-bounce recoil, indexed down from {@code $26}. */
+    public static final int SSZ_BOUNCY_CLOUD_RECOIL_TABLE_ADDR = 0x0466A0;
+    /** {@code word_466C8}: four puff rows of X offset, Y offset, X velocity, Y velocity. */
+    public static final int SSZ_BOUNCY_CLOUD_PUFF_TABLE_ADDR = 0x0466C8;
+    /** {@code Map_SSZElevatorBar} (sonic3k.lst:107062), shared by the swinging carrier family. */
+    public static final int MAP_SSZ_ELEVATOR_BAR_ADDR = 0x046ADA;
+    /** {@code Map_SSZRotatingPlatform} (sonic3k.lst:108003). */
+    public static final int MAP_SSZ_ROTATING_PLATFORM_ADDR = 0x046CE8;
+    /** {@code Map_SSZRetractingSpring} (sonic3k.lst:108584). */
+    public static final int MAP_SSZ_RETRACTING_SPRING_ADDR = 0x046D20;
+    /** {@code byte_468C4}: twelve (render-flag, mapping-frame) pairs for a carried player. */
+    public static final int SSZ_CARRIED_PLAYER_FRAME_TABLE_ADDR = 0x0468C4;
+    /** {@code byte_468DC}: the retracting spring's 36-byte {@code sub_1DD0E} height map. */
+    public static final int SSZ_RETRACTING_SPRING_HEIGHT_TABLE_ADDR = 0x0468DC;
 
     /**
      * CNZ Act 1 miniboss PLC id.
