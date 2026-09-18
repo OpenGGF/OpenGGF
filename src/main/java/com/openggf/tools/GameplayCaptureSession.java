@@ -185,6 +185,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
             level.initLevelEventsForLevel();
             level.updateObjectPositions();
         }
+        if (settings.rings() != null) {
+            // Declared capture setup: the ring count the route carried in. A boss filmed from a
+            // positioned start otherwise begins on zero rings, where the first touch is fatal and
+            // the fight cannot be filmed at all. Applied last: --star-post saves a checkpoint with
+            // restoreRings false and the reposition re-runs the level events, either of which can
+            // zero a count written earlier. Ported from the Lava Reef campaign's b35f59d33.
+            player.setRingCount(settings.rings());
+        }
     }
 
     /** Steps one gameplay frame with the given held input ({@code null} = neutral). */
@@ -351,7 +359,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
-                           Integer cameraXSub, boolean starPost) {
+                           Integer cameraXSub, boolean starPost, Integer rings) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
@@ -362,7 +370,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         Path donorRom, Integer startX, Integer startY, String emeraldStates,
                         boolean showTitleCard, boolean completeSpecialStage) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, null, null, false);
+                    showTitleCard, completeSpecialStage, null, null, false, null);
         }
 
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
@@ -370,7 +378,15 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
                         Integer cameraXSub) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false);
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false, null);
+        }
+
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub, boolean starPost) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, null);
         }
 
         public Settings {
