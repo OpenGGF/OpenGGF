@@ -5,7 +5,7 @@ ROM `Current_zone_and_act = $A00`, SKL object set.
 Character routes: Sonic, Sonic + Tails, Tails (`LevelSelect_CheckKnuckles` denies Knuckles except
 with `Debug_cheat_flag != 0`, and no Knuckles art or route exists for act 1).
 Owning plan: [SSZ bring-up](../../plans/2026-09-17-ssz-bring-up.md).
-Status: in progress (slices 0, 1, 1b, 2, and part of 3). Nothing below certifies the act.
+Status: in progress (slices 0, 1, 1b, 2, 3, 4 and 5). Nothing below certifies the act.
 
 Incoming: HPZ teleporter altar ending → `$A00` (`HpzTeleporterRouteHelperObjectInstance`), level
 select, save progression. Outgoing: `StartNewLevel $B00` from the Death Egg launch (`loc_581D2`);
@@ -46,8 +46,8 @@ green label, and "implemented" alone never closes a row.
 | OBJECT: `$7E` collapsing column + debris (25 placements) | `Obj_SSZCollapsingColumn` / `loc_44B30`/`loc_44B90`, debris `loc_44BCC`/`loc_44BF8`, `word_46618` | 320 | `TestS3kSszTraversalPlatforms` | yes | not yet | not exercised | eight pieces from `word_46618` decoded in the test, the `routine(a0)` report count and the `$7FFF` park asserted from the routines | `07-ssz-column-breaks-into-eight.mp4`, frame 90 | The `Random_Number` bob phase is drawn per column, so the column order of a load moves the RNG stream; not compared to native |
 | OBJECT: `$7C` collapsing bridge + shared debris (8 placements) | `Obj_SSZCollapsingBridge` / `loc_44C76`/`loc_44C9C`/`loc_44D22`, debris `loc_45052` | 320 | `TestS3kSszTraversalPlatforms` | yes | not yet | not exercised | subtype bit 7 (the only bit read), the four pieces with their `$102` frame word and 6/12/18/24 delays, and the 8-px-per-six-frames shrink to the `$7FFF` park, all asserted from the routine | `07-ssz-column-breaks-into-eight.mp4` shows the `$7E` sibling; `$7C`'s own clip is owed | Wide-viewport and donor rows open |
 | OBJECT: `$74 $75 $76 $7A $7B $7D`, EggRobo `$A0` | per-object inits | — | slice 3 (remaining) | open (placeholders) | open | open | open | open | 113 of the 154 slice-3 placements remain |
-| LIFE: death, starposts `$34:$02/$03/$04`, respawn, Y seam | `LevelSetup` clears `Events_bg+$00..$0F`; `SSZ1_ScreenInit` starpost path | — | slice 4 | open | open | open | open | open | Slice 4 |
-| BOSS: GHZ recreation lock / fight / defeat / pad `$79:$AA` | `sub_575EA` `loc_57686`-`loc_576E8`, `Obj_SSZGHZBoss` | — | slice 5 | open | open | open | open | open | Slice 5 |
+| LIFE: death, starposts `$34:$02/$03/$04`, respawn, Y seam | `LevelSetup` (sonic3k.asm:102185) `clr.l Events_bg+$00/$04/$08/$0C`; `Level:` (7623) `clearRAM _unkFA80,$80`; `SSZ1_ScreenInit` starpost path; `sub_575EA` MTZ pre-lock | 320 | `TestS3kSszLifecycleProduction` | yes | declared restart, not a route: `SSZ1_ScreenInit` drags a leader with no star post back to the arrival column, so `$34:$03` is written the way the ROM writes it | yes: the reload resets the timeline instead of continuing the pre-death history, and builds a new `SszZoneRuntimeState` (`assertSame` fails) | yes: `hpz_2` is itself a `$34:$03` restart (metadata `start_x 0x14C0 / start_y 0x00E8`) and its row 0's player `($14C0,$EC)` and camera `($1420,$8C)` are matched exactly | `16-ssz-death-restarts-at-the-star-post.mp4`, frames 77/150/220 | Only `$34:$03` is driven; `$34:$02`/`$34:$04` and a wide row are owed, as is a capture of a post being physically touched |
+| BOSS: GHZ recreation lock / fight / defeat | `sub_575EA` `loc_57686`-`loc_576E8`; `Obj_SSZGHZBoss` `off_7A2B4` routines 0-`$A`, `sub_7A5A0`, `loc_7A3CE`-`loc_7A3F8`; children `ChildObjDat_7A684`/`_7A69E`, `Child1_MakeMechaHead` | 320 + 800 | `TestS3kSszGhzArenaHeadless` | yes | declared restart at `($200,$7C8)`: the leader settles on the arena floor at `($200,$86C)` with the camera at `($160,$7C0)` by the act's own physics, and both gates then fire. No cold route reaches the arena yet | yes: mid-swing with all six links out; nulling the links' `chainParent` restore fails five of the six | **not claimed.** Values come from the routines only; the `hpz` fixture's Green Hill arena window (camera `$160,$7C0`, 1142 rows) is unread | `17-ssz-green-hill-recreation-ball-and-chain.mp4`, frames 330/420/600/900 | `sub_7A5A0`'s `word_7A628` three-colour hit flash is unported (the shared boss flasher is used instead); the `$79:$AA` pad's post-defeat rise is implemented but not driven end to end |
 | BOSS: MTZ recreation lock / fight / defeat / pad `$79:$F6` | `loc_5770C`-`loc_5775C`, `Obj_SSZMTZBoss` | — | slice 6 | open | open | open | open | open | Slice 6 |
 | BOSS: Mecha Sonic spawn / fight / defeat, results + save | `loc_45A84`, `loc_7B2DC`, `loc_7B308`, `loc_2DCA0` | — | slice 7 | open | open | open | open | open | Slice 7 |
 | EVENT: crumble, hot-swap, Death Egg BG, debris, ramp script, `$B00` request | `SSZ1_ScreenEvent` stages 0/4/8, `Obj_57E96`, `sub_5750C`, `sub_574DC`, `loc_58192`, `loc_581D2` | — | slice 8 | open | open | open | open | open | Slice 8 |
@@ -133,11 +133,11 @@ reachability, not a trace replay, and no frontier is claimed past `$6EB`.
 - The engine's arrival begins one frame later than fixture `hpz` row 0 implies, because the screen
   init runs from pre-physics of frame 1 rather than inside the level load. Values match exactly;
   the phase is slice 10's to settle.
-- No rewind **spot** has been exercised on any SSZ object yet, slice 3's families included. Every new class does pass the
-  generic capture/restore round trip in `TestEveryObjectRewindRoundTrip`, and
-  `SszZoneRuntimeState` is captured, but nothing has been captured mid-arrival or mid-cutscene,
-  restored and replayed forward.
-- The pseudo-starpost's other half — die after the bridge and respawn at `($140,$C6C)` — is owed:
-  slice 1b covers the respawn-finds-it-extended case, the death path belongs with slice 4.
+- Rewind spots now exist for slice 3's six families, the `$7E` debris deletion (the first SSZ spot
+  where an `ObjectRefId` sidecar is load-bearing, because the children really are gone at the
+  restore) and the Green Hill fight. Still not exercised: a spot mid-arrival or mid-cutscene, and
+  any spot at a wide viewport.
+- The pseudo-starpost's other half — die after the bridge and respawn at `($140,$C6C)` — is still
+  owed. Slice 4 drives a real death and reload, but at `$34:$03`, not at the bridge's write.
 - The Death Egg's `Pal_KnuxSSZEnd` patch, its missile and cloud children, and cutscene Knuckles'
   resting X are filed in [s3k-known-bugs](../../../status/s3k-known-bugs.md).
