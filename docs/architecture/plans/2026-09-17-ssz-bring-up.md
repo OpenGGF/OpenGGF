@@ -386,13 +386,15 @@ Still open — the named slice must resolve each **before** building on it:
 
 ## Status
 
+Last updated 2026-09-18 after slice 5, at `0d66b1434` on `feature/ai-ssz-bring-up`.
+
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 0, 1, 1b, 2 and **3** delivered: all 154 act-1 slice-3 placements now resolve to concrete classes ($74 $75 $76 $79 $7A $7B $7C $7D $7E $7F $A0), alongside the placement census, runtime state, screen init, the whole `sub_575EA` bounds machine short of boss allocation, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, and the act-1 background. `TestS3kSszPlacementCensus` ratchets act 1 to zero unimplemented families; act 2 still owes `$B2` (slice 9). Slices 4-11 are not started |
-| Cold-reachable | Unchanged by slice 3 so far: the new objects all sit past the bridge and no route reaches them yet, so they are exercised from star-post checkpoint entries. Act 1's arrival and cutscene run from a cold load and open the route: the bridge clears `Events_bg+$05` and the camera limits become `0 … $19A0`. Everything from the GHZ arena on is not started. Act 2 still loads with no events |
-| Rewind-verified | One spot exercised, in the sky (slice 2): capture mid-swing inside the cloud band, step, restore, compare, replay forward, compare again. It caught two real defects. The arrival and cutscene spots are still owed |
-| Native behaviour matched | The act-1 background layout is decoded from the ROM and matched against the engine's layer. That settles plain mode (rows 0-2 are one repeated chunk; the arrival camera selects row 1) and exposes a cloud-mode defect: the ROM pins that plane to layout columns 56-59 and the engine reads camera-derived ones (s3k-known-bugs #41). Placement/ring decode pinned to the ROM; the arrival's forced camera, player offset and rise arithmetic match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference against fixture `hpz` row 0 recorded as open. No SSZ native probe yet |
-| Visually matched | No new capture for slice 3 yet: the pad, platform and column art is registered and asserted but has not been photographed, and the cloud band has still never had a camera in it — and would render wrong if it did. Arrival and cutscene inspected frame by frame in the captures below; the background is inspected in the slice 2 clips at 320 and wide; the Death Egg's palette and children are filed as gaps |
+| Implemented | Slices 0, 1, 1b, 2, **3**, **4** and **5** delivered. All 154 act-1 slice-3 placements resolve to concrete classes (`$74 $75 $76 $79 $7A $7B $7C $7D $7E $7F $A0`); the census ratchets act 1 to zero unimplemented families and act 2 still owes `$B2` (slice 9). On top of that: the placement census, runtime state, screen init, the whole `sub_575EA` bounds machine **including** the Green Hill allocation at `loc_576E8`, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, the act-1 background, the death and checkpoint lifecycle, and `Obj_SSZGHZBoss` with its six-link chain, emitter and Mecha Sonic head. Slices 6-11 are not started |
+| Cold-reachable | Act 1's arrival and cutscene run from a cold load and open the route: the bridge clears `Events_bg+$05` and the camera limits become `0 … $19A0`. `TestS3kSszColdRoutes` carries the recorded movie input to X `$6EB`, past the bridge and the arrival ledge, short of the `$7B` cluster at `$740`. Everything past that — the traversal families, both arenas, the lifecycle — is exercised from **declared** star-post entries, not from a route. `SSZ1_ScreenInit` is why: with no star post it drags the leader back to the arrival column, so a walked approach to anything past the bridge does not exist yet. Act 2 still loads with no events |
+| Rewind-verified | Spots: the cloud band (slice 2), six slice-3 families, the `$7E` debris **deletion** (the first SSZ spot where an `ObjectRefId` sidecar is load-bearing, because the children really are gone at the restore), the death reload's timeline isolation, and the Green Hill fight mid-swing with all six chain links out. Each was broken on purpose once. Still owed: a spot mid-arrival or mid-cutscene, and any spot at a wide viewport |
+| Native behaviour matched | Three places. The act-1 background layout is decoded from the ROM and matched column for column against the engine's layer. Fixture `hpz` row 0's arrival values match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference recorded as open. Fixture `hpz_2` is itself a `$34:$03` restart and its row 0's player `($14C0,$EC)` and camera `($1420,$8C)` are matched exactly. **Nothing else is.** In particular no boss, no traversal family and no EggRobo is compared against a native row, and the `hpz` fixture's Green Hill arena window (camera `$160,$7C0`, 1142 rows) is unread. There is still no SSZ native probe |
+| Visually matched | Seventeen clips, `01`-`17`, each cut from a raw capture whose frames were read before cutting; the frames looked at are in `~/Videos/OGGF/ssz-bring-up/INDEX.md`. Every slice-3 family, the death and restart, and the Green Hill fight are filmed. Not filmed: the EggRobo's nibble-0/nibble-2 pairing in one shot (the obstacle is measured in INDEX.md), a wide-viewport row for anything past slice 2, and known bug #41's before/after — which was taken and shows **no pixel difference**, reopening the rendered half of that fix |
 
 Out of scope, recorded as dependencies: DEZ presentation/route after `$B00` (DEZ campaign, which
 also owns the mislabelled `ssz*` fixtures); `sub_5B18E`, `Obj_Ending`, credits and the Knuckles
@@ -1441,3 +1443,57 @@ the defeat is implemented but not driven end to end in a test. No capture yet. N
 comparison for the fight: the `hpz` fixture's Green Hill arena window (camera `$160,$7C0`, 1142
 rows) is the obvious next evidence and nothing here is compared against it, so "native behaviour
 matched" is not claimed for any of these rows.
+
+### 2026-09-18 — handover after slice 5
+
+Branch `feature/ai-ssz-bring-up`, head `0d66b1434`, base develop `035e48a58`. Nothing pushed,
+nothing merged. Commits this entry covers, oldest first: `5d746a8f2` (the `$74` finding and the
+EggRobo collision fix), `965ea8c1f` (the recreation rewind spot and #41's blank before/after),
+`664b15e76` (slice 4), `9e38c808c` (slice 5), `df1a3b85e` and `0d66b1434` (matrix and backlog).
+
+**Where slice 6 starts.** `Obj_SSZMTZBoss` (`loc_7A6B6`) and `sub_575EA`'s `loc_5775C`. Four things
+this entry learned that slice 6 will hit immediately and should not re-derive:
+
+1. **`SetUp_ObjAttributes` is the routine counter** — it ends `addq.b #2,routine(a0)`. Without that
+   fact every S&K boss's routine-0 entry reads as an infinite loop.
+2. **The arena gate is a camera, not the lock.** `loc_5775C` waits for `Camera_Y_pos == $380`
+   exactly, and the lock only publishes `Camera_target_max_Y_pos`; the boundary then eases at two
+   pixels a frame. From `$1000` that is roughly 1650 frames. Give the test the budget.
+3. **`Camera_X_pos` comparisons are width-sensitive.** `loc_5770C` tests `== $1660`. Use
+   `Sonic3kSSZEvents.nativeFramedCameraX`, which already exists, or the Metropolis arena is
+   unreachable at every wide viewport exactly as Green Hill was.
+4. **The boss and its children must be persistent.** Nothing in these dispatch chains runs
+   `Obj_WaitOffscreen`, and the escape leaves the locked arena; without `isPersistent()` the engine
+   stops updating the object part-way through and the defeat flag is never written.
+
+`Obj_SSZMTZBoss` differs from Green Hill in ways worth reading before writing anything: it has two
+routines rather than six, it writes its own `SSZ_MTZ_boss_X/Y_pos` and `_vel` words rather than
+using `MoveSprite2`'s SST fields, `loc_7A7C4` writes `$10,0,3,0,1,0` into `_unkFA82.._unkFA87` —
+the same word the EggRobo pairing uses, so an EggRobo fly-by released before the fight will look
+released afterwards unless the boss's write is modelled — and it allocates a second object at
+`loc_7AD8A` with `$34 = a0`.
+
+**The four things slice 5 did not deliver**, in the order they are worth doing: the `word_7A628`
+three-colour hit flash (`sub_7A5A0` patches `Normal_palette+$0E/$1C/$1E` from a two-row table
+indexed by `$20(a0)` bit 0, not a whole line, and the shared boss flasher is standing in); the
+`$79:$AA` gated pad driven end to end from the defeat flag to the `$2A0` lift; a native comparison
+against the `hpz` fixture's Green Hill window; and a wide-viewport capture of the fight.
+
+**Two open questions with kill conditions.**
+
+- *Known bug #41's rendered half.* The fix changes the published window (the layout test proves it)
+  and changes no pixel at camera `($898,$58C)` over 48 sampled frames. Either `LevelTilemapManager`
+  does not consume `bgTilemapBaseX` for SSZ act 1's plane, or that is the wrong camera. Killed by a
+  before/after pair at any camera whose frames differ, or by a read of the act-1 path through
+  `ensureBackgroundTilemapData` showing where the base is dropped. Recorded in
+  `docs/status/s3k-known-bugs.md` #41, where the plain-mode half is now marked asserted rather than
+  demonstrated.
+- *The EggRobo pairing shot.* Measured obstacle in `~/Videos/OGGF/ssz-bring-up/INDEX.md`: the fly-by
+  descends about `$1A` px before turning upward, and every nibble-2 partner hovers at a Y that is
+  off the top of the screen from the ledge the player must stand on to load it. Killed by a capture
+  that puts both on screen, or by establishing that none of the eleven pairs can.
+
+**One correction to make sure survives.** This plan's fixture table describes
+`s3k-sonic-tails-complete-emeralds/hpz_2` as carrying a "second death". It carries one
+`player_routine 00` span, not two, and `TestS3kSszLifecycleProduction` asserts that count so the
+claim cannot drift back in.
