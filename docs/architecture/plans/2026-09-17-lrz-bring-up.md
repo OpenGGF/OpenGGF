@@ -3070,3 +3070,50 @@ warned that "the live set at the change is what has to be compliant, and it is o
 running the change". Three classes were enumerated when the change was driven from a synthetic
 publication; the fourth only appears when a real boss defeat puts the end-sign control on the
 slot list. A zone adopting this policy should expect to find its last offender this way.
+
+
+### 2026-09-18 - Clips 31, 32 and 33 delivered, and the two gaps clip 33 shows
+
+**One capture, `raw-45-lrz1-miniboss-full-fight`, 4600 frames, gives all three.**
+`inputs/lrz1-miniboss-full-fight-v13.txt` is `v10` with the tap-jump pulse widened to the whole
+fight and lifted out of the first two slam windows, so the right hand dies before the drill does:
+
+| event | `V_int_run_count` | capture frame |
+| --- | --- | --- |
+| Super Sonic | -- | 170 |
+| right hand `collision_property` 4 -> 3 -> 2 -> 1 -> 0 | 273, 618, 1124, 1156 | 1155 |
+| drill `collision_property` 3 -> 2 -> 1 -> 0 | 1821, 1853, 1885 | 1869 |
+| act word flips, player and camera `-$2C00` | -- | **2305** |
+| ring tally reaches zero | -- | 3230 |
+
+`state.csv` has **zero `hurt` frames in 4600**. The whole fight takes no damage, which is what the
+Super Sonic reading predicted and is the clearest confirmation of it.
+
+**The hand needs one pass, not one window.** Both hands sit at `y 1844`-`1846` through the hover,
+and a jump from the arena floor apexes at `y 1918` -- Super Sonic's jump is no higher, measured on
+this capture, so the ninth handover's "jump higher" idea would not have worked either. The hand is
+only reachable while it travels: it crosses jump height on the way up at about `v 273` and on the
+way down at about `v 618`, and the third pass at `v 1124`-`1156` landed two hits because
+`sub_78CF4`'s `$20` invulnerability had expired inside the pass.
+
+**Clip 33 shows two gaps and hides neither**, both now in `s3k-known-bugs.md`:
+
+1. *The background plane still holds act 1's lava after the change.* The foreground is act 2's
+   from frame 2305 -- the floor is the blue crystal -- but nothing redraws plane B, because
+   `LRZ2_BackgroundEvent` stages 0 and 4 (`loc_5700C`/`loc_57040`, sonic3k.asm:115692-115722) are
+   not implemented. Stage 0 allocates `loc_5711E`, resets the tile-offset effect and arms
+   `Draw_delayed_position` = `Camera_Y_pos_BG_copy + $E0` masked by `Camera_Y_pos_mask` with
+   `Draw_delayed_rowcount` `$F`; stage 4 runs `Draw_PlaneVertBottomUp` until it reports done.
+   This is a **different** symptom from the direct-`$901` entry, which is about art readiness on a
+   load that never runs this event at all. The direct-load entry therefore still stands; it was
+   not re-tested this round and no claim is made about it.
+2. *The results panel never hands control back.* The tally finishes on frame 3230 and the player is
+   still pinned at `x 296` at frame 4500, with the input log still pressing jump. Native resumes
+   act 2 play about 893 frames after its own transition (fixture rows 25557 -> ~26450). So clip 33
+   cannot end on the player standing in act 2, and **no matrix row may claim the handover is
+   complete**.
+
+**What this means for the work order.** Item (C)'s question -- whether the direct-`$901` art gap
+still stands -- is answered only in part: the seamless path has its own, separately caused
+background gap, and closing `LRZ2_BackgroundEvent` stages 0 and 4 is the prerequisite for testing
+either. That is the first item of slice 7, ahead of the traversal objects.

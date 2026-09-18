@@ -5840,6 +5840,24 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 
 ---
 
+## Lava Reef Act 2: The Background Plane Still Holds Act 1 After the Seamless Act Change
+
+- **Location** — `LRZ2_BackgroundEvent` (`loc_5700C`/`loc_57040`/`loc_57058`, sonic3k.asm:115680-115735) and the `Events_routine_bg` staging it drives; visible through the seamless `$900` -> `$901` handover
+- **Symptom** — Measured 2026-09-18 on the first capture to defeat the act 1 miniboss for real (`~/Videos/OGGF/lrz-bring-up/raw-45-lrz1-miniboss-full-fight`, clip `33`). The act word flips on frame 2305 and the FOREGROUND is act 2's from that frame: the floor is the blue crystal, the player's x moves `11560` -> `296` and the camera `11264` -> `0`, both exactly `-$2C00`. The BACKGROUND plane keeps drawing act 1's lava, at frame 2350 and still at frame 4500, 2195 frames later.
+- **Cause, from the ROM** — Nothing redraws it. `loc_5700C` (stage 0) allocates `loc_5711E`, calls `sub_57082`, resets the tile-offset effect and then sets `Draw_delayed_position` to `Camera_Y_pos_BG_copy + $E0` masked by `Camera_Y_pos_mask` with `Draw_delayed_rowcount` `$F`; `loc_57040` (stage 4) runs `Draw_PlaneVertBottomUp` until it reports done. Neither stage is implemented, so the act-2 plane fill never runs and the plane keeps whatever act 1 left in it. This is a different symptom from the direct-`$901` entry below, which is about art readiness on a load that never runs this event at all; both are act-2 background work.
+- **Removal condition** — A capture through the seamless change showing the crystal wall behind the player in act 2, with `LRZ2_BackgroundEvent` stages 0 and 4 implemented and a headless case driving `Events_routine_bg` through `0 -> 4 -> 8`. Owned by LRZ slice 7 (act 2).
+
+---
+
+## Lava Reef Act 2: The Results Screen Never Hands Control Back After the Seamless Change
+
+- **Location** — `S3kResultsScreenObjectInstance` / `S3kBossDefeatSignpostFlow`'s `AWAIT_ACT_TRANSITION` hand-off, through the Lava Reef seamless `$901` change
+- **Symptom** — Measured 2026-09-18 on the same capture. The act change lands on frame 2305 and the ring tally finishes on frame 3230, but the results panel is still drawn and the player still cannot move at frame 4500, the end of a 4600-frame capture: `state.csv` has `x` pinned at `296` from the change to the last frame while the input log is still pressing jump.
+- **Native comparison** — The `s3k-sonic-tails-complete-emeralds/lrz` fixture transitions at row 25557, zeroes the rings at 26312 and has Player 1 moving again by about row 26450, **893 frames after the change**. The engine is 2195 frames past its own change and has not.
+- **Removal condition** — A capture through the seamless change in which the player walks in act 2 after the tally, and a headless case asserting control is restored within the native interval. Owned by LRZ slice 7. Until then clip `33` ends on the results panel and no matrix row may claim the handover is complete.
+
+---
+
 ## Lava Reef Act 2: Background Art Missing on a Direct `$901` Load
 
 - **Location** — `$901` level load / PLC art readiness; visible through `SwScrlLrz` act 2
