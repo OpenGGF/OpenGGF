@@ -542,8 +542,9 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 ## Status
 
 Slices 0 and 1 delivered 2026-09-17 on base `035e48a58` (`0d9a4f3ea`, `4e7655bf9`); see the
-evidence log. **Slice 2 is delivered and gated three times** (runs `20260918T100237Z-e62d5573`,
-`20260918T105742Z-cc4590b5` and `20260918T132045Z-02b73773`, all acknowledged). The reference
+evidence log. **Slice 2 is delivered and gated four times** (runs `20260918T100237Z-e62d5573`,
+`20260918T105742Z-cc4590b5`, `20260918T132045Z-02b73773` and `20260918T153215Z-c588acfb`, all
+acknowledged). The reference
 table now stands at **93 covered, 4 partial, 15 missing, 4 n/a**. The 15 missing rows are, by
 owner: the Knuckles glide/slide/climb rows behind the glide probe wrapper (5), the dash-dust
 and Tails'-tail render rows (3), the two rows blocked on upright behaviour the engine does not
@@ -569,7 +570,7 @@ asserted against anything real.
 | --- | --- |
 | Implemented | Slice 1: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Slice 2 part 1: inverted position integration (`MoveSprite_TestGravity`/`2` and `CalcRoomInFront`), the death plane at the top of the level, the level-load clear and the seamless act change's preserve. Slice 2 part 2: the `sub_11FD6`/`sub_11FEE` probe swap and its angle mirror. Slice 2 part 3: the ceiling-sensor activation swap that the probe swap needed, and the six airborne push-out and snap sites measured for all three characters against real Death Egg act 2 terrain. Reverse gravity now stands at 34 of 116 ROM references covered, 6 partial, 72 missing. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art |
 | Cold-reachable | Not started |
-| Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted. Capture/restore across an *inverted physics state* is not verified and cannot be until step 2a-2 |
+| Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted. Every slice 3 object has its own capture/restore/replay spot: the `$5B` crossing latch, the `$58` toggle counter, the `$59` rider budget and the `$5A` ride angle, each asserted to resume on the same update of the replay as of the first run |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` (slice 0), all six classes red from frame 0 |
 | Visually matched | Slice 1 presentation inspected at 320 and 800 px with before/after clips; no native pixel comparison |
 
@@ -1866,4 +1867,68 @@ the registered sidekick's position over the first 60 frames and see whether the 
 undone or the sprite is hidden.
 
 Clip `035-gravity-tube-320` ships with the alternation described rather than smoothed over.
+
+### 2026-09-18 — The end-of-session gate, and the handover after `$5A`
+
+**The gate.** Preflight passed (Java 21, Lua 5.4, PowerShell) in the actual launch environment.
+`run_categories.py --base 035e48a58 --run` selected **BROAD** again — 2716/2716 classes, full
+ordinary suite plus guards — stated before launching, with the runner's 40-minute
+per-invocation and 10-minute no-output timeouts as the stopping rule.
+
+| Lane | Result |
+| --- | --- |
+| Ordinary | 2716 reports, **22102 tests, 0 failures, 0 errors, 27 skipped**, 1053.9 s |
+| Guards | 85 reports, **669 tests, 0/0/0**, 190.0 s |
+
+Run id `20260918T153215Z-c588acfb`, exit 0, acknowledged. The 27 skips are the same set as the
+three previous gates, reason for reason: opt-in system properties (`soz.*.capture`,
+`openggf.aiz1.*`, the benchmark and allocation probes) and unavailable-host assumptions
+(surfaceless EGL, OpenGL 4.1, a local BizHawk reference). No `@RequiresRom` class appears in the
+skip list, which is how the previous gates' enumeration was read — a grep for "rom" in the skip
+reasons is not the check, because it matches "from" in "excluded from normal runs".
+
+Twenty-seven more tests than the previous gate (22075 → 22102) and no new failures: eighteen
+new `$59` and `$5A` cases, three new `$58` art and presentation cases, and the rest the
+reworked assertions.
+
+**The four-class trace comparison** was repeated on `31d59684e`, `clean test` with
+`-Ptrace-replay` and all three ROM paths absolute (`s1.gen`, `s2.gen`, `s3k.gen` — not
+`sonic1.gen`/`sonic2.gen`, which do not exist in this worktree and would have skipped both S1
+classes silently; **Skipped: 0** in all four classes is the check that they did not):
+`TestS1Ghz1TraceReplay` and `TestS1Mz1TraceReplay` 1/1 green; `TestS2Ehz1TraceReplay` red with
+**16388 errors, first at frame 6 on `dynamic_art.outstanding_transfer_ids` (expected=[2],
+actual=[])**; `TestS3kAizTraceReplay` 3/16 red with **59 errors, first at frame 5497 on
+`camera_x`, expected `0x0010` actual `0x0012`**. Identical to the five-times-recorded
+`f60b3f3e2` baseline, failure for failure and field for field; both reds stay
+**baseline-attributed**. Four classes only, and no evidence about any other class.
+
+**Handover after `$5A`.** Slice 3 is four of seven and every `Reverse_gravity_flag` writer and
+reader in the Death Egg object set is implemented. What remains:
+
+1. **`$5C` `Obj_DEZGravityHub` (0 act 1 / 3 act 2), `$5F` `Obj_DEZGravityRoom` (1/0) and `$61`
+   `Obj_DEZGravityPuzzle` (1/0).** None contains a `Reverse_gravity_flag` reference — verified
+   by grep over each routine, not assumed — so they are traversal objects that happen to sit in
+   gravity rooms, and nothing in this campaign's reverse-gravity obligation depends on them.
+   They are the smallest remaining slice 3 work: 5 placements between them. `$5C` sits at
+   `$0C40,$05C0` and `$32C0,$0640`/`$0840` in act 2, each paired with a `$5A` above or below.
+2. **The `$5A` rider alternation** at the co-located `$5B`/`$5A` pair (`$1A40,$08C0`), with its
+   kill condition: a native BizHawk capture of that site under reverse gravity. `sub_48F12`'s
+   mount has no `Status_InAir` test, so the ROM may alternate too.
+3. **The sidekick clip.** The tool now seeds the whole team and the seed is confirmed applied;
+   Tails is still absent from the act 2 corridor. Kill condition in `INDEX.md`.
+4. **The cold act 2 route** (`$B01` from level start, native input from the `ssz`-named DEZ
+   fixture, `zone_id 11`, capture frame n+1 = native row n, `--settle 1`) — not started this
+   session, and the thing that unblocks the rings/hit/shield clips, which the earlier
+   measurement showed are not reachable by positioned entry at any `$5B` site.
+5. **The checklist a new gravity object needs is now six**, not five: the DEZ census, the S3K
+   object profile (`SHARED_IMPLEMENTED_IDS` when the S3KL side is already concrete), the rewind
+   override baseline, the rewind tail inventory, `TestObjectServicesMigrationGuard`'s
+   no-null-`services()` rule, and — new with `$5A` —
+   `TestObjectPhysicsStandardizationGuard`'s ban on a raw `setCentreYPreserveSubpixel` on a
+   playable. Only `-Pguards` sees the last four.
+6. **A method note worth more than any of the above.** Every assertion in the four
+   gravity-object suites drives `update()` directly, so none of them sees the engine's own
+   per-frame bookkeeping between object updates. The `$5A` rider alternation was found by
+   filming and is invisible to all 41 of its focused tests. A green focused suite is not
+   evidence about frame-to-frame engine state around an object.
 
