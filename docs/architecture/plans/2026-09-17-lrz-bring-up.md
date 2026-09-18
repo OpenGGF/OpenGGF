@@ -1839,3 +1839,74 @@ classes; treat it as a slice, not an object.
 **Media.** Clips `09`-`28` unchanged. New raw captures kept as evidence for the dome finding, not
 as clips: `raw-38-lrz1-dome-lock`, `raw-38-lrz1-dome-lock-before`, `raw-39-lrz1-dome-lock-after`,
 `raw-39-lrz1-dome-lock-before`, with their inputs.
+
+## Handover, 2026-09-18 (sixth)
+
+**Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`), on top of the fifth
+handover's `a7b9de1ef`: `fd0d769bf` the dome-background finding and `PlaneOpacityProbe`,
+`9020c502f` the miniboss object, `17ccb4e72` its travel-direction fix. Tree clean; nothing pushed
+or merged.
+
+**Census: 0 / 188 / 8** of 609 / 455 / 35. **Act 1 has no placeholders left** -- every placement in
+the act builds a concrete class.
+
+**Measurements at this head (`17ccb4e72`).**
+
+| What | Result |
+| --- | --- |
+| Four mandatory S3K classes + `TestLrz*`/`TestS3kLrz*`/`TestS3kHpz*`/`TestS3kSoz*`/`TestS3kDdz*`/`SwScrlLrzTest`/`TestFireworm*` + both rewind guards | 1666 tests, 0 failures, **0 skips** |
+| `-Pguards test -B` (at `9020c502f`; `17ccb4e72` touched no registry or annotation surface) | 669 tests, 0 failures |
+| `TestS3kLrzForegroundOpacity` | 2 tests, 0 failures, 0 skips |
+
+Not re-measured at this head: the cold act 1 route and
+`TestS3kSonicTailsLrzSegmentTraceReplay`. The miniboss sits far past the route's frontier, but the
+route number in the fifth handover is now stamped to an older commit -- **re-measure before quoting
+it**. This is focused validation; no `run_categories.py --base 035e48a58 --run` has been run for
+this branch.
+
+**(A) is answered, and the answer was not the expected one.** The dome background lock is not an
+SSZ-style window defect. Lava Reef act 1's *foreground* plane is opaque wherever the camera sits in
+or around the dome, so no plane B pixel can reach the screen there whatever `SwScrlLrz` computes:
+0 of 71 680 see-through pixels at each of six dome viewports, and act-wide only 116 645 of
+48 234 496 layout pixels (0.24%) transparent inside populated chunks. Measured from ROM data with
+the new `com.openggf.tools.PlaneOpacityProbe`, pinned by `TestS3kLrzForegroundOpacity` with an
+Angel Island control. The [s3k-known-bugs](../../status/s3k-known-bugs.md) entry is rewritten and
+its removal condition is now a native plane-B-toggled capture at `($1E00,$900)`: agreement closes
+it as correct behaviour, disagreement reopens it as a chunk/pattern decode defect. **Slice 5 still
+has no clip, and now the reason is understood rather than merely observed.**
+
+**Slice 6 is part done.** The miniboss object is in, registered, art-wired and unit-tested, and the
+fight's *shape* is right. It cannot yet end. What is owed, with the ROM label for each, is the
+table in the slice 6 evidence-log entry above; the debris offsets, frames and `Obj_VelocityIndex`
+entries and all four palette addresses are already decoded there, so none of that needs re-reading.
+The largest remaining pieces in order: the hit path into `sub_78C14`/`sub_78CF4` (without it
+nothing can damage the boss), the `loc_78C60` defeat chain, then results and the `loc_56CAA`
+seamless `$901` change, then `LRZ2_BackgroundEvent` stages 0/4.
+
+**Two method notes worth more than the code.**
+
+- A test written from the same misreading as the code will agree with it. The first travel-direction
+  test passed against an inverted comparison because it asserted only the endpoint, and an
+  inverted compare reaches the same endpoint in one frame. Breaking the code on purpose *after*
+  writing the test is what caught it. The same pattern is why `TestS3kLrzForegroundOpacity` ships
+  with an Angel Island control rather than the dome assertion alone.
+- A byte-identical before/after capture cannot separate "wrong pixels drawn" from "no pixels
+  reachable". When a background change produces one, reach for `PlaneOpacityProbe` before reaching
+  for another capture.
+
+**Owed elsewhere, carried forward unchanged.**
+
+- `$1D` / `sub_42EC0` exercised on a route. A spindash into the `($94B,$4A7)` placement from
+  `($9B8,$4B4)` did not latch it; the other placement is `($19C8,$6D9)` with a route row at
+  `($19B4,$723)`.
+- Cold-route (rather than route-position) rewind spots, and a route spot for `$99`.
+- Act 2 placements exercised on an act 2 route.
+- Native row 2323, the route's first divergence, unattributed, and measured before this head.
+- `loc_849D8`'s `Set_IndexedVelocity` `d0` for a retired Fireworm segment.
+- The direct-`$901` act 2 background art gap in s3k-known-bugs; the seamless path is the one
+  expected to make act 2 correct, so it stays open until the transition lands.
+- No matrix rows for the miniboss: it has no motion verification, no clip and no route rewind spot,
+  so nothing may be recorded as covered for it yet.
+
+**Media.** Clips `09`-`28` unchanged; no new clip. `raw-38`/`raw-39` dome captures retained as
+evidence for the foreground-opacity finding.
