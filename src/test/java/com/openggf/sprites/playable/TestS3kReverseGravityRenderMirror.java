@@ -63,4 +63,41 @@ class TestS3kReverseGravityRenderMirror {
             SessionManager.clear();
         }
     }
+
+    /**
+     * A player under object mapping-frame control is still mirrored.
+     *
+     * <p>This is the case Tails' carry needs. {@code loc_14492} (sonic3k.asm:27290-27299) and
+     * {@code sub_1459E} (:27395-27411) set {@code object_control} on the carried player — so
+     * {@code Animate_Sonic} does not run for it — and then do the mirroring themselves, with
+     * the same {@code andi.b #$FC,render_flags} / {@code or.b d0} / {@code eori.b #2} shape
+     * the animators use. The net is unchanged: the carried player's Y-flip equals the flag.
+     * {@code renderVFlipForDraw} composes the flag for every draw rather than only the ones
+     * the animator reached, which is what makes those two rows fall out of the same owner.
+     */
+    @Test
+    void theMirrorSurvivesObjectMappingFrameControl() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 1)
+                .build();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            sprite.setObjectMappingFrameControl(true);
+
+            GameServices.gameState().setReverseGravityActive(true);
+            fixture.stepIdleFrames(1);
+            assertTrue(sprite.isObjectMappingFrameControl(),
+                    "the fixture must still be in the carried/scripted mapping state");
+            assertTrue(sprite.renderVFlipForDraw(),
+                    "loc_14492 / sub_1459E mirror the carried player even though the animator "
+                            + "is skipped");
+
+            GameServices.gameState().setReverseGravityActive(false);
+            fixture.stepIdleFrames(1);
+            assertFalse(sprite.renderVFlipForDraw(),
+                    "and a carried player is upright again with the flag clear");
+        } finally {
+            SessionManager.clear();
+        }
+    }
 }

@@ -138,11 +138,11 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 26495 | `loc_13B50` | `Tails_Catch_Up_Flying` (`loc_13B50`): respawn Y is `target + $C0` instead of `- $C0` | `SidekickCpuController` (comment only, no branch) | missing |
+| 26495 | `loc_13B50` | `Tails_Catch_Up_Flying` (`loc_13B50`): respawn Y is `target + $C0` instead of `- $C0` | `TailsRespawnStrategy.beginApproach`; `Tails_CPU_target_Y` stays unmirrored as the ROM writes it before the branch | covered |
 | 27287 | `loc_14474` | `Tails_Carry_Sonic` (`loc_14474`): carried player at `-$1C` instead of `+$1C` | `TailsCarryController:83,164` | covered |
-| 27298 | `loc_14492` | `loc_14492`: carried player vertical mirror | — | missing |
+| 27298 | `loc_14492` | `loc_14492`: carried player vertical mirror | `AbstractPlayableSprite.renderVFlipForDraw`, which composes the flag for every draw and not only the ones the animator reached — the carried player is under `object_control` | covered |
 | 27354 | `loc_14542` | carry pick-up window: `+$50` to the Y delta (`loc_14542`) | `TailsCarryController:68` | covered |
-| 27407 | `sub_1459E` | `sub_1459E` carry release: `y_pos -= $38` and vertical mirror | — | missing |
+| 27407 | `sub_1459E` | `sub_1459E` carry attach: `y_pos -= $38` after the unconditional `+$1C` (net `-$1C`) and vertical mirror | `TailsCarryController:83` writes the net offset; `AbstractPlayableSprite.renderVFlipForDraw` owns the mirror | covered |
 
 ### E. Knuckles routines
 
@@ -254,7 +254,7 @@ is the RAM wipe described above).
 | A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
 | B. Sonic (and Sonic/Knuckles shared) routines | 20 | 17 | 1 | 1 | 1 |
 | C. Tails routines | 21 | 18 | 1 | 1 | 1 |
-| D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
+| D. Tails CPU, flight catch-up and carry | 5 | 5 | 0 | 0 | 0 |
 | E. Knuckles routines | 24 | 17 | 1 | 5 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 6 | 0 | 3 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
@@ -262,7 +262,7 @@ is the RAM wipe described above).
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **73** | **4** | **35** | **4** |
+| **Total** | **116** | **76** | **4** | **32** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
