@@ -95,6 +95,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwitchObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java#restoreRewindState", 1),
             // HPZ ($1601) teleporter graph and Knuckles-fight children keep object links in
             // ObjectRefId sidecars: generic capture lost the teleporter's beam link on replay.
             // TestS3kHpzCompatibilityMatrix and TestS3kHpzKnucklesFightHeadless prove restore

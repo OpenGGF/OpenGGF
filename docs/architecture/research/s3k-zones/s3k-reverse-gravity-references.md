@@ -222,10 +222,10 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | ---: | --- | --- | --- | --- |
 | 93727 | `loc_47AA6` | `Obj_DEZConveyorPad` (`$53`, `loc_47AA6`): negates the X carry | new | missing |
 | 94874 | `loc_48B7E` | `Obj_DEZGravitySwitch` (`$58`, `loc_48B7E`): **writer** — toggles the flag 4 frames after a top/bottom press, then a 20-frame rearm | `S3kDezGravitySwitchObjectInstance.toggleFlag` | covered |
-| 94990 | `loc_48CB0` | `Obj_DEZTeleporter` (`$59`): negates the unroll radius Y adjustment | new | missing |
-| 95045 | `loc_48D78` | `Obj_DEZTeleporter`: Y-flip on the captured player frames | new | missing |
-| 95075 | `loc_48DCA` | `Obj_DEZTeleporter` (`loc_48DCA`): compares subtype bit 7 with the flag (Player 1 only) | new | missing |
-| 95080 | `loc_48DF2` | `Obj_DEZTeleporter` (`loc_48DF2`): **writer** — flag = subtype bit 7 | new | missing |
+| 94990 | `loc_48CB0` | `Obj_DEZTeleporter` (`$59`): negates the unroll radius Y adjustment | `S3kDezTeleporterObjectInstance.capture` | covered |
+| 95045 | `loc_48D78` | `Obj_DEZTeleporter`: Y-flip on the captured player frames | `AbstractPlayableSprite.renderVFlipForDraw` (the slice 2 draw-time mirror already composes bit 1 from the flag; `S3kDezTeleporterObjectInstance.updatePose` writes only the pose table's X flip) | covered |
+| 95075 | `loc_48DCA` | `Obj_DEZTeleporter` (`loc_48DCA`): compares subtype bit 7 with the flag (Player 1 only) | `S3kDezTeleporterObjectInstance.writeFlagAtMidpoint` | covered |
+| 95080 | `loc_48DF2` | `Obj_DEZTeleporter` (`loc_48DF2`): **writer** — flag = subtype bit 7 | `S3kDezTeleporterObjectInstance.writeFlagAtMidpoint` | covered |
 | 95277 | `loc_48FBA` | `Obj_DEZGravityTube` (`$5A`, `loc_48FBA`) exit: mirrors `flip_angle`, Y-flip | new | missing |
 | 95322 | `loc_4904A` | `Obj_DEZGravityTube` (`loc_4904A`): Y-flip while riding | new | missing |
 | 95511 | `sub_49228` | `Obj_DEZGravitySwap` (`$5B`, `sub_49228`): **writer** — clear | `S3kDezGravitySwapObjectInstance.applyCrossing` | covered |

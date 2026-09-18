@@ -135,8 +135,10 @@ class TestRemainingRewindTailInventory {
         // Death Egg gravity slice: S3kDezGravitySwapObjectInstance ($5B) is one more class and
         // one more isolated pass -- its spawn constructor is its probe constructor and its two
         // booleans round-trip through the subclass extra. $58
-        // S3kDezGravitySwitchObjectInstance is the same shape again. No bucket grows.
-        return new TailInventory(1111, 876, 235, 0, buckets);
+        // S3kDezGravitySwitchObjectInstance is the same shape again, and $59
+        // S3kDezTeleporterObjectInstance a third time -- its two rider blocks round-trip as one
+        // subclass extra record. No bucket grows.
+        return new TailInventory(1112, 877, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

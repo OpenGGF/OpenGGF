@@ -38,6 +38,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   choice, so running back the way you came restores it. Act 2's pressure pads flip it too,
   from either face, so a pad works whichever way up you reach it; the pads are now drawn,
   sinking as they are pressed, and sound the transporter note.
+  Act 2's teleporter columns now work too: step into one and it takes hold, spins up, carries
+  you to its partner and flips gravity on the way, and a second player can ride without the
+  gravity changing under the first.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

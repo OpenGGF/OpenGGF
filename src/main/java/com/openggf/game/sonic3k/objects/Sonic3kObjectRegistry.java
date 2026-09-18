@@ -504,6 +504,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.MGZ_DASH_TRIGGER,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $59 is Obj_DEZTeleporter (sonic3k.asm:94913); S3KL $59 is
+                        // Obj_MGZDashTrigger. The two object tables share the number.
+                        return new S3kDezTeleporterObjectInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }

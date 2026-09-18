@@ -97,7 +97,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder | 4 |
 | `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | placeholder | 5 |
 | `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** (`S3kDezGravitySwitchObjectInstance`; art not registered) | 3 |
-| `$59` | `Obj_DEZTeleporter` | 0 | 21 | placeholder | 3 |
+| `$59` | `Obj_DEZTeleporter` | 0 | 21 | `S3kDezTeleporterObjectInstance` | 3 |
 | `$5A` | `Obj_DEZGravityTube` | 24 | 17 | placeholder | 3 |
 | `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** (`S3kDezGravitySwapObjectInstance`) | 3 |
 | `$5C` | `Obj_DEZGravityHub` | 0 | 3 | placeholder | 3 |
@@ -254,21 +254,21 @@ so subtypes `$80+` arrive inverted.
 | `$57` | `$06` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
 | `$57` | `$07` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
 | `$58` | `$00` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** |
-| `$59` | `$0D` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$15` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$18` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$22` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$25` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$3A` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$45` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$4D` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$8D` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$95` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$A2` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$A5` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$BA` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$C5` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$CD` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
+| `$59` | `$0D` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$15` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$18` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$22` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$25` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$3A` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$45` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$4D` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$8D` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$95` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$A2` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$A5` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$BA` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$C5` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$CD` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
 | `$5A` | `$08` | `Obj_DEZGravityTube` | 7 | 2 | placeholder |
 | `$5A` | `$10` | `Obj_DEZGravityTube` | 6 | 6 | placeholder |
 | `$5A` | `$12` | `Obj_DEZGravityTube` | 0 | 3 | placeholder |

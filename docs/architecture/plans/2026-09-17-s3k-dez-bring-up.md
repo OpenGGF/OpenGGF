@@ -542,16 +542,23 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 ## Status
 
 Slices 0 and 1 delivered 2026-09-17 on base `035e48a58` (`0d9a4f3ea`, `4e7655bf9`); see the
-evidence log. **Slice 2 is delivered and gated twice** (runs `20260918T100237Z-e62d5573` and
-`20260918T105742Z-cc4590b5`, both acknowledged), with the reference table at **86 covered, 4
-partial, 22 missing, 4 n/a**. The 22 missing rows are, by owner: the Knuckles glide/slide/climb
-rows behind the glide probe wrapper (5), the dash-dust and Tails'-tail render rows (3), the two
-rows blocked on upright behaviour the engine does not model (`Touch_Monitor`, `Obj_Spikes`),
-`loc_1E44C`'s rebuilt comparison (1), the act 2 boss's three, and slice 3's remaining eight
-DEZ-object rows. **Slice 3 is part-delivered**: `$5B` `Obj_DEZGravitySwap` is concrete, which
-makes `Reverse_gravity_flag` reachable in ordinary play for the first time. `$58`, `$59`, `$5A`,
-`$5C`, `$5F` and `$61` remain; the ROM reading for `$58` and `$59` is written up in the last
-evidence entry so the next session does not repeat it.
+evidence log. **Slice 2 is delivered and gated three times** (runs `20260918T100237Z-e62d5573`,
+`20260918T105742Z-cc4590b5` and `20260918T132045Z-02b73773`, all acknowledged). The reference
+table now stands at **91 covered, 4 partial, 17 missing, 4 n/a**. The 17 missing rows are, by
+owner: the Knuckles glide/slide/climb rows behind the glide probe wrapper (5), the dash-dust
+and Tails'-tail render rows (3), the two rows blocked on upright behaviour the engine does not
+model (`Touch_Monitor`, `Obj_Spikes`), `loc_1E44C`'s rebuilt comparison (1), the act 2 boss's
+three, and slice 3's remaining DEZ-object rows (`$5A`'s two, `$53`'s one).
+
+**Slice 3 is three of seven.** `$5B` `Obj_DEZGravitySwap`, `$58` `Obj_DEZGravitySwitch` (with
+its art and its transporter sound) and `$59` `Obj_DEZTeleporter` are concrete, so every writer
+of `Reverse_gravity_flag` a player can reach is implemented. `$5A` `Obj_DEZGravityTube` (24
+act 1, 17 act 2, and the only remaining *reader*), `$5C`, `$5F` and `$61` remain; `$5A` is the
+next one and also the object that unblocks the three slice 2 clips still unfilmed, because it
+is the neighbour of every `$5B` site. The ROM reading for `$5A` is in the 2026-09-18 handover
+entry (`Obj_DEZGravityTube` at :95169, two variants — the horizontal `loc_48EEC`/`sub_48F12`
+selected when `subtype` bit 7 is clear, and the vertical `loc_4906A`/`sub_49090` when it is
+set — with `loc_48FBA` mirroring `flip_angle` on exit and `loc_4904A` Y-flipping the rider).
 
 The blocker for the rest is not ROM reading — it is that **no fixture exists in which an inverted
 player can be shown landing on real ceiling terrain**. Three candidates were tried and rejected
@@ -1714,3 +1721,78 @@ on `dynamic_art.outstanding_transfer_ids` (expected=[2], actual=[])**; `TestS3kA
 `0x0012`**. Identical to the four-times-recorded `f60b3f3e2` baseline, failure for failure and
 field for field; both reds stay **baseline-attributed**. Four classes only, and no evidence
 about any other class.
+
+### 2026-09-18 — The `$58` pad's presentation, and `$59` `Obj_DEZTeleporter`
+
+**One of the two `$58` gaps was not a gap.** `sfx_Transporter` is `$73`
+(sonic3k.constants.asm:1560) and the engine has carried it as `Sonic3kSfx.TRANSPORTER` since
+CNZ; six other S3K objects already play it. The recorded gap came from searching `GameSound`,
+which is not where S3K SFX constants live. Worth recording as a method note: when a constant
+"does not exist", check the game-specific enum before the shared one, and grep the *value*
+(`0x73`) as well as the name.
+
+The art gap was real and is closed. `Map_DEZGravitySwitch` is ROM `$48BEA`
+(sonic3k.lst:112040) and `make_art_tile(ArtTile_DEZMisc+$143,1,0)` (:94802) is the same
+`ArtTile_DEZMisc` block the Death Egg door already draws from, so it is a plain
+`LevelArtEntry` and queues nothing new. Two frames: `word_48BEE` is four 16x8 pieces at
+y `-8`/`0` and x `-$10`/`0` — a 32x16 pad — and `word_48C08` drops the lower row for the
+pressed pose the object already selected. Three assertions, all red first: the art plan entry
+for both acts, the press-frame-only SFX (`expected: <[115]> but was: <[]>`), and the `$280`
+priority bucket (`expected: <5> but was: <0>`). A fourth decodes `$48BEA` off the cartridge
+and pins the 4/2 piece counts and the `+2` maximum tile, so a wrong address reddens rather
+than silently drawing nothing.
+
+**Clip `033-gravity-switch-pad-320`,** the first `$58` clip, filmed from the unflipped pad at
+`$1C40,$06B8`. The first take failed in a way worth recording: the pad is a `$1B`-wide solid
+whose top sits about 15 px above the floor, so walking into it is a *push*, not a press — the
+capture stalled with x pinned at `$1C25`, exactly the pad's left edge. A one-frame hop fixes
+it. Landing at frame 107, `sub_48B40`'s rider release at 108 (`air` back to 1 with `yvel` 0),
+the toggle at 111, then `yvel` climbing +`$38`/frame while `y` *falls* 1692 → 1491 and an
+inverted landing on the ceiling at 152.
+
+**`$59` `Obj_DEZTeleporter` landed**, the third of slice 3's seven and the last flag writer.
+Twenty-one act 2 placements in vertically paired columns — `$0AD0`, `$1150`, `$1550`,
+`$1750`, `$1D50`, `$2850`, `$2950`, `$2AD0`, `$3450`, `$35D0` — whose pairs carry opposite
+subtype bit 7s, so riding one flips gravity and riding its partner flips it back. Four
+routines per player over two independent ten-byte state blocks (`$30(a0)`, `$3A(a0)`).
+
+| ROM fact | Test |
+| --- | --- |
+| `addq.w #3,d0` (:94946) and `cmpi.w #$10,d0 / bhs` (:94952): the window is `-3 <= dx <= $C` | `theUnflippedCaptureWindowRunsFromMinusThreeToPlusTwelve`, all four edges |
+| `addi.w #$A,d0` when `status` bit 0 is set (:94951) **mirrors** the window to `-$D <= dx <= 2` | `theXFlippedCaptureWindowIsTheSameWidthOnTheOtherSide` |
+| `addi.w #$20,d1 / cmpi.w #$40,d1` (:94955-94957) | `theCaptureBandIsFortyPixelsTallCentredOnTheObject` |
+| `btst #Status_InAir,status(a1) / bne` (:94962) | `anAirbornePlayerIsNotCaptured` |
+| `movea.w interact(a1),a3 / tst.b (a3,d0.w)` (:94968-94973) | `aPlayerWhoseRideJustEndedIsNotCapturedAgainByItsNeighbour` |
+| `addq.w #8,4(a4)` to `cmpi.w #$300` (:94993-94995), then the budget and `±$1000` | `theLaunchWaitsForTheSpinRampToReachThreeHundred`, all 95 updates before it |
+| `cmp.w d2,d1 / bne` (:95067-95068): the write needs `6(a4) == 8(a4)` | `theFlagIsWrittenAtTheMidpointAndNotBefore` |
+| `rol.b #1,d0 / andi.b #1,d0` (:95072-95074): the value is subtype bit 7 | `thePairedSubtypeWritesZeroAtItsOwnMidpoint`, both subtypes of a real column |
+| `cmpa.w #Player_1,a1 / bne` (:95069-95070) | `playerTwoRidesButNeverWritesTheFlag` |
+
+**Two corrections to the handover's reading.** The `$A` bias does not *widen* the capture
+window, it **mirrors** it: `$10` px either way, on the other side of the object's centre,
+which is what a flipped placement needs. And `_unkFAB8` bit 0 (:94965) is deliberately not
+modelled — its only writer in the whole disassembly is `Ending_ScreenInit`'s `Obj_5D86A`
+(:123769), so during Death Egg gameplay the bit is always clear and the refusal is
+unreachable. Recorded rather than invented as a global.
+
+**Two of the nine assertions could not fail on their first version, and the break found both.**
+`aPlayerAnotherTeleporterStillHoldsIsNotCapturedAgain` captured the player on one teleporter
+and offered them straight to a second — but a captured player already has `object_control`
+set, so the *earlier* refusal at :94958 answered and removing the interact check left the test
+green. The interact check only does work in the window the ROM built it for: after
+`loc_48E2C` clears `object_control` (:95105) and the player lands, but before `loc_48E94`
+clears the block. Rewritten to put the player in exactly that state, with both earlier
+refusals asserted inapplicable as preconditions, it reddens. The second was worse: the
+rewrite's loop was `for (…; … && first.isRidingForTest(true); …)`, whose condition is false
+before anything captures, so the loop body never ran and every "precondition" passed
+vacuously. A precondition that asserts the *positive* (`assertTrue(first.isRidingForTest…)`)
+before the loop is what caught it. Nine mechanisms, nine breaks, nine reds, each mapped to its
+own test; the rewind spot reddens as collateral on the midpoint break, which is expected.
+
+Census: act 2 placeholders 321 → 300, concrete 173 → 194. Reference table **91 covered, 4
+partial, 17 missing, 4 n/a**. The same five inventories moved as for `$5B` and `$58`, plus
+one new shared helper: `NativePositionOps.addYPos16_16`, the Y twin of the existing
+`addXPos16_16`, because the ride's `move.l y_pos(a1),d3 / asl.l #8,d0 / add.l d0,d3`
+(:95095-95101) accumulates the whole `y_vel` in the subpixel half and a
+`addYPosPreserveSubpixel` would truncate it every frame.
+
