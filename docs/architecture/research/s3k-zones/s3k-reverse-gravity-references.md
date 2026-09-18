@@ -180,10 +180,10 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 30063 | `loc_1613C` | `Obj_Tails_Tail` (`loc_1613C`): vertical mirror except for the directional animation 3 | — | missing |
 | 34038 | `loc_18C20` | `Obj_DashDust` (`loc_18C20`): status Y-flip and `-4` Y offset | — | missing |
 | 34113 | `loc_18D14` | `Obj_DashDust` (`loc_18D14`): negates the skid-dust Y offset | — | missing |
-| 34594 | `Obj_InstaShield_Main` | `Obj_InstaShield_Main`: Y-flip status bit | — | missing |
-| 34666 | `Obj_FireShield_Main` | `Obj_FireShield_Main`: Y-flip status bit | — | missing |
-| 34747 | `Obj_LightningShield_Main` | `Obj_LightningShield_Main`: Y-flip status bit | — | missing |
-| 34911 | `Obj_BubbleShield_Main` | `Obj_BubbleShield_Main`: Y-flip status bit | — | missing |
+| 34594 | `Obj_InstaShield_Main` | `Obj_InstaShield_Main`: Y-flip status bit | `InstaShieldObjectInstance.shieldRenderVFlip` → `ShieldAnimationArtLifecycle.reverseGravityMirror` | covered |
+| 34666 | `Obj_FireShield_Main` | `Obj_FireShield_Main`: Y-flip status bit | `FireShieldObjectInstance.shieldRenderVFlip` → the same owner | covered |
+| 34747 | `Obj_LightningShield_Main` | `Obj_LightningShield_Main`: Y-flip status bit | `LightningShieldObjectInstance.shieldRenderVFlip` → the same owner | covered |
+| 34911 | `Obj_BubbleShield_Main` | `Obj_BubbleShield_Main`: Y-flip status bit | `BubbleShieldObjectInstance.shieldRenderVFlip` → the same owner | covered |
 | 35081 | `Obj_SuperTailsBirds_Main` | `Obj_SuperTailsBirds_Main`: render Y-flip | `SuperTailsFlickyFlockObjectInstance:96` | covered |
 | 35132 | `Obj_SuperTailsBirds_GetDestination` | `Obj_SuperTailsBirds_GetDestination`: target `+$20` instead of `-$20` | `SuperTailsFlickyFlockObjectInstance:126,272` | covered |
 
@@ -256,13 +256,13 @@ is the RAM wipe described above).
 | C. Tails routines | 21 | 18 | 1 | 1 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
 | E. Knuckles routines | 24 | 17 | 1 | 5 | 1 |
-| F. Dust, Tails' tails, shields, Super Tails birds | 9 | 2 | 0 | 7 | 0 |
+| F. Dust, Tails' tails, shields, Super Tails birds | 9 | 6 | 0 | 3 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 0 | 0 | 5 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **69** | **4** | **39** | **4** |
+| **Total** | **116** | **73** | **4** | **35** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
