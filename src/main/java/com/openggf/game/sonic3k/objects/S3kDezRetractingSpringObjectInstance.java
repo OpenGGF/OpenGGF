@@ -137,6 +137,19 @@ public final class S3kDezRetractingSpringObjectInstance extends AbstractObjectIn
         return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
     }
 
+    /**
+     * {@code loc_1E45A} :42000-42007. Both rejects are unsigned: {@code sub.w d1,d0 / bhi}
+     * throws out positive separation and {@code cmpi.w #-$10,d0 / blo} throws out everything
+     * unsigned-below {@code $FFF0}, which includes {@code d0 == 0}. The accepted window is
+     * {@code -$10 <= d0 <= -1}, so the exact surface boundary is not a landing. Shared with
+     * every other {@code SolidObjectTop_1P} caller, including {@code Obj_DEZEnergyBridge},
+     * where the act 2 route turns on this exact frame.
+     */
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        return true;
+    }
+
     @Override
     public int getOnScreenHalfWidth() {
         // move.b #$10,width_pixels(a0) (:94103): render and balance widths follow the solid one.

@@ -111022,3 +111022,57 @@ and `$0480,$03E8`, both subtype `$01` and both still placeholders. `$55` has 13 
 placements, so it is the next class the route wants.
 
 `SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 527.
+
+### 2026-09-19 — DEZ act 2: the energy bridge and the clock the route was not carrying
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$55` `S3kDezEnergyBridgeObjectInstance`.
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 527 frames | **616 frames** |
+
+**Two separate defects had to be fixed together, and the first one was in the route, not the
+engine.** `Obj_DEZEnergyBridge` is on for `((subtype & 3) + 2) << 5` frames out of a period of
+`$7F`, `$FF`, `$1FF` or `$3FF`, phased on `Level_frame_counter` (`sub_47DDE`,
+sonic3k.asm:93879-93902). The seeded act 2 route started a fresh engine level load, so its
+counter began at zero while the native one had been running since long before the act change:
+every frame-phased object in the act was wrong by an unknown offset. The route now seeds both
+`LevelManager` and `SpriteManager` from the fixture's `gameplay_frame_counter` at row 19772
+(`$4D39`), which is what `TraceReplaySessionBootstrap` already does for trace replay, and asserts
+that value and its successor so a re-recorded fixture fails loudly.
+
+**The second was a sign error in the engine's top-solid acceptance window, found from one native
+row.** With the clock seeded, the bridge landed the player at row 20299 where the ROM leaves them
+airborne until 20300. `loc_1E45A` (:42000-42007) ends with `cmpi.w #-$10,d0 / blo.w locret`, and
+`blo` is *unsigned*: it rejects every `d0` below `$FFF0`, zero included. Together with the
+preceding `sub.w d1,d0 / bhi`, the accepted window is `-$10 <= d0 <= -1` — the player's feet must
+already be inside the surface by at least one pixel, and the exact boundary is not a landing. At
+row 20299 the player's `y $03C8` sits exactly at `$03E8 - 9 - $13 - 4`, so `d0` is 0 and the ROM
+passes; a pixel later it is `-2` and they land at `$03CB`, which is the ROM's row 20300 to the
+pixel. Both `$55` and `$5D` now declare `rejectsZeroDistanceTopSolidLanding()`, since both call the
+same `SolidObjectTop_1P`. The engine-wide profile documentation claims S3K accepts the exact
+boundary; that claim is wrong for this routine and is contradicted here rather than edited, because
+changing the shared default is not in this campaign's scope.
+
+A third reading, recorded because it was nearly mistaken for a bug: at rows 20187-20199 the player
+runs along `y $03CC` with `stand_on_obj $06` directly under the first bridge and is *not* caught by
+it. `status_byte` is `$00` there — no `Status_OnObj` — so that is terrain, the `$06` is a stale
+`interact` latch, and the bridge is simply outside its window (phase `$62` against an on-duration
+of `$60`). The riding formula `objY - d3 - y_radius` gives `$03CC` and the new-landing formula
+`objY - d3 - y_radius - 1` gives `$03CB`, which is why rows 20300 and 20301 differ by one.
+
+**The new first divergence is a hit, at native row 20389.**
+
+```
+row=20388 x=0424 y=05A1 ys=0E70 rings=4 air=1
+row=20389 x=0426 y=05B0 ys=FC00 rings=0 air=1
+```
+
+`y_vel` goes to `-$400` and `x_vel` to `-$200` — the hurt rebound — and the four rings the player
+had collected since row 20300 are lost. The engine still has them. The only placement in reach is
+`DEZ2_Sprites` record 7, **`$A5` `Obj_Chainspike`** at `$0480,$05B0` subtype `$00`, whose chain
+hangs down from there and which is still a placeholder. Six act 1 and twelve act 2 placements.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 616.

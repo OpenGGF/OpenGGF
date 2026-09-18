@@ -52,6 +52,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   you when you come at them from the side they are walking toward. Act 2's retracting springs
   work: they push out of the wall while you are below them, pull back in once you are well
   above, latch as they start and finish each stroke, and fling you upward when you land on one.
+  The energy bridges across both acts switch on and off on their own schedules, carry you while
+  they are lit, and drop you when they go out.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

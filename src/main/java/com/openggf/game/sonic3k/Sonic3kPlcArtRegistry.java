@@ -37,6 +37,8 @@ public final class Sonic3kPlcArtRegistry {
     // Map_DEZRetractingSpring: word_481BC retracted, word_481D0 compressed, word_481DE
     // extended (sonic3k.lst:111138-111140).
     private static final int DEZ_RETRACTING_SPRING_FRAME_COUNT = 3;
+    // Map_DEZEnergyBridge: four frames of the same sliding 8x8 pair (sonic3k.asm:94088).
+    private static final int DEZ_ENERGY_BRIDGE_FRAME_COUNT = 4;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -2713,6 +2715,20 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null,
                 DEZ_RETRACTING_SPRING_FRAME_COUNT
+        ));
+
+        // Energy bridge (SKL object 0x55, Obj_DEZEnergyBridge): the intermittent top solids
+        // in both acts. ROM header: move.l #Map_DEZEnergyBridge,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc+$B2,1,0),art_tile(a0)
+        // (sonic3k.asm:93910, :93880), the same ArtTile_DEZMisc block the door and the
+        // gravity switch draw from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_ENERGY_BRIDGE,
+                Sonic3kConstants.MAP_DEZ_ENERGY_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0xB2,
+                1,
+                null,
+                DEZ_ENERGY_BRIDGE_FRAME_COUNT
         ));
     }
 

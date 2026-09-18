@@ -75,6 +75,16 @@ class TestS3kDezColdRoutes {
     static final int FREE_PLAY_X_SUB = 0x1800;
     static final int FREE_PLAY_Y_SUB = 0x5268;
     /**
+     * Row 19772's {@code gameplay_frame_counter}, which is the ROM's {@code Level_frame_counter}.
+     * Objects whose cycle is phased on that clock — {@code $55} {@code Obj_DEZEnergyBridge} is
+     * the first this route reaches — are wrong by a fixed offset unless the seed carries it,
+     * because a fresh engine level load starts the counter at zero while the native one has been
+     * running since before the act change. {@code LevelManager.setFrameCounter} wants the
+     * previous completed frame, which is exactly this row's value: the first stepped frame is
+     * row 19773 and reads {@code $4D3A}.
+     */
+    static final int FREE_PLAY_LEVEL_FRAME_COUNTER = 0x4D39;
+    /**
      * Declared engine setup, not trace data. {@code LevelSizes} gives DEZ2 a minimum camera X
      * of {@code 0} (sonic3k.asm's {@code LevelSizes}, the {@code DEZ2} row), and the engine
      * loads that faithfully — but the native camera stops dead at {@code $0080} from row 19812
@@ -97,16 +107,18 @@ class TestS3kDezColdRoutes {
      * and 472 until {@code $5D} {@code Obj_DEZRetractingSpring} landed, which is the
      * {@code -$A00} launch at native row 20245.
      *
-     * <p>The first divergence is now native row 20300, the frame the ROM <em>lands</em> the
-     * player from that launch: {@code air} goes to 0, {@code stand_on_obj} from {@code $0E} to
-     * {@code $0D} and {@code y} settles at {@code $03CB} against the engine's {@code $03CA},
-     * with {@code camera_y} {@code $037C} against {@code $0382}. The only placements under
-     * {@code x $0495} at that height are {@code DEZ2_Sprites} records 5 and 6, {@code $55}
-     * {@code Obj_DEZEnergyBridge} at {@code $0400,$03E8} and {@code $0480,$03E8} subtype
-     * {@code $01}, both still placeholders: there is nothing for the player to land on.
-     * A ratchet, not a target: raise it when the frontier moves.
+     * It was 527 until {@code $55} {@code Obj_DEZEnergyBridge} landed, which is the object the
+     * player falls onto at native row 20300, and until the route began carrying the ROM's
+     * {@code Level_frame_counter} (see {@link #FREE_PLAY_LEVEL_FRAME_COUNTER}).
+     *
+     * <p>The first divergence is now native row 20389, where the player takes a hit: {@code y_vel}
+     * goes to {@code $FC00} ({@code -$400}), {@code x_vel} to {@code -$200} and the ring count
+     * from 4 to 0, at {@code $0426,$05B0}. The engine still has its four rings. The only
+     * placement in reach is {@code DEZ2_Sprites} record 7, {@code $A5} {@code Obj_Chainspike} at
+     * {@code $0480,$05B0} subtype {@code $00}, whose chain hangs down from there and which is
+     * still a placeholder. A ratchet, not a target: raise it when the frontier moves.
      */
-    static final int SEEDED_ROUTE_FRONTIER = 527;
+    static final int SEEDED_ROUTE_FRONTIER = 616;
 
     @AfterEach
     void reset() {
@@ -132,6 +144,15 @@ class TestS3kDezColdRoutes {
         String[] previous = rows.get(ACT_TWO_LOAD_ROW - 1);
         assertTrue(Integer.parseInt(previous[9], 16) > 0x3000,
                 "the row before the load is still act 1, far to the right");
+
+        // The seeded route now also carries the ROM's Level_frame_counter, which every
+        // frame-phased object reads. Column 5 is gameplay_frame_counter.
+        String[] freePlay = rows.get(ACT_TWO_FREE_PLAY_ROW);
+        assertEquals(FREE_PLAY_LEVEL_FRAME_COUNTER, Integer.parseInt(freePlay[5], 16),
+                "native Level_frame_counter at the first frame of free play");
+        assertEquals(FREE_PLAY_LEVEL_FRAME_COUNTER + 1,
+                Integer.parseInt(rows.get(ACT_TWO_FREE_PLAY_ROW + 1)[5], 16),
+                "and it advances by one a row, so the seed is the previous completed frame");
     }
 
     /**
@@ -212,6 +233,8 @@ class TestS3kDezColdRoutes {
         player.setAngle((byte) 0);
         player.setSubpixelRaw(FREE_PLAY_X_SUB, FREE_PLAY_Y_SUB);
         player.setRingCount(0);
+        GameServices.level().setFrameCounter(FREE_PLAY_LEVEL_FRAME_COUNTER);
+        GameServices.sprites().setFrameCounter(FREE_PLAY_LEVEL_FRAME_COUNTER);
         GameServices.camera().setMinX((short) FREE_PLAY_CAMERA_MIN_X);
         GameServices.camera().setMinXCurrent((short) FREE_PLAY_CAMERA_MIN_X);
         GameServices.camera().setMinXTarget((short) FREE_PLAY_CAMERA_MIN_X);

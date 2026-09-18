@@ -476,6 +476,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.MGZ_HEAD_TRIGGER,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $55 is Obj_DEZEnergyBridge (sonic3k.asm:93909); S3KL $55 is
+                        // Obj_MGZHeadTrigger. The two object tables share the number.
+                        return new S3kDezEnergyBridgeObjectInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }

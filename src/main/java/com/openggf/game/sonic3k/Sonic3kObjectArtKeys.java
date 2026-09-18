@@ -496,6 +496,10 @@ public final class Sonic3kObjectArtKeys {
     // DEZ Retracting Spring (SKL 0x5D) - ArtTile_DEZ2Extra, palette 1, Map_DEZRetractingSpring
     // (sonic3k.asm:94099-94100).
     public static final String DEZ_RETRACTING_SPRING = "dez_retracting_spring";
+
+    // DEZ Energy Bridge (SKL 0x55) - ArtTile_DEZMisc+$B2, palette 1, Map_DEZEnergyBridge
+    // (sonic3k.asm:93880, :93910).
+    public static final String DEZ_ENERGY_BRIDGE = "dez_energy_bridge";
     public static final String DOOR_HORIZONTAL = "door_horizontal";        // ArtTile_CNZMisc+$C5, Map_CNZDoorHorizontal
 
     private Sonic3kObjectArtKeys() {

@@ -112,6 +112,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x3D, // RetractingSpring
             0x51, // FloatingPlatform
             0x54, // Bubbler
+            0x55, // MGZHeadTrigger (S3KL) / DEZEnergyBridge (SKL) -- as $5B below
             0x58, // MGZSwingingSpikeBall (S3KL) / DEZGravitySwitch (SKL) -- as $5B below
             0x59, // MGZDashTrigger (S3KL) / DEZTeleporter (SKL) -- concrete in both
             0x5A, // MGZPulley (S3KL) / DEZGravityTube (SKL) -- concrete in both

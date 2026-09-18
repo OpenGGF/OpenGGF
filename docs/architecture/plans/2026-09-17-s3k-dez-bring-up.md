@@ -2478,3 +2478,78 @@ the ROM lands the player from the spring's arc: `air` 1 → 0, `stand_on_obj` `$
 settling at `$03CB` against the engine's `$03CA` and `camera_y` `$037C` against `$0382`. The only
 placements under `x $0495` at that height are `DEZ2_Sprites` records 5 and 6 at `$0400,$03E8` and
 `$0480,$03E8`, both subtype `$01`. Thirteen act 1 and twelve act 2 placements.
+
+### 2026-09-19 — `$55` `Obj_DEZEnergyBridge`, and the clock the seeded route was not carrying
+
+Frontier 527 → **616**. Two defects had to be fixed together and only one of them was in an
+object; the other was in the route harness and had been silently invalidating every
+frame-phased object in the act.
+
+**1. The seeded route did not carry `Level_frame_counter`.** The bridge's whole cycle is phased
+on that clock (`sub_47DDE`, :93879-93902): bits 2-3 of the subtype pick a period mask from
+`word_47DD6` (`$7F`, `$FF`, `$1FF`, `$3FF`), bits 4-7 a phase index scaled by a sixteenth of the
+period, bits 0-1 an on-duration of `((n + 2) << 5)`. A fresh engine level load starts that counter
+at zero; the native one had been running since long before the act change. The route now seeds
+`LevelManager` and `SpriteManager` from the fixture's `gameplay_frame_counter` at row 19772
+(`$4D39`) — the same value and the same "previous completed frame" convention
+`TraceReplaySessionBootstrap` already uses — and the break-the-fixture test asserts it and its
+successor. **Any future DEZ object that reads `Level_frame_counter` was untestable on this route
+before this change and is testable now.**
+
+**2. `SolidObjectTop_1P` rejects the exact surface boundary, and the engine's shared profile
+documentation says otherwise.** `loc_1E45A` (:42000-42007) is
+`sub.w d1,d0 / bhi.w locret` then `cmpi.w #-$10,d0 / blo.w locret`. Both are unsigned. The second
+rejects everything below `$FFF0`, which includes zero, so the accepted window is
+`-$10 <= d0 <= -1`: the player's feet must already be a pixel inside the surface. Native row 20299
+is exactly that frame — `y $03C8` against `$03E8 - 9 - $13 - 4` — and the ROM leaves the player
+airborne; row 20300 is `-2` and lands them at `$03CB`. Both `$55` and `$5D` now declare
+`rejectsZeroDistanceTopSolidLanding()`. `SolidObjectProvider`'s javadoc claims S3K's
+`SolidObjectTop_1P` "accepts it and only rejects positive separation or overlap below `-$10`";
+that is wrong for this routine. It is contradicted here rather than edited, because changing a
+shared default that every S3K top solid reads is not this campaign's change to make — and it is
+the kind of claim that should be re-derived from the listing by whoever does make it.
+
+**A near-miss worth recording.** Rows 20187-20199 have the player running along `y $03CC` with
+`stand_on_obj $06`, directly underneath the first bridge, uncaught. That looks like the bridge
+failing to be solid. It is not: `status_byte` is `$00` there, so `Status_OnObj` is clear and the
+surface is terrain; `$06` is a stale `interact` latch from before. The bridge is simply outside
+its window (phase `$62` against an on-duration of `$60`). The two formulas differ by one —
+`MvSonicOnPtfm`'s riding `objY - d3 - y_radius` gives `$03CC`, `loc_1E45A`'s new landing
+`objY - d3 - y_radius - 1` gives `$03CB` — which is exactly the step between rows 20300 and 20301.
+
+**Three more things the ROM says about this object.**
+
+1. **Neither entry path waits a frame.** The init's `sub.w d1,d0 / bcc` (:93915) is an unsigned
+   compare of the phase against the on-duration; a borrow means the phase is still inside the
+   window, so the object negates the difference into `$34(a0)` and runs the on body immediately
+   (:93917-93920). The other branch installs `loc_47E62` and falls straight through into it
+   (:93923-93925), and `loc_47E76` likewise falls through into `loc_47E8C` (:93936-93942).
+2. **One frame of every window is not solid.** `subq.w #1,$34(a0) / bne` (:93942-93943): the
+   update on which the counter reaches zero branches past the `SolidObjectTop` call to
+   `loc_47EBE`, so a `$60`-frame window is solid for `$5F` updates.
+3. **Riders are pushed off by name.** `sub_47EE8` (:93977-93984) clears the object's own standing
+   bit and, only if it was set, clears the player's `Status_OnObj` and sets `Status_InAir`.
+
+Eleven tests, twelve deliberate breaks in five groups. **One of the assertions did not bite and
+was removed rather than kept.** `anOffBridgeIsNeitherSolidNorDrawn` asserted that an off bridge
+appends no render commands — but a headless fixture has no pattern renderer, so
+`appendRenderCommands` returns early whatever the gate does, and the break that removed the gate
+produced no failure. The test is now `anOffBridgeIsNotSolid` and states the coverage limit; the
+draw gate belongs to the clip.
+
+Two smaller shapes worth keeping. The three subtype-derived values are read from the immutable
+placement on demand rather than cached, because `TestRewindCoverageGuard` correctly calls a stored
+copy a coverage gap — the same finding `$61`'s `bobCentreY` produced. And the two standing bits
+are booleans resolved against `playerQuery().playersFor(NATIVE_P1_P2)` rather than two held player
+references, which keeps them ordinary captured state and off `TestRewindArchitectureGuard`'s
+`@RewindTransient` baseline; `services().sidekicks()` is refused by
+`TestObjectPhysicsStandardizationGuard` and the participation query is the sanctioned route to
+`Player_2`.
+
+Census: act 1 placeholders 192 → 179, concrete 173 → 186; act 2 placeholders 256 → 244, concrete
+238 → 250.
+
+**The next class the route wants is `$A5` `Obj_Chainspike`.** Native row 20389 is a hit:
+`y_vel` `-$400`, `x_vel` `-$200`, four rings lost, at `$0426,$05B0`. The only placement in reach
+is `DEZ2_Sprites` record 7 at `$0480,$05B0` subtype `$00`. Six act 1 and twelve act 2 placements,
+and its art is already in the PLC registry (`ART_KOSM_CHAINSPIKE_ADDR`).
