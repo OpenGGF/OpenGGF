@@ -553,6 +553,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new MGZTopLauncherObjectInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.DEZ_GRAVITY_ROOM,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $5F is Obj_DEZGravityRoom (sonic3k.asm:95814); the S3KL table
+                        // has no object at this number.
+                        return new S3kDezGravityRoomObjectInstance(spawn);
+                    }
+                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                });
         registerStockZoneBound(Sonic3kObjectIds.BUMPER,
                 (spawn, registry) -> {
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {

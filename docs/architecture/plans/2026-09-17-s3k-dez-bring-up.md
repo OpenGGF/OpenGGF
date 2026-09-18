@@ -2035,3 +2035,62 @@ break before claiming the suite pinned anything.
 
 Census: act 2 placeholders 283 → 280, concrete 211 → 214. Act 1 unchanged — no `$5C` there.
 Guards 669/669 after the five inventories a new object moves.
+
+### 2026-09-18 — `$5F` `Obj_DEZGravityRoom`, act 1's turbine corridor
+
+One act 1 placement, `DEZ1_Sprites` record 299 at `$2480,$0840`, subtype `$00`. The record
+coordinates for `$5C`, `$5F` and `$61` were read off the placement tables directly (a throwaway
+dump over `CommonPlacementParser`, deleted afterwards) rather than guessed: `$5C` is
+`$0C40,$05C0` subtype `$0F`, `$32C0,$0640` subtype `$06` and `$32C0,$0840` subtype `$05` — all
+four exits, then down+left, then up+left, which is the reading the `$5C` bit order predicted.
+**`$61` sits at `$2690,$0840`, inside the `$5F` corridor's `$500` px reach**: the puzzle is the
+obstacle in the turbine room, not a separate feature.
+
+`sub_4964A` (:95843-95952) catches a player in `[x, x+$500)` by `$±140`, where the X test is an
+**unsigned** compare on the raw difference — a player left of the object wraps to a huge value
+and is never caught. The same compare is the release. `addi.w #$38,x_vel` has no cap of its own;
+up and down move `y_vel` by `$18` toward `∓$600` and the clamp is written so a player already
+past the limit keeps the speed they arrived with. `asr.w #5` is the drag, and the 68000 borrow
+decides whether the result crossed zero and is flattened.
+
+**The drag is asymmetric and that is the shift, not a bug.** `asr` rounds toward minus infinity,
+so `-$18` drags by `-1` and `+$18` drags by nothing: one frame of up gives `-$17` and one frame
+of down `+$18`. The test asserts both.
+
+The object runs `MoveSprite2`, `Player_JumpAngle` and `SonicKnux_DoLevelCollision` on the player
+itself because `object_control = 1` has stopped the player's own movement, then sets
+`Status_InAir` again. The engine already exposes all three to an object —
+`AbstractSprite.move`, `CollisionSystem.resolveAirCollision` and a six-line local copy of
+`Player_JumpAngle`'s walk-toward-zero — so no shared surface was added for this.
+
+**Three of the first nine breaks were silent, and all three were the test's fault.** Two
+steering assertions called the object's arithmetic helper with the *test's own* copies of the
+step and the limit, so changing either constant in the object left them green: a measurement
+that cannot disagree. The third watched a player who never landed, so removing the
+`bset #Status_InAir` changed nothing. Reworked — steering now runs through `update()` with held
+input, and the landing case hands the object a grounded player each frame — all nine breaks
+redden. This is the second campaign session where a break that changed nothing exposed a badly
+chosen assertion rather than a pinned mechanism; the pattern is worth treating as the default
+expectation rather than a surprise.
+
+Census: act 1 placeholders 201 → 200, concrete 164 → 165. Guards 669/669.
+
+**`$61` `Obj_DEZGravityPuzzle` is not implemented, and here is its reading** so the next agent
+starts from analysis rather than from the disassembly. Init (:96087-96099) sets `$20`×`$30`
+bounds, priority `$280`, stores `y_pos` in `$46(a0)` as the bob centre and allocates a child
+through `AllocateObjectAfterCurrent` whose routine is `Sprite_OnScreen_Test`, with
+`mainspr_childsprites = 6` and six pieces from `byte_49A5A`: `(-$1C,-$20,3)`, `(-$1C,0,3)`,
+`(-$1C,$20,3)`, `($1C,-$20,4)`, `($1C,0,4)`, `($1C,$20,4)` — two columns of three panels, frames
+3 and 4. Each piece's frame is lowered by 2 when its bit of `MHZ_pollen_counter` is set, so that
+shared byte is the panel state, reused in Death Egg. Main (:96101-96121): `angle(a0)` increments
+by one a frame and `GetSineCosine >> 2` added to `$46(a0)` is the bob, with the same offset
+written into each child piece's Y; then `SolidObjectFull2` with `d1 = $23`, `d2 = $30`,
+`d3 = $31`. A push from either player runs `sub_49A0E` — panel index is
+`clamp(y_pos(a1) - y_pos(a0) + $30, 0, $60) >> 5` plus 3 when the player is to the right, then
+`bset` that bit and lower the piece's frame — and `sub_49A02`, which plays `sfx_TunnelBooster`
+and falls into the shared launcher `loc_49850`: `x_vel = ±$C00` away from the object, airborne,
+`ground_vel = 1` signed by facing, `flip_angle = 1` when it was zero, `anim = 0`,
+`flips_remaining = -1`, `flip_speed = 4`. What it needs that nothing in the campaign has yet: a
+`SolidObjectFull2` binding, a six-piece child sprite with its own mappings and art
+(`Map_DEZGravityPuzzle`, `ArtTile_DEZMisc2+$31`), and a rewind-visible home for the
+`MHZ_pollen_counter` panel bitfield.

@@ -103,7 +103,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$5C` | `Obj_DEZGravityHub` | 0 | 3 | `S3kDezGravityHubObjectInstance` | 3 |
 | `$5D` | `Obj_DEZRetractingSpring` | 0 | 13 | unregistered | 4 |
 | `$5E` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered | 4 |
-| `$5F` | `Obj_DEZGravityRoom` | 1 | 0 | unregistered | 3 |
+| `$5F` | `Obj_DEZGravityRoom` | 1 | 0 | `S3kDezGravityRoomObjectInstance` | 3 |
 | `$60` | `Obj_DEZBumperWall` | 10 | 0 | unregistered | 4 |
 | `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | unregistered | 3 |
 | `$6A` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete | verify only (8) |
@@ -286,7 +286,7 @@ so subtypes `$80+` arrive inverted.
 | `$5C` | `$0F` | `Obj_DEZGravityHub` | 0 | 1 | implemented |
 | `$5D` | `$02` | `Obj_DEZRetractingSpring` | 0 | 13 | unregistered |
 | `$5E` | `$00` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered |
-| `$5F` | `$00` | `Obj_DEZGravityRoom` | 1 | 0 | unregistered |
+| `$5F` | `$00` | `Obj_DEZGravityRoom` | 1 | 0 | implemented |
 | `$60` | `$00` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
 | `$60` | `$18` | `Obj_DEZBumperWall` | 4 | 0 | unregistered |
 | `$60` | `$38` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |

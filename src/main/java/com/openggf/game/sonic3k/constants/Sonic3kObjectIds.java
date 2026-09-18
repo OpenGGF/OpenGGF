@@ -160,6 +160,9 @@ public final class Sonic3kObjectIds {
     public static final int MGZ_PULLEY = 0x5A;
     public static final int MGZ_TOP_PLATFORM = 0x5B;
     public static final int MGZ_TOP_LAUNCHER = 0x5C;
+    // SKL object table only: Obj_DEZGravityRoom (sonic3k.asm:95814). The S3KL table has
+    // no object at $5F, so this number is named after its only owner.
+    public static final int DEZ_GRAVITY_ROOM = 0x5F;
     public static final int HCZ_SNAKE_BLOCKS = 0x67;
     public static final int TENSION_BRIDGE = 0x6C;
     public static final int INVISIBLE_HURT_BLOCK_H = 0x6A;

@@ -46,7 +46,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   way up, and the ride is continuous rather than dropping and catching you every other frame.
   The junctions the tunnels feed into now catch you as well: they pull you to the middle, hold
   you spinning there, and fire you out along whichever way you press of the ones that junction
-  opens onto.
+  opens onto. Act 1's turbine corridor blows you along it now as well, tumbling, with up and
+  down to steer by.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.
