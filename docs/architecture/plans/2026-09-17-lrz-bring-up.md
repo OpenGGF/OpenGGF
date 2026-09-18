@@ -367,7 +367,7 @@ Still open:
 | Claim | State |
 | --- | --- |
 | Implemented | **Slices 0-4 complete**, slice 5 started (placeholder baseline **1 / 188 / 8** of 609 / 455 / 35): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, every slice 3 class (`$15` corkscrew, `$16` wall ride, `$17` sinking rock, `$18` falling spike, `$19` door, `$1A` big door, `$1B` fireball launcher, `$1C` horizontal button, `$1D` shooting trigger, `$1E` dash elevator, `$1F` lava fall, `$20` swinging spike ball, `$21` smashing spike platform, `$22` spike ball, `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits), and **all three badniks**: `$9A` Iwamodoki, `$9B` Toxomister with its cloud and seven puffs, and `$99` Fireworm as its four ROM objects (spawner, DPLC head, four staggered segments, a flame on each). Slice 5's state half landed: `LrzDomeRegions` (`sub_56DCA` + `word_56F88`), `sub_56DAC`'s locked-background arithmetic, and `Obj_56EA0` the dome lava surface with its `_unkEE9C` phase and the P1/P2 fire-shield asymmetry. **Slice 5 is now complete**: the `Events_routine_bg` 0/4/8 stage machine (`LrzBackgroundStageMachine`), `SwScrlLrz`'s locked and pinned modes, the `Draw_delayed_rowcount $F` bottom-up refresh, and the Knuckles `$F6` background chunk. Absent: the `LRZ1_BackgroundEvent` seamless `$901` handover (stage `$C`), three bosses, cutscenes, `StartNewLevel` |
-| Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). On the fixture's own recorded native input the engine matches Player 1 `(x, y)` **exactly for native rows 0-856** (was 0-636 before the frame-637 fix) and then reaches x 4029 open-loop before dying at frame 3649. **The reach is not a progress measure** and will keep falling as the zone fills in: the input is the fixture's own, which native survives, so the reach only measures how long an off-phase replay lives among real hazards. Quote the exact-match row and the first divergence. The first divergence is native row 857, and it is now **identified**: `$99 Obj_Fireworm`. Player 1 rolls into the head and kills it on native row 856, and the fixture's `+208` post-gravity `player_y_speed` is negated to `-208`; the engine does not register the kill. Evidence and kill condition in the [trace frontier log](../../status/trace-frontier-log.md). The hand-authored `lrz1-cold-route-v7` frontier of x 1909 is untouched. Nothing cold-reached in act 2 or the boss act |
+| Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). On the fixture's own recorded native input the engine matches Player 1 `(x, y)` **exactly for native rows 0-2322** (0-856 at the fourth handover, 0-636 before the frame-637 fix). **The reach is not a progress measure** and will keep falling as the zone fills in: the input is the fixture's own, which native survives, so the reach only measures how long an off-phase replay lives among real hazards. Quote the exact-match row and the first divergence. Re-measured at `13a7c8fe8`, row 857 was **already closed** by the Fireworm landing (the fourth handover's number predates `cad4a2e07`). The real divergence was row 863, a hurt the engine took and native did not: a killed worm left its flames alive. Fixed, and the route now matches **exactly for native rows 0-2322**, with the new first divergence at row 2323, unattributed. Evidence in the [trace frontier log](../../status/trace-frontier-log.md). The hand-authored `lrz1-cold-route-v7` frontier of x 1909 is untouched. Nothing cold-reached in act 2 or the boss act |
 | Rewind-verified | Before/active/after spots with forward replay for the `$19` door, the `$1C` button latch, the `$15` corkscrew ride, the `$17` sinking rock, the `$16` wall ride, the `$18` falling spike, the `$21` smashing spike platform, `$1B`, `$1F`, `$20` and the `$1E` dash elevator's mid-ride (`TestLrzHazardRewindSpots`, `TestLrzDashElevatorRewindSpot`), each broken on purpose once. Plus `LrzZoneRuntimeState` capture/restore round trips and the animator's counter blob. New in `TestS3kLrzRouteRewindSpots`, on real terrain at fixture route positions: `$18` mid-fall AND landed (whole composite), `$1A` opening (whole composite), `$9C` rumbling and `$9A` fuse-lit (both now whole-composite again, with the dropped-children restore gap closed), and a child-count spot for the crusher's four `S3kCameraGradualObjectInstance` children and the Fireworm's eight segments. `TestS3kLrzDomeBackgroundHeadless` adds a whole-composite spot inside a locked dome region. Still owed: `$1D`/`sub_42EC0` on a route, and cold-route (rather than route-position) spots |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
 | Visually matched | Act 1 parallax, the act-1 lava block, the act-1 rock sprites (320 and 400), the act-1 animated background lava, and clips `08`-`28` covering every slice 3a/3b/3c/3d class plus all three badniks. Clips `21`-`28` are after-only: the "before" is a placeholder that draws nothing. Clip `27` is the Fireworm swimming with its tail; clip `28` is the Toxomister mist reaching Sonic and pinning him -- his ground speed is held at zero for ~100 frames while Left is held, then the shake frees him. Act 2's background is still blocked by the direct-`$901` art gap, which slice 2 proved is not the animated-tile DMA. **Slice 5 has no clip and cannot have one**: the engine's act 1 background plane draws no visible pixels at the dome, proved by an absurd-offset ablation and recorded in [s3k-known-bugs](../../status/s3k-known-bugs.md) |
@@ -1357,16 +1357,24 @@ to an absurd `($123,$45)` changes nothing either. The engine's act 1 background 
 no visible pixels there; what looks like the crystal wall is foreground art. Recorded in
 [s3k-known-bugs](../../status/s3k-known-bugs.md) with the native capture that would settle it.
 
-**Row 857 is a Fireworm kill the engine misses.** Read straight out of the fixture, not guessed:
+**Row 857 was already closed, and the real defect was eight rows later.** Read straight out of the
+fixture, not guessed:
 rows 850-870 have Player 1 rolling and airborne with `player_y_speed` climbing `$38` a frame, row
 855 at `+$98` and row 856 at `-$D0`, so the frame applied gravity to reach `+$D0` and then negated
 it -- the ordinary rolling-kill bounce. The `aux_state` rows name the victim: at row 856 slot 24
 (`Obj_Fireworm`'s head, `$8F7A4`) becomes `loc_1E66E` inside `Obj_Explosion`, slot 25 a segment
 becomes `Obj_FlickerMove` and slot 29 the flame becomes `Delete_Current_Sprite`, all in one frame.
-The engine's head is killable (`collision_flags $1A`), so the open question is where the engine's
-head *is* on that frame; the swim phase starts on the spawner's `Find_SonicTails` gate, and one
-frame of difference moves the whole chain several pixels. Full entry and kill condition in the
-[trace frontier log](../../status/trace-frontier-log.md).
+**The engine matches that whole bounce.** The fourth handover's row 857 was measured before
+`cad4a2e07` and was stale; re-measuring at `13a7c8fe8` put the exact match at rows 0-862. What the
+engine got wrong was the *aftermath*: `Child_DrawTouch_Sprite_FlickerMove` -> `loc_849D8`
+(sonic3k.asm:178135-178140, :178120-178125) sets each segment's own `status` bit 7, clears its
+collision flags and replaces its routine with `Obj_FlickerMove`, and each flame's
+`Child_DrawTouch_Sprite` (:178053-178058) then deletes it. The engine answered only the collision
+flags, so four `collision_flags $98` flames outlived the worm and one hurt Player 1 on row 863.
+Deleting the flames alone moved it only to row 871, because a segment still inside its
+`word_8F940` wait went on to grow a *new* flame; the routine has to stop as well. With both halves
+the route matches **exactly for native rows 0-2322** and the new first divergence is row 2323,
+unattributed.
 
 ## Handover, 2026-09-18
 
@@ -1607,12 +1615,11 @@ miniboss. **Slices 0-5 are complete.**
 
 | What | Result |
 | --- | --- |
-| Mandatory S3K + `TestLrz*`/`TestS3kLrz*`/`TestS3kHpz*`/`TestS3kSoz*`/`TestS3kDdz*`/`SwScrlLrzTest`/`TestFireworm*` + both rewind guards | 1653 tests, 0 failures, **0 skips** |
-| `-Pguards test -B` | 669 tests, 0 failures |
+| Mandatory S3K + `TestLrz*`/`TestS3kLrz*`/`TestS3kHpz*`/`TestS3kSoz*`/`TestS3kDdz*`/`SwScrlLrzTest`/`TestFireworm*` + both rewind guards | 1654 tests, 0 failures, **0 skips** |
+| `-Pguards test -B` | 669 tests, 0 failures (measured at `13a7c8fe8`; the Fireworm retire commit adds no annotation or registry change) |
+| Cold act 1 route, `GameplayCaptureTool --main sonic --sidekick tails --settle 1` on the fixture's own recorded input | exact Player 1 `(x, y)` for **native rows 0-2322**; first divergence row 2323, `player_y` 390 against 399 |
 
-Not re-measured at this head: `TestS3kSonicTailsLrzSegmentTraceReplay` and the cold act 1 route.
-Nothing in these two commits touches shared physics, but re-measure before quoting them with this
-commit. This is focused validation; no `run_categories.py --base 035e48a58 --run` has been run for
+Not re-measured at this head: `TestS3kSonicTailsLrzSegmentTraceReplay`. This is focused validation; no `run_categories.py --base 035e48a58 --run` has been run for
 this branch.
 
 **Slice 6 read-ahead, from a full ROM pass this round, so the next agent does not re-derive it.**
@@ -1693,7 +1700,8 @@ classes; treat it as a slice, not an object.
   `($19B4,$723)`.
 - Cold-route (rather than route-position) rewind spots, and a route spot for `$99`.
 - Act 2 placements exercised on an act 2 route.
-- The row-857 Fireworm measurement named in the [trace frontier log](../../status/trace-frontier-log.md).
+- Native row 2323, the new first route divergence, unattributed ([trace frontier log](../../status/trace-frontier-log.md)).
+- `loc_849D8`'s `Set_IndexedVelocity` `d0` for a retired Fireworm segment, so its debris flies.
 - The dome background's invisibility, in [s3k-known-bugs](../../status/s3k-known-bugs.md); until it
   is settled, slice 5 has no clip.
 - No change-based `run_categories.py --base 035e48a58 --run` for this branch.

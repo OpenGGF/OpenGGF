@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -63,6 +64,8 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
     /** ROM {@code $2E(a0)} during the wait. */
     private int waitTimer;
     private int mappingFrame = INITIAL_MAPPING_FRAME;
+    /** ROM {@code status} bit 7 as {@code loc_849D8} sets it once the head is gone. */
+    private boolean retired;
     private boolean flipX;
     private boolean flipY;
 
@@ -116,6 +119,12 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (retired) {
+            // loc_849D8 overwrote the object's routine pointer with Obj_FlickerMove, so a retired
+            // segment never runs its own dispatch again -- in particular a segment still waiting
+            // when the head died must not go on to grow a flame.
+            return;
+        }
         if (phase == Phase.WAITING) {
             // loc_8F948: Obj_Wait, then loc_8F94E.
             waitTimer--;
@@ -126,6 +135,7 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
                 phase = Phase.MOVING;
             }
             refreshFlame();
+            retireWithHead();
             return;
         }
         swim.update(motion, scripts(), Sonic3kConstants.LRZ_FIREWORM_ANIM_TURN_ADDR,
@@ -133,6 +143,32 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
         mappingFrame = swim.mappingFrame();
         updateDynamicSpawn(motion.x, motion.y);
         refreshFlame();
+        retireWithHead();
+    }
+
+    /**
+     * {@code Child_DrawTouch_Sprite_FlickerMove} (sonic3k.asm:178135-178140) is the segment's draw
+     * tail, so this runs at the end of the dispatch as the ROM does. With the head's {@code status}
+     * bit 7 set it branches to {@code loc_849D8} (:178120-178125), which sets the segment's own
+     * bit 7, turns it into {@code Obj_FlickerMove} and clears {@code collision_flags}. Each flame
+     * draws through {@code Child_DrawTouch_Sprite} (:178053-178058) and sees that bit on its own
+     * parent, so it runs {@code Go_Delete_Sprite} on its next dispatch -- which is why a killed
+     * worm takes its flames with it instead of leaving four live hurt regions behind.
+     *
+     * <p>Not modelled: {@code loc_849D8}'s {@code Set_IndexedVelocity}, so the retired segment
+     * stays where it is instead of flying off as debris. {@code d0} is whatever the segment's own
+     * routine left in it at that branch, which the disassembly does not settle; recorded rather
+     * than guessed.
+     */
+    private void retireWithHead() {
+        if (retired || head == null || !head.isDestroyed()) {
+            return;
+        }
+        retired = true;
+        if (flame != null && !flame.isDestroyed()) {
+            ObjectLifetimeOps.expireDynamic(flame);
+        }
+        flame = null;
     }
 
     /** {@code loc_8F94E}: {@code ChildObjDat_8FA30} at {@code (0,-$E)}. */

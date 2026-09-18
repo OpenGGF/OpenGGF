@@ -233,6 +233,44 @@ class TestFirewormBadnikInstance {
         assertEquals(0, segment.getCollisionFlags(), "once status bit 7 is set on the parent");
     }
 
+    /**
+     * The other half of the same retirement. Each flame draws through
+     * {@code Child_DrawTouch_Sprite} (sonic3k.asm:178053-178058), which runs
+     * {@code Go_Delete_Sprite} as soon as its own parent -- the segment -- has {@code status}
+     * bit 7 set, and {@code loc_849D8} (:178120-178125) sets that bit on the segment the moment
+     * the head is gone. So a killed worm takes its flames with it in the same frame the segments
+     * stop hurting; a surviving flame is still a {@code collision_flags $98} hurt region.
+     */
+    @Test
+    void theFlamesGoWithTheChain() {
+        TestObjectServices services = services();
+        TestablePlayableSprite p1 = player(BASE_X - 0x40);
+        FirewormHeadInstance head = head(services);
+        for (int frame = 1; frame <= 80; frame++) {
+            head.update(frame, p1);
+            for (FirewormSegmentInstance segment : segments(services)) {
+                segment.update(frame, p1);
+            }
+        }
+        List<FirewormFlameInstance> flames = active(services, FirewormFlameInstance.class);
+        assertFalse(flames.isEmpty(), "the segments must have grown their flames by now");
+        assertEquals(0x98, flames.getFirst().getCollisionFlags(), "word_8FA08's collision_flags");
+
+        head.setDestroyed(true);
+        for (FirewormSegmentInstance segment : segments(services)) {
+            segment.update(81, p1);
+        }
+
+        for (FirewormFlameInstance flame : flames) {
+            assertTrue(flame.isDestroyed(),
+                    "Child_DrawTouch_Sprite must Go_Delete_Sprite once the segment's bit 7 is set");
+        }
+        assertTrue(active(services, FirewormFlameInstance.class).stream()
+                        .allMatch(AbstractObjectInstance::isDestroyed),
+                "no flame may outlive the worm as a live hurt region; the object manager's own"
+                        + " pass is what then takes the destroyed slots out");
+    }
+
     // ===== harness =====
 
     private static FirewormBadnikInstance spawner() {

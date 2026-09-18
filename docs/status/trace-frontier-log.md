@@ -111041,33 +111041,60 @@ No `$17`-family placement lies there, so the owner is terrain or a dynamically s
 it has not been identified yet. The open-loop reach is unchanged and, as recorded before, is not a
 progress measure.
 
-## 2026-09-18 - LRZ1: the row-857 divergence is a Fireworm kill the engine misses
+## 2026-09-18 - LRZ1: row 857 was already closed, and the real frontier is row 863
 
-**Identified, from the fixture's own aux rows.** The owner of the `player_y_speed` sign flip at
-native row 856 is `$99 Obj_Fireworm`, and the flip is an ordinary rolling-kill bounce, not terrain
-and not a negation of the previous row's value.
+**Correction, and the reason it needed one.** The fourth handover recorded native row 857 as the
+first divergence and left it unattributed. That measurement predates `cad4a2e07`, the Fireworm
+commit: the handover itself says the route was not re-measured after `398c34991`. Re-measured at
+`13a7c8fe8` with `GameplayCaptureTool --main sonic --sidekick tails --settle 1` on the fixture's
+own recorded input, the engine matches Player 1 `(x, y)` **exactly for native rows 0-862**, row 856
+bounce included. Row 857 is closed and was closed by the Fireworm landing.
 
-`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/lrz` rows 850-870 show
-Player 1 rolling and airborne throughout (`player_air 1`, `player_rolling 1`, `player_angle 0`),
-with `player_y_speed` climbing by `$38` a frame, the rolling gravity. Row 855 is `+$98`; row 856 is
-`-$D0`. `+$98 + $38 = +$D0`, so the frame applied gravity first and then negated: the bounce is the
-standard rolling-kill reversal of the post-gravity velocity, `+208` to `-208`.
+**What row 856 is, for the record.** Player 1 rolls into `Obj_Fireworm`'s head and kills it.
+`player_y_speed` climbs `$38` a frame (rolling gravity), row 855 is `+$98`, and row 856 is `-$D0`:
+gravity first to `+$D0`, then the rolling-kill negation. The fixture's `aux_state` rows name the
+victim outright -- at row 856 slot 24 (`Obj_Fireworm`'s head, `$8F7A4`) becomes `loc_1E66E` inside
+`Obj_Explosion` (sonic3k.asm:42162), slot 25 a segment becomes `Obj_FlickerMove` (`$85102`) and
+slot 29 its flame becomes `Delete_Current_Sprite` (`$1ABB6`), all in one frame. The engine matches
+the whole bounce.
 
-The `aux_state` object rows name the victim outright. At row 855 the Fireworm is whole: slot 24 is
-`Obj_Fireworm`'s head (`$8F7A4`) at `($674,$4E2)`, slot 25 a segment (`$8F8F0`) at `($680,$4E3)`,
-slot 29 its flame (`$8F95C`). At row 856 all three change object code in the same frame: slot 24
-becomes `loc_1E66E`, which is inside `Obj_Explosion` (sonic3k.asm:42162, ROM `$1E66E`), slot 25
-becomes `Obj_FlickerMove` (`$85102`) and slot 29 `Delete_Current_Sprite` (`$1ABB6`). Player 1 was
-at `($661,$4CD)` with the head 21 px right and 21 px below.
+**The new first divergence is native row 863, and the engine's player is hurt there while the
+fixture's is not.** Native continues its arc (`player_y_speed` 184, 240, 296 ...); the engine jumps
+to `y 1223` with `y_vel -$400` and `x_vel -$200`, the S3K hurt recoil, and travels backwards from
+there.
 
-**Not fixed, and not yet attributed inside the engine.** The engine's `FirewormHeadInstance`
-already carries `collision_flags $1A`, so the head is killable there; what has not been measured is
-where the engine's head *is* on that frame. The worm's swim phase starts when its spawner's
-`Find_SonicTails` reports under `$80`, so a one-frame difference in that gate moves the whole chain
-several pixels and the rolling player passes over it instead of through it.
+| Row | Native `(x, y, y_speed)` | Engine `(x, y, y_speed, x_speed)` |
+| ---: | --- | --- |
+| 862 | 1644, 1228, 128 | 1644, 1228, 128, 465 |
+| 863 | 1646, 1228, 184 | 1646, 1223, **-1024**, **-512** |
+| 864 | 1647, 1229, 240 | 1644, 1227, 0, -512 |
 
-**Kill condition.** Log the engine's Fireworm head position at the frame matching native row 856.
-If it is within a rolling Player 1's hitbox of `($674,$4E2)` and still no kill is registered, the
-cause is the touch contract, not the head's phase, and this reading is wrong. If it is not, the
-next measurement is the frame the spawner releases the head, against the fixture's own slot-24
-creation frame.
+**Reading, with its ROM citation.** The killed head takes its whole chain with it in the ROM, and
+the engine only takes half. `Child_DrawTouch_Sprite_FlickerMove` (sonic3k.asm:178135-178140) is
+what each segment draws through: with the head's `status` bit 7 set it branches to `loc_849D8`
+(:178120-178125), which sets the segment's own `status` bit 7, turns it into `Obj_FlickerMove`,
+**clears `collision_flags`** and gives it an indexed velocity. Each flame then draws through
+`Child_DrawTouch_Sprite` (:178053-178058), which sees its segment's bit 7 and runs
+`Go_Delete_Sprite`. The engine's `FirewormSegmentInstance` answers the first half -- it reports no
+collision flags once its head is destroyed -- but it never marks itself destroyed, so
+`FirewormFlameInstance` keeps its `collision_flags $98` and is still a live hurt region seven
+frames after the worm died. That is what hits Player 1 on row 863.
+
+**Fixed, LRZ-local (`FirewormSegmentInstance`).** A segment now sets its own bit 7 at the end of
+its dispatch once the head is gone, deletes its flame, and -- because `loc_849D8` overwrites the
+object's routine pointer with `Obj_FlickerMove` -- stops running its own routine at all. That last
+part is the half a first attempt missed: deleting the flame alone moved the divergence only eight
+frames, because a segment still in its `word_8F940` wait when the head died went on to leave the
+wait and grow a **new** flame, which then hurt Player 1 at row 871. A probe on the live flames
+showed one undestroyed at `(1668,1236)` with the player hurt at `(1660,1240)`.
+
+**Re-measured at that fix.** The engine now matches Player 1 `(x, y)` **exactly for native rows
+0-2322**, up from 0-862. The new first divergence is native row 2323: `player_y` 390 against the
+engine's 399, `player_x` 4297 in both, engine `y_vel` 1160 and not hurt. Unattributed; the next
+round owns it.
+
+**Not modelled, recorded rather than guessed.** `loc_849D8`'s `Set_IndexedVelocity` gives the
+retired segment a velocity from `Obj_VelocityIndex` (sonic3k.asm:179163-179183) indexed by
+`d0 + 2*subtype`, and `d0` at that branch is whatever the segment's own routine last left in it,
+which the disassembly does not settle. The engine's retired segments therefore stay where they are
+instead of flying off as debris. A native capture of a killed worm would settle it.

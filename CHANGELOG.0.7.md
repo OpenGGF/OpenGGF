@@ -235,6 +235,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 
+- **S3K Fireworm:** killing a Lava Reef fireworm now retires its whole body. Its segments stop
+  moving and its flames go out, instead of the flames staying behind as invisible fire that
+  burned the player seconds later.
+
 - **S3K Lava Reef domes:** the background now locks onto the dome as the player crosses each
   of the three dome thresholds, rises and falls with the lava surface inside it, and stays on
   the dome view for the eight frames the plane takes to redraw on the way out. Knuckles gets
