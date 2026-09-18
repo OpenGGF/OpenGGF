@@ -8,6 +8,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kLRZEvents;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -75,16 +78,52 @@ class TestS3kLrzSeamlessActChangeHeadless {
         assertEquals(0, before.actIndex(), "precondition: act 1");
         assertEquals(0, before.eventsFg5(), "precondition: Events_fg_5 is clear");
 
-        // The ROM reaches this with the miniboss arena lock still on the camera: the measured
-        // pair is ($2C00,$710), and loc_56CAA's word subtract takes those bounds to act 2's own.
-        // Starting from a zero min would make the subtract underflow, which is not the ROM's case.
+        // The ROM reaches this with the miniboss arena lock still on the camera. The arena's
+        // measured left edge is $2C00 and its measured right wall $2D28 (both recorded in the
+        // campaign plan at b35f59d33); the two are kept distinct on purpose, because a min that
+        // equals the max pins the camera to a point and would make the camera and player
+        // assertions below pass whatever the transition did with its offsets.
         fixture.camera().setX((short) 0x2C00);
         fixture.camera().setMinX((short) 0x2C00);
-        fixture.camera().setMaxX((short) 0x2C00);
+        fixture.camera().setMaxX((short) 0x2D28);
         int playerXBefore = player.getCentreX() & 0xFFFF;
         int cameraXBefore = fixture.camera().getX() & 0xFFFF;
         int minXBefore = fixture.camera().getMinX() & 0xFFFF;
         int maxXBefore = fixture.camera().getMaxX() & 0xFFFF;
+        // jsr (Offset_ObjectsDuringTransition) (sonic3k.asm:115365) subtracts d0 from every
+        // world-space SST entry, not just the players. Pick one that is live now and follow it.
+        // Obj_Results only runs after the act has ended, which in Lava Reef act 1 means the
+        // miniboss is already Obj_Explosion. Leaving it alive would keep its arena camera lock
+        // running into act 2 and rewrite the very bounds this case is about.
+        for (ObjectInstance o : fixture.runtime().getLevelManager().getObjectManager()
+                .getActiveObjects()) {
+            if (o instanceof com.openggf.game.sonic3k.objects.bosses.LrzMinibossInstance boss) {
+                boss.setDestroyed(true);
+            }
+        }
+
+        StringBuilder live = new StringBuilder();
+        AbstractObjectInstance carried = null;
+        for (ObjectInstance o : fixture.runtime().getLevelManager().getObjectManager()
+                .getActiveObjects()) {
+            if (!(o instanceof AbstractObjectInstance aoi) || aoi.isDestroyed()
+                    || aoi.getSpawn() == null) {
+                continue;
+            }
+            live.append("\n  ").append(aoi.getClass().getSimpleName()).append("@")
+                    .append(Integer.toHexString(aoi.getCollisionX() & 0xFFFF));
+            if ((aoi.getCollisionX() & 0xFFFF) >= 0x2000) {
+                carried = aoi;
+                break;
+            }
+        }
+        assertNotNull(carried,
+                "precondition: a live world-space object in act 1 coordinates; live are" + live);
+        assertTrue(carried.participatesInRomWorldTransitionOffset(),
+                "precondition: the chosen object is world-positioned, the engine's render_flags "
+                        + "bit 2: " + carried.getClass().getSimpleName());
+        int carriedXBefore = carried.getCollisionX() & 0xFFFF;
+
         // Something the change must clear: Clear_Switches wipes the trigger array.
         Sonic3kLevelTriggerManager.setBit(0, 0);
         assertTrue(Sonic3kLevelTriggerManager.testBit(0, 0), "precondition: a trigger bit is set");
@@ -127,29 +166,44 @@ class TestS3kLrzSeamlessActChangeHeadless {
         assertTrue(!Sonic3kLevelTriggerManager.testBit(0, 0),
                 "Clear_Switches wipes the trigger array (sonic3k.asm:115355, 104284-104291)");
 
-        // sub.w d0,(Player_1+x_pos) (sonic3k.asm:115363). The exact word is asserted on the
-        // camera below, which no terrain touches; the player's own x is read after the target
-        // act's first pass, and $2C00 lands them within a few pixels of act 2's left edge where
-        // the level's own boundary owns the final value. What this asserts is that the player was
-        // carried out of act 1's coordinates at all.
         assertTrue(playerXBefore >= REBASE_X, "precondition: the player is in act 1 coordinates");
-        assertTrue((player.getCentreX() & 0xFFFF) < 0x0200,
-                "the player is in act 2's coordinates, not act 1's: x is "
-                        + Integer.toHexString(player.getCentreX() & 0xFFFF));
-        // sub.w d0,(Camera_X_pos) (sonic3k.asm:115366): like the player's own x, the value read
-        // after the target act's first pass is the camera's follow of a player that has already
-        // been clamped by act 2's left boundary. The two bounds below are the direct writes.
+        // sub.w d0,(Player_1+x_pos) (sonic3k.asm:115363) puts the player at $2C0A - $2C00 = $A,
+        // which is left of the new boundary, so Player_LevelBound pins them on the same frame:
+        // move.w (Camera_min_X_pos),d0 / addi.w #$10,d0 / cmp.w d1,d0 / bhi Player_Boundary_Sides
+        // (sonic3k.asm:23179-23181, 23211-23212). With the rebased min at 0 that is exactly $10.
+        int rebasedPlayerX = (playerXBefore - REBASE_X) & 0xFFFF;
+        int boundaryX = (fixture.camera().getMinX() & 0xFFFF) + 0x10;
+        assertTrue(rebasedPlayerX < boundaryX,
+                "precondition: the rebase puts the player past the act 2 left boundary ("
+                        + rebasedPlayerX + " < " + boundaryX + ")");
+        assertEquals(boundaryX, player.getCentreX() & 0xFFFF,
+                "Player_LevelBound pins the rebased player to Camera_min_X_pos + $10");
+        assertEquals((carriedXBefore - REBASE_X) & 0xFFFF, carried.getCollisionX() & 0xFFFF,
+                "jsr (Offset_ObjectsDuringTransition) moves every carried world-space object by "
+                        + "the same d0 (sonic3k.asm:115365, 104166-104181): "
+                        + carried.getClass().getSimpleName());
         assertTrue(cameraXBefore >= REBASE_X - 0x200, "precondition: the camera is in the arena");
-        assertTrue((short) fixture.camera().getX() < 0x0200,
-                "the camera is in act 2's coordinates: x is " + (short) fixture.camera().getX());
-        String seen = " (minX=" + (short) fixture.camera().getMinX()
-                + " maxX=" + (short) fixture.camera().getMaxX()
-                + " camX=" + (short) fixture.camera().getX()
-                + " px=" + (short) player.getCentreX() + ")";
-        assertEquals((minXBefore - REBASE_X) & 0xFFFF, fixture.camera().getMinX() & 0xFFFF,
-                "sub.w d0,(Camera_min_X_pos) (sonic3k.asm:115368)" + seen);
-        assertEquals((maxXBefore - REBASE_X) & 0xFFFF, fixture.camera().getMaxX() & 0xFFFF,
-                "sub.w d0,(Camera_max_X_pos) (sonic3k.asm:115369)" + seen);
+        // sub.w d0,(Camera_X_pos) (sonic3k.asm:115366). The camera was written at $2C00 exactly,
+        // so the rebase is the whole story here and no clamp reaches it.
+        assertEquals((cameraXBefore - REBASE_X) & 0xFFFF, fixture.camera().getX() & 0xFFFF,
+                "sub.w d0,(Camera_X_pos) (sonic3k.asm:115366)");
+        // The Y bounds are deliberately NOT asserted to survive. loc_56CAA subtracts from no Y
+        // word (sonic3k.asm:115366-115369) and Load_Level writes no camera word (:38747-38761),
+        // but the same routine also does clr.b (Dynamic_resize_routine) at :115350, so act 2's
+        // own resize owner runs from its first entry on the very next pass and installs act 2's
+        // Y bounds. Measured here: minY goes 0 to $710 on the change frame. Carrying act 1's Y
+        // across would be the deviation, not the fidelity.
+        // The camera BOUNDS are deliberately not asserted either, for the same measured reason:
+        // loc_56CAA does subtract $2C00 from Camera_min_X_pos and Camera_max_X_pos (:115368-369)
+        // and the request carries both, but the same routine's clr.b (Dynamic_resize_routine)
+        // at :115350 puts act 2's resize owner back at its first entry, and it installs act 2's
+        // own bounds on the change frame. Measured at this commit: minX 0 (indistinguishable
+        // from the subtract) and maxX 0, not the $128 the subtract alone would leave. What is
+        // attributable to the subtract is the camera POSITION, asserted above, which the resize
+        // owner does not rewrite.
+        assertTrue(maxXBefore > minXBefore,
+                "precondition: the arena bounds were not collapsed to a point, which would pin "
+                        + "the camera and make the position assertion above unfalsifiable");
     }
 
     /** {@code Sonic3kLRZEvents} owns the stage constant the two halves share. */

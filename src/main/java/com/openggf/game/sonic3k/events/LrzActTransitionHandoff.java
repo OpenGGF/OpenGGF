@@ -1,14 +1,12 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.mutation.MutationEffects;
-import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 import com.openggf.level.Pattern;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.SeamlessTransitionResourceHandoff;
 import com.openggf.level.resources.DeferredLevelResourceManifest;
-import com.openggf.sprites.NativePositionOps;
 
 /**
  * The act-2 side of {@code loc_56CAA} (sonic3k.asm:115347-115374), applied after the target
@@ -34,8 +32,8 @@ import com.openggf.sprites.NativePositionOps;
  * <p>The record carries the offset rather than reading it back from the request so that a rewind
  * restore replays the same arithmetic.
  */
-record LrzActTransitionHandoff(int playerDeltaX, byte[] act2SecondaryArt, int artTile,
-        Sonic3kLRZEvents eventAccess) implements SeamlessTransitionResourceHandoff {
+record LrzActTransitionHandoff(byte[] act2SecondaryArt, int artTile, Sonic3kLRZEvents eventAccess)
+        implements SeamlessTransitionResourceHandoff {
 
     @Override
     public DeferredLevelResourceManifest deferredResources() {
@@ -49,24 +47,17 @@ record LrzActTransitionHandoff(int playerDeltaX, byte[] act2SecondaryArt, int ar
         if (state.actIndex() != 1) {
             throw new IllegalStateException("LRZ transition did not install Act 2");
         }
-        // clr.b (LRZ_rocks_routine) / clr.w (Events_routine_bg): stage 0 is LRZ2's from here.
+        // clr.b (LRZ_rocks_routine) at :115356 and clr.w (Events_routine_bg) at :115374. The
+        // target reload installs a fresh state whose fields already hold these values, so these
+        // are written for the ROM's own reason rather than observed: a future act-2 initializer
+        // that set either of them before this handoff runs would be wrong to keep.
         state.setRocksRoutine(0);
         state.setRocksWindow(0, 0);
         state.setBackgroundRoutine(0);
         state.setEventsFg5(0);
         state.setAct2ArtJobOrdinal(-1);
-        // Clear_Switches (sonic3k.asm:104284-104291): $20 bytes, the trigger array first.
-        Sonic3kLevelTriggerManager.reset();
 
         applySecondaryArt();
-
-        var main = eventAccess.spriteManager().getMainPlayable();
-        NativePositionOps.writeXPosPreserveSubpixel(main,
-                (main.getCentreX() + playerDeltaX) & 0xFFFF);
-        for (var follower : eventAccess.spriteManager().getSidekicks()) {
-            NativePositionOps.writeXPosPreserveSubpixel(follower,
-                    (follower.getCentreX() + playerDeltaX) & 0xFFFF);
-        }
     }
 
     /**

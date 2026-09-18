@@ -2702,6 +2702,82 @@ compared frames, first divergence engine frame **3155** = native row **3154**. T
 floor at `(4274,770)` (`air 0`, `rolling 0`, `y_vel 0`, `g_speed` taking the `x_vel`) while the
 engine falls on through. Recorded in the frontier log with its kill condition.
 
+### 2026-09-18 - The seamless act change built, and what the independent review found in it
+
+**It runs in production.** `Obj_Results` -> `signalActTransition()` ->
+`setEventsFg5ForActTransition()` (now with a Lava Reef branch) -> `loc_56BD2`'s stage 0 ->
+`loc_56CAA`'s stage `$C`. `TestS3kLrzSeamlessActChangeHeadless` drives exactly that chain and
+asserts the act word, the stage the change parks on, the trigger-array clear, the player, the
+camera position and a carried object.
+
+**The review found a blocker the first cut had.** Report:
+`~/Videos/OGGF/lrz-bring-up/notes/lrz-seamless-act-change-review.md` (13 findings, read-only, no
+build). The blocker: `jsr (Offset_ObjectsDuringTransition)` (sonic3k.asm:115365) was not modelled
+at all. The request carried `cameraOffset` but no `playerOffset` and no
+`romWorldObjectOffsetRange`, and `LevelActTransitionExecutor.offsetCarriedObjectsForTransition`
+reads **`playerOffsetX()`**, not `cameraOffsetX()` -- so under the default `CARRIED_OBJECTS`
+policy every surviving act-1 object was left `$2C00` to the right of the player while the commit
+message claimed they moved. Fixed with `.playerOffset(-$2C00, 0)` and
+`.romWorldObjectOffsetRange(4, 94)`, the FBZ precedent's own slot span
+(`Dynamic_object_RAM+object_size` to `Breathing_bubbles`, sonic3k.constants.asm:303-311).
+
+**That fix has a cost the review did not predict, and it is worth knowing before the next zone
+does this.** `ROM_WORLD_OFFSET_RANGE` **throws** for any carried object that reports
+`participatesInRomWorldTransitionOffset()` without implementing `RomWorldPositionedObject`:
+"SST slot N reports render_flags bit 2 without a native ROM position contract". Three classes had
+to be given the contract before the change would run at all -- `Sonic3kPathSwapObjectInstance`,
+`SozSpriteMaskObjectInstance` (both shared) and `LrzMinibossInstance`. The failure is loud rather
+than silent, which is the right trade, but **the live set at the change is what has to be
+compliant**, and it is only known by running the change. A zone adopting this policy should
+expect the same enumeration.
+
+**Three review findings were applied as given**: `Clear_Switches` runs *before* the reload
+(:115355 precedes :115359), not in the handoff after it, matching FBZ; the arm branch is gated on
+stage 0, because only `loc_56BD2` reads `Events_fg_5` and stages 4 and 8 never do; and
+`setEventsFg5` is gated on zone and act, because the Lava Reef runtime state is shared with the
+boss act and an ungated write latches a word there that nothing consumes. The `ordinal < 0`
+fallback that would have changed the act without the art now throws instead.
+
+**Two review findings were rejected, with the ROM.**
+
+1. *"No act-2 title card is requested, unlike every precedent."* `loc_56CAA` allocates no
+   `Obj_TitleCard`: it has no `AllocateObject` at all. That is what makes the Lava Reef change
+   seamless, and it is why `showInLevelTitleCard(false)` is right. SOZ and FBZ pass `TITLE_OWNER`
+   for their art lease because their own paths *do* allocate a card; with no title owner here a
+   `TITLE_OWNER` lease would never be consumed, so `IMMEDIATE` stands. Recorded so the next round
+   does not "fix" it.
+2. *"The post-transition camera Y bounds are not carried; the arena Y lock is released."* Half
+   right and the wrong conclusion. `loc_56CAA` does subtract from no Y word -- and it also does
+   `clr.b (Dynamic_resize_routine)` at :115350, which puts act 2's resize owner back at its first
+   entry so it installs act 2's own bounds immediately. Measured on the change frame: `minY` goes
+   `0` to `$710` and `maxX` ends at `0`, not the `$128` the subtract alone would leave. The Y and
+   the bounds are therefore **not** asserted, and the comment in the test says why. What is
+   attributable to the subtract is the camera *position*, which the resize owner does not rewrite,
+   and that is asserted exactly.
+
+**A measurement the review asked for and got.** The player does not land on
+`playerXBefore - $2C00`. `Player_LevelBound` (sonic3k.asm:23179-23181, 23211-23212) pins them to
+`Camera_min_X_pos + $10` on the same frame, and with the rebased min at 0 that is exactly `$10`.
+The earlier range check was hiding this; the test now asserts `$10` with the citation. The review
+was right that the weakening hid something, and wrong that the hidden thing was a defect.
+
+**Verified.** `TestS3kLrzSeamlessActChangeHeadless` green, and red on the carried-object assertion
+alone when `romWorldObjectOffsetRange` is removed once (`expected: <65440> but was: <11168>` --
+the object sitting in act 1 coordinates, which is the blocker reproduced). Focused set
+`TestLrz*`/`TestS3kLrz*`/`TestSoz*`/`TestS3kSoz*`/`TestS3kHpz*`/`TestS3kDdz*`/`TestFbz*`/
+`TestS3kFbz*` plus the four mandatory S3K classes, both rewind guards, `SwScrlLrzTest` and the
+path-swap/sprite-mask tests: **3719 tests, 0 failures, 8 skips**, all eight
+`@EnabledIfSystemProperty` SOZ capture harnesses. `-Pguards test -B`: **669, 0 failures**.
+This is focused validation, not a suite pass: no trace fixtures beyond the SOZ complete run that
+the pattern pulled in, and no `run_categories.py` selection.
+
+**Still owed on slice 6**: the two camera releases and `word_78EAA` (`loc_78AA8`/`loc_78B00`/
+`loc_78B08`, sonic3k.asm:160509-160528: `Camera_X_pos >= $2C0` sets `Camera_min_X_pos = $2C0` and
+swaps `Pal_LRZ2` into line 2 with `Pal_LRZMiniboss3` into line 3; `Camera_X_pos >= $940` sets
+`Camera_min_X_pos = $940` and clears `Palette_cycle_counter1`), `LRZ2_BackgroundEvent` stages 0
+and 4 (`loc_5700C`/`loc_57040`, :115693-115722), timeline isolation across the change, rewind
+spots either side of it, clip `33`, and the matrix rows. Clips `31` and `32` are untouched.
+
 ## Handover, 2026-09-18 (eleventh)
 
 **Head `4509d4f25`**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;

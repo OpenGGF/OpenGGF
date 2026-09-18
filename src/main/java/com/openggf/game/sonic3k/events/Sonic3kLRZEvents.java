@@ -113,6 +113,10 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     private static final int ACT2_PLC = 0x30;
     /** {@code move.w #$2C00,d0} at {@code loc_56CAA} (sonic3k.asm:115361). */
     private static final int ACT2_REBASE_X = 0x2C00;
+    /** {@code Dynamic_object_RAM+object_size}, the first slot {@code Offset_ObjectsDuringTransition} walks. */
+    private static final int FIRST_ROM_WORLD_OFFSET_SLOT = 4;
+    /** {@code Breathing_bubbles}: the {@code dbf} count ends exclusive here. */
+    private static final int LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE = 94;
 
     private boolean act1BackgroundInitialised;
 
@@ -153,6 +157,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             applyActChangeWhenArtIsReady(lrz);
             return true;
         }
+        // Only stage 0 (loc_56BD2) reads Events_fg_5: stages 4 (loc_56C6E) and 8 (loc_56C88)
+        // never look at the word (LRZ1_BackgroundEvent_Index, sonic3k.asm:115264-115271).
+        if (lrz.backgroundRoutine() != LrzBackgroundStageMachine.BG_STAGE_NORMAL) {
+            return false;
+        }
         // tst.w (Events_fg_5) / beq loc_56C28: with the word clear this is the ordinary stage 0.
         if (lrz.eventsFg5() == 0) {
             return false;
@@ -188,8 +197,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
      */
     private void applyActChangeWhenArtIsReady(LrzZoneRuntimeState lrz) {
         if (lrz.act2ArtJobOrdinal() < 0) {
-            requestAct2Reload(null);
-            return;
+            // Stage $C is only ever entered from armActChange, which always leaves an ordinal.
+            // Changing the act from here would skip tst.b (Kos_modules_left) and leave act 2
+            // running on act 1's patterns at tile $090, silently and only visually.
+            throw new IllegalStateException(
+                    "Lava Reef stage $C reached with no queued act 2 art job");
         }
         var handle = hardwareTiming().pendingHandle(
                 com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
@@ -210,30 +222,50 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
      */
     private void requestAct2Reload(byte[] act2SecondaryArt) {
         var handoff = seamlessTransitionResourceHandoffs().register(
-                new LrzActTransitionHandoff(-ACT2_REBASE_X, act2SecondaryArt,
-                        ACT2_SECONDARY_ART_TILE, this));
+                new LrzActTransitionHandoff(act2SecondaryArt, ACT2_SECONDARY_ART_TILE, this));
         Camera camera = camera();
-        int minX = (camera.getMinX() - ACT2_REBASE_X) & 0xFFFF;
-        int maxX = (camera.getMaxX() - ACT2_REBASE_X) & 0xFFFF;
-        levelManager().applySynchronousScreenEventTransition(
-                SeamlessLevelTransitionRequest.builder(
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
-                        .targetZoneAct(Sonic3kZoneIds.ZONE_LRZ, 1)
-                        .deactivateLevelNow(false)
-                        .preserveMusic(true)
-                        .preserveLevelGamestate(true)
-                        .showInLevelTitleCard(false)
-                        .objectSurvivalPolicy(
-                                SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST)
-                        .preserveOffsetCameraPosition(true)
-                        // sub.w d0,(Camera_X_pos) / (Camera_X_pos_copy) and the two bounds.
-                        .cameraOffset(-ACT2_REBASE_X, 0)
-                        .postTransitionMinX(minX)
-                        .postTransitionMaxX(maxX)
-                        .postTransitionMinXTarget(minX)
-                        .postTransitionMaxXTarget(maxX)
-                        .resourceHandoff(handoff)
-                        .build());
+                .targetZoneAct(Sonic3kZoneIds.ZONE_LRZ, 1)
+                .deactivateLevelNow(false)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                // loc_56CAA allocates no Obj_TitleCard: the Lava Reef change is seamless, which
+                // is why it is the only act change in the zone with no card. SOZ and FBZ pass
+                // TITLE_OWNER because their own paths do allocate one; with no title owner here
+                // a TITLE_OWNER lease would never be consumed, so the art is admitted directly.
+                .showInLevelTitleCard(false)
+                .objectSurvivalPolicy(
+                        SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST)
+                .preserveOffsetCameraPosition(true)
+                // sub.w d0,(Player_1+x_pos) / (Player_2+x_pos) (sonic3k.asm:115363-115364) and
+                // jsr (Offset_ObjectsDuringTransition) (:115365), which walks
+                // Dynamic_object_RAM+object_size up to Breathing_bubbles -- ROM SST slots 4 to 94
+                // exclusive (sonic3k.constants.asm:303-311) -- and subtracts d0/d1 from every
+                // entry whose render_flags bit 2 says it is in world coordinates.
+                .playerOffset(-ACT2_REBASE_X, 0)
+                .romWorldObjectOffsetRange(FIRST_ROM_WORLD_OFFSET_SLOT,
+                        LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE)
+                // sub.w d0,(Camera_X_pos) / (Camera_X_pos_copy) (:115366-115367).
+                .cameraOffset(-ACT2_REBASE_X, 0)
+                // sub.w d0,(Camera_min_X_pos) / (Camera_max_X_pos) (:115368-115369). loc_56CAA
+                // touches no Y word at all and Load_Level writes no camera word, so the Y bounds
+                // the arena left behind have to be carried across unchanged rather than taking
+                // act 2's own -- the two camera releases that follow are what widen them.
+                .postTransitionMinX((int) camera.getMinX() - ACT2_REBASE_X)
+                .postTransitionMaxX((int) camera.getMaxX() - ACT2_REBASE_X)
+                .postTransitionMinXTarget((int) camera.getMinXTarget() - ACT2_REBASE_X)
+                .postTransitionMaxXTarget((int) camera.getMaxXTarget() - ACT2_REBASE_X)
+                .postTransitionMinY((int) camera.getMinY())
+                .postTransitionMaxY((int) camera.getMaxY())
+                .postTransitionMinYTarget((int) camera.getMinYTarget())
+                .postTransitionMaxYTarget((int) camera.getMaxYTarget())
+                .resourceHandoff(handoff)
+                .build();
+        // jsr (Clear_Switches) at :115355 runs BEFORE jsr (Load_Level) at :115359, so a trigger
+        // bit an act-2 initializer sets during the reload must survive. FBZ does the same.
+        com.openggf.game.sonic3k.Sonic3kLevelTriggerManager.reset();
+        levelManager().applySynchronousScreenEventTransition(request);
         // The synchronous reload has finished: this is the first legal post-change rewind state.
         if (hasRuntime()) {
             levelManager().markSynchronousSeamlessTransitionBoundary();
@@ -243,7 +275,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     /** {@code Obj_Results}' {@code st (Events_fg_5)} for Lava Reef (sonic3k.asm:62615-62622). */
     public void setEventsFg5(boolean flag) {
         LrzZoneRuntimeState lrz = state();
-        if (lrz != null) {
+        // Obj_Results' own gate is zone and act, not handler: tst.b (Apparent_act) / bne and the
+        // Angel Island / Ice Cap exclusions (sonic3k.asm:62615-62622). The Lava Reef runtime
+        // state is shared with the boss act, so without this the word latches there and is
+        // carried in rewind with nothing to consume it.
+        if (lrz != null && lrz.zoneIndex() == Sonic3kZoneIds.ZONE_LRZ && lrz.actIndex() == 0) {
             lrz.setEventsFg5(flag ? 0xFFFF : 0);
         }
     }

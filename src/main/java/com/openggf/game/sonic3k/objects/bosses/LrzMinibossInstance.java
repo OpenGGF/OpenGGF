@@ -46,7 +46,8 @@ import java.util.List;
  * {@code loc_7A100}.
  */
 public final class LrzMinibossInstance extends AbstractBossInstance
-        implements SpawnRewindRecreatable, SolidObjectProvider {
+        implements SpawnRewindRecreatable, SolidObjectProvider,
+        com.openggf.level.objects.RomWorldPositionedObject {
 
     /**
      * {@code word_784E0} (sonic3k.asm:159994), the {@code Check_CameraInRange} box the object's
@@ -267,6 +268,21 @@ public final class LrzMinibossInstance extends AbstractBossInstance
 
     public LrzMinibossInstance(ObjectSpawn spawn) {
         super(spawn, "LRZMiniboss");
+    }
+
+    /**
+     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104166-104181) subtracts {@code d0}/
+     * {@code d1} from every SST slot whose {@code render_flags} bit 2 is set. The drill is
+     * normally already {@code Obj_Explosion} by the time the seamless act change runs, but a slot
+     * that is still live has to move with the world like any other.
+     */
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        state.x = (state.x + offsetX) & 0xFFFF;
+        state.y = (state.y + offsetY) & 0xFFFF;
+        state.xFixed = (state.xFixed & 0xFFFF) | (state.x << 16);
+        state.yFixed = (state.yFixed & 0xFFFF) | (state.y << 16);
+        travelBottomY = (travelBottomY + offsetY) & 0xFFFF;
     }
 
     @Override
