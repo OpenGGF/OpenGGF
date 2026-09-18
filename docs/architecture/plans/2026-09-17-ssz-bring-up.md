@@ -1956,3 +1956,53 @@ cannot hurt anybody and a defeat with no debris. The re-film is recorded as owed
 teleport** — either give `GameplayCaptureTool` a checkpoint-restart option of the same shape as
 `HeadlessTestFixture`'s, or author a route from the previous star post. That is the next thing to
 try, and it is not a five-minute job.
+
+### 2026-09-18 — handover after the review-application round
+
+Branch `feature/ai-ssz-bring-up`, head `6d462604b`, base develop `035e48a58`. Nothing pushed,
+nothing merged. Commits this round, oldest first: `ea8b23a9e` (the review applied),
+`96599ba13` (how it was applied, disputed and tested), `6d462604b` (the native comparison and the
+claim it corrected).
+
+**Where slice 6 stands: not started.** The three tasks this round carried were the review
+application, a re-film and a native comparison. The review application ran long, twice, because
+two of its corrections were themselves regressions that had to be caught first — so the Metropolis
+recreation has not been written. What exists for it is the disassembly reading in the slice-6
+entry above, which is enough to start from the routines rather than the label list, plus one piece
+of good news found while reading `Sonic3kSSZEvents`: **the MTZ lock is already implemented**
+(`mtzBand`, `loc_5770C` through `st (Events_bg+$03).w`), including the `nativeFramedCameraX`
+treatment of `Camera_X_pos == $1660`. Only `loc_5775C`'s spawn is missing, so the first increment
+is small: `allocateMtzBoss` beside `allocateGhzBoss`, then `Obj_SSZMTZBoss`'s init and `off_7A728`
+routine 0/2 — which is enough to put the ship on screen and test.
+
+**Three things a slice-6 implementer should take from this round rather than rediscover.**
+
+1. **The shared touch response writes the boss's SST.** `Touch_Enemy`'s `.checkhurtenemy`
+   (sonic3k.asm:20922) does `move.b collision_flags(a1),$25(a1)`, `move.b d0,$1C(a1)` (which
+   player hit it) and, at zero hits, `bset #7,status(a1)`. Two reviews and one implementer all
+   concluded `status` bit 7 was never set, because all three grepped only the boss's own routines.
+   For a shared SST field, look in the subsystem that owns the interaction. The MTZ boss's
+   `sub_7ACF2` is the same hit machine with different offsets (`$1C(a0)` for the window,
+   `move.b #$F,collision_flags(a0)` for the restore), so the same applies to it.
+2. **The `hpz` segment is the native oracle for act 1's fights.** Its
+   `aux_state.jsonl.gz` `object_appeared` rows carry each slot's code-pointer ROM address, which
+   dates every phase transition without a physics row. The Metropolis fight is in the same
+   segment or the one after it; find it by looking for `Obj_SSZMTZBoss` (`$7A6A6`) and `loc_7A71A`
+   (`$7A71A`) the same way. This is the cheapest verification available for a boss and it should
+   be used *while* implementing, not after.
+3. **`defeatDeferralAppliesToThisBoss()` is probably right for the MTZ boss too.** `loc_7A71A`
+   has the same shape — dispatch first, `sub_7ACF2` after — so its `loc_7AD3A` install of
+   `Wait_FadeToLevelMusic` also lands after the slot is done for the frame. Apply it from the
+   start rather than discovering the one-frame gap later, and confirm it against the native rows.
+
+**Still owed on the Green Hill fight**, in the order they are worth doing: the
+`defeatDeferralAppliesToThisBoss()` override and its two test numbers (written, reverted unrun,
+described above with its evidence); the clip 18 re-film, which needs a capture path that does not
+teleport; and the `$79:$AA` gated pad driven end to end from the defeat flag to the `$2A0` lift.
+The hit flash has no native comparison because palette is not in the trace schema.
+
+**Measurement note for the next agent.** The Maven queue was nine requests deep for the last hour
+of this round and reaped three of this worktree's waiting runners before they were admitted. That
+is why the last behaviour change was reverted rather than committed unrun. If runners keep dying
+while waiting, do not work around it by calling `mvn` directly and do not commit unverified
+changes; revert to the last verified tree, commit that, and hand the change over.
