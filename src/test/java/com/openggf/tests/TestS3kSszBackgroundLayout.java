@@ -10,6 +10,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +22,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,6 +54,8 @@ class TestS3kSszBackgroundLayout {
 
     /** {@code SSZ1_ScreenInit}: {@code move.w #$F49,(Camera_Y_pos).w}. */
     private static final int ARRIVAL_CAMERA_Y = 0xF49;
+    /** {@code sub_57A60} plain mode: {@code addi.w #$28,d0}. */
+    private static final int PLAIN_BACKGROUND_X_OFFSET = 0x28;
     /** {@code sub_57A60} plain mode: {@code addi.w #$160,d0}. */
     private static final int PLAIN_BACKGROUND_Y_OFFSET = 0x160;
     /** The SSZ camera wrap {@code loc_45744} opens and {@code Camera#setVerticalWrapEnabled} owns. */
@@ -276,6 +280,121 @@ class TestS3kSszBackgroundLayout {
             ids.add(id);
         }
         return ids;
+    }
+
+    /**
+     * s3k-known-bugs #41, the plain-mode half. Below wrapped {@code Camera_Y $800} the ROM's
+     * background is camera-derived: {@code sub_57A60} writes {@code Camera_X_pos_BG_copy =
+     * Camera_X + $28} and {@code Reset_TileOffsetPositionEff} refills Plane B from it as the
+     * camera moves. The engine's cached background window must follow that word, because its
+     * period is only as wide as the scroll fan — leaving the window base at layout X 0 makes the
+     * word wrap inside columns 0-3, which at these rows are entirely the flat sky chunk.
+     *
+     * <p>The camera used here is the one the {@code $7B} diagonal-walkway capture sits at,
+     * {@code ($6A0,$550)}: wrapped {@code Camera_Y} far below {@code $800}, so plain mode
+     * throughout and the cloud window never engages. Background Y is {@code $550 + $160 = $6B0},
+     * row 13, and the column the scroll word selects is {@code ($6A0 + $28) >> 7 = 13} — inside
+     * the structure cluster the first case above pins.
+     */
+    @Test
+    void plainModeSourcesThePlaneFromTheCameraDerivedWindow() throws IOException {
+        int[][] layout = romBackgroundLayout();
+        HeadlessTestFixture fixture = bootAt(320, 0x0740, 0x05B0);
+        var parallax = GameServices.parallax();
+        int cameraY = 0;
+        for (int frame = 0; frame < 240; frame++) {
+            fixture.stepIdleFrames(1);
+            cameraY = GameServices.camera().getY() & (Y_WRAP - 1);
+        }
+        assertTrue(cameraY < CLOUD_BAND_LOW,
+                "this checkpoint stays in plain mode; wrapped Camera_Y was $"
+                        + Integer.toHexString(cameraY));
+
+        int cameraX = GameServices.camera().getX() & 0xFFFF;
+        int expectedBackgroundX = (cameraX + PLAIN_BACKGROUND_X_OFFSET) & 0xFFFF;
+        assertEquals(expectedBackgroundX, parallax.getBgCameraX(),
+                "plain mode publishes Camera_X + $28 as the background plane's layout X");
+
+        // The cached window base itself is only moved from the render pass
+        // (LevelManager.applyBackgroundTilemapWindowSelection, called from LevelRenderer), which a
+        // headless step does not run — so what is asserted here is the input that pass consumes,
+        // together with the four conditions its window-follow branch tests.
+        assertEquals(BgTilemapUpdateMode.STATIC_WINDOW,
+                parallax.getBgTilemapUpdateMode(), "the branch needs a static-window plane");
+        assertTrue(GameServices.level().getZoneFeatureProvider().bgWrapsHorizontally(),
+                "act 1 runs the 512-pixel wrap model in plain mode too");
+        assertEquals(512, parallax.getBgPeriodWidth(),
+                "and its period is the VDP plane, not the scroll fan");
+
+        // It tracks the camera rather than sitting still: step until Camera_X has moved and the
+        // published layout X moves with it, which is the whole difference from the base-0 branch.
+        int startCameraX = cameraX;
+        int startBackgroundX = parallax.getBgCameraX();
+        for (int frame = 0; frame < 240 && (GameServices.camera().getX() & 0xFFFF) == startCameraX;
+                frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        int movedCameraX = GameServices.camera().getX() & 0xFFFF;
+        if (movedCameraX != startCameraX) {
+            assertEquals((movedCameraX + PLAIN_BACKGROUND_X_OFFSET) & 0xFFFF,
+                    parallax.getBgCameraX(),
+                    "the published layout X follows Camera_X");
+            assertNotEquals(startBackgroundX, parallax.getBgCameraX(),
+                    "and it is not pinned");
+        }
+
+        // What the base-0 window could never reach. Plain mode's offset is 1:1
+        // (Camera_X + $28), so a background column is only ever on screen when the camera is in
+        // front of it; the defect is not that structure is missing at one camera, it is that the
+        // window ignores the camera entirely. Row 13 is the row the walkway stretch samples, and
+        // the columns that carry its distant sanctuary structures are past the four a base-0
+        // 512-pixel window spans.
+        int structureRow = 13;
+        int firstStructureColumn = -1;
+        for (int c = 4; c < layout[structureRow].length; c++) {
+            if (layout[structureRow][c] != 0x02 && layout[structureRow][c] != 0x00) {
+                firstStructureColumn = c;
+                break;
+            }
+        }
+        assertTrue(firstStructureColumn > 3,
+                "row 13's structure starts past the base-0 window, at column "
+                        + firstStructureColumn);
+        for (int c = 0; c < 4; c++) {
+            assertEquals(0x02, layout[structureRow][c],
+                    "the base-0 window's column " + c + " is the flat sky chunk");
+        }
+        // The camera that puts that column on screen, and the layout X plain mode publishes for it.
+        int structureCameraX = firstStructureColumn * CHUNK_PIXELS - PLAIN_BACKGROUND_X_OFFSET;
+        assertEquals(firstStructureColumn,
+                ((structureCameraX + PLAIN_BACKGROUND_X_OFFSET) / CHUNK_PIXELS),
+                "Camera_X + $28 selects that column");
+    }
+
+    private static HeadlessTestFixture bootAt(int width, int x, int y) {
+        var config = SonicConfigurationService.getInstance();
+        config.clearSessionOverrides();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
+                WidescreenAspect.NATIVE_4_3.name());
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        CrossGameFeatureProvider.getInstance().resetState();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_SSZ, 0)
+                .withFreshLevelStartLifecycle()
+                .startPosition((short) x, (short) y)
+                .startPositionIsCentre()
+                .build();
+        if (GameServices.level().getCheckpointState()
+                instanceof com.openggf.game.CheckpointState checkpoint) {
+            checkpoint.saveCheckpoint(1, x, y, false);
+        }
+        return fixture;
     }
 
     private static HeadlessTestFixture boot(int width) {

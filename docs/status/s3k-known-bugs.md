@@ -5869,98 +5869,44 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Suspected cause** — `SSZ1_BackgroundEvent` routine 4 keeps rendering the framing frozen in `Events_bg+$0C`/`+$0E` until the staged redraw reports done, and routine `$C` does the same on the way back. The engine draws the background from the whole level layout instead of a nametable, so it has nothing to stage: each redraw routine completes in one frame. The framing values, the deform bands and the routine order all match; only the duration of the two transition states does not.
 - **Removal condition** — Either a native probe measures the ROM's redraw length at that crossing and the engine holds routines 4 and `$C` for the same number of frames, or a `hpz` fixture window shows the crossing and the engine matches it frame for frame.
 
-## Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky
+## Sky Sanctuary Act 1 Background Window — **fixed**, and the symptom that reported it was wrong
 
-The cloud-mode half of the old "flat sky in both BG modes" entry is **fixed**: `SwScrlSsz` now
-pins the cloud-mode plane to background layout X `$1C00` (columns 56-59) through `getBgCameraX()`,
-with `Sonic3kZoneFeatureProvider.bgWrapsHorizontally()` enabling the 512-pixel wrap model while
-that mode is active — the same mechanism MGZ state 8 and the ICZ1 opening use. The cloud band
-renders; see `05-ssz-cloud-band-before-after.mp4`.
+Both halves of the old "flat sky in both BG modes" entry are now fixed, and the plain-mode half
+arrived with a correction to its own evidence.
 
-- **Location** — `SwScrlSsz` (`src/main/java/com/openggf/game/sonic3k/scroll/`)
-- **Symptom** — **Now observed.** `~/Videos/OGGF/ssz-bring-up/raw-10-ssz-diagonal-walkway` frame 75
-  sits at camera `($6A0,$550)` — wrapped `Camera_Y` well below `$800`, so plain mode throughout, and
-  the cloud window is never engaged — and the background is flat blue. The act-1 layout's row 13
-  (`BG Y = $550 + $160 = $6B0`) carries thirteen distinct chunk ids across columns ~9-52, the
-  distant sanctuary structures (`$BC`-`$EA`, `$C3`, `$38`, `$62`, `$01`, `$0F`, `$3A`-`$3D`). None of
-  them reaches the screen.
-- **Cause — established 2026-09-18, by reading the window-selection path rather than by guessing.**
-  `LevelRenderer.renderBackground` passes `parallaxManager.getBgCameraX()` to
-  `LevelManager.applyBackgroundTilemapWindowSelection`. That method has three branches. The middle
-  one — the one that moves the cache window to follow the background camera — requires
-  `bgCameraX != Integer.MIN_VALUE` **and** `zoneFeatureProvider.bgWrapsHorizontally()`. In plain
-  mode `SwScrlSsz.getBgCameraX()` returns `MIN_VALUE` and
-  `Sonic3kZoneFeatureProvider.isSszCloudBackgroundWindowActive` is false, so control falls to the
-  third branch, which pins `bgTilemapBaseX` to 0. The period width is
-  `SwScrlSsz.getBgPeriodWidth()`, which outside cloud mode is
-  `SwScrlHpz.requiredBgPeriodWidth(horizScrollBuf, viewportWidth())` — the fan's width, not the
-  background's. So the plane is built from background layout X 0 upward for that many pixels and
-  the `Camera_X + $28` scroll word wraps inside it. At camera `($6A0,$550)` the word is `$6C8`,
-  layout column 13, which is inside the structure cluster; the window it indexes is not.
-  Neither of the two things previously suspected is wrong on its own: `plainParameters` produces
-  the right word and `getBgCameraX()` is right that plain mode is camera-derived on the cartridge.
-  The defect is that "camera-derived" is expressed as base 0, which is only equivalent to the
-  cartridge when the cached window spans the whole background.
-- **Candidate fix, not yet taken** — have `getBgCameraX()` return `state.backgroundCameraX()` in
-  plain mode as well and widen `isSszCloudBackgroundWindowActive` to the whole of act 1, so the
-  middle branch runs in both modes and the window base follows the background camera. That is what
-  the VDP does: Plane B is a 512-pixel nametable that `Reset_TileOffsetPositionEff` refills as
-  `Camera_X_pos_BG_copy` moves. The risk is that it changes the plane source for every plain-mode
-  frame in the act, so it needs the RED layout test written first (the shape `7eae9918d` used for
-  the cloud window), the existing `TestS3kSszBackgroundLayout` and `TestS3kSszScrollBands` cases
-  re-run, and a before/after capture at 320 and wide.
-- **Removal condition** — The structures the layout holds at rows 4-17, columns ~9-52 appear on a
-  capture with the camera below wrapped `Camera_Y $800`, at 320 and at a wide viewport, with the
-  act-1 matrix's plain-mode background row carrying the frame numbers.
+**Cloud mode** (fixed earlier): `SwScrlSsz` pins the plane to background layout X `$1C00`
+(columns 56-59) through `getBgCameraX()`. See `05-ssz-cloud-band-before-after.mp4`.
 
-## Sky Sanctuary EggRobo Fly-By Draws Unscaled Art
+**Plain mode** (fixed 2026-09-18). `LevelManager.applyBackgroundTilemapWindowSelection` has three
+branches; the one that moves the BG cache window to follow the background camera needs both
+`bgCameraX != Integer.MIN_VALUE` and `zoneFeatureProvider.bgWrapsHorizontally()`. Plain mode
+returned `MIN_VALUE` and the SSZ predicate was cloud-only, so control reached the third branch,
+which pins `bgTilemapBaseX` to 0 — the plane was built from background layout X 0 for the period
+width and the `Camera_X + $28` scroll word wrapped inside columns 0-3, whatever the camera was
+doing. `SwScrlSsz.getBgCameraX()` now publishes `state.backgroundCameraX()` in plain mode,
+`SwScrlSsz.backgroundWindowActive()` puts act 1 on the 512-pixel wrap model in both modes, and
+`getBgPeriodWidth()` returns the plane width for act 1 rather than the scroll fan's.
 
-`loc_91874` gives the nibble-0 EggRobo `Map_ScaledArt` over `ArtTile_EggRoboFlyScaled` and a
-`$42(a0)` pointer to `ArtScaled_EggRoboFly`; `loc_91526` steps `$40` down by three from `$7F` and
-calls `Perform_Art_Scaling` on each step that differs from `$41`, so the sprite grows as it
-approaches. The engine has no runtime art scaler, so `EggRoboBadnikInstance` tracks the scale index
-and applies `sub_8619A`'s `$100 / ($40 + 4)` perspective offset — the motion is right — but draws
-the ordinary `Map_EggRobo` badnik sheet at a fixed size.
+**The reported symptom did not demonstrate the defect, and the earlier entry was wrong to say it
+did.** `raw-10-ssz-diagonal-walkway` frame 75 sits at camera `($6A0,$550)`. Plain mode's offset is
+1:1, so background column `($6A0 + $28) >> 7 = 13` and background row `($550 + $160) >> 7 = 13`.
+Decoding the layout the way `TestS3kSszBackgroundLayout` does — 60 columns by 22 rows — row 13 is
+`02` at columns 13 through 16. The cartridge shows flat sky at that camera too. The earlier reading
+took "row 13 carries thirteen distinct chunk ids across columns ~9-52" to mean structure should be
+on screen there; the row does carry structure, at columns 9, 12 and 17-22, but none of it is in
+front of that camera. The real defect was never about one frame: a base-0 window ignores the camera
+entirely, so the structures at columns 17 and beyond could never reach the screen at any camera.
+That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
+`getBgCameraX()` to `MIN_VALUE` fails it.
 
-- **Location** — `EggRoboBadnikInstance.updateFlyBy`
-  (`src/main/java/com/openggf/game/sonic3k/objects/badniks/`)
-- **Symptom** — the distant EggRobo that crosses the sanctuary before each fighter appears is
-  full-size for its whole pass instead of growing from a dot.
-- **Removal condition** — a `Perform_Art_Scaling` equivalent that can resample a Kosinski-moduled
-  sheet per frame, with a fly-by capture at 320 and wide showing the sprite growing, and the scale
-  index asserted against `$7F, $7C, … , $04`.
-
-## Sky Sanctuary EggRobo Releases the Shared Animal, Not loc_917C0's
-
-`loc_917C0` builds its own animal: a `Random_Number` draw picks `ArtTile_Animals1` or
-`ArtTile_Animals2`, `word_2C7EA` supplies the X velocity, hop height and mappings, the X velocity is
-mirrored by the releaser's own render flip, and the Y velocity is the RNG's high word clamped to at
-least `$100` and negated. `EggRoboBadnikInstance.releaseAnimal` spawns the shared
-`AnimalObjectInstance` instead, which takes its own launch values.
-
-- **Location** — `EggRoboBadnikInstance.releaseAnimal`
-- **Symptom** — the four animals a nibble-4 EggRobo drops leave on the engine's standard freed-animal
-  arc rather than `word_2C7EA`'s, and they do not inherit the robot's facing.
-- **Removal condition** — a `loc_917C0` child that reads `word_2C7EA` from the ROM, with its two
-  art variants and the facing mirror asserted, and the RNG draw ordered where the ROM draws it.
-
-## Sky Sanctuary Carried-Player Pose Writes the Facing Bit the ROM Leaves Alone
-
-`loc_460A6` writes `byte_468C4`'s low two bits straight into the carried player's `render_flags`,
-which is a draw-time flip only: `status(a1)`'s facing bit is untouched, so a player released from a
-spinning post keeps whichever way they were facing when they stepped on. This engine derives a
-playable's horizontal flip from `Direction`, so `SszCarriedPlayerPose` applies the table's X-flip
-bit through `setDirection` instead, which also moves the status facing bit.
-
-- **Location** — `SszCarriedPlayerPose.apply`
-  (`src/main/java/com/openggf/game/sonic3k/objects/`), used by `Obj_SSZRotatingPlatform` (`$76`)
-  and its `loc_45F10` carrier.
-- **Symptom** — a player who leaves a `$76` post faces whichever way the last pose row drew them,
-  rather than the way they arrived. Nothing reads the bit while they are held, because they are
-  under `object_control 3` throughout; only the frame after the release can differ.
-- **Removal condition** — a playable render-flip channel that is independent of `Direction`, so the
-  pose table can set the draw flip without the status bit, with a `$76` release at 320 and wide
-  showing the arrival facing preserved.
+- **Location** — `SwScrlSsz.getBgCameraX` / `backgroundWindowActive` / `getBgPeriodWidth`,
+  `Sonic3kZoneFeatureProvider.isSszCloudBackgroundWindowActive`
+- **Verification** — `TestS3kSszBackgroundLayout` 7, `TestS3kSszBackgroundClouds` 6,
+  `TestS3kSszScrollBands` 11, and the SSZ/HPZ/DDZ/scroll batch at 1682 tests, all 0 failures and 0
+  skips; `-Pguards` 669, 0 failures, 0 skips.
+- **Still owed** — a before/after capture at a camera where a background column actually carries
+  structure (row 13, columns 17-22, i.e. camera X around `$858`-`$B58` with wrapped camera Y around
+  `$520`-`$59F`), at 320 and at a wide viewport. The `$7B` walkway camera is not that place.
 
 ## Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss
 

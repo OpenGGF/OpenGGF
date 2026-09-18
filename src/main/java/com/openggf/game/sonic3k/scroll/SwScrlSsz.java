@@ -350,7 +350,9 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     public int getBgPeriodWidth() {
         // Cloud mode fills the whole 512-pixel plane from four chunks (loc_5799A's moveq #$20,d6)
         // and moves it only with the HScroll bands, so its period is the plane, not the fan width.
-        return cloudWindowActive() ? VDP_PLANE_WIDTH_PX : currentBgPeriodWidth;
+        // Act 1 draws Plane B as a nametable in both modes, so its period is the plane. Act 2's
+        // layer is slice 9's and keeps the fan-derived period.
+        return backgroundWindowActive() ? VDP_PLANE_WIDTH_PX : currentBgPeriodWidth;
     }
 
     /**
@@ -376,7 +378,27 @@ public class SwScrlSsz extends SwScrlS3kDefault {
      */
     @Override
     public int getBgCameraX() {
-        return cloudWindowActive() ? CLOUD_WINDOW_LAYOUT_X : Integer.MIN_VALUE;
+        if (cloudWindowActive()) {
+            return CLOUD_WINDOW_LAYOUT_X;
+        }
+        // Plain mode is camera-derived on the cartridge, but the cache window still has to follow
+        // the word rather than sit at layout X 0: sub_57A60 writes Camera_X_pos_BG_copy and
+        // Reset_TileOffsetPositionEff refills Plane B from it. See s3k-known-bugs #41.
+        SszZoneRuntimeState state = state();
+        if (state == null || state.actIndex() != 0) {
+            return Integer.MIN_VALUE;
+        }
+        return state.backgroundCameraX() & 0xFFFF;
+    }
+
+    /**
+     * Whether act 1's background plane is on the 512-pixel wrap model at all. True in both modes:
+     * the cloud window pins the plane and plain mode moves it with the camera, but either way the
+     * plane is a nametable and not a slice of a contiguous background.
+     */
+    public static boolean backgroundWindowActive() {
+        SszZoneRuntimeState state = state();
+        return state != null && state.actIndex() == 0;
     }
 
     /**
