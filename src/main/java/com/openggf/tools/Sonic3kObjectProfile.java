@@ -319,6 +319,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x7D, // SSZBouncyCloud
             0x7E, // SSZCollapsingColumn
             0x7F, // SSZFloatingPlatform
+            0xA0, // EggRobo
             0xAF // SSZCutsceneButton
     );
 

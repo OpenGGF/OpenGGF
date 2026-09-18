@@ -26,3 +26,6 @@ com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance#finalScalar#wi
 com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance#objectRef#arc
+com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance#finalScalar#group
+com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance#finalScalar#mode
+com.openggf.game.sonic3k.objects.badniks.EggRoboShotInstance#finalScalar#facingLeft

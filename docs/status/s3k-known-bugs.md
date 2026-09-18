@@ -5896,6 +5896,37 @@ renders; see `05-ssz-cloud-band-before-after.mp4`.
   capture with the camera below wrapped `Camera_Y $800`, at 320 and at a wide viewport, with the
   act-1 matrix's plain-mode background row carrying the frame numbers.
 
+## Sky Sanctuary EggRobo Fly-By Draws Unscaled Art
+
+`loc_91874` gives the nibble-0 EggRobo `Map_ScaledArt` over `ArtTile_EggRoboFlyScaled` and a
+`$42(a0)` pointer to `ArtScaled_EggRoboFly`; `loc_91526` steps `$40` down by three from `$7F` and
+calls `Perform_Art_Scaling` on each step that differs from `$41`, so the sprite grows as it
+approaches. The engine has no runtime art scaler, so `EggRoboBadnikInstance` tracks the scale index
+and applies `sub_8619A`'s `$100 / ($40 + 4)` perspective offset — the motion is right — but draws
+the ordinary `Map_EggRobo` badnik sheet at a fixed size.
+
+- **Location** — `EggRoboBadnikInstance.updateFlyBy`
+  (`src/main/java/com/openggf/game/sonic3k/objects/badniks/`)
+- **Symptom** — the distant EggRobo that crosses the sanctuary before each fighter appears is
+  full-size for its whole pass instead of growing from a dot.
+- **Removal condition** — a `Perform_Art_Scaling` equivalent that can resample a Kosinski-moduled
+  sheet per frame, with a fly-by capture at 320 and wide showing the sprite growing, and the scale
+  index asserted against `$7F, $7C, … , $04`.
+
+## Sky Sanctuary EggRobo Releases the Shared Animal, Not loc_917C0's
+
+`loc_917C0` builds its own animal: a `Random_Number` draw picks `ArtTile_Animals1` or
+`ArtTile_Animals2`, `word_2C7EA` supplies the X velocity, hop height and mappings, the X velocity is
+mirrored by the releaser's own render flip, and the Y velocity is the RNG's high word clamped to at
+least `$100` and negated. `EggRoboBadnikInstance.releaseAnimal` spawns the shared
+`AnimalObjectInstance` instead, which takes its own launch values.
+
+- **Location** — `EggRoboBadnikInstance.releaseAnimal`
+- **Symptom** — the four animals a nibble-4 EggRobo drops leave on the engine's standard freed-animal
+  arc rather than `word_2C7EA`'s, and they do not inherit the robot's facing.
+- **Removal condition** — a `loc_917C0` child that reads `word_2C7EA` from the ROM, with its two
+  art variants and the facing mirror asserted, and the RNG draw ordered where the ROM draws it.
+
 ## Sky Sanctuary Carried-Player Pose Writes the Facing Bit the ROM Leaves Alone
 
 `loc_460A6` writes `byte_468C4`'s low two bits straight into the carried player's `render_flags`,

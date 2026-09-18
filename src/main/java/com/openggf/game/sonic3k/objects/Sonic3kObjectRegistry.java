@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance;
+
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance;
@@ -1500,6 +1502,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.SSZ_RETRACTING_SPRING,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
                 (spawn, registry) -> new SszRetractingSpringObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_EGG_ROBO,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new EggRoboBadnikInstance(spawn));
 
         // The Doomsday Zone's SKL object set.
         registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,

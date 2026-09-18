@@ -52,6 +52,17 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     private short unkEE9C;
     /** {@code _unkFAA4}: the SST slot of the object the launch carries; written by the bosses. */
     private short unkFAA4;
+    /**
+     * {@code _unkFA82}: one bit per EggRobo pairing group, indexed by {@code subtype >> 4}. A
+     * nibble-0 fly-by sets its bit as it leaves the screen ({@code loc_91570}) and the matching
+     * nibble-2 fighters test it in {@code sub_91914}. No ROM code clears it, so it is cleared
+     * here by the state itself being rebuilt on every level load.
+     *
+     * <p>{@code loc_7A7C4} (the MTZ boss, slice 6) writes six bytes starting at this address for
+     * an unrelated purpose; that overlap is out of scope until the boss lands.
+     */
+    private int unkFA82;
+
     /** {@code _unkFA84}: this frame's halved camera X delta, added by {@code MoveSprite_SSZBGAdjust}. */
     private short unkFA84;
     private int unkFAB8;
@@ -145,6 +156,19 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     /** {@code _unkFAA4}. */
     public int carriedObjectSlot() { return unkFAA4 & 0xFFFF; }
     public void setCarriedObjectSlot(int value) { unkFAA4 = (short) value; }
+
+    /** {@code btst d0,(_unkFA82).w}. */
+    public boolean eggRoboFlyByPassed(int group) {
+        return (unkFA82 & (1 << (group & 0x0F))) != 0;
+    }
+
+    /** {@code bset d0,d1} / {@code move.w d1,(_unkFA82).w}. */
+    public void markEggRoboFlyByPassed(int group) {
+        unkFA82 |= 1 << (group & 0x0F);
+    }
+
+    /** The whole word, for tests. */
+    public int eggRoboFlyByBits() { return unkFA82 & 0xFFFF; }
 
     /** {@code _unkFA84}: {@code loc_6607E} writes {@code (Camera_X - previous) >> 1} each frame. */
     public int backgroundCameraDelta() { return unkFA84; }

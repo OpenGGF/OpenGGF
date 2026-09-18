@@ -30,7 +30,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   them before flinging them where they are steering, the short posts spin a player in place
   and their invisible carriers walk them round in a circle, the swinging and rotating arms
   carry a player at the tip of a jointed arc, and the retracting springs fold away until
-  somebody comes at them and then fire them along the deck. The recreated Green Hill and
+  somebody comes at them and then fire them along the deck. Sky Sanctuary's EggRobos patrol
+  the act now, in all three shapes the cartridge gives them: the distant one that crosses the
+  sky and, by crossing, lets its partner appear; the hovering one that tracks the player,
+  levels its arm and fires a laser once it has them lined up; and the one that lets four
+  animals go before it takes off and joins the others. The recreated Green Hill and
   Metropolis arenas, their bosses and the Death Egg launch are still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter

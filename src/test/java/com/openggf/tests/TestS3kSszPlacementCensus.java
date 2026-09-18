@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.tools.Sonic3kObjectProfile;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.tests.rules.RequiresRom;
@@ -18,6 +19,8 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
+import java.util.Set;
 import java.util.TreeMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -302,6 +305,40 @@ class TestS3kSszPlacementCensus {
                         () -> String.format("placed ID $%02X is not in the census", spawn.objectId()));
             }
         }
+    }
+
+    /**
+     * The slice-3 census ratchet: every act-1 placement is an implemented family. The ids come
+     * from {@link Sonic3kObjectProfile}, whose zone lists {@code TestSonic3kObjectProfileRegistry-
+     * Guard} pins against the registry itself in a fresh JVM — so this asserts real ownership
+     * without constructing every factory's product inside the ordinary fork.
+     */
+    @Test
+    void actOneLeavesNoPlaceholderFamilies() throws IOException {
+        Set<Integer> implemented = Sonic3kObjectProfile.implementedIdsForZone(SSZ);
+        Set<String> unimplemented = new TreeSet<>();
+        for (ObjectSpawn spawn : new Sonic3kObjectPlacement(rom()).load(SSZ, 0)) {
+            if (!implemented.contains(spawn.objectId())) {
+                unimplemented.add(String.format("$%02X:$%02X", spawn.objectId(), spawn.subtype()));
+            }
+        }
+        assertEquals(Set.of(), unimplemented,
+                "act-1 placements with no implemented owner");
+    }
+
+    /** Act 2's own census, which slice 9 still owns. */
+    @Test
+    void actTwoRecordsItsRemainingPlaceholderFamilies() throws IOException {
+        Set<Integer> implemented = Sonic3kObjectProfile.implementedIdsForZone(SSZ);
+        Set<String> unimplemented = new TreeSet<>();
+        for (ObjectSpawn spawn : new Sonic3kObjectPlacement(rom()).load(SSZ, 1)) {
+            if (!implemented.contains(spawn.objectId())) {
+                unimplemented.add(String.format("$%02X:$%02X", spawn.objectId(), spawn.subtype()));
+            }
+        }
+        // $B2 is Obj_KnuxFinalBossCrane, the act-2 cutscene crane slice 9 owns.
+        assertEquals(Set.of("$B2:$00"), unimplemented,
+                "act-2 placements still waiting on slice 9");
     }
 
     private static Map<String, Integer> census(List<ObjectSpawn> spawns) {
