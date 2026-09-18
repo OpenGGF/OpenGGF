@@ -194,6 +194,9 @@ public final class SszMechaSonicTrailChild extends AbstractObjectInstance
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MECHA_SONIC_EXTRA);
         if (renderer != null && renderer.isReady()) {
+            // ObjDat3_7D402 is make_art_tile(ArtTile_MechaSonicExtra,0,1) -- line 0, where the
+            // spark object's ObjDat_MechaSonic_Sparks uses line 1 off the same sheet, so this
+            // one passes its line explicitly rather than taking the sheet's.
             renderer.drawFrameIndex(anim.mappingFrame, x, y,
                     parent != null && parent.renderFlippedForTest(), false, 0);
         }

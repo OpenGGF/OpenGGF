@@ -2325,3 +2325,26 @@ field-disposition debt file, which says never to grow it. Focused validation, no
 seven of its eight cases and passed the eighth; the seven were the ones that boot the level and
 the eighth is the pure table assertion, which is exactly the split that proves the live cases
 reach production code rather than passing vacuously.
+
+### 2026-09-18 — what the first Mecha Sonic clip found that the tests could not
+
+`23-ssz-mecha-sonic-entry-and-attacks.mp4` took three captures, and the first two were both real
+defects rather than capture mistakes.
+
+`raw-36` drew him orange. `loc_7B35A` ends `PalLoad_Line1 Pal_SSZGHZMisc` — the same palette and
+the same line the Green Hill recreation loads — and that call was simply missing from the init;
+`ObjSlot_MechaSonic` is `make_art_tile(ArtTile_MechaSonic,1,1)`, so without it he takes whatever
+the level left on line 1.
+
+`raw-37` had the palette loaded and was still orange, because the draw passed `0` as
+`PatternSpriteRenderer.drawFrameIndex`'s palette override — copied from the Metropolis ship,
+where passing a line explicitly is correct because its sheet is shared between the orbs' line and
+the lasers'. Here it forced line 0 over the line that had just been loaded. `raw-38` passes `-1`
+and takes the sheet's own registered line, and the after-image child passes `0` because
+`ObjDat3_7D402` really is `make_art_tile(ArtTile_MechaSonicExtra,0,1)` where the spark object's
+`ObjDat_MechaSonic_Sparks` is line 1 off the same sheet.
+
+**Neither of those could fail a headless test as written**, because nothing in this slice asserts
+a rendered pixel — the palette owner and the draw call are presentation. That is the argument for
+the campaign's one-clip-per-feature rule, and it is worth saying plainly: the tests were green
+across both wrong versions.

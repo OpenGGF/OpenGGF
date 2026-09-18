@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -228,6 +230,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private Callback callback = Callback.NONE;
     private boolean initExecuted;
     private boolean defeated;
+    /** {@code PalLoad_Line1} is a one-shot; the restore belongs to the owed defeat graph. */
+    private boolean paletteLoaded;
 
     private final S3kRawAnimation.State anim = new S3kRawAnimation.State();
     /** A lazily sliced read-only window over the ROM's script block; nothing to restore. */
@@ -246,7 +250,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private record RewindExtra(List<ObjectRefId> trailIds, int posX, int posY, int xVel, int yVel,
                                int xAccel, int timer, int attackChoice, int attackCounter,
                                int yRadius, boolean renderFlipped, int flags,
-                               int callback, boolean initExecuted, boolean defeated,
+                               int callback, boolean initExecuted, boolean defeated, boolean paletteLoaded,
                                int animScript, int animFrame, int animFrameTimer,
                                int mappingFrame, int routine, int hitCount, boolean invulnerable,
                                int invulnerabilityTimer)
@@ -262,7 +266,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 List.copyOf(trailIds), posX, posY, xVel, yVel, xAccel, timer, attackChoice,
                 attackCounter, yRadius, renderFlipped, flags, callback.ordinal(),
-                initExecuted, defeated, anim.script, anim.animFrame, anim.animFrameTimer,
+                initExecuted, defeated, paletteLoaded, anim.script, anim.animFrame, anim.animFrameTimer,
                 anim.mappingFrame, super.state.routine, super.state.hitCount,
                 super.state.invulnerable, super.state.invulnerabilityTimer));
     }
@@ -287,6 +291,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         callback = Callback.values()[extra.callback()];
         initExecuted = extra.initExecuted();
         defeated = extra.defeated();
+        paletteLoaded = extra.paletteLoaded();
         anim.script = extra.animScript();
         anim.animFrame = extra.animFrame();
         anim.animFrameTimer = extra.animFrameTimer();
@@ -408,7 +413,12 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         }
         setPosition((cameraX + SPAWN_CAMERA_X_OFFSET) & 0xFFFF,
                 (cameraY + SPAWN_CAMERA_Y_OFFSET) & 0xFFFF);
-        // loc_7B35A's act-1 branch: AllocateObject / move.l #Obj_Song_Fade_Transition,(a1) /
+        // loc_7B35A, in its own order: Queue_Kos_Module ArtKosM_MechaSonicExtra (the engine's
+        // standalone sheet needs no queue), Load_PLC_Raw PLC_BossExplosion, and then
+        // PalLoad_Line1 Pal_SSZGHZMisc -- which matters, because ObjSlot_MechaSonic draws this
+        // object on line 1 and without the load he takes whatever the level left there.
+        loadFightPalette();
+        // Then the act-1 branch: AllocateObject / move.l #Obj_Song_Fade_Transition,(a1) /
         // move.b #mus_EndBoss,subtype(a1). The object's own init is move.w #90,$2E(a0) and a
         // cmd_FadeOut, so the theme arrives 91 updates later, not on this frame.
         spawnFreeChild(() -> new SongFadeTransitionInstance(90, Sonic3kMusic.BOSS.id));
@@ -930,6 +940,32 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         return ssz == null ? 0xFFFF : ssz.bossRightX();
     }
 
+    /**
+     * {@code PalLoad_Line1 Pal_SSZGHZMisc} in {@code loc_7B35A}: the same palette the Green Hill
+     * recreation loads, and the same line. Act 1 ends with the Death Egg launch rather than with
+     * a restore, so nothing here puts the level's line 1 back; that belongs to
+     * {@code loc_7B81A}'s graph, which is owed.
+     */
+    private void loadFightPalette() {
+        if (paletteLoaded) {
+            return;
+        }
+        try {
+            byte[] line = services().rom()
+                    .readBytes(Sonic3kConstants.PAL_SSZ_GHZ_MISC_ADDR, 32);
+            S3kPaletteWriteSupport.applyLine(
+                    services().paletteOwnershipRegistryOrNull(),
+                    services().currentLevel(),
+                    services().graphicsManager(),
+                    S3kPaletteOwners.SSZ_MECHA_SONIC,
+                    S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                    1, line);
+            paletteLoaded = true;
+        } catch (IOException | RuntimeException ignored) {
+            // Partial object harnesses may not provide a ROM or palette surface.
+        }
+    }
+
     private SszZoneRuntimeState sszState() {
         return S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);
     }
@@ -989,7 +1025,10 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MECHA_SONIC);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(anim.mappingFrame, getX(), getY(), renderFlipped, false, 0);
+            // ObjSlot_MechaSonic is make_art_tile(ArtTile_MechaSonic,1,1): palette line 1, which
+            // is the line loc_7B35A's PalLoad_Line1 has just filled from Pal_SSZGHZMisc. -1 keeps
+            // the sheet's own registered line rather than forcing line 0.
+            renderer.drawFrameIndex(anim.mappingFrame, getX(), getY(), renderFlipped, false, -1);
         }
     }
 }
