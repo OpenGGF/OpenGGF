@@ -224,6 +224,63 @@ class TestLrzRockCrusher {
         assertEquals(-1, harness.state.screenShake().flag(), "this branch does not clear the shake");
     }
 
+    /**
+     * The pieces' shake, {@code loc_90436} (sonic3k.asm:197486-197508). {@code d3} is
+     * {@code (subtype & 8) >> 1} and {@code d1} is {@code 0} or {@code 2}; the sum indexes
+     * {@code byte_904AC} as a BYTE offset into four {@code (frames, delta)} PAIRS, so the pair
+     * index is that sum halved and the upper row reads the table's second half. Reading the sum
+     * as a pair index instead walks off the end -- which is what a real act-1 load did before this
+     * test existed, with an {@code Index 4 out of bounds for length 4} inside the capture.
+     */
+    @Test
+    void everyPieceWalksByteAdjustedShakePairsAndNeverLeavesTheTable() {
+        int[][] table = {{1, 8}, {3, -4}, {3, -4}, {7, 2}};
+        for (int index = 0; index < 8; index++) {
+            int subtype = index * 2;
+            LrzRockCrusherPieceInstance piece =
+                    new LrzRockCrusherPieceInstance(subtype, 0, 0);
+            LrzRockCrusher harness = harness(0, 0xE40, 0x680);
+            piece.setServices(harness.services);
+            piece.attachTo(harness.crusher);
+            harness.crusher.update(1, null);
+            harness.camera.setMaxY(harness.camera.getMaxYTarget());
+            harness.camera.setX((short) harness.crusher.cameraTargetX());
+            harness.crusher.update(2, null);
+
+            // routine 2 -> 4 on the parent's $38 bit 2, then $2E counts down from subtype & 4.
+            piece.update(3, null);
+            assertEquals(4, piece.routine(), "piece " + index + " released");
+            int wait = subtype & 4;
+            for (int frame = 0; frame <= wait; frame++) {
+                piece.update(4 + frame, null);
+            }
+            assertEquals(6, piece.routine(), "piece " + index + " shaking");
+
+            // The first pair is d1 = 0, so the row's FIRST entry: pairs 0 and 2.
+            int[] first = table[((subtype & 8) >> 1) / 2];
+            assertEquals(first[1], piece.delta(), "piece " + index + " first delta");
+            // $39(a0) allows two more pair picks and loc_90490 then returns the piece to
+            // routine 4 with $2E = ((subtype & 8) >> 1) + 4 (:197509-197515), after which
+            // routine 4 starts the next burst -- so the piece cycles 6 -> 4 -> 6 forever.
+            boolean returnedToWait = false;
+            for (int frame = 0; frame < 60 && !returnedToWait; frame++) {
+                piece.update(100 + frame, null);
+                if (piece.routine() == 4) {
+                    returnedToWait = true;
+                    assertEquals(((subtype & 8) >> 1) + 4, piece.timer(),
+                            "piece " + index + " reload from loc_90490");
+                }
+            }
+            assertTrue(returnedToWait, "piece " + index + " reaches loc_90490");
+            // Sixty more frames of the 6 -> 4 -> 6 cycle must stay inside byte_904AC.
+            for (int frame = 0; frame < 60; frame++) {
+                piece.update(200 + frame, null);
+            }
+            assertTrue(piece.routine() == 4 || piece.routine() == 6,
+                    "piece " + index + " stays in the shake cycle");
+        }
+    }
+
     /** {@code move.b #$40,y_radius(a0)}, {@code collision_property -1}, {@code ObjDat} (:197013-197016). */
     @Test
     void renderAndCollisionStateAreTheInitWrites() {

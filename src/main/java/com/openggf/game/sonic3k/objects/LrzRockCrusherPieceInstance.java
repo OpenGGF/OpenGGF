@@ -144,11 +144,14 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
             timer = ((subtype & 8) >> 1) + 4;
             return;
         }
-        // lsr.w #1,d3 / bchg #2,$38(a0) / beq -> d1 = 0 else 2 (:197502-197506).
-        int row = (subtype & 8) >> 1;
+        // lsr.w #1,d3 / bchg #2,$38(a0) / beq -> d1 = 0 when the bit WAS clear, 2 when it was
+        // set (:197502-197506). d3 is then a BYTE offset into byte_904AC, whose entries are
+        // (frames, delta) PAIRS, so the pair index is d3 / 2 and never leaves 0..3.
+        int rowByteOffset = (subtype & 8) >> 1;
+        boolean wasSet = alternate;
         alternate = !alternate;
-        int index = row + (alternate ? 0 : 2);
-        int[] pair = SHAKE_TABLE[index];
+        int byteOffset = rowByteOffset + (wasSet ? 2 : 0);
+        int[] pair = SHAKE_TABLE[byteOffset / 2];
         timer = pair[0];
         delta = pair[1];
     }
