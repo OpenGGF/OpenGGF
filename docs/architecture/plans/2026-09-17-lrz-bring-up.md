@@ -2342,5 +2342,13 @@ open, then into the arena. The capture that films the fight is the same capture 
 cold route reaches the boss, so doing the route work once serves both the clips and the frontier
 re-measurement the lead asked for.
 
+**The wall is not a wall: it yields to speed.** A tenth probe added a spindash at it
+(`30 -; 220 R; 20 D; 1 D+A; 12 D; ... ; 20 D; 700 R` from `($2857,$6D0)`) and the player passed
+`$2995` to **`x=$29F5`, `y=$692`**, still alive and still moving right at `gspeed 44` when the
+input ran out. So it is a slope or a rise that walking cannot climb, not a closed door, and the
+route continues -- it just needs a longer tail and probably more than one spindash. That is the
+thread to pull: the input log that got there is saved in the campaign capture directory as
+`inputs/lrz1-arena-approach-spindash-v1.txt`.
+
 **Clips `29`-`32` are therefore still owed, and so is the route re-measurement.** Nothing was
 numbered this round; the next clip number is still `29`.
