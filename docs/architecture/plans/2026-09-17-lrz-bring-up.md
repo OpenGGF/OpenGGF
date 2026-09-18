@@ -913,11 +913,31 @@ frame 460. Frames 385 and 450 were extracted and compared before publishing: in 
 sandstone column is down and blocking him, in the second it has risen into the ceiling with only
 its bottom edge showing.
 
-**The open-loop limit, measured.** Replaying the native input is not a trace replay and drifts: the
-engine is 44 px behind native by frame 400, 202 by 663, 582 by 1000 and 1833 by 2200, and dies at
-frame 4659. The first 460 frames track within about 40 px, which covers the rock and the door. Do
-not read the later divergence as a list of engine defects - it is one accumulated phase error - but
-the early drift is itself worth a look when slice 11 starts on the strict replay.
+**Two located divergences, not "drift" (measured 2026-09-18 at `f75a47ae5`).** Replaying the
+recorded input frame for frame and comparing against the same fixture's own rows turns the vague
+"open-loop limit" into two specific defects, both inside the first 165 frames, both with
+**identical input**, and neither caused by anything this campaign has implemented.
+
+1. **The falling intro starts gravity one frame late.** First position difference greater than
+   1 px is **frame 7** (engine `y` 36, native `y` 38, input `0000`, both airborne, both
+   `ground_vel` 0), but the shape is not drift: over frames **3 to 155** the engine's `(x,y)` equals
+   the native row `n-1` **exactly, every frame** - 153 consecutive frames with zero mismatches at
+   shift 1, against 323 mismatches at shift 0 and 319 at shift 2. The engine is one whole frame
+   behind from the very first moving frame of the act, before any object is involved. The
+   air-to-ground transitions carry the same offset: native rows 62, 108, 181; engine frames 63, 109,
+   190.
+2. **The `$31` collapsing bridge gives way eight frames late.** The shift-1 match breaks at
+   **frame 156**. At native row 152 the player standing at `($17D,$371)` leaves the ground and
+   `y_speed` climbs 56, 112, 168, 224 as the platform under him drops; the engine keeps
+   `air = 0` and `y` pinned at `881` until **frame 161**, eight frames later. The only object within
+   96 px is `$31 Obj_LRZCollapsingBridge` at `($13E,$3A0)`, 63 px left and 47 below - the anchor end
+   of a bridge the player is standing along. `$31` is a shared, already-implemented class
+   (`CollapsingBridgeObjectInstance`), inherited rather than introduced here.
+
+Both belong to slice 11, and the second is the more tractable: a collapse-timing comparison against
+these rows needs no new harness. The accumulated figures the earlier entry quoted (44 px by frame
+400, 1833 by 2200, death at 4659) are the downstream consequence of these two, not separate
+defects, and should not be read as a list.
 
 ### 2026-09-18 - Slice 3a continued: the corkscrew (commit `9b0608d96`)
 

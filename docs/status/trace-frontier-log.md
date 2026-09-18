@@ -110835,3 +110835,34 @@ Frontier re-measurement, `maven_queue.py -Dmse=off -Ptrace-segments
 `3418eba6e`: **red, unchanged**. Totals 11909 errors, 0 warnings; first error frame 208,
 `tails_y_speed` (expected `0x07BD`, actual `0x0000`) — the S3K `SolidObjectTop`
 zero-distance boundary recorded on 2026-08-15. No fixture was changed or consumed.
+
+## 2026-09-18 - LRZ1: two located divergences inside the first 165 frames
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at
+  `f75a47ae5`. Not a trace replay: the recorded controller input of
+  `traces/s3k/runs/s3k-sonic-tails-complete-emeralds/lrz/physics.csv.gz` was converted to a
+  `GameplayCaptureTool` input log (bits 0 Up, 1 Down, 2 Left, 3 Right, 4 A - no other bit occurs in
+  any of the segment's 38,885 rows) and replayed cold from the act's own start with no teleport,
+  then compared frame for frame against that same fixture's position rows. Command:
+  `maven_queue.py -Dmse=off exec:java -Dexec.mainClass=com.openggf.tools.GameplayCaptureTool` with
+  `--game s3k --zone lrz --act 1 --width 320 --every 4 --stop-on-death false --input
+  target/capture/lrz1-native-input-route.txt`; capture kept as
+  `~/Videos/OGGF/lrz-bring-up/raw-20-lrz1-native-input-route`, input preserved under
+  `~/Videos/OGGF/lrz-bring-up/inputs/`.
+- **Frame 7, `player_y`: the falling intro starts gravity one frame late.** Engine `y` 36 against
+  native 38, input `0000`, both airborne, both `ground_vel` 0. The first difference of any size is
+  frame 3. It is a phase error rather than drift: over frames 3-155 the engine's `(x,y)` equals
+  native row `n-1` exactly on every frame - 0 mismatches at shift 1 against 323 at shift 0 and 319
+  at shift 2 - and the air-to-ground transitions carry the same offset (native rows 62, 108, 181;
+  engine frames 63, 109, 190).
+- **Frame 156, `player_y`: `$31 Obj_LRZCollapsingBridge` gives way eight frames late.** The shift-1
+  match breaks here. Native row 152 has the player leave the ground at `($17D,$371)` with `y_speed`
+  climbing 56, 112, 168, 224 as the platform drops; the engine holds `air = 0` and `y = 881` until
+  frame 161. The only placement within 96 px is `$31` at `($13E,$3A0)`. `$31` is shared and already
+  implemented (`CollapsingBridgeObjectInstance`), so this is inherited, not introduced by the LRZ
+  campaign.
+- Downstream figures (44 px behind by frame 400, 1833 by frame 2200, death at frame 4659) are the
+  consequence of these two and are not separate frontiers.
+- Unchanged and not re-measured here: `TestS3kSonicTailsLrzSegmentTraceReplay`'s own first error at
+  frame 208 `tails_y_speed` (last measured `3418eba6e`). The two divergences above are about
+  Player 1 position under the strict-replay harness's own fixture, reached by a different route.
