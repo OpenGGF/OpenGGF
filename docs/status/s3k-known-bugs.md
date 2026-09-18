@@ -5944,14 +5944,16 @@ That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
   bare tail-jump to `AllocateObject` is absent with them — a second slot the ROM consumes and never
   writes — and slot order decides sibling execution and RNG draw order, so it belongs in this list
   rather than being treated as a no-op.
-- **Also untested rather than unimplemented** — nothing drives routines `$0A` to `$28`, so
-  `loc_7B484`'s RNG branch, both landings, both dashes, the ground pound, the slam-and-backstep
-  chain and the final hop are implemented against the ROM but unexercised, as are rows 2 to 4 of
-  `byte_7D24C` and the `loc_7C8FE`/`loc_7B70E` subtype paths that reach them.
+- **Untested rather than unimplemented** — the `$20`-frame hit window's *phase* is unverified.
+  `sub_7D312` opens the window on the frame after the hit, because `Touch_Enemy` has already
+  zeroed `collision_flags`; the duration is `$20` on both sides, but which frame the engine's
+  shared boss touch pass counts as the first has not been checked against the routine, and no
+  test pins it. The window's duration, and the fact that `sub_7D2D8` leaves the byte alone while
+  it runs, are covered.
 - **Removal condition** — `loc_7B81A`'s routines 0 to 4 run for act 1, the act-1 handover through
   `loc_7D056` reaches the results screen, both remaining children exist with their own tests, and
-  the attack graph is driven to at least one landing and one of each of `byte_7B636`'s three
-  attacks against ROM literals.
+  the hit window's phase is pinned against `sub_7D312`. The attack graph itself is now driven to
+  a landing and to each of `byte_7B636`'s three attacks against ROM literals.
 
 ## Sky Sanctuary Boss Defeats Draw No Explosion
 

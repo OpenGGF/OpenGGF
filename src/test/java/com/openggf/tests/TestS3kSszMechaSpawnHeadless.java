@@ -20,7 +20,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
@@ -535,20 +534,6 @@ class TestS3kSszMechaSpawnHeadless {
             }
         }
         return null;
-    }
-
-    private static List<Object> allActive(Class<?> type) {
-        List<Object> out = new ArrayList<>();
-        var manager = GameServices.level().getObjectManager();
-        if (manager == null) {
-            return out;
-        }
-        for (var instance : manager.getActiveObjects()) {
-            if (type.isInstance(instance) && !instance.isDestroyed()) {
-                out.add(instance);
-            }
-        }
-        return out;
     }
 
     private static HeadlessTestFixture bootAtCheckpoint(int width, int x, int y) {

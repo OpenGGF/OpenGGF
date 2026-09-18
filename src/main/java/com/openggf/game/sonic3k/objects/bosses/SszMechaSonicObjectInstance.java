@@ -897,9 +897,12 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     /**
      * {@code move.l #script,$30(a0)} on its own. The ROM writes the pointer without touching
-     * {@code anim_frame} or {@code anim_frame_timer} at {@code loc_7B41C}, {@code loc_7B4EC},
-     * {@code loc_7B5C2} and {@code loc_7B57A}, so a script installed there resumes at whatever
-     * index the previous one left behind; only {@code Set_Raw_Animation} clears them.
+     * {@code anim_frame} or {@code anim_frame_timer}, so a script installed this way resumes at
+     * whatever index the previous one left behind. The act-1 graph does it seven times —
+     * {@code loc_7B41C}, {@code loc_7B484}'s two branches, {@code loc_7B4EC},
+     * {@code loc_7B520}, {@code loc_7B57A} and {@code loc_7B5C2} — against one
+     * {@code Set_Raw_Animation}, at {@code loc_7B5E8}, which is the only one that clears them.
+     * (The {@code $F8} command rewrites {@code $30} again at run time, from inside the script.)
      */
     private void setAnimation(int address) {
         anim.script = address;

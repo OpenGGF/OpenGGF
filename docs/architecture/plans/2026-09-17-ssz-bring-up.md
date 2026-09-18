@@ -2274,9 +2274,14 @@ collision byte straight back on the next frame and the window would not exist.
 
 **One animation detail that is not a tidy-up.** `Set_Raw_Animation` clears `anim_frame` and
 `anim_frame_timer`; a bare `move.l #script,$30(a0)` does not. The act-1 graph uses the bare form
-at `loc_7B41C`, `loc_7B4EC`, `loc_7B5C2` and `loc_7B57A` and `Set_Raw_Animation` only at
-`loc_7B5E8`, so four of the five script changes resume at whatever index the previous script
-left behind. The first draft of this class cleared them everywhere, which is a different object.
+at seven places and `Set_Raw_Animation` at exactly one, `loc_7B5E8`, so seven of the eight
+script changes resume at whatever index the previous script left behind. The first draft of this
+class cleared them everywhere, which is a different object.
+
+(The first write-up of this said "four of five". The distinction was right and the count was
+wrong — `grep '$30(a0)'` over the block gives seven bare writes plus the one
+`Set_Raw_Animation`, and the `$F8` command rewrites the pointer again from inside the script.
+The reviewer caught it; the code already had the right split.)
 
 **The attacks are a cycle, not a draw.** `loc_7B5E8` reads `byte_7B62E[$3B & 7]` — `0,1,2,0,1,2,
 0,1` — and steps `$3B`; `byte_7B636` turns that into routine `$16`, `$1A` or `$1E`. The RNG is
