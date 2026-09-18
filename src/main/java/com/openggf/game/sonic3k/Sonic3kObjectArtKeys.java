@@ -311,6 +311,12 @@ public final class Sonic3kObjectArtKeys {
      * {@code make_art_tile($0D3,2,1)} (sonic3k.asm:89025).
      */
     public static final String LRZ_ROCK_DEBRIS = "lrz_rock_debris";
+    /**
+     * {@code Obj_LRZRockCrusher}: {@code Map_LRZRockCrusher} over
+     * {@code ArtTile_LRZRockCrusher}, palette 1 ({@code ObjDat_LRZRockCrusher},
+     * sonic3k.asm:197426-197428). Its eight hit pieces copy the same art_tile.
+     */
+    public static final String LRZ_ROCK_CRUSHER = "lrz_rock_crusher";
     /** {@code Obj_LRZSwingingSpikeBall}: {@code Map_LRZSwingingSpikeBall}, palette 1. */
     public static final String LRZ_SWINGING_SPIKE_BALL = "lrz_swinging_spike_ball";
     /** The same map on palette line 0, which {@code andi.w #$9FFF} leaves the chain child. */

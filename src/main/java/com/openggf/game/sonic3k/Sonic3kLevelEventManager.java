@@ -2337,6 +2337,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for HCZ. */
     public Sonic3kHCZEvents getHczEventsForTest()  { return hczEvents; }
     public Sonic3kFBZEvents getFbzEventsForTest()  { return fbzEvents; }
+
+    public com.openggf.game.sonic3k.events.Sonic3kLRZEvents getLrzEventsForTest() { return lrzEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for CNZ. */
     public Sonic3kCNZEvents getCnzEventsForTest()  { return cnzEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for MGZ. */

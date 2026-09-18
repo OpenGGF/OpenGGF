@@ -1516,6 +1516,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_GATE_LASER,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzSmashingSpikePlatformObjectInstance(spawn));
+        // Id $9C is Obj_LRZRockCrusher in the SKL set (sonic3k.asm:196988); the S3KL set spends
+        // it on Obj_Spiker, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.SPIKER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzRockCrusherObjectInstance(spawn));
         // Id $22 is Obj_LRZSpikeBall in the SKL set (sonic3k.asm:88838); the S3KL set spends it
         // on Obj_LBZAlarm.
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_ALARM,

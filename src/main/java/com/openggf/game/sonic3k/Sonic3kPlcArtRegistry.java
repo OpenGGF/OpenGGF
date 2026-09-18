@@ -2630,6 +2630,16 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 null
         ));
+        // Rock crusher (SKL object $9C): make_art_tile(ArtTile_LRZRockCrusher,1,0)
+        // (ObjDat_LRZRockCrusher, sonic3k.asm:197426-197427). Both placements are in act 1 and
+        // the object queues ArtKosM_LRZRockCrusher itself at init.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_ROCK_CRUSHER,
+                Sonic3kConstants.MAP_LRZ_ROCK_CRUSHER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_ROCK_CRUSHER,
+                1,
+                null
+        ));
         // Spike ball (SKL object $22) and the chips sub_439EC throws:
         // make_art_tile(ArtTile_LRZBigSpike,1,0) and make_art_tile($0D3,2,1)
         // (sonic3k.asm:88840, :89025). All six placements are in act 1.

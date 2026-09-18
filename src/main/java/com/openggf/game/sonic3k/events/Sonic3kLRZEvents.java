@@ -1,11 +1,15 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.mutation.LayoutMutationContext;
+import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.render.LrzRockSpriteRenderer;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 
 /**
  * Lava Reef screen and background events for {@code $900}, {@code $901} and the boss act
@@ -55,11 +59,81 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         camera.setYCopy((short) (camera.getYCopy() + screenShakeOffset));
     }
 
+    /**
+     * {@code LRZ1_ScreenEvent}'s chunk edits (sonic3k.asm:115201-115224). {@code a3} is
+     * {@code Level_layout_main} (the {@code ScreenEvents} preamble at :102237 loads it), whose
+     * entries are longs -- {@code Layout_row_index_mask} is {@code $7C} (:102207) -- so the
+     * {@code movea.w} at {@code $38(a3)}, {@code $3C(a3)} and {@code $40(a3)} reads the FOREGROUND
+     * row pointer of layout rows 14, 15 and 16, and {@code lea $1D(a1)} indexes column 29 of that
+     * row. The rock crusher's own bridge positions confirm the reading independently: subtype 0
+     * drops slabs at {@code ($F00,$760)} and {@code ($F80,$760)}, which are columns 30 and 31 of
+     * row 14, and the other subtype at {@code ($540,$860)}, column 10 of row 16.
+     *
+     * <p>The engine calls the ROM's {@code $80 x $80} unit a <em>block</em>, so each write is one
+     * {@code setBlockInMap(0, column, row, id)} on the foreground layer.
+     */
+    private static final int CRUSHER_EDIT_FIRST_COLUMN = 29;
+    private static final int CRUSHER_EDIT_ROW_A = 14;
+    private static final int CRUSHER_EDIT_ROW_B = 15;
+    private static final int CRUSHER_EDIT_ROW_C = 16;
+    /** {@code move.b #$44 / #0 / #$4A} at {@code loc_56B2C} (:115211-115214). */
+    private static final int[] CRUSHER_EDIT_ROW_A_IDS = {0x44, 0x00, 0x4A};
+    /** {@code move.b #$3E / #0 / #$4B} at {@code loc_56B2C} (:115216-115219). */
+    private static final int[] CRUSHER_EDIT_ROW_B_IDS = {0x3E, 0x00, 0x4B};
+    /** {@code move.b #$9C,$A(a1)} on the positive branch (:115207). */
+    private static final int CRUSHER_EDIT_POSITIVE_COLUMN = 10;
+    private static final int CRUSHER_EDIT_POSITIVE_ID = 0x9C;
+
     @Override
     public void update(int act, int frameCounter) {
-        // loc_56B5E / LRZ2_ScreenEvent with no pending chunk edit: DrawTilesAsYouMove only, which
-        // the engine's own tile streaming already does. The stage machines arrive with their slices.
+        // LRZ1_ScreenEvent reads Events_bg+$0C before anything else draws (:115201-115204); with
+        // no pending edit it is loc_56B5E, DrawTilesAsYouMove only, which the engine's own tile
+        // streaming already does. The stage machines arrive with their slices.
+        applyPendingChunkEdit(act);
         advanceRockSpriteWindow();
+    }
+
+    /**
+     * {@code LRZ1_ScreenEvent} {@code loc_56B2C}/{@code loc_56B54} (sonic3k.asm:115201-115224).
+     * {@code tst.w} on the request word: zero does nothing, negative takes the two-row opening,
+     * and positive the single {@code $9C} write. Either way {@code loc_56B54} clears the word and
+     * redraws the screen directly, which is what consuming the request and letting the mutation
+     * pipeline publish a foreground redraw does here.
+     */
+    private void applyPendingChunkEdit(int act) {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ || act != 0) {
+            return;
+        }
+        short request = (short) lrz.chunkEditRequest();
+        if (request == 0) {
+            return;
+        }
+        lrz.consumeChunkEditRequest();
+        if (request < 0) {
+            applyLayoutWrites(CRUSHER_EDIT_ROW_A, CRUSHER_EDIT_ROW_A_IDS);
+            applyLayoutWrites(CRUSHER_EDIT_ROW_B, CRUSHER_EDIT_ROW_B_IDS);
+            return;
+        }
+        applyLayoutWrite(CRUSHER_EDIT_ROW_C, CRUSHER_EDIT_POSITIVE_COLUMN, CRUSHER_EDIT_POSITIVE_ID);
+    }
+
+    private void applyLayoutWrites(int row, int[] ids) {
+        for (int i = 0; i < ids.length; i++) {
+            applyLayoutWrite(row, CRUSHER_EDIT_FIRST_COLUMN + i, ids[i]);
+        }
+    }
+
+    private void applyLayoutWrite(int row, int column, int blockId) {
+        LevelManager manager = levelManager();
+        Level level = manager != null ? manager.getCurrentLevel() : null;
+        if (level == null) {
+            return;
+        }
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level), manager::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                ctx -> ctx.surface().setBlockInMap(0, column, row, blockId), context);
     }
 
     /**

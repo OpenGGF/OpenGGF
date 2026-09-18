@@ -393,6 +393,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The act 1 spike balls are in too: the big ones grind back and forth along the floor throwing
   rock chips, and the one on the swinging arm is only dangerous on half its sweep until a player
   approaches it from the left, when it breaks off the arm and rolls away downhill.
+  Act 1's two rock crushers work end to end: reach one and the camera locks to its own limits, the
+  crusher rumbles overhead with the screen shaking for three seconds, then the rock underneath is
+  cut away, collapsing slabs drop into the gap, the crusher falls through and explodes, and the
+  camera eases back out to the act's own bounds.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list

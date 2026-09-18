@@ -1721,6 +1721,16 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_LAVA_FALL_ADDR = 0x043782;
     /** {@code Map_LRZSmashingSpikePlatform} (sonic3k.lst: $4324A). */
     public static final int MAP_LRZ_SMASHING_SPIKE_PLATFORM_ADDR = 0x04324A;
+    /** {@code Map_LRZRockCrusher} (sonic3k.lst: $186D6A). */
+    public static final int MAP_LRZ_ROCK_CRUSHER_ADDR = 0x186D6A;
+    /** {@code ArtKosM_LRZRockCrusher} (sonic3k.lst: $16F928). */
+    public static final int ART_KOSM_LRZ_ROCK_CRUSHER_ADDR = 0x16F928;
+    /** {@code ArtTile_LRZRockCrusher} (sonic3k.lst: $52E). */
+    public static final int ARTTILE_LRZ_ROCK_CRUSHER = 0x052E;
+    /** {@code Pal_LRZRockCrusher} (sonic3k.lst: $90680), one 32-byte line. */
+    public static final int PAL_LRZ_ROCK_CRUSHER_ADDR = 0x090680;
+    /** {@code Pal_LRZ1} (sonic3k.lst: $A967C), the line the crusher restores on exit. */
+    public static final int PAL_LRZ1_ADDR = 0x0A967C;
     /** {@code Map_LRZSpikeBall} (sonic3k.lst: $43A8E). */
     public static final int MAP_LRZ_SPIKE_BALL_ADDR = 0x043A8E;
     /** {@code Map_LRZRockDebris} (sonic3k.lst: $43B12). */
