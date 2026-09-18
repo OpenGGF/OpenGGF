@@ -919,6 +919,55 @@ frame 4659. The first 460 frames track within about 40 px, which covers the rock
 not read the later divergence as a list of engine defects - it is one accumulated phase error - but
 the early drift is itself worth a look when slice 11 starts on the strict replay.
 
+### 2026-09-18 - Slice 3a continued: the corkscrew (commit `9b0608d96`)
+
+**Delivered.** `LrzCorkscrewObjectInstance` for `$15` (one act 1 placement at `($1240,$3D8)`),
+registered on the id the S3KL set spends on `Obj_LBZPlayerLauncher`, with a `LRZ_ONLY_IDS` entry and
+no art: Init writes only `width_pixels` and the routine pointer, so the object is invisible and the
+level art draws the shape it sweeps the player along.
+
+**Four ROM readings worth carrying.**
+
+1. **The accumulator is read two ways.** `$30(a0)`/`$34(a0)` are longs; `add.l` accumulates
+   `ground_vel << 8`, but every `cmpi.w`/`move.w` on `(a2)` reads the **high** word
+   (sonic3k.asm:87613-87616). So the high word is the ride parameter and the exits are "the long
+   went negative" and "the high word reached `$700`". Reading those word accesses as the low half
+   would put the rider at the wrong point of the turn while still looking plausible frame to frame.
+2. **The two capture tests are deliberately different kinds.** Horizontal is an unsigned borrow
+   (`bcs`) plus a signed `bge #$20`, so half-open; vertical is a plain signed `bgt #$20`, so it
+   includes its far edge.
+3. **The Y add is a byte add into a masked word.** `andi.w #$FF80,d0 / add.b (a3,d1.w),d0`
+   (:87640-87643): the table value lands in the low byte and the `$80` step stays in bit 7 of that
+   byte rather than carrying into the high byte.
+4. **Both exits reverse the rider.** `neg.w ground_vel(a1)` at :87591 and :87607 on a speed that was
+   positive for the whole ride. And `move.w #1,anim(a1)` is a word write over `anim` and
+   `prev_anim`, so the rider leaves with `anim` 0 - the walk - not `anim` 1.
+
+The three tables (`RawAni_4247E` `$4247E`, `byte_4248A` `$4248A`, `byte_4250A` `$4250A`) were read
+out of the user-supplied ROM image and are byte-identical to the disassembly's `dc.b` listings.
+
+**Independent confirmation from the native trace, not used to build the class.** In
+`s3k-sonic-tails-complete-emeralds/lrz`, row 3393 has the player at `(4654,981)` with
+`ground_vel` 1076; row 3394 is at `(4658,983)` - `dx` 2 inside the half-open `$20` box, `dy` 15
+inside the inclusive one - and `ground_vel` jumps to **1536**, exactly the `$600` floor. It then
+climbs 1552, 1568, 1584, 1600, 1616, 1632: exactly `$10` a frame. Both the capture floor and the
+acceleration are therefore confirmed against recorded hardware.
+
+**Tests.** `TestLrzCorkscrewObjectInstance` (10) and `TestLrzCorkscrewRewindSpot` (3, before /
+mid-ride / after with forward replay, pinning the whole long rather than its high word). Broken on
+purpose once: `X_AMPLITUDE` `$4800` to `$4000` turned
+`rideXOffsetIsTheSineTimesFortyEightHundredHighWord` red at `expected: <27> but was: <24>`;
+reverted. Census red on exactly the one `$15` row, then act 1 ratcheted 171 to **170**. Green batch
+1220 tests, 0 failures, 0 skips; `-Pguards` 669, 0 failures.
+
+**Clip 14** `14-lrz1-corkscrew-before-after.mp4` (`raw-22-lrz1-corkscrew-{before,after}`, 300
+frames, 299 of which differ). With the corkscrew the player's `ground_vel` is floored to `$600` at
+frame 68 and climbs to 3984 while he is swept 416 pixels down and around the turn; without it he
+runs past at his own speed and stops on terrain at x 4797.
+
+**Not modelled.** `scroll_delay_counter`, which the capture zeroes and the engine has no setter
+for; it affects camera lag, not the ride.
+
 **Read ahead for 3a's remainder, so the next agent does not re-derive it.** `Obj_LRZCorkscrew`
 (sonic3k.asm:87494-87513, ROM `$4224E`) and `Obj_LRZWallRide` (:87693-87712, ROM `$4254A`) are both
 much larger than anything in 3b: each takes full control of the player through
