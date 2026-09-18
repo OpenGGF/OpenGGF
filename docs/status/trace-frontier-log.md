@@ -111128,6 +111128,33 @@ number that matters and it has not moved: the `tails_y_speed` mismatch at frame 
 No sweep target selected from this measurement; the LRZ campaign's next target is the slice 6
 defeat chain, which this trace does not reach.
 
+## 2026-09-18 - LRZ1 cold route: the toxomister rebound closed, frontier at row 3154
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at
+  the commit that carries this entry (base develop `035e48a58`).
+- Command: `python3 tools/testing/maven_queue.py -Dmse=off compile exec:java
+  "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k
+  --zone lrz --act 1 --main sonic --sidekick tails --settle 1 --frames 12000 --no-video
+  --input ~/Videos/OGGF/lrz-bring-up/inputs/lrz1-native-input-route.txt ..."`, compared
+  against `s3k-sonic-tails-complete-emeralds/lrz` `physics.csv` Player 1 `(x, y)` with
+  the capture's one-frame boot offset (engine frame `f` against native row `f - 1`).
+  The capture produced 5200 frames and 3154 of them compare.
+- **The row-2323 divergence is closed.** Engine frame 2323 now reads `y_speed -1104` at
+  `(4293,394)`, native row 2322's own value, and frame 2324 lands on native's `y 390`.
+  Cause and fix: `Obj_Toxomister`'s body is a `Touch_Enemy`-type badnik
+  (`collision_flags $18`) that the engine could not destroy, so the shared owner applied
+  no `Touch_EnemyNormal` bounce. Evidence and the two measurement hazards are in the
+  [LRZ plan](../architecture/plans/2026-09-17-lrz-bring-up.md).
+- **New first divergence: engine frame 3155 = native row 3154.** Engine `(4274,775)`
+  still falling at `y_vel 1384`; native `(4274,770)` with `air 0`, `rolling 0`,
+  `y_vel 0` and `g_speed` taking the frame's `x_vel 89`. Native lands on a floor at
+  `y 770` that the engine has nothing on. The frames either side match exactly, so this
+  is a missing support at that coordinate and not accumulated phase.
+- **Kill condition for the next round:** put a player at `(4274,765)` falling at
+  `y_vel $530` and assert they come to rest at `y 770`. If nothing supports them, the
+  defect is a missing or mis-positioned solid there -- check the act's placements around
+  `x $10B0` before assuming terrain.
+
 ## 2026-09-18 - LRZ1 cold route re-measured at HEAD: the toxomister rebound
 
 - Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head

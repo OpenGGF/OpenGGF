@@ -2649,6 +2649,59 @@ failing only its own assertion); a focused run of the four mandatory S3K classes
 **This is focused validation, not a suite pass**: no trace fixtures, no `run_categories.py`
 selection, and no act 2 or LRZ3 coverage were run.
 
+### 2026-09-18 - The row-2323 divergence: the toxomister body was not a badnik at all
+
+**What it was.** `ObjDat_Toxomister` (sonic3k.asm:196950-196954) ends `dc.b 8,8,1,$18`, and that
+last byte is `collision_flags`. `Touch_ChkValue` (sonic3k.asm:20774-20776) takes only bits 6-7 as
+the type, and `$18 & $C0` is zero: the body is a plain `Touch_Enemy`. The low six bits index
+`Touch_Sizes` (sonic3k.asm:20713+), and entry `$18` is `dc.b 4,4` -- an 8x8 box, not the `8,8`
+`width_pixels`/`height_pixels` in the same record, which are the sprite.
+
+`ToxomisterBadnikInstance` implemented `TouchResponseProvider` and nothing else. The shared owner
+therefore classified the touch as `ENEMY`, found the player attacking, called nobody, saw the
+instance still alive and applied no bounce: `ObjectTouchResponseController` only bounces when
+`onPlayerAttack` destroyed the instance. The body could not be destroyed by any means.
+
+**How it was found, so the next round does not re-derive it.** A probe printed the touch list and
+every overlap on the route's own recorded input: the body is live at `(4292,408)` with `cf=$18`,
+`skip=false`, `onScreen=true`, and `LRZTP-HIT ToxomisterBadnikInstance@(4292,408) cat=ENEMY
+flags=18 w=4 h=4` fires on four consecutive frames with no effect at all. The engine's cluster
+matches native's aux rows exactly -- body `(4292,408)`, cloud `(4280,416)` `cf=$D8`, seven puffs
+across `(4268-4292, 412-420)` -- so this was never a placement or activation defect.
+
+**The fix.** The body implements `TouchResponseAttackable` and `PoweredScreenAttackable` and
+destroys through the shared `S3K_DESTRUCTION_CONFIG`, which is now package-visible for it. The
+cloud follows `Child_AddToTouchList` (sonic3k.asm:84962-84966): when the body has raised `status`
+bit 7 the cloud takes `Go_Delete_Sprite` instead of joining the collision response list, and
+`Go_Delete_Sprite` itself does `bset #7,status(a0)` -- the bit the puffs read at `loc_8FEDC` -- so
+the puffs disperse through `loc_8FF12` exactly as on the cloud's other endings. Nothing else in
+the chain changed.
+
+**Two measurement hazards worth carrying forward.**
+
+1. A headless fixture started in Lava Reef act 1 carries the act's **forced** intro animation
+   (`HURT_FALL $1B`), and `withSkippedZoneIntro()` does **not** clear it. `setRolling(true)` and
+   `setAnimationId(ROLL)` both look like they took -- `getRolling()` is true -- but
+   `getAnimationId()` still reads `$1B`, `isSpinAttackAnimation` fails, and the player is hurt or
+   killed by the very badnik the case is about. Three runs were spent on this. The case needs
+   `setForcedAnimationId(-1)`.
+2. The first synthetic setup put the player somewhere the act kills them, and the failure looked
+   like the touch not firing. The route's own state (rolling, airborne, `y_vel $448`, at
+   `(4293,394)`) is what the case must reproduce, and the route capture is what settles whether a
+   synthetic case is measuring the engine or its own scaffolding.
+
+**Verified.** `TestS3kLrzToxomisterReboundHeadless` green with the fix and red on its own
+assertion with `onPlayerAttack` broken once ("Touch_EnemyNormal rewrites the badnik to
+Obj_Explosion"). The focused set -- `TestToxomisterBadnikInstance`,
+`TestLrz*`/`TestS3kLrz*`, the four mandatory S3K classes, `TestEveryObjectRewindRoundTrip`,
+`TestRewindHarnessCoverageRatchet`, `SwScrlLrzTest` -- 1482 tests, 0 failures, 0 skips.
+
+**The route.** Re-measured on the fixture's own recorded input at this commit: exact for **3154**
+compared frames, first divergence engine frame **3155** = native row **3154**. The frontier moved
+831 rows. The new divergence is a landing the engine does not make: native puts the player on a
+floor at `(4274,770)` (`air 0`, `rolling 0`, `y_vel 0`, `g_speed` taking the `x_vel`) while the
+engine falls on through. Recorded in the frontier log with its kill condition.
+
 ## Handover, 2026-09-18 (eleventh)
 
 **Head `4509d4f25`**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;

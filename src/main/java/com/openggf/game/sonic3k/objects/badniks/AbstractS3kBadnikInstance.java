@@ -77,8 +77,14 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
                 S3K_DESTRUCTION_CONFIG);
     }
 
-    /** S3K destruction config: spawn animal + points popup, no respawn tracking, S3K break SFX. */
-    private static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
+    /**
+     * S3K destruction config: spawn animal + points popup, no respawn tracking, S3K break SFX.
+     *
+     * <p>Package-visible because {@code Obj_Toxomister}'s body is an ordinary
+     * {@code Touch_Enemy}-type badnik ({@code collision_flags $18}) that does not share this
+     * class's shape, and {@code Touch_EnemyNormal} gives it the same destruction.
+     */
+    static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
             Sonic3kSfx.BREAK.id,
             (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
             false,  // useRespawnTracking (S3K always removeFromActiveSpawns)

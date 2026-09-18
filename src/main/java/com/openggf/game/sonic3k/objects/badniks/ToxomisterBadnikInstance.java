@@ -14,8 +14,13 @@ import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.DestructionEffects;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.PoweredScreenAttackable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -44,7 +49,8 @@ import java.util.List;
  * the clock the ROM reads here, not the level counter.
  */
 public final class ToxomisterBadnikInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements TouchResponseProvider, TouchResponseAttackable, PoweredScreenAttackable,
+        RewindRecreatable, RomObjectCodePointerProvider {
 
     /** {@code ObjDat_Toxomister}: {@code dc.w $280}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
@@ -127,6 +133,44 @@ public final class ToxomisterBadnikInstance extends AbstractObjectInstance
             return;
         }
         faceNearestPlayer(vIntRunCount, playerEntity);
+    }
+
+    /**
+     * {@code Touch_EnemyNormal} (sonic3k.asm:20945-20990).
+     *
+     * <p>{@code ObjDat_Toxomister}'s {@code collision_flags $18} has zero in bits 6-7, so
+     * {@code Touch_ChkValue} (sonic3k.asm:20774-20776) routes the body through
+     * {@code Touch_Enemy}. An attacking player therefore destroys it exactly like any other
+     * badnik: {@code bset #7,status(a1)}, the chain bonus and points, and
+     * {@code move.l #Obj_Explosion,(a1)}. The bounce applied to the player belongs to the
+     * shared touch owner, not here.
+     */
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        destroyAsBadnik(player, false);
+    }
+
+    @Override
+    public void onPoweredScreenAttack(PlayableEntity player) {
+        destroyAsBadnik(player, true);
+    }
+
+    private void destroyAsBadnik(PlayableEntity player, boolean powered) {
+        if (isDestroyed()) {
+            return;
+        }
+        // The ROM rewrites this SST slot in place, so the explosion inherits the slot.
+        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        setDestroyed(true);
+        if (powered) {
+            DestructionEffects.destroyBadnikPowered(getCentreX(), getCentreY(), getSpawn(),
+                    mySlot, player, services(),
+                    AbstractS3kBadnikInstance.S3K_DESTRUCTION_CONFIG);
+        } else {
+            DestructionEffects.destroyBadnik(getCentreX(), getCentreY(), getSpawn(),
+                    mySlot, player, services(),
+                    AbstractS3kBadnikInstance.S3K_DESTRUCTION_CONFIG);
+        }
     }
 
     /** {@code sub_8FF72} (sonic3k.asm, {@code $8FF72}). */

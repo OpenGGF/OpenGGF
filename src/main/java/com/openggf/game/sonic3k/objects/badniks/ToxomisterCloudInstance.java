@@ -152,6 +152,14 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
             case 6 -> settle();
             default -> stayAttached(playerEntity);
         }
+        // Child_AddToTouchList (sonic3k.asm:84962-84966) runs after loc_8FDBA's own dispatch:
+        // when the body raised status bit 7 the cloud takes Go_Delete_Sprite instead of joining
+        // the collision response list. Go_Delete_Sprite (sonic3k.asm) itself does
+        // bset #7,status(a0), which is the bit the puffs read in loc_8FEDC -- so the cloud's
+        // own children disperse through loc_8FF12 exactly as they do on its other endings.
+        if (body != null && body.isDestroyed() && !dispersing) {
+            expire();
+        }
         updateDynamicSpawn(motion.x, motion.y);
     }
 
