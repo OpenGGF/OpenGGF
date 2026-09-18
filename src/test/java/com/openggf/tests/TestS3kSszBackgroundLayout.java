@@ -20,6 +20,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -198,6 +200,57 @@ class TestS3kSszBackgroundLayout {
                 "the arrival rise carries the camera into the cloud band [$800,$F00)");
         assertEquals(CLOUD_WINDOW_LAYOUT_X, parallax.getBgCameraX(),
                 "cloud mode pins the background plane's layout X to $1C00 (loc_5799A)");
+    }
+
+    /**
+     * The cloud band cannot occlude the HUD, and the reason is in the tile words rather than in
+     * the renderer. On the hardware the plane/sprite order is low planes, low sprites, high
+     * planes, high sprites — so a Plane B tile with bit 15 set really can cover a low-priority
+     * sprite. None of the cloud chunks sets it: every pattern in the cloud window's chunks is
+     * low priority, so they sit behind every sprite including the HUD.
+     *
+     * <p>Filed because the fixed background made the white HUD text sit on white cloud instead of
+     * on flat blue, which reads as washed out. That is contrast, not occlusion — the HUD glyph
+     * pixels are byte-identical before and after the fix — and this case pins the ROM fact the
+     * conclusion rests on, so a later renderer change cannot quietly invalidate it.
+     */
+    @Test
+    void noCloudWindowChunkCarriesAHighPriorityTile() throws IOException {
+        int[][] layout = romBackgroundLayout();
+        boot(320);
+        var level = GameServices.level().getCurrentLevel();
+        Set<Integer> checked = new LinkedHashSet<>();
+        int patterns = 0;
+        for (int row = 3; row <= 7; row++) {
+            for (int column = CLOUD_WINDOW_FIRST_COLUMN;
+                    column < CLOUD_WINDOW_FIRST_COLUMN + CLOUD_WINDOW_COLUMNS; column++) {
+                int chunkId = layout[row][column];
+                if (!checked.add(chunkId)) {
+                    continue;
+                }
+                var block = level.getBlock(chunkId);
+                assertNotNull(block, "chunk $" + Integer.toHexString(chunkId) + " is decoded");
+                int side = block.getGridSide();
+                for (int by = 0; by < side; by++) {
+                    for (int bx = 0; bx < side; bx++) {
+                        var chunk = level.getChunk(block.getChunkDesc(bx, by).getChunkIndex());
+                        if (chunk == null) {
+                            continue;
+                        }
+                        for (int ty = 0; ty < 2; ty++) {
+                            for (int tx = 0; tx < 2; tx++) {
+                                patterns++;
+                                assertFalse(chunk.getPatternDesc(tx, ty).getPriority(),
+                                        "cloud chunk $" + Integer.toHexString(chunkId)
+                                                + " sets a high-priority tile");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue(checked.size() >= 12, "the cloud band uses at least twelve distinct chunks");
+        assertTrue(patterns > 0, "the walk actually reached pattern descriptors");
     }
 
     /**

@@ -991,3 +991,26 @@ reached yet.
 
 **Tests.** `TestS3kSszTraversalPlatforms` grew to 5 cases, `TestS3kSszTeleporterPads` 8,
 `TestS3kSszBackgroundLayout` 5 — 18, 0 failures, 0 skips.
+
+**HUD legibility over the fixed cloud band — checked, not a defect.** Reviewing clip `05`, the
+"after" half's bottom-left lives counter reads washed out and the SCORE/TIME text has cloud pixels
+between its glyphs, where the "before" HUD looks solid. Two candidate causes were separated by
+measurement rather than by eye:
+
+- *Does the engine let the background occlude the HUD?* No. Comparing the raw PNGs at frame 250,
+  **zero** glyph-coloured pixels differ between before and after — 815 unchanged in the
+  SCORE/TIME/RINGS block and 364 in the lives counter, with the dark outline colour
+  `(36,36,36)` and the yellow `(255,255,0)` at identical counts in both. Every pixel that changed
+  was background. The HUD is drawn intact.
+- *Could the cloud chunks legitimately occlude it?* Also no, and this is the part worth pinning.
+  On the hardware the order is low planes, low sprites, high planes, high sprites, so a Plane B
+  tile with bit 15 set really can cover a low-priority sprite.
+  `TestS3kSszBackgroundLayout#noCloudWindowChunkCarriesAHighPriorityTile` walks every pattern
+  descriptor of every distinct chunk in the cloud window's rows 3-7 through the engine's decoded
+  tables and asserts none sets the priority bit. They are all low priority.
+
+What actually changed is what sits *behind* the HUD's transparent gaps: flat blue before, white
+cloud after. White text on white cloud reads as low contrast. That is the cartridge's own
+composition — the background is correct now, and the HUD is unchanged — so nothing is filed as a
+gap. It is recorded here because "the HUD looks wrong after a background fix" is exactly the shape
+of report that invites a renderer change that would be wrong.
