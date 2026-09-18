@@ -111127,3 +111127,35 @@ number that matters and it has not moved: the `tails_y_speed` mismatch at frame 
 
 No sweep target selected from this measurement; the LRZ campaign's next target is the slice 6
 defeat chain, which this trace does not reach.
+
+## 2026-09-18 - LRZ1 cold route re-measured at HEAD: the toxomister rebound
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head
+  `37c45d1ae` (base develop `035e48a58`). Tree clean; nothing pushed.
+- Command: `python3 tools/testing/maven_queue.py -Dmse=off exec:java
+  "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k
+  --zone lrz --act 1 --main sonic --sidekick tails --settle 1 --frames 3000
+  --input ~/Videos/OGGF/lrz-bring-up/inputs/lrz1-native-input-route.txt ..."`,
+  compared against `s3k-sonic-tails-complete-emeralds/lrz` `physics.csv`
+  Player 1 `(x, y)`.
+- **The frontier has not moved.** With the capture's one-frame boot offset applied
+  (engine frame `f` against native row `f - 1`), the route is exact for 2323
+  compared frames and first diverges at engine frame **2324** = native row **2323**:
+  engine `(4297, 399)`, native `(4297, 390)`. The last stamped figure was taken at
+  `17ccb4e72` and four commits have landed since; it is now re-measured at
+  `37c45d1ae` and unchanged.
+- **Cause, newly identified this round.** At native row 2322 `player_y_speed`
+  goes `1048` to `-1104` with **no input** and with the player airborne and
+  rolling throughout: that is `Touch_Enemy_Part2`'s `neg.w y_vel` after gravity,
+  not a jump. The aux rows put a cluster at `(4268-4292, 408-420)` -- one
+  `loc_8FD76`, one `loc_8FDBA` and seven `loc_8FEDC`, all inside
+  `Obj_Toxomister` -- so the rolling player rebounds off the toxomister (or its
+  mist) and the engine's does not. From there the engine keeps falling
+  (`y 399, 403, 408, ...`) while native climbs away (`390, 387, 383, ...`).
+- **Kill condition for the next round:** put a rolling airborne player at
+  `(4293, 394)` with `y_speed 1048` against the engine's toxomister at that
+  placement and assert `y_speed` is negated. If it is, the divergence is the
+  badnik's presence or activation window, not its touch response.
+- Measurement hazard hit and worth repeating: an offset sweep that breaks out of
+  its loop on the first missing key reports "no divergence" for the offset that
+  compares nothing. Count the compared frames and print the count.
