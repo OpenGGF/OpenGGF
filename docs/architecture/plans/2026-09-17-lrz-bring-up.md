@@ -366,7 +366,7 @@ Still open:
 
 | Claim | State |
 | --- | --- |
-| Implemented | **Slices 0-5 complete, slice 6 started** (placeholder baseline **0 / 188 / 8** of 609 / 455 / 35): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, every slice 3 class (`$15` corkscrew, `$16` wall ride, `$17` sinking rock, `$18` falling spike, `$19` door, `$1A` big door, `$1B` fireball launcher, `$1C` horizontal button, `$1D` shooting trigger, `$1E` dash elevator, `$1F` lava fall, `$20` swinging spike ball, `$21` smashing spike platform, `$22` spike ball, `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits), and **all three badniks**: `$9A` Iwamodoki, `$9B` Toxomister with its cloud and seven puffs, and `$99` Fireworm as its four ROM objects (spawner, DPLC head, four staggered segments, a flame on each). Slice 5's state half landed: `LrzDomeRegions` (`sub_56DCA` + `word_56F88`), `sub_56DAC`'s locked-background arithmetic, and `Obj_56EA0` the dome lava surface with its `_unkEE9C` phase and the P1/P2 fire-shield asymmetry. **Slice 5 is now complete**: the `Events_routine_bg` 0/4/8 stage machine (`LrzBackgroundStageMachine`), `SwScrlLrz`'s locked and pinned modes, the `Draw_delayed_rowcount $F` bottom-up refresh, and the Knuckles `$F6` background chunk. **Slice 6 part one**: `LrzMinibossInstance` (SKL `$9D`) with the whole `off_7854C` routine table, the `$34` continuation chain, `sub_7867C`'s re-aim, `Swing_Setup1`/`Swing_UpAndDown`, and the three `loc_7880A` child shapes plus the hand's projectile -- registered, art-wired and unit-tested, which takes the act 1 census to **0**. The fight cannot yet end: the hit path, the `FixBugs = 0` flash, `SolidObjectFull`, the defeat chain, the debris, the post-defeat palette rotation, results and the seamless act change are all still owed, and it has had no motion verification, clip or route rewind spot. Absent: the `LRZ1_BackgroundEvent` seamless `$901` handover (stage `$C`), the two remaining bosses, cutscenes, `StartNewLevel` |
+| Implemented | **Slices 0-5 complete, slice 6 started** (placeholder baseline **0 / 188 / 8** of 609 / 455 / 35): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, every slice 3 class (`$15` corkscrew, `$16` wall ride, `$17` sinking rock, `$18` falling spike, `$19` door, `$1A` big door, `$1B` fireball launcher, `$1C` horizontal button, `$1D` shooting trigger, `$1E` dash elevator, `$1F` lava fall, `$20` swinging spike ball, `$21` smashing spike platform, `$22` spike ball, `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits), and **all three badniks**: `$9A` Iwamodoki, `$9B` Toxomister with its cloud and seven puffs, and `$99` Fireworm as its four ROM objects (spawner, DPLC head, four staggered segments, a flame on each). Slice 5's state half landed: `LrzDomeRegions` (`sub_56DCA` + `word_56F88`), `sub_56DAC`'s locked-background arithmetic, and `Obj_56EA0` the dome lava surface with its `_unkEE9C` phase and the P1/P2 fire-shield asymmetry. **Slice 5 is now complete**: the `Events_routine_bg` 0/4/8 stage machine (`LrzBackgroundStageMachine`), `SwScrlLrz`'s locked and pinned modes, the `Draw_delayed_rowcount $F` bottom-up refresh, and the Knuckles `$F6` background chunk. **Slice 6 part one**: `LrzMinibossInstance` (SKL `$9D`) with the whole `off_7854C` routine table, the `$34` continuation chain, `sub_7867C`'s re-aim, `Swing_Setup1`/`Swing_UpAndDown`, and the three `loc_7880A` child shapes plus the hand's projectile -- registered, art-wired and unit-tested, which takes the act 1 census to **0**. **The seven-item independent review is applied** (`d48420e24`): the arms unroll on `sub_78BD6`'s `$2E` stagger, the hand rides `parent3` through `MoveSprite_AtAngleLookup`, `Animate_RawMultiDelay` starts at index 2, `loc_788F4` stores the stepped angle unconditionally, link offsets use the ROM sine table and `asr.l #4` in 16.16, the projectile culls on `Sprite_CheckDeleteTouchXY` literally, and `SolidObjectFull`/`Displace_PlayerOffObject` are real. With them the **hit path**: `collision_flags` is the ROM byte and `sub_78C14` owns the `$20`-frame flash with the `FixBugs = 0` `word_78CB2` window. A restore after `ROUTINE_INIT` rebuilds any missing child. Nine of the class's fifteen tests watch motion across frames; ten deliberate breaks produced ten failures with the right diagnosis. The fight still cannot end: the defeat chain, the per-child retirement (`sub_78B46`), the debris, the post-defeat palette rotation, results and the seamless act change are owed, and it has had **no clip, no route rewind spot and no native comparison**. Absent: the `LRZ1_BackgroundEvent` seamless `$901` handover (stage `$C`), the two remaining bosses, cutscenes, `StartNewLevel` |
 | Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). On the fixture's own recorded native input the engine matches Player 1 `(x, y)` **exactly for native rows 0-2322** (0-856 at the fourth handover, 0-636 before the frame-637 fix). **The reach is not a progress measure** and will keep falling as the zone fills in: the input is the fixture's own, which native survives, so the reach only measures how long an off-phase replay lives among real hazards. Quote the exact-match row and the first divergence. Re-measured at `13a7c8fe8`, row 857 was **already closed** by the Fireworm landing (the fourth handover's number predates `cad4a2e07`). The real divergence was row 863, a hurt the engine took and native did not: a killed worm left its flames alive. Fixed, and the route now matches **exactly for native rows 0-2322**, with the new first divergence at row 2323, unattributed. Evidence in the [trace frontier log](../../status/trace-frontier-log.md). The hand-authored `lrz1-cold-route-v7` frontier of x 1909 is untouched. Nothing cold-reached in act 2 or the boss act |
 | Rewind-verified | Before/active/after spots with forward replay for the `$19` door, the `$1C` button latch, the `$15` corkscrew ride, the `$17` sinking rock, the `$16` wall ride, the `$18` falling spike, the `$21` smashing spike platform, `$1B`, `$1F`, `$20` and the `$1E` dash elevator's mid-ride (`TestLrzHazardRewindSpots`, `TestLrzDashElevatorRewindSpot`), each broken on purpose once. Plus `LrzZoneRuntimeState` capture/restore round trips and the animator's counter blob. New in `TestS3kLrzRouteRewindSpots`, on real terrain at fixture route positions: `$18` mid-fall AND landed (whole composite), `$1A` opening (whole composite), `$9C` rumbling and `$9A` fuse-lit (both now whole-composite again, with the dropped-children restore gap closed), and a child-count spot for the crusher's four `S3kCameraGradualObjectInstance` children and the Fireworm's eight segments. `TestS3kLrzDomeBackgroundHeadless` adds a whole-composite spot inside a locked dome region. Still owed: `$1D`/`sub_42EC0` on a route, and cold-route (rather than route-position) spots |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
@@ -2023,3 +2023,83 @@ the constants file puts `Anim_Counters ds.b $10` immediately after `Level_trigge
 which is the same cleared-counter state the Verified ROM values row for `loc_282D0` already
 describes for a direct `$901` load. `Sonic3kLevelEventManager`'s existing CNZ1 -> CNZ2 retained
 `Obj_EndSignControl` and results path is the closest precedent in the engine.
+
+## Handover, 2026-09-18 (seventh)
+
+**Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`), on top of `590d7ef4d`:
+`d48420e24`, the review fixes plus the hit path. Tree clean; nothing pushed or merged.
+**Census unchanged at 0 / 188 / 8.**
+
+**Measurements at `d48420e24`.**
+
+| What | Command | Result |
+| --- | --- | --- |
+| Four mandatory S3K classes + `TestLrz*`/`TestS3kLrz*`/`TestS3kHpz*`/`TestS3kSoz*`/`TestS3kDdz*`/`SwScrlLrzTest` + both rewind guards | `maven_queue.py -Dmse=off -Dtest=<list> -Ds3k.rom.path=... test` | **1666 tests, 0 failures, 0 skips** |
+| Structural guards | `maven_queue.py -Dmse=off -Pguards test -B` | **669 tests, 0 failures, 0 skips** |
+| `TestLrzMinibossInstance` alone | focused | 15 tests, 0 failures, 0 skips |
+| Same, with nine deliberate breaks | focused | 9 failures, one per break |
+| Same, with the `FixBugs` break alone | focused | 1 failure, the flash-window assertion |
+
+This is focused validation. **No `run_categories.py --base 035e48a58 --run` has been run for this
+branch**, and the cold act 1 route and `TestS3kSonicTailsLrzSegmentTraceReplay` were **not**
+re-measured at this head -- the sixth handover's numbers are stamped to `17ccb4e72` and older, so
+re-measure before quoting any of them.
+
+**What slice 6 still owes, in the order it has to be built.** The ROM is decoded for all of it;
+the debris offsets, frames, `Obj_VelocityIndex` entries and the four palette addresses are in the
+slice 6 evidence entry above and need no further reading.
+
+1. **The defeat chain.** `loc_78C60` currently stops at "defeated": it sets `$38` bits 6 and 7,
+   displaces the player and stops the timer, but nothing downstream consumes that.
+   `Wait_FadeToLevelMusic` (sonic3k.asm:179659-179676) counts `$2E` out, hides the sprite, sets
+   `$2E = 2*60-1`, allocates `Obj_Song_Fade_ToLevelMusic` and jumps `$34` = `loc_787E0`, which
+   allocates the `loc_78AA8` palette waiter, creates the eleven `ChildObjDat_78D9E` debris and
+   jumps `Obj_EndSignControl`.
+2. **Per-child retirement, `sub_78B46` (sonic3k.asm:160547-160585).** Every ring child tests one
+   bit of the parent's `$38` -- 6 unmirrored, 7 mirrored -- at the end of its own update. Two
+   things set it: `loc_78D2C` when that ring's **hand** dies, so killing a hand retires the whole
+   arm behind it, and `loc_78C60` on defeat. The child is then parked on `Wait_Draw` with
+   `priority = $80` and `$2E = $2C - subtype * 2`, so the arm peels away from the hand end first;
+   `loc_78B86` spawns a `Child6_CreateBossExplosion` (`S3kBossExplosionChild` exists) and deletes
+   `$F` frames later. **This is currently inert**: the flag is set and nothing reads it, so today
+   killing a hand does nothing visible beyond shortening the hover. A first attempt at a shared
+   `LrzMinibossRetirement` holder was written and **deleted unused**: a new object-typed field on
+   a boss child is a `TestRewindHarnessCoverageRatchet` risk that was not worth taking blind. Two
+   `int` scalars per child, matching the existing non-final-scalar pattern in these classes, is
+   the low-risk shape.
+3. **The two camera-release waiters**, `loc_78AA8`/`loc_78AE6` (`Camera_min_X_pos = $940` once
+   `Camera_X_pos` reaches it, `word_78EAA` rotation, `Palette_cycle_counter1 = $7FFF`) and
+   `loc_78B08` (`Camera_min_X_pos = $2C0`, `Pal_LRZ2` over line 2, `Pal_LRZMiniboss3` over line 3).
+   `loc_78AA8` only starts once `End_of_level_flag` is set, so it belongs after results.
+4. **Results, then the seamless `$901` change.** The trigger chain is decoded in the evidence
+   entry above and is the load-bearing piece: `Obj_Results` sets `Events_fg_5` at
+   sonic3k.asm:62621 **only** when `Apparent_act == 0` and the zone is neither Angel Island nor
+   Ice Cap; `LRZ1_BackgroundEvent` stage 0 (`loc_56BD2`, sonic3k.asm:115274-115289) consumes it,
+   queues the LRZ2 secondary chunk/block/art Kos plus PLC `$30`, and sets `Events_routine_bg = $C`;
+   stage `$C` (`loc_56CAA`, sonic3k.asm:115347-115375) waits on `Kos_modules_left` and then does
+   the whole act change on one frame. `Clear_Switches` (sonic3k.asm:104284-104291) clears `$20`
+   **bytes** from `Level_trigger_array`, and `sonic3k.constants.asm:699-700` puts
+   `Anim_Counters ds.b $10` directly after `Level_trigger_array ds.b $10`, so the act change wipes
+   the animated-tile phase counters as well -- the same cleared-counter state the Verified ROM
+   values row for `loc_282D0` describes for a direct `$901` load, and the reason the first upload
+   after the transition is skipped. `Sonic3kLevelEventManager`'s CNZ1 -> CNZ2 retained
+   `Obj_EndSignControl` and results path (around lines 1860-2015) is the engine's closest
+   precedent and should be read before `SozActTransitionHandoff`.
+5. **`LRZ2_BackgroundEvent` stages 0 and 4** (`loc_5700C`/`loc_57040`, sonic3k.asm:115693-115722).
+   Stage 0 allocates `loc_5711E` into `Events_bg+$06` -- which is the Death Egg background sprite
+   the Verified ROM values row says slice 7's owner must trace before coding -- then runs
+   `sub_57082`, `Reset_TileOffsetPositionEff`, `Draw_delayed_position = (d0 + $E0) & Camera_Y_pos_mask`,
+   `Draw_delayed_rowcount = $F`, and advances by 4.
+
+**Independent review.** One was spawned for the seven applied items and its findings are in the
+final report for this round; it is **not** a review of the transition boundary, because the
+transition is not implemented. The transition reviewer the work order asks for should be spawned
+once item 4 above exists to review.
+
+**Carried forward unchanged from the sixth handover**: the `$1D`/`sub_42EC0` route exercise, cold-
+route rewind spots and a route spot for `$99`, act 2 placements on an act 2 route, native row 2323,
+`loc_849D8`'s `Set_IndexedVelocity` `d0` for a retired Fireworm segment, the direct-`$901` act 2
+background art gap, and slice 5's clip. **No matrix row may be recorded for the miniboss yet**: it
+still has no clip, no route rewind spot and no native comparison.
+
+**Media.** Clips `09`-`28` unchanged; no new clip this round.
