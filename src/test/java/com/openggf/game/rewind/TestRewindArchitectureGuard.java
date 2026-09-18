@@ -139,6 +139,7 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/level/objects/ShieldObjectInstance.java#@RewindTransient", 3),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/SpikebonkerBadnikInstance.java#@RewindTransient", 2),
             // HPZ Knuckles-fight object links are restored by ObjectRefId sidecars.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#@RewindTransient", 1),
             // DDZ parent3 link, restored by the ObjectRefId sidecar in AbstractDdzObjectInstance.

@@ -90,13 +90,19 @@ class TestS3kDezColdRoutes {
     /** How far each route is driven before the frontier is reported. */
     static final int ROUTE_FRAMES = 1200;
     /**
-     * Measured 2026-09-18 on this branch: 390 frames of exact player x, y, camera and ring
-     * parity from the first frame of act 2 free play. The first divergence is native row
-     * 20163, where the player is airborne and rolling through a repeated upward impulse and
-     * the engine's {@code y} reads {@code $039F} against the ROM's {@code $039E}. A ratchet,
-     * not a target: raise it when the frontier moves.
+     * Measured 2026-09-18 on this branch: 472 frames of exact player x, y, camera and ring
+     * parity from the first frame of act 2 free play. It was 390 until {@code $A4}
+     * {@code Obj_Spikebonker} landed — the divergence there was the badnik's own destruction
+     * rebound ({@code neg.w y_vel(a0)}, sonic3k.asm:20979) that a placeholder could not give.
+     *
+     * <p>The first divergence is now native row 20245, where {@code y_vel} goes from
+     * {@code $09A0} to {@code $F600} ({@code -$A00}) and {@code stand_on_obj} changes from
+     * {@code $06} to {@code $0E}: a spring. The only placement in reach is {@code DEZ2_Sprites}
+     * record 8, {@code $5D} {@code Obj_DEZRetractingSpring} at {@code $04B0,$04C0} with
+     * {@code render_flags} bit 1 set and subtype {@code $02}, which is still a placeholder.
+     * A ratchet, not a target: raise it when the frontier moves.
      */
-    static final int SEEDED_ROUTE_FRONTIER = 390;
+    static final int SEEDED_ROUTE_FRONTIER = 472;
 
     @AfterEach
     void reset() {

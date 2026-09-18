@@ -136,6 +136,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x8E, // MonkeyDude / Dragonfly
             0x8F, // CaterKillerJr / Butterdroid
             0x90, // AIZMinibossCutscene / Cluckoid
+            0xA4, // Sparkle / Spikebonker
             0xA8, // Blaster / MHZ1CutsceneKnuckles
             0xA9, // TechnoSqueek / MHZ1CutsceneButton
             0xEB // GumballItem
@@ -209,7 +210,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0xA1, // MGZEndBoss
             0xA2, // MGZEndBossKnux
             0xA3, // Clamer
-            0xA4, // Sparkle
             0xA5, // Batbot
             0xA6, // CNZMiniboss
             0xA7, // CNZEndBoss

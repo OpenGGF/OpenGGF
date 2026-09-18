@@ -110931,3 +110931,48 @@ make here, and the one-pixel difference is not a rounding difference. The air dr
 the divergence is already exact (`x_vel -= x_vel >> 5` on every row whose `y_vel` is negative and
 no drag on the two rows where it is not), which is the check that the surrounding physics is not
 the suspect.
+
+## 2026-09-18 — Death Egg act 2's route frontier moves 390 → 472 on one badnik
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$A4` `SpikebonkerBadnikInstance`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 390 frames | **472 frames** |
+
+The previous entry predicted this: the divergence at native row 20163 was the enemy-destroyed
+rebound `neg.w y_vel(a0)` (sonic3k.asm:20979), which a placeholder cannot give, and the enemy was
+`$A4` `Obj_Spikebonker`. Implementing it closed that frame and the 81 after it. The prediction and
+the result are separable — the arithmetic identified the routine before any code was written, and
+the frontier is the check.
+
+A second, independent confirmation fell out of the ROM reading. `Obj_Spikebonker`'s patrol is
+`x_vel` `±$80` with `Obj_Wait` turning it after `subtype` frames and `subtype * 2` thereafter
+(`loc_91A0C`/`loc_91AB0`, :198906-198964). At subtype `$20` that is a beat reaching about 32 px
+left of the placement: `$0380 - $1F` is `$0361`, **exactly the player's x at the divergent row**.
+The badnik was at the far end of its own patrol.
+
+**The new first divergence is a spring, at native row 20245.**
+
+```
+row=20244 x=04A8 y=049B xs=0568 ys=09A0 air=1 sto=06
+row=20245 x=04AD y=04AB xs=0568 ys=F600 air=1 sto=0E
+```
+
+`y_vel` goes to `$F600` = `-$A00` in one frame, `ground_vel` is overwritten with `x_speed`, and
+`stand_on_obj` changes from `$06` to `$0E`. The engine's `y` reads `$04A4` against the ROM's
+`$04AB`, so the snap to the spring's own Y is missing as well as the launch. The only placement in
+reach is `DEZ2_Sprites` record 8, **`$5D` `Obj_DEZRetractingSpring`** at `$04B0,$04C0` with
+`render_flags` bit 1 set (Y-flipped, which is why it fires a player upward from below) and subtype
+`$02`. It has 13 act 2 placements and is still a placeholder, so it is the next class the route
+wants.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 472.

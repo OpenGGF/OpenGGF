@@ -48,7 +48,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   you spinning there, and fire you out along whichever way you press of the ones that junction
   opens onto. Act 1's turbine corridor blows you along it now as well, tumbling, with up and
   down to steer by, and the bobbing shaft inside it bounces you off and lights up whichever
-  of its six panels you hit.
+  of its six panels you hit. The Spikebonker mace robots patrol both acts, hover, and swing at
+  you when you come at them from the side they are walking toward.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

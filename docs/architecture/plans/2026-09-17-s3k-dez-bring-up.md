@@ -2303,3 +2303,47 @@ applies to a `$B01` load, and a positioned act 2 capture — which skips the ent
 should have Tails in it. The blocker is an engine or capture-tool defect. The remaining kill
 condition in `INDEX.md` (log the registered sidekick's `x`/`y` on each of the first 60 frames)
 still has to be run, but it is now looking for a bug rather than deciding whether one exists.
+
+### 2026-09-18 — Slice 4 opens with `$A4` `Obj_Spikebonker`, and the route confirms it
+
+The route named the class and then checked the work. The identification was made from arithmetic
+alone — `$003F + $38` negated is `$FF89`, which is `Touch_ChkHurt`'s enemy-destroyed
+`neg.w y_vel(a0)` at sonic3k.asm:20979 and neither of its two `±$100` siblings — and the
+implementation moved the seeded act 2 frontier from **390 to 472 frames**. Prediction first,
+measurement second, and they are separable: nothing about the badnik's code was written before the
+routine was named.
+
+A second confirmation fell out of the ROM reading rather than being looked for. The patrol is
+`x_vel` `±$80` with `Obj_Wait` turning it after `subtype` frames and `subtype * 2` thereafter, so
+a subtype `$20` placement at `$0380` reaches about `$0361` at the far end of its beat — exactly
+the player's x at the divergent row. The badnik was at the end of its own patrol when it was hit.
+
+**Three things about this object that the ROM says and a summary would not.**
+
+1. **The first patrol leg is half of every leg after it.** `$2E(a0) = subtype - 1` and
+   `$3A(a0) = subtype * 2 - 1` (:198914-198918), and `loc_91AB0` reloads `$2E` from `$3A`. The
+   badnik starts at one end of its beat, not in the middle of it, which is what makes its phase
+   at any given frame predictable from the placement alone.
+2. **The slam is one-sided.** `Find_OtherObject` leaves `d0` at 0 when the player is to the
+   badnik's left; the `btst #0,render_flags(a0) / subq.w #2,d0 / tst.w d0 / beq` sequence
+   (:198938-198944) then passes only when the player is on the side it is *walking toward*. A
+   player standing the same `$40` px behind it is ignored. It reads `Player_1` only, so a
+   sidekick never triggers a slam.
+3. **The mace swings horizontally, not in a circle.** `MoveSprite_AngleXLookupOffset`
+   (:178670-178713) mirrors `AngleLookup_1` through the angle's top two bits and writes the
+   result into the head's **X** only; the Y is the pivot's. The assembly's vertical motion is the
+   body's own `Swing_UpAndDown`. `AngleLookup_1`'s 64 bytes run 0 to `$C`, so the sweep is 12 px
+   either side — the reach comes from the `$1F`-frame slide (`loc_91B14`/`loc_91B3E`), not the
+   arc.
+
+The ROM's pivot child has no attributes of its own beyond the `(0,$14)` offset it refreshes at,
+so the pivot and the drawn head are one object here. That is the only structural departure and it
+is stated in the class.
+
+Ten tests, seventeen deliberate breaks. Census: act 1 placeholders 199 → 192, concrete 166 → 173;
+act 2 placeholders 280 → 269, concrete 214 → 225.
+
+**The next class the route wants is `$5D` `Obj_DEZRetractingSpring`**, `DEZ2_Sprites` record 8 at
+`$04B0,$04C0`, `render_flags` bit 1 set, subtype `$02` — the Y-flipped spring at native row 20245
+whose `-$A00` launch and Y snap the engine has no object for. Thirteen act 2 placements. The
+frontier log has the rows.
