@@ -2340,6 +2340,65 @@ inside `SolidObjectParams.of($33,4,0)` while `state.routine == ROUTINE_SLAM` and
 `collision_property` decrements -- then fix whichever of the solid path or the touch path is
 swallowing it. That test is also the RED test for clip `30`, because a fight where the boss cannot
 be hit cannot be filmed. **Clips `30`, `31` and `32` are blocked on it**, not on input authoring.
+### 2026-09-18 - The drill was always hittable: the box is 32 px, not 102
+
+**The hit defect was a measurement error, and the ROM settles it.** `loc_7871A` calls
+`SolidObjectFull` with `d1=$33`, a pixel half-width for the push-out box; `loc_786EA` writes
+`collision_flags 6`, whose low six bits select `Touch_Sizes` entry 6 (sonic3k.asm:20713-20720,
+`dc.b $10,$10`) -- a **32x32** box on `x_pos`/`y_pos`. The tenth round read `$33` as the touch
+size and concluded the player "crosses that box, in the air, for about sixty frames". It crossed
+the 102 px box the player stands on. Against the real 32 px box the recorded crossing is a near
+miss: over capture frames 990-1050 the player is left of it while still too high (`y` 1923-1945,
+box top 1959) and low enough only once it is past on the right (`x` 11419, box right edge 11408).
+No hit **and** no ring loss is what a miss looks like; a swallowed hit would have hurt him.
+
+**Native, at its own relative geometry** (`s3k-sonic-tails-complete-emeralds/lrz`, slot 22 =
+`loc_78538`): the drill slams at `(11432,1975)` over frames 23832-23927. Player 1 lands on its
+solid top at `y 1956` (frames 23870-23876, `air 0`), jumps, comes down rolling, is inside the
+touch box at 23927-23930 at `(11429,1956)` -- 3 px left, 19 px above -- and its `y` reverses there
+on the boss rebound. Rings are 355 across the whole window.
+
+**The engine already does all of that**, and `TestLrzMinibossHitPath` now holds it: a hit at
+native's own offset, a hit at the 16 px edge and none at 40 px, and the drill solid across its
+full `$33` width throughout. Two deliberate breaks: publishing size index 7 failed both geometry
+tests on their own assertions while the solid test stayed green; making the drill non-solid failed
+only the solid test. `COLLISION_SIZE` was `$33` sitting in the size-index slot -- dead, because
+`getCollisionFlags()` is overridden, but it is the misreading itself in the code, and it is now 6.
+
+**Confirmed in the fight, not only in a fixture.** With
+`inputs/lrz1-miniboss-fight-v7.txt` (`--x 0x2C00 --y 0x600 --rings 355 --settle 1`) and a
+temporary `lrz.drill.probe` print in `updateBossLogic` (reverted before the delivered capture),
+the drill goes `hits 6 -> 5` at `v 972` with `collision_flags 6 -> 0`, and `sub_78C14` restores
+the byte at `v 1004` -- the `$20` window, exactly. The hit is landed by the **insta-shield**: the
+script presses A every other frame, and the 48x48 pass reaches a drill 33 px away that the
+ordinary 16 px player box does not.
+
+**Three things the arena forces on any input script, all measured.**
+
+1. **`Check_CameraInRange` must see the arena before the fight starts at all.** A capture that
+   walks left first completes the gate at `v 1987` instead of `v 173`, and no slam happens inside
+   1000 frames. A capture that reaches the arena promptly gets the measured `v 173`.
+2. **Once the gate locks the camera at `($2C00,$710)` the player is confined to about
+   `x 11272`-`11560`.** The left bound is the locked camera edge. The one safe standing spot found
+   earlier (`x 11163`, 900 frames without a scratch) is *outside* that band and only reachable
+   before the lock -- which is why it is safe, and why it cannot be used.
+3. **Standing still inside the band costs every ring.** At `x 11280`, `11470` and `11560` the
+   player is hit about every 180 frames (capture frames 256, 443, 619 in `raw-41`; 261 in the v5
+   probe), the first hit scatters all 355 rings and the second kills. Native never loses a ring in
+   the same band because it never stands still. Pacing and jumping through the wait survives it.
+
+**Open question, with a kill condition.** Is the ~180-frame hit while standing in the band the
+hand's shot behaving as the ROM's does, or an engine box? **Kill condition:** drive native's rows
+23150-23310 input from a position and boss phase matched to native's and compare `rings`; if the
+engine still loses them there, the hand or its shot is wrong. Not answered this round.
+
+**A capture-fidelity question this round did not chase.** In `raw-44-lrz1-miniboss-hit`, frames
+963-967 and 968-971 are byte-for-byte identical although `state.csv` has the player moving 2 px a
+frame and the slam's screen shake running. Adjacent frames elsewhere in the same capture differ
+normally. Either `GameplayCaptureTool` repeated a presented frame there or the render skipped one;
+`state.csv` is the authority for what happened, and the hit is evidenced by the probe, not by the
+PNGs.
+
 ## Handover, 2026-09-18 (eighth)
 
 **Where the work is.** Branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. This round
