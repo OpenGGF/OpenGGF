@@ -366,7 +366,7 @@ Still open:
 
 | Claim | State |
 | --- | --- |
-| Implemented | **Slices 0-3 complete** and slice 4 started (placeholder baseline 43 / 206 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, and every slice 3 class: `$15` corkscrew, `$16` wall ride, `$17` sinking rock, `$18` falling spike, `$19` door, `$1A` big door, `$1B` fireball launcher, `$1C` horizontal button, `$1D` shooting trigger, `$1E` dash elevator, `$1F` lava fall, `$20` swinging spike ball, `$21` smashing spike platform, `$22` spike ball, `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits it requests. Slice 4's `$9A Obj_Iwamodoki` (32 + 34) landed. Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: the `LRZ1_BackgroundEvent` stage machine and the seamless `$901` handover, the dome regions, `$99` and `$9B`, three bosses, cutscenes, `StartNewLevel` |
+| Implemented | **Slices 0-3 complete** and slice 4 started (placeholder baseline 21 / 197 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, and every slice 3 class: `$15` corkscrew, `$16` wall ride, `$17` sinking rock, `$18` falling spike, `$19` door, `$1A` big door, `$1B` fireball launcher, `$1C` horizontal button, `$1D` shooting trigger, `$1E` dash elevator, `$1F` lava fall, `$20` swinging spike ball, `$21` smashing spike platform, `$22` spike ball, `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits it requests. Slice 4's `$9A Obj_Iwamodoki` (32 + 34) and `$9B Obj_Toxomister` with its cloud and seven puffs (22 + 9) landed. Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: the `LRZ1_BackgroundEvent` stage machine and the seamless `$901` handover, the dome regions, `$99 Obj_Fireworm`, three bosses, cutscenes, `StartNewLevel` |
 | Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). On the fixture's recorded native input the engine matches Player 1 `(x, y)` exactly for frames 0-636 and then reaches **x 4029** open-loop before dying at frame 3649. That reach is LOWER than the 4301 recorded at `21fbec7e6`. The input is the FIXTURE'S OWN native input, which native survives, so the drop is the engine's open-loop phase error meeting hazards that are now present: the first hurt is at frame 1102 next to the `$1B` launchers. Closing the frame-637 ordering divergence is what would raise it; the classes are not implicated. The hand-authored `lrz1-cold-route-v7` frontier of x 1909 is untouched. Nothing cold-reached in act 2 or the boss act |
 | Rewind-verified | Before/active/after spots with forward replay for the `$19` door, the `$1C` button latch, the `$15` corkscrew ride, the `$17` sinking rock, the `$16` wall ride, the `$18` falling spike, the `$21` smashing spike platform (fall, hold and rise), and now `$1B`, `$1F`, `$20` and the `$1E` dash elevator's mid-ride (`TestLrzHazardRewindSpots`, `TestLrzDashElevatorRewindSpot`), each broken on purpose once. Plus `LrzZoneRuntimeState` capture/restore round trips and the animator's counter blob. `$9C` and `$9A` are covered by `TestEveryObjectRewindRoundTrip` only; no route spot yet |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
@@ -1174,6 +1174,28 @@ are after-only clips, not before/after pairs: the "before" for every one of them
 `PlaceholderObjectInstance` that draws nothing, which the census records exactly. Clip `24`'s
 frames 200 and 330 differ in exactly the edited layout rows.
 
+**Slice 4's second class, `$9B Obj_Toxomister`** (commit `c45f35e74`), landed after those
+measurements: the body, its cloud and the seven puffs. Two readings worth keeping.
+
+9. **`Check_LRControllerShake` frees on the SIXTH reversal, not the fifth.** `$3C(a0)` is loaded
+   with 5, but the escape is `subq.b #1,$3C(a0) / bmi`, so it is the reversal that takes the
+   counter below zero that frees the player. Reading the loaded constant as the count is off by
+   one; the test says so by name.
+10. **The Toxomister's slow-down is an arithmetic shift.** `sub_8FFE0` takes an eighth off
+    `x_vel` and an eighth off `ground_vel` -- or `y_vel` when airborne -- every frame with
+    `asr.w #3`, so a negative speed decays toward zero rather than reversing. A logical shift
+    happens to give the same answer for a 16-bit value after truncation, so that perturbation is
+    NOT a usable "break it on purpose" for this routine; changing the shift distance is.
+
+**The four object-graph links this round needed sidecars.** `LrzRockCrusherPieceInstance#parent`,
+`ToxomisterBadnikInstance#cloud`, `ToxomisterCloudInstance#body` and `ToxomisterPuffInstance#parent`
+are all read every frame and cannot be rebuilt from scalars. Java `transient` does NOT satisfy
+`TestRewindCoverageGuard`: it wants `@RewindTransient` plus a real restore, and
+`TestRewindArchitectureGuard` then ratchets both the annotation and the capture/restore override,
+so each addition is triaged in its two baselines with the reason. The crusher piece had the same
+latent defect from the earlier commit -- a restored piece would have frozen in place -- and is
+fixed here.
+
 **Measurements at `72920cabc`.**
 
 | What | Command | Result |
@@ -1327,17 +1349,20 @@ route inputs under `inputs/`.
 **Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`), on top of the second
 handover's commits: `f0b7a6eff` `$21` smashing spike platform and `$22` spike ball,
 `cfa443e13` `$9C` rock crusher and the `LRZ1_ScreenEvent` chunk edits, `98a8c7261` the
-shake-table fix, `6f6a48bab` the owed rewind spots, `72920cabc` `$9A` Iwamodoki. Tree clean;
-nothing pushed or merged.
+shake-table fix, `6f6a48bab` the owed rewind spots, `72920cabc` `$9A` Iwamodoki, `07fe184d7` and
+`7aece7b45` the docs and the route-attribution correction, `c45f35e74` `$9B` Toxomister. Tree
+clean; nothing pushed or merged.
 
-**Census: 43 / 206 / 8** placeholders of 609 / 455 / 35. **Slice 3 has no rows left.**
+**Census: 21 / 197 / 8** placeholders of 609 / 455 / 35. **Slice 3 has no rows left, and slice 4
+has only `$99 Obj_Fireworm` (20 act 1, 9 act 2).**
 
-**Rows that remain in slice 4**, and nothing of slice 3:
+**The one row that remains in slice 4**, and nothing of slice 3 (the `$9B` and `PLCKosM_LRZ`
+rows below are kept for the record of what was read):
 
 | Row | Placements | Read-ahead |
 | --- | ---: | --- |
 | `$99 Obj_Fireworm` | 20 act 1, 9 act 2 | sonic3k.asm:188000 area, ROM `$8F760`. A head (`loc_8F7A4`) plus a four-segment tail (`ChildObjDat_8FA16` -> `loc_8F8F0`) and a tip (`ChildObjDat_8FA30` -> `loc_8F95C`). `loc_8F77A` waits for `Find_SonicTails` under `$80`, then `ChildObjDat_8FA0E` makes the head at `(0,-8)`. The head's routine 2 sets `$2E = 3`, `$34 = loc_8F81E` and `Set_VelocityXTrackSonic` with `d4 = -$100`; routine 6 is `Swing_UpAndDown_Count` with `$3E = $80`, `y_vel = $80`, `$40 = 8` and `$39 = 8` bursts; routine 8 turns around, flipping `$42(a0)` and re-reading `byte_8FA4D`. Segment `$2E` seeds come from `word_8F940` = `$B, $16, $21, $2C`, i.e. each segment trails the one before by `$B` frames. `DPLCPtr_Fireworm` at ROM `$8FA38` means the head needs `Perform_DPLC`, which the segments do not. |
-| `$9B Obj_Toxomister` | 22 act 1, 9 act 2 | sonic3k.asm from `Obj_Toxomister`, ROM `$8FD48`. The body is a main sprite with one child sprite at `y +- $18`; `sub_8FF72` plays `sfx_EnemyBreath` and creates the cloud (`ChildObjDat_90040` -> `loc_8FDBA`), whose address it keeps in `$44(a0)`. The cloud has seven puffs (`ChildObjDat_90048` -> `loc_8FE8E`), `collision_flags $D8`, `y_radius $18`, a `$6F`-frame life and then `$40` of `y_vel` until `ObjHitFloor_DoRoutine` lands it. **The player hook is `sub_8FF8C` + `sub_8FFE0`**: on a touch that is not `anim == 2` and not a bubble shield, the cloud latches the player in `$44(a0)`, its controller port in `$3E(a0)`, and routine 8 with `$2E = 59`. From then `loc_8FE50` runs `Check_LRControllerShake` (five left/right reversals inside 60 frames frees the player), pins the cloud to the player, calls `sub_8FFE0` - which removes an eighth of `x_vel` and an eighth of `ground_vel`, or of `y_vel` when airborne, every frame - and `sub_881FE`, which takes one ring a second and kills the player at zero. That is the slow-down, and it belongs in a player-state hook with its own rewind adapter. |
+| ~~`$9B Obj_Toxomister`~~ **done** (`c45f35e74`) | 22 act 1, 9 act 2 | sonic3k.asm from `Obj_Toxomister`, ROM `$8FD48`. The body is a main sprite with one child sprite at `y +- $18`; `sub_8FF72` plays `sfx_EnemyBreath` and creates the cloud (`ChildObjDat_90040` -> `loc_8FDBA`), whose address it keeps in `$44(a0)`. The cloud has seven puffs (`ChildObjDat_90048` -> `loc_8FE8E`), `collision_flags $D8`, `y_radius $18`, a `$6F`-frame life and then `$40` of `y_vel` until `ObjHitFloor_DoRoutine` lands it. **The player hook is `sub_8FF8C` + `sub_8FFE0`**: on a touch that is not `anim == 2` and not a bubble shield, the cloud latches the player in `$44(a0)`, its controller port in `$3E(a0)`, and routine 8 with `$2E = 59`. From then `loc_8FE50` runs `Check_LRControllerShake` (five left/right reversals inside 60 frames frees the player), pins the cloud to the player, calls `sub_8FFE0` - which removes an eighth of `x_vel` and an eighth of `ground_vel`, or of `y_vel` when airborne, every frame - and `sub_881FE`, which takes one ring a second and kills the player at zero. That is the slow-down, and it belongs in a player-state hook with its own rewind adapter. |
 | `PLCKosM_LRZ` readiness | - | Already done, and worth knowing before re-deriving it: `Sonic3kPlcArtRegistry` already registers `FIREWORM_SEGMENTS`, `IWAMODOKI` and `TOXOMISTER` as `StandaloneArtEntry` rows, which is what `LoadEnemyArt`'s `PLCKosM_LRZ` (sonic3k.asm:64423-64426) queues. `ArtTile_Iwamodoki` is `$530` and `ArtTile_Toxomister` `$562`. |
 
 **Slice 3's remaining owed rows**, carried forward because they are coverage, not content:
@@ -1363,5 +1388,7 @@ keep falling as the zone fills in**, and quote the exact-match frame and the fir
 instead. Raising it means closing frame 637, which belongs to the shared solid path and is outside
 this campaign.
 
-**Media.** Clips `09`-`25` in `~/Videos/OGGF/lrz-bring-up/`, every `raw-NN-*` kept, all demo and
-route inputs under `inputs/`. `21`-`25` are after-only clips; the census is the "before".
+**Media.** Clips `09`-`26` in `~/Videos/OGGF/lrz-bring-up/`, every `raw-NN-*` kept, all demo and
+route inputs under `inputs/`. `21`-`26` are after-only clips; the census is the "before". Clip
+`26` shows the Toxomister present and breathing at 320, not the mist catching a player -- that
+beat needs an authored approach and is owed.

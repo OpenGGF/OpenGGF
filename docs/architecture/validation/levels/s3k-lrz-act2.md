@@ -20,13 +20,13 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, of which **206 still build a
-`PlaceholderObjectInstance`** after slice 4's Iwamodoki (281 at `035e48a58`, 277 after slice 1,
+Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, of which **197 still build a
+`PlaceholderObjectInstance`** after slice 4's Iwamodoki and Toxomister (281 at `035e48a58`, 277 after slice 1,
 255 after slice 3b's doors and horizontal buttons, 254 after the `$16` wall ride, 240 after the
 `$20` swinging spike ball); 281 live rings (282 records minus the leading `(0,0)` sentinel).
 
 Act 2 classes reached so far are all shared with act 1 and were implemented there: `$6E` (4),
-`$19` (11), `$1C` (11), `$16` (1), `$20` (14) and `$9A` (34). **None of their act 2 skins or
+`$19` (11), `$1C` (11), `$16` (1), `$20` (14), `$9A` (34) and `$9B` (9). **None of their act 2 skins or
 placements has been exercised in act 2 itself** - that remains an owed row, recorded in the
 [bring-up plan](../../plans/2026-09-17-lrz-bring-up.md) handover.
 

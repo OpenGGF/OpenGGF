@@ -110983,3 +110983,7 @@ Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `7
 - Classes landed between the two measurements: `$21` smashing spike platform, `$22` spike ball,
   `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits,
   and `$9A` Iwamodoki. Census 98 / 240 / 8 -> 43 / 206 / 8.
+- `$9B Obj_Toxomister` landed after these measurements (`c45f35e74`), taking the census to
+  **21 / 197 / 8**. The trace and route numbers above were NOT re-measured at that head, so they
+  belong to `72920cabc` and should be quoted with it. Expect the reach to fall again, for the same
+  reason.
