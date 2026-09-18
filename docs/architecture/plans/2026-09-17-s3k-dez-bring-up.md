@@ -1492,3 +1492,55 @@ comes from a `$58`/`$5B` placed alongside.
 staged captures the previous session listed still need a player route that reaches one of the
 eleven `$5B` sites, which is act 2 cold-route work the gate for this change came first. The
 `INDEX.md` table of unstaged clips stands unchanged.
+
+**Handover: what the next session picks up, in order.**
+
+1. **`$58` `Obj_DEZGravitySwitch`** (5 act 2 placements, x/y decoded in the part-3 entry). The
+   whole object is `loc_48AD6`-`loc_48BE4` (:94809-94910) and is four routines, not one:
+   `SolidObjectFull` with `d1 = $1B, d2 = 8, d3 = 9, d4 = x_pos`; `swap d6` then
+   `andi.w #$14,d0` for Player 1's contact bits (`$28` is Player 2's, and Player 2 only ever
+   reaches `sub_48B40`'s release, never the toggle); on a press, `mapping_frame = 1`,
+   `$30 = 3`, and the pad sinks `d0 = 8` (negated by its own `render_flags` bit 1) before
+   `sub_48B40` runs for **both** players — zeroing `anim`, `flip_type`, `double_jump_flag`,
+   `jumping`, `spin_dash_flag`, `ground_vel`, `x_vel`, `y_vel`, setting `Status_InAir` and
+   clearing `Status_OnObj` unconditionally, with only the final `add.w d0,y_pos(a1)` nudge
+   masked by `d3`; then `sfx_Transporter`. `loc_48B7E` counts `$30` down and on the frame it
+   goes negative (four frames after the press) does `eori.b #1,(Reverse_gravity_flag).w` — a
+   **toggle**, unlike `$5B`'s write — sets `$30 = 19` and moves to `loc_48B9C`, which will not
+   start the rearm while `Status_OnObj(a0)` is set (it resets `$30` to 0 each such frame).
+   Note `sub_48B40` returns immediately when `object_control(a1)` is non-zero.
+2. **`$59` `Obj_DEZTeleporter`** (21 act 2 placements) — the biggest of the seven. Four routines
+   per player through `off_48C3C`, run for Player 1 and Player 2 with separate `$30`/`$3A`
+   state blocks. Its flag write is `loc_48DF2` (:95080), Player 1 only
+   (`cmpa.w #Player_1,a1`), taking the value from subtype bit 7 via `rol.b #1,d0 /
+   andi.b #1,d0`; `1(a4)` is set when that value differs from the current flag, and the exit
+   offsets at `loc_48E2C`-`loc_48E8E` read it. It also owns `loc_48CB0`'s unroll (with the
+   ordinary `neg.w d0` under the flag, :94990) and `loc_48D78`'s Y-flip on the captured player
+   frames (:95045), which is the row that needs `Perform_Player_DPLC`.
+3. **`$5A` `Obj_DEZGravityTube`** (24/17) reads the flag only: `loc_48FBA` mirrors `flip_angle`
+   on exit and `loc_4904A` Y-flips while riding.
+4. **`$5C`, `$5F`, `$61`** contain no `Reverse_gravity_flag` reference at all. They move the
+   player with `object_control`; any gravity change near them comes from a `$58`/`$5B` placed
+   alongside. Do not look for a flag branch in them.
+5. **The cold act 2 route and the clips**, which need at least `$58` or a route that reaches a
+   `$5B` site. Until then the `INDEX.md` clip table stays as it is.
+6. **The eleven open group A-I rows**, listed with their reasons in
+   [s3k-known-bugs](../../status/s3k-known-bugs.md). The cheapest real one is Knuckles:
+   route `checkGlideFloorDist` through the `sub_11FD6` wrapper first, then :30921, :30977 and
+   :31004 fall out together.
+
+**The four-class trace comparison for this session**, `clean test` with `-Ptrace-replay` in this
+worktree, all three ROM paths absolute, on top of `04a1e84f7`:
+
+| Class | Recorded `f60b3f3e2` baseline | After `04a1e84f7` |
+| --- | --- | --- |
+| `TestS1Ghz1TraceReplay` | 1/1 green | 1/1 green |
+| `TestS1Mz1TraceReplay` | 1/1 green | 1/1 green |
+| `TestS2Ehz1TraceReplay` | red, 16388 errors, frame 6 `dynamic_art.outstanding_transfer_ids` (expected=[2], actual=[]) | red, 16388 errors, frame 6, same field and values |
+| `TestS3kAizTraceReplay` | 3/16 red, 59 errors, frame 5497 `camera_x` expected `0x0010` actual `0x0012` | 3/16 red, 59 errors, frame 5497, same values |
+
+Failure for failure identical; both reds stay **baseline-attributed**. As in the previous
+sessions, the `f60b3f3e2` side was not re-detached — it is the baseline recorded identically in
+the part-2, part-3 and part-10 entries, and these numbers match it error for error. That is a
+comparison against a thrice-recorded baseline, not two fresh measurements. Four classes, not the
+trace profiles, and no evidence about any other class.
