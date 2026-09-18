@@ -6,6 +6,8 @@ import com.openggf.configuration.WidescreenAspect;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
@@ -186,6 +188,43 @@ class TestS3kSszEggRobo {
                 "CreateChild6_Simple let animals go on the way");
         assertTrue(releaser.lowPriorityArtForTest(),
                 "bclr #7,art_tile(a0) drops the robot behind the level art as it leaves");
+    }
+
+    /** Rewind spot: the releaser part-way through its four animals, children and all. */
+    @Test
+    void theEggRoboSurvivesACaptureRestoreAndForwardReplay() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1330, 0x0600);
+        boolean reached = false;
+        for (int frame = 0; frame < 600 && !reached; frame++) {
+            fixture.stepIdleFrames(1);
+            for (EggRoboBadnikInstance robo : allActive(EggRoboBadnikInstance.class)) {
+                if (robo.animalsLeftForTest() < EggRoboBadnikInstance.ANIMAL_RELEASES) {
+                    reached = true;
+                }
+            }
+        }
+        assertTrue(reached, "the releaser was never reached mid-count");
+
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot before = registry.capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = registry.capture();
+
+        registry.restore(before);
+        sameSnapshot(before, registry.capture(), "restore mid-release");
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, registry.capture(), "forward replay mid-release");
+    }
+
+    private static void sameSnapshot(CompositeSnapshot a, CompositeSnapshot b, String label) {
+        assertEquals(a.entries().keySet(), b.entries().keySet(), label);
+        for (String key : a.entries().keySet()) {
+            assertTrue(RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)).isEmpty(),
+                    () -> label + " " + key + ": "
+                            + RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)));
+        }
     }
 
     private static int countActive(Class<?> type) {

@@ -6,6 +6,8 @@ import com.openggf.configuration.WidescreenAspect;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
@@ -455,6 +457,111 @@ class TestS3kSszCarriersAndSprings {
         // of the three are observable here; the parity assertion above is what pins the gate.
         assertTrue(steps >= 2, "the extension steps once per odd counter, saw " + steps);
         assertEquals(0x0A60, spring.getX() & 0xFFFF, "an extended spring reports its real X");
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Rewind spots. One per family, taken while the object is mid-action rather than at rest:
+    // capture, step, capture, restore, compare, replay forward, compare again.
+    // ---------------------------------------------------------------------------------------
+
+    /** {@code $7D} mid sag ramp, with the shared bounce counter part-way down. */
+    @Test
+    void theBouncyCloudSurvivesACaptureRestoreAndForwardReplay() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x0DC0, 0x0B55);
+        rewindSpot(fixture, () -> {
+            for (SszBouncyCloudObjectInstance cloud
+                    : allActive(SszBouncyCloudObjectInstance.class)) {
+                if (cloud.stateForTest(0) > 1) {
+                    return true;
+                }
+            }
+            return false;
+        }, "a cloud mid sag ramp");
+    }
+
+    /** {@code $7A} while it is holding the player on its swing. */
+    @Test
+    void theElevatorBarSurvivesACaptureRestoreAndForwardReplay() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x6C0, 0x520);
+        rewindSpot(fixture, () -> {
+            SszElevatorBarObjectInstance bar = active(SszElevatorBarObjectInstance.class);
+            return bar != null && bar.holdingForTest(0);
+        }, "a bar holding the player");
+    }
+
+    /** {@code $76} with its invisible carrier allocated — two objects and a reference between them. */
+    @Test
+    void theRotatingPlatformSurvivesACaptureRestoreAndForwardReplay() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x0C00, 0x780);
+        rewindSpot(fixture, () -> {
+            SszRotatingPlatformObjectInstance post = active(SszRotatingPlatformObjectInstance.class);
+            return post != null && post.carrierForTest() != null;
+        }, "a post with its carrier");
+    }
+
+    /** {@code $75} with the whole hub -> arc -> rider bar chain up and the arm swinging. */
+    @Test
+    void theSwingingCarrierChainSurvivesACaptureRestoreAndForwardReplay() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x0D40, 0x1C0);
+        rewindSpot(fixture, () -> {
+            SszSwingingCarrierObjectInstance hub = active(SszSwingingCarrierObjectInstance.class);
+            return hub != null && hub.arcForTest() != null
+                    && active(SszSwingingCarrierBarObjectInstance.class) != null;
+        }, "the full carrier chain");
+    }
+
+    /** {@code $74} part-way through its extension, where the frame-counter gate is live. */
+    @Test
+    void theRetractingSpringSurvivesACaptureRestoreAndForwardReplay() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x0A60, 0x0A30);
+        rewindSpot(fixture, () -> {
+            SszRetractingSpringObjectInstance spring =
+                    active(SszRetractingSpringObjectInstance.class);
+            return spring != null && spring.mappingFrameForTest() >= 1;
+        }, "a spring mid extension");
+    }
+
+    /**
+     * Steps until {@code ready} holds, then captures, steps, captures, restores, compares, replays
+     * one frame and compares again. A restore that drops captured state shows up in the first
+     * comparison; a restore that leaves the object unable to continue shows up in the second.
+     *
+     * <p><b>What this cannot see.</b> At these spots the object instances survive the restore in
+     * place, so a subclass's {@code restoreRewindState} for an {@code ObjectRefId} sidecar is never
+     * exercised: disabling {@code SszRotatingPlatformObjectInstance}'s carrier restore outright
+     * leaves both this spot and {@code TestEveryObjectRewindRoundTrip} green. Object-reference
+     * restore needs a spot that forces recreation — a cull and reload across the capture — and is
+     * recorded as owed in the act-1 matrix rather than claimed here.
+     */
+    private static void rewindSpot(HeadlessTestFixture fixture,
+            java.util.function.BooleanSupplier ready, String what) {
+        boolean reached = false;
+        for (int frame = 0; frame < 900 && !reached; frame++) {
+            fixture.stepIdleFrames(1);
+            reached = ready.getAsBoolean();
+        }
+        assertTrue(reached, "the spot was never reached: " + what);
+
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot before = registry.capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = registry.capture();
+
+        registry.restore(before);
+        sameSnapshot(before, registry.capture(), "restore at " + what);
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, registry.capture(), "forward replay at " + what);
+    }
+
+    private static void sameSnapshot(CompositeSnapshot a, CompositeSnapshot b, String label) {
+        assertEquals(a.entries().keySet(), b.entries().keySet(), label);
+        for (String key : a.entries().keySet()) {
+            assertTrue(RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)).isEmpty(),
+                    () -> label + " " + key + ": "
+                            + RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)));
+        }
     }
 
     private static void assertArrayEqualsAsBytes(int[] expected, int[] actual, String message) {
