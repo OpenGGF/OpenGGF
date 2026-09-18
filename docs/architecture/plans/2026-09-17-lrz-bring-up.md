@@ -1480,6 +1480,32 @@ Palettes: `Pal_LRZMiniboss1` `$78E0A` (line 1 at setup), `Pal_LRZMiniboss2` `$78
 (`sub_78B38` copies `$40` bytes to line 3), `Pal_LRZMiniboss3` `$78E6A` and `Pal_LRZ2` `$A96DC`
 (`loc_78B08`, `$20` bytes over line 2). All in `Sonic3kConstants`.
 
+### 2026-09-18 - The miniboss travels the other way, and the first test that said so was worthless
+
+Re-reading `Obj_LRZMiniboss` after committing it found a real inversion in the commit itself.
+`loc_78562` sets `_unkFAB0 = $7A8` and `_unkFAB2 = y_pos`, and the natural reading is "floor" and
+"ceiling". It is the other way round. `loc_78606` starts that leg with `y_vel = -$400`, so the
+drill **climbs**, and `loc_78628`'s `cmp.w y_pos(a0),d0 / blo.w` (sonic3k.asm:160108-160110)
+computes `d0 - y_pos` and returns while `$7A8` is the lower of the two -- that is, while the drill
+is still below the top of its travel. `_unkFAB2`, the spawn height, is the **bottom** it falls back
+to after each slam, which `loc_78768`'s `bhi.s` (sonic3k.asm:160219-160222) confirms in the
+opposite direction. The shipped code had the compare reversed; with a spawn above `$7A8` the boss
+snapped on its first frame, and below it, it never arrived. Fixed, with `FLOOR_Y`/`ceilingY`
+renamed to `TRAVEL_TOP_Y`/`travelBottomY` so the names stop arguing with the ROM.
+
+**The first regression test for it passed against the broken code.** `theDrillClimbsToTheTravelTop`
+asserted the endpoint (`y == $7A8`), that motion was upward, and that the boss had moved -- and an
+inverted compare satisfies all three, because snapping from `$900` to `$7A8` in one frame *is* an
+upward move ending at `$7A8`. Endpoint assertions cannot distinguish a climb from a teleport. The
+replacement, `theDrillClimbsToTheTravelTopOneStepAtATime`, asserts that the first moved frame lands
+*strictly between* the spawn height and `$7A8`, and that more than fifty intermediate frames occur
+(`-$400` is four pixels a frame, so `$158` takes about 86). Re-broken on purpose, it now fails with
+`it did land on 7a8`.
+
+Worth carrying forward as a habit, not just a fix: a test written from the same misreading as the
+code will agree with it. Breaking the code on purpose is the only step that catches that, and it
+has to be done *after* the test is written, not instead of writing one.
+
 ## Handover, 2026-09-18
 
 **Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`): `d2c58f148` slice 3b,

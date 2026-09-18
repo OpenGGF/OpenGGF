@@ -16,8 +16,9 @@ import java.util.List;
  * S3K SKL object {@code $9D} - the Lava Reef act 1 miniboss ({@code Obj_LRZMiniboss},
  * sonic3k.asm:160001-160900, ROM {@code $78500}).
  *
- * <p>The ROM object is a hovering drill that descends to a fixed floor, swings while it tracks
- * Player 1, then drops, slams and rises again. {@code off_7854C} is eleven routine slots with nine
+ * <p>The ROM object is a hovering drill that climbs to a fixed height ({@code _unkFAB0} =
+ * {@code $7A8}), swings there while it tracks Player 1, then drops, slams, and falls back to the
+ * height it spawned at ({@code _unkFAB2}) before repeating. {@code off_7854C} is eleven routine slots with nine
  * distinct handlers ({@code loc_785E4}, plain {@code Obj_Wait}, fills three of them); the phase
  * changes themselves live in the {@code $34(a0)} continuation that {@code Obj_Wait} calls when
  * {@code $2E} counts past zero, which is why the routine table looks smaller than the cycle.
@@ -49,8 +50,14 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
      */
     private static final int COLLISION_SIZE = 0x33;
 
-    /** {@code move.w #$7A8,(_unkFAB0).w}: the floor the drill descends to ({@code loc_78562}). */
-    private static final int FLOOR_Y = 0x7A8;
+    /**
+     * {@code move.w #$7A8,(_unkFAB0).w} at {@code loc_78562}: the <b>top</b> of the drill's
+     * travel, not a floor. {@code loc_78606} starts this leg with {@code y_vel = -$400}, and
+     * {@code loc_78628}'s {@code cmp.w y_pos(a0),d0 / blo.w} returns while {@code $7A8} is below
+     * {@code y_pos}, i.e. while the drill is still under it. {@code _unkFAB2} holds the spawn
+     * {@code y_pos}, which is the bottom it returns to after each slam.
+     */
+    private static final int TRAVEL_TOP_Y = 0x7A8;
 
     // ROM routine values. The routine byte steps by 2 and indexes off_7854C directly.
     private static final int ROUTINE_INIT = 0x00;               // loc_78562
@@ -58,12 +65,12 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
     private static final int ROUTINE_ART_DELAY = 0x04;          // loc_785C2
     private static final int ROUTINE_HOVER_WAIT = 0x06;         // loc_785E4, Obj_Wait
     private static final int ROUTINE_PRE_DESCENT_WAIT = 0x08;   // loc_785E4, Obj_Wait
-    private static final int ROUTINE_DESCEND = 0x0A;            // loc_78628
+    private static final int ROUTINE_RISE_TO_TOP = 0x0A;        // loc_78628
     private static final int ROUTINE_SWING = 0x0C;              // loc_78666
     private static final int ROUTINE_PRE_DROP_WAIT = 0x0E;      // loc_785E4, Obj_Wait
     private static final int ROUTINE_DROP = 0x10;               // loc_786DA
     private static final int ROUTINE_SLAM = 0x12;               // loc_7871A
-    private static final int ROUTINE_RISE = 0x14;               // loc_78768
+    private static final int ROUTINE_RETURN_TO_BOTTOM = 0x14;   // loc_78768
 
     // $34(a0) continuations, in the order the cycle runs them.
     private static final int CONTINUATION_NONE = 0;
@@ -118,7 +125,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
     private int flags38;
     private int mappingFrame = INITIAL_MAPPING_FRAME;
     private int collisionFlagsByte;
-    private int ceilingY;
+    private int travelBottomY;
     private int swingMaxVelocity;
     private int swingAcceleration;
     private int[] animation = ANIM_RISE;
@@ -138,8 +145,8 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
         state.yFixed = state.y << 16;
         state.hitCount = HIT_COUNT;
         state.routine = ROUTINE_INIT;
-        // loc_78562: move.w y_pos(a0),(_unkFAB2).w - the height it returns to between slams.
-        ceilingY = spawn.y();
+        // loc_78562: move.w y_pos(a0),(_unkFAB2).w - the height it returns to after each slam.
+        travelBottomY = spawn.y();
         mappingFrame = INITIAL_MAPPING_FRAME;
         collisionFlagsByte = 0;
         continuation = CONTINUATION_NONE;
@@ -169,11 +176,11 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
             case ROUTINE_QUEUE_ART -> queueArt();
             case ROUTINE_ART_DELAY -> countDownArtDelay();
             case ROUTINE_HOVER_WAIT, ROUTINE_PRE_DESCENT_WAIT, ROUTINE_PRE_DROP_WAIT -> objWait();
-            case ROUTINE_DESCEND -> descend(vIntRunCount, player);
+            case ROUTINE_RISE_TO_TOP -> riseToTravelTop(vIntRunCount, player);
             case ROUTINE_SWING -> swing(vIntRunCount, player);
             case ROUTINE_DROP -> drop();
             case ROUTINE_SLAM -> objWait();
-            case ROUTINE_RISE -> rise();
+            case ROUTINE_RETURN_TO_BOTTOM -> returnToTravelBottom();
             default -> { }
         }
     }
@@ -247,7 +254,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
             }
             case CONTINUATION_78606 -> {
                 // loc_78606: rise out of frame and start the descent animation.
-                state.routine = ROUTINE_DESCEND;
+                state.routine = ROUTINE_RISE_TO_TOP;
                 state.xVel = 0;
                 state.yVel = RISE_VELOCITY;
                 playSfx(Sonic3kSfx.BOSS_HAND.id);
@@ -278,7 +285,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
             }
             case CONTINUATION_7873A -> {
                 // loc_7873A: peel the player off and climb back to the ceiling.
-                state.routine = ROUTINE_RISE;
+                state.routine = ROUTINE_RETURN_TO_BOTTOM;
                 waitTimer = RISE_TIMER;
                 continuation = CONTINUATION_787AE;
                 state.xVel = 0;
@@ -302,15 +309,21 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
         }
     }
 
-    /** {@code loc_78628} (sonic3k.asm:160144-160159). */
-    private void descend(int vIntRunCount, PlayableEntity player) {
+    /**
+     * {@code loc_78628} (sonic3k.asm:160104-160116). The drill climbs at {@code -$400} until it
+     * reaches {@code _unkFAB0}. The ROM's {@code cmp.w y_pos(a0),d0 / blo.w} computes
+     * {@code d0 - y_pos} and returns when {@code d0} is the lower, so the leg continues while the
+     * top bound is still above the drill in screen terms -- numerically while
+     * {@code TRAVEL_TOP_Y < y}.
+     */
+    private void riseToTravelTop(int vIntRunCount, PlayableEntity player) {
         advanceRawAnimation();
         trackPlayer(vIntRunCount, player);
         moveSprite2();
-        if (Integer.compareUnsigned(state.y, FLOOR_Y) < 0) {
+        if (Integer.compareUnsigned(TRAVEL_TOP_Y, state.y) < 0) {
             return;
         }
-        state.y = FLOOR_Y;
+        state.y = TRAVEL_TOP_Y;
         state.yFixed = state.y << 16;
         state.routine = ROUTINE_SWING;
         state.yVel = 0;
@@ -334,15 +347,19 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
         advanceRawAnimation();
     }
 
-    /** {@code loc_78768} (sonic3k.asm:160244-160262). */
-    private void rise() {
+    /**
+     * {@code loc_78768} (sonic3k.asm:160218-160225). After the slam the drill falls back at
+     * {@code $400} to the spawn height it started from. {@code bhi.s} returns while
+     * {@code _unkFAB2} is still greater than {@code y_pos}.
+     */
+    private void returnToTravelBottom() {
         advanceRawAnimation();
         moveSprite2();
         objWait();
-        if (Integer.compareUnsigned(ceilingY, state.y) > 0) {
+        if (Integer.compareUnsigned(travelBottomY, state.y) > 0) {
             return;
         }
-        state.y = ceilingY;
+        state.y = travelBottomY;
         state.yFixed = state.y << 16;
         state.routine = ROUTINE_HOVER_WAIT;
     }

@@ -47,7 +47,7 @@ class TestLrzMinibossInstance {
         camera.setX((short) SPAWN_X);
         camera.setY((short) SPAWN_Y);
         boss = new LrzMinibossInstance(new ObjectSpawn(SPAWN_X, SPAWN_Y, 0x9D, 0, 0, false, 0));
-        boss.setServices(new TestObjectServices().withCamera(camera));
+        boss.setServices(new TestObjectServices().withIsolatedObjectManager().withCamera(camera));
     }
 
     @Test
@@ -119,6 +119,55 @@ class TestLrzMinibossInstance {
         }
         assertEquals(0xC0, boss.getFlags38() & 0xC0,
                 "sub_78CF4's loc_78D2C sets $38 bits 6 and 7, one per facing");
+    }
+
+    /**
+     * The drill's travel bounds, and the direction it moves between them. {@code loc_78562} sets
+     * {@code _unkFAB0 = $7A8} and {@code _unkFAB2 = y_pos}; {@code loc_78606} starts the leg with
+     * {@code y_vel = -$400}; and {@code loc_78628}'s {@code cmp.w y_pos(a0),d0 / blo.w} returns
+     * while {@code $7A8} is numerically below {@code y_pos}. So a boss spawned <b>below</b>
+     * {@code $7A8} climbs to it and stops there; it does not snap on the first frame, and it does
+     * not sail past.
+     *
+     * <p>This is the assertion that catches an inverted comparison. With the branch the wrong way
+     * round the boss either arrives instantly or never arrives, and only a test that watches the
+     * position over the whole leg can tell those apart from the correct behaviour.
+     */
+    @Test
+    void theDrillClimbsToTheTravelTopOneStepAtATime() {
+        int spawnY = 0x0900;                 // below $7A8 on screen, numerically greater
+        boss = new LrzMinibossInstance(new ObjectSpawn(SPAWN_X, spawnY, 0x9D, 0, 0, false, 0));
+        boss.setServices(new TestObjectServices().withIsolatedObjectManager().withCamera(camera));
+
+        int frame = 0;
+        while (boss.getY() == spawnY && frame < 2000) {
+            boss.update(frame++, null);
+        }
+        assertTrue(frame < 2000, "the boss never left its spawn height; the rise leg was not reached");
+
+        // loc_78606's y_vel = -$400 is four pixels a frame, so $900 - $7A8 = $158 takes 86
+        // frames. An inverted compare in loc_78628 snaps straight to $7A8 in one, which every
+        // endpoint assertion alone would happily accept - so count the steps, not the endpoint.
+        int stepsAtIntermediateHeights = 0;
+        int previous = boss.getY();
+        assertTrue(previous > 0x07A8 && previous < spawnY,
+                "the first moved frame must land strictly between the spawn height and $7A8, "
+                        + "not on $7A8 itself; it did land on " + Integer.toHexString(previous));
+        while (boss.getY() != 0x07A8 && frame < 2000) {
+            boss.update(frame++, null);
+            assertTrue(boss.getY() <= previous,
+                    "loc_78606 sets y_vel = -$400: this leg only ever moves up");
+            if (boss.getY() > 0x07A8) {
+                stepsAtIntermediateHeights++;
+            }
+            previous = boss.getY();
+        }
+        assertEquals(0x07A8, boss.getY(),
+                "loc_78628 snaps y_pos to _unkFAB0 = $7A8 and swings there");
+        assertTrue(stepsAtIntermediateHeights > 50,
+                "at four pixels a frame the $158 climb takes about 86 frames; only "
+                        + stepsAtIntermediateHeights + " intermediate frames were observed, "
+                        + "which is what an inverted loc_78628 compare looks like");
     }
 
     private static long countOf(List<BossChildComponent> children, Class<?> type) {
