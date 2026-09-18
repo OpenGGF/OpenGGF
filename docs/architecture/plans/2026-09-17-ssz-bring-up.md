@@ -2190,3 +2190,48 @@ rings flag. The eight hits, the seven arm-raise cycles, the laser pass and the d
 `$79:$F6` pad are driven end to end by `TestS3kSszMtzArenaHeadless` and by nothing on film. That is
 recorded as owed in `INDEX.md` and in the act-1 matrix rather than left to be rediscovered: what it
 wants is a route into the arena with rings, or a capture flag that seeds them.
+
+### 2026-09-18 — the Metropolis fight on film, and the two things that made it hard
+
+`--rings` is ported from the Lava Reef campaign's `b35f59d33` in `dae80b909`, by hand rather than
+by cherry-pick: this branch had already added `--star-post` and its `Settings` component, so the
+count becomes the last record component and the older constructors chain through a new one. One
+deliberate difference from the origin. It applied the count early, before the camera-fraction and
+star-post blocks; here the block runs last, after the reposition, because `--star-post` calls
+`CheckpointState.saveCheckpoint` with `restoreRings` false and the `--x/--y` path re-runs
+`initLevelEventsForLevel`, and either can zero a count written earlier. Sky Sanctuary act 1 needs
+`--star-post` to reach any arena at all, so the ordering matters here in a way it did not there.
+
+**Seeding rings is necessary and not sufficient.** The first attempt seeded 355 and still died at
+frame 680. `DESCENT_FLOOR_Y` is `$420` and the ring's rest radius is the ship's `$27`, so while the
+ship is descending the orbs sweep below the `$42C` arena floor: a leader standing under `$1700`
+is hurt at about frame 332 whatever it is doing, and a hurt spends the **whole** bank at once —
+the scattered rings are mostly not recovered, and in the second attempt the count went 355 → 0 →
+5 and the next contact killed. What worked (`raw-34-ssz-mtz-chase`, 2961 frames) was to stop
+standing still: alternate left and right across the arena, tapping A every ten frames, which both
+attacks and walks over the scattered rings. That run lands all eight hits, the defeat at frame
+1737, and the `$79:$F6` pad at 2113-2369.
+
+**The laser pass will not fit in the same run.** `collision_property 8` against `$3C = 7` means
+the seventh hit spends the last arm cycle and `loc_7AA02` starts the pass, and the eighth hit ends
+the fight — in `raw-34` the seventh landed at 1705 and the eighth at 1736, 31 frames later, and
+`sub_7AB56`'s three pairs are `$1E` apart. So the laser pass is filmed by branching: `raw-35`
+replays `raw-34`'s input exactly to frame 1720, then holds left with no A for 240 frames. The
+first pair leaves the nose at 1745 and three shots cross the arena before the player re-engages.
+This is the general shape for any fight whose only interesting phase is one the player can cut
+short — diverge the input from a known-good run at a frame that is already past the event that
+opens the phase.
+
+**What the clips are, and one thing they corrected.** `20` is the launch: a hit sets the ship's
+`$39(a0)`, the first orb to update takes it, and it leaves with `y_vel -$400` and the `+/-$80`
+horizontal term clamped into `[$16A0,$1760)`. On film it does not stay a grey sphere — the launch
+animation opens it through frames 2 to 8 before `loc_7AFA4` writes `$C6` and it falls to `$42C`
+and bounces, which is why the first reading of `raw-34` was "there is a second ship in the arena".
+`22` was also mis-described on the first pass: the slow 1-px-every-other-tick lift from frame 2195
+is `loc_456F4`'s charge drawing the leader onto the pad, **not** the gated pad's own `$20` of
+rise at 1 px per four ticks. That rise is over long before the leader reaches it. The launch
+proper starts at 2257 at 16 px a frame and takes him 929 px out of the arena.
+
+**Still owed on this fight.** No clip is cut to the `$68` arm extension itself, and nothing on
+film distinguishes the raised ring from the resting one. The palette flash still has no native
+comparison, because palette is not in the trace schema.
