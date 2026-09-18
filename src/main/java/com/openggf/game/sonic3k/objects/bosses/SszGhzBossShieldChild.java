@@ -30,7 +30,22 @@ import java.util.List;
  * deletes it outright, the parent's {@code $38} bit 6 hides it for the frame, and
  * {@code (V_int_run_count+3)} bit 0 hides it every other frame — the flicker is a skipped draw,
  * not an animation. Only on the frames it survives does it refresh its position, add itself to the
- * collision response list and draw, so it is harmful exactly on the frames it is visible.
+ * collision response list and draw.
+ *
+ * <p><b>It cannot hurt anything.</b> {@code word_7A65A}'s last byte is the
+ * {@code collision_flags} {@code SetUp_ObjAttributes3} writes and it is {@code 0}, so the
+ * {@code Add_SpriteToCollisionResponseList} entry is inert every frame — this is a decoration on
+ * the nose of the ship, not a second hitbox. The one object in this fight that touches the player
+ * is the ball, through {@code loc_7A514}'s {@code Child_DrawTouch_Sprite_FlickerMove}.
+ *
+ * <p><b>The first test is what deletes it, and it fires at the killing hit.</b> Nothing inside
+ * {@code Obj_SSZGHZBoss} sets {@code status} bit 7 on the ship — the hit window sets bit 6
+ * ({@code sub_7A5A0}) and the defeat sets {@code $38} bit 4 ({@code loc_7A3F8}) — but the shared
+ * touch response does: {@code Touch_Enemy}'s {@code .checkhurtenemy} runs
+ * {@code subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)}
+ * (sonic3k.asm:20922) when the last hit lands. So {@code loc_7A568} takes {@code loc_7A59A} and
+ * {@code Delete_Current_Sprite} on the frame after the eighth hit, well before the escape run
+ * ends — not when the ship's slot is finally freed.
  */
 public final class SszGhzBossShieldChild extends AbstractObjectInstance
         implements RewindRecreatable {
@@ -92,8 +107,8 @@ public final class SszGhzBossShieldChild extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         visibleThisFrame = false;
-        if (parent == null || parent.isDestroyed() || parent.hasEscaped()) {
-            // btst #7,status(a1) -> Delete_Current_Sprite.
+        if (parent == null || parent.isDestroyed() || parent.hasStatusBit7()) {
+            // btst #7,status(a1) / bne.s loc_7A59A -> jmp (Delete_Current_Sprite).
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }

@@ -128,11 +128,60 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     private static final int ROUTINE_SWEEP = 8;
     private static final int ROUTINE_WAIT_FOR_BALL = 0x0A;
 
+    /** {@code move.w #$3F,$2E(a0)} in {@code BossDefeated} (sonic3k.asm:180822). */
+    private static final int DEFEAT_WAIT_FRAMES = 0x3F;
+    /** {@code moveq #100,d0 / jsr (HUD_AddToScore)} in the same routine. */
+    private static final int DEFEAT_SCORE = 100;
+    /** {@code move.b #$20,$20(a0)} in {@code sub_7A5A0}. */
+    private static final int HIT_WINDOW_FRAMES = 0x20;
+    /**
+     * {@code word_7A622}: the three {@code Normal_palette} <em>byte</em> offsets
+     * {@code sub_7A614} patches, as colour indices into palette line 0 — the line
+     * {@code make_art_tile(ArtTile_RobotnikShip,0,0)} draws the ship on.
+     */
+    private static final int FLASH_COLOR_A = 0x0E / 2;
+    private static final int FLASH_COLOR_B = 0x1C / 2;
+    private static final int FLASH_COLOR_C = 0x1E / 2;
+    /** {@code word_7A628}: two overlapping three-word rows in one six-word table. */
+    private static final int[] FLASH_TABLE = {0x0008, 0x0866, 0x0222, 0x0888, 0x0CCC, 0x0EEE};
+    /**
+     * {@code btst #0,$20(a0) / bne.s loc_7A5D4} leaves {@code d0} zero on the odd frames, so the
+     * odd frames always write {@code word_7A628}'s first row.
+     */
+    private static final int FLASH_ROW_NORMAL = 0;
+    /**
+     * The even frames add a byte offset. {@code FixBugs = 0} ships {@code addi.w #2*2,d0}, which
+     * lands one word short of the second row and writes {@code $222,$888,$CCC} — a row that
+     * overlaps the normal one, so the flash is dark-to-mid. The {@code FixBugs} branch is
+     * {@code 2*3}, which would write {@code $888,$CCC,$EEE} and give the intended bright flash.
+     * Modelled as shipped, per runtime invariant 7.
+     */
+    private static final int FLASH_ROW_SHIPPED = (2 * 2) / 2;
+    static final int FLASH_ROW_FIXED = (2 * 3) / 2;
+
     /** {@code $2E(a0)} and the {@code $34(a0)} continuation it runs at zero. */
     private int waitTimer = ENTRY_WAIT_FRAMES;
-    private Continuation waitContinuation = Continuation.START_FIGHT;
+    private Continuation waitContinuation = Continuation.NONE;
 
     private enum Continuation { START_FIGHT, END_FALL, TURN_AROUND, ESCAPE_DONE, NONE }
+
+    /**
+     * The init block ({@code Obj_SSZGHZBoss} itself) is one execution that ends
+     * {@code jmp (PalLoad_Line1)}; {@code Obj_Wait} does not run on it, because the
+     * {@code move.l #Obj_Wait,(a0)} at the top only changes what the <em>next</em> frame runs.
+     */
+    /** {@code status} bit 7; see {@link #hasStatusBit7()}. */
+    private boolean statusBit7;
+    private boolean initExecuted;
+    /**
+     * {@code loc_7A294} is the tail of the frame the wait expires on, not a frame of its own:
+     * {@code Obj_Wait}'s {@code bmi} reaches {@code loc_84892}, which is
+     * {@code movea.l $34(a0),a1 / jmp (a1)}, and {@code loc_7A294} installs {@code loc_7A29C} and
+     * returns from there. So the 32nd decrement and the handover share one execution, and the
+     * routine table is first dispatched on the one after it. Modelled as a separate early return
+     * because the decrement and the dispatch are separate frames either way.
+     */
+    private boolean dispatcherInstalled;
 
     /** 16.16 position and 8.8 velocities, as {@code MoveSprite2} reads them. */
     private int xPos;
@@ -171,7 +220,10 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
                                int yVel, int swingMax, int swingAcceleration, boolean swingDown,
                                boolean renderFlipped, boolean chainReady, boolean ballReachedFarSide,
                                boolean escaped, boolean chainPhaseActive, boolean entryApplied,
-                               boolean paletteLoaded, boolean escaping, boolean escapeRunning)
+                               boolean paletteLoaded, boolean escaping, boolean escapeRunning,
+                               boolean initExecuted, boolean dispatcherInstalled,
+                               boolean statusBit7,
+                               boolean invulnerable, int invulnerabilityTimer)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     @Override
@@ -187,7 +239,9 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
                 List.copyOf(chainIds),
                 waitTimer, waitContinuation.ordinal(), xPos, yPos, xVel, yVel, swingMax,
                 swingAcceleration, swingDown, renderFlipped, chainReady, ballReachedFarSide,
-                escaped, chainPhaseActive, entryApplied, paletteLoaded, escaping, escapeRunning));
+                escaped, chainPhaseActive, entryApplied, paletteLoaded, escaping, escapeRunning,
+                initExecuted, dispatcherInstalled, statusBit7, state.invulnerable,
+                state.invulnerabilityTimer));
     }
 
     @Override
@@ -214,6 +268,11 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
         paletteLoaded = extra.paletteLoaded();
         escaping = extra.escaping();
         escapeRunning = extra.escapeRunning();
+        initExecuted = extra.initExecuted();
+        dispatcherInstalled = extra.dispatcherInstalled();
+        statusBit7 = extra.statusBit7();
+        state.invulnerable = extra.invulnerable();
+        state.invulnerabilityTimer = extra.invulnerabilityTimer();
         head = (SszMechaSonicHeadChild) resolve(context, extra.headId());
         shield = (SszGhzBossShieldChild) resolve(context, extra.shieldId());
         chain.clear();
@@ -240,6 +299,16 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     @Override protected int getCollisionSizeIndex() { return COLLISION_SIZE; }
 
     @Override protected void onHitTaken(int remainingHits) { }
+
+    /**
+     * {@code sub_7A5A0} is this object's own hit window: it arms {@code $20(a0)}, reads bit 0 of
+     * it to pick a palette row and only then counts it down. The shared handler decrements before
+     * the flash reads the counter and flashes one whole line, so this boss owns both.
+     */
+    @Override protected boolean usesBaseHitHandler() { return false; }
+
+    /** {@code BossDefeated} is {@code moveq #100,d0} into {@code HUD_AddToScore}. */
+    @Override protected int getDefeatScore() { return DEFEAT_SCORE; }
 
     @Override protected boolean usesDefeatSequencer() { return false; }
 
@@ -271,18 +340,33 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
-        applyEntryOnce();
-        if (escaping) {
-            updateEscape();
+        if (!initExecuted) {
+            // Obj_SSZGHZBoss's own body. It ends jmp (PalLoad_Line1) and never reaches Obj_Wait:
+            // move.l #Obj_Wait,(a0) only changes what the NEXT frame runs, so this execution
+            // does not consume one of the $1F wait frames.
+            applyEntryOnce();
+            if (entryApplied) {
+                initExecuted = true;
+            }
             return;
         }
-        if (waitContinuation == Continuation.START_FIGHT) {
-            // Obj_Wait with $34 = loc_7A294: the dispatch does not start for $1F frames.
+        if (escaping) {
+            updateEscape();
+            syncBossStatePosition();
+            return;
+        }
+        if (!dispatcherInstalled) {
+            // Obj_Wait: subq.w #1,$2E(a0) / bmi -> movea.l $34(a0),a1 / jmp (a1).
             if (--waitTimer >= 0) {
                 return;
             }
-            waitContinuation = Continuation.NONE;
+            // loc_84892 tail-calls $34(a0) on the frame the wait goes negative, and loc_7A294
+            // is move.l #loc_7A29C,(a0) / rts. Either way the table is first dispatched next
+            // frame, not on this one.
+            dispatcherInstalled = true;
+            return;
         }
+        // loc_7A29C: dispatch, then sub_7A5A0, then Draw_And_Touch_Sprite.
         switch (state.routine) {
             case ROUTINE_SETUP -> enterFall();
             case ROUTINE_FALLING -> updateFall();
@@ -292,6 +376,69 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
             case ROUTINE_WAIT_FOR_BALL -> updateWaitForBall();
             default -> { }
         }
+        updateHitWindow();
+        syncBossStatePosition();
+    }
+
+    /**
+     * {@code sub_7A5A0}, which {@code loc_7A29C} calls after every routine dispatch.
+     *
+     * <p>The gate is {@code tst.b collision_flags(a0)}: the touch response zeroes
+     * {@code collision_flags} on the frame a hit lands and stashes the original in {@code $25(a0)},
+     * so "collision flags are zero" is exactly this engine's {@code state.invulnerable}. While the
+     * window runs it patches three {@code Normal_palette} entries and counts {@code $20(a0)} down;
+     * at zero it restores {@code collision_flags} from {@code $25(a0)}, which is the invulnerable
+     * flag clearing here. The defeat branch is {@code loc_7A5EC}, which the base hit handler's
+     * {@code triggerDefeat} already owns.
+     */
+    private void updateHitWindow() {
+        if (state.defeated || !state.invulnerable) {
+            return;
+        }
+        // btst #0,$20(a0): odd counter values take the branch that leaves d0 zero.
+        int row = (state.invulnerabilityTimer & 1) != 0 ? FLASH_ROW_NORMAL : FLASH_ROW_SHIPPED;
+        writeFlashRow(row);
+        // subq.b #1,$20(a0) / bne.s locret_7A5EA.
+        state.invulnerabilityTimer--;
+        if (state.invulnerabilityTimer <= 0) {
+            state.invulnerabilityTimer = 0;
+            // move.b $25(a0),collision_flags(a0): the ship is hittable again.
+            state.invulnerable = false;
+        }
+    }
+
+    /** {@code sub_7A614}: {@code CopyWordData_3} of three words into {@code word_7A622}'s list. */
+    private void writeFlashRow(int row) {
+        var registry = services().paletteOwnershipRegistryOrNull();
+        var level = services().currentLevel();
+        var graphics = services().graphicsManager();
+        S3kPaletteWriteSupport.applyContiguousPatch(registry, level, graphics,
+                S3kPaletteOwners.SSZ_GHZ_BOSS_HIT_FLASH, S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                0, FLASH_COLOR_A, segaWords(FLASH_TABLE[row]));
+        // Normal_palette+$1C and +$1E are adjacent, so the last two words are one patch.
+        S3kPaletteWriteSupport.applyContiguousPatch(registry, level, graphics,
+                S3kPaletteOwners.SSZ_GHZ_BOSS_HIT_FLASH, S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                0, FLASH_COLOR_B, segaWords(FLASH_TABLE[row + 1], FLASH_TABLE[row + 2]));
+    }
+
+    private static byte[] segaWords(int... words) {
+        byte[] out = new byte[words.length * 2];
+        for (int i = 0; i < words.length; i++) {
+            out[i * 2] = (byte) (words[i] >> 8);
+            out[i * 2 + 1] = (byte) words[i];
+        }
+        return out;
+    }
+
+    /**
+     * {@code x_pos}/{@code y_pos} are the object's own SST words, and the shared boss base reads
+     * {@code state.x}/{@code state.y} for the defeat explosion offsets, the debug overlay and the
+     * dynamic spawn a rewind recreation is rebuilt from. This object moves through its own
+     * {@code MoveSprite2} fields, so those two have to follow or all three read the spawn.
+     */
+    private void syncBossStatePosition() {
+        state.x = getX();
+        state.y = getY();
     }
 
     /** The init block: PLC, art queue, palette save and {@code PalLoad_Line1}. */
@@ -343,7 +490,7 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     private void updateRunIn() {
         swing();
         moveSprite();
-        int trigger = (camera().getX() + CHAIN_TRIGGER_CAMERA_OFFSET) & 0xFFFF;
+        int trigger = (nativeFramedCameraX() + CHAIN_TRIGGER_CAMERA_OFFSET) & 0xFFFF;
         if (Integer.compareUnsigned(trigger, getX()) < 0) {
             return;
         }
@@ -434,12 +581,26 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     protected void onDefeatStarted() {
         escaping = true;
         escapeRunning = false;
-        chainPhaseActive = false;
-        for (SszGhzBossChainLinkChild link : chain) {
-            ObjectLifetimeOps.deleteNoRespawn(link);
-        }
-        chain.clear();
+        // move.w #$3F,$2E(a0) in BossDefeated (sonic3k.asm:180822), which loc_7A5EC jumps to
+        // after installing Wait_FadeToLevelMusic. The fade wait is this value, not whatever the
+        // last routine happened to leave in $2E.
+        waitTimer = DEFEAT_WAIT_FRAMES;
+        // loc_7A5EC clears no $38 bit and deletes nothing. What breaks the children up is the
+        // shared touch response: Touch_Enemy's .checkhurtenemy runs
+        // "subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)"
+        // (sonic3k.asm:20922) on the killing hit, so the ship's status bit 7 goes up in the
+        // collision pass. statusBit7 is that bit; the children read it through parent3.
+        statusBit7 = true;
     }
+
+    /**
+     * {@code status} bit 7, set on the ship by {@code Touch_Enemy}'s {@code .checkhurtenemy}
+     * when {@code boss_hitcount2} reaches zero (sonic3k.asm:20922) — not by anything inside
+     * {@code Obj_SSZGHZBoss}. It is what {@code loc_7A568} and
+     * {@code Child_Draw[Touch]_Sprite_FlickerMove} test on {@code parent3}: the emitter deletes
+     * itself and every chain link converts to {@code Obj_FlickerMove} scatter debris.
+     */
+    public boolean hasStatusBit7() { return statusBit7; }
 
     /** {@code Wait_FadeToLevelMusic}, {@code loc_7A3CE}, {@code loc_7A3E6} and {@code loc_7A3F8}. */
     private void updateEscape() {
@@ -498,6 +659,15 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
 
     public int waitTimerForTest() { return waitTimer; }
 
+    /** True once the {@code Obj_SSZGHZBoss} init body has had its own execution. */
+    public boolean initExecutedForTest() { return initExecuted; }
+
+    /** True once {@code loc_7A294} has installed {@code loc_7A29C}. */
+    public boolean dispatcherInstalledForTest() { return dispatcherInstalled; }
+
+    /** {@code $20(a0)}: the hit window {@code sub_7A5A0} counts down. */
+    public int hitWindowForTest() { return state.invulnerable ? state.invulnerabilityTimer : 0; }
+
     public int hitsRemainingForTest() { return state.hitCount; }
 
     public List<SszGhzBossChainLinkChild> chainForTest() { return List.copyOf(chain); }
@@ -521,6 +691,25 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
 
     private com.openggf.camera.Camera camera() {
         return services().camera();
+    }
+
+    /**
+     * {@code Camera_X_pos} as the ROM's 320-pixel frame sees it.
+     *
+     * <p>{@code loc_7A244}'s {@code addi.w #$110,d0} and {@code loc_7A32C}'s {@code addi.w #$A0,d0}
+     * are both offsets from the camera's left edge, and the arena lock does not fix that edge: it
+     * writes {@code Camera_max_X_pos = $160}, and the engine's wider viewport then centres the
+     * same focus point, so {@code camera.getX()} reads {@code $160} at 320 px and {@code $70} at
+     * 800 px. Read raw, the ship would spawn at {@code $180} and drop its chain at {@code $110} on
+     * a wide screen — a different arena from the cartridge's. Same treatment, same reason, as
+     * {@code HczMinibossInstance.nativeFramedCameraX} and {@code Sonic3kSSZEvents}'s copy.
+     */
+    private int nativeFramedCameraX() {
+        var camera = camera();
+        int focusExcess = Math.max(0,
+                com.openggf.camera.DeadzoneGeometry.rightEdge(camera.getWidth())
+                        - com.openggf.camera.DeadzoneGeometry.rightEdge(320));
+        return (camera.getX() + focusExcess) & 0xFFFF;
     }
 
     /** {@code PalLoad_Line1 Pal_SSZGHZMisc}. */

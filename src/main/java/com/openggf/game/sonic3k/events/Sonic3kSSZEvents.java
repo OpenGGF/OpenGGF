@@ -356,7 +356,10 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
         }
         SszGhzBossObjectInstance boss = spawnObject(() -> new SszGhzBossObjectInstance(
                 new ObjectSpawn(
-                        (camera.getX() + SszGhzBossObjectInstance.SPAWN_CAMERA_X_OFFSET) & 0xFFFF,
+                        // addi.w #$110,d0 is an offset from the ROM's 320-pixel left edge; the
+                        // lock fixes Camera_max_X_pos, not the wider viewport's left edge.
+                        (nativeFramedCameraX(camera)
+                                + SszGhzBossObjectInstance.SPAWN_CAMERA_X_OFFSET) & 0xFFFF,
                         (camera.getY() + SszGhzBossObjectInstance.SPAWN_CAMERA_Y_OFFSET) & 0xFFFF,
                         0, 0, 0, false, 0)));
         if (boss == null) {

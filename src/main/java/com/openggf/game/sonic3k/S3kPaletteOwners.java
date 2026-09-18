@@ -35,6 +35,11 @@ public final class S3kPaletteOwners {
     public static final String MHZ_END_BOSS = "s3k.mhz.endBoss";
     /** {@code Obj_SSZGHZBoss}: {@code PalLoad_Line1 Pal_SSZGHZMisc} for the fight. */
     public static final String SSZ_GHZ_BOSS = "s3k.ssz.ghzBoss";
+    /**
+     * {@code sub_7A5A0}/{@code sub_7A614}: the three {@code Normal_palette} words the Green Hill
+     * recreation patches while its {@code $20(a0)} hit window runs. Line 0, not a whole line.
+     */
+    public static final String SSZ_GHZ_BOSS_HIT_FLASH = "s3k.ssz.ghzBossHitFlash";
     public static final String MHZ_END_BOSS_DEFEAT_FADE = "s3k.mhz.endBossDefeatFade";
     public static final String MGZ_MINIBOSS = "s3k.mgz.miniboss";
     public static final String MGZ_TUNNELBOT = "s3k.mgz.tunnelbot";
