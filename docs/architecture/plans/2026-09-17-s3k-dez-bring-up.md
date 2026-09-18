@@ -551,16 +551,24 @@ and Tails'-tail render rows (3), the two rows blocked on upright behaviour the e
 model (`Touch_Monitor`, `Obj_Spikes`), `loc_1E44C`'s rebuilt comparison (1), the act 2 boss's
 three, and `Obj_DEZConveyorPad`'s one (a slice 4 object).
 
-**Slice 3 is six of seven.** `$5B` `Obj_DEZGravitySwap`, `$58` `Obj_DEZGravitySwitch` (with its
+**Slice 3 is complete.** `$5B` `Obj_DEZGravitySwap`, `$58` `Obj_DEZGravitySwitch` (with its
 art and its transporter sound), `$59` `Obj_DEZTeleporter`, `$5A` `Obj_DEZGravityTube`, `$5C`
 `Obj_DEZGravityHub` and `$5F` `Obj_DEZGravityRoom` are concrete; every `Reverse_gravity_flag`
 writer and reader in the Death Egg object set is implemented, and so are two of the three
-traversal objects that merely sit in gravity rooms. **`$61` `Obj_DEZGravityPuzzle` remains**,
-one act 1 placement at `$2690,$0840` — inside the `$5F` corridor's reach, so it is the obstacle
-in the turbine room. Its full ROM reading, and the three things it needs that nothing in the
-campaign has yet (a `SolidObjectFull2` binding, a six-piece child sprite with its own art, and a
-rewind-visible home for the `MHZ_pollen_counter` panel bitfield), are in the `$5F` evidence
-entry.
+traversal objects that merely sit in gravity rooms. **`$61` `Obj_DEZGravityPuzzle` landed on
+2026-09-18** — one act 1 placement at `$2690,$0840`, inside the `$5F` corridor's reach, so it is
+the obstacle in the turbine room: a `SolidObjectFull2` binding, the six marker panels drawn in
+the shaft's own bucket, and the `MHZ_pollen_counter` panel bitfield living in
+`S3kDezZoneRuntimeState`. The reference table's group J totals row was stale against its own body
+and now reads 11 covered of 12; the only J row still missing is `Obj_DEZConveyorPad` (`$53`), a
+slice 4 object.
+
+**Slice 4's order is settled by the route.** Death Egg act 2's 390-frame frontier diverges
+because `$A4` `Obj_Spikebonker` is a placeholder: the native `y_vel` flip is `Touch_ChkHurt`'s
+`neg.w y_vel(a0)` on a destroyed enemy, exact to the bit. So `$A4` is slice 4's first class, and
+the sidekick clip blocker is ours rather than faithful behaviour — the native park at
+`$7F00,$FFF9` is `sub_13ECA`'s entrance despawn and Tails is back 28 frames after free play
+starts. Both are in the evidence log.
 
 **Death Egg act 2 has a route frontier: 390 frames** from the first frame of free play, exact in
 player x, y, camera and rings, pinned as a ratchet in `TestS3kDezColdRoutes`. A cold `$B01`
@@ -2196,3 +2204,102 @@ actual=[])**; `TestS3kAizTraceReplay` 3/16 red with **59 errors, first at frame 
    nothing about frame-to-frame engine state around an object: the `$5A` rider alternation was
    invisible to 41 unit tests and took a production-loop test to see. `TestS3kDezGravityTubeRouteHeadless`
    is the pattern for the next object that needs one.
+
+### 2026-09-18 — `$61` `Obj_DEZGravityPuzzle`, and the slice 3 close
+
+The `$5F` entry above left a complete ROM reading for this object, and it held up, with three
+corrections worth recording because two of them would have shipped a wrong panel.
+
+1. **The clamp is `$40`, not `$60`.** `cmpi.w #$60,d0 / blo.s loc_49A34 / moveq #$40,d0`
+   (:96212-96214) replaces an out-of-range row with `$40`, and `$40 >> 5` is 2 while `$60 >> 5`
+   is 3 — which is the *right-hand column's first panel*. A player low down on the left of the
+   shaft would have lit a panel on the other side. The earlier reading said
+   `clamp(…, 0, $60)`, which is the same shape and the wrong number.
+2. **The mapping frames run the other way round.** `Map_DEZGravityPuzzle` frames 3 and 4 both
+   point at `word_49AAC`, which declares **zero pieces**; frames 1 and 2 are the single mirrored
+   16x16 marker. The init loop hands each piece frame 3 or 4 and `subq.b #2` lowers it on a
+   push, so an unpressed panel draws *nothing* and pressing one is what makes its marker appear.
+   Reading "lowered by 2" as "dimmed" would have drawn six markers permanently.
+3. **`loc_499EC` has a live `FixBugs = 0` ordering bug.** Player 1's branch does
+   `lea (Player_1).w,a1` *then* `bsr sub_49A0E` (:96170-96171); Player 2's branch does
+   `bsr sub_49A0E` *then* `lea (Player_2).w,a1` (:96177-96179). So when both players push on the
+   same update, Player 2's push marks the panel under **Player 1**, and Player 2's own row is
+   never recorded. When only Player 2 pushes, `a1` still holds Player 2 because
+   `SolidObjectFull2`'s tail left it there (:41062-41063), and the panel is right. The test
+   asserts the buggy shape and says what the fixed branch would do.
+
+**Where the panel bitfield lives.** The ROM keeps it in `MHZ_pollen_counter` — Mushroom Hill's
+particle counter, reused as six panel bits. That is level RAM, not an object field, so it went
+into `S3kDezZoneRuntimeState` (one `short`, `CAPTURE_BYTES` 8 → 9 words) where rewind already
+captures it. MHZ and DEZ never share a level, so a DEZ-local home is behaviourally identical to
+the shared byte and does not put a Death Egg concern inside the MHZ spawner.
+
+**Rendering.** The ROM draws the six markers from a child object at priority `$200` against the
+shaft's `$280`. They are drawn in the shaft's own bucket here: the markers sit at `±$1C` either
+side of a `$20`-wide shaft, so the two never overlap and the ordering is not observable. No
+child-sprite machinery was added for an ordering that nothing can see.
+
+**Twelve tests, fifteen deliberate breaks, every one red.** Unlike the `$5F` round, no break was
+silent: the lesson from that session — never assert through the object's own arithmetic helper —
+was applied up front, so every expected number here is a literal from the listing and every
+assertion runs through `update()` or `onSolidContact()`.
+
+### 2026-09-18 — The act 2 frontier's cause: a badnik, not a physics difference
+
+Answered from the fixture's own rows and the ROM, with no engine run. `$003F + $38` (one frame of
+gravity) is `$0077`, and the native `y_vel` at row 20162 is `$FF89`, which is exactly `-$0077`.
+That is `neg.w y_vel(a0)` at sonic3k.asm:20979, the enemy-destroyed arm of `Touch_ChkHurt`: the
+player is falling (so not `.bounceplayerdown`) and above the enemy (so not `.bounceplayerup`), and
+the remaining branch negates the velocity outright. The other two arms add or subtract `$100` and
+neither reaches `$FF89` from `$003F`, which is what makes the arithmetic identifying rather than
+merely consistent.
+
+The enemy is **`$A4` `Obj_Spikebonker`**, `DEZ2_Sprites` record 2 at `$0380,$03B0` subtype `$20`,
+the only placement of anything within 64 px of the divergence, and **a placeholder in the
+engine**. So the frontier is blocked on a slice 4 badnik and there is no physics fix to make. The
+full measurement is in
+[the frontier log](../../status/trace-frontier-log.md#2026-09-18--death-egg-act-2s-390-frame-divergence-is-an-unimplemented-badnik).
+
+This settles slice 4's order: **`$A4` `Obj_Spikebonker` is the first slice 4 class**, because it
+is the route's own blocker. Its reading, for whoever picks it up:
+
+`Obj_Spikebonker` (:198893-199124) is three objects. The body runs `Obj_WaitOffscreen`, a
+three-entry routine index, then `Sprite_CheckDeleteTouch`. Init `loc_91A0C` sets up from
+`ObjDat_Spikebonker` (:199117-199120: `Map_Spikebonker`, `ArtTile_Spikebonker` palette 1,
+priority `$280`, width `$10`, height `$14`, frame 0, collision flags `$1A`), gives `x_vel`
+`-$80` negated by `render_flags` bit 0, stores `subtype - 1` in `$2E(a0)` and `subtype * 2 - 1`
+in `$3A(a0)`, installs `loc_91AB0` as the `Obj_Wait` expiry handler in `$34(a0)`, creates the arm
+child from `ChildObjDat_91C2C` (routine `loc_91AD2`, offset `0,$14`), and sets `$3E = y_vel = $40`
+with `$40(a0) = 4` — the peak and the acceleration `Swing_UpAndDown` uses. Routine 2 `loc_91A6A`
+runs `Find_OtherObject` against Player 1 and bonks (routine 4, `$38` bit 3, `sfx_Bouncy`) when
+`d2 < $60` and the facing-adjusted `d0` is zero; otherwise `Swing_UpAndDown`, `MoveSprite2` and
+`Obj_Wait`, whose expiry (`loc_91AB0`) negates `x_vel`, flips `render_flags` bit 0 and reloads
+`$2E` from `$3A` — a patrol that turns after `subtype` steps and thereafter after `subtype * 2`.
+Routine 4 waits for the arm to clear `$38` bit 3. The arm (`loc_91AD2`/`loc_91AEC`) refreshes off
+the parent and walks its own child's `$3C` angle down by 8 a frame; the ball (`loc_91BA8`,
+attributes `word_91C26`: priority `$200`, `$10` x `$10`, frame 1, collision `$9A`) picks a mapping
+frame from `byte_91C0E`, swaps between priority `$200` and `$280` on the sign of `$3C + $40`, and
+positions itself with `MoveSprite_AngleXLookupOffset` over `AngleLookup_1`. Every shared helper it
+needs already has an engine precedent: `AizMinibossSwingMotion` for `Swing_UpAndDown`,
+`PoindexterBadnikInstance` for `Find_OtherObject`, `TunnelbotBadnikInstance` for
+`Refresh_ChildPositionAdjusted`, `ClamerObjectInstance` for `CreateChild1_Normal` and
+`Child_DrawTouch_Sprite`. Only `MoveSprite_AngleXLookupOffset` (sonic3k.asm:178670-178713, over the
+four-quadrant `AngleX_LookupIndex` table at :178681) has no engine consumer yet; `AngleLookup_1`
+itself (:201847) is already a named constant.
+
+### 2026-09-18 — The sidekick blocker is ours, and the native rows say so
+
+The open question was whether the native act 2 rows parking Tails at `$7F00,$FFF9` mean a `$B01`
+entry legitimately has no sidekick. It does not. Sampling the fixture's `sidekick_x`/`sidekick_y`:
+he is at `0120,07E0` beside the player in act 1, at `7F00,FFF9` for the scripted entrance only,
+and back in play at `0139,0301` at row 19800 — twenty-eight frames after control returns —
+dropping in from above and shadowing the player for the rest of the act.
+
+`$7F00` with `object_control $81` and `Status_InAir` is **`sub_13ECA`** (sonic3k.asm:26800-26810):
+it zeroes `Tails_CPU_idle_timer` and `Tails_CPU_flight_timer`, sets `Tails_CPU_routine` to 2 and
+parks the sprite at `$7F00,0`. Routine 2 is the state that flies him back on screen, which is
+exactly what row 19800 shows. So the park is the CPU despawn the entrance uses, not a policy that
+applies to a `$B01` load, and a positioned act 2 capture — which skips the entrance entirely —
+should have Tails in it. The blocker is an engine or capture-tool defect. The remaining kill
+condition in `INDEX.md` (log the registered sidekick's `x`/`y` on each of the first 60 frames)
+still has to be run, but it is now looking for a bug rather than deciding whether one exists.

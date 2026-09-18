@@ -110890,3 +110890,44 @@ move backwards silently. The next target is the first divergence itself: at nati
 player is airborne and rolling, and `y_vel` flips from `$003F` to `$FF89` between rows 20161 and
 20162 — an upward impulse mid-air with no jump available, so an object is most likely giving it.
 Identify that object before treating the pixel as a physics rounding difference.
+
+
+## 2026-09-18 — Death Egg act 2's 390-frame divergence is an unimplemented badnik
+
+Commit `d79a6eb7c`, worktree `.worktrees/ai-s3k-dez-bring-up`, branch
+`feature/ai-s3k-dez-bring-up`. No engine run was needed: the cause is in the fixture's own rows
+and in the ROM.
+
+The seeded act 2 route diverges at native row 20163 with `player_y` `$039E` expected against
+`$039F` actual, and the previous entry left the question open — the player is airborne and
+rolling with no jump available, and `y_vel` flips from `$003F` to `$FF89` between rows 20161 and
+20162. **It is a destroyed badnik.**
+
+```
+row=20160 x=035B y=039E xs=02CC ys=0007 air=1 roll=1
+row=20161 x=035E y=039E xs=02CC ys=003F air=1 roll=1
+row=20162 x=0361 y=039F xs=02CC ys=FF89 air=1 roll=1
+row=20163 x=0363 y=039E xs=02B6 ys=FFC1 air=1 roll=1
+```
+
+`$003F + $38` (one frame of gravity) is `$0077`, and `$FF89` is exactly `-$0077`. That is
+`neg.w y_vel(a0)` at **sonic3k.asm:20979**, the enemy-destroyed branch of `Touch_ChkHurt`:
+`tst.w y_vel(a0)` is not negative, so it falls past `.bounceplayerdown`; `cmp.w y_pos(a1),d0`
+with the player at `$039F` and the enemy at `$03B0` is *below*, so it falls past
+`.bounceplayerup` as well, and the remaining branch negates the whole velocity. The three-way
+split is what makes the arithmetic identifying: the other two arms add or subtract `$100`
+and neither produces `$FF89` from `$003F`.
+
+The enemy is **`$A4` `Obj_Spikebonker`**, `DEZ2_Sprites` record 2 at `$0380,$03B0`, subtype
+`$20` — the only placement of any object within 64 px of the divergence, and its own
+`ObjDat_Spikebonker` hitbox (`$10` x `$14`, collision flags `$1A`, sonic3k.asm:199117-199120)
+plus its `-$80`/frame patrol walk (`loc_91A0C`, :198906-198911) close the 31 px between the
+placement and the player. It is **a placeholder in the engine**: `$A4` is absent from
+`TestS3kDezPlacementCensus`'s concrete set and the object inventory lists its 11 act 2 and 7
+act 1 placements as unimplemented slice 4 work.
+
+So the frontier does not move until `Obj_Spikebonker` is implemented; there is no physics fix to
+make here, and the one-pixel difference is not a rounding difference. The air drag either side of
+the divergence is already exact (`x_vel -= x_vel >> 5` on every row whose `y_vel` is negative and
+no drag on the two rows where it is not), which is the check that the surrounding physics is not
+the suspect.

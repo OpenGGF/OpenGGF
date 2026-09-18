@@ -105,7 +105,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$5E` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered | 4 |
 | `$5F` | `Obj_DEZGravityRoom` | 1 | 0 | `S3kDezGravityRoomObjectInstance` | 3 |
 | `$60` | `Obj_DEZBumperWall` | 10 | 0 | unregistered | 4 |
-| `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | unregistered | 3 |
+| `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | `S3kDezGravityPuzzleObjectInstance` | 3 |
 | `$6A` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete | verify only (8) |
 | `$6B` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete | verify only (8) |
 | `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | placeholder | 4 |
@@ -291,7 +291,7 @@ so subtypes `$80+` arrive inverted.
 | `$60` | `$18` | `Obj_DEZBumperWall` | 4 | 0 | unregistered |
 | `$60` | `$38` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
 | `$60` | `$80` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
-| `$61` | `$00` | `Obj_DEZGravityPuzzle` | 1 | 0 | unregistered |
+| `$61` | `$00` | `Obj_DEZGravityPuzzle` | 1 | 0 | implemented |
 | `$6A` | `$F1` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete |
 | `$6B` | `$F1` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete |
 | `$6D` | `$61` | `Obj_InvisibleShockBlock` | 1 | 6 | placeholder |

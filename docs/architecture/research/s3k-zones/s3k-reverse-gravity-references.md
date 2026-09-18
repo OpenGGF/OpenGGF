@@ -260,14 +260,18 @@ is the RAM wipe described above).
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 0 | 1 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
-| J. DEZ objects | 12 | 5 | 0 | 7 | 0 |
+| J. DEZ objects | 12 | 11 | 0 | 1 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **87** | **4** | **21** | **4** |
+| **Total** | **116** | **93** | **4** | **15** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
 
-Updated 2026-09-17 for slice 2 steps 2a-1 and 2a-2 (both halves).
+Updated 2026-09-18 for slice 3. The group J body rows were brought up to date as each DEZ
+object landed, but this totals table was not: it still read 5 covered and 7 missing against a
+body that lists 11 covered. The only J row still missing is `Obj_DEZConveyorPad` (`$53`,
+`loc_47AA6`), a slice 4 object. The grand total moves with it, from 87 covered / 21 missing to
+93 / 15, which is the figure the campaign plan's Status section already quotes.
 
 `sub_11FD6` and `sub_11FEE` are now **covered**. The wrapper selects the opposite sensor array and
 mirrors the angle it returns (`TestS3kReverseGravityProbeSelection`,
