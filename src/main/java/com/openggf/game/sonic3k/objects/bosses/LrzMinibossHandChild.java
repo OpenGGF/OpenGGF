@@ -27,7 +27,7 @@ import java.util.List;
  * {@code $FFF} -- which is not a long reload so much as a stop, because the parent's bit 2
  * (set when the arm finishes retracting) returns the hand to its idle routine first.
  */
-final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecreatable {
+final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecreatable, LrzMinibossRingChild {
 
     /** {@code word_78D6C}: priority 0, {@code $10 $10} size, mapping frame 6, collision 6. */
     private static final int MAPPING_FRAME = 6;
@@ -144,9 +144,8 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
         return shotCounter;
     }
 
-    int getChildSubtype() {
-        return childSubtype;
-    }
+    @Override public int ringSubtype() { return childSubtype; }
+    @Override public boolean ringMirrored() { return mirrored; }
 
     private boolean bossFlagSet(int mask) {
         return parent instanceof LrzMinibossInstance boss && (boss.getFlags38() & mask) != 0;

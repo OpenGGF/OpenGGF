@@ -26,7 +26,7 @@ import java.util.List;
  * {@code $40} to {@code $3C} each frame, negating {@code $40} whenever the sum leaves
  * {@code [$70,$90]}. The chain therefore sways 16 angle units either side of straight down.
  */
-final class LrzMinibossOrbiterChild extends AbstractBossChild implements RewindRecreatable {
+final class LrzMinibossOrbiterChild extends AbstractBossChild implements RewindRecreatable, LrzMinibossRingChild {
 
     /** {@code word_78D66}: mapping frame 8, priority 0. */
     private static final int MAPPING_FRAME = 8;
@@ -101,27 +101,41 @@ final class LrzMinibossOrbiterChild extends AbstractBossChild implements RewindR
     }
 
     /**
-     * {@code parent3(a1)} in {@code CreateChild8_TreeListRepeated} is simply the previous child
-     * created, so the predecessor is this child's immediate neighbour in the parent's list.
-     * Resolved on demand rather than stored, so nothing here holds an object reference across a
-     * rewind capture.
+     * {@code parent3(a1)}: the child created just before this one in the same ring, which the
+     * create loop's {@code addq.w #2,d2} makes the one two subtypes lower.
+     *
+     * <p>Resolved by identity rather than by list position, and on demand rather than stored. By
+     * position it would be wrong twice over: the engine prunes destroyed children from the
+     * parent's list, so a retiring sibling would silently re-aim every later link, and at the ring
+     * boundary that shift would anchor ring two's first link to ring one's hand. The ROM's
+     * {@code parent3} is a stored pointer and does neither. On demand, because storing the
+     * reference would need an {@code ObjectRefId} sidecar to survive a rewind capture.
      */
     private BossChildComponent previousLinkInRing() {
         if (parent == null) {
             return null;
         }
-        List<BossChildComponent> siblings = parent.getChildComponents();
-        int index = siblings.indexOf(this);
-        return index > 0 ? siblings.get(index - 1) : null;
+        for (BossChildComponent sibling : parent.getChildComponents()) {
+            if (sibling instanceof LrzMinibossRingChild ringChild
+                    && ringChild.ringMirrored() == mirrored
+                    && ringChild.ringSubtype() == childSubtype - 2) {
+                return sibling;
+            }
+        }
+        return null;
     }
 
     int getAngle() {
         return angle;
     }
 
-    int getChildSubtype() {
-        return childSubtype;
+    /** The resolved {@code parent3}, for the ring-identity test. */
+    BossChildComponent previousLinkForTest() {
+        return previousLinkInRing();
     }
+
+    @Override public int ringSubtype() { return childSubtype; }
+    @Override public boolean ringMirrored() { return mirrored; }
 
     @Override public boolean isPersistent() { return true; }
     @Override public boolean isHighPriority() { return true; }

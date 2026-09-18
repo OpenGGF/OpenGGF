@@ -26,7 +26,7 @@ import java.util.List;
  * the boss retracts ({@code loc_788A4}) it falls back at {@code $200} and then sets the parent's
  * bit 2 ({@code loc_788CC}), which is the hand's cue to stop firing.
  */
-final class LrzMinibossArmSegmentChild extends AbstractBossChild implements RewindRecreatable {
+final class LrzMinibossArmSegmentChild extends AbstractBossChild implements RewindRecreatable, LrzMinibossRingChild {
 
     /** {@code word_78D66}: priority 0, {@code $08 $08} size, mapping frame 8, collision 0. */
     private static final int MAPPING_FRAME = 8;
@@ -153,9 +153,8 @@ final class LrzMinibossArmSegmentChild extends AbstractBossChild implements Rewi
         return parent instanceof LrzMinibossInstance boss && (boss.getFlags38() & (1 << 3)) != 0;
     }
 
-    int getChildSubtype() {
-        return childSubtype;
-    }
+    @Override public int ringSubtype() { return childSubtype; }
+    @Override public boolean ringMirrored() { return mirrored; }
 
     boolean isMirrored() {
         return mirrored;

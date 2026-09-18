@@ -13,6 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -168,6 +169,43 @@ class TestLrzMinibossInstance {
                 "at four pixels a frame the $158 climb takes about 86 frames; only "
                         + stepsAtIntermediateHeights + " intermediate frames were observed, "
                         + "which is what an inverted loc_78628 compare looks like");
+    }
+
+    /**
+     * {@code parent3(a1)} is a stored pointer: retiring a sibling does not re-aim anyone
+     * (sonic3k.asm:177181-177203). The engine prunes destroyed children from the parent's list,
+     * so resolving the predecessor by list position survives an unrelated removal only by luck --
+     * a link and its immediate neighbour shift together. It does not survive the removal of the
+     * <b>anchor itself</b>: ring two's first link would then take whatever slid into that slot,
+     * which is ring one's hand, wiring the two arms together. Identity by (ring, subtype) instead
+     * resolves to nothing and falls back to the boss, which is the safe reading.
+     *
+     * <p>Break it by resolving with {@code indexOf(this) - 1} and this fails with ring one's hand.
+     */
+    @Test
+    void retiringALinksAnchorDoesNotAimItAtTheOtherRing() {
+        boss.update(0, null);
+        List<BossChildComponent> children = boss.getChildComponents();
+
+        LrzMinibossOrbiterChild firstLinkOfSecondRing = children.stream()
+                .filter(LrzMinibossOrbiterChild.class::isInstance)
+                .map(LrzMinibossOrbiterChild.class::cast)
+                .filter(link -> link.ringMirrored() && link.ringSubtype() == 2)
+                .findFirst().orElseThrow();
+        BossChildComponent anchor = firstLinkOfSecondRing.previousLinkForTest();
+        assertTrue(anchor instanceof LrzMinibossArmSegmentChild
+                        && ((LrzMinibossRingChild) anchor).ringMirrored(),
+                "subtype 2's predecessor is its own ring's arm segment, but it was "
+                        + (anchor == null ? "null" : anchor.getClass().getSimpleName()));
+
+        // sub_78B46 retires children one at a time; the parent prunes them from its list.
+        children.remove(anchor);
+
+        BossChildComponent after = firstLinkOfSecondRing.previousLinkForTest();
+        assertFalse(after instanceof LrzMinibossRingChild ring && !ring.ringMirrored(),
+                "retiring the anchor aimed ring two's first link at a ring one child ("
+                        + (after == null ? "null" : after.getClass().getSimpleName())
+                        + "), wiring the two arms together");
     }
 
     private static long countOf(List<BossChildComponent> children, Class<?> type) {

@@ -1840,6 +1840,29 @@ classes; treat it as a slice, not an object.
 as clips: `raw-38-lrz1-dome-lock`, `raw-38-lrz1-dome-lock-before`, `raw-39-lrz1-dome-lock-after`,
 `raw-39-lrz1-dome-lock-before`, with their inputs.
 
+### 2026-09-18 - The arm chain anchors by identity, and the first test for that was tautological too
+
+`MoveSprite_CircularSimple` anchors each arm link on `parent3(a0)`, which the create loop sets to
+the previously created child. The first implementation resolved that as "my immediate neighbour in
+the parent's child list", which is wrong in a way that only bites later: the engine prunes
+destroyed children from that list, and `sub_78B46` retires every child one at a time at defeat. The
+ROM's `parent3` is a stored pointer and never re-aims.
+
+The hazard is narrower than it first looks, and getting that right mattered. Removing an *unrelated*
+child shifts a link and its neighbour together, so the positional lookup survives. It does **not**
+survive removing the anchor itself: ring two's first link then takes whatever slid into that slot,
+which is ring one's hand, wiring the two arms into one chain. Resolving by `(ring, subtype - 2)`
+instead resolves to nothing and falls back to the boss, which is the safe reading. `LrzMinibossRingChild`
+carries that identity.
+
+**The first test for this passed against the positional code**, for two separate reasons stacked on
+each other: it removed an unrelated child (which, per the above, is harmless either way). Only after
+working out *which* removal actually leaks did the test fail on the broken code -- with exactly the
+right diagnosis, `LrzMinibossHandChild`. That is the second test in this slice to need a deliberate
+break before it was worth anything, and in both cases the break did not merely confirm the test: it
+corrected my understanding of the defect.
+
+
 ## Handover, 2026-09-18 (sixth)
 
 **Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`), on top of the fifth
