@@ -1230,3 +1230,30 @@ engine's existing users of a player Y-flip — stay green, 255 focused tests in 
 
 Table: **67 covered, 6 partial, 39 missing, 4 n/a**, from 14 / 8 / 90 / 4 at the start of this
 session.
+
+
+### 2026-09-18 — Slice 2, part 9: the broad run caught the render mirror, and what it taught
+
+**The end-of-slice category run went red on the first attempt, for a good reason.**
+`run_categories.py --base 035e48a58 --run` selected the whole ordinary suite plus guards (shared
+collision, animation and camera code changed): **2709 classes, 22049 tests, 7 failures, 0 errors,
+27 skipped**, guards **669/669 green**, ordinary lane 1055 s. Every skip was an opt-in profile
+(`openggf.audio.repeatedPlaybackBenchmark`, `openggf.checkpoint.measure`, `rewind.soak`,
+`openggf.rewind.alloc.measure`, `openggf.aiz1.routes` and the like) — none silent.
+
+All seven failures were mine, and all from part 8: six in `TestPlayableSpriteAnimation` and one in
+`TestHeadlessTestFixture`, every one of the form "expected the native Y flip to be set, was clear".
+
+**The lesson.** The engine's stored `renderVFlip` is not the ROM's `render_flags` bit 1. The ROM's
+animator clears that bit every frame; the engine's *sets* it to encode native mapping orientation —
+the flipped fourth slope bank (S1 walk at angle $18) and the negative-flip-type tumble — and objects
+read it back to write it again. Writing the ROM's net into it therefore erased an unrelated meaning
+the same field carries. The focused suites chosen for part 8 (the FBZ objects that set a player
+Y-flip) did not cover the animator's own uses, so only the broad run could find it: a precise
+demonstration of why the change-based selection widens to everything when shared code moves.
+
+**The fix.** `AbstractPlayableSprite.renderVFlipForDraw` composes the flag at the three player draw
+sites and leaves the stored flip alone. Package-private, so only `Sonic`, `Tails` and `Knuckles`
+see it and it stays off the `@ModApi` surface this class pins; the ghost and hyper-trail samplers
+keep sampling the stored value deliberately. The corridor test now asserts both halves — the drawn
+flip follows the flag, and the stored flip does not.

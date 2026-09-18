@@ -145,6 +145,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // level entry after a long run), read by objects that gate on its low bits.
             level.getObjectManager().initVblaCounter(settings.vIntRunCount());
         }
+        if (settings.reverseGravity()) {
+            // Declared capture setup: the S3K Reverse_gravity_flag ($FFFFF7C6). Nothing in the
+            // running game writes it yet -- Obj_DEZGravitySwitch ($58), Obj_DEZTeleporter ($59)
+            // and Obj_DEZGravitySwap ($5B) are the ROM's writers and arrive in the Death Egg
+            // object slice -- so a capture that wants inverted gravity seeds it here, exactly as
+            // the reverse-gravity tests do. Say so in the clip's label.
+            GameServices.gameState().setReverseGravityActive(true);
+        }
         if (settings.cameraXSub() != null) {
             // Declared capture setup: the inherited Camera_X_pos low word. Only zones that keep
             // a camera fraction honour it (S3K Doomsday autoscroll, sub_82920).
@@ -336,7 +344,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
-                           Integer cameraXSub) {
+                           Integer cameraXSub, boolean reverseGravity) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
@@ -347,7 +355,15 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         Path donorRom, Integer startX, Integer startY, String emeraldStates,
                         boolean showTitleCard, boolean completeSpecialStage) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, null, null);
+                    showTitleCard, completeSpecialStage, null, null, false);
+        }
+
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false);
         }
 
         public Settings {

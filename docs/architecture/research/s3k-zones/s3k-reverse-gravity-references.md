@@ -88,7 +88,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
 | 21952 | `Sonic_Control` | `Sonic_Control` debug cheat: button A toggles the flag (`Debug_mode_flag` only) | — (tests use the `GameStateManager` setter) | n/a |
-| 22011 | `loc_10C62` | `loc_10C62`: `eori.b #2,render_flags` after `Animate_Sonic` (vertical mirror) | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
+| 22011 | `loc_10C62` | `loc_10C62`: `eori.b #2,render_flags` after `Animate_Sonic` (vertical mirror) | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 | 22623 | `loc_11276` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_112A6`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 22646 | `loc_112B0` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_112E0`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 22988 | `loc_11578` | `Sonic_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
@@ -106,14 +106,14 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 24426 | `loc_12246` | `BubbleShield_Bounce` (`loc_12246`): negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | `PlayableSpriteMovement.applyHurtStopBottomKill` | partial |
 | 24552 | `loc_123DE` | `loc_123DE` (dead/respawn): off-screen test uses `Camera_Y - $10` going up | — | missing |
-| 24716 | `sub_125E0` | `sub_125E0` (hurt/dead animate): vertical mirror | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
+| 24716 | `sub_125E0` | `sub_125E0` (hurt/dead animate): vertical mirror | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 
 ### C. Tails routines
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
 | 26166 | `Tails_Control` | `Tails_Control` debug cheat toggle | — | n/a |
-| 26255 | `loc_138C8` | `loc_138C8`: vertical mirror after `Animate_Tails` | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
+| 26255 | `loc_138C8` | `loc_138C8`: vertical mirror after `Animate_Tails` | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 | 27868 | `loc_14AA0` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_14AA0`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 27891 | `loc_14ADA` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_14ADA`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 28233 | `loc_14DA2` | `Tails_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
@@ -131,8 +131,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 29104 | `loc_155E2` | `Tails_DoLevelCollision` `loc_155E2`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29143 | `Tails_TouchFloor` | `Tails_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 29220 | `sub_15716` | `sub_15716` (hurt): death-plane test flips to the top | same shared owner as :24475 | partial |
-| 29336 | `sub_15842` | `sub_15842` (hurt/dead animate): vertical mirror | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
-| 29594 | `loc_15A7A` | `loc_15A7A` (`Animate_Tails` rotation frames): vertical mirror applied inside the animator | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
+| 29336 | `sub_15842` | `sub_15842` (hurt/dead animate): vertical mirror | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
+| 29594 | `loc_15A7A` | `loc_15A7A` (`Animate_Tails` rotation frames): vertical mirror applied inside the animator | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 
 ### D. Tails CPU, flight catch-up and carry
 
@@ -149,7 +149,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
 | 30394 | `Knuckles_Control` | `Knuckles_Control` debug cheat toggle | — | n/a |
-| 30453 | `loc_16614` | `loc_16614`: vertical mirror after `Animate_Knuckles` | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
+| 30453 | `loc_16614` | `loc_16614`: vertical mirror after `Animate_Knuckles` | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 | 30840 | `Knuckles_Gliding_HitWall` | `Knuckles_Gliding_HitWall`: reverse-gravity ledge probe (`.reverseGravity`) | `GlideWallGrabTerrain.align` via `PlayableSpriteMovement:2557` | covered |
 | 30880 | `Knuckles_Gliding_HitWall` | `Knuckles_Gliding_HitWall` (left wall): same | `GlideWallGrabTerrain.align` | covered |
 | 30921 | `Knuckles_Fall_From_Glide` | `Knuckles_Fall_From_Glide`: negates the radius Y adjustment | — | missing |
@@ -171,7 +171,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 32802 | `loc_17AEC` | `Knux_DoLevelCollision` `loc_17AEC`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32839 | `Knux_TouchFloor` | `Knux_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 32911 | `sub_17C10` | `sub_17C10` (hurt): death-plane test flips to the top | same shared owner as :24475 | partial |
-| 33017 | `sub_17D1E` | `sub_17D1E` (hurt/dead animate): vertical mirror | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
+| 33017 | `sub_17D1E` | `sub_17D1E` (hurt/dead animate): vertical mirror | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 
 ### F. Dust, Tails' tails, shields, Super Tails birds
 
@@ -364,7 +364,7 @@ the ROM does not have here.
 :24754-24757) immediately before each `eori.b #2`, so the player's Y-flip is simply *equal to the
 flag* every frame the animator runs. Porting the XOR literally into an engine whose animator does
 not rewrite the flags would alternate the sprite every frame.
-`PlayableSpriteAnimation.applyReverseGravityRenderMirror` writes the net instead, under the same
+`AbstractPlayableSprite.renderVFlipForDraw` writes the net instead, under the same
 `btst #1,object_control` gate the ROM uses (the engine's `isObjectMappingFrameControl`, which
 already owns "object mappings keep their paired flags"). That single owner covers the ordinary,
 hurt, dead and Tails-rotation animators for all three characters. The FBZ wire-cage, rail, chain

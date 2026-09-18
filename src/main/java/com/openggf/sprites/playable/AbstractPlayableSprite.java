@@ -1896,6 +1896,29 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return renderVFlip;
         }
 
+        /**
+         * The Y flip the player's own draw uses, with the reverse-gravity mirror composed in.
+         *
+         * <p>{@code loc_10C62} / {@code loc_138C8} / {@code loc_16614} (sonic3k.asm:22007-22013,
+         * 26251-26257, 30450-30456) apply {@code eori.b #2,render_flags(a0)} after the animator,
+         * and {@code sub_125E0} (:24711-24718), {@code sub_15842} (:29336), {@code sub_17D1E}
+         * (:33017) and {@code loc_15A7A} (:29591-29597) repeat it in the hurt, dead and rotation
+         * paths — every one of them an XOR of the flip the animator just produced.
+         *
+         * <p>It is composed here rather than written into {@link #renderVFlip} because the engine's
+         * stored flag is not the ROM's {@code render_flags} bit 1. The ROM's animator clears that
+         * bit every frame; the engine's keeps a flip that encodes native mapping orientation (the
+         * flipped slope banks and the negative-flip-type tumble), and objects read the stored value
+         * back to write it again. Mutating it would corrupt both. Package-private so that only
+         * {@code Sonic}, {@code Tails} and {@code Knuckles} — this package — see it, which also
+         * keeps it off the {@code @ModApi} surface this class pins.
+         */
+        boolean renderVFlipForDraw() {
+                var gameState = currentGameStateOrNull();
+                boolean reverseGravity = gameState != null && gameState.isReverseGravityActive();
+                return renderVFlip ^ reverseGravity;
+        }
+
         public void setRenderFlips(boolean hFlip, boolean vFlip) {
                 this.renderHFlip = hFlip;
                 this.renderVFlip = vFlip;

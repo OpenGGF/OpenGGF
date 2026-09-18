@@ -154,7 +154,6 @@ public class PlayableSpriteAnimation {
             return;
         }
         updateAnimation(frameCounter);
-        applyReverseGravityRenderMirror();
         if (dynamicArtDecisionOwner != null) {
             if (bootstrapDynamicArtPrime) {
                 dynamicArtDecisionOwner.prime(sprite.getMappingFrame());
@@ -169,34 +168,6 @@ public class PlayableSpriteAnimation {
         // Obj02. S3K places Tails_tails identically in Level_object_RAM after
         // Dynamic_object_RAM_end (docs/skdisasm/sonic3k.constants.asm:307-315).
         // SpriteManager.advanceTailsTailsAfterObjectExecution() owns that slot.
-    }
-
-    /**
-     * {@code loc_10C62} / {@code loc_138C8} / {@code loc_16614} (sonic3k.asm:22007-22013,
-     * 26251-26257, 30450-30456): {@code eori.b #2,render_flags(a0)} immediately after the
-     * animator, under the same {@code btst #1,object_control} gate that skips the animator.
-     *
-     * <p>{@code Animate_Sonic} has just cleared {@code render_flags} bits 0-1 and rewritten
-     * bit 0 from the facing status ({@code andi.b #$FC} / {@code or.b d1}, :24754-24757), so
-     * the XOR's net effect is that the player's Y-flip simply equals the flag. The engine's
-     * animator does not rewrite the flags, so this writes that net instead of XOR-ing, which
-     * would otherwise alternate every frame. Object-owned mappings keep their paired flags,
-     * matching the ROM's gate and the engine's existing rule for them.
-     *
-     * <p>The hurt, dead and rotation-frame animators repeat the same pattern and end at this
-     * one owner: {@code sub_125E0} (:24711-24718), {@code sub_15842} (:29336),
-     * {@code sub_17D1E} (:33017) and {@code Animate_Tails}' {@code loc_15A7A} (:29591-29597).
-     */
-    private void applyReverseGravityRenderMirror() {
-        if (sprite == null || animationUpdateSuppressedThisFrame
-                || sprite.isObjectMappingFrameControl()) {
-            return;
-        }
-        var gameState = sprite.currentGameStateOrNull();
-        boolean reverseGravity = gameState != null && gameState.isReverseGravityActive();
-        if (sprite.getRenderVFlip() != reverseGravity) {
-            sprite.setRenderFlips(sprite.getRenderHFlip(), reverseGravity);
-        }
     }
 
     private void updateAnimation(int frameCounter) {
