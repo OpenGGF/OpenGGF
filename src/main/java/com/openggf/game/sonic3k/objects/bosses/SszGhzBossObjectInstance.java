@@ -300,6 +300,8 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
             return;
         }
         entryApplied = true;
+        // move.b #1,(Boss_flag).w in the init; loc_7A3F8's clr.b is the only thing that clears it.
+        setBossFlag(true);
         loadFightPalette();
     }
 
@@ -462,6 +464,8 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     /** {@code loc_7A3F8}. */
     private void markBeaten() {
         escaped = true;
+        // clr.b (Boss_flag).w is loc_7A3F8's first instruction, before the flag writes below.
+        setBossFlag(false);
         SszZoneRuntimeState state = sszState();
         if (state != null) {
             // st (Events_bg+$00).w: the negative byte sub_575EA reads as "beaten" and the
@@ -497,6 +501,19 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     public int hitsRemainingForTest() { return state.hitCount; }
 
     public List<SszGhzBossChainLinkChild> chainForTest() { return List.copyOf(chain); }
+
+    /**
+     * {@code Boss_flag}. {@code Sonic3kLevelEventManager.setBossFlag} routes only to AIZ and CNZ,
+     * so calling it from here would be a no-op dressed up as a port; the write goes to
+     * {@link SszZoneRuntimeState} instead, where the rewind capture carries it and a consumer can
+     * be added when one exists. Nothing in SSZ reads it yet — recorded as a gap rather than hidden.
+     */
+    private void setBossFlag(boolean active) {
+        SszZoneRuntimeState ssz = sszState();
+        if (ssz != null) {
+            ssz.setBossFlag(active);
+        }
+    }
 
     private SszZoneRuntimeState sszState() {
         return S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);

@@ -1497,3 +1497,36 @@ against the `hpz` fixture's Green Hill window; and a wide-viewport capture of th
 `s3k-sonic-tails-complete-emeralds/hpz_2` as carrying a "second death". It carries one
 `player_routine 00` span, not two, and `TestS3kSszLifecycleProduction` asserts that count so the
 claim cannot drift back in.
+
+### 2026-09-18 — slice 5 follow-up: `Boss_flag`, and a no-op that nearly shipped
+
+Reviewing the port's own citations turned up one thing slice 5 had left out and one thing it nearly
+got wrong in a way that would have read as done.
+
+`Obj_SSZGHZBoss`'s init is `move.b #1,(Boss_flag).w` and `loc_7A3F8`'s first instruction is
+`clr.b (Boss_flag).w`, before the `_unkFA89` and `Events_bg+$00` writes. Neither was ported.
+
+The obvious fix — call `Sonic3kLevelEventManager.setBossFlag` the way `MhzEndBossInstance` does —
+would have been a **no-op dressed as a port**: that method routes only to `aizEvents` and
+`cnzEvents`, so an SSZ caller writes nothing and every test that asserted it would have had to
+assert something else. The write goes to `SszZoneRuntimeState.bossFlag` instead, where it is real
+state, the rewind capture carries it, and a consumer can be added when one exists. **No SSZ
+consumer reads it yet**, which is recorded on the accessor itself rather than left to be
+rediscovered.
+
+The test asserts it true after the entry wait and false after the escape. The first version
+asserted it on the frame the allocation happens and failed — correctly: the init block is the
+object's first *execution* in the engine exactly as it is in the ROM, where the allocation only
+writes the routine pointer. That failure is left described here because "assert the init's effects
+on the allocation frame" is an easy thing to write and an easy thing to then weaken.
+
+Re-run after the change: the four mandatory S3K classes with the SSZ, HPZ and DDZ suites and the
+rewind harness, 1520 tests, 0 failures, 0 skips; `-Pguards` 669, 0 failures, 0 skips.
+
+**One precision deviation, recorded not fixed.** `MoveSprite_CircularSimple` reads and writes the
+chain links' positions as longwords — `move.l x_pos(a1),d2` / `move.l d2,x_pos(a0)` — so the ROM
+carries each link's sub-pixel fraction. `SszGhzBossChainLinkChild` keeps whole-pixel X and Y and
+re-derives the orbit from its parent every frame, so the fraction is dropped. The error cannot
+accumulate, because each frame's position is computed absolutely from the parent rather than
+integrated, but a link can sit one pixel from where the cartridge puts it. Worth knowing before
+anyone compares the chain against a native row.

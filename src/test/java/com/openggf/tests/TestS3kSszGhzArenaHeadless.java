@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -134,6 +135,10 @@ class TestS3kSszGhzArenaHeadless {
 
         int yBeforeTheWait = boss.getY() & 0xFFFF;
         fixture.stepIdleFrames(0x1F);
+        // The init block is the object's first execution, as it is in the ROM: the allocation
+        // only writes the routine pointer.
+        assertTrue(S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow()
+                .bossFlag(), "move.b #1,(Boss_flag).w in the init");
         assertEquals(yBeforeTheWait, boss.getY() & 0xFFFF,
                 "Obj_Wait with $2E = $1F: nothing moves for those frames");
 
@@ -215,6 +220,7 @@ class TestS3kSszGhzArenaHeadless {
         assertEquals(0, countActive(SszMechaSonicHeadChild.class),
                 "st (_unkFA89).w deletes the head with the ship");
         assertEquals(0, countActive(SszGhzBossObjectInstance.class), "Go_Delete_Sprite");
+        assertFalse(state.bossFlag(), "clr.b (Boss_flag).w is loc_7A3F8's first instruction");
     }
 
     /**

@@ -67,6 +67,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     private short unkFA84;
     private int unkFAB8;
     private boolean screenInitApplied;
+    private boolean bossFlag;
     /**
      * {@code Events_bg+$10}: the background-framing toggle {@code sub_579F0} flips at
      * {@code Camera_X_pos $1800}. It sits outside the sixteen bytes {@code LevelSetup} clears,
@@ -179,6 +180,16 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public void setCutsceneFlag(int bit) { unkFAB8 |= 1 << bit; }
     public void clearCutsceneFlags() { unkFAB8 = 0; }
     public int cutsceneFlags() { return unkFAB8; }
+
+    /**
+     * {@code Boss_flag}. {@code Obj_SSZGHZBoss}'s init writes {@code move.b #1,(Boss_flag).w} and
+     * {@code loc_7A3F8} is the only thing that clears it. It is kept here because the write is
+     * real and the rewind capture has to carry it; <b>no SSZ consumer reads it yet</b>, so it
+     * records the boss's own state rather than gating anything.
+     */
+    public boolean bossFlag() { return bossFlag; }
+
+    public void setBossFlag(boolean value) { bossFlag = value; }
 
     public boolean screenInitApplied() { return screenInitApplied; }
     public void markScreenInitApplied() { screenInitApplied = true; }
