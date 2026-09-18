@@ -139,8 +139,10 @@ class TestRemainingRewindTailInventory {
         // S3kDezTeleporterObjectInstance a third time -- its two rider blocks round-trip as one
         // subclass extra record, $5A S3kDezGravityTubeObjectInstance a fourth and $5C
         // S3kDezGravityHubObjectInstance a fifth, $5F S3kDezGravityRoomObjectInstance a
-        // sixth and $61 S3kDezGravityPuzzleObjectInstance a seventh. No bucket grows.
-        return new TailInventory(1116, 881, 235, 0, buckets);
+        // sixth and $61 S3kDezGravityPuzzleObjectInstance a seventh. $A4
+        // SpikebonkerBadnikInstance and its SpikebonkerMace child add the eighth and ninth.
+        // No bucket grows.
+        return new TailInventory(1118, 883, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
