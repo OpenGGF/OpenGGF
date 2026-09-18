@@ -3150,3 +3150,86 @@ routine's arithmetic, not read back from the class; broken on purpose once (`cos
 wide/donor/roster row. Every one of those needs an act 2 route, which needs the background and
 results-handover gaps above closed first -- which is why those are slice 7's first item and not
 its last.
+
+## Handover, 2026-09-18 (thirteenth)
+
+**Head is this commit**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
+nothing pushed or merged. Commits this round, in order: `df4507647` the end-sign control's
+position contract, `c02d77195` the horizontal button's landing width and the corkscrew unroll,
+`a620c4b66` the fight evidence, `3ff9fb7f7` the clips and the two act-2 gaps, `865f120b6` the act 1
+matrix rows, `03fe152ab` slice 7's orbiting spike balls.
+
+**The one thing to read before doing anything else.** The recorded native fight is **Super Sonic**,
+and that is measured, not inferred: `physics.csv` row 24174 has `player_status_byte 07` and from
+there the ring count falls by exactly one every 61 frames, sixteen times running. Three handovers
+were solving a survivability problem the ROM does not pose. With `--emeralds 1111111` the fight is
+"stand at the right wall and tap jump every 34 frames inside each slam window" -- three hits a
+window, six hits, dead at `v 1885`, **zero `hurt` frames in 4600**. The scripts are
+`inputs/lrz1-miniboss-fight-v10.txt` (drill only) and `inputs/lrz1-miniboss-full-fight-v13.txt`
+(hand first, then drill), and `raw-45-lrz1-miniboss-full-fight` is the capture all three clips
+come from.
+
+**What landed.**
+
+1. **Clips `31`, `32`, `33`.** Hand destroyed and its arm peeling; the sixth drill hit and the
+   defeat; the results screen with the act changing underneath it on frame 2305. `INDEX.md` has
+   the frames looked at and the caveats.
+2. **The act change survives a real defeat.** `S3kBossDefeatSignpostFlow` is the fourth carried
+   object the `ROM_WORLD_OFFSET_RANGE` policy needed, and only a real defeat puts it on the slot
+   list. It now carries the contract.
+3. **The route frontier moved 404 rows, 3154 to 3558.** `Obj_LRZButtonHorizontal` is a full solid
+   whose landing x test the engine computed from `d1 - $B`; this caller sets `d1 = width_pixels`,
+   so the reconstruction gave a ten-pixel strip. The corkscrew's `andi.b #$89` unroll was fixed on
+   the way and was **not** the cause -- the frontier is 3558 with and without it.
+4. **Slice 7 started**: `$2B` and `$2C`, the two orbiting spike balls, 52 placements. Act 2's
+   census ratchets **188 to 136**.
+
+**What is owed, in the order the next round should take it.**
+
+1. **`LRZ2_BackgroundEvent` stages 0 and 4** (`loc_5700C`/`loc_57040`, sonic3k.asm:115692-115722).
+   This is now the campaign's blocking item, not a tidy-up: the act-2 background plane still holds
+   act 1's lava after the change, and every remaining act-2 obligation -- a route, the traversal
+   clips, the rewind spots, the direct-`$901` question -- waits behind it.
+2. **The results panel's hand-off.** It never restores control after the seamless change. Native
+   resumes act 2 play about 893 frames after its own transition; the engine is still pinned at
+   2195. Both are in `s3k-known-bugs.md`.
+3. **Slice 7's remaining classes**: `$29` flame thrower (52), `$2D` solid moving platforms (52),
+   `$25` chained platforms (3), `$32` turbine sprites (18), `$37` spike ball launcher (9),
+   `$AE` (1), `$B3` (1), plus the Death Egg background sprite at `loc_5711E`. `$29` and `$25` were
+   read out this round and are the two with real structure: `$29` is a thrower plus a flame child
+   (`loc_43F12` is the second variant, `loc_44048` the flame), and `$25` is a spawner walking
+   `off_4A914` path tables with `sub_4A7BA`/`SolidObjectFull`.
+4. **Row 3558.** One pixel in x where the corkscrew ride meets the `$F8` slope. Kill condition in
+   the frontier log.
+5. **The two camera releases and `word_78EAA`**, unchanged from the twelfth handover.
+
+**Carried forward unchanged**: the `$1D`/`sub_42EC0` route exercise, cold-route rewind spots and a
+route spot for `$99`, `loc_849D8`'s `Set_IndexedVelocity` `d0` for a retired Fireworm segment,
+slice 5's clip, and timeline isolation across the act change.
+
+**A method note worth more than any of the above.** The shared Maven queue was saturated for most
+of this round -- one capture waited **fifteen minutes** for a slot and a test-compile error in a
+new test file then wasted it. The way out was to take one Maven slot that ran
+`dependency:build-classpath -Dmdep.outputFile=target/cp.txt` alongside its real work, and from
+then on run captures and JUnit straight off `target/classes` with `java -cp "$(cat target/cp.txt)"`
+and the `junit-platform-console-standalone` jar. A 4200-frame capture went from a fifteen-minute
+wait plus the run to **under a minute**, and the whole test tree compiles with one `javac` in about
+a minute. `-Pguards` and anything that must run through the real build still go through the queue,
+and did. Every measurement in this round's entries was taken that way; the classpath is Maven's
+own, so the runs are the same runs.
+
+**Verification at this head.** `-Pguards test -B`: **669, 0 failures, 0 skips** -- run twice, the
+first catching exactly the two things guards exist for (the new ids missing from
+`Sonic3kObjectProfile`'s LRZ list, and a `final` field the rewind coverage guard could not
+restore). Focused set off the built classes: every `TestLrz*`/`TestS3kLrz*` class, the four
+mandatory S3K classes, `TestEveryObjectRewindRoundTrip` (1152, up from 1150),
+`TestRewindHarnessCoverageRatchet`, `TestS3kBossDefeatSignpostFlow`, `SwScrlLrzTest` and the
+census -- all green. **This is focused validation, not a suite pass**: no `run_categories.py`
+selection was run. The four LRZ trace-replay fixtures remain red on their own long-standing first
+errors (`TestS3kSonicTailsLrzSegmentTraceReplay` frame 208 `tails_y_speed`, 6729 errors against
+the 6835 last recorded; the three `tailsfullchain` LRZ segments at frame 0), and none of them is
+attributable to this round's changes.
+
+**Media.** Clips `31`, `32`, `33` added, `INDEX.md` updated. The next clip number is `34`. New
+inputs: `lrz1-miniboss-fight-v9.txt`, `lrz1-miniboss-fight-v10.txt`,
+`lrz1-miniboss-full-fight-v13.txt`. New raw capture: `raw-45-lrz1-miniboss-full-fight`.
