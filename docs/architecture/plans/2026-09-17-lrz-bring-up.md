@@ -1068,6 +1068,48 @@ in about 51 frames, which is why the demo jumps.
 player supported at `y 1311` but never sinking, which reads exactly like a missing rider carry. It
 is kept as the record of that. Always queue `compile exec:java` after touching engine code.
 
+### 2026-09-18 - Slice 3a's remainder and most of 3c
+
+Six classes landed after the divergence work, each with a ROM-cited unit test broken on purpose
+once, a rewind spot where the object has restorable state, a before/after clip whose halves were
+frame-compared before publishing, and a census ratchet. Commits: `d38a4aa34` `$17`, `94f72378e`
+`$16`, `c01b86106` `$18`, `366589663` `$1B`, `99688145b` `$1F`, `21fbec7e6` `$20`.
+
+**Readings worth keeping.**
+
+1. **`$18`'s trigger distance is the subtype in pixels.** `move.b subtype(a0),$2F(a0)` writes into
+   the *low byte* of the word `cmp.w $2E(a0),d0` reads, and a freshly allocated slot is zeroed
+   (`Delete_Referenced_Sprite` clears the whole SST; `AllocateObject` only looks for a slot whose
+   first long is zero). Lava Reef's subtypes are 1 to 5, so a spike releases only while a player is
+   within one to five pixels of its X. Both instructions were byte-verified in the ROM at
+   `$4288C` and `$428BE` because a value that narrow reads like a transcription slip.
+2. **`$16` carries a live X-velocity defect.** `loc_42718` loads the rider's previous `x_pos` into
+   `d2` and then overwrites `d2` with the ride amplitude before `sub.w d2,d0` makes `x_vel`, so
+   `x_vel` is `(newX - amplitude) << 8` and not a displacement; the Y path re-loads `y_pos(a1)`
+   after using `d2` and does compute a real delta. Byte-verified at `$42718` and `$42748`.
+3. **`MoveSprite2` scaling was wrong in landed work.** The routine is `ext.l / lsl.l #8 / add.l`
+   per axis (sonic3k.asm:36054-36061), so an 8.8 velocity must be shifted left eight to line up
+   with a 16.16 position. `LrzShootingTriggerProjectileInstance` added the raw word, so its shots
+   crept at 1/256 of the right speed, and its test asserted only the velocity *fields* and never
+   the resulting motion. Fixed in `366589663`, with a motion assertion added. **The lesson is the
+   general one:** a test that asserts the inputs to a computation and not its output cannot catch
+   the computation being wrong.
+4. **`render_flags` bit 7 is "was drawn last frame", not "is on screen".** `$1B` gates its shot on
+   it, and a launcher created as the camera reaches it must not fire on its creation frame. The
+   class latches the previous frame's on-screen answer rather than asking the camera directly.
+5. **`$20`'s chain geometry has a dirty-register question**, recorded on the class with a kill
+   condition: `GetSineCosine` writes only the low word of `d0`/`d1`, so after the `swap` the long's
+   low word is caller junk. It cannot reach the first link, but the `add.l` loop accumulates it and
+   with four links could carry one pixel into the ball. Modelled as clean; kill it with a trace row
+   that disagrees.
+
+**Clips 15-20** in `~/Videos/OGGF/lrz-bring-up/`: `15` sinking rock, `16` wall ride, `17` falling
+spike, `18` fireball launcher, `19` lava fall, `20` swinging spike ball, with `raw-26` to `raw-31`
+kept. `raw-25` is kept only as the record of a stale-classes capture (see the hazard above).
+
+**Not delivered.** 3c's `$21` (15 placements, ten subtypes) and `$22` (6, two subtypes), and 3d's
+`$9C`. Read-ahead for all three is in the handover below.
+
 ## Handover, 2026-09-18
 
 **Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`): `d2c58f148` slice 3b,
@@ -1105,3 +1147,86 @@ the cause, and closing them is worth more to the route than any further hand-aut
 **Owed on what has landed:** wide-viewport and donor rows for every slice 3a/3b class, a cold-route
 spot for `$1A` and `$1D`, `sub_42EC0` exercised on a route rather than only in a unit test, act 2's
 door and button skins exercised at all, and the dash elevator's mid-ride rewind spot.
+
+## Handover, 2026-09-18 (second)
+
+**Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`), on top of the first
+handover's commits: `d38a4aa34` `$17` sinking rock, `40c8fbee1` the withdrawn divergences,
+`94f72378e` `$16` wall ride, `c01b86106` `$18` falling spike, `366589663` `$1B` fireball launcher
+plus the `MoveSprite2` fix, `99688145b` `$1F` lava fall, `21fbec7e6` `$20` swinging spike ball.
+Tree clean; nothing pushed or merged.
+
+**Census: 98 / 240 / 8** placeholders of 609 / 455 / 35 (was 170 / 255 / 8 at the first handover,
+239 / 281 / 14 at `035e48a58`).
+
+**Measurements at this head.**
+
+| What | Command | Result |
+| --- | --- | --- |
+| `TestS3kSonicTailsLrzSegmentTraceReplay` | `maven_queue.py -Dmse=off -Ptrace-segments -Dtest=… -Ds3k.rom.path=<worktree>/s3k.gen test` | 7174 errors, first error frame 208 `tails_y_speed` (7191 at `9744c58de`; first error unchanged) |
+| Mandatory S3K + LRZ/HPZ/SOZ + rewind batch | `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestLrz*,TestS3kLrz*,TestS3kHpz*,TestS3kSoz*,TestEveryObjectRewindRoundTrip,TestRewindHarnessCoverageRatchet` | 1499 tests, 0 failures, 0 skips |
+| Structural guards | `-Pguards test -B` | 669 tests, 0 failures |
+| Cold act 1 route on the recorded input | `GameplayCaptureTool --main sonic --sidekick tails --settle 1 --frames 12000` | exact `(x, y)` match for frames 0-636; open-loop reach **x 4301** (was 2779 before the hazards, 2357 before the alignment fix) |
+
+This is focused validation, not a suite pass: the change-based runner has not been run against
+`035e48a58` for this branch.
+
+**Rows that remain in slice 3**, all act 1 unless noted:
+
+| Sub-slice | Rows | Placements |
+| --- | --- | ---: |
+| 3c | `$21` ten subtypes, `$22` two subtypes | 15 + 6 |
+| 3d | `$9C` subtypes 0 and 2 | 2 |
+
+**Read-ahead, so the next agent does not re-derive it.**
+
+- **`$21 Obj_LRZSmashingSpikePlatform`** (sonic3k.asm:88538-88651, ROM `$433E8`). Not read in
+  detail this round.
+- **`$22 Obj_LRZSpikeBall`** (sonic3k.asm:88838-…, ROM `$436E8`). Two shapes. Subtype 0 goes
+  straight to `loc_4397E` with `collision_flags $8F` and the priority bit set: the static big
+  spike. Subtype `$C0` runs `loc_437FE`, a swinging boulder whose X is
+  `$44(a0) + (cos(angle) >> 2)` and whose collision and priority are switched off for the half of
+  the circle where `angle` is non-negative (`andi.w #drawing_mask,art_tile` at :88868). Standing on
+  it with `$30(a0)` set and the angle equal to the subtype starts a roll: routine `loc_4389E`,
+  `x_vel -$400`, then `MoveSprite2` with `ObjCheckLeftWallDist_Part2` and `ObjCheckFloorDist` in
+  the loop. The rolling half needs terrain queries the engine has (`ObjectTerrainUtils`), so the
+  work is size rather than novelty.
+- **`$9C Obj_LRZRockCrusher`** (sonic3k.asm:196988-197400, ROM `$900E4`) is **a slice on its own**,
+  not a 3c-sized object. Its parts, all enumerated and located:
+  - Init picks `word_901B8` or `word_901C4` by subtype for the new camera limits, stores the four
+    current ones in `Camera_stored_*`, runs `SetUp_ObjAttributes` from `ObjDat_LRZRockCrusher`
+    (`Map_LRZRockCrusher`, `make_art_tile(ArtTile_LRZRockCrusher,1,0)`, priority `$180`,
+    `$80/$40/0/$10`), sets `y_radius $40` and `collision_property -1`, creates an
+    `Obj_SpriteMask` child positioned per subtype, queues `ArtKosM_LRZRockCrusher`, loads
+    `PLC_BossExplosion`, loads `Pal_LRZRockCrusher` on line 1, and creates the eight-piece
+    `ChildObjDat_90626` hit child ring.
+  - Five parent routines (`off_901EA`): wait for the camera to reach the stored limits and then
+    allocate the `loc_90502` timer child; rumble and creep downward one pixel a frame with
+    `ObjCheckFloorDist`; a `$27` countdown; `MoveSprite` until `y_pos` passes `word_902EC`; and the
+    explosion tail that restores `ArtKosM_FirewormSegments`, `ArtKosM_Iwamodoki` and `Pal_LRZ1`.
+  - `sub_905A8` is the boss-style hit flash (`CopyWordData_3` over three palette entries).
+  - `loc_90512`, the timer child, is the layout edit: subtype 0 does `st (Events_bg+$0C)`, clears
+    `Screen_shake_flag` and allocates two `Obj_LRZCollapsingBridge` with `$32 = 1` at `($F00,$760)`
+    and `($F80,$760)`; the other subtype does `st (Events_bg+$0D)`, allocates one at `($540,$860)`,
+    restores `Camera_target_max_Y_pos` and creates `Child7_ChangeLevSize` (the four
+    `Obj_*LevStart/End*Gradual` objects).
+  - Everything it needs has engine precedent except `Child7_ChangeLevSize`; the `Events_bg+$0C`
+    consumer in `Sonic3kLRZEvents` is written but has no writer yet, and `LrzZoneRuntimeState`
+    already carries the request word so rewind captures it.
+
+**The route's first divergence is one pixel, and it is not an LRZ object.** Frame 637, `player_y`
+1322 against 1321: the ROM runs Player_1 before the sinking rock, so the jump off it uses the seat
+the block gave on frame 636, while the engine sinks the block and re-seats the rider first and
+applies both the sink's `+1` and the jump's `+5`. Full evidence and a kill condition are in the
+[trace frontier log](../../status/trace-frontier-log.md). It belongs to the shared solid/riding
+path and is out of this campaign's scope to reorder.
+
+**Owed on what has landed:** wide-viewport and donor rows for every slice 3a/3b/3c class; a
+cold-route spot for `$1A` and `$1D`; `sub_42EC0` exercised on a route rather than only in a unit
+test; act 2's door, button and swinging-spike-ball skins exercised at all; the dash elevator's
+mid-ride rewind spot; a rewind spot on `$18`'s landing boundary (it needs real terrain for
+`ObjCheckFloorDist`); and rewind spots for `$1B`, `$1F` and `$20`, whose state is a small counter
+and is covered today only by `TestEveryObjectRewindRoundTrip`.
+
+**Media.** Clips `09`-`20` in `~/Videos/OGGF/lrz-bring-up/`, every `raw-NN-*` kept, all demo and
+route inputs under `inputs/`.

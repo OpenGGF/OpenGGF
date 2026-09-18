@@ -110930,3 +110930,24 @@ shared path carries every S3K trace and is out of this campaign's scope to reord
 falling, and from there the two separate by 64 px vertically and then by hundreds. No placement
 lies at `($661,$4CD)`, so whatever performs that negation is terrain or a dynamically spawned
 owner, and it is reached or missed on a 1 px margin.
+
+## 2026-09-18 - LRZ1: after slice 3a's remainder and most of 3c
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `21fbec7e6`.
+
+- `maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay
+  -Ds3k.rom.path=<worktree>/s3k.gen test`: **7174 errors, first error frame 208 `tails_y_speed`
+  expected `0x07BD`, actual `0x0000`** (7191 errors at `9744c58de`; the first error frame and field
+  are unchanged, so the frontier has not moved and nothing regressed).
+- Cold act 1 route on the fixture's own recorded input, `GameplayCaptureTool --main sonic
+  --sidekick tails --settle 1 --frames 12000` compared against
+  `s3k-sonic-tails-complete-emeralds/lrz` at the capture's one-frame boot offset: Player 1
+  `(x, y)` matches **exactly for frames 0-636**, and the open-loop reach is **x 4301** (2779 with
+  only `$17` implemented, 2357 before the alignment was corrected).
+- The first divergence is unchanged: frame 637, `player_y` 1322 against 1321, the moving-platform
+  jump ordering recorded in the entry above. It is what ends the route.
+- Six classes landed between the two measurements: `$17` sinking rock, `$16` wall ride, `$18`
+  falling spike, `$1B` fireball launcher (with its shot), `$1F` lava fall (with its drops) and
+  `$20` swinging spike ball. `MoveSprite2`'s `lsl.l #8` was also missing from
+  `LrzShootingTriggerProjectileInstance`, whose shots crept at 1/256 of the right speed; its test
+  asserted the velocity fields and never the resulting motion.
