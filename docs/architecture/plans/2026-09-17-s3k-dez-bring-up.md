@@ -551,13 +551,22 @@ and Tails'-tail render rows (3), the two rows blocked on upright behaviour the e
 model (`Touch_Monitor`, `Obj_Spikes`), `loc_1E44C`'s rebuilt comparison (1), the act 2 boss's
 three, and `Obj_DEZConveyorPad`'s one (a slice 4 object).
 
-**Slice 3 is four of seven, and every `Reverse_gravity_flag` writer and reader in the Death
-Egg object set is now implemented.** `$5B` `Obj_DEZGravitySwap`, `$58` `Obj_DEZGravitySwitch`
-(with its art and its transporter sound), `$59` `Obj_DEZTeleporter` and `$5A`
-`Obj_DEZGravityTube` are concrete. `$5C` `Obj_DEZGravityHub`, `$5F` `Obj_DEZGravityRoom` and
-`$61` `Obj_DEZGravityPuzzle` remain; the handover entry records that none of the three contains
-a flag reference at all, so they are traversal work rather than gravity work and nothing in
-this campaign's reverse-gravity obligation depends on them.
+**Slice 3 is six of seven.** `$5B` `Obj_DEZGravitySwap`, `$58` `Obj_DEZGravitySwitch` (with its
+art and its transporter sound), `$59` `Obj_DEZTeleporter`, `$5A` `Obj_DEZGravityTube`, `$5C`
+`Obj_DEZGravityHub` and `$5F` `Obj_DEZGravityRoom` are concrete; every `Reverse_gravity_flag`
+writer and reader in the Death Egg object set is implemented, and so are two of the three
+traversal objects that merely sit in gravity rooms. **`$61` `Obj_DEZGravityPuzzle` remains**,
+one act 1 placement at `$2690,$0840` — inside the `$5F` corridor's reach, so it is the obstacle
+in the turbine room. Its full ROM reading, and the three things it needs that nothing in the
+campaign has yet (a `SolidObjectFull2` binding, a six-piece child sprite with its own art, and a
+rewind-visible home for the `MHZ_pollen_counter` panel bitfield), are in the `$5F` evidence
+entry.
+
+**Death Egg act 2 has a route frontier: 390 frames** from the first frame of free play, exact in
+player x, y, camera and rings, pinned as a ratchet in `TestS3kDezColdRoutes`. A cold `$B01`
+route is not comparable against this movie until the act 2 entrance is implemented; that finding
+and the camera-lock false alarm behind it are in the route evidence entry and in the frontier
+log.
 
 The blocker for the rest is not ROM reading — it is that **no fixture exists in which an inverted
 player can be shown landing on real ceiling terrain**. Three candidates were tried and rejected
@@ -569,9 +578,9 @@ asserted against anything real.
 | Claim | State |
 | --- | --- |
 | Implemented | Slice 1: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Slice 2 part 1: inverted position integration (`MoveSprite_TestGravity`/`2` and `CalcRoomInFront`), the death plane at the top of the level, the level-load clear and the seamless act change's preserve. Slice 2 part 2: the `sub_11FD6`/`sub_11FEE` probe swap and its angle mirror. Slice 2 part 3: the ceiling-sensor activation swap that the probe swap needed, and the six airborne push-out and snap sites measured for all three characters against real Death Egg act 2 terrain. Reverse gravity now stands at 34 of 116 ROM references covered, 6 partial, 72 missing. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art |
-| Cold-reachable | Not started |
+| Cold-reachable | Act 2: seeded from the first frame of free play, 390 frames of exact player, camera and ring parity (`TestS3kDezColdRoutes`, ratcheted). The cold `$B01` route is measured and is 0 frames, because the movie reaches act 2 through a scripted entrance whose terminus is the engine's own start position — not a defect, and not comparable until the entrance is implemented. Act 1 not started |
 | Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted. Every slice 3 object has its own capture/restore/replay spot: the `$5B` crossing latch, the `$58` toggle counter, the `$59` rider budget and the `$5A` ride angle, each asserted to resume on the same update of the replay as of the first run |
-| Native behaviour matched | Not started; replay frontiers measured at `035e48a58` (slice 0), all six classes red from frame 0 |
+| Native behaviour matched | Act 2's first 390 free-play frames match the native run exactly in position, camera and rings; the first divergence is one pixel of `y` at native row 20163 with the player airborne and rolling through an unexplained upward impulse. The six segment replay classes are unchanged from the `035e48a58` measurement, all red from frame 0 on bootstrap state |
 | Visually matched | Slice 1 presentation inspected at 320 and 800 px with before/after clips; no native pixel comparison |
 
 Out of scope, recorded as dependencies: `$D01` ending and credits (ending campaign); the SSZ
@@ -2123,3 +2132,67 @@ what belongs here is what it changes about the plan.
 The act 1 cold start (`$B00`, `loc_6986` → `Obj_LevelIntro_PlayerRun`) is **not started**: act 1
 has its own intro sequence and the same question applies to it, so it wants the same two-route
 treatment rather than an assumption that a cold start is comparable.
+
+### 2026-09-18 — The end-of-session gate, and the handover after `$5F`
+
+**The gate.** Preflight passed (Java 21, Lua 5.4, PowerShell) in the actual launch environment.
+`run_categories.py --base 035e48a58 --run` selected **BROAD** — 2720/2720 classes, full ordinary
+suite plus guards — stated before launching, with the runner's 40-minute per-invocation and
+10-minute no-output timeouts as the stopping rule.
+
+| Lane | Result |
+| --- | --- |
+| Ordinary | 2720 reports, **22127 tests, 0 failures, 0 errors, 27 skipped**, 1059.2 s |
+| Guards | 85 reports, **669 tests, 0/0/0**, 193.1 s |
+
+Run id `20260918T174336Z-b9c5b3c6`, exit 0, acknowledged. The 27 skips are the same set as the
+four previous gates, reason for reason: opt-in system properties (`soz.*.capture`,
+`openggf.aiz1.*`, `openggf.rewind.alloc.measure`, the benchmark and allocation probes) and
+unavailable-host assumptions (surfaceless EGL, OpenGL 4.1, a local BizHawk reference). No
+`@RequiresRom` class appears in the skip list. Twenty-five more tests than the previous gate
+(22102 → 22127): eighteen new `$5C` and `$5F` cases, the two route tests and the production-loop
+tube pair, less the two static helpers the reworked `$5F` steering assertions replaced.
+
+**The four-class trace comparison** was repeated on `2db05324b`, `clean test` with
+`-Ptrace-replay` and all three ROM paths absolute (`s1.gen`, `s2.gen`, `s3k.gen`;
+**Skipped: 0** in all four classes is the check that no class silently skipped):
+`TestS1Ghz1TraceReplay` and `TestS1Mz1TraceReplay` 1/1 green; `TestS2Ehz1TraceReplay` red with
+**16388 errors, first at frame 6 on `dynamic_art.outstanding_transfer_ids` (expected=[2],
+actual=[])**; `TestS3kAizTraceReplay` 3/16 red with **59 errors, first at frame 5497 on
+`camera_x`, expected `0x0010` actual `0x0012`**. Identical to the six-times-recorded
+`f60b3f3e2` baseline, failure for failure and field for field; both reds stay
+**baseline-attributed**. Four classes only, and no evidence about any other class.
+
+**Handover.** Slice 3 is six of seven. What remains, in the order the campaign wants it:
+
+1. **The act 2 route's first divergence.** Native row 20163, one pixel of `y`, with the player
+   airborne and rolling and `y_vel` flipping from `$003F` to `$FF89` between rows 20161 and
+   20162 — an upward impulse mid-air with no jump available. Find the object giving it before
+   touching physics. `TestS3kDezColdRoutes` ratchets the 390-frame frontier, so the fix is
+   measurable the moment it lands.
+2. **`$61` `Obj_DEZGravityPuzzle`**, the last slice 3 class. Full ROM reading is in the `$5F`
+   evidence entry; it needs a `SolidObjectFull2` binding, a six-piece child sprite with
+   `Map_DEZGravityPuzzle` and `ArtTile_DEZMisc2+$31`, and a rewind-visible home for the
+   `MHZ_pollen_counter` panel bitfield. It is the obstacle inside the `$5F` corridor, so filming
+   the two together is one clip.
+3. **The act 1 cold route.** Not started, and the act 2 finding changes how to approach it: act 1
+   has its own intro (`loc_6986` → `Obj_LevelIntro_PlayerRun`), so measure both a cold route and
+   a route seeded at the first frame of free play rather than assuming the cold one is
+   comparable.
+4. **The sidekick clip** is still blocked at the same place the previous session left it: the
+   team seed is confirmed applied and Tails is still absent from every frame. The kill condition
+   in `INDEX.md` — log the registered sidekick's position over the first 60 frames and see
+   whether the seed is being undone or the sprite is hidden — has not been run. Note that the
+   native act 2 rows park the sidekick at `$7F00,$FFF9` through the whole entrance, so a
+   positioned act 2 entry may be reproducing a parked sidekick faithfully; check that before
+   calling it a bug.
+5. **The rings / hit / lost-rings, shield and solid-object-ride inverted clips** are still
+   unfilmed. The seeded act 2 route is the vehicle for them now: it reaches `$0363` in 390
+   frames with real terrain and objects around it, which the positioned `$5B` entries never did.
+6. **Two method notes, both earned twice.** A break that changes nothing is evidence the break
+   was badly chosen, not that the mechanism is pinned — the `$5A` session found it once and the
+   `$5F` steering assertions found it again, in the specific form of *a test calling the
+   object's arithmetic with the test's own copy of the constant*. And a green focused suite says
+   nothing about frame-to-frame engine state around an object: the `$5A` rider alternation was
+   invisible to 41 unit tests and took a production-loop test to see. `TestS3kDezGravityTubeRouteHeadless`
+   is the pattern for the next object that needs one.
