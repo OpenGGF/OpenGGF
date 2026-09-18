@@ -2956,3 +2956,117 @@ SOZ complete run the class pattern pulled in.
 
 **On the shared Maven queue.** It was saturated for most of this round by another campaign; one
 focused run waited 15 minutes under aged-FIFO before admission. Batch checks.
+
+### 2026-09-18 - The recorded fight is Super Sonic, and the row-3154 floor is a button
+
+**The native run does not dodge anything.** Reading the `lrz` fixture's own rows for the fight
+settles what three rounds of input authoring were trying to reproduce, and it is not a skilled
+dodge. `physics.csv` row **24174** has `player_status_byte` `07` with `anim 02`, and from that row
+the ring count falls by exactly one every **61 frames** -- 24174, 24235, 24296, 24357, 24418,
+24479, 24540, 24601, 24662, 24723, 24784, 24845, 24906, 24967, 25028, 25089 -- which is
+`Obj_Player`'s Super drain and nothing else. The mapping frames from there are `$86`-`$8B`. The
+recorded player is **Super Sonic** for the second half of the fight, so the hands' shots cannot
+hurt them at all, and from row ~24300 Player 1 stands still at `x $2C9E` holding Down for 1200
+frames while **Tails** does the jumping: the hits at 24580, 24612 and 24644 are the sidekick's
+passes, with the drill's `status` bit 6 flashing on each.
+
+**What that means for clips `31` and `32`.** The survivability problem the ninth through twelfth
+handovers kept hitting -- a hit zeroes the rings, `--rings` buys exactly one mistake, the first
+shot lands at `v 524` long before the first slam -- is not a problem the ROM asks the player to
+solve. `GameplayCaptureTool --emeralds 1111111` with the arena's own 355 rings reproduces the
+recorded run's own state: two jump presses in one airborne period transform, and from there the
+fight needs no dodging at all. Author the clips that way; it is what the fixture did.
+
+**Two facts measured this round that the authored scripts needed anyway.**
+
+1. *Standing still at the right wall is fatal for an ordinary Sonic.* `sub_7867C` tracks Player 1
+   and `loc_78628` stops the drill where the player stood at `v 901`, so a player who holds still
+   at `x 11560` has the drill drop on them: measured `x 11552` at `v 901`, `collision_flags $B5`
+   at `v 933`, dead at capture frame 932 on the zero rings the `v 575` shot had already left.
+   (`inputs/lrz1-miniboss-fight-v9.txt`.)
+2. *`v8` lands one hit, not three.* A `lrz.drill.probe` print in `updateBossLogic` over
+   `inputs/lrz1-miniboss-fight-v8.txt` has `collision_property` go `6` to `5` at `v 972` and stay
+   there for the remaining 1856 frames. The eleventh handover's "three hits" is withdrawn. The
+   cycle itself is confirmed unchanged: `rt $12` opens at `v 936`, `1793` and `2650`, 857 frames
+   apart, hittable for 96 frames each, with `sub_78C14`'s `$20` invulnerability restoring
+   `collision_flags` 32 frames after a hit.
+
+**The hands are out of reach from the floor.** The same probe puts both hands at `y 1844`-`1846`
+for the whole hover, 123 px above a player standing at `y 1968`, and a jump from the arena floor
+apexes at `y 1917`. They pass through the player's reach only while they descend (`y 1936` at
+`v 620` to `y 1997` at `v 650`) and again while they rise after the slam, and they park at
+`y 2069`, below the floor, from `v 690` to `v 1080`. So clip `31`'s hand kill -- four hits through
+`sub_78CF4` -- has at most one landing per pass and two passes per 857-frame cycle.
+
+### 2026-09-18 - Row 3154: the missing floor is `Obj_LRZButtonHorizontal`
+
+**It is an object, and the fixture names it.** Native `physics.csv` carries
+`player_stand_on_obj` `$0D` across the landing, and the aux `object_state` rows for frames
+3145-3160 put slot **13** at `($10C2,$325)` with `object_code` `0x00042D16` and `subtype $0C`.
+`loc_42D16` is `Obj_LRZButtonHorizontal`'s main loop (sonic3k.asm:88221-88240), and it calls
+`SolidObjectFull` with `d1 = $10`, `d2 = $F`, `d3 = $10` behind no on-screen test and no routine
+gate at all. `$325 - $10 - 19` is `$302`, which is native row 3155's landing `y` exactly, so the
+arithmetic identifies the support with no fitting.
+
+The player lands at `x $10B2` against an object at `x $10C2` with `d1 = $10`: `relX` is
+`$10B2 - $10C2 + $10 = 0`, the first pixel of the span. `ObjectSolidContactController`'s own test
+is `relX < 0 || relX >= halfWidth * 2` (:2606-2607), which admits `relX == 0`, so the engine's x
+test is not the difference; the class already declares
+`SolidObjectParams.of($10, $F, $10)` and `SolidRoutineProfile.fullSolid(false)`.
+
+`TestS3kLrzButtonHorizontalLandingHeadless` is the RED test for it: it asserts the placement is
+live and that a player falling at native row 3154's own `y_speed $530` comes to rest at `y $302`.
+
+### 2026-09-18 - The fight, solved: three hits a window, and the defect the first real defeat found
+
+**`inputs/lrz1-miniboss-fight-v10.txt` kills the drill.** The whole script is: run right for 128
+frames, jump, press jump again in the air to transform, then **stand still at the right wall and
+do nothing but tap jump every 34 frames inside each slam window**. With
+`--emeralds 1111111 --rings 355` the `lrz.drill.probe` reads
+
+| `V_int_run_count` | `collision_property` | rings |
+| --- | --- | --- |
+| 936 | 6 (window opens) | 343 |
+| 964 | 5 | 342 |
+| 996 | 4 | 342 |
+| 1028 | 3 | 341 |
+| 1793 | 3 (window two) | 329 |
+| 1821 | 2 | 328 |
+| 1853 | 1 | 328 |
+| 1885 | **0** | 327 |
+
+**Three hits per window, two windows, six hits, dead at `v 1885`** -- about 31 seconds of fight.
+The ring count only ever falls by the Super drain (355 to 327 is 28 rings over 1708 frames, one
+per 61), so not one of the hands' shots landed: Super Sonic is invulnerable and the dodging
+problem the ninth through twelfth handovers were solving does not exist.
+
+**Why 34 frames.** `sub_78C14` sets `$20(a0)` to `$20` on a hit and restores `collision_flags`
+when it expires, so the earliest a second hit can land is 32 frames later; the window is
+`$5F` = 95 frames, which fits three. The player stands at `x 11560`, the drill tracks to
+`x 11552` at `v 901` and slams there, and the standing player ends up on its solid top with the
+32x32 touch box in reach of the jump. **Standing still is safe as Super Sonic and fatal
+otherwise** -- the same position killed an ordinary Sonic at capture frame 932 in `v9`.
+
+**The defeat then refused to change the act, and that is a real defect.** The first capture ever
+to kill the drill reached the handover and threw:
+
+```
+SST slot 36 reports render_flags bit 2 without a native ROM position contract:
+com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow
+```
+
+`loc_787E0` (sonic3k.asm:160569-160576) rewrites the defeated drill's **own** SST entry to
+`Obj_EndSignControl`, keeping its `render_flags`, and `Offset_ObjectsDuringTransition`
+(sonic3k.asm:104166-104178) subtracts the handover's `d0` from `x_pos` of every slot in
+`Dynamic_object_RAM+object_size`..`Breathing_bubbles` whose bit 2 is set. So the flow is exactly
+one of the slots the ROM moves, and `ROM_WORLD_OFFSET_RANGE` was right to refuse. The fix is the
+contract on `S3kBossDefeatSignpostFlow`, moving its one position word, `signpostX`;
+`getY()` stays zero because no routine after `loc_787E0` reads that slot's `y_pos` and the
+Lava Reef handover's own `d1` is zero. `TestS3kBossDefeatSignpostFlow#theActChangeOffsetMovesTheSignpostXWord`
+pins it.
+
+**This is the twelfth handover's predicted cost arriving on schedule.** The seamless-change entry
+warned that "the live set at the change is what has to be compliant, and it is only known by
+running the change". Three classes were enumerated when the change was driven from a synthetic
+publication; the fourth only appears when a real boss defeat puts the end-sign control on the
+slot list. A zone adopting this policy should expect to find its last offender this way.
