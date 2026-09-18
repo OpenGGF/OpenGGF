@@ -3224,6 +3224,47 @@ wall leaves it nowhere to put a ringless Sonic.
 
 **Owed, unchanged:** `loc_5711E`, the act-2 Death Egg background sprite `loc_5700C` allocates.
 
+
+### 2026-09-19 - Slice 7 continued: the flame throwers, and why act 2 still has no clip of one
+
+**`$29`, 52 of act 2's 136 remaining placements, census 136 -> 84.**
+`Obj_LRZFlameThrower` (sonic3k.asm:89227-89448) is one class with an `Axis` and one child class
+for `loc_44048`'s flame. The readings worth carrying forward are in the commit (`b5a477216`); the
+one that most changes behaviour is that **the subtype is the pause, not the burst**: `$30` always
+starts at `2*60` and `$32 = (subtype & $7F) * 4` is only the gap, so every thrower in the zone
+fires for exactly two seconds and differs only in how long it rests. Act 2's placements use
+`$08`-`$18` and `$93`-`$96`, so the gaps run 32 to 96 frames.
+
+**Two engine-side facts this needed.** `isWithinSolidContactBounds()` is the engine's model of
+`render_flags` bit 7, which is the ROM's own gate on the allocation -- and it reads the **static**
+viewport snapshot `ObjectManager` publishes each frame, so a unit fixture has to call
+`AbstractObjectInstance.updateCameraBounds` itself or nothing ever spawns. And the rewind coverage
+guard cannot restore a `final` field: `axis` and `mirrored` had to become plain fields, the same
+correction the orbiting spike balls needed.
+
+**The clip is owed, and the reason is a route blocker, not the object.** Filming a thrower needs
+the camera on one, and the act-2 placements sit where a cold route cannot yet reach:
+
+- A direct `$901` load **cannot go left of `x 2384`**: act 2's own resize owner pins
+  `Camera_min_X_pos` at `$940` on a fresh load, which is exactly `loc_78AE6`'s value, so the first
+  two throwers at `($8D2,$770)` and `($A4C,$6AF)` are behind the start.
+- Running right from the act-2 start stops at **`x 2741`** against a door column
+  (`raw-48-lrz2-flame-thrower`, frame 200). The next thrower is at `($E50,$6B0)`, past it.
+- The `($A4C,$6AF)` thrower is 190 px above the corridor floor, so even standing next to it the
+  camera never sets its bit and it correctly makes no flames.
+
+So the act-2 clips wait on the act-2 route, which is slice 7's remaining traversal objects plus
+the door triggers -- not on any of the classes that have landed.
+
+**Also read out for the next round, so it need not be re-derived.** `Obj_LRZSolidMovingPlatforms`
+(`$2D`, 52 placements, sonic3k.asm:51012-51110): `byte_25826` holds two entries,
+`{$20,$20,0}` and `{$20,$20,1}`, selected by `(subtype >> 2) & $1C`, and `off_258BC` holds nine
+movers -- an `rts`, `Oscillating_table+$0A - $20` and `+$1E - $40` applied to `x` from `$30`, the
+same two applied to `y` from `$34`, and four `sub_25974` ramps (limits `$5F` and `$7F`, `$40`
+stepping by 4 with `$3C` as the direction flag). `status` bit 0 negates every one of them. The
+solid call is `d1 = width_pixels + $B`, `d2 = height_pixels`, `d3 = d2 + 1`, and the unload test
+reads `$30`, the anchor's x, through `Sprite_OnScreen_Test2`.
+
 ## Handover, 2026-09-18 (thirteenth)
 
 **Head is this commit**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
@@ -3306,3 +3347,76 @@ attributable to this round's changes.
 **Media.** Clips `31`, `32`, `33` added, `INDEX.md` updated. The next clip number is `34`. New
 inputs: `lrz1-miniboss-fight-v9.txt`, `lrz1-miniboss-fight-v10.txt`,
 `lrz1-miniboss-full-fight-v13.txt`. New raw capture: `raw-45-lrz1-miniboss-full-fight`.
+
+## Handover, 2026-09-19 (fourteenth)
+
+**Head is this commit**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
+nothing pushed or merged. Commits this round, in order: `4dd0844b6` the act-change hand-off,
+`10dc06bb5` `LRZ2_BackgroundEvent`'s three stages, `09dcba966` the correction to the two known-bug
+entries, `b5a477216` the flame throwers, and this one.
+
+**The one thing to read before doing anything else.** Both gaps the thirteenth handover made the
+campaign's blocking item were **misdiagnosed**, and the native capture that settles it is on disk
+at `~/Videos/OGGF/lrz-bring-up/native-lrz2-bg/run1` (movie frames 415532-416433 of
+`s3k-sonic-tails-complete-emeralds.bk2` = trace rows 25549-26450, six minutes to produce through
+`tools/bizhawk/capture_movie_checkpoints.lua`). The ROM draws the **same lava-filled background**
+the engine does, at the same `Camera_Y_pos $710`; the nametable and the pattern art after the
+change are byte-identical to a direct `$901` load's; and the results hand-off had already been
+restoring control at +934 frames with every control flag clear. What was actually broken was
+`Camera_max_X_pos`, and one flag fixed it.
+
+**What landed.**
+
+1. **Act 2 is playable out of the change.** `Obj_EndSignControlDoStart`'s `Change_Act2Sizes`
+   (sonic3k.asm:180420-180424, :180580-180596) was not being asked for by the Lava Reef flow, so
+   the arena's right wall -- carried across rebased by `-$2C00` -- pinned the player.
+   `TestS3kLrzActChangeHandoffHeadless` drives arena gate, defeat, results and change and then
+   holds right. **Clip `34`** is the walk, `x 296` to `x 2357`.
+2. **`LRZ2_BackgroundEvent`'s three stages**, with the entry distinction that matters:
+   `LRZ2_BackgroundInit` starts a direct `$901` load on stage 8, the seamless change starts on
+   stage 0. It changes no pixel, and its commit says so.
+3. **Flame throwers `$29`**, 52 placements, census **136 -> 84**.
+
+**What is owed, in the order the next round should take it.**
+
+1. **`loc_78AA8`'s two camera releases and their palette** (sonic3k.asm:160505-160545). This is now
+   the best-evidenced open item in the zone: the native capture at row 26450 draws act 2's blocks
+   **gold**, because `loc_78B08` installs `Pal_LRZ2` over `Normal_palette_line_2` and
+   `Pal_LRZMiniboss3` over line 3 only when `Camera_X_pos` reaches `$2C0`, together with
+   `Camera_min_X_pos = $2C0`; `loc_78AE6` does the same at `$940`. The engine shows act 2's palette
+   from the change frame. `word_78EAA`'s rotation runs between the two. Entry in
+   `s3k-known-bugs.md`.
+2. **The act-2 route**, which every remaining act-2 obligation now waits on -- clips, rewind spots,
+   matrix rows and the extension of the cold route through the transition. The concrete blocker is
+   a door column at `x 2741` that stops a right-held player on a fresh `$901` load; act 2's doors
+   `$01-$0B` each have a `$1C` button, already implemented, so this is route authoring.
+3. **Slice 7's remaining classes**: `$2D` solid moving platforms (52, read out in this round's
+   entry and ready to write), `$32` turbine sprites (18), `$37` spike ball launcher (9), `$25`
+   chained platforms (3), `$AE` (1), `$B3` (1), plus `loc_5711E`, the act-2 Death Egg background
+   sprite `LRZ2_BackgroundEvent` stage 0 allocates.
+4. **Row 3558**, one pixel in x where the corkscrew ride meets the `$F8` slope. Unchanged.
+5. **The act-1 obligations carried forward unchanged**: the `$1D`/`sub_42EC0` route exercise,
+   cold-route rewind spots and a route spot for `$99`, `loc_849D8`'s `Set_IndexedVelocity` `d0`
+   for a retired Fireworm segment, slice 5's clip, and timeline isolation across the act change.
+
+**Verification at this head.** `-Pguards test -B`: **669, 0 failures, 0 skips** -- run twice, the
+first catching exactly what guards exist for (two `final` fields the rewind coverage guard could
+not restore). Focused queue runs: 212 tests for the hand-off commit, 121 for the background
+stages, 1245 for the flame throwers, every one 0 failures and 0 skips. **This is focused
+validation, not a suite pass**: no `run_categories.py` selection was run. The four LRZ trace
+fixtures remain red on their own long-standing first errors and none was re-run this round -- note
+that `target/surefire-reports` still holds a **stale** `TestS3kSonicTailsLrzSegmentTraceReplay`
+report from 2026-09-18 14:06, which is not evidence about any commit on this branch.
+
+**Media.** Clip `34` added and `INDEX.md` updated, including a correction to clip `33`'s entry.
+The next clip number is `35`. New inputs: `lrz1-act-change-walk-v14.txt`,
+`lrz2-flame-thrower-v1.txt`, `lrz2-flame-thrower-v2.txt`. New raw captures:
+`raw-46-lrz-act-change-walk`, `raw-47`/`raw-48-lrz2-flame-thrower` (both route probes, no clip),
+and the native `native-lrz2-bg/run1`.
+
+**A method note.** The classpath trick from the thirteenth handover carried this whole round, and
+two hazards came with it. A probe that renders must publish the viewport snapshot itself or every
+`render_flags` bit 7 gate reads false. And `target/surefire-reports` is **not** cleaned between
+runs: a report there can be hours older than the run you are reading, which is how a long-dead
+trace failure nearly got attributed to this round's commits. Check the mtime before believing a
+report.
