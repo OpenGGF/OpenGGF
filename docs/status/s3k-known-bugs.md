@@ -5904,9 +5904,24 @@ That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
 - **Verification** — `TestS3kSszBackgroundLayout` 7, `TestS3kSszBackgroundClouds` 6,
   `TestS3kSszScrollBands` 11, and the SSZ/HPZ/DDZ/scroll batch at 1682 tests, all 0 failures and 0
   skips; `-Pguards` 669, 0 failures, 0 skips.
-- **Still owed** — a before/after capture at a camera where a background column actually carries
-  structure (row 13, columns 17-22, i.e. camera X around `$858`-`$B58` with wrapped camera Y around
-  `$520`-`$59F`), at 320 and at a wide viewport. The `$7B` walkway camera is not that place.
+- **The before/after capture was taken, and it shows nothing — which reopens the rendered half.**
+  `raw-24-ssz-bg41-before` and `raw-25-ssz-bg41-after` are 240-frame captures from the same
+  `--star-post --x 0x900 --y 0x580` setup, taken side by side around one recompile: the "before"
+  build restored `getBgCameraX()` to `MIN_VALUE` in plain mode and made `backgroundWindowActive()`
+  cloud-only, and was confirmed effective by `TestS3kSszBackgroundLayout#plainModeSourcesThePlaneFromTheCameraDerivedWindow`
+  going red on it (`expected: <1792> but was: <-2147483648>`). The player settles at
+  `($938,$5EC)` with the camera at `($898,$58C)` — background column `($898 + $28) >> 7 = 17`, row
+  `($58C + $160) >> 7 = 13`, exactly the place this entry asked for — and **every one of 48 sampled
+  frames is pixel-identical between the two builds** (`ImageChops.difference(...).getbbox()` is
+  `None` throughout). The engine's published window really does change (the layout test proves it),
+  but no pixel does.
+- **Open question, with a kill condition.** Either `LevelTilemapManager` does not consume
+  `bgTilemapBaseX` / the period width for SSZ act 1's plane — in which case the "fixed" claim above
+  is a claim about an API, not about the screen, and the rendered half of #41 is still open — or
+  there is a camera where the two builds differ and `($898,$58C)` is not it. Killed by either: a
+  before/after pair at any camera whose frames differ, or a read of the SSZ act-1 path through
+  `ensureBackgroundTilemapData` showing where the base is dropped. Until one of those lands, treat
+  the plain-mode half as **asserted, not demonstrated**; the wide-viewport capture is owed too.
 
 ## Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss
 

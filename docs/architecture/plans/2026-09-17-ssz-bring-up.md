@@ -1268,3 +1268,34 @@ Owed, with the next thing to try named: a capture that stands the player on the 
 `($15D0,$CEC)` **without** stepping off it — a one-frame right tap rather than a burst — so the
 fighter's load window opens while the camera is still on the walkway; or a group whose fighter Y is
 at least `$60` below its own ledge.
+
+### 2026-09-18 — slice 3's tail, part 2: #41 has no picture, and a rewind spot that can disagree
+
+**The #41 before/after was taken and it is blank.** `raw-24-ssz-bg41-before` and
+`raw-25-ssz-bg41-after`: 240 frames each, `--star-post --x 0x900 --y 0x580`, one recompile apart.
+The before build put `getBgCameraX()` back to `MIN_VALUE` in plain mode and made
+`backgroundWindowActive()` cloud-only; it was confirmed effective rather than assumed, by
+`TestS3kSszBackgroundLayout#plainModeSourcesThePlaneFromTheCameraDerivedWindow` going red on it
+(`expected: <1792> but was: <-2147483648>`). The player settles at `($938,$5EC)`, camera
+`($898,$58C)` — background column 17, row 13, the place the entry asked for — and **48 sampled
+frames are pixel-identical between the builds**. `Sonic3kZoneFeatureProvider.useFullWidthBackgroundTilemapWindow`
+is MGZ-only, so SSZ does take the branch the fix moves it to; the window base really changes from
+0 to `$890` and the period from the fan width to 512, and nothing on screen does. Either the SSZ
+act-1 plane is not built from `bgTilemapBaseX` at all, or `($898,$58C)` is the wrong camera. Filed
+as an open question with both kill conditions in `docs/status/s3k-known-bugs.md` #41, and the
+plain-mode half is downgraded there from "fixed" to **asserted, not demonstrated**. This is
+recorded rather than quietly dropped because a fix whose only evidence is the assertion it was
+written against is exactly the shape of thing a later agent would re-derive.
+
+**A rewind spot that can disagree.** The slice-3 spots all captured and restored one frame apart
+with every object alive on both sides, so a broken `ObjectRefId` restore could not have been seen
+— the previous entry proved that by disabling the rotating platform's carrier restore and finding
+everything still green.
+`TestS3kSszTraversalPlatforms#restoringPastTheDebrisDeletionRecreatesThePiecesAndTheirColumnLink`
+captures while the `$7E` column's eight `word_46618` pieces are in the air, runs on until every
+piece has been deleted (`countActive == 0`, asserted), and only then restores. The pieces have to
+be recreated — the test holds the pre-deletion instances and asserts none of the restored ones is
+the same object — and each piece's `parent3(a0)` has to resolve through the identity table to the
+live column. Broken on purpose by replacing the debris' `resolveObject` with `column = null`:
+`expected: <SszCollapsingColumnObjectInstance@…> but was: <null>`. That is the first SSZ spot where
+the sidecar is load-bearing.

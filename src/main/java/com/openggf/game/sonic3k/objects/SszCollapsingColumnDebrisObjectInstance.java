@@ -112,6 +112,9 @@ public final class SszCollapsingColumnDebrisObjectInstance extends AbstractObjec
         }
     }
 
+    /** The {@code parent3(a0)} link, as an {@code ObjectRefId} sidecar restores it. */
+    public SszCollapsingColumnObjectInstance columnForTest() { return column; }
+
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }

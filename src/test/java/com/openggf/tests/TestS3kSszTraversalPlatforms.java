@@ -7,6 +7,8 @@ import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -28,6 +30,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -276,6 +279,100 @@ class TestS3kSszTraversalPlatforms {
                 SszCollapsingBridgeDiagonalObjectInstance.SLOPE_TABLE_ADDR), "byte_46658[0]");
         assertEquals(25, (byte) rom.readU8(
                 SszCollapsingBridgeDiagonalObjectInstance.SLOPE_TABLE_ADDR + 63), "byte_46658[63]");
+    }
+
+    /**
+     * The rewind spot slice 3 owed: one that restores into a state where the child instances no
+     * longer exist, so the {@code ObjectRefId} sidecar really has to do something.
+     *
+     * <p>Every earlier SSZ spot captured and restored one frame apart, with both the parent and its
+     * children alive on both sides — so the restore found each object already in place and a broken
+     * sidecar could not have been noticed (disabling the rotating platform's carrier restore left
+     * all of them green). Here the capture is taken while the column's eight {@code word_46618}
+     * pieces are falling, the run then continues until every piece has been deleted, and only then
+     * is the snapshot restored. The pieces have to come back as <em>new</em> instances, and each
+     * one's {@code parent3(a0)} link has to resolve through the identity table to the live column.
+     */
+    @Test
+    void restoringPastTheDebrisDeletionRecreatesThePiecesAndTheirColumnLink() {
+        // $7E:$00 at ($600,$960).
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x600, 0x900);
+        SszCollapsingColumnObjectInstance column = null;
+        for (int frame = 0; frame < 240 && column == null; frame++) {
+            fixture.stepIdleFrames(1);
+            column = active(SszCollapsingColumnObjectInstance.class);
+        }
+        assertNotNull(column, "$7E:$00 at ($600,$960)");
+        for (int frame = 0; frame < 600 && !column.collapsedForTest(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(column.collapsedForTest(), "the column ran loc_44B30");
+        // Let the pieces get clear of the column so the capture is mid-fall, not mid-allocation.
+        fixture.stepIdleFrames(20);
+        assertTrue(countActive(SszCollapsingColumnDebrisObjectInstance.class) > 0,
+                "pieces are in the air at the capture");
+
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot before = registry.capture();
+        List<SszCollapsingColumnDebrisObjectInstance> originals =
+                allActive(SszCollapsingColumnDebrisObjectInstance.class);
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = registry.capture();
+
+        int settled = 0;
+        for (int frame = 0; frame < 900; frame++) {
+            fixture.stepIdleFrames(1);
+            settled = countActive(SszCollapsingColumnDebrisObjectInstance.class);
+            if (settled == 0) {
+                break;
+            }
+        }
+        assertEquals(0, settled,
+                "every piece is gone before the restore, so nothing can survive it in place");
+
+        registry.restore(before);
+        List<SszCollapsingColumnDebrisObjectInstance> restored =
+                allActive(SszCollapsingColumnDebrisObjectInstance.class);
+        assertEquals(originals.size(), restored.size(),
+                "the restore recreated the pieces that were in the air");
+        SszCollapsingColumnObjectInstance liveColumn =
+                active(SszCollapsingColumnObjectInstance.class);
+        assertNotNull(liveColumn, "the column is back too");
+        for (SszCollapsingColumnDebrisObjectInstance piece : restored) {
+            assertTrue(originals.stream().noneMatch(original -> original == piece),
+                    "a piece survived the deletion instead of being recreated");
+            assertSame(liveColumn, piece.columnForTest(),
+                    "the ObjectRefId sidecar resolved parent3(a0) to the restored column");
+        }
+        sameSnapshot(before, registry.capture(), "restore past the debris deletion");
+
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, registry.capture(), "forward replay past the debris deletion");
+    }
+
+    private static void sameSnapshot(CompositeSnapshot a, CompositeSnapshot b, String label) {
+        assertEquals(a.entries().keySet(), b.entries().keySet(), label);
+        for (String key : a.entries().keySet()) {
+            assertTrue(RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)).isEmpty(),
+                    () -> label + " " + key + ": "
+                            + RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)));
+        }
+    }
+
+    private static <T> List<T> allActive(Class<T> type) {
+        var manager = GameServices.level().getObjectManager();
+        List<T> found = new ArrayList<>();
+        if (manager == null) {
+            return found;
+        }
+        for (ObjectInstance instance : manager.getActiveObjects()) {
+            if (type.isInstance(instance) && !instance.isDestroyed()) {
+                found.add(type.cast(instance));
+            }
+        }
+        return found;
     }
 
     private static <T> T active(Class<T> type) {
