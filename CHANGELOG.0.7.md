@@ -393,6 +393,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The act 1 spike balls are in too: the big ones grind back and forth along the floor throwing
   rock chips, and the one on the swinging arm is only dangerous on half its sweep until a player
   approaches it from the left, when it breaks off the arm and rolls away downhill.
+  The zone's mist-breathing badniks are in as well: each one turns to face you and breathes a
+  cloud that drifts, settles on the ground and, if it catches you, clings on - dragging your speed
+  down an eighth a frame and taking a ring a second until you shake it off by rocking left and
+  right, or blow it apart with a spindash.
   Lava Reef's bomb badniks are in, 66 of them across the two acts: each one is a solid block you
   can stand on until a player comes within a few steps, when its fuse lights, flickers faster and
   faster, and it blows itself apart into four fragments that arc away and fall.

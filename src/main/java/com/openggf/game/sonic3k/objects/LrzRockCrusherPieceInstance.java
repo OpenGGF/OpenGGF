@@ -1,6 +1,10 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
@@ -75,7 +79,10 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
     /** ROM {@code routine(a0)}: 2 = wait for the parent, 4 = countdown, 6 = shake, 8 = done. */
     private int routine = 2;
     /** ROM {@code $46(a0)}: the parent this piece reads through {@code Refresh_ChildPosition}. */
-    private transient LrzRockCrusherObjectInstance parent;
+    @RewindTransient(reason = "parent3 link restored by ObjectRefId in restoreRewindState")
+    private LrzRockCrusherObjectInstance parent;
+
+    private record ParentLink(ObjectRefId parentId) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     LrzRockCrusherPieceInstance(int subtype, int childDx, int childDy) {
         super(new ObjectSpawn(0, 0, Sonic3kObjectIds.SPIKER, subtype, 0, false, 0),
@@ -163,6 +170,22 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
         }
         updateDynamicSpawn((parent.getCentreX() + childDx) & 0xFFFF,
                 (parent.getCentreY() + childDy) & 0xFFFF);
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        ObjectRefId id = context.identityTable().map(table -> table.encodeObject(parent)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new ParentLink(id));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof ParentLink link) {
+            parent = link.parentId() == null ? null
+                    : (LrzRockCrusherObjectInstance) context.requireIdentityTable()
+                            .resolveObject(link.parentId(), true);
+        }
     }
 
     /** ROM {@code child_dy(a0)}. */

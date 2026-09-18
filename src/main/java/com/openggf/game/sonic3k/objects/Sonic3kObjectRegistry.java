@@ -27,6 +27,7 @@ import com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.PoindexterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.ToxomisterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -1522,6 +1523,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.HCZ_END_BOSS,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new IwamodokiBadnikInstance(spawn));
+        // Id $9B is Obj_Toxomister in the SKL set (sonic3k.asm, ROM $8FD48); the S3KL set spends
+        // it on Obj_Bubbles, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.BUBBLES_BADNIK,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new ToxomisterBadnikInstance(spawn));
         // Id $9C is Obj_LRZRockCrusher in the SKL set (sonic3k.asm:196988); the S3KL set spends
         // it on Obj_Spiker, which is the name the id constant carries.
         registerStockRomZoneBound(Sonic3kObjectIds.SPIKER,

@@ -108,7 +108,23 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#restoreRewindState", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#restoreRewindState", 1),
+            // 2026-09-18 Lava Reef. Four object-graph links that a restore cannot rebuild from
+            // scalars, each travelling as an ObjectRefId sidecar on the same triage precedent as
+            // the DDZ and HPZ entries above.
+            //  - The rock crusher's eight hit pieces read their parent's position every frame
+            //    through Refresh_ChildPosition; without the link a restored piece freezes.
+            //  - The Toxomister body watches $44(a0) to know when to breathe again, its cloud
+            //    reads the body's facing to sign the puff dispersal, and each puff follows the
+            //    cloud. A lost link would make the body breathe a second cloud immediately.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzRockCrusherPieceInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzRockCrusherPieceInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterBadnikInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterBadnikInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#restoreRewindState", 1)
     );
 
     private static final Map<String, Integer> OBJECT_REWIND_ANNOTATION_BASELINE = Map.ofEntries(
@@ -138,6 +154,12 @@ class TestRewindArchitectureGuard {
             // to the nearest live parent on recreate, not rewindable scalar state.
             // Same structural-parent triage precedent as the entries above.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/BuggernautBabyInstance.java#@RewindTransient", 1),
+            // 2026-09-18 Lava Reef: the four links triaged with the override entries above, each
+            // restored by its own ObjectRefId sidecar rather than left to be rebuilt.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzRockCrusherPieceInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterBadnikInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#@RewindTransient", 1),
             // Checkpoint/starpost orbit children keep ROM parent pointers as
             // structural live links. Rewind recreates them only when a matching
             // live parent exists, then reapplies captured scalar orbit state.
