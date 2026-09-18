@@ -210,6 +210,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         if (!player.isOnObject()) {
             return;
         }
+        holdRide(player);
         int amplitude = isWide() ? LIFT_AMPLITUDE_WIDE : LIFT_AMPLITUDE;
         int step = isWide() ? ANGLE_STEP_WIDE : ANGLE_STEP;
         // GetSineCosine returns the cosine in d1 (:3025); muls.w d0,d1 / swap d1 keeps the
@@ -304,6 +305,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         if (!player.isOnObject()) {
             return;
         }
+        holdRide(player);
         int swing = (TrigLookupTable.cosHex(state.angle) * SWING_AMPLITUDE) >> 16;
         NativePositionOps.writeXPosPreserveSubpixel(player, (getX() + swing) & 0xFFFF);
         int frameIndex = (state.angle & 0xFF) / SWING_FRAME_DIVISOR;
@@ -317,6 +319,21 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
     /** {@code cmpi.b #6,routine(a1) / bhs} plus the debug-placement gate (:95230-95233). */
     private boolean isIgnorable(AbstractPlayableSprite player) {
         return player.getDead() || player.isHurt() || player.isDebugMode();
+    }
+
+    /**
+     * The ROM's standing bit stays set for the whole ride, so the engine's per-frame object
+     * support has to be renewed for the whole ride too. Marking it only at the mount let the
+     * engine drop the rider the next frame, which showed up in a capture as nineteen frames of
+     * {@code air} flickering 1/0 beside the {@code $1A40} tube.
+     */
+    private void holdRide(AbstractPlayableSprite player) {
+        ObjectServices objectServices = tryServices();
+        if (objectServices != null && objectServices.objectManager() != null) {
+            objectServices.objectManager().markObjectSupportThisFrame(player);
+        }
+        player.setOnObject(true);
+        player.setAir(false);
     }
 
     /** {@code sub_33C34} (:70167-70187), the ROM's {@code RideObject_SetRide}. */
