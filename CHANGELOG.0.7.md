@@ -387,8 +387,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   you approach it from the right; and the shooting triggers fire their slow diagonal
   shots until you roll into one, which bounces you back, blows the trigger up and
   opens its door.
+  The small horizontal buttons are solid all the way round, so you can drop onto the top of
+  one and stand there rather than falling straight through it.
   The act 1 corkscrew works: run into it with enough speed and it takes hold of you,
-  sweeps you around the turn and spits you back out the way you came.
+  sweeps you around the turn and spits you back out the way you came. Being caught by one
+  now straightens you out of a roll the way the ROM does, so you leave the turn standing.
   Act 1's sinking rocks are solid again: stand on one and it sinks smoothly under your
   weight, rising back once you step off. Jumping off one while it is still sinking now leaves
   exactly where the ROM leaves you: the pixel the block sinks on that frame is no longer added
@@ -491,7 +494,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   first, each link bursting as it goes, instead of quietly shortening the drill's hover. Killing
   the drill itself now ends the fight: it fades out, breaks into eleven pieces on their own arcs,
   and hands over to the end-of-act sign and the results screen the way every other Sonic 3 &
-  Knuckles miniboss does.
+  Knuckles miniboss does. The end-of-act sign the defeat hands over to moves with the act
+  change as well; before, a real defeat stopped the change dead rather than carrying into
+  Act 2.
   Beating the drill now changes the act. Once the tally is over, Lava Reef loads Act 2's art
   behind the results screen and then, on a single frame, swaps the act underneath the player:
   the level, its solids and its object list are Act 2's, and the player, the camera and the
