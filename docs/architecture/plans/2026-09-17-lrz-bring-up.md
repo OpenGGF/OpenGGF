@@ -2041,9 +2041,12 @@ describes for a direct `$901` load. `Sonic3kLevelEventManager`'s existing CNZ1 -
 | Same, with the `FixBugs` break alone | focused | 1 failure, the flash-window assertion |
 
 This is focused validation. **No `run_categories.py --base 035e48a58 --run` has been run for this
-branch**, and the cold act 1 route and `TestS3kSonicTailsLrzSegmentTraceReplay` were **not**
-re-measured at this head -- the sixth handover's numbers are stamped to `17ccb4e72` and older, so
-re-measure before quoting any of them.
+branch.** `TestS3kSonicTailsLrzSegmentTraceReplay` **was** re-measured, at `51474c172`: the
+frontier is unchanged at frame 208 `tails_y_speed` (expected `0x07BD`, actual `0x0000`) with 6835
+errors, recorded in the [trace frontier log](../../status/trace-frontier-log.md) with the note that
+the drop from 7703 belongs to the whole span since the frame-637 fix and was not attributed
+further. The **cold act 1 route was not re-measured**; the sixth handover's row-2322 figure is
+stamped to `17ccb4e72`, so re-measure before quoting it.
 
 **What slice 6 still owes, in the order it has to be built.** The ROM is decoded for all of it;
 the debris offsets, frames, `Obj_VelocityIndex` entries and the four palette addresses are in the
