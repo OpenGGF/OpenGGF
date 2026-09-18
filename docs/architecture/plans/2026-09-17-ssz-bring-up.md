@@ -1530,3 +1530,32 @@ re-derives the orbit from its parent every frame, so the fraction is dropped. Th
 accumulate, because each frame's position is computed absolutely from the parent rather than
 integrated, but a link can sit one pixel from where the cartridge puts it. Worth knowing before
 anyone compares the chain against a native row.
+
+### 2026-09-18 — the slice-5 reviewer did not deliver, and what was checked instead
+
+An independent reviewer was spawned against commit `9e38c808c` with a specific brief: the routine
+dispatch and what advances `routine`, `Swing_UpAndDown`'s sign conventions, `MoveSprite2` versus
+`MoveSprite`, the `loc_7A496` angle machine's `sls`/`not.b`/`btst #0,render_flags` combination,
+`MoveSprite_CircularSimple`'s shift semantics, `sub_7A5A0`'s hit gate and `$25(a0)` restore,
+`loc_7A3F8`'s write order, drifted citations, and assertions that could not disagree. It ran for
+about ten minutes and twenty-four tool calls and then ended **without returning a report**; three
+requests to deliver it, including one asking only for partial findings, produced nothing. **No
+reviewer findings exist for slice 5.** This is recorded rather than quietly dropped, because "an
+independent reviewer looked at it" is exactly the kind of claim that later reads as coverage.
+
+What was checked directly instead, against the disassembly text, with the results:
+
+| Checked | Result |
+| --- | --- |
+| `SetUp_ObjAttributes` ends `addq.b #2,routine(a0)` | Correct as modelled; it is the only thing advancing `routine` through `off_7A2B4` |
+| `loc_7A496`'s reversal window and which end sets `$38` bit 3 | Traced frame by frame from angle 0. `sls` is C-or-Z on `subi.b #$40,d0`, so it means `angle <= $40`; `bhs #-$80` skips when the biased value is `>= $80`, so the reversal fires once at `$40` and once at `$BF` and the sweep runs the long way round through zero. With the ship unflipped bit 3 is set at the `$BF` end and flipped at the `$40` end. Matches the port |
+| `MoveSprite_CircularSimple`'s `asr.l d2` | `(±$100 << 16) >> 4` is 16.0 in 16.16, so `$3A = 4` really is a 16-pixel arm and `3` a 32-pixel one. Matches |
+| The same routine's longword position read/write | **Deviation found**: the ROM carries each link's sub-pixel fraction, the port keeps whole pixels. Recorded above; cannot accumulate |
+| `Obj_SSZGHZBoss`'s `Boss_flag` writes | **Gap found and fixed**; see the entry above |
+| `loc_7A32C`'s `Camera_X + $A0` trigger | Width-independent in practice, because the lock pins `Camera_max_X` to `$160` so the camera sits at `$160` at every viewport |
+| The defeat case's hit delivery | **Hole found and closed**: the eight hits are delivered by calling `onPlayerAttack` directly, so the test passed without the ship being touchable at all. It now asserts the box (`$C0 | $F`), the hit counter and the zero after defeat |
+
+Not checked by anyone: `sub_7A5A0`'s `$25(a0)` collision restore against the shared hit handler's
+equivalent, `Swing_UpAndDown`'s shared helper against the ROM routine text, and every citation in
+the four classes' Javadoc. Those remain open for slice 6's reviewer, who should be given the same
+brief and actually waited on.
