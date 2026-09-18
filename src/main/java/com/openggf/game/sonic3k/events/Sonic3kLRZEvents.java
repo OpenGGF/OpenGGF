@@ -119,6 +119,14 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     private static final int LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE = 94;
 
     private boolean act1BackgroundInitialised;
+    /**
+     * {@code LRZ2_BackgroundInit} (sonic3k.asm:115655-115668) runs on a direct {@code $901} load
+     * and leaves {@code Events_routine_bg} on 8. The seamless change does not run it at all --
+     * {@code loc_56CAA} calls {@code Load_Level}, not the background initializer, and ends on
+     * {@code clr.w (Events_routine_bg)} -- so {@link #requestAct2Reload} sets this before the
+     * reload and act 2 starts on {@code LRZ2_BackgroundEvent}'s stage 0 instead.
+     */
+    private boolean act2BackgroundInitialised;
 
     @Override
     public void update(int act, int frameCounter) {
@@ -134,7 +142,50 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             return;
         }
         advanceDomeRegions(act);
+        advanceAct2Background(act);
         advanceRockSpriteWindow();
+    }
+
+    /**
+     * {@code LRZ2_BackgroundInit} (sonic3k.asm:115655-115668) and then
+     * {@code LRZ2_BackgroundEvent} (:115676-115738), which act 2 dispatches every frame in place
+     * of act 1's.
+     *
+     * <p>The initializer is skipped for the seamless change on purpose: {@code loc_56CAA} runs
+     * {@code Load_Level}, which does not re-enter the background initializer, and leaves the
+     * routine word clear, so the act-2 event's stage 0 is what refills plane B after the change.
+     */
+    private void advanceAct2Background(int act) {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ || act != 1) {
+            return;
+        }
+        if (!act2BackgroundInitialised) {
+            act2BackgroundInitialised = true;
+            // loc_56FD2: Events_routine_bg = 8, sub_57082, Reset_TileOffsetPositionEff,
+            // Refresh_PlaneFull, ApplyDeformation. The deformation is SwScrlLrz's already.
+            lrz.setBackgroundRoutine(Lrz2BackgroundStageMachine.BG_STAGE_STEADY);
+            resetEffectiveTileOffsets();
+            refreshPlaneFull();
+            return;
+        }
+        Lrz2BackgroundStageMachine.advance(lrz, this::resetEffectiveTileOffsets);
+    }
+
+    /** ROM {@code Reset_TileOffsetPositionEff}. */
+    private void resetEffectiveTileOffsets() {
+        LevelManager manager = levelManager();
+        if (manager != null) {
+            manager.resetTileOffsetPositionEffectiveForFullRefresh();
+        }
+    }
+
+    /** ROM {@code Refresh_PlaneFull}, from {@code LRZ2_BackgroundInit}'s {@code moveq #0,d1}. */
+    private void refreshPlaneFull() {
+        LevelManager manager = levelManager();
+        if (manager != null) {
+            manager.refreshFullTilemapPlanesFromCurrentLayout(0);
+        }
     }
 
     /**
@@ -265,6 +316,9 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         // jsr (Clear_Switches) at :115355 runs BEFORE jsr (Load_Level) at :115359, so a trigger
         // bit an act-2 initializer sets during the reload must survive. FBZ does the same.
         com.openggf.game.sonic3k.Sonic3kLevelTriggerManager.reset();
+        // loc_56CAA never calls LRZ2_BackgroundInit: the act 2 background arrives through
+        // LRZ2_BackgroundEvent's stage 0 (loc_5700C), which the cleared routine word selects.
+        act2BackgroundInitialised = true;
         levelManager().applySynchronousScreenEventTransition(request);
         // The synchronous reload has finished: this is the first legal post-change rewind state.
         if (hasRuntime()) {
