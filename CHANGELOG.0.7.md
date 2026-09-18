@@ -36,7 +36,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   of the level. Shields, spilled rings, dust, springs, solid objects and a carried or respawning
   sidekick all follow the flip. Which direction of crossing turns gravity on is the level's own
   choice, so running back the way you came restores it. Act 2's pressure pads flip it too,
-  from either face, so a pad works whichever way up you reach it.
+  from either face, so a pad works whichever way up you reach it; the pads are now drawn,
+  sinking as they are pressed, and sound the transporter note.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

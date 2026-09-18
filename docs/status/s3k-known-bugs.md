@@ -201,13 +201,13 @@ the writer anyway is a deliberate choice recorded here rather than a resolution.
 
 Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
 
-**Two gaps that arrived with the gravity objects themselves**, both shared-surface work
-rather than reverse-gravity work: `Obj_DEZGravitySwitch` (`$58`) is **solid and functional
-but invisible**, because `Map_DEZGravitySwitch` / `make_art_tile(ArtTile_DEZMisc+$143,1,0)`
-(sonic3k.asm:94801-94803) is not registered for Death Egg in `Sonic3kPlcArtRegistry`; and
-its press is **silent**, because `sfx_Transporter` (:94833) has no `GameSound` constant.
-Both belong with the DEZ misc-object art, not with the gravity slice. `Obj_DEZGravitySwap`
-(`$5B`) has no art in the ROM either and is correctly invisible.
+**The two gaps that arrived with `$58` are closed.** `Obj_DEZGravitySwitch` draws from
+`Map_DEZGravitySwitch` (ROM `$48BEA`) through `make_art_tile(ArtTile_DEZMisc+$143,1,0)`
+(sonic3k.asm:94801-94803), now a `Sonic3kPlcArtRegistry` level-art entry on the same
+`ArtTile_DEZMisc` block the Death Egg door already draws from, and its press plays
+`sfx_Transporter`, which the engine already carried as `Sonic3kSfx.TRANSPORTER` ($73) —
+the gap was a search for a `GameSound` constant, not a missing sound. `Obj_DEZGravitySwap`
+(`$5B`) has no art in the ROM and is correctly invisible.
 
 **Suspected cause.** Not a defect — a deliberately sliced port. 22 of the 116
 `Reverse_gravity_flag` references in the disassembly are still unimplemented (11 of them in

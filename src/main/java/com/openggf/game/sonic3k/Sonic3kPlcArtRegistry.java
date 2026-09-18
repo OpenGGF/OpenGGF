@@ -29,6 +29,8 @@ public final class Sonic3kPlcArtRegistry {
     private static final int[] DOOR_VERTICAL_HCZ_FRAMES = {0};
     private static final int[] DOOR_VERTICAL_CNZ_FRAMES = {1};
     private static final int[] DOOR_VERTICAL_DEZ_FRAMES = {2};
+    /** word_48BEE (armed) and word_48C08 (pressed), sonic3k.lst:112043-112044. */
+    private static final int DEZ_GRAVITY_SWITCH_FRAME_COUNT = 2;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -2664,6 +2666,20 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null,
                 DOOR_VERTICAL_DEZ_FRAMES
+        ));
+
+        // Gravity switch (SKL object 0x58, Obj_DEZGravitySwitch): the act 2 pressure pads.
+        // ROM header: move.l #Map_DEZGravitySwitch,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc+$143,1,0),art_tile(a0) (sonic3k.asm:94801-94802).
+        // Two frames -- word_48BEE armed, word_48C08 pressed -- from the same ArtTile_DEZMisc
+        // block the door above draws from, so no extra PLC is needed.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_GRAVITY_SWITCH,
+                Sonic3kConstants.MAP_DEZ_GRAVITY_SWITCH_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x143,
+                1,
+                null,
+                DEZ_GRAVITY_SWITCH_FRAME_COUNT
         ));
     }
 

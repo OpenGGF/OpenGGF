@@ -1,6 +1,10 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameStateManager;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -12,6 +16,10 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.render.PatternSpriteRenderer;
+
+import java.util.List;
 
 /**
  * SKL {@code $58}, {@code Obj_DEZGravitySwitch} (sonic3k.asm:94800-94910).
@@ -141,10 +149,12 @@ public final class S3kDezGravitySwitchObjectInstance extends AbstractObjectInsta
         routine = Routine.COUNTING;
         applySink(true);
         releaseRider(player);
-        // ROM plays sfx_Transporter here (:94832-94833). GameSound has no constant for it
-        // and adding one is a shared-enum change this slice does not need, so the press is
-        // silent for now; recorded as an inherited gap in the act 2 matrix. Captures are
-        // silent anyway and audio claims in this project are test-backed, never clip-backed.
+        // moveq #signextendB(sfx_Transporter),d0 / jsr (Play_SFX).l (:94832-94833), inside
+        // the press branch: the toggle four updates later and the rearm are both silent.
+        ObjectServices objectServices = tryServices();
+        if (objectServices != null) {
+            objectServices.playSfx(Sonic3kSfx.TRANSPORTER.id);
+        }
     }
 
     /**
@@ -223,13 +233,30 @@ public final class S3kDezGravitySwitchObjectInstance extends AbstractObjectInsta
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
     /**
-     * Not drawn yet. The ROM pad has real art -- {@code Map_DEZGravitySwitch} at
-     * {@code make_art_tile(ArtTile_DEZMisc+$143,1,0)} with two mapping frames, the second
-     * being the pressed pose (:94801-94807) -- and none of that is registered in
-     * {@code Sonic3kPlcArtRegistry} for Death Egg yet. The pad is solid and functional but
-     * invisible; the art belongs with the rest of the DEZ misc-object art, not with this
-     * slice. Recorded as an inherited gap in the act 2 matrix.
+     * {@code Map_DEZGravitySwitch} through {@code make_art_tile(ArtTile_DEZMisc+$143,1,0)}
+     * (:94801-94802): two frames from the level's own {@code ArtTile_DEZMisc} block, frame 0
+     * the armed 32x16 pad and frame 1 the two-piece pressed pose. The placement's own
+     * {@code render_flags} flip bits are kept -- the header only ever ORs bit 2 (:94803) --
+     * so a pad mounted on a ceiling draws upside down as well as sinking upward.
      */
     @Override
-    public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
+    public void appendRenderCommands(List<GLCommand> commands) {
+        ObjectRenderManager renderManager = getRenderManager();
+        if (renderManager == null) {
+            return;
+        }
+        PatternSpriteRenderer renderer =
+                renderManager.getRenderer(Sonic3kObjectArtKeys.DEZ_GRAVITY_SWITCH);
+        if (renderer == null || !renderer.isReady()) {
+            return;
+        }
+        renderer.drawFrameIndex(mappingFrame, getX(), getY(),
+                (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
+    }
+
+    /** ROM {@code move.w #$280,priority(a0)} (:94805). */
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.fromS3kWord(0x280);
+    }
 }

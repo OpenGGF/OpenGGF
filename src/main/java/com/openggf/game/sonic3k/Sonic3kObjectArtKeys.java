@@ -486,6 +486,9 @@ public final class Sonic3kObjectArtKeys {
     public static final String DOOR_VERTICAL_HCZ = "door_vertical_hcz";   // ArtTile_HCZMisc+$0A, Map_HCZCNZDEZDoor
     public static final String DOOR_VERTICAL_CNZ = "door_vertical_cnz";   // ArtTile_CNZMisc+$C5, Map_HCZCNZDEZDoor
     public static final String DOOR_VERTICAL_DEZ = "door_vertical_dez";   // ArtTile_DEZMisc+$1E, Map_HCZCNZDEZDoor
+
+    // DEZ Gravity Switch (SKL 0x58) - ArtTile_DEZMisc+$143, palette 1, Map_DEZGravitySwitch
+    public static final String DEZ_GRAVITY_SWITCH = "dez_gravity_switch";
     public static final String DOOR_HORIZONTAL = "door_horizontal";        // ArtTile_CNZMisc+$C5, Map_CNZDoorHorizontal
 
     private Sonic3kObjectArtKeys() {

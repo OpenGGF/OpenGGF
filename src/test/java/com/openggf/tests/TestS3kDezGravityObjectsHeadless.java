@@ -1,19 +1,25 @@
 package com.openggf.tests;
 
+import com.openggf.audio.AudioManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.S3kDezGravitySwapObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kDezGravitySwitchObjectInstance;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -474,6 +480,72 @@ class TestS3kDezGravityObjectsHeadless {
             restored.update(0, sprite);
             assertTrue(GameServices.gameState().isReverseGravityActive(),
                     "and toggles on the same update of the replay as of the first run");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /**
+     * {@code moveq #signextendB(sfx_Transporter),d0 / jsr (Play_SFX).l} (:94832-94833),
+     * inside the press branch and nowhere else. {@code sfx_Transporter} is {@code $73}
+     * (sonic3k.constants.asm:1560), which the engine already carries as
+     * {@link com.openggf.game.sonic3k.audio.Sonic3kSfx#TRANSPORTER}.
+     *
+     * <p>The press frame is the only frame that plays it: the toggle four updates later is
+     * silent, and so is the rearm.
+     */
+    @Test
+    void theGravitySwitchPlaysTheTransporterSoundOnThePressFrameOnly() {
+        HeadlessTestFixture fixture = fixture();
+        AudioManager audioManager = AudioManager.getInstance();
+        List<Integer> requested = new ArrayList<>();
+        try {
+            audioManager.setRequestObserver((requestClass, rawSoundId) -> requested.add(rawSoundId));
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            pressPad(pad, sprite);
+            assertEquals(List.of(Sonic3kSfx.TRANSPORTER.id), requested,
+                    "the press frame plays sfx_Transporter ($73) exactly once");
+
+            requested.clear();
+            for (int update = 0; update < 24; update++) {
+                pad.update(0, sprite);
+            }
+            assertTrue(GameServices.gameState().isReverseGravityActive(),
+                    "precondition: those updates crossed the toggle");
+            assertEquals(List.of(), requested,
+                    "the toggle and the rearm are silent; only the press calls Play_SFX");
+        } finally {
+            audioManager.setRequestObserver(null);
+            SessionManager.clear();
+        }
+    }
+
+    /**
+     * {@code move.b #1,mapping_frame(a0)} on the press (:94821) and back to 0 when the pad
+     * rises (:94902). Frame 1 is {@code word_48C08}, the two-piece pressed pose.
+     */
+    @Test
+    void theGravitySwitchShowsItsPressedMappingFrameWhilePressed() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+            assertEquals(0, pad.mappingFrameForTest(), "armed is frame 0");
+
+            pressPad(pad, sprite);
+            assertEquals(1, pad.mappingFrameForTest(), "the press shows the sunken pose");
+            assertEquals(RenderPriority.fromS3kWord(0x280), pad.getPriorityBucket(),
+                    "move.w #$280,priority(a0) (:94805)");
+
+            for (int update = 0; update < 40 && pad.isPressed(); update++) {
+                pad.update(0, sprite);
+            }
+            assertFalse(pad.isPressed(), "precondition: the pad rearmed");
+            assertEquals(0, pad.mappingFrameForTest(), "and is drawn armed again");
         } finally {
             SessionManager.clear();
         }
