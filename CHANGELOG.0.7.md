@@ -474,6 +474,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   `bk2-input-authoring` document the workflow. Native BizHawk reference capture
   uses a shared host with explicit zone plans, input hashes and failed-export
   detection; existing FBZ commands remain compatible.
+- **Plane opacity probe:** a development tool answers, from the decoded ROM layout
+  alone, whether the plane behind another can show through at a coordinate. Where a
+  before/after frame capture cannot separate "wrong pixels drawn" from "no pixels
+  reachable" -- both look byte-identical -- this separates them. It settled why Lava
+  Reef Act 1's dome background change produced no visible difference: that act's
+  foreground is opaque across the whole dome. No gameplay or rendering behavior changes.
+
 - **Existing feature foundations:** retain editor, racing, prepared-loading,
   audio-core, and mod regression coverage while stock campaigns mature.
 

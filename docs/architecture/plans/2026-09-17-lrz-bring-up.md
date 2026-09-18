@@ -370,7 +370,7 @@ Still open:
 | Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). On the fixture's own recorded native input the engine matches Player 1 `(x, y)` **exactly for native rows 0-2322** (0-856 at the fourth handover, 0-636 before the frame-637 fix). **The reach is not a progress measure** and will keep falling as the zone fills in: the input is the fixture's own, which native survives, so the reach only measures how long an off-phase replay lives among real hazards. Quote the exact-match row and the first divergence. Re-measured at `13a7c8fe8`, row 857 was **already closed** by the Fireworm landing (the fourth handover's number predates `cad4a2e07`). The real divergence was row 863, a hurt the engine took and native did not: a killed worm left its flames alive. Fixed, and the route now matches **exactly for native rows 0-2322**, with the new first divergence at row 2323, unattributed. Evidence in the [trace frontier log](../../status/trace-frontier-log.md). The hand-authored `lrz1-cold-route-v7` frontier of x 1909 is untouched. Nothing cold-reached in act 2 or the boss act |
 | Rewind-verified | Before/active/after spots with forward replay for the `$19` door, the `$1C` button latch, the `$15` corkscrew ride, the `$17` sinking rock, the `$16` wall ride, the `$18` falling spike, the `$21` smashing spike platform, `$1B`, `$1F`, `$20` and the `$1E` dash elevator's mid-ride (`TestLrzHazardRewindSpots`, `TestLrzDashElevatorRewindSpot`), each broken on purpose once. Plus `LrzZoneRuntimeState` capture/restore round trips and the animator's counter blob. New in `TestS3kLrzRouteRewindSpots`, on real terrain at fixture route positions: `$18` mid-fall AND landed (whole composite), `$1A` opening (whole composite), `$9C` rumbling and `$9A` fuse-lit (both now whole-composite again, with the dropped-children restore gap closed), and a child-count spot for the crusher's four `S3kCameraGradualObjectInstance` children and the Fireworm's eight segments. `TestS3kLrzDomeBackgroundHeadless` adds a whole-composite spot inside a locked dome region. Still owed: `$1D`/`sub_42EC0` on a route, and cold-route (rather than route-position) spots |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
-| Visually matched | Act 1 parallax, the act-1 lava block, the act-1 rock sprites (320 and 400), the act-1 animated background lava, and clips `08`-`28` covering every slice 3a/3b/3c/3d class plus all three badniks. Clips `21`-`28` are after-only: the "before" is a placeholder that draws nothing. Clip `27` is the Fireworm swimming with its tail; clip `28` is the Toxomister mist reaching Sonic and pinning him -- his ground speed is held at zero for ~100 frames while Left is held, then the shake frees him. Act 2's background is still blocked by the direct-`$901` art gap, which slice 2 proved is not the animated-tile DMA. **Slice 5 has no clip and cannot have one**: the engine's act 1 background plane draws no visible pixels at the dome, proved by an absurd-offset ablation and recorded in [s3k-known-bugs](../../status/s3k-known-bugs.md) |
+| Visually matched | Act 1 parallax, the act-1 lava block, the act-1 rock sprites (320 and 400), the act-1 animated background lava, and clips `08`-`28` covering every slice 3a/3b/3c/3d class plus all three badniks. Clips `21`-`28` are after-only: the "before" is a placeholder that draws nothing. Clip `27` is the Fireworm swimming with its tail; clip `28` is the Toxomister mist reaching Sonic and pinning him -- his ground speed is held at zero for ~100 frames while Left is held, then the shake frees him. Act 2's background is still blocked by the direct-`$901` art gap, which slice 2 proved is not the animated-tile DMA. **Slice 5 has no clip and cannot have one**: Lava Reef act 1's *foreground* plane is opaque across the whole dome, so no background pixel can reach the screen there whatever the lock computes -- measured from ROM data with `PlaneOpacityProbe` (0 of 71 680 see-through pixels at each of six dome viewports), pinned by `TestS3kLrzForegroundOpacity` with an Angel Island control, and recorded in [s3k-known-bugs](../../status/s3k-known-bugs.md), whose removal condition is now a native plane-B-toggled capture |
 
 Out of scope, recorded as dependencies: SSZ after HPZ (SSZ campaign); Knuckles replay classes and
 fixtures' harness work beyond recording frontiers; the `lrz_completerun` hardware-timing compile
@@ -1375,6 +1375,49 @@ Deleting the flames alone moved it only to row 871, because a segment still insi
 `word_8F940` wait went on to grow a *new* flame; the routine has to stop as well. With both halves
 the route matches **exactly for native rows 0-2322** and the new first divergence is row 2323,
 unattributed.
+
+### 2026-09-18 - The dome background is occluded, not mis-windowed
+
+The slice 5 handover left the dome lock with no clip and an open question: the engine's act 1
+background plane draws no visible pixels, proved only by an absurd-offset ablation. The working
+hypothesis was SSZ's cloud-window defect (`7eae9918d`: `SwScrlSsz.getBgCameraX()` reporting a fixed
+`$1C00` window plus `Sonic3kZoneFeatureProvider.bgWrapsHorizontally()`), where the right pixels were
+sampled from the wrong layout columns. **It is not that.** The evidence:
+
+- Lava Reef is not in `bgWrapsHorizontally()`, so `applyBackgroundTilemapWindowSelection` pins
+  `bgTilemapBaseX` to 0 and the shader wraps at the 512px period. The act 1 background layout
+  (decoded, Sonic) is a clean periodic tiling: row 0 `E9 E8` repeating, rows 1-3 four-chunk repeats
+  `F6/EC/ED/EA/EB`, `EF/F0/F1/EE`, `F3/F5/F4/F2`, all in columns 0-13, row 4 back to row 0's pair.
+  Both the locked (`$561,$C5`) and unlocked (`$34C,$109`) background cameras land on populated
+  columns, and the absurd ablation `($123,$45)` shifts by 62px horizontally and 128px vertically --
+  neither a multiple of 512 -- so a visible plane B would have moved. The window is not the problem.
+- The foreground is. `com.openggf.tools.PlaneOpacityProbe` walks the decoded layout, blocks, chunks
+  and patterns (ROM data; no renderer, no camera, no frame) and counts pixels through which plane B
+  could show. At six 320x224 camera positions spanning the dome -- `($1900,$800)`, `($1B00,$800)`,
+  `($1D00,$880)`, `($1E00,$900)`, `($2200,$900)`, `($22C0,$780)` -- **0 of 71 680 pixels** are
+  see-through. Act-wide: 48 234 496 layout pixels, of which only 116 645 (0.24%) are transparent
+  inside populated chunks, in 2 299 16x16 cells bounded by `($900,$30)`-`($2850,$950)`, all thin
+  ceiling and floor seams. The longest run near the dome is one 16px row at `y=$630`, ~500px above
+  region 0's floor and outside a 224px viewport there. The crystal wall seen inside the dome is
+  foreground art.
+- Pinned by `TestS3kLrzForegroundOpacity`: the dome assertion (`seeThroughPixels == 0`) ships beside
+  an Angel Island act 1 control asserting `> 0` through the same code, so a probe that could not
+  disagree fails instead of passing silently. 2 tests, 0 failures, 0 skips.
+
+What this does **not** establish is the ROM's own plane B at those coordinates. The engine decodes
+the same ROM data and an index-0 plane A pixel is the only way plane B shows on hardware, so the
+arithmetic carries over, but no native capture has been taken. The removal condition in
+[s3k-known-bugs](../../status/s3k-known-bugs.md) is now a native plane-B-toggled capture at
+`($1E00,$900)`: agreement closes the entry as correct behaviour, disagreement reopens it as a
+chunk/pattern decode defect. Slice 5 still has no clip, and that is the reason.
+
+A separate, unobservable fidelity gap found while reading: `LRZ1_BackgroundInit` (:115231-115241)
+copies background row 0's pointer over rows 7 to 31 (`move.w #$1C,d1` / `moveq #$19-1,d2`, 4-byte
+rows). The engine implements only the Knuckles `$F6` write from that routine; its decoded rows 5-31
+keep whatever the layout held (zeros plus stray `FF` at row 7 column 27 and `78`/`1F` at rows 18-19
+columns 56-63). Because act 1's background camera Y is `Camera_Y_pos_copy / 8` it never reaches row
+7, so nothing observable depends on it; `Sonic3kSOZEvents.initializeScreen` shows the one-loop shape
+if a later slice needs it.
 
 ## Handover, 2026-09-18
 
