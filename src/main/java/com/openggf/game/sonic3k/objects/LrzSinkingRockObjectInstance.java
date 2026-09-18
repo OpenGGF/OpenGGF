@@ -174,6 +174,26 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
+        // The a0.d6 standing bit SolidObjectFull_1P reads is per object
+        // (sonic3k.asm:41021-41034): loc_1DC98's bclr names THIS block's status byte, and another
+        // solid's SolidObjectFull clears only its own. The block's stale-rider branch must
+        // therefore still be available when the block's own checkpoint runs, even if an earlier
+        // slot's checkpoint already saw the rider airborne. Same contract as
+        // Obj_MGZMovingSpikePlatform.
+        return true;
+    }
+
+    @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // loc_1DC98 (sonic3k.asm:41028-41034) clears Status_OnObj / d6 and returns d4 = 0 without
+        // falling through to SolidObject_cont, so neither MvSonicOnPtfm nor loc_1E154's
+        // upward-velocity lift (:41608-41637) runs on the frame the rider jumps off. Without this
+        // the block's sink is applied on top of Sonic_Jump's own y_pos change.
+        return true;
+    }
+
+    @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
         // d4 = x_pos(a0) (:87937) and the block only ever moves vertically, so MvSonicOnPtfm's
         // d4 - x_pos(a0) carry is zero either way.

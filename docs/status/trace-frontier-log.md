@@ -110987,3 +110987,56 @@ Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `7
   **21 / 197 / 8**. The trace and route numbers above were NOT re-measured at that head, so they
   belong to `72920cabc` and should be quoted with it. Expect the reach to fall again, for the same
   reason.
+
+## 2026-09-18 - LRZ1: the frame-637 divergence was not an ordering defect, and it is closed
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at the commit
+that carries this entry (base develop `035e48a58`).
+
+**The open question from the entry above is killed by reading the engine, not by a measurement.**
+It asked whether the engine would have to order the player's own update ahead of the object
+updates "as the ROM's slot order does". It already does: S3K sets
+`ObjectInteractionRules.objectsExecuteAfterPlayerPhysics()`, so `LevelFrameStep` (:325, :339-:364)
+runs `physics` first and then `objects` with inline solid checkpoints, and
+`SpriteManager.tickPlayablePhysics` (:1836-:1842) skips the legacy pre-movement batched solid pass
+for exactly that reason. No reordering was needed and none was made.
+
+**What the pixel actually was.** Reproduced in a bounded headless case
+(`TestS3kLrzSinkingRockJumpOffHeadless`): ride the `($4F8,$543)` `$17 Obj_LRZSinkingRock` until
+`$2E` is climbing, then jump. Instrumented per-frame, the block's own `update` sees Player 1
+already at the ROM's value (`p1y = 1322`, `air = true`) - the player pass ran first, correctly -
+and the player leaves the block's solid checkpoint at 1323. The extra pixel is
+`ObjectSolidContactController.resolveContactInternal`'s `loc_1E154` upward-velocity lift
+(`newCenterY = playerCenterY - distY + 3`), and it runs because an **earlier slot's** checkpoint
+had already consumed the block's riding record: on the jump frame the trace shows
+`instance=LrzButtonHorizontalObjectInstance riding=LrzSinkingRockObjectInstance air=true`, and by
+the time the block's own checkpoint runs it reads `riding=null standingBit=false` and takes the
+fresh-contact path.
+
+That is not what the ROM does. `SolidObjectFull_1P` reads the **object's own** `a0.d6`
+(sonic3k.asm:41021-41034); `loc_1DC98`'s `bclr d6,status(a0)` names that object's status byte, so
+another solid's `SolidObjectFull` never clears this block's bit. With the bit still set and
+`Status_InAir` set, the block's own call returns `d4 = 0` without `MvSonicOnPtfm` and without
+falling through to `loc_1E154`.
+
+**Fix, entirely LRZ-local.** `LrzSinkingRockObjectInstance` now declares the two existing
+per-object contracts - `airborneRiderUnseatRequiresOwnCheckpoint` (the MGZ moving spike platform
+precedent) and `airborneStaleStandingBitReturnsNoContact`. No shared file was touched, so no other
+zone or game can be affected by it.
+
+**Measurements at this head** (all `maven_queue.py -Dmse=off …
+-Ds3k.rom.path=<worktree>/s3k.gen`):
+
+| What | Result |
+| --- | --- |
+| `TestS3kLrzSinkingRockJumpOffHeadless` | RED before the fix (`expected 1322, was 1323` - the route's own frame-637 signature), green after |
+| Mandatory S3K + `TestLrz*`/`TestS3kLrz*`/`TestS3kHpz*`/`TestS3kSoz*` + `TestEveryObjectRewindRoundTrip` + `TestRewindHarnessCoverageRatchet` | 1554 tests, 0 failures, 0 errors, **0 skips** |
+| `TestS3kSonicTailsLrzSegmentTraceReplay` (`-Ptrace-segments`) | 7703 errors, first error frame 208 `tails_y_speed` expected `0x07BD` actual `0x0000` - **unchanged frontier**, 5 fewer errors than the 7708 at `72920cabc` |
+| Cold act 1 route, `GameplayCaptureTool --main sonic --sidekick tails --settle 1 --frames 12000` on the fixture's own recorded input | Player 1 `(x, y)` matches **exactly for native rows 0-856** (was 0-636); open-loop reach **x 4029**, unchanged |
+
+**New first divergence: native row 857, `player_y` 1228 against the engine's 1230, `player_x`
+1635 in both.** This is the negation the previous entry predicted one row earlier: the fixture's
+`player_y_speed` flips sign exactly at row 856 near `($663,$4CC)` while the engine keeps falling.
+No `$17`-family placement lies there, so the owner is terrain or a dynamically spawned object and
+it has not been identified yet. The open-loop reach is unchanged and, as recorded before, is not a
+progress measure.

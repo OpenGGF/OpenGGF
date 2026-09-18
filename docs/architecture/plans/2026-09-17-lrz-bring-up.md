@@ -1223,6 +1223,47 @@ divergence, not the open-loop reach, until then.
 This is focused validation, not a suite pass: the change-based runner has not been run against
 `035e48a58` for this branch.
 
+### 2026-09-18 - The frame-637 divergence closed (it was not an ordering defect)
+
+The second handover recorded the frame-637 `player_y` 1322/1321 divergence as a shared
+solid/riding **ordering** question and put it outside the campaign. That framing was wrong, and
+one read of the engine kills it: S3K already runs the player pass before the object pass.
+`ObjectInteractionRules.objectsExecuteAfterPlayerPhysics()` is true for S3K, `LevelFrameStep`
+(:325, :339-:364) wraps `physics` and then `objects` with inline solid checkpoints in that order,
+and `SpriteManager.tickPlayablePhysics` (:1836-:1842) deliberately skips the legacy pre-movement
+batched solid pass for exactly that reason. Nothing needed reordering.
+
+Instrumenting a bounded headless reproduction (ride the `($4F8,$543)` block, jump while `$2E`
+climbs) showed the block's own `update` seeing Player 1 already at the ROM's 1322 with
+`air = true`, and the player leaving the block's checkpoint at 1323. The pixel is
+`resolveContactInternal`'s `loc_1E154` upward-velocity lift, reached because an earlier slot's
+checkpoint (`LrzButtonHorizontalObjectInstance`, in this act) had already consumed the block's
+riding record and standing bit; the block's own checkpoint then read `riding=null
+standingBit=false` and took the fresh-contact path.
+
+The ROM's `a0.d6` is per object (`SolidObjectFull_1P`, sonic3k.asm:41021-41034): `loc_1DC98`'s
+`bclr d6,status(a0)` names *that* object's status byte, so another solid's `SolidObjectFull`
+cannot clear this block's. With the bit set and `Status_InAir` set, the block's own call returns
+`d4 = 0` - no `MvSonicOnPtfm`, no `loc_1E154`.
+
+**Fix:** `LrzSinkingRockObjectInstance` declares `airborneRiderUnseatRequiresOwnCheckpoint` (the
+`Obj_MGZMovingSpikePlatform` precedent) and `airborneStaleStandingBitReturnsNoContact`. Both are
+existing per-object opt-ins; **no shared file was edited**, so the change cannot reach another zone
+or game and no matched cross-zone baseline run was needed. `TestS3kLrzSinkingRockJumpOffHeadless`
+is the RED-first test, cited from `Sonic_Jump` (:23288-23349, the `loc_118AE` +5) and
+`loc_1DC98`; it failed with the route's own `expected 1322, was 1323` before the fix.
+
+**Measurements at this head.** Mandatory S3K + `TestLrz*`/`TestS3kLrz*`/`TestS3kHpz*`/`TestS3kSoz*`
++ `TestEveryObjectRewindRoundTrip` + `TestRewindHarnessCoverageRatchet`: 1554 tests, 0 failures, 0
+skips. `TestS3kSonicTailsLrzSegmentTraceReplay`: 7703 errors, first error still frame 208
+`tails_y_speed` - frontier unchanged, five fewer errors than `72920cabc`'s 7708. Cold act 1 route
+on the fixture's recorded input: exact Player 1 `(x, y)` for **native rows 0-856** (was 0-636),
+open-loop reach still x 4029.
+
+**New first divergence: native row 857, `player_y` 1228 against 1230** (`player_x` 1635 in both).
+This is the sign negation the previous entry predicted at row 856, near `($663,$4CC)`. Its owner is
+not a `$17`-family placement and has not been identified; it is the next route blocker.
+
 ## Handover, 2026-09-18
 
 **Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`): `d2c58f148` slice 3b,

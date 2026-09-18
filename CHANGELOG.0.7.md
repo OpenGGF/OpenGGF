@@ -376,7 +376,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The act 1 corkscrew works: run into it with enough speed and it takes hold of you,
   sweeps you around the turn and spits you back out the way you came.
   Act 1's sinking rocks are solid again: stand on one and it sinks smoothly under your
-  weight, rising back once you step off.
+  weight, rising back once you step off. Jumping off one while it is still sinking now leaves
+  exactly where the ROM leaves you: the pixel the block sinks on that frame is no longer added
+  to the jump.
   The wall rides work in both acts: run into one with any speed at all and it takes hold,
   sweeps you up over the curve and drops you back on the floor heading the other way.
   The act 1 falling spikes drop: walk directly underneath one and it lets go, hurting anything
