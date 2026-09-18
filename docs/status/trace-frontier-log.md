@@ -110866,3 +110866,67 @@ zero-distance boundary recorded on 2026-08-15. No fixture was changed or consume
 - Unchanged and not re-measured here: `TestS3kSonicTailsLrzSegmentTraceReplay`'s own first error at
   frame 208 `tails_y_speed` (last measured `3418eba6e`). The two divergences above are about
   Player 1 position under the strict-replay harness's own fixture, reached by a different route.
+
+## 2026-09-18 - LRZ1: both located divergences were the harness, not the engine
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`. The two divergences
+recorded in the entry above are **withdrawn**: neither is an engine defect. Both were artefacts of
+how the cold-route capture was aligned against the fixture, and the entry above should be read only
+as the record of how they were found and killed.
+
+**The measurement that killed both.** `TestS3kSonicTailsLrzSegmentTraceReplay` at `9744c58de`:
+`maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay
+-Ds3k.rom.path=<worktree>/s3k.gen test` - 7191 errors, **first error frame 208 `tails_y_speed`
+expected `0x07BD`, actual `0x0000`** (improved from the 11909 errors measured at `3418eba6e`; the
+first error frame and field are unchanged). `TraceBinder` compares Player 1 `y` and `y_speed` on
+every row (`TraceBinder.java:202`, `:217`), so frames 0-207 of that run are an exact Player 1
+position match - which covers frame 7 and frame 156. A one-frame-late falling intro, or a
+collapsing bridge eight frames late, would both have failed at their own frame.
+
+**Divergence 1 was the capture's frame numbering.** `GameplayCaptureTool` steps the loop and *then*
+writes the state row (`GameplayCaptureTool.java:89-91`), but its `boot()` leaves one pre-gameplay
+frame for the first `step()` to consume, so capture frame 0 is a level-load frame with no player
+pass and capture frame `n+1` is native row `n`. The recorded trace's row 0 already carries
+`y_speed = $38`, one gravity step, so the ROM's row 0 is its first gameplay frame. Comparing at
+that offset, a fresh capture matched **every** position row with zero mismatches.
+
+**Divergence 2 was a missing sidekick.** The capture was taken with the tool's default
+`--sidekick none` while the fixture is Sonic + Tails, and `$31 Obj_LRZCollapsingBridge` arms on
+*either* player's standing bit (`loc_39CBC`, sonic3k.asm:77423-77427). In the fixture Tails is
+already standing on it (`sidekick_stand_on_obj = 05`) from row 101, seven frames before Sonic
+lands at row 108. The placement at `($13E,$3A0)` is subtype `$00`, so `$30(a0)` starts at
+`(0 & $F) << 4 + 8 = 8`; the collapse fires `8 + 1` frames after arming and the rider is released
+`$2A` frames after that, giving `101 + 8 + 1 + 42 = 152` - exactly the native release row. Re-run
+with `--sidekick tails`, the engine's bridge releases on the same frame. `LrzCollapsingBridgeInstance`
+needed no change.
+
+**Corrected route comparison, and the third alignment fact.** The input log must start one capture
+frame late as well (`--settle 1`): with the log applied from frame 0 the engine received each row's
+input one gameplay frame early, which released a spindash at native row 364 instead of 365. With
+`--sidekick tails --settle 1` the cold act 1 route on the recorded input matched the fixture's
+Player 1 `(x, y)` **exactly for frames 0-628**, where the engine fell through the block the native
+player lands on at `($4F3,$51F)` - `$17 Obj_LRZSinkingRock`, then a placeholder.
+
+**New first divergence: frame 637, `player_y` 1322 against 1321.** Measured at `d38a4aa34` with
+`$17` implemented; the exact match now runs to frame 636. On frame 637 the player jumps off the
+sinking rock. The ROM runs Player_1 (object slot 0) before the block, so the jump's
+`addq.w #5,y_pos` applies to the seat the block gave it on frame 636 (`y` 1316 -> 1321) and the
+block's own `SolidObjectFull` that frame takes the `Status_InAir` branch (`loc_1DC98`,
+sonic3k.asm:41033-41038) and does not re-seat. The engine sinks the block and re-seats the rider
+first, so the jump starts from 1317 and lands on 1322: the sink's `+1` and the jump's `+5` are both
+applied. The arithmetic is exact - `$2E` is 5 on frame 636 and 6 on frame 637, and
+`sin(5) >> 3 = 3`, `sin(6) >> 3 = 4` - so this is a one-frame ordering difference in the shared
+solid/riding path, not an LRZ object defect and not a constant to tune.
+
+**Open question with a kill condition.** If the engine ordered the player's own update ahead of the
+object updates and their solid checkpoints, as the ROM's slot order does, the jump would read the
+previous frame's seat and frame 637 would match. Kill it by finding any moving-platform jump in an
+already-green S3K trace that the engine gets right today: if one exists, the ordering is not the
+cause and the difference is local to how this block publishes its position. Not attempted here; the
+shared path carries every S3K trace and is out of this campaign's scope to reorder.
+
+**Downstream.** The 1 px is what ends the route. By frame 800 the engine is 1 px low; at native row
+856 the fixture's `player_y_speed` is negated exactly (`208` to `-208`) while the engine keeps
+falling, and from there the two separate by 64 px vertically and then by hundreds. No placement
+lies at `($661,$4CD)`, so whatever performs that negation is terrain or a dynamically spawned
+owner, and it is reached or missed on a 1 px margin.

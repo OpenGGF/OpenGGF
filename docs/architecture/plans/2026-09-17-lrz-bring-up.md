@@ -1017,6 +1017,57 @@ bit 0 to pick the direction. Both carry a live `FixBugs = 0` branch: `addq.b
 Player 2 behaves erratically on a shared ride, and the shipped behaviour is the dirty one.
 
 
+### 2026-09-18 - Both located divergences withdrawn, and `$17` found by the route
+
+**Neither divergence was an engine defect.** The full measurement is in the
+[trace frontier log](../../status/trace-frontier-log.md); the short form:
+
+1. The **falling intro** is not one frame late. `TestS3kSonicTailsLrzSegmentTraceReplay` at
+   `9744c58de` has its first error at frame 208 (`tails_y_speed`, expected `0x07BD`, actual
+   `0x0000`, 7191 errors total), and `TraceBinder` compares Player 1 `y` and `y_speed` on every row
+   (`TraceBinder.java:202`, `:217`), so frames 0-207 are an exact Player 1 position match - frame 7
+   included. What was one frame late was the **capture**: `GameplayCaptureTool` writes its state row
+   after `loop.step()` but its `boot()` leaves one pre-gameplay frame for the first step to consume,
+   so capture frame `n+1` is native row `n`.
+2. The **collapsing bridge** is not eight frames late. The capture ran with the tool's default
+   `--sidekick none` against a Sonic + Tails fixture, and `$31` arms on *either* player's standing
+   bit (`loc_39CBC`). Tails is standing on that bridge from row 101, seven frames before Sonic lands
+   at 108. With subtype `$00` the counter starts at `8`, the collapse fires one frame after it
+   expires and the rider is released `$2A` frames later: `101 + 8 + 1 + 42 = 152`, the native release
+   row exactly. `LrzCollapsingBridgeInstance` was already correct and was not touched.
+
+**A third alignment fact, found while checking the first two.** The input log has to start one
+capture frame late too (`--settle 1`). Applied from frame 0 it reached the engine one gameplay frame
+early, which released a spindash at native row 364 instead of 365. With `--sidekick tails --settle 1`
+the cold route on the recorded input matched the fixture's Player 1 `(x, y)` **exactly for frames
+0-628**. The lesson is recorded as a hazard: a cold-route capture compared against a fixture needs
+the fixture's own team and the capture's own one-frame boot offset, on both the comparison and the
+input, or it manufactures divergences that look like engine defects.
+
+**What the corrected comparison then found is a real missing class**, not phase. At native row 629
+the player lands on an object (`player_stand_on_obj` goes to `0D`) at `($4F3,$51F)` and the engine
+fell through it. The layout has `$17 Obj_LRZSinkingRock` subtype 0 at `($4F8,$543)` with
+`d3 = $11`, so its top is `1347 - 17 = 1330` and a standing player sits at `1330 - 19 = 1311` -
+the native row exactly. Implemented (commit `d38a4aa34`); the exact match now runs to frame 636.
+
+**The new first divergence is one pixel at frame 637** and belongs to the shared solid/riding path:
+the ROM runs Player_1 before the block, so a jump off it uses the previous frame's seat, while the
+engine sinks the block and re-seats the rider first and applies both the sink's `+1` and the jump's
+`+5`. Recorded with its kill condition in the frontier log. It is what ends the route: by frame 800
+the engine is 1 px low, and at row 856 the fixture negates `player_y_speed` exactly (`208` to
+`-208`) on a margin the engine misses. Open-loop the route still reaches **x 2779** (was 2357).
+
+**Clip 15** `15-lrz1-sinking-rock-before-after.mp4` (`raw-26-lrz1-sinking-rock-{before,after}`, 160
+frames, 159 of which differ). Teleported onto the block at `(1280,1290)` with two jumps: in "after"
+he lands on it, it sinks under him, he jumps off, it rises back, and it sinks again; in "before" he
+falls straight through and dies in the lava below. The block sinks a standing player into that lava
+in about 51 frames, which is why the demo jumps.
+
+**A hazard that cost two captures.** `exec:java` does not recompile, and the earlier
+`raw-25-lrz1-sinking-rock-*` pair was taken against stale classes: the "after" half showed the
+player supported at `y 1311` but never sinking, which reads exactly like a missing rider carry. It
+is kept as the record of that. Always queue `compile exec:java` after touching engine code.
+
 ## Handover, 2026-09-18
 
 **Committed on `feature/ai-lrz-bring-up`** (base develop `035e48a58`): `d2c58f148` slice 3b,
