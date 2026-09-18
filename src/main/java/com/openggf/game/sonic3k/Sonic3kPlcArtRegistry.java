@@ -2574,6 +2574,22 @@ public final class Sonic3kPlcArtRegistry {
         // $1A, $1C, $1D). Act 2 re-skins the door and the horizontal button; the big door and the
         // shooting trigger are act 1 only, but registering them in both acts costs nothing and
         // keeps the act branch below to the cases the ROM actually branches on.
+        // Fireball launcher (SKL object $1B) and its shot: the same mappings on palette lines 3
+        // and 0 (sonic3k.asm:88153, :88179).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_FIREBALL_LAUNCHER,
+                Sonic3kConstants.MAP_LRZ_FIREBALL_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                3,
+                null
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_FIREBALL,
+                Sonic3kConstants.MAP_LRZ_FIREBALL_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                0,
+                null
+        ));
         // Falling spike (SKL object $18): make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:87948).
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.LRZ_FALLING_SPIKE,

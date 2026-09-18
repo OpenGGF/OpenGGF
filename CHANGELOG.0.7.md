@@ -381,6 +381,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   sweeps you up over the curve and drops you back on the floor heading the other way.
   The act 1 falling spikes drop: walk directly underneath one and it lets go, hurting anything
   it lands on, and once it hits the floor it stops hurting and stays as a solid block.
+  The act 1 fireball launchers spit their fireballs again, each on its own period, and the
+  shooting triggers' shots now travel at the speed the ROM gives them instead of creeping.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list

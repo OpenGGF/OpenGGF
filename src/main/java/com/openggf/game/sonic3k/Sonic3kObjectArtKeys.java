@@ -286,6 +286,14 @@ public final class Sonic3kObjectArtKeys {
     public static final String LRZ2_SINKING_ROCK = "lrz2_sinking_rock";
     /** {@code Obj_LRZFallingSpike}: {@code Map_LRZFallingSpike} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_FALLING_SPIKE = "lrz_falling_spike";
+    /** {@code Obj_LRZFireballLauncher}: {@code Map_LRZFireballLauncher}, palette 3, frame 2. */
+    public static final String LRZ_FIREBALL_LAUNCHER = "lrz_fireball_launcher";
+    /**
+     * The fireball it allocates. It copies the launcher's mappings but is given
+     * {@code make_art_tile(ArtTile_LRZMisc,0,0)} (sonic3k.asm:88179), so frames 0 and 1 of the same
+     * map are drawn on palette line 0 rather than the launcher's 3.
+     */
+    public static final String LRZ_FIREBALL = "lrz_fireball";
     public static final String LRZ2_BUTTON = "lrz2_button";
     /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_DOOR = "lrz_door";

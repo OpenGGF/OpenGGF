@@ -305,6 +305,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x15, // LRZCorkscrew
             0x16, // LRZWallRide
             0x18, // LRZFallingSpike
+            0x1B, // LRZFireballLauncher
             0x17, // LRZSinkingRock
             0x19, // LRZDoor
             0x1A, // LRZBigDoor

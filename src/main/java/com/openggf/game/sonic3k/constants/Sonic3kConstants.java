@@ -1715,6 +1715,8 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_SINKING_ROCK_ADDR = 0x042834;
     /** {@code Map_LRZFallingSpike} (sonic3k.lst: $42920). */
     public static final int MAP_LRZ_FALLING_SPIKE_ADDR = 0x042920;
+    /** {@code Map_LRZFireballLauncher} (sonic3k.lst: $42CB2); the fireball shares it. */
+    public static final int MAP_LRZ_FIREBALL_LAUNCHER_ADDR = 0x042CB2;
     /**
      * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87910).
      * The same base the act 2 door uses; named separately so neither owner reads as the other's.

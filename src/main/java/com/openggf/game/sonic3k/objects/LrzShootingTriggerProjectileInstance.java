@@ -20,8 +20,8 @@ import java.util.List;
  * and draws frame 1.
  *
  * <p>{@code MoveSprite2} applies {@code x_vel} and {@code y_vel} with no gravity term, and both are
- * {@code $200} at birth (:88325-88326), so the shot travels diagonally down and away at one pixel
- * every two frames on each axis. The parent's {@code status} bit 0 - the placement's flip flag -
+ * {@code $200} at birth (:88325-88326), so the shot travels diagonally down and away at two pixels
+ * a frame on each axis. The parent's {@code status} bit 0 - the placement's flip flag -
  * negates only {@code x_vel} (:88327-88330).
  *
  * <p>It copies the trigger's {@code mappings} but not its {@code art_tile}: the parent writes
@@ -81,9 +81,12 @@ public final class LrzShootingTriggerProjectileInstance extends AbstractObjectIn
             setDestroyedByOffscreen();
             return;
         }
-        // jsr (MoveSprite2): x_pos += x_vel, y_pos += y_vel, no gravity.
-        xPosition += xVelocity;
-        yPosition += yVelocity;
+        // jsr (MoveSprite2): ext.l / lsl.l #8 / add.l for each axis (sonic3k.asm:36054-36061),
+        // so the 8.8 velocity lines up with the middle sixteen bits of the 16.16 position. Adding
+        // the raw word instead moves the shot 1/256 of the distance, which is what this class did
+        // until the fireball launcher's own motion test caught it.
+        xPosition += xVelocity << 8;
+        yPosition += yVelocity << 8;
         updateDynamicSpawn((xPosition >> 16) & 0xFFFF, (yPosition >> 16) & 0xFFFF);
     }
 

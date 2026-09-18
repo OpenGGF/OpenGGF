@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
@@ -271,6 +272,28 @@ class TestLrzDoorsButtonsAndTriggers {
                 new LrzShootingTriggerProjectileInstance(spawn(TRIGGER_ID, 0xA0, 1), true);
         assertEquals(-0x200, flipped.xVelocity(), "only x_vel is negated");
         assertEquals(0x200, flipped.yVelocity());
+    }
+
+    /**
+     * {@code jsr (MoveSprite2)} (sonic3k.asm:88342). The routine is {@code ext.l / lsl.l #8 /
+     * add.l} for each axis (:36054-36061), so an {@code $200} velocity is two pixels a frame, not
+     * two subpixels. Asserting the velocity fields alone let this class move 1/256 of the right
+     * distance until the fireball launcher's own motion test caught the same mistake.
+     */
+    @Test
+    void shootingTriggerShotMovesTwoPixelsAFrameOnEachAxis() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x4000, 0x2000, 0);
+        try {
+            LrzShootingTriggerProjectileInstance shot =
+                    new LrzShootingTriggerProjectileInstance(spawn(TRIGGER_ID, 0xA0, 0), false);
+            for (int frame = 1; frame <= 8; frame++) {
+                shot.update(frame, null);
+            }
+            assertEquals(BASE_X + 16, shot.getCentreX(), "eight frames of $200 is sixteen pixels");
+            assertEquals(BASE_Y + 16, shot.getCentreY(), "and the same downward");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
     }
 
     // ----- Obj_LRZBigDoor ----------------------------------------------------------------------
