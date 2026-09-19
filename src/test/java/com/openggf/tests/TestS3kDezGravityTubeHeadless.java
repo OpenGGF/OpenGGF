@@ -115,6 +115,61 @@ class TestS3kDezGravityTubeHeadless {
         }
     }
 
+    /**
+     * {@code RideObject_SetRide} clears the former {@code interact(a1)} owner's standing bit
+     * before publishing the new one (:70167-70187). A later-slot former tube must therefore
+     * take its mount branch, not eject the rider from the tube that just won ownership.
+     */
+    @Test
+    void aTubeTransferClearsTheFormerTubesRideBeforeItsLaterSlotRuns() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            S3kDezGravityTubeObjectInstance former = placeAt(0x0F80, 0x07C0, 0x10);
+            S3kDezGravityTubeObjectInstance replacement = placeAt(0x0EC0, 0x0780, 0x48);
+
+            moveTo(sprite, 0x0F01, 0x07CB);
+            sprite.setAir(false);
+            former.update(0, sprite);
+            assertTrue(former.isRidingForTest(true), "precondition: slot 9 owns the ride");
+
+            moveTo(sprite, 0x0EFD, 0x07CB);
+            replacement.update(1, sprite);
+            assertTrue(replacement.isRidingForTest(true), "slot 5 takes ownership first");
+            former.update(1, sprite);
+
+            assertFalse(former.isRidingForTest(true), "the former SST standing bit was cleared");
+            assertTrue(replacement.isRidingForTest(true));
+            assertTrue(sprite.isOnObject(), "the later former owner must not eject the rider");
+            assertFalse(sprite.getAir());
+            assertEquals(replacement, sprite.getLatchedSolidObjectInstance());
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /** {@code Player_TouchFloor} restores the standing radius and applies its centre delta. */
+    @Test
+    void anAirborneRollingMountAppliesTheNativeCentreRadiusDelta() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            S3kDezGravityTubeObjectInstance tube = place(0x48);
+            moveTo(sprite, OBJECT_X, OBJECT_Y + 0x14);
+            sprite.setRolling(true);
+            sprite.setAir(true);
+            int rollingCentreY = sprite.getCentreY();
+
+            tube.update(0, sprite);
+
+            assertFalse(sprite.getRolling());
+            assertEquals(rollingCentreY - 5, sprite.getCentreY(),
+                    "Sonic's y_radius $0E -> $13 applies add.w #-5,y_pos");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
     /** {@code moveq #4,d3} and {@code move.w #$5000,d0} for the bit 6 tube (:95303-95306). */
     @Test
     void theBitSixTubeStepsByFourAndSwingsFurther() {
@@ -304,8 +359,12 @@ class TestS3kDezGravityTubeHeadless {
     }
 
     private S3kDezGravityTubeObjectInstance place(int subtype) {
-        ObjectSpawn spawn = new ObjectSpawn(OBJECT_X, OBJECT_Y, 0x5A, subtype, 0,
-                false, OBJECT_Y, -1);
+        return placeAt(OBJECT_X, OBJECT_Y, subtype);
+    }
+
+    private S3kDezGravityTubeObjectInstance placeAt(int x, int y, int subtype) {
+        ObjectSpawn spawn = new ObjectSpawn(x, y, 0x5A, subtype, 0,
+                false, y, -1);
         S3kDezGravityTubeObjectInstance tube = new S3kDezGravityTubeObjectInstance(spawn);
         GameServices.level().getObjectManager().addDynamicObject(tube);
         return tube;

@@ -128,12 +128,13 @@ class TestS3kDezColdRoutes {
     /**
      * Measured after aligning the Spikebonker touch slot, Chainspike floor probe and
      * torpedo-launcher render extent. The corrected hazard timing replaces the old death
-     * branch: the route remains exact through 4,103 frames and stays alive through the
-     * measurement cap, reaching {@code $1587}. The next split is a one-pixel X and
-     * five-pixel Y difference after the route returns left to {@code $0EFA}.
+     * branch. Live tube ownership and the rolling-to-standing centre correction then keep
+     * the route exact through 4,372 frames. The corrected branch dies at frame 15,191 after
+     * reaching {@code $1657}; the earlier 19,870-frame cap belonged to the now-rejected
+     * stale-tube path and is no longer a meaningful survival floor.
      */
-    static final int ACT_ONE_EXACT_FRONTIER = 4103;
-    static final int ACT_ONE_SURVIVAL_FRONTIER = 19870;
+    static final int ACT_ONE_EXACT_FRONTIER = 4372;
+    static final int ACT_ONE_SURVIVAL_FRONTIER = 15191;
     static final int ACT_ONE_MAX_X = 0x1587;
 
     @AfterEach

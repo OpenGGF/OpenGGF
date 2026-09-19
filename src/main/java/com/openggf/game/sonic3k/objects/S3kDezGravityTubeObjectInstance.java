@@ -140,6 +140,13 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
     }
 
     private void runFor(AbstractPlayableSprite player, RiderState state, int vIntRunCount) {
+        // RideObject_SetRide clears the previous interact owner's standing bit before it
+        // assigns the new owner (sonic3k.asm:70167-70187). The engine's non-solid ride
+        // analogue is the live latch; a per-tube boolean alone survives a lower-slot tube
+        // taking ownership and lets the old tube run its exit path later in the same pass.
+        if (state.riding && player.getLatchedSolidObjectInstance() != this) {
+            state.riding = false;
+        }
         if (isVertical()) {
             if (state.riding) {
                 verticalRide(player, state, vIntRunCount);
@@ -343,10 +350,12 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
             player.setXSpeed((short) 0);
             if (player.getRolling()) {
                 // Player_ResetOnFloor_Part2's add.w d0,y_pos(a1), where d0 is the radius
-                // the un-roll gives back; NativePositionOps owns playable native writes.
-                int radiusDelta = player.getYRadius() - player.getStandYRadius();
+                // the un-roll gives back. setRolling(false) expands the engine's top-left
+                // sprite by the full height difference, so shift top-left by that full
+                // amount to produce the ROM's five-pixel centre change.
+                int topLeftAdjustment = player.getRollHeightAdjustment();
                 player.setRolling(false);
-                NativePositionOps.addYPosPreserveSubpixel(player, radiusDelta);
+                NativePositionOps.addYPosPreserveSubpixel(player, -topLeftAdjustment);
             }
             player.setPushing(false);
             player.setJumping(false);

@@ -3001,3 +3001,18 @@ until its own later `SolidObjectFull` callback. Reading the live per-object latc
 direction-change state closes that ordering gap without changing service-free unit fixtures.
 Exact route parity advances again, from **3,624 to 4,103 frames**. The next row differs in both
 coordinates: native `$0EFA,$07D0`, engine `$0EF9,$07CB`.
+
+The next owner was `$5A` `Obj_DEZGravityTube`. Native `RideObject_SetRide` clears the former
+`interact` owner's standing bit before assigning a new tube. The port's per-tube `riding`
+boolean survived that transfer, so the former later slot ejected Sonic after the new earlier
+slot had seated him. The live latch now clears the stale routine state before dispatch. A second
+edge was the engine's top-left sprite representation: `setRolling(false)` expands the visual
+height and moves the computed centre down five pixels, so applying only the ROM's `y_radius`
+delta canceled itself. Shifting top-left by the full height difference reproduces
+`Player_TouchFloor`'s five-pixel centre correction.
+
+Those changes advance exact parity to **4,372 frames**. They also replace the old divergent
+19,870-frame measurement-cap branch with a path that reaches x `$1657` and dies at frame
+**15,191**; that lower survival number is recorded as a changed route, not called a regression
+to the rejected stale-tube path. The next split at row 4,373 is X only: native `$0DCB`, engine
+`$0DCA`, with Y exact at `$070F`.
