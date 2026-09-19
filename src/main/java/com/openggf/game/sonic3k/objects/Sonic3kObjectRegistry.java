@@ -1505,6 +1505,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.SSZ_EGG_ROBO,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
                 (spawn, registry) -> new EggRoboBadnikInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_KNUX_FINAL_BOSS_CRANE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszKnuxFinalBossCraneObjectInstance(spawn));
 
         // The Doomsday Zone's SKL object set.
         registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,

@@ -314,6 +314,8 @@ public final class Sonic3kObjectIds {
     public static final int SSZ_COLLAPSING_COLUMN = 0x7E;
     public static final int SSZ_FLOATING_PLATFORM = 0x7F;
     public static final int SSZ_EGG_ROBO = 0xA0;
+    /** SKL set 2: {@code Obj_KnuxFinalBossCrane}; S3KL reuses $B2 for the ICZ freezer. */
+    public static final int SSZ_KNUX_FINAL_BOSS_CRANE = 0xB2;
     // HPZ uses the SKL pointer-table identities below.
     public static final int SSZ_HPZ_TELEPORTER = 0x79;
     public static final int HPZ_MASTER_EMERALD = 0xB0;

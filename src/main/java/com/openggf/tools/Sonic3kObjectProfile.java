@@ -320,7 +320,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x7E, // SSZCollapsingColumn
             0x7F, // SSZFloatingPlatform
             0xA0, // EggRobo
-            0xAF // SSZCutsceneButton
+            0xAF, // SSZCutsceneButton
+            0xB2 // KnuxFinalBossCrane
     );
 
     /** Every id implemented in at least one S3KL zone. */
