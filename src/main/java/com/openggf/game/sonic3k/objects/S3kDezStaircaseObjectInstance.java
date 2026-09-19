@@ -28,7 +28,7 @@ public final class S3kDezStaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frame, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         reserveSlots();
         switch (routine) {
             case 0, 4 -> updateP2Wait();

@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -93,7 +94,7 @@ public final class S3kDezMinibossInstance extends AbstractBossInstance
             case PHASE_RESULTS -> updateResults();
             case PHASE_TRANSITION_DROP -> updateTransitionDrop(player);
             case PHASE_ACT2_WAIT -> updateAct2Wait();
-            case PHASE_DONE -> setDestroyed(true);
+            case PHASE_DONE -> ObjectLifetimeOps.destroyLatched(this);
             default -> throw new IllegalStateException("DEZ miniboss phase " + state.routine);
         }
         state.xFixed = state.x << 16;
@@ -215,6 +216,11 @@ public final class S3kDezMinibossInstance extends AbstractBossInstance
             }
             graphCreated = true;
         }
+    }
+
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        ensurePresentationAndGraph();
     }
 
     private void loadPalette(int address, int line, String owner) {

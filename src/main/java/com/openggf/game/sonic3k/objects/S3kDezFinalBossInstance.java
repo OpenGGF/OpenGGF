@@ -14,6 +14,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -23,7 +24,9 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -95,18 +98,17 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
     private void preparePlayers(PlayableEntity player) {
         playersPrepared = true;
         placeRunInPlayer(player, 0x30, state().playerCharacter() == PlayerCharacter.TAILS_ALONE);
-        for (PlayableEntity sidekick : services().sidekicks()) placeRunInPlayer(sidekick, 0x10, true);
+        placeRunInPlayer(nativeP2(), 0x10, true);
     }
 
     private static void placeRunInPlayer(PlayableEntity player, int x, boolean tails) {
         if (player == null) return;
-        player.setCentreX((short) x);
-        player.setCentreYPreserveSubpixel((short) (0xCD + (tails ? 4 : 0)));
+        NativePositionOps.writeXPosResetSubpixel((AbstractPlayableSprite) player, x);
+        NativePositionOps.writeYPosPreserveSubpixel(player, 0xCD + (tails ? 4 : 0));
         player.setXSpeed((short) 0x600);
         player.setGSpeed((short) 0x600);
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setObjectControlled(true);
-            sprite.setObjectControlSuppressesMovement(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         }
     }
 
@@ -195,31 +197,37 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
             // transition port owns the fade and mode boundary for this equivalent path.
             services().levelManager().requestGameOverExit(GameOverExit.TITLE_SCREEN);
         }
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     private void advancePlayers(PlayableEntity main, int pixels) {
-        if (main != null) main.shiftX(pixels);
-        for (PlayableEntity sidekick : services().sidekicks()) sidekick.shiftX(pixels);
+        if (main instanceof AbstractPlayableSprite sprite)
+            NativePositionOps.addXPosPreserveSubpixel(sprite, pixels);
+        if (nativeP2() instanceof AbstractPlayableSprite sidekick)
+            NativePositionOps.addXPosPreserveSubpixel(sidekick, pixels);
     }
 
     private void stopPlayers(PlayableEntity main) {
         if (main != null) { main.setXSpeed((short) 0); main.setGSpeed((short) 0); }
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        PlayableEntity sidekick = nativeP2();
+        if (sidekick != null) {
             sidekick.setXSpeed((short) 0); sidekick.setGSpeed((short) 0);
         }
     }
 
     private void releasePlayers(PlayableEntity main) {
         if (main != null) releasePlayer(main);
-        for (PlayableEntity sidekick : services().sidekicks()) releasePlayer(sidekick);
+        releasePlayer(nativeP2());
     }
 
     private static void releasePlayer(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setObjectControlSuppressesMovement(false);
-            sprite.setObjectControlled(false);
+            ObjectControlState.none().applyTo(sprite);
         }
+    }
+
+    private PlayableEntity nativeP2() {
+        return services().playerQuery().nativeP2OrNull();
     }
 
     private void ensureGraph() {
@@ -236,6 +244,11 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
             if (child != null && !child.isDestroyed()) childComponents.add(child);
         }
         graphCreated = true;
+    }
+
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        ensureGraph();
     }
 
     private S3kDezZoneRuntimeState state() {
@@ -347,7 +360,7 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
             int cameraX = services().camera().getX() & 0xFFFF;
             int width = services().camera().getWidth() & 0xFFFF;
             if (age > 0xC0 || getX() < cameraX - 0x100 || getX() > cameraX + width + 0x100)
-                setDestroyed(true);
+                ObjectLifetimeOps.destroyLatched(this);
         }
 
         @Override public int getX() { return xFixed >> 16; }

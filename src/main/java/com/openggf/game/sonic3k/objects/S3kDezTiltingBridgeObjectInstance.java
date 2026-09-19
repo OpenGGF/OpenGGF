@@ -36,7 +36,7 @@ public final class S3kDezTiltingBridgeObjectInstance extends AbstractObjectInsta
         for (int i=0;i<8;i++) yFixed[i]=baseY<<16;
     }
 
-    @Override public void update(int frame, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         reserveSlots();
         if (falling) {
             for (int i = 0; i < 8; i++) {

@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -210,7 +211,7 @@ public final class S3kDezEndBossInstance extends AbstractBossInstance
                 services().levelGamestate().getTimerFrames(), player.getShieldType());
         services().requestSessionSave(com.openggf.game.save.SaveReason.PROGRESSION_SAVE);
         services().requestZoneAndAct(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 0, true);
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     private void ensurePresentationAndGraph() {
@@ -230,6 +231,11 @@ public final class S3kDezEndBossInstance extends AbstractBossInstance
             if (child != null && !child.isDestroyed()) childComponents.add(child);
         }
         graphCreated = true;
+    }
+
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        ensurePresentationAndGraph();
     }
 
     private void loadPalette() {
@@ -324,7 +330,7 @@ public final class S3kDezEndBossInstance extends AbstractBossInstance
             if (!shouldUpdate(vIntRunCount)) return;
             syncPositionWithParent();
             updateDynamicSpawn();
-            if (role >= 3 && localAngle > 0x80) setDestroyed(true);
+            if (role >= 3 && localAngle > 0x80) ObjectLifetimeOps.destroyLatched(this);
         }
 
         @Override

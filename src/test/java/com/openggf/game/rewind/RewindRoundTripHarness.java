@@ -95,6 +95,12 @@ public final class RewindRoundTripHarness {
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
 
     private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
+            Map.entry("com.openggf.game.sonic3k.objects.S3kDezMinibossInstance$Component",
+                    "com.openggf.game.sonic3k.objects.TestS3kDezMinibossInstance"),
+            Map.entry("com.openggf.game.sonic3k.objects.S3kDezEndBossInstance$Component",
+                    "com.openggf.game.sonic3k.objects.TestS3kDezEndBossInstance"),
+            Map.entry("com.openggf.game.sonic3k.objects.S3kDezFinalBossInstance$Component",
+                    "com.openggf.game.sonic3k.objects.TestS3kDezFinalBossInstance"),
             Map.entry("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Shell",
                     "com.openggf.tests.TestSozBadnikProduction"),
             Map.entry("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Legs",

@@ -153,7 +153,9 @@ class TestRemainingRewindTailInventory {
         // its three shapes are read from the immutable subtype and the gate's open/shut is the
         // zone runtime state's panel bitfield.
         // No bucket grows.
-        return new TailInventory(1123, 888, 235, 0, buckets);
+        // DEZ's three boss component families are exercised through their owning
+        // capture/restore graphs; the independent arena solids probe directly.
+        return new TailInventory(1148, 910, 238, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -30,7 +31,7 @@ public final class S3kDezTorpedoProjectileObjectInstance extends AbstractObjectI
         xFixed += velocity << 8;
         updateDynamicSpawn((xFixed >> 16) & 0xFFFF, getY());
         if (!isOnScreen()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.destroyLatched(this);
         }
     }
 

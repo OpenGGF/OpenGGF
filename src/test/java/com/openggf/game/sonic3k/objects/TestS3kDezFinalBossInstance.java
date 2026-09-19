@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.GameOverExit;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayerCharacter;
@@ -10,12 +11,15 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.levelselect.Sonic3kLevelSelectConstants;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -35,9 +39,26 @@ class TestS3kDezFinalBossInstance {
         Harness services = new Harness(PlayerCharacter.SONIC_ALONE);
         S3kDezFinalBossInstance boss = boss(services);
         boss.update(0, player());
+        assertEquals(S3kDezFinalBossInstance.GRAPH_SIZE,
+                services.objectManager().activeObjectsOfType(S3kDezFinalBossInstance.Component.class).size());
         assertEquals(S3kDezFinalBossInstance.GRAPH_SIZE, boss.getChildComponents().size());
         assertEquals(0x3C0, services.runtime.act3BackgroundWord(0x02));
         assertEquals(0x0F8, services.runtime.act3BackgroundWord(0x04));
+    }
+
+    @Test
+    void completeCombatGraphRestoresWithItsParentLinks() {
+        Harness services = new Harness(PlayerCharacter.SONIC_ALONE);
+        S3kDezFinalBossInstance boss = boss(services);
+        boss.update(0, player());
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(services.objectManager().rewindSnapshottable());
+        var snapshot = rewind.capture();
+        rewind.restore(snapshot);
+        var restored = services.objectManager().activeObjectsOfType(S3kDezFinalBossInstance.class).getFirst();
+        assertEquals(S3kDezFinalBossInstance.GRAPH_SIZE, restored.getChildComponents().size());
+        assertEquals(S3kDezFinalBossInstance.GRAPH_SIZE,
+                services.objectManager().activeObjectsOfType(S3kDezFinalBossInstance.Component.class).size());
     }
 
     @Test
@@ -111,11 +132,8 @@ class TestS3kDezFinalBossInstance {
     }
 
     private static S3kDezFinalBossInstance boss(Harness services) {
-        var boss = new S3kDezFinalBossInstance(new ObjectSpawn(
-                0x3C0, 0x0F8, 0xA7, 0, 0, false, -1));
-        boss.setServices(services);
-        services.objectManager().addDynamicObject(boss);
-        return boss;
+        return services.objectManager().createDynamicObject(() -> new S3kDezFinalBossInstance(
+                new ObjectSpawn(0x3C0, 0x0F8, 0xA7, 0, 0, false, -1)));
     }
 
     private static TestablePlayableSprite player() {
@@ -133,6 +151,8 @@ class TestS3kDezFinalBossInstance {
 
         Harness(PlayerCharacter character) {
             withIsolatedObjectManager();
+            objectManager().reset(0);
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
             runtime = new S3kDezZoneRuntimeState(
                     Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 0, character);
             zoneRuntimeRegistry().install(runtime);

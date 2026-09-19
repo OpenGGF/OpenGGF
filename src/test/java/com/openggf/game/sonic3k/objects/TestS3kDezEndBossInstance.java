@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -37,7 +38,24 @@ class TestS3kDezEndBossInstance {
         HarnessServices services = new HarnessServices();
         S3kDezEndBossInstance boss = boss(services);
         boss.update(0, player(0x3480));
+        assertEquals(S3kDezEndBossInstance.INITIAL_GRAPH_SIZE,
+                services.objectManager().activeObjectsOfType(S3kDezEndBossInstance.Component.class).size());
         assertEquals(S3kDezEndBossInstance.INITIAL_GRAPH_SIZE, boss.getChildComponents().size());
+    }
+
+    @Test
+    void completeCombatGraphRestoresWithItsParentLinks() {
+        HarnessServices services = new HarnessServices();
+        S3kDezEndBossInstance boss = boss(services);
+        boss.update(0, player(0x3480));
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(services.objectManager().rewindSnapshottable());
+        var snapshot = rewind.capture();
+        rewind.restore(snapshot);
+        var restored = services.objectManager().activeObjectsOfType(S3kDezEndBossInstance.class).getFirst();
+        assertEquals(S3kDezEndBossInstance.INITIAL_GRAPH_SIZE, restored.getChildComponents().size());
+        assertEquals(S3kDezEndBossInstance.INITIAL_GRAPH_SIZE,
+                services.objectManager().activeObjectsOfType(S3kDezEndBossInstance.Component.class).size());
     }
 
     @Test
@@ -77,10 +95,7 @@ class TestS3kDezEndBossInstance {
     }
 
     private static S3kDezEndBossInstance boss(HarnessServices services) {
-        S3kDezEndBossInstance boss = new S3kDezEndBossInstance(spawn());
-        boss.setServices(services);
-        services.objectManager().addDynamicObject(boss);
-        return boss;
+        return services.objectManager().createDynamicObject(() -> new S3kDezEndBossInstance(spawn()));
     }
 
     private static ObjectSpawn spawn() {
@@ -102,6 +117,7 @@ class TestS3kDezEndBossInstance {
 
         private HarnessServices() {
             withIsolatedObjectManager();
+            objectManager().reset(0);
             zoneRuntimeRegistry().install(runtime);
         }
 

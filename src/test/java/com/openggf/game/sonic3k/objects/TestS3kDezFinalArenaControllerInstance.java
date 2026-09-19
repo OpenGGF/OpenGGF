@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
@@ -39,12 +40,29 @@ class TestS3kDezFinalArenaControllerInstance {
                 .anyMatch(S3kDezFinalArenaControllerInstance.FallingBlock.class::isInstance));
     }
 
+    @Test
+    void arenaWallAndFallingBlockRestoreWithTheFloorGraph() {
+        Harness services = new Harness();
+        var floor = floor(services);
+        services.runtime.setAct3BackgroundWord(0x08, 0x2D0);
+        services.runtime.setAct3BackgroundWord(0x16, 0x2C0);
+        floor.update(0, null);
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(services.objectManager().rewindSnapshottable());
+        var snapshot = rewind.capture();
+        rewind.restore(snapshot);
+        assertEquals(1, services.objectManager()
+                .activeObjectsOfType(S3kDezFinalArenaControllerInstance.class).size());
+        assertEquals(1, services.objectManager()
+                .activeObjectsOfType(S3kDezFinalArenaControllerInstance.ArenaWall.class).size());
+        assertEquals(1, services.objectManager()
+                .activeObjectsOfType(S3kDezFinalArenaControllerInstance.FallingBlock.class).size());
+    }
+
     private static S3kDezFinalArenaControllerInstance floor(Harness services) {
-        var floor = new S3kDezFinalArenaControllerInstance(new ObjectSpawn(
-                0x130, 0xF0, 0xA7, 0, 0, false, -1));
-        floor.setServices(services);
-        services.objectManager().addDynamicObject(floor);
-        return floor;
+        return services.objectManager().createDynamicObject(() ->
+                new S3kDezFinalArenaControllerInstance(new ObjectSpawn(
+                        0x130, 0xF0, 0xA7, 0, 0, false, -1)));
     }
 
     private static final class Harness extends StubObjectServices {
@@ -55,6 +73,7 @@ class TestS3kDezFinalArenaControllerInstance {
 
         Harness() {
             withIsolatedObjectManager();
+            objectManager().reset(0);
             runtime.setAct3BackgroundWord(0x00, 0x6C0);
             runtime.setAct3BackgroundWord(0x16, 0x80);
             zoneRuntimeRegistry().install(runtime);

@@ -5,6 +5,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
@@ -45,6 +46,23 @@ class TestS3kDezMinibossInstance {
     }
 
     @Test
+    void completeCombatGraphRestoresWithItsParentLinks() {
+        HarnessServices services = new HarnessServices();
+        S3kDezMinibossInstance boss = boss(services);
+        boss.update(0, player());
+        assertEquals(S3kDezMinibossInstance.CHILD_COUNT,
+                services.objectManager().activeObjectsOfType(S3kDezMinibossInstance.Component.class).size());
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(services.objectManager().rewindSnapshottable());
+        var snapshot = rewind.capture();
+        rewind.restore(snapshot);
+        var restored = services.objectManager().activeObjectsOfType(S3kDezMinibossInstance.class).getFirst();
+        assertEquals(S3kDezMinibossInstance.CHILD_COUNT, restored.getChildComponents().size());
+        assertEquals(S3kDezMinibossInstance.CHILD_COUNT,
+                services.objectManager().activeObjectsOfType(S3kDezMinibossInstance.Component.class).size());
+    }
+
+    @Test
     void eighthHitStopsTimerAndRaisesTheForegroundEventBeforeResults() {
         HarnessServices services = new HarnessServices();
         S3kDezMinibossInstance boss = boss(services);
@@ -79,10 +97,7 @@ class TestS3kDezMinibossInstance {
     }
 
     private static S3kDezMinibossInstance boss(HarnessServices services) {
-        S3kDezMinibossInstance boss = new S3kDezMinibossInstance(spawn());
-        boss.setServices(services);
-        services.objectManager().addDynamicObject(boss);
-        return boss;
+        return services.objectManager().createDynamicObject(() -> new S3kDezMinibossInstance(spawn()));
     }
 
     private static ObjectSpawn spawn() {
@@ -102,6 +117,7 @@ class TestS3kDezMinibossInstance {
 
         private HarnessServices() {
             withIsolatedObjectManager();
+            objectManager().reset(0);
             zoneRuntimeRegistry().install(runtime);
         }
 

@@ -43,7 +43,7 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
     }
 
     @Override
-    public void update(int frame, PlayableEntity fallback) {
+    public void update(int vIntRunCount, PlayableEntity fallback) {
         boolean launchingAtEntry = launching;
         AbstractPlayableSprite main = sprite(tryServices() == null
                 ? fallback : services().playerQuery().mainPlayerOrNull());

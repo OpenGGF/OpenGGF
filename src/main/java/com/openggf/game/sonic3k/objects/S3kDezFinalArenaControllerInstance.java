@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -102,21 +103,20 @@ public final class S3kDezFinalArenaControllerInstance extends AbstractObjectInst
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
 
     static final class ArenaWall extends AbstractObjectInstance
-            implements SolidObjectProvider, RewindRecreatable {
+            implements SolidObjectProvider, SpawnRewindRecreatable {
         ArenaWall(S3kDezFinalArenaControllerInstance owner) {
-            super(new ObjectSpawn(0x40, 0xF0, Sonic3kObjectIds.DEZ_END_BOSS,
-                    1, 0, false, -1), "DEZ3ArenaWall");
+            this(new ObjectSpawn(0x40, 0xF0, Sonic3kObjectIds.DEZ_END_BOSS,
+                    1, 0, false, -1));
         }
 
-        @Override public ArenaWall recreateForRewind(RewindRecreateContext context) {
-            return RewindRecreateObjectLinks.nearestObject(context,
-                    S3kDezFinalArenaControllerInstance.class, true, 0x800)
-                    .map(ArenaWall::new).orElse(null);
+        public ArenaWall(ObjectSpawn spawn) {
+            super(spawn, "DEZ3ArenaWall");
         }
         @Override public void update(int vIntRunCount, PlayableEntity player) {
             S3kDezZoneRuntimeState state = services().zoneRuntimeState() instanceof S3kDezZoneRuntimeState dez
                     ? dez : null;
-            if (state == null || state.act3BackgroundWord(0x00) != 0x6C0) setDestroyed(true);
+            if (state == null || state.act3BackgroundWord(0x00) != 0x6C0)
+                ObjectLifetimeOps.destroyLatched(this);
         }
         @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x40, 0x10, 0x10); }
         @Override public int getX() { return 0x40; }
@@ -126,28 +126,27 @@ public final class S3kDezFinalArenaControllerInstance extends AbstractObjectInst
     }
 
     static final class FallingBlock extends AbstractObjectInstance
-            implements SolidObjectProvider, RewindRecreatable {
+            implements SolidObjectProvider, SpawnRewindRecreatable {
         private int x;
         private int y = 0xF0;
         private int yFixed = y << 16;
         private int yVelocity;
 
         FallingBlock(S3kDezFinalArenaControllerInstance owner, int x) {
-            super(new ObjectSpawn(x, 0xF0, Sonic3kObjectIds.DEZ_END_BOSS,
-                    2, 0, false, -1), "DEZ3FallingBlock");
-            this.x = x;
+            this(new ObjectSpawn(x, 0xF0, Sonic3kObjectIds.DEZ_END_BOSS,
+                    2, 0, false, -1));
         }
 
-        @Override public FallingBlock recreateForRewind(RewindRecreateContext context) {
-            return RewindRecreateObjectLinks.nearestObject(context,
-                    S3kDezFinalArenaControllerInstance.class, true, 0x1000)
-                    .map(parent -> new FallingBlock(parent, context.spawn().x())).orElse(null);
+        public FallingBlock(ObjectSpawn spawn) {
+            super(spawn, "DEZ3FallingBlock");
+            this.x = spawn.x();
         }
         @Override public void update(int vIntRunCount, PlayableEntity player) {
             yFixed += yVelocity << 8;
             yVelocity = (short) (yVelocity + 0x1A);
             y = yFixed >> 16;
-            if (y > (services().camera().getY() & 0xFFFF) + 0x300) setDestroyed(true);
+            if (y > (services().camera().getY() & 0xFFFF) + 0x300)
+                ObjectLifetimeOps.destroyLatched(this);
         }
         @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x10, 0x10, 0x10); }
         @Override public int getX() { return x; }
