@@ -150,7 +150,9 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_GATE_LASER = 0x21;
     // S3KL object table: Obj_LBZAlarm.
     public static final int LBZ_ALARM = 0x22;
+    // SKL $52 is Obj_DEZLightning; S3KL $52 is the MGZ/LBZ smashing pillar.
     public static final int MGZLBZ_SMASHING_PILLAR = 0x52;
+    public static final int DEZ_LIGHTNING = 0x52;
     public static final int MGZ_SWINGING_PLATFORM = 0x53;
     // SKL $55 is Obj_DEZEnergyBridge (sonic3k.asm:93909); S3KL $55 is Obj_MGZHeadTrigger.
     // The two object tables share the number.

@@ -2718,3 +2718,26 @@ masking the `$A5` session hit, where an earlier assertion in the same test fails
 
 Census: act 1 placeholders 173 → 163, concrete 192 → 202. Act 2 is unchanged; `$60` places none
 there.
+
+### 2026-09-19 — `$52` `Obj_DEZLightning`
+
+The highest-weight remaining traversal object is now concrete: **48 act 1 and 94 act 2
+placements**. The implementation follows `Obj_DEZLightning` (`sonic3k.asm:93608-93645`) and
+`Ani_DEZLightning` rather than using an engine timer approximation:
+
+1. animation `1,1,2,3,4,$FC` holds each visible mapping for delay+1 = two object passes;
+2. only mapping 3 exposes collision flags `$9F`, matching the sole
+   `Sprite_CheckDeleteTouch3` call at `loc_478E2`;
+3. `$FC` clears the mapping and falls through to the waiting routine on the same pass;
+4. the subtype byte is copied to the wait word and predecremented, so the next strike begins
+   after the counter becomes negative; and
+5. `sfx_Lightning` is queued only when the strike begins on screen.
+
+The ROM-resident `ArtTile_DEZMisc+$2C` art and `Map_DEZLightning` at `$4792E` are registered as
+level art; no disassembly asset is used at runtime. Eight focused tests (three behavior and five
+ROM census/inventory checks) pass with zero skips. Census: act 1 placeholders **163 → 115** and
+concrete **202 → 250**; act 2 placeholders **232 → 138** and concrete **262 → 356**.
+
+The next placement-weight frontier is `$6D` `InvisibleShockBlock` (22/56), followed by `$4D`
+`Obj_DEZTorpedoLauncher` (36/38). The earlier act 2 route divergence remains the shared `$08`
+spike carry measurement and is not attributed to this object.

@@ -493,6 +493,7 @@ public class Sonic3kConstants {
     // word_48BEE is the armed 32x16 pad, word_48C08 the two-piece pressed pose.
     // The header takes make_art_tile(ArtTile_DEZMisc+$143,1,0) (sonic3k.asm:94802).
     public static final int MAP_DEZ_GRAVITY_SWITCH_ADDR = 0x048BEA;
+    public static final int MAP_DEZ_LIGHTNING_ADDR = 0x04792E;
     /** {@code Map_DEZGravityPuzzle} (sonic3k.lst: ROM $00049A6C). */
     public static final int MAP_DEZ_GRAVITY_PUZZLE_ADDR = 0x049A6C;
 
