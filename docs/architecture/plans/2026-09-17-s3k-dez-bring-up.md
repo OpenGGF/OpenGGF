@@ -2847,3 +2847,15 @@ sound from `Level_frame_counter & $F`.
 The normal and wide mappings at ROM `$47C08/$47CA8` use resident `ArtTile_DEZMisc+$BB` through
 the ROM art pipeline. Census: act 1 placeholders **30 → 26**, concrete **335 → 339**; act 2
 placeholders **39 → 34**, concrete **455 → 460**. This closes reference-table group J.
+
+### 2026-09-19 — `$4A` `Obj_DEZFloatingPlatform`
+
+All ten act 2 floating platforms now port the DEZ-specific dispatch at
+`Obj_DEZFloatingPlatform` (`sonic3k.asm:51229-51277`). The placed subtype set `$00-$04` covers
+stationary platforms, the `$20/$40` horizontal oscillator amplitudes, the `$5F` accelerating
+sweep, and the vertical `$20` oscillator. These are full solids with the ROM's `$20/$10`
+render dimensions and `$2B/$10/$11` collision arguments, not the top-only shared floating
+platform profile.
+
+The two-frame mapping at ROM `$25ACA` uses resident `ArtTile_DEZ2Extra+$8`. Census: act 2
+placeholders **34 → 24**, concrete **460 → 470**; act 1 is unchanged.

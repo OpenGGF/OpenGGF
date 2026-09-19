@@ -84,7 +84,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$2F` | `Obj_StillSprite` | 19 | 20 | shared concrete | 4 (verify DEZ frames `$30-$32` art) |
 | `$34` | `Obj_StarPost` | 3 | 4 | shared concrete | 6, 8 (respawn rows) |
 | `$3C` | `Obj_Door` | 11 | 6 | shared concrete | 4 (verify DEZ art and trigger) |
-| `$4A` | `Obj_DEZFloatingPlatform` | 0 | 10 | placeholder | 4 |
+| `$4A` | `Obj_DEZFloatingPlatform` | 0 | 10 | concrete: full-solid DEZ oscillation/sweep table | 4 |
 | `$4B` | `Obj_DEZTiltingBridge` | 1 | 3 | placeholder | 4 |
 | `$4C` | `Obj_DEZHangCarrier` | 3 | 1 | placeholder | 4 |
 | `$4D` | `Obj_DEZTorpedoLauncher` | 36 | 38 | concrete: timed launcher, closing animation and touch projectile | 4 |

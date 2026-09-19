@@ -2739,6 +2739,9 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_CONVEYOR_PAD_WIDE,
                 Sonic3kConstants.MAP_DEZ_CONVEYOR_PAD_WIDE_ADDR,
                 Sonic3kConstants.ARTTILE_DEZ_MISC + 0xBB, 1, null, 4));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FLOATING_PLATFORM,
+                Sonic3kConstants.MAP_DEZ_FLOATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ2_EXTRA + 0x08, 1, null, 2));
 
         // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
         // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and

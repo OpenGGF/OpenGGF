@@ -104,6 +104,7 @@ public final class Sonic3kObjectIds {
     public static final int DEZ_CONVEYOR_BELT = 0x50;
     public static final int FLOATING_PLATFORM = 0x51;
     public static final int BUMPER = 0x4A;
+    public static final int DEZ_FLOATING_PLATFORM = 0x4A;
     // S3KL object table: Obj_CNZTriangleBumpers.
     public static final int CNZ_TRIANGLE_BUMPER = 0x4B;
     public static final int BUBBLER = 0x54;

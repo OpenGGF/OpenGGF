@@ -619,6 +619,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ) {
                         return new CnzBumperObjectInstance(spawn);
                     }
+                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_DEZ) {
+                        return new S3kDezFloatingPlatformObjectInstance(spawn);
+                    }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet()));
                 });
         registerStockZoneBound(Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER,
