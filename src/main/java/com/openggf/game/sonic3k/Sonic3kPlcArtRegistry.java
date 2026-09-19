@@ -41,6 +41,8 @@ public final class Sonic3kPlcArtRegistry {
     private static final int DEZ_ENERGY_BRIDGE_FRAME_COUNT = 4;
     // Map_DEZBumperWall: one frame, two stacked 16x32 pieces (sonic3k.asm:96083).
     private static final int DEZ_BUMPER_WALL_FRAME_COUNT = 1;
+    /** Map_DEZMiniboss header has frames $00-$25 (ROM $184FBA). */
+    private static final int DEZ_MINIBOSS_FRAME_COUNT = 0x26;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -2666,6 +2668,19 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 -1
         ));
+
+        // Obj_DEZMiniboss queues ArtKosM_DEZMinibossMisc at ArtTile_DEZMiniboss.
+        // Keeping it standalone preserves the same ROM-backed mapping/pattern pair while
+        // the object's PLC request remains responsible for native queue timing.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_MINIBOSS,
+                Sonic3kConstants.ART_KOSM_DEZ_MINIBOSS_MISC_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_MINIBOSS_MISC_SIZE,
+                Sonic3kConstants.MAP_DEZ_MINIBOSS_ADDR,
+                1,
+                -1,
+                DEZ_MINIBOSS_FRAME_COUNT));
 
         // Door (Object 0x3C) vertical: ArtTile_DEZMisc + $1E, palette 1
         // ROM: make_art_tile(ArtTile_DEZMisc+$1E, 1, 0)

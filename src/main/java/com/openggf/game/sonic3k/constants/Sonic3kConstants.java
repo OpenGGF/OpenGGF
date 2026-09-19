@@ -517,6 +517,14 @@ public class Sonic3kConstants {
     /** {@code Map_DEZBumperWall} (sonic3k.lst: ROM $000498C2). */
     public static final int MAP_DEZ_BUMPER_WALL_ADDR = 0x0498C2;
 
+    // ===== DEZ Act 1 miniboss (Obj_DEZMiniboss, SKL $A6) =====
+    // Verified against the locked-on World ROM with RomOffsetFinder --game s3k.
+    public static final int ART_KOSM_DEZ_MINIBOSS_MISC_ADDR = 0x1805A0;
+    public static final int ART_KOSM_DEZ_MINIBOSS_MISC_SIZE = 5664;
+    public static final int MAP_DEZ_MINIBOSS_ADDR = 0x184FBA;
+    public static final int PAL_DEZ_MINIBOSS_1_ADDR = 0x07EFFC;
+    public static final int PAL_DEZ_MINIBOSS_2_ADDR = 0x07F01C;
+
     // ===== Tension Bridge mappings (Obj_TensionBridge, ID 0x6C) =====
     public static final int MAP_TENSION_BRIDGE_ADDR = 0x038FF2;   // Map_TensionBridge
     public static final int MAP_ICZ_TENSION_BRIDGE_ADDR = 0x038FBA; // Map_ICZTensionBridge

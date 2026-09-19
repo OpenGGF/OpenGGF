@@ -2917,3 +2917,24 @@ and sine-up commands with native byte-pointer packing. Player positions use cent
 writes and 16.8 velocities; object control is released only by the path terminator. The eleven
 launcher mappings at ROM `$48424` use resident `ArtTile_DEZMisc+$38`. Census: act 1 placeholders
 **4 → 1**, concrete **361 → 364**; act 2 placeholders **5 → 1**, concrete **489 → 493**.
+
+### 2026-09-19 — `$A6` `Obj_DEZMiniboss`
+
+The placed act 1 boss now resolves to `S3kDezMinibossInstance`, backed by the ROM's
+`Obj_DEZMiniboss` graph (`sonic3k.asm:167750-169630`). Its root owns the initial hit proxy and
+eight articulated components from `ChildObjDat_7EF8E/7EF96`; all nodes are real dynamic objects,
+use stable same-class ordinals, and relink to the nearest restored root after rewind. The root
+retains eight-hit damage authority, hit-speed escalation, arena bounds, hover sound, defeat
+explosions, timer stop, and the nonstandard persistent lifetime required by the seamless change.
+
+The defeat chain raises rewind-owned `Events_fg_4` before results and again when the surviving
+carrier opens the act 2 stage-zero screen event. It also opens the ROM's vertical camera targets,
+lands at `$3AC`, waits 119 retained passes, loads `Pal_DEZMiniboss2` into line 2, and then expires.
+The initial and transition palettes come from ROM `$7EFFC/$7F01C`; the 38-frame mapping at
+`$184FBA` and 5,664-byte Kosinski-moduled art at `$1805A0` are registered through the ROM art
+pipeline. Focused tests cover zone-set resolution, fixed graph allocation, eighth-hit event/timer
+semantics, transition event/camera semantics, ROM placement census and art registration.
+
+Census: act 1 placeholders **1 → 0**, concrete **364 → 365**; act 2 remains at one placeholder,
+the `$A7` end boss. The full player-control/title-card choreography remains owned by slice 7's
+seamless-transition route acceptance rather than being falsely certified by this boss milestone.

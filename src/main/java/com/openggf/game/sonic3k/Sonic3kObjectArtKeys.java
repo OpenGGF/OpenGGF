@@ -518,6 +518,7 @@ public final class Sonic3kObjectArtKeys {
     // DEZ Bumper Wall (SKL 0x60) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZBumperWall
     // (sonic3k.asm:95959-95960), the same art block the $61 gravity puzzle draws from.
     public static final String DEZ_BUMPER_WALL = "dez_bumper_wall";
+    public static final String DEZ_MINIBOSS = "dez_miniboss";
     public static final String DOOR_HORIZONTAL = "door_horizontal";        // ArtTile_CNZMisc+$C5, Map_CNZDoorHorizontal
 
     private Sonic3kObjectArtKeys() {

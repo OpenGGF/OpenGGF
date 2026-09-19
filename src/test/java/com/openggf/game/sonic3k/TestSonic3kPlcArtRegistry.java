@@ -1503,9 +1503,10 @@ public class TestSonic3kPlcArtRegistry {
     public void dezPlanHasTwoBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0B, 0);
         assertNotNull(plan);
-        assertEquals(8, plan.standaloneArt().size());
+        assertEquals(9, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKEBONKER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CHAINSPIKE)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_MINIBOSS)));
     }
 
     @Test

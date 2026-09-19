@@ -323,8 +323,10 @@ public final class Sonic3kObjectIds {
     public static final int BATBOT = 0xA5;
     // S3KL object table: Obj_CNZMiniboss. SKL reuses $A6 for DEZMiniboss.
     public static final int CNZ_MINIBOSS = 0xA6;
+    public static final int DEZ_MINIBOSS = 0xA6;
     // S3KL object table: Obj_CNZEndBoss. SKL reuses $A7 for DEZEndBoss.
     public static final int CNZ_END_BOSS = 0xA7;
+    public static final int DEZ_END_BOSS = 0xA7;
     // S3KL object table: Obj_FBZMiniboss. SKL reuses $AA for Hyudoro.
     public static final int FBZ_MINIBOSS = 0xAA;
     public static final int FBZ2_SUBBOSS = 0xAB;
