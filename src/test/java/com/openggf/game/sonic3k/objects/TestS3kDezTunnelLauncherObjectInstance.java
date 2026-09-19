@@ -8,6 +8,9 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kPlcArtRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +37,57 @@ class TestS3kDezTunnelLauncherObjectInstance {
         assertEquals(7, launcher.launchCountForTest());
         assertEquals(2, launcher.getReservedChildSlotCount());
         assertEquals(4, launcher.romObjectCodePointerHighWord());
+    }
+
+    @Test
+    void captureCopiesLauncherFacingAndRunsTouchFloorBeforeTakingControl() {
+        S3kDezTunnelLauncherObjectInstance launcher = new S3kDezTunnelLauncherObjectInstance(
+                new ObjectSpawn(0x100, 0x180, 0x57, 0, 1, false, 0));
+        Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+        NativePositionOps.writeXPosResetSubpixel(sonic, 0x100);
+        NativePositionOps.writeYPosResetSubpixel(sonic, 0x180);
+        sonic.setRolling(true);
+        sonic.setRollingJump(true);
+        sonic.setPushing(true);
+        sonic.setFlipAngle(0x40);
+        sonic.setFlipsRemaining(3);
+        sonic.setAir(false);
+
+        launcher.update(0, sonic);
+
+        assertEquals(Direction.LEFT, sonic.getDirection(),
+                "sub_48370 copies launcher status bit 0 to player facing");
+        assertFalse(sonic.getRolling(), "Player_TouchFloor restores standing radii");
+        assertFalse(sonic.getRollingJump());
+        assertFalse(sonic.getPushing());
+        assertEquals(0, sonic.getFlipAngle());
+        assertEquals(0, sonic.getFlipsRemaining());
+        assertTrue(sonic.isObjectControlled());
+        assertEquals(9, sonic.getAnimationId());
+        assertEquals(0, sonic.getXSpeed());
+        assertEquals(0, sonic.getYSpeed());
+        assertEquals(0, sonic.getGSpeed());
+    }
+
+    @Test
+    void sinePathPublishesTunnelPoseAndRestoresTheGroundAngleAtItsEnd() {
+        S3kDezTunnelLauncherObjectInstance launcher = launcher();
+        Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+        NativePositionOps.writeXPosResetSubpixel(sonic, 0x100);
+        NativePositionOps.writeYPosResetSubpixel(sonic, 0x180);
+        int startY = sonic.getCentreY();
+        launcher.primeSineRiderForTest(sonic, true, 0x20, 0x24);
+
+        launcher.update(0, sonic);
+
+        assertEquals(0xFF, sonic.getAngle() & 0xFF,
+                "DEZTunnelControl_DoSine writes angle = -1 during the curve");
+        assertEquals(0x20, sonic.getFlipAngle());
+        assertEquals(startY + 3, sonic.getCentreY(), "SineDown adds three pixels per update");
+
+        launcher.update(1, sonic);
+        assertEquals(0, sonic.getAngle() & 0xFF,
+                "the curve handoff restores angle before reading the next waypoint");
     }
 
     @Test

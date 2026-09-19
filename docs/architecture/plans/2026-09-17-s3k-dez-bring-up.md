@@ -3016,3 +3016,20 @@ Those changes advance exact parity to **4,372 frames**. They also replace the ol
 **15,191**; that lower survival number is recorded as a changed route, not called a regression
 to the rejected stale-tube path. The next split at row 4,373 is X only: native `$0DCB`, engine
 `$0DCA`, with Y exact at `$070F`.
+
+### 2026-09-19 — `$57` light-tunnel player-state parity
+
+The existing `$57` implementation already folds `Obj_DEZTunnelControl` into the placed launcher,
+but three controller writes were missing. `sub_48370` now copies the launcher's facing bit and
+runs the relevant `Player_TouchFloor` reset before publishing object control `$81`; the path setup
+publishes angle 0 and mapping frame `$96`; and the two sine modes publish angle `$FF` plus the
+live `flip_angle`, restoring angle 0 at their handoff. These are player-state and pose corrections,
+not a claim that slice 5 is complete: `Obj_DEZTransRingSpawner` / `Obj_DEZTransRing` presentation,
+moving capture, native cadence, and the full rewind route remain open.
+
+The frame-4,373 tube frontier was also audited without changing production. The S3K fixture is an
+end-of-frame recording. At the split, the engine enters `RideObject_SetRide` airborne with empty
+terrain probes, so its disassembly-mandated `move.w #0,x_vel` runs; the native row retains `$1D0`.
+No fixture-local exception was added. Resolving that discrepancy requires identifying the native
+writer/landing owner, ideally from a matching-ROM velocity-write probe; the available local ROM
+does not match the canonical capture identity.

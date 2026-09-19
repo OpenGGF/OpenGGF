@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -72,7 +73,11 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
         if (dx < -8 || dx >= 8 || dy < -0x10 || dy >= 0x10) return;
 
         NativePositionOps.writeXPosPreserveSubpixel(player, (short) baseX);
-        player.setAir(false);
+        // sub_48370 copies only the launcher's status bit 0 before
+        // Player_TouchFloor (sonic3k.asm:94350-94358). Placement render bit 0 is
+        // the engine's retained form of that status bit.
+        player.setDirection((spawn.renderFlags() & 1) != 0 ? Direction.LEFT : Direction.RIGHT);
+        touchFloor(player);
         player.setPushing(false);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
@@ -153,10 +158,12 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
             writePosition(player, word(state.data, 0), word(state.data, 2));
             player.setAnimationId(2);
             player.setJumping(false);
+            player.setAngle((byte) 0);
             player.setGSpeed((short) 0x800);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
             player.setAir(true);
+            player.setMappingFrame(0x96);
             setupLinear(player, state, word(state.data, 4), word(state.data, 6));
             state.phase = 2;
         } catch (IOException | RuntimeException exception) {
@@ -200,6 +207,9 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
         int step = state.data[state.pointer + 1];
         int end = state.data[state.pointer + 3] & 0xFF;
         if ((state.angle & 0xFF) == end) {
+            if (state.phase == 5 || state.phase == 6) {
+                player.setAngle((byte) 0);
+            }
             state.pointer += 4;
             readNext(player, state);
             return;
@@ -217,6 +227,10 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
         } else {
             x = state.centreX + (sin >> 1);
             y = oldY + (state.phase == 5 ? 3 : -3);
+            // DEZTunnelControl_DoSine publishes the special pose before moving
+            // the ring/player pair (sonic3k.asm:94642-94645).
+            player.setAngle((byte) 0xFF);
+            player.setFlipAngle(state.angle);
         }
         writePosition(player, x, y);
         player.setXSpeed((short) ((x - oldX) << 8));
@@ -236,6 +250,31 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
     private void release(AbstractPlayableSprite player, RiderState state) {
         if (ownsControl(player, state)) ObjectControlState.none().applyTo(player);
         state.reset();
+    }
+
+    /** Player_TouchFloor's state-reset subset used by the launcher capture. */
+    private void touchFloor(AbstractPlayableSprite player) {
+        if (player.getRolling()) {
+            int topLeftAdjustment = player.getRollHeightAdjustment();
+            player.setRolling(false);
+            int centreDelta = -topLeftAdjustment;
+            if (reverseGravityActive()) {
+                centreDelta = -centreDelta;
+            }
+            NativePositionOps.addYPosPreserveSubpixel(player, centreDelta);
+        }
+        player.setAir(false);
+        player.setPushing(false);
+        player.setRollingJump(false);
+        player.setJumping(false);
+        player.setFlipAngle(0);
+        player.setFlipType(0);
+        player.setFlipsRemaining(0);
+    }
+
+    private boolean reverseGravityActive() {
+        return tryServices() != null && services().gameState() != null
+                && services().gameState().isReverseGravityActive();
     }
 
     private boolean ownsControl(AbstractPlayableSprite player, RiderState state) {
@@ -291,6 +330,17 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
         p1.angle = seed + 7;
         p1.centreX = seed + 8;
         p1.centreY = seed + 9;
+    }
+    void primeSineRiderForTest(AbstractPlayableSprite player, boolean down, int angle, int end) {
+        p1.reset();
+        p1.phase = down ? 5 : 6;
+        p1.data = new byte[]{0, 4, 0, (byte) end};
+        p1.pointer = 0;
+        p1.remaining = 1;
+        p1.angle = angle & 0xFF;
+        p1.centreX = player.getCentreX();
+        p1.centreY = player.getCentreY();
+        controllerActive = true;
     }
     long riderChecksumForTest() {
         return p1.phase + p1.delay + p1.controlGeneration + p1.data[0] + p1.data[1]
