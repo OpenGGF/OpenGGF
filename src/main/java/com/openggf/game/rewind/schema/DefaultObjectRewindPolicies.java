@@ -102,7 +102,8 @@ final class DefaultObjectRewindPolicies {
             "wreckingBall"
     );
 
-    private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+    private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES =
+            Map.<FieldKey, RewindFieldPolicy>ofEntries(
             // These SOZ SST links remain mutable during native graph teardown.
             // Capture their identities explicitly so both schema restore and the
             // coverage audit agree; constructors deliberately recreate null links.

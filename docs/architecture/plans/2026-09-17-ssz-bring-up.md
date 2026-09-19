@@ -2448,3 +2448,23 @@ behaviour and not an omission.
 Tests: `TestS3kSszMechaSpawnHeadless` is 16 cases; with the SSZ, mandatory S3K and rewind
 round-trip batch, **1280 run, 0 failures, 0 errors, 0 skipped**; `-Pguards` **669 run, 0
 failures**, after triaging the handover object's capture/restore override with its reason.
+
+### 2026-09-19 — slice 8 rendered launch audit
+
+`GameplayCaptureTool` gained a declared `--end-of-level` setup flag. It writes the production
+`End_of_level_flag` after boot/repositioning; it does not jump the SSZ event routine or hydrate
+any gameplay state. `raw-39-ssz-launch-debris` proved that setting the flag at the cold arrival
+is not a valid visual reproduction: the launch objects live at `$1Axx` while that camera remains
+at `$0200`. `raw-41-ssz-launch-production-position` therefore uses the ROM's star-post path and
+`--x $1A40 --y $670`; its `state.csv` keeps camera X `$19A0`, and frames 500/700/900/1100 show
+the player, the rising/breaking launch structures, and the custom chunk grid.
+
+That valid capture still shows the ordinary cloud plane behind the launch. A proposed fixed
+background window at layout X `$1A00` produced byte-identical keyed screenshots and was rejected;
+the engine's whole-layout renderer does not yet model the cartridge's live Plane B nametable
+patch closely enough for that selector alone to own the image. Native screenshot corroboration
+was attempted with `capture_movie_checkpoints.lua` at `hpz_3` rows 2400..3600, but the common
+host rejected the available root ROM before launch: SHA-1 `b711a909cce238ca4af3e517a2edca306228efa5`
+does not match the required locked-on identity `cfbf98c36c776677290a872547ac47c53d2761d6`.
+The identity check was not bypassed. The rendered Death Egg/Plane B composition therefore remains
+open; the captures establish the engine symptom, not native pixel parity.

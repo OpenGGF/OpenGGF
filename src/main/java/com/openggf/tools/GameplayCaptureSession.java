@@ -193,6 +193,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // zero a count written earlier. Ported from the Lava Reef campaign's b35f59d33.
             player.setRingCount(settings.rings());
         }
+        if (settings.endOfLevel()) {
+            // Declared capture setup for production post-boss event owners such as SSZ1's
+            // Death Egg launch. This is the ROM's End_of_level_flag, not a direct event jump.
+            GameServices.gameState().setEndOfLevelFlag(true);
+        }
     }
 
     /** Steps one gameplay frame with the given held input ({@code null} = neutral). */
@@ -359,7 +364,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
-                           Integer cameraXSub, boolean starPost, Integer rings) {
+                           Integer cameraXSub, boolean starPost, Integer rings, boolean endOfLevel) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
@@ -370,7 +375,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         Path donorRom, Integer startX, Integer startY, String emeraldStates,
                         boolean showTitleCard, boolean completeSpecialStage) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, null, null, false, null);
+                    showTitleCard, completeSpecialStage, null, null, false, null, false);
         }
 
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
@@ -378,7 +383,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
                         Integer cameraXSub) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false, null);
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false, null, false);
         }
 
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
@@ -386,7 +391,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
                         Integer cameraXSub, boolean starPost) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, null);
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, null, false);
         }
 
         public Settings {

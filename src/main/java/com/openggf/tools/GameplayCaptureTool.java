@@ -69,7 +69,7 @@ public final class GameplayCaptureTool {
                 arguments.width(), arguments.mainCharacter(), arguments.sidekickCharacter(),
                 arguments.donor(), donorRom, arguments.startX(), arguments.startY(), arguments.emeralds(), arguments.titleCard(),
                 arguments.completeSpecialStage(), arguments.vIntRunCount(), arguments.cameraXSub(),
-                arguments.starPost(), arguments.rings());
+                arguments.starPost(), arguments.rings(), arguments.endOfLevel());
         int zone = ZoneIds.resolve(arguments.game(), arguments.zone());
         int act = arguments.act();
 
@@ -172,7 +172,8 @@ public final class GameplayCaptureTool {
                             int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
                             boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
                             Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
-                            Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings) {
+                            Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings,
+                            boolean endOfLevel) {
 
         public static Arguments parse(String[] argv) {
             String game = "s3k";
@@ -206,6 +207,7 @@ public final class GameplayCaptureTool {
             Integer rings = null;
             boolean titleCard = false;
             boolean completeSpecialStage = false;
+            boolean endOfLevel = false;
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -249,6 +251,7 @@ public final class GameplayCaptureTool {
                     case "--camera-x-sub" -> cameraXSub = number(value(argv, ++i, flag), flag);
                     case "--rings" -> rings = number(value(argv, ++i, flag), flag);
                     case "--complete-special-stage" -> completeSpecialStage = true;
+                    case "--end-of-level" -> endOfLevel = true;
                     default -> throw new IllegalArgumentException("Unknown argument: " + flag);
                 }
             }
@@ -267,7 +270,7 @@ public final class GameplayCaptureTool {
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
-                    vIntRunCount, cameraXSub, starPost, rings);
+                    vIntRunCount, cameraXSub, starPost, rings, endOfLevel);
         }
 
         private static String value(String[] argv, int index, String flag) {
