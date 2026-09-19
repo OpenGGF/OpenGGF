@@ -7,6 +7,10 @@
       { "pattern": "pixel-font\\.png" },
       { "pattern": "pixel-font-ns\\.png" },
       { "pattern": "titlescreen/.*\\.png" },
+      { "pattern": "icon/.*\\.png" },
+      { "pattern": "load-time-profiles/.*\\.json" },
+      { "pattern": "net/.*\\.json" },
+      { "pattern": "\\QMETA-INF/openggf-mod-sdk/templates/\\E.*" },
       { "pattern": "shaders/.*\\.(glsl|vert|frag)" },
       { "pattern": "\\Qorg/lwjgl/\\E.*" }
     ]

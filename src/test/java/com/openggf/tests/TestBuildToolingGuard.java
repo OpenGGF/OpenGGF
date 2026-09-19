@@ -1469,10 +1469,6 @@ class TestBuildToolingGuard {
         if (!ci.contains("pull_request:\n    branches:\n      - next\n      - develop")) {
             violations.add(".github/workflows/ci.yml must validate pull requests targeting next and develop");
         }
-        // Every branch push reaches smoke; release destinations are checked only on integration branches.
-        if (!ci.contains("push:\n    branches:\n      - '**'")) {
-            violations.add(".github/workflows/ci.yml must validate pushes on every branch");
-        }
         if (!release.contains("pull_request:\n    branches: [master]")) {
             violations.add(".github/workflows/release.yml must retain pull-request ownership for master only");
         }
@@ -1482,11 +1478,6 @@ class TestBuildToolingGuard {
 
         assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run tests (pull request)",
                 "github.event_name == 'pull_request'", "github.base_ref", violations);
-        String pushSmoke = workflowStep(ci, "Run smoke suite (push)");
-        if (pushSmoke == null || !pushSmoke.contains("github.event_name == 'push'")
-                || !hasCanonicalPushDestinationDispatch(pushSmoke)) {
-            violations.add("CI push smoke must validate master/develop/next destinations and omit feature refs");
-        }
         assertMavenStepOmitsDestination(ci, ".github/workflows/ci.yml", "Run tests (manual)",
                 violations);
 
@@ -2966,22 +2957,9 @@ class TestBuildToolingGuard {
     }
 
     /**
-     * An ordinary branch push must reach exactly one Maven job, and that job
-     * must be the bounded {@code smoke} suite.
-     *
-     * <p>This used to require that a branch push run <em>no</em> Maven at all.
-     * That kept pushes cheap but gave a feature branch no regression signal
-     * whatsoever, so the full suite was pinned onto develop and master pushes
-     * instead -- twenty-six minutes of mail per merge, which stopped being read.
-     * The replacement splits the difference: {@code smoke} runs everywhere and
-     * finishes in minutes because it drops the {@code slow-suite} oracle sweeps,
-     * and the full {@code test} job moved to pull requests and manual
-     * dispatch.
-     *
-     * <p>The lever this protects is the same one as before -- a push must not
-     * silently acquire another long Maven job. {@code guards} and {@code test}
-     * both stay off the push path entirely, and any new Maven-bearing job has
-     * to be push-excluded or pinned to the integration branches.
+     * Ordinary branch pushes must not start CI. Validation happens on pull
+     * requests and deliberate manual dispatches; release.yml retains the
+     * separate master push path.
      *
      * <p>Branch policy validation is no longer part of the push path: the
      * {@code .githooks} enforce it at commit time on every branch, and master
@@ -2993,12 +2971,8 @@ class TestBuildToolingGuard {
         String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/ci.yml")));
         List<String> violations = new ArrayList<>();
 
-        String pushTrigger = yamlIndentedBlock(workflow, "  push:", 2);
-        if (!pushTrigger.contains("branches:\n") || !pushTrigger.contains("- '**'")) {
-            violations.add(".github/workflows/ci.yml push trigger is not explicitly limited to all branches");
-        }
-        if (pushTrigger.contains("tags:")) {
-            violations.add(".github/workflows/ci.yml branch policy push trigger also declares tag reachability");
+        if (yamlIndentedBlock(workflow, "  push:", 2).length() > 0) {
+            violations.add(".github/workflows/ci.yml must not trigger on ordinary pushes");
         }
 
         String policyJob = yamlIndentedBlock(workflow, "  policy:", 2);
@@ -3026,11 +3000,6 @@ class TestBuildToolingGuard {
                 violations.add(".github/workflows/ci.yml smoke job does not run the smoke profile directly");
             }
             String smokeCondition = yamlJobCondition(smokeJob);
-            if (conditionExcludesPush(smokeCondition)
-                    || conditionPinsPushToIntegrationBranches(smokeCondition)) {
-                violations.add(".github/workflows/ci.yml smoke job is not reachable from an ordinary"
-                        + " branch push, which leaves branch pushes with no test signal");
-            }
             if (smokeJob.contains("continue-on-error: true")) {
                 violations.add(".github/workflows/ci.yml smoke job is non-blocking, so a red smoke"
                         + " suite reports green");
@@ -3042,15 +3011,14 @@ class TestBuildToolingGuard {
                 continue;
             }
             String jobCondition = yamlJobCondition(job.getValue());
-            if (!conditionExcludesPush(jobCondition)
-                    && !conditionPinsPushToIntegrationBranches(jobCondition)) {
+            if (!conditionExcludesPush(jobCondition)) {
                 violations.add(".github/workflows/ci.yml Maven-bearing job " + job.getKey()
-                        + " is reachable from a branch push; only smoke may be");
+                        + " must exclude push events");
             }
         }
 
         if (!violations.isEmpty()) {
-            fail("all-branch pushes need exactly one bounded Maven job:\n  "
+            fail("ordinary pushes must not start CI:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
