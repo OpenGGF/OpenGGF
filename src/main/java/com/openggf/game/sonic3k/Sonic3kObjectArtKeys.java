@@ -357,6 +357,23 @@ public final class Sonic3kObjectArtKeys {
      * over tile {@code $090}, palette 2 ({@code make_art_tile($090,2,0)}, sonic3k.asm:51013-51014).
      */
     public static final String LRZ2_SOLID_MOVING_PLATFORM = "lrz2_solid_moving_platform";
+    /**
+     * {@code Obj_LRZSpikeBallLauncher} and the ball it allocates: {@code Map_LRZSpikeBallLauncher}
+     * (ROM {@code $449BC}) over {@code make_art_tile(ArtTile_LRZ2Misc,1,0)}
+     * (sonic3k.asm:89849-89850). The ball copies the parent's {@code mappings} and
+     * {@code art_tile} verbatim (:89864-89865), so both read one key: frames 0-2 are the ball and
+     * 3-4 the launcher.
+     */
+    public static final String LRZ2_SPIKE_BALL_LAUNCHER = "lrz2_spike_ball_launcher";
+    /**
+     * {@code Obj_LRZTurbineSprites} subtype 0: {@code Map_LRZTurbineSprites} (ROM {@code $445A6})
+     * over {@code make_art_tile(ArtTile_LRZ2Drum,1,1)} (sonic3k.asm:89612, :89626).
+     */
+    public static final String LRZ2_TURBINE_SPRITES = "lrz2_turbine_sprites";
+    /** Its non-zero subtypes: {@code Map_LRZTurbineSprites2} (ROM {@code $445B0}), same tiles. */
+    public static final String LRZ2_TURBINE_SPRITES_THIN = "lrz2_turbine_sprites_thin";
+    /** {@code Obj_LRZChainedPlatforms}: {@code Map_LRZChainedPlatforms} (ROM {@code $4A980}). */
+    public static final String LRZ2_CHAINED_PLATFORM = "lrz2_chained_platform";
     public static final String LRZ2_BUTTON = "lrz2_button";
     /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_DOOR = "lrz_door";

@@ -2756,6 +2756,15 @@ public final class Sonic3kPlcArtRegistry {
                     2,
                     null
             ));
+            // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89850); the ball copies the
+            // launcher's art_tile and mappings verbatim (:89864-89865).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SPIKE_BALL_LAUNCHER,
+                    Sonic3kConstants.MAP_LRZ_SPIKE_BALL_LAUNCHER_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
         }
 
         if (actIndex == 0) {
