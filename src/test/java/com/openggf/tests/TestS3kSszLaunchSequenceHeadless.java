@@ -104,6 +104,16 @@ class TestS3kSszLaunchSequenceHeadless {
         assertEquals(-1, state.launchRampArtJobOrdinal());
         assertNotNull(GameServices.level().getCurrentLevel().getPattern(0x073));
         assertNotNull(GameServices.level().getCurrentLevel().getPattern(0x348));
+        var map = GameServices.level().getCurrentLevel().getMap();
+        int patchX = map.getWidth() - 3;
+        assertArrayEquals(new int[]{4, 5, 6}, new int[]{
+                map.getValue(0, patchX, 0) & 0xFF,
+                map.getValue(0, patchX + 1, 0) & 0xFF,
+                map.getValue(0, patchX + 2, 0) & 0xFF});
+        assertArrayEquals(new int[]{7, 8, 9}, new int[]{
+                map.getValue(0, patchX, 2) & 0xFF,
+                map.getValue(0, patchX + 1, 2) & 0xFF,
+                map.getValue(0, patchX + 2, 2) & 0xFF});
 
         for (int frame = 0; frame < 0x400 && (GameServices.camera().getY() & 0xFFFF) != 0x110; frame++) {
             fixture.stepIdleFrames(1);

@@ -165,6 +165,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
     private void queueActOneLaunchResources(SszZoneRuntimeState state) {
         if (state.launchResourcesQueued()) return;
         try {
+            patchActOneLaunchLayout();
             state.setLaunchBlocksJobOrdinal(directKosQueue().queueStandardKos(rom(),
                     Sonic3kConstants.SSZ1_CUSTOM_BLOCKS_128_ADDR,
                     S3kKosRamDestinations.CHUNK_TABLE + 0x180).ordinal());
@@ -182,6 +183,18 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
         } catch (java.io.IOException failure) {
             throw new IllegalStateException("Cannot queue SSZ1 Death Egg launch resources", failure);
         }
+    }
+
+    /** loc_57360: the final three entries of FG layout rows 0 and 2 become chunks 4..9. */
+    private void patchActOneLaunchLayout() {
+        zoneLayoutMutationPipeline().queue(context -> {
+            int x = levelManager().getCurrentLevel().getMap().getWidth() - 3;
+            for (int column = 0; column < 3; column++) {
+                context.surface().setBlockInMap(0, x + column, 0, 4 + column);
+                context.surface().setBlockInMap(0, x + column, 2, 7 + column);
+            }
+            return MutationEffects.redrawAllTilemaps();
+        });
     }
 
     /** Publishes each payload only when its physical timing handle becomes ready. */
