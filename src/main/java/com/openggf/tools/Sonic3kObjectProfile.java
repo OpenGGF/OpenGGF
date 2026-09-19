@@ -316,15 +316,20 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x1E, // LRZDashElevator
             0x21, // LRZSmashingSpikePlatform
             0x22, // LRZSpikeBall
+            0x25, // LRZChainedPlatforms
             0x29, // LRZFlameThrower
             0x2B, // LRZOrbitingSpikeBallHorizontal
             0x2C, // LRZOrbitingSpikeBallVertical
             0x2D, // LRZSolidMovingPlatforms
+            0x32, // LRZTurbineSprites
+            0x37, // LRZSpikeBallLauncher
             0x99, // Fireworm
             0x9A, // Iwamodoki
             0x9B, // Toxomister
             0x9C, // LRZRockCrusher
-            0x9D // LRZMiniboss
+            0x9D, // LRZMiniboss
+            0xAE, // LRZ2CutsceneKnuckles
+            0xB3 // StartNewLevel
     );
 
     // DDZ-only implementations from SKL ids gated on ZONE_DDZ.
