@@ -46,6 +46,19 @@ class TestS3kDezConveyorPadObjectInstance {
     }
 
     @Test
+    void aSecondRiderReversesTheBeltEvenWhileTheFirstRemainsStanding() {
+        S3kDezConveyorPadObjectInstance pad = pad(0x01, 0);
+        pad.setSidekickStandingForTest(true);
+        pad.update(0, null);
+        pad.update(1, null);
+        assertEquals(1, pad.animationForTest(), "Tails' first carry reverses the belt");
+
+        pad.setStandingForTest(true);
+        pad.update(2, null);
+        assertEquals(0, pad.animationForTest(), "P1 is a new bit in the two-player standing mask");
+    }
+
+    @Test
     void zeroSubtypeUsesTheNarrowFullSolidDimensions() {
         S3kDezConveyorPadObjectInstance pad = pad(0x00, 0);
         assertEquals(0x4B, pad.getSolidParams().halfWidth());

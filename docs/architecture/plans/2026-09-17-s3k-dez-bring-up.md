@@ -2959,3 +2959,20 @@ the `$1700` request, ROM art and the placement census.
 Census: act 2 placeholders **1 → 0**, concrete **493 → 494**. Both normal Death Egg acts now
 decode with zero placeholder placements; the dynamically spawned `$1700` final-boss graph is
 still a distinct slice and is not certified by that placement result.
+
+### 2026-09-19 — act 1 conveyor re-entry frontier
+
+The 3,434-frame split was not a general solid-contact ordering bug. Native slot 16 is the
+`$53:$B0` conveyor pad at `($1540,$0870)`. Tails is already standing on it when Sonic lands:
+frame 3,433 carries Sonic two pixels left, then `loc_47A38` observes P1's newly set bit in the
+two-player standing mask and reverses the animation; frame 3,434 carries him two pixels right.
+The first port reduced the previous mask to one boolean, so Tails' existing bit hid Sonic's new
+bit and the belt never reversed. Preserving the two bits moves exact player parity from 3,433 to
+3,517 frames; the focused route plus pad suite passes 6/6.
+
+The new row-3,518 frontier is the same mechanism exposing an earlier sidekick divergence, not a
+second pad arithmetic defect. Native slot 16's status changes `$08` → `$18` as Tails newly stands,
+which reverses the belt and offsets Sonic's negative ground movement. Engine Tails does not supply
+that contact on the matched player route, so Sonic is four pixels left by the end of the frame.
+The next owner is sidekick trajectory/contact parity before row 3,518; fitting another pad toggle
+to Sonic's frame would encode the fixture and was rejected.

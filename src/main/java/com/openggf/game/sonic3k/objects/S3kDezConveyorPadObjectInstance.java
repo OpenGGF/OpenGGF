@@ -26,7 +26,7 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
     private boolean started;
     private int floorState;
     private boolean p1Standing, p2Standing;
-    private boolean previousStanding;
+    private int previousStandingMask;
 
     public S3kDezConveyorPadObjectInstance(ObjectSpawn spawn) {
         super(spawn, "DEZConveyorPad");
@@ -39,6 +39,7 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
 
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         boolean standing = p1Standing || p2Standing;
+        int standingMask = (p1Standing ? 1 : 0) | (p2Standing ? 2 : 0);
         boolean justStarted = false;
         if (standing && !started) {
             started = true;
@@ -60,10 +61,10 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
             // then reverses anim on a newly-set standing bit. The first carry
             // therefore uses the placement direction; the next pass uses the
             // reversed belt direction.
-            if (standing && !previousStanding) {
+            if ((standingMask & ~previousStandingMask) != 0) {
                 animation ^= 1;
             }
-            previousStanding = standing;
+            previousStandingMask = standingMask;
         }
         animate();
         if (isOnScreen(0) && (levelFrame(vIntRunCount) & 0xF) == 0 && tryServices() != null) {
@@ -152,5 +153,6 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
     }
     int travelLeftForTest() { return travelLeft; }
     void setStandingForTest(boolean standing) { p1Standing = standing; }
+    void setSidekickStandingForTest(boolean standing) { p2Standing = standing; }
     int animationForTest() { return animation; }
 }

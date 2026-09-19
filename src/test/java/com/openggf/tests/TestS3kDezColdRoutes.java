@@ -132,7 +132,7 @@ class TestS3kDezColdRoutes {
      * {@code $0FB5}; the native route now remains exact through 3,433 frames and
      * reaches {@code $1598} before its next frontier.
      */
-    static final int ACT_ONE_EXACT_FRONTIER = 3433;
+    static final int ACT_ONE_EXACT_FRONTIER = 3517;
     static final int ACT_ONE_SURVIVAL_FRONTIER = 4386;
     static final int ACT_ONE_MAX_X = 0x1598;
 
