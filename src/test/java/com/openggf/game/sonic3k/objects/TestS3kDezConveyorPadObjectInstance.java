@@ -15,8 +15,14 @@ class TestS3kDezConveyorPadObjectInstance {
 
         pad.setStandingForTest(true);
         pad.update(1, null);
+        assertEquals(0x100, pad.getY(), "the routine-change pass does not move");
+        assertEquals(8, pad.travelLeftForTest());
+
+        pad.update(2, null);
         assertEquals(0x101, pad.getY());
         assertEquals(7, pad.travelLeftForTest());
+        assertEquals(1, pad.animationForTest(),
+                "the first carry pass then reverses on the new standing bit");
     }
 
     @Test
@@ -24,6 +30,7 @@ class TestS3kDezConveyorPadObjectInstance {
         S3kDezConveyorPadObjectInstance pad = pad(0x81, 0);
         pad.setStandingForTest(true);
         pad.update(0, null);
+        pad.update(1, null);
 
         assertEquals(0x0FF, pad.getY());
         assertEquals(0x8B, pad.getSolidParams().halfWidth());

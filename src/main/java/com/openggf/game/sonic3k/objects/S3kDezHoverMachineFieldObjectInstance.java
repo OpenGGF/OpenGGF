@@ -60,8 +60,15 @@ public final class S3kDezHoverMachineFieldObjectInstance extends AbstractObjectI
         if (biased >= wave + 0x20) {
             return;
         }
-        int correction = relative < 0 ? wave : wave + (~relative << 1);
-        correction = -(correction >> 4);
+        // sub_4952A keeps d1=relative after `sub.w d0,d1` when that subtraction
+        // borrows (the player is above the field), then rejoins at `add.w d0,d1`.
+        // The non-borrow path alone applies not.w/add.w. Preserve the signed-word
+        // branch: dropping relative from the borrow path makes the arch pull upward
+        // too quickly as its wave crosses an ASR boundary.
+        int correctionWord = relative < 0 ? wave + relative : wave + (~relative << 1);
+        // 68000 order matters for negative values: neg.w happens before asr.w.
+        int correction = (short) -(short) correctionWord;
+        correction >>= 4;
         NativePositionOps.writeYPosPreserveSubpixel(player, player.getCentreY() + correction);
         player.setAir(true);
         player.setRollingJump(false);
@@ -101,4 +108,12 @@ public final class S3kDezHoverMachineFieldObjectInstance extends AbstractObjectI
     int angleForTest() { return angle; }
     int baseXForTest() { return baseX; }
     void liftForTest(AbstractPlayableSprite player) { lift(player); }
+
+    /**
+     * The ROM's after-current child first executes on the allocation pass. The engine's
+     * dynamically inserted child receives an allocation update before the first routed
+     * gameplay row as well, so seed one two-degree step behind to expose the same phase
+     * to the first player-interaction pass.
+     */
+    void seedAfterCurrentAllocationPhase() { angle = 0xFE; }
 }

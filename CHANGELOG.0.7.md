@@ -30,7 +30,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   transition sound, as in the ROM, instead of fading to white.
 - **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it
   at a quarter of the camera speed, cycle their console and panel colours, and animate their
-  machinery tiles. Death Egg Act 2's gravity now reverses: crossing one of the act's invisible
+  machinery tiles. Act 1's magnetic hover fields now use the ROM's signed word correction,
+  lift-pad arms use the high byte of their fixed-point angle, and conveyor pads preserve their
+  one-pass start and direction-change timing, carrying the recorded route through the machinery
+  instead of throwing it onto a divergent lower path. Death Egg Act 2's gravity now reverses:
+  crossing one of the act's invisible
   gravity triggers flips which way is down, and the player falls to the ceiling, stands and runs
   on it, rolls, jumps, lands, gets hurt and dies against a death plane that has moved to the top
   of the level. Shields, spilled rings, dust, springs, solid objects and a carried or respawning

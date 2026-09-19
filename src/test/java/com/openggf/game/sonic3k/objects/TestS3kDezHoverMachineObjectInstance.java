@@ -51,13 +51,28 @@ class TestS3kDezHoverMachineObjectInstance {
 
         field.liftForTest(player);
 
-        assertEquals(0x17B, player.getCentreY(),
-                "not.w/add.w on zero separation makes the $60 wave correction $5 pixels");
+        assertEquals(0x17A, player.getCentreY(),
+                "not.w/add.w and neg.w before asr.w make the $60 wave correction 6 pixels");
         assertEquals(0, player.getYSpeed());
         assertEquals(1, player.getGSpeed());
         assertEquals(1, player.getFlipAngle());
         assertEquals(0x7F, player.getFlipsRemaining());
         assertEquals(8, player.getFlipSpeed());
+    }
+
+    @Test
+    void fieldKeepsNegativeRelativeYInTheRomBorrowPath() {
+        S3kDezHoverMachineFieldObjectInstance field =
+                new S3kDezHoverMachineFieldObjectInstance(spawn(0x120));
+        field.setServices(new TestObjectServices());
+        TestPlayableSprite player = new TestPlayableSprite();
+        NativePositionOps.writeXPosPreserveSubpixel(player, 0x120);
+        NativePositionOps.writeYPosPreserveSubpixel(player, 0x170);
+
+        field.liftForTest(player);
+
+        assertEquals(0x16B, player.getCentreY(),
+                "the borrow path adds relative Y back before the signed divide");
     }
 
     private static ObjectSpawn spawn(int x) {

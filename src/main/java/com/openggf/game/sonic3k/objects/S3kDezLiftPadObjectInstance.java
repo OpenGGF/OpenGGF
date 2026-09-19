@@ -83,7 +83,7 @@ public final class S3kDezLiftPadObjectInstance extends AbstractObjectInstance
             if (angularVelocity == 0) {
                 active = false;
             }
-            if ((motionAngle & 0xFF) >= 0x20) {
+            if (angleByte() >= 0x20) {
                 decelerating = true;
             }
         } else {
@@ -92,14 +92,16 @@ public final class S3kDezLiftPadObjectInstance extends AbstractObjectInstance
             if (angularVelocity == 0) {
                 releaseDelay = 30;
             }
-            if ((motionAngle & 0xFF) < 0x20) {
+            if (angleByte() < 0x20) {
                 decelerating = false;
             }
         }
     }
 
     private void updatePositions() {
-        int angle = motionAngle & 0xFF;
+        // `angle` is a word accumulator, but move.b angle(a0),d0 reads its
+        // high byte on the 68000. The low byte is the fractional phase.
+        int angle = angleByte();
         if ((spawn.subtype() & 0x10) != 0) {
             angle = (short) -angle;
             if ((spawn.subtype() & 0x20) != 0) {
@@ -127,6 +129,10 @@ public final class S3kDezLiftPadObjectInstance extends AbstractObjectInstance
         accumY += sinStep;
         platformX = (accumX >> 16) - 0x20 + ((spawn.renderFlags() & 1) != 0 ? 0x40 : 0);
         platformY = accumY >> 16;
+    }
+
+    private int angleByte() {
+        return (motionAngle >>> 8) & 0xFF;
     }
 
     private void reserveChildSlot() {

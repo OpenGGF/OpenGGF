@@ -28,7 +28,7 @@ class TestS3kDezLiftPadObjectInstance {
     }
 
     @Test
-    void firstStandingContactAcceleratesThenSwitchesToDeceleration() {
+    void firstStandingContactAcceleratesInWordFixedPoint() {
         S3kDezLiftPadObjectInstance pad = pad(0x07, 0);
 
         pad.updateOscillator(true);
@@ -41,14 +41,31 @@ class TestS3kDezLiftPadObjectInstance {
         assertEquals(48, pad.motionAngleForTest());
 
         pad.updateOscillator(false);
-        assertEquals(16, pad.angularVelocityForTest());
-        assertEquals(64, pad.motionAngleForTest());
+        assertEquals(32, pad.angularVelocityForTest());
+        assertEquals(80, pad.motionAngleForTest());
+    }
+
+    @Test
+    void wordAngleUsesItsBigEndianHighByteAsTheVisiblePhase() {
+        S3kDezLiftPadObjectInstance pad = pad(0x27, 0);
+
+        pad.updateOscillator(true);
+        pad.updatePositionsForTest();
+        assertEquals(0x0E0, pad.getX());
+        assertEquals(0x080, pad.getY(), "angle word $0008 still exposes byte angle zero");
+
+        for (int i = 0; i < 7; i++) {
+            pad.updateOscillator(true);
+        }
+        pad.updatePositionsForTest();
+        assertTrue(pad.getX() != 0x0E0 || pad.getY() != 0x080,
+                "the endpoint moves once the word's high byte advances");
     }
 
     @Test
     void zeroVelocityStartsThirtyPassReleaseDelayWhichStandingFreezes() {
         S3kDezLiftPadObjectInstance pad = pad(0x07, 0);
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 90; i++) {
             pad.updateOscillator(i == 0);
         }
         assertEquals(0, pad.angularVelocityForTest());

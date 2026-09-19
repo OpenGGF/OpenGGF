@@ -26,6 +26,7 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
     private boolean started;
     private int floorState;
     private boolean p1Standing, p2Standing;
+    private boolean previousStanding;
 
     public S3kDezConveyorPadObjectInstance(ObjectSpawn spawn) {
         super(spawn, "DEZConveyorPad");
@@ -38,11 +39,16 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
 
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         boolean standing = p1Standing || p2Standing;
+        boolean justStarted = false;
         if (standing && !started) {
             started = true;
             animation = spawn.renderFlags() & 1;
+            justStarted = true;
         }
-        if (started) {
+        // loc_479F0 changes the routine and branches straight to animation/
+        // SolidObjectFull. loc_47A14 movement and rider carry start on the
+        // following object pass, after the standing bit was first observed.
+        if (started && !justStarted) {
             if (travelLeft != 0) {
                 travelLeft--;
                 yFixed += verticalStep << 16;
@@ -50,8 +56,16 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
                 updateTerrainFollowingPad();
             }
             carryRiders();
-            animate();
+            // loc_47A38 stores the current standing mask only after carrying,
+            // then reverses anim on a newly-set standing bit. The first carry
+            // therefore uses the placement direction; the next pass uses the
+            // reversed belt direction.
+            if (standing && !previousStanding) {
+                animation ^= 1;
+            }
+            previousStanding = standing;
         }
+        animate();
         if (isOnScreen(0) && (levelFrame(vIntRunCount) & 0xF) == 0 && tryServices() != null) {
             services().playSfx(Sonic3kSfx.CONVEYOR_PLATFORM.id);
         }

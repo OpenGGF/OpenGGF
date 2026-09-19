@@ -125,8 +125,16 @@ class TestS3kDezColdRoutes {
      * campaign has written. A ratchet, not a target: raise it when the frontier moves.
      */
     static final int SEEDED_ROUTE_FRONTIER = 1256;
-    static final int ACT_ONE_EXACT_FRONTIER = 1741;
-    static final int ACT_ONE_SURVIVAL_FRONTIER = 5352;
+    /**
+     * Measured after restoring the hover field's word arithmetic, the lift pad's
+     * big-endian angle byte and the conveyor pad's routine-change pass. The prior
+     * 5,352-frame survival followed a divergent lower route and never passed
+     * {@code $0FB5}; the native route now remains exact through 3,433 frames and
+     * reaches {@code $1598} before its next frontier.
+     */
+    static final int ACT_ONE_EXACT_FRONTIER = 3433;
+    static final int ACT_ONE_SURVIVAL_FRONTIER = 4386;
+    static final int ACT_ONE_MAX_X = 0x1598;
 
     @AfterEach
     void reset() {
@@ -200,7 +208,7 @@ class TestS3kDezColdRoutes {
                 "act 1 exact frontier regressed from " + ACT_ONE_EXACT_FRONTIER);
         assertTrue(frames >= ACT_ONE_SURVIVAL_FRONTIER,
                 "act 1 input route survival regressed from " + ACT_ONE_SURVIVAL_FRONTIER);
-        assertTrue(maxX >= 0x0FB5, "act 1 maximum route X regressed");
+        assertTrue(maxX >= ACT_ONE_MAX_X, "act 1 maximum route X regressed");
     }
 
     /**

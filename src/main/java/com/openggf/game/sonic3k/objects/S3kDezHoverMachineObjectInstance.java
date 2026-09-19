@@ -27,8 +27,12 @@ public final class S3kDezHoverMachineObjectInstance extends AbstractObjectInstan
         if (!childSpawned) {
             childSpawned = true;
             // AllocateObjectAfterCurrent: the oscillator executes later in the same object pass.
-            spawnChild(() -> new S3kDezHoverMachineFieldObjectInstance(new ObjectSpawn(
-                    (getX() + 0x20) & 0xFFFF, getY(), 0, 0, spawn.renderFlags(), false, 0)));
+            spawnChild(() -> {
+                var field = new S3kDezHoverMachineFieldObjectInstance(new ObjectSpawn(
+                        (getX() + 0x20) & 0xFFFF, getY(), 0, 0, spawn.renderFlags(), false, 0));
+                field.seedAfterCurrentAllocationPhase();
+                return field;
+            });
         }
         mappingFrame = (mappingFrame + 1) & 1;
     }
