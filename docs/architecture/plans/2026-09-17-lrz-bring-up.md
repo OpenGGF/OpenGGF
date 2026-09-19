@@ -3609,3 +3609,18 @@ the focused batch and `-Pguards`, cancelling a waiting request rather than letti
 tree that was about to change. And `pgrep -f` inside a Bash tool call matches the tool's own shell:
 killing by that pattern kills the call (exit 144). Put the pattern in a script file and kill by the
 PIDs it prints.
+
+## 2026-09-19 — the placed `$B3` route exit
+
+LRZ2's single `$B3:$2D` placement is now `S3kStartNewLevelObjectInstance`, reducing the act-2
+placeholder census from 23 to **22**. It ports `Obj_StartNewLevel`'s asymmetric
+`Check_InMyRange` rectangle and its word-width subtype transform: the cleared byte after subtype
+forms `$2D00`, and `lsr.w #1 / rol.b #1` produces the playable Hidden Palace request `$1601`.
+The shipped Knuckles-only save branch is retained through the LRZ runtime roster.
+
+Focused validation with the locked-on ROM: `TestS3kLrzStartNewLevelObject` and
+`TestS3kLrzPlacementCensus`, **7 tests, 0 failures, 0 errors, 0 skipped**. The earlier focused
+rewind/census batch at the same working tree ran **1165 tests, 0 failures, 0 errors, 0 skipped**.
+This is focused validation, not a suite pass. Remaining act-2 placeholders are `$25` (3), `$32`
+(18), and `$AE` (1); the breadth/route and presentation obligations in the fifteenth handover
+remain open.

@@ -84,13 +84,14 @@ class TestS3kLrzPlacementCensus {
      * {@code $2C} {@code Obj_LRZOrbitingSpikeBallVertical} (0 / 40) took act 2 from 188 to
      * 136, {@code $29} {@code Obj_LRZFlameThrower} (0 / 52) to 84 and {@code $2D}
      * {@code Obj_LRZSolidMovingPlatforms} (0 / 52) to 32 and {@code $37}
-     * {@code Obj_LRZSpikeBallLauncher} (0 / 9) to <b>23</b>; the sentence below is kept as it
+     * {@code Obj_LRZSpikeBallLauncher} (0 / 9) to 23 and {@code $B3}
+     * {@code Obj_StartNewLevel} (0 / 1) to <b>22</b>; the sentence below is kept as it
      * was written for act 1
      * to <b>0</b>: every act 1 placement now builds a concrete class.
      */
     private static final Map<String, String> PLACEHOLDER_BASELINE = Map.of(
             "LRZ1", "",
-            "LRZ2", "25:80=1,81=1,82=1;32:00=7,01=11;AE:00=1;B3:2D=1",
+            "LRZ2", "25:80=1,81=1,82=1;32:00=7,01=11;AE:00=1",
             "LRZ3", "9E:00=1;AD:00=1,01=1,02=2,04=3");
 
     private static RomByteReader rom;
@@ -119,7 +120,7 @@ class TestS3kLrzPlacementCensus {
 
     @Test
     void act2PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 23);
+        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 22);
     }
 
     @Test

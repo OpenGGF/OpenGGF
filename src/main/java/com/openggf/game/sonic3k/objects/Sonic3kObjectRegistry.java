@@ -1575,6 +1575,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.HCZ_WATER_RUSH,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzSpikeBallLauncherObjectInstance(spawn));
+        // Id $B3 is Obj_StartNewLevel in the SKL set. LRZ2 places subtype $2D at ($3FE0,$E0),
+        // whose two-byte subtype transform requests playable Hidden Palace ($1601).
+        registerStockRomZoneBound(Sonic3kObjectIds.ICZ_SEGMENT_COLUMN,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new S3kStartNewLevelObjectInstance(spawn));
         // Id $22 is Obj_LRZSpikeBall in the SKL set (sonic3k.asm:88838); the S3KL set spends it
         // on Obj_LBZAlarm.
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_ALARM,
