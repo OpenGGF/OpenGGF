@@ -65,7 +65,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   2 placement branch, and the first eight hits run the cartridge's fade, spin-up, arena opening,
   charge, landing, transformation and forced Knuckles run before handing the fight to his
   distinct 36-slot Super dispatcher with a replenished health bar; the second set follows the
-  cartridge's staged fade, progression save and ending-event stop-line waits. The Master Emerald
+  cartridge's staged fade, progression save and ending-event stop-line waits. That terminal
+  handoff now also applies the cartridge's `$83` player-control lock, clears the forced mapping
+  frame and is covered through the stage-4 event consumption and 120-frame stop boundary. The Master Emerald
   now watches the transformation using its own ROM art and flickers with the native cutscene bit,
   and Super Mecha Sonic can throw the cartridge's eight-way harmful energy burst. Capturing and
   replaying that fight now also discards expired after-images instead of retaining a dead object

@@ -234,6 +234,36 @@ class TestS3kSszAct2FinaleHeadless {
     }
 
     @Test
+    void secondHealthBarLocksKnucklesAndPublishesTheEndingHandshake() {
+        HeadlessTestFixture fixture = boot();
+        SszMechaSonicObjectInstance boss = runToBoss(fixture);
+        for (int hit = 0; hit < 8; hit++) landOneHit(fixture, boss);
+        runIntoSuperGraph(fixture, boss);
+        // The test's first health bar uses the production touch pass. Isolate the terminal
+        // graph here from the Super dispatcher's long harmful/non-hittable animation windows.
+        for (int hit = 0; hit < 8; hit++) {
+            boss.applyHitForTest(fixture.sprite());
+            fixture.stepIdleFrames(0x21);
+        }
+        assertTrue(boss.defeatedForTest(), () -> "second health bar did not enter loc_7BC32; hits="
+                + boss.getCollisionProperty() + " phase=" + boss.actTwoDefeatPhaseForTest());
+
+        var state = S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        for (int frame = 0; frame < 0x180 && state.foregroundRoutine() < 8; frame++) {
+            fixture.stepIdleFrames(1);
+        }
+
+        assertEquals(8, state.foregroundRoutine(),
+                "loc_7BCB0's Events_fg_4+1 handshake is consumed by stage 4");
+        assertEquals(0, state.eventsFg4Low(), "stage 4 clears the consumed handshake word");
+        assertTrue(fixture.sprite().isControlLocked(), "loc_7BCB0 writes object_control $83");
+        assertEquals(0, fixture.sprite().getMappingFrame(), "loc_7BCB0 clears mapping_frame");
+
+        fixture.stepIdleFrames((2 * 60) + 1);
+        assertTrue(boss.isDestroyed(), "loc_7BCFC reaches the accepted ending-object stop line");
+    }
+
+    @Test
     void superDispatcherSurvivesCaptureRestoreAndForwardReplay() {
         HeadlessTestFixture fixture = boot();
         SszMechaSonicObjectInstance boss = runToBoss(fixture);
@@ -362,7 +392,9 @@ class TestS3kSszAct2FinaleHeadless {
             player.setAir(true);
             player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
             fixture.stepIdleFrames(1);
-            if (boss.getCollisionProperty() == before - 1 || boss.superPhaseForTest()) return;
+            if (boss.getCollisionProperty() == before - 1
+                    || (before == 1 && boss.superPhaseForTest()
+                    && boss.getCollisionProperty() == 8)) return;
         }
         throw new AssertionError("a hit never landed through the production touch pass");
     }

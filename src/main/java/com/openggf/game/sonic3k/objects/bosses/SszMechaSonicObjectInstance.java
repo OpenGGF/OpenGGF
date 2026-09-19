@@ -1281,6 +1281,18 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                 actTwoDefeatPhase = 2;
                 SszZoneRuntimeState ssz = sszState();
                 if (ssz != null) ssz.setEventsFg4Low(0xFF);
+                AbstractPlayableSprite player = mainPlayer();
+                if (player != null) {
+                    // loc_7BCB0: object_control=$83, mapping_frame=0, clear standing/
+                    // jumping/spindash state. The control lock owns the engine equivalent;
+                    // explicit frame control preserves the ROM's cleared mapping byte.
+                    player.setControlLocked(true);
+                    player.setObjectMappingFrameControl(true);
+                    player.setMappingFrame(0);
+                    player.setJumping(false);
+                    player.setSpindash(false);
+                    player.setLatchedSolidObject(0, null);
+                }
                 services().requestSessionSave(com.openggf.game.save.SaveReason.PROGRESSION_SAVE);
             }
             return;
@@ -1563,6 +1575,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     public boolean superPhaseForTest() { return superPhase; }
     public int actTwoRoutePhaseForTest() { return actTwoRoutePhase; }
     public int actTwoDefeatPhaseForTest() { return actTwoDefeatPhase; }
+    public void applyHitForTest(AbstractPlayableSprite player) { hitHandler.processHit(player); }
     public List<SszMechaSonicTrailChild> trailForTest() { return List.copyOf(trail); }
 
     // --- draw -------------------------------------------------------------------------------
