@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance;
 import com.openggf.game.sonic3k.objects.SszSolidCloudObjectInstance;
 import com.openggf.game.sonic3k.objects.SszEndingIslandMaskObjectInstance;
 import com.openggf.game.sonic3k.objects.SszAct2EndingCameraController;
+import com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 import com.openggf.level.Pattern;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -111,11 +112,34 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             applyScreenInit(act, state);
         }
         if (act == 0) {
+            if (gameState().isEndOfLevelFlag() || state.foregroundRoutine() >= 4) {
+                actOneLaunchEvent(state);
+                return;
+            }
             // SSZ1_ScreenEvent stage 0 (loc_572BA) runs sub_575EA every frame until
             // End_of_level_flag starts the launch.
             dynamicResize(state);
         } else {
             actTwoScreenEvent(state);
+        }
+    }
+
+    /** {@code SSZ1_ScreenEvent} stage 0's {@code End_of_level_flag} launch edge. */
+    private void actOneLaunchEvent(SszZoneRuntimeState state) {
+        if (state.foregroundRoutine() == 0) {
+            spawnObject(() -> new SszLaunchControllerObjectInstance(
+                    new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+            state.setForegroundRoutine(4);
+            camera().setScrollLocked(true);
+            AbstractPlayableSprite player = spriteManager().getMainPlayable();
+            if (player != null) player.setControlLocked(true);
+            for (var sidekick : spriteManager().getSidekicks()) sidekick.setControlLocked(true);
+            return;
+        }
+        if (state.foregroundRoutine() == 4 && state.eventsFg4() != 0) {
+            // loc_57360's terrain/art hot-swap is applied by the launch mutation owner;
+            // advancing here gives the background/column owner the ROM's steady stage 8.
+            state.setForegroundRoutine(8);
         }
     }
 

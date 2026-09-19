@@ -92,7 +92,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   declared seeded continuation fills the cartridge's sixteen solid
   mask tiles, allocates the eight-piece ending-island mask, consumes the 16-row delayed redraw
   and resets the camera exactly at stage `$C`; the shared ending object that normally triggers
-  it remains outside this zone campaign. The Death Egg launch is still to come.
+  it remains outside this zone campaign. Act 1's results flag now also starts its persistent
+  spiral-ramp controller: the native 30-frame wait and rumble cadence lead to the `$910`
+  scripted jump (`$400/-$680`, ground speed `$800`), the gravity apex starts the 180-frame
+  exit wait, and Player 1 fades into the `$B00` Death Egg request. The coupled crumble,
+  terrain/art swap and launch debris are still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
