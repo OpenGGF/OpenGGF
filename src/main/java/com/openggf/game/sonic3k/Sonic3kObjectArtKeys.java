@@ -352,6 +352,11 @@ public final class Sonic3kObjectArtKeys {
      * its own {@code mappings} pointer into the child (:89297) and only the tile base differs.
      */
     public static final String LRZ2_FLAME = "lrz2_flame";
+    /**
+     * {@code Obj_LRZSolidMovingPlatforms}: {@code Map_LRZSolidMovingPlatforms} (ROM {@code $259C4})
+     * over tile {@code $090}, palette 2 ({@code make_art_tile($090,2,0)}, sonic3k.asm:51013-51014).
+     */
+    public static final String LRZ2_SOLID_MOVING_PLATFORM = "lrz2_solid_moving_platform";
     public static final String LRZ2_BUTTON = "lrz2_button";
     /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_DOOR = "lrz_door";

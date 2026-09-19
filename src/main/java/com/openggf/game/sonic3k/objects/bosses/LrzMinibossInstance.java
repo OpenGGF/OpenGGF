@@ -1088,8 +1088,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
             return;
         }
         try {
-            byte[] data = com.openggf.game.GameServices.rom().getRom()
-                    .readBytes(romAddr, PALETTE_LINE_BYTES * lines);
+            byte[] data = objectServices.rom().readBytes(romAddr, PALETTE_LINE_BYTES * lines);
             for (int line = 0; line < lines; line++) {
                 byte[] slice = new byte[PALETTE_LINE_BYTES];
                 System.arraycopy(data, line * PALETTE_LINE_BYTES, slice, 0, PALETTE_LINE_BYTES);

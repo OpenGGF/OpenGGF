@@ -1564,6 +1564,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.AIZ_DISAPPEARING_FLOOR,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzFlameThrowerObjectInstance(spawn));
+        // Id $2D is Obj_LRZSolidMovingPlatforms in the SKL set (sonic3k.asm:51012); the S3KL set
+        // spends it on Obj_AIZFallingLog, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_FALLING_LOG,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzSolidMovingPlatformObjectInstance(spawn));
         // Id $22 is Obj_LRZSpikeBall in the SKL set (sonic3k.asm:88838); the S3KL set spends it
         // on Obj_LBZAlarm.
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_ALARM,

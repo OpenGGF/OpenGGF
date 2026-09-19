@@ -522,6 +522,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   change loads no palette at all -- and Act 2 only takes its own blue crystal colours once the
   player has walked far enough into it, where the ROM swaps them. Before this, Act 2 turned blue
   the instant the act changed.
+  Act 2's solid moving platforms are in too, another 52: blocks you ride that drift along one axis
+  and back, some keeping time with the zone's shared oscillation and some easing out of each end
+  under their own acceleration, and either kind can be mirrored to start from the other side.
   Act 2's flame throwers are in, 52 of them: each one is a solid block that fires a jet of flame
   for two seconds, pauses for a length its own placement chooses, and fires again, sweeping the jet
   through a narrow fan as it goes. They come in the wall-mounted and floor-mounted kinds, either

@@ -134,7 +134,9 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
         if (gate == Gate.SIBLING) {
             installActTwoPalette();
         }
-        setDestroyed(true);
+        // jmp (Delete_Current_Sprite) (sonic3k.asm:160528, :160547): neither slot is a placement
+        // and neither comes back.
+        com.openggf.level.objects.ObjectLifetimeOps.destroyLatched(this);
     }
 
     /**
@@ -143,7 +145,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
      */
     private void installActTwoPalette() {
         try {
-            var rom = com.openggf.game.GameServices.rom().getRom();
+            var rom = services().rom();
             byte[] act2 = rom.readBytes(Sonic3kConstants.PAL_LRZ2_ADDR, PALETTE_LINE_BYTES);
             applyLine(ACT2_PALETTE_LINE, act2);
             byte[] miniboss3 = rom.readBytes(

@@ -2748,6 +2748,14 @@ public final class Sonic3kPlcArtRegistry {
                     1,
                     null
             ));
+            // make_art_tile($090,2,0) (sonic3k.asm:51013-51014).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SOLID_MOVING_PLATFORM,
+                    Sonic3kConstants.MAP_LRZ_SOLID_MOVING_PLATFORM_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_FLAME_THROWER,
+                    2,
+                    null
+            ));
         }
 
         if (actIndex == 0) {

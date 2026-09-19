@@ -3265,6 +3265,62 @@ stepping by 4 with `$3C` as the direction flag). `status` bit 0 negates every on
 solid call is `d1 = width_pixels + $B`, `d2 = height_pixels`, `d3 = d2 + 1`, and the unload test
 reads `$30`, the anchor's x, through `Sprite_OnScreen_Test2`.
 
+
+### 2026-09-19 (second round) - The act 2 palette, the route frontier, and slice 7's second big family
+
+**The palette gap the native capture found is closed, and it took three parts.** The reading that
+makes it tractable is one line of `Load_Level` (sonic3k.asm:38747-38761): it copies `$1000` bytes
+of level layout and **nothing else**. No palette. So in the ROM the miniboss fight's own palette
+lines cross the seamless act change untouched, and the only thing that replaces them is
+`loc_78B08`, once the act 2 camera reaches `$2C0`.
+
+- `Obj_LRZMiniboss`'s init tail loads `Pal_LRZMiniboss1` through `PalLoad_Line1` (:160008-160009),
+  and `PalLoad_Line1` writes `Normal_palette_line_2` (:180037-180044) -- **engine line 1**, because
+  the ROM's names are one-based. `loc_78528` then loads `Pal_LRZMiniboss2` through `sub_78B38`,
+  `$40` bytes from `line_3`, engine lines 2 and 3. Neither was implemented.
+- `Sonic3kLRZEvents` writes those three lines back after its own reload, which is the one place the
+  engine has to do something the ROM does not.
+- `LrzPostDefeatCameraReleaseInstance` is `loc_78AA8` and the `loc_78B08` it allocates. The
+  `End_of_level_flag` gate is what keeps both thresholds on act 2's rebased camera rather than act
+  1's `$2C00`, and it is the whole reason the twelfth handover was right to leave them out until
+  the change existed.
+
+**Confirmed on film against the native.** Clip `35`: the blocks are the miniboss palette's gold
+until camera x `$2C0` on capture frame 3539 and act 2's blue after it, and the gold half matches
+the native capture's own `f416433.png`. The rotation script `word_78EAA` that runs between the two
+releases is not implemented and has its own known-bugs entry now.
+
+**Act 2 has a route frontier: 923 rows.** The `lrz` fixture's own input column from row 25558,
+converted to an input log (`inputs/lrz2-native-route-v1.txt`), drives the engine through the
+production act change and matches Player 1's `x` and `y` **exactly for rows 25558-26481**. First
+player divergence row **26482**, first camera divergence row **26416**. Details and the kill
+condition are in the frontier log; what is worth repeating here is the shape of the divergence:
+
+- The native **spindashes** out of the change. Rows 25558-26481 are a crouch and a charge; the
+  release is row 26482, and the engine's release speed is `$900` where the native's first two
+  frames imply `$A00`. The engine's `Spindash_counter` at release is 683 and its decay is exact
+  (774 -> 750 is `774 - 774/32`), so the gap is in what was accumulated, not in how it decays.
+- The probe cannot yet say whether a charge was dropped or the release formula is short, because
+  it starts feeding input at the change and the native was already crouching. That is the first
+  thing the next round should separate.
+
+**The "door column at x 2741" from the fourteenth handover is withdrawn.** It is not a door the
+route opens: the native jumps at `x $AA8` and climbs a shaft (`y $732` to `$4E4` over rows
+26949-27169). A right-held player meets a wall there; the recorded route goes up.
+
+**`$2D`, `Obj_LRZSolidMovingPlatforms`, 52 placements, census 84 -> 32.** The subtype is read
+twice -- `(subtype >> 4) & 1` picks one of `byte_25826`'s two entries, which differ only in
+`mapping_frame`, and `subtype & $F` picks one of `off_258BC`'s nine movers. Act 2 places movers
+0, 1, 2, 4, 5 and 6 with both skins. The reading that a transcription gets wrong is `sub_25974`:
+`$36` is a word that `add.w` accumulates but `cmp.b`/`move.b` read as a **byte**, so it is 8.8 and
+`$40` is an 8.8 *acceleration* stepping by 4 a frame. Read `$36` as a plain word and the platform
+reaches its limit in two frames instead of about ninety; the test breaks exactly that way when the
+mask is changed, which is how it was checked.
+
+**Still owed on both new families**: clips, rewind spots on a route, and wide/donor/roster rows.
+`inputs/lrz1-fight-then-native-act2-v1.txt` (the fight input truncated at the change frame with the
+native's act-2 controller appended) is the route a clip should be filmed from.
+
 ## Handover, 2026-09-18 (thirteenth)
 
 **Head is this commit**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
@@ -3420,3 +3476,77 @@ two hazards came with it. A probe that renders must publish the viewport snapsho
 runs: a report there can be hours older than the run you are reading, which is how a long-dead
 trace failure nearly got attributed to this round's commits. Check the mtime before believing a
 report.
+
+## Handover, 2026-09-19 (fifteenth)
+
+**Head is this commit**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
+nothing pushed or merged. This round continued straight on from the fourteenth handover, so read
+that one first -- it carries the correction that both act-2 "blockers" were misdiagnosed.
+
+**Commits this round, in order**: `4dd0844b6` the act-change hand-off, `10dc06bb5`
+`LRZ2_BackgroundEvent`'s three stages, `09dcba966` the known-bugs correction, `b5a477216` the flame
+throwers, `8875bc7f2` the fourteenth handover, `8805711f8` the fight palette and the two camera
+releases, and this one with `$2D`.
+
+**Act 2's census is 455 placements with 32 placeholders left**, from 188 at the start of slice 7:
+`$2B`/`$2C` (52), `$29` (52) and `$2D` (52). What remains is `$32` turbine sprites (18), `$37`
+spike ball launcher (9), `$25` chained platforms (3), `$AE` (1) and `$B3` (1).
+
+**The two things this round establishes that change what the next one should do.**
+
+1. **Act 2 has a route frontier and it is 923 rows.** The `lrz` fixture's own input column drives
+   the engine through the production act change and matches Player 1 exactly to row 26481. The
+   first divergence is the native's **spindash release** at row 26482: engine `$900`, native an
+   implied `$A00`, engine `Spindash_counter` 683 at release with its decay verified exact. The
+   probe starts feeding input at the change while the native was already crouching, so **whether a
+   charge was dropped or the release formula is short is not yet separated** -- that is the first
+   measurement the next round should take, and it is cheap.
+2. **The act 2 palette is a fight-owned palette.** `Load_Level` copies no palette at all, so the
+   miniboss's own lines cross the change and only `loc_78B08` replaces them at `Camera_X_pos $2C0`.
+   Clip `35` shows the swap and its gold half matches the native capture. Any future work that
+   touches the seamless change must keep `restoreFightPaletteAcrossTheChange` or reproduce it.
+
+**What is owed, in the order the next round should take it.**
+
+1. **The act 2 route clip and rewind spots.** `inputs/lrz1-fight-then-native-act2-v1.txt` is the
+   fight truncated at the change frame with the native's act-2 controller appended, and the route
+   passes the flame throwers at `($8D2,$770)` and `($A4C,$6AF)`, so one capture can carry clips for
+   `$29`, `$2D` and the route at once. None of the three landed families has a clip, a rewind spot
+   on a route, or a wide/donor/roster row.
+2. **Row 26482**, with the charge-versus-formula question above as its kill condition.
+3. **Slice 7's remainder.** `$37` is read out and small: `Obj_LRZSpikeBallLauncher`
+   (sonic3k.asm:89848-89931) allocates its ball as a child at `y_pos - 8` with `$46` as the rest
+   height, runs `Ani_LRZSpikeBallLauncher` through `Animate_SpriteIrregularDelay` (whose `$FC`
+   command is what sets `routine` and makes the object fire), launches at `y_vel = -(subtype << 4)`
+   and lets `MoveSprite` bring the ball back to `$46`. There is **no** shared irregular-delay
+   animator in the engine: `AizDisappearingFloorObjectInstance.updateIrregularAnimation` transcribes
+   its own script as a table and the `$FC`/`$FD`/`$FF` commands with it, which is the pattern to
+   follow. The script is `3,$7F,$FC,$FF` then a fifty-entry ramp ending `$FC,$FF,$FD,0`. `$32` (`Obj_LRZTurbineSprites`, :89611-...) is the
+   large one: per-player state at `$30`, `Ctrl_n_logical` reads, `object_control` writes and a
+   release that re-poses the player -- budget it properly.
+4. **`word_78EAA`'s palette rotation script**, the one piece of `loc_78AA8` still missing.
+5. **`loc_5711E`**, the act-2 Death Egg background sprite, and the act-1 items carried unchanged
+   from the thirteenth handover.
+
+**Verification at this head.** `-Pguards test -B`: **669, 0 failures, 0 skips** -- run twice, the
+first catching five failures across three guards that were all this round's own: two object classes
+reaching `GameServices` directly instead of injected `services()`, and one raw `setDestroyed(true)`
+over the ratcheted budget. Both are the kind of thing only the guards find. Focused queue runs this
+round: 212, 121, 1245 and 1276 tests, every one 0 failures and 0 skips. The four LRZ
+trace fixtures were re-measured once at `8875bc7f2` after deleting `target/surefire-reports`
+(6729 / 659 / 1031 / 1073 errors; first errors frame 208, 218, 0 and 0) and are recorded in the
+frontier log; they were **not** re-run after the two commits that followed. This is focused
+validation, not a suite pass.
+
+**Media.** Clips `34` and `35` added, `INDEX.md` updated including a correction to clip `33`. The
+next clip number is `36`. New inputs: `lrz1-act-change-walk-v14.txt`, `lrz2-native-route-v1.txt`
+(the fixture's own act-2 controller), `lrz1-fight-then-native-act2-v1.txt`,
+`lrz2-flame-thrower-v1.txt` and `-v2.txt` (route probes). New raw captures: `raw-46`, `raw-47`,
+`raw-48`, `raw-49`, and the native `native-lrz2-bg/run1`.
+
+**Two method notes.** The shared Maven queue was saturated for this whole round; the working
+pattern was to iterate off `target/classes` with the classpath file and spend queue slots only on
+the focused batch and `-Pguards`, cancelling a waiting request rather than letting it start on a
+tree that was about to change. And `pgrep -f` inside a Bash tool call matches the tool's own shell:
+killing by that pattern kills the call (exit 144). Put the pattern in a script file and kill by the
+PIDs it prints.
