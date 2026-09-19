@@ -3558,7 +3558,15 @@ spike ball launcher (9), `$25` chained platforms (3), `$AE` (1) and `$B3` (1).
    route on the native's own controller (`inputs/lrz1-fight-then-native-act2-v2.txt`, 2600 rows
    from 25558) and it catches `$29` firing, so the flame throwers have their clip; `$2B`/`$2C` and
    `$2D` still have none, and none of the three has a rewind spot on a route or a
-   wide/donor/roster row. The same capture is the route to hang those on.
+   wide/donor/roster row.
+   **Where to aim those clips**, so the next round does not re-derive it: the filmed 2600 rows end
+   at `x $AA8` where the route climbs a shaft, and the nearest placements are `$2C` at
+   `($B58,$7A8)` through `($BA0,$7A8)` -- the same floor height, about 170 px further on -- and
+   `$2D` at `($B80,$5A0)`/`($B80,$5E0)` and `($D60,$6E0)` upward. The climb passes `x $B6A` at
+   `y $4E4`, so it goes *above* the `$2C` cluster: either extend the route rows past 28158 and
+   check where it comes back down, or film those two from a positioned act 2 entry, which is what
+   the earlier `raw-47`/`raw-48` probes could not do because act 2's resize pins
+   `Camera_min_X_pos` at `$940` on a fresh load.
 2. **Row 26482 is closed as a probe artefact** and row **26416** is attributed to the act-2 camera
    bounds; see this round's third entry. What is left of both is real work on the shared path:
    `Make_LevelSizeObj`'s two missing Y workers, and the fact that the engine's
