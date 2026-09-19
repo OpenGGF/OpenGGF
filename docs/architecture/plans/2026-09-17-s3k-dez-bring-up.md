@@ -563,20 +563,35 @@ the shaft's own bucket, and the `MHZ_pollen_counter` panel bitfield living in
 and now reads 11 covered of 12; the only J row still missing is `Obj_DEZConveyorPad` (`$53`), a
 slice 4 object.
 
-**Slice 4 has started, and the route is choosing its order.** `$A4` `Obj_Spikebonker` landed
-first because the act 2 frontier named it — the native `y_vel` flip at row 20162 is
-`Touch_ChkHurt`'s `neg.w y_vel(a0)` on a destroyed enemy, exact to the bit — and landing it moved
-the seeded frontier **390 → 472 frames**. The new first divergence names the next class the same
-way: `$5D` `Obj_DEZRetractingSpring` at `$04B0,$04C0`, whose `-$A00` launch and Y snap the engine
-has no object for. The sidekick clip blocker is ours rather than faithful behaviour — the native
-park at `$7F00,$FFF9` is `sub_13ECA`'s entrance despawn and Tails is back 28 frames after free
-play starts. All three are in the evidence log.
+**Slice 4 is in progress and the route has chosen every one of its classes so far.** Four have
+landed, each named by the act 2 frontier before any of its code was written:
 
-**Death Egg act 2 has a route frontier: 472 frames** from the first frame of free play, exact in
-player x, y, camera and rings, pinned as a ratchet in `TestS3kDezColdRoutes`. A cold `$B01`
-route is not comparable against this movie until the act 2 entrance is implemented; that finding
-and the camera-lock false alarm behind it are in the route evidence entry and in the frontier
-log.
+| Class | ROM | Frontier after |
+| --- | --- | ---: |
+| `$A4` `Obj_Spikebonker` | :198893-199124 | 390 → 472 |
+| `$5D` `Obj_DEZRetractingSpring` | :94098-94185 | 472 → 527 |
+| `$55` `Obj_DEZEnergyBridge` | :93909-93990 | 527 → 616 |
+| `$A5` `Obj_Chainspike` | :199132-199420 | 616 → **1256** |
+
+**Death Egg act 2 has a route frontier of 1256 frames** from the first frame of free play, exact
+in player x, y, camera and rings, pinned as a ratchet in `TestS3kDezColdRoutes`. Two harness
+defects had to be fixed along the way and both are worth knowing about: the seeded route was not
+carrying the ROM's `Level_frame_counter`, which made every frame-phased object in the act
+untestable, and `ROUTE_FRAMES` was too short to hold the frontier once `$A5` landed — the first
+run after it reported "no divergence in 1200 frames", which is the end of a window, not a
+frontier. `ROUTE_FRAMES` is now 4000.
+
+**The first divergence is no longer a Death Egg object.** Native row 21029: the player has been
+riding a shared `$08` platform since row 21026 and the engine's `x` falls one pixel behind, with
+`camera_x` following, while `y`, both speeds, the angle and the rings all still match. That is
+the shared platform's horizontal carry and it wants a shared-object measurement rather than
+another DEZ class.
+
+The sidekick clip blocker is ours rather than faithful behaviour — the native park at
+`$7F00,$FFF9` is `sub_13ECA`'s entrance despawn and Tails is back 28 frames after free play
+starts. A cold `$B01` route is still not comparable against this movie until the act 2 entrance
+is implemented; that finding and the camera-lock false alarm behind it are in the route evidence
+entry and in the frontier log.
 
 The blocker for the rest is not ROM reading — it is that **no fixture exists in which an inverted
 player can be shown landing on real ceiling terrain**. Three candidates were tried and rejected
@@ -588,9 +603,9 @@ asserted against anything real.
 | Claim | State |
 | --- | --- |
 | Implemented | Slice 1: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Slice 2 part 1: inverted position integration (`MoveSprite_TestGravity`/`2` and `CalcRoomInFront`), the death plane at the top of the level, the level-load clear and the seamless act change's preserve. Slice 2 part 2: the `sub_11FD6`/`sub_11FEE` probe swap and its angle mirror. Slice 2 part 3: the ceiling-sensor activation swap that the probe swap needed, and the six airborne push-out and snap sites measured for all three characters against real Death Egg act 2 terrain. Reverse gravity now stands at 34 of 116 ROM references covered, 6 partial, 72 missing. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art |
-| Cold-reachable | Act 2: seeded from the first frame of free play, 472 frames of exact player, camera and ring parity (`TestS3kDezColdRoutes`, ratcheted; it was 390 until `$A4` landed). The cold `$B01` route is measured and is 0 frames, because the movie reaches act 2 through a scripted entrance whose terminus is the engine's own start position — not a defect, and not comparable until the entrance is implemented. Act 1 not started |
+| Cold-reachable | Act 2: seeded from the first frame of free play, **1256 frames** of exact player, camera and ring parity (`TestS3kDezColdRoutes`, ratcheted; 390 → 472 → 527 → 616 → 1256 as `$A4`, `$5D`, `$55` and `$A5` landed, with the `Level_frame_counter` seed and the widened `ROUTE_FRAMES` in between). The cold `$B01` route is measured and is 0 frames, because the movie reaches act 2 through a scripted entrance whose terminus is the engine's own start position — not a defect, and not comparable until the entrance is implemented. Act 1 not started |
 | Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted. Every slice 3 object has its own capture/restore/replay spot: the `$5B` crossing latch, the `$58` toggle counter, the `$59` rider budget and the `$5A` ride angle, each asserted to resume on the same update of the replay as of the first run |
-| Native behaviour matched | Act 2's first 472 free-play frames match the native run exactly in position, camera and rings; the first divergence is native row 20245, where the player is launched by a `$5D` spring the engine has no object for. The six segment replay classes are unchanged from the `035e48a58` measurement, all red from frame 0 on bootstrap state |
+| Native behaviour matched | Act 2's first 1256 free-play frames match the native run exactly in position, camera and rings; the first divergence is native row 21029, a one-pixel `x` lag while riding a shared `$08` platform, which is not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement, all red from frame 0 on bootstrap state |
 | Visually matched | Slice 1 presentation inspected at 320 and 800 px with before/after clips; no native pixel comparison |
 
 Out of scope, recorded as dependencies: `$D01` ending and credits (ending campaign); the SSZ
@@ -2605,3 +2620,63 @@ behind, `$0696` against `$0697`, with `camera_x` following. `y`, both speeds, th
 rings all still match. That is the shared platform's horizontal carry and it is the first
 divergence on this route that is not a Death Egg object — worth a separate, shared-object
 measurement rather than another DEZ class.
+
+### 2026-09-19 — The end-of-session gate, and the handover after `$A5`
+
+**The gate, green on the first run.** Preflight passed (Java 21, Lua 5.4, PowerShell) in the
+actual launch environment. `run_categories.py --base 035e48a58 --run` selected **BROAD** —
+2725/2725 classes, full ordinary suite plus guards — stated before launching, with the runner's
+40-minute per-invocation and 10-minute no-output timeouts as the stopping rule.
+
+| Lane | Reports | Tests | Failures | Errors | Skipped | Seconds |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ordinary `20260918T235943Z-4eaba3ab` | 2725 | 22189 | 0 | 0 | 27 | 989.8 |
+| guards | 85 | 669 | 0 | 0 | 0 | 182.3 |
+
+Acknowledged. The 27 skips are the same set as the six previous gates, reason for reason:
+opt-in system properties (`soz.*.capture` ×8, `openggf.aiz1.*` ×3, `openggf.rewind.alloc.measure`,
+`openggf.checkpoint.measure`, the audio and rewind-dispatch benchmarks, the three native-GL
+properties, the two background-sampling properties) and unavailable-host assumptions
+(surfaceless EGL, OpenGL 4.1, a local BizHawk reference, a local OpenGGF timeline capture, the
+`-Drewind.soak` profile, the shader-pack diagnostic, and `TestCPZObjectBugs`' spin-tube capture).
+**No `@RequiresRom` class appears in the skip list.** Thirty-seven more tests than the previous
+gate (22152 → 22189): thirteen `$5D` cases, eleven `$55`, nine `$A5`, and four from the route and
+inventory classes.
+
+**The four-class trace comparison** was repeated on this tree, `clean test` with `-Ptrace-replay`
+and all three ROM paths absolute (**Skipped: 0** in all four classes, which is the check that no
+class silently skipped): `TestS1Ghz1TraceReplay` and `TestS1Mz1TraceReplay` 1/1 green;
+`TestS2Ehz1TraceReplay` red with **16388 errors, first at frame 6 on
+`dynamic_art.outstanding_transfer_ids` (expected=[2], actual=[])**; `TestS3kAizTraceReplay` 3/16
+red with **59 errors, first at frame 5497 on `camera_x`, expected `0x0010` actual `0x0012`**.
+Identical to the recorded `f60b3f3e2` baseline, failure for failure and field for field; both
+reds stay **baseline-attributed**. Four classes only, and no evidence about any other class.
+
+**Handover.** Slice 4 is four classes in. What the next session wants, in order:
+
+1. **The first route divergence is now a shared object, and it should be measured as one.**
+   Native row 21029: riding a shared `$08` platform, the engine's `x` is one pixel behind for one
+   frame and then stays behind, `camera_x` following, with `y`, both speeds, the angle and the
+   rings all matching. Nothing in this campaign owns that code. A bounded before/after on the
+   platform carry is the right shape, not another DEZ class.
+2. **`$60` `Obj_DEZBumperWall` is the named suspect for the act 1 corridor jam**
+   ([known bug](../../status/s3k-known-bugs.md#death-egg-act-1s-turbine-corridor-jams-at-x--2636)),
+   and it is a slice 4 class: ten act 1 placements, two of which bracket the jam at `$2600`.
+   It also shares `loc_49850` with `$61`, which is already implemented. Landing it is the
+   cheapest test of the jam's leading hypothesis, and it unblocks the `$61` launch and panel clip.
+3. **The remaining slice 4 classes by placement weight**, none of which the act 2 route has
+   reached: `$52` `Obj_DEZLightning` (48/94), `$6D` `InvisibleShockBlock` (22/56), `$4D`
+   `Obj_DEZTorpedoLauncher` (36/38), `$4F` `Obj_DEZStaircase` (18/15), `$50` `Obj_DEZConveyorBelt`
+   (8/5), `$4E` `Obj_DEZLiftPad` (7/0), `$53` `Obj_DEZConveyorPad` (4/5, the last open group J
+   reverse-gravity row), `$4A` (0/10), `$4C` (3/1), `$4B` (1/3), `$5E` `Obj_DEZHoverMachine`
+   (11/0), `$56` (1/0).
+4. **No clip has been filmed for any slice 4 class.** `$A4`, `$5D`, `$55` and `$A5` all have
+   "No clip yet" in both matrices. The act 2 route now runs 1256 exact frames, which is a
+   route-driven capture waiting to happen: the springs, the bridges and a Chainspike charge are
+   all inside it, and the seeded capture seed that the route uses is already written down.
+5. **Two method notes earned this session.** A group of deliberate mutations only proves the
+   assertions it actually reaches — two of `$A5`'s twelve had to be re-run alone because an
+   earlier assertion in the same test failed first and masked them. And an assertion that cannot
+   fail is worse than no assertion: `$55`'s off-state draw check passed against a headless
+   fixture that has no renderer at all, and was removed rather than kept once a deliberate break
+   produced no failure.
