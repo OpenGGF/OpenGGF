@@ -38,8 +38,8 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
-        boolean standing = p1Standing || p2Standing;
-        int standingMask = (p1Standing ? 1 : 0) | (p2Standing ? 2 : 0);
+        int standingMask = currentStandingMask();
+        boolean standing = standingMask != 0;
         boolean justStarted = false;
         if (standing && !started) {
             started = true;
@@ -56,7 +56,7 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
             } else if ((spawn.subtype() & 0x7F) == 0) {
                 updateTerrainFollowingPad();
             }
-            carryRiders();
+            carryRiders(standingMask);
             // loc_47A38 stores the current standing mask only after carrying,
             // then reverses anim on a newly-set standing bit. The first carry
             // therefore uses the placement direction; the next pass uses the
@@ -101,11 +101,30 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
                 x & 0xFFFF, (getY() + 0x0F) & 0xFFFF).distance();
     }
 
-    private void carryRiders() {
+    private int currentStandingMask() {
+        if (tryServices() == null || services().objectManager() == null
+                || services().playerQuery() == null) {
+            return (p1Standing ? 1 : 0) | (p2Standing ? 2 : 0);
+        }
+        // status(a0)&standing_mask is live SST state. A lower-slot solid may seat the
+        // player first and RideObject_SetRide clears this pad's bit before our slot runs;
+        // listener booleans are not notified until this pad's later SolidObjectFull call.
+        int mask = 0;
+        List<PlayableEntity> players = services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+        for (int i = 0; i < players.size() && i < 2; i++) {
+            if (services().objectManager().hasObjectStandingBit(players.get(i), this)) {
+                mask |= 1 << i;
+            }
+        }
+        return mask;
+    }
+
+    private void carryRiders(int standingMask) {
         if (tryServices() == null || services().playerQuery() == null) return;
         List<PlayableEntity> players = services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
         for (int i = 0; i < players.size(); i++) {
-            if ((i == 0 ? p1Standing : p2Standing) && players.get(i) instanceof AbstractPlayableSprite sprite) {
+            if ((standingMask & (1 << i)) != 0 && players.get(i) instanceof AbstractPlayableSprite sprite) {
                 int step = animation == 0 ? 2 : -2;
                 NativePositionOps.writeXPosPreserveSubpixel(sprite, sprite.getCentreX() + step);
             }

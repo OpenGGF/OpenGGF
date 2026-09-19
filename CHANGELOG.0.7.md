@@ -33,7 +33,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   machinery tiles. Act 1's magnetic hover fields now use the ROM's signed word correction,
   lift-pad arms use the high byte of their fixed-point angle, conveyor pads preserve their
   one-pass start and per-player direction-change timing, and Spikebonker, Chainspike and torpedo
-  launcher contact/probe/visibility timing follows the native object slots, carrying the recorded route through the machinery
+  launcher contact/probe/visibility timing follows the native object slots. Conveyor carry also
+  follows live standing-bit ownership when an earlier solid seats the player, carrying the recorded route through the machinery
   instead of throwing it onto a divergent lower path. Death Egg Act 2's gravity now reverses:
   crossing one of the act's invisible
   gravity triggers flips which way is down, and the player falls to the ceiling, stands and runs

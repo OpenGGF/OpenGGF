@@ -128,11 +128,11 @@ class TestS3kDezColdRoutes {
     /**
      * Measured after aligning the Spikebonker touch slot, Chainspike floor probe and
      * torpedo-launcher render extent. The corrected hazard timing replaces the old death
-     * branch: the route remains exact through 3,624 frames and stays alive through the
-     * measurement cap, reaching {@code $1587}. The next split is one extra two-pixel
-     * conveyor carry when Sonic leaves the pad.
+     * branch: the route remains exact through 4,103 frames and stays alive through the
+     * measurement cap, reaching {@code $1587}. The next split is a one-pixel X and
+     * five-pixel Y difference after the route returns left to {@code $0EFA}.
      */
-    static final int ACT_ONE_EXACT_FRONTIER = 3624;
+    static final int ACT_ONE_EXACT_FRONTIER = 4103;
     static final int ACT_ONE_SURVIVAL_FRONTIER = 19870;
     static final int ACT_ONE_MAX_X = 0x1587;
 
@@ -187,6 +187,7 @@ class TestS3kDezColdRoutes {
         int frames = 0;
         List<String[]> rows = readRows();
         int firstPositionMismatch = -1;
+        String firstPositionMismatchDetail = null;
         while (frames < ACT_TWO_LOAD_ROW + 1200
                 && GameServices.level().getCurrentAct() == 0
                 && !player.getDead()) {
@@ -198,12 +199,17 @@ class TestS3kDezColdRoutes {
                     && ((player.getCentreX() & 0xFFFF) != Integer.parseInt(nativeRow[9], 16)
                     || (player.getCentreY() & 0xFFFF) != Integer.parseInt(nativeRow[10], 16))) {
                 firstPositionMismatch = frames;
+                firstPositionMismatchDetail = String.format(
+                        "native x=%s y=%s; engine x=%04X y=%04X",
+                        nativeRow[9], nativeRow[10], player.getCentreX() & 0xFFFF,
+                        player.getCentreY() & 0xFFFF);
             }
         }
         System.out.printf("DEZ act 1 cold route: frames=%d maxX=%04X zone=%02X act=%d dead=%s%n",
                 frames, maxX, GameServices.level().getCurrentZone(),
                 GameServices.level().getCurrentAct(), player.getDead());
-        System.out.println("first position mismatch=" + firstPositionMismatch);
+        System.out.println("first position mismatch=" + firstPositionMismatch + " ("
+                + firstPositionMismatchDetail + ")");
         assertTrue(firstPositionMismatch > ACT_ONE_EXACT_FRONTIER,
                 "act 1 exact frontier regressed from " + ACT_ONE_EXACT_FRONTIER);
         assertTrue(frames >= ACT_ONE_SURVIVAL_FRONTIER,

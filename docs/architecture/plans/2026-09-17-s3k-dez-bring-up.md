@@ -2992,3 +2992,12 @@ with natural movement only, while the engine applies one final two-pixel conveyo
 clearing contact. Preserving either the previous standing mask or the player object's stale
 on-object flag was tested and rejected: both change earlier valid contacts. The next owner is
 the solid/contact callback boundary for a departing rider, not a route-specific conveyor rule.
+
+The boundary proved to be an ownership transfer rather than a late clear. On the split frame,
+native `stand_on_obj` changes from conveyor slot `$10` to invisible-block slot `$07`. The engine's
+central standing-bit registry already performs the ROM's `RideObject_SetRide` eviction when the
+lower slot seats Sonic, but the conveyor was still consulting its compatibility-listener boolean
+until its own later `SolidObjectFull` callback. Reading the live per-object latch for carry and
+direction-change state closes that ordering gap without changing service-free unit fixtures.
+Exact route parity advances again, from **3,624 to 4,103 frames**. The next row differs in both
+coordinates: native `$0EFA,$07D0`, engine `$0EF9,$07CB`.
