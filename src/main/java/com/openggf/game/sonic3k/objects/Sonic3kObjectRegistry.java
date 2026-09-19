@@ -368,19 +368,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new AizDrawBridgeObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.SINKING_MUD,
-                (spawn, registry) -> {
-                    // $4F is Obj_SinkingMud only in Sprite_Listing3 (SK Set 1);
-                    // Sprite_ListingK (SK Set 2) routes the same id to Obj_DEZStaircase.
-                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_DEZ) {
-                        return new S3kDezStaircaseObjectInstance(spawn);
-                    }
-                    S3kZoneSet zoneSet = getCurrentZoneSet();
-                    if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
-                    }
-                    return new SinkingMudObjectInstance(spawn);
-                });
+        registerZoneSetBound(Sonic3kObjectIds.SINKING_MUD, S3kZoneSet.S3KL,
+                (spawn, registry) -> new SinkingMudObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.AIZ_COLLAPSING_LOG_BRIDGE,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
@@ -472,17 +461,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new MGZTwistingLoopObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
-                (spawn, registry) -> {
-                    S3kZoneSet zoneSet = getCurrentZoneSet();
-                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_DEZ) {
-                        return new S3kDezTunnelLauncherObjectInstance(spawn);
-                    }
-                    if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
-                    }
-                    return new MGZTriggerPlatformObjectInstance(spawn);
-                });
+        registerZoneSetBound(Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM, S3kZoneSet.S3KL,
+                (spawn, registry) -> new MGZTriggerPlatformObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.MGZ_HEAD_TRIGGER,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
@@ -1194,28 +1174,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new HczEndBossInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.CNZ_MINIBOSS,
-                (spawn, registry) -> {
-                    S3kZoneSet zoneSet = getCurrentZoneSet();
-                    if (zoneSet != S3kZoneSet.S3KL) {
-                        if (currentRomZoneId() == Sonic3kZoneIds.ZONE_DEZ) {
-                            return new S3kDezMinibossInstance(spawn);
-                        }
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
-                    }
-                    return new CnzMinibossInstance(spawn);
-                });
-        factories.put(Sonic3kObjectIds.CNZ_END_BOSS,
-                (spawn, registry) -> {
-                    S3kZoneSet zoneSet = getCurrentZoneSet();
-                    if (zoneSet != S3kZoneSet.S3KL) {
-                        if (currentRomZoneId() == Sonic3kZoneIds.ZONE_DEZ) {
-                            return new S3kDezEndBossInstance(spawn);
-                        }
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
-                    }
-                    return new CnzEndBossInstance(spawn);
-                });
+        registerZoneSetBound(Sonic3kObjectIds.CNZ_MINIBOSS, S3kZoneSet.S3KL,
+                (spawn, registry) -> new CnzMinibossInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.CNZ_END_BOSS, S3kZoneSet.S3KL,
+                (spawn, registry) -> new CnzEndBossInstance(spawn));
         factories.put(Sonic3kObjectIds.FBZ_MINIBOSS,
                 (spawn, registry) -> {
                     if (getCurrentZoneSet() != S3kZoneSet.S3KL) {
@@ -1581,6 +1543,84 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
 
+        // Death Egg's SKL table reuses four S3KL identities. Keep its stock ROM owners
+        // separate so custom content retains the S3KL pointer-table contract.
+        registerStockRomZoneBound(Sonic3kObjectIds.SINKING_MUD,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezStaircaseObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezTunnelLauncherObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.CNZ_MINIBOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezMinibossInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.CNZ_END_BOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezEndBossInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.CNZ_SPIRAL_TUBE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezHangCarrierObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.CNZ_BARBER_POLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezTorpedoLauncherObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.CNZ_WIRE_CAGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezLiftPadObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_TWISTING_LOOP,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezConveyorBeltObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZLBZ_SMASHING_PILLAR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezLightningObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_SWINGING_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezConveyorPadObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_HEAD_TRIGGER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezEnergyBridgeObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_MOVING_SPIKE_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezCurvedEnergyBridgeObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_SWINGING_SPIKE_BALL,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezGravitySwitchObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_DASH_TRIGGER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezTeleporterObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_PULLEY,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezGravityTubeObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_TOP_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezGravitySwapObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZ_TOP_LAUNCHER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezGravityHubObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DEZ_RETRACTING_SPRING,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezRetractingSpringObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DEZ_HOVER_MACHINE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezHoverMachineObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DEZ_GRAVITY_ROOM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezGravityRoomObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DEZ_BUMPER_WALL,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezBumperWallObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DEZ_GRAVITY_PUZZLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new S3kDezGravityPuzzleObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.HCZ_WATER_SPLASH,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new Sonic3kInvisibleShockBlockObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SPARKLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new SpikebonkerBadnikInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.BATBOT,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new ChainspikeBadnikInstance(spawn));
+
         // The Doomsday Zone's SKL object set.
         registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DDZ,
@@ -1605,6 +1645,30 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
 
         factories.forEach(this::registerSetOnly);
+        // DEZ aliases with an S3KL owner remain available to custom S3KL content, but not to
+        // custom SKL content or unrelated stock SKL zones. Entries without an S3KL owner are
+        // stock-DEZ-only and therefore have no generic fallback.
+        for (int objectId : new int[] {
+                Sonic3kObjectIds.CNZ_SPIRAL_TUBE, Sonic3kObjectIds.CNZ_BARBER_POLE,
+                Sonic3kObjectIds.CNZ_WIRE_CAGE, Sonic3kObjectIds.SINKING_MUD,
+                Sonic3kObjectIds.MGZ_TWISTING_LOOP, Sonic3kObjectIds.MGZLBZ_SMASHING_PILLAR,
+                Sonic3kObjectIds.MGZ_SWINGING_PLATFORM, Sonic3kObjectIds.MGZ_HEAD_TRIGGER,
+                Sonic3kObjectIds.MGZ_MOVING_SPIKE_PLATFORM, Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                Sonic3kObjectIds.MGZ_SWINGING_SPIKE_BALL, Sonic3kObjectIds.MGZ_DASH_TRIGGER,
+                Sonic3kObjectIds.MGZ_PULLEY, Sonic3kObjectIds.MGZ_TOP_PLATFORM,
+                Sonic3kObjectIds.MGZ_TOP_LAUNCHER, Sonic3kObjectIds.HCZ_WATER_SPLASH,
+                Sonic3kObjectIds.SPARKLE, Sonic3kObjectIds.BATBOT,
+                Sonic3kObjectIds.CNZ_MINIBOSS, Sonic3kObjectIds.CNZ_END_BOSS}) {
+            ObjectFactory factory = factories.get(objectId);
+            factoryEntries.put(objectId, new FactoryEntry(factory,
+                    context -> context.zoneSet() == S3kZoneSet.S3KL));
+        }
+        for (int objectId : new int[] {
+                Sonic3kObjectIds.DEZ_RETRACTING_SPRING, Sonic3kObjectIds.DEZ_HOVER_MACHINE,
+                Sonic3kObjectIds.DEZ_GRAVITY_ROOM, Sonic3kObjectIds.DEZ_BUMPER_WALL,
+                Sonic3kObjectIds.DEZ_GRAVITY_PUZZLE}) {
+            factoryEntries.remove(objectId);
+        }
     }
 
     @Override
