@@ -440,7 +440,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   cut away, collapsing slabs drop into the gap, the crusher falls through and explodes, and the
   camera eases back out to the act's own bounds.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
-  scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
+  scroll; Hidden Palace and the Super Emerald sanctuary keep theirs. Lava Reef's boss act now
+  has its own heat-shimmer deformation, the seven-stage forced-camera descent, and the native
+  star-post camera checkpoint instead of the generic fallback presentation.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
   opens with a `(0,0)` record that the ring manager always steps over, and the engine
   was spawning it as a real ring.

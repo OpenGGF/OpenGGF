@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.objects.LrzDomeLavaPlatformObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
@@ -133,9 +134,15 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
      * reload and act 2 starts on {@code LRZ2_BackgroundEvent}'s stage 0 instead.
      */
     private boolean act2BackgroundInitialised;
+    private boolean act3Initialised;
 
     @Override
     public void update(int act, int frameCounter) {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz != null && lrz.zoneIndex() == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ) {
+            updateAct3ScreenAndBackground(lrz);
+            return;
+        }
         // LRZ1_ScreenEvent reads Events_bg+$0C before anything else draws (:115201-115204); with
         // no pending edit it is loc_56B5E, DrawTilesAsYouMove only, which the engine's own tile
         // streaming already does. The stage machines arrive with their slices.
@@ -150,6 +157,151 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         advanceDomeRegions(act);
         advanceAct2Background(act);
         advanceRockSpriteWindow();
+    }
+
+    /** {@code LRZ3_ScreenInit}, screen stages and the camera halves of the BG stages. */
+    private void updateAct3ScreenAndBackground(LrzZoneRuntimeState lrz) {
+        if (!act3Initialised) {
+            act3Initialised = true;
+            AbstractPlayableSprite player = spriteManager().getMainPlayable();
+            if (player != null && (player.getCentreX() & 0xFFFF) >= 0x480) {
+                Camera camera = camera();
+                setCameraPositionAndBounds(camera, 0x920, 0x2F0);
+                lrz.setLrz3SpecialEventsRoutine(0x14);
+                lrz.setLrz3AutoscrollStage(0x10);
+                lrz.setLrz3AutoscrollDelay(0x2D);
+                lrz.setLrz3ScreenRoutine(0x0C);
+                lrz.setLrz3CameraFixed(0x920 << 16, 0x2F0 << 16);
+            } else {
+                lrz.setLrz3ScreenRoutine(4);
+                lrz.setLrz3CameraFixed(camera().getX() << 16, camera().getY() << 16);
+            }
+            resetActualTileOffsetsAndRefresh();
+        }
+
+        // loc_59B46: once camera Y reaches its current maximum, pin the minimum to it.
+        Camera camera = camera();
+        if (lrz.lrz3ScreenRoutine() == 4 && camera.getY() == camera.getMaxY()) {
+            camera.setMinY(camera.getY());
+            camera.setMinYTarget(camera.getY());
+        }
+        if (lrz.lrz3TerrainRequest() != 0) {
+            lrz.setLrz3TerrainRequest(0);
+            lrz.setLrz3ScreenRoutine(Math.min(0x0C, lrz.lrz3ScreenRoutine() + 4));
+        }
+
+        int y = camera.getY() & 0xFFFF;
+        if (lrz.backgroundRoutine() == 0 && y >= 0x500) {
+            lrz.setBackgroundRoutine(4);
+        } else if (lrz.backgroundRoutine() == 4 && y < 0x500) {
+            lrz.publishDeformationWords(camera.getX() & 0xFFFF, y, 0, 0);
+            lrz.setDelayedRowcount(0x0F);
+            lrz.setBackgroundRoutine(8);
+        } else if (lrz.backgroundRoutine() == 8) {
+            int rows = lrz.delayedRowcount() - 1;
+            lrz.setDelayedRowcount(rows);
+            if (rows < 0) {
+                lrz.clearSavedBackgroundCamera();
+                lrz.setBackgroundRoutine(0);
+            }
+        }
+        if (y < 0x500) {
+            lrz.publishDeformationWords((camera.getX() & 0xFFFF) >> 4,
+                    (y >> 4) + 0x10, 0, 0);
+        } else {
+            lrz.publishDeformationWords((camera.getX() & 0xFFFF) - 0x700,
+                    y - 0x500, 0, 0);
+        }
+    }
+
+    /** ROM {@code Special_events_routine=$14}, {@code loc_59E46..loc_59FC2}. */
+    public void updateSpecialEvents(int act) {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ
+                || lrz.lrz3SpecialEventsRoutine() != 0x14) {
+            return;
+        }
+        if (lrz.lrz3AutoscrollDelay() != 0) {
+            lrz.setLrz3AutoscrollDelay(lrz.lrz3AutoscrollDelay() - 1);
+            return;
+        }
+        Camera camera = camera();
+        int x = camera.getX() & 0xFFFF;
+        int y = camera.getY() & 0xFFFF;
+        int stage = lrz.lrz3AutoscrollStage();
+        int dx = 0;
+        int dy = 0;
+        boolean advance = false;
+        switch (stage) {
+            case 0 -> { dx = 0x20000; advance = x >= 0x410; }
+            case 4 -> { dx = 0x16A00; dy = -0x16A00; advance = y <= 0x330; }
+            case 8 -> { dx = 0x20000; advance = x >= 0x650; }
+            case 0x0C -> { dx = 0x16A00; dy = -0x16A00; advance = y <= 0x2F0; }
+            case 0x10 -> { dx = 0x20000; advance = x >= 0x910; }
+            case 0x14 -> { dx = 0x1D900; dy = 0xC400; advance = y >= 0x320; }
+            case 0x18 -> {
+                dx = 0x20000;
+                AbstractPlayableSprite player = spriteManager().getMainPlayable();
+                if (x >= 0xBBF && player != null && (player.getCentreX() & 0xFFFF) >= 0xC50) {
+                    camera.setMinX((short) 0xA00);
+                    camera.setMinXTarget((short) 0xA00);
+                    camera.setMaxX((short) 0xBC0);
+                    camera.setMaxXTarget((short) 0xBC0);
+                    camera.setMaxY((short) 0x560);
+                    camera.setMaxYTarget((short) 0x560);
+                    lrz.setLrz3SpecialEventsRoutine(0);
+                    return;
+                }
+            }
+            default -> throw new IllegalStateException("Invalid LRZ3 autoscroll stage " + stage);
+        }
+        if (advance) {
+            lrz.setLrz3AutoscrollStage(stage + 4);
+        }
+        int fixedX = lrz.lrz3CameraXFixed() + dx;
+        int fixedY = lrz.lrz3CameraYFixed() + dy;
+        lrz.setLrz3CameraFixed(fixedX, fixedY);
+        setCameraPositionAndBounds(camera, fixedX >> 16, fixedY >> 16);
+        confineAct3Players((fixedX >> 16) + 0x10, (fixedX >> 16) + 0x120, dx >> 8);
+    }
+
+    private void confineAct3Players(int left, int right, int groundVelocity) {
+        java.util.List<AbstractPlayableSprite> players = new java.util.ArrayList<>();
+        players.add(spriteManager().getMainPlayable());
+        players.addAll(spriteManager().getSidekicks());
+        for (AbstractPlayableSprite player : players) {
+            if (player == null) continue;
+            int x = player.getCentreX() & 0xFFFF;
+            if (x < left) {
+                NativePositionOps.writeXPosPreserveSubpixel(player, left);
+                player.setGSpeed((short) groundVelocity);
+            } else if (x >= right) {
+                NativePositionOps.writeXPosPreserveSubpixel(player, right);
+            }
+        }
+    }
+
+    private static void setCameraPositionAndBounds(Camera camera, int x, int y) {
+        camera.setX((short) x);
+        camera.setXCopy((short) x);
+        camera.setMinX((short) x);
+        camera.setMinXTarget((short) x);
+        camera.setMaxX((short) x);
+        camera.setMaxXTarget((short) x);
+        camera.setY((short) y);
+        camera.setYCopy((short) y);
+        camera.setMinY((short) y);
+        camera.setMinYTarget((short) y);
+        camera.setMaxY((short) y);
+        camera.setMaxYTarget((short) y);
+    }
+
+    private void resetActualTileOffsetsAndRefresh() {
+        LevelManager manager = levelManager();
+        if (manager != null) {
+            manager.resetTileOffsetPositionActualForFullRefresh();
+            manager.refreshFullTilemapPlanesFromCurrentLayout(0);
+        }
     }
 
     /**

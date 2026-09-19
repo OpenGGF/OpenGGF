@@ -35,6 +35,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
     private SwScrlSoz sozHandler;
     private SwScrlHpz hpzHandler;
     private SwScrlLrz lrzHandler;
+    private SwScrlLrz3 lrz3Handler;
     private SwScrlDdz ddzHandler;
     private SwScrlGumball gumballHandler;
     private SwScrlPachinko pachinkoHandler;
@@ -82,6 +83,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
         sozHandler = new SwScrlSoz(rom);
         hpzHandler = new SwScrlHpz();
         lrzHandler = new SwScrlLrz();
+        lrz3Handler = new SwScrlLrz3();
         ddzHandler = new SwScrlDdz();
         gumballHandler = new SwScrlGumball();
         pachinkoHandler = new SwScrlPachinko();
@@ -140,9 +142,9 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
             case Sonic3kZoneConstants.ZONE_SOZ -> sozHandler;
             case Sonic3kZoneConstants.ZONE_DDZ -> ddzHandler;
             case Sonic3kZoneConstants.ZONE_LRZ -> lrzHandler;
-            // Act 0 of either is a boss act: $1600 (Lava Reef, SwScrlLrz3 pending) and $1700
-            // (Death Egg act 3), both on the default handler until their own campaigns land.
-            case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
+            case Sonic3kZoneIds.ZONE_HPZ -> actIndex == 0 ? lrz3Handler : hpzHandler;
+            // $1700 is Death Egg act 3; its own deformation remains on the DEZ frontier.
+            case Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
                     actIndex == 0 ? defaultHandler : hpzHandler;
             case Sonic3kZoneIds.ZONE_GUMBALL -> gumballHandler;
             case Sonic3kZoneIds.ZONE_GLOWING_SPHERE -> pachinkoHandler;

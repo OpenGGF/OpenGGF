@@ -5,12 +5,13 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.scroll.SwScrlHpz;
 import com.openggf.game.sonic3k.scroll.SwScrlLrz;
-import com.openggf.game.sonic3k.scroll.SwScrlS3kDefault;
+import com.openggf.game.sonic3k.scroll.SwScrlLrz3;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -72,14 +73,14 @@ class TestS3kLrzScrollRegistrationHeadless {
         assertEquals(act, state.actIndex());
     }
 
-    /** {@code $1600} is the Lava Reef boss act; {@code SwScrlLrz3} is slice 9. */
+    /** {@code $1600} is the Lava Reef boss act and owns {@code SwScrlLrz3}. */
     @Test
     void bossActUsesTheLavaReefRuntimeStateAndNoLongerBorrowsHiddenPalaceScroll() {
         HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ, 0).build();
 
         ZoneScrollHandler handler = liveHandler();
         assertFalse(handler instanceof SwScrlHpz, "$1600 must not run HPZ_BackgroundEvent");
-        assertInstanceOf(SwScrlS3kDefault.class, handler);
+        assertInstanceOf(SwScrlLrz3.class, handler);
         LrzZoneRuntimeState state = lrz();
         assertEquals(Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ, state.zoneIndex());
         assertEquals(0, state.actIndex());
@@ -125,6 +126,13 @@ class TestS3kLrzScrollRegistrationHeadless {
         state.setRocksRoutine(2);
         state.publishDeformationWords(0x123, 0x45, 0x111, 0x100);
         state.storeCameraBounds(0x10, 0x2000, 0x20, 0x800);
+        state.setLrz3ScreenRoutine(8);
+        state.setLrz3SpecialEventsRoutine(0x14);
+        state.setLrz3AutoscrollStage(0x10);
+        state.setLrz3AutoscrollDelay(0x2D);
+        state.setLrz3ChunkEditY(0x456);
+        state.setLrz3TerrainRequest(-1);
+        state.setLrz3CameraFixed(0x12340000, 0x56780000);
         byte[] captured = state.captureBytes();
 
         state.screenShake().clear();
@@ -147,6 +155,46 @@ class TestS3kLrzScrollRegistrationHeadless {
         assertEquals(0x100, state.animationPhaseX1());
         assertEquals(0x2000, state.cameraStoredMaxX());
         assertEquals(0x800, state.cameraStoredMaxY());
+        assertEquals(8, state.lrz3ScreenRoutine());
+        assertEquals(0x14, state.lrz3SpecialEventsRoutine());
+        assertEquals(0x10, state.lrz3AutoscrollStage());
+        assertEquals(0x2D, state.lrz3AutoscrollDelay());
+        assertEquals(0x456, state.lrz3ChunkEditY());
+        assertEquals(0xFFFF, state.lrz3TerrainRequest());
+        assertEquals(0x12340000, state.lrz3CameraXFixed());
+        assertEquals(0x56780000, state.lrz3CameraYFixed());
+    }
+
+    @Test
+    void bossActRespawnPastEntranceRestoresForcedRouteCheckpoint() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ, 0).build();
+        GameServices.sprites().getMainPlayable().setCentreX((short) 0x480);
+        Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager)
+                GameServices.module().getLevelEventProvider();
+
+        manager.getLrzEventsForTest().update(0, 0);
+
+        assertEquals(0x920, fixture.camera().getX() & 0xFFFF);
+        assertEquals(0x2F0, fixture.camera().getY() & 0xFFFF);
+        assertEquals(0x14, lrz().lrz3SpecialEventsRoutine());
+        assertEquals(0x10, lrz().lrz3AutoscrollStage());
+        assertEquals(0x2D, lrz().lrz3AutoscrollDelay());
+        assertEquals(0x0C, lrz().lrz3ScreenRoutine());
+    }
+
+    @Test
+    void bossActShimmerStartsAtScreenRoutineEight() {
+        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ, 0).build();
+        ZoneScrollHandler handler = liveHandler();
+        int[] plain = new int[com.openggf.level.scroll.M68KMath.VISIBLE_LINES];
+        int[] shimmer = new int[plain.length];
+        handler.update(plain, 0x800, 0x520, 7, 0);
+        lrz().setLrz3ScreenRoutine(8);
+        handler.update(shimmer, 0x800, 0x520, 7, 0);
+
+        assertFalse(Arrays.equals(plain, shimmer));
+        assertTrue(Arrays.stream(shimmer).distinct().count() > 1);
     }
 
     private int[] scanlineWordsAt(int width, int act) {

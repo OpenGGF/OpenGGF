@@ -701,6 +701,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             // bounds before the sidekick slot executes (sonic3k.asm:28407-28452).
             syncSidekickBoundsToCamera();
         }
+        if (lrzEvents != null && isLavaReef(currentZone, currentAct)) {
+            lrzEvents.updateSpecialEvents(currentAct);
+            syncSidekickBoundsToCamera();
+        }
     }
 
     @Override

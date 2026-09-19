@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 22 * Short.BYTES;
+            S3kScreenShake.captureBytes() + 4 * Integer.BYTES + 28 * Short.BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -82,6 +82,21 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short cutsceneFlags;
     /** ROM {@code Act3_flag}: carry rings/timer into the LRZ boss slot. */
     private short act3CarryActive;
+    /** LRZ3 {@code Events_routine_fg}: 0, 4, 8 or $C. */
+    private short lrz3ScreenRoutine;
+    /** LRZ3 {@code Special_events_routine}; $14 while the forced camera route owns scrolling. */
+    private short lrz3SpecialEventsRoutine;
+    /** LRZ3 {@code Events_bg+$00}: seven-stage forced-camera route, in four-byte steps. */
+    private short lrz3AutoscrollStage;
+    /** LRZ3 {@code Events_bg+$02}: entry delay before the forced route starts. */
+    private short lrz3AutoscrollDelay;
+    /** LRZ3 {@code Events_bg+$0E}: Y coordinate paired with the inherited +$0C chunk request. */
+    private short lrz3ChunkEditY;
+    /** LRZ3 {@code Events_fg_4}: screen-event terrain request. */
+    private short lrz3TerrainRequest;
+    /** 16.16 copies used by LRZ3's forced-camera additions. */
+    private int lrz3CameraXFixed;
+    private int lrz3CameraYFixed;
 
     public LrzZoneRuntimeState(int zoneIndex, int actIndex, PlayerCharacter playerCharacter) {
         this.zoneIndex = zoneIndex;
@@ -296,6 +311,25 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     public boolean act3CarryActive() { return act3CarryActive != 0; }
     public void setAct3CarryActive(boolean active) { act3CarryActive = (short) (active ? -1 : 0); }
 
+    public int lrz3ScreenRoutine() { return lrz3ScreenRoutine & 0xFFFF; }
+    public void setLrz3ScreenRoutine(int value) { lrz3ScreenRoutine = (short) value; }
+    public int lrz3SpecialEventsRoutine() { return lrz3SpecialEventsRoutine & 0xFFFF; }
+    public void setLrz3SpecialEventsRoutine(int value) { lrz3SpecialEventsRoutine = (short) value; }
+    public int lrz3AutoscrollStage() { return lrz3AutoscrollStage & 0xFFFF; }
+    public void setLrz3AutoscrollStage(int value) { lrz3AutoscrollStage = (short) value; }
+    public int lrz3AutoscrollDelay() { return lrz3AutoscrollDelay & 0xFFFF; }
+    public void setLrz3AutoscrollDelay(int value) { lrz3AutoscrollDelay = (short) value; }
+    public int lrz3ChunkEditY() { return lrz3ChunkEditY & 0xFFFF; }
+    public void setLrz3ChunkEditY(int value) { lrz3ChunkEditY = (short) value; }
+    public int lrz3TerrainRequest() { return lrz3TerrainRequest & 0xFFFF; }
+    public void setLrz3TerrainRequest(int value) { lrz3TerrainRequest = (short) value; }
+    public int lrz3CameraXFixed() { return lrz3CameraXFixed; }
+    public int lrz3CameraYFixed() { return lrz3CameraYFixed; }
+    public void setLrz3CameraFixed(int xFixed, int yFixed) {
+        lrz3CameraXFixed = xFixed;
+        lrz3CameraYFixed = yFixed;
+    }
+
     @Override
     public byte[] captureBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES);
@@ -324,6 +358,14 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(cameraStoredMaxY);
         buffer.putShort(cutsceneFlags);
         buffer.putShort(act3CarryActive);
+        buffer.putShort(lrz3ScreenRoutine);
+        buffer.putShort(lrz3SpecialEventsRoutine);
+        buffer.putShort(lrz3AutoscrollStage);
+        buffer.putShort(lrz3AutoscrollDelay);
+        buffer.putShort(lrz3ChunkEditY);
+        buffer.putShort(lrz3TerrainRequest);
+        buffer.putInt(lrz3CameraXFixed);
+        buffer.putInt(lrz3CameraYFixed);
         return buffer.array();
     }
 
@@ -358,5 +400,13 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         cameraStoredMaxY = buffer.getShort();
         cutsceneFlags = buffer.getShort();
         act3CarryActive = buffer.getShort();
+        lrz3ScreenRoutine = buffer.getShort();
+        lrz3SpecialEventsRoutine = buffer.getShort();
+        lrz3AutoscrollStage = buffer.getShort();
+        lrz3AutoscrollDelay = buffer.getShort();
+        lrz3ChunkEditY = buffer.getShort();
+        lrz3TerrainRequest = buffer.getShort();
+        lrz3CameraXFixed = buffer.getInt();
+        lrz3CameraYFixed = buffer.getInt();
     }
 }
