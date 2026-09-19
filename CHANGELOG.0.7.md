@@ -64,8 +64,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   boss. Mecha Sonic now takes the Act 2 placement branch, and the first eight hits
   hand the arena and its music to his replenished Super phase; the second set follows the
   cartridge's staged fade, progression save and ending-event stop-line waits. The exact crane
-  grab, Super attack repertoire and Master Emerald presentation remain next. The Death Egg
-  launch is still to come.
+  grab, Super attack repertoire and Master Emerald presentation remain next. Act 2's sky now
+  has its own cold-load scroll fan and deformation too, including the cartridge's twenty-column
+  vertical wave rather than inheriting the flat default background. Its later ending-event
+  deformation modes remain to be finished. The Death Egg launch is still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,

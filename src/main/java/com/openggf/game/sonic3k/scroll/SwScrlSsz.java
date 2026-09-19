@@ -7,6 +7,8 @@ import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 
+import java.util.Arrays;
+
 import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
 import static com.openggf.level.scroll.M68KMath.negWord;
 
@@ -60,8 +62,9 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * shake {@code SSZ1_ScreenEvent} adds to the Y copy, which Sky Sanctuary raises during the Death
  * Egg launch, so the launch slice owns closing that gap.
  *
- * <p>Act 2 runs {@code SSZ2_BackgroundInit}/{@code SSZ2_BackgroundEvent} and is not
- * implemented here yet; it falls back to the default handler.
+ * <p>Act 2 uses its separate {@code SSZ2_BackgroundInit/Event}: a fixed {@code $5E}
+ * background origin, the {@code sub_58D3E} scroll-word fan, {@code SSZ2_BGDeformArray},
+ * and the twenty VSRAM column words assembled at {@code loc_5904A}.
  */
 public class SwScrlSsz extends SwScrlS3kDefault {
 
@@ -109,6 +112,14 @@ public class SwScrlSsz extends SwScrlS3kDefault {
 
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(SCROLL_WORD_COUNT);
+    private final ScrollValueTable act2ScrollTable = ScrollValueTable.ofLength(40);
+
+    static final int[] SSZ2_BG_DEFORM = {
+            0x120, 8, 8, 4, 4, 8, 8, 0x18, 0x10, 0x10, 0x7FFF
+    };
+    private static final int ACT2_BG_X = 0x5E;
+    private static final int ACT2_BG_Y_OFFSET = 0x320;
+    private static final int ACT2_COLUMN_COUNT = 20;
 
     private int currentBgPeriodWidth = 512;
     /** The VDP plane B width the cloud path fills whole ({@code moveq #$20,d6}). */
@@ -121,10 +132,15 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     @Override
     public void update(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
         SszZoneRuntimeState state = state();
-        if (actId != 0 || state == null || !state.screenInitApplied()) {
-            // SSZ2_BackgroundInit/Event belong to the act-2 slice; before the screen init has
-            // forced the camera there is no Sky Sanctuary framing to derive.
+        if (state == null || !state.screenInitApplied()) {
             super.update(horizScrollBuf, cameraX, cameraY, frameCounter, actId);
+            return;
+        }
+        if (actId != 0) {
+            composeActTwo(state, horizScrollBuf, cameraX, cameraY,
+                    frameCounter != state.backgroundScrollFrame());
+            state.setBackgroundScrollFrame(frameCounter);
+            currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(horizScrollBuf, viewportWidth());
             return;
         }
         // SSZ1_BackgroundEvent is a once-per-frame routine with persistent state (the drift
@@ -136,6 +152,86 @@ public class SwScrlSsz extends SwScrlS3kDefault {
         state.setBackgroundScrollFrame(frameCounter);
         composeFrame(state, horizScrollBuf, cameraX, cameraY, advance);
         currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(horizScrollBuf, viewportWidth());
+    }
+
+    /** Cold route of {@code sub_58D3E}/{@code sub_58FBC}, while Events_routine_fg is below $C. */
+    void composeActTwo(SszZoneRuntimeState state, int[] output,
+                       int cameraX, int cameraY, boolean advance) {
+        resetScrollTracking();
+        composer.reset();
+        if (!state.backgroundInitApplied()) {
+            state.markBackgroundInitApplied();
+            state.setCloudDrift(0);
+        }
+        int accumulator = state.cloudDrift();
+        if (advance) state.setCloudDrift(accumulator + 0x1000);
+
+        act2ScrollTable.clear();
+        int cameraRate = (((short) cameraX) << 16) >> 5;
+        int step = cameraRate;
+        int value = (cameraRate >> 1) + accumulator;
+        setAct2Words(value, 0x00, 0x04, 0x08, 0x10, 0x36, 0x3A, 0x3E, 0x46);
+        value += step;
+        setAct2Words(value, 0x06, 0x0A, 0x0E, 0x14, 0x3C, 0x40, 0x44);
+        value += step;
+        setAct2Words(value, 0x02, 0x0C, 0x16, 0x34, 0x38, 0x42);
+        value += step;
+        setAct2Words(value, 0x12);
+        for (int i = 0; i < 9; i++) {
+            value += step;
+            setAct2Words(value, 0x18 + i * 2);
+        }
+
+        int bgY = (short) (cameraY - ACT2_BG_Y_OFFSET - state.cloudOscillator() + 8);
+        state.setBackgroundCameraX(ACT2_BG_X);
+        state.setBackgroundCameraY(bgY);
+        short fg = negWord(cameraX);
+        composer.setVscrollFactorBG((short) bgY);
+        DeformationPlan.applyTableBands(composer, (short) bgY, fg, act2ScrollTable,
+                SSZ2_BG_DEFORM, DEFORM_TABLE_START_INDEX, NEGATE_WORD);
+        applyActTwoColumns(state, bgY);
+        composer.copyPackedScrollWordsTo(output);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    private void setAct2Words(int fixed, int... byteOffsets) {
+        short word = (short) (fixed >> 16);
+        for (int offset : byteOffsets) {
+            act2ScrollTable.set(DEFORM_TABLE_START_INDEX + (offset >> 1), word);
+        }
+    }
+
+    /** {@code loc_58EA2}, {@code loc_58EE8}, then {@code loc_58F1E/loc_5904A}. */
+    private void applyActTwoColumns(SszZoneRuntimeState state, int bgY) {
+        short[] columns = composer.writablePerColumnVScrollBG(ACT2_COLUMN_COUNT);
+        Arrays.fill(columns, (short) bgY);
+        int amplitude = (short) state.eventsBgWord(0);
+        int[] wave = new int[144];
+        fillSymmetricWave(wave, 0, 64, amplitude, 7);
+        fillSymmetricWave(wave, 128, 8, amplitude, 3);
+        int rounded = (ACT2_BG_X + 0x0F) & ~0x0F;
+        int source = (rounded >> 3) & ~1;
+        for (int i = 0; i < columns.length; i++) {
+            columns[i] = (short) (bgY + 8 + wave[Math.floorMod(source + i, wave.length)]);
+        }
+    }
+
+    private static void fillSymmetricWave(int[] target, int start, int half, int amplitude,
+                                          int shift) {
+        int magnitude = Math.abs((short) amplitude);
+        boolean negativeFirst = amplitude < 0;
+        for (int i = 0; i < half; i++) {
+            int sample = (magnitude * (i + 1)) >> shift;
+            target[start + half - 1 - i] = negativeFirst ? sample : -sample;
+            target[start + half + i] = negativeFirst ? -sample : sample;
+        }
+    }
+
+    @Override
+    public short[] getPerColumnVScrollBG() {
+        return composer.getPerColumnVScrollBG();
     }
 
     /**
@@ -344,6 +440,10 @@ public class SwScrlSsz extends SwScrlS3kDefault {
 
     ScrollValueTable scrollWords() {
         return hScrollTable;
+    }
+
+    ScrollValueTable actTwoScrollWords() {
+        return act2ScrollTable;
     }
 
     @Override

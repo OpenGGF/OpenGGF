@@ -36,6 +36,42 @@ class TestS3kSszScrollBands {
         return state;
     }
 
+    private static SszZoneRuntimeState act2State() {
+        SszZoneRuntimeState state = new SszZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
+        state.markScreenInitApplied();
+        return state;
+    }
+
+    @Test
+    void actTwoColdFanUsesTheThreeCameraRatesAndFixedBackgroundOrigin() {
+        SwScrlSsz handler = new SwScrlSsz();
+        SszZoneRuntimeState state = act2State();
+        int[] buffer = new int[VISIBLE_LINES];
+
+        handler.composeActTwo(state, buffer, 0x800, 0x649, true);
+
+        assertEquals(0x1000, state.cloudDrift(), "addi.l #$1000,(HScroll_table)");
+        assertEquals(0x5E, state.backgroundCameraX(), "move.w #$5E,Camera_X_pos_BG_copy");
+        assertEquals(0x331, state.backgroundCameraY(), "Camera_Y-$320+8");
+        assertEquals((short) 0x20, handler.actTwoScrollWords().get(2), "Camera_X/64");
+        assertEquals((short) 0x60, handler.actTwoScrollWords().get(5), "next Camera_X/32 step");
+        assertEquals((short) -0x800, unpackFG(buffer[0]));
+    }
+
+    @Test
+    void actTwoPublishesTwentyVsramColumnWords() {
+        SwScrlSsz handler = new SwScrlSsz();
+        SszZoneRuntimeState state = act2State();
+        state.setEventsBgWord(0, 0x100);
+
+        handler.composeActTwo(state, new int[VISIBLE_LINES], 0, 0x649, true);
+
+        short[] columns = handler.getPerColumnVScrollBG();
+        assertNotNull(columns);
+        assertEquals(20, columns.length, "loc_5904A moveq #$14-1,d1");
+        assertNotEquals(columns[0], columns[19], "the symmetric source wave advances by column");
+    }
+
     @Test
     void providerRoutesSkySanctuaryToItsOwnHandler() throws Exception {
         Sonic3kScrollHandlerProvider provider = new Sonic3kScrollHandlerProvider();
