@@ -5,6 +5,8 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.SszKnuxFinalBossCraneObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
@@ -57,9 +59,39 @@ class TestS3kSszAct2FinaleHeadless {
         assertTrue(boss.actTwoForTest(), "Current_act selects the act-2 init branch");
         assertTrue(S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry())
                 .orElseThrow().cutsceneFlag(4), "crane helper raised _unkFAB8 bit 4");
+        assertEquals(0x1F, S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry())
+                        .orElseThrow().cutsceneFlags() & 0x1F,
+                "the hook and camera helper raised native phase bits 0..4");
         assertEquals(GameServices.camera().getMinX() & 0xFFFF,
                 GameServices.camera().getMaxX() & 0xFFFF,
                 "the final allocation boundary preserves the crane-owned camera lock");
+    }
+
+    @Test
+    void cranePickupSurvivesCaptureRestoreAndForwardReplay() {
+        HeadlessTestFixture fixture = boot();
+        var state = S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        for (int frame = 0; frame < 0x200 && !state.cutsceneFlag(2); frame++) {
+            var player = fixture.sprite();
+            player.setCentreX((short) 0x120);
+            player.setCentreYPreserveSubpixel((short) 0x430);
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setAir(true);
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(state.cutsceneFlag(2), "loc_7CDD2 captured Knuckles");
+
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot before = registry.capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = registry.capture();
+        registry.restore(before);
+        sameSnapshot(before, registry.capture(), "restore during crane pickup");
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, registry.capture(), "forward replay during crane pickup");
     }
 
     @Test
@@ -99,5 +131,14 @@ class TestS3kSszAct2FinaleHeadless {
             if (type.isInstance(object) && !object.isDestroyed()) return type.cast(object);
         }
         return null;
+    }
+
+    private static void sameSnapshot(CompositeSnapshot a, CompositeSnapshot b, String label) {
+        assertEquals(a.entries().keySet(), b.entries().keySet(), label);
+        for (String key : a.entries().keySet()) {
+            assertTrue(RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)).isEmpty(),
+                    () -> label + " " + key + ": "
+                            + RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)));
+        }
     }
 }
