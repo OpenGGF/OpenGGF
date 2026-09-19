@@ -95,6 +95,12 @@ public final class RewindRoundTripHarness {
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
 
     private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
+            Map.entry("com.openggf.game.sonic3k.objects.S3kDezMinibossInstance$Component",
+                    "com.openggf.game.sonic3k.objects.TestS3kDezMinibossInstance"),
+            Map.entry("com.openggf.game.sonic3k.objects.S3kDezEndBossInstance$Component",
+                    "com.openggf.game.sonic3k.objects.TestS3kDezEndBossInstance"),
+            Map.entry("com.openggf.game.sonic3k.objects.S3kDezFinalBossInstance$Component",
+                    "com.openggf.game.sonic3k.objects.TestS3kDezFinalBossInstance"),
             Map.entry("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Shell",
                     "com.openggf.tests.TestSozBadnikProduction"),
             Map.entry("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Legs",
@@ -1808,6 +1814,10 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm",
                 "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SpikebonkerBadnikInstance$SpikebonkerMace",
+                "com.openggf.game.sonic3k.objects.badniks.SpikebonkerBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.ChainspikeBadnikInstance$ChainspikeChild",
+                "com.openggf.game.sonic3k.objects.badniks.ChainspikeBadnikInstance");
         // S3K MHZ cutscene/miniboss children. The parent object IDs are zone-set
         // dependent, so registryForSeededParent supplies exact parent factories.
         m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",

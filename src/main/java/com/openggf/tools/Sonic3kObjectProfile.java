@@ -281,6 +281,13 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x8B // SpriteMask
     );
 
+    // DEZ-only SKL aliases, gated on stock ROM zone $0B.
+    private static final Set<Integer> DEZ_ONLY_IDS = Set.of(
+            0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,
+            0x50, 0x52, 0x53, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C,
+            0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x6D,
+            0xA4, 0xA5, 0xA6, 0xA7);
+
     // MHZ-only implementations from SKL ids gated on ZONE_MHZ.
     private static final Set<Integer> MHZ_ONLY_IDS = Set.of(
             0x03, // MHZTwistedVine
@@ -315,6 +322,9 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
         if (S3kZoneSet.forZone(zoneId) == S3kZoneSet.SKL) {
             if (zoneId == Sonic3kZoneIds.ZONE_MHZ) {
                 return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS);
+            }
+            if (zoneId == Sonic3kZoneIds.ZONE_DEZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DEZ_ONLY_IDS);
             }
             return zoneId == Sonic3kZoneIds.ZONE_DDZ
                     ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS)

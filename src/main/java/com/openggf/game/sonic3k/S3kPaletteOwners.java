@@ -50,6 +50,8 @@ public final class S3kPaletteOwners {
     public static final String ICZ_STARTUP_PALETTE = "s3k.icz.startupPalette";
     public static final String ICZ_ZONE_CYCLE = "s3k.icz.zoneCycle";
     public static final String LRZ_ZONE_CYCLE = "s3k.lrz.zoneCycle";
+    /** {@code AnPal_DEZ1} / {@code AnPal_DEZ2}: Death Egg lines 3 and 4. */
+    public static final String DEZ_ZONE_CYCLE = "s3k.dez.zoneCycle";
     /**
      * CNZ AnPal palette ownership for the bumper, background, and tertiary
      * animation tables.

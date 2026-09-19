@@ -29,6 +29,21 @@ public final class Sonic3kPlcArtRegistry {
     private static final int[] DOOR_VERTICAL_HCZ_FRAMES = {0};
     private static final int[] DOOR_VERTICAL_CNZ_FRAMES = {1};
     private static final int[] DOOR_VERTICAL_DEZ_FRAMES = {2};
+    /** word_48BEE (armed) and word_48C08 (pressed), sonic3k.lst:112043-112044. */
+    private static final int DEZ_GRAVITY_SWITCH_FRAME_COUNT = 2;
+    // Map_DEZGravityPuzzle: frame 0 the six-piece shaft, 1 and 2 the mirrored marker panel,
+    // 3 and 4 both word_49AAC with zero pieces (the unpressed panels draw nothing).
+    private static final int DEZ_GRAVITY_PUZZLE_FRAME_COUNT = 5;
+    // Map_DEZRetractingSpring: word_481BC retracted, word_481D0 compressed, word_481DE
+    // extended (sonic3k.lst:111138-111140).
+    private static final int DEZ_RETRACTING_SPRING_FRAME_COUNT = 3;
+    // Map_DEZEnergyBridge: four frames of the same sliding 8x8 pair (sonic3k.asm:94088).
+    private static final int DEZ_ENERGY_BRIDGE_FRAME_COUNT = 4;
+    // Map_DEZBumperWall: one frame, two stacked 16x32 pieces (sonic3k.asm:96083).
+    private static final int DEZ_BUMPER_WALL_FRAME_COUNT = 1;
+    /** Map_DEZMiniboss header has frames $00-$25 (ROM $184FBA). */
+    private static final int DEZ_MINIBOSS_FRAME_COUNT = 0x26;
+    private static final int DEZ_END_BOSS_FRAME_COUNT = 40;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -402,6 +417,7 @@ public final class Sonic3kPlcArtRegistry {
             case 0x14 -> addPachinkoEntries(actIndex, standalone, levelArt);
             case 0x15 -> addSlotsEntries(actIndex, standalone, levelArt);
             case 0x16 -> addHpzEntries(actIndex, standalone, levelArt);
+            case 0x17 -> { if (actIndex == 0) addDez3Entries(standalone, levelArt); }
         }
     }
 
@@ -2655,6 +2671,27 @@ public final class Sonic3kPlcArtRegistry {
                 -1
         ));
 
+        // Obj_DEZMiniboss queues ArtKosM_DEZMinibossMisc at ArtTile_DEZMiniboss.
+        // Keeping it standalone preserves the same ROM-backed mapping/pattern pair while
+        // the object's PLC request remains responsible for native queue timing.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_MINIBOSS,
+                Sonic3kConstants.ART_KOSM_DEZ_MINIBOSS_MISC_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_MINIBOSS_MISC_SIZE,
+                Sonic3kConstants.MAP_DEZ_MINIBOSS_ADDR,
+                1,
+                -1,
+                DEZ_MINIBOSS_FRAME_COUNT));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_END_BOSS,
+                Sonic3kConstants.ART_KOSM_DEZ_END_BOSS_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_END_BOSS_SIZE,
+                Sonic3kConstants.MAP_DEZ_END_BOSS_ADDR,
+                1,
+                -1,
+                DEZ_END_BOSS_FRAME_COUNT));
         // Door (Object 0x3C) vertical: ArtTile_DEZMisc + $1E, palette 1
         // ROM: make_art_tile(ArtTile_DEZMisc+$1E, 1, 0)
         levelArt.add(new LevelArtEntry(
@@ -2665,6 +2702,170 @@ public final class Sonic3kPlcArtRegistry {
                 null,
                 DOOR_VERTICAL_DEZ_FRAMES
         ));
+
+        // Gravity switch (SKL object 0x58, Obj_DEZGravitySwitch): the act 2 pressure pads.
+        // ROM header: move.l #Map_DEZGravitySwitch,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc+$143,1,0),art_tile(a0) (sonic3k.asm:94801-94802).
+        // Two frames -- word_48BEE armed, word_48C08 pressed -- from the same ArtTile_DEZMisc
+        // block the door above draws from, so no extra PLC is needed.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_GRAVITY_SWITCH,
+                Sonic3kConstants.MAP_DEZ_GRAVITY_SWITCH_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x143,
+                1,
+                null,
+                DEZ_GRAVITY_SWITCH_FRAME_COUNT
+        ));
+
+        // Lightning (SKL object $52, Obj_DEZLightning): five mapping frames, including the
+        // empty idle frame. The art is part of the resident DEZ miscellaneous PLC.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_LIGHTNING,
+                Sonic3kConstants.MAP_DEZ_LIGHTNING_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x2C,
+                0,
+                null,
+                5
+        ));
+
+        // Obj_DEZTorpedoLauncher and its projectile share the ten-frame mapping and the
+        // resident DEZ miscellaneous art block (sonic3k.asm:93052-93130).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_TORPEDO_LAUNCHER,
+                Sonic3kConstants.MAP_DEZ_TORPEDO_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x26,
+                0,
+                null,
+                10
+        ));
+
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_HOVER_MACHINE,
+                Sonic3kConstants.MAP_DEZ_HOVER_MACHINE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x11,
+                1,
+                null,
+                3
+        ));
+
+        // Obj_DEZLiftPad: parent platform plus the inline multi-sprite lift column.
+        // ArtTile_DEZMisc2 is resident in the DEZ PLC (sonic3k.asm:93133-93138).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_LIFT_PAD,
+                Sonic3kConstants.MAP_DEZ_LIFT_PAD_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x06,
+                1,
+                null,
+                3
+        ));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_CONVEYOR_PAD,
+                Sonic3kConstants.MAP_DEZ_CONVEYOR_PAD_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0xBB, 1, null, 5));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_CONVEYOR_PAD_WIDE,
+                Sonic3kConstants.MAP_DEZ_CONVEYOR_PAD_WIDE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0xBB, 1, null, 4));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FLOATING_PLATFORM,
+                Sonic3kConstants.MAP_DEZ_FLOATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ2_EXTRA + 0x08, 1, null, 2));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_HANG_CARRIER,
+                Sonic3kConstants.MAP_DEZ_HANG_CARRIER_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x10, 1, null, 1));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_TILTING_BRIDGE,
+                Sonic3kConstants.MAP_DEZ_TILTING_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC, 1, null, 1));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_STAIRCASE,
+                Sonic3kConstants.MAP_DEZ_TILTING_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x133, 1, null, 1));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_TUNNEL_LAUNCHER,
+                Sonic3kConstants.MAP_DEZ_TUNNEL_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x38, 0, null, 11));
+
+        // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
+        // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:96088-96089),
+        // the same block Obj_DEZBumperWall draws from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_GRAVITY_PUZZLE,
+                Sonic3kConstants.MAP_DEZ_GRAVITY_PUZZLE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x31,
+                1,
+                null,
+                DEZ_GRAVITY_PUZZLE_FRAME_COUNT
+        ));
+
+        // Retracting spring (SKL object 0x5D, Obj_DEZRetractingSpring): act 2's horizontal
+        // piston. ROM header: move.l #Map_DEZRetractingSpring,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZ2Extra,1,0),art_tile(a0) (sonic3k.asm:94099-94100).
+        // ArtNem_DEZ2Extra is already queued into ArtTile_DEZ2Extra by DEZ act 2's PLC
+        // (plreq at sonic3k.lst:228636), so no extra PLC is needed.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_RETRACTING_SPRING,
+                Sonic3kConstants.MAP_DEZ_RETRACTING_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ2_EXTRA,
+                1,
+                null,
+                DEZ_RETRACTING_SPRING_FRAME_COUNT
+        ));
+
+        // Energy bridge (SKL object 0x55, Obj_DEZEnergyBridge): the intermittent top solids
+        // in both acts. ROM header: move.l #Map_DEZEnergyBridge,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc+$B2,1,0),art_tile(a0)
+        // (sonic3k.asm:93910, :93880), the same ArtTile_DEZMisc block the door and the
+        // gravity switch draw from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_ENERGY_BRIDGE,
+                Sonic3kConstants.MAP_DEZ_ENERGY_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0xB2,
+                1,
+                null,
+                DEZ_ENERGY_BRIDGE_FRAME_COUNT
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_ENERGY_BRIDGE_CURVED,
+                Sonic3kConstants.MAP_DEZ_ENERGY_BRIDGE_CURVED_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0xB2,
+                1,
+                null,
+                DEZ_ENERGY_BRIDGE_FRAME_COUNT
+        ));
+
+        // Bumper wall (SKL object 0x60, Obj_DEZBumperWall): the act 1 turbine room's walls,
+        // posts and exit gate. ROM header: move.l #Map_DEZBumperWall,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:95959-95960),
+        // the same block the $61 gravity puzzle draws from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_BUMPER_WALL,
+                Sonic3kConstants.MAP_DEZ_BUMPER_WALL_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x31,
+                1,
+                null,
+                DEZ_BUMPER_WALL_FRAME_COUNT
+        ));
+    }
+
+    private static void addDez3Entries(List<StandaloneArtEntry> standalone,
+                                       List<LevelArtEntry> levelArt) {
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_MISC_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_MISC_SIZE,
+                Sonic3kConstants.MAP_DEZ_FINAL_BOSS_MISC_ADDR, 1, -1, 32));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MASTER_EMERALD,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_MASTER_EMERALD_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_MASTER_EMERALD_SIZE,
+                Sonic3kConstants.MAP_DEZ_FINAL_BOSS_MASTER_EMERALD_ADDR, 1, -1, 2));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_DEBRIS,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_DEBRIS_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_DEBRIS_SIZE,
+                Sonic3kConstants.MAP_DEZ_FINAL_BOSS_DEBRIS_ADDR, 1, -1, 3));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ3_BLOCKS,
+                Sonic3kConstants.MAP_DEZ3_BLOCKS_ADDR, 0x001, 2, null,
+                new int[]{0, 1, 2, 3}));
     }
 
     /**

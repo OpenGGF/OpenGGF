@@ -122,6 +122,7 @@ public class Sonic3kGameModule implements GameModule {
     private final Sonic3kTitleScreenManager titleScreenProvider = new Sonic3kTitleScreenManager();
     private final Sonic3kLevelSelectManager levelSelectProvider = new Sonic3kLevelSelectManager();
     private final Sonic3kCheatFlags cheatFlags = new Sonic3kCheatFlags();
+    private final Sonic3kAct3Carry act3Carry = new Sonic3kAct3Carry();
     private final com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile dataSelectHostProfile =
             new com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile();
     private DataSelectPresentationProvider dataSelectPresentationProvider;
@@ -485,6 +486,9 @@ public class Sonic3kGameModule implements GameModule {
         if (type == Sonic3kCheatFlags.class) {
             return (T) cheatFlags;
         }
+        if (type == Sonic3kAct3Carry.class) {
+            return (T) act3Carry;
+        }
         if (type == com.openggf.game.internal.SidekickCpuInitializationPolicy.class) {
             return (T) com.openggf.game.sonic3k.sidekick.Sonic3kSidekickCpuInitializationPolicy.INSTANCE;
         }
@@ -514,7 +518,9 @@ public class Sonic3kGameModule implements GameModule {
 
     @Override
     public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
-        return levelTitlePlcService == null ? List.of() : List.of(levelTitlePlcService);
+        return levelTitlePlcService == null
+                ? List.of(act3Carry)
+                : List.of(levelTitlePlcService, act3Carry);
     }
 
     @Override

@@ -5,7 +5,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PlaceholderObjectInstance;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,12 +29,12 @@ class TestSinkingMudRegistry {
     }
 
     @Test
-    void registryKeepsId0x4FPlaceholderInSklZoneSet() {
+    void registryCreatesDeathEggStaircaseInStockSklZone() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_DEZ);
 
         ObjectInstance instance = registry.create(spawn());
 
-        assertInstanceOf(PlaceholderObjectInstance.class, instance);
+        assertInstanceOf(S3kDezStaircaseObjectInstance.class, instance);
         assertEquals("DEZStaircase", registry.getPrimaryName(Sonic3kObjectIds.SINKING_MUD, S3kZoneSet.SKL));
         assertEquals("SinkingMud", registry.getPrimaryName(Sonic3kObjectIds.SINKING_MUD, S3kZoneSet.S3KL));
     }

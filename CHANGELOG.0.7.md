@@ -28,6 +28,41 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   emerald and, once all seven are held, announces "NOW SONIC CAN BE HYPER SONIC"; the
   small Chaos Emerald indicators only show emeralds that have not been converted. Leaving any S3K special-stage results screen now fades to black without the stage
   transition sound, as in the ROM, instead of fading to white.
+- **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it
+  at a quarter of the camera speed, cycle their console and panel colours, and animate their
+  machinery tiles. Act 1's magnetic hover fields now use the ROM's signed word correction,
+  lift-pad arms use the high byte of their fixed-point angle, and conveyor pads preserve their
+  one-pass start and direction-change timing, carrying the recorded route through the machinery
+  instead of throwing it onto a divergent lower path. Death Egg Act 2's gravity now reverses:
+  crossing one of the act's invisible
+  gravity triggers flips which way is down, and the player falls to the ceiling, stands and runs
+  on it, rolls, jumps, lands, gets hurt and dies against a death plane that has moved to the top
+  of the level. Shields, spilled rings, dust, springs, solid objects and a carried or respawning
+  sidekick all follow the flip. Which direction of crossing turns gravity on is the level's own
+  choice, so running back the way you came restores it. Act 2's pressure pads flip it too,
+  from either face, so a pad works whichever way up you reach it; the pads are now drawn,
+  sinking as they are pressed, and sound the transporter note.
+  Act 2's teleporter columns now work too: step into one and it takes hold, spins up, carries
+  you to its partner and flips gravity on the way, and a second player can ride without the
+  gravity changing under the first.
+  The act's gravity tunnels now take hold too: run into one and it carries you along, lifting
+  and swinging you as it goes, and leaving one while gravity is reversed turns you the right
+  way up, and the ride is continuous rather than dropping and catching you every other frame.
+  The junctions the tunnels feed into now catch you as well: they pull you to the middle, hold
+  you spinning there, and fire you out along whichever way you press of the ones that junction
+  opens onto. Act 1's turbine corridor blows you along it now as well, tumbling, with up and
+  down to steer by, and the bobbing shaft inside it bounces you off and lights up whichever
+  of its six panels you hit. The Spikebonker mace robots patrol both acts, hover, and swing at
+  you when you come at them from the side they are walking toward. Act 2's retracting springs
+  work: they push out of the wall while you are below them, pull back in once you are well
+  above, latch as they start and finish each stroke, and fling you upward when you land on one.
+  The energy bridges across both acts switch on and off on their own schedules, carry you while
+  they are lit, and drop you when they go out.
+  The Chainspike robots charge across both acts, slowing to a stop and turning around, and
+  stab their spikes into the floor when you get close.
+  Defeating the Act 2 gravity boss now carries rings, time and shield into the distinct
+  `$1700` final arena instead of treating it as Hidden Palace; that arena initializes its
+  ROM event words and camera and starts the dynamic final-boss graph.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

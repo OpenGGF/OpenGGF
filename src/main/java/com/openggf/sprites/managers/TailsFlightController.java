@@ -28,6 +28,16 @@ public final class TailsFlightController {
         int defaultYRadius = sprite.getStandYRadius();
         if (sprite.getRolling()) {
             sprite.setRolling(false);
+            // Tails_Test_For_Flight loc_1515C (sonic3k.asm:28655-28672) puts
+            // y_radius - default_y_radius in d1, tests Reverse_gravity_flag, and on the
+            // set side runs `neg.w d0` -- the wrong register, holding nothing this site
+            // uses -- before `add.w d1,y_pos(a0)`. The unroll adjustment is therefore NOT
+            // inverted under reverse gravity, unlike every other unroll site
+            // (loc_14DA2 :28233, loc_14FC4 :28500, loc_1527C :28748, which all negate d0
+            // because d0 is the adjustment there). This build is FixBugs = 0, so the
+            // write stays unconditional: the fixed branch would negate this delta and
+            // keep an inverted Tails' head against the ceiling, where the shipped branch
+            // shifts him by twice the radius difference instead.
             sprite.setCentreYPreserveSubpixel(
                     (short) (oldCentreY + oldYRadius - defaultYRadius));
         }

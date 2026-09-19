@@ -26,6 +26,7 @@ import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
 import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.ReverseGravity;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
 import com.openggf.physics.TerrainCheckResult;
@@ -642,7 +643,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// Timer expired - transition to dead state (no upward bounce)
 				sprite.setDead(true);
 			}
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 			sprite.updateSensors(originalX, originalY);
 			applyScreenYWrapValueAfterControl();
 			return;
@@ -656,7 +657,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				return;
 			}
 			short oldYSpeed = applyDeathMovement();
-			sprite.move(sprite.getXSpeed(), oldYSpeed);
+			moveSpriteTestGravity(sprite.getXSpeed(), oldYSpeed);
 			sprite.updateSensors(originalX, originalY);
 			applyScreenYWrapValueAfterControl();
 			return;
@@ -871,7 +872,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		preRollGroundSpeed = sprite.getGSpeed();
 		doCheckStartRoll();
 		doLevelBoundary();
-		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+		moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		applyMissedDetachSlopeResist();
@@ -904,7 +905,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doRollRepel();
 		doRollSpeed();
 		doLevelBoundary();
-		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+		moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
@@ -977,7 +978,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (isCpuLevelBoundaryKillActive()) {
 				return;
 			}
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());  // MoveSprite2
+			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());  // MoveSprite2
 			// ROM: Knux_DoLevelCollision_CheckRet — custom collision for glide.
 			// May transition to sliding (flag 3) / wall-climb (flag 4).
 			doGlideCollision();
@@ -1009,7 +1010,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				return;
 			}
 			// MoveSprite2 (no gravity): move by the pre-control velocity first.
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 			doChgJumpDir();                       // Knux_ChgJumpDir (air control)
 			applyGravity();                       // addi.w #$38,y_vel(a0)
 			applyUnderwaterAirGravityReduction(); // btst Status_Underwater; subi #$28
@@ -1325,9 +1326,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Release charged spindash (s2.asm:37244) */
 	private void doReleaseSpindash() {
+		short preReleaseCentreY = sprite.getCentreY();
 		sprite.applyRollingRadii(false);
 		setRollAnimation();
-		sprite.setY((short) (sprite.getY() + sprite.getRollHeightAdjustment()));
+		// loc_11C5E: addq.w #5,y_pos, and subi.w #5*2 under Reverse_gravity_flag
+		// (sonic3k.asm:23692-23697; Tails loc_1527C :28748).
+		applyRollRadiusShift(preReleaseCentreY, true);
 		sprite.setSpindash(false);
 
 		short[] table = getSpindashSpeedTable();
@@ -1393,7 +1397,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean doJump() {
 		int hexAngle = sprite.getAngle() & 0xFF;
 
-		if (!collisionSystem().hasEnoughHeadroom(sprite, hexAngle)) {
+		// Sonic_Jump mirrors the angle it hands to CalcRoomOverHead when
+		// Reverse_gravity_flag is set (sonic3k.asm:23290-23300; Tails_Jump :28524-28534,
+		// Knux_Jump :32438-32448), so an inverted player's headroom is measured toward the
+		// floor it is about to jump at rather than into the ceiling it stands on. Only the
+		// headroom angle is mirrored: the launch vector at loc_1182E (:23343-23345) re-reads
+		// angle(a0) raw with no flag test.
+		GameStateManager jumpState = gameState();
+		boolean invertedJump = jumpState != null && jumpState.isReverseGravityActive();
+		int headroomAngle = invertedJump ? ReverseGravity.mirrorAngle(hexAngle) : hexAngle;
+
+		if (!collisionSystem().hasEnoughHeadroom(sprite, headroomAngle)) {
 			return false;
 		}
 
@@ -1432,8 +1446,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// default_y_radius - roll_y_radius (sonic3k.asm:28561-28577).
 			// Use centre coordinates directly so preserved roll-sized dimensions
 			// from marker/despawn paths do not double-count the height change.
-			sprite.setCentreYPreserveSubpixel(
-					(short) (preRollCentreY + sprite.getStandYRadius() - sprite.getRollYRadius()));
+			// loc_1182E (sonic3k.asm:23343-23351) negates that delta under the flag;
+			// Tails loc_1504C (:28568-28576) and Knux loc_1775C (:32485-32493) match.
+			int jumpRadiusDelta = sprite.getStandYRadius() - sprite.getRollYRadius();
+			sprite.setCentreYPreserveSubpixel((short) (preRollCentreY
+					+ ReverseGravity.mirrorYDelta(invertedJump, jumpRadiusDelta)));
 		} else {
 			sprite.setRollingJump(true);
 		}
@@ -2960,6 +2977,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getAir() || sprite.getRolling()) return;
 
 		short preRollCentreX = sprite.getCentreX();
+		short preRollCentreY = sprite.getCentreY();
 		sprite.setRolling(true);
 		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
 		if (animationRules != null && animationRules.animationChangeClearsPush()) {
@@ -2977,7 +2995,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Tails_Roll sonic3k.asm:28494-28500). Preserve ROM centre X when the
 		// engine's top-left sprite box changes width on wall modes.
 		sprite.setCentreXPreserveSubpixel(preRollCentreX);
-		sprite.setY((short) (sprite.getY() + sprite.getRollHeightAdjustment()));
+		// Player_DoRoll: addq.w #5,y_pos, and subi.w #2*5 under Reverse_gravity_flag
+		// (sonic3k.asm:23263-23268; Tails loc_14FC4 :28500 with +1/-1).
+		applyRollRadiusShift(preRollCentreY, true);
 		audioManager.playSfx(GameSound.ROLLING);
 
 		if (sprite.getGSpeed() == 0) {
@@ -2998,6 +3018,36 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int slopeEffect = (slopeFactor * TrigLookupTable.sinHex(hexAngle)) >> 8;
 
 		sprite.setGSpeed((short) (gSpeed + slopeEffect));
+	}
+
+
+	/**
+	 * The {@code y_pos} write that follows a roll or unroll radius change.
+	 *
+	 * <p>Upright the engine expresses the ROM's centre move as a top-left shift, because
+	 * changing the rolling state also changes the sprite box height; {@code
+	 * getRollHeightAdjustment()} returns the full height difference for exactly that reason.
+	 * Under {@code Reverse_gravity_flag} the ROM negates the <em>centre</em> delta —
+	 * {@code Player_DoRoll} {@code addq.w #5} then {@code subi.w #2*5} (sonic3k.asm:23263-23268),
+	 * {@code loc_11578}'s {@code neg.w d0} (:22986-22991), {@code loc_11C5E} (:23692-23697),
+	 * {@code loc_12246} (:24426) and the Tails and Knuckles twins — so negating the top-left
+	 * helper would move the centre by twice the ROM's amount. Write the mirrored centre instead,
+	 * which is the form {@code PlayableHurtRadiusTransition} already uses for
+	 * {@code Player_TouchFloor}.
+	 *
+	 * @param centreYBefore the ROM {@code y_pos} before the radius change
+	 * @param enteringRoll true at the sites that shrink the radius, false at those that restore it
+	 */
+	private void applyRollRadiusShift(int centreYBefore, boolean enteringRoll) {
+		GameStateManager state = gameState();
+		if (state != null && state.isReverseGravityActive()) {
+			int radiusShift = sprite.getStandYRadius() - sprite.getRollYRadius();
+			int uprightCentreDelta = enteringRoll ? radiusShift : -radiusShift;
+			sprite.setCentreYPreserveSubpixel((short) (centreYBefore - uprightCentreDelta));
+			return;
+		}
+		short shift = sprite.getRollHeightAdjustment();
+		sprite.setY((short) (sprite.getY() + (enteringRoll ? shift : -shift)));
 	}
 
 	/** Sonic_RollSpeed: Roll deceleration and velocity conversion (s2.asm:36666) */
@@ -3137,7 +3187,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setRolling(false);
 				sprite.setCentreXPreserveSubpixel(preRollStopCentreX);
 				if (rollRadiiApplied) {
-					sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+					// loc_11578 puts y_radius - default_y_radius in d0 and negates it
+					// under Reverse_gravity_flag before add.w d0,y_pos.
+					applyRollRadiusShift(preRollStopCentreY, false);
 				} else {
 					sprite.setCentreYPreserveSubpixel(preRollStopCentreY);
 				}
@@ -3262,6 +3314,34 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setYSpeed(ySpeed);
 	}
 
+	/**
+	 * {@code MoveSprite_TestGravity} / {@code MoveSprite_TestGravity2}
+	 * (sonic3k.asm:36068-36101): the position integration every player movement
+	 * routine reaches. With {@code Reverse_gravity_flag} ($FFFFF7C6) set the ROM
+	 * loads {@code y_vel} into {@code d0} and runs {@code neg.w d0} before the
+	 * 32-bit position add, so the stored velocity keeps its sign (positive is
+	 * still "falling") while the arc is mirrored. The {@code addi.w #$38,y_vel}
+	 * gravity step inside {@code MoveSprite_TestGravity} is <em>not</em> inverted
+	 * and stays with {@link #applyGravity()}.
+	 *
+	 * <p>Only the routines that reach the {@code _TestGravity} wrappers use this.
+	 * The nine {@code MoveSprite_TestGravity} and sixteen
+	 * {@code MoveSprite_TestGravity2} call sites are the player normal/air/jump/
+	 * roll/hurt/dead/drown-sink routines of all three characters, Knuckles' glide
+	 * and slide, Tails' flight and the bouncing ring; plain {@code MoveSprite} /
+	 * {@code MoveSprite2} callers (every other object) never invert.
+	 */
+	private void moveSpriteTestGravity(short xSpeed, short ySpeed) {
+		sprite.move(xSpeed,
+				ReverseGravity.integrationYSpeed(isReverseGravityActive(), ySpeed));
+	}
+
+	/** ROM: {@code tst.b (Reverse_gravity_flag).w} ($FFFFF7C6). */
+	private boolean isReverseGravityActive() {
+		GameStateManager gameState = sprite.currentGameStateOrNull();
+		return gameState != null && gameState.isReverseGravityActive();
+	}
+
 	/** ObjectMoveAndFall: Apply velocity and gravity (s2.asm:29945-29953)
 	 * ROM applies gravity to y_vel BEFORE movement, but uses the OLD y_vel for position:
 	 *   move.w  y_vel(a0),d0           ; Save old y_vel in d0
@@ -3283,7 +3363,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (!tailsFlightVerticalUpdatedThisFrame) {
 				cpu.applyFlyingCarryVerticalVelocity();
 			}
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 			return;
 		}
 		if (isTailsFlightPhysicsActive(sprite) && !tailsFlightActivatedThisFrame) {
@@ -3295,14 +3375,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (!tailsFlightVerticalUpdatedThisFrame) {
 				applyGravity();
 			}
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 			return;
 		}
 		short oldYSpeed = sprite.getYSpeed();  // Save old y_vel before gravity
 		applyGravity();                         // Gated on isObjectControlled()
 		short xMoveSpeed = (suppressedAxes & 0x1) != 0 ? 0 : sprite.getXSpeed();
 		short yMoveSpeed = (suppressedAxes & 0x2) != 0 ? 0 : oldYSpeed;
-		sprite.move(xMoveSpeed, yMoveSpeed);  // Move using OLD y_vel
+		moveSpriteTestGravity(xMoveSpeed, yMoveSpeed);  // Move using OLD y_vel
 	}
 
 	/**
@@ -3475,7 +3555,30 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			boolean useCentreY = (movementRules != null && movementRules.levelBoundaryUsesCentreY())
 					|| (sprite.isCpuControlled() && sprite.getCpuController() != null);
 			int playerY = useCentreY ? sprite.getCentreY() : sprite.getY();
-			if (playerY > effectiveMaxY + 224) {
+			// Player_Boundary_CheckBottom (sonic3k.asm:23188-23206) tests
+			// Reverse_gravity_flag right after Disable_death_plane and branches to
+			// loc_11722, whose whole body is
+			//   move.w (Camera_min_Y_pos).w,d0 / cmp.w y_pos(a0),d0 / blt.s <alive>
+			// so the player lives while Camera_min_Y_pos < y_pos and dies at or above
+			// it. The $E0 offset belongs to the upright branch alone and has no
+			// counterpart here. Tails_Check_Screen_Boundaries loc_14F30/loc_14F4C
+			// (:28423-28441) is the identical pair for the sidekick, which is why this
+			// single owner covers both ROM rows.
+			//
+			// The min-side bound takes min(live, target) as the mirror of the
+			// max-side max(live, target) guard above: that guard is an engine
+			// allowance for a still-easing camera boundary, not a ROM branch, and it
+			// would be an unfair death here for exactly the same reason.
+			boolean reverseGravity = isReverseGravityActive();
+			int effectiveMinY = Math.min(camera.getMinY(), camera.getMinYTarget());
+			if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+				effectiveMinY = Math.min(effectiveMinY,
+						sprite.getCpuController().getMinYBound(effectiveMinY));
+			}
+			boolean pastKillPlane = reverseGravity
+					? playerY <= effectiveMinY
+					: playerY > effectiveMaxY + 224;
+			if (pastKillPlane) {
 				GameModule module = sprite.currentGameModule();
 				LevelEventProvider levelEvents = module != null ? module.getLevelEventProvider() : null;
 				SidekickCpuController cpuController = sprite.getCpuController();
@@ -3550,6 +3653,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// is set the camera boundaries do not yet describe the level.
 			return false;
 		}
+		// sub_12318 tests Reverse_gravity_flag immediately after Disable_death_plane
+		// and branches to loc_12336 (sonic3k.asm:24477-24491), whose whole body is
+		//   move.w (Camera_min_Y_pos).w,d0 / cmp.w y_pos(a0),d0 / blt.s <alive>
+		// -- the top of the level, with no $E0 offset and no unsigned variant. Tails
+		// sub_15716 (:29220) and Knuckles sub_17C10 (:32911) are the same code.
+		if (isReverseGravityActive()) {
+			int minBoundary = Math.min(camera.getMinY(), camera.getMinYTarget());
+			if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+				minBoundary = Math.min(minBoundary,
+						sprite.getCpuController().getMinYBound(minBoundary));
+			}
+			return sprite.getCentreY() <= minBoundary && applyHurtStopKill();
+		}
 		// Held mask, shared with doLevelBoundary's kill plane -- see the javadoc above.
 		int boundary = Math.max(camera.getMaxY(), camera.getMaxYTarget());
 		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
@@ -3565,6 +3681,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (!past) {
 			return false;
 		}
+		return applyHurtStopKill();
+	}
+
+	/** The kill half of {@code sub_12318}, shared by its upright and inverted tests. */
+	private boolean applyHurtStopKill() {
 		GameModule module = sprite.currentGameModule();
 		LevelEventProvider levelEvents = module != null ? module.getLevelEventProvider() : null;
 		SidekickCpuController cpuController = sprite.getCpuController();
@@ -3905,6 +4026,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				int oldYRadius = sprite.getYRadius();
 				sprite.setRolling(false);
 				int radiusDelta = oldYRadius - sprite.getStandYRadius();
+				// Player_TouchFloor (sonic3k.asm:24346-24354) negates the radius
+				// adjustment under Reverse_gravity_flag, as PlayableHurtRadiusTransition
+				// already does for the hurt path.
+				GameStateManager landingState = gameState();
+				if (landingState != null && landingState.isReverseGravityActive()) {
+					radiusDelta = -radiusDelta;
+				}
 				if (((sprite.getAngle() + ANGLE_WALL_OFFSET) & ANGLE_WALL_MASK) != 0) {
 					radiusDelta = -radiusDelta;
 				}
@@ -4157,8 +4285,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setPushing(false);
 		sprite.setAnimationId(2);
 		if (!sprite.getRolling()) {
+			// loc_12246 (sonic3k.asm:24422-24430) negates the same radius adjustment
+			// under Reverse_gravity_flag.
+			short preBounceCentreY = sprite.getCentreY();
 			sprite.setRolling(true);
-			sprite.setY((short) (sprite.getY() + sprite.getRollHeightAdjustment()));
+			applyRollRadiusShift(preBounceCentreY, true);
 		}
 		audioManager.playSfx(GameSound.BUBBLE_ATTACK);
 		var shield = sprite.getShieldObject();
@@ -4668,6 +4799,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& boundaryRules.deathFallBottomReferenceIsCameraBottomBoundary()
 				? camera.getMaxY()
 				: camera.getY();
+		if (isReverseGravityActive()) {
+			// S3K loc_123DE (sonic3k.asm:24549-24556): the dead player's off-screen
+			// test is rebuilt, not mirrored. The flag branch is
+			//   subi.w #$10,d0 / cmp.w y_pos(a0),d0 / bge.w loc_12410
+			// against the upright
+			//   addi.w #$100,d0 / cmp.w y_pos(a0),d0 / bge.w locret
+			// so the restart fires once the corpse has risen to Camera_Y_pos - $10,
+			// off the top of the screen -- the only way out for a corpse whose growing
+			// positive y_vel MoveSprite_TestGravity integrates upward. The two offsets
+			// are $10 and $100, not mirrors of each other, and the reverse side carries
+			// no competition-mode $70 adjustment (that subi.w sits on the upright path).
+			return sprite.getCentreY() <= reference - 0x10;
+		}
 		return sprite.getCentreY() > reference + 0x100;
 	}
 

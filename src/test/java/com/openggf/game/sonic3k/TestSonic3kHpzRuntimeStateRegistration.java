@@ -5,6 +5,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
@@ -62,6 +63,8 @@ class TestSonic3kHpzRuntimeStateRegistration {
         manager.initLevel(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 0);
 
         assertTrue(S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry()).isEmpty());
-        assertFalse(GameServices.zoneRuntimeRegistry().current() instanceof HpzZoneRuntimeState);
+        assertInstanceOf(S3kDezZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        assertEquals(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA,
+                GameServices.zoneRuntimeRegistry().current().zoneIndex());
     }
 }

@@ -111,7 +111,7 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
             int cx = player.getCentreX();
             int cy = player.getCentreY();
             boolean hFlip = player.getDirection() == Direction.LEFT;
-            dplcRenderer.drawFrame(animationLifecycle.mappingFrame(), cx, cy, hFlip, false);
+            dplcRenderer.drawFrame(animationLifecycle.mappingFrame(), cx, cy, hFlip, shieldRenderVFlip());
             return;
         }
         if (hasRenderer()) {
@@ -129,5 +129,14 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
         if (module == null) return null;
         ObjectArtProvider provider = module.getObjectArtProvider();
         return (provider instanceof Sonic3kObjectArtProvider s3k) ? s3k : null;
+    }
+
+    /**
+     * ROM: {@code Obj_InstaShield_Main} sonic3k.asm:34590-34597 sets the shield's Y-flip bit from
+     * {@code Reverse_gravity_flag} after masking the inherited status down to the
+     * orientation bit. See {@link ShieldAnimationArtLifecycle#reverseGravityMirror}.
+     */
+    boolean shieldRenderVFlip() {
+        return ShieldAnimationArtLifecycle.reverseGravityMirror(services());
     }
 }

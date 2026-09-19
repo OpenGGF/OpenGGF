@@ -486,6 +486,44 @@ public final class Sonic3kObjectArtKeys {
     public static final String DOOR_VERTICAL_HCZ = "door_vertical_hcz";   // ArtTile_HCZMisc+$0A, Map_HCZCNZDEZDoor
     public static final String DOOR_VERTICAL_CNZ = "door_vertical_cnz";   // ArtTile_CNZMisc+$C5, Map_HCZCNZDEZDoor
     public static final String DOOR_VERTICAL_DEZ = "door_vertical_dez";   // ArtTile_DEZMisc+$1E, Map_HCZCNZDEZDoor
+
+    // DEZ Gravity Switch (SKL 0x58) - ArtTile_DEZMisc+$143, palette 1, Map_DEZGravitySwitch
+    public static final String DEZ_GRAVITY_SWITCH = "dez_gravity_switch";
+
+    // DEZ Lightning (SKL 0x52) - ArtTile_DEZMisc+$2C, palette 0, Map_DEZLightning.
+    public static final String DEZ_LIGHTNING = "dez_lightning";
+    public static final String DEZ_TORPEDO_LAUNCHER = "dez_torpedo_launcher";
+    public static final String DEZ_HOVER_MACHINE = "dez_hover_machine";
+    public static final String DEZ_LIFT_PAD = "dez_lift_pad";
+    public static final String DEZ_CONVEYOR_PAD = "dez_conveyor_pad";
+    public static final String DEZ_CONVEYOR_PAD_WIDE = "dez_conveyor_pad_wide";
+    public static final String DEZ_FLOATING_PLATFORM = "dez_floating_platform";
+    public static final String DEZ_HANG_CARRIER = "dez_hang_carrier";
+    public static final String DEZ_TILTING_BRIDGE = "dez_tilting_bridge";
+    public static final String DEZ_STAIRCASE = "dez_staircase";
+    public static final String DEZ_TUNNEL_LAUNCHER = "dez_tunnel_launcher";
+
+    // DEZ Gravity Puzzle (SKL 0x61) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZGravityPuzzle
+    public static final String DEZ_GRAVITY_PUZZLE = "dez_gravity_puzzle";
+
+    // DEZ Retracting Spring (SKL 0x5D) - ArtTile_DEZ2Extra, palette 1, Map_DEZRetractingSpring
+    // (sonic3k.asm:94099-94100).
+    public static final String DEZ_RETRACTING_SPRING = "dez_retracting_spring";
+
+    // DEZ Energy Bridge (SKL 0x55) - ArtTile_DEZMisc+$B2, palette 1, Map_DEZEnergyBridge
+    // (sonic3k.asm:93880, :93910).
+    public static final String DEZ_ENERGY_BRIDGE = "dez_energy_bridge";
+    public static final String DEZ_ENERGY_BRIDGE_CURVED = "dez_energy_bridge_curved";
+
+    // DEZ Bumper Wall (SKL 0x60) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZBumperWall
+    // (sonic3k.asm:95959-95960), the same art block the $61 gravity puzzle draws from.
+    public static final String DEZ_BUMPER_WALL = "dez_bumper_wall";
+    public static final String DEZ_MINIBOSS = "dez_miniboss";
+    public static final String DEZ_END_BOSS = "dez_end_boss";
+    public static final String DEZ_FINAL_BOSS_MISC = "dez_final_boss_misc";
+    public static final String DEZ_FINAL_BOSS_MASTER_EMERALD = "dez_final_boss_master_emerald";
+    public static final String DEZ_FINAL_BOSS_DEBRIS = "dez_final_boss_debris";
+    public static final String DEZ3_BLOCKS = "dez3_blocks";
     public static final String DOOR_HORIZONTAL = "door_horizontal";        // ArtTile_CNZMisc+$C5, Map_CNZDoorHorizontal
 
     private Sonic3kObjectArtKeys() {

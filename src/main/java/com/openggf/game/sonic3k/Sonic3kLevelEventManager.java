@@ -126,6 +126,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kMHZEvents mhzEvents;
     private com.openggf.game.sonic3k.events.Sonic3kSOZEvents sozEvents;
     private com.openggf.game.sonic3k.events.Sonic3kHPZEvents hpzEvents;
+    private com.openggf.game.sonic3k.events.Sonic3kDEZEvents dezEvents;
     private final AizPreparedTransitionArtState aizPreparedTransitionArt =
             new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -311,6 +312,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             hpzEvents = null;
         }
 
+        // DEZ1/2 ($B00/$B01) and the dynamically-spawned final-boss act ($1700).
+        if (zone == Sonic3kZoneIds.ZONE_DEZ
+                || (zone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && act == 0)) {
+            dezEvents = new com.openggf.game.sonic3k.events.Sonic3kDEZEvents();
+            dezEvents.init(act);
+        } else {
+            dezEvents = null;
+        }
+
         // Install typed zone runtime state into the registry.
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
         // getCurrent() which can destroy the runtime during level loading.
@@ -487,6 +497,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new SozZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
+        } else if (zone == Sonic3kZoneIds.ZONE_DEZ) {
+            registry.install(new com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState(
+                    act, playerCharacter));
+        } else if (zone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && act == 0) {
+            registry.install(new com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState(
+                    zone, act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_DDZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(act, playerCharacter));
             allocateDdzFlightController();
@@ -637,6 +653,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (hpzEvents != null && currentZone == Sonic3kZoneIds.ZONE_HPZ) {
             hpzEvents.update(currentAct, frameCounter);
+        }
+        if (dezEvents != null && (currentZone == Sonic3kZoneIds.ZONE_DEZ
+                || (currentZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && currentAct == 0))) {
+            dezEvents.update(currentAct, frameCounter);
         }
         releasePendingMgzPostTransition();
         syncSidekickBoundsToCamera();
@@ -1648,7 +1668,17 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             case Sonic3kZoneIds.ZONE_SOZ -> state instanceof SozZoneRuntimeState;
             // Reinstalling would zero the Doomsday words and allocate a second flight controller.
             case Sonic3kZoneIds.ZONE_DDZ -> state instanceof com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
-            case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
+            // Reinstalling would reset Events_routine_fg/bg and drop a raised Events_fg_4/5.
+            case Sonic3kZoneIds.ZONE_DEZ ->
+                    state instanceof com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState dezState
+                            && dezState.zoneIndex() == currentZone
+                            && dezState.actIndex() == currentAct;
+            case Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA -> currentAct == 0
+                    ? state instanceof com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState dezState
+                            && dezState.zoneIndex() == currentZone && dezState.actIndex() == currentAct
+                    : state instanceof HpzZoneRuntimeState hpzState
+                            && hpzState.zoneIndex() == currentZone && hpzState.actIndex() == currentAct;
+            case Sonic3kZoneIds.ZONE_HPZ ->
                     state instanceof HpzZoneRuntimeState hpzState
                             && hpzState.zoneIndex() == currentZone
                             && hpzState.actIndex() == currentAct;
