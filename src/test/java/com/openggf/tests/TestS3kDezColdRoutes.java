@@ -125,6 +125,8 @@ class TestS3kDezColdRoutes {
      * campaign has written. A ratchet, not a target: raise it when the frontier moves.
      */
     static final int SEEDED_ROUTE_FRONTIER = 1256;
+    static final int ACT_ONE_EXACT_FRONTIER = 1741;
+    static final int ACT_ONE_SURVIVAL_FRONTIER = 5352;
 
     @AfterEach
     void reset() {
@@ -159,6 +161,46 @@ class TestS3kDezColdRoutes {
         assertEquals(FREE_PLAY_LEVEL_FRAME_COUNTER + 1,
                 Integer.parseInt(rows.get(ACT_TWO_FREE_PLAY_ROW + 1)[5], 16),
                 "and it advances by one a row, so the seed is the previous completed frame");
+    }
+
+    @Test
+    void recordedInputsAdvanceTheColdActOneRoute() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .withFreshLevelStartLifecycle()
+                .withRecording(BK2)
+                .withRecordingStartFrame(SEGMENT_MOVIE_OFFSET)
+                .build();
+        var player = fixture.sprite();
+        int maxX = player.getCentreX() & 0xFFFF;
+        int frames = 0;
+        List<String[]> rows = readRows();
+        int firstPositionMismatch = -1;
+        while (frames < ACT_TWO_LOAD_ROW + 1200
+                && GameServices.level().getCurrentAct() == 0
+                && !player.getDead()) {
+            fixture.stepFrameFromRecording();
+            frames++;
+            maxX = Math.max(maxX, player.getCentreX() & 0xFFFF);
+            String[] nativeRow = rows.get(frames - 1);
+            if (firstPositionMismatch < 0
+                    && ((player.getCentreX() & 0xFFFF) != Integer.parseInt(nativeRow[9], 16)
+                    || (player.getCentreY() & 0xFFFF) != Integer.parseInt(nativeRow[10], 16))) {
+                firstPositionMismatch = frames;
+            }
+        }
+        System.out.printf("DEZ act 1 cold route: frames=%d maxX=%04X zone=%02X act=%d dead=%s%n",
+                frames, maxX, GameServices.level().getCurrentZone(),
+                GameServices.level().getCurrentAct(), player.getDead());
+        System.out.println("first position mismatch=" + firstPositionMismatch);
+        assertTrue(firstPositionMismatch > ACT_ONE_EXACT_FRONTIER,
+                "act 1 exact frontier regressed from " + ACT_ONE_EXACT_FRONTIER);
+        assertTrue(frames >= ACT_ONE_SURVIVAL_FRONTIER,
+                "act 1 input route survival regressed from " + ACT_ONE_SURVIVAL_FRONTIER);
+        assertTrue(maxX >= 0x0FB5, "act 1 maximum route X regressed");
     }
 
     /**
