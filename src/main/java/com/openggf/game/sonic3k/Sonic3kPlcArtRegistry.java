@@ -2703,6 +2703,17 @@ public final class Sonic3kPlcArtRegistry {
                 5
         ));
 
+        // Obj_DEZTorpedoLauncher and its projectile share the ten-frame mapping and the
+        // resident DEZ miscellaneous art block (sonic3k.asm:93052-93130).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_TORPEDO_LAUNCHER,
+                Sonic3kConstants.MAP_DEZ_TORPEDO_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x26,
+                0,
+                null,
+                10
+        ));
+
         // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
         // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and
         // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:96088-96089),

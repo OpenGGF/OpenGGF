@@ -143,6 +143,8 @@ public final class Sonic3kObjectIds {
     public static final int CNZ_SPIRAL_TUBE = 0x4C;
     // S3KL object table: Obj_CNZBarberPoleSprite.
     public static final int CNZ_BARBER_POLE = 0x4D;
+    // SKL $4D is Obj_DEZTorpedoLauncher; S3KL $4D is the CNZ barber pole.
+    public static final int DEZ_TORPEDO_LAUNCHER = 0x4D;
     // S3KL object table: Obj_CNZWireCage.
     public static final int CNZ_WIRE_CAGE = 0x4E;
     public static final int MGZLBZ_SMASHING_PILLAR_ALT = 0x20;

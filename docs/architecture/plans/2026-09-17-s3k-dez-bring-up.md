@@ -2756,3 +2756,22 @@ Sixteen focused tests pass with zero skips: three elemental reaction cases, eigh
 regressions and five ROM census/inventory checks. Census: act 1 placeholders **115 → 93** and
 concrete **250 → 272**; act 2 placeholders **138 → 82** and concrete **356 → 412**.
 `$4D` `Obj_DEZTorpedoLauncher` (36/38) is now the highest-weight missing traversal class.
+
+### 2026-09-19 — `$4D` `Obj_DEZTorpedoLauncher`
+
+All **36 act 1 and 38 act 2** launchers now resolve to the SKL implementation. The parent ports
+`Obj_DEZTorpedoLauncher` (`sonic3k.asm:93052-93126`): subtype times four is both the live and reload
+word, the counter runs only while the retained on-screen bit is set, expiry allocates the child
+after the current slot, and the launcher closes from mapping 8 to 0 after the `$1F` hold with
+eight-pass intermediate steps. Allocation failure still consumes the cycle, as in `loc_47252`.
+
+The child ports `loc_4728A`: mapping 9, collision `$9B`, priority `$300`, horizontal speed
+`-$400` or `+$400` selected by status bit 0, `MoveSprite2` fixed-point integration, touch-list
+participation through `TouchResponseProvider`, and off-screen deletion. Parent and child share
+the ten-frame ROM mapping at `$472A8` and resident `ArtTile_DEZMisc+$26`; the firing edge queues
+`sfx_ChainTension`.
+
+Eight focused behavior/census checks pass with zero skips, and packaging succeeds. Census: act 1
+placeholders **93 → 57**, concrete **272 → 308**; act 2 placeholders **82 → 44**, concrete
+**412 → 450**. Remaining traversal placeholders are now low-count classes rather than the three
+high-weight hazards that dominated both acts.
