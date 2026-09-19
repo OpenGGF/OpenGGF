@@ -55,7 +55,24 @@ class TestS3kSszScrollBands {
         assertEquals(0x331, state.backgroundCameraY(), "Camera_Y-$320+8");
         assertEquals((short) 0x20, handler.actTwoScrollWords().get(2), "Camera_X/64");
         assertEquals((short) 0x60, handler.actTwoScrollWords().get(5), "next Camera_X/32 step");
-        assertEquals((short) -0x800, unpackFG(buffer[0]));
+        assertEquals((short) 0, unpackFG(buffer[0]),
+                "Camera Y $649 has passed word_58C80's finite bands into its zero tail word");
+    }
+
+    @Test
+    void actTwoAppliesWord58C80ToForegroundScanlines() {
+        SwScrlSsz handler = new SwScrlSsz();
+        SszZoneRuntimeState state = act2State();
+        int[] buffer = new int[VISIBLE_LINES];
+
+        handler.composeActTwo(state, buffer, 0x800, 0x430, true);
+
+        assertEquals((short) -0x60, unpackFG(buffer[0]),
+                "Camera Y $430 starts exactly at word_58C80 band 10 / HScroll+$14");
+        assertEquals((short) -0x60, unpackFG(buffer[15]));
+        assertEquals((short) -0xA0, unpackFG(buffer[16]),
+                "the next $10-line band consumes the next HScroll word");
+        assertNotEquals(unpackFG(buffer[0]), unpackFG(buffer[VISIBLE_LINES - 1]));
     }
 
     @Test

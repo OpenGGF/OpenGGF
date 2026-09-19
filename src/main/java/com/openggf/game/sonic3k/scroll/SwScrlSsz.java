@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
+import com.openggf.level.scroll.M68KMath;
 
 import java.util.Arrays;
 
@@ -117,6 +118,12 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     static final int[] SSZ2_BG_DEFORM = {
             0x120, 8, 8, 4, 4, 8, 8, 0x18, 0x10, 0x10, 0x7FFF
     };
+    static final int[] SSZ2_FG_DEFORM = {
+            0x380, 0x10, 0x10, 0x18, 0x10, 0x08, 0x10, 0x10, 0x08, 0x38,
+            0x10, 0x10, 0x28, 0x08, 0x20, 0x08, 0x08, 0x08, 0x08, 0x08,
+            0x18, 0x20, 0x30, 0x08, 0x08, 0x10, 0x08, 0x28, 0x10, 0x10,
+            0x18, 0x10, 0x08, 0x10, 0x10, 0x08, 0x7FFF
+    };
     private static final int ACT2_BG_X = 0x5E;
     private static final int ACT2_BG_Y_OFFSET = 0x320;
     private static final int ACT2_COLUMN_COUNT = 20;
@@ -191,9 +198,37 @@ public class SwScrlSsz extends SwScrlS3kDefault {
                 SSZ2_BG_DEFORM, DEFORM_TABLE_START_INDEX, NEGATE_WORD);
         applyActTwoColumns(state, bgY);
         composer.copyPackedScrollWordsTo(output);
+        if (state.foregroundRoutine() < 0x0C) {
+            applyActTwoForegroundBands(output, cameraY);
+        }
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    /** {@code ApplyFGDeformation} over {@code word_58C80} and {@code HScroll_table+$004}. */
+    private void applyActTwoForegroundBands(int[] output, int cameraY) {
+        int y = (short) cameraY;
+        int band = 0;
+        int valueIndex = DEFORM_TABLE_START_INDEX;
+        int height = SSZ2_FG_DEFORM[band++];
+        while (y - height >= 0) {
+            y -= height;
+            valueIndex++;
+            height = SSZ2_FG_DEFORM[Math.min(band++, SSZ2_FG_DEFORM.length - 1)];
+        }
+        int remaining = height - y;
+        int line = 0;
+        while (line < output.length) {
+            short fg = negWord(act2ScrollTable.get(valueIndex));
+            int count = Math.min(remaining, output.length - line);
+            for (int i = 0; i < count; i++, line++) {
+                output[line] = M68KMath.packScrollWords(fg, M68KMath.unpackBG(output[line]));
+            }
+            valueIndex++;
+            height = SSZ2_FG_DEFORM[Math.min(band++, SSZ2_FG_DEFORM.length - 1)];
+            remaining = height;
+        }
     }
 
     private void setAct2Words(int fixed, int... byteOffsets) {

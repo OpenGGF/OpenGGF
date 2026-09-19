@@ -78,7 +78,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   cartridge's `$400` dominant-axis velocity, while subtype 8 plays the finishing script and
   retires. Act 2's sky now
   has its own cold-load scroll fan and deformation too, including the cartridge's twenty-column
-  vertical wave rather than inheriting the flat default background. Its later ending-event
+  vertical wave rather than inheriting the flat default background. Its foreground now also
+  expands `word_58C80` across scanlines instead of scrolling as one flat camera word. Later ending-event
   deformation modes remain to be finished. The final defeat now also changes the two arena
   floor rows through the rewind-aware world-mutation path before handing control to the
   ending-only stages. The Death Egg launch is still to come.
