@@ -68,7 +68,8 @@ public final class GameplayCaptureTool {
         GameplayCaptureSession.Settings settings = new GameplayCaptureSession.Settings(
                 arguments.width(), arguments.mainCharacter(), arguments.sidekickCharacter(),
                 arguments.donor(), donorRom, arguments.startX(), arguments.startY(), arguments.emeralds(), arguments.titleCard(),
-                arguments.completeSpecialStage(), arguments.vIntRunCount(), arguments.cameraXSub());
+                arguments.completeSpecialStage(), arguments.vIntRunCount(), arguments.cameraXSub(),
+                arguments.starPost(), arguments.rings());
         int zone = ZoneIds.resolve(arguments.game(), arguments.zone());
         int act = arguments.act();
 
@@ -171,7 +172,7 @@ public final class GameplayCaptureTool {
                             int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
                             boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
                             Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
-                            Integer vIntRunCount, Integer cameraXSub) {
+                            Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings) {
 
         public static Arguments parse(String[] argv) {
             String game = "s3k";
@@ -179,6 +180,7 @@ public final class GameplayCaptureTool {
             String zone = null;
             Integer act = null;
             Integer startX = null;
+            boolean starPost = false;
             Integer startY = null;
             int width = 320;
             String main = "sonic";
@@ -201,6 +203,7 @@ public final class GameplayCaptureTool {
             String emeralds = null;
             Integer vIntRunCount = null;
             Integer cameraXSub = null;
+            Integer rings = null;
             boolean titleCard = false;
             boolean completeSpecialStage = false;
             for (int i = 0; i < argv.length; i++) {
@@ -241,8 +244,10 @@ public final class GameplayCaptureTool {
                     case "--out-dir" -> outDir = Path.of(value(argv, ++i, flag));
                     case "--emeralds" -> emeralds = value(argv, ++i, flag);
                     case "--title-card" -> titleCard = true;
+                    case "--star-post" -> starPost = true;
                     case "--vint-run-count" -> vIntRunCount = number(value(argv, ++i, flag), flag);
                     case "--camera-x-sub" -> cameraXSub = number(value(argv, ++i, flag), flag);
+                    case "--rings" -> rings = number(value(argv, ++i, flag), flag);
                     case "--complete-special-stage" -> completeSpecialStage = true;
                     default -> throw new IllegalArgumentException("Unknown argument: " + flag);
                 }
@@ -262,7 +267,7 @@ public final class GameplayCaptureTool {
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
-                    vIntRunCount, cameraXSub);
+                    vIntRunCount, cameraXSub, starPost, rings);
         }
 
         private static String value(String[] argv, int index, String flag) {

@@ -235,6 +235,18 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.LBZ_TUBE_ELEVATOR,
                 Sonic3kObjectIds.LBZ1_ROBOTNIK,
                 Sonic3kObjectIds.LBZ2_ROBOTNIK_SHIP,
+                Sonic3kObjectIds.FBZ_ROTATING_PLATFORM,
+                Sonic3kObjectIds.ICZ_CRUSHING_COLUMN,
+                Sonic3kObjectIds.SSZ_FLOATING_PLATFORM,
+                Sonic3kObjectIds.SSZ_COLLAPSING_COLUMN,
+                Sonic3kObjectIds.SSZ_COLLAPSING_BRIDGE,
+                Sonic3kObjectIds.SSZ_COLLAPSING_BRIDGE_DIAGONAL,
+                Sonic3kObjectIds.SSZ_BOUNCY_CLOUD,
+                Sonic3kObjectIds.SSZ_ELEVATOR_BAR,
+                Sonic3kObjectIds.SSZ_ROTATING_PLATFORM,
+                Sonic3kObjectIds.SSZ_SWINGING_CARRIER,
+                Sonic3kObjectIds.SSZ_EGG_ROBO,
+                Sonic3kObjectIds.SSZ_KNUX_FINAL_BOSS_CRANE,
                 Sonic3kObjectIds.MHZ_MUSHROOM_CAP,
                 Sonic3kObjectIds.MHZ_MUSHROOM_CATAPULT,
                 Sonic3kObjectIds.MHZ_MUSHROOM_PARACHUTE,
@@ -260,29 +272,18 @@ class TestSonic3kModZoneObjectSet {
     @Test
     void stockZoneDependencyInventoryRemainsExplicitFactoryMetadata() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
-        Set<Integer> pointerTableCollisionIds = Set.of(
-                Sonic3kObjectIds.HPZ_MASTER_EMERALD,
-                Sonic3kObjectIds.HPZ_SUPER_EMERALD,
-                Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
-                // S3KL's ICZ ice cube, spikes and harmful ice share $B6-$B8.
-                Sonic3kObjectIds.DDZ_END_BOSS,
-                Sonic3kObjectIds.DDZ_ASTEROID,
-                Sonic3kObjectIds.DDZ_MISSILE);
+        Set<Integer> s3klCollisions = registry.stockZoneBoundFactoryIds().stream()
+                .filter(id -> registry.canCreateInCustomZone(S3kZoneSet.S3KL, id))
+                .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+        Set<Integer> sklCollisions = registry.stockZoneBoundFactoryIds().stream()
+                .filter(id -> registry.canCreateInCustomZone(S3kZoneSet.SKL, id))
+                .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
 
-        for (int objectId : registry.stockZoneBoundFactoryIds()) {
-            if (pointerTableCollisionIds.contains(objectId)) {
-                assertTrue(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
-                        () -> "S3KL must retain its ICZ pointer-table object at slot $"
-                                + Integer.toHexString(objectId));
-            } else {
-                assertFalse(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
-                        () -> "S3KL custom-compatible collision at object $"
-                                + Integer.toHexString(objectId));
-            }
-            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId),
-                    () -> "SKL custom-compatible collision at object $"
-                            + Integer.toHexString(objectId));
-        }
+        assertEquals(Set.of(
+                0x75, 0x76, 0x77, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F,
+                0xAF, 0xB0, 0xB2, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8),
+                s3klCollisions);
+        assertEquals(Set.of(0xAF, 0xB2), sklCollisions);
     }
 
     @Test

@@ -61,6 +61,14 @@ Entries should include:
 35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
 36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
 37. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
+38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
+39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
+40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
+41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
+42. [Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop](#sky-sanctuary-mecha-sonic-is-only-its-entry-and-its-attack-loop)
+43. [Sky Sanctuary Boss Defeats Draw No Explosion](#sky-sanctuary-boss-defeats-draw-no-explosion)
+44. [Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship](#sky-sanctuary-metropolis-orbs-still-on-the-ring-are-deleted-with-their-ship)
+45. [S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object](#s3k-special-property-touch-teleports-the-sidekick-for-every-c0-object)
 
 ---
 
@@ -5837,3 +5845,156 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Symptom** — (1) With fewer than seven Super Emeralds `loc_8167C` installs the Doomsday Super stars `loc_8242A` (`ArtUnc_SuperSonic_Stars`, six frames trailing Player 1); the engine draws none. (2) On the native all-Super route the Hyper sparkles are smaller than the engine's at the same rows (native pass-1 `boss_arrival`/`phase_change` screenshots against `raw-10-seeded-route-320`), an animation phase or frame-selection difference in the shared Hyper stars. (3) Native HUD keeps showing 0 rings after `loc_8160A` adds 50 until the next HUD ring update; the engine shows 50 at once. (4) The recording frame driver keeps stepping gameplay for the 21 frames of the `StartNewLevel $D01` fade (rows 10059-10079) that native and `GameLoop` freeze. (5) Strict `TestS3kSonicTailsZone0cSegmentTraceReplay` is red from frame 0 (`camera_y`): the replay bootstrap derives the camera from the metadata start position and seeds neither the camera X fraction nor the full `V_int_run_count`.
 - **Suspected cause** — (1) not ported; (2) unmeasured; (3) HUD ring redraw flag not modelled for direct `Ring_count` writes; (4) and (5) harness bootstrap/driver limits, not runtime behaviour: `TestS3kDdzColdRoutes` declares the two inherited clocks and matches every gameplay row.
 - **Removal condition** — `loc_8242A` implemented with a capture; a native probe of `Obj_HyperSonic_Stars` frames matched; HUD ring display matches native at DDZ entry; the recording driver honours the zone-fade freeze; the zone0c replay bootstrap reproduces the native entry state and the strict replay reports its first real divergence.
+
+---
+
+## Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips
+
+- **Location** — `RingManager.RingPlacement#ringWindowStart` (`src/main/java/com/openggf/level/rings/RingManager.java`)
+- **Symptom** — SSZ1's ring list (`SSZ1_Rings $1F9616`) opens with a `(0,0)` record; SSZ2's list is that record alone. `TestS3kSszPlacementCensus#ringRecordsMatchTheRomIncludingTheLeadingZeroRecord` pins the decode. The engine's raw ring window starts at `max(cameraX - 8, 0)`, so at `Camera_X <= 8` the record enters the window and a collectible ring can exist at world `(0,0)`. SSZ1 reaches `Camera_min_X = 0` once the cutscene bridge retracts (`loc_44FBA`), so the camera can get there.
+- **Suspected cause** — `Load_Rings` `loc_E8BE` computes `d4 = Camera_X - 8` and, when that is not above zero, forces `d4 = 1` before advancing the cursor while `d4 > recordX`. With a floor of 1 the `(0,0)` record is always stepped over; with the engine's floor of 0 it is not. The margin constant is shared with S2's `RingsManager_Main`, so the fix is a shared-owner change, not an SSZ-local one.
+- **Fix in flight, owned elsewhere** — the LRZ campaign's `3418eba6e` drops the sentinel in shared `Sonic3kRingPlacement`; it reaches the SSZ branch at merge time and takes every SSZ act's live ring set down by one. SSZ makes no edit here. The census test decodes the ROM totals itself (179 act 1, 0 act 2) and accepts the loader either matching them or carrying exactly one leading `(0,0)` sentinel, so it is correct on both sides of that merge.
+- **Removal condition** — The raw ring-window floor matches `loc_E8BE` (and the S2 equivalent is checked against `RingsManager_Main`), with a regression test that a `(0,0)` record is never renderable or collectible at `Camera_X <= 8`, and no S1/S2/S3K ring test regresses.
+
+---
+
+## Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position
+
+- **Location** — `SszDeathEggSmallObjectInstance`, `CutsceneKnucklesSszInstance` (`src/main/java/com/openggf/game/sonic3k/objects/`)
+- **Symptom** — In `~/Videos/OGGF/ssz-bring-up/raw-03-knuckles-cutscene-bridge-walk` the rising Death Egg draws in the level's own palette line rather than `Pal_KnuxSSZEnd`, so it reads green and grey instead of the ROM's colours; it fires no missiles and has no cloud children; and at the bridge release (frame 1450) cutscene Knuckles is standing beside Player 1 well past the `$2A8` button rather than where the ROM leaves him.
+- **Suspected cause** — `loc_659CC` reseeds `RNG_seed` from `V_int_run_count`, saves `Normal_palette_line_4` to `Target_palette_line_4` and patches it from `Pal_KnuxSSZEnd` (restoring it at `loc_65A4A`), and creates `ChildObjDat_665C4`; `loc_65A4A` calls `sub_66054` for the `ChildObjDat_665F0` missiles on `V_int_run_count+3 & $1F`. None of that is ported: only the rise, the `$2E = $100` gate and the `_unkFAB8` bit 1 handshake the cutscene route depends on are. Knuckles' final X is unverified against native: `loc_658BA`'s `MoveSprite2` and `loc_658F2`'s landing are modelled from the routine text without a native probe of his resting position.
+- **Removal condition** — `Pal_KnuxSSZEnd` is applied and restored through `S3kPaletteWriteSupport`, the missile and cloud children exist, and a native probe or `hpz` fixture window confirms cutscene Knuckles' X at the frame `Events_bg+$08` is written and at his deletion.
+
+## Sky Sanctuary Background Mode Switch Completes a Frame Early
+
+- **Location** — `SwScrlSsz` (`src/main/java/com/openggf/game/sonic3k/scroll/`)
+- **Symptom** — Crossing the wrapped camera-Y `$800`/`$F00` boundary in Sky Sanctuary act 1 swaps between the plain sky and the banded cloud background two frames after the test fires, where the cartridge takes as long as `Draw_PlaneVertBottomUp` needs to refill the 512-pixel background nametable.
+- **Suspected cause** — `SSZ1_BackgroundEvent` routine 4 keeps rendering the framing frozen in `Events_bg+$0C`/`+$0E` until the staged redraw reports done, and routine `$C` does the same on the way back. The engine draws the background from the whole level layout instead of a nametable, so it has nothing to stage: each redraw routine completes in one frame. The framing values, the deform bands and the routine order all match; only the duration of the two transition states does not.
+- **Removal condition** — Either a native probe measures the ROM's redraw length at that crossing and the engine holds routines 4 and `$C` for the same number of frames, or a `hpz` fixture window shows the crossing and the engine matches it frame for frame.
+
+## Sky Sanctuary Act 1 Background Window — **fixed**, and the symptom that reported it was wrong
+
+Both halves of the old "flat sky in both BG modes" entry are now fixed, and the plain-mode half
+arrived with a correction to its own evidence.
+
+**Cloud mode** (fixed earlier): `SwScrlSsz` pins the plane to background layout X `$1C00`
+(columns 56-59) through `getBgCameraX()`. See `05-ssz-cloud-band-before-after.mp4`.
+
+**Plain mode** (fixed 2026-09-18). `LevelManager.applyBackgroundTilemapWindowSelection` has three
+branches; the one that moves the BG cache window to follow the background camera needs both
+`bgCameraX != Integer.MIN_VALUE` and `zoneFeatureProvider.bgWrapsHorizontally()`. Plain mode
+returned `MIN_VALUE` and the SSZ predicate was cloud-only, so control reached the third branch,
+which pins `bgTilemapBaseX` to 0 — the plane was built from background layout X 0 for the period
+width and the `Camera_X + $28` scroll word wrapped inside columns 0-3, whatever the camera was
+doing. `SwScrlSsz.getBgCameraX()` now publishes `state.backgroundCameraX()` in plain mode,
+`SwScrlSsz.backgroundWindowActive()` puts act 1 on the 512-pixel wrap model in both modes, and
+`getBgPeriodWidth()` returns the plane width for act 1 rather than the scroll fan's.
+
+**The reported symptom did not demonstrate the defect, and the earlier entry was wrong to say it
+did.** `raw-10-ssz-diagonal-walkway` frame 75 sits at camera `($6A0,$550)`. Plain mode's offset is
+1:1, so background column `($6A0 + $28) >> 7 = 13` and background row `($550 + $160) >> 7 = 13`.
+Decoding the layout the way `TestS3kSszBackgroundLayout` does — 60 columns by 22 rows — row 13 is
+`02` at columns 13 through 16. The cartridge shows flat sky at that camera too. The earlier reading
+took "row 13 carries thirteen distinct chunk ids across columns ~9-52" to mean structure should be
+on screen there; the row does carry structure, at columns 9, 12 and 17-22, but none of it is in
+front of that camera. The real defect was never about one frame: a base-0 window ignores the camera
+entirely, so the structures at columns 17 and beyond could never reach the screen at any camera.
+That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
+`getBgCameraX()` to `MIN_VALUE` fails it.
+
+- **Location** — `SwScrlSsz.getBgCameraX` / `backgroundWindowActive` / `getBgPeriodWidth`,
+  `Sonic3kZoneFeatureProvider.isSszCloudBackgroundWindowActive`
+- **Verification** — `TestS3kSszBackgroundLayout` 7, `TestS3kSszBackgroundClouds` 6,
+  `TestS3kSszScrollBands` 11, and the SSZ/HPZ/DDZ/scroll batch at 1682 tests, all 0 failures and 0
+  skips; `-Pguards` 669, 0 failures, 0 skips.
+- **The before/after capture was taken, and it shows nothing — which reopens the rendered half.**
+  `raw-24-ssz-bg41-before` and `raw-25-ssz-bg41-after` are 240-frame captures from the same
+  `--star-post --x 0x900 --y 0x580` setup, taken side by side around one recompile: the "before"
+  build restored `getBgCameraX()` to `MIN_VALUE` in plain mode and made `backgroundWindowActive()`
+  cloud-only, and was confirmed effective by `TestS3kSszBackgroundLayout#plainModeSourcesThePlaneFromTheCameraDerivedWindow`
+  going red on it (`expected: <1792> but was: <-2147483648>`). The player settles at
+  `($938,$5EC)` with the camera at `($898,$58C)` — background column `($898 + $28) >> 7 = 17`, row
+  `($58C + $160) >> 7 = 13`, exactly the place this entry asked for — and **every one of 48 sampled
+  frames is pixel-identical between the two builds** (`ImageChops.difference(...).getbbox()` is
+  `None` throughout). The engine's published window really does change (the layout test proves it),
+  but no pixel does.
+- **Open question, with a kill condition.** Either `LevelTilemapManager` does not consume
+  `bgTilemapBaseX` / the period width for SSZ act 1's plane — in which case the "fixed" claim above
+  is a claim about an API, not about the screen, and the rendered half of #41 is still open — or
+  there is a camera where the two builds differ and `($898,$58C)` is not it. Killed by either: a
+  before/after pair at any camera whose frames differ, or a read of the SSZ act-1 path through
+  `ensureBackgroundTilemapData` showing where the base is dropped. Until one of those lands, treat
+  the plain-mode half as **asserted, not demonstrated**; the wide-viewport capture is owed too.
+
+## Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop
+
+- **Location** — `SszMechaSonicObjectInstance` (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
+- **Symptom** — The `$79:$00` pad at `($1A40,$670)` now allocates `Obj_SSZEndBoss` and explodes
+  behind it, and the boss runs `SSZEndBoss_Index`'s act-1 entries 0 through `$28` — the entry run,
+  the return, the landing, the two openings and the three-way attack cycle — with `sub_7D2D8`'s
+  per-frame collision byte and `sub_7D312`'s window. Three things below that are not there.
+- **Suspected cause** — Not a defect; slice 7 of the
+  [SSZ bring-up plan](../architecture/plans/2026-09-17-ssz-bring-up.md) is delivered in stages and
+  the stages stop short of its cosmetics. `loc_7B81A`'s act-1 routines 0, 2 and 4 and
+  `loc_7D056`'s handover are implemented and dated against native. What is missing is (a)
+  `sub_7C678`'s palette rotation over `word_7D842` together with the `ChildObjDat_7D48C`
+  (`Obj_MechaSonic_Sparks`) child it gates — the sparks' own test is a read of the rotating
+  colour, `cmpi.w #$E88,(Normal_palette_line_2+$12).w`, so neither is useful without the other,
+  and `loc_7B984`'s `Run_PalRotationScript` therefore drives nothing; (b) the
+  `ChildObjDat_7D474` child at `loc_7C9BA`; and (c) `loc_7B39C`'s bare tail-jump to
+  `AllocateObject`, a second slot the ROM consumes and never writes — slot order decides sibling
+  execution and RNG draw order, so it belongs here rather than being treated as a no-op.
+- **Untested rather than unimplemented** — the `$20`-frame hit window's *phase* is unverified.
+  `sub_7D312` opens the window on the frame after the hit, because `Touch_Enemy` has already
+  zeroed `collision_flags`; the duration is `$20` on both sides, but which frame the engine's
+  shared boss touch pass counts as the first has not been checked against the routine, and no
+  test pins it. The window's duration, and the fact that `sub_7D2D8` leaves the byte alone while
+  it runs, are covered.
+- **Removal condition** — the palette rotation and its spark child exist, `loc_7C9BA` exists,
+  `loc_7B39C`'s allocate is accounted for, and the hit window's phase is pinned against
+  `sub_7D312`. The attack graph is driven to a landing and to each of `byte_7B636`'s three
+  attacks against ROM literals, and the defeat through `loc_7D056` is driven and dated.
+
+## Sky Sanctuary Boss Defeats Draw No Explosion
+
+- **Location** — `SszGhzBossObjectInstance.onDefeatStarted` and `SszMtzBossObjectInstance.onDefeatStarted`
+  (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
+- **Symptom** — Both act 1 recreations reach zero hits, install `Wait_FadeToLevelMusic`, score and
+  fly off correctly, but nothing explodes on the killing frame.
+- **Suspected cause** — `loc_7A5EC` and `loc_7AD3A` both run `CreateChild1_Normal` over
+  `Child6_CreateBossExplosion` with `subtype 4` immediately before `jmp (BossDefeated).l`. Neither
+  port spawns that child, and both set `usesDefeatSequencer()` false, so the shared base's own
+  explosion path is off as well.
+- **Removal condition** — `Child6_CreateBossExplosion` subtype 4 is ported and both defeats spawn
+  it on the killing frame, with a clip showing it.
+
+## Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship
+
+- **Location** — `SszMtzBossOrbChild.update` (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
+- **Symptom** — When `loc_7ACA4` frees the ship's slot, every orb still orbiting disappears with
+  it. On the cartridge they keep orbiting.
+- **Suspected cause** — `sub_7B0C2`, which is what `_unkFA88` pops an orb through, is only reached
+  from `loc_7AFA4` (launched) and `loc_7B02A` (bouncing). An orb in `loc_7AE22` never tests that
+  flag, so after `Go_Delete_Sprite` it goes on reading `$34(a0)` — a slot the next allocation will
+  overwrite — and orbits whatever it finds there until the act ends. The engine cannot reproduce a
+  read of a freed slot and deleting is the sane substitute, but it is a divergence and the
+  Metropolis fight's last frames look different because of it.
+- **Removal condition** — Either a native capture shows the cartridge's orbs are culled some other
+  way, or the divergence is accepted in writing with a clip of both behaviours.
+
+## S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object
+
+- **Location** — `ObjectTouchResponseController` (`src/main/java/com/openggf/level/objects/`), the
+  `TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY` arm
+- **Symptom** — Any S3K object whose collision byte decodes as `SPECIAL` teleports the native
+  Player 2 onto it and forces animation 2 when the leader is Knuckles, and puts Player 2 in the air
+  on every leader. The Metropolis boss's launched orbs (`$C6`) are the newest objects to take that
+  path, so a Knuckles + Tails route through the fight moves Tails onto each orb the leader touches.
+- **Suspected cause** — `Touch_Special`'s `loc_103FA` (sonic3k.asm:21162-21194) does only
+  `addq.b #1,collision_property(a1)`, twice for the sidekick. The teleport belongs to a specific
+  object's routine, not to the shared category, and generalising it puts it on every
+  special-property object. The decode itself also returns `SPECIAL` for any `$C0` byte before
+  `Touch_Special`'s size list is consulted, so bytes the ROM ignores (the orbs' unreachable `$DA`)
+  would dispatch here too.
+- **Removal condition** — The teleport moves to the object that owns it in ROM, the size list gates
+  the `SPECIAL` decode, and a Knuckles + Tails Metropolis clip shows Tails staying where they were.
