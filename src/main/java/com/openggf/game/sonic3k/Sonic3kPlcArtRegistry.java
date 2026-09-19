@@ -2757,7 +2757,9 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.DPLC_MECHA_SONIC_ADDR
         ));
         // loc_7B35A queues ArtKosM_MechaSonicExtra into ArtTile_MechaSonicExtra for the trail and
-        // spark children; ObjDat3_7D402 draws them on line 1.
+        // spark children; ObjDat3_7D402 draws them on line 1. Map_MechaSonicExtra's 27th entry is
+        // a sprite-mask frame at tile $93, beyond this 139-tile module, and none of the Mecha
+        // child scripts addresses it; bound this sheet to the 26 owned frames.
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.MECHA_SONIC_EXTRA,
                 Sonic3kConstants.ART_KOSM_MECHA_SONIC_EXTRA_ADDR,
@@ -2765,7 +2767,10 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR,
                 1,
-                -1
+                -1,
+                S3kSpriteDataLoader.MappingFormat.STANDARD,
+                26,
+                0
         ));
         // loc_7B996 queues the ending Master Emerald before the forced run; loc_7C818 draws
         // Map_SSZMasterEmerald from ArtTile_Ending_MasterEmerald on palette line 0.
