@@ -41,8 +41,11 @@ public final class S3kDezTorpedoLauncherObjectInstance extends AbstractObjectIns
             }
             return;
         }
-        // loc_471D6 reads the retained on-screen bit before decrementing the word timer.
-        if (!isOnScreen() || --timer >= 0) {
+        // loc_471D6 reads render_flags bit 7, published by Draw_Sprite from the launcher's
+        // 8x16 extent. A point-only viewport test starts the timer late while the camera is
+        // moving vertically past the launcher (sonic3k.asm:93052-93078).
+        if (!isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight())
+                || --timer >= 0) {
             return;
         }
         timer = reload;
@@ -67,6 +70,7 @@ public final class S3kDezTorpedoLauncherObjectInstance extends AbstractObjectIns
 
     @Override public int getPriorityBucket() { return RenderPriority.fromS3kWord(PRIORITY_WORD); }
     @Override public int getOnScreenHalfWidth() { return 8; }
+    @Override public int getOnScreenHalfHeight() { return 0x10; }
     @Override public int romObjectCodePointerHighWord() { return 4; }
 
     int timerForTest() { return timer; }

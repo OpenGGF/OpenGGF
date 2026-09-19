@@ -410,6 +410,13 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         private static final int FIXED_HALF_SIZE = 8;
         private static final int SPIKE_HALF_WIDTH = 8;
         private static final int SPIKE_HALF_HEIGHT = 0x80;
+        /**
+         * {@code word_91EE6}'s {@code $80} is {@code height_pixels}, but
+         * {@code ObjCheckFloorDist} reads {@code y_radius}; {@code SetUp_ObjAttributes3} leaves
+         * that RAM byte zero for this child. Probe from the child origin, as the native slot
+         * does (sonic3k.asm:199285-199324, 199410-199411, 20087-20096).
+         */
+        private static final int SPIKE_FLOOR_PROBE_Y_RADIUS = 0;
 
         /** {@code moveq #8,d0} (:199296), negated when the parent is Y-flipped. */
         private static final int EXTEND_SPEED = 8;
@@ -547,7 +554,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
          */
         private boolean hitFloor() {
             var floor = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(
-                    anchorX(), anchorY(), SPIKE_HALF_HEIGHT);
+                    anchorX(), anchorY(), SPIKE_FLOOR_PROBE_Y_RADIUS);
             return floor.hasCollision() && floor.distance() < 0;
         }
 

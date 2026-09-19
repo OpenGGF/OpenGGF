@@ -198,13 +198,12 @@ class TestChainspikeBadnikInstance {
 
             lower.update(1, sprite);
             assertEquals(8, lower.extendOffsetForTest(), "add.w y_vel(a0),d0 (:199308-199309)");
-            // jsr (ObjCheckFloorDist) / tst.w d1 / bmi loc_91E46 (:199322-199324) with
-            // y_radius = height_pixels = $80 (word_91EE6, :199411): the spike probes 128 px
-            // ahead, so it finds the act's floor on its first outbound update and rebounds at
-            // a quarter of its speed, move.w y_vel(a0),d0 / asr.w #2 / neg.w (:199339-199342).
+            // word_91EE6's $80 is height_pixels, while ObjCheckFloorDist reads the untouched
+            // y_radius byte (zero), so the first two steps do not invent a 128px-ahead hit.
             lower.update(2, sprite);
-            assertEquals(-2, lower.extendVelocityForTest(), "-(8 >> 2)");
-            assertEquals(6, lower.extendOffsetForTest(), "and it starts back up the same update");
+            assertEquals(8, lower.extendVelocityForTest(),
+                    "the signed $80 probe does not manufacture an immediate floor hit");
+            assertEquals(16, lower.extendOffsetForTest());
         } finally {
             SessionManager.clear();
         }

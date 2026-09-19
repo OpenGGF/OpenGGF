@@ -334,6 +334,16 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         private int slamTimer;
         private int mappingFrame = 1;
         private int priorityBucket = 4;
+        /**
+         * The engine collapses the ROM's pivot slot ({@code loc_91AEC}) and drawn-head slot
+         * ({@code loc_91BA8}) into this object. Keep the preceding published head position for
+         * the player-slot touch pass: S3K's collision-response list holds the drawn-head slot
+         * pointer from the preceding {@code Process_Sprites} pass, before either child slot
+         * advances again (sonic3k.asm:20660-20681, 199001-199098).
+         */
+        private int previousTouchX;
+        private int previousTouchY;
+        private boolean previousTouchPositionValid;
 
         SpikebonkerMace(ObjectSpawn spawn, SpikebonkerBadnikInstance body) {
             super(spawn, "SpikebonkerMace");
@@ -347,6 +357,9 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
                 ObjectLifetimeOps.deleteNoRespawn(this);
                 return;
             }
+            previousTouchX = getX();
+            previousTouchY = getY();
+            previousTouchPositionValid = true;
             switch (phase) {
                 case ORBIT -> orbit();
                 case SLAM_OUT -> slide(Phase.SWEEP);
@@ -360,6 +373,16 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             // addi.b #$40,d0 / bpl: the far half of the sweep drops behind the body.
             priorityBucket = (byte) (angle + 0x40) >= 0 ? 4 : 5;
             updateDynamicSpawn(pivotX() + horizontalOffset(), pivotY());
+        }
+
+        @Override
+        public int getPreUpdateCollisionX() {
+            return previousTouchPositionValid ? previousTouchX : super.getPreUpdateCollisionX();
+        }
+
+        @Override
+        public int getPreUpdateCollisionY() {
+            return previousTouchPositionValid ? previousTouchY : super.getPreUpdateCollisionY();
         }
 
         /** {@code loc_91AEC} :199001-199014. */

@@ -168,6 +168,21 @@ class TestSpikebonkerBadnikInstance {
         assertEquals(0xF0, mace.angleForTest());
     }
 
+    @Test
+    void theCollapsedMaceRetainsThePrecedingDrawnHeadPositionForTouch() {
+        SpikebonkerBadnikInstance body = activated(0x20, 0);
+        SpikebonkerBadnikInstance.SpikebonkerMace mace = body.maceForTest();
+
+        mace.update(0, null);
+        int firstPublishedX = mace.getX();
+        int firstPublishedY = mace.getY();
+        mace.update(1, null);
+
+        assertEquals(firstPublishedX, mace.getPreUpdateCollisionX(),
+                "the player slot reads the preceding drawn-head publication");
+        assertEquals(firstPublishedY, mace.getPreUpdateCollisionY());
+    }
+
     /**
      * {@code MoveSprite_AngleXLookupOffset} (:178670-178713) reads {@code AngleLookup_1}
      * (:201847-201850) four different ways depending on the angle's top two bits. Expected

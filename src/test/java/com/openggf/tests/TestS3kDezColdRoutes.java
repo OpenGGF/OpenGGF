@@ -126,15 +126,15 @@ class TestS3kDezColdRoutes {
      */
     static final int SEEDED_ROUTE_FRONTIER = 1256;
     /**
-     * Measured after restoring the hover field's word arithmetic, the lift pad's
-     * big-endian angle byte and the conveyor pad's routine-change pass. The prior
-     * 5,352-frame survival followed a divergent lower route and never passed
-     * {@code $0FB5}; the native route now remains exact through 3,433 frames and
-     * reaches {@code $1598} before its next frontier.
+     * Measured after aligning the Spikebonker touch slot, Chainspike floor probe and
+     * torpedo-launcher render extent. The corrected hazard timing replaces the old death
+     * branch: the route remains exact through 3,624 frames and stays alive through the
+     * measurement cap, reaching {@code $1587}. The next split is one extra two-pixel
+     * conveyor carry when Sonic leaves the pad.
      */
-    static final int ACT_ONE_EXACT_FRONTIER = 3517;
-    static final int ACT_ONE_SURVIVAL_FRONTIER = 4386;
-    static final int ACT_ONE_MAX_X = 0x1598;
+    static final int ACT_ONE_EXACT_FRONTIER = 3624;
+    static final int ACT_ONE_SURVIVAL_FRONTIER = 19870;
+    static final int ACT_ONE_MAX_X = 0x1587;
 
     @AfterEach
     void reset() {

@@ -2976,3 +2976,19 @@ which reverses the belt and offsets Sonic's negative ground movement. Engine Tai
 that contact on the matched player route, so Sonic is four pixels left by the end of the frame.
 The next owner is sidekick trajectory/contact parity before row 3,518; fitting another pad toggle
 to Sonic's frame would encode the fixture and was rejected.
+
+### 2026-09-19 — act 1 hazard timing and the conveyor-departure frontier
+
+The row-3,518 split reduced to three native object-slot details. The collapsed Spikebonker mace
+now retains the preceding drawn-head publication for the player touch pass. Chainspike keeps its
+`height_pixels=$80` render extent but probes the floor with the child slot's untouched
+`y_radius=0`. The torpedo launcher advances its countdown while its 8x16 sprite extent has
+render bit 7, rather than waiting for its origin point to enter the viewport. Together these
+align the sidekick hazard sequence and move exact Sonic parity from **3,517 to 3,624 frames**.
+
+The corrected route no longer enters the old death branch: it remains alive through the full
+**19,870-frame measurement cap**, reaching x `$1587`. At row 3,625 native Sonic leaves the pad
+with natural movement only, while the engine applies one final two-pixel conveyor carry before
+clearing contact. Preserving either the previous standing mask or the player object's stale
+on-object flag was tested and rejected: both change earlier valid contacts. The next owner is
+the solid/contact callback boundary for a departing rider, not a route-specific conveyor rule.
