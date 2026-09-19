@@ -181,6 +181,8 @@ public final class Sonic3kObjectIds {
     public static final int TENSION_BRIDGE = 0x6C;
     public static final int INVISIBLE_HURT_BLOCK_H = 0x6A;
     public static final int INVISIBLE_HURT_BLOCK_V = 0x6B;
+    // SKL $6D is Obj_InvisibleShockBlock; S3KL $6D is the HCZ water splash.
+    public static final int INVISIBLE_SHOCK_BLOCK = 0x6D;
     public static final int SS_ENTRY_RING = 0x85;
     public static final int GUMBALL_MACHINE = 0x86;
     public static final int GUMBALL_TRIANGLE_BUMPER = 0x87;

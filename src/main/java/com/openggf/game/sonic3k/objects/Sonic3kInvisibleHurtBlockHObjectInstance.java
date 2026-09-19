@@ -27,7 +27,8 @@ public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBl
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        if (playerEntity == null || !isActiveHurtFace(contact) || playerEntity.getInvulnerable()) {
+        if (playerEntity == null || !isActiveHurtFace(contact) || playerEntity.getInvulnerable()
+                || isShieldImmune(playerEntity)) {
             return;
         }
 
@@ -48,6 +49,11 @@ public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBl
             services().spawnLostRingsAfterCurrentFrame(playerEntity, frameCounter);
         }
         playerEntity.applyHurtOrDeath(sourceX, DamageCause.NORMAL, hadRings);
+    }
+
+    /** Ordinary invisible hurt blocks are blocked by every shield. Elemental variants narrow this. */
+    protected boolean isShieldImmune(PlayableEntity playerEntity) {
+        return playerEntity.hasShield();
     }
 
     private void rewindPlayerYBeforeHurt(PlayableEntity player) {

@@ -2741,3 +2741,18 @@ concrete **202 → 250**; act 2 placeholders **232 → 138** and concrete **262 
 The next placement-weight frontier is `$6D` `InvisibleShockBlock` (22/56), followed by `$4D`
 `Obj_DEZTorpedoLauncher` (36/38). The earlier act 2 route divergence remains the shared `$08`
 spike carry measurement and is not attributed to this object.
+
+### 2026-09-19 — `$6D` `Obj_InvisibleShockBlock`
+
+All **22 act 1 and 56 act 2** shock blocks are concrete. ROM entry
+`Obj_InvisibleShockBlock` (`sonic3k.asm:43299-43301`) sets shield-reaction bit 5 and falls through
+to `Obj_InvisibleHurtBlockHorizontal`; the engine mirrors that ownership by subclassing the
+existing solid/hurt implementation and narrowing its immunity hook to `ShieldType.LIGHTNING`.
+Fire, bubble and basic shields therefore enter ordinary `HurtCharacter` handling, while the
+lightning shield is immune. Placement flip bits, dimensions, side selection, ring-spill ordering
+and the pre-hurt Y rewind stay owned by the already-tested shared routine.
+
+Sixteen focused tests pass with zero skips: three elemental reaction cases, eight shared hurt-block
+regressions and five ROM census/inventory checks. Census: act 1 placeholders **115 → 93** and
+concrete **250 → 272**; act 2 placeholders **138 → 82** and concrete **356 → 412**.
+`$4D` `Obj_DEZTorpedoLauncher` (36/38) is now the highest-weight missing traversal class.

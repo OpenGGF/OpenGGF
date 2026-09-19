@@ -108,7 +108,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | `S3kDezGravityPuzzleObjectInstance` | 3 |
 | `$6A` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete | verify only (8) |
 | `$6B` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete | verify only (8) |
-| `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | placeholder | 4 |
+| `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | concrete: shared hurt block plus lightning-shield reaction | 4 |
 | `$78` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete | 4 (verify; duplicate registration above) |
 | `$A4` | `Obj_Spikebonker` | 7 | 11 | `SpikebonkerBadnikInstance` | 4 |
 | `$A5` | `Obj_Chainspike` | 6 | 12 | implemented | 4 |
