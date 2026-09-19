@@ -159,6 +159,7 @@ public final class Sonic3kObjectIds {
     public static final int MGZLBZ_SMASHING_PILLAR = 0x52;
     public static final int DEZ_LIGHTNING = 0x52;
     public static final int MGZ_SWINGING_PLATFORM = 0x53;
+    public static final int DEZ_CONVEYOR_PAD = 0x53;
     // SKL $55 is Obj_DEZEnergyBridge (sonic3k.asm:93909); S3KL $55 is Obj_MGZHeadTrigger.
     // The two object tables share the number.
     public static final int MGZ_HEAD_TRIGGER = 0x55;

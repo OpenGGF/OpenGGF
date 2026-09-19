@@ -92,7 +92,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$4F` | `Obj_DEZStaircase` | 18 | 15 | placeholder | 4 |
 | `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | concrete: invisible two-sided grounded-player conveyor | 4 |
 | `$52` | `Obj_DEZLightning` | 48 | 94 | concrete: ROM animation/wait/touch, art and local SFX | 4 |
-| `$53` | `Obj_DEZConveyorPad` | 4 | 5 | placeholder | 4 (reads the flag, sonic3k.asm:93727) |
+| `$53` | `Obj_DEZConveyorPad` | 4 | 5 | concrete: triggered finite/floor-following full-solid conveyor | 4 |
 | `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | `S3kDezEnergyBridgeObjectInstance` | 4 |
 | `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | concrete: timed curved collision-index field | 4 |
 | `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | placeholder | 5 |

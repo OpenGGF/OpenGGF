@@ -2834,3 +2834,16 @@ when the field itself expires, a player it owned is additionally released into t
 The four-frame curved mapping at ROM `$48038` is registered against resident
 `ArtTile_DEZMisc+$B2`; animation and `sfx_EnergyZap` use the level-frame clock. Census: act 1
 placeholders **31 → 30**, concrete **334 → 335**; act 2 is unchanged.
+
+### 2026-09-19 — `$53` `Obj_DEZConveyorPad`
+
+All four act 1 and five act 2 conveyor pads now port `Obj_DEZConveyorPad`
+(`sonic3k.asm:93696-93850`). Nonzero subtypes wait for a standing player, then move vertically
+for `(subtype & $7F) * 8` passes in the sign-selected direction; subtype zero follows the floor,
+reverses at side terrain, and retains the ROM's narrow mapping. Both variants use full-solid
+dimensions, move their native riders two pixels with the animated belt, and drive the conveyor
+sound from `Level_frame_counter & $F`.
+
+The normal and wide mappings at ROM `$47C08/$47CA8` use resident `ArtTile_DEZMisc+$BB` through
+the ROM art pipeline. Census: act 1 placeholders **30 → 26**, concrete **335 → 339**; act 2
+placeholders **39 → 34**, concrete **455 → 460**. This closes reference-table group J.
