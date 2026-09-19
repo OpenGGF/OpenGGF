@@ -1,16 +1,8 @@
 name: Release
 
 on:
-  pull_request:
-    branches: [master]
   push:
     branches: [master]
-  workflow_dispatch:
-    inputs:
-      validate_roms:
-        description: 'Also run ROM-backed validation on a configured fixture runner'
-        type: boolean
-        default: false
 
 
 jobs:

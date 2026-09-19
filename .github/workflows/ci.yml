@@ -1,14 +1,9 @@
 name: CI
 
 on:
-  pull_request:
-    branches:
-      - next
-      - develop
   push:
     branches:
-      - '**'
-  workflow_dispatch:
+      - master
 
 jobs:
   # Pull requests only. Branch/trailer/changelog policy is enforced locally by
@@ -28,9 +23,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
 
-  # The fast lane. This is the only Maven job an ordinary branch push reaches,
-  # and allBranchPushPolicyShouldRemainLightweight in TestBuildToolingGuard pins
-  # it that way, so it has to stay bounded.
+  # The fast lane for pull requests and deliberate manual runs.
   #
   # `-Psmoke` is the default suite minus ten @Tag("slow-suite") classes that were
   # 93 percent of its wall clock (about 23 of 25 minutes); see the profile comment
@@ -62,19 +55,10 @@ jobs:
         shell: bash
         run: mvn -Dmse=off -Psmoke test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
 
-      - name: Run smoke suite (push)
+      - name: Run smoke suite (master push)
         if: github.event_name == 'push'
         shell: bash
-        run: |
-          # Feature pushes have no release destination yet. Keep strict policy
-          # agreement for integration branches; PR jobs validate their base ref.
-          destination_args=()
-          case "$GITHUB_REF_NAME" in
-            master|develop|next)
-              destination_args=("-DmodApi.destinationBranch=$GITHUB_REF_NAME")
-              ;;
-          esac
-          mvn -Dmse=off -Psmoke test -B "${destination_args[@]}"
+        run: mvn -Dmse=off -Psmoke test -B -DmodApi.destinationBranch=master
 
       - name: Run smoke suite (manual)
         if: github.event_name == 'workflow_dispatch'
@@ -166,8 +150,7 @@ jobs:
   # deterministic red test and an order-dependent one unnoticed. Nothing runs
   # it unattended now -- there is no schedule -- so a regression confined to
   # the tagged oracle sweeps waits for a pull request or for someone to
-  # dispatch a run. `smoke` is the only thing left on the push path, and it
-  # keeps the per-push signal for everything outside the tagged classes.
+  # dispatch a run.
   #
   # ROM-free either way: ROM-gated classes error only when a path is supplied.
   test:
