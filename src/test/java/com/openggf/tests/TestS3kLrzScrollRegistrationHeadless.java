@@ -6,6 +6,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.objects.Lrz3LavaSurfaceObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.LrzEndBossInstance;
 import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -195,6 +197,30 @@ class TestS3kLrzScrollRegistrationHeadless {
 
         assertFalse(Arrays.equals(plain, shimmer));
         assertTrue(Arrays.stream(shimmer).distinct().count() > 1);
+    }
+
+    @Test
+    void exactArenaGateSpawnsFourteenHitBossAndLavaSurfaceOnce() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ, 0).build();
+        Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager)
+                GameServices.module().getLevelEventProvider();
+        manager.getLrzEventsForTest().update(0, 0); // initializes the surface
+        fixture.camera().setX((short) 0xA00);
+        fixture.camera().setY((short) 0x500);
+        fixture.camera().setMaxY((short) 0x500);
+
+        manager.getLrzEventsForTest().update(0, 1);
+        manager.getLrzEventsForTest().update(0, 2);
+
+        var active = GameServices.level().getObjectManager().getActiveObjects();
+        assertEquals(1, active.stream().filter(Lrz3LavaSurfaceObjectInstance.class::isInstance).count());
+        var bosses = active.stream().filter(LrzEndBossInstance.class::isInstance)
+                .map(LrzEndBossInstance.class::cast).toList();
+        assertEquals(1, bosses.size());
+        assertEquals(14, bosses.getFirst().hitCountForTest());
+        assertEquals(0x0C, lrz().backgroundRoutine());
+        assertTrue(lrz().lrz3BossSpawned());
     }
 
     private int[] scanlineWordsAt(int width, int act) {

@@ -6,6 +6,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.NativePositionOps;
+import com.openggf.game.sonic3k.objects.bosses.LrzEndBossInstance;
+import com.openggf.game.sonic3k.objects.Lrz3LavaSurfaceObjectInstance;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
@@ -177,6 +179,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
                 lrz.setLrz3CameraFixed(camera().getX() << 16, camera().getY() << 16);
             }
             resetActualTileOffsetsAndRefresh();
+            spawnObject(() -> new Lrz3LavaSurfaceObjectInstance());
         }
 
         // loc_59B46: once camera Y reaches its current maximum, pin the minimum to it.
@@ -204,6 +207,18 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
                 lrz.clearSavedBackgroundCamera();
                 lrz.setBackgroundRoutine(0);
             }
+        }
+        if (lrz.backgroundRoutine() == 4
+                && (camera.getX() & 0xFFFF) == 0xA00
+                && y == (camera.getMaxY() & 0xFFFF)
+                && !lrz.lrz3BossSpawned()) {
+            camera.setMaxX((short) 0xA00);
+            camera.setMaxXTarget((short) 0xA00);
+            camera.setMinY((short) y);
+            camera.setMinYTarget((short) y);
+            lrz.setBackgroundRoutine(0x0C);
+            lrz.setLrz3BossSpawned(true);
+            spawnObject(() -> new LrzEndBossInstance());
         }
         if (y < 0x500) {
             lrz.publishDeformationWords((camera.getX() & 0xFFFF) >> 4,

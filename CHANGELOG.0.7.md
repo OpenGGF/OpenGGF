@@ -445,6 +445,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   star-post camera checkpoint instead of the generic fallback presentation. Its placed entry
   controller and all seven act-three platforms now use rewindable production objects; the
   rising/falling and static-solid variants no longer disappear as placeholders.
+  Reaching the exact act-three arena gate now locks the camera and starts the ROM's fourteen-hit
+  alternating magma-jump boss over its sloped lava surface; defeat opens the route into Hidden
+  Palace instead of leaving the player in an empty arena.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
   opens with a `(0,0)` record that the ring manager always steps over, and the engine
   was spawning it as a real ring.
