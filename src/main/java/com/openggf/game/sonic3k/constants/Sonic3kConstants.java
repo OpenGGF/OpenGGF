@@ -502,6 +502,7 @@ public class Sonic3kConstants {
     public static final int MAP_DEZ_CONVEYOR_PAD_WIDE_ADDR = 0x047CA8;
     public static final int MAP_DEZ_FLOATING_PLATFORM_ADDR = 0x025ACA;
     public static final int MAP_DEZ_HANG_CARRIER_ADDR = 0x04717E;
+    public static final int MAP_DEZ_TILTING_BRIDGE_ADDR = 0x046F7A;
     /** {@code Map_DEZGravityPuzzle} (sonic3k.lst: ROM $00049A6C). */
     public static final int MAP_DEZ_GRAVITY_PUZZLE_ADDR = 0x049A6C;
 

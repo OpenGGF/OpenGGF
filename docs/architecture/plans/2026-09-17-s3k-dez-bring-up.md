@@ -2874,3 +2874,17 @@ Jump release restores control, applies optional left/right `$200` velocity, laun
 single mapping at ROM `$4717E` uses resident `ArtTile_DEZMisc+$10`; switch/rising sounds retain
 their native edges. Census: act 1 placeholders **26 → 23**, concrete **339 → 342**; act 2
 placeholders **24 → 23**, concrete **470 → 471**.
+
+### 2026-09-19 — `$4B` `Obj_DEZTiltingBridge`
+
+All one act 1 and three act 2 tilting bridges now port `Obj_DEZTiltingBridge`
+(`sonic3k.asm:92740-92882`) as the ROM's eight consecutive SST slabs. The folded engine object
+reserves the seven child slots, exposes eight full-solid `$1B/$10/$11` collision pieces, and
+preserves earlier-piece collision order and per-piece standing ownership for both native players.
+
+Each standing piece indexes the exact signed 8-by-8 `byte_46ED8` force table. Both players'
+forces accumulate independently into each slab's 16.16 vertical velocity. At a `$70`-pixel
+displacement the bridge enters the ROM collapse phase: velocities are multiplied by four once,
+then gain `$1000` gravity on subsequent passes. The single mapping at ROM `$46F7A` uses resident
+`ArtTile_DEZMisc`. Census: act 1 placeholders **23 → 22**, concrete **342 → 343**; act 2
+placeholders **23 → 20**, concrete **471 → 474**.

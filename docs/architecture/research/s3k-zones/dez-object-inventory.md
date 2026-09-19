@@ -85,7 +85,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$34` | `Obj_StarPost` | 3 | 4 | shared concrete | 6, 8 (respawn rows) |
 | `$3C` | `Obj_Door` | 11 | 6 | shared concrete | 4 (verify DEZ art and trigger) |
 | `$4A` | `Obj_DEZFloatingPlatform` | 0 | 10 | concrete: full-solid DEZ oscillation/sweep table | 4 |
-| `$4B` | `Obj_DEZTiltingBridge` | 1 | 3 | placeholder | 4 |
+| `$4B` | `Obj_DEZTiltingBridge` | 1 | 3 | concrete: eight-piece force matrix and collapse | 4 |
 | `$4C` | `Obj_DEZHangCarrier` | 3 | 1 | concrete: dual-player capture, lift, ceiling turn and jump release | 4 |
 | `$4D` | `Obj_DEZTorpedoLauncher` | 36 | 38 | concrete: timed launcher, closing animation and touch projectile | 4 |
 | `$4E` | `Obj_DEZLiftPad` | 7 | 0 | concrete: triggered accelerating lift arm and top-solid pad | 4 |
@@ -179,7 +179,7 @@ so subtypes `$80+` arrive inverted.
 | `$4A` | `$02` | `Obj_DEZFloatingPlatform` | 0 | 1 | placeholder |
 | `$4A` | `$03` | `Obj_DEZFloatingPlatform` | 0 | 1 | placeholder |
 | `$4A` | `$04` | `Obj_DEZFloatingPlatform` | 0 | 4 | placeholder |
-| `$4B` | `$00` | `Obj_DEZTiltingBridge` | 1 | 3 | placeholder |
+| `$4B` | `$00` | `Obj_DEZTiltingBridge` | 1 | 3 | concrete |
 | `$4C` | `$25` | `Obj_DEZHangCarrier` | 1 | 1 | placeholder |
 | `$4C` | `$34` | `Obj_DEZHangCarrier` | 1 | 0 | placeholder |
 | `$4C` | `$44` | `Obj_DEZHangCarrier` | 1 | 0 | placeholder |
