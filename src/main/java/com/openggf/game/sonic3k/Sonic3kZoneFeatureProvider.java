@@ -765,11 +765,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
 
     @Override
     public boolean shouldSuppressInitialTitleCard(int zoneIndex, int actIndex) {
-        if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 0
-                && GameServices.hasRuntime()) {
-            Sonic3kAct3Carry carry = GameServices.module().getGameService(Sonic3kAct3Carry.class);
-            if (carry != null && carry.active()) return true;
-        }
+        // DEZ3_ScreenInit enters the dynamically spawned final arena directly. The
+        // ROM's level-select $1700 entry and the normal DEZ2 handoff both bypass
+        // Obj_TitleCard (sonic3k.asm:120319, 171000).
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 0) return true;
         // The ROM's $1701 arena restart bypasses Obj_TitleCard explicitly.
         if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 1) {
             return true;

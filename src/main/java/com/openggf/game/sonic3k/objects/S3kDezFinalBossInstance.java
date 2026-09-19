@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.GameOverExit;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
@@ -10,6 +11,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.ObjectSpawn;
@@ -17,6 +20,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -144,7 +148,12 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
         state.x += state.xVel;
         angle = (angle + 2) & 0x7F;
         state.y = 0x128 - (int) Math.round(Math.sin(angle * Math.PI / 64.0) * 16);
-        if ((vIntRunCount & 0x3F) == 0) services().playSfx(Sonic3kSfx.LASER.id);
+        if ((vIntRunCount & 0x3F) == 0) {
+            services().playSfx(Sonic3kSfx.LASER.id);
+            int targetX = player == null ? state.x - 1 : player.getCentreX() & 0xFFFF;
+            int direction = targetX < state.x ? -1 : 1;
+            spawnFreeChild(() -> new LaserHazard(state.x, state.y + 0x18, direction));
+        }
         int target = player == null ? state.x : player.getCentreX() & 0xFFFF;
         if (state.x > target + 0x80) state.xVel = -1;
         else if (state.x < target - 0x80) state.xVel = 1;
@@ -181,6 +190,10 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
             services().requestZoneAndAct(Sonic3kZoneIds.ZONE_DDZ, 0, true);
         } else if (character != PlayerCharacter.KNUCKLES) {
             services().requestZoneAndAct(Sonic3kZoneIds.ZONE_INTRO_ENDING, 1, true);
+        } else {
+            // loc_8041E writes GameMode_SegaScreen. The engine's existing title-screen
+            // transition port owns the fade and mode boundary for this equivalent path.
+            services().levelManager().requestGameOverExit(GameOverExit.TITLE_SCREEN);
         }
         setDestroyed(true);
     }
@@ -275,6 +288,11 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
 
         @Override public void syncPositionWithParent() {
             if (!(parent instanceof S3kDezFinalBossInstance boss) || parent.isDestroyed()) return;
+            if (role == 6 && boss.phase() >= CHASE) {
+                currentX = boss.getX() - 0x50;
+                currentY = (boss.services().camera().getY() & 0xFFFF) + 0xCF;
+                return;
+            }
             localAngle = (localAngle + (role < 4 ? 2 : 4)) & 0xFF;
             int radius = role < 4 ? 0x28 : 0x50;
             currentX = boss.getX() + (int) Math.round(Math.cos(localAngle * Math.PI / 128.0) * radius);
@@ -289,9 +307,59 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
 
         @Override public void appendRenderCommands(List<GLCommand> commands) {
             if (!(parent instanceof S3kDezFinalBossInstance boss)) return;
-            PatternSpriteRenderer renderer = boss.renderer(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC);
+            if (role == 6 && boss.phase() < CHASE) return;
+            String key = role == 6 ? Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MASTER_EMERALD
+                    : role == 7 && boss.phase() >= ARENA_SHRINK
+                    ? Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_DEBRIS
+                    : Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC;
+            PatternSpriteRenderer renderer = boss.renderer(key);
             if (renderer != null && renderer.isReady())
-                renderer.drawFrameIndex(Math.min(31, role + 1), currentX, currentY, false, false, 1);
+                renderer.drawFrameIndex(role == 6 ? 0 : role == 7 ? 1 : role + 1,
+                        currentX, currentY, false, false, 1);
+        }
+    }
+
+    /** The damaging laser/fireball pass created by {@code loc_807BC-loc_809F4}. */
+    static final class LaserHazard extends AbstractObjectInstance
+            implements TouchResponseProvider, SpawnRewindRecreatable {
+        private static final int COLLISION_FLAGS = 0xAC;
+        private int xFixed;
+        private int yFixed;
+        private int xVelocity;
+        private int age;
+
+        LaserHazard(int x, int y, int direction) {
+            this(new ObjectSpawn(x, y, Sonic3kObjectIds.DEZ_END_BOSS,
+                    direction < 0 ? 0 : 1, 0, false, -1));
+        }
+
+        public LaserHazard(ObjectSpawn spawn) {
+            super(spawn, "DEZ3BossLaser");
+            xFixed = spawn.x() << 16;
+            yFixed = spawn.y() << 16;
+            xVelocity = (spawn.subtype() == 0 ? -1 : 1) * 0x300;
+        }
+
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
+            xFixed += xVelocity << 8;
+            age++;
+            yFixed += (int) Math.round(Math.sin(age * Math.PI / 16.0) * 0x1800);
+            int cameraX = services().camera().getX() & 0xFFFF;
+            int width = services().camera().getWidth() & 0xFFFF;
+            if (age > 0xC0 || getX() < cameraX - 0x100 || getX() > cameraX + width + 0x100)
+                setDestroyed(true);
+        }
+
+        @Override public int getX() { return xFixed >> 16; }
+        @Override public int getY() { return yFixed >> 16; }
+        @Override public int getCollisionFlags() { return COLLISION_FLAGS; }
+        @Override public int getCollisionProperty() { return 0; }
+        @Override public int getPriorityBucket() { return RenderPriority.fromS3kWord(0x280); }
+        @Override public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC);
+            if (renderer != null && renderer.isReady())
+                renderer.drawFrameIndex(0x1A + ((age >>> 2) & 1), getX(), getY(),
+                        xVelocity < 0, false, 1);
         }
     }
 }

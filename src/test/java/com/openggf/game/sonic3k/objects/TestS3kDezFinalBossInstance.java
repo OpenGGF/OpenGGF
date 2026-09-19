@@ -3,11 +3,14 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameOverExit;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.levelselect.Sonic3kLevelSelectConstants;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
@@ -21,6 +24,11 @@ import static org.mockito.Mockito.verify;
 class TestS3kDezFinalBossInstance {
     private static final TouchResponseResult HIT =
             new TouchResponseResult(0x0F, 0, 0, TouchCategory.ENEMY);
+
+    @Test
+    void finalArenaIsAvailableAtTheRomsDoomsdayActTwoLevelSelectSlot() {
+        assertEquals(0x1700, Sonic3kLevelSelectConstants.LEVEL_ORDER[25]);
+    }
 
     @Test
     void firstDispatchBuildsTheFixedBossGraph() {
@@ -58,6 +66,21 @@ class TestS3kDezFinalBossInstance {
     }
 
     @Test
+    void fightDispatchCreatesTheDamagingLaserHazard() {
+        Harness services = new Harness(PlayerCharacter.SONIC_ALONE);
+        S3kDezFinalBossInstance boss = boss(services);
+        boss.setPhaseForTesting(S3kDezFinalBossInstance.FIGHT, 0);
+        boss.update(0, player());
+        assertEquals(1, services.objectManager().getActiveObjects().stream()
+                .filter(S3kDezFinalBossInstance.LaserHazard.class::isInstance).count());
+        var laser = services.objectManager().getActiveObjects().stream()
+                .filter(S3kDezFinalBossInstance.LaserHazard.class::isInstance)
+                .map(S3kDezFinalBossInstance.LaserHazard.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(0xAC, laser.getCollisionFlags());
+    }
+
+    @Test
     void sevenEmeraldSonicExitRequestsDoomsday() {
         Harness services = new Harness(PlayerCharacter.SONIC_ALONE);
         for (int index = 0; index < 7; index++) services.gameState.markEmeraldCollected(index);
@@ -78,6 +101,15 @@ class TestS3kDezFinalBossInstance {
         assertEquals(1, services.requestedAct);
     }
 
+    @Test
+    void knucklesExitRequestsTheSegaTitleModeBoundary() {
+        Harness services = new Harness(PlayerCharacter.KNUCKLES);
+        S3kDezFinalBossInstance boss = boss(services);
+        boss.setPhaseForTesting(S3kDezFinalBossInstance.EXIT, 1);
+        boss.update(0, player());
+        verify(services.levelManager).requestGameOverExit(GameOverExit.TITLE_SCREEN);
+    }
+
     private static S3kDezFinalBossInstance boss(Harness services) {
         var boss = new S3kDezFinalBossInstance(new ObjectSpawn(
                 0x3C0, 0x0F8, 0xA7, 0, 0, false, -1));
@@ -93,6 +125,7 @@ class TestS3kDezFinalBossInstance {
     private static final class Harness extends StubObjectServices {
         private final Camera camera = new Camera();
         private final LevelState levelState = mock(LevelState.class);
+        private final LevelManager levelManager = mock(LevelManager.class);
         private final GameStateManager gameState = new GameStateManager();
         private final S3kDezZoneRuntimeState runtime;
         private int requestedZone = -1;
@@ -107,6 +140,7 @@ class TestS3kDezFinalBossInstance {
 
         @Override public Camera camera() { return camera; }
         @Override public LevelState levelGamestate() { return levelState; }
+        @Override public LevelManager levelManager() { return levelManager; }
         @Override public GameStateManager gameState() { return gameState; }
         @Override public Rom rom() { return null; }
         @Override public void requestZoneAndAct(int zone, int act, boolean deactivate) {

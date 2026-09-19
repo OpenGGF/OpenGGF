@@ -654,7 +654,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (hpzEvents != null && currentZone == Sonic3kZoneIds.ZONE_HPZ) {
             hpzEvents.update(currentAct, frameCounter);
         }
-        if (dezEvents != null && currentZone == Sonic3kZoneIds.ZONE_DEZ) {
+        if (dezEvents != null && (currentZone == Sonic3kZoneIds.ZONE_DEZ
+                || (currentZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && currentAct == 0))) {
             dezEvents.update(currentAct, frameCounter);
         }
         releasePendingMgzPostTransition();
