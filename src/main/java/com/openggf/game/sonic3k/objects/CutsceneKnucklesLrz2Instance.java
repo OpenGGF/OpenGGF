@@ -5,6 +5,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -21,7 +22,7 @@ public final class CutsceneKnucklesLrz2Instance extends AbstractObjectInstance
 
     public CutsceneKnucklesLrz2Instance(ObjectSpawn spawn) { super(spawn, "CutsceneKnucklesLRZ2"); }
 
-    @Override public void update(int v, PlayableEntity p) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!(services().zoneRuntimeState() instanceof LrzZoneRuntimeState lrz)) return;
         if (stage == 0 && lrz.cutsceneFlag(1)) {
             stage = 1; timer = 46; mappingFrame = 0xDE;
@@ -33,6 +34,9 @@ public final class CutsceneKnucklesLrz2Instance extends AbstractObjectInstance
     }
     @Override public int getX() { return 0x3A38; }
     @Override public int getY() { return 0x00EC; }
+    @Override public int getPriorityBucket() {
+        return RenderPriority.fromS3kWord(0x180); // ObjSlot_CutsceneKnux
+    }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES);
         if(r!=null) r.drawFrameIndex(mappingFrame,getX(),getY(),true,false);

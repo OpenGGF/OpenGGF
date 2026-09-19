@@ -119,6 +119,23 @@ class TestRewindArchitectureGuard {
             //    cloud. A lost link would make the body breathe a second cloud immediately.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzRockCrusherPieceInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzRockCrusherPieceInstance.java#restoreRewindState", 1),
+            // 2026-09-19 Lava Reef route mechanisms. These compact sidecars predate a matching
+            // schema policy and are exercised by the LRZ route rewind matrices; keep their
+            // disposition explicit until the fields migrate centrally.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLrz2Instance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLrz2Instance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lrz2CutsceneControllerObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lrz2CutsceneControllerObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzChainedPlatformObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzChainedPlatformObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzKnucklesBoulderObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzKnucklesBoulderObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzSpikeBallLauncherObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzSpikeBallLauncherObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzTurbineSpritesObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzTurbineSpritesObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kStartNewLevelObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kStartNewLevelObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterBadnikInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterBadnikInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#captureRewindState", 1),
@@ -172,6 +189,7 @@ class TestRewindArchitectureGuard {
             // 2026-09-18 Lava Reef: the four links triaged with the override entries above, each
             // restored by its own ObjectRefId sidecar rather than left to be rebuilt.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzRockCrusherPieceInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzSpikeBallLauncherObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterBadnikInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#@RewindTransient", 1),

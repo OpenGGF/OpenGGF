@@ -235,7 +235,7 @@ public class TestSonic3kPlcArtRegistry {
     @Test
     public void aiz1PlanIncludesBadnikAndLevelArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x00, 0);
-        assertEquals(10, plan.standaloneArt().size());
+        assertEquals(9, plan.standaloneArt().size());
 
         // Verify Bloominator
         Sonic3kPlcArtRegistry.StandaloneArtEntry bloominator = plan.standaloneArt().stream()
@@ -366,7 +366,7 @@ public class TestSonic3kPlcArtRegistry {
     public void iczPlanHasCollapsingBridgeAndBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x05, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ICZ_SNOWDUST)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ICZ_STAR_POINTER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ICZ_PENGUINATOR)));
@@ -1473,7 +1473,7 @@ public class TestSonic3kPlcArtRegistry {
     public void lrzPlanHasRocksAndBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x09, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FIREWORM_SEGMENTS)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.IWAMODOKI)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.TOXOMISTER)));

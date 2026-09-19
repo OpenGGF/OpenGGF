@@ -56,9 +56,9 @@ public final class Lrz2CutsceneControllerObjectInstance extends AbstractObjectIn
         services().camera().setMinX(services().camera().getX());
         if (!childrenSpawned) {
             childrenSpawned = true;
-            spawnDynamicObject(new CutsceneKnucklesLrz2Instance(new ObjectSpawn(
+            spawnChild(() -> new CutsceneKnucklesLrz2Instance(new ObjectSpawn(
                     0x3A38, 0x00EC, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x24, 0, false, 0)));
-            spawnDynamicObject(new LrzKnucklesBoulderObjectInstance());
+            spawnChild(LrzKnucklesBoulderObjectInstance::new);
             spawnDynamicObject(SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
         }
         stage = 1;

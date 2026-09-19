@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <ul>
  *   <li>Script 0 is one entry, {@code (3, $7F)}, so the launcher sits on frame {@code 3} for
  *       {@code $80 = 128} passes; the {@code $FC} that charges it lands on pass {@code 129}.</li>
- *   <li>Script 1's forty-two entries carry delays {@code $D,$D,$B,$B,9,9,7,7,5,5,3,3,1,1} and
+ *   <li>Script 1's forty-two entries carry delays {@code $D, $D, $B, $B, 9, 9, 7, 7, 5, 5, 3, 3, 1, 1} and
  *       then twenty-eight zeros, so the flicker runs
  *       {@code 2*(14+12+10+8+6+4+2) + 28 = 140} passes.</li>
  * </ul>

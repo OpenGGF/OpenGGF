@@ -13,7 +13,7 @@ public final class LrzKnucklesBoulderObjectInstance extends AbstractObjectInstan
     private boolean moving; private int x=0x3A08,y=0x00E2,xSub,ySub,xVel,yVel;
     private record Extra(boolean moving,int x,int y,int xSub,int ySub,int xVel,int yVel) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra{}
     public LrzKnucklesBoulderObjectInstance(){super(new ObjectSpawn(0x3A08,0x00E2,0,0,0,false,0),"LRZKnucklesBoulder");}
-    @Override public void update(int v,PlayableEntity p){
+    @Override public void update(int vIntRunCount,PlayableEntity player){
         if(!moving){if(services().zoneRuntimeState() instanceof LrzZoneRuntimeState l&&l.cutsceneFlag(2)){moving=true;xVel=-0x200;}return;}
         xSub+=xVel; ySub+=yVel; x+=(short)(xSub>>8); y+=(short)(ySub>>8); xSub&=0xFF; ySub&=0xFF;
         yVel=Math.min(yVel+0x38,0x1000); updateDynamicSpawn(x&0xFFFF,y&0xFFFF);
