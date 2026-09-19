@@ -58,6 +58,10 @@ public final class LrzRockCrusherTimerChildInstance extends AbstractObjectInstan
         this.subtype = subtype & 0xFF;
     }
 
+    public LrzRockCrusherTimerChildInstance(ObjectSpawn spawn) {
+        this(spawn.subtype());
+    }
+
     @Override
     public LrzRockCrusherTimerChildInstance recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),

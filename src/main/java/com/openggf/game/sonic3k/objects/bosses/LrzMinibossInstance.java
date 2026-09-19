@@ -385,6 +385,13 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         }
     }
 
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        childrenCreated = true;
+        createChildRing(false);
+        createChildRing(true);
+    }
+
     /** {@code loc_7880A}'s dispatch: {@code 0} segment, {@code $16} hand, anything else a link. */
     private com.openggf.level.objects.boss.AbstractBossChild createRingChild(int subtype, boolean mirrored) {
         final int childSubtype = subtype;

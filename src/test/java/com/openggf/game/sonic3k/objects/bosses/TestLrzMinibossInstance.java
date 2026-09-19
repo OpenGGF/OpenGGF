@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -184,6 +185,36 @@ class TestLrzMinibossInstance {
                         + "CreateChild8_TreeListRepeated steps the subtype by two");
         assertEquals(20L, countOf(children, LrzMinibossOrbiterChild.class),
                 "subtypes 2..$14 are loc_788DE arm links");
+    }
+
+    @Test
+    void fixedRingGraphReconstructsWithExactChildCensus() {
+        camera.setY((short) 0x0710);
+        TestObjectServices graphServices = new TestObjectServices()
+                .withIsolatedObjectManager().withCamera(camera);
+        graphServices.objectManager().reset(0);
+        LrzMinibossInstance root = graphServices.objectManager().createDynamicObject(() ->
+                new LrzMinibossInstance(new ObjectSpawn(
+                        SPAWN_X, SPAWN_Y, 0x9D, 0, 0, false, 0)));
+        for (int frame = 0; frame < 600 && !root.isArenaGateComplete(); frame++) {
+            root.update(frame, null);
+        }
+        root.update(600, null);
+        assertEquals(24, root.getChildComponents().size());
+
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(graphServices.objectManager().rewindSnapshottable());
+        var snapshot = rewind.capture();
+        graphServices.objectManager().getActiveObjects().stream().toList()
+                .forEach(graphServices.objectManager()::removeDynamicObject);
+        rewind.restore(snapshot);
+
+        LrzMinibossInstance restored = graphServices.objectManager()
+                .activeObjectsOfType(LrzMinibossInstance.class).getFirst();
+        assertEquals(24, restored.getChildComponents().size());
+        assertEquals(2L, countOf(restored.getChildComponents(), LrzMinibossArmSegmentChild.class));
+        assertEquals(2L, countOf(restored.getChildComponents(), LrzMinibossHandChild.class));
+        assertEquals(20L, countOf(restored.getChildComponents(), LrzMinibossOrbiterChild.class));
     }
 
     @Test

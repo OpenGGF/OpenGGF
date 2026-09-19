@@ -128,6 +128,10 @@ public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInst
         this.highPriority = false;
     }
 
+    public LrzOrbitingSpikeBallObjectInstance(ObjectSpawn spawn) {
+        this(spawn, spawn.objectId() == 0x2C ? Axis.VERTICAL : Axis.HORIZONTAL);
+    }
+
     /**
      * Both objects sit in the {@code $0004} bank: {@code Obj_LRZOrbitingSpikeBallHorizontal} at
      * ROM {@code $00043B34} and {@code Obj_LRZOrbitingSpikeBallVertical} at {@code $00043C26}

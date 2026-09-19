@@ -64,6 +64,10 @@ public final class IwamodokiShrapnelInstance extends AbstractObjectInstance
         this.motion = new SubpixelMotion.State(x & 0xFFFF, y & 0xFFFF, 0, 0, xVel, yVel);
     }
 
+    public IwamodokiShrapnelInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), spawn.subtype(), 0, 0);
+    }
+
     @Override
     public IwamodokiShrapnelInstance recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
