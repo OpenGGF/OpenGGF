@@ -2795,6 +2795,13 @@ public class Sonic3kConstants {
     /** ROM sub_13ECA off-screen marker X for despawned Tails. sonic3k.asm:26806. */
     public static final int TAILS_CPU_DESPAWN_X = 0x7F00;
 
+    // SSZ1_ScreenEvent loc_57360: the post-Mecha-Sonic Death Egg launch image.
+    public static final int SSZ1_CUSTOM_BLOCKS_128_ADDR = 0x1CEFE4;
+    public static final int SSZ1_CUSTOM_CHUNKS_16_ADDR = 0x1CE312;
+    public static final int ART_KOSM_SSZ1_CUSTOM_ADDR = 0x1CE832;
+    public static final int ART_KOSM_SSZ_SPIRAL_RAMP_ADDR = 0x1541B0;
+    public static final int PAL_SSZ_DEATH_EGG_ADDR = 0x577DA;
+
     private static boolean scanned = false;
 
     public static boolean isScanned() {

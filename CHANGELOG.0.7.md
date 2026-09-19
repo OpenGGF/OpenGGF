@@ -56,6 +56,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   along it, turning to face the player, jumping, and following the jump with an air dash, a
   ground pound or a landing that sets up two more dashes. Which parts of him can be hit and
   which hurt to touch change frame by frame with his animation, as they do on the cartridge.
+  Once the results finish, the launch sequence now replaces the sanctuary terrain and tiles
+  with the ROM's Death Egg approach image, changes the sky palette, carries Sonic around the
+  spiral ramp and throws him toward Death Egg before loading its first act.
   The eighth hit now ends him too: he is thrown back, holds still for a little over two seconds,
   drops to the floor in his beaten pose, and the act hands over to its results — which waits for
   the player to be standing rather than ending on a timer alone. Knuckles' Act 2 route now owns

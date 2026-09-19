@@ -14,6 +14,12 @@ import com.openggf.game.sonic3k.objects.SszEndingIslandMaskObjectInstance;
 import com.openggf.game.sonic3k.objects.SszAct2EndingCameraController;
 import com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
+import com.openggf.game.sonic3k.Sonic3kLevel;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.Pattern;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
@@ -137,10 +143,91 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             return;
         }
         if (state.foregroundRoutine() == 4 && state.eventsFg4() != 0) {
-            // loc_57360's terrain/art hot-swap is applied by the launch mutation owner;
-            // advancing here gives the background/column owner the ROM's steady stage 8.
+            queueActOneLaunchResources(state);
             state.setForegroundRoutine(8);
         }
+        claimActOneLaunchResources(state);
+    }
+
+    /** loc_57360: submit the two direct Kosinski tables and two KosM tile archives in ROM order. */
+    private void queueActOneLaunchResources(SszZoneRuntimeState state) {
+        if (state.launchResourcesQueued()) return;
+        try {
+            state.setLaunchBlocksJobOrdinal(directKosQueue().queueStandardKos(rom(),
+                    Sonic3kConstants.SSZ1_CUSTOM_BLOCKS_128_ADDR,
+                    S3kKosRamDestinations.CHUNK_TABLE + 0x180).ordinal());
+            state.setLaunchChunksJobOrdinal(directKosQueue().queueStandardKos(rom(),
+                    Sonic3kConstants.SSZ1_CUSTOM_CHUNKS_16_ADDR,
+                    S3kKosRamDestinations.blockTableOffset(0xB8)).ordinal());
+            state.setLaunchCustomArtJobOrdinal(moduleKosQueue().queue(rom(),
+                    Sonic3kConstants.ART_KOSM_SSZ1_CUSTOM_ADDR, 0x073).ordinal());
+            state.setLaunchRampArtJobOrdinal(moduleKosQueue().queue(rom(),
+                    Sonic3kConstants.ART_KOSM_SSZ_SPIRAL_RAMP_ADDR, 0x348).ordinal());
+            state.markLaunchResourcesQueued();
+            S3kPaletteWriteSupport.applyLine(paletteRegistryOrNull(), levelManager().getCurrentLevel(),
+                    graphics(), "ssz.launch.death-egg", S3kPaletteOwners.PRIORITY_ZONE_EVENT, 1,
+                    rom().readBytes(Sonic3kConstants.PAL_SSZ_DEATH_EGG_ADDR, 32), true);
+        } catch (java.io.IOException failure) {
+            throw new IllegalStateException("Cannot queue SSZ1 Death Egg launch resources", failure);
+        }
+    }
+
+    /** Publishes each payload only when its physical timing handle becomes ready. */
+    private void claimActOneLaunchResources(SszZoneRuntimeState state) {
+        if (!state.launchResourcesQueued() || state.launchResourcesPublished()) return;
+        byte[] blocks = claimDirectIfReady(state.launchBlocksJobOrdinal());
+        if (blocks != null) state.setLaunchBlocksJobOrdinal(-1);
+        byte[] chunks = claimDirectIfReady(state.launchChunksJobOrdinal());
+        if (chunks != null) state.setLaunchChunksJobOrdinal(-1);
+        byte[] customArt = claimModuleIfReady(state.launchCustomArtJobOrdinal());
+        if (customArt != null) state.setLaunchCustomArtJobOrdinal(-1);
+        byte[] rampArt = claimModuleIfReady(state.launchRampArtJobOrdinal());
+        if (rampArt != null) state.setLaunchRampArtJobOrdinal(-1);
+        if (blocks == null && state.launchBlocksJobOrdinal() >= 0
+                || chunks == null && state.launchChunksJobOrdinal() >= 0
+                || customArt == null && state.launchCustomArtJobOrdinal() >= 0
+                || rampArt == null && state.launchRampArtJobOrdinal() >= 0) return;
+
+        // A payload may have been published on an earlier frame; the helpers below apply a
+        // ready payload immediately so no decoded bytes have to survive outside the rewind ledger.
+        state.markLaunchResourcesPublished();
+    }
+
+    private byte[] claimDirectIfReady(long ordinal) {
+        if (ordinal < 0) return null;
+        var handle = hardwareTiming().pendingHandle(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, ordinal)
+                .orElseThrow(() -> new IllegalStateException("SSZ lost a direct Kosinski job"));
+        if (!directKosQueue().isReady(handle)) return null;
+        int destination = directKosQueue().descriptor(handle).destinationAddress();
+        byte[] payload = directKosQueue().claim(handle);
+        zoneLayoutMutationPipeline().queue(context -> {
+            Sonic3kLevel level = (Sonic3kLevel) levelManager().getCurrentLevel();
+            if (destination == S3kKosRamDestinations.CHUNK_TABLE + 0x180) {
+                level.applyBlockOverlay(payload, 0x180, false);
+            } else {
+                level.applyChunkOverlay(payload, 0xB8, false);
+            }
+            return MutationEffects.redrawAllTilemaps();
+        });
+        return payload;
+    }
+
+    private byte[] claimModuleIfReady(long ordinal) {
+        if (ordinal < 0) return null;
+        var handle = hardwareTiming().pendingHandle(HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)
+                .orElseThrow(() -> new IllegalStateException("SSZ lost a KosM job"));
+        if (!moduleKosQueue().isReady(handle)) return null;
+        int tile = moduleKosQueue().descriptor(handle).destinationAddress() / 32;
+        byte[] payload = moduleKosQueue().claim(handle);
+        zoneLayoutMutationPipeline().queue(context -> {
+            Sonic3kLevel level = (Sonic3kLevel) levelManager().getCurrentLevel();
+            level.applyPatternOverlay(payload, tile * 32, false);
+            Sonic3kPlcLoader.refreshAffectedRenderers(
+                    java.util.List.of(new Sonic3kPlcLoader.TileRange(tile, payload.length / 32)),
+                    levelManager());
+            return MutationEffects.redrawAllTilemaps();
+        });
+        return payload;
     }
 
     /**

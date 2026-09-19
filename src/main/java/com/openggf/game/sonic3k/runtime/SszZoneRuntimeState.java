@@ -39,7 +39,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public static final int EVENTS_BG_BYTES = 0x10;
 
     private static final int CAPTURE_BYTES =
-            EVENTS_BG_BYTES + 16 * Short.BYTES + 3 * Integer.BYTES + 3;
+            EVENTS_BG_BYTES + 16 * Short.BYTES + 3 * Integer.BYTES + 3
+                    + 4 * Long.BYTES + 2;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -105,6 +106,13 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
      * and the event has persistent state, so it is captured with the rest of it.
      */
     private int backgroundScrollFrame = Integer.MIN_VALUE;
+    /** The four physical Queue_Kos/Queue_Kos_Module jobs submitted by loc_57360. */
+    private long launchBlocksJobOrdinal = -1;
+    private long launchChunksJobOrdinal = -1;
+    private long launchCustomArtJobOrdinal = -1;
+    private long launchRampArtJobOrdinal = -1;
+    private boolean launchResourcesQueued;
+    private boolean launchResourcesPublished;
 
     public SszZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -279,6 +287,19 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public int backgroundScrollFrame() { return backgroundScrollFrame; }
     public void setBackgroundScrollFrame(int value) { backgroundScrollFrame = value; }
 
+    public long launchBlocksJobOrdinal() { return launchBlocksJobOrdinal; }
+    public void setLaunchBlocksJobOrdinal(long value) { launchBlocksJobOrdinal = value; }
+    public long launchChunksJobOrdinal() { return launchChunksJobOrdinal; }
+    public void setLaunchChunksJobOrdinal(long value) { launchChunksJobOrdinal = value; }
+    public long launchCustomArtJobOrdinal() { return launchCustomArtJobOrdinal; }
+    public void setLaunchCustomArtJobOrdinal(long value) { launchCustomArtJobOrdinal = value; }
+    public long launchRampArtJobOrdinal() { return launchRampArtJobOrdinal; }
+    public void setLaunchRampArtJobOrdinal(long value) { launchRampArtJobOrdinal = value; }
+    public boolean launchResourcesQueued() { return launchResourcesQueued; }
+    public void markLaunchResourcesQueued() { launchResourcesQueued = true; }
+    public boolean launchResourcesPublished() { return launchResourcesPublished; }
+    public void markLaunchResourcesPublished() { launchResourcesPublished = true; }
+
     @Override
     public byte[] captureBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES);
@@ -305,6 +326,12 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(cloudDriftAccumulator);
         buffer.put((byte) (backgroundInitApplied ? 1 : 0));
         buffer.putInt(backgroundScrollFrame);
+        buffer.putLong(launchBlocksJobOrdinal);
+        buffer.putLong(launchChunksJobOrdinal);
+        buffer.putLong(launchCustomArtJobOrdinal);
+        buffer.putLong(launchRampArtJobOrdinal);
+        buffer.put((byte) (launchResourcesQueued ? 1 : 0));
+        buffer.put((byte) (launchResourcesPublished ? 1 : 0));
         return buffer.array();
     }
 
@@ -337,5 +364,11 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         cloudDriftAccumulator = buffer.getInt();
         backgroundInitApplied = buffer.get() != 0;
         backgroundScrollFrame = buffer.getInt();
+        launchBlocksJobOrdinal = buffer.getLong();
+        launchChunksJobOrdinal = buffer.getLong();
+        launchCustomArtJobOrdinal = buffer.getLong();
+        launchRampArtJobOrdinal = buffer.getLong();
+        launchResourcesQueued = buffer.get() != 0;
+        launchResourcesPublished = buffer.get() != 0;
     }
 }

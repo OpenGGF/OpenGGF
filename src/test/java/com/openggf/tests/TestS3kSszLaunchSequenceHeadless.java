@@ -9,6 +9,7 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance;
+import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -59,6 +60,31 @@ class TestS3kSszLaunchSequenceHeadless {
         assertEquals(Sonic3kZoneIds.ZONE_DEZ, GameServices.level().getCurrentZone(),
                 "loc_581D2 requests StartNewLevel $B00");
         assertEquals(0, GameServices.level().getCurrentAct());
+    }
+
+    @Test
+    void columnHandshakeQueuesAndPublishesTheDeathEggImage() {
+        HeadlessTestFixture fixture = boot();
+        GameServices.gameState().setEndOfLevelFlag(true);
+        fixture.stepIdleFrames(2);
+        SszZoneRuntimeState state = (SszZoneRuntimeState) GameServices.zoneRuntimeState();
+        assertEquals(4, state.foregroundRoutine());
+
+        // sub_5750C owns this edge; this test isolates loc_57360's consumer.
+        state.setEventsFg4Low(0xFF);
+        for (int frame = 0; frame < 0x300 && !state.launchResourcesPublished(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+
+        assertEquals(8, state.foregroundRoutine());
+        assertTrue(state.launchResourcesQueued());
+        assertTrue(state.launchResourcesPublished());
+        assertEquals(-1, state.launchBlocksJobOrdinal());
+        assertEquals(-1, state.launchChunksJobOrdinal());
+        assertEquals(-1, state.launchCustomArtJobOrdinal());
+        assertEquals(-1, state.launchRampArtJobOrdinal());
+        assertNotNull(GameServices.level().getCurrentLevel().getPattern(0x073));
+        assertNotNull(GameServices.level().getCurrentLevel().getPattern(0x348));
     }
 
     private static HeadlessTestFixture boot() {
