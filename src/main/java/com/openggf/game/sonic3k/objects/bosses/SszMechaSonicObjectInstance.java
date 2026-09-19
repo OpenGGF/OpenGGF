@@ -273,7 +273,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     /** A lazily sliced read-only window over the ROM's script block; nothing to restore. */
     private transient S3kRawAnimation animator;
 
-    private final List<SszMechaSonicTrailChild> trail = new ArrayList<>();
+    /** Custom-captured below so expired, unregistered children never enter the generic ref codec. */
+    private final transient List<SszMechaSonicTrailChild> trail = new ArrayList<>();
 
     public SszMechaSonicObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSZEndBoss");
@@ -300,7 +301,15 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         var table = context.identityTable();
         List<ObjectRefId> trailIds = new ArrayList<>();
         for (SszMechaSonicTrailChild child : trail) {
-            trailIds.add(table.map(t -> t.encodeObject(child)).orElse(null));
+            if (child != null && !child.isDestroyed()) {
+                // A child allocated during this update is not in the manager's capture roster
+                // until the pending-add boundary. Only rostered children have identities and
+                // can be restored; the pending child remains owned by that boundary.
+                ObjectRefId id = table.map(t -> t.encodeObject(child)).orElse(null);
+                if (id != null) {
+                    trailIds.add(id);
+                }
+            }
         }
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 List.copyOf(trailIds), posX, posY, xVel, yVel, xAccel, timer, attackChoice,

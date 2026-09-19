@@ -157,6 +157,25 @@ class TestS3kSszAct2FinaleHeadless {
                 "loc_7C818 positioned it from Camera_max_X and Camera_Y");
     }
 
+    @Test
+    void superDispatcherSurvivesCaptureRestoreAndForwardReplay() {
+        HeadlessTestFixture fixture = boot();
+        SszMechaSonicObjectInstance boss = runToBoss(fixture);
+        for (int hit = 0; hit < 8; hit++) landOneHit(fixture, boss);
+        runIntoSuperGraph(fixture, boss);
+
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot before = registry.capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = registry.capture();
+        registry.restore(before);
+        sameSnapshot(before, registry.capture(), "restore in Obj_SSZ2_Boss");
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, registry.capture(), "forward replay in Obj_SSZ2_Boss");
+    }
+
     private static HeadlessTestFixture boot() {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
@@ -207,6 +226,20 @@ class TestS3kSszAct2FinaleHeadless {
             if (boss.getCollisionProperty() == before - 1 || boss.superPhaseForTest()) return;
         }
         throw new AssertionError("a hit never landed through the production touch pass");
+    }
+
+    private static void runIntoSuperGraph(HeadlessTestFixture fixture,
+                                          SszMechaSonicObjectInstance boss) {
+        for (int frame = 0; frame < 0x900; frame++) {
+            var player = fixture.sprite();
+            player.setDead(false);
+            player.setHurt(false);
+            player.setCentreYPreserveSubpixel((short) 0x430);
+            player.setAir(false);
+            fixture.stepIdleFrames(1);
+            if (boss.actTwoRoutePhaseForTest() < 0) return;
+        }
+        throw new AssertionError("the forced bridge never installed Obj_SSZ2_Boss");
     }
 
     private static <T> T active(Class<T> type) {
