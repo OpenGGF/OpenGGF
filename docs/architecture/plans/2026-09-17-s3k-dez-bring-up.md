@@ -2806,3 +2806,19 @@ are untouched; normal off-screen deletion remains active.
 
 Eight focused behavior/census checks pass with zero skips. Census: act 1 placeholders **46 → 38**
 and concrete **319 → 327**; act 2 placeholders **44 → 39** and concrete **450 → 455**.
+
+### 2026-09-19 — `$4E` `Obj_DEZLiftPad`
+
+All seven act 1 lift pads now port `Obj_DEZLiftPad` and `sub_4748E/sub_4757A`
+(`sonic3k.asm:93132-93357`). The low subtype nibble owns the inline multi-sprite point count;
+bits 4/5 and the X flip select the ROM angle transforms. The platform endpoint and intermediate
+lift points use the native sine table's 16.16 accumulation, while the platform supplies the
+ROM's top-only `$18` by 9 solid surface.
+
+The first P1 standing latch starts `sfx_GravityLift` and the word-width oscillator: velocity
+accelerates by 8 until the low angle byte reaches `$20`, decelerates by 8 to zero, then observes
+the 30-pass release delay. As shipped, remaining on the pad freezes that delay. The resident
+`ArtTile_DEZMisc2+$6` art and three-frame mapping at ROM `$47614` are registered through the ROM
+pipeline, and the separately allocated multi-sprite SST slot is reserved for slot-pressure parity.
+
+Census: act 1 placeholders **38 → 31**, concrete **327 → 334**; act 2 is unchanged.

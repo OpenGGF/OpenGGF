@@ -2723,6 +2723,17 @@ public final class Sonic3kPlcArtRegistry {
                 3
         ));
 
+        // Obj_DEZLiftPad: parent platform plus the inline multi-sprite lift column.
+        // ArtTile_DEZMisc2 is resident in the DEZ PLC (sonic3k.asm:93133-93138).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_LIFT_PAD,
+                Sonic3kConstants.MAP_DEZ_LIFT_PAD_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x06,
+                1,
+                null,
+                3
+        ));
+
         // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
         // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and
         // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:96088-96089),

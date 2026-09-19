@@ -148,6 +148,8 @@ public final class Sonic3kObjectIds {
     public static final int DEZ_TORPEDO_LAUNCHER = 0x4D;
     // S3KL object table: Obj_CNZWireCage.
     public static final int CNZ_WIRE_CAGE = 0x4E;
+    // SKL $4E is Obj_DEZLiftPad; S3KL $4E is the CNZ wire cage.
+    public static final int DEZ_LIFT_PAD = 0x4E;
     public static final int MGZLBZ_SMASHING_PILLAR_ALT = 0x20;
     // S3KL object table: Obj_LBZGateLaser. SKL reuses $21 for Obj_LRZSmashingSpikePlatform.
     public static final int LBZ_GATE_LASER = 0x21;

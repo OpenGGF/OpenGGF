@@ -494,6 +494,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String DEZ_LIGHTNING = "dez_lightning";
     public static final String DEZ_TORPEDO_LAUNCHER = "dez_torpedo_launcher";
     public static final String DEZ_HOVER_MACHINE = "dez_hover_machine";
+    public static final String DEZ_LIFT_PAD = "dez_lift_pad";
 
     // DEZ Gravity Puzzle (SKL 0x61) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZGravityPuzzle
     public static final String DEZ_GRAVITY_PUZZLE = "dez_gravity_puzzle";

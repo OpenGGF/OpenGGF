@@ -496,6 +496,8 @@ public class Sonic3kConstants {
     public static final int MAP_DEZ_LIGHTNING_ADDR = 0x04792E;
     public static final int MAP_DEZ_TORPEDO_LAUNCHER_ADDR = 0x0472A8;
     public static final int MAP_DEZ_HOVER_MACHINE_ADDR = 0x0495D8;
+    /** {@code Map_DEZLiftPad} (sonic3k.asm:93359; first frame at ROM $0004761A). */
+    public static final int MAP_DEZ_LIFT_PAD_ADDR = 0x047614;
     /** {@code Map_DEZGravityPuzzle} (sonic3k.lst: ROM $00049A6C). */
     public static final int MAP_DEZ_GRAVITY_PUZZLE_ADDR = 0x049A6C;
 

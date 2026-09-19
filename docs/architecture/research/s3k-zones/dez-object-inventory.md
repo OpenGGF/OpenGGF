@@ -88,7 +88,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$4B` | `Obj_DEZTiltingBridge` | 1 | 3 | placeholder | 4 |
 | `$4C` | `Obj_DEZHangCarrier` | 3 | 1 | placeholder | 4 |
 | `$4D` | `Obj_DEZTorpedoLauncher` | 36 | 38 | concrete: timed launcher, closing animation and touch projectile | 4 |
-| `$4E` | `Obj_DEZLiftPad` | 7 | 0 | placeholder | 4 |
+| `$4E` | `Obj_DEZLiftPad` | 7 | 0 | concrete: triggered accelerating lift arm and top-solid pad | 4 |
 | `$4F` | `Obj_DEZStaircase` | 18 | 15 | placeholder | 4 |
 | `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | concrete: invisible two-sided grounded-player conveyor | 4 |
 | `$52` | `Obj_DEZLightning` | 48 | 94 | concrete: ROM animation/wait/touch, art and local SFX | 4 |
