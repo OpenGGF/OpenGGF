@@ -3508,11 +3508,11 @@ spike ball launcher (9), `$25` chained platforms (3), `$AE` (1) and `$B3` (1).
 
 **What is owed, in the order the next round should take it.**
 
-1. **The act 2 route clip and rewind spots.** `inputs/lrz1-fight-then-native-act2-v1.txt` is the
-   fight truncated at the change frame with the native's act-2 controller appended, and the route
-   passes the flame throwers at `($8D2,$770)` and `($A4C,$6AF)`, so one capture can carry clips for
-   `$29`, `$2D` and the route at once. None of the three landed families has a clip, a rewind spot
-   on a route, or a wide/donor/roster row.
+1. **Rewind spots and the breadth rows for the three landed families.** Clip `36` is the act 2
+   route on the native's own controller (`inputs/lrz1-fight-then-native-act2-v2.txt`, 2600 rows
+   from 25558) and it catches `$29` firing, so the flame throwers have their clip; `$2B`/`$2C` and
+   `$2D` still have none, and none of the three has a rewind spot on a route or a
+   wide/donor/roster row. The same capture is the route to hang those on.
 2. **Row 26482**, with the charge-versus-formula question above as its kill condition.
 3. **Slice 7's remainder.** `$37` is read out and small: `Obj_LRZSpikeBallLauncher`
    (sonic3k.asm:89848-89931) allocates its ball as a child at `y_pos - 8` with `$46` as the rest
@@ -3538,11 +3538,12 @@ trace fixtures were re-measured once at `8875bc7f2` after deleting `target/suref
 frontier log; they were **not** re-run after the two commits that followed. This is focused
 validation, not a suite pass.
 
-**Media.** Clips `34` and `35` added, `INDEX.md` updated including a correction to clip `33`. The
-next clip number is `36`. New inputs: `lrz1-act-change-walk-v14.txt`, `lrz2-native-route-v1.txt`
+**Media.** Clips `34`, `35` and `36` added, `INDEX.md` updated including a correction to clip `33`.
+The next clip number is `37`. New inputs: `lrz1-act-change-walk-v14.txt`, `lrz2-native-route-v1.txt`
 (the fixture's own act-2 controller), `lrz1-fight-then-native-act2-v1.txt`,
-`lrz2-flame-thrower-v1.txt` and `-v2.txt` (route probes). New raw captures: `raw-46`, `raw-47`,
-`raw-48`, `raw-49`, and the native `native-lrz2-bg/run1`.
+`lrz2-native-route-v2.txt`, `lrz1-fight-then-native-act2-v1.txt` and `-v2.txt`,
+`lrz2-flame-thrower-v1.txt` and `-v2.txt` (route probes). New raw captures: `raw-46` to `raw-51`,
+and the native `native-lrz2-bg/run1`.
 
 **Two method notes.** The shared Maven queue was saturated for this whole round; the working
 pattern was to iterate off `target/classes` with the classpath file and spend queue slots only on
