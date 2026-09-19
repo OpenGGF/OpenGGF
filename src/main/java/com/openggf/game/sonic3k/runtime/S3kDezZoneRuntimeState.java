@@ -33,7 +33,7 @@ import java.util.Objects;
  * stays in {@code GameStateManager} where rewind already captures it.
  */
 public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 21 * Short.BYTES;
+    private static final int CAPTURE_BYTES = 22 * Short.BYTES;
 
     private final int zoneIndex;
     private final int actIndex;
@@ -48,6 +48,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     private short cameraStoredMinY;
     private short cameraStoredMaxY;
     private short panelBits;
+    private short backgroundDrawRowsRemaining;
     // DEZ3 Events_bg+$00..$16, kept as words because several are signed counters.
     private final short[] act3Background = new short[12];
 
@@ -114,6 +115,12 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     public void setBackgroundRoutine(int value) { backgroundRoutine = (short) value; }
     public void advanceBackgroundRoutine() { backgroundRoutine += 4; }
 
+    /** {@code Draw_delayed_rowcount} used by DEZ2's bottom-up transition redraw. */
+    public int backgroundDrawRowsRemaining() { return backgroundDrawRowsRemaining; }
+    public void setBackgroundDrawRowsRemaining(int value) {
+        backgroundDrawRowsRemaining = (short) value;
+    }
+
     /**
      * {@code MHZ_pollen_counter}, the byte Mushroom Hill counts particles in and Death Egg
      * reuses as {@code Obj_DEZGravityPuzzle}'s six panel bits ({@code bset d0,
@@ -159,6 +166,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         buffer.putShort(cameraStoredMinY);
         buffer.putShort(cameraStoredMaxY);
         buffer.putShort(panelBits);
+        buffer.putShort(backgroundDrawRowsRemaining);
         for (short word : act3Background) buffer.putShort(word);
         return buffer.array();
     }
@@ -178,6 +186,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         cameraStoredMinY = buffer.getShort();
         cameraStoredMaxY = buffer.getShort();
         panelBits = buffer.getShort();
+        backgroundDrawRowsRemaining = buffer.getShort();
         for (int i = 0; i < act3Background.length; i++) act3Background[i] = buffer.getShort();
     }
 }

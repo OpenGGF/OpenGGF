@@ -23,8 +23,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
  *
  * <p>Persistent event words live in {@link S3kDezZoneRuntimeState} so rewind captures them.
  * The seamless {@code $B00} → {@code $B01} change in {@code DEZ1_BackgroundEvent}
- * {@code loc_593EC}, the miniboss transport chain and the background bottom-up redraw are not
- * here yet; they are slice 7 of the bring-up plan.
+ * {@code loc_593EC} and the miniboss transport chain are not here yet.
  */
 public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
     private boolean act3CarryConsumed;
@@ -68,6 +67,7 @@ public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
             updateAct1ScreenEvent(state);
         } else {
             updateAct2ScreenEvent(state);
+            updateAct2BackgroundEvent(state);
         }
     }
 
@@ -208,6 +208,37 @@ public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
             default -> {
                 // loc_594F8: jmp (DrawTilesAsYouMove).l
             }
+        }
+    }
+
+    /**
+     * {@code DEZ2_BackgroundEvent} stages 0-2 ({@code loc_59532..loc_59566}). The seamless
+     * reload leaves the routine at zero; a direct act-2 load starts at eight and bypasses this
+     * redraw. Native {@code Draw_PlaneVertBottomUp} consumes two rows per dispatch from the
+     * initial {@code $0F} row counter, then returns negative and advances to plain deformation.
+     */
+    private void updateAct2BackgroundEvent(S3kDezZoneRuntimeState state) {
+        switch (state.backgroundRoutine()) {
+            case 0 -> {
+                var manager = levelManager();
+                if (manager != null) {
+                    manager.resetTileOffsetPositionEffectiveForFullRefresh();
+                }
+                state.setBackgroundDrawRowsRemaining(0x0F);
+                state.advanceBackgroundRoutine();
+            }
+            case 4 -> {
+                int remaining = state.backgroundDrawRowsRemaining() - 2;
+                state.setBackgroundDrawRowsRemaining(remaining);
+                if (remaining < 0) {
+                    var manager = levelManager();
+                    if (manager != null) {
+                        manager.refreshFullTilemapPlanesFromCurrentLayout(0);
+                    }
+                    state.advanceBackgroundRoutine();
+                }
+            }
+            default -> { /* stage 8: PlainDeformation */ }
         }
     }
 

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@code DEZ1_ScreenEvent}, {@code DEZ2_ScreenInit} and {@code DEZ2_ScreenEvent}
@@ -166,5 +167,23 @@ class TestS3kDezScreenEvents {
         assertEquals(0xDC, chunkAt(level, 2, 14));
         assertEquals(0xD7, chunkAt(level, 3, 14));
         assertEquals(4, dezState().foregroundRoutine());
+    }
+
+    /** The seamless entry starts DEZ2_BackgroundEvent at zero and redraws 16 rows bottom-up. */
+    @Test
+    void actTwoTransitionBackgroundRedrawAdvancesToPlainDeformation() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, ACT_2)
+                .build();
+        fixture.stepIdleFrames(2);
+
+        dezState().setBackgroundRoutine(0);
+        fixture.stepIdleFrames(1);
+        assertEquals(4, dezState().backgroundRoutine());
+        assertEquals(0x0F, dezState().backgroundDrawRowsRemaining());
+
+        fixture.stepIdleFrames(8);
+        assertEquals(8, dezState().backgroundRoutine());
+        assertTrue(dezState().backgroundDrawRowsRemaining() < 0);
     }
 }
