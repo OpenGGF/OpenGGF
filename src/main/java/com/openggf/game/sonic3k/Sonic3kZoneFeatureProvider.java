@@ -27,10 +27,12 @@ import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.render.IczBigSnowPileBackgroundEffect;
+import com.openggf.game.sonic3k.render.LrzRockSpriteRenderer;
 import com.openggf.game.sonic3k.render.IczBigSnowPilePriorityMaskEffect;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
@@ -54,7 +56,7 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
     @Override
     public boolean negativeTumbleUsesUnreflectedAngle(boolean facingLeft) {
         // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24938-24984):
@@ -67,6 +69,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     private static final Logger LOGGER = Logger.getLogger(Sonic3kZoneFeatureProvider.class.getName());
     private static final int VDP_BG_PLANE_WIDTH_PX = 512;
 
+    private LrzRockSpriteRenderer lrzRockSpriteRenderer;
     private final AizBattleshipRenderFeature aizBattleshipRenderFeature = new AizBattleshipRenderFeature();
     private final AizTransitionRenderFeature aizTransitionRenderFeature = new AizTransitionRenderFeature();
     private final SpecialRenderEffect hczBgHighPriorityForegroundOverlayEffect =
@@ -358,6 +361,39 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         if (zoneIndex == Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
             initSlotMachineRenderer(rom);
         }
+        // LevelLoop calls Draw_LRZ_Special_Rock_Sprites only for Current_zone 9
+        // (sonic3k.asm:7900-7903); the boss act's zone has no rock list.
+        lrzRockSpriteRenderer = zoneIndex == Sonic3kZoneIds.ZONE_LRZ
+                ? LrzRockSpriteRenderer.load(rom, actIndex)
+                : null;
+    }
+
+    /** The zone's rock renderer, or {@code null} outside Lava Reef acts 1 and 2. */
+    public LrzRockSpriteRenderer lrzRockSpriteRenderer() {
+        return lrzRockSpriteRenderer;
+    }
+
+    /**
+     * {@code Render_Sprites_NextLevel} (sonic3k.asm:36386-36390) appends the Lava Reef rocks while
+     * the sprite-table pointer is still on priority level 0, so they sit behind everything already
+     * in that level and in front of every later one.
+     */
+    @Override
+    public void appendSpritesAfterPriorityBucket(int bucket) {
+        LrzRockSpriteRenderer renderer = lrzRockSpriteRenderer;
+        if (renderer == null || bucket != com.openggf.graphics.RenderPriority.MIN
+                || !GameServices.hasRuntime()) {
+            return;
+        }
+        LrzZoneRuntimeState state =
+                S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (state == null) {
+            return;
+        }
+        Camera camera = GameServices.camera();
+        GraphicsManager graphics = GameServices.graphics();
+        renderer.draw(graphics, state, camera.getXCopy(), camera.getYCopy(),
+                graphics.getViewportWidth(), graphics.getViewportHeight());
     }
 
     private void initSlotMachineRenderer(Rom rom) {

@@ -278,7 +278,121 @@ public final class Sonic3kObjectArtKeys {
     public static final String HCZ_BUTTON = "hcz_button";
     public static final String CNZ_BUTTON = "cnz_button";
     public static final String LRZ_BUTTON = "lrz_button";
+    /** {@code Obj_LRZDashElevator}: {@code Map_LRZDashElevator} over {@code ArtTile_LRZMisc}. */
+    public static final String LRZ_DASH_ELEVATOR = "lrz_dash_elevator";
+    /** {@code Obj_LRZSinkingRock}: {@code Map_LRZSinkingRock} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_SINKING_ROCK = "lrz_sinking_rock";
+    /** The same mappings over the act 2 tile base {@code $090} (sonic3k.asm:87910). */
+    public static final String LRZ2_SINKING_ROCK = "lrz2_sinking_rock";
+    /** {@code Obj_LRZFallingSpike}: {@code Map_LRZFallingSpike} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_FALLING_SPIKE = "lrz_falling_spike";
+    /** {@code Obj_LRZFireballLauncher}: {@code Map_LRZFireballLauncher}, palette 3, frame 2. */
+    public static final String LRZ_FIREBALL_LAUNCHER = "lrz_fireball_launcher";
+    /**
+     * The fireball it allocates. It copies the launcher's mappings but is given
+     * {@code make_art_tile(ArtTile_LRZMisc,0,0)} (sonic3k.asm:88179), so frames 0 and 1 of the same
+     * map are drawn on palette line 0 rather than the launcher's 3.
+     */
+    public static final String LRZ_FIREBALL = "lrz_fireball";
+    /** The drops {@code Obj_LRZLavaFall} allocates: {@code Map_LRZLavaFall} on palette line 2. */
+    public static final String LRZ_LAVA_FALL = "lrz_lava_fall";
+    /**
+     * {@code Obj_LRZSmashingSpikePlatform}: {@code Map_LRZSmashingSpikePlatform} over
+     * {@code ArtTile_LRZMisc}, palette 2 (sonic3k.asm:88540).
+     */
+    public static final String LRZ_SMASHING_SPIKE_PLATFORM = "lrz_smashing_spike_platform";
+    /**
+     * {@code Obj_LRZSpikeBall}: {@code Map_LRZSpikeBall} over {@code ArtTile_LRZBigSpike},
+     * palette 1 (sonic3k.asm:88840).
+     */
+    public static final String LRZ_SPIKE_BALL = "lrz_spike_ball";
+    /**
+     * The chips {@code sub_439EC} throws: {@code Map_LRZRockDebris} on
+     * {@code make_art_tile($0D3,2,1)} (sonic3k.asm:89025).
+     */
+    public static final String LRZ_ROCK_DEBRIS = "lrz_rock_debris";
+    /**
+     * {@code Obj_LRZRockCrusher}: {@code Map_LRZRockCrusher} over
+     * {@code ArtTile_LRZRockCrusher}, palette 1 ({@code ObjDat_LRZRockCrusher},
+     * sonic3k.asm:197426-197428). Its eight hit pieces copy the same art_tile.
+     */
+    public static final String LRZ_ROCK_CRUSHER = "lrz_rock_crusher";
+    /**
+     * {@code Obj_LRZMiniboss} and every one of its children: {@code Map_LRZMiniboss} over
+     * {@code ArtTile_LRZMiniboss}, {@code make_art_tile(ArtTile_LRZMiniboss,1,1)} so palette
+     * line 1 and high priority ({@code ObjDat_LRZMiniboss}, sonic3k.asm:160797-160799).
+     * {@code CreateChild8_TreeListRepeated} copies the parent's mappings and art tile into
+     * every child, so the arms, orbiters, hand, projectiles and defeat debris all draw from
+     * this one sheet.
+     */
+    public static final String LRZ_MINIBOSS = "lrz_miniboss";
+    /** {@code Obj_LRZSwingingSpikeBall}: {@code Map_LRZSwingingSpikeBall}, palette 1. */
+    public static final String LRZ_SWINGING_SPIKE_BALL = "lrz_swinging_spike_ball";
+    /** The same map on palette line 0, which {@code andi.w #$9FFF} leaves the chain child. */
+    public static final String LRZ_SWINGING_SPIKE_BALL_CHAIN = "lrz_swinging_spike_ball_chain";
+    /** Act 2's {@code Map_LRZSwingingSpikeBall2} over {@code ArtTile_LRZ2Misc}, palette 1. */
+    public static final String LRZ2_SWINGING_SPIKE_BALL = "lrz2_swinging_spike_ball";
+    /** Act 2's chain: the same map on palette line 0. */
+    public static final String LRZ2_SWINGING_SPIKE_BALL_CHAIN = "lrz2_swinging_spike_ball_chain";
+    /**
+     * {@code Obj_LRZOrbitingSpikeBall*}: {@code Map_LRZOrbitingSpikeBall} (ROM {@code $43D24})
+     * over {@code ArtTile_LRZ2Misc}, palette 1 (sonic3k.asm:89078-89079, :89150-89151). Both
+     * orbiting ids are act 2 only.
+     */
+    public static final String LRZ2_ORBITING_SPIKE_BALL = "lrz2_orbiting_spike_ball";
+    /**
+     * {@code Obj_LRZFlameThrower}'s body: {@code Map_LRZFlameThrower} (ROM {@code $4408A}) over
+     * tile {@code $090}, palette 1 ({@code make_art_tile($090,1,0)}, sonic3k.asm:89228-89229).
+     * That base is act 2's secondary art, which is why the thrower is an act 2 object.
+     */
+    public static final String LRZ2_FLAME_THROWER = "lrz2_flame_thrower";
+    /**
+     * The flames it allocates: the same mappings on {@code ArtTile_LRZ2Misc}, palette 1
+     * ({@code make_art_tile(ArtTile_LRZ2Misc,1,0)}, sonic3k.asm:89299, :89408). The parent copies
+     * its own {@code mappings} pointer into the child (:89297) and only the tile base differs.
+     */
+    public static final String LRZ2_FLAME = "lrz2_flame";
+    /**
+     * {@code Obj_LRZSolidMovingPlatforms}: {@code Map_LRZSolidMovingPlatforms} (ROM {@code $259C4})
+     * over tile {@code $090}, palette 2 ({@code make_art_tile($090,2,0)}, sonic3k.asm:51013-51014).
+     */
+    public static final String LRZ2_SOLID_MOVING_PLATFORM = "lrz2_solid_moving_platform";
+    /**
+     * {@code Obj_LRZSpikeBallLauncher} and the ball it allocates: {@code Map_LRZSpikeBallLauncher}
+     * (ROM {@code $449BC}) over {@code make_art_tile(ArtTile_LRZ2Misc,1,0)}
+     * (sonic3k.asm:89849-89850). The ball copies the parent's {@code mappings} and
+     * {@code art_tile} verbatim (:89864-89865), so both read one key: frames 0-2 are the ball and
+     * 3-4 the launcher.
+     */
+    public static final String LRZ2_SPIKE_BALL_LAUNCHER = "lrz2_spike_ball_launcher";
+    /**
+     * {@code Obj_LRZTurbineSprites} subtype 0: {@code Map_LRZTurbineSprites} (ROM {@code $445A6})
+     * over {@code make_art_tile(ArtTile_LRZ2Drum,1,1)} (sonic3k.asm:89612, :89626).
+     */
+    public static final String LRZ2_TURBINE_SPRITES = "lrz2_turbine_sprites";
+    /** Its non-zero subtypes: {@code Map_LRZTurbineSprites2} (ROM {@code $445B0}), same tiles. */
+    public static final String LRZ2_TURBINE_SPRITES_THIN = "lrz2_turbine_sprites_thin";
+    /** {@code Obj_LRZChainedPlatforms}: {@code Map_LRZChainedPlatforms} (ROM {@code $4A980}). */
+    public static final String LRZ2_CHAINED_PLATFORM = "lrz2_chained_platform";
     public static final String LRZ2_BUTTON = "lrz2_button";
+    /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_DOOR = "lrz_door";
+    /** The same mappings over the act 2 tile base {@code $090} (sonic3k.asm:88027). */
+    public static final String LRZ2_DOOR = "lrz2_door";
+    /** {@code Obj_LRZBigDoor}: {@code Map_LRZBigDoor} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_BIG_DOOR = "lrz_big_door";
+    /** {@code Obj_LRZButtonHorizontal}: {@code Map_LRZButtonHorizontal}, palette 3. */
+    public static final String LRZ_BUTTON_HORIZONTAL = "lrz_button_horizontal";
+    /** Act 2's {@code Map_LRZButtonHorizontal2} over {@code ArtTile_LRZ2Misc}, palette 1. */
+    public static final String LRZ2_BUTTON_HORIZONTAL = "lrz2_button_horizontal";
+    /** {@code Obj_LRZShootingTrigger}: {@code Map_LRZShootingTrigger} frame 0, palette 3. */
+    public static final String LRZ_SHOOTING_TRIGGER = "lrz_shooting_trigger";
+    /**
+     * The shot the trigger allocates. It copies its parent's mappings but is given
+     * {@code make_art_tile(ArtTile_LRZMisc,0,0)} (sonic3k.asm:88307), so the same map frame is
+     * drawn on palette line 0 rather than the parent's 3.
+     */
+    public static final String LRZ_SHOOTING_TRIGGER_SHOT = "lrz_shooting_trigger_shot";
 
     // FBZ badniks
     public static final String FBZ_BLASTER = "fbz_blaster";

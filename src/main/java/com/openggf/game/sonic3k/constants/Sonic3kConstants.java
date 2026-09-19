@@ -1697,6 +1697,91 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_FBZ_BUTTON_ADDR = 0x165E80;
     public static final int MAP_BUTTON_ADDR = 0x02C71E;
     public static final int MAP_LRZ_BUTTON_ADDR = 0x02C748;
+    /** {@code Map_LRZDashElevator} (sonic3k.lst: $43096). */
+    public static final int MAP_LRZ_DASH_ELEVATOR_ADDR = 0x043096;
+    /** {@code Map_LRZDoor} (sonic3k.lst: $429DA); both acts share it. */
+    public static final int MAP_LRZ_DOOR_ADDR = 0x0429DA;
+    /** {@code Map_LRZBigDoor} (sonic3k.lst: $42B24). */
+    public static final int MAP_LRZ_BIG_DOOR_ADDR = 0x042B24;
+    /** {@code Map_LRZButtonHorizontal} (sonic3k.lst: $42D7C). */
+    public static final int MAP_LRZ_BUTTON_HORIZONTAL_ADDR = 0x042D7C;
+    /** {@code Map_LRZButtonHorizontal2} (sonic3k.lst: $42D9E), the act 2 skin. */
+    public static final int MAP_LRZ_BUTTON_HORIZONTAL2_ADDR = 0x042D9E;
+    /** {@code Map_LRZShootingTrigger} (sonic3k.lst: $42F06); the shot reuses it at frame 1. */
+    public static final int MAP_LRZ_SHOOTING_TRIGGER_ADDR = 0x042F06;
+    /** {@code make_art_tile($090,2,0)}: the act 2 door's tile base (sonic3k.asm:88027). */
+    public static final int ARTTILE_LRZ2_DOOR = 0x0090;
+    /** {@code Map_LRZSinkingRock} (sonic3k.lst: $42834); both acts share it. */
+    public static final int MAP_LRZ_SINKING_ROCK_ADDR = 0x042834;
+    /** {@code Map_LRZFallingSpike} (sonic3k.lst: $42920). */
+    public static final int MAP_LRZ_FALLING_SPIKE_ADDR = 0x042920;
+    /** {@code Map_LRZFireballLauncher} (sonic3k.lst: $42CB2); the fireball shares it. */
+    public static final int MAP_LRZ_FIREBALL_LAUNCHER_ADDR = 0x042CB2;
+    /** {@code Map_LRZLavaFall} (sonic3k.lst: $43782), used only by the drops. */
+    public static final int MAP_LRZ_LAVA_FALL_ADDR = 0x043782;
+    /** {@code Map_LRZSmashingSpikePlatform} (sonic3k.lst: $4324A). */
+    public static final int MAP_LRZ_SMASHING_SPIKE_PLATFORM_ADDR = 0x04324A;
+    /** {@code Map_LRZRockCrusher} (sonic3k.lst: $186D6A). */
+    public static final int MAP_LRZ_ROCK_CRUSHER_ADDR = 0x186D6A;
+    /** {@code ArtKosM_LRZRockCrusher} (sonic3k.lst: $16F928). */
+    public static final int ART_KOSM_LRZ_ROCK_CRUSHER_ADDR = 0x16F928;
+    /** {@code ArtTile_LRZRockCrusher} (sonic3k.lst: $52E). */
+    public static final int ARTTILE_LRZ_ROCK_CRUSHER = 0x052E;
+    /** {@code Pal_LRZRockCrusher} (sonic3k.lst: $90680), one 32-byte line. */
+    public static final int PAL_LRZ_ROCK_CRUSHER_ADDR = 0x090680;
+    /** {@code Map_LRZMiniboss} (sonic3k.lst: $186EC8). */
+    public static final int MAP_LRZ_MINIBOSS_ADDR = 0x186EC8;
+    /** {@code ArtKosM_LRZMiniboss} (sonic3k.lst: $16FCDA); {@code loc_78592} queues it. */
+    public static final int ART_KOSM_LRZ_MINIBOSS_ADDR = 0x16FCDA;
+    /** {@code ArtTile_LRZMiniboss} (sonic3k.constants.asm:1320). */
+    public static final int ARTTILE_LRZ_MINIBOSS = 0x03FB;
+    /** {@code Pal_LRZMiniboss1} (sonic3k.lst: $78E0A): {@code PalLoad_Line1} at object setup. */
+    public static final int PAL_LRZ_MINIBOSS_1_ADDR = 0x078E0A;
+    /** {@code Pal_LRZMiniboss2} (sonic3k.lst: $78E2A): {@code sub_78B38} copies $40 bytes to line 3. */
+    public static final int PAL_LRZ_MINIBOSS_2_ADDR = 0x078E2A;
+    /** {@code Pal_LRZMiniboss3} (sonic3k.lst: $78E6A): the post-defeat camera release, {@code loc_78B08}. */
+    public static final int PAL_LRZ_MINIBOSS_3_ADDR = 0x078E6A;
+    /** {@code Pal_LRZ2} (sonic3k.lst: $A96DC): {@code loc_78B08} copies $20 bytes over line 2. */
+    public static final int PAL_LRZ2_ADDR = 0x0A96DC;
+    /** {@code Pal_LRZ1} (sonic3k.lst: $A967C), the line the crusher restores on exit. */
+    public static final int PAL_LRZ1_ADDR = 0x0A967C;
+    /** {@code Map_LRZSpikeBall} (sonic3k.lst: $43A8E). */
+    public static final int MAP_LRZ_SPIKE_BALL_ADDR = 0x043A8E;
+    /** {@code Map_LRZRockDebris} (sonic3k.lst: $43B12). */
+    public static final int MAP_LRZ_ROCK_DEBRIS_ADDR = 0x043B12;
+    /** {@code ArtTile_LRZBigSpike} (sonic3k.lst: $442). */
+    public static final int ARTTILE_LRZ_BIG_SPIKE = 0x0442;
+    /** {@code Map_LRZSwingingSpikeBall} (sonic3k.lst: $43666). */
+    public static final int MAP_LRZ_SWINGING_SPIKE_BALL_ADDR = 0x043666;
+    /** {@code Map_LRZSwingingSpikeBall2} (sonic3k.lst: $4367E), the act 2 skin. */
+    public static final int MAP_LRZ_SWINGING_SPIKE_BALL2_ADDR = 0x04367E;
+    /** {@code Map_LRZOrbitingSpikeBall} (sonic3k.lst, ROM {@code $43D24}). */
+    public static final int MAP_LRZ_ORBITING_SPIKE_BALL_ADDR = 0x043D24;
+    /** {@code Map_LRZFlameThrower} (sonic3k.lst, ROM {@code $4408A}). */
+    public static final int MAP_LRZ_FLAME_THROWER_ADDR = 0x04408A;
+    /** {@code Map_LRZSolidMovingPlatforms} (sonic3k.lst, ROM {@code $259C4}). */
+    public static final int MAP_LRZ_SOLID_MOVING_PLATFORM_ADDR = 0x0259C4;
+    /** {@code Map_LRZSpikeBallLauncher} (sonic3k.lst, ROM {@code $449BC}). */
+    public static final int MAP_LRZ_SPIKE_BALL_LAUNCHER_ADDR = 0x0449BC;
+    /** {@code Map_LRZTurbineSprites} (sonic3k.lst, ROM {@code $445A6}). */
+    public static final int MAP_LRZ_TURBINE_SPRITES_ADDR = 0x0445A6;
+    /** {@code Map_LRZTurbineSprites2} (sonic3k.lst, ROM {@code $445B0}). */
+    public static final int MAP_LRZ_TURBINE_SPRITES2_ADDR = 0x0445B0;
+    /** {@code ArtTile_LRZ2Drum} (sonic3k.lst: $3AD). */
+    public static final int ARTTILE_LRZ2_DRUM = 0x03AD;
+    /** {@code Map_LRZChainedPlatforms} (sonic3k.lst, ROM {@code $4A980}). */
+    public static final int MAP_LRZ_CHAINED_PLATFORM_ADDR = 0x04A980;
+    /**
+     * {@code make_art_tile($090,1,0)}: the flame thrower's tile base (sonic3k.asm:89228). It is
+     * act 2's secondary art, the same base the act 2 sinking rock and door use; named separately
+     * so no owner reads as another's.
+     */
+    public static final int ARTTILE_LRZ2_FLAME_THROWER = 0x0090;
+    /**
+     * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87910).
+     * The same base the act 2 door uses; named separately so neither owner reads as the other's.
+     */
+    public static final int ARTTILE_LRZ2_SINKING_ROCK = 0x0090;
     public static final int MAP_HCZ_BUTTON_ADDR = 0x22BD1A;
     public static final int MAP_CNZ_BUTTON_ADDR = 0x22BD4A;
     public static final int ARTTILE_MHZ1_CUTSCENE_BUTTON = 0x0341;
@@ -1870,6 +1955,19 @@ public class Sonic3kConstants {
     /** Raw animation bytes {@code byte_832A8} through {@code byte_832E1}. */
     public static final int DDZ_RAW_ANIM_BASE_ADDR = 0x0832A8;
     public static final int DDZ_RAW_ANIM_SIZE = 0x3A;
+
+    /**
+     * {@code byte_8FA40} through the end of {@code byte_8FA56}: the Fireworm's three raw
+     * animation scripts, which end where {@link #MAP_FIREWORM_SEGMENTS_ADDR} begins.
+     */
+    public static final int LRZ_FIREWORM_RAW_ANIM_BASE_ADDR = 0x08FA40;
+    public static final int LRZ_FIREWORM_RAW_ANIM_SIZE = 0x1C;
+    /** {@code byte_8FA40}: the swim loop the head and every segment run in routine 6. */
+    public static final int LRZ_FIREWORM_ANIM_SWIM_ADDR = 0x08FA40;
+    /** {@code byte_8FA4D}: the turn-around loop, whose third entry flips the sprite. */
+    public static final int LRZ_FIREWORM_ANIM_TURN_ADDR = 0x08FA4D;
+    /** {@code byte_8FA56}: the flame's four-frame flicker. */
+    public static final int LRZ_FIREWORM_ANIM_FLAME_ADDR = 0x08FA56;
 
     // ===== DEZ Badnik Art =====
     public static final int ART_KOSM_SPIKEBONKER_ADDR = 0x18008C;

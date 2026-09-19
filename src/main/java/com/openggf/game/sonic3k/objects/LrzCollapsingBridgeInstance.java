@@ -158,6 +158,26 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         }
     }
 
+    /**
+     * The spawn {@code Obj_LRZRockCrusher}'s timer child allocates its slabs from
+     * (sonic3k.asm:197227-197231, :197250-197254). {@code AllocateObject} hands out a zeroed SST
+     * and the ROM writes only word 0, {@code $32}, {@code x_pos} and {@code y_pos}, so the subtype
+     * is 0 -- entry 0 of {@code byte_39CA4}.
+     */
+    public static ObjectSpawn crusherDebrisSpawn(int x, int y) {
+        return new ObjectSpawn(x & 0xFFFF, y & 0xFFFF,
+                com.openggf.game.sonic3k.constants.Sonic3kObjectIds.LBZ_ROLLING_DRUM,
+                0, 0, false, 0);
+    }
+
+    /**
+     * {@code move.b #1,$32(a1)} (:197229): the slab arrives already broken loose rather than
+     * waiting to be stood on.
+     */
+    public void markAlreadyBrokenLoose() {
+        this.armed = true;
+    }
+
     @Override
     public LrzCollapsingBridgeInstance recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),

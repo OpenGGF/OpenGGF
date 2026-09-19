@@ -47,6 +47,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
 | `--emeralds <7 digits>` | unchanged | S3K `Collected_emeralds_array` setup (0 none, 1 Chaos, 2 grey Super, 3 Super), applied after boot |
 | `--vint-run-count <n>` | fresh | Declared inherited `V_int_run_count` (objects gating on its low bits, e.g. DDZ turret aim) |
+| `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
 | `--title-card` | off | Keep and draw title-card presentations instead of omitting them |
 | `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop |
@@ -84,3 +85,9 @@ user the MP4 plus one or two stills, with the frame numbers and what they show.
 - The input log is held state per frame; a jump is one frame of `A` then release.
   Scripted timing is fixed, so anything keyed to object phases (elevators, polarity
   cycles) needs the `--settle` count tuned from `state.csv`, not guessed.
+- A byte-identical before/after capture is not evidence that the change is inert: the
+  affected plane may not be visible at that position. A Lava Reef Act 2 background change
+  produced zero differing frames over 420 frames at two positions, then differed at two of
+  eight positions swept across the act, because the foreground is opaque almost everywhere.
+  Sweep several positions before concluding either way, and confirm the plane is on screen
+  at the one you film.

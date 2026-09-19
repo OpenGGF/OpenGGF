@@ -225,6 +225,32 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.LBZ_FINAL_BOSS_2,
                 Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX,
                 Sonic3kObjectIds.LBZ_GATE_LASER,
+                Sonic3kObjectIds.LBZ_PLAYER_LAUNCHER,
+                Sonic3kObjectIds.LBZ_FLAME_THROWER,
+                Sonic3kObjectIds.LBZ_RIDE_GRAPPLE,
+                Sonic3kObjectIds.LBZ_CUP_ELEVATOR,
+                Sonic3kObjectIds.LBZ_CUP_ELEVATOR_POLE,
+                Sonic3kObjectIds.LRZ_BIG_DOOR,
+                Sonic3kObjectIds.LRZ_BUTTON_HORIZONTAL,
+                Sonic3kObjectIds.LRZ_SHOOTING_TRIGGER,
+                Sonic3kObjectIds.MGZLBZ_SMASHING_PILLAR_ALT,
+                Sonic3kObjectIds.LBZ_ALARM,
+                Sonic3kObjectIds.LRZ_CHAINED_PLATFORMS,
+                Sonic3kObjectIds.AIZ_DISAPPEARING_FLOOR,
+                Sonic3kObjectIds.AIZ_FLIPPING_BRIDGE,
+                Sonic3kObjectIds.AIZ_COLLAPSING_LOG_BRIDGE,
+                Sonic3kObjectIds.AIZ_FALLING_LOG,
+                Sonic3kObjectIds.AIZ_DRAW_BRIDGE,
+                Sonic3kObjectIds.HCZ_WATER_RUSH,
+                Sonic3kObjectIds.HCZ_MINIBOSS,
+                Sonic3kObjectIds.HCZ_END_BOSS,
+                Sonic3kObjectIds.BUBBLES_BADNIK,
+                Sonic3kObjectIds.SPIKER,
+                Sonic3kObjectIds.MANTIS,
+                Sonic3kObjectIds.TUNNELBOT,
+                Sonic3kObjectIds.PENGUINATOR,
+                Sonic3kObjectIds.STAR_POINTER,
+                Sonic3kObjectIds.ICZ_SEGMENT_COLUMN,
                 Sonic3kObjectIds.LBZ_KNUX_PILLAR,
                 Sonic3kObjectIds.LBZ_LOWERING_GRAPPLE,
                 Sonic3kObjectIds.LBZ_MINIBOSS,
@@ -260,29 +286,27 @@ class TestSonic3kModZoneObjectSet {
     @Test
     void stockZoneDependencyInventoryRemainsExplicitFactoryMetadata() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
-        Set<Integer> pointerTableCollisionIds = Set.of(
-                Sonic3kObjectIds.HPZ_MASTER_EMERALD,
-                Sonic3kObjectIds.HPZ_SUPER_EMERALD,
-                Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
-                // S3KL's ICZ ice cube, spikes and harmful ice share $B6-$B8.
-                Sonic3kObjectIds.DDZ_END_BOSS,
-                Sonic3kObjectIds.DDZ_ASTEROID,
-                Sonic3kObjectIds.DDZ_MISSILE);
+        Set<Integer> s3klCollisions = registry.stockZoneBoundFactoryIds().stream()
+                .filter(id -> registry.canCreateInCustomZone(S3kZoneSet.S3KL, id))
+                .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+        Set<Integer> sklCollisions = registry.stockZoneBoundFactoryIds().stream()
+                .filter(id -> registry.canCreateInCustomZone(S3kZoneSet.SKL, id))
+                .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
 
-        for (int objectId : registry.stockZoneBoundFactoryIds()) {
-            if (pointerTableCollisionIds.contains(objectId)) {
-                assertTrue(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
-                        () -> "S3KL must retain its ICZ pointer-table object at slot $"
-                                + Integer.toHexString(objectId));
-            } else {
-                assertFalse(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
-                        () -> "S3KL custom-compatible collision at object $"
-                                + Integer.toHexString(objectId));
-            }
-            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId),
-                    () -> "SKL custom-compatible collision at object $"
-                            + Integer.toHexString(objectId));
-        }
+        // These ids retain a pointer-table owner in custom content even though a stock ROM zone
+        // has a more specific owner. Keep the aliases exact so adding a stock-zone factory cannot
+        // silently broaden the custom-zone contract.
+        assertEquals(Set.of(
+                0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x22, 0x29,
+                0x2B, 0x2C, 0x2D, 0x32, 0x37,
+                0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xAD,
+                0xAE, 0xB0, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8),
+                s3klCollisions);
+        assertEquals(Set.of(
+                0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x22, 0x29,
+                0x2B, 0x2C, 0x2D, 0x32, 0x37,
+                0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xAD, 0xAE, 0xB3),
+                sklCollisions);
     }
 
     @Test

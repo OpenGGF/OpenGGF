@@ -38,6 +38,18 @@ public final class S3kCameraGradualObjectInstance extends AbstractObjectInstance
         this.kind = kind;
     }
 
+    /**
+     * Probe constructor for {@link com.openggf.level.objects.ObjectRewindDynamicCodecs}'s
+     * {@code genericRecreate}: it must build an instance of a {@link RewindRecreatable} class
+     * before it can call {@link #recreateForRewind}, and it only knows a fixed set of
+     * signatures. Without one of them the whole child is silently dropped on restore, which is
+     * how the Lava Reef crusher lost its four {@code Child7_ChangeLevSize} children. The kind
+     * rides in the spawn's subtype, exactly as {@link #recreateForRewind} reads it back.
+     */
+    private S3kCameraGradualObjectInstance(ObjectSpawn spawn) {
+        this(spawn.subtype());
+    }
+
     @Override
     public S3kCameraGradualObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new S3kCameraGradualObjectInstance(ctx.spawn().subtype());

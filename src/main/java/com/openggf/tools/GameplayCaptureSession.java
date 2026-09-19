@@ -145,6 +145,13 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // level entry after a long run), read by objects that gate on its low bits.
             level.getObjectManager().initVblaCounter(settings.vIntRunCount());
         }
+        if (settings.rings() != null) {
+            // Declared capture setup: the ring count the route carried in. A boss clip filmed
+            // from a positioned start otherwise begins on 0 rings, where the first touch is
+            // fatal and the fight cannot be filmed at all; the recorded Sonic + Tails run
+            // arrives at the Lava Reef act 1 arena with 355.
+            GameServices.camera().getFocusedSprite().setRingCount(settings.rings());
+        }
         if (settings.cameraXSub() != null) {
             // Declared capture setup: the inherited Camera_X_pos low word. Only zones that keep
             // a camera fraction honour it (S3K Doomsday autoscroll, sub_82920).
@@ -336,7 +343,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
-                           Integer cameraXSub) {
+                           Integer cameraXSub, Integer rings) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
@@ -347,7 +354,15 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         Path donorRom, Integer startX, Integer startY, String emeraldStates,
                         boolean showTitleCard, boolean completeSpecialStage) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, null, null);
+                    showTitleCard, completeSpecialStage, null, null, null);
+        }
+
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, null);
         }
 
         public Settings {

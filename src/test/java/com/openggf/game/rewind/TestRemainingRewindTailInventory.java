@@ -132,7 +132,9 @@ class TestRemainingRewindTailInventory {
         // HPZ compatibility, fight and native-sequence graph tests.
         // Doomsday bring-up: 23 object classes, all passing the isolated sweep through their
         // private ObjectSpawn probe constructors.
-        return new TailInventory(1109, 874, 235, 0, buckets);
+        // Full LRZ bring-up adds 52 concrete object classes. Forty-seven probe
+        // independently; the five miniboss-owned children use focused family tests.
+        return new TailInventory(1161, 921, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
