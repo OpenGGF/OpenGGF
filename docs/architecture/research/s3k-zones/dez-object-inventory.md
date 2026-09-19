@@ -113,7 +113,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$A4` | `Obj_Spikebonker` | 7 | 11 | `SpikebonkerBadnikInstance` | 4 |
 | `$A5` | `Obj_Chainspike` | 6 | 12 | implemented | 4 |
 | `$A6` | `Obj_DEZMiniboss` | 1 | 0 | `S3kDezMinibossInstance` | 6 |
-| `$A7` | `Obj_DEZEndBoss` | 0 | 1 | placeholder | 8 |
+| `$A7` | `Obj_DEZEndBoss` | 0 | 1 | `S3kDezEndBossInstance` | 8 |
 
 Both bosses are **placed** objects gated by `Check_CameraInRange`, not event spawns.
 
@@ -304,7 +304,7 @@ so subtypes `$80+` arrive inverted.
 | `$A4` | `$40` | `Obj_Spikebonker` | 3 | 1 | implemented |
 | `$A5` | `$00` | `Obj_Chainspike` | 6 | 12 | implemented |
 | `$A6` | `$00` | `Obj_DEZMiniboss` | 1 | 0 | implemented |
-| `$A7` | `$00` | `Obj_DEZEndBoss` | 0 | 1 | placeholder |
+| `$A7` | `$00` | `Obj_DEZEndBoss` | 0 | 1 | implemented |
 
 ## Dynamic objects not in the placement files
 

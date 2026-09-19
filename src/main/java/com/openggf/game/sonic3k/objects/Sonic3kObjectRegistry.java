@@ -1209,6 +1209,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
+                        if (currentRomZoneId() == Sonic3kZoneIds.ZONE_DEZ) {
+                            return new S3kDezEndBossInstance(spawn);
+                        }
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }
                     return new CnzEndBossInstance(spawn);

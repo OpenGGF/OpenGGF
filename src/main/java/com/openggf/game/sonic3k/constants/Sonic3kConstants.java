@@ -524,6 +524,10 @@ public class Sonic3kConstants {
     public static final int MAP_DEZ_MINIBOSS_ADDR = 0x184FBA;
     public static final int PAL_DEZ_MINIBOSS_1_ADDR = 0x07EFFC;
     public static final int PAL_DEZ_MINIBOSS_2_ADDR = 0x07F01C;
+    public static final int ART_KOSM_DEZ_END_BOSS_ADDR = 0x181002;
+    public static final int ART_KOSM_DEZ_END_BOSS_SIZE = 7040;
+    public static final int MAP_DEZ_END_BOSS_ADDR = 0x185B82;
+    public static final int PAL_DEZ_END_BOSS_ADDR = 0x07FD08;
 
     // ===== Tension Bridge mappings (Obj_TensionBridge, ID 0x6C) =====
     public static final int MAP_TENSION_BRIDGE_ADDR = 0x038FF2;   // Map_TensionBridge

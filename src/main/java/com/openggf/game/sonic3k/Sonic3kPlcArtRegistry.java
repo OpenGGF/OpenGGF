@@ -43,6 +43,7 @@ public final class Sonic3kPlcArtRegistry {
     private static final int DEZ_BUMPER_WALL_FRAME_COUNT = 1;
     /** Map_DEZMiniboss header has frames $00-$25 (ROM $184FBA). */
     private static final int DEZ_MINIBOSS_FRAME_COUNT = 0x26;
+    private static final int DEZ_END_BOSS_FRAME_COUNT = 40;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -2681,6 +2682,15 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 -1,
                 DEZ_MINIBOSS_FRAME_COUNT));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_END_BOSS,
+                Sonic3kConstants.ART_KOSM_DEZ_END_BOSS_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_END_BOSS_SIZE,
+                Sonic3kConstants.MAP_DEZ_END_BOSS_ADDR,
+                1,
+                -1,
+                DEZ_END_BOSS_FRAME_COUNT));
 
         // Door (Object 0x3C) vertical: ArtTile_DEZMisc + $1E, palette 1
         // ROM: make_art_tile(ArtTile_DEZMisc+$1E, 1, 0)

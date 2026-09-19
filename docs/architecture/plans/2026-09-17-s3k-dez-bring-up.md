@@ -2938,3 +2938,24 @@ semantics, transition event/camera semantics, ROM placement census and art regis
 Census: act 1 placeholders **1 → 0**, concrete **364 → 365**; act 2 remains at one placeholder,
 the `$A7` end boss. The full player-control/title-card choreography remains owned by slice 7's
 seamless-transition route acceptance rather than being falsely certified by this boss milestone.
+
+### 2026-09-19 — `$A7` `Obj_DEZEndBoss`
+
+The placed act 2 boss now resolves to `S3kDezEndBossInstance`, following the owner and child
+tables at `sonic3k.asm:169634-170932`. The initial graph contains the two arena/Robotnik visuals
+and the P1 gravity ball; each attack adds the paired release components with owner-managed
+lifetime and stable rewind relinks. The root preserves the `$BF` entry, `$B3` hover windows,
+three release cycles, arena reflection limits `$3488/$3598`, eight-hit authority, hover cadence,
+defeat fall to `$318`, explosion cadence and stopped level timer.
+
+The fatal path clears reverse gravity, raises `Events_fg_4` at the ROM's `$30` countdown point,
+restores DEZ2 music, publishes camera target `$3620`, and waits for the player to clear
+`Camera_X+$160` before saving progression and requesting the special `$1700` boss act. The
+40-frame mapping at ROM `$185B82`, 7,040-byte Kosinski-moduled art at `$181002`, and line-1
+palette at `$7FD08` are all loaded through the ROM pipeline. Focused tests cover zone-set
+resolution, graph allocation, fatal reverse-gravity/timer semantics, terrain-event timing,
+the `$1700` request, ROM art and the placement census.
+
+Census: act 2 placeholders **1 → 0**, concrete **493 → 494**. Both normal Death Egg acts now
+decode with zero placeholder placements; the dynamically spawned `$1700` final-boss graph is
+still a distinct slice and is not certified by that placement result.
