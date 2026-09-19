@@ -102,7 +102,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** (`S3kDezGravitySwapObjectInstance`) | 3 |
 | `$5C` | `Obj_DEZGravityHub` | 0 | 3 | `S3kDezGravityHubObjectInstance` | 3 |
 | `$5D` | `Obj_DEZRetractingSpring` | 0 | 13 | `S3kDezRetractingSpringObjectInstance` | 4 |
-| `$5E` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered | 4 |
+| `$5E` | `Obj_DEZHoverMachine` | 11 | 0 | concrete: flicker owner plus oscillating lift field child | 4 |
 | `$5F` | `Obj_DEZGravityRoom` | 1 | 0 | `S3kDezGravityRoomObjectInstance` | 3 |
 | `$60` | `Obj_DEZBumperWall` | 10 | 0 | `S3kDezBumperWallObjectInstance` | 4 |
 | `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | `S3kDezGravityPuzzleObjectInstance` | 3 |

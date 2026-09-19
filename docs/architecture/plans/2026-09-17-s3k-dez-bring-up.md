@@ -2775,3 +2775,21 @@ Eight focused behavior/census checks pass with zero skips, and packaging succeed
 placeholders **93 → 57**, concrete **272 → 308**; act 2 placeholders **82 → 44**, concrete
 **412 → 450**. Remaining traversal placeholders are now low-count classes rather than the three
 high-weight hazards that dominated both acts.
+
+### 2026-09-19 — `$5E` `Obj_DEZHoverMachine`
+
+All eleven act 1 hover machines now create their `AllocateObjectAfterCurrent` field child. The
+parent alternates mappings 0/1 every object pass; the child draws mapping 2, advances its byte
+angle by 2, orbits 32 pixels to the right by `cos(angle)>>3`, and changes from priority `$200`
+to `$300` on the sign half of the pre-increment angle (`sonic3k.asm:95740-95809`). The three-frame
+mapping at `$495D8` uses resident `ArtTile_DEZMisc2+$11` through the ROM art pipeline.
+
+The interaction ports `sub_4952A`, including its easy-to-miss sine input: `GetSineCosine` reads
+the player's **biased relative X left in d0**, not the child's orbit angle. Players in the
+128-pixel arch get the ROM word-width Y correction, zero Y velocity, air state, cleared
+roll-jump/jump/double-jump state, ground speed 1, and the `$7F`/8 tumble. Both native player slots
+participate and the magnetic-spike sound uses `Level_frame_counter & $F`.
+
+Census: act 1 placeholders **57 → 46**, concrete **308 → 319**; act 2 is unchanged. Focused
+coverage includes parent flicker, child orbit/priority, exact zero-separation lift rounding,
+player-state writes, ROM routine page, and placement census.
