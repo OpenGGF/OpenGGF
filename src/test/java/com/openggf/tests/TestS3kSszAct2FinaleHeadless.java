@@ -62,6 +62,19 @@ class TestS3kSszAct2FinaleHeadless {
                 "the final allocation boundary preserves the crane-owned camera lock");
     }
 
+    @Test
+    void defeatHandshakeAdvancesThroughTheArenaFloorStage() {
+        HeadlessTestFixture fixture = boot();
+        var state = S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        state.setForegroundRoutine(4);
+        state.setEventsFg4Low(0xFF);
+
+        fixture.stepIdleFrames(1);
+
+        assertEquals(8, state.foregroundRoutine(), "loc_58AE0 addq.w #4,Events_routine_fg");
+        assertEquals(0, state.eventsFg4(), "loc_58AE0 clr.w Events_fg_4");
+    }
+
     private static HeadlessTestFixture boot() {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();

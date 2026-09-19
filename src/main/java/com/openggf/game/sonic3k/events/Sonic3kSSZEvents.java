@@ -5,13 +5,13 @@ import com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMtzBossObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.camera.DeadzoneGeometry;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.objects.SszArrivalControllerObjectInstance;
 import com.openggf.game.sonic3k.objects.SszCloudOscillatorObjectInstance;
 import com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance;
 import com.openggf.game.sonic3k.objects.SszSolidCloudObjectInstance;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
-import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -110,7 +110,52 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             // SSZ1_ScreenEvent stage 0 (loc_572BA) runs sub_575EA every frame until
             // End_of_level_flag starts the launch.
             dynamicResize(state);
+        } else {
+            actTwoScreenEvent(state);
         }
+    }
+
+    /**
+     * Cold-reachable part of {@code SSZ2_ScreenEvent} (loc_58ACC/loc_58AE0). Once the
+     * arrival has settled the camera, stage 0 advances to 4. The final boss writes
+     * {@code Events_fg_4+1}; stage 4 consumes it and patches the two arena rows before
+     * advancing to the ending-only stage 8.
+     */
+    private void actTwoScreenEvent(SszZoneRuntimeState state) {
+        switch (state.foregroundRoutine()) {
+            case 0 -> {
+                if ((camera().getMinY() & 0xFFFF) == (camera().getMaxY() & 0xFFFF)) {
+                    state.setForegroundRoutine(4);
+                }
+            }
+            case 4 -> {
+                if (state.eventsFg4() == 0) return;
+                state.setEventsFg4(0);
+                patchActTwoArenaFloor();
+                state.setForegroundRoutine(8);
+            }
+            default -> {
+                // Stages 8+ are entered by Obj_Ending and remain explicitly outside the
+                // accepted cold stop line until that ending owner is implemented.
+            }
+        }
+    }
+
+    /** loc_58AF6: row-pointer offsets $24/$28 are layout rows $12/$14. */
+    private void patchActTwoArenaFloor() {
+        var pipeline = zoneLayoutMutationPipelineOrNull();
+        if (pipeline == null) return;
+        pipeline.queue(context -> {
+            for (int pair = 0; pair < 4; pair++) {
+                context.surface().setBlockInMap(0, pair * 2, 0x12, 0x17);
+                context.surface().setBlockInMap(0, pair * 2 + 1, 0x12, 0x18);
+                context.surface().setBlockInMap(0, pair * 2, 0x14, 0x19);
+                context.surface().setBlockInMap(0, pair * 2 + 1, 0x14, 0x19);
+            }
+            context.surface().setBlockInMap(0, 8, 0x12, 0x17);
+            context.surface().setBlockInMap(0, 8, 0x14, 0x19);
+            return MutationEffects.redrawAllTilemaps();
+        });
     }
 
     /**

@@ -67,7 +67,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   grab, Super attack repertoire and Master Emerald presentation remain next. Act 2's sky now
   has its own cold-load scroll fan and deformation too, including the cartridge's twenty-column
   vertical wave rather than inheriting the flat default background. Its later ending-event
-  deformation modes remain to be finished. The Death Egg launch is still to come.
+  deformation modes remain to be finished. The final defeat now also changes the two arena
+  floor rows through the rewind-aware world-mutation path before handing control to the
+  ending-only stages. The Death Egg launch is still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
