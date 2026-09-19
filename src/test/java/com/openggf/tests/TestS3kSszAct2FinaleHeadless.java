@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.SszKnuxFinalBossCraneObjectInstance;
 import com.openggf.game.sonic3k.objects.SszEndingIslandMaskObjectInstance;
+import com.openggf.game.sonic3k.objects.SszAct2EndingCameraController;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMasterEmeraldObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaProjectileChild;
@@ -140,6 +141,50 @@ class TestS3kSszAct2FinaleHeadless {
         assertEquals(0x10, state.foregroundRoutine(), "loc_58B7C advances after all 16 rows");
         assertEquals(0, GameServices.camera().getY(), "loc_58B7C clears Camera_Y_pos");
         assertEquals(0, GameServices.camera().getYCopy(), "loc_58B7C clears Camera_Y_pos_copy");
+    }
+
+    @Test
+    void seededNegativeSignalRunsThePersistentCameraControllerIntoStageEight() {
+        HeadlessTestFixture fixture = boot();
+        var state = S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        fixture.stepIdleFrames(1); // publish CreateNewSprite4's pending dynamic allocation
+        SszAct2EndingCameraController controller = active(SszAct2EndingCameraController.class);
+        assertNotNull(controller, "SSZ2_ScreenInit allocates loc_59078");
+        state.setForegroundRoutine(8);
+        state.setEventsFg4(0xFF00);
+        state.setSpecialVIntRoutine(1);
+
+        fixture.stepIdleFrames(80);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot before = registry.capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = registry.capture();
+        registry.restore(before);
+        sameSnapshot(before, registry.capture(), "restore during loc_59078 gradual swing");
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, registry.capture(), "forward replay during loc_59078 gradual swing");
+
+        for (int frame = 0; frame < 0x1000
+                && active(SszEndingIslandMaskObjectInstance.class) == null; frame++) {
+            fixture.stepIdleFrames(1);
+        }
+
+        controller = active(SszAct2EndingCameraController.class);
+        assertNotNull(controller, "the no-emerald controller remains allocated for routine 8");
+        int controllerRoutine = controller.routineForTest();
+        assertEquals(8, controllerRoutine, () ->
+                "the no-emerald route remains alive for loc_59194 after reaching camera $600; y=$"
+                        + Integer.toHexString(GameServices.camera().getY() & 0xFFFF)
+                        + " osc=$" + Integer.toHexString(state.cloudOscillator() & 0xFFFF)
+                        + " fg4=$" + Integer.toHexString(state.eventsFg4()));
+        assertEquals(0x600, GameServices.camera().getY() & 0xFFFF,
+                "loc_59184 supplies the stage-8 trigger at Camera_Y_pos $600");
+        assertNotNull(active(SszEndingIslandMaskObjectInstance.class),
+                "the controller's low-byte trigger reaches the production stage-8 owner");
+        assertTrue(controller.alignmentSignalledForTest(),
+                "loc_59176 crosses the $D0 camera/oscillator alignment latch");
     }
 
     @Test

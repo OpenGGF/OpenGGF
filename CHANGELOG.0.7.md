@@ -82,7 +82,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   expands `word_58C80` across scanlines instead of scrolling as one flat camera word. Later ending-event
   deformation modes remain to be finished. The final defeat now also changes the two arena
   floor rows through the rewind-aware world-mutation path before handing control to the
-  ending-only stages. A declared seeded continuation now fills the cartridge's sixteen solid
+  ending-only stages. The screen-init camera controller now consumes a declared negative ending
+  signal across the cartridge's two gradual-swing zero crossings, takes over the camera and
+  oscillator, reaches the no-emerald `$600` trigger, and hands that trigger to stage 8. That
+  declared seeded continuation fills the cartridge's sixteen solid
   mask tiles, allocates the eight-piece ending-island mask, consumes the 16-row delayed redraw
   and resets the camera exactly at stage `$C`; the shared ending object that normally triggers
   it remains outside this zone campaign. The Death Egg launch is still to come.

@@ -39,7 +39,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public static final int EVENTS_BG_BYTES = 0x10;
 
     private static final int CAPTURE_BYTES =
-            EVENTS_BG_BYTES + 15 * Short.BYTES + 3 * Integer.BYTES + 3;
+            EVENTS_BG_BYTES + 16 * Short.BYTES + 3 * Integer.BYTES + 3;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -50,6 +50,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     private short eventsRoutineBg;
     /** {@code Draw_delayed_rowcount}: SSZ2 stage $C consumes the seeded $F through -1. */
     private short endingDrawRows;
+    /** {@code Special_V_int_routine}: nonzero admits the SSZ2 ending camera controller. */
+    private short specialVIntRoutine;
     private short unkEE98;
     private short unkEE9C;
     /** {@code _unkFAA4}: the SST slot of the object the launch carries; written by the bosses. */
@@ -162,6 +164,9 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
 
     public int endingDrawRows() { return endingDrawRows; }
     public void setEndingDrawRows(int value) { endingDrawRows = (short) value; }
+
+    public int specialVIntRoutine() { return specialVIntRoutine & 0xFFFF; }
+    public void setSpecialVIntRoutine(int value) { specialVIntRoutine = (short) value; }
 
     /** {@code _unkEE98}. */
     public int unkEE98() { return unkEE98; }
@@ -282,6 +287,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putShort(eventsRoutineFg);
         buffer.putShort(eventsRoutineBg);
         buffer.putShort(endingDrawRows);
+        buffer.putShort(specialVIntRoutine);
         buffer.putShort(unkEE98);
         buffer.putShort(unkEE9C);
         buffer.putShort(unkFAA4);
@@ -313,6 +319,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         eventsRoutineFg = buffer.getShort();
         eventsRoutineBg = buffer.getShort();
         endingDrawRows = buffer.getShort();
+        specialVIntRoutine = buffer.getShort();
         unkEE98 = buffer.getShort();
         unkEE9C = buffer.getShort();
         unkFAA4 = buffer.getShort();

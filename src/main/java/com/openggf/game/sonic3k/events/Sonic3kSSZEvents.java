@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.objects.SszCloudOscillatorObjectInstance;
 import com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance;
 import com.openggf.game.sonic3k.objects.SszSolidCloudObjectInstance;
 import com.openggf.game.sonic3k.objects.SszEndingIslandMaskObjectInstance;
+import com.openggf.game.sonic3k.objects.SszAct2EndingCameraController;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 import com.openggf.level.Pattern;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -259,6 +260,8 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                 camera.setXCopy((short) ACT2_CAMERA_X);
                 camera.setY((short) ACT2_CAMERA_Y);
                 camera.setYCopy((short) ACT2_CAMERA_Y);
+                spawnObject(() -> new SszAct2EndingCameraController(
+                        new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
             }
             camera.setScrollLocked(true);
         }
