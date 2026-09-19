@@ -1511,6 +1511,16 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void dez3PlanOwnsOnlyItsDynamicArenaArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x17, 0);
+        assertEquals(9, plan.standaloneArt().size());
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MASTER_EMERALD)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_DEBRIS)));
+        assertTrue(plan.levelArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ3_BLOCKS)));
+    }
+
+    @Test
     public void ddzPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0C, 0);
         assertNotNull(plan);

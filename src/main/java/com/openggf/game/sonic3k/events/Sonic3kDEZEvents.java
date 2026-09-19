@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kAct3Carry;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.S3kDezFinalBossInstance;
+import com.openggf.game.sonic3k.objects.S3kDezFinalArenaControllerInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -62,11 +63,72 @@ public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
         }
         if (state.zoneIndex() == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA) {
             updateAct3ScreenEvent(state);
+            updateAct3BackgroundEvent(state);
         } else if (act == 0) {
             updateAct1ScreenEvent(state);
         } else {
             updateAct2ScreenEvent(state);
         }
+    }
+
+    /** Nine-entry {@code DEZ3_BackgroundEvent_Index} progression. */
+    private void updateAct3BackgroundEvent(S3kDezZoneRuntimeState state) {
+        switch (state.backgroundRoutine()) {
+            case 0 -> {
+                if (state.consumeEventsFg5()) {
+                    writeChunks(2, 0x0D, 0x1A);
+                    state.advanceBackgroundRoutine();
+                }
+            }
+            case 4 -> {
+                if (gameState().isScreenShakeActive()) {
+                    state.setAct3BackgroundWord(0x16, 0x2C0);
+                    state.advanceBackgroundRoutine();
+                }
+            }
+            case 8 -> {
+                if (state.act3BackgroundWord(0x00) != 0x6C0) {
+                    prepareAct3BottomUpDraw(state);
+                    state.advanceBackgroundRoutine();
+                }
+            }
+            case 12 -> finishAct3BottomUpDraw(state);
+            case 16 -> {
+                if (state.act3BackgroundWord(0x00) != 0x2C0) {
+                    prepareAct3BottomUpDraw(state);
+                    state.setAct3BackgroundWord(0x16,
+                            (camera().getXCopy() & 0xFFFF) & 0xFFE0);
+                    state.advanceBackgroundRoutine();
+                }
+            }
+            case 20 -> finishAct3BottomUpDraw(state);
+            case 24 -> {
+                if (state.act3BackgroundWord(0x00) == 0) {
+                    prepareAct3BottomUpDraw(state);
+                    state.advanceBackgroundRoutine();
+                } else if (state.consumeEventsFg5()) {
+                    int phase = state.act3BackgroundWord(0x0A);
+                    int chunk = switch (phase) { case 2 -> 0x09; case 6 -> 0x08; default -> 0x06; };
+                    writeChunks(3, 0x0E, chunk);
+                    state.setAct3BackgroundWord(0x0A, phase == 6 ? -2 : phase + 2);
+                }
+            }
+            case 28 -> finishAct3BottomUpDraw(state);
+            default -> { /* stage $20: DrawBGAsYouMove only */ }
+        }
+    }
+
+    private void prepareAct3BottomUpDraw(S3kDezZoneRuntimeState state) {
+        state.setAct3BackgroundWord(0x0C, 0x0F);
+        var manager = levelManager();
+        if (manager != null) manager.resetTileOffsetPositionEffectiveForFullRefresh();
+    }
+
+    private void finishAct3BottomUpDraw(S3kDezZoneRuntimeState state) {
+        state.setAct3BackgroundWord(0x0C, 0);
+        state.advanceBackgroundRoutine();
+        var manager = levelManager();
+        if (manager != null) manager.refreshFullTilemapPlanesFromCurrentLayout(0);
     }
 
     /** {@code DEZ3_ScreenEvent} stage 0: restore the level-load carry exactly once. */
@@ -99,6 +161,9 @@ public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
         camera().setYCopy((short) 0x20);
         camera().setMinX((short) 0x80);
         camera().setMaxX((short) 0x80);
+        spawnObject(() -> new S3kDezFinalArenaControllerInstance(new ObjectSpawn(
+                0x130, 0x0F0, Sonic3kObjectIds.DEZ_END_BOSS,
+                0, 0, false, -1)));
         S3kDezFinalBossInstance boss = spawnObject(() -> new S3kDezFinalBossInstance(
                 new ObjectSpawn(0x3C0, 0x0F8, Sonic3kObjectIds.DEZ_END_BOSS,
                         0, 0, false, -1)));

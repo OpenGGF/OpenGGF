@@ -417,6 +417,7 @@ public final class Sonic3kPlcArtRegistry {
             case 0x14 -> addPachinkoEntries(actIndex, standalone, levelArt);
             case 0x15 -> addSlotsEntries(actIndex, standalone, levelArt);
             case 0x16 -> addHpzEntries(actIndex, standalone, levelArt);
+            case 0x17 -> { if (actIndex == 0) addDez3Entries(standalone, levelArt); }
         }
     }
 
@@ -2691,7 +2692,6 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 -1,
                 DEZ_END_BOSS_FRAME_COUNT));
-
         // Door (Object 0x3C) vertical: ArtTile_DEZMisc + $1E, palette 1
         // ROM: make_art_tile(ArtTile_DEZMisc+$1E, 1, 0)
         levelArt.add(new LevelArtEntry(
@@ -2841,6 +2841,31 @@ public final class Sonic3kPlcArtRegistry {
                 null,
                 DEZ_BUMPER_WALL_FRAME_COUNT
         ));
+    }
+
+    private static void addDez3Entries(List<StandaloneArtEntry> standalone,
+                                       List<LevelArtEntry> levelArt) {
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_MISC_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_MISC_SIZE,
+                Sonic3kConstants.MAP_DEZ_FINAL_BOSS_MISC_ADDR, 1, -1, 32));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MASTER_EMERALD,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_MASTER_EMERALD_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_MASTER_EMERALD_SIZE,
+                Sonic3kConstants.MAP_DEZ_FINAL_BOSS_MASTER_EMERALD_ADDR, 1, -1, 2));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_DEBRIS,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_DEBRIS_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                Sonic3kConstants.ART_KOSM_DEZ_FINAL_BOSS_DEBRIS_SIZE,
+                Sonic3kConstants.MAP_DEZ_FINAL_BOSS_DEBRIS_ADDR, 1, -1, 3));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ3_BLOCKS,
+                Sonic3kConstants.MAP_DEZ3_BLOCKS_ADDR, 0x001, 2, null,
+                new int[]{0, 1, 2, 3}));
     }
 
     /**

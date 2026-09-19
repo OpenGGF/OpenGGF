@@ -33,6 +33,15 @@ class TestS3kDezFinalBossInstance {
     }
 
     @Test
+    void tailsRunInUsesTheRomCharacterHeightOffset() {
+        Harness services = new Harness(PlayerCharacter.TAILS_ALONE);
+        S3kDezFinalBossInstance boss = boss(services);
+        var tails = new TestablePlayableSprite("custom-name", (short) 0x300, (short) 0xCD);
+        boss.update(0, tails);
+        assertEquals(0xD1, tails.getCentreY());
+    }
+
+    @Test
     void eighthHitStartsTheArenaShrinkAndStopsTheTimer() {
         Harness services = new Harness(PlayerCharacter.SONIC_ALONE);
         S3kDezFinalBossInstance boss = boss(services);

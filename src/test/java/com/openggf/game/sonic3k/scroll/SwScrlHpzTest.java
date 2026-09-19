@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
 import static com.openggf.level.scroll.M68KMath.unpackBG;
+import static com.openggf.level.scroll.M68KMath.unpackFG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -54,14 +55,12 @@ class SwScrlHpzTest {
                 Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 0);
         assertNotSame(handler, bossHandler);
         int[] actual = new int[VISIBLE_LINES];
-        int[] expected = new int[VISIBLE_LINES];
-        SwScrlS3kDefault fallback = new SwScrlS3kDefault();
         handler.update(actual, SANCTUARY_CAMERA_X, SANCTUARY_CAMERA_Y, 0, 1);
         assertEquals((short) 0x0096, handler.getVscrollFactorBG());
         bossHandler.update(actual, 0x160, 0x240, 0, 0);
-        fallback.update(expected, 0x160, 0x240, 0, 0);
-        assertArrayEquals(expected, actual);
-        assertEquals(fallback.getVscrollFactorBG(), bossHandler.getVscrollFactorBG());
+        assertEquals((short) -0x160, unpackFG(actual[0]));
+        assertEquals((short) -0x460, unpackBG(actual[0]));
+        assertEquals((short) 0x2C8, bossHandler.getVscrollFactorBG());
     }
 
     /**

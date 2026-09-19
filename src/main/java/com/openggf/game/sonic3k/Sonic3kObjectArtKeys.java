@@ -520,6 +520,10 @@ public final class Sonic3kObjectArtKeys {
     public static final String DEZ_BUMPER_WALL = "dez_bumper_wall";
     public static final String DEZ_MINIBOSS = "dez_miniboss";
     public static final String DEZ_END_BOSS = "dez_end_boss";
+    public static final String DEZ_FINAL_BOSS_MISC = "dez_final_boss_misc";
+    public static final String DEZ_FINAL_BOSS_MASTER_EMERALD = "dez_final_boss_master_emerald";
+    public static final String DEZ_FINAL_BOSS_DEBRIS = "dez_final_boss_debris";
+    public static final String DEZ3_BLOCKS = "dez3_blocks";
     public static final String DOOR_HORIZONTAL = "door_horizontal";        // ArtTile_CNZMisc+$C5, Map_CNZDoorHorizontal
 
     private Sonic3kObjectArtKeys() {

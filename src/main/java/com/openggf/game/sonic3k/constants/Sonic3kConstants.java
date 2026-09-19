@@ -528,6 +528,16 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_DEZ_END_BOSS_SIZE = 7040;
     public static final int MAP_DEZ_END_BOSS_ADDR = 0x185B82;
     public static final int PAL_DEZ_END_BOSS_ADDR = 0x07FD08;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_MISC_ADDR = 0x181D44;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_MISC_SIZE = 0x26A0;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_MASTER_EMERALD_ADDR = 0x182BE6;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_MASTER_EMERALD_SIZE = 0x0600;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_DEBRIS_ADDR = 0x182ED8;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_DEBRIS_SIZE = 0x0520;
+    public static final int MAP_DEZ_FINAL_BOSS_MISC_ADDR = 0x187888;
+    public static final int MAP_DEZ_FINAL_BOSS_MASTER_EMERALD_ADDR = 0x187B34;
+    public static final int MAP_DEZ_FINAL_BOSS_DEBRIS_ADDR = 0x187B66;
+    public static final int MAP_DEZ3_BLOCKS_ADDR = 0x05A9AC;
 
     // ===== Tension Bridge mappings (Obj_TensionBridge, ID 0x6C) =====
     public static final int MAP_TENSION_BRIDGE_ADDR = 0x038FF2;   // Map_TensionBridge

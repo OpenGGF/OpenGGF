@@ -3,11 +3,15 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -86,15 +90,14 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
 
     private void preparePlayers(PlayableEntity player) {
         playersPrepared = true;
-        placeRunInPlayer(player, 0x30);
-        for (PlayableEntity sidekick : services().sidekicks()) placeRunInPlayer(sidekick, 0x10);
+        placeRunInPlayer(player, 0x30, state().playerCharacter() == PlayerCharacter.TAILS_ALONE);
+        for (PlayableEntity sidekick : services().sidekicks()) placeRunInPlayer(sidekick, 0x10, true);
     }
 
-    private static void placeRunInPlayer(PlayableEntity player, int x) {
+    private static void placeRunInPlayer(PlayableEntity player, int x, boolean tails) {
         if (player == null) return;
         player.setCentreX((short) x);
-        player.setCentreYPreserveSubpixel((short) (0xCD
-                + ("tails".equalsIgnoreCase(player.toString()) ? 4 : 0)));
+        player.setCentreYPreserveSubpixel((short) (0xCD + (tails ? 4 : 0)));
         player.setXSpeed((short) 0x600);
         player.setGSpeed((short) 0x600);
         if (player instanceof AbstractPlayableSprite sprite) {
@@ -125,6 +128,7 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
         state.routine = DESCEND;
         timer = 0xBF;
         state.yVel = -0x80;
+        state().raiseEventsFg5();
     }
 
     private void descend() {
@@ -133,6 +137,7 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
         state.routine = FIGHT;
         state.xVel = 1;
         state.yVel = 0;
+        services().gameState().setScreenShakeActive(true);
     }
 
     private void fight(int vIntRunCount, PlayableEntity player) {
@@ -146,8 +151,7 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
     }
 
     private void shrinkArena() {
-        int current = state().act3BackgroundWord(0x00);
-        if (current != 0x2C0) state().setAct3BackgroundWord(0x00, 0x2C0);
+        state().setAct3BackgroundWord(0x00, 0x6C0);
         state.routine = CHASE;
         state.xVel = 0x500;
         timer = 0x100;
@@ -158,7 +162,7 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
         state.y = (services().camera().getY() & 0xFFFF) + 0x50
                 + (int) Math.round(Math.sin((angle += 4) * Math.PI / 128.0) * 8);
         services().camera().setMinX(services().camera().getX());
-        if (player != null && (player.getCentreX() & 0xFFFF) > (state.x + 0x180)
+        if ((player != null && (player.getCentreX() & 0xFFFF) > (state.x + 0x180))
                 || --timer <= 0) {
             state().setAct3BackgroundWord(0x00, 0);
             state.routine = EXIT;
@@ -206,6 +210,12 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
     }
 
     private void ensureGraph() {
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager != null && renderManager.getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
+            provider.ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC);
+            provider.ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MASTER_EMERALD);
+            provider.ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_DEBRIS);
+        }
         if (graphCreated) return;
         for (int role = 0; role < GRAPH_SIZE; role++) {
             int childRole = role;
@@ -232,7 +242,16 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
     }
     @Override public boolean isPersistent() { return true; }
     @Override public int getPriorityBucket() { return 4; }
-    @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    @Override public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = renderer(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC);
+        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(
+                state.routine >= CHASE ? 20 : 0, state.x, state.y, false, false, 1);
+    }
+
+    private PatternSpriteRenderer renderer(String key) {
+        ObjectRenderManager manager = tryServices() == null ? null : services().renderManager();
+        return manager == null ? null : manager.getRenderer(key);
+    }
 
     int phase() { return state.routine; }
     void setPhaseForTesting(int phase, int timer) { state.routine = phase; this.timer = timer; }
@@ -268,6 +287,11 @@ public final class S3kDezFinalBossInstance extends AbstractBossInstance
             updateDynamicSpawn();
         }
 
-        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+        @Override public void appendRenderCommands(List<GLCommand> commands) {
+            if (!(parent instanceof S3kDezFinalBossInstance boss)) return;
+            PatternSpriteRenderer renderer = boss.renderer(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC);
+            if (renderer != null && renderer.isReady())
+                renderer.drawFrameIndex(Math.min(31, role + 1), currentX, currentY, false, false, 1);
+        }
     }
 }
