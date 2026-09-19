@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -21,6 +22,8 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     private static final int ANGLES_PER_ROW = 0x70;
     private static final int JUMP_COUNTER = 0x910;
     private static final int EXIT_WAIT = 3 * 60;
+    private static final int COLUMN_FLOOR_Y = 0x580;
+    private static final int[] COLUMN_DELAYS = {0, 9, 0xC, 6, 3, 0xC, 0, 9, 0xC, 3};
 
     private int timer = START_WAIT;
     private int routine;
@@ -32,6 +35,10 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     private int jumpYVelocity;
     private boolean jumping;
     private boolean exitRequested;
+    private final int[] columnDelay = COLUMN_DELAYS.clone();
+    private final int[] columnVelocityFixed = new int[COLUMN_DELAYS.length];
+    private final int[] columnOffsetFixed = new int[COLUMN_DELAYS.length];
+    private boolean columnsFinished;
 
     public SszLaunchControllerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSZ Death Egg launch controller");
@@ -47,6 +54,7 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
         }
         AbstractPlayableSprite player = services().spriteManager().getMainPlayable();
         if (player == null) return;
+        updateCrumblingColumns();
         if (routine == 0) {
             if (--timer != 0) return;
             routine = 4;
@@ -56,6 +64,66 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
         } else {
             updateJump(player);
         }
+    }
+
+    /** {@code sub_5750C}: ten delayed 16.16 falls, their clamp handshake, and `_unkFAA4` carry. */
+    private void updateCrumblingColumns() {
+        if (columnsFinished) return;
+        int cameraY = services().camera().getY() & 0xFFFF;
+        int clamped = 0;
+        for (int column = 0; column < COLUMN_DELAYS.length; column++) {
+            if (columnDelay[column] < 0) {
+                clamped++;
+                continue;
+            }
+            if (columnDelay[column] > 0) {
+                columnDelay[column]--;
+            } else {
+                int previousVelocity = columnVelocityFixed[column];
+                columnVelocityFixed[column] += 0x800;
+                columnOffsetFixed[column] -= previousVelocity;
+            }
+            if ((columnOffsetFixed[column] >> 16) + cameraY < COLUMN_FLOOR_Y) {
+                columnOffsetFixed[column] = (COLUMN_FLOOR_Y - cameraY) << 16;
+                columnVelocityFixed[column] = 0;
+                columnDelay[column] = -1;
+                clamped++;
+            }
+        }
+        carryFinalArenaObject();
+        if (clamped != COLUMN_DELAYS.length) return;
+        columnsFinished = true;
+        runtime().setEventsFg4Low(0xFF);
+        deleteCarriedObject();
+    }
+
+    private void carryFinalArenaObject() {
+        AbstractObjectInstance carried = carriedObject();
+        if (carried == null) return;
+        int column = Math.max(0, Math.min(COLUMN_DELAYS.length - 1,
+                ((carried.getX() - 0x19A0) >> 3 & 0xFFFC) >> 2));
+        int targetY = 0x660 - (columnOffsetFixed[column] >> 16);
+        carried.applyLevelRepeatOffset(0, targetY - carried.getY());
+    }
+
+    private void deleteCarriedObject() {
+        AbstractObjectInstance carried = carriedObject();
+        if (carried != null) ObjectLifetimeOps.deleteNoRespawn(carried);
+    }
+
+    private AbstractObjectInstance carriedObject() {
+        int slot = runtime().carriedObjectSlot();
+        var manager = services().levelManager().getObjectManager();
+        if (manager == null) return null;
+        return manager.getActiveObjects().stream()
+                .filter(AbstractObjectInstance.class::isInstance)
+                .map(AbstractObjectInstance.class::cast)
+                .filter(object -> object != this && object.getSlotIndex() == slot && !object.isDestroyed())
+                .findFirst().orElse(null);
+    }
+
+    private SszZoneRuntimeState runtime() {
+        return (SszZoneRuntimeState) services().zoneRuntimeState();
     }
 
     private void updateRamp(AbstractPlayableSprite player) {
@@ -121,5 +189,7 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     public boolean jumpingForTest() { return jumping; }
     public int exitTimerForTest() { return timer; }
     public boolean exitRequestedForTest() { return exitRequested; }
+    public boolean columnsFinishedForTest() { return columnsFinished; }
+    public int columnOffsetForTest(int column) { return columnOffsetFixed[column] >> 16; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
 }

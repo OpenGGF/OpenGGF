@@ -70,12 +70,31 @@ class TestS3kSszLaunchSequenceHeadless {
         SszZoneRuntimeState state = (SszZoneRuntimeState) GameServices.zoneRuntimeState();
         assertEquals(4, state.foregroundRoutine());
 
-        // sub_5750C owns this edge; this test isolates loc_57360's consumer.
-        state.setEventsFg4Low(0xFF);
+        for (int frame = 0; frame < 40; frame++) {
+            GameServices.camera().setY((short) 0x5C0);
+            GameServices.camera().setYCopy((short) 0x5C0);
+            fixture.stepIdleFrames(1);
+        }
+        CompositeSnapshot crumbleBefore = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot crumbleAfter = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.gameplayMode().getRewindRegistry().restore(crumbleBefore);
+        sameSnapshot(crumbleBefore, fixture.gameplayMode().getRewindRegistry().capture(), "crumble restore");
+        fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(crumbleAfter, fixture.gameplayMode().getRewindRegistry().capture(), "crumble replay");
+
         for (int frame = 0; frame < 0x300 && !state.launchResourcesPublished(); frame++) {
+            // The production handoff enters from the final arena at Camera_Y $5C0. This
+            // isolated load still has the arrival controller, so retain the owning arena Y.
+            GameServices.camera().setY((short) 0x5C0);
+            GameServices.camera().setYCopy((short) 0x5C0);
             fixture.stepIdleFrames(1);
         }
 
+        assertTrue(active().columnsFinishedForTest(), "all ten sub_5750C columns clamp");
+        assertEquals(-0x40, active().columnOffsetForTest(0));
+        assertEquals(0xFF, state.eventsFg4Low(), "the last clamp writes Events_fg_4+1");
         assertEquals(8, state.foregroundRoutine());
         assertTrue(state.launchResourcesQueued());
         assertTrue(state.launchResourcesPublished());
