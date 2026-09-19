@@ -82,7 +82,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   expands `word_58C80` across scanlines instead of scrolling as one flat camera word. Later ending-event
   deformation modes remain to be finished. The final defeat now also changes the two arena
   floor rows through the rewind-aware world-mutation path before handing control to the
-  ending-only stages. The Death Egg launch is still to come.
+  ending-only stages. A declared seeded continuation now fills the cartridge's sixteen solid
+  mask tiles, allocates the eight-piece ending-island mask, consumes the 16-row delayed redraw
+  and resets the camera exactly at stage `$C`; the shared ending object that normally triggers
+  it remains outside this zone campaign. The Death Egg launch is still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,

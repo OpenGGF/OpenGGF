@@ -10,6 +10,7 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.SszKnuxFinalBossCraneObjectInstance;
+import com.openggf.game.sonic3k.objects.SszEndingIslandMaskObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMasterEmeraldObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaProjectileChild;
@@ -111,6 +112,34 @@ class TestS3kSszAct2FinaleHeadless {
 
         assertEquals(8, state.foregroundRoutine(), "loc_58AE0 addq.w #4,Events_routine_fg");
         assertEquals(0, state.eventsFg4(), "loc_58AE0 clr.w Events_fg_4");
+    }
+
+    @Test
+    void seededEndingTransitionFillsMaskTilesAndCompletesDelayedDraw() {
+        HeadlessTestFixture fixture = boot();
+        var state = S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        state.setForegroundRoutine(8);
+        state.setEventsFg4(0x00FF);
+        GameServices.camera().setY((short) 0x649);
+        GameServices.camera().setYCopy((short) 0x649);
+
+        fixture.stepIdleFrames(1);
+
+        assertEquals(0x0C, state.foregroundRoutine(), "loc_58B20 advances to delayed draw stage");
+        assertEquals(0x0F, state.endingDrawRows(), "Draw_delayed_rowcount starts at $F");
+        assertNotNull(active(SszEndingIslandMaskObjectInstance.class),
+                "loc_58B4C allocates the ending-island sprite mask");
+        for (int tile = 0x7F0; tile <= 0x7FF; tile++) {
+            var pattern = GameServices.level().getCurrentLevel().getPattern(tile);
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                assertEquals(6, pattern.getPixel(x, y), "solid mask tile $" + Integer.toHexString(tile));
+            }
+        }
+
+        fixture.stepIdleFrames(17);
+        assertEquals(0x10, state.foregroundRoutine(), "loc_58B7C advances after all 16 rows");
+        assertEquals(0, GameServices.camera().getY(), "loc_58B7C clears Camera_Y_pos");
+        assertEquals(0, GameServices.camera().getYCopy(), "loc_58B7C clears Camera_Y_pos_copy");
     }
 
     @Test

@@ -10,6 +10,9 @@ import com.openggf.game.sonic3k.objects.SszArrivalControllerObjectInstance;
 import com.openggf.game.sonic3k.objects.SszCloudOscillatorObjectInstance;
 import com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance;
 import com.openggf.game.sonic3k.objects.SszSolidCloudObjectInstance;
+import com.openggf.game.sonic3k.objects.SszEndingIslandMaskObjectInstance;
+import com.openggf.game.sonic3k.Sonic3kPlcLoader;
+import com.openggf.level.Pattern;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -119,7 +122,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
      * Cold-reachable part of {@code SSZ2_ScreenEvent} (loc_58ACC/loc_58AE0). Once the
      * arrival has settled the camera, stage 0 advances to 4. The final boss writes
      * {@code Events_fg_4+1}; stage 4 consumes it and patches the two arena rows before
-     * advancing to the ending-only stage 8.
+     * advancing to the seeded ending transition at stage 8.
      */
     private void actTwoScreenEvent(SszZoneRuntimeState state) {
         switch (state.foregroundRoutine()) {
@@ -134,11 +137,61 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                 patchActTwoArenaFloor();
                 state.setForegroundRoutine(8);
             }
-            default -> {
-                // Stages 8+ are entered by Obj_Ending and remain explicitly outside the
-                // accepted cold stop line until that ending owner is implemented.
+            case 8 -> {
+                // loc_58B20 tests the full word and rejects negative values. The bring-up
+                // seed uses $00FF: positive, but with the same low-byte handshake value.
+                if (state.eventsFg4() == 0 || (short) state.eventsFg4() < 0) return;
+                state.setEventsFg4(0);
+                fillActTwoEndingMaskTiles();
+                spawnObject(() -> new SszEndingIslandMaskObjectInstance(
+                        new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+                state.setEndingDrawRows(0x0F);
+                state.setForegroundRoutine(0x0C);
             }
+            case 0x0C -> {
+                // Draw_PlaneVertBottomUp consumes one delayed row per V-int and reports
+                // completion after the $F..0 sequence.
+                if (state.endingDrawRows() >= 0) {
+                    state.setEndingDrawRows(state.endingDrawRows() - 1);
+                    return;
+                }
+                camera().setY((short) 0);
+                camera().setYCopy((short) 0);
+                state.setForegroundRoutine(0x10);
+            }
+            default -> { }
         }
+    }
+
+    /** loc_58B20: fill VRAM tiles $7F0-$7FF with the solid palette-index-six mask pattern. */
+    private void fillActTwoEndingMaskTiles() {
+        var pipeline = zoneLayoutMutationPipelineOrNull();
+        if (pipeline == null) return;
+        pipeline.queue(context -> {
+            byte[] segaPattern = new byte[32];
+            java.util.Arrays.fill(segaPattern, (byte) 0x66);
+            MutationEffects effects = MutationEffects.NONE;
+            for (int tile = 0x7F0; tile <= 0x7FF; tile++) {
+                Pattern pattern = new Pattern();
+                pattern.fromSegaFormat(segaPattern);
+                effects = mergeMutationEffects(effects, context.surface().setPattern(tile, pattern));
+            }
+            Sonic3kPlcLoader.refreshAffectedRenderers(
+                    java.util.List.of(new Sonic3kPlcLoader.TileRange(0x7F0, 0x10)), levelManager());
+            return effects;
+        });
+    }
+
+    private static MutationEffects mergeMutationEffects(MutationEffects first, MutationEffects second) {
+        var dirty = first.dirtyPatterns();
+        dirty.or(second.dirtyPatterns());
+        return new MutationEffects(dirty,
+                first.dirtyRegionProcessingRequired() || second.dirtyRegionProcessingRequired(),
+                first.foregroundRedrawRequired() || second.foregroundRedrawRequired(),
+                first.allTilemapsRedrawRequired() || second.allTilemapsRedrawRequired(),
+                first.patternLookupRefreshRequired() || second.patternLookupRefreshRequired(),
+                first.objectResyncRequired() || second.objectResyncRequired(),
+                first.ringResyncRequired() || second.ringResyncRequired());
     }
 
     /** loc_58AF6: row-pointer offsets $24/$28 are layout rows $12/$14. */
