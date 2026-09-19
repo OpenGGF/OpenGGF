@@ -2774,6 +2774,14 @@ public final class Sonic3kPlcArtRegistry {
                 null,
                 DEZ_ENERGY_BRIDGE_FRAME_COUNT
         ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_ENERGY_BRIDGE_CURVED,
+                Sonic3kConstants.MAP_DEZ_ENERGY_BRIDGE_CURVED_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0xB2,
+                1,
+                null,
+                DEZ_ENERGY_BRIDGE_FRAME_COUNT
+        ));
 
         // Bumper wall (SKL object 0x60, Obj_DEZBumperWall): the act 1 turbine room's walls,
         // posts and exit gate. ROM header: move.l #Map_DEZBumperWall,mappings(a0) and

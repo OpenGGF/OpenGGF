@@ -2822,3 +2822,15 @@ the 30-pass release delay. As shipped, remaining on the pad freezes that delay. 
 pipeline, and the separately allocated multi-sprite SST slot is reserved for slot-pressure parity.
 
 Census: act 1 placeholders **38 → 31**, concrete **327 → 334**; act 2 is unchanged.
+
+### 2026-09-19 — `$56` `Obj_DEZEnergyBridgeCurved`
+
+The sole act 1 curved energy bridge now ports `Obj_DEZEnergyBridgeCurved` and `sub_47F9C`
+(`sonic3k.asm:94033-94106`). It shares `$55`'s subtype period/phase/on-duration decoder, but is
+not a conventional solid: while active, each native player inside its `$50` by `$30` region gets
+the ROM's curved top/LRB collision indexes `$0E/$0F`. Leaving an active field restores `$0C/$0D`;
+when the field itself expires, a player it owned is additionally released into the air.
+
+The four-frame curved mapping at ROM `$48038` is registered against resident
+`ArtTile_DEZMisc+$B2`; animation and `sfx_EnergyZap` use the level-frame clock. Census: act 1
+placeholders **31 → 30**, concrete **334 → 335**; act 2 is unchanged.

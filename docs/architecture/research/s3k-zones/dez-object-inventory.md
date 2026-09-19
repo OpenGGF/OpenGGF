@@ -94,7 +94,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$52` | `Obj_DEZLightning` | 48 | 94 | concrete: ROM animation/wait/touch, art and local SFX | 4 |
 | `$53` | `Obj_DEZConveyorPad` | 4 | 5 | placeholder | 4 (reads the flag, sonic3k.asm:93727) |
 | `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | `S3kDezEnergyBridgeObjectInstance` | 4 |
-| `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder | 4 |
+| `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | concrete: timed curved collision-index field | 4 |
 | `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | placeholder | 5 |
 | `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** (`S3kDezGravitySwitchObjectInstance`; art not registered) | 3 |
 | `$59` | `Obj_DEZTeleporter` | 0 | 21 | `S3kDezTeleporterObjectInstance` | 3 |

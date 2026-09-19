@@ -163,6 +163,8 @@ public final class Sonic3kObjectIds {
     // The two object tables share the number.
     public static final int MGZ_HEAD_TRIGGER = 0x55;
     public static final int MGZ_MOVING_SPIKE_PLATFORM = 0x56;
+    // SKL $56 is Obj_DEZEnergyBridgeCurved; S3KL $56 is the MGZ spike platform.
+    public static final int DEZ_ENERGY_BRIDGE_CURVED = 0x56;
     public static final int MGZ_TRIGGER_PLATFORM = 0x57;
     public static final int MGZ_SWINGING_SPIKE_BALL = 0x58;
     public static final int MGZ_DASH_TRIGGER = 0x59;
