@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.objects.SszSolidCloudObjectInstance;
 import com.openggf.game.sonic3k.objects.SszEndingIslandMaskObjectInstance;
 import com.openggf.game.sonic3k.objects.SszAct2EndingCameraController;
 import com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance;
+import com.openggf.game.sonic3k.objects.SszLaunchStructureObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -166,6 +167,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
         if (state.launchResourcesQueued()) return;
         try {
             patchActOneLaunchLayout();
+            spawnActOneLaunchStructure();
             state.setLaunchBlocksJobOrdinal(directKosQueue().queueStandardKos(rom(),
                     Sonic3kConstants.SSZ1_CUSTOM_BLOCKS_128_ADDR,
                     S3kKosRamDestinations.CHUNK_TABLE + 0x180).ordinal());
@@ -182,6 +184,25 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                     rom().readBytes(Sonic3kConstants.PAL_SSZ_DEATH_EGG_ADDR, 32), true);
         } catch (java.io.IOException failure) {
             throw new IllegalStateException("Cannot queue SSZ1 Death Egg launch resources", failure);
+        }
+    }
+
+    /** loc_5742C: ten repeated rows, with the ROM's four independent allocation boundaries. */
+    private void spawnActOneLaunchStructure() {
+        int leftY = 0x5A8;
+        int rightY = 0x58C;
+        int rampY = 0x554;
+        for (int row = 0; row < 10; row++) {
+            int rowLeftY = leftY;
+            int rowRightY = rightY;
+            int rowRampY = rampY;
+            spawnObject(() -> SszLaunchStructureObjectInstance.piece(0x1A38, rowLeftY, 6, 0x80));
+            spawnObject(() -> SszLaunchStructureObjectInstance.piece(0x1A80, rowRightY, 0xA, 0x100));
+            spawnObject(() -> SszLaunchStructureObjectInstance.piece(0x1A48, rowLeftY - 0x38, 0xB, 0x200));
+            spawnObject(() -> SszLaunchStructureObjectInstance.piece(0x19F8, rowRampY, 9, 0x80));
+            leftY -= 0x70;
+            rightY -= 0x70;
+            rampY -= 0x70;
         }
     }
 

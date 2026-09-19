@@ -9,6 +9,7 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance;
+import com.openggf.game.sonic3k.objects.SszLaunchStructureObjectInstance;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -84,19 +85,31 @@ class TestS3kSszLaunchSequenceHeadless {
         fixture.stepIdleFrames(1);
         sameSnapshot(crumbleAfter, fixture.gameplayMode().getRewindRegistry().capture(), "crumble replay");
 
-        for (int frame = 0; frame < 0x300 && !state.launchResourcesPublished(); frame++) {
+        for (int frame = 0; frame < 0x300 && state.foregroundRoutine() != 8; frame++) {
             // The production handoff enters from the final arena at Camera_Y $5C0. This
             // isolated load still has the arrival controller, so retain the owning arena Y.
             GameServices.camera().setY((short) 0x5C0);
             GameServices.camera().setYCopy((short) 0x5C0);
             fixture.stepIdleFrames(1);
         }
+        assertEquals(8, state.foregroundRoutine());
+        assertTrue(state.launchResourcesQueued());
+        var structureFrames = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(SszLaunchStructureObjectInstance.class::isInstance)
+                .map(SszLaunchStructureObjectInstance.class::cast)
+                .filter(object -> !object.isDestroyed())
+                .map(SszLaunchStructureObjectInstance::mappingFrameForTest).collect(java.util.stream.Collectors.toSet());
+        assertTrue(structureFrames.stream().anyMatch(frame -> frame >= 6 && frame <= 8)
+                        && structureFrames.contains(9) && structureFrames.contains(0xA)
+                        && structureFrames.stream().anyMatch(frame -> frame >= 0xB && frame <= 0xD),
+                "loc_5742C allocates each structure role before any later prefix failure");
+        for (int frame = 0; frame < 0x300 && !state.launchResourcesPublished(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
 
         assertTrue(active().columnsFinishedForTest(), "all ten sub_5750C columns clamp");
         assertEquals(-0x40, active().columnOffsetForTest(0));
         assertEquals(0xFF, state.eventsFg4Low(), "the last clamp writes Events_fg_4+1");
-        assertEquals(8, state.foregroundRoutine());
-        assertTrue(state.launchResourcesQueued());
         assertTrue(state.launchResourcesPublished());
         assertEquals(-1, state.launchBlocksJobOrdinal());
         assertEquals(-1, state.launchChunksJobOrdinal());

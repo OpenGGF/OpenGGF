@@ -2671,6 +2671,12 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_SSZ_MISC + 0x20,
                 2,
                 null));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_LAUNCH_STRUCTURE,
+                Sonic3kConstants.MAP_SSZ_COLLAPSING_BRIDGE_ADDR,
+                0x348,
+                2,
+                null));
         // loc_57BB2: make_art_tile(ArtTile_SSZMisc+$3C,3,1) over Map_SSZRoamingClouds.
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.SSZ_ROAMING_CLOUD,

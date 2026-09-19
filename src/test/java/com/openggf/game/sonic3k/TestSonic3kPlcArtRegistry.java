@@ -1488,7 +1488,7 @@ public class TestSonic3kPlcArtRegistry {
     public void sszPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0A, 0);
         assertNotNull(plan);
-        assertEquals(15, plan.standaloneArt().size());
+        assertEquals(16, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SSZ_EGG_ROBO)));
 
         // EggRobo should use palette 0
@@ -1497,6 +1497,8 @@ public class TestSonic3kPlcArtRegistry {
                 .findFirst().orElse(null);
         assertNotNull(eggRobo);
         assertEquals(0, eggRobo.palette());
+        assertTrue(plan.levelArt().stream()
+                .anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SSZ_LAUNCH_STRUCTURE)));
     }
 
     @Test

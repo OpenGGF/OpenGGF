@@ -393,6 +393,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String SSZ_CUTSCENE_BUTTON = "ssz_cutscene_button";
     /** Obj_SSZCutsceneBridge: Map_SSZCollapsingBridge over ArtTile_SSZMisc+$20, palette 2. */
     public static final String SSZ_CUTSCENE_BRIDGE = "ssz_cutscene_bridge";
+    /** loc_581F2..loc_58360: the launch structure uses the same mappings at tile $348. */
+    public static final String SSZ_LAUNCH_STRUCTURE = "ssz_launch_structure";
     /** loc_57BB2: Map_SSZRoamingClouds over make_art_tile(ArtTile_SSZMisc+$3C,3,1). */
     public static final String SSZ_ROAMING_CLOUD = "ssz_roaming_cloud";
     /** Obj_SSZBouncyCloud and its loc_452DA puffs: make_art_tile(ArtTile_SSZMisc+$102,3,1). */
