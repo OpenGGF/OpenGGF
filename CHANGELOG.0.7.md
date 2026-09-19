@@ -61,10 +61,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the player to be standing rather than ending on a timer alone. Knuckles' Act 2 route now owns
   its placed final-boss crane too: it closes the camera, enters when Knuckles jumps, carries the
   native approach/return music handoff, lowers its hook to align with Knuckles, grabs and lifts
-  him, reaches the final-arena scroll lock and allocates the boss. Mecha Sonic now takes the Act 2 placement branch, and the first eight hits
-  hand the arena and its music to his replenished Super phase; the second set follows the
-  cartridge's staged fade, progression save and ending-event stop-line waits. The Super attack
-  repertoire and Master Emerald presentation remain next. Act 2's sky now
+  him, reaches the final-arena scroll lock and allocates the boss. Mecha Sonic now takes the Act
+  2 placement branch, and the first eight hits run the cartridge's fade, spin-up, arena opening,
+  charge, landing, transformation and forced Knuckles run before handing the fight to his
+  distinct 36-slot Super dispatcher with a replenished health bar; the second set follows the
+  cartridge's staged fade, progression save and ending-event stop-line waits. The Super
+  attacks' projectile children and Master Emerald presentation remain next. Act 2's sky now
   has its own cold-load scroll fan and deformation too, including the cartridge's twenty-column
   vertical wave rather than inheriting the flat default background. Its later ending-event
   deformation modes remain to be finished. The final defeat now also changes the two arena

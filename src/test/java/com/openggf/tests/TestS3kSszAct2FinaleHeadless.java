@@ -8,6 +8,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.SszKnuxFinalBossCraneObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -107,6 +108,33 @@ class TestS3kSszAct2FinaleHeadless {
         assertEquals(0, state.eventsFg4(), "loc_58AE0 clr.w Events_fg_4");
     }
 
+    @Test
+    void firstHealthBarRunsTheForcedBridgeIntoTheDistinctSuperDispatcher() {
+        HeadlessTestFixture fixture = boot();
+        SszMechaSonicObjectInstance boss = runToBoss(fixture);
+        for (int hit = 0; hit < 8; hit++) landOneHit(fixture, boss);
+
+        assertTrue(boss.superPhaseForTest(), "loc_7B8E6 selected the act-2 transformation");
+        assertEquals(0, boss.actTwoRoutePhaseForTest(), "the $BF fade wait begins first");
+        assertEquals(8, boss.getCollisionProperty(), "the Super form receives a fresh eight hits");
+
+        boolean enteredGraph = false;
+        for (int frame = 0; frame < 0x900 && !enteredGraph; frame++) {
+            var player = fixture.sprite();
+            player.setDead(false);
+            player.setHurt(false);
+            player.setCentreYPreserveSubpixel((short) 0x430);
+            player.setAir(false);
+            fixture.stepIdleFrames(1);
+            enteredGraph = boss.actTwoRoutePhaseForTest() < 0;
+        }
+        assertTrue(enteredGraph, () -> "loc_7BBE0 installed Obj_SSZ2_Boss; bridge phase="
+                + boss.actTwoRoutePhaseForTest() + " routine=$"
+                + Integer.toHexString(boss.routineForTest()));
+        assertTrue((boss.routineForTest() & 1) == 0 && boss.routineForTest() <= 0x46,
+                "SSZ2_Boss_Index owns one of its 36 even routine bytes");
+    }
+
     private static HeadlessTestFixture boot() {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
@@ -122,6 +150,41 @@ class TestS3kSszAct2FinaleHeadless {
                 .startPosition((short) 0x120, (short) 0x430)
                 .startPositionIsCentre()
                 .build();
+    }
+
+    private static SszMechaSonicObjectInstance runToBoss(HeadlessTestFixture fixture) {
+        for (int frame = 0; frame < 0x300; frame++) {
+            var player = fixture.sprite();
+            player.setCentreX((short) 0x120);
+            player.setCentreYPreserveSubpixel((short) 0x430);
+            player.setAir(true);
+            fixture.stepIdleFrames(1);
+            SszMechaSonicObjectInstance boss = active(SszMechaSonicObjectInstance.class);
+            if (boss != null && boss.initExecutedForTest() && boss.routineForTest() != 0) return boss;
+        }
+        throw new AssertionError("the crane never allocated and released Mecha Sonic");
+    }
+
+    private static void landOneHit(HeadlessTestFixture fixture,
+                                   SszMechaSonicObjectInstance boss) {
+        int before = boss.getCollisionProperty();
+        for (int frame = 0; frame < 0x500; frame++) {
+            var player = fixture.sprite();
+            player.setDead(false);
+            player.setHurt(false);
+            player.setInvulnerableFrames(0);
+            player.setInvincibleFrames(2);
+            player.setCentreX((short) boss.getX());
+            player.setCentreYPreserveSubpixel((short) boss.getY());
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setGSpeed((short) 0);
+            player.setAir(true);
+            player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+            fixture.stepIdleFrames(1);
+            if (boss.getCollisionProperty() == before - 1 || boss.superPhaseForTest()) return;
+        }
+        throw new AssertionError("a hit never landed through the production touch pass");
     }
 
     private static <T> T active(Class<T> type) {

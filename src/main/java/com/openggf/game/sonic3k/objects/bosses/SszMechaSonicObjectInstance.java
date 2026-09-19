@@ -23,6 +23,8 @@ import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -259,6 +261,12 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private boolean superPhase;
     /** loc_7BC32/loc_7BCFC countdown phases after the Super form's eighth hit. */
     private int actTwoDefeatPhase;
+    /** loc_7B8E6..loc_7BBE0 bridge, then -1 while Obj_SSZ2_Boss owns dispatch. */
+    private int actTwoRoutePhase = -1;
+    /** $3C(a0), the current Super-phase horizontal target. */
+    private int superTargetX;
+    /** $39(a0), reused by the ROM as the Super-phase repeat counter. */
+    private int superRepeat;
 
     private final S3kRawAnimation.State anim = new S3kRawAnimation.State();
     /** A lazily sliced read-only window over the ROM's script block; nothing to restore. */
@@ -279,6 +287,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                                int yRadius, boolean renderFlipped, int flags,
                                int callback, boolean initExecuted, boolean defeated, boolean paletteLoaded,
                                boolean actTwo, boolean superPhase, int actTwoDefeatPhase,
+                               int actTwoRoutePhase, int superTargetX, int superRepeat,
                                int animScript, int animFrame, int animFrameTimer,
                                int mappingFrame, int routine, int hitCount, boolean invulnerable,
                                int invulnerabilityTimer)
@@ -295,6 +304,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                 List.copyOf(trailIds), posX, posY, xVel, yVel, xAccel, timer, attackChoice,
                 attackCounter, yRadius, renderFlipped, flags, callback.ordinal(),
                 initExecuted, defeated, paletteLoaded, actTwo, superPhase, actTwoDefeatPhase,
+                actTwoRoutePhase, superTargetX, superRepeat,
                 anim.script, anim.animFrame, anim.animFrameTimer,
                 anim.mappingFrame, super.state.routine, super.state.hitCount,
                 super.state.invulnerable, super.state.invulnerabilityTimer));
@@ -324,6 +334,9 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         actTwo = extra.actTwo();
         superPhase = extra.superPhase();
         actTwoDefeatPhase = extra.actTwoDefeatPhase();
+        actTwoRoutePhase = extra.actTwoRoutePhase();
+        superTargetX = extra.superTargetX();
+        superRepeat = extra.superRepeat();
         anim.script = extra.animScript();
         anim.animFrame = extra.animFrame();
         anim.animFrameTimer = extra.animFrameTimer();
@@ -494,6 +507,11 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     /** {@code SSZEndBoss_Index}, act 1 entries only. */
     private void dispatch() {
+        if (actTwo && superPhase) {
+            if (actTwoRoutePhase >= 0) dispatchActTwoRoute();
+            else dispatchSuperGraph();
+            return;
+        }
         switch (super.state.routine) {
             case 0 -> {
                 // loc_7B3AC: the crane helper raises _unkFAB8 bit 4.
@@ -526,6 +544,253 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             case 0x28 -> finalHop();
             default -> { }
         }
+    }
+
+    /**
+     * {@code loc_7B8E6..loc_7BBE0}: the first defeat is a transformation bridge, not the
+     * second health bar starting in place. It fades the end-boss theme, spins up, locks the
+     * player, opens the arena, runs Mecha Sonic to the launch point, lands him, transforms him,
+     * then forces Knuckles right before installing {@code Obj_SSZ2_Boss}.
+     */
+    private void dispatchActTwoRoute() {
+        switch (actTwoRoutePhase) {
+            case 0 -> {
+                animate();
+                if (--timer >= 0) return;
+                services().playMusic(Sonic3kMusic.DDZ.id);
+                timer = 0x3F;
+                actTwoRoutePhase = 1;
+            }
+            case 1 -> {
+                animate();
+                if (--timer >= 0) return;
+                timer = 0x3B;
+                flags |= 1 << FLAG_TRAIL;
+                actTwoRoutePhase = 2;
+            }
+            case 2 -> {
+                animate();
+                services().playSfx(Sonic3kSfx.DASH.id);
+                if (--timer >= 0) return;
+                AbstractPlayableSprite player = mainPlayer();
+                if (player != null) {
+                    player.setControlLocked(true);
+                    player.setXSpeed((short) 0);
+                    player.setYSpeed((short) 0);
+                }
+                var camera = services().camera();
+                camera.setMaxX((short) ((camera.getMaxX() + 0x140) & 0xFFFF));
+                SszZoneRuntimeState state = sszState();
+                if (state != null) state.setBossRightX(((camera.getMaxX() & 0xFFFF) + 0x100) & 0xFFFF);
+                xVel = 0x600;
+                yVel = 0;
+                actTwoRoutePhase = 3;
+            }
+            case 3 -> {
+                moveSprite2();
+                if (getX() < ((boxRightX() - 0xAA) & 0xFFFF)) return;
+                xAccel = -0x30;
+                timer = 0x0F;
+                actTwoRoutePhase = 4;
+            }
+            case 4 -> {
+                xVel = (short) (xVel + xAccel);
+                moveSprite2();
+                animate();
+                if (--timer >= 0) return;
+                flags &= ~(1 << FLAG_TRAIL);
+                yVel = -0x400;
+                yRadius = 0x4B;
+                actTwoRoutePhase = 5;
+            }
+            case 5 -> {
+                animate();
+                moveSpriteWithGravity(LIGHT_GRAVITY);
+                Integer floor = floorDistance();
+                if (yVel < 0) return;
+                if (floor == null) {
+                    // The cold SSZ2 arena is a sparse ending layout. ObjHitFloor_DoRoutine
+                    // lands on its fixed platform row; preserve that owner when a partial
+                    // headless collision window has not materialised the row yet.
+                    int platformY = (cameraY() + 0xA0) & 0xFFFF;
+                    if (getY() < platformY) return;
+                    setPosition(getX(), platformY);
+                } else {
+                    if (floor > 0) return;
+                    setPosition(getX(), (getY() + floor) & 0xFFFF);
+                }
+                services().playSfx(Sonic3kSfx.MECHA_LAND.id);
+                timer = 0x3F;
+                actTwoRoutePhase = 6;
+            }
+            case 6 -> {
+                animate();
+                services().playSfx(Sonic3kSfx.MECHA_TRANSFORM.id);
+                if (--timer >= 0) return;
+                AbstractPlayableSprite player = mainPlayer();
+                int releaseX = (services().camera().getMinX() & 0xFFFF) + 0x1F0;
+                if (player != null && player.getCentreX() < releaseX) {
+                    player.setControlLocked(true);
+                    player.setXSpeed((short) 0x600);
+                    // loc_7BBE0 supplies held Right while Ctrl_1_locked is set. The engine's
+                    // lock intentionally suppresses live input, so apply that owned movement
+                    // directly rather than leaking a synthetic controller state globally.
+                    NativePositionOps.addXPosPreserveSubpixel(player, 6);
+                    return;
+                }
+                if (player != null) {
+                    player.setXSpeed((short) 0);
+                    player.setControlLocked(false);
+                }
+                services().camera().setScrollLocked(false);
+                super.state.routine = 2;
+                timer = 0x0F;
+                actTwoRoutePhase = -1;
+            }
+            default -> { }
+        }
+    }
+
+    /**
+     * {@code SSZ2_Boss_Index}: the cartridge's distinct 36-entry dispatcher. The routines keep
+     * their native byte values so hit, collision and rewind observations can be compared without
+     * translating an engine-only phase enum. Child projectiles remain ordinary object children;
+     * this method owns the boss movement and branch graph.
+     */
+    private void dispatchSuperGraph() {
+        switch (super.state.routine) {
+            case 0, 2 -> {
+                animate();
+                if (--timer >= 0) return;
+                super.state.routine = 4;
+                yVel = -0x480;
+            }
+            case 4 -> {
+                moveSpriteWithGravity(LIGHT_GRAVITY);
+                if (getY() > bossCeilingY()) return;
+                setPosition(getX(), bossCeilingY());
+                super.state.routine = 6;
+                timer = 0x1F;
+            }
+            case 6 -> {
+                animate();
+                if (--timer >= 0) return;
+                super.state.routine = 8;
+                timer = 0x3F;
+            }
+            case 8 -> {
+                animate();
+                if (--timer >= 0) return;
+                chooseSuperDashTarget();
+            }
+            case 0x0A -> {
+                animate();
+                xVel = (short) (xVel + xAccel);
+                moveSprite2();
+                if (Math.abs(xVel) < 0x800) return;
+                super.state.routine = 0x0C;
+            }
+            case 0x0C -> {
+                moveSprite2();
+                if (Math.abs(getX() - superTargetX) >= 0x38) return;
+                super.state.routine = 0x0E;
+                xAccel = -xAccel;
+                timer = 7;
+            }
+            case 0x0E -> {
+                animate();
+                xVel = (short) (xVel + xAccel);
+                moveSprite2();
+                if ((xVel >= 0 && getX() < superTargetX)
+                        || (xVel < 0 && getX() > superTargetX)) return;
+                super.state.routine = 0x10;
+            }
+            case 0x10 -> {
+                animate();
+                if (--timer >= 0) return;
+                if (++superRepeat < 2) chooseSuperDashTarget();
+                else chooseSuperAttack();
+            }
+            case 0x12 -> {
+                animate();
+                moveSprite2();
+                Integer floor = floorDistance();
+                if (floor == null || floor > 0) return;
+                setPosition(getX(), (getY() + floor) & 0xFFFF);
+                super.state.routine = 0x14;
+                timer = 0x3F;
+                services().playSfx(Sonic3kSfx.CRASH.id);
+            }
+            case 0x14 -> { animate(); if (--timer < 0) { super.state.routine = 0x16; yVel = -0x400; } }
+            case 0x16 -> { animate(); moveSprite2(); if (getY() <= bossCeilingY()) { setPosition(getX(), bossCeilingY()); super.state.routine = 0x1A; timer = 0x0F; } }
+            case 0x18 -> { animate(); if (--timer < 0) chooseSuperDashTarget(); }
+            case 0x1A -> { animate(); if (--timer < 0) chooseSuperDashTarget(); }
+            case 0x1C -> {
+                animate();
+                xVel = (short) (xVel + xAccel);
+                moveSprite2();
+                if (Math.abs(xVel) >= 0x700) { super.state.routine = 0x1E; yVel = 0x780; yRadius = 0x57; }
+            }
+            case 0x1E -> { animate(); moveSprite2(); if (floorDistanceReached()) { super.state.routine = 0x20; yVel = -0x600; services().playSfx(Sonic3kSfx.MECHA_LAND.id); } }
+            case 0x20 -> { animate(); moveSpriteWithGravity(-0x80); if (floorDistanceReached()) { super.state.routine = 0x22; xAccel = -(xAccel >> 1); timer = 0x1F; } }
+            case 0x22 -> { animate(); xVel = (short) (xVel + xAccel); moveSprite2(); if (--timer < 0) { super.state.routine = 0x24; timer = 0x0F; } }
+            case 0x24 -> { animate(); if (--timer < 0) { super.state.routine = 0x26; yVel = -0x600; } }
+            case 0x26 -> { animate(); moveSpriteWithGravity(LIGHT_GRAVITY); if (getY() <= bossCeilingY()) { setPosition(getX(), bossCeilingY()); chooseSuperDashTarget(); } }
+            case 0x28 -> { animate(); moveSpriteWithGravity(0x10); if (yVel >= 0x100) { super.state.routine = 0x2A; timer = 0x1F; superRepeat = 3; } }
+            case 0x2A, 0x2C -> { animate(); moveSprite2(); if (--timer < 0 && --superRepeat < 0) { super.state.routine = 0x2E; yVel = 0x600; } else if (timer < 0) timer = 0x2F; }
+            case 0x2E -> { animate(); moveSpriteWithGravity(NORMAL_GRAVITY); if (floorDistanceReached()) { super.state.routine = 0x30; timer = 0x0F; } }
+            case 0x30 -> { animate(); if (--timer < 0) { super.state.routine = 0x32; yVel = -0x400; } }
+            case 0x32 -> { animate(); moveSpriteWithGravity(LIGHT_GRAVITY); if (floorDistanceReached()) { super.state.routine = 0x34; xVel = getX() < boxRightX() ? 0x400 : -0x400; } }
+            case 0x34 -> { animate(); moveSprite2(); if (boundaryReached() != null) { super.state.routine = 0x36; xVel = 0; yVel = -0x200; } }
+            case 0x36 -> { animate(); moveSpriteWithGravity(LIGHT_GRAVITY); if (floorDistanceReached()) { super.state.routine = 0x38; timer = 0x0F; } }
+            case 0x38 -> { animate(); if (--timer < 0) { super.state.routine = 0x3A; yVel = -0x400; } }
+            case 0x3A -> { animate(); moveSpriteWithGravity(LIGHT_GRAVITY); if (floorDistanceReached()) { super.state.routine = 0; timer = 0x0F; } }
+            case 0x3C -> { animate(); if (--timer < 0) chooseSuperAttack(); }
+            case 0x3E, 0x40, 0x42, 0x44 -> { animate(); moveSprite2(); if (--timer < 0) { super.state.routine += 2; timer = 0x1F; } }
+            case 0x46 -> { animate(); if (--timer < 0) { super.state.routine = 0x3C; timer = 0x7F; } }
+            default -> { super.state.routine = 8; timer = 0x1F; }
+        }
+    }
+
+    private void chooseSuperDashTarget() {
+        super.state.routine = 0x0A;
+        int middle = (boxLeftX() + boxRightX()) >>> 1;
+        boolean goRight = getX() < middle;
+        superTargetX = goRight ? boxRightX() : boxLeftX();
+        xVel = 0;
+        yVel = 0;
+        xAccel = goRight ? 0x80 : -0x80;
+        timer = 7;
+    }
+
+    private void chooseSuperAttack() {
+        superRepeat = 0;
+        int choice = services().rng() == null ? 0 : services().rng().nextWord() & 3;
+        super.state.routine = switch (choice) {
+            case 0 -> 0x12;
+            case 1 -> 0x1C;
+            case 2 -> 0x28;
+            default -> 0x3C;
+        };
+        timer = 0x1F;
+        xAccel = getX() < ((boxLeftX() + boxRightX()) >>> 1) ? 0x80 : -0x80;
+        if (super.state.routine == 0x12) yVel = 0x400;
+    }
+
+    private boolean floorDistanceReached() {
+        Integer floor = floorDistance();
+        if (floor == null || floor > 0) return false;
+        setPosition(getX(), (getY() + floor) & 0xFFFF);
+        return true;
+    }
+
+    private int bossCeilingY() {
+        SszZoneRuntimeState state = sszState();
+        return state == null ? cameraY() + 0x30 : state.bossCeilingY();
+    }
+
+    private AbstractPlayableSprite mainPlayer() {
+        return services().spriteManager().getMainPlayable();
     }
 
     /** {@code loc_7B3E6}: run left until the camera's left margin has passed {@code x_pos}. */
@@ -869,25 +1134,17 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         if (actTwo && !superPhase) {
             // loc_7B8E6..loc_7BBE0 is the transformation/forced-run bridge to Obj_SSZ2_Boss.
             // Keep its gameplay authority here: replenish the native eight hits, install the
-            // Super collision bit, expand the arena, and resume the shared attack chooser.
+            // Super collision bit, then run the fade/spin/forced-run graph before the distinct
+            // SSZ2_Boss_Index dispatcher takes ownership.
             superPhase = true;
             super.state.defeated = false;
             super.state.hitCount = HIT_COUNT;
             super.state.invulnerable = false;
             flags |= 1 << 7;
-            SszZoneRuntimeState ssz = sszState();
-            int left = services().camera().getMinX() & 0xFFFF;
-            if (ssz != null) {
-                ssz.setBossLeftX((left + 0xB0) & 0xFFFF);
-                ssz.setBossRightX((left + 0x230) & 0xFFFF);
-                ssz.setBossCeilingY((cameraY() + 0x30) & 0xFFFF);
-            }
-            services().camera().setMaxX((short) ((services().camera().getMaxX() + 0x140) & 0xFFFF));
-            services().camera().setScrollLocked(false);
-            services().playMusic(Sonic3kMusic.DDZ.id);
-            super.state.routine = 0x14;
-            attackCounter = 2;
-            onFacePlayer();
+            super.state.routine = 8;
+            timer = 0xBF;
+            actTwoRoutePhase = 0;
+            services().fadeOutMusic();
             return;
         }
         defeated = true;
@@ -1225,6 +1482,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     public boolean defeatedForTest() { return defeated; }
     public boolean actTwoForTest() { return actTwo; }
     public boolean superPhaseForTest() { return superPhase; }
+    public int actTwoRoutePhaseForTest() { return actTwoRoutePhase; }
     public int actTwoDefeatPhaseForTest() { return actTwoDefeatPhase; }
     public List<SszMechaSonicTrailChild> trailForTest() { return List.copyOf(trail); }
 
