@@ -186,4 +186,28 @@ class TestS3kDezScreenEvents {
         assertEquals(8, dezState().backgroundRoutine());
         assertTrue(dezState().backgroundDrawRowsRemaining() < 0);
     }
+
+    @Test
+    void actOneResultsSignalPerformsTheSeamlessActTwoReload() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, ACT_1)
+                .build();
+        fixture.stepIdleFrames(2);
+        int oldX = GameServices.sprites().getMainPlayable().getCentreX() & 0xFFFF;
+        int oldY = GameServices.sprites().getMainPlayable().getCentreY() & 0xFFFF;
+
+        dezState().raiseEventsFg5();
+        fixture.stepIdleFrames(2);
+
+        assertEquals(ACT_2, GameServices.level().getCurrentAct());
+        assertEquals((oldX - 0x3600) & 0xFFFF,
+                GameServices.sprites().getMainPlayable().getCentreX() & 0xFFFF);
+        assertEquals((oldY + 0x0400) & 0xFFFF,
+                GameServices.sprites().getMainPlayable().getCentreY() & 0xFFFF);
+        assertEquals(0, dezState().foregroundRoutine());
+        assertEquals(0, dezState().backgroundRoutine());
+        fixture.stepIdleFrames(1);
+        assertEquals(4, dezState().backgroundRoutine(),
+                "the first post-reload event pass starts the bottom-up redraw");
+    }
 }

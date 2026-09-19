@@ -1,12 +1,16 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.Sonic3kAct3Carry;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.S3kDezFinalBossInstance;
 import com.openggf.game.sonic3k.objects.S3kDezFinalArenaControllerInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 
@@ -65,6 +69,7 @@ public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
             updateAct3BackgroundEvent(state);
         } else if (act == 0) {
             updateAct1ScreenEvent(state);
+            updateAct1BackgroundEvent(state);
         } else {
             updateAct2ScreenEvent(state);
             updateAct2BackgroundEvent(state);
@@ -180,6 +185,66 @@ public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
             return;
         }
         writeChunks(ACT1_CHUNK_ROW, ACT1_CHUNK_COLUMN, ACT1_CHUNK);
+    }
+
+    /** {@code DEZ1_BackgroundEvent}: results signal, resource wait, then {@code loc_593EC}. */
+    private void updateAct1BackgroundEvent(S3kDezZoneRuntimeState state) {
+        switch (state.backgroundRoutine()) {
+            case 0 -> {
+                if (state.consumeEventsFg5()) {
+                    // The target level's normal ROM pipeline owns the same PLC $38 and DEZ2
+                    // secondary resources. Advancing here preserves the native wait boundary.
+                    state.advanceBackgroundRoutine();
+                }
+            }
+            case 4 -> requestAct2Transition();
+            default -> { }
+        }
+    }
+
+    private void requestAct2Transition() {
+        var handoff = seamlessTransitionResourceHandoffs().register(
+                new DezActTransitionHandoff(this));
+        SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
+        var cam = camera();
+        int minX = offsetWord(cam.getMinX(), -0x3600);
+        int maxX = offsetWord(cam.getMaxX(), -0x3600);
+        int minY = offsetWord(cam.getMinY(), 0x0400);
+        int maxY = offsetWord(cam.getMaxY(), 0x0400);
+        int maxYTarget = offsetWord(cam.getMaxYTarget(), 0x0400);
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(Sonic3kZoneIds.ZONE_DEZ, 1)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
+                .deactivateLevelNow(false)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                .preserveEndOfLevelState(true)
+                .objectSurvivalPolicy(
+                        SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.PERSISTENT_EXACT_SST)
+                .showInLevelTitleCard(false)
+                .resetLevelGamestateAtInLevelTitleCardDisplay(true)
+                .preserveOffsetCameraPosition(true)
+                .postTransitionMinX(minX)
+                .postTransitionMaxX(maxX)
+                .postTransitionMinY(minY)
+                .postTransitionMaxY(maxY)
+                .postTransitionMaxYTarget(maxYTarget)
+                .playerOffset(-0x3600, 0x0400)
+                .cameraOffset(-0x3600, 0x0400)
+                .resourceHandoff(handoff)
+                .build();
+        try {
+            // loc_593EC calls Load_Level and rebases the world inside this event dispatch.
+            levelManager().executeActTransition(request);
+            levelManager().markSynchronousSeamlessTransitionBoundary();
+        } catch (java.io.IOException failure) {
+            throw new IllegalStateException("Failed to apply DEZ act transition", failure);
+        }
+    }
+
+    private static int offsetWord(short value, int offset) {
+        return ((value & 0xFFFF) + offset) & 0xFFFF;
     }
 
     /**
