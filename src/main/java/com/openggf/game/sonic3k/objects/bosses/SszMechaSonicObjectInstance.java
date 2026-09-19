@@ -252,6 +252,12 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private boolean defeated;
     /** {@code PalLoad_Line1} is a one-shot; the restore belongs to the owed defeat graph. */
     private boolean paletteLoaded;
+    /** Current_act != 0: the crane route reuses this object before it becomes Obj_SSZ2_Boss. */
+    private boolean actTwo;
+    /** Set after the first eight hits transform Mecha Sonic into the Super phase. */
+    private boolean superPhase;
+    /** loc_7BC32/loc_7BCFC countdown phases after the Super form's eighth hit. */
+    private int actTwoDefeatPhase;
 
     private final S3kRawAnimation.State anim = new S3kRawAnimation.State();
     /** A lazily sliced read-only window over the ROM's script block; nothing to restore. */
@@ -271,6 +277,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                                int xAccel, int timer, int attackChoice, int attackCounter,
                                int yRadius, boolean renderFlipped, int flags,
                                int callback, boolean initExecuted, boolean defeated, boolean paletteLoaded,
+                               boolean actTwo, boolean superPhase, int actTwoDefeatPhase,
                                int animScript, int animFrame, int animFrameTimer,
                                int mappingFrame, int routine, int hitCount, boolean invulnerable,
                                int invulnerabilityTimer)
@@ -286,7 +293,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 List.copyOf(trailIds), posX, posY, xVel, yVel, xAccel, timer, attackChoice,
                 attackCounter, yRadius, renderFlipped, flags, callback.ordinal(),
-                initExecuted, defeated, paletteLoaded, anim.script, anim.animFrame, anim.animFrameTimer,
+                initExecuted, defeated, paletteLoaded, actTwo, superPhase, actTwoDefeatPhase,
+                anim.script, anim.animFrame, anim.animFrameTimer,
                 anim.mappingFrame, super.state.routine, super.state.hitCount,
                 super.state.invulnerable, super.state.invulnerabilityTimer));
     }
@@ -312,6 +320,9 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         initExecuted = extra.initExecuted();
         defeated = extra.defeated();
         paletteLoaded = extra.paletteLoaded();
+        actTwo = extra.actTwo();
+        superPhase = extra.superPhase();
+        actTwoDefeatPhase = extra.actTwoDefeatPhase();
         anim.script = extra.animScript();
         anim.animFrame = extra.animFrame();
         anim.animFrameTimer = extra.animFrameTimer();
@@ -441,12 +452,20 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         }
         super.state.hitCount = HIT_COUNT;
         collisionFlags = COLLISION_BY_FRAME[0];
+        actTwo = services().currentAct() != 0;
 
         SszZoneRuntimeState ssz = sszState();
         var camera = services().camera();
         int cameraX = camera == null ? 0 : camera.getX() & 0xFFFF;
         int cameraY = camera == null ? 0 : camera.getY() & 0xFFFF;
 
+        if (actTwo) {
+            // loc_7B2DC: Current_act != 0 keeps routine 0 and forces the landing point.
+            super.state.routine = 0;
+            setPosition(0x220, 0x4A0);
+            loadFightPalette();
+            return;
+        }
         super.state.routine = 4;
         anim.mappingFrame = ENTRY_MAPPING_FRAME;
         xVel = ENTRY_X_VEL;
@@ -475,6 +494,19 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     /** {@code SSZEndBoss_Index}, act 1 entries only. */
     private void dispatch() {
         switch (super.state.routine) {
+            case 0 -> {
+                // loc_7B3AC: the crane helper raises _unkFAB8 bit 4.
+                SszZoneRuntimeState ssz = sszState();
+                if (actTwo && ssz != null && ssz.cutsceneFlag(4)) {
+                    super.state.routine = 0x14;
+                    attackCounter = 2;
+                    int cameraX = cameraX();
+                    ssz.setBossLeftX((cameraX + 0x20) & 0xFFFF);
+                    ssz.setBossRightX((cameraX + 0x120) & 0xFFFF);
+                    ssz.setBossCeilingY((cameraY() + 0x30) & 0xFFFF);
+                    onFacePlayer();
+                }
+            }
             case 4 -> runOffScreen();
             case 6 -> objWait();
             case 8 -> runBackAcrossTheArena();
@@ -833,12 +865,36 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
      */
     @Override
     protected void onDefeatStarted() {
+        if (actTwo && !superPhase) {
+            // loc_7B8E6..loc_7BBE0 is the transformation/forced-run bridge to Obj_SSZ2_Boss.
+            // Keep its gameplay authority here: replenish the native eight hits, install the
+            // Super collision bit, expand the arena, and resume the shared attack chooser.
+            superPhase = true;
+            super.state.defeated = false;
+            super.state.hitCount = HIT_COUNT;
+            super.state.invulnerable = false;
+            flags |= 1 << 7;
+            SszZoneRuntimeState ssz = sszState();
+            int left = services().camera().getMinX() & 0xFFFF;
+            if (ssz != null) {
+                ssz.setBossLeftX((left + 0xB0) & 0xFFFF);
+                ssz.setBossRightX((left + 0x230) & 0xFFFF);
+                ssz.setBossCeilingY((cameraY() + 0x30) & 0xFFFF);
+            }
+            services().camera().setMaxX((short) ((services().camera().getMaxX() + 0x140) & 0xFFFF));
+            services().camera().setScrollLocked(false);
+            services().playMusic(Sonic3kMusic.DDZ.id);
+            super.state.routine = 0x14;
+            attackCounter = 2;
+            onFacePlayer();
+            return;
+        }
         defeated = true;
         // move.l #loc_7B81A,(a0) / clr.b routine(a0) / move.l #loc_7B858,$34(a0)
         super.state.routine = 0;
         // bset #6,status(a0), and move.w #$7F,$2E(a0)
         super.state.invulnerable = true;
-        timer = DEFEAT_WAIT;
+        timer = actTwo && superPhase ? 0xBF : DEFEAT_WAIT;
         callback = Callback.DEFEAT_FALL;
         // lea (Child6_CreateBossExplosion).l,a2 / CreateChild1_Normal, subtype 4. The score is
         // the base's, added before this runs. Nothing here clears x_vel, y_vel or the trail bit.
@@ -858,6 +914,10 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
      * {@code $67C} floor and {@code ObjHitFloor_DoRoutine} lands him on its first dispatch.
      */
     private void dispatchDefeat() {
+        if (actTwo && superPhase) {
+            dispatchActTwoDefeat();
+            return;
+        }
         switch (super.state.routine) {
             case 0 -> objWait();
             case 2 -> {
@@ -868,6 +928,32 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             // rotation sub_7C678 sets up over word_7D842 is owed with the spark child it feeds.
             case 4 -> { animate(); objWait(); }
             default -> { }
+        }
+    }
+
+    /** loc_7BC32..loc_7BCFC: the accepted cold-route stop line before ending-only objects. */
+    private void dispatchActTwoDefeat() {
+        if (actTwoDefeatPhase == 0) {
+            if (--timer < 0) {
+                timer = 0x1F;
+                actTwoDefeatPhase = 1;
+                services().fadeOutMusic();
+                setPosition(getX(), (getY() + 0x20) & 0xFFFF);
+            }
+            return;
+        }
+        if (actTwoDefeatPhase == 1) {
+            if (--timer < 0) {
+                timer = (2 * 60) - 1;
+                actTwoDefeatPhase = 2;
+                SszZoneRuntimeState ssz = sszState();
+                if (ssz != null) ssz.setEventsFg4Low(0xFF);
+                services().requestSessionSave(com.openggf.game.save.SaveReason.PROGRESSION_SAVE);
+            }
+            return;
+        }
+        if (--timer < 0) {
+            setDestroyed(true);
         }
     }
 
@@ -1136,6 +1222,9 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     public int attackChoiceForTest() { return attackChoice; }
     public boolean initExecutedForTest() { return initExecuted; }
     public boolean defeatedForTest() { return defeated; }
+    public boolean actTwoForTest() { return actTwo; }
+    public boolean superPhaseForTest() { return superPhase; }
+    public int actTwoDefeatPhaseForTest() { return actTwoDefeatPhase; }
     public List<SszMechaSonicTrailChild> trailForTest() { return List.copyOf(trail); }
 
     // --- draw -------------------------------------------------------------------------------

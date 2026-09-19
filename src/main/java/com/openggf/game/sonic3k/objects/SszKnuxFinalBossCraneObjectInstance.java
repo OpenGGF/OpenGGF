@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -38,6 +40,7 @@ public final class SszKnuxFinalBossCraneObjectInstance extends AbstractObjectIns
     private int y;
     private int swingAngle;
     private int timer;
+    private boolean bossSpawned;
     private Phase phase = Phase.INIT;
 
     public SszKnuxFinalBossCraneObjectInstance(ObjectSpawn spawn) {
@@ -90,10 +93,16 @@ public final class SszKnuxFinalBossCraneObjectInstance extends AbstractObjectIns
                 swing();
                 if (--timer < 0) {
                     services().camera().setScrollLocked(true);
+                    S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry())
+                            .ifPresent(state -> state.setCutsceneFlag(4));
+                    spawnBoss();
                     phase = Phase.READY;
                 }
             }
-            case READY -> swing();
+            case READY -> {
+                swing();
+                spawnBoss();
+            }
         }
     }
 
@@ -108,6 +117,12 @@ public final class SszKnuxFinalBossCraneObjectInstance extends AbstractObjectIns
     private void swing() {
         swingAngle = (swingAngle + 4) & 0xFF;
         y = spawn.y() + (int) Math.round(Math.sin(swingAngle * Math.PI / 128.0) * 4.0);
+    }
+
+    private void spawnBoss() {
+        if (bossSpawned) return;
+        bossSpawned = spawnAfterCurrentSibling(() -> new SszMechaSonicObjectInstance(
+                new ObjectSpawn(0x220, 0x4A0, 0, 0, 0, false, 0))) != null;
     }
 
     @Override public int getX() { return x; }

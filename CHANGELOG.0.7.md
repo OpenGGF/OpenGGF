@@ -60,9 +60,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   drops to the floor in his beaten pose, and the act hands over to its results — which waits for
   the player to be standing rather than ending on a timer alone. Knuckles' Act 2 route now owns
   its placed final-boss crane too: it closes the camera, enters when Knuckles jumps, carries the
-  native approach/return music handoff and reaches the final-arena scroll lock. Its grab and
-  Super Mecha Sonic encounter remain the next part of that route. The Death Egg launch is still
-  to come.
+  native approach/return music handoff, reaches the final-arena scroll lock and allocates the
+  boss. Mecha Sonic now takes the Act 2 placement branch, and the first eight hits
+  hand the arena and its music to his replenished Super phase; the second set follows the
+  cartridge's staged fade, progression save and ending-event stop-line waits. The exact crane
+  grab, Super attack repertoire and Master Emerald presentation remain next. The Death Egg
+  launch is still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
