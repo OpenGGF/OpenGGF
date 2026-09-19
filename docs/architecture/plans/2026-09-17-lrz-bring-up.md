@@ -3650,3 +3650,18 @@ triples and mapping frame are explicitly rewind-captured. This removes all 18 `$
 taking act 2 from 19 placeholders to **1**. `$AE` is the sole remaining act-2 placeholder and is
 kept atomic because its controller, subtype `$24` Knuckles actor, boulder, camera/control
 choreography and act-3 carry state form one native protocol.
+
+## 2026-09-19 — `$AE` LRZ2 ending protocol
+
+`Obj_LRZ2CutsceneKnuckles` now owns the ROM's character gate, asymmetric range activation,
+camera-left lock, `$39B0` player stop, grounded release into `object_control=$81`, two-pixel camera
+rise to `$90`, and the `$4C0` transition into `$1600`. It allocates the subtype `$24`
+`CutsceneKnux_LRZ2` actor and boulder; their `_unkFAB8` bit-1/bit-2 handshake is runtime-owned and
+rewind-captured, as is the controller state and `Act3_flag` stand-in. The actor follows the two raw
+animation completion boundaries and the boulder begins its native `-$200` leftward/gravity move
+when bit 2 is published. LRZ2's placement census is now **zero placeholders**.
+
+The presentation portion remains intentionally bounded: the shared cutscene-Knuckles sheet draws
+the actor, while the dynamically queued boulder mapping/art and its exact terrain bounce remain a
+recorded visual/physics refinement rather than a route blocker. The transition itself uses the
+production `requestZoneAndAct($16,0,true)` path.

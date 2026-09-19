@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 20 * Short.BYTES;
+            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 22 * Short.BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -78,6 +78,10 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short cameraStoredMaxX;
     private short cameraStoredMinY;
     private short cameraStoredMaxY;
+    /** ROM {@code _unkFAB8}: LRZ2 cutscene coordination bits 0-2. */
+    private short cutsceneFlags;
+    /** ROM {@code Act3_flag}: carry rings/timer into the LRZ boss slot. */
+    private short act3CarryActive;
 
     public LrzZoneRuntimeState(int zoneIndex, int actIndex, PlayerCharacter playerCharacter) {
         this.zoneIndex = zoneIndex;
@@ -286,6 +290,12 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         cameraStoredMaxY = (short) maxY;
     }
 
+    public boolean cutsceneFlag(int bit) { return (cutsceneFlags & (1 << bit)) != 0; }
+    public void setCutsceneFlag(int bit) { cutsceneFlags |= (short) (1 << bit); }
+    public int cutsceneFlags() { return cutsceneFlags & 0xFF; }
+    public boolean act3CarryActive() { return act3CarryActive != 0; }
+    public void setAct3CarryActive(boolean active) { act3CarryActive = (short) (active ? -1 : 0); }
+
     @Override
     public byte[] captureBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES);
@@ -312,6 +322,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(cameraStoredMaxX);
         buffer.putShort(cameraStoredMinY);
         buffer.putShort(cameraStoredMaxY);
+        buffer.putShort(cutsceneFlags);
+        buffer.putShort(act3CarryActive);
         return buffer.array();
     }
 
@@ -344,5 +356,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         cameraStoredMaxX = buffer.getShort();
         cameraStoredMinY = buffer.getShort();
         cameraStoredMaxY = buffer.getShort();
+        cutsceneFlags = buffer.getShort();
+        act3CarryActive = buffer.getShort();
     }
 }

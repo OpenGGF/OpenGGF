@@ -1309,6 +1309,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (subtype == 0x20) {
                         return new CutsceneKnucklesMhz2Instance(spawn);
                     }
+                    if (subtype == 0x24) {
+                        return new CutsceneKnucklesLrz2Instance(spawn);
+                    }
                     if (subtype == 0x28) {
                         return new CutsceneKnucklesHpzInstance(spawn);
                     }
@@ -1585,6 +1588,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.AIZ_DRAW_BRIDGE,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzTurbineSpritesObjectInstance(spawn));
+        // Id $AE is Obj_LRZ2CutsceneKnuckles in the SKL set (sonic3k.asm:131172).
+        registerStockRomZoneBound(Sonic3kObjectIds.STAR_POINTER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new Lrz2CutsceneControllerObjectInstance(spawn));
         // Id $B3 is Obj_StartNewLevel in the SKL set. LRZ2 places subtype $2D at ($3FE0,$E0),
         // whose two-byte subtype transform requests playable Hidden Palace ($1601).
         registerStockRomZoneBound(Sonic3kObjectIds.ICZ_SEGMENT_COLUMN,

@@ -306,7 +306,7 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$AD` | `$01` | `Obj_LRZ3Platform` | 0 | 0 | 1 | placeholder (SKL branch) | 9 |
 | `$AD` | `$02` | `Obj_LRZ3Platform` | 0 | 0 | 2 | placeholder (SKL branch) | 9 |
 | `$AD` | `$04` | `Obj_LRZ3Platform` | 0 | 0 | 3 | placeholder (SKL branch) | 9 |
-| `$AE` | `$00` | `Obj_LRZ2CutsceneKnuckles` | 0 | 1 | 0 | placeholder (SKL branch) | 8 |
+| `$AE` | `$00` | `Obj_LRZ2CutsceneKnuckles` | 0 | 1 | 0 | `Lrz2CutsceneControllerObjectInstance` | 8 |
 | `$B3` | `$2D` | `Obj_StartNewLevel` | 0 | 1 | 0 | concrete zone-specific | 8 |
 
 ## Per-ID totals and notes
