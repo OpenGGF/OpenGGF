@@ -33,8 +33,9 @@ import java.util.Objects;
  * stays in {@code GameStateManager} where rewind already captures it.
  */
 public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 9 * Short.BYTES;
+    private static final int CAPTURE_BYTES = 21 * Short.BYTES;
 
+    private final int zoneIndex;
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
 
@@ -47,8 +48,15 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     private short cameraStoredMinY;
     private short cameraStoredMaxY;
     private short panelBits;
+    // DEZ3 Events_bg+$00..$16, kept as words because several are signed counters.
+    private final short[] act3Background = new short[12];
 
     public S3kDezZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
+        this(0x0B, actIndex, playerCharacter);
+    }
+
+    public S3kDezZoneRuntimeState(int zoneIndex, int actIndex, PlayerCharacter playerCharacter) {
+        this.zoneIndex = zoneIndex;
         this.actIndex = actIndex;
         this.playerCharacter = Objects.requireNonNull(playerCharacter, "playerCharacter");
         if (actIndex == 1) {
@@ -60,7 +68,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         }
     }
 
-    @Override public int zoneIndex() { return 0x0B; }
+    @Override public int zoneIndex() { return zoneIndex; }
     @Override public int actIndex() { return actIndex; }
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
 
@@ -115,6 +123,21 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     public int panelBits() { return panelBits & 0xFF; }
     public void setPanelBits(int value) { panelBits = (short) (value & 0xFF); }
 
+    public int act3BackgroundWord(int byteOffset) {
+        requireAct3Offset(byteOffset);
+        return act3Background[byteOffset >>> 1] & 0xFFFF;
+    }
+
+    public void setAct3BackgroundWord(int byteOffset, int value) {
+        requireAct3Offset(byteOffset);
+        act3Background[byteOffset >>> 1] = (short) value;
+    }
+
+    private static void requireAct3Offset(int byteOffset) {
+        if ((byteOffset & 1) != 0 || byteOffset < 0 || byteOffset > 0x16)
+            throw new IllegalArgumentException("DEZ3 Events_bg offset: " + byteOffset);
+    }
+
     @Override public int cameraStoredMinX() { return cameraStoredMinX & 0xFFFF; }
     @Override public int cameraStoredMaxX() { return cameraStoredMaxX & 0xFFFF; }
     @Override public int cameraStoredMinY() { return cameraStoredMinY; }
@@ -136,6 +159,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         buffer.putShort(cameraStoredMinY);
         buffer.putShort(cameraStoredMaxY);
         buffer.putShort(panelBits);
+        for (short word : act3Background) buffer.putShort(word);
         return buffer.array();
     }
 
@@ -154,5 +178,6 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         cameraStoredMinY = buffer.getShort();
         cameraStoredMaxY = buffer.getShort();
         panelBits = buffer.getShort();
+        for (int i = 0; i < act3Background.length; i++) act3Background[i] = buffer.getShort();
     }
 }

@@ -5,7 +5,10 @@ ROM `Current_zone_and_act = $1700`. **Not Sonic 2's Death Egg**, and not the
 `$1701` Super Emerald sanctuary, which has its own
 [matrix](s3k-hpz-sanctuary.md). Owning plan:
 [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
-Status: not started. Nothing below certifies the act.
+Status: implementation in progress. The `$1700` identity, Act 3 carry, initial event
+words/camera and dynamic boss graph are implemented and focused-tested; floor/block
+actors, the complete background redraw machine, ROM-backed boss presentation and route
+captures remain open, so this matrix does not yet certify the act.
 
 LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art
 `levartptrs $4C,$4C,$40` (PLC `$4C`, palette `$40`, `ArtKosM_DEZ3`,
@@ -32,9 +35,9 @@ level and dies at frame 98. No title card is drawn. Capture:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Not started (standard level load only; no `$1700` resource profile, no events, no objects, and the scroll handler is HPZ's because `Sonic3kScrollHandlerProvider` keys zone `$17` without the act — slice 1's new `ZONE_DEZ` case is zone `$0B` only and does not touch `$17`) |
+| Implemented | Partial: `$1700` now has DEZ runtime/events rather than HPZ, act-aware fallback scroll, carry restore, screen-init camera/event words and an eight-child dynamic boss graph. Arena auxiliaries, complete BG stages and ROM-backed boss art remain open. |
 | Cold-reachable | Not started |
-| Rewind-verified | Not started |
+| Rewind-verified | Partial: the session carry and twelve `Events_bg` words round-trip; final graph passes focused construction/state tests. Empirical mid-phase route rewind remains open. |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` below |
 | Visually matched | Not started; `raw-00-baseline-before-work/1700-final-boss` is the "before" capture |
 
@@ -43,17 +46,23 @@ level and dies at frame 98. No title card is drawn. Capture:
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |
 | --- | --- | --- | --- | --- | --- | --- |
 | ENTRY: `$1700` resource profile | `levartptrs $4C/$4C/$40`; player placement `loc_7FD9E`; no title card (`Act3_flag`, `loc_62B6`) | — | `TestS3kDezFinalArenaHeadless` | missing | unrun | Slice 9 |
-| ENTRY: `Act3_*` carry | `loc_7F310` saves rings, timer and `Saved2_status_secondary`; `DEZ3_ScreenEvent` stage 0 `loc_5A49A` restores them | — | slice 9 test | missing | unrun | Slices 8 and 9; shared owner with LRZ |
-| PRESENT: scroll and plane | `sub_5A508`, `sub_5A76C`, `loc_5A734`, FG wrap `Camera_X_copy & $1FF`, `Camera_Y_copy = $20 + shake` | 320 + one wide | `TestS3kDezFinalArenaHeadless` | missing (`$17` resolves to `SwScrlHpz`) | unrun | Slice 9; the provider's act-keying for `$16`/`$17` is the LRZ campaign's shared edit |
+| ENTRY: `Act3_*` carry | `loc_7F310` saves rings, timer and `Saved2_status_secondary`; `DEZ3_ScreenEvent` stage 0 `loc_5A49A` restores them | — | `TestSonic3kAct3Carry`, `TestS3kDezAct3RuntimeState` | implemented as session-lived `Sonic3kAct3Carry`; armed by the DEZ2 boss and consumed by DEZ3 | focused green, 2026-09-19 | Cold handoff and shield visual route still need the slice 11 capture |
+| PRESENT: scroll and plane | `sub_5A508`, `sub_5A76C`, `loc_5A734`, FG wrap `Camera_X_copy & $1FF`, `Camera_Y_copy = $20 + shake` | 320 + one wide | `SwScrlHpzTest` | `$1700` no longer resolves to HPZ; initial X/Y copies installed | focused green, 2026-09-19 | DEZ3 deformation/redraw and wide capture remain slice 9 work |
 | PRESENT: laser DMA | `sub_5A79E`, `ArtUnc_DEZFBLaser` → tile `$208`, `$40` words when `Events_bg+$10 != +$12` | 320 | slice 9 test | missing | unrun | Slice 9 |
 | EVENT: arena shrink stages | `Events_bg+$00`: `$6C0` → `$2C0` → `$6C0` → 0 | — | slice 9 test | missing | unrun | Slice 9 |
 | OBJECT: arena floor and falling blocks | `Obj_5A7C8`, `Obj_5A872`, `Obj_5A8E6`, `Obj_5A922`, `Obj_5A94C` | — | slice 9 test | missing | unrun | Slice 9 |
-| BOSS: `Obj_DEZ3_Boss` phases and chase | per-phase | — | `TestS3kDezFinalBossHeadless` | missing | unrun | Slice 10 |
+| BOSS: `Obj_DEZ3_Boss` phases and chase | per-phase | — | `TestS3kDezFinalBossInstance` | initial run-in, eight-hit fight, arena-word handoff, chase and Sonic exit branches implemented in a rewind graph | focused green, 2026-09-19 | Graph composition, timings, presentation and Knuckles `Game_mode 0` branch remain open; not certified |
 | EXIT: `loc_803D6` branches | `SaveGame`; `Player_mode < 2` and 7 emeralds → `$C00`; else `Player_mode != 3` → `$D01`; else `Game_mode 0` | — | `TestS3kDezExitBranches` | missing | unrun | Slice 10; closes the DDZ seeded-entry caveat |
 | ORACLE: Sonic + Tails arena | `runs/s3k-sonic-tails-complete-emeralds/dez23_8` (`zone_id 23`, act index 0, 5,181 rows, offset 509032) — **this is `$1700`, not "Hidden Palace proper"** | — | `TestS3kSonicTailsDez238SegmentTraceReplay` (expected red) | — | blocked: 621 errors, first error frame 0 `x_sub` expected `0x0000` actual `0x0C00` (`035e48a58`) | Slices 9-10 |
 | ORACLE: Tails arena | `runs/s3k-tails-full-chain-all-emeralds/dez23_8` (5,550 rows) | — | `TestS3kTailsFullChainDez238SegmentTraceReplay` (expected red) | — | blocked: 339 errors, first error frame 0 `camera_y` expected `0x0010` actual `0x0020` (`035e48a58`) | Slices 9-10 |
 
 ## Execution evidence
+
+- 2026-09-19, working tree after `9ebc40e31d`: focused Maven invocation of
+  `TestSonic3kAct3Carry`, `TestS3kDezAct3RuntimeState`,
+  `TestS3kDezFinalBossInstance`, `TestS3kDezEndBossInstance`, `SwScrlHpzTest`
+  and `TestSonic3kHpzRuntimeStateRegistration`: 21 tests, 0 failures, 0 errors,
+  0 skips.
 
 See the [act 1 matrix](s3k-dez-act1.md#execution-evidence) for the single frontier command;
 all six classes ran in one invocation with 0 skips.

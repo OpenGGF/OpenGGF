@@ -765,6 +765,11 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
 
     @Override
     public boolean shouldSuppressInitialTitleCard(int zoneIndex, int actIndex) {
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 0
+                && GameServices.hasRuntime()) {
+            Sonic3kAct3Carry carry = GameServices.module().getGameService(Sonic3kAct3Carry.class);
+            if (carry != null && carry.active()) return true;
+        }
         // The ROM's $1701 arena restart bypasses Obj_TitleCard explicitly.
         if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 1) {
             return true;

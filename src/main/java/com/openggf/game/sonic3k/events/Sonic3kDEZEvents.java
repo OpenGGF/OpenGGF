@@ -1,6 +1,11 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.sonic3k.Sonic3kAct3Carry;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.S3kDezFinalBossInstance;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 
@@ -21,6 +26,9 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
  * here yet; they are slice 7 of the bring-up plan.
  */
 public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
+    private boolean act3CarryConsumed;
+    private boolean act3Initialised;
+    private boolean act3BossSpawned;
 
     /** {@code DEZ1_ScreenEvent}: {@code movea.w $14(a3),a1} is foreground row 5. */
     static final int ACT1_CHUNK_ROW = 5;
@@ -52,11 +60,49 @@ public class Sonic3kDEZEvents extends Sonic3kZoneEvents {
         if (state == null) {
             return;
         }
-        if (act == 0) {
+        if (state.zoneIndex() == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA) {
+            updateAct3ScreenEvent(state);
+        } else if (act == 0) {
             updateAct1ScreenEvent(state);
         } else {
             updateAct2ScreenEvent(state);
         }
+    }
+
+    /** {@code DEZ3_ScreenEvent} stage 0: restore the level-load carry exactly once. */
+    private void updateAct3ScreenEvent(S3kDezZoneRuntimeState state) {
+        initializeAct3(state);
+        if (act3CarryConsumed) return;
+        act3CarryConsumed = true;
+        Sonic3kAct3Carry carry = module().getGameService(Sonic3kAct3Carry.class);
+        Sonic3kAct3Carry.Snapshot saved = carry == null ? null : carry.consume();
+        if (saved == null) return; // Direct level-select load: normal fresh-level values.
+        levelManager().getLevelGamestate().setRings(saved.rings());
+        levelManager().getLevelGamestate().setTimerFrames(saved.timerFrames());
+        var player = spriteManager().getMainPlayable();
+        if (player != null && saved.shield() != null) player.giveShield(saved.shield());
+        state.setForegroundRoutine(4);
+    }
+
+    /** {@code DEZ3_ScreenInit}, excluding the boss graph installed by the next slice. */
+    private void initializeAct3(S3kDezZoneRuntimeState state) {
+        if (act3Initialised) return;
+        act3Initialised = true;
+        state.setAct3BackgroundWord(0x00, 0x6C0);
+        state.setAct3BackgroundWord(0x02, 0x3C0);
+        state.setAct3BackgroundWord(0x04, 0x0F8);
+        state.setAct3BackgroundWord(0x10, 0);
+        state.setAct3BackgroundWord(0x12, 0xFFFF);
+        state.setAct3BackgroundWord(0x16, 0x80);
+        camera().setX((short) 0x80);
+        camera().setXCopy((short) 0x80);
+        camera().setYCopy((short) 0x20);
+        camera().setMinX((short) 0x80);
+        camera().setMaxX((short) 0x80);
+        S3kDezFinalBossInstance boss = spawnObject(() -> new S3kDezFinalBossInstance(
+                new ObjectSpawn(0x3C0, 0x0F8, Sonic3kObjectIds.DEZ_END_BOSS,
+                        0, 0, false, -1)));
+        act3BossSpawned = boss != null;
     }
 
     /**

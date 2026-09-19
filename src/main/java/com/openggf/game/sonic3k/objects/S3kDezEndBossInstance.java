@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.Sonic3kAct3Carry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -203,6 +204,10 @@ public final class S3kDezEndBossInstance extends AbstractBossInstance
             return;
         }
         transitionRequested = true;
+        Sonic3kAct3Carry carry = services().gameModule() == null ? null
+                : services().gameModule().getGameService(Sonic3kAct3Carry.class);
+        if (carry != null) carry.arm(services().levelGamestate().getRings(),
+                services().levelGamestate().getTimerFrames(), player.getShieldType());
         services().requestSessionSave(com.openggf.game.save.SaveReason.PROGRESSION_SAVE);
         services().requestZoneAndAct(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 0, true);
         setDestroyed(true);

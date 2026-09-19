@@ -56,6 +56,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   they are lit, and drop you when they go out.
   The Chainspike robots charge across both acts, slowing to a stop and turning around, and
   stab their spikes into the floor when you get close.
+  Defeating the Act 2 gravity boss now carries rings, time and shield into the distinct
+  `$1700` final arena instead of treating it as Hidden Palace; that arena initializes its
+  ROM event words and camera and starts the dynamic final-boss graph.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

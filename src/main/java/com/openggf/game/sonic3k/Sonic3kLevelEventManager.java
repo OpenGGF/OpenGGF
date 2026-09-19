@@ -312,9 +312,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             hpzEvents = null;
         }
 
-        // Death Egg acts 1 and 2 ($B00/$B01); the $1700 final-boss act is zone $17 and is not
-        // this handler.
-        if (zone == Sonic3kZoneIds.ZONE_DEZ) {
+        // DEZ1/2 ($B00/$B01) and the dynamically-spawned final-boss act ($1700).
+        if (zone == Sonic3kZoneIds.ZONE_DEZ
+                || (zone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && act == 0)) {
             dezEvents = new com.openggf.game.sonic3k.events.Sonic3kDEZEvents();
             dezEvents.init(act);
         } else {
@@ -500,6 +500,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else if (zone == Sonic3kZoneIds.ZONE_DEZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState(
                     act, playerCharacter));
+        } else if (zone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && act == 0) {
+            registry.install(new com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState(
+                    zone, act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_DDZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(act, playerCharacter));
             allocateDdzFlightController();
@@ -1667,8 +1670,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             // Reinstalling would reset Events_routine_fg/bg and drop a raised Events_fg_4/5.
             case Sonic3kZoneIds.ZONE_DEZ ->
                     state instanceof com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState dezState
+                            && dezState.zoneIndex() == currentZone
                             && dezState.actIndex() == currentAct;
-            case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
+            case Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA -> currentAct == 0
+                    ? state instanceof com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState dezState
+                            && dezState.zoneIndex() == currentZone && dezState.actIndex() == currentAct
+                    : state instanceof HpzZoneRuntimeState hpzState
+                            && hpzState.zoneIndex() == currentZone && hpzState.actIndex() == currentAct;
+            case Sonic3kZoneIds.ZONE_HPZ ->
                     state instanceof HpzZoneRuntimeState hpzState
                             && hpzState.zoneIndex() == currentZone
                             && hpzState.actIndex() == currentAct;
