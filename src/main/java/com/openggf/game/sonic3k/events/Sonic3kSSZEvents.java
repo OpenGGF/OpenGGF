@@ -147,6 +147,18 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             state.setForegroundRoutine(8);
         }
         claimActOneLaunchResources(state);
+        if (state.foregroundRoutine() >= 8) updateDeathEggBackground(state);
+    }
+
+    /** {@code sub_574DC}: launch-only Plane B origin and its `$6000`/frame vertical rise. */
+    private void updateDeathEggBackground(SszZoneRuntimeState state) {
+        state.setBackgroundCameraX(camera().getXCopy());
+        int backgroundY = ((short) camera().getY() - 0x110) >> 2;
+        if ((camera().getY() & 0xFFFF) == 0x110) {
+            state.setLaunchBackgroundRise(state.launchBackgroundRise() + 0x6000);
+            backgroundY += state.launchBackgroundRise() >> 16;
+        }
+        state.setBackgroundCameraY(backgroundY);
     }
 
     /** loc_57360: submit the two direct Kosinski tables and two KosM tile archives in ROM order. */

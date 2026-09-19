@@ -64,6 +64,18 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
         } else {
             updateJump(player);
         }
+        lowerLaunchCamera();
+    }
+
+    /** loc_57F94: lower Camera_Y toward the current spiral row, at no more than 2 px/frame. */
+    private void lowerLaunchCamera() {
+        if (!columnsFinished) return;
+        int target = Math.max(0x110, 0x500 - rampRow * 0x70 - rampAngle);
+        int cameraY = services().camera().getY() & 0xFFFF;
+        if (cameraY <= target) return;
+        int next = Math.max(target, cameraY - 2);
+        services().camera().setY((short) next);
+        services().camera().setYCopy((short) next);
     }
 
     /** {@code sub_5750C}: ten delayed 16.16 falls, their clamp handshake, and `_unkFAA4` carry. */

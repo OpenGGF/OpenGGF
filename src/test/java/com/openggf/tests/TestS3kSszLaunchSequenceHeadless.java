@@ -104,6 +104,16 @@ class TestS3kSszLaunchSequenceHeadless {
         assertEquals(-1, state.launchRampArtJobOrdinal());
         assertNotNull(GameServices.level().getCurrentLevel().getPattern(0x073));
         assertNotNull(GameServices.level().getCurrentLevel().getPattern(0x348));
+
+        for (int frame = 0; frame < 0x400 && (GameServices.camera().getY() & 0xFFFF) != 0x110; frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertEquals(0x110, GameServices.camera().getY() & 0xFFFF,
+                "loc_57F94 follows the spiral down to the Death Egg framing");
+        int riseBefore = state.launchBackgroundRise();
+        fixture.stepIdleFrames(2);
+        assertEquals(riseBefore + 2 * 0x6000, state.launchBackgroundRise());
+        assertEquals(GameServices.camera().getXCopy(), state.backgroundCameraX());
     }
 
     private static HeadlessTestFixture boot() {

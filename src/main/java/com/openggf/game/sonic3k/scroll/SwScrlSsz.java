@@ -283,6 +283,21 @@ public class SwScrlSsz extends SwScrlS3kDefault {
         resetScrollTracking();
         composer.reset();
 
+        if (state.foregroundRoutine() >= 8) {
+            // SSZ1_ScreenEvent stage 8 owns Plane B through sub_574DC. The launch image
+            // is a single scroll plane, not either of SSZ1_BackgroundEvent's sky modes.
+            short fg = negWord(cameraX);
+            short bgY = (short) state.backgroundCameraY();
+            composer.setVscrollFactorBG(bgY);
+            composer.fillPackedScrollWords(0, VISIBLE_LINES, fg,
+                    negWord(state.backgroundCameraX()));
+            composer.copyPackedScrollWordsTo(horizScrollBuf);
+            vscrollFactorBG = composer.getVscrollFactorBG();
+            minScrollOffset = composer.getMinScrollOffset();
+            maxScrollOffset = composer.getMaxScrollOffset();
+            return false;
+        }
+
         boolean clouds;
         if (advance) {
             if (!state.backgroundInitApplied()) {

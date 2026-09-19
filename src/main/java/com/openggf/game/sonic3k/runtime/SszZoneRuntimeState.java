@@ -40,7 +40,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
 
     private static final int CAPTURE_BYTES =
             EVENTS_BG_BYTES + 16 * Short.BYTES + 3 * Integer.BYTES + 3
-                    + 4 * Long.BYTES + 2;
+                    + 4 * Long.BYTES + Integer.BYTES + 2;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -113,6 +113,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     private long launchRampArtJobOrdinal = -1;
     private boolean launchResourcesQueued;
     private boolean launchResourcesPublished;
+    /** {@code _unkEEF6}: 16.16 vertical rise added to the launch's Death Egg plane. */
+    private int launchBackgroundRise;
 
     public SszZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -299,6 +301,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public void markLaunchResourcesQueued() { launchResourcesQueued = true; }
     public boolean launchResourcesPublished() { return launchResourcesPublished; }
     public void markLaunchResourcesPublished() { launchResourcesPublished = true; }
+    public int launchBackgroundRise() { return launchBackgroundRise; }
+    public void setLaunchBackgroundRise(int value) { launchBackgroundRise = value; }
 
     @Override
     public byte[] captureBytes() {
@@ -332,6 +336,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putLong(launchRampArtJobOrdinal);
         buffer.put((byte) (launchResourcesQueued ? 1 : 0));
         buffer.put((byte) (launchResourcesPublished ? 1 : 0));
+        buffer.putInt(launchBackgroundRise);
         return buffer.array();
     }
 
@@ -370,5 +375,6 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         launchRampArtJobOrdinal = buffer.getLong();
         launchResourcesQueued = buffer.get() != 0;
         launchResourcesPublished = buffer.get() != 0;
+        launchBackgroundRise = buffer.getInt();
     }
 }
