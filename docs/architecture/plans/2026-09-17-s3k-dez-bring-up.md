@@ -2680,3 +2680,41 @@ reds stay **baseline-attributed**. Four classes only, and no evidence about any 
    fail is worse than no assertion: `$55`'s off-state draw check passed against a headless
    fixture that has no renderer at all, and was removed rather than kept once a deliberate break
    produced no failure.
+
+### 2026-09-19 — `$60` `Obj_DEZBumperWall`, and the corridor jam it does not explain
+
+Ten act 1 placements, all of them inside the `$5F` turbine room, and one object with three
+shapes chosen by the subtype's *sign* (:95964-95970). Subtype 0 is the `$17` x `$20`/`$21`
+`SolidObjectFull2` wall; a positive subtype is a `$13`-wide post whose `height_pixels` **is the
+subtype** (`d2 = height`, `d3 = height + 1`); a negative subtype is the same full wall plus one
+test run before the solid every update — `cmpi.b #$3F,(MHZ_pollen_counter).w`, and on all six
+bits `move.w #$7F00,x_pos(a0)`. That last shape is the room's exit gate, and the byte it reads
+is the one `Obj_DEZGravityPuzzle` writes: records 331 and 332 at `$280C` sit past the `$61` at
+`$2690`, so the room's design is *press all six panels and the way out opens*. `sub_49848` is
+`sfx_Bumper` plus `loc_49850`, the launch `$61` already models.
+
+**The hypothesis it was implemented to test is dead, and two measurements killed it.**
+
+1. **`$60` is not the jam.** With the class live, the same positioned capture
+   (`--x 0x2500 --y 0x0840`, 300 neutral frames) stops at the identical `x = 9773` with `x_vel`
+   frozen at 2912 — byte for byte the reading the known bug recorded when `$60` was a
+   placeholder. The arithmetic says the hypothesis was always weak: records 311 and 312 are at
+   `$2600` with `d1 = $17`, so their right face is `$2617` = 9751, and the player's left edge
+   stops at 9764, *past* them.
+2. **It is not static terrain either.** A player placed at `$2620` (9760) or at `$2640` (9792) —
+   either side of the jam face — at the same `y $0840` is in open space: both fall 236 px to the
+   floor at y 2348 and stand there. Neither side of the face is inside a solid, and neither
+   position is even captured by the corridor, which also narrows the `$5F` capture window well
+   below its `$500` release window.
+
+So only a player the corridor is *carrying* stops at `$2636`, which leaves the last candidate the
+known bug named: `move` + `resolveAirCollision` clamping a blown player against something the
+ROM's `MoveSprite2` + `SonicKnux_DoLevelCollision` would push out of. That is a shared
+collision-resolution question, not a Death Egg object, and it still wants the native capture.
+The known bug is updated with both rulings-out rather than left listing a dead suspect.
+
+Four tests, eleven deliberate breaks. Two of the eleven had to be re-run alone — the same
+masking the `$A5` session hit, where an earlier assertion in the same test fails first.
+
+Census: act 1 placeholders 173 → 163, concrete 192 → 202. Act 2 is unchanged; `$60` places none
+there.

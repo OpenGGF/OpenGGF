@@ -580,6 +580,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
+        factories.put(Sonic3kObjectIds.DEZ_BUMPER_WALL,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $60 is Obj_DEZBumperWall (sonic3k.asm:95958); the S3KL table
+                        // has no object at this number.
+                        return new S3kDezBumperWallObjectInstance(spawn);
+                    }
+                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                });
         factories.put(Sonic3kObjectIds.DEZ_GRAVITY_PUZZLE,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();

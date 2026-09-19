@@ -70,15 +70,15 @@ class TestS3kDezPlacementCensus {
      * ({@code Obj_DEZGravitySwitch}, 5) are slice 3's first two. Every other placed
      * DEZ ID resolves to {@link PlaceholderObjectInstance} today, either because its factory is
      * bound to the S3KL pointer set (a different object under the same number) or because no
-     * factory exists at all ({@code $5E}, {@code $60}).
+     * factory exists at all ({@code $5E}).
      */
     private static final Set<Integer> CONCRETE_DEZ_IDS = Set.of(
-            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x55, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5F, 0x61, 0x6A, 0x6B, 0x78, 0xA4, 0xA5);
+            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x55, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5F, 0x60, 0x61, 0x6A, 0x6B, 0x78, 0xA4, 0xA5);
 
     /** Recorded baseline: placements that still resolve to a placeholder. Slices 3-6 drive these to 0. */
-    private static final int PLACEHOLDER_ACT_1 = 173;
+    private static final int PLACEHOLDER_ACT_1 = 163;
     private static final int PLACEHOLDER_ACT_2 = 232;
-    private static final int CONCRETE_ACT_1 = 192;
+    private static final int CONCRETE_ACT_1 = 202;
     private static final int CONCRETE_ACT_2 = 262;
 
     @Test

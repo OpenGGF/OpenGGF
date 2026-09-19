@@ -39,6 +39,8 @@ public final class Sonic3kPlcArtRegistry {
     private static final int DEZ_RETRACTING_SPRING_FRAME_COUNT = 3;
     // Map_DEZEnergyBridge: four frames of the same sliding 8x8 pair (sonic3k.asm:94088).
     private static final int DEZ_ENERGY_BRIDGE_FRAME_COUNT = 4;
+    // Map_DEZBumperWall: one frame, two stacked 16x32 pieces (sonic3k.asm:96083).
+    private static final int DEZ_BUMPER_WALL_FRAME_COUNT = 1;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -2729,6 +2731,19 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null,
                 DEZ_ENERGY_BRIDGE_FRAME_COUNT
+        ));
+
+        // Bumper wall (SKL object 0x60, Obj_DEZBumperWall): the act 1 turbine room's walls,
+        // posts and exit gate. ROM header: move.l #Map_DEZBumperWall,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:95959-95960),
+        // the same block the $61 gravity puzzle draws from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_BUMPER_WALL,
+                Sonic3kConstants.MAP_DEZ_BUMPER_WALL_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x31,
+                1,
+                null,
+                DEZ_BUMPER_WALL_FRAME_COUNT
         ));
     }
 

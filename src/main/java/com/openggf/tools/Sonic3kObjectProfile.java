@@ -286,6 +286,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x14, // Updraft
             0x5D, // DEZRetractingSpring -- S3KL $5D is the competition-only Obj_CGZTriangleBumpers
             0x5F, // DEZGravityRoom -- the S3KL table has no object at this number
+            0x60, // DEZBumperWall -- the S3KL table has no object at this number
             0x61, // DEZGravityPuzzle -- S3KL $61 is the competition-only Obj_BPZBalloon
             0x8B // SpriteMask
     );
