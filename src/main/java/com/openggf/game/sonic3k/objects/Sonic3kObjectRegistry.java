@@ -1549,6 +1549,12 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new com.openggf.game.sonic3k.objects.bosses
                         .LrzMinibossInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.TUNNELBOT,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ,
+                (spawn, registry) -> new Lrz3AutoscrollControllerObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.PENGUINATOR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ,
+                (spawn, registry) -> new Lrz3PlatformObjectInstance(spawn));
         // Ids $2B and $2C are Obj_LRZOrbitingSpikeBallHorizontal and
         // Obj_LRZOrbitingSpikeBallVertical in the SKL set (sonic3k.asm:89077, :89149); the S3KL
         // set spends them on Obj_AIZFlippingBridge and Obj_AIZCollapsingLogBridge, which are the
