@@ -9,8 +9,10 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance;
+import com.openggf.game.sonic3k.objects.SszLaunchBackgroundDebrisController;
 import com.openggf.game.sonic3k.objects.SszLaunchStructureObjectInstance;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -31,7 +33,7 @@ class TestS3kSszLaunchSequenceHeadless {
     void resultsFlagRunsTheNativeJumpAndRequestsDeathEgg() {
         HeadlessTestFixture fixture = boot();
         GameServices.gameState().setEndOfLevelFlag(true);
-        fixture.stepIdleFrames(2);
+        fixture.stepIdleFrames(1);
         SszLaunchControllerObjectInstance launch = active();
         assertNotNull(launch, "SSZ1_ScreenEvent allocates Obj_57E96");
 
@@ -45,13 +47,13 @@ class TestS3kSszLaunchSequenceHeadless {
         assertEquals(0x800, fixture.sprite().getGSpeed(), "native jump ground_vel");
 
         CompositeSnapshot before = fixture.gameplayMode().getRewindRegistry().capture();
-        fixture.stepIdleFrames(1);
+        fixture.stepIdleFrames(2);
         CompositeSnapshot after = fixture.gameplayMode().getRewindRegistry().capture();
         fixture.gameplayMode().getRewindRegistry().restore(before);
         sameSnapshot(before, fixture.gameplayMode().getRewindRegistry().capture(), "launch restore");
         fixture.runner().primeInputState(
                 new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
-        fixture.stepIdleFrames(1);
+        fixture.stepIdleFrames(2);
         sameSnapshot(after, fixture.gameplayMode().getRewindRegistry().capture(), "launch replay");
 
         for (int frame = 0; frame < 0x200
@@ -117,6 +119,19 @@ class TestS3kSszLaunchSequenceHeadless {
         assertEquals(-1, state.launchRampArtJobOrdinal());
         assertNotNull(GameServices.level().getCurrentLevel().getPattern(0x073));
         assertNotNull(GameServices.level().getCurrentLevel().getPattern(0x348));
+        for (int frame = 0; frame < 24 && !active().debrisSpawnedForTest(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(active().debrisSpawnedForTest(), "loc_57F3E allocates Obj_583BE after 15 frames");
+        var debrisController = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(SszLaunchBackgroundDebrisController.class::isInstance)
+                .map(SszLaunchBackgroundDebrisController.class::cast).findFirst().orElseThrow();
+        NativePositionOps.writeYPosPreserveSubpixel(fixture.sprite(), 0x660);
+        fixture.stepIdleFrames(2);
+        assertEquals(0x860, debrisController.nextYForTest(),
+                "Obj_583BE emits once the player reaches its vertical threshold");
+        assertEquals(4, debrisController.emittedPiecesForTest(),
+                "the first ROM row has four non-$FFFF descriptors");
         var map = GameServices.level().getCurrentLevel().getMap();
         int patchX = map.getWidth() - 3;
         assertArrayEquals(new int[]{4, 5, 6}, new int[]{

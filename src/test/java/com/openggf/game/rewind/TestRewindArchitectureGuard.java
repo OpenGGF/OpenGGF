@@ -187,7 +187,22 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#restoreRewindState", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#restoreRewindState", 1),
+            // SSZ's finale children retain parent/target SST links and ROM animation state that
+            // spawn recreation cannot derive. The finale and per-object round-trip suites cover
+            // capture, relinking, restore equality and forward replay for these graphs.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszKnuxFinalBossCraneObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszKnuxFinalBossCraneObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMasterEmeraldObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMasterEmeraldObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaPaletteRotationChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaPaletteRotationChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszSuperMechaLaserChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszSuperMechaLaserChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszSuperMechaMissilePodChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszSuperMechaMissilePodChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszSuperMechaProjectileChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszSuperMechaProjectileChild.java#restoreRewindState", 1)
     );
 
     private static final Map<String, Integer> OBJECT_REWIND_ANNOTATION_BASELINE = Map.ofEntries(

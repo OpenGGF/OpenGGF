@@ -39,6 +39,8 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     private final int[] columnVelocityFixed = new int[COLUMN_DELAYS.length];
     private final int[] columnOffsetFixed = new int[COLUMN_DELAYS.length];
     private boolean columnsFinished;
+    private int debrisSpawnDelay = -1;
+    private boolean debrisSpawned;
 
     public SszLaunchControllerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSZ Death Egg launch controller");
@@ -55,6 +57,7 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
         AbstractPlayableSprite player = services().spriteManager().getMainPlayable();
         if (player == null) return;
         updateCrumblingColumns();
+        updateDebrisSpawn();
         if (routine == 0) {
             if (--timer != 0) return;
             routine = 4;
@@ -105,8 +108,18 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
         carryFinalArenaObject();
         if (clamped != COLUMN_DELAYS.length) return;
         columnsFinished = true;
+        debrisSpawnDelay = 15;
         runtime().setEventsFg4Low(0xFF);
         deleteCarriedObject();
+    }
+
+    /** {@code loc_57F3E}: allocate {@code Obj_583BE} after the 15-word launch delay. */
+    private void updateDebrisSpawn() {
+        if (!columnsFinished || debrisSpawned || debrisSpawnDelay < 0) return;
+        if (--debrisSpawnDelay > 0) return;
+        debrisSpawned = true;
+        spawnChild(() -> new SszLaunchBackgroundDebrisController(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
     }
 
     private void carryFinalArenaObject() {
@@ -203,5 +216,6 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     public boolean exitRequestedForTest() { return exitRequested; }
     public boolean columnsFinishedForTest() { return columnsFinished; }
     public int columnOffsetForTest(int column) { return columnOffsetFixed[column] >> 16; }
+    public boolean debrisSpawnedForTest() { return debrisSpawned; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
 }
