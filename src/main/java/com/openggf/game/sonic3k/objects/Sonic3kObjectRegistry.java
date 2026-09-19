@@ -372,6 +372,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     // $4F is Obj_SinkingMud only in Sprite_Listing3 (SK Set 1);
                     // Sprite_ListingK (SK Set 2) routes the same id to Obj_DEZStaircase.
+                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_DEZ) {
+                        return new S3kDezStaircaseObjectInstance(spawn);
+                    }
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));

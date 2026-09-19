@@ -89,7 +89,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$4C` | `Obj_DEZHangCarrier` | 3 | 1 | concrete: dual-player capture, lift, ceiling turn and jump release | 4 |
 | `$4D` | `Obj_DEZTorpedoLauncher` | 36 | 38 | concrete: timed launcher, closing animation and touch projectile | 4 |
 | `$4E` | `Obj_DEZLiftPad` | 7 | 0 | concrete: triggered accelerating lift arm and top-solid pad | 4 |
-| `$4F` | `Obj_DEZStaircase` | 18 | 15 | placeholder | 4 |
+| `$4F` | `Obj_DEZStaircase` | 18 | 15 | concrete: four-piece contact-triggered ramp | 4 |
 | `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | concrete: invisible two-sided grounded-player conveyor | 4 |
 | `$52` | `Obj_DEZLightning` | 48 | 94 | concrete: ROM animation/wait/touch, art and local SFX | 4 |
 | `$53` | `Obj_DEZConveyorPad` | 4 | 5 | concrete: triggered finite/floor-following full-solid conveyor | 4 |
@@ -196,8 +196,8 @@ so subtypes `$80+` arrive inverted.
 | `$4D` | `$20` | `Obj_DEZTorpedoLauncher` | 0 | 4 | placeholder |
 | `$4E` | `$07` | `Obj_DEZLiftPad` | 5 | 0 | placeholder |
 | `$4E` | `$27` | `Obj_DEZLiftPad` | 2 | 0 | placeholder |
-| `$4F` | `$00` | `Obj_DEZStaircase` | 4 | 4 | placeholder |
-| `$4F` | `$04` | `Obj_DEZStaircase` | 14 | 11 | placeholder |
+| `$4F` | `$00` | `Obj_DEZStaircase` | 4 | 4 | concrete |
+| `$4F` | `$04` | `Obj_DEZStaircase` | 14 | 11 | concrete |
 | `$50` | `$08` | `Obj_DEZConveyorBelt` | 1 | 0 | placeholder |
 | `$50` | `$10` | `Obj_DEZConveyorBelt` | 2 | 4 | placeholder |
 | `$50` | `$18` | `Obj_DEZConveyorBelt` | 2 | 1 | placeholder |

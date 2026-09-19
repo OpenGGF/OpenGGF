@@ -2888,3 +2888,16 @@ displacement the bridge enters the ROM collapse phase: velocities are multiplied
 then gain `$1000` gravity on subsequent passes. The single mapping at ROM `$46F7A` uses resident
 `ArtTile_DEZMisc`. Census: act 1 placeholders **23 → 22**, concrete **342 → 343**; act 2
 placeholders **23 → 20**, concrete **471 → 474**.
+
+### 2026-09-19 — `$4F` `Obj_DEZStaircase`
+
+All eighteen act 1 and fifteen act 2 staircases now port `Obj_DEZStaircase`
+(`sonic3k.asm:93363-93554`) as four ordered full-solid SST pieces. The controller reserves the
+three child slots, retains the placement flip's reversed offset-field order, and accepts both
+standing and pushing contact from the correct native player trigger lanes.
+
+After the ROM 30/60-pass delay, the four steps follow the exact word ramps
+`n, 3n/4, n/2, n/4` toward signed `$80`; the alternate routines preserve the countdown shake.
+Subtype bit 2 selects rise versus fall and the render flip transform, while all pieces share the
+tilting-bridge mapping with resident `ArtTile_DEZMisc+$133`. Census: act 1 placeholders
+**22 → 4**, concrete **343 → 361**; act 2 placeholders **20 → 5**, concrete **474 → 489**.

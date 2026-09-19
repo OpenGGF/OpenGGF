@@ -500,6 +500,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String DEZ_FLOATING_PLATFORM = "dez_floating_platform";
     public static final String DEZ_HANG_CARRIER = "dez_hang_carrier";
     public static final String DEZ_TILTING_BRIDGE = "dez_tilting_bridge";
+    public static final String DEZ_STAIRCASE = "dez_staircase";
 
     // DEZ Gravity Puzzle (SKL 0x61) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZGravityPuzzle
     public static final String DEZ_GRAVITY_PUZZLE = "dez_gravity_puzzle";

@@ -108,6 +108,7 @@ public final class Sonic3kObjectIds {
     // S3KL object table: Obj_CNZTriangleBumpers.
     public static final int CNZ_TRIANGLE_BUMPER = 0x4B;
     public static final int DEZ_TILTING_BRIDGE = 0x4B;
+    public static final int DEZ_STAIRCASE = 0x4F;
     public static final int BUBBLER = 0x54;
     public static final int BUTTON = 0x33;
     public static final int STAR_POST = 0x34;
