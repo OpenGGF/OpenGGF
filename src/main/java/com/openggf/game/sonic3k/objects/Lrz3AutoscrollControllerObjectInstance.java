@@ -12,6 +12,10 @@ import java.util.List;
 /** ROM {@code Obj_LRZ3Autoscroll} ({@code $9E}), the entry flash/control coordinator. */
 public final class Lrz3AutoscrollControllerObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, RomObjectCodePointerProvider {
+    private static final int FLASH_ANIMATION_FRAMES = 30;
+    private static final int FADE_TO_WHITE_FRAMES = 29;
+    private static final int SHIP_HOLD_FRAMES = 0x120;
+    private static final int DEBRIS_HOLD_FRAMES = 0xC0;
     private int stage;
     private int timer = 59;
     private record Extra(int stage, int timer)
@@ -28,27 +32,51 @@ public final class Lrz3AutoscrollControllerObjectInstance extends AbstractObject
         switch (stage) {
             case 0 -> {
                 lockPlayers(true);
-                if (timer-- < 0) { stage = 1; timer = 0x11F; }
+                if (--timer < 0) { stage = 1; timer = FLASH_ANIMATION_FRAMES - 1; }
             }
             case 1 -> {
-                // loc_793E2..loc_79486: Death Egg flash/fade. The palette owner performs the
-                // actual fades; this controller preserves its ROM-duration gate and signals.
-                if (timer-- < 0) {
-                    lrz.setCutsceneFlag(0);
-                    lrz.setLrz3TerrainRequest(-1);
-                    lockPlayers(false);
+                if (--timer < 0) {
+                    // loc_79416: the flash callback suspends AnPal_LRZ3 while the generic
+                    // eight-step fade raises the normal palette to white.
+                    lrz.setLrz3PaletteCycleGate(0x80);
                     stage = 2;
-                    timer = 0xBF;
+                    timer = FADE_TO_WHITE_FRAMES - 1;
                 }
             }
             case 2 -> {
-                if (timer-- < 0) {
+                if (--timer < 0) {
+                    // loc_79486: fade completion re-enables the post-flash accent channel,
+                    // publishes the first terrain request and creates the bridge at ($60,$4D0).
+                    lrz.setLrz3PaletteCycleGate(1);
+                    lrz.setCutsceneFlag(0);
+                    lrz.setLrz3TerrainRequest(-1);
+                    spawnFlashBridge();
+                    lockPlayers(false);
+                    stage = 3;
+                    timer = SHIP_HOLD_FRAMES - 1;
+                }
+            }
+            case 3 -> {
+                if (--timer < 0) {
+                    lrz.setCutsceneFlag(1);
+                    stage = 4;
+                    timer = DEBRIS_HOLD_FRAMES - 1;
+                }
+            }
+            case 4 -> {
+                if (--timer < 0) {
                     lrz.setLrz3TerrainRequest(-1);
                     ObjectLifetimeOps.deleteNoRespawn(this);
                 }
             }
             default -> { }
         }
+    }
+
+    private void spawnFlashBridge() {
+        if (services().objectManager() == null) return;
+        spawnChild(() -> new CollapsingBridgeObjectInstance(
+                new ObjectSpawn(0x60, 0x4D0, 0x0F, 0, 0, false, 0)));
     }
 
     private void lockPlayers(boolean locked) {
@@ -75,4 +103,5 @@ public final class Lrz3AutoscrollControllerObjectInstance extends AbstractObject
     @Override public boolean isPersistent() { return true; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
     public int stageForTest() { return stage; }
+    public int timerForTest() { return timer; }
 }

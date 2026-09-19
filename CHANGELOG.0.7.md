@@ -443,7 +443,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs. Lava Reef's boss act now
   has its own heat-shimmer deformation, the seven-stage forced-camera descent, and the native
   star-post camera checkpoint instead of the generic fallback presentation. Its lava colors now
-  also cycle from the boss act's ROM tables, including the gated post-flash accent channel. Its placed entry
+  also cycle from the boss act's ROM tables; the Death Egg flash now pauses that cycle, fades to
+  white, enables the post-flash accent, creates the collapsing bridge and releases the route on
+  the ROM timers. Its placed entry
   controller and all seven act-three platforms now use rewindable production objects; the
   rising/falling and static-solid variants no longer disappear as placeholders.
   Reaching the exact act-three arena gate now locks the camera and starts the ROM's fourteen-hit
