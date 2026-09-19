@@ -73,8 +73,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   mapping frames, so the after-images and energy burst no longer disappear when the unrelated
   trailing sprite-mask frame points beyond their art module. His Super dash also carries the
   cartridge's mirrored, ROM-animated missile pod at its native offset and retires it with the
-  parent's attack flag. His attached
-  laser and missile children remain next. Act 2's sky now
+  parent's attack flag. The final attack's four attached lasers now run their two native ROM
+  scripts too: the first three detach on `$F4` and aim a harmful beam at Knuckles with the
+  cartridge's `$400` dominant-axis velocity, while subtype 8 plays the finishing script and
+  retires. Act 2's sky now
   has its own cold-load scroll fan and deformation too, including the cartridge's twenty-column
   vertical wave rather than inheriting the flat default background. Its later ending-event
   deformation modes remain to be finished. The final defeat now also changes the two arena

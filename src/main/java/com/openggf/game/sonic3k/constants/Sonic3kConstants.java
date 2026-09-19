@@ -2110,7 +2110,9 @@ public class Sonic3kConstants {
      * signed byte: {@code byte_7D52A} ends {@code dc.b $F8,$F9}, which is seven bytes backwards,
      * and a window that began at the script's own address could not address it.
      */
-    public static final int SSZ_MECHA_ANIM_BLOCK_SIZE = 0x01C0;
+    // Includes the act-2 child scripts through byte_7D6B3; the former $1C0 window ended at
+    // $7D690 in the middle of byte_7D68C and made the laser callback unreachable.
+    public static final int SSZ_MECHA_ANIM_BLOCK_SIZE = 0x0200;
     public static final int SSZ_MECHA_ANIM_LAND_SHORT_ADDR = 0x07D4DE;
     public static final int SSZ_MECHA_ANIM_LAND_LONG_ADDR = 0x07D4EF;
     public static final int SSZ_MECHA_ANIM_ENTRY_ADDR = 0x07D523;
@@ -2123,6 +2125,8 @@ public class Sonic3kConstants {
     public static final int SSZ_MECHA_TRAIL_ANIM_ADDR = 0x07D65F;
     /** {@code byte_7D67B}: the attached Super Mecha Sonic missile-pod animation. */
     public static final int SSZ_MECHA_MISSILE_POD_ANIM_ADDR = 0x07D67B;
+    public static final int SSZ_MECHA_LASER_LAUNCH_ANIM_ADDR = 0x07D68C;
+    public static final int SSZ_MECHA_LASER_FINISH_ANIM_ADDR = 0x07D6B3;
     /** {@code byte_7D5E4}: the pose {@code loc_7B888} sets when the beaten Mecha Sonic lands. */
     public static final int SSZ_MECHA_ANIM_DEFEATED_ADDR = 0x07D5E4;
 

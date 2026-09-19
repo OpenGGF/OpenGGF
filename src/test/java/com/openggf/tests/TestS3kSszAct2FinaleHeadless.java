@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMasterEmeraldObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaProjectileChild;
 import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaMissilePodChild;
+import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaLaserChild;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.tests.rules.RequiresRom;
@@ -208,6 +209,36 @@ class TestS3kSszAct2FinaleHeadless {
         fixture.stepIdleFrames(1);
         sameSnapshot(after, fixture.gameplayMode().getRewindRegistry().capture(),
                 "forward replay with attached missile pod");
+    }
+
+    @Test
+    void superLaserDetachesAndAimsAtKnuckles() {
+        HeadlessTestFixture fixture = boot();
+        SszMechaSonicObjectInstance boss = runToBoss(fixture);
+        for (int hit = 0; hit < 8; hit++) landOneHit(fixture, boss);
+        runIntoSuperGraph(fixture, boss);
+
+        SszSuperMechaLaserChild laser = new SszSuperMechaLaserChild(
+                new ObjectSpawn(boss.getX(), boss.getY(), 0, 0, 0, false, 0), boss);
+        GameServices.level().getObjectManager().addDynamicObject(laser);
+        fixture.sprite().setCentreX((short) (boss.getX() + 0x80));
+        fixture.sprite().setCentreYPreserveSubpixel((short) (boss.getY() + 0x20));
+        laser.update(0, fixture.sprite());
+        int expectedDx = boss.renderFlippedForTest() ? 7 : -7;
+        assertEquals((boss.getX() + expectedDx) & 0xFFFF, laser.getX(),
+                "ChildObjDat_7D4AE keeps the armed laser at child_dx -7");
+        assertEquals((boss.getY() - 8) & 0xFFFF, laser.getY(),
+                "ChildObjDat_7D4AE keeps the armed laser at child_dy -8");
+
+        for (int frame = 0; frame < 0x100 && !laser.launchedForTest(); frame++) {
+            laser.update(frame + 1, fixture.sprite());
+        }
+        assertTrue(laser.launchedForTest(), () -> "byte_7D68C's $F4 callback entered loc_7C764; "
+                + "anim_frame=" + laser.animationFrameForTest() + " mapping_frame="
+                + laser.mappingFrameForTest() + " destroyed=" + laser.isDestroyed());
+        assertEquals(0x400, Math.max(Math.abs(laser.xVelForTest()),
+                Math.abs(laser.yVelForTest())), "sub_861D0 d5=2 fixes the dominant speed at $400");
+        assertTrue(laser.xVelForTest() > 0, "the launched beam aims toward Knuckles");
     }
 
     private static HeadlessTestFixture boot() {

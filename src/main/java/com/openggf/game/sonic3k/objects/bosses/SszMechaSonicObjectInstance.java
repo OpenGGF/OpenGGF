@@ -761,7 +761,20 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             case 0x24 -> { animate(); if (--timer < 0) { super.state.routine = 0x26; yVel = -0x600; } }
             case 0x26 -> { animate(); moveSpriteWithGravity(LIGHT_GRAVITY); if (getY() <= bossCeilingY()) { setPosition(getX(), bossCeilingY()); chooseSuperDashTarget(); } }
             case 0x28 -> { animate(); moveSpriteWithGravity(0x10); if (yVel >= 0x100) { super.state.routine = 0x2A; timer = 0x1F; superRepeat = 3; } }
-            case 0x2A, 0x2C -> { animate(); moveSprite2(); if (--timer < 0 && --superRepeat < 0) { super.state.routine = 0x2E; yVel = 0x600; } else if (timer < 0) timer = 0x2F; }
+            case 0x2A, 0x2C -> {
+                animate();
+                moveSprite2();
+                if (--timer < 0) {
+                    int remaining = --superRepeat;
+                    spawnSuperLaser(remaining < 0 ? 8 : 0);
+                    if (remaining < 0) {
+                        super.state.routine = 0x2E;
+                        yVel = 0x600;
+                    } else {
+                        timer = 0x2F;
+                    }
+                }
+            }
             case 0x2E -> { animate(); moveSpriteWithGravity(NORMAL_GRAVITY); if (floorDistanceReached()) { super.state.routine = 0x30; timer = 0x0F; } }
             case 0x30 -> { animate(); if (--timer < 0) { super.state.routine = 0x32; yVel = -0x400; } }
             case 0x32 -> { animate(); moveSpriteWithGravity(LIGHT_GRAVITY); if (floorDistanceReached()) { super.state.routine = 0x34; xVel = getX() < boxRightX() ? 0x400 : -0x400; } }
@@ -830,6 +843,13 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             spawnChild(() -> new SszSuperMechaProjectileChild(
                     new ObjectSpawn(getX(), getY(), 0, childSubtype, 0, false, 0)));
         }
+    }
+
+    /** {@code ChildObjDat_7D4AE}: {@code loc_7C744} at {@code (-7,-8)}. */
+    private void spawnSuperLaser(int subtype) {
+        final int childSubtype = subtype;
+        spawnChild(() -> new SszSuperMechaLaserChild(
+                new ObjectSpawn(getX(), getY(), 0, childSubtype, 0, false, 0), this));
     }
 
     private boolean floorDistanceReached() {
