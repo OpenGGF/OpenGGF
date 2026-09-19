@@ -132,6 +132,8 @@ class TestS3kSszLaunchSequenceHeadless {
                 "Obj_583BE emits once the player reaches its vertical threshold");
         assertEquals(4, debrisController.emittedPiecesForTest(),
                 "the first ROM row has four non-$FFFF descriptors");
+        assertEquals(4, debrisController.allocatedPiecesForTest(),
+                "FindNextFreeObj retains all four first-row allocations");
         var map = GameServices.level().getCurrentLevel().getMap();
         int patchX = map.getWidth() - 3;
         assertArrayEquals(new int[]{4, 5, 6}, new int[]{

@@ -6,7 +6,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -31,7 +30,9 @@ public final class SszLaunchBackgroundDebrisPiece extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (delay > 0) { delay--; return; }
-        if (!isOnScreen()) ObjectLifetimeOps.deleteNoRespawn(this);
+        // loc_584A2 ends in out_of_range.w: the ROM's coarse X-only test, not a
+        // full viewport predicate. Early rows are deliberately born below the screen.
+        coarseXCullViewport(getX());
     }
 
     @Override public int getPriorityBucket() { return RenderPriority.fromS3kWord(0x180); }

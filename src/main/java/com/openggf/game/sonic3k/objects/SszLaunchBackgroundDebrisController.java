@@ -19,6 +19,7 @@ public final class SszLaunchBackgroundDebrisController extends AbstractObjectIns
     private int rowDelay;
     private int delayPhase;
     private int emittedPieces;
+    private int allocatedPieces;
 
     public SszLaunchBackgroundDebrisController(ObjectSpawn spawn) {
         super(spawn, "SSZLaunchBackgroundDebrisController");
@@ -75,14 +76,16 @@ public final class SszLaunchBackgroundDebrisController extends AbstractObjectIns
                 default -> 0x0C;
             };
             int x = 0x1A08 + column * 0x10;
-            spawnChild(() -> new SszLaunchBackgroundDebrisPiece(
+            SszLaunchBackgroundDebrisPiece piece = spawnChild(() -> new SszLaunchBackgroundDebrisPiece(
                     new ObjectSpawn(x, y - 0x178, 0, delay, 0, false, descriptor)));
             emittedPieces++;
+            if (piece.getSlotIndex() >= 0) allocatedPieces++;
         }
     }
 
     public int nextYForTest() { return nextY; }
     public int rowDelayForTest() { return rowDelay; }
     public int emittedPiecesForTest() { return emittedPieces; }
+    public int allocatedPiecesForTest() { return allocatedPieces; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
 }

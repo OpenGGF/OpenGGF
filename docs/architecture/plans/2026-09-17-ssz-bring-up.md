@@ -2468,3 +2468,11 @@ host rejected the available root ROM before launch: SHA-1 `b711a909cce238ca4af3e
 does not match the required locked-on identity `cfbf98c36c776677290a872547ac47c53d2761d6`.
 The identity check was not bypassed. The rendered Death Egg/Plane B composition therefore remains
 open; the captures establish the engine symptom, not native pixel parity.
+
+`raw-44-ssz-debris-x-cull` closes a separate rendering bug found by that audit. `loc_584A2` ends
+in `out_of_range.w`, the ROM's coarse X-only deletion macro; the first port used a full X/Y
+viewport predicate and destroyed every row while it was still below the screen. With the X-only
+test, all four non-`$FFFF` descriptors in the first row receive SST slots. Matched-frame RGB diffs
+against `raw-41` show the retained rows entering across X 100..219 at the bottom edge: 190 changed
+pixels at frame 500, 508 at frame 1000 and 764 through Y 196..223 at frame 1050. This proves the
+engine-side debris presentation changed as intended; it is not a native pixel match.
