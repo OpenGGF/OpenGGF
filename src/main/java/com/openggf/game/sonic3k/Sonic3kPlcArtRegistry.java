@@ -2767,6 +2767,17 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 -1
         ));
+        // loc_7B996 queues the ending Master Emerald before the forced run; loc_7C818 draws
+        // Map_SSZMasterEmerald from ArtTile_Ending_MasterEmerald on palette line 0.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.SSZ_MASTER_EMERALD,
+                Sonic3kConstants.ART_KOSM_SSZ_MASTER_EMERALD_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_SSZ_MASTER_EMERALD_ADDR,
+                0,
+                -1
+        ));
     }
 
     /**

@@ -267,6 +267,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private int superTargetX;
     /** $39(a0), reused by the ROM as the Super-phase repeat counter. */
     private int superRepeat;
+    private boolean masterEmeraldSpawned;
 
     private final S3kRawAnimation.State anim = new S3kRawAnimation.State();
     /** A lazily sliced read-only window over the ROM's script block; nothing to restore. */
@@ -288,6 +289,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                                int callback, boolean initExecuted, boolean defeated, boolean paletteLoaded,
                                boolean actTwo, boolean superPhase, int actTwoDefeatPhase,
                                int actTwoRoutePhase, int superTargetX, int superRepeat,
+                               boolean masterEmeraldSpawned,
                                int animScript, int animFrame, int animFrameTimer,
                                int mappingFrame, int routine, int hitCount, boolean invulnerable,
                                int invulnerabilityTimer)
@@ -304,7 +306,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                 List.copyOf(trailIds), posX, posY, xVel, yVel, xAccel, timer, attackChoice,
                 attackCounter, yRadius, renderFlipped, flags, callback.ordinal(),
                 initExecuted, defeated, paletteLoaded, actTwo, superPhase, actTwoDefeatPhase,
-                actTwoRoutePhase, superTargetX, superRepeat,
+                actTwoRoutePhase, superTargetX, superRepeat, masterEmeraldSpawned,
                 anim.script, anim.animFrame, anim.animFrameTimer,
                 anim.mappingFrame, super.state.routine, super.state.hitCount,
                 super.state.invulnerable, super.state.invulnerabilityTimer));
@@ -337,6 +339,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         actTwoRoutePhase = extra.actTwoRoutePhase();
         superTargetX = extra.superTargetX();
         superRepeat = extra.superRepeat();
+        masterEmeraldSpawned = extra.masterEmeraldSpawned();
         anim.script = extra.animScript();
         anim.animFrame = extra.animFrame();
         anim.animFrameTimer = extra.animFrameTimer();
@@ -582,6 +585,10 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                 camera.setMaxX((short) ((camera.getMaxX() + 0x140) & 0xFFFF));
                 SszZoneRuntimeState state = sszState();
                 if (state != null) state.setBossRightX(((camera.getMaxX() & 0xFFFF) + 0x100) & 0xFFFF);
+                if (!masterEmeraldSpawned) {
+                    masterEmeraldSpawned = spawnFreeChild(() -> SszMasterEmeraldObjectInstance
+                            .atArenaCamera(new ObjectSpawn(0, 0, 0, 0, 0, false, 0))) != null;
+                }
                 xVel = 0x600;
                 yVel = 0;
                 actTwoRoutePhase = 3;
@@ -626,6 +633,11 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             case 6 -> {
                 animate();
                 services().playSfx(Sonic3kSfx.MECHA_TRANSFORM.id);
+                SszZoneRuntimeState state = sszState();
+                if (state != null) {
+                    if (state.cutsceneFlag(6)) state.clearCutsceneFlag(6);
+                    else state.setCutsceneFlag(6);
+                }
                 if (--timer >= 0) return;
                 AbstractPlayableSprite player = mainPlayer();
                 int releaseX = (services().camera().getMinX() & 0xFFFF) + 0x1F0;

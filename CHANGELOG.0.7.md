@@ -65,8 +65,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   2 placement branch, and the first eight hits run the cartridge's fade, spin-up, arena opening,
   charge, landing, transformation and forced Knuckles run before handing the fight to his
   distinct 36-slot Super dispatcher with a replenished health bar; the second set follows the
-  cartridge's staged fade, progression save and ending-event stop-line waits. The Super
-  attacks' projectile children and Master Emerald presentation remain next. Act 2's sky now
+  cartridge's staged fade, progression save and ending-event stop-line waits. The Master Emerald
+  now watches the transformation using its own ROM art and flickers with the native cutscene bit;
+  the Super attacks' projectile children remain next. Act 2's sky now
   has its own cold-load scroll fan and deformation too, including the cartridge's twenty-column
   vertical wave rather than inheriting the flat default background. Its later ending-event
   deformation modes remain to be finished. The final defeat now also changes the two arena

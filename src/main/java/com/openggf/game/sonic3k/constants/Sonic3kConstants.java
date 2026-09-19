@@ -2093,6 +2093,11 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_MECHA_SONIC_EXTRA_ADDR = 0x17F738;
     /** {@code Map_MechaSonicExtra} ($18561E). */
     public static final int MAP_MECHA_SONIC_EXTRA_ADDR = 0x18561E;
+    /** {@code ArtKosM_EndingMasterEmerald} / {@code Map_SSZMasterEmerald}. */
+    public static final int ART_KOSM_SSZ_MASTER_EMERALD_ADDR = 0x17FCBA;
+    // Locked-on ROM address. The Sonic3_Complete assembly listing places the same byte sequence
+    // at $7D622; the $7D712 signature is the shipped CFBF98C3 image used at runtime.
+    public static final int MAP_SSZ_MASTER_EMERALD_ADDR = 0x07D712;
 
     /**
      * {@code Obj_SSZEndBoss}'s raw animation scripts, addressed by ROM address because

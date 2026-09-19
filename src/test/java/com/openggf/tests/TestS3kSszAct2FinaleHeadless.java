@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.SszKnuxFinalBossCraneObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.SszMasterEmeraldObjectInstance;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -133,6 +134,10 @@ class TestS3kSszAct2FinaleHeadless {
                 + Integer.toHexString(boss.routineForTest()));
         assertTrue((boss.routineForTest() & 1) == 0 && boss.routineForTest() <= 0x46,
                 "SSZ2_Boss_Index owns one of its 36 even routine bytes");
+        SszMasterEmeraldObjectInstance emerald = active(SszMasterEmeraldObjectInstance.class);
+        assertNotNull(emerald, "loc_7BA38 allocated the arena Master Emerald");
+        assertTrue(emerald.getX() != 0 && emerald.getY() != 0,
+                "loc_7C818 positioned it from Camera_max_X and Camera_Y");
     }
 
     private static HeadlessTestFixture boot() {
