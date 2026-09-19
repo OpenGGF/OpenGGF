@@ -200,6 +200,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     public static final int DEFEAT_LANDED_WAIT = (2 * 60) - 1;
     /** {@code bset #5,$38(a0)} in {@code loc_7B888}. */
     private static final int FLAG_DEFEAT_LANDED = 5;
+    /** {@code $38(a0)} bit 6: the attached {@code loc_7C78E} missile pod remains alive. */
+    private static final int FLAG_MISSILE_POD = 6;
 
     // --- $38(a0) bits ------------------------------------------------------------------------
 
@@ -729,6 +731,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             case 0x10 -> {
                 animate();
                 if (--timer >= 0) return;
+                releaseMissilePod();
                 if (++superRepeat < 2) chooseSuperDashTarget();
                 else chooseSuperAttack();
             }
@@ -754,7 +757,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             }
             case 0x1E -> { animate(); moveSprite2(); if (floorDistanceReached()) { super.state.routine = 0x20; yVel = -0x600; services().playSfx(Sonic3kSfx.MECHA_LAND.id); } }
             case 0x20 -> { animate(); moveSpriteWithGravity(-0x80); if (floorDistanceReached()) { super.state.routine = 0x22; xAccel = -(xAccel >> 1); timer = 0x1F; } }
-            case 0x22 -> { animate(); xVel = (short) (xVel + xAccel); moveSprite2(); if (--timer < 0) { super.state.routine = 0x24; timer = 0x0F; } }
+            case 0x22 -> { animate(); xVel = (short) (xVel + xAccel); moveSprite2(); if (--timer < 0) { releaseMissilePod(); super.state.routine = 0x24; timer = 0x0F; } }
             case 0x24 -> { animate(); if (--timer < 0) { super.state.routine = 0x26; yVel = -0x600; } }
             case 0x26 -> { animate(); moveSpriteWithGravity(LIGHT_GRAVITY); if (getY() <= bossCeilingY()) { setPosition(getX(), bossCeilingY()); chooseSuperDashTarget(); } }
             case 0x28 -> { animate(); moveSpriteWithGravity(0x10); if (yVel >= 0x100) { super.state.routine = 0x2A; timer = 0x1F; superRepeat = 3; } }
@@ -789,6 +792,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         yVel = 0;
         xAccel = goRight ? 0x80 : -0x80;
         timer = 7;
+        attachMissilePod();
     }
 
     private void chooseSuperAttack() {
@@ -803,6 +807,19 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         timer = 0x1F;
         xAccel = getX() < ((boxLeftX() + boxRightX()) >>> 1) ? 0x80 : -0x80;
         if (super.state.routine == 0x12) yVel = 0x400;
+        if (super.state.routine == 0x1C) attachMissilePod();
+    }
+
+    /** {@code bset #6,$38(a0)} / {@code ChildObjDat_7D49A}: one child at {@code (+$14,-4)}. */
+    private void attachMissilePod() {
+        if ((flags & (1 << FLAG_MISSILE_POD)) != 0) return;
+        flags |= 1 << FLAG_MISSILE_POD;
+        spawnChild(() -> new SszSuperMechaMissilePodChild(
+                new ObjectSpawn(getX(), getY(), 0, 0, 0, false, 0), this));
+    }
+
+    private void releaseMissilePod() {
+        flags &= ~(1 << FLAG_MISSILE_POD);
     }
 
     /** {@code ChildObjDat_7D4A8}: eight loc_7C726 children, subtype 0..7. */
@@ -1499,6 +1516,10 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     /** {@code btst #2,$38(a1)}: the trail draws only while the boss is dashing. */
     public boolean trailVisible() {
         return (flags & (1 << FLAG_TRAIL)) != 0 && !isDestroyed();
+    }
+
+    public boolean missilePodVisible() {
+        return (flags & (1 << FLAG_MISSILE_POD)) != 0 && !isDestroyed();
     }
 
     // --- test surface ---------------------------------------------------------------------------

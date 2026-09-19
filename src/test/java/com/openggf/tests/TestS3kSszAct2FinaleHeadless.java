@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.objects.SszKnuxFinalBossCraneObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMasterEmeraldObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaProjectileChild;
+import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaMissilePodChild;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.tests.rules.RequiresRom;
@@ -174,6 +175,39 @@ class TestS3kSszAct2FinaleHeadless {
                 new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
         fixture.stepIdleFrames(1);
         sameSnapshot(after, registry.capture(), "forward replay in Obj_SSZ2_Boss");
+    }
+
+    @Test
+    void superDashCarriesTheNativeMissilePodChild() {
+        HeadlessTestFixture fixture = boot();
+        SszMechaSonicObjectInstance boss = runToBoss(fixture);
+        for (int hit = 0; hit < 8; hit++) landOneHit(fixture, boss);
+        runIntoSuperGraph(fixture, boss);
+
+        SszSuperMechaMissilePodChild pod = null;
+        for (int frame = 0; frame < 0x100 && pod == null; frame++) {
+            fixture.stepIdleFrames(1);
+            pod = active(SszSuperMechaMissilePodChild.class);
+        }
+        assertNotNull(pod, "loc_7BEB0 allocated ChildObjDat_7D49A for the Super dash");
+        fixture.stepIdleFrames(1);
+        int expectedDx = boss.renderFlippedForTest() ? -0x14 : 0x14;
+        assertEquals((boss.getX() + expectedDx) & 0xFFFF, pod.getX(),
+                "loc_7C79C mirrors child_dx $14 with the parent");
+        assertEquals((boss.getY() - 4) & 0xFFFF, pod.getY(),
+                "ChildObjDat_7D49A owns child_dy -4");
+
+        CompositeSnapshot before = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.gameplayMode().getRewindRegistry().restore(before);
+        sameSnapshot(before, fixture.gameplayMode().getRewindRegistry().capture(),
+                "restore with attached missile pod");
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, fixture.gameplayMode().getRewindRegistry().capture(),
+                "forward replay with attached missile pod");
     }
 
     private static HeadlessTestFixture boot() {

@@ -229,6 +229,7 @@ final class DefaultObjectRewindPolicies {
             // each surviving child's reverse link is still captured and relinked below.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance", "trail"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszSuperMechaMissilePodChild", "parent"), RewindFieldPolicy.CAPTURED),
             // $30(a0) on the Mecha Sonic spawner pad: loc_45AB0 reads the boss slot back every
             // frame to decide when to explode, so the pad's reference survives a restore.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance", "mechaBoss"), RewindFieldPolicy.CAPTURED),
