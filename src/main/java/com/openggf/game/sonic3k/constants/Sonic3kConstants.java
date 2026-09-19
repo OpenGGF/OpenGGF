@@ -974,6 +974,10 @@ public class Sonic3kConstants {
     // ROM bug: writes same 2 colors twice (uses (a0,d0.w) twice instead of 4(a0,d0.w)) — replicated faithfully.
     public static final int ANPAL_LRZ2_3_ADDR = 0x003344;
     public static final int ANPAL_LRZ2_3_SIZE = 256;
+    // LRZ boss act ($1600): palette 3 colors 12-13, 15 frames x 4 bytes.
+    // AnPal_PalLRZ3 -- verified at 0x0036EC by ROM binary search.
+    public static final int ANPAL_LRZ3_ADDR = 0x0036EC;
+    public static final int ANPAL_LRZ3_SIZE = 60;
     // BPZ balloons (palette 2, colors 13-15): 3 frames x 6 bytes = 18 bytes
     // Verified by ROM binary search for pattern 00EE 00AE 006C 00AE 006E 00EE 006E 00EE 00AE
     public static final int ANPAL_BPZ_1_ADDR = 0x0034CC;

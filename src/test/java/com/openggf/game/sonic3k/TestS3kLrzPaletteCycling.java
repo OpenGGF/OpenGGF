@@ -57,6 +57,7 @@ public class TestS3kLrzPaletteCycling {
     private static final int ZONE_LRZ = 0x09;
     private static final int ACT_1 = 0;
     private static final int ACT_2 = 1;
+    private static final int ZONE_LRZ_BOSS = 0x16;
 
     private static SharedLevel sharedLevel;
 
@@ -235,6 +236,26 @@ public class TestS3kLrzPaletteCycling {
         }
     }
 
+    @Test
+    public void lrz3CycleRunsOnlyTheRomSharedChannelBeforeTheFlashGate() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        LrzStubLevel stubLevel = new LrzStubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(
+                reader, stubLevel, ZONE_LRZ_BOSS, 0, registry, null);
+        cycler.update();
+
+        for (int c = 1; c <= 4; c++) {
+            assertEquals(S3kPaletteOwners.LRZ_ZONE_CYCLE,
+                    registry.ownerAt(PaletteSurface.NORMAL, 2, c));
+        }
+        assertEquals("none", registry.ownerAt(PaletteSurface.NORMAL, 3, 12),
+                "AnPal_LRZ3's accent channel waits for Palette_cycle_counters+$00");
+        assertEquals("none", registry.ownerAt(PaletteSurface.NORMAL, 3, 13));
+    }
+
     /**
      * Verifies channel A produces multiple distinct lava color values over a full cycle.
      * Channel A: 16 frames (step +8, wrap 0x80), timer period 16 Ã¢â€ â€™ fires every 16 ticks.
@@ -334,5 +355,3 @@ public class TestS3kLrzPaletteCycling {
         @Override public int getZoneIndex() { return ZONE_LRZ; }
     }
 }
-
-

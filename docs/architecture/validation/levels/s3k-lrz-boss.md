@@ -6,7 +6,7 @@ on a level-select load and none on the Act 2 handover (`Act3_flag`, `loc_62B6`).
 Character route: Sonic + Tails and Tails alone only — Knuckles never enters `$1600`.
 Flash sequence, autoscroll, end boss, capsule and `Obj_StartNewLevel $2D` at `($FE8,$5E0)` to
 Hidden Palace `$1601`. Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md).
-Status: slice 0 baseline only.
+Status: playable forced-camera and boss route implemented; remaining work is presentation and strict replay.
 
 Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`, `Act3_timer`,
 `Saved2_status_secondary`), level select `$1600`, star-post respawn (`LRZ3_ScreenInit` P1 X >=
@@ -22,8 +22,8 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 35 placed objects, of which **8 still build a
-`PlaceholderObjectInstance`** after slice 1 (14 at `035e48a58`); 52 live rings (53 records minus the
+Placement baseline (`TestS3kLrzPlacementCensus`): 35 placed objects with **zero remaining
+`PlaceholderObjectInstance` placements** (14 at `035e48a58`); 52 live rings (53 records minus the
 leading `(0,0)` sentinel). The end boss, capsule, `StartNewLevel`, dome platform and Death Egg sprite are
 event-spawned and are not in the placement list.
 
@@ -36,7 +36,7 @@ event-spawned and are not in the placement list.
 | ENTRY: star-post respawn branch | `LRZ3_ScreenInit` P1 X >= `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` -> `Target_palette_line_2`, player `($9C0,$36C)` | native | `TestS3kLrzScrollRegistrationHeadless` | camera/event checkpoint implemented and rewind-covered | focused pass, pending revision | Palette and player-position restore remain in slice 9 |
 | PRESENT: scroll handler registration | `$1600` must not use `SwScrlHpz`; `$1601` must keep it | native | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented (`$1600` uses `SwScrlLrz3`, `$1601` keeps `SwScrlHpz`) | focused pass, pending revision | — |
 | PRESENT: `SwScrlLrz3`, shimmer and per-column VScroll | `LRZ3_BackgroundEvent` five stages `0,4,8,$C,$10`; `word_5A106` = `$310` then 18 x `$10`; `sub_59D82/59DA2/59DBC`, `sub_59DDE` | native + wide | `TestS3kLrzScrollRegistrationHeadless` | base camera transforms and dual-plane shimmer implemented | focused pass, pending revision | BG stages `$C/$10` and per-column boss VScroll remain slice 10 |
-| PRESENT: animated tiles and palette | `AnimateTiles_LRZ3` channel 0 only at tile `$170` (`loc_2833C` returns for `Current_zone $16`); `$1600` AniPLC entry is `AniPLC_NULL`; `AnPal_LRZ3` gate `Palette_cycle_counters+$00` in {0, `$80`, 1} | native | — | not implemented | open | Slice 9 |
+| PRESENT: animated tiles and palette | `AnimateTiles_LRZ3` channel 0 only at tile `$170` (`loc_2833C` returns for `Current_zone $16`); `$1600` AniPLC entry is `AniPLC_NULL`; `AnPal_LRZ3` gate `Palette_cycle_counters+$00` in {0, `$80`, 1} | native | `TestS3kLrzPatternAnimation`, `TestS3kLrzPaletteCycling` | implemented, including rewind state for the flash gate | focused pass | The flash event still has to drive the `$80` -> 1 gate sequence |
 | EVENT: Death Egg flash sequence | `LRZ3_BackgroundEvent` stages, `Obj_CollapsingBridge` spawn at `($60,$4D0)` | native | — | not implemented | open | Slice 9 |
 | EVENT: autoscroll | `Special_events_routine $14` (`loc_59E46`), seven stages; thresholds X `$410`, Y <= `$330`, X `$650`, Y <= `$2F0`, X `$910`, Y >= `$320`, X `$BBF` with P1 X >= `$C50`; `sub_59F82` push at `Camera_X + $10`, kill on `Status_Push`, right cap `Camera_X + $120` | native + wide | `TestS3kLrzScrollRegistrationHeadless` (checkpoint/rewind) | seven camera stages, fixed-point deltas and both player clamps implemented | focused pass, pending revision | Crush-kill branch and full-route/wide replay remain slice 9 |
 | OBJECT: `$9E` autoscroll controller, `$AD` platforms (7), `$6E` lava blocks (6), `$8B` sprite masks (2) | `Obj_LRZ3Autoscroll`, `Obj_LRZ3Platform`, `Obj_InvisibleLavaBlock`, `Obj_SpriteMask` | native | `TestS3kLrzPlacementCensus`, `TestLrz3Platform`, `TestSonic3kInvisibleHurtBlockHObjectInstance` | `$9E`, every placed `$AD` subtype and `$6E` implemented; LRZ3 placeholder baseline is zero | focused pass, pending revision | `$8B` shared implementation remains a visual-route question |

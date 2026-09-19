@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + 4 * Integer.BYTES + 29 * Short.BYTES;
+            S3kScreenShake.captureBytes() + 4 * Integer.BYTES + 30 * Short.BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -98,6 +98,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private int lrz3CameraXFixed;
     private int lrz3CameraYFixed;
     private short lrz3BossSpawned;
+    /** ROM {@code Palette_cycle_counters+$00}: 0 normal, $80 paused, 1 post-flash. */
+    private short lrz3PaletteCycleGate;
 
     public LrzZoneRuntimeState(int zoneIndex, int actIndex, PlayerCharacter playerCharacter) {
         this.zoneIndex = zoneIndex;
@@ -332,6 +334,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     }
     public boolean lrz3BossSpawned() { return lrz3BossSpawned != 0; }
     public void setLrz3BossSpawned(boolean value) { lrz3BossSpawned = (short) (value ? -1 : 0); }
+    public int lrz3PaletteCycleGate() { return lrz3PaletteCycleGate & 0xFF; }
+    public void setLrz3PaletteCycleGate(int value) { lrz3PaletteCycleGate = (short) value; }
 
     @Override
     public byte[] captureBytes() {
@@ -370,6 +374,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putInt(lrz3CameraXFixed);
         buffer.putInt(lrz3CameraYFixed);
         buffer.putShort(lrz3BossSpawned);
+        buffer.putShort(lrz3PaletteCycleGate);
         return buffer.array();
     }
 
@@ -413,5 +418,6 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         lrz3CameraXFixed = buffer.getInt();
         lrz3CameraYFixed = buffer.getInt();
         lrz3BossSpawned = buffer.getShort();
+        lrz3PaletteCycleGate = buffer.getShort();
     }
 }

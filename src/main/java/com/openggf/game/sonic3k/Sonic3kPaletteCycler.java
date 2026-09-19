@@ -187,7 +187,16 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             // are AnPal_HPZ; entries 44 (LRZ3) and 46 (DEZ3) are not
             // (sonic3k.asm:3161-3164).
             case 0x16, 0x17:
-                if (actIndex == 1) {
+                if (zoneIndex == 0x16 && actIndex == 0) {
+                    byte[] sharedData = safeSlice(reader, Sonic3kConstants.ANPAL_LRZ12_1_ADDR,
+                            Sonic3kConstants.ANPAL_LRZ12_1_SIZE);
+                    byte[] bossData = safeSlice(reader, Sonic3kConstants.ANPAL_LRZ3_ADDR,
+                            Sonic3kConstants.ANPAL_LRZ3_SIZE);
+                    if (sharedData.length >= Sonic3kConstants.ANPAL_LRZ12_1_SIZE
+                            && bossData.length >= Sonic3kConstants.ANPAL_LRZ3_SIZE) {
+                        list.add(new Lrz3Cycle(sharedData, bossData));
+                    }
+                } else if (actIndex == 1) {
                     byte[] hpzData = safeSlice(reader, Sonic3kConstants.ANPAL_HPZ_ADDR,
                             Sonic3kConstants.ANPAL_HPZ_SIZE);
                     if (hpzData.length >= Sonic3kConstants.ANPAL_HPZ_SIZE) {
@@ -1467,6 +1476,72 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 cacheFallbackPaletteTexture(registry, gm, level, 3);
                 dirty3 = false;
             }
+        }
+    }
+
+    /** ROM {@code AnPal_LRZ3}: the boss-act lava cycle and post-flash accent cycle. */
+    private static class Lrz3Cycle extends PaletteCycle {
+        private final byte[] sharedData;
+        private final byte[] bossData;
+        private int timerShared;
+        private int counterShared;
+        private int timerBoss;
+        private int counterBoss;
+        private boolean dirty2;
+        private boolean dirty3;
+
+        Lrz3Cycle(byte[] sharedData, byte[] bossData) {
+            this.sharedData = sharedData;
+            this.bossData = bossData;
+        }
+
+        @Override
+        void tick(Level level, PaletteOwnershipRegistry registry) {
+            int gate = lrz3PaletteGate();
+            if ((gate & 0x80) != 0) {
+                return;
+            }
+            GraphicsManager gm = GameServices.graphics();
+            if (timerShared > 0) {
+                timerShared--;
+            } else {
+                timerShared = 0x0F;
+                int offset = counterShared;
+                counterShared = (counterShared + 8) & 0x7F;
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                        S3kPaletteOwners.LRZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        2, 1, slice(sharedData, offset, 8));
+                dirty2 = true;
+            }
+            if (gate != 0) {
+                if (timerBoss > 0) {
+                    timerBoss--;
+                } else {
+                    timerBoss = 7;
+                    int offset = counterBoss;
+                    counterBoss += 4;
+                    if (counterBoss >= 0x3C) counterBoss = 0;
+                    S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                            S3kPaletteOwners.LRZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                            3, 12, slice(bossData, offset, 4));
+                    dirty3 = true;
+                }
+            }
+            if (dirty2) {
+                cacheFallbackPaletteTexture(registry, gm, level, 2);
+                dirty2 = false;
+            }
+            if (dirty3) {
+                cacheFallbackPaletteTexture(registry, gm, level, 3);
+                dirty3 = false;
+            }
+        }
+
+        private static int lrz3PaletteGate() {
+            if (!GameServices.hasRuntime()) return 0;
+            return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry())
+                    .map(com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState::lrz3PaletteCycleGate)
+                    .orElse(0);
         }
     }
 
