@@ -103,6 +103,10 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // Obj_DEZTunnelLauncher owns two mutable ROM controller blocks. They are plain
+            // state holders (including a ROM path byte array), not structural object links.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance", "p1"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance", "p2"), RewindFieldPolicy.CAPTURED),
             // These SOZ SST links remain mutable during native graph teardown.
             // Capture their identities explicitly so both schema restore and the
             // coverage audit agree; constructors deliberately recreate null links.

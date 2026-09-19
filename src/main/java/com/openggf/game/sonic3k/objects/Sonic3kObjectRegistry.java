@@ -475,6 +475,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_DEZ) {
+                        return new S3kDezTunnelLauncherObjectInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }

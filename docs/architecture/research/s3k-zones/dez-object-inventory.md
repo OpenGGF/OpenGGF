@@ -95,7 +95,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$53` | `Obj_DEZConveyorPad` | 4 | 5 | concrete: triggered finite/floor-following full-solid conveyor | 4 |
 | `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | `S3kDezEnergyBridgeObjectInstance` | 4 |
 | `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | concrete: timed curved collision-index field | 4 |
-| `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | placeholder | 5 |
+| `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | concrete: dual-player ROM path transport | 5 |
 | `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** (`S3kDezGravitySwitchObjectInstance`; art not registered) | 3 |
 | `$59` | `Obj_DEZTeleporter` | 0 | 21 | `S3kDezTeleporterObjectInstance` | 3 |
 | `$5A` | `Obj_DEZGravityTube` | 24 | 17 | `S3kDezGravityTubeObjectInstance` | 3 |
@@ -246,13 +246,13 @@ so subtypes `$80+` arrive inverted.
 | `$55` | `$61` | `Obj_DEZEnergyBridge` | 2 | 0 | implemented |
 | `$55` | `$66` | `Obj_DEZEnergyBridge` | 5 | 0 | implemented |
 | `$56` | `$07` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder |
-| `$57` | `$00` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
-| `$57` | `$01` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
-| `$57` | `$03` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$57` | `$04` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$57` | `$05` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$57` | `$06` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
-| `$57` | `$07` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
+| `$57` | `$00` | `Obj_DEZTunnelLauncher` | 1 | 0 | concrete |
+| `$57` | `$01` | `Obj_DEZTunnelLauncher` | 1 | 0 | concrete |
+| `$57` | `$03` | `Obj_DEZTunnelLauncher` | 0 | 1 | concrete |
+| `$57` | `$04` | `Obj_DEZTunnelLauncher` | 0 | 1 | concrete |
+| `$57` | `$05` | `Obj_DEZTunnelLauncher` | 0 | 1 | concrete |
+| `$57` | `$06` | `Obj_DEZTunnelLauncher` | 1 | 0 | concrete |
+| `$57` | `$07` | `Obj_DEZTunnelLauncher` | 0 | 1 | concrete |
 | `$58` | `$00` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** |
 | `$59` | `$0D` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
 | `$59` | `$15` | `Obj_DEZTeleporter` | 0 | 1 | implemented |

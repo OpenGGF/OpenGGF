@@ -2901,3 +2901,19 @@ After the ROM 30/60-pass delay, the four steps follow the exact word ramps
 Subtype bit 2 selects rise versus fall and the render flip transform, while all pieces share the
 tilting-bridge mapping with resident `ArtTile_DEZMisc+$133`. Census: act 1 placeholders
 **22 → 4**, concrete **343 → 361**; act 2 placeholders **20 → 5**, concrete **474 → 489**.
+
+### 2026-09-19 — `$57` `Obj_DEZTunnelLauncher`
+
+All three act 1 and four act 2 light-tunnel launchers now port `Obj_DEZTunnelLauncher` and
+`Obj_DEZTunnelControl` (`sonic3k.asm:94233-94778`). Each native
+player has an independent capture/control block; the launcher preserves the ROM's P1-owned
+ten-count ready sequence, 60-pass cadence, indicator blink, opening/closing mappings, and
+after-current controller/ring-spawner slot pressure. The separately rendered moving transport
+ring trail remains part of final route-presentation verification rather than this traversal slice.
+
+The controller reads the selected path stream directly from ROM `$1FB49E-$1FB6CE`, including
+the shared subtype 2/3 path, and interprets its normal, large-circle, small-circle, sine-down,
+and sine-up commands with native byte-pointer packing. Player positions use centre-coordinate
+writes and 16.8 velocities; object control is released only by the path terminator. The eleven
+launcher mappings at ROM `$48424` use resident `ArtTile_DEZMisc+$38`. Census: act 1 placeholders
+**4 → 1**, concrete **361 → 364**; act 2 placeholders **5 → 1**, concrete **489 → 493**.
