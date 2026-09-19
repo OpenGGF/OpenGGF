@@ -101,6 +101,7 @@ public final class Sonic3kObjectIds {
     public static final int AIZ_DRAW_BRIDGE = 0x32;
     public static final int SINKING_MUD = 0x4F;
     public static final int MGZ_TWISTING_LOOP = 0x50;
+    public static final int DEZ_CONVEYOR_BELT = 0x50;
     public static final int FLOATING_PLATFORM = 0x51;
     public static final int BUMPER = 0x4A;
     // S3KL object table: Obj_CNZTriangleBumpers.

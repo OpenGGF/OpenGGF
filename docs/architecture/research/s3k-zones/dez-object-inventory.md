@@ -90,7 +90,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$4D` | `Obj_DEZTorpedoLauncher` | 36 | 38 | concrete: timed launcher, closing animation and touch projectile | 4 |
 | `$4E` | `Obj_DEZLiftPad` | 7 | 0 | placeholder | 4 |
 | `$4F` | `Obj_DEZStaircase` | 18 | 15 | placeholder | 4 |
-| `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | placeholder | 4 |
+| `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | concrete: invisible two-sided grounded-player conveyor | 4 |
 | `$52` | `Obj_DEZLightning` | 48 | 94 | concrete: ROM animation/wait/touch, art and local SFX | 4 |
 | `$53` | `Obj_DEZConveyorPad` | 4 | 5 | placeholder | 4 (reads the flag, sonic3k.asm:93727) |
 | `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | `S3kDezEnergyBridgeObjectInstance` | 4 |

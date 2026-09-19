@@ -2793,3 +2793,16 @@ participate and the magnetic-spike sound uses `Level_frame_counter & $F`.
 Census: act 1 placeholders **57 → 46**, concrete **308 → 319**; act 2 is unchanged. Focused
 coverage includes parent flicker, child orbit/priority, exact zero-separation lift rounding,
 player-state writes, ROM routine page, and placement census.
+
+### 2026-09-19 — `$50` `Obj_DEZConveyorBelt`
+
+All eight act 1 and five act 2 conveyor regions now port `Obj_DEZConveyorBelt`
+(`sonic3k.asm:93556-93597`). The invisible controller derives its horizontal half-width from
+`(subtype & $7F) * 8` and a two-pixel-per-pass step from the placement X flip. A grounded native
+player inside the horizontal extent and the ROM's 96-pixel vertical window is moved with
+subpixel precision: players above the controller follow the configured direction, while players
+below it move in the opposite direction. Airborne players and either player outside the region
+are untouched; normal off-screen deletion remains active.
+
+Eight focused behavior/census checks pass with zero skips. Census: act 1 placeholders **46 → 38**
+and concrete **319 → 327**; act 2 placeholders **44 → 39** and concrete **450 → 455**.

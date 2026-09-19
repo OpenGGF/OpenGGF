@@ -461,8 +461,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.MGZ_TWISTING_LOOP,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
-                    if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        return new S3kDezConveyorBeltObjectInstance(spawn);
                     }
                     return new MGZTwistingLoopObjectInstance(spawn);
                 });
