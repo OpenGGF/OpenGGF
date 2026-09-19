@@ -187,9 +187,9 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$24` | `$D7` | `Obj_AutomaticTunnel` | 0 | 1 | 0 | shared concrete | 7 |
 | `$24` | `$D8` | `Obj_AutomaticTunnel` | 0 | 1 | 0 | shared concrete | 7 |
 | `$24` | `$D9` | `Obj_AutomaticTunnel` | 0 | 1 | 0 | shared concrete | 7 |
-| `$25` | `$80` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | unregistered (default placeholder) | 7 |
-| `$25` | `$81` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | unregistered (default placeholder) | 7 |
-| `$25` | `$82` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | unregistered (default placeholder) | 7 |
+| `$25` | `$80` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | concrete zone-specific | 7 |
+| `$25` | `$81` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | concrete zone-specific | 7 |
+| `$25` | `$82` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | concrete zone-specific | 7 |
 | `$28` | `$00` | `Obj_InvisibleBlock` | 1 | 0 | 0 | shared concrete | V |
 | `$28` | `$11` | `Obj_InvisibleBlock` | 3 | 0 | 7 | shared concrete | V |
 | `$28` | `$12` | `Obj_InvisibleBlock` | 0 | 1 | 0 | shared concrete | V |

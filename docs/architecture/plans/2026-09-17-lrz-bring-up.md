@@ -3624,3 +3624,18 @@ rewind/census batch at the same working tree ran **1165 tests, 0 failures, 0 err
 This is focused validation, not a suite pass. Remaining act-2 placeholders are `$25` (3), `$32`
 (18), and `$AE` (1); the breadth/route and presentation obligations in the fifteenth handover
 remain open.
+
+## 2026-09-19 — `$25` chained platforms
+
+The three high-bit `$25` records now expand `off_4A914` into the ROM's 4/4/8 independently solid
+platforms and follow `word_4A896`, `word_4A8C0` and `word_4A8EA` with the major axis capped at
+one pixel per frame and the minor axis kept as an 8.8 proportional velocity. Status bit 0 reverses
+the waypoint walk with the same one-row adjustment as `loc_4A6CE`; rendering uses the existing
+ROM-backed `Map_LRZChainedPlatforms` registration.
+
+The act-2 placeholder census is **19**, down from 22. Focused validation:
+`TestLrzChainedPlatformObject` plus `TestS3kLrzPlacementCensus`, **8 tests, 0 failures, 0 errors,
+0 skipped**. The first combined rewind/census/object run executed 1169 tests and was red only on
+one incorrect new test expectation (`$74`, not `$A0`, for the reversed short leg); the production
+value agreed with the ROM division and the corrected focused rerun is green. This remains focused
+validation, not a suite pass. `$32` (18) and `$AE` (1) are the only act-2 placeholder placements.

@@ -93,6 +93,8 @@ public final class Sonic3kObjectIds {
     // S3KL object table: Obj_LBZLoweringGrapple. SKL reuses $1F for Obj_LRZLavaFall.
     public static final int LBZ_LOWERING_GRAPPLE = 0x1F;
     public static final int AUTOMATIC_TUNNEL = 0x24;
+    /** SKL object table: Obj_LRZChainedPlatforms. */
+    public static final int LRZ_CHAINED_PLATFORMS = 0x25;
     public static final int AUTO_SPIN = 0x26;
     public static final int CORK_FLOOR = 0x2A;
     public static final int AIZ_FLIPPING_BRIDGE = 0x2B;

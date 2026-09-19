@@ -2805,6 +2805,14 @@ public final class Sonic3kPlcArtRegistry {
                     null
             ));
         } else {
+            // Obj_LRZChainedPlatforms: make_art_tile(ArtTile_LRZ2Misc,1,0).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_CHAINED_PLATFORM,
+                    Sonic3kConstants.MAP_LRZ_CHAINED_PLATFORM_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
             // make_art_tile($090,2,0) (sonic3k.asm:88027).
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.LRZ2_DOOR,
