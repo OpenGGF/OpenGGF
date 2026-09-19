@@ -2859,3 +2859,18 @@ platform profile.
 
 The two-frame mapping at ROM `$25ACA` uses resident `ArtTile_DEZ2Extra+$8`. Census: act 2
 placeholders **34 → 24**, concrete **460 → 470**; act 1 is unchanged.
+
+### 2026-09-19 — `$4C` `Obj_DEZHangCarrier`
+
+All three act 1 and one act 2 hang carriers now port `Obj_DEZHangCarrier` and `sub_4703E`
+(`sonic3k.asm:92885-93035`). Each native player has an independent capture/cooldown slot. An
+eligible player in the `$20` by `$18` handle window is stopped, snapped 40 pixels below the
+carrier, put in animation `$14`, and movement-suppressed. P1 capture starts the shipped upward
+acceleration; ceiling contact snaps the carrier, selects signed `$200` horizontal speed, and the
+subtype times four bounds its travel.
+
+Jump release restores control, applies optional left/right `$200` velocity, launches at
+`-$380`, and restores rolling state/radii with the ROM's 18/60-pass recapture cooldown. The
+single mapping at ROM `$4717E` uses resident `ArtTile_DEZMisc+$10`; switch/rising sounds retain
+their native edges. Census: act 1 placeholders **26 → 23**, concrete **339 → 342**; act 2
+placeholders **24 → 23**, concrete **470 → 471**.

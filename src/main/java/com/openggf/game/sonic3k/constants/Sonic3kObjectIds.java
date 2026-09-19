@@ -143,6 +143,7 @@ public final class Sonic3kObjectIds {
     public static final int CNZ_GIANT_WHEEL = 0x49;
     // S3KL object table: Obj_CNZSpiralTube. Controller-only object; no separate mapping/art owner.
     public static final int CNZ_SPIRAL_TUBE = 0x4C;
+    public static final int DEZ_HANG_CARRIER = 0x4C;
     // S3KL object table: Obj_CNZBarberPoleSprite.
     public static final int CNZ_BARBER_POLE = 0x4D;
     // SKL $4D is Obj_DEZTorpedoLauncher; S3KL $4D is the CNZ barber pole.

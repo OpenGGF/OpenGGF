@@ -86,7 +86,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$3C` | `Obj_Door` | 11 | 6 | shared concrete | 4 (verify DEZ art and trigger) |
 | `$4A` | `Obj_DEZFloatingPlatform` | 0 | 10 | concrete: full-solid DEZ oscillation/sweep table | 4 |
 | `$4B` | `Obj_DEZTiltingBridge` | 1 | 3 | placeholder | 4 |
-| `$4C` | `Obj_DEZHangCarrier` | 3 | 1 | placeholder | 4 |
+| `$4C` | `Obj_DEZHangCarrier` | 3 | 1 | concrete: dual-player capture, lift, ceiling turn and jump release | 4 |
 | `$4D` | `Obj_DEZTorpedoLauncher` | 36 | 38 | concrete: timed launcher, closing animation and touch projectile | 4 |
 | `$4E` | `Obj_DEZLiftPad` | 7 | 0 | concrete: triggered accelerating lift arm and top-solid pad | 4 |
 | `$4F` | `Obj_DEZStaircase` | 18 | 15 | placeholder | 4 |
