@@ -3321,6 +3321,52 @@ mask is changed, which is how it was checked.
 `inputs/lrz1-fight-then-native-act2-v1.txt` (the fight input truncated at the change frame with the
 native's act-2 controller appended) is the route a clip should be filmed from.
 
+
+### 2026-09-19 (third round) - Both act-2 divergences attributed, and neither is where it looked
+
+**Row 26482 is the probe's own start, not the release formula, and the formula is verified.**
+`SonicKnux_Spindash`'s release (sonic3k.asm:23698-23706) reads `spin_dash_counter` with
+`move.b` -- the **high byte of a word** -- and indexes `word_11CF2`, which is
+`$800 + index * $80` for indices 0-8, or `word_11D04` (`$B00 + index * $80`) when
+`Super_Sonic_Knux_flag` is set. The charge is `addi.w #$200` a press capped at `$800`
+(:23771-23774) and the decay is `counter -= counter >> 5` a frame (:23757-23761).
+
+Every one of those matches the engine: its counter decays 774 -> 750 exactly, it peaks at
+**1093** (`$445`, high byte 4, table entry `$A00`) on its last charge, and it releases at 683
+(`$2AB`, high byte 2, `$900`) sixteen frames later. The engine is not short on the formula; it is
+short by **one charge**.
+
+**The dropped charge is the probe's.** The input window has five B presses (steps 816, 846, 867,
+895, 907) and the engine logs four charges -- the press at step 816 goes on *starting* the
+spindash. The native had already started its own: the fixture's input column has `0012`, Down plus
+B, at row **24918**, 640 rows before the act change and long before the window begins. So every
+press inside the window is a charge for the native and only four of five are for the engine.
+
+The next probe that wants this row has to begin before row 24918 or carry `spin_dash_flag` and the
+counter in its declared write. **Nothing here is an engine defect**, and the engine's Super release
+table is present (`PlayerCapabilityRules.superSpindashSpeedTable`), so the Super/ordinary split is
+not the difference either.
+
+**Row 26416's three pixels are the camera bounds, and they are a timing difference, not an
+arithmetic one.** Measured at the divergence: the engine's camera Y bounds are
+`minY = maxY = minYTarget = maxYTarget = $710` -- the arena lock, carried across the change and
+never opened -- and `maxX` is still `0` sixty frames later. The native's camera is already drifting
+down by then. So `Change_Act2Sizes` has not run yet on the engine's timeline while the ROM's has.
+
+Two ROM facts bound the fix:
+
+1. `Change_Act2Sizes` falls through into `Make_LevelSizeObj`, whose `Child1_Act2LevelSize`
+   (sonic3k.asm:180602-180612) creates **three** workers -- `Obj_IncLevEndXGradual`,
+   `Obj_DecLevStartYGradual` and `Obj_IncLevEndYGradual`. The engine's
+   `S3kBossDefeatSignpostFlow.updateAwaitActTransition` spawns only the X one, so even once it
+   runs, the Y bounds open in one step rather than gradually.
+2. It runs from `Obj_EndSignControlDoStart`, which waits on `End_of_level_flag`, which the ROM's
+   act 2 **title card** sets. The engine skips that title card for Lava Reef and its flag arrives
+   from another owner on a later frame. That is the timing half, and it reaches into the shared
+   results/title-card path rather than the zone's own code.
+
+Both are recorded rather than attempted: the second is not a Lava Reef-local change.
+
 ## Handover, 2026-09-18 (thirteenth)
 
 **Head is this commit**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
@@ -3513,7 +3559,11 @@ spike ball launcher (9), `$25` chained platforms (3), `$AE` (1) and `$B3` (1).
    from 25558) and it catches `$29` firing, so the flame throwers have their clip; `$2B`/`$2C` and
    `$2D` still have none, and none of the three has a rewind spot on a route or a
    wide/donor/roster row. The same capture is the route to hang those on.
-2. **Row 26482**, with the charge-versus-formula question above as its kill condition.
+2. **Row 26482 is closed as a probe artefact** and row **26416** is attributed to the act-2 camera
+   bounds; see this round's third entry. What is left of both is real work on the shared path:
+   `Make_LevelSizeObj`'s two missing Y workers, and the fact that the engine's
+   `End_of_level_flag` for Lava Reef arrives later than the ROM's because the act 2 title card is
+   skipped.
 3. **Slice 7's remainder.** `$37` is read out and small: `Obj_LRZSpikeBallLauncher`
    (sonic3k.asm:89848-89931) allocates its ball as a child at `y_pos - 8` with `$46` as the rest
    height, runs `Ani_LRZSpikeBallLauncher` through `Animate_SpriteIrregularDelay` (whose `$FC`

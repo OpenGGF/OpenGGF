@@ -111258,7 +111258,20 @@ defeat chain, which this trace does not reach.
   own row-25558 state, Player 1 `($009E,$07AE)` and the camera `(0,$0710)`, because the filmed
   fight is not the recorded route and leaves the player 138 px away. The write is the only
   non-production input; everything after it is the native's controller.
-- Kill condition for row 26482: the engine's spindash release from `x $9E` on this floor must
-  produce the native's first two frames of `x`. If it is the release velocity, the divergence
-  moves to the next event; if it is the release frame, the whole trajectory shifts by one and the
-  error count will not fall.
+- **Both divergences attributed, 2026-09-19.** Row 26482 is the probe's own start, not an engine
+  defect: `SonicKnux_Spindash`'s release indexes `word_11CF2` with the HIGH byte of the word
+  `spin_dash_counter` (`move.b`, sonic3k.asm:23700-23703), charges `+$200` a press capped at
+  `$800` and decays `counter -= counter >> 5`, and the engine matches all three -- it peaks at
+  1093 (`$445`, table entry `$A00`) and releases at 683 (`$2AB`, `$900`) sixteen frames later
+  because it is **one charge short**. The window holds five B presses and the engine logs four:
+  the first goes on starting the spindash, which the native had already started at row **24918**
+  (`0012`, Down plus B), 640 rows before the change. A probe that wants this row must begin before
+  24918 or carry `spin_dash_flag` and the counter in its declared write.
+- Row 26416's three pixels are the act 2 camera bounds. Measured at the divergence, the engine's
+  `minY`, `maxY` and both Y targets are all `$710`, the arena lock carried across the change, and
+  `maxX` is still `0` sixty frames later, so `Change_Act2Sizes` has not run on the engine's
+  timeline while the ROM's has. Two causes, both outside Lava Reef's own code:
+  `Make_LevelSizeObj`'s `Child1_Act2LevelSize` creates three gradual workers
+  (sonic3k.asm:180602-180612) and the engine spawns only `Obj_IncLevEndXGradual`; and
+  `Obj_EndSignControlDoStart` waits on `End_of_level_flag`, which the ROM's act 2 title card sets
+  and the engine's Lava Reef path reaches later because that title card is skipped.
