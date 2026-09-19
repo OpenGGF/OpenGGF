@@ -16,6 +16,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -953,7 +954,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             return;
         }
         if (--timer < 0) {
-            setDestroyed(true);
+            ObjectLifetimeOps.destroyLatched(this);
         }
     }
 
