@@ -1,12 +1,14 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -125,6 +127,10 @@ public final class LrzTurbineSpritesObjectInstance extends AbstractObjectInstanc
     private final int[] cooldown = new int[2];
     /** ROM {@code $34(a0)} and {@code $35(a0)}. */
     private final int[] rideAngle = new int[2];
+
+    private record RewindExtra(boolean thinVariant, int mappingFrame, boolean[] captured,
+                               int[] cooldown, int[] rideAngle)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public LrzTurbineSpritesObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LRZTurbineSprites");
@@ -408,6 +414,24 @@ public final class LrzTurbineSpritesObjectInstance extends AbstractObjectInstanc
     @Override
     public int getOnScreenHalfHeight() {
         return HALF_HEIGHT;
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
+                thinVariant, mappingFrame, captured.clone(), cooldown.clone(), rideAngle.clone()));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
+            thinVariant = extra.thinVariant();
+            mappingFrame = extra.mappingFrame();
+            System.arraycopy(extra.captured(), 0, captured, 0, captured.length);
+            System.arraycopy(extra.cooldown(), 0, cooldown, 0, cooldown.length);
+            System.arraycopy(extra.rideAngle(), 0, rideAngle, 0, rideAngle.length);
+        }
     }
 
     @Override

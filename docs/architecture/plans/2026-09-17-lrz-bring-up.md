@@ -3639,3 +3639,14 @@ The act-2 placeholder census is **19**, down from 22. Focused validation:
 one incorrect new test expectation (`$74`, not `$A0`, for the reversed short leg); the production
 value agreed with the ROM division and the corrected focused rerun is green. This remains focused
 validation, not a suite pass. `$32` (18) and `$AE` (1) are the only act-2 placeholder placements.
+
+## 2026-09-19 — `$32` turbine capture and thin sprites
+
+The disassembly-backed `LrzTurbineSpritesObjectInstance` is now connected to LRZ's SKL registry
+branch and both ROM mapping tables are registered against the act-2 drum tiles. Subtype zero owns
+the two-player capture/cooldown/angle triples and three asymmetric entry bands; non-zero subtypes
+retain the ROM's thin `$A0` touch response and four-frame level-clock animation. The mutable
+triples and mapping frame are explicitly rewind-captured. This removes all 18 `$32` placements,
+taking act 2 from 19 placeholders to **1**. `$AE` is the sole remaining act-2 placeholder and is
+kept atomic because its controller, subtype `$24` Knuckles actor, boulder, camera/control
+choreography and act-3 carry state form one native protocol.

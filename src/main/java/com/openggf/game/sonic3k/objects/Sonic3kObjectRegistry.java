@@ -1580,6 +1580,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.LRZ_CHAINED_PLATFORMS,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzChainedPlatformObjectInstance(spawn));
+        // Id $32 is Obj_LRZTurbineSprites in the SKL set. Subtype zero is the capture turbine;
+        // non-zero subtypes are the thin $A0 touch-response animation (sonic3k.asm:89652).
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_DRAW_BRIDGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzTurbineSpritesObjectInstance(spawn));
         // Id $B3 is Obj_StartNewLevel in the SKL set. LRZ2 places subtype $2D at ($3FE0,$E0),
         // whose two-byte subtype transform requests playable Hidden Palace ($1601).
         registerStockRomZoneBound(Sonic3kObjectIds.ICZ_SEGMENT_COLUMN,

@@ -2813,6 +2813,21 @@ public final class Sonic3kPlcArtRegistry {
                     1,
                     null
             ));
+            // Obj_LRZTurbineSprites uses the same drum tiles with two mapping tables.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES,
+                    Sonic3kConstants.MAP_LRZ_TURBINE_SPRITES_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_DRUM,
+                    1,
+                    null
+            ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES_THIN,
+                    Sonic3kConstants.MAP_LRZ_TURBINE_SPRITES2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_DRUM,
+                    1,
+                    null
+            ));
             // make_art_tile($090,2,0) (sonic3k.asm:88027).
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.LRZ2_DOOR,

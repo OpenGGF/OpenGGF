@@ -250,8 +250,8 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$31` | `$00` | `Obj_LRZCollapsingBridge` | 11 | 0 | 0 | concrete zone-specific | V |
 | `$31` | `$01` | `Obj_LRZCollapsingBridge` | 12 | 0 | 0 | concrete zone-specific | V |
 | `$31` | `$02` | `Obj_LRZCollapsingBridge` | 4 | 0 | 0 | concrete zone-specific | V |
-| `$32` | `$00` | `Obj_LRZTurbineSprites` | 0 | 7 | 0 | placeholder (SKL branch) | 7 |
-| `$32` | `$01` | `Obj_LRZTurbineSprites` | 0 | 11 | 0 | placeholder (SKL branch) | 7 |
+| `$32` | `$00` | `Obj_LRZTurbineSprites` | 0 | 7 | 0 | `LrzTurbineSpritesObjectInstance` | 7 |
+| `$32` | `$01` | `Obj_LRZTurbineSprites` | 0 | 11 | 0 | `LrzTurbineSpritesObjectInstance` | 7 |
 | `$33` | `$03` | `Obj_Button` | 1 | 0 | 0 | shared concrete | V |
 | `$33` | `$05` | `Obj_Button` | 0 | 1 | 0 | shared concrete | V |
 | `$33` | `$0A` | `Obj_Button` | 1 | 0 | 0 | shared concrete | V |
