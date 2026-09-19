@@ -12,6 +12,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.SszKnuxFinalBossCraneObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMasterEmeraldObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaProjectileChild;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -107,6 +109,21 @@ class TestS3kSszAct2FinaleHeadless {
 
         assertEquals(8, state.foregroundRoutine(), "loc_58AE0 addq.w #4,Events_routine_fg");
         assertEquals(0, state.eventsFg4(), "loc_58AE0 clr.w Events_fg_4");
+    }
+
+    @Test
+    void superBurstUsesTheRomsEightIndexedVelocityRows() {
+        int[][] expected = {
+                {0, 0x400}, {0x2D4, 0x2D4}, {0x400, 0}, {0x2D4, -0x2D4},
+                {0, -0x400}, {-0x2D4, -0x2D4}, {-0x400, 0}, {-0x2D4, 0x2D4}
+        };
+        for (int subtype = 0; subtype < expected.length; subtype++) {
+            var shot = new SszSuperMechaProjectileChild(
+                    new ObjectSpawn(0x200, 0x400, 0, subtype, 0, false, 0));
+            assertEquals(expected[subtype][0], shot.xVelForTest(), "word_7D172 x row " + subtype);
+            assertEquals(expected[subtype][1], shot.yVelForTest(), "word_7D172 y row " + subtype);
+            assertEquals(0x87, shot.getCollisionFlags(), "ObjDat3_7D444 collision");
+        }
     }
 
     @Test

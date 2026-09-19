@@ -759,7 +759,14 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             case 0x3A -> { animate(); moveSpriteWithGravity(LIGHT_GRAVITY); if (floorDistanceReached()) { super.state.routine = 0; timer = 0x0F; } }
             case 0x3C -> { animate(); if (--timer < 0) chooseSuperAttack(); }
             case 0x3E, 0x40, 0x42, 0x44 -> { animate(); moveSprite2(); if (--timer < 0) { super.state.routine += 2; timer = 0x1F; } }
-            case 0x46 -> { animate(); if (--timer < 0) { super.state.routine = 0x3C; timer = 0x7F; } }
+            case 0x46 -> {
+                animate();
+                if (--timer < 0) {
+                    spawnSuperBurst();
+                    super.state.routine = 0x3C;
+                    timer = 0x7F;
+                }
+            }
             default -> { super.state.routine = 8; timer = 0x1F; }
         }
     }
@@ -787,6 +794,16 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         timer = 0x1F;
         xAccel = getX() < ((boxLeftX() + boxRightX()) >>> 1) ? 0x80 : -0x80;
         if (super.state.routine == 0x12) yVel = 0x400;
+    }
+
+    /** {@code ChildObjDat_7D4A8}: eight loc_7C726 children, subtype 0..7. */
+    private void spawnSuperBurst() {
+        services().playSfx(Sonic3kSfx.BOSS_PROJECTILE.id);
+        for (int subtype = 0; subtype < 8; subtype++) {
+            final int childSubtype = subtype;
+            spawnChild(() -> new SszSuperMechaProjectileChild(
+                    new ObjectSpawn(getX(), getY(), 0, childSubtype, 0, false, 0)));
+        }
     }
 
     private boolean floorDistanceReached() {
