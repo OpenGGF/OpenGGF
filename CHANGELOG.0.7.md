@@ -69,6 +69,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   handoff now also applies the cartridge's `$83` player-control lock, clears the forced mapping
   frame and is covered through the stage-4 event consumption and 120-frame stop boundary. The Master Emerald
   now watches the transformation using its own ROM art and flickers with the native cutscene bit,
+  while Mecha Sonic's transformation landing now installs and advances the ROM's 16-colour
+  flash script through the palette-ownership path with rewind-safe script timing,
   and Super Mecha Sonic can throw the cartridge's eight-way harmful energy burst. Capturing and
   replaying that fight now also discards expired after-images instead of retaining a dead object
   reference in the rewind graph. The shared Mecha Sonic effects sheet now loads its 26 owned ROM

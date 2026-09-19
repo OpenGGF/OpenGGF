@@ -17,6 +17,7 @@ import com.openggf.game.sonic3k.objects.bosses.SszMasterEmeraldObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaProjectileChild;
 import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaMissilePodChild;
 import com.openggf.game.sonic3k.objects.bosses.SszSuperMechaLaserChild;
+import com.openggf.game.sonic3k.objects.bosses.SszMechaPaletteRotationChild;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.tests.rules.RequiresRom;
@@ -280,6 +281,45 @@ class TestS3kSszAct2FinaleHeadless {
                 new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
         fixture.stepIdleFrames(1);
         sameSnapshot(after, registry.capture(), "forward replay in Obj_SSZ2_Boss");
+    }
+
+    @Test
+    void transformationRunsTheRomBackedPaletteRotationScript() throws Exception {
+        HeadlessTestFixture fixture = boot();
+        SszMechaSonicObjectInstance boss = runToBoss(fixture);
+        for (int hit = 0; hit < 8; hit++) landOneHit(fixture, boss);
+
+        SszMechaPaletteRotationChild rotation = null;
+        for (int frame = 0; frame < 0x900 && rotation == null; frame++) {
+            fixture.stepIdleFrames(1);
+            rotation = active(SszMechaPaletteRotationChild.class);
+        }
+        assertNotNull(rotation, "loc_7BB7C installs word_7D9EA at the transformation landing");
+        fixture.stepIdleFrames(1);
+
+        int pointer = SszMechaPaletteRotationChild.SCRIPT_POINTER;
+        var rom = GameServices.rom().getRom();
+        int displacement = rom.read16BitAddr(pointer);
+        int header = rom.read32BitAddr(pointer + 4) & 0x00FF_FFFF;
+        int expectedFirst = rom.read16BitAddr(header + displacement);
+        int actualFirst = com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
+                GameServices.level().getCurrentLevel().getPalette(1).getColor(0));
+        assertEquals(expectedFirst, actualFirst,
+                "Run_PalRotationScript writes the first ROM colour to Normal_palette_line_2");
+        assertTrue(rotation.cursorForTest() > header + displacement,
+                "the script cursor advances past its 16-colour frame and delay");
+
+        CompositeSnapshot before = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.gameplayMode().getRewindRegistry().restore(before);
+        sameSnapshot(before, fixture.gameplayMode().getRewindRegistry().capture(),
+                "restore during word_7D9EA palette rotation");
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, fixture.gameplayMode().getRewindRegistry().capture(),
+                "forward replay during word_7D9EA palette rotation");
     }
 
     @Test
