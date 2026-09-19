@@ -5840,12 +5840,13 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 
 ---
 
-## Lava Reef Act 2: The Miniboss Palette and the Two Camera Releases Are Not Implemented
+## Lava Reef: The Post-Defeat Palette Rotation Script Is Not Implemented
 
-- **Location** — `loc_78AA8` and the two objects behind it, `loc_78AE6` and `loc_78B08` (sonic3k.asm:160505-160545), allocated by `loc_787E0` when the act 1 drill dies
-- **Symptom** — Measured 2026-09-19. After the seamless act change the engine draws act 2 in act 2's own palette immediately. Native does not: a BizHawk capture of the recorded movie's own change (`~/Videos/OGGF/lrz-bring-up/native-lrz2-bg/run1`, movie frames 415532-416433 = `s3k-sonic-tails-complete-emeralds/lrz` rows 25549-26450) still has the act 1 miniboss palette at row 26450, 893 frames after the change: its crystal blocks read gold and brown where the engine's read blue. The same capture confirms everything else about that frame matches.
-- **Cause, from the ROM** — `loc_78AA8` waits for `End_of_level_flag`, installs `word_78EAA`'s palette rotation with `Palette_rotation_custom` = `loc_78B00` and `Palette_cycle_counter1` = `$7FFF`, and allocates a second object at `loc_78B08`. `loc_78AE6` then waits for `Camera_X_pos` to reach `$940` and writes `Camera_min_X_pos` = `$940`; `loc_78B08` waits for `$2C0` and writes `Camera_min_X_pos` = `$2C0` **and** copies `Pal_LRZ2` over `Normal_palette_line_2` and `Pal_LRZMiniboss3` over line 3. So the act 2 palette arrives with the second camera release, not with the act change, and the rotation script runs in between. None of it is implemented.
-- **Removal condition** — `loc_78AA8`, `loc_78AE6` and `loc_78B08` implemented with their palette rotation and both `Camera_min_X_pos` writes, and a capture through the change whose palette matches `native-lrz2-bg/run1`'s frames at the same camera positions. Owned by LRZ slice 7 (act 2).
+- **Location** — `word_78EAA` (sonic3k.asm:160887-160901) through `Palette_rotation_custom` and `Palette_cycle_counter1`, installed by `loc_78AA8` (:160508-160516)
+- **Symptom** — Between the act change and `loc_78B08`'s release the ROM fades five colours of `Normal_palette_line_3+$02` down a thirteen-step ramp (`$0EE,$0AE,$06E,$00E,$00A` to `$222,$222,$224,$422,$222`), the miniboss arena's glow dying away behind the results. The engine holds the miniboss colours flat over that interval instead.
+- **Cause** — `Palette_rotation_custom` is a different mechanism from the `AnPal` cycles the engine runs: a one-shot script with its own per-step frame counts, whose last step hands the object back to `loc_78AE6` through `loc_78B00`. Neither the script format nor `Run_PalRotationScript` is implemented.
+- **Not affected** — the two camera releases and both palette installs around it are implemented (`loc_78AA8`/`loc_78AE6`/`loc_78B08`, `LrzPostDefeatCameraReleaseInstance`), and a capture through the change now matches the native capture's gold blocks before `Camera_X_pos $2C0` and blue after.
+- **Removal condition** — `Run_PalRotationScript` and `word_78EAA` implemented, with a capture whose colours over that interval match a native BizHawk capture sampled across the ramp.
 
 ---
 

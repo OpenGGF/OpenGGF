@@ -517,6 +517,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   act change carried across with everything else, is replaced by Act 2's own once the results are
   over, so the player walks on instead of standing against an invisible wall where the arena used
   to end.
+  The fight now recolours the zone the way the ROM does: the drill's arrival and its first
+  attack each load their own palette, those colours carry through the act change -- the ROM's act
+  change loads no palette at all -- and Act 2 only takes its own blue crystal colours once the
+  player has walked far enough into it, where the ROM swaps them. Before this, Act 2 turned blue
+  the instant the act changed.
   Act 2's flame throwers are in, 52 of them: each one is a solid block that fires a jet of flame
   for two seconds, pauses for a length its own placement chooses, and fires again, sweeping the jet
   through a narrow fan as it goes. They come in the wall-mounted and floor-mounted kinds, either

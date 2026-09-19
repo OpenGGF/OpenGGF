@@ -6,6 +6,7 @@ import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.objects.LrzPostDefeatCameraReleaseInstance;
 import com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
@@ -204,6 +205,10 @@ public final class LrzMinibossInstance extends AbstractBossInstance
      */
     private static final int FLASH_WORD_OFFSET_SHIPPED = (2 * 2) / 2;
     private static final String FLASH_PALETTE_OWNER = "lrz.miniboss.flash";
+    /** Owner for the fight's two ROM palette installs, distinct from the hit flash's. */
+    private static final String MINIBOSS_PALETTE_OWNER = "lrz.miniboss.palette";
+    /** One Genesis palette line: sixteen words. */
+    private static final int PALETTE_LINE_BYTES = 0x20;
     private static final int FLASH_PALETTE_PRIORITY = 200;
     /** {@code word_786A2}: {@code dc.w -$200,$200}, selected by {@code Find_OtherObject}'s d0. */
     private static final int TRACKING_SPEED = 0x200;
@@ -934,15 +939,19 @@ public final class LrzMinibossInstance extends AbstractBossInstance
      * waiter, create {@code ChildObjDat_78D9E}'s eleven pieces, and become
      * {@code Obj_EndSignControl}.
      *
-     * <p>The palette waiter is <b>not</b> built yet, and deliberately so: both of the objects it
+     * <p>The palette waiter is {@link LrzPostDefeatCameraReleaseInstance}. Both of the objects it
      * leads to release the camera at act-2 coordinates ({@code Camera_min_X_pos = $940} at
      * {@code loc_78AE6} and {@code $2C0} at {@code loc_78B08}), which only make sense once the
-     * seamless change has rebased the world by {@code -$2C00}. Wiring them before that change
-     * exists would fire both on the frame the drill dies and drag the act 1 camera bound
-     * backwards. See the plan's open questions.
+     * seamless change has rebased the world by {@code -$2C00} -- and the ROM guarantees that
+     * ordering itself, because the waiter does nothing at all until {@code End_of_level_flag} is
+     * set, which the act 2 title card does after the change.
      */
     private void loc787E0() {
         defeatPhase = DEFEAT_HANDED_OFF;
+        // jsr (AllocateObject).l / move.l #loc_78AA8,(a1) (sonic3k.asm:160247-160250), before the
+        // debris and before this slot becomes Obj_EndSignControl.
+        spawnChild(() -> new LrzPostDefeatCameraReleaseInstance(
+                LrzPostDefeatCameraReleaseInstance.Gate.WAITER));
         for (int index = 0; index < LrzMinibossDebrisChild.DEBRIS_COUNT; index++) {
             final int piece = index;
             spawnChild(() -> new LrzMinibossDebrisChild(this, piece));
@@ -1032,6 +1041,11 @@ public final class LrzMinibossInstance extends AbstractBossInstance
             }
             arenaGateStarted = true;
             objectServices.fadeOutMusic();
+            // jmp (PalLoad_Line1).l with Pal_LRZMiniboss1 (sonic3k.asm:160008-160009) is the
+            // init dispatch's own tail, and it only runs when Check_CameraInRange let the init
+            // continue -- out of range, loc_85C74 drops the return address and the object dies.
+            // PalLoad_Line1 writes Normal_palette_line_2 (:180037-180044), engine line 1.
+            installMinibossPalette(com.openggf.game.sonic3k.constants.Sonic3kConstants.PAL_LRZ_MINIBOSS_1_ADDR, 1, 1);
             cameraGate.begin(objectServices.camera(),
                     new S3kSharedBossCameraGate.LockBounds(
                             ARENA_LOCK_Y, ARENA_LOCK_Y, ARENA_LOCK_X, ARENA_LOCK_X),
@@ -1040,6 +1054,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
             // the following frame, exactly as it is for the Ice Cap miniboss.
             return;
         }
+        boolean wasComplete = arenaGateComplete;
         arenaGateComplete = cameraGate.update(objectServices.camera(), () -> {
             if (!bossMusicStarted) {
                 bossMusicStarted = true;
@@ -1050,6 +1065,47 @@ public final class LrzMinibossInstance extends AbstractBossInstance
                 objectServices.playMusic(Sonic3kMusic.MINIBOSS_S3.id);
             }
         });
+        if (arenaGateComplete && !wasComplete) {
+            // loc_78528 (sonic3k.asm:160017-160020): the handoff dispatch installs the routine
+            // table and calls sub_78B38 with Pal_LRZMiniboss2, which copies $40 bytes from
+            // Normal_palette_line_3 (:160548-160555) -- engine lines 2 and 3.
+            installMinibossPalette(com.openggf.game.sonic3k.constants.Sonic3kConstants.PAL_LRZ_MINIBOSS_2_ADDR, 2, 2);
+        }
+    }
+
+    /**
+     * The fight's own palette installs. The ROM keeps them live through the seamless act change,
+     * because Load_Level copies the level layout and no palette (sonic3k.asm:38747-38761); only
+     * loc_78B08's release replaces them, and then only once the act 2 camera reaches $2C0.
+     *
+     * @param romAddr  the ROM palette
+     * @param firstLine engine palette line, ROM names being one-based
+     * @param lines    how many consecutive lines the copy covers
+     */
+    private void installMinibossPalette(int romAddr, int firstLine, int lines) {
+        var objectServices = tryServices();
+        if (objectServices == null || objectServices.currentLevel() == null) {
+            return;
+        }
+        try {
+            byte[] data = com.openggf.game.GameServices.rom().getRom()
+                    .readBytes(romAddr, PALETTE_LINE_BYTES * lines);
+            for (int line = 0; line < lines; line++) {
+                byte[] slice = new byte[PALETTE_LINE_BYTES];
+                System.arraycopy(data, line * PALETTE_LINE_BYTES, slice, 0, PALETTE_LINE_BYTES);
+                com.openggf.game.sonic3k.S3kPaletteWriteSupport.applyLine(
+                        objectServices.paletteOwnershipRegistryOrNull(),
+                        objectServices.currentLevel(),
+                        objectServices.graphicsManager(),
+                        MINIBOSS_PALETTE_OWNER,
+                        com.openggf.game.sonic3k.S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                        firstLine + line,
+                        slice,
+                        true);
+            }
+        } catch (Exception ignored) {
+            // A fixture without the ROM still runs the fight.
+        }
     }
 
     /** {@code Check_CameraInRange} on {@code word_784E0}. */

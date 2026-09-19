@@ -111223,3 +111223,42 @@ defeat chain, which this trace does not reach.
 - Measurement hazard hit and worth repeating: an offset sweep that breaks out of
   its loop on the first missing key reports "no divergence" for the offset that
   compares nothing. Count the compared frames and print the count.
+
+## 2026-09-19 - Lava Reef: the four segments re-measured at HEAD, and an act-2 route frontier
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `8875bc7f2`,
+  base develop `035e48a58`. Tree clean.
+- Command: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments
+  -Ds3k.rom.path=<worktree>/s3k.gen -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay,
+  TestS3kTailsFullChainLrzSegmentTraceReplay,TestS3kTailsFullChainLrz2SegmentTraceReplay,
+  TestS3kTailsFullChainLrz3SegmentTraceReplay test -B`, run after `rm -rf target/surefire-reports`
+  so no stale report could be read as a result. **4 tests, 4 failures, 0 errors, 0 skips.**
+
+| fixture | errors | first error |
+| --- | --- | --- |
+| `s3k-sonic-tails-complete-emeralds/lrz` | 6729 | frame 208 `tails_y_speed` (expected `$07BD`, actual `$0000`) |
+| `s3k-tails-full-chain-all-emeralds/lrz` | 659 | frame 218 `y_speed` (expected `$07AA`, actual `$0000`) |
+| `s3k-tails-full-chain-all-emeralds/lrz_2` | 1031 | frame 0 `camera_y` (expected `$0409`, actual `$040D`) |
+| `s3k-tails-full-chain-all-emeralds/lrz_3` | 1073 | frame 0 `y_speed` (expected `$0000`, actual `$0038`) |
+
+  The 6729 is the same count the thirteenth handover recorded before this round's four commits, so
+  none of them moved it; the `6835` figure that appeared in a report file during this round was a
+  **stale** artefact from 2026-09-18 14:06 that `rm -rf` removed.
+
+- **Act 2 has a route frontier now, and it is 923 rows.** Driving the engine through the
+  production act change and then feeding it the native's own act-2 input -- the `lrz` fixture's
+  input column from row 25558, converted to an input log
+  (`~/Videos/OGGF/lrz-bring-up/inputs/lrz2-native-route-v1.txt`) -- Player 1's `x` and `y` match
+  the fixture **exactly for rows 25558-26481**. First player divergence is row **26482**: engine
+  `($A6,$7B5)` against native `($A8,$7B5)`, two pixels in `x` on the frame the native's spindash
+  releases. First camera divergence is earlier, row **26416**, three pixels in `y`
+  (`$710` against `$713`).
+- This is a **declared positioned probe, not a cold route**: the engine reaches act 2 through the
+  real chain (arena gate, drill defeat, results, `loc_56CAA`) and is then written to the fixture's
+  own row-25558 state, Player 1 `($009E,$07AE)` and the camera `(0,$0710)`, because the filmed
+  fight is not the recorded route and leaves the player 138 px away. The write is the only
+  non-production input; everything after it is the native's controller.
+- Kill condition for row 26482: the engine's spindash release from `x $9E` on this floor must
+  produce the native's first two frames of `x`. If it is the release velocity, the divergence
+  moves to the next event; if it is the release frame, the whole trajectory shifts by one and the
+  error count will not fall.

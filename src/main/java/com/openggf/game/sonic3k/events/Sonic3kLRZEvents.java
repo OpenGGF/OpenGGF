@@ -8,6 +8,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.render.LrzRockSpriteRenderer;
 import com.openggf.game.PlayerCharacter;
@@ -117,6 +118,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     private static final int FIRST_ROM_WORLD_OFFSET_SLOT = 4;
     /** {@code Breathing_bubbles}: the {@code dbf} count ends exclusive here. */
     private static final int LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE = 94;
+
+    /** {@code PalLoad_Line1} writes {@code Normal_palette_line_2}: engine line 1. */
+    private static final int MINIBOSS_PALETTE_FIRST_LINE = 1;
+    /** One Genesis palette line: sixteen words. */
+    private static final int PALETTE_LINE_BYTES = 0x20;
 
     private boolean act1BackgroundInitialised;
     /**
@@ -320,10 +326,32 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         // LRZ2_BackgroundEvent's stage 0 (loc_5700C), which the cleared routine word selects.
         act2BackgroundInitialised = true;
         levelManager().applySynchronousScreenEventTransition(request);
+        restoreFightPaletteAcrossTheChange();
         // The synchronous reload has finished: this is the first legal post-change rewind state.
         if (hasRuntime()) {
             levelManager().markSynchronousSeamlessTransitionBoundary();
         }
+    }
+
+
+    /**
+     * {@code Load_Level} (sonic3k.asm:38747-38761) copies the level layout and nothing else: no
+     * palette. So the ROM carries the fight's own lines -- {@code Pal_LRZMiniboss1} on
+     * {@code Normal_palette_line_2} and {@code Pal_LRZMiniboss2} on {@code line_3} and the line
+     * after it -- straight through the act change, and only {@code loc_78B08} replaces them, once
+     * the act 2 camera has reached {@code $2C0}.
+     *
+     * <p>The engine's reload installs the target level's palette, which the ROM's does not, so the
+     * three lines the fight owns are written back here. Measured on a native BizHawk capture of
+     * the recorded movie ({@code ~/Videos/OGGF/lrz-bring-up/native-lrz2-bg/run1}, movie frame
+     * 416433 = trace row 26450): 893 frames after its own change the ROM still draws act 2's
+     * blocks gold, in the miniboss palette, not blue.
+     */
+    private void restoreFightPaletteAcrossTheChange() {
+        loadPalette(MINIBOSS_PALETTE_FIRST_LINE, Sonic3kConstants.PAL_LRZ_MINIBOSS_1_ADDR);
+        loadPalette(MINIBOSS_PALETTE_FIRST_LINE + 1, Sonic3kConstants.PAL_LRZ_MINIBOSS_2_ADDR);
+        loadPalette(MINIBOSS_PALETTE_FIRST_LINE + 2,
+                Sonic3kConstants.PAL_LRZ_MINIBOSS_2_ADDR + PALETTE_LINE_BYTES);
     }
 
     /** {@code Obj_Results}' {@code st (Events_fg_5)} for Lava Reef (sonic3k.asm:62615-62622). */
