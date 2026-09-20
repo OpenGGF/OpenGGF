@@ -14,6 +14,10 @@ That parenthetical "(yet!)" is doing a lot of work. This page explains how it go
 two-person chat log where the commits are silent. Where even that record is thin (early
 throwaway experiments, work done over Discord), it's flagged as recollection, not fact.*
 
+*The maintainer's GitHub identity is **Raiscan (`@raiscan`)**. Older local commit metadata and
+some historical chat quotes use the name Farrell; this page uses the handle for reader-facing
+attribution.*
+
 ---
 
 ## 2013–2024 — James, solo, by hand
@@ -35,7 +39,7 @@ working from Sonic Retro documentation and community hacking guides. Not the dis
 those only became the reference much later. Even the doubt was there from early on:
 
 > *"what were we thinking, wanting to make a Java version of this…"*
-> — Farrell, 2017
+> — Raiscan (`@raiscan`), 2017
 
 That foundation matters to everything that follows: every later experiment with AI happened
 *on top of* a hand-built engine with a hard, objective definition of "correct" — the original
@@ -44,9 +48,9 @@ ROM. There was always something to be wrong against.
 ### The audio that never got done
 
 This is a two-person project — *"Jamesj999 and Raiscan,"* as the build titles still say. James
-owned the engine. Audio was always Farrell's to do, and for years it simply… wasn't.
+owned the engine. Audio was always Raiscan's to do, and for years it simply… wasn't.
 
-> *"I need to do muh audio bungery"* — Farrell, **Jan 2020**
+> *"I need to do muh audio bungery"* — Raiscan (`@raiscan`), **Jan 2020**
 >
 > *"audio is a bit bung"* — James, **Jan 2022**
 >
@@ -79,7 +83,7 @@ That's the throwaway-scratchpad loop in two commits — get something that almos
 it against the ROM until it does. The chat from those weeks is all GPT-4:
 
 > *"I've been using ChatGPT to convert the pojos… I've got a good prompt baseline going where
-> I've given it rules"* — Farrell, 24 Sep 2024
+> I've given it rules"* — Raiscan (`@raiscan`), 24 Sep 2024
 >
 > *"I asked ChatGPT to interpret Nemesis' notes"* — 1 Oct 2024
 >
@@ -88,7 +92,7 @@ it against the ROM until it does. The chat from those weeks is all GPT-4:
 And then the payoff, the day OpenAI's first "thinking" model landed:
 
 > *"Chatgpt with its new thinking model did most of the conversion of that accurate kosinski"*
-> — Farrell, **21 Oct 2024**
+> — Raiscan (`@raiscan`), **21 Oct 2024**
 
 That's the whole thesis of this page in one sentence, eighteen months early: a model plus a
 byte-exact oracle cracked a real Mega Drive compression format. James immediately saw where it
@@ -109,7 +113,7 @@ And the lesson from that half stuck: **plausibility is not accuracy, and only th
 The next jump wasn't a smarter chat window; it was AI that could *run things itself*. The online
 version of Codex showed up and changed the texture of the work overnight:
 
-> *"Codex stuff: it makes a VM container and runs commands rofl"* — Farrell, 8 Jun 2025
+> *"Codex stuff: it makes a VM container and runs commands rofl"* — Raiscan (`@raiscan`), 8 Jun 2025
 >
 > *"Did some more experimenting with Codex last night. The AGENTS file helps a lot with
 > sensibility. I literally can't throw features fast enough at [it]"* — 11 Jun 2025
@@ -158,7 +162,7 @@ not answer about its own output. So it confidently emitted code that produced ea
 screeches and reported success.
 
 Which meant a human had to *become* the oracle. Getting from Jules's blind first draft to something
-accurate was weeks of Farrell sitting through detuned, clipping, wrong-instrument builds — ear
+accurate was weeks of Raiscan sitting through detuned, clipping, wrong-instrument builds — ear
 against the speaker, diagnosing chip-state bugs by hand in the IntelliJ debugger: FM operators,
 key-on timing, DAC rate maths, one screech at a time. The agent typed; the human listened,
 diagnosed, and corrected, over and over. Part of becoming the oracle meant *building* one: a
@@ -178,14 +182,14 @@ the whole point:
 > ▶ **[Listen — the first bad-sound build (mp4, with audio)](../assets/ai-journey/2025-12-garbled-shotgun.mp4)** ·
 > *the joke is entirely in the audio; a GIF could never*
 
-> *"that'll be why I could hear it going mad"* — Farrell, on an early audio build, Jan 2026
+> *"that'll be why I could hear it going mad"* — Raiscan (`@raiscan`), on an early audio build, Jan 2026
 >
 > *"hahaha no sound"* — James, Jan 2026
 
 From there it was the long climb to accuracy, including discoveries like the Sonic 2 sound driver
 hardcoding a wait specifically for the CPZ gloop sound:
 
-> *"who puts that in the sound driver"* — Farrell, Jan 2026
+> *"who puts that in the sound driver"* — Raiscan (`@raiscan`), Jan 2026
 
 ## February–March 2026 — AI in earnest: specs and plans
 
@@ -272,7 +276,7 @@ authored a particular commit.
 
 The strongest attribution signal is still the Git trailer. It records a model as a credited
 collaborator when the commit includes `Co-Authored-By`; it does not capture quiet Codex work that
-lands under Farrell's name, and it does not measure rejected attempts. On `origin/develop` the
+lands under `@raiscan`'s local commit identity, and it does not measure rejected attempts. On `origin/develop` the
 late-period trailers are:
 
 | Model/tool signal | Git attribution | Project-scoped usage evidence | What it appears to have done |
@@ -280,12 +284,12 @@ late-period trailers are:
 | Claude Opus 5 | 726 trailers, 24 Jul–18 Sep | 7.88B tokens in recoverable OpenGGF sessions | S3K, trace, documentation, and integration work |
 | Claude Fable 5 | 507 trailers, 10 Jun–31 Aug | 194M tokens in recoverable OpenGGF sessions | Trace, S3K, tests, plans, and rewind work |
 | Claude Fable 5.1 | 366 trailers, 2–17 Sep | 1.83B tokens in recoverable OpenGGF sessions | Audio-heavy parity work: 189 subjects mention audio |
-| GPT-5.6 Sol | no reliable trailer attribution | 9.34B tokens in tagged OpenGGF sessions | High-volume Codex work; commits generally appear under Farrell |
+| GPT-5.6 Sol | no reliable trailer attribution | 9.34B tokens in tagged OpenGGF sessions | High-volume Codex work; commits generally appear under `@raiscan` |
 | GPT-5.6 Luna | no reliable trailer attribution | 3.38B tokens in tagged OpenGGF sessions | Codex work visible in the project session log |
 | GPT-6 Astra | no reliable trailer attribution | 4.24B tokens in tagged OpenGGF sessions | September Codex work; especially visible around audio/native checks |
 
 There is an important measurement boundary here. `ccusage` is **account-wide mechanically**, but
-Farrell confirms that **all usage from 1 June 2026 onward was exclusively OpenGGF work**. That
+Raiscan confirms that **all usage from 1 June 2026 onward was exclusively OpenGGF work**. That
 makes the **140.6 billion tokens** and **$93.0k recorded cost** in the 1 June–20 September
 window project-only for this analysis. The larger all-history figures — **164.3 billion tokens**
 and **$107.1k** — still include pre-June usage and should not be presented as OpenGGF-only.
@@ -354,7 +358,7 @@ this confirmed history, and cwd-scoped session logs are still a partial bridge t
 ## The hall of shame
 
 Every frame of accuracy was paid for in bugs that were, at the time, very funny. A small,
-affectionate museum — drawn from the dev clips James and Farrell fired at each other:
+affectionate museum — drawn from the dev clips James and Raiscan fired at each other:
 
 | | |
 |:---:|:---:|
@@ -397,7 +401,7 @@ which is the whole point of building against an oracle. Roughly in order:
 - **GPT-5.6 Sol, Terra, and Luna** — first observed in the account history on **9, 11, and 10
   July**, respectively. Sol and Luna are visible in the recoverable project-scoped Codex sessions;
   Terra is not observed in that tagged OpenGGF subset, so that absence should not be read as proof
-  that Terra was unused. Their commits generally land under Farrell rather than a model trailer.
+  that Terra was unused. Their commits generally land under `@raiscan` rather than a model trailer.
 - **Fable 5.1** — first observed on **2 September 2026**, with **366 Git trailers** through
   17 September. This phase is unusually legible: **189 of its credited commit subjects mention
   audio**, including FM timing, DAC behaviour, chip buses, and parity tests. It is the clearest
@@ -448,7 +452,7 @@ But the "(yet!)" is getting louder every frontier we close.
 ## A note on the media
 
 The GIFs in [the hall of shame](#the-hall-of-shame) are short, silent, downscaled clips pulled
-from the James↔Farrell dev chat (kept small to spare the repo). They're visual bugs by necessity:
+from the James↔Raiscan dev chat (kept small to spare the repo). They're visual bugs by necessity:
 the all-time-worst moment was *audio* — a zone playing the wrong theme as a garbled shotgun — and
 a silent GIF simply can't tell that joke. The calm-looking Jan-2026 build is the closest we can
 show; the sound has to be taken on faith.
@@ -459,8 +463,8 @@ show; the sound has to be taken on faith.
 [`../status/trace-frontier-log.md`](../status/trace-frontier-log.md). For the project's stance on AI authorship, see
 the "Did you use AI to write this?" section of the [README](../../README.md).*
 
-*Authorship: the original narrative was written by Claude Opus 4.8, with Farrell dictating the
-history. This update was directed by Farrell and fact-checked against `origin/develop` at
+*Authorship: the original narrative was written by Claude Opus 4.8, with Raiscan (`@raiscan`)
+dictating the history. This update was directed by Raiscan (`@raiscan`) and fact-checked against `origin/develop` at
 `98f5fe5af`, the local `ccusage` history through 20 September 2026, and recoverable
 project-scoped session logs. Fitting, for a page about exactly this. Or, in the author's own
 words: "You write it up so it's nice, I really can't be arsed writing a novel on this."*
