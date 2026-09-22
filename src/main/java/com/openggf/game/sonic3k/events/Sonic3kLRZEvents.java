@@ -144,6 +144,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     public void update(int act, int frameCounter) {
         if (state() != null && state().zoneIndex() == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && act == 0) {
             advanceBossScreen();
+            LrzBossBackgroundStageMachine.advance(state(),camera().getX(),camera().getY(),camera().getMaxY(),()-> {
+                camera().setMaxX((short)0xA00); camera().setMinY(camera().getY());
+                levelManager().getObjectManager().createDynamicObject(
+                        com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance::new);
+            });
             return;
         }
         // LRZ1_ScreenEvent reads Events_bg+$0C before anything else draws (:115201-115204); with

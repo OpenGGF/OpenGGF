@@ -8,7 +8,8 @@ Flash sequence, autoscroll, end boss, capsule and `Obj_StartNewLevel $2D` at `($
 Hidden Palace `$1601`. Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md).
 Status: fresh-load carry/title suppression, screen stages and autoscroll implemented;
 platform generation and lava presentation are implemented; the flash/controller
-graph, background stage owner and end boss remain open.
+graph remains open; the background stage owner and end-boss candidate are under
+validation (see the in-progress evidence below).
 
 Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`, `Act3_timer`,
 `Saved2_status_secondary`), level select `$1600`, star-post respawn (`LRZ3_ScreenInit` P1 X >=
@@ -70,3 +71,29 @@ completion. All 1635 moving special-event dispatches agree with the ported fixed
 point arithmetic; unchanged emulator frames were excluded from that motion check.
 This does not certify frame-clock admission, the unimplemented flash/boss graphs
 or visual parity. See the campaign audit for the native encounter observations.
+
+## September 22 end-boss candidate (not certified)
+
+On parent `3fbb61e7c`, the background arena owner and 14-hit boss/mine graph are
+implemented in the working tree. Short startup lifetime and removed-parent/child
+restore/forward checks pass (`TestS3kLrzBossPlatformsHeadless`, 19 tests, 18:10 BST).
+The original checkpoint movie reaches defeat but hurts the player at capture
+frame 2777 and dies at 5903 before results. Clip 43 shows only the first cycle.
+A native stalled frame precedes a consistent one-frame boss offset; diagnostic
+alignment matches 4584 root state rows but is not a strict replay pass.
+
+Startup/launch allocation prefixes, negative player/fire-shield attacks, mine
+publication and explosion failure/RNG order now pass. A real authored checkpoint
+fight reaches capsule/results and playable `$1601`; full-world restoration and
+forward replay pass at peak graph (13), defeat, capsule opening and results.
+The 96-test focused selection passed at 18:41 BST without failures/errors/skips.
+Clip 44 records the completion with explicit initial fire shield and 37 rings,
+native Sonic + Tails, width 320; no hurt/death in 7300 frames.
+At 18:46 BST, 25 complete checkpoint fights pass across five widths and native
+Sonic solo/team, native Tails solo, S1 Sonic and S2 Sonic + Tails; every case
+includes the four restore/forward checks. Stream allocation failure/retry and
+reused-slot reads also pass. Palette disable/pause/resume is covered at 18:49 BST.
+Capsule child-slot fidelity, native palette row timing, hardware admission and
+cold entry remain open. See the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md)
+for failures, rejected approaches and provenance. Existing obligation rows above
+retain their delivered status until the candidate passes its encounter gate.

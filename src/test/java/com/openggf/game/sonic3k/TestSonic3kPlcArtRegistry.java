@@ -1473,7 +1473,8 @@ public class TestSonic3kPlcArtRegistry {
     public void lrzPlanHasRocksAndBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x09, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size());
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FIREWORM)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FIREWORM_SEGMENTS)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.IWAMODOKI)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.TOXOMISTER)));
@@ -1482,6 +1483,20 @@ public class TestSonic3kPlcArtRegistry {
         boolean hasLrz1Rock = plan.levelArt().stream()
                 .anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.LRZ1_ROCK));
         assertTrue(hasLrz1Rock);
+    }
+
+    @Test
+    public void lrzEndBossArtBelongsToTheBossActAndUsesItsOwnRomMappings() {
+        var boss = Sonic3kPlcArtRegistry.getPlan(0x16, 0).standaloneArt().stream()
+                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.LRZ_END_BOSS)).findFirst().orElseThrow();
+        assertEquals(0x1715F2, boss.artAddr());
+        assertEquals(0x187382, boss.mappingAddr());
+        assertEquals(18, boss.mappingFrameCount());
+        assertEquals(1, boss.palette());
+        for (int[] route : new int[][]{{9, 0}, {9, 1}, {0x16, 1}, {0x17, 1}}) {
+            assertTrue(Sonic3kPlcArtRegistry.getPlan(route[0], route[1]).standaloneArt().stream()
+                    .noneMatch(e -> e.key().equals(Sonic3kObjectArtKeys.LRZ_END_BOSS)));
+        }
     }
 
     @Test

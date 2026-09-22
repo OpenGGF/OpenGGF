@@ -434,3 +434,107 @@ passed 37 at 17:42 BST with no failures/errors/skips. Queued `-Pguards`
 `TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestObjectPriorityBucketGuard,TestSonic3kObjectProfileRegistryGuard,TestObjectServicesMigrationGuard`
 passed 18 at 17:42 BST, no failures/errors/skips. Campaign-wide validation,
 integration and push are still pending.
+
+### End-boss implementation in progress
+
+Parent `3fbb61e7c`, same campaign tree. `LRZ3_BackgroundEvent` now owns the
+single arena-allocation attempt; the candidate boss models the 14-hit scripted
+mine publisher, persistent crest/pilot, launch plume/trail, first-free platform
+stream, sinking/explosion phase, capsule, palette restoration and results wait.
+This is not yet a delivered or certified encounter. Capsule child-slot fidelity,
+all allocation-failure boundaries, completion replay and inherited cold entry
+remain open.
+
+Raw 64 revealed the new unpositioned root was being removed by default placement
+range unloading after its first update. The native waiting routine has no such
+tail; explicit routine-owned lifetimes fix it. Raw 65 then reached all 14 mine
+hits and defeat. A second implementation defect was truncating a 24-bit child
+routine address through the spawn subtype byte. Stable byte identities now
+recreate the five roles explicitly. The removed-parent/child restore and forward
+replay test initially found the inert zero-spawn schema probe needed a legal
+constructor; the corrected focused platform/graph class passed 19 tests at
+18:10 BST, no failures/errors/skips. Earlier background/camera/lifetime selection
+passed 40 at 18:06 BST.
+
+Native run 2 has an unchanged player/platform frame at emulator frame 435183;
+the positioned engine run advances there (capture frame 1114). No frame-index
+special case was added. From body initialization through the last pre-death boss
+row, 4584 engine rows match native root X, Y, routine, health, flash and wait timer
+with that **explicit one-frame diagnostic offset**. This is state-machine evidence,
+not strict replay parity or permission to drive gameplay from the comparison.
+The corresponding native input can diverge spatially after the admission difference.
+Raw 65 first hurts P1 at frame 2777 and dies at 5903, before results. Adding a
+fire shield at initial setup does not resolve it: the mine hit consumes it.
+
+Clip 43 contains raw 65 frames 1450–2649, 20 seconds at original speed, silent,
+showing emergence and the first three scripted hits. All 1200 frames decode;
+no damage/death occurs in that excerpt. Full raw capture and provenance retain
+the later failed route instead of presenting the excerpt as completion evidence.
+
+
+The authored controller route now reaches the real capsule/results release and
+playable `$1601`. Raw 67 has 7300 frames, zero hurt/death frames, and loads Hidden
+Palace at frame 7119. Setup is explicitly a fresh positioned checkpoint, native
+Sonic + Tails, 320px, 37 initial rings and a fire shield. The first 1450 inputs
+come from the original BK2; subsequent inputs were authored against the live
+mine/capsule geometry. No gameplay values are supplied from native observations.
+Clip 44 edits frames `[1450,2100)` and `[5700,7300)` into 2250 frames / 37.5 s;
+complete MP4 decoding passed. The destination's unusual entrance artwork prompted
+an independent native capture: frame 441900 is `$1601`, Y `$AEC`, with the same
+ROM art. This ruled out a suspected wrong destination. This remains checkpoint
+completion evidence, not cold entry or strict parity.
+
+Rejected capture raw 66 used an input-log header without `#P1`/`#P2` group
+markers, silently shifting decoded controls. All 5670 authored rows of corrected
+raw 67 round-trip to their intended button masks. Its source input and provenance
+are retained with the external capture; raw 66 is marked failed, not completion.
+
+`TestLrzEndBossEncounterHeadless` exercises startup/launch allocation prefixes,
+negative rolling/fire-shield attacks, real mine publication and delayed root
+consumption, V-int-gated trails, grounded capsule eligibility, and allocation
+failure/RNG ordering for three-burst explosions. Its real controller-driven fight
+removes and recreates the encounter at peak graph size (13), defeat, capsule
+opening and results, comparing all registered snapshots before and after one
+forward frame. This exposed two rewind defects: the floating capsule omitted its
+optional explosion controller, and power-up rebinding made the idle insta-shield
+the last occupant of the equipped shield's shared fixed slot. The floating
+capsule now captures its emitter like the upright capsule; rebinding registers
+the idle ability before the equipped shield. The 37-test encounter/shield/player
+rewind selection passed at 18:35 BST, no failures/errors/skips. The expanded
+96-test encounter/platform/background and required AIZ/load/bootstrap/decoding
+selection passed at 18:41 BST, no failures/errors/skips. All commands use the
+queued Maven wrapper and the explicit verified S3K ROM path.
+
+Still open: `$9E` cold-entry flash graph, capsule's collapsed child-slot graph and
+separate P2 ending-pose boundary, platform stream slot-reuse pressure, native
+palette-restore timing, wider/donor/team encounter products and the native
+art-queue admission difference. Campaign integration and combined validation
+remain pending.
+
+The focused structural selection (`-Pguards`, field disposition, helper coverage,
+zone-event schema and recreate-link tolerance) passed 21 checks at 18:43 BST.
+The art/provider/capsule selection completed 121 tests without skips and found
+one stale assertion: the Act 1 plan expected nine standalone entries, omitting
+the already-registered Fireworm head alongside its segment sheet (six common
+entries plus four badnik entries). The boss art is correctly confined to `$1600`;
+its registration does not change Act 1. The corrected inventory asserts the head
+explicitly, and a new test pins the boss ROM art/mappings/palette and excludes it
+from Acts 1/2, playable HPZ and the sanctuary. The other 120 tests passed.
+
+The corrected art registry selection passed 77 at 18:44 BST. Platform-stream
+pressure now verifies failed-first-allocation retry, cleared-slot X=0, reused-slot
+occupant X, and low-byte direction shutdown. The encounter class then passed
+41 tests at 18:46 BST (no failures/errors/skips): 25 complete fights across five
+widths (320/352/400/528/800) and five configurations (native Sonic + Tails,
+native Sonic solo, native Tails solo, S1 Sonic solo, S2 Sonic + Tails), each with
+all four full-world remove/restore/forward checks, plus 16 short boundaries.
+These use declared arena/fire-shield setup and do not certify the cold approach.
+
+`Run_PalRotationScript`'s global disable gate is now honored by the capsule
+palette helper while its caller still writes `$7FFF`. The focused pause/resume
+regression passed at 18:49 BST; two existing LRZ3 palette-cycle checks also
+passed. An initial assertion incorrectly treated `palscriptdata 4` as stored
+word 4: the disassembly macro emits `frames-1`, so the correct encoded delay is
+3 and the next write is four enabled dispatches later. Runtime timing already
+used the ROM word; only the test expectation needed correction. Native palette
+row parity and capsule child-slot fidelity remain open.

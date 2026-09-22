@@ -3609,3 +3609,17 @@ the focused batch and `-Pguards`, cancelling a waiting request rather than letti
 tree that was about to change. And `pgrep -f` inside a Bash tool call matches the tool's own shell:
 killing by that pattern kills the call (exit 144). Put the pattern in a script file and kill by the
 PIDs it prints.
+
+
+### 2026-09-22 campaign continuation: end-boss candidate
+
+The completion campaign on `feature/ai-sk-zone-completion`, parent `3fbb61e7c`,
+implements the background arena owner and the 14-hit end boss through capsule,
+results and the `$1601` exit. Follow the updated
+[boss matrix](../validation/levels/s3k-lrz-boss.md) and
+[campaign audit](../audits/2026-09-22-sk-zone-bring-up.md) for the exact tests,
+failed attempts, native offset caveat and external media provenance. Clip 44
+shows the successful authored checkpoint encounter; it does not certify cold
+entry. The remaining `$9E` flash/autoscroll object graph is the next route blocker.
+Capsule slot fidelity, separate P2 ending pose, allocation pressure and encounter
+configuration breadth remain explicit obligations. No integration/push claim yet.

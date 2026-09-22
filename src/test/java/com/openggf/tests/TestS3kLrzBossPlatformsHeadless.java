@@ -43,6 +43,40 @@ class TestS3kLrzBossPlatformsHeadless {
         assertEquals(dynamic.size(),platforms().stream().filter(p->p.getSpawn().objectId()==0).count());
         fixture.stepFrame(false,false,false,false,false); same(after,registry.capture());
     }
+    @Test void unpositionedBossRemainsAliveWhileWaitingForTheEntryPlatform() {
+        var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
+                .startPosition((short)0x480,(short)0x400).startPositionIsCentre().build();
+        var manager=GameServices.level().getObjectManager();
+        var boss=manager.createDynamicObject(com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance::new);
+        for(int i=0;i<3;i++) fixture.stepFrame(false,false,false,false,false);
+        assertTrue(manager.getActiveObjects().contains(boss),
+                "Obj_LRZEndBoss waits at uninitialized coordinates without a range-delete tail");
+        assertEquals(0,boss.getX()); assertEquals(0,boss.getY());
+        assertEquals(boss.getSlotIndex(),com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                .currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow().bossAct().bossSlot());
+    }
+
+    @Test void bossCreatesItsPersistentChildrenAndRestoresTheirParentGraph() {
+        var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
+                .startPosition((short)0x480,(short)0x400).startPositionIsCentre().build();
+        var manager=GameServices.level().getObjectManager();
+        manager.createDynamicObject(com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance::new);
+        fixture.stepFrame(false,false,false,false,false);
+        com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry())
+                .orElseThrow().bossAct().publishEntryPlatformReady();
+        for(int i=0;i<124;i++) fixture.stepFrame(false,false,false,false,false);
+        var children=manager.getActiveObjects().stream()
+                .filter(o->o instanceof com.openggf.game.sonic3k.objects.LrzEndBossChild).toList();
+        assertEquals(2,children.size(),"ChildObjDat_7A18C crest and pilot");
+        var registry=fixture.gameplayMode().getRewindRegistry(); var before=registry.capture();
+        fixture.stepFrame(false,false,false,false,false); var after=registry.capture();
+        manager.getActiveObjects().stream().filter(o->o instanceof com.openggf.game.sonic3k.objects.LrzEndBossChild
+                || o instanceof com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance)
+                .toList().forEach(manager::removeDynamicObject);
+        registry.restore(before); same(before,registry.capture());
+        fixture.stepFrame(false,false,false,false,false); same(after,registry.capture());
+    }
+
     @Test void nativeMaskFramesCoverTheLavaHorizonAtTheirOwnPriority() throws Exception {
         HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle().build();
         assertTrue(new com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider().useSpriteSatMasking(22));

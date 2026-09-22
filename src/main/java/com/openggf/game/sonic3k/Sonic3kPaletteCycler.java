@@ -1248,6 +1248,10 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                     ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentLrz(
                             GameServices.zoneRuntimeRegistry()).orElse(null) : null;
             int mode = runtime == null ? 0 : runtime.bossAct().paletteMode();
+            if (runtime != null) {
+                int write=runtime.bossAct().consumePrimaryPaletteTimerWrite();
+                if(write>=0) primaryTimer=write;
+            }
             if ((byte) mode < 0) return;
             var graphics = GameServices.graphics();
             if (--primaryTimer < 0) {

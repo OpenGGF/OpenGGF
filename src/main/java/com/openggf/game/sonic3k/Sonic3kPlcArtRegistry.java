@@ -3008,6 +3008,8 @@ public final class Sonic3kPlcArtRegistry {
      */
     private static void addLrzBossEntries(List<StandaloneArtEntry> standalone,
                                           List<LevelArtEntry> levelArt) {
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.LRZ_END_BOSS,
+                0x1715F2, CompressionType.KOSINSKI_MODULED, 0, 0x187382, 1, -1, 18));
         // ObjDat3_7960E / ArtKosM_LRZ3PlatformDebris, ROM $1714C0, Map_LRZ3Debris $187860.
         standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.LRZ3_PLATFORM_DEBRIS,
                 0x1714C0, CompressionType.KOSINSKI_MODULED, 0, 0x187860, 3, -1, 4));

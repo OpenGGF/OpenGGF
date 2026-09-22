@@ -105,6 +105,8 @@ final class DefaultObjectRewindPolicies {
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
             // LRZ3 undersides must bind to their exact recreated moving platform.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzBossPlatformObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzEndBossChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzEndBossExplosion", "parent"), RewindFieldPolicy.CAPTURED),
             // Launcher must retain the exact managed ball after recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzSpikeBallLauncherObjectInstance", "ball"), RewindFieldPolicy.CAPTURED),
             // These SOZ SST links remain mutable during native graph teardown.
