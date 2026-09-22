@@ -2750,3 +2750,26 @@ Concrete placement counts are now 224/365 in act 1 and 318/494 in act 2. The
 seeded act-2 trace frontier remains 1256 frames with the same row-21029 X/camera
 difference; cold entry remains unmatched. This slice adds no act-wide route or
 native visual claim. Visible lightning emitters `$52` remain next.
+
+
+## 2026-09-22 slice 4: visible lightning
+
+After `de73bead8`, SKL `$52` owns the ROM lightning animation at `$47926`, with
+five mapping frames at `$4792E` using DEZMisc tile `$379`, palette 0, bucket 5.
+Its classic `Animate_Sprite` `$FC` command clears the pose and enters a signed
+word subtype wait. Poses 1–4 each last two object dispatches; only pose 3 appends
+the object pointer to the next player pass's collision list. Collision flags
+stay `$9F`. Restart sound reads the carried render bit, including empty poses.
+
+The first census failed because the similarly named pillar alias is `$20`, not
+`$52`; registration now uses the verified `$52` constant and preserves the
+S3KL pillar. Counts are 272/365 and 412/494 concrete placements. Timer, sound,
+ROM art and player-loop contact/rewind tests cover this owner; the latter checks
+the preceding published pose rather than assuming the harness's initial load
+dispatch is an ordinary gameplay tick.
+
+Engine clip `$HOME/Videos/OGGF/s3k-dez-bring-up/050-lightning-and-shock-floor-320/capture.mp4`
+shows 300 frames of the placed emitters with Sonic alongside, zero deaths.
+The initial positioned attempt `048` died immediately; `049` left the emitters
+below the viewport. Neither is accepted as visual evidence for this change.
+Full native matching, inverted contacts and donor/team breadth remain open.

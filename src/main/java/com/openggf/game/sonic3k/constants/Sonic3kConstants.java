@@ -504,6 +504,9 @@ public class Sonic3kConstants {
     public static final int MAP_DEZ_ENERGY_BRIDGE_ADDR = 0x047FF8;
     /** {@code Map_DEZBumperWall} (sonic3k.lst: ROM $000498C2). */
     public static final int MAP_DEZ_BUMPER_WALL_ADDR = 0x0498C2;
+    /** Ani_DEZLightning / Map_DEZLightning, sonic3k.lst:110370-110380. */
+    public static final int ANI_DEZ_LIGHTNING_ADDR = 0x047926;
+    public static final int MAP_DEZ_LIGHTNING_ADDR = 0x04792E;
 
     // ===== Tension Bridge mappings (Obj_TensionBridge, ID 0x6C) =====
     public static final int MAP_TENSION_BRIDGE_ADDR = 0x038FF2;   // Map_TensionBridge

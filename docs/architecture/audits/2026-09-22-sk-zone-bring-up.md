@@ -991,3 +991,34 @@ TestRewindArchitectureGuard,TestSonic3kObjectProfileRegistryGuard` passed all
 isolated passes and 240 graph-covered, no missing codec. Census is 224/365
 concrete in act 1 and 318/494 in act 2. These are focused checks, not combined
 campaign delivery or a full route/native visual claim.
+
+
+### Visible lightning family
+
+After `de73bead8`, SKL `$52` is implemented from `Obj_DEZLightning` at `$478BE`
+through `$4791A`. Animation `$47926` and mapping `$4792E` are ROM-backed;
+DEZMisc tile `$379`, palette 0 and sprite bucket 5 follow the art word and
+priority word independently. `$FC` ends the flash into a subtype countdown.
+Only pose 3 publishes a collision-list pointer; flags stay `$9F`, so the next
+player pass consumes exactly the native list. Sound reads the last renderer
+visibility bit, including the empty waiting pose.
+
+The initial census caught the wrong pillar constant (`ALT` is `$20`); the final
+registration uses `$52`. The contact test's original absolute pass count also
+counted initial-load dispatch as ordinary gameplay. It now observes the actual
+preceding published pose and checks damage through the production player loop,
+including restoring a pending damaging pointer and replaying the hit.
+
+At 22:08 BST, queued Java 21 `-Dmse=off` selection
+`TestS3kDezLightningHeadless,TestS3kDezPlacementCensus,TestSonic3kPlcArtRegistry,
+TestPatternSpriteRendererCorruptionGuard,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passed 150 tests, zero failures/errors/skips, with absolute S3K and S1 ROM paths.
+This includes both packages' `TestSonic3kLevelLoading` classes.
+Clip `050` under `$HOME/Videos/OGGF/s3k-dez-bring-up/` shows 300 frames of the
+placed emitters, zero deaths, and passes full ffmpeg decode. Frame 90 was
+inspected. `048` immediately died and `049` framed the emitters below the screen;
+neither supports visual acceptance. Census is 272/365 and 412/494 concrete.
+Native matching and donor/team/inverted-contact breadth remain open.
+
+Fresh `-Pguards` selection `TestRemainingRewindTailInventory,TestRewindArchitectureGuard,TestSonic3kObjectProfileRegistryGuard` passed 7 checks at 22:09 BST, zero skips. Inventory is 1234 total / 994 isolated / 240 graph-covered / 0 missing codec. Combined campaign validation remains owed.

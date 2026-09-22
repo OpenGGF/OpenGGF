@@ -3194,6 +3194,14 @@ public final class Sonic3kPlcArtRegistry {
                 DEZ_ENERGY_BRIDGE_FRAME_COUNT
         ));
 
+        // Obj_DEZLightning: ArtTile_DEZMisc+$2C, palette 0, Map_DEZLightning.
+        // Five frames include the empty wait pose (sonic3k.asm:93568-93569).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_LIGHTNING,
+                Sonic3kConstants.MAP_DEZ_LIGHTNING_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x2C,
+                0, null, 5));
+
         // Bumper wall (SKL object 0x60, Obj_DEZBumperWall): the act 1 turbine room's walls,
         // posts and exit gate. ROM header: move.l #Map_DEZBumperWall,mappings(a0) and
         // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:95959-95960),
