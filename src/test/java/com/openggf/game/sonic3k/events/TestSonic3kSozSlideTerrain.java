@@ -3,19 +3,16 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SecondaryAbility;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kSozSlideTerrain {
     private byte[] table(int address, int size) throws Exception {
-        byte[] rom = Files.readAllBytes(Path.of(System.getProperty("s3k.rom.path")));
-        return Arrays.copyOfRange(rom, address, address + size);
+        return TestEnvironment.currentRom().readBytes(address, size);
     }
     private boolean apply(AbstractPlayableSprite p, int block) throws Exception {
         return Sonic3kSOZEvents.applySlideTerrain(p, block, table(0x74AC,17), table(0x74BD,34));

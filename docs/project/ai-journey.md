@@ -14,6 +14,10 @@ That parenthetical "(yet!)" is doing a lot of work. This page explains how it go
 two-person chat log where the commits are silent. Where even that record is thin (early
 throwaway experiments, work done over Discord), it's flagged as recollection, not fact.*
 
+*The maintainer's GitHub identity is **Raiscan (`@raiscan`)**. Older local commit metadata and
+some historical chat quotes use the name Farrell; this page uses the handle for reader-facing
+attribution.*
+
 ---
 
 ## 2013–2024 — James, solo, by hand
@@ -35,7 +39,7 @@ working from Sonic Retro documentation and community hacking guides. Not the dis
 those only became the reference much later. Even the doubt was there from early on:
 
 > *"what were we thinking, wanting to make a Java version of this…"*
-> — Farrell, 2017
+> — Raiscan (`@raiscan`), 2017
 
 That foundation matters to everything that follows: every later experiment with AI happened
 *on top of* a hand-built engine with a hard, objective definition of "correct" — the original
@@ -44,9 +48,9 @@ ROM. There was always something to be wrong against.
 ### The audio that never got done
 
 This is a two-person project — *"Jamesj999 and Raiscan,"* as the build titles still say. James
-owned the engine. Audio was always Farrell's to do, and for years it simply… wasn't.
+owned the engine. Audio was always Raiscan's to do, and for years it simply… wasn't.
 
-> *"I need to do muh audio bungery"* — Farrell, **Jan 2020**
+> *"I need to do muh audio bungery"* — Raiscan (`@raiscan`), **Jan 2020**
 >
 > *"audio is a bit bung"* — James, **Jan 2022**
 >
@@ -79,7 +83,7 @@ That's the throwaway-scratchpad loop in two commits — get something that almos
 it against the ROM until it does. The chat from those weeks is all GPT-4:
 
 > *"I've been using ChatGPT to convert the pojos… I've got a good prompt baseline going where
-> I've given it rules"* — Farrell, 24 Sep 2024
+> I've given it rules"* — Raiscan (`@raiscan`), 24 Sep 2024
 >
 > *"I asked ChatGPT to interpret Nemesis' notes"* — 1 Oct 2024
 >
@@ -88,7 +92,7 @@ it against the ROM until it does. The chat from those weeks is all GPT-4:
 And then the payoff, the day OpenAI's first "thinking" model landed:
 
 > *"Chatgpt with its new thinking model did most of the conversion of that accurate kosinski"*
-> — Farrell, **21 Oct 2024**
+> — Raiscan (`@raiscan`), **21 Oct 2024**
 
 That's the whole thesis of this page in one sentence, eighteen months early: a model plus a
 byte-exact oracle cracked a real Mega Drive compression format. James immediately saw where it
@@ -109,7 +113,7 @@ And the lesson from that half stuck: **plausibility is not accuracy, and only th
 The next jump wasn't a smarter chat window; it was AI that could *run things itself*. The online
 version of Codex showed up and changed the texture of the work overnight:
 
-> *"Codex stuff: it makes a VM container and runs commands rofl"* — Farrell, 8 Jun 2025
+> *"Codex stuff: it makes a VM container and runs commands rofl"* — Raiscan (`@raiscan`), 8 Jun 2025
 >
 > *"Did some more experimenting with Codex last night. The AGENTS file helps a lot with
 > sensibility. I literally can't throw features fast enough at [it]"* — 11 Jun 2025
@@ -158,7 +162,7 @@ not answer about its own output. So it confidently emitted code that produced ea
 screeches and reported success.
 
 Which meant a human had to *become* the oracle. Getting from Jules's blind first draft to something
-accurate was weeks of Farrell sitting through detuned, clipping, wrong-instrument builds — ear
+accurate was weeks of Raiscan sitting through detuned, clipping, wrong-instrument builds — ear
 against the speaker, diagnosing chip-state bugs by hand in the IntelliJ debugger: FM operators,
 key-on timing, DAC rate maths, one screech at a time. The agent typed; the human listened,
 diagnosed, and corrected, over and over. Part of becoming the oracle meant *building* one: a
@@ -178,14 +182,14 @@ the whole point:
 > ▶ **[Listen — the first bad-sound build (mp4, with audio)](../assets/ai-journey/2025-12-garbled-shotgun.mp4)** ·
 > *the joke is entirely in the audio; a GIF could never*
 
-> *"that'll be why I could hear it going mad"* — Farrell, on an early audio build, Jan 2026
+> *"that'll be why I could hear it going mad"* — Raiscan (`@raiscan`), on an early audio build, Jan 2026
 >
 > *"hahaha no sound"* — James, Jan 2026
 
 From there it was the long climb to accuracy, including discoveries like the Sonic 2 sound driver
 hardcoding a wait specifically for the CPZ gloop sound:
 
-> *"who puts that in the sound driver"* — Farrell, Jan 2026
+> *"who puts that in the sound driver"* — Raiscan (`@raiscan`), Jan 2026
 
 ## February–March 2026 — AI in earnest: specs and plans
 
@@ -246,10 +250,115 @@ arena approach (frame ~19089)** — thousands of frames of byte-comparable, ROM-
 earned by closing a specific divergence the trace pointed at. Dozens of these traces run across
 S1, S2, and S3K.
 
+## July–September 2026 — the frontier becomes a production system
+
+When this page was last reorganised on **26 July 2026**, the trace frontier was already the
+right way to think about AI-assisted accuracy. The next eight weeks show what happens when that
+loop is run at project scale. From **27 July through 19 September**, `origin/develop` records
+**5,004 commits**: **3,772 non-merge commits** and **1,232 merges**. That is not 5,004 model
+outputs, and it is not a claim that every commit was AI-written. It is the size of the delivery
+stream in which the method operated.
+
+The work was not one undifferentiated AI flood. The commit subjects show several parallel
+frontiers: **823 documentation commits**, **561 general fixes**, **341 audio fixes**, **235 S3K
+fixes**, **157 test commits**, **135 trace fixes**, and **118 audio tests** in that same window.
+By September, the loop had grown beyond movement traces: native checkpoint pixel capture landed
+in [`fc29dcf37`](https://github.com/OpenGGF/OpenGGF/commit/fc29dcf37), physical FM chip-bus capture
+in [`aefd59738`](https://github.com/OpenGGF/OpenGGF/commit/aefd59738), and the clean-room
+`FastYm2612Dsp` behind `audio.fmCore=fast` in [`354104dc0`](https://github.com/OpenGGF/OpenGGF/commit/354104dc0).
+The oracle is becoming a family of oracles: ROM state, audio state, and rendered pixels.
+
+The model/tool sequence changed in the same period. The local account history first shows
+**GPT-5.6 Sol on 9 July**, **Luna on 10 July**, and **Terra on 11 July**; **Opus 5** appears on
+24 July; **Fable 5.1** on 2 September; and **GPT-6 Astra** on 4 September. These dates are first
+observed use in the local usage export, not release dates and not proof that a particular model
+authored a particular commit.
+
+The strongest attribution signal is still the Git trailer. It records a model as a credited
+collaborator when the commit includes `Co-Authored-By`; it does not capture quiet Codex work that
+lands under `@raiscan`'s local commit identity, and it does not measure rejected attempts. On `origin/develop` the
+late-period trailers are:
+
+| Model/tool signal | Git attribution | Project-scoped usage evidence | What it appears to have done |
+|---|---:|---:|---|
+| Claude Opus 5 | 726 trailers, 24 Jul–18 Sep | 7.88B tokens in recoverable OpenGGF sessions | S3K, trace, documentation, and integration work |
+| Claude Fable 5 | 507 trailers, 10 Jun–31 Aug | 194M tokens in recoverable OpenGGF sessions | Trace, S3K, tests, plans, and rewind work |
+| Claude Fable 5.1 | 366 trailers, 2–17 Sep | 1.83B tokens in recoverable OpenGGF sessions | Audio-heavy parity work: 189 subjects mention audio |
+| GPT-5.6 Sol | no reliable trailer attribution | 9.34B tokens in tagged OpenGGF sessions | High-volume Codex work; commits generally appear under `@raiscan` |
+| GPT-5.6 Luna | no reliable trailer attribution | 3.38B tokens in tagged OpenGGF sessions | Codex work visible in the project session log |
+| GPT-6 Astra | no reliable trailer attribution | 4.24B tokens in tagged OpenGGF sessions | September Codex work; especially visible around audio/native checks |
+
+There is an important measurement boundary here. `ccusage` is **account-wide mechanically**, but
+Raiscan confirms that **all usage from 1 June 2026 onward was exclusively OpenGGF work**. That
+makes the **140.6 billion tokens** and **$93.0k recorded cost** in the 1 June–20 September
+window project-only for this analysis. The larger all-history figures — **164.3 billion tokens**
+and **$107.1k** — still include pre-June usage and should not be presented as OpenGGF-only.
+The project-scoped session figures above are a useful cross-check, but remain incomplete —
+especially for Codex sessions whose model metadata was not recoverable. Git history tells us what
+landed; usage history tells us what was spent; neither one alone tells us which model deserves
+credit for a particular line.
+
+### A fairer 2026 comparison: equal launch windows
+
+Raw totals are distorted by availability. To make the comparison less misleading, the table below
+normalises each model to the **first 14 calendar days in which it appears in the account-wide
+usage history**. The windows are intentionally launch-aligned rather than one shared fortnight:
+that asks, “what did the first two weeks of each model's observed use look like?” It is not a
+quality benchmark, and the concurrent `develop` commit count is context only — those commits are
+not assigned to the model.
+
+The usage values were derived from `ccusage daily --json` for **23 April–20 September 2026**;
+the commit counts were independently counted from `origin/develop` over the matching UTC-calendar
+windows. Windows beginning on or after **1 June** can be treated as OpenGGF-only under the
+confirmed usage boundary. The GPT-5.5 baseline window predates that boundary and remains a mixed
+account-wide comparison. Keeping those ledgers separate is deliberate.
+
+| First observed model | Equal window | Active days | Observed tokens | Recorded cost | `develop` commits in window |
+|---|---|---:|---:|---:|---:|
+| GPT-5.5 | 23 Apr–6 May | 11/14 | 4.86B | $3,654.82 | 954 |
+| Claude Opus 4.8 | 23 Jun–6 Jul | 13/14 | 7.65B | $5,816.92 | 1,643 |
+| Claude Fable 5 | 2–15 Jul | 11/14 | 1.61B | $2,540.14 | 1,414 |
+| GPT-5.6 Sol | 9–22 Jul | 14/14 | 26.85B | $14,365.52 | 1,748 |
+| GPT-5.6 Luna | 10–23 Jul | 3/14 | 7.17M | $0.31 | 1,800 |
+| GPT-5.6 Terra | 11–24 Jul | 5/14 | 131.30M | $39.85 | 1,778 |
+| Claude Opus 5 | 24 Jul–6 Aug | 11/14 | 6.05B | $4,327.49 | 1,039 |
+| Claude Fable 5.1 | 2–15 Sep | 12/14 | 2.09B | $1,267.60 | 1,436 |
+| GPT-6 Astra | 4–17 Sep | 12/14 | 4.35B | $5,635.84 | 1,515 |
+
+Two useful cautions fall out of this normalisation. Sol's first observed fortnight is a very large
+OpenGGF usage burst, while Luna and Terra are sparse in the same ledger; that is a statement about
+this local account's routing and workload, not model capability. And the high commit counts in
+every row reinforce the central problem: a busy repository cannot tell us which model typed a line
+unless the workflow left an attribution signal. The next useful analysis is a model-complete
+equal-window table for the Codex session files, not a broader account-wide total.
+
+The practical lesson is more useful than a leaderboard: **models became interchangeable hands
+inside a human-owned, oracle-driven system**. Opus 5 carried a broad S3K/trace/documentation
+frontier; Fable 5.1 concentrated heavily on audio; Sol, Luna, and Astra contributed substantial
+Codex activity without leaving the same trailer fingerprint. The stable unit of progress was not
+the model. It was the loop: reproduce the ROM, isolate the first mismatch, cite the owning
+routine, change the engine, and run the oracle again.
+
+### Shareable companion graphics
+
+The source-linked fact sheets are intended for technical contributors and people building similar
+AI-assisted preservation projects:
+
+- [AI × ROM accuracy — fact sheet (PNG)](../assets/ai-journey/ai-journey-fact-sheet.png) ·
+  [source SVG](../assets/ai-journey/ai-journey-fact-sheet.svg)
+- [Model/tool timeline (PNG)](../assets/ai-journey/ai-journey-model-timeline.png) ·
+  [source SVG](../assets/ai-journey/ai-journey-model-timeline.svg)
+- [Model roles and evidence (PNG)](../assets/ai-journey/ai-journey-model-roles.png) ·
+  [source SVG](../assets/ai-journey/ai-journey-model-roles.svg)
+
+Each graphic carries its own source note. The short version: Git is the landing record, trailers
+are attribution hints, `ccusage` is mechanically account-wide but project-only from June onward in
+this confirmed history, and cwd-scoped session logs are still a partial bridge to model identity.
+
 ## The hall of shame
 
 Every frame of accuracy was paid for in bugs that were, at the time, very funny. A small,
-affectionate museum — drawn from the dev clips James and Farrell fired at each other:
+affectionate museum — drawn from the dev clips James and Raiscan fired at each other:
 
 | | |
 |:---:|:---:|
@@ -277,12 +386,39 @@ which is the whole point of building against an oracle. Roughly in order:
 - **Claude Code** — the first *measurable jump* in quality. The `Co-Authored-By` trailers start
   around **22 January 2026** (Opus 4.5), and Claude quickly became the workhorse through Opus 4.6
   and 4.7 — the dominant signature in the entire commit history.
-- **Today: Opus 4.8 and GPT-5.5, side by side.** GPT-5.5 was state-of-the-art for a stretch and
-  did genuinely strong work (it commits quietly, under the human's name on `codex/*` branches, so
-  it's underrepresented in the trailers). **Opus 4.8 narrowed the gap** enough to bring the work
-  back to Claude Code; the two now run in parallel depending on the task.
-- **Fable 5 — the one that got away.** We had it for a brief two-day window (25 commits across
-  10–12 June 2026) and it showed real promise before it went. Here's hoping Anthropic brings it back.
+- **Opus 4.8 and GPT-5.5** — the parallel workhorses through mid-2026. GPT-5.5 commits quietly,
+  under the human's name on `codex/*` branches, so its usage is underrepresented in the trailers.
+  Opus 4.8's trailer span runs from late May into July, alongside the GPT-5.5 usage window.
+- **Fable 5** — not just the brief June experiment remembered in the first draft. The local Git
+  history contains **507 `Claude Fable 5` trailers**, from **10 June through 31 August 2026**,
+  with the densest run in July. Its credited work clusters around traces, S3K, tests, plans, and
+  rewind. It was a real phase of the project, even though it was not always available in the same
+  way as Claude Code.
+- **Opus 5** — first visible in the local usage history on **24 July 2026**, and credited by
+  **726 Git trailers** through 18 September. Its landed work is broad: S3K bring-up, trace
+  infrastructure, documentation, integration, and the large body of reviewable glue that keeps
+  the frontier moving.
+- **GPT-5.6 Sol, Terra, and Luna** — first observed in the account history on **9, 11, and 10
+  July**, respectively. Sol and Luna are visible in the recoverable project-scoped Codex sessions;
+  Terra is not observed in that tagged OpenGGF subset, so that absence should not be read as proof
+  that Terra was unused. Their commits generally land under `@raiscan` rather than a model trailer.
+- **Fable 5.1** — first observed on **2 September 2026**, with **366 Git trailers** through
+  17 September. This phase is unusually legible: **189 of its credited commit subjects mention
+  audio**, including FM timing, DAC behaviour, chip buses, and parity tests. It is the clearest
+  example yet of a model being associated with a narrow technical frontier rather than a generic
+  “AI contribution.” The US-government availability block that prompted the earlier “one that got
+  away” wording was a real interruption, but it was not the end of the story: Fable 5.1 returned
+  as a distinct, audio-heavy phase.
+- **GPT-6 Astra** — first observed on **4 September 2026**. It has no reliable Git trailer
+  fingerprint, but the recoverable OpenGGF session log contains **4.24 billion tokens** through
+  16 September. Treat that as project activity evidence, not line-level authorship.
+
+The numbers come from three different ledgers and should not be collapsed into one leaderboard:
+Git commits and trailers show what landed and how a commit was credited; `ccusage` shows local
+token volume and recorded cost, with the June-onward period confirmed as OpenGGF-only; cwd-scoped
+session logs provide a partial project view, with missing model metadata in many Codex sessions.
+In other words, **usage is not authorship, authorship is not quality, and quality is not accuracy
+until the ROM agrees**.
 
 The throughline: no single tool "won." Each raised the floor, the oracle kept score, and the
 discipline around them stayed constant.
@@ -316,7 +452,7 @@ But the "(yet!)" is getting louder every frontier we close.
 ## A note on the media
 
 The GIFs in [the hall of shame](#the-hall-of-shame) are short, silent, downscaled clips pulled
-from the James↔Farrell dev chat (kept small to spare the repo). They're visual bugs by necessity:
+from the James↔Raiscan dev chat (kept small to spare the repo). They're visual bugs by necessity:
 the all-time-worst moment was *audio* — a zone playing the wrong theme as a garbled shotgun — and
 a silent GIF simply can't tell that joke. The calm-looking Jan-2026 build is the closest we can
 show; the sound has to be taken on faith.
@@ -327,7 +463,8 @@ show; the sound has to be taken on faith.
 [`../status/trace-frontier-log.md`](../status/trace-frontier-log.md). For the project's stance on AI authorship, see
 the "Did you use AI to write this?" section of the [README](../../README.md).*
 
-*Authorship: written by Claude Opus 4.8, with Farrell dictating the history — and fact-checked
-against the commit log (and ten years of chat backlog) every step of the way. Fitting, for a page
-about exactly this. Or, in the author's own words: "You write it up so it's nice, I really can't be
-arsed writing a novel on this."*
+*Authorship: the original narrative was written by Claude Opus 4.8, with Raiscan (`@raiscan`)
+dictating the history. This update was directed by Raiscan (`@raiscan`) and fact-checked against `origin/develop` at
+`98f5fe5af`, the local `ccusage` history through 20 September 2026, and recoverable
+project-scoped session logs. Fitting, for a page about exactly this. Or, in the author's own
+words: "You write it up so it's nice, I really can't be arsed writing a novel on this."*
