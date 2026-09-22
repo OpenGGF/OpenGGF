@@ -1424,6 +1424,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Reconcile only the adapter binding here; never restore a second sidecar.
         reconcileFbzRuntimeStateAfterRestore();
         reconcileFbzCloudsAfterObjectRestore();
+        S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).ifPresent(state ->
+                com.openggf.game.sonic3k.events.SszLaunchBackground.restore(GameServices.level(), state));
     }
 
     @Override

@@ -136,6 +136,25 @@ public class SwScrlSsz extends SwScrlS3kDefault {
         state.setBackgroundScrollFrame(frameCounter);
         composeFrame(state, horizScrollBuf, cameraX, cameraY, advance);
         currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(horizScrollBuf, viewportWidth());
+        if (advance && state.foregroundRoutine() >= 8)
+            com.openggf.game.sonic3k.events.SszLaunchBackground.update(GameServices.level(), state);
+    }
+
+    // shader_tilemap adds column values to WorldOffsetY. Convert the native absolute
+    // VSRAM words to deltas, or the arena/Death Egg samples camera Y twice.
+    @Override public short[] getPerColumnVScrollFG() {
+        var state = state();
+        if (state == null || state.foregroundRoutine() == 0) return null;
+        int width = viewportWidth();
+        short[] columns = new short[(width + 15) / 16];
+        var camera = GameServices.camera();
+        for (int i = 0; i < columns.length; i++) {
+            if (state.foregroundRoutine() == 4) {
+                int channel = Math.max(0, Math.min(9, (camera.getX() + i * 16 - 0x19A0) >> 5));
+                columns[i] = (short) (state.launch().scroll(channel) - camera.getY());
+            } else columns[i] = (short) (state.launch().foregroundY() - camera.getY());
+        }
+        return columns;
     }
 
     /**

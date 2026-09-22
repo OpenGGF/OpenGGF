@@ -16,6 +16,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -248,6 +249,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private Callback callback = Callback.NONE;
     private boolean initExecuted;
     private boolean defeated;
+    private boolean launchDeletePending;
+    public void deleteOnNextObjectPass() { launchDeletePending = true; }
     /** {@code PalLoad_Line1} is a one-shot; the restore belongs to the owed defeat graph. */
     private boolean paletteLoaded;
 
@@ -271,7 +274,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                                int callback, boolean initExecuted, boolean defeated, boolean paletteLoaded,
                                int animScript, int animFrame, int animFrameTimer,
                                int mappingFrame, int routine, int hitCount, boolean invulnerable,
-                               int invulnerabilityTimer)
+                               int invulnerabilityTimer, boolean launchDeletePending)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     @Override
@@ -286,7 +289,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                 attackCounter, yRadius, renderFlipped, flags, callback.ordinal(),
                 initExecuted, defeated, paletteLoaded, anim.script, anim.animFrame, anim.animFrameTimer,
                 anim.mappingFrame, super.state.routine, super.state.hitCount,
-                super.state.invulnerable, super.state.invulnerabilityTimer));
+                super.state.invulnerable, super.state.invulnerabilityTimer, launchDeletePending));
     }
 
     @Override
@@ -309,6 +312,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         callback = Callback.values()[extra.callback()];
         initExecuted = extra.initExecuted();
         defeated = extra.defeated();
+        launchDeletePending = extra.launchDeletePending();
         paletteLoaded = extra.paletteLoaded();
         anim.script = extra.animScript();
         anim.animFrame = extra.animFrame();
@@ -404,6 +408,10 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
+        if (launchDeletePending) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
         // Obj_SSZEndBoss's tail is unconditional: the routine, then sub_7D312, then sub_7D2D8,
         // then Perform_DPLC. The init is routine 0's body, not something that happens instead of
         // a dispatch, so the collision byte is written on that frame too -- loc_7B308 has just
@@ -441,7 +449,12 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
         SszZoneRuntimeState ssz = sszState();
         var camera = services().camera();
-        int cameraX = camera == null ? 0 : camera.getX() & 0xFFFF;
+        // Camera bounds describe the native arena; a wider viewport moves only its
+        // displayed left edge. Match SSZ's event gates and GHZ recreation framing.
+        int focusExcess = camera == null ? 0 : Math.max(0,
+                com.openggf.camera.DeadzoneGeometry.rightEdge(camera.getWidth())
+                        - com.openggf.camera.DeadzoneGeometry.rightEdge(320));
+        int cameraX = camera == null ? 0 : (camera.getX() + focusExcess) & 0xFFFF;
         int cameraY = camera == null ? 0 : camera.getY() & 0xFFFF;
 
         super.state.routine = 4;
@@ -1024,6 +1037,9 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         }
         return animator;
     }
+
+    /** sub_5750C writes the carried slot's y_pos word, retaining its fraction. */
+    public void carryOnCollapsingColumn(int y) { setPosition(getX(), y); }
 
     private void setPosition(int x, int y) {
         posX = (posX & 0xFFFF) | ((x & 0xFFFF) << 16);

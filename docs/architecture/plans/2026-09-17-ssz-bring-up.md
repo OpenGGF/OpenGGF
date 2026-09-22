@@ -2448,3 +2448,16 @@ behaviour and not an omission.
 Tests: `TestS3kSszMechaSpawnHeadless` is 16 cases; with the SSZ, mandatory S3K and rewind
 round-trip batch, **1280 run, 0 failures, 0 errors, 0 skipped**; `-Pguards` **669 run, 0
 failures**, after triaging the handover object's capture/restore override with its reason.
+
+
+### 2026-09-22 — slice 8 integration and visual validation
+
+The completion campaign implements the native results-to-DEZ1 launch, including
+ten collapse channels, queued terrain/art replacement, retained Plane-B clearing,
+38 spiral pieces, crumble debris, player priority/frame scripting and the final
+`StartNewLevel $B00`. A controller-driven Hyper run from a declared final checkpoint
+now reaches actual DEZ1; clip 24 in `$HOME/Videos/OGGF/ssz-bring-up/INDEX.md`
+shows the launch. The dated [campaign audit](../audits/2026-09-22-sk-zone-bring-up.md)
+records evidence, rejected implementations and current checks; the act matrix
+keeps remaining native/team/donor/rewind obligations explicit. This does not
+close slice 9/10 or certify a cold route through the entire act.

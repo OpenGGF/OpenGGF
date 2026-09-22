@@ -447,9 +447,24 @@ class TestS3kSszMechaSpawnHeadless {
      * {@code $2E} and then refuses while Player 1 is in the air, so a leader still falling holds
      * the handover open frame after frame and it fires on the first grounded one.
      */
-    @Test
-    void theHandoverWaitsForTheLeaderToBeStandingAndNotJustForItsTimer() {
-        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 400, 800})
+    void theHandoverWaitsForTheLeaderToBeStandingAndNotJustForItsTimer(int width) {
+        assertHandover(width, "sonic", "", null);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"320, sonic, tails", "400, tails, ''"})
+    void nativeTeamsCompleteTheLaunch(int width, String main, String partner) {
+        assertHandover(width, main, partner, null);
+    }
+
+    @Test void sonicOneDonorCompletesTheLaunch() {
+        assertHandover(320, "sonic", "", "s1");
+    }
+
+    private void assertHandover(int width, String main, String partner, String donor) {
+        HeadlessTestFixture fixture = bootAtCheckpoint(width, PAD_X, PAD_Y, main, partner, donor);
         SszMechaSonicObjectInstance boss = runToInit(fixture);
         for (int hit = 8; hit > 0; hit--) {
             landOneHit(fixture, boss);
@@ -474,7 +489,13 @@ class TestS3kSszMechaSpawnHeadless {
         assertTrue(handover.timerForTest() < 0, "and $2E went negative long ago");
 
         parkTheLeader(fixture);
-        fixture.stepIdleFrames(1);
+        // The characters have different floor radii. Let physics establish contact,
+        // then require the handover on that exact grounded dispatch, not one later.
+        for (int frame = 0; frame < 8 && !handover.resultsRequestedForTest(); frame++) {
+            fixture.stepIdleFrames(1);
+            assertEquals(!fixture.sprite().getAir(), handover.resultsRequestedForTest(),
+                    "sub_868F8 follows this character's actual ground contact");
+        }
         assertTrue(handover.resultsRequestedForTest(),
                 "the first grounded dispatch takes it");
         assertEquals(2, handover.routineForTest(), "move.b d0,routine(a0) with d0 = 2");
@@ -498,6 +519,40 @@ class TestS3kSszMechaSpawnHeadless {
         }
         assertTrue(GameServices.gameState().isEndOfLevelFlag(),
                 "real results completion releases the SSZ launch event");
+        boolean forcedJumpSeen = false;
+        for (int frame = 0; frame < 3200 && GameServices.level().getCurrentZone() == 10; frame++) {
+            if (requireState().foregroundRoutine() == 4 && fixture.sprite().getYSpeed() < 0)
+                forcedJumpSeen = true;
+            if (requireState().foregroundRoutine() == 8) {
+                var parallax = GameServices.parallax();
+                var columns = parallax.getVScrollPerColumnFGForShader();
+                assertNotNull(columns);
+                assertEquals((short) requireState().launch().foregroundY(),
+                        (short) (parallax.getVscrollFactorFG() + columns[0]),
+                        "shader_tilemap adds column deltas to its foreground world offset");
+            }
+            if (frame == 60 || frame == 240 || frame == 650 || frame == 1300) {
+                var launchBefore = registry.capture();
+                fixture.stepIdleFrames(1);
+                var launchAfter = registry.capture();
+                var manager = GameServices.level().getObjectManager();
+                for (var object : List.copyOf(manager.getActiveObjects())) {
+                    if (object instanceof com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance
+                            || object instanceof com.openggf.game.sonic3k.objects.SszLaunchPieceObjectInstance
+                            || object instanceof com.openggf.game.sonic3k.objects.SszLaunchCrumbleObjectInstance)
+                        manager.removeDynamicObject(object);
+                }
+                registry.restore(launchBefore);
+                sameSnapshot(launchBefore, registry.capture(), "launch graph recreation at " + frame);
+                fixture.runner().primeInputState(
+                        new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+                fixture.stepIdleFrames(1);
+                sameSnapshot(launchAfter, registry.capture(), "launch replay at " + frame);
+            } else fixture.stepIdleFrames(1);
+        }
+        assertTrue(forcedJumpSeen, "sub_58002's C press reaches player physics before the scripted spiral");
+        assertEquals(11, GameServices.level().getCurrentZone(),
+                "loc_581D2 requests and loads Death Egg after the real spiral arc");
     }
 
     @org.junit.jupiter.params.ParameterizedTest
@@ -705,10 +760,15 @@ class TestS3kSszMechaSpawnHeadless {
     }
 
     private static HeadlessTestFixture bootAtCheckpoint(int width, int x, int y) {
+        return bootAtCheckpoint(width, x, y, "sonic", "", null);
+    }
+
+    private static HeadlessTestFixture bootAtCheckpoint(int width, int x, int y,
+                                                       String main, String partner, String donor) {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
-        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, main);
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, partner);
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
                 width == 320 ? WidescreenAspect.NATIVE_4_3.name()
@@ -718,7 +778,10 @@ class TestS3kSszMechaSpawnHeadless {
         CrossGameFeatureProvider.getInstance().resetState();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
+        if (donor != null) config.setSessionOverride(SonicConfiguration.SONIC_1_ROM,
+                java.util.Objects.requireNonNull(System.getProperty("sonic1.rom.path"), "explicit S1 ROM path"));
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withCrossGameDonation(donor)
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_SSZ, 0)
                 .withFreshLevelStartLifecycle()
                 .startPosition((short) x, (short) y)

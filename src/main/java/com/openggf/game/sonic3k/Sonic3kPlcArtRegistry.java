@@ -2964,6 +2964,14 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_SSZ_MISC + 0x20,
                 2,
                 null));
+        // loc_581F2/58360 draw frames 9/10 from the separately queued spiral ramp bank.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SSZ_LAUNCH_RAMP,
+                Sonic3kConstants.MAP_SSZ_COLLAPSING_BRIDGE_ADDR, 0x348, 2, null));
+        // word_58894 uses four-tile bases $00..$68. Sentinel rows use frames 1/2
+        // with art_tile zero; ordinary rows use frame 0 plus their tile/palette/flip word.
+        for (int tile = 0; tile <= 0x68; tile += 4) {
+            levelArt.add(new LevelArtEntry("ssz_launch_crumble_" + tile, 0x58A14, tile, 0, null));
+        }
         // loc_57BB2: make_art_tile(ArtTile_SSZMisc+$3C,3,1) over Map_SSZRoamingClouds.
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.SSZ_ROAMING_CLOUD,

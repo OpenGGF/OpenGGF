@@ -5970,6 +5970,13 @@ That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
 
 ## Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop
 
+**2026-09-22 scope update:** production defeat/results and the Death Egg launch
+through actual DEZ1 load are now implemented. The remaining gaps below concern
+palette/child/slot semantics and native hit-window phase; this historical heading
+no longer describes the implemented extent. The launch has component width/team/
+donor/rewind checks and a controller-driven Hyper checkpoint recording, but does
+not yet have native parity or a cold full-act route certificate.
+
 - **Location** — `SszMechaSonicObjectInstance` (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
 - **Symptom** — The `$79:$00` pad at `($1A40,$670)` now allocates `Obj_SSZEndBoss` and explodes
   behind it, and the boss runs `SSZEndBoss_Index`'s act-1 entries 0 through `$28` — the entry run,

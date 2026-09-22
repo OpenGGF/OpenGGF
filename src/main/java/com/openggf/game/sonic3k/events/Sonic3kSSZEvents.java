@@ -107,9 +107,16 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             applyScreenInit(act, state);
         }
         if (act == 0) {
-            // SSZ1_ScreenEvent stage 0 (loc_572BA) runs sub_575EA every frame until
-            // End_of_level_flag starts the launch.
-            dynamicResize(state);
+            var services = levelManager().getObjectManager().getObjectServices();
+            state.launch().advanceShake(frameCounter,
+                    services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p && p.getDead());
+            camera().setYCopy((short) (camera().getYCopy() + state.launch().appliedShake()));
+            if (state.foregroundRoutine() == 0) {
+                if (gameState().isEndOfLevelFlag()) SszLaunchWorld.begin(services, state);
+                else dynamicResize(state);
+            } else {
+                SszLaunchWorld.update(services, state);
+            }
         }
     }
 

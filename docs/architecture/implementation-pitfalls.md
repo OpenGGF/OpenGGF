@@ -423,6 +423,13 @@ For a pixel-displacement oracle, compare opaque foreground regions: shifting a
 composite through a transparent edge also shifts the independently scrolled BG
 and gives a false failure. The SOZ methodology-v2 plan records this correction.
 
+SSZ's launch exposed the same hazard for vertical columns: `shader_tilemap`
+adds the per-column value to `WorldOffsetY`. Convert native absolute VSRAM
+words to camera-relative deltas at the scroll producer. Supplying the native
+word directly counts camera Y twice; the logic can still reach the next zone
+while the foreground Death Egg artwork is entirely absent. Check the final
+shader sum and a rendered frame, not just the handler's array.
+
 
 ### Resolve raw object offsets through the constants table
 

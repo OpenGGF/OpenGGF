@@ -667,4 +667,88 @@ and Mecha tests passed. The one failure was the pre-bring-up inventory assertion
 that SSZ has seven standalone sheets; the merged registry has fifteen. Updated
 that expected inventory and reran `TestSonic3kPlcArtRegistry#sszPlanHasEggRobo`:
 one pass, no skips at 19:41 BST. This reconciles a stale merge test, not an asset
-loading fallback. Visual capture of the corrected trail is still owed.
+loading fallback. The corrected trail is visible in `$HOME/Videos/OGGF/ssz-bring-up/raw-39-mecha-trail-restored/capture.mp4`
+(900 frames, 15 seconds; full ffmpeg decode checked). It starts at the declared
+final-pad checkpoint with 355 rings; this is attack/art evidence, not a completed fight.
+
+
+### SSZ launch implementation under validation
+
+The campaign now connects production results to `SSZ1_ScreenEvent` stages 4/8,
+ten independently delayed collapse columns, the four native Kos/KosM jobs,
+Death Egg foreground layout/palette, 38 spiral pieces, crumble particles,
+`Obj_57E96`'s forced jump/nine spiral turns/final arc and `StartNewLevel $B00`.
+All runtime art still comes from the ROM. The launch owns captured timers,
+fixed-point motion, job ordinals, screen shake and retained Plane-B tile words.
+Mecha receives `Delete_Current_Sprite` for its next object dispatch, rather than
+being removed during the screen event.
+
+The component handover test uses declared checkpoint setup and test-positioned
+boss hits, then exercises production results, neutral-input launch, actual DEZ1
+load and graph removal/recreation with forward replay at four launch boundaries.
+It is not a cold route or controller-only boss-clear claim. Width expansion and
+required S3K regression selection are in progress; native team/donor breadth,
+allocation exhaustion, video review and load-history isolation remain owed.
+
+Two plausible but insufficient implementations were rejected during development:
+
+- Reaching DEZ was possible even without the first scripted jump. The initial
+  code wrote logical/history input only, which did not reach movement under the
+  hardware-input lock. A negative-Y-velocity assertion exposed that missing
+  jump; the existing forced-input ownership path now delivers it, with held
+  input suppressing repeat jump presses. The focused regression passed.
+- Reading `loc_57916` alone suggests 32 adjacent cleared tiles. Its consumer,
+  `VInt_DrawLevel_Draw`, calls `VInt_VRAMWrite` twice, at addresses $80 bytes
+  apart. D1=7 therefore means 16 tiles on each of two rows. The implementation
+  retains native Plane B and writes the literal $6061 descriptors after normal
+  entering-row updates; it does not replace the effect with a solid rectangle.
+
+`Render_Sprites` reads zero `width_pixels` for these fresh native slots; their
+height fields are $18 (bridge), $1C (ramp), $10 (detached bridge) and 8 (debris).
+Those bounds replace the initial generic 32/28 and 16/8 culling margins.
+The spiral DBF decrements before entering its loop, so its high-byte count means
+exactly that many $70 rises; there is no additional or missing turn.
+
+At 20:19 BST the seven-class selection completed 82 checks: 80 passed, two
+failed, zero skips. The 400px handover lost its boss and the 800px case could
+not land a hit. Mecha's native camera-relative fight box was being constructed
+from the wider viewport's displayed left edge. Applying the same native focus
+conversion already used by the GHZ recreation keeps the fight over its arena
+floor. At 20:22 BST all 20 `TestS3kSszMechaSpawnHeadless` checks passed, including
+the three widths through DEZ1. The other 62 checks in the earlier selection
+passed: launch state/background row selection and the required AIZ/load/bootstrap/
+decoding checks. Both selections used queued Maven, `-Dmse=off` and the absolute
+S3K ROM path. A missing `ObjectLifetimeOps` import stopped the preceding compile
+and was corrected before either completed selection. These remain focused
+checks; combined campaign validation is still owed.
+
+The first rendered Hyper route (`raw-40-mecha-launch-hyper`, declared final-pad
+checkpoint, 355 rings, Super Emerald array `3333333`) cleared Mecha via controller
+input and reached DEZ1. It exposed an absent foreground Death Egg: the launch
+supplied absolute VSRAM words to a shader that adds its column input to camera Y.
+The producer now converts to deltas; a regression asserts the final shader sum.
+That initial recording is superseded during visual validation, not certified.
+The input-authoring probe omitted rendering and its timing differed from the
+recorded playback, so the rendered CSV, not the probe's completion frame, owns
+capture claims. Investigate that difference before using the probe as a parity
+oracle; neither run hydrates from trace comparison rows.
+
+At 20:32 BST the expanded focused selection (`TestS3kSszMechaSpawnHeadless`,
+`TestSszLaunchState`, `TestSszLaunchBackground`, `TestSonic3kPlcArtRegistry`,
+`TestPatternSpriteRendererCorruptionGuard`) completed 107 checks: 106 passed,
+one failed, zero skips. Native Sonic at 320/400/800, Sonic + Tails and S1-donor
+handover passed, including the shader-sum regression. Tails alone exposed the
+test's Sonic-sized floor-contact assumption. The test now waits for physics to
+establish contact and asserts the handover on the exact first grounded dispatch.
+At 20:34 BST both native-team cases passed; the two focused rewind guards passed
+in a separate `-Pguards` invocation. All Maven runs used the shared queue and
+absolute S3K/S1 ROM properties where applicable. The full ROM art crawler passed
+with the launch ramp/debris registrations; no synthetic padding was added.
+
+The corrected 4800-frame rendering now shows the foreground Death Egg and
+reaches DEZ1 at camera-row frame 4223, with zero deaths. The complete 80-second
+capture and 1940-frame (32.33-second) excerpt both passed ffmpeg decoding.
+Clip 24, its source InputLog/state CSV/provenance and inspected stills are under
+`$HOME/Videos/OGGF/ssz-bring-up/`. Source-frame 4000 shows the Death Egg;
+4700 shows the loaded destination. Exhausted launch allocations, explicit
+transition-history isolation and native timing/pixel comparison remain open.

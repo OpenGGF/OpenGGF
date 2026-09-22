@@ -39,7 +39,10 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public static final int EVENTS_BG_BYTES = 0x10;
 
     private static final int CAPTURE_BYTES =
-            EVENTS_BG_BYTES + 14 * Short.BYTES + 3 * Integer.BYTES + 3;
+            EVENTS_BG_BYTES + 14 * Short.BYTES + 3 * Integer.BYTES + 3 + SszLaunchState.CAPTURE_BYTES;
+
+    private final SszLaunchState launch = new SszLaunchState();
+    public SszLaunchState launch() { return launch; }
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -107,6 +110,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         this.playerCharacter = Objects.requireNonNull(playerCharacter, "playerCharacter");
     }
 
+    @Override public boolean usesPersistentBackgroundVdpPlane() { return actIndex == 0 && foregroundRoutine() >= 8; }
     @Override public int zoneIndex() { return 0x0A; }
     @Override public int actIndex() { return actIndex; }
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
@@ -293,6 +297,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(cloudDriftAccumulator);
         buffer.put((byte) (backgroundInitApplied ? 1 : 0));
         buffer.putInt(backgroundScrollFrame);
+        launch.capture(buffer);
         return buffer.array();
     }
 
@@ -323,5 +328,6 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         cloudDriftAccumulator = buffer.getInt();
         backgroundInitApplied = buffer.get() != 0;
         backgroundScrollFrame = buffer.getInt();
+        launch.restore(buffer);
     }
 }
