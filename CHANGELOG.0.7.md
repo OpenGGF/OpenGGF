@@ -131,7 +131,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   travel along it and let players jump away. Act 2 floating platforms oscillate or
   accelerate along their placed axis, carrying riders while their lights alternate. Tilting
   bridges respond to where players stand, then break into falling sections and release
-  riders onto the floor. Shock floors and ceilings now hurt on
+  riders onto the floor. Conveyor pads start when ridden, follow the floor or travel a fixed
+  vertical distance, and reverse their belts for newly arriving riders and inverted gravity.
+  Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's

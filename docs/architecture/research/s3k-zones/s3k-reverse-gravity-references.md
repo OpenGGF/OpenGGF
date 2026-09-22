@@ -220,7 +220,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 93727 | `loc_47AA6` | `Obj_DEZConveyorPad` (`$53`, `loc_47AA6`): negates the X carry | new | missing |
+| 93727 | `loc_47AA6` | `Obj_DEZConveyorPad` (`$53`, `loc_47AA6`): negates the X carry | `S3kDezConveyorPadObjectInstance.carryConveyor`; native P1/P2 and inverted placed ride in `TestS3kDezConveyorPadHeadless` | covered |
 | 94874 | `loc_48B7E` | `Obj_DEZGravitySwitch` (`$58`, `loc_48B7E`): **writer** — toggles the flag 4 frames after a top/bottom press, then a 20-frame rearm | `S3kDezGravitySwitchObjectInstance.toggleFlag` | covered |
 | 94990 | `loc_48CB0` | `Obj_DEZTeleporter` (`$59`): negates the unroll radius Y adjustment | `S3kDezTeleporterObjectInstance.capture` | covered |
 | 95045 | `loc_48D78` | `Obj_DEZTeleporter`: Y-flip on the captured player frames | `AbstractPlayableSprite.renderVFlipForDraw` (the slice 2 draw-time mirror already composes bit 1 from the flag; `S3kDezTeleporterObjectInstance.updatePose` writes only the pose table's X flip) | covered |
@@ -260,16 +260,20 @@ is the RAM wipe described above).
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 0 | 1 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
-| J. DEZ objects | 12 | 11 | 0 | 1 | 0 |
+| J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **93** | **4** | **15** | **4** |
+| **Total** | **116** | **94** | **4** | **14** | **4** |
+
+Updated 2026-09-23: the conveyor pad closes the last group J row; all four
+render flag combinations, both native player slots and both gravity directions
+have carry checks, plus an actual inverted Act-2 ride and restore/replay.
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
 
 Updated 2026-09-18 for slice 3. The group J body rows were brought up to date as each DEZ
 object landed, but this totals table was not: it still read 5 covered and 7 missing against a
-body that lists 11 covered. The only J row still missing is `Obj_DEZConveyorPad` (`$53`,
+body that lists 11 covered. At that point the only J row still missing was `Obj_DEZConveyorPad` (`$53`,
 `loc_47AA6`), a slice 4 object. The grand total moves with it, from 87 covered / 21 missing to
 93 / 15, which is the figure the campaign plan's Status section already quotes.
 

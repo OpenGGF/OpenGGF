@@ -435,7 +435,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new S3kDezConveyorPadObjectInstance(spawn);
                     }
                     return new MGZSwingingPlatformObjectInstance(spawn);
                 });

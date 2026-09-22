@@ -545,11 +545,12 @@ Slices 0 and 1 delivered 2026-09-17 on base `035e48a58` (`0d9a4f3ea`, `4e7655bf9
 evidence log. **Slice 2 is delivered and gated four times** (runs `20260918T100237Z-e62d5573`,
 `20260918T105742Z-cc4590b5`, `20260918T132045Z-02b73773` and `20260918T153215Z-c588acfb`, all
 acknowledged). The reference
-table now stands at **93 covered, 4 partial, 15 missing, 4 n/a**. The 15 missing rows are, by
+table now stands at **94 covered, 4 partial, 14 missing, 4 n/a** after the
+2026-09-23 conveyor-pad follow-up. The 14 missing rows are, by
 owner: the Knuckles glide/slide/climb rows behind the glide probe wrapper (5), the dash-dust
 and Tails'-tail render rows (3), the two rows blocked on upright behaviour the engine does not
 model (`Touch_Monitor`, `Obj_Spikes`), `loc_1E44C`'s rebuilt comparison (1), the act 2 boss's
-three, and `Obj_DEZConveyorPad`'s one (a slice 4 object).
+three. The conveyor-pad carry reversal is now covered.
 
 **Slice 3 is complete.** `$5B` `Obj_DEZGravitySwap`, `$58` `Obj_DEZGravitySwitch` (with its
 art and its transporter sound), `$59` `Obj_DEZTeleporter`, `$5A` `Obj_DEZGravityTube`, `$5C`
@@ -560,8 +561,8 @@ traversal objects that merely sit in gravity rooms. **`$61` `Obj_DEZGravityPuzzl
 the obstacle in the turbine room: a `SolidObjectFull2` binding, the six marker panels drawn in
 the shaft's own bucket, and the `MHZ_pollen_counter` panel bitfield living in
 `S3kDezZoneRuntimeState`. The reference table's group J totals row was stale against its own body
-and now reads 11 covered of 12; the only J row still missing is `Obj_DEZConveyorPad` (`$53`), a
-slice 4 object.
+and read 11 covered of 12 after slice 3. Conveyor pad `$53` closes the final
+group J row in the 2026-09-23 continuation.
 
 **Slice 4 is in progress and the route has chosen every one of its classes so far.** Four have
 landed, each named by the act 2 frontier before any of its code was written:
@@ -3038,3 +3039,26 @@ gameplay captures; native frame-120 PNGs match the earlier captures exactly.
 The [audit](../audits/2026-09-22-sk-zone-bring-up.md) records commands,
 rejected approaches, fade/load checks and external clips 078–080. This closes
 the reported repeated-background presentation issue, not the remaining routes.
+
+### Conveyor-pad implementation notes (after `f759da908`)
+
+The full subtype byte selects vertical versus horizontal after a rider activates
+it; low seven bits separately choose width and vertical distance (times eight).
+Thus subtype `$80` remains narrow and takes the vertical branch with zero travel.
+The activation dispatch animates and collides but does not move. Vertical carry
+uses the old belt direction for native P1/P2, negates it under reverse gravity,
+then toggles once for any newly standing native player. Horizontal travel has
+no extra belt carry: the shared solid uses the old platform X. Its floor state
+falls one pixel until penetration, follows the lesser of two edge probes through
+`$E`, then installs gravity for the next dispatch. `MoveSprite` integrates old
+word velocity before adding `$38`. Wall correction and rider-edge turns precede
+animation and the manual solid checkpoint; horizontal sound follows contact.
+The native level-frame clock gates sound, with the prior render sign gate only
+on horizontal travel. Five narrow mapping entries include an alias of the first
+wide frame; the separate wide table has four entries. Art comes from DEZMisc+$BB.
+
+Eleven focused checks cover these boundaries, ROM animation and map shapes,
+real horizontal/vertical rides at 320/800, forced recreation/replay and declared
+inverted Act-2 entry. The last group J gravity reader is now implemented.
+Census is 354/365 and 489/494. Remaining placed families are lift pads, tunnel
+launchers and act bosses; final-boss flow and route/breadth obligations remain.

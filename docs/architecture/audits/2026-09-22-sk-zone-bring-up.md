@@ -1393,3 +1393,56 @@ eight images were inspected, all runs have zero hurt/death rows. Native
 074 (Act 1) and 071 (Act 2). This is matched engine regression evidence,
 not native emulator pixel certification. The extension adds no object types
 or census changes. Conveyor-pad WIP remains stashed until this fix is committed.
+
+### DEZ conveyor pads (after `f759da908`, 2026-09-23)
+
+Restored the conveyor-pad WIP after the widescreen fix and completed SKL `$53`
+from `loc_479F0`–`sub_47B58`. Activation installs the selected routine but does
+not run it immediately. Vertical motion has finite word distance and a separate
+native P1/P2 belt carry, reversed by gravity; horizontal motion follows floor
+probes, falls after a delayed routine change and reverses at walls. Both toggle
+belt animation once on new standing bits. Horizontal sound follows the manual
+solid checkpoint and uses the preceding render visibility; vertical sound does
+not require visibility. Animation and both mapping tables load from ROM.
+The narrow table has five pointers, including a wide-frame alias, not four.
+
+The eleven `TestS3kDezConveyorPadHeadless` checks pass: all direction flags and
+both gravity polarities, both native slots/extra-follower exclusion, exact
+finite travel and subtype `$80`, ROM animation, terrain boundary and fall order,
+map shape, real horizontal/vertical rides at 320/800, forced recreation and
+forward replay, and a declared inverted Act-2 underside ride/replay. The final
+focused command selected that class, `TestS3kDezColdRoutes`,
+`TestSonic3kPlcArtRegistry` and `TestPatternSpriteRendererCorruptionGuard`:
+**94 passed, zero skips**, Java 21 and the absolute S3K ROM, queued Maven.
+The earlier run also passed census (6) and the existing S3KL MGZ platform (5).
+It had five test-fixture errors (the mocked level hid the injected manager),
+which the final run resolved without changing gameplay behavior.
+
+The Act-2 seeded frontier remains 1256, first mismatch at native row 21029:
+player X `$697/$696`, camera X `$5F7/$5F6`; Y/rings agree. Cold entry remains
+frontier zero because its scripted arrival is missing. This is unchanged
+ratchet evidence, not a full route pass.
+
+Fresh schema/inventory/architecture checks pass with 1245 total / 1005
+isolated / 240 graph-covered / 0 missing codec. The profile guard found `$53`
+listed separately in each half although it is now concrete everywhere; move it
+to `SHARED_IMPLEMENTED_IDS` and rerun that guard. Counts are now 354/365 and
+489/494, leaving lift pads `$4E`, tunnel launchers `$57` and the act bosses.
+The reverse-gravity reference inventory is 94 covered / 4 partial / 14 missing /
+4 n/a: group J is complete, while the eleven A-I rows and three boss rows remain.
+Cold routes, native comparisons, donor/roster breadth, final-boss flow and
+campaign integration remain outstanding.
+
+The repaired profile guard passes both checks; combined fresh inventory/schema/
+architecture/profile coverage is eight checks, zero skips. No further engine
+change was needed. External videos 081–085 document the capture attempts:
+neutral Act-1 entries encounter torpedoes/spikes (081 dies at frame 327; 082/083
+survive their budgets but take damage). Controlled vertical input 084 holds
+Sonic against the belt; its shared excerpt is frames 0–179, three seconds with
+zero hurt/death. The full 420-frame source encounters a torpedo at 209 and dies
+at 384, and remains explicitly outside a completed-route claim. The script is
+`17 -; 43 R; repeat 180 { 1 R; 1 - }`, round-tripped by InputLogAuthorTool.
+Act-2 horizontal clip 085 records 300 frames, 43 hurt rows and zero death rows;
+its torpedo hazard remains visible. Both shared videos fully decode and their
+mechanism frames were inspected. These are component demonstrations, not clean
+full routes. The original conveyor-pad stash is accounted for by this commit.

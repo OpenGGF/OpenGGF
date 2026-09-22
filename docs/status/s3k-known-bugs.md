@@ -217,9 +217,10 @@ Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
 the gap was a search for a `GameSound` constant, not a missing sound. `Obj_DEZGravitySwap`
 (`$5B`) has no art in the ROM and is correctly invisible.
 
-**Suspected cause.** Not a defect — a deliberately sliced port. 15 of the 116
+**Suspected cause.** Not a defect — a deliberately sliced port. 14 of the 116
 `Reverse_gravity_flag` references in the disassembly are still unimplemented (11 of them in
-groups A-I, above; the rest are the act 2 boss's three and `Obj_DEZConveyorPad`'s one). No
+groups A-I, above; the rest are the act 2 boss's three). The conveyor pad's
+carry reversal now has native-player and inverted placed-ride/replay checks. No
 Death Egg gravity object owns a missing row any more; the row-by-row inventory is
 [s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
 
