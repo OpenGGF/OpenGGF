@@ -603,6 +603,8 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
         // (sonic3k.asm:20922) on the killing hit, so the ship's status bit 7 goes up in the
         // collision pass. statusBit7 is that bit; the children read it through parent3.
         statusBit7 = true;
+        // CreateChild1_Normal searches forward from this SST slot, once.
+        SszBossExplosionController.spawnFor(services(), getSlotIndex(), getX(), getY());
     }
 
     /**
@@ -648,6 +650,14 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
         restoreLevelPaletteLine();
         ObjectLifetimeOps.deleteNoRespawn(this);
     }
+
+    void releaseShield(SszGhzBossShieldChild child) {
+        if (shield == child) {
+            shield = null;
+        }
+    }
+
+    void releaseChainLink(SszGhzBossChainLinkChild child) { chain.remove(child); }
 
     void setChainReady() { chainReady = true; }
 

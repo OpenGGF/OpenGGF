@@ -819,11 +819,12 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
         allOrbsShouldPop = true;
         // clr.b $38(a0): the arms collapse, which the orbit reads as a zero radius.
         armX = 0;
-        // Gap, recorded in docs/status/s3k-known-bugs.md: loc_7AD3A also runs CreateChild1_Normal
-        // over Child6_CreateBossExplosion with subtype 4 before it reaches BossDefeated, and
-        // usesDefeatSequencer() is false here, so no explosion is drawn at all. The Green Hill
-        // sibling carries the same gap.
+        // CreateChild1_Normal searches forward from this SST slot, once.
+        SszBossExplosionController.spawnFor(services(), getSlotIndex(), getX(), getY());
     }
+
+    /** Obj_WaitForParent reads bit 5 of this ship's native $38 arm radius. */
+    boolean stopsDefeatExplosions() { return (armX & 0x20) != 0; }
 
     /** {@code Wait_FadeToLevelMusic}, {@code loc_7AC7A}, {@code loc_7AC92} and {@code loc_7ACA4}. */
     private void updateEscape() {
@@ -955,6 +956,8 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
     public int hitsRemainingForTest() { return super.state.hitCount; }
 
     public int collisionSizeForTest() { return collisionSize; }
+
+    void releaseOrb(SszMtzBossOrbChild child) { orbs.remove(child); }
 
     public List<SszMtzBossOrbChild> orbsForTest() { return List.copyOf(orbs); }
 

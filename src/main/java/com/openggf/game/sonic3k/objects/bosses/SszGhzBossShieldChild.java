@@ -109,6 +109,9 @@ public final class SszGhzBossShieldChild extends AbstractObjectInstance
         visibleThisFrame = false;
         if (parent == null || parent.isDestroyed() || parent.hasStatusBit7()) {
             // btst #7,status(a1) / bne.s loc_7A59A -> jmp (Delete_Current_Sprite).
+            if (parent != null) {
+                parent.releaseShield(this);
+            }
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }

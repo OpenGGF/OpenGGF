@@ -230,12 +230,15 @@ public final class SszGhzBossChainLinkChild extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         lastVIntRunCount = vIntRunCount;
-        if (boss == null || boss.isDestroyed()) {
-            ObjectLifetimeOps.deleteNoRespawn(this);
-            return;
-        }
         if (routine == ROUTINE_FLICKER_MOVE) {
             updateFlickerMove();
+            return;
+        }
+        if (boss == null || boss.isDestroyed()) {
+            if (boss != null) {
+                boss.releaseChainLink(this);
+            }
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
         switch (routine) {
@@ -261,6 +264,11 @@ public final class SszGhzBossChainLinkChild extends AbstractObjectInstance
     /** {@code loc_849D8}. */
     private void enterFlickerMove() {
         routine = ROUTINE_FLICKER_MOVE;
+        // Obj_FlickerMove never reads parent3 again. Drop Java graph ownership before
+        // an earlier link is culled, while keeping this slot's routine/status visible.
+        boss.releaseChainLink(this);
+        boss = null;
+        chainParent = null;
         int[] velocity = SCATTER_VELOCITY[Math.min(subtype / 2, SCATTER_VELOCITY.length - 1)];
         // btst #0,render_flags(a0) / neg.w x_vel: these links are never X-flipped.
         xVel = velocity[0];

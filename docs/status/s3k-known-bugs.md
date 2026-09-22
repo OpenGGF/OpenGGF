@@ -6004,18 +6004,20 @@ not yet have native parity or a cold full-act route certificate.
   `sub_7D312`. The attack graph is driven to a landing and to each of `byte_7B636`'s three
   attacks against ROM literals, and the defeat through `loc_7D056` is driven and dated.
 
-## Sky Sanctuary Boss Defeats Draw No Explosion
+## Sky Sanctuary Explosion Controller Replacement-Slot Stop Bit
 
-- **Location** — `SszGhzBossObjectInstance.onDefeatStarted` and `SszMtzBossObjectInstance.onDefeatStarted`
-  (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
-- **Symptom** — Both act 1 recreations reach zero hits, install `Wait_FadeToLevelMusic`, score and
-  fly off correctly, but nothing explodes on the killing frame.
-- **Suspected cause** — `loc_7A5EC` and `loc_7AD3A` both run `CreateChild1_Normal` over
-  `Child6_CreateBossExplosion` with `subtype 4` immediately before `jmp (BossDefeated).l`. Neither
-  port spawns that child, and both set `usesDefeatSequencer()` false, so the shared base's own
-  explosion path is off as well.
-- **Removal condition** — `Child6_CreateBossExplosion` subtype 4 is ported and both defeats spawn
-  it on the killing frame, with a clip showing it.
+- **Location** — `SszBossExplosionController`.
+- **Remaining gap** — The GHZ and MTZ defeat explosions are implemented, including
+  forward allocation, three-frame cadence, failed-allocation RNG ordering, shared
+  ROM artwork, and rewind recreation. The controller reads its parent slot's live
+  position and retires after that slot becomes empty. MTZ supplies its native
+  `$38` bit 5; unrelated objects reusing that slot do not expose arbitrary SST
+  bytes, so their stop-bit behavior is not reproduced.
+- **Evidence** — Both encounter defeat tests and focused allocation tests;
+  refreshed `raw-41-mtz-defeat-explosions` checkpoint recording in the campaign
+  media directory. Cold-route and native pixel/timing certification remain open.
+- **Removal condition** — Model and exercise the relevant replacement occupant's
+  `$38` semantics from ROM evidence without inventing a generic false stop flag.
 
 ## Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship
 

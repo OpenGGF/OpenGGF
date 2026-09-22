@@ -2461,3 +2461,15 @@ shows the launch. The dated [campaign audit](../audits/2026-09-22-sk-zone-bring-
 records evidence, rejected implementations and current checks; the act matrix
 keeps remaining native/team/donor/rewind obligations explicit. This does not
 close slice 9/10 or certify a cold route through the entire act.
+
+
+### Campaign follow-up: recreated-boss explosion graph
+
+The earlier missing `Child6_CreateBossExplosion` gap is superseded: both ships
+now allocate subtype 4 with native forward-slot allocation and three-frame
+cadence. Failed bursts consume no RNG; each child plays its sound on first
+execution. Shared ROM artwork is cached for drawing. Defeat rewind spots exposed
+stale shield/orb references; deletion now releases them, while GHZ scatter links
+leave their former graph when they become independent `Obj_FlickerMove` objects.
+See the campaign audit and act-1 matrix for exact validation and the refreshed
+Metropolis recording. Arbitrary reused-slot `$38` fidelity remains open.

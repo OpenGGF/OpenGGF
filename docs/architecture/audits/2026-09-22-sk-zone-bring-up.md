@@ -752,3 +752,47 @@ Clip 24, its source InputLog/state CSV/provenance and inspected stills are under
 `$HOME/Videos/OGGF/ssz-bring-up/`. Source-frame 4000 shows the Death Egg;
 4700 shows the loaded destination. Exhausted launch allocations, explicit
 transition-history isolation and native timing/pixel comparison remain open.
+
+
+### SSZ recreated-boss defeat explosions
+
+Following launch commit `703158d80`, both `loc_7A5EC` and `loc_7AD3A`
+now allocate an independent subtype-4 `Obj_CreateBossExplosion` controller.
+`CreateChild1_Normal` uses **AllocateObjectAfterCurrent**, not first-free
+allocation; the earlier working assumption was rejected by the routine itself.
+The controller follows the occupant of its captured parent slot, predecrements
+its zeroed wait word, reloads two, allocates each explosion forward, and consumes
+RNG only after success. The child owns its initial explosion sound. An empty
+parent slot installs next-pass deletion. MTZ exposes its native `$38` stop bit;
+arbitrary replacement occupants' unmodelled `$38` bytes remain a fidelity gap.
+
+The first 28-case encounter run completed with 26 passes and two rewind errors,
+no skips. New defeat snapshots exposed stale deleted shield/orb references,
+previously missed by the mid-fight spots. Children now release those references
+when deleted. GHZ links become independent on `Obj_FlickerMove`, which no longer
+reads their former parents, so earlier culled links cannot poison later snapshots.
+The same tests preserve the source-backed 184-frame defeat-to-release interval.
+Focused allocation tests also cover full forward slots, no fallback/RNG on
+failure, three-frame cadence, slot replacement positions and deferred deletion.
+The next focused run passed all 30 cases without skips. The initial refreshed
+recording showed no explosions despite their live object graph: SSZ did not load
+the shared boss-explosion sheet. The controller allocation path now ensures the
+existing ROM-backed sheet is cached, as other S3K boss callers do. That recording
+is superseded, not visual evidence. A test-only attempt to force object recreation
+used a nonexistent `GameServices.levelManager()` accessor and failed compilation;
+it was corrected to `GameServices.level()` before rerunning.
+The four-case allocation/defeat selection then passed; both defeat cases passed
+again with explicit ready-renderer assertions. The two rewind structural guards
+passed in a separate fresh `-Pguards` JVM, with zero skips. Commands used queued
+Maven, Java 21, `-Dmse=off`, and the absolute S3K ROM property. The final defeat
+checks remove controllers/explosions before restoring, so they exercise recreation
+as well as state rollback and forward replay.
+
+The corrected `raw-41-mtz-defeat-explosions/capture.mp4` is 720 frames / 12 seconds,
+source frames 1680–2399, native Sonic alone at 320 px with the declared
+`$1700,$420` checkpoint and 355 rings. It shows the bursts and the exit pad;
+frame 1770 was inspected and the full file passed ffmpeg decoding. All 2400
+stepped CSV rows are alive. The capture's provenance records source hashes.
+This is local rendered evidence, not native parity or a cold route.
+The combined change-based plan against `c91fd5ac7` now selects 2785 ordinary
+classes plus guards; that campaign-wide run remains owed.

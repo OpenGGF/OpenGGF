@@ -4,6 +4,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.sonic3k.objects.bosses.SszBossExplosionController;
+import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
@@ -652,11 +654,40 @@ class TestS3kSszMtzArenaHeadless {
         assertTrue(state.eventsBgByte(EV_MTZ_BOSS) > 0,
                 "loc_7AD3A writes no Events_bg flag: the killing hit only starts the escape");
 
+        var explosionRenderer = GameServices.level().getObjectRenderManager().getBossExplosionRenderer();
+        assertNotNull(explosionRenderer, "the shared ROM explosion sheet is loaded");
+        assertTrue(explosionRenderer.isReady(), "late-loaded explosion patterns are cached for rendering");
+        assertEquals(1, countActive(SszBossExplosionController.class),
+                "the killing dispatch allocates Child6_CreateBossExplosion subtype 4");
         int framesToBeaten = 0;
         while (state.eventsBgByte(EV_MTZ_BOSS) >= 0 && framesToBeaten < 400) {
             pinNonAttackingAt(fixture, APPROACH_X, APPROACH_Y);
             fixture.stepIdleFrames(1);
             framesToBeaten++;
+            if (framesToBeaten == 1) {
+                assertTrue(countActive(S3kBossExplosionChild.class) > 0,
+                        "zeroed $2E expires on the first controller dispatch");
+            }
+            if (framesToBeaten == 20) {
+                var registry = fixture.gameplayMode().getRewindRegistry();
+                CompositeSnapshot before = registry.capture();
+                fixture.stepIdleFrames(1);
+                CompositeSnapshot after = registry.capture();
+                var manager = GameServices.level().getObjectManager();
+                for (var object : List.copyOf(manager.getActiveObjects())) {
+                    if (object instanceof SszBossExplosionController
+                            || object instanceof S3kBossExplosionChild) {
+                        manager.removeDynamicObject(object);
+                    }
+                }
+                registry.restore(before);
+                sameSnapshot(before, registry.capture(), "restore defeat explosions");
+                fixture.runner().primeInputState(
+                        new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+                fixture.stepIdleFrames(1);
+                sameSnapshot(after, registry.capture(), "forward replay defeat explosions");
+                framesToBeaten++;
+            }
         }
         assertTrue(state.eventsBgByte(EV_MTZ_BOSS) < 0, "st (Events_bg+$02).w in loc_7ACA4");
         assertEquals(0x40 + 0x78, framesToBeaten,
@@ -667,6 +698,9 @@ class TestS3kSszMtzArenaHeadless {
         assertEquals(0, countActive(SszMtzBossObjectInstance.class), "Go_Delete_Sprite");
         assertEquals(0, countActive(SszMechaSonicHeadChild.class),
                 "st (_unkFA89).w deletes the head with the ship");
+        fixture.stepIdleFrames(2);
+        assertEquals(0, countActive(SszBossExplosionController.class),
+                "Obj_WaitForParent retires after the ship slot is freed");
         assertFalse(state.bossFlag(), "clr.b (Boss_flag).w is loc_7ACA4's first instruction");
         assertEquals(0, countActive(SszMtzBossOrbChild.class),
                 "the engine deletes an orbiting orb with its ship. That is a divergence, not the "

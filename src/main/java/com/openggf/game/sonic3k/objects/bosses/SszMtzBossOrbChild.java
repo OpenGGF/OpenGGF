@@ -262,6 +262,9 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
             // loc_7B02A. On the cartridge those orbs keep orbiting a slot loc_7ACA4 has freed,
             // reading whatever the next object writes into it. Deleting with the ship is the
             // engine's choice, not the ROM's.
+            if (parent != null) {
+                parent.releaseOrb(this);
+            }
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
@@ -545,6 +548,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
         services().playSfx(Sonic3kSfx.BALLOON.id);
         if (parent != null) {
             parent.removeLiveOrb();
+            parent.releaseOrb(this);
         }
         ObjectLifetimeOps.deleteNoRespawn(this);
     }

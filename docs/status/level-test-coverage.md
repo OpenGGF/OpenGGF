@@ -138,7 +138,7 @@ his palette rotation and spark child, the `loc_7C9BA` child and `loc_7B39C`'s ba
 open. The production results-to-DEZ1 launch now passes component handover/rewind checks at
 320/400/800, native Sonic + Tails, Tails alone and S1 donor, with a controller Hyper
 checkpoint recording through the destination load; exhausted slots, transition-history
-isolation and native parity remain open. Both recreations' entry and defeat intervals are compared against the `hpz` segment's aux rows; their orbits, flashes and laser cadence are not, and the Metropolis fight is now filmed end to end (clips 20-22) with `GameplayCaptureTool --rings` |
+isolation and native parity remain open. Both recreations now emit defeat explosions and have defeat-graph recreation/forward-replay checks; a refreshed Metropolis checkpoint recording shows the bursts. Replacement-slot stop-byte fidelity remains open. Both recreations' entry and defeat intervals are compared against the `hpz` segment's aux rows; their orbits, flashes and laser cadence are not, and the Metropolis fight is now filmed end to end (clips 20-22) with `GameplayCaptureTool --rings` |
 | S3K | `S3K_SKY_SANCTUARY_2` | [Act 2 matrix](../architecture/validation/levels/s3k-ssz-act2.md) — v2 bring-up in progress; placement census pinned to the ROM and baseline capture recorded; arrival, camera controller, crane cutscene and both boss phases open |
 | S3K | `S3K_DEATH_EGG_1` | Audit pending |
 | S3K | `S3K_DEATH_EGG_2` | Audit pending |

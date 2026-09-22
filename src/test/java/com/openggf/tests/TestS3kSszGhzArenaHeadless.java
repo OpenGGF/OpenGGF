@@ -4,6 +4,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.sonic3k.objects.bosses.SszBossExplosionController;
+import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
@@ -606,11 +608,40 @@ class TestS3kSszGhzArenaHeadless {
                 "Touch_Enemy's .checkhurtenemy sets status bit 7 on the ship when "
                         + "boss_hitcount2 reaches zero (sonic3k.asm:20922)");
 
+        var explosionRenderer = GameServices.level().getObjectRenderManager().getBossExplosionRenderer();
+        assertNotNull(explosionRenderer, "the shared ROM explosion sheet is loaded");
+        assertTrue(explosionRenderer.isReady(), "late-loaded explosion patterns are cached for rendering");
+        assertEquals(1, countActive(SszBossExplosionController.class),
+                "the killing dispatch allocates Child6_CreateBossExplosion subtype 4");
         int framesToBeaten = 0;
         while (state.eventsBgByte(EV_GHZ_BOSS) >= 0 && framesToBeaten < 400) {
             pinNonAttackingAt(fixture, APPROACH_X, APPROACH_Y);
             fixture.stepIdleFrames(1);
             framesToBeaten++;
+            if (framesToBeaten == 1) {
+                assertTrue(countActive(S3kBossExplosionChild.class) > 0,
+                        "zeroed $2E expires on the first controller dispatch");
+            }
+            if (framesToBeaten == 20) {
+                var registry = fixture.gameplayMode().getRewindRegistry();
+                CompositeSnapshot before = registry.capture();
+                fixture.stepIdleFrames(1);
+                CompositeSnapshot after = registry.capture();
+                var manager = GameServices.level().getObjectManager();
+                for (var object : List.copyOf(manager.getActiveObjects())) {
+                    if (object instanceof SszBossExplosionController
+                            || object instanceof S3kBossExplosionChild) {
+                        manager.removeDynamicObject(object);
+                    }
+                }
+                registry.restore(before);
+                sameSnapshot(before, registry.capture(), "restore defeat explosions");
+                fixture.runner().primeInputState(
+                        new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+                fixture.stepIdleFrames(1);
+                sameSnapshot(after, registry.capture(), "forward replay defeat explosions");
+                framesToBeaten++;
+            }
         }
         assertTrue(state.eventsBgByte(EV_GHZ_BOSS) < 0,
                 "loc_7A3F8 st (Events_bg+$00).w after the escape");
@@ -628,6 +659,9 @@ class TestS3kSszGhzArenaHeadless {
                 "Obj_FlickerMove culls each scattered link once it is off screen");
         assertEquals(0, countActive(SszGhzBossShieldChild.class),
                 "loc_7A568 took loc_7A59A the frame after the eighth hit");
+        fixture.stepIdleFrames(2);
+        assertEquals(0, countActive(SszBossExplosionController.class),
+                "Obj_WaitForParent retires after the ship slot is freed");
         assertFalse(state.bossFlag(), "clr.b (Boss_flag).w is loc_7A3F8's first instruction");
     }
 
