@@ -61,6 +61,17 @@ ROM writes jump radii explicitly and then sets the roll bit, use
 The DEZ carrier regression preserves airborne jump fields and custom radii on
 capture, and native centre/fractions on release.
 
+**Custom retirement tails must retain the viewport term.** New objects that override
+`isCustomOutOfRange` bypass the manager's widened placement-window policy.
+A literal native `$280` then lets an 800-pixel viewport load an object early,
+delete it immediately, and leave it dormant when the player later reaches it.
+Use `coarseXCullRange()` for `Sprite_OnScreen_Test`/`Test2` and preserve any
+additional ROM anchor/range offset separately (DEZ turbine: `$400` plus that
+range). Native 320-pixel behavior remains exact. Positioned contact checks can
+miss this: the 2026-09-22 DEZ curved-bridge approach passed at 320 and failed at
+800 even though both positioned width checks passed. Test an approach from
+outside the native spawn window as well as an already-loaded interaction.
+
 **Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
 object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
 the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can

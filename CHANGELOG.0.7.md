@@ -116,7 +116,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   work: they push out of the wall while you are below them, pull back in once you are well
   above, latch as they start and finish each stroke, and fling you upward when you land on one.
   The energy bridges across both acts switch on and off on their own schedules, carry you while
-  they are lit, and drop you when they go out.
+  they are lit, and drop you when they go out. The curved bridge enables its terrain
+  path while lit; both forms retain the final displayed phase when they switch off.
+  The new mechanisms stay loaded across widescreen approaches.
   The Chainspike robots charge across both acts, slowing to a stop and turning around, and
   stab their spikes into the floor when you get close. Lightning flashes from the floor
   emitters with its short damage window and sound. Conveyor belts carry grounded players

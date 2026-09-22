@@ -86,6 +86,8 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
     private int onFramesLeft;
     private int mappingFrame;
     private boolean initApplied;
+    private boolean drawPublished;
+    private boolean renderedOnScreen;
 
     /**
      * The object's own {@code p1_standing_bit} and {@code p2_standing_bit} (status bits 3 and
@@ -131,6 +133,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        drawPublished = false;
         int levelFrameCounter = levelFrameCounter(vIntRunCount);
         if (!initApplied) {
             initApplied = true;
@@ -155,8 +158,9 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
         }
         // loc_47EBE :93945-93953. Both the switch-off frame and an ordinary on frame reach
         // this: only the SolidObjectTop call is skipped.
+        drawPublished = true; // expiry still reaches Sprite_OnScreen_Test
         mappingFrame = levelFrameCounter & MAPPING_FRAME_MASK;
-        if ((levelFrameCounter & ZAP_PERIOD_MASK) == 0 && isOnScreen(0)) {
+        if ((levelFrameCounter & ZAP_PERIOD_MASK) == 0 && renderedOnScreen) {
             ObjectServices objectServices = tryServices();
             if (objectServices != null) {
                 objectServices.playSfx(Sonic3kSfx.ENERGY_ZAP.id);
@@ -302,10 +306,11 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
      * {@code make_art_tile(ArtTile_DEZMisc+$B2,1,0)} (:93880) through
      * {@code Map_DEZEnergyBridge}. Nothing is drawn while the bridge is off, because the off
      * routine jumps to {@code Delete_Sprite_If_Not_In_Range} without displaying.
+     * The dispatch that installs that off routine still publishes its last sprite.
      */
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!on) {
+        if (!drawPublished) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.DEZ_ENERGY_BRIDGE);
@@ -320,6 +325,17 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
     public int getPriorityBucket() {
         return RenderPriority.fromS3kWord(PRIORITY_WORD);
     }
+
+    @Override public void refreshPostCameraRenderState() {
+        if (drawPublished) renderedOnScreen = isWithinRenderSpriteBounds(0x40, 8);
+    }
+    @Override public int getOnScreenHalfHeight() { return 8; }
+    @Override public boolean checksOutOfRangeAfterRoutine() { return true; }
+    @Override public boolean usesCustomOutOfRangeCheck() { return true; }
+    @Override public boolean isCustomOutOfRange(int cameraX) {
+        return isCoarseXOutOfRange(getX(), cameraX, coarseXCullRange());
+    }
+    public boolean drawPublishedForTest() { return drawPublished; }
 
     // --- helpers ---
 

@@ -81,6 +81,7 @@ class TestS3kDezHoverMachineObjectInstance {
             if(tick==32||tick==96)assertEquals(0xE0,rotor.getX());
             if(tick==64)assertEquals(0xC0,rotor.getX());
         }
+        com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(0,0,320,224,0x800);
         var edge=new S3kDezHoverRotorObjectInstance(new ObjectSpawn(0x270,0,0x5E,0,0,false,0));
         assertEquals(0x290,edge.getX());assertFalse(edge.isCustomOutOfRange(0));assertTrue(edge.isCustomOutOfRange(-0x80));
     }

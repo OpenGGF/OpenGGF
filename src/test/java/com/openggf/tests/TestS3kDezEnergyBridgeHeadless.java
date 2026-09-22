@@ -201,6 +201,7 @@ class TestS3kDezEnergyBridgeHeadless {
             step(bridge, sprite, 0x205F);
 
             assertFalse(bridge.isOnForTest(), "$34 reached zero");
+            assertTrue(bridge.drawPublishedForTest(), "expiry still reaches Sprite_OnScreen_Test");
             assertTrue(sprite.getAir(), "bset #Status_InAir,status(a1) (:93981)");
             assertFalse(sprite.isOnObject(), "bclr #Status_OnObj,status(a1) (:93980)");
         } finally {
@@ -245,8 +246,8 @@ class TestS3kDezEnergyBridgeHeadless {
             for (int counter = 0x2000; counter < 0x2010; counter++) {
                 step(bridge, sprite, counter);
             }
-            assertEquals(List.of(Sonic3kSfx.ENERGY_ZAP.id, Sonic3kSfx.ENERGY_ZAP.id), requested,
-                    "sixteen on updates zap twice, at $2000 and $2008");
+            assertEquals(List.of(Sonic3kSfx.ENERGY_ZAP.id), requested,
+                    "initial carried render flag is clear; only $2008 zaps after rendering");
 
             // A second bridge that spawns outside the window. $34 counts down independently of
             // the phase, so the first one is still mid-window and cannot answer this.
@@ -268,9 +269,10 @@ class TestS3kDezEnergyBridgeHeadless {
      * the {@code SolidObjectTop} call.
      *
      * <p>Coverage limit, stated rather than faked: the ROM also skips the display on that path,
-     * and the class gates {@code appendRenderCommands} on the same flag, but a headless fixture
+     * and the class records a separate draw-publication bit, but a headless fixture
      * has no pattern renderer, so an assertion that the command list is empty would pass
-     * whatever the gate did. The draw gate is covered by the clip, not by this suite.
+     * whatever the gate did. This suite checks publication, including the distinct
+     * expiry dispatch; ROM-art checks and captures cover the renderer.
      */
     @Test
     void anOffBridgeIsNotSolid() {
@@ -281,6 +283,7 @@ class TestS3kDezEnergyBridgeHeadless {
             step(bridge, sprite, 0x2060);
             assertFalse(bridge.isOnForTest(), "the phase is outside the window");
             assertFalse(bridge.isSolidFor(sprite), "no SolidObjectTop call while off");
+            assertFalse(bridge.drawPublishedForTest());
         } finally {
             SessionManager.clear();
         }
@@ -331,6 +334,7 @@ class TestS3kDezEnergyBridgeHeadless {
                       int levelFrameCounter) {
         GameServices.level().setFrameCounter(levelFrameCounter);
         bridge.update(levelFrameCounter, sprite);
+        bridge.refreshPostCameraRenderState();
     }
 
     private S3kDezEnergyBridgeObjectInstance place(int subtype, int levelFrameCounter) {

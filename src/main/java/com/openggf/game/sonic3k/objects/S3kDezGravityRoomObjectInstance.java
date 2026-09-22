@@ -106,11 +106,12 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
         // Obj_DEZGravityRoom (:95823-95828): unlike RememberState's normal range,
-        // the anchor is shifted $400 right and the unsigned limit is $680.
+        // the anchor is shifted $400 right and the native unsigned limit is $680.
+        // The viewport term follows the engine's existing widescreen window policy.
         // Keeping the owner alive is essential while object_control suppresses movement.
         int coarseBack = (cameraX - 0x80) & 0xFF80;
         int shiftedAnchor = (getX() + 0x400) & 0xFF80;
-        return ((shiftedAnchor - coarseBack) & 0xFFFF) > 0x680;
+        return ((shiftedAnchor - coarseBack) & 0xFFFF) > 0x400 + coarseXCullRange();
     }
 
     /** {@code sub_4964A} :95843-95952. */

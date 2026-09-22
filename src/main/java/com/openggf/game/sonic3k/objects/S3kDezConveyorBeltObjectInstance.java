@@ -46,8 +46,9 @@ public final class S3kDezConveyorBeltObjectInstance extends AbstractObjectInstan
     @Override public boolean checksOutOfRangeAfterRoutine() { return true; }
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     @Override public boolean isCustomOutOfRange(int cameraX) {
-        // Delete_Sprite_If_Not_In_Range uses the fixed $280 coarse-X limit.
-        return isCoarseXOutOfRange(getX(), cameraX, 0x280);
+        // Native Delete_Sprite_If_Not_In_Range uses $280; widen only the
+        // viewport term to match the engine's placement window.
+        return isCoarseXOutOfRange(getX(), cameraX, coarseXCullRange());
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         // The belt is level art. This controller has no sprite mapping.

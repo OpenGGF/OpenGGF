@@ -141,7 +141,7 @@ public final class S3kDezStaircaseObjectInstance extends AbstractObjectInstance
     @Override public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) { return true; }
     @Override public boolean checksOutOfRangeAfterRoutine() { return true; }
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
-    @Override public boolean isCustomOutOfRange(int cameraX) { return isCoarseXOutOfRange(anchorX, cameraX, 0x280); }
+    @Override public boolean isCustomOutOfRange(int cameraX) { return isCoarseXOutOfRange(anchorX, cameraX, coarseXCullRange()); }
     @Override public int getOnScreenHalfWidth() { return 0x10; }
     @Override public int getOnScreenHalfHeight() { return 0x10; }
     @Override public int getPriorityBucket() { return 3; } // priority=$180; art bit 15 clear

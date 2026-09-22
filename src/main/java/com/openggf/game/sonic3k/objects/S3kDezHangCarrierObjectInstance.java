@@ -134,7 +134,7 @@ public class S3kDezHangCarrierObjectInstance extends AbstractObjectInstance
     @Override public boolean checksOutOfRangeAfterRoutine() { return true; }
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     @Override public boolean isCustomOutOfRange(int cameraX) {
-        return isCoarseXOutOfRange(getX(), cameraX, 0x280);
+        return isCoarseXOutOfRange(getX(), cameraX, coarseXCullRange());
     }
     @Override public int getOnScreenHalfWidth() { return 0x18; }
     @Override public int getOnScreenHalfHeight() { return 0x14; }

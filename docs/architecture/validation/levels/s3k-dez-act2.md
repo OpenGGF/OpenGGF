@@ -72,3 +72,10 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 See the [act 1 matrix](s3k-dez-act1.md#execution-evidence) for the single frontier command;
 all six classes ran in one invocation with 0 skips.
+
+2026-09-22 follow-up after `33e6b66d5`: straight energy bridges now retain the
+expiry draw and consume carried render visibility for zap sound. The new DEZ
+retirement tails use the established viewport term (native `$280` unchanged),
+including the turbine's extra `$400`. The 87-case affected-family selection
+passes with zero skips; seeded frontier remains 1256, cold entry remains 0.
+This does not close Act-2 route or participant breadth.

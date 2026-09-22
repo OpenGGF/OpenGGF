@@ -1199,3 +1199,61 @@ and inspected frames 100/300 (320) and 300 (800). No deaths; the longer 320 clip
 includes a post-release hazard hit with 36 hurt-state rows. Counts are 348/365
 and 471/494 concrete. Native parity, cold routes, Act-2 interaction and broader
 participants remain open. Combined validation/integration are still pending.
+
+
+### Curved energy bridge and approach-window correction
+
+After `33e6b66d5`, SKL `$56` follows `Obj_DEZEnergyBridgeCurved`, shared
+`sub_47DDE` phase decoding, and `sub_47F9C`. Its rectangle admits native P1/P2
+without status gates and switches top/LRB solidity to E/F; leaving restores
+C/D without setting air, while timer expiry sets air for admitted players.
+Expiry still draws; inactive passes do not. Sound consumes the previous
+rendered bit and Level_frame_counter. The ROM map `$48038` has 3/3/3/2 pieces
+at DEZMisc+$B2. The existing straight `$55` bridge incorrectly hid its expiry
+draw and used freshly computed visibility; both edges now match the same ROM
+tail, with regression coverage and no seeded route-frontier change.
+
+Initial focused selection at 23:15 BST passed 29 cases (curved unit, straight
+bridge, census, MGZ moving platform and cold-route checks). At 23:16, the three
+new ROM/headless cases plus 78 PLC and 2 renderer-corruption checks passed,
+zero skips. Initial fresh inventory/architecture/profile guards passed 7 at
+23:17 (1242 total / 1002 isolated / 240 graph / 0 missing codec).
+
+A stronger controller approach passed at 320 but failed at 800: the curve was
+loaded into the wider placement window and immediately retired against literal
+`$280`, then remained dormant when the player arrived. Clip 068 reproduces
+the absent curve and missed carrier. Positioned width checks had missed this.
+The fix uses existing `coarseXCullRange()` in the new DEZ families, retaining
+the exact native limit and extending only the viewport term under the documented
+engine policy. The turbine retains its additional `$400` in anchor and range.
+A direct boundary regression covers nine affected object classes. The controller
+approach now crosses secondary terrain, loops around and grabs the hanging
+carrier at both widths, with restore/forward replay from before the curve.
+No gameplay state or priority was forced to make the route work.
+
+At 23:24 BST, queued Java 21, absolute S3K ROM path and
+`-Dtest=TestS3kDezCurvedEnergyBridgeObjectInstance,TestS3kDezCurvedEnergyBridgeHeadless,
+TestS3kDezEnergyBridgeHeadless,TestS3kDezHangCarrierObjectInstance,
+TestS3kDezHangCarrierHeadless,TestS3kDezHoverMachineObjectInstance,
+TestS3kDezHoverMachineHeadless,TestS3kDezStaircaseHeadless,TestS3kDezTorpedoHeadless,
+TestS3kDezConveyorBeltObjectInstance,TestS3kDezConveyorBeltHeadless,
+TestS3kDezLightningHeadless,TestS3kDezGravityRoomHeadless,TestS3kDezColdRoutes`
+passed 87 checks, zero failures/errors/skips. This includes the two newly added
+controller approaches, component recreation/expiry checks, prior object graph
+replays and native/wide retirement boundaries. Native seeded DEZ2 still matches
+1256 frames; first differing row remains 21029 (X 0696/0697, camera 05F6/05F7).
+The cold act-entry mismatch remains. Counts are 349/365 and 471/494 concrete,
+leaving 16/23 placeholder placements; native parity and complete routes remain
+open. Campaign-wide verification and integration are pending.
+
+Capture attempts are kept distinct: 064 shows stationary expiry, 065 climbs
+partway and rolls back with insufficient momentum, 066 reaches the curve while
+it is off, and 067 times the approach into its lit phase using only controller
+input. The initial 068 launch raced a compile and failed before boot; its retry
+is the pre-fix wide failure above. Compile and capture must be sequential even
+for a source-comment rebuild. Corrected widescreen footage is 069. These are
+positioned engine routes, not cold-start or native comparison evidence.
+
+Clips 067 (320) and corrected 069 (800) each complete 504 frames with zero
+hurt/death rows. Full decode and traversal-frame inspection pass, and every
+player X/Y/X-velocity/Y-velocity/ground-speed row agrees across widths.

@@ -267,6 +267,7 @@ class TestS3kDezGravityRoomHeadless {
 
     @Test
     void extendedRangeUsesTheRomAnchorAndUnsignedEdges() {
+        com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(0,0,320,224,0x800);
         S3kDezGravityRoomObjectInstance room = new S3kDezGravityRoomObjectInstance(
                 new ObjectSpawn(OBJECT_X, OBJECT_Y, 0x5F, 0, 0, false, OBJECT_Y, -1));
         assertTrue(room.checksOutOfRangeAfterRoutine(), "both players run before retirement");
@@ -275,6 +276,9 @@ class TestS3kDezGravityRoomHeadless {
         assertTrue(room.isCustomOutOfRange(0x2200), "$700 is outside");
         assertFalse(room.isCustomOutOfRange(0x2900), "zero unsigned distance");
         assertTrue(room.isCustomOutOfRange(0x2980), "negative distance wraps outside");
+        com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(0,0,800,224,0x800);
+        assertFalse(room.isCustomOutOfRange(0x2200), "wide placement window retains the room controller");
+        com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
     @Test

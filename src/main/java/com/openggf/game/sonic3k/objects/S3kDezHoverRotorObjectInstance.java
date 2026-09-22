@@ -77,7 +77,7 @@ public final class S3kDezHoverRotorObjectInstance extends AbstractObjectInstance
     @Override public boolean checksOutOfRangeAfterRoutine() { return true; }
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     @Override public boolean isCustomOutOfRange(int cameraX) {
-        return isCoarseXOutOfRange(anchorX, cameraX, 0x280);
+        return isCoarseXOutOfRange(anchorX, cameraX, coarseXCullRange());
     }
     @Override public int getOnScreenHalfWidth() { return 16; }
     @Override public int getOnScreenHalfHeight() { return 16; }
