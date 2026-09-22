@@ -180,5 +180,6 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
   use the common native capture host with explicit frame windows and its own movie save.
 
 - `tools/bizhawk/capture_lrz_boss_reference.lua`: read-only original-movie LRZ3
-  camera/event and object-graph observer; native save and frame-window plan inputs
+  camera/event and object-graph observer, with optional lava/VScroll/HScroll export;
+  native save and frame-window plan inputs
   (September 22 S&K completion campaign).

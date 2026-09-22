@@ -42,6 +42,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kLrzPatternAnimation {
 
+    @Test void bossActRunsOnlyChannelZeroAtItsOwnTileAddress() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(22, 0).build();
+        var animator = animatorOrThrow();
+        assertEquals(List.of(), animator.scriptsForTesting());
+        assertFalse(animator.shouldRunLrzBackgroundLayer2Channel());
+        assertEquals(0x170, animator.lrzBackgroundLayer1Destination());
+        byte[] otherTiles = tileBytes(GameServices.level().getCurrentLevel(), 0x320, 0x30);
+        assertSplitChannel(48, 0x480, 0xC0, WORD_2834C, ART_LRZ_BG, 0x170, true);
+        assertArrayEquals(otherTiles, tileBytes(GameServices.level().getCurrentLevel(), 0x320, 0x30));
+    }
+
     @Test
     void act1LoadsAniPlcLrz1() throws Exception {
         HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0).build();

@@ -79,7 +79,7 @@ class TestS3kLrzScrollRegistrationHeadless {
 
         ZoneScrollHandler handler = liveHandler();
         assertFalse(handler instanceof SwScrlHpz, "$1600 must not run HPZ_BackgroundEvent");
-        assertInstanceOf(SwScrlS3kDefault.class, handler);
+        assertInstanceOf(com.openggf.game.sonic3k.scroll.SwScrlLrz3.class, handler);
         LrzZoneRuntimeState state = lrz();
         assertEquals(Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ, state.zoneIndex());
         assertEquals(0, state.actIndex());

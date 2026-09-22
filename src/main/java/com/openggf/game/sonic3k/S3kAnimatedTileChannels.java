@@ -313,7 +313,7 @@ final class S3kAnimatedTileChannels {
                 "s3k.lrz.bg1",
                 owner::shouldRunLrzBackgroundLayer1Channel,
                 ctx -> owner.computeLrzBackgroundLayer1Phase(),
-                new DestinationPlan(0x320, 0x343),
+                new DestinationPlan(owner.lrzBackgroundLayer1Destination(), owner.lrzBackgroundLayer1Destination() + 0x23),
                 AnimatedTileCachePolicy.ON_PHASE_CHANGE,
                 new SplitTransferApplyStrategy(owner::updateLrzBackgroundLayer1ForGraph)
         ));

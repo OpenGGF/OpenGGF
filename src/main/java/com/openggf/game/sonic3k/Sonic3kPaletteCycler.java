@@ -187,7 +187,11 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             // are AnPal_HPZ; entries 44 (LRZ3) and 46 (DEZ3) are not
             // (sonic3k.asm:3161-3164).
             case 0x16, 0x17:
-                if (actIndex == 1) {
+                if (zoneIndex == 0x16 && actIndex == 0) {
+                    list.add(new Lrz3Cycle(reader.slice(Sonic3kConstants.ANPAL_LRZ12_1_ADDR,
+                                    Sonic3kConstants.ANPAL_LRZ12_1_SIZE),
+                            reader.slice(Sonic3kConstants.ANPAL_LRZ3_ADDR, Sonic3kConstants.ANPAL_LRZ3_SIZE)));
+                } else if (actIndex == 1) {
                     byte[] hpzData = safeSlice(reader, Sonic3kConstants.ANPAL_HPZ_ADDR,
                             Sonic3kConstants.ANPAL_HPZ_SIZE);
                     if (hpzData.length >= Sonic3kConstants.ANPAL_HPZ_SIZE) {
@@ -1224,6 +1228,44 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             if (dirty) {
                 cacheFallbackPaletteTexture(registry, gm, level, 2);
                 dirty = false;
+            }
+        }
+    }
+
+    /** AnPal_LRZ3: signed mode gate; independent sixteen/eight-dispatch timers. */
+    private static final class Lrz3Cycle extends PaletteCycle {
+        private final byte[] primary;
+        private final byte[] fire;
+        private int primaryTimer;
+        private int primaryOffset;
+        private int fireTimer;
+        private int fireOffset;
+
+        Lrz3Cycle(byte[] primary, byte[] fire) { this.primary = primary; this.fire = fire; }
+
+        @Override void tick(Level level, PaletteOwnershipRegistry registry) {
+            var runtime = GameServices.hasRuntime()
+                    ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentLrz(
+                            GameServices.zoneRuntimeRegistry()).orElse(null) : null;
+            int mode = runtime == null ? 0 : runtime.bossAct().paletteMode();
+            if ((byte) mode < 0) return;
+            var graphics = GameServices.graphics();
+            if (--primaryTimer < 0) {
+                primaryTimer = 15;
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, graphics,
+                        S3kPaletteOwners.LRZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        2, 1, slice(primary, primaryOffset, 8));
+                primaryOffset = (primaryOffset + 8) & 0x7F;
+                cacheFallbackPaletteTexture(registry, graphics, level, 2);
+            }
+            if (mode != 0 && --fireTimer < 0) {
+                fireTimer = 7;
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, graphics,
+                        S3kPaletteOwners.LRZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        3, 12, slice(fire, fireOffset, 4));
+                fireOffset += 4;
+                if (fireOffset >= 0x3C) fireOffset = 0;
+                cacheFallbackPaletteTexture(registry, graphics, level, 3);
             }
         }
     }

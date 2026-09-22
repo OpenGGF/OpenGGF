@@ -328,3 +328,56 @@ Queued palette ownership integration: 3 passed at 16:37. Queued
 `-Pguards -Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestS3kZoneEventPaletteOwnership,TestZoneRuntimeRegistryRewindSnapshot`
 passed 10 at 16:38, zero skips/errors/failures. These are focused checks; combined
 campaign validation and integration remain pending.
+
+
+### Boss-act presentation and lava surface (September 22, continuing)
+
+Parent `c5c002865`, worktree `.worktrees/ai-sk-zone-completion`.
+`SwScrlLrz3` now interprets the distant/linear background coordinates, the ROM
+`word_5077E` heat shimmer and the retained 192-byte lava height table. Stage `$C`
+produces per-column vertical scroll. Wider views extend the native table by
+holding its outer samples. The background event stage machine and its boss
+allocation are still pending; isolated rendering checks do not establish reachability.
+
+The boss act's direct animated channel uses tile `$170` and all 48 ROM frames;
+its null AniPLC entry must still load that direct channel's raw art. The first
+54-test run exposed the constructor's early-return omission (53 passed, one
+pixel oracle failure). Loading direct art before that return fixed it; the
+focused rerun of `TestS3kLrzPatternAnimation,TestS3kLrzBossPaletteCycling,SwScrlLrz3Test,TestS3kLrzBossCameraHeadless`
+passed 34 tests at 16:48 BST, zero failures/errors/skips. Palette clocks reproduce
+`AnPal_LRZ3` modes 0, `$80`, and 1, including frozen counters and rewind.
+
+The read-only native observer's optional deformation output records 581
+consecutive frames 435600–436180 in `native-boss-20260922/run3` (23.802 seconds
+host time). Independent comparisons matched all 581 height tables, all twenty
+VScroll columns and all 224 foreground/background horizontal-scroll lines on
+every sampled frame. The recording uses the same original movie and verified
+state as run 2; no RAM writes or engine hydration. The exporter SHA-256 is
+`cf8de2f6f8935ecd43a553642562e679d9fa534588c195e7eae71e5dc7d6391c`.
+Both slope directions and all amplitudes 0–128 also have independent fixed-point
+arithmetic tests. This is a bounded presentation oracle, not a strict route pass.
+
+`Obj_59FC4` is allocated once before initial placements, as in BackgroundInit.
+It owns slope amplitude/table updates and the 16:16 current. Direction may change
+in a later boss slot, so current and table retain the lava slot's publication until
+its next dispatch. The tilted collision helper uses signed bytes; visual scroll
+and platform-height readers use unsigned bytes. Native P1 alone receives the
+fire-shield burn exemption. Capsule/end flags suppress burns without suppressing
+current. The focused arithmetic/camera/palette/scroll run passed 23 tests at
+16:57 BST, zero failures/errors/skips. Actual landing and graph validation follows.
+
+Capture `raw-60-lrz3-camera-presentation` shows the checkpoint camera and updated
+presentation, but reaches death because the placed platforms remain unfinished.
+It is development evidence only, not a completed route or a highlights chapter.
+Media delivery uses file links at the user's request because inline playback
+fails in their Codex GUI.
+
+The real solid/contact test passed at 16:59 BST; its strengthened graph-removal,
+recreation and whole-world forward replay passed at 17:00 BST (one test each,
+zero failures/errors/skips). It establishes a real tilted landing, native P1/P2
+fire-shield asymmetry, a negative `$300` fractional current, and current continuing
+after capsule completion. Two test accessor typos were corrected before those runs.
+
+Queued `-Pguards -Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestS3kZoneEventPaletteOwnership,TestZoneRuntimeRegistryRewindSnapshot`
+passed 10 at 17:01 BST, zero failures/errors/skips. Lua syntax and diff whitespace
+checks passed. Combined campaign validation and integration remain pending.

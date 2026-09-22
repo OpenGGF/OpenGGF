@@ -83,4 +83,46 @@ class TestS3kLrzBossCameraHeadless {
         assertEquals(0x17,map.getValue(0,1,9)&255); assertEquals(0x17,map.getValue(0,2,9)&255);
         assertEquals(0,state.chunkEditX());
     }
+    @Test void lavaSupportsProtectedP1BurnsP2AndRestoresFractionalCurrent() throws Exception {
+        var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle().build();
+        var runtime=S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        var objects=GameServices.level().getObjectManager();
+        assertEquals(1,objects.getActiveObjects().stream().filter(
+                o->o instanceof com.openggf.game.sonic3k.objects.LrzBossLavaSurfaceObjectInstance).count());
+        runtime.setBackgroundRoutine(12);
+        var player=fixture.sprite(); player.giveShield(com.openggf.game.ShieldType.FIRE);
+        var camera=GameServices.camera(); camera.setX((short)0xA00); camera.setY((short)0x560);
+        camera.setMinX((short)0xA00); camera.setMaxX((short)0xA00);
+        camera.setMinY((short)0x560); camera.setMaxY((short)0x560); camera.setMaxYTarget((short)0x560);
+        player.setCentreX((short)0xA40); player.setCentreY((short)(0x610-player.getYRadius()-2));
+        player.setAir(true); player.setYSpeed((short)0x100); player.setXSpeed((short)0);
+        fixture.stepFrame(false,false,false,false,false);
+        var lava=(com.openggf.game.sonic3k.objects.LrzBossLavaSurfaceObjectInstance) objects.getActiveObjects().stream()
+                .filter(o->o instanceof com.openggf.game.sonic3k.objects.LrzBossLavaSurfaceObjectInstance).findFirst().orElseThrow();
+        assertTrue(objects.isRidingObject(player,lava),"real sloped solid establishes contact");
+        assertFalse(player.isHurt()); assertFalse(player.getDead());
+        runtime.bossAct().setLavaDirection(1);
+        var registry=fixture.gameplayMode().getRewindRegistry(); var before=registry.capture();
+        fixture.stepFrame(false,false,false,false,false); var after=registry.capture();
+        assertEquals(1,runtime.bossAct().lavaAmplitude());
+        assertEquals(0xFD00,player.getXSubpixelRaw(),"negative 768 current retains its fraction");
+        objects.removeDynamicObject(lava);
+        registry.restore(before);
+        var restoredLava=(com.openggf.game.sonic3k.objects.LrzBossLavaSurfaceObjectInstance) objects.getActiveObjects().stream()
+                .filter(o->o instanceof com.openggf.game.sonic3k.objects.LrzBossLavaSurfaceObjectInstance).findFirst().orElseThrow();
+        assertNotSame(lava,restoredLava); lava=restoredLava;
+        fixture.stepFrame(false,false,false,false,false); var replay=registry.capture();
+        for(String key:after.entries().keySet()) assertTrue(RewindSnapshotDiff.diffKey(key,after.get(key),replay.get(key)).isEmpty(),
+                ()->key+RewindSnapshotDiff.diffKey(key,after.get(key),replay.get(key)));
+        var side=GameServices.sprites().getSidekicks().getFirst();
+        side.giveShield(com.openggf.game.ShieldType.FIRE);
+        var contact=new com.openggf.level.objects.SolidContact(true,false,false,true,false);
+        lava.onSolidContact(side,contact,123);
+        assertTrue(side.isHurt(),"native P2 has no fire-shield exemption");
+        side.setHurt(false); runtime.bossAct().setCapsuleOpened(true);
+        int x=(player.getCentreX()<<16)|player.getXSubpixelRaw();
+        lava.onSolidContact(player,contact,124);
+        assertEquals(x-768,(player.getCentreX()<<16)|player.getXSubpixelRaw(),"capsule gate still applies current");
+    }
+
 }

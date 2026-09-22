@@ -171,6 +171,12 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         if (player == null) return;
         var boss = lrz.bossAct();
         boss.markInitialized();
+        // LRZ3_BackgroundInit allocates Obj_59FC4 before Load_Sprites, once even on failure.
+        var objects = levelManager().getObjectManager();
+        if (objects != null && objects.getActiveObjects().stream().noneMatch(
+                o -> o instanceof com.openggf.game.sonic3k.objects.LrzBossLavaSurfaceObjectInstance)) {
+            objects.createDynamicObject(com.openggf.game.sonic3k.objects.LrzBossLavaSurfaceObjectInstance::new);
+        }
         camera().setMaxX((short) 0);
         if ((player.getCentreX() & 0xFFFF) >= 0x480) {
             // loc_59A9A stages the fire palette in Target_palette before entry fade.

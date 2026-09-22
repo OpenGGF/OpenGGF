@@ -392,7 +392,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public boolean defersInitialObjectPlacementUntilAfterLevelEvents(int zone, int act) {
         // FBZ1_ScreenInit and FBZ2_ScreenInit allocate
         // Obj_FBZOutdoorBGMotion before the first Load_Sprites pass.
-        return zone == Sonic3kZoneIds.ZONE_FBZ;
+        return zone == Sonic3kZoneIds.ZONE_FBZ
+                || (zone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && act == 0);
     }
 
     @Override

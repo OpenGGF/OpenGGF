@@ -348,6 +348,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             } else {
                 this.gumballAniData = null;
             }
+            // LRZ3 also uses direct DMA despite AniPLC_NULL.
+            loadLrzRawArt(reader);
             installGraphChannels();
             return;
         }
@@ -1772,7 +1774,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int pairIndex = bandBits >> 2;
         applySplitRawPatternDma(lrzBg1Data, primarySourceOffset, frameSourceOffset,
                 LRZ_BG1_SPLIT_WORD_COUNTS[pairIndex], LRZ_BG1_SPLIT_WORD_COUNTS[pairIndex + 1],
-                LRZ_BG1_DEST_TILE);
+                lrzBackgroundLayer1Destination());
     }
 
     /**
@@ -1804,6 +1806,14 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
     void updateLrzBackgroundLayer2ForGraph() {
         updateLrzBackgroundLayer2();
+    }
+
+    int lrzBackgroundLayer1Destination() {
+        return isLrzBossAct() ? 0x170 : LRZ_BG1_DEST_TILE;
+    }
+
+    private boolean isLrzBossAct() {
+        return zoneIndex == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && actIndex == 0;
     }
 
     boolean shouldRunLrzBackgroundLayer1Channel() {
@@ -1932,12 +1942,12 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
      * uncompressed blocks; the boss act reuses them at different destination tiles.
      */
     private void loadLrzRawArt(RomByteReader reader) {
-        if (zoneIndex != Sonic3kZoneIds.ZONE_LRZ) {
-            return;
-        }
+        if (zoneIndex != Sonic3kZoneIds.ZONE_LRZ && !isLrzBossAct()) return;
         lrzBg1Data = loadRawBytes(reader, ART_UNC_ANI_LRZ_BG_ADDR, ART_UNC_ANI_LRZ_BG_SIZE);
-        lrzBg2Data = loadRawBytes(reader, ART_UNC_ANI_LRZ_BG2_ADDR, ART_UNC_ANI_LRZ_BG2_SIZE);
-        level.ensurePatternCapacity(LRZ_ANIMATED_TILE_CAPACITY);
+        if (!isLrzBossAct()) {
+            lrzBg2Data = loadRawBytes(reader, ART_UNC_ANI_LRZ_BG2_ADDR, ART_UNC_ANI_LRZ_BG2_SIZE);
+        }
+        level.ensurePatternCapacity(isLrzBossAct() ? 0x194 : LRZ_ANIMATED_TILE_CAPACITY);
     }
 
     private void loadLbzRawArt(RomByteReader reader) {
@@ -2324,7 +2334,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             graph.install(S3kAnimatedTileChannels.buildIczChannels(this, scripts, actIndex));
             return;
         }
-        if (zoneIndex == Sonic3kZoneIds.ZONE_LRZ) {
+        if (zoneIndex == Sonic3kZoneIds.ZONE_LRZ || isLrzBossAct()) {
             graph.install(S3kAnimatedTileChannels.buildLrzChannels(this, scripts));
             return;
         }
