@@ -40,6 +40,11 @@ final class LrzMinibossHitSparkChild extends AbstractBossChild implements Rewind
     /** {@code loc_78A28} runs on the creation frame and returns; {@code loc_78A46} starts after. */
     private boolean setupFrameDone;
 
+    /** Restore construction uses the live concrete boss; snapshot fields restore the phase. */
+    private LrzMinibossHitSparkChild(LrzMinibossInstance parent) {
+        this(parent, false);
+    }
+
     LrzMinibossHitSparkChild(AbstractBossInstance parent, boolean mirrored) {
         super(parent, "LRZMinibossHitSpark", PRIORITY_BUCKET, 0x9D);
         this.mirrored = mirrored;
@@ -48,6 +53,7 @@ final class LrzMinibossHitSparkChild extends AbstractBossChild implements Rewind
             this.currentX = hand.getX();
             this.currentY = hand.getY();
         }
+        updateDynamicSpawn();
     }
 
     @Override

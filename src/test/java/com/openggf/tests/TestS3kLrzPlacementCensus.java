@@ -90,7 +90,7 @@ class TestS3kLrzPlacementCensus {
      */
     private static final Map<String, String> PLACEHOLDER_BASELINE = Map.of(
             "LRZ1", "",
-            "LRZ2", "25:80=1,81=1,82=1;32:00=7,01=11;AE:00=1;B3:2D=1",
+            "LRZ2", "25:80=1,81=1,82=1;AE:00=1;B3:2D=1",
             "LRZ3", "9E:00=1;AD:00=1,01=1,02=2,04=3");
 
     private static RomByteReader rom;
@@ -119,7 +119,7 @@ class TestS3kLrzPlacementCensus {
 
     @Test
     void act2PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 23);
+        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 5);
     }
 
     @Test

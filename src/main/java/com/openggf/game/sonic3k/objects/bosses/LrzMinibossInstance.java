@@ -397,40 +397,10 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         return spawnChild(() -> new LrzMinibossOrbiterChild(this, childSubtype, mirrored));
     }
 
-    /**
-     * A restore that lands after {@code ROUTINE_INIT} never replays the create loop, because
-     * {@code childrenCreated} was captured true. The rewind framework re-adopts the captured
-     * children, but if any of the 24 did not come back -- a capture taken before every child's
-     * own state was settled, or a ring the pruning pass had already emptied -- the boss would run
-     * the rest of the fight with a short arm and nothing would say so. Rebuild the missing ones
-     * from the same {@code loc_78562} loop, which is deterministic in subtype and ring, rather
-     * than leaving a census the ROM cannot produce.
-     */
+    /** The captured child graph is authoritative, including arms already retired by sub_78B46. */
     @Override
     protected void afterRewindRestoreSettled() {
         super.afterRewindRestoreSettled();
-        if (!childrenCreated || state.defeated) {
-            return;
-        }
-        restoreMissingRing(false);
-        restoreMissingRing(true);
-    }
-
-    private void restoreMissingRing(boolean mirrored) {
-        for (int subtype = 0; subtype <= LAST_CHILD_SUBTYPE; subtype += CHILD_SUBTYPE_STEP) {
-            final int childSubtype = subtype;
-            boolean present = childComponents.stream()
-                    .anyMatch(child -> child instanceof LrzMinibossRingChild ring
-                            && ring.ringMirrored() == mirrored
-                            && ring.ringSubtype() == childSubtype);
-            if (present) {
-                continue;
-            }
-            var created = createRingChild(childSubtype, mirrored);
-            if (created != null) {
-                childComponents.add(created);
-            }
-        }
     }
 
     /** {@code loc_78592} (sonic3k.asm:160059-160068): waits on the Nemesis queue, then queues art. */

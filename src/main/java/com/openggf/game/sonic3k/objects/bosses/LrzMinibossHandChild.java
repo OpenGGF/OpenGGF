@@ -127,6 +127,11 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
     /** Whether this frame's routine reached a {@code Draw_Sprite}. See the class comment. */
     private boolean drawnThisFrame;
 
+    /** Restore construction uses the live concrete boss; snapshot fields restore the phase. */
+    private LrzMinibossHandChild(LrzMinibossInstance parent) {
+        this(parent, 0x16, false);
+    }
+
     LrzMinibossHandChild(AbstractBossInstance parent, int childSubtype, boolean mirrored) {
         super(parent, "LRZMinibossHand", PRIORITY_BUCKET, 0x9D);
         this.mirrored = mirrored;

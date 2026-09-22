@@ -60,6 +60,11 @@ final class LrzMinibossArmSegmentChild extends LrzMinibossRingChildBase implemen
     private int xFixed;
     private int yFixed;
 
+    /** Restore construction uses the live concrete boss; snapshot fields restore the phase. */
+    private LrzMinibossArmSegmentChild(LrzMinibossInstance parent) {
+        this(parent, 0, false);
+    }
+
     LrzMinibossArmSegmentChild(AbstractBossInstance parent, int childSubtype, boolean mirrored) {
         super(parent, "LRZMinibossArmSegment", PRIORITY_BUCKET, 0x9D);
         this.mirrored = mirrored;

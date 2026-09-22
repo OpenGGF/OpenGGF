@@ -66,3 +66,14 @@ Slice 0 (`3418eba6e`): `-Dtest=TestS3kLrzPlacementCensus,TestSonic3kRingPlacemen
 Slice 1 (`bbd156d37`): focused batch of 1263 tests, 0 failures, 0 skips, plus `-Pguards` 669 tests,
 0 failures. Media: `raw-00-lrz1-before/`, clips `00a-lrz1-baseline-before-work.mp4`,
 `02-lrz1-parallax-before-after.mp4`, `05-lrz1-lava-block-before-after.mp4`.
+
+### 2026-09-22 continuation: actual boss graph restoration
+
+`TestS3kLrzBossRewindHeadless` uses a declared arena entry at `(2C00,600)`.
+It captures unfolded arms, production hit flashes and defeat debris, explicitly
+removes live children, then restores and compares every world snapshot entry and
+one-frame forward replay. Both tests pass; direct eligible touch calls make this
+rewind evidence, not controller-route completion. The inherited missing child
+constructors and resurrection of retired arms are fixed; see the
+[campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#rewind-findings-from-the-continuation).
+Cold route, donor/team/viewport fight breadth and native comparison remain open.

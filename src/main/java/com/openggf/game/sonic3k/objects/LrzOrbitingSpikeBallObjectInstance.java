@@ -109,6 +109,11 @@ public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInst
     /** ROM {@code art_tile(a0)} bit 15 as this frame's routine left it. */
     private boolean highPriority;
 
+    /** Spawn-only entry for dynamic rewind reconstruction of either placed object ID. */
+    private LrzOrbitingSpikeBallObjectInstance(ObjectSpawn spawn) {
+        this(spawn, spawn.objectId() == 0x2C ? Axis.VERTICAL : Axis.HORIZONTAL);
+    }
+
     public LrzOrbitingSpikeBallObjectInstance(ObjectSpawn spawn, Axis axis) {
         super(spawn, axis == Axis.HORIZONTAL
                 ? "LRZOrbitingSpikeBallHorizontal" : "LRZOrbitingSpikeBallVertical");

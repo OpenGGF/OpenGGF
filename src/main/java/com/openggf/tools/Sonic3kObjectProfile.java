@@ -81,6 +81,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x2F, // StillSprite
             0x30, // AnimatedStillSprite
             0x31, // LBZRollingDrum / LRZCollapsingBridge
+            0x32, // AIZDrawBridge / LRZTurbineSprites
             0x33, // Button
             0x34, // StarPost
             0x35, // AIZForegroundPlant
@@ -156,7 +157,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x2C, // AIZCollapsingLogBridge
             0x2D, // AIZFallingLog
             0x2E, // AIZSpikedLog
-            0x32, // AIZDrawBridge
             0x36, // HCZBreakableBar
             0x37, // HCZWaterRush
             0x4C, // CNZSpiralTube
@@ -320,6 +320,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x2B, // LRZOrbitingSpikeBallHorizontal
             0x2C, // LRZOrbitingSpikeBallVertical
             0x2D, // LRZSolidMovingPlatforms
+            0x37, // LRZSpikeBallLauncher
             0x99, // Fireworm
             0x9A, // Iwamodoki
             0x9B, // Toxomister

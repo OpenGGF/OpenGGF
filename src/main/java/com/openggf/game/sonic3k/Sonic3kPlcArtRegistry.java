@@ -2756,6 +2756,17 @@ public final class Sonic3kPlcArtRegistry {
                     2,
                     null
             ));
+            // Obj_LRZTurbineSprites: both mapping tables address PLC-loaded ArtTile_LRZ2Drum.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES,
+                    Sonic3kConstants.MAP_LRZ_TURBINE_SPRITES_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_DRUM,
+                    1, null));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES_THIN,
+                    Sonic3kConstants.MAP_LRZ_TURBINE_SPRITES2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_DRUM,
+                    1, null));
             // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89850); the ball copies the
             // launcher's art_tile and mappings verbatim (:89864-89865).
             levelArt.add(new LevelArtEntry(

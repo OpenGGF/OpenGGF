@@ -103,6 +103,8 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // Launcher must retain the exact managed ball after recreation.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzSpikeBallLauncherObjectInstance", "ball"), RewindFieldPolicy.CAPTURED),
             // These SOZ SST links remain mutable during native graph teardown.
             // Capture their identities explicitly so both schema restore and the
             // coverage audit agree; constructors deliberately recreate null links.

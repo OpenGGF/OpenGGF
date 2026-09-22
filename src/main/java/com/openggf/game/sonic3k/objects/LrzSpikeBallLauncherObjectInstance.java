@@ -1,16 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
-import com.openggf.game.rewind.identity.ObjectRefId;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -107,7 +103,6 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
     /** {@code jsr AllocateObjectAfterCurrent} at :89855 runs once, on the init pass. */
     private boolean initialised;
 
-    @RewindTransient(reason = "ball link restored by ObjectRefId in restoreRewindState")
     private LrzSpikeBallLauncherBallInstance ball;
 
     public LrzSpikeBallLauncherObjectInstance(ObjectSpawn spawn) {
@@ -326,21 +321,4 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
         renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
     }
 
-    private record Links(ObjectRefId ballId) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
-
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        ObjectRefId ballId = context.identityTable().map(table -> table.encodeObject(ball)).orElse(null);
-        return super.captureRewindState(context).withObjectSubclassExtra(new Links(ballId));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof Links links) {
-            ball = links.ballId() == null ? null
-                    : (LrzSpikeBallLauncherBallInstance)
-                            context.requireIdentityTable().resolveObject(links.ballId(), true);
-        }
-    }
 }

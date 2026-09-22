@@ -52,6 +52,11 @@ public final class LrzRockCrusherTimerChildInstance extends AbstractObjectInstan
     private int countdown;
     private boolean armed;
 
+    /** Restore entry: the captured scalar state replaces this harmless initial subtype. */
+    private LrzRockCrusherTimerChildInstance(ObjectSpawn spawn) {
+        this(spawn.subtype());
+    }
+
     public LrzRockCrusherTimerChildInstance(int subtype) {
         super(new ObjectSpawn(0, 0, Sonic3kObjectIds.SPIKER, subtype, 0, false, 0),
                 "LRZRockCrusherTimer");

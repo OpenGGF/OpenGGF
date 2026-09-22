@@ -61,6 +61,11 @@ final class LrzMinibossOrbiterChild extends LrzMinibossRingChildBase implements 
     private int xFixed;
     private int yFixed;
 
+    /** Restore construction uses the live concrete boss; snapshot fields restore the phase. */
+    private LrzMinibossOrbiterChild(LrzMinibossInstance parent) {
+        this(parent, 0, false);
+    }
+
     LrzMinibossOrbiterChild(AbstractBossInstance parent, int childSubtype, boolean mirrored) {
         super(parent, "LRZMinibossArmLink", PRIORITY_BUCKET, 0x9D);
         this.mirrored = mirrored;

@@ -83,6 +83,12 @@ helper values; applying it to a live managed child can make an owner's captured
 collection retain stale objects after recreation. Use object scalar capture and
 identity relinking for those children. Exercise remove/recreate/restore with the
 real manager, including any optional defeat controller that advances child cleanup.
+Test creation and retirement boundaries as well as a steady fight. LRZ's old
+restore hook rebuilt destroyed arms (12 survivors became 24); restore the captured
+graph instead. Boss-child spawn metadata is a derived position/ordinal cache:
+refresh it before capture, including the first frame after subclass construction.
+`TestS3kLrzBossRewindHeadless` covers arms, hit flashes and defeat debris through
+explicit removal/recreation and whole-world forward replay.
 
 **ROM sprite priority buckets are SAT order.** Lower priority buckets and earlier object
 slots appear in front; painter rendering reverses both orders. Folded boss parts

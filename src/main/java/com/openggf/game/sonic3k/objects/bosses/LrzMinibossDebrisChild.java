@@ -72,6 +72,11 @@ final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRe
     private boolean flickerBit;
     private boolean drawnThisFrame;
 
+    /** Restore construction uses the live concrete boss; snapshot fields restore the phase. */
+    private LrzMinibossDebrisChild(LrzMinibossInstance parent) {
+        this(parent, 0);
+    }
+
     LrzMinibossDebrisChild(AbstractBossInstance parent, int index) {
         super(parent, "LRZMinibossDebris", PRIORITY, 0x9D);
         this.index = index;
@@ -85,6 +90,7 @@ final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRe
         this.mappingFrame = RAW_ANI_78A9C[index];
         this.xVelocity = DEBRIS_VELOCITIES[index][0];
         this.yVelocity = DEBRIS_VELOCITIES[index][1];
+        updateDynamicSpawn();
     }
 
     @Override

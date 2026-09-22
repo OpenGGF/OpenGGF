@@ -44,10 +44,9 @@ import java.util.List;
  * which band a player enters by decides where on the loop they join it.
  *
  * <p><b>The middle band is for high-priority players only</b> ({@code cmpi.b #$30,d1 /
- * tst.w art_tile(a1) / bpl}, :89781-89784): a player drawn behind the level tiles -- which is what
- * this object itself puts them behind on the far half of the loop -- is the only one the middle
- * band accepts. That is how the turbine hands a player round its own back without catching them
- * again on the way past.
+ * tst.w art_tile(a1) / bpl}, :89781-89784): a player drawn in front of low-priority level tiles
+ * is the only one the middle
+ * band accepts. Low-priority players passing behind the terrain are not captured there.
  *
  * <p><b>The entry angle carries the level clock in it</b> ({@code (Level_frame_counter+1) & 7},
  * minus {@code 4}, times {@code 4}, added to {@code d1}, :89791-89796), so two captures from the
@@ -120,11 +119,11 @@ public final class LrzTurbineSpritesObjectInstance extends AbstractObjectInstanc
     /** ROM {@code mapping_frame(a0)}: {@code ((Level_frame_counter+1) >> 1) & 3} for both. */
     private int mappingFrame;
     /** ROM {@code $30(a0)} and {@code $31(a0)}. */
-    private final boolean[] captured = new boolean[2];
+    private boolean[] captured = new boolean[2];
     /** ROM {@code $32(a0)} and {@code $33(a0)}. */
-    private final int[] cooldown = new int[2];
+    private int[] cooldown = new int[2];
     /** ROM {@code $34(a0)} and {@code $35(a0)}. */
-    private final int[] rideAngle = new int[2];
+    private int[] rideAngle = new int[2];
 
     public LrzTurbineSpritesObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LRZTurbineSprites");
@@ -185,9 +184,9 @@ public final class LrzTurbineSpritesObjectInstance extends AbstractObjectInstanc
             releasePlain(slot, player);
             return;
         }
-        if (player.isJumpPressed()) {
+        if (player.isLogicalJumpPressActive()) {
             // andi.w #button_A_mask|button_B_mask|button_C_mask,d1 (:89657): the low byte of
-            // Ctrl_n_logical, so a HELD button, not a press edge.
+            // Ctrl_n_logical: the low byte contains newly pressed buttons.
             releaseByJump(slot, player);
             return;
         }
@@ -279,7 +278,7 @@ public final class LrzTurbineSpritesObjectInstance extends AbstractObjectInstanc
         }
         if (BAND_ANGLE[band] == 0x30 && !player.isHighPriority()) {
             // cmpi.b #$30,d1 / tst.w art_tile(a1) / bpl (:89781-89784): the middle band only
-            // takes a player the turbine has already put behind the tiles.
+            // takes a high-priority player, not one passing behind the tiles.
             return;
         }
         // loc_444B6 (:89786-89806).

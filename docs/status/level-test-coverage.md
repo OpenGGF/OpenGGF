@@ -290,3 +290,14 @@ SOZ2 last-checkpoint debug skipping now has a production reload regression at
 320/400/800px with native Sonic+Tails: destination events, boss wall art/solids,
 brightness, preserved lives and rewind timeline isolation. Ordinary checkpoint
 activation coverage did not exercise the former coordinate-only shortcut.
+
+
+S&K campaign reconciliation (2026-09-22): the [audit](../architecture/audits/2026-09-22-sk-zone-bring-up.md)
+distinguishes integrated MHZ/FBZ/SOZ/DDZ evidence from the local LRZ/SSZ/DEZ campaigns.
+The LRZ summaries above predate their later commits. Current LRZ Act 1 has zero
+placeholder placements and a working miniboss/results/act-change implementation;
+Act 2 has five placeholders after the turbine continuation. These counts are not
+completion claims. The [Act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md)
+records 17 positioned turbine interaction and full-state rewind rows across all
+five current viewport presets, S1/S2 donation and native characters, plus six
+focused cases. Cold completion and the other inherited matrix gaps remain open.

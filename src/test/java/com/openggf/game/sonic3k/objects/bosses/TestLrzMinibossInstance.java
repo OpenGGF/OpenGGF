@@ -412,6 +412,12 @@ class TestLrzMinibossInstance {
         assertTrue(deletedOnFrame.get(0x14) < deletedOnFrame.get(2),
                 "the link nearest the hand must go before the link nearest the shoulder: "
                         + deletedOnFrame);
+        long liveRingParts = boss.getChildComponents().stream()
+                .filter(LrzMinibossRingChild.class::isInstance).count();
+        boss.afterRewindRestoreSettled();
+        assertEquals(liveRingParts, boss.getChildComponents().stream()
+                        .filter(LrzMinibossRingChild.class::isInstance).count(),
+                "settling a restored graph must not resurrect the defeated hand's arm");
     }
 
     /**
@@ -797,34 +803,6 @@ class TestLrzMinibossInstance {
                 "y_pos $880: $880 - $700 + $80 = $200 exactly, which bhi keeps -- a "
                         + "cameraY + $140 box killed it $40 earlier");
         assertFalse(shotSurvivesAt(0x1000, 0x087E), "y_pos $881 gives $201 > $200");
-    }
-
-    /**
-     * {@code loc_78562} creates the 24 children once, in {@code ROUTINE_INIT}. A rewind restore
-     * that lands on any later routine never replays that loop, so if the capture came back short
-     * the boss would fight the rest of the round with a truncated arm and nothing would say so.
-     * The census is rebuilt from the same deterministic (ring, subtype) loop.
-     */
-    @Test
-    void aRestoreAfterInitStillHasTwentyFourChildren() {
-        boss.update(0, null);
-        boss.update(1, null);
-        assertEquals(24, boss.getChildComponents().size());
-
-        // Whatever the capture lost: a whole ring's hand, a mid-arm link, a segment.
-        boss.getChildComponents().removeIf(child -> child instanceof LrzMinibossHandChild hand
-                && hand.ringMirrored());
-        boss.getChildComponents().removeIf(child -> child instanceof LrzMinibossOrbiterChild link
-                && !link.ringMirrored() && link.ringSubtype() == 0x0A);
-        assertEquals(22, boss.getChildComponents().size());
-
-        boss.afterRewindRestoreSettled();
-
-        assertEquals(24, boss.getChildComponents().size(),
-                "the create loop is deterministic in ring and subtype; rebuild what is missing");
-        assertEquals(2L, countOf(boss.getChildComponents(), LrzMinibossHandChild.class));
-        assertEquals(20L, countOf(boss.getChildComponents(), LrzMinibossOrbiterChild.class));
-        assertEquals(2L, countOf(boss.getChildComponents(), LrzMinibossArmSegmentChild.class));
     }
 
     /**

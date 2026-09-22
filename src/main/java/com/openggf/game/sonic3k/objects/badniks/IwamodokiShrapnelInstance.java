@@ -54,6 +54,11 @@ public final class IwamodokiShrapnelInstance extends AbstractObjectInstance
     private int animTimer;
     private final SubpixelMotion.State motion;
 
+    /** Restore entry; SubpixelMotion restores both velocity and fractional position. */
+    private IwamodokiShrapnelInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), spawn.subtype(), 0, 0);
+    }
+
     public IwamodokiShrapnelInstance(int x, int y, int subtype, int xVel, int yVel) {
         super(new ObjectSpawn(x & 0xFFFF, y & 0xFFFF, 0, subtype, 0, false, 0),
                 "IwamodokiShrapnel");
