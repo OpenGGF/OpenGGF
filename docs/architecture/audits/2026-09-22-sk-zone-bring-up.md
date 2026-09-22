@@ -173,3 +173,18 @@ hurt/dead frames; frame 120 and the full MP4 decode were checked (8s, 960×672,6
 The preceding `(19C0,550)` filming attempt encountered its nearby flame thrower and
 was not selected for the showcase. Both are positioned starts, not cold completion.
 Act 2 is now down to two placeholder placements: the boulder cutscene and exit.
+
+## LRZ Knuckles exit
+
+After `ab873c917`, `$B3` follows `Obj_StartNewLevel` ($863EC), leaving `$AE` as
+Act 2's only placeholder placement. The focused queued command
+`-Dtest=TestS3kStartNewLevel,TestS3kLrzPlacementCensus,TestS3kLrzExitHeadless`
+with the absolute S3K ROM passed **20 tests, zero failures/errors/skips** at
+15:37 BST. The real exit loads HPZ for all three native characters; save gating
+is tested separately. Rewind coverage and profile guards passed. Inventory-only
+ratchet failure (new passing class) was reconciled to 1158/918/240 and rerun:
+one test passed at 15:40 BST, no tails.
+
+External clip 39 and raw-58 record Knuckles entering HPZ from declared `(3FC8,D0)`;
+360 frames, zero hurt/dead frames, frame 120 inspected and complete MP4 decoded.
+This remains positioned evidence, not cold-route completion.

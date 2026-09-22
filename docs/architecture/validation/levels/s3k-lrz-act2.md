@@ -7,7 +7,7 @@ cutscene and `StartNewLevel $1600`) and Knuckles (`Obj_StartNewLevel` `$B3` at `
 `$1601`). Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md); starting inventory:
 [LRZ placement inventory](../../research/s3k-zones/lrz-object-inventory.md).
 Status: traversal families are implemented through slice 7 as of the 2026-09-22
-continuation. The boulder cutscene and Knuckles exit remain open; route certification
+continuation. The Knuckles exit is implemented; the boulder cutscene remains open. Route certification
 and the remaining breadth/lifecycle/native obligations are still separate gates.
 
 Incoming: seamless `$900` handover, level select `$901`, star-post reload.
@@ -22,8 +22,8 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, **two remaining
-placeholders** (`$AE:00`, `$B3:2D`) after the launchers, turbines and chained platforms;
+Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, **one remaining
+placeholder** (`$AE:00`) after the launchers, turbines and chained platforms;
 281 live rings (282 records minus the leading `(0,0)` sentinel). Historical counts
 were 281 at `035e48a58`, 188 before slice 7, 23 at `c708e1a2b`, and five at `87f0bf87b`.
 
@@ -93,3 +93,16 @@ The chained-platform continuation uses the ROM's `SolidObjectFull` high d6 bits
 cases including the rewind inventory; its counts are 1157/917/240 (total/isolated/
 graph-covered), with no unresolved buckets. The native exporter and complete
 provenance are described in the campaign audit. New footage remains positioned.
+
+## Exit continuation (2026-09-22)
+
+`$B3:2D` now follows `Obj_StartNewLevel` ($863EC): half-open signed bounds,
+packed subtype destination `$1601`, and `SaveGame` gated on LRZ + Knuckles only.
+Sonic/Tails reaching this placement still take its transition, as in ROM.
+`TestS3kStartNewLevel,TestS3kLrzPlacementCensus,TestS3kLrzExitHeadless` passed
+20 tests without failures/errors/skips using the queued Maven wrapper and absolute
+S3K ROM. The real placement at `(3FE0,E0)` reaches HPZ through GameLoop's fade
+for native Sonic, Tails and Knuckles. Rewind/profile guards pass; the inventory is
+1158 = 918 isolated passes + 240 graph-covered, with no failure tails.
+Clip 39 shows a positioned Knuckles approach and HPZ arrival (360 frames, zero
+hurt/dead frames); this does not establish a cold route or wide/donor breadth.

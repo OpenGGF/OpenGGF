@@ -136,7 +136,8 @@ class TestRemainingRewindTailInventory {
         // across unfolded arms, hit flashes and defeat debris by TestS3kLrzBossRewindHeadless.
         // The chained-platform class also passes the isolated probe; all three live
         // group shapes recreate independently in TestS3kLrzChainedPlatformsHeadless.
-        return new TailInventory(1157, 917, 240, 0, buckets);
+        // Shared StartNewLevel trigger has scalar-only request state and probes cleanly.
+        return new TailInventory(1158, 918, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
