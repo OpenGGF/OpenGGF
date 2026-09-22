@@ -125,3 +125,51 @@ The focused shared-boss regression selection
 `-Dtest=TestS1*Boss*GraphRewind,TestS2*Boss*GraphRewind,TestS2DeathEggRobotGraphRewind,TestS2MechaSonicGraphRewind,TestS3k*Boss*GraphRewind,TestS3kLrzBossRewindHeadless,TestS3kLrzLauncherRewindHeadless`
 with all three absolute ROM paths passed **77 tests, zero failures/errors/skips**
 at 15:14 BST. Combined change-based selection remains required before integration.
+
+## Chained platforms and native traversal corroboration
+
+Continuation after `87f0bf87b` implements `$25` from `Obj_LRZChainedPlatforms`
+(`$4A644`): negative subtype expands the ROM's 4/4/8 groups, all ten-waypoint paths
+come from ROM, and `sub_4A818` preserves DIVS signed remainder in the minor-axis
+fraction. `SolidObjectFull` high d6 bits 18/19 select underside damage; the top
+carries its rider safely. The actual groups at `(15C0,A90)`, `(19C0,590)` and
+`(1D40,890)` restore independent phases without duplication. Focused tests:
+
+- `TestLrzChainedPlatforms,TestS3kLrzChainedPlatformsHeadless,TestS3kLrzPlacementCensus`:
+  11 tests, no failures/errors/skips before expanding contact breadth.
+- `TestLrzChainedPlatforms,TestS3kLrzChainedPlatformsHeadless,TestRemainingRewindTailInventory`:
+  24 tests, no failures/errors/skips after covering widths 320/352/400/528/800 ×
+  native/S1/S2 Sonic and native Tails/Knuckles. All commands use the queued Maven
+  wrapper and absolute S3K ROM property. Inventory now 1157/917/240 with empty tails.
+- Structural rewind coverage/architecture and profile registration pass; the initial
+  inventory-only failure was the new isolated-passing class, then updated explicitly.
+
+Read-only native replay (`native-traversal-20260922/run1`, external LRZ archive)
+resumes the original BK2's frame-415400 save and observes frames 418100–422900,
+without memory writes. The verified ROM SHA-1 is
+`CFBF98C36C776677290A872547AC47C53D2761D6`; BK2 SHA-256
+`AD40FB0B0A74FA12B08AB71B2E48A7455B388D14F43F4CDED502AC4A15D1B3C0`.
+The common native host completed with no logged failures in 9.527 seconds.
+9593 object rows include 1734 chained-platform samples and 134 captured-player
+turbine samples. All 134 turbine Y offsets agree with `byte_44572`; releases at
+movie frames 419598/419717/419831 yield -1944/-3072/-3012. Three new unit cases
+exercise those phases through ordinary capture/rotation, not state hydration;
+`TestLrzTurbineSprites` passes nine cases with zero skips/failures/errors.
+Native chain roots at frames 422436 and 422859 begin with Y fraction `$73F8`,
+matching the independent ROM-table path tests. Native images f419600/f422620 were
+inspected. This is behavior corroboration; matched trajectory/pixel certification
+still needs matched entry and observation boundaries.
+
+Promoted the reusable native observer to
+[`capture_lrz_traversal_reference.lua`](../../../tools/bizhawk/capture_lrz_traversal_reference.lua)
+with explicit plan fields. `luac5.4 -p` passed. Use the common host, original movie
+and its own save with `--require-output objects.csv --require-output done.txt`;
+external `host.json` records the full command and hashes. No observation feeds
+engine gameplay.
+
+Clip 38 (`raw-57-chain-80-320-20260922`) is 480 neutral frames from declared
+`(15C0,A50)`, 99 rings, native Sonic. State CSV shows a down-and-up ride with zero
+hurt/dead frames; frame 120 and the full MP4 decode were checked (8s, 960×672,60fps).
+The preceding `(19C0,550)` filming attempt encountered its nearby flame thrower and
+was not selected for the showcase. Both are positioned starts, not cold completion.
+Act 2 is now down to two placeholder placements: the boulder cutscene and exit.

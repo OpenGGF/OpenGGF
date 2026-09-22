@@ -6,7 +6,9 @@ Character routes: Sonic + Tails, Sonic, Tails (seamless arrival from Act 1, then
 cutscene and `StartNewLevel $1600`) and Knuckles (`Obj_StartNewLevel` `$B3` at `($3FE0,$E0)` to
 `$1601`). Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md); starting inventory:
 [LRZ placement inventory](../../research/s3k-zones/lrz-object-inventory.md).
-Status: act 1 slices 0-3 have brought the shared classes with them; act 2 traversal is slice 7.
+Status: traversal families are implemented through slice 7 as of the 2026-09-22
+continuation. The boulder cutscene and Knuckles exit remain open; route certification
+and the remaining breadth/lifecycle/native obligations are still separate gates.
 
 Incoming: seamless `$900` handover, level select `$901`, star-post reload.
 Outgoing: `$1600` (Sonic/Tails, with the Act 3 carry) and `$1601` (Knuckles, with `SaveGame`).
@@ -20,18 +22,14 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, of which **32 still build a
-`PlaceholderObjectInstance`** (281 at `035e48a58`, 277 after slice 1,
-255 after slice 3b's doors and horizontal buttons, 254 after the `$16` wall ride, 240 after the
-`$20` swinging spike ball, 197 after slice 4's Iwamodoki and Toxomister, and 136 after slice 7's
-two orbiting spike balls, `$2B` (12) and `$2C` (40), 84 after its `$29` flame throwers (52) and
-32 after its `$2D` solid moving platforms (52)); 281 live rings (282 records minus the
-leading `(0,0)` sentinel).
+Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, **two remaining
+placeholders** (`$AE:00`, `$B3:2D`) after the launchers, turbines and chained platforms;
+281 live rings (282 records minus the leading `(0,0)` sentinel). Historical counts
+were 281 at `035e48a58`, 188 before slice 7, 23 at `c708e1a2b`, and five at `87f0bf87b`.
 
-Act 2 classes reached so far are all shared with act 1 and were implemented there: `$6E` (4),
-`$19` (11), `$1C` (11), `$16` (1), `$20` (14), `$9A` (34) and `$9B` (9). **None of their act 2 skins or
-placements has been exercised in act 2 itself** - that remains an owed row, recorded in the
-[bring-up plan](../../plans/2026-09-17-lrz-bring-up.md) handover.
+The compatibility matrix verifies Act 2's ROM-backed skins, including its own
+sinking rock, doors, buttons and swinging-spike-ball art. That does not establish
+behavior at every placement; the remaining obligations below retain that distinction.
 
 ## Obligations
 
@@ -50,9 +48,9 @@ placements has been exercised in act 2 itself** - that remains an owed row, reco
 | OBJECT: doors and horizontal buttons `$19` (11), `$1C` (11) | `Obj_LRZDoor` act 2 skin (`mapping_frame` 1, art base `$090`, `height_pixels $20`, so a shorter solid box) and `Obj_LRZButtonHorizontal` act 2 skin (`Map_LRZButtonHorizontal2` over `ArtTile_LRZ2Misc`, palette 1) | native | `TestLrzDoorsButtonsAndTriggers` (act 1 decode), `TestS3kLrzPlacementCensus` | implemented | pass, `d2c58f148` | The act-2 skin is registered but not exercised: no act-2 unit case, no route spot. Act 2 doors `$01-$0B` each have a `$1C` button; `$33/$05` is extra |
 | OBJECT: flame throwers `$29` (52) | `Obj_LRZFlameThrower` (sonic3k.asm:89227-89448): subtype bit 7 picks the variant and the rest is `$32 = (subtype & $7F) * 4`, the idle length between `2*60`-frame bursts; emission is gated on `(Level_frame_counter+1) & 3`, `$2E = sin(angle) asr 4` with `addq.b #8,angle`, and the flame leaves at `sin/cos($2E) asl 2` from `x_pos + $10` (or `y_pos + $10`); `tst.b render_flags / bpl` makes an off-screen thrower run its cycle and its sound but allocate nothing | native | `TestLrzFlameThrower` (8) | implemented | pass | Eight cases from the ROM's immediates and its own sine table, broken on purpose once (`addq.b #4` for `#8`) and failing on the angle case only. **Owed**: no clip, no rewind spot on a route, no act 2 route position and no wide/donor/roster row |
 | OBJECT: solid moving platforms `$2D` (52) | `Obj_LRZSolidMovingPlatforms` (sonic3k.asm:51012-51110): `(subtype >> 4) & 1` picks one of `byte_25826`'s two entries and `subtype & $F` one of `off_258BC`'s nine movers -- an `rts`, `Oscillating_table+$0A`/`+$1E` on x and on y, and four `sub_25974` ramps at limits `$5F` and `$7F`; `sub_25974`'s `$36` is an 8.8 accumulator whose HIGH byte the limit is compared against, and `$40` is an 8.8 acceleration stepping by 4 | native | `TestLrzSolidMovingPlatform` (7) | implemented | pass | Seven cases on the ROM's own arithmetic, broken on purpose once (masking `$36` to a byte) and failing on the two ramp cases only. **Owed**: no clip, no rewind spot on a route and no wide/donor/roster row |
-| OBJECT: turbines `$32` (18 placements) | `Obj_LRZTurbineSprites`, `sub_44338`, `loc_44448`, `sub_4450A`; logical press byte, three capture bands, two native player slots | 320/352/400/528/800 × native/S1/S2 Sonic, plus native Tails/Knuckles | `TestLrzTurbineSprites`, `TestS3kLrzTurbineHeadless` | implemented in 2026-09-22 continuation | 23 cases, 0 failures/errors/skips | Real placement capture/release and whole-composite mid-ride/cooldown restore + forward replay. Art ready from ROM. Positioned moving captures at 320/800 and S1 400; native pixel/trajectory comparison and extra-team breadth open. |
-| OBJECT: spike-ball launcher `$37` (9 placements) | `Obj_LRZSpikeBallLauncher`, `loc_448A8`, `loc_44916` | native | `TestLrzSpikeBallLauncher` | inherited implementation `c708e1a2b` | focused tests pass | Rewind graph review and moving capture remain open. |
-| OBJECT: chained platforms `$25` (3 placements) | `Obj_LRZChainedPlatforms` | native | — | not implemented | open | Slice 7's remaining traversal family. |
+| OBJECT: turbines `$32` (18 placements) | `Obj_LRZTurbineSprites`, `sub_44338`, `loc_44448`, `sub_4450A`; logical press byte, three capture bands, two native player slots | 320/352/400/528/800 × native/S1/S2 Sonic, plus native Tails/Knuckles | `TestLrzTurbineSprites`, `TestS3kLrzTurbineHeadless` | implemented in 2026-09-22 continuation | 26 cases, 0 failures/errors/skips | Real placement capture/release and whole-composite mid-ride/cooldown restore + forward replay. Art ready from ROM. Positioned moving captures at 320/800 and S1 400; 134 native ride-offset samples and three release velocities corroborated by read-only BK2 replay. Matched pixels and extra-team breadth open. |
+| OBJECT: spike-ball launcher `$37` (9 placements) | `Obj_LRZSpikeBallLauncher`, `loc_448A8`, `loc_44916` | native | `TestLrzSpikeBallLauncher` | inherited implementation `c708e1a2b` | focused tests pass | In-flight child removal/recreation + whole-world replay pass in `TestS3kLrzLauncherRewindHeadless`; moving capture remains open. |
+| OBJECT: chained platforms `$25` (3 placements) | `Obj_LRZChainedPlatforms`, ROM group/path tables, `sub_4A818` signed division; safe top, spiked underside | all five current widths × native/S1/S2 Sonic, native Tails/Knuckles | `TestLrzChainedPlatforms`, `TestS3kLrzChainedPlatformsHeadless` | implemented | 23 behavior cases pass; isolated rewind inventory passes | All paths close both ways; all three real groups recreate without duplication; riding and underside hurt verified. Clip 38 shows positioned ride. Native first-step fraction `$73F8` agrees. Cold-route, extended teams and matched pixels remain open. |
 | OBJECT: badniks `$99 $9A $9B` (52 placements) | `Obj_Fireworm`, `Obj_Iwamodoki`, `Obj_Toxomister` | native 320 + 400 | `TestFirewormBadnikInstance`, `TestIwamodokiBadnikInstance`, `TestToxomisterBadnikInstance`, `TestS3kLrzCompatibilityMatrix` | implemented (all three; the classes are act-agnostic and the badniks share one art sheet across both acts) | pass, `cad4a2e07` | Placements exercised in act 2 only through the census and the matrix's art rows; no act 2 route or clip yet |
 | BREADTH: act 2's own skins | `Obj_LRZSinkingRock`'s act branch (`mapping_frame` 1 and the `$090` tile base, sonic3k.asm:87907-87910) plus the act 2 door, button and swinging-spike-ball art keys | native 320 and 400, in act 2 | `TestS3kLrzCompatibilityMatrix#actTwoExercisesItsOwnSkins`, `#actTwoSkinsAlsoLoadWide` | implemented | pass | Asserts the load really is act 2 and that each act 2 art key has a ready ROM-backed renderer. Behaviour of the act 2 placements themselves is still unverified |
 | OBJECT: `$0F` collapsing bridges (25) and `$24` tunnel (10) | `Obj_CollapsingBridge` zone-9 mappings; `Obj_AutomaticTunnel` subtypes `$55-$59`, `$D5-$D9` | native | `TestS3kLrzPlacementCensus` (classification only) | implemented | classification pass | Per-subtype behaviour unverified |
@@ -89,3 +87,9 @@ Media: `$VIDEO_ROOT/lrz-bring-up/raw-52-turbine-320-20260922`,
 `raw-55-turbine-approach-320-20260922`. All are declared positioned entries,
 not cold routes. The latter starts above the upper capture band, falls into the
 real placement and jumps free at frame 240. Native corroboration is still open.
+
+The chained-platform continuation uses the ROM's `SolidObjectFull` high d6 bits
+18/19 (underside), not bits 20/21 (top landing). Queued focused tests passed 24
+cases including the rewind inventory; its counts are 1157/917/240 (total/isolated/
+graph-covered), with no unresolved buckets. The native exporter and complete
+provenance are described in the campaign audit. New footage remains positioned.

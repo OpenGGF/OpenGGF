@@ -86,6 +86,7 @@ class TestS3kLrzCompatibilityMatrix {
             Sonic3kObjectArtKeys.LRZ2_SINKING_ROCK,
             Sonic3kObjectArtKeys.LRZ2_SWINGING_SPIKE_BALL,
             Sonic3kObjectArtKeys.LRZ2_SWINGING_SPIKE_BALL_CHAIN,
+            Sonic3kObjectArtKeys.LRZ2_CHAINED_PLATFORM,
             Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES,
             Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES_THIN,
             Sonic3kObjectArtKeys.LRZ2_SPIKE_BALL_LAUNCHER,

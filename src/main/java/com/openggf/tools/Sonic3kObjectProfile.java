@@ -320,6 +320,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x2B, // LRZOrbitingSpikeBallHorizontal
             0x2C, // LRZOrbitingSpikeBallVertical
             0x2D, // LRZSolidMovingPlatforms
+            0x25, // LRZChainedPlatforms
             0x37, // LRZSpikeBallLauncher
             0x99, // Fireworm
             0x9A, // Iwamodoki

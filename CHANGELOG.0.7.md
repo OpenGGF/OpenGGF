@@ -373,7 +373,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **S3K Lava Reef:** Act 2 turbines carry the player around their rotating drums
   and release on a fresh jump press, with separate state for Sonic and Tails and
   restored ride/cooldown state when rewinding. Both turbine variants draw their
-  ROM-loaded art. Rewinding the miniboss preserves its arms, hit flashes and defeat
+  ROM-loaded art. Chained platforms follow their ROM paths, carry players on top
+  and hurt on contact with their spiked undersides. Rewinding the miniboss preserves its arms, hit flashes and defeat
   debris without resurrecting destroyed parts; launchers retain their in-flight balls.
   Lava Reef Acts 1 and 2 now scroll their own layered background
   instead of the generic quarter-speed fallback, Act 2 animates its own lava tiles

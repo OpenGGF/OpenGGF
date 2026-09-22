@@ -6,6 +6,8 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -77,6 +79,22 @@ class TestLrzTurbineSprites {
         assertFalse(player.isJumping());
         // angle $78 -> byte_443B4[7] | 8 = $68; ROM sine $68 = $8E.
         assertEquals(-0x8E * 12, player.getYSpeed());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"100,-1944", "64,-3072", "72,-3012"})
+    void jumpVelocitiesMatchReadOnlyNativeObservations(int angle, int velocity) {
+        // Original complete-run BK2 frames 419598, 419717 and 419831, captured without RAM edits.
+        // Set up the ordinary capture band, then advance the object's ROM loop to that phase.
+        var turbine = turbine(0);
+        var player = player(0, -80);
+        turbine.update(4, player);
+        for (int i = 0; i < 64 && turbine.rideAngle(0) != angle; i++) turbine.update(4, player);
+        assertEquals(angle, turbine.rideAngle(0));
+        player.setLogicalInputState(false, false, false, false, true, true);
+        turbine.update(4, player);
+        assertFalse(turbine.isCaptured(0));
+        assertEquals(velocity, player.getYSpeed());
     }
 
     @Test

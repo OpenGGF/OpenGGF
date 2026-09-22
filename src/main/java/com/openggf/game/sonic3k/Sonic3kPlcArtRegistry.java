@@ -2756,6 +2756,10 @@ public final class Sonic3kPlcArtRegistry {
                     2,
                     null
             ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_CHAINED_PLATFORM,
+                    Sonic3kConstants.MAP_LRZ_CHAINED_PLATFORM_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC, 1, null));
             // Obj_LRZTurbineSprites: both mapping tables address PLC-loaded ArtTile_LRZ2Drum.
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES,

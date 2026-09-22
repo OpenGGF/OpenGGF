@@ -411,6 +411,13 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new AizDisappearingFloorObjectInstance(spawn);
                 });
+        registerStockZoneBound(0x25, (spawn, registry) -> {
+            S3kZoneSet zoneSet = getCurrentZoneSet();
+            if (zoneSet == S3kZoneSet.SKL && currentRomZoneId() == Sonic3kZoneIds.ZONE_LRZ) {
+                return new LrzChainedPlatformObjectInstance(spawn);
+            }
+            return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+        });
         factories.put(Sonic3kObjectIds.INVISIBLE_BLOCK,
                 (spawn, registry) -> new Sonic3kInvisibleBlockObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.INVISIBLE_HURT_BLOCK_H,
