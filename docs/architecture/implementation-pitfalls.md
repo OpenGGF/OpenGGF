@@ -570,3 +570,21 @@ already-measured corridor at x=`$1ACC`.
 
 **Calibrate a terrain sweep against a known-good point before believing a negative result.**
 A sweep that finds nothing is far more often a wrong predicate than an empty level.
+
+
+### A working early object update does not prove its lifetime tail
+
+DEZ's `$5F` turbine controller accelerated correctly, then left its player frozen
+at `$262D` because default range retirement removed the movement owner. Its ROM
+tail shifts the anchor `$400`, compares an unsigned `$680` range, and runs after
+both player slots. Test the production loop crossing the unload boundary; direct
+`update()` tests cannot see this failure. Also distinguish `SolidObjectFull2`'s
+returned d6 side bits (`loc_1E094` sets them in air) from grounded status pushing
+bits when implementing bounces. See the 2026-09-22 S&K campaign audit.
+
+When a test changes viewport configuration, rebuild the gameplay session before
+loading and assert `GameServices.camera().getWidth()`. `Camera` captures dimensions
+at construction; asserting the config value alone can report wide coverage while
+the production camera remains 320 px. Rendered captures exposed this in the DEZ
+room follow-up; matching the actual width also changes when the puzzle spawns and
+therefore its bob phase, so identical pad timings need not solve both views.

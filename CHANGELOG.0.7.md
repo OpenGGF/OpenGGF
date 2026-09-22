@@ -110,8 +110,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The junctions the tunnels feed into now catch you as well: they pull you to the middle, hold
   you spinning there, and fire you out along whichever way you press of the ones that junction
   opens onto. Act 1's turbine corridor blows you along it now as well, tumbling, with up and
-  down to steer by, and the bobbing shaft inside it bounces you off and lights up whichever
-  of its six panels you hit. The Spikebonker mace robots patrol both acts, hover, and swing at
+  down to steer by. Its controller stays alive as the camera follows you, and the bobbing
+  shaft and walls bounce airborne riders; hitting all six panels opens the exit. The Spikebonker mace robots patrol both acts, hover, and swing at
   you when you come at them from the side they are walking toward. Act 2's retracting springs
   work: they push out of the wall while you are below them, pull back in once you are well
   above, latch as they start and finish each stroke, and fling you upward when you land on one.

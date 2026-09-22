@@ -5,6 +5,7 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.S3kDezGravityRoomObjectInstance;
+import com.openggf.game.sonic3k.objects.S3kDezBumperWallObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -12,6 +13,11 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.WidescreenAspect;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,6 +41,7 @@ class TestS3kDezGravityRoomHeadless {
 
     @AfterEach
     void tearDown() {
+        SonicConfigurationService.getInstance().clearSessionOverrides();
         SessionManager.clear();
     }
 
@@ -256,6 +263,165 @@ class TestS3kDezGravityRoomHeadless {
         } finally {
             SessionManager.clear();
         }
+    }
+
+    @Test
+    void extendedRangeUsesTheRomAnchorAndUnsignedEdges() {
+        S3kDezGravityRoomObjectInstance room = new S3kDezGravityRoomObjectInstance(
+                new ObjectSpawn(OBJECT_X, OBJECT_Y, 0x5F, 0, 0, false, OBJECT_Y, -1));
+        assertTrue(room.checksOutOfRangeAfterRoutine(), "both players run before retirement");
+        assertTrue(room.usesCustomOutOfRangeCheck());
+        assertFalse(room.isCustomOutOfRange(0x2280), "$680 inclusive distance");
+        assertTrue(room.isCustomOutOfRange(0x2200), "$700 is outside");
+        assertFalse(room.isCustomOutOfRange(0x2900), "zero unsigned distance");
+        assertTrue(room.isCustomOutOfRange(0x2980), "negative distance wraps outside");
+    }
+
+    @Test
+    void placedControllerSurvivesAsTheCameraCrossesTheRoom() {
+        TestEnvironment.activeGameplayMode();
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .startPosition((short) 0x2500, (short) OBJECT_Y)
+                .startPositionIsCentre()
+                .build();
+        boolean captured = false;
+        int maxX = fixture.sprite().getCentreX();
+        for (int frame = 0; frame < 150; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            var sprite = fixture.sprite();
+            maxX = Math.max(maxX, sprite.getCentreX());
+            S3kDezGravityRoomObjectInstance room = null;
+            for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                if (object instanceof S3kDezGravityRoomObjectInstance candidate) {
+                    room = candidate;
+                    captured |= room.isCapturedForTest(true);
+                    break;
+                }
+            }
+            // Obj_DEZGravityRoom's tail uses (x+$400)&$FF80 and a $680 range.
+            // A captured player at the historical $2636 jam is well inside it.
+            if (captured && sprite.getCentreX() < OBJECT_X + CORRIDOR_LENGTH) {
+                assertTrue(room != null, "room controller unloaded while carrying at frame "
+                        + frame + " x=" + Integer.toHexString(sprite.getCentreX()));
+            }
+        }
+        assertTrue(captured, "real placed controller must capture the player");
+        assertTrue(maxX > 0x2650, "must reach the puzzle face beyond the old $2636 jam; maxX="
+                + Integer.toHexString(maxX));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {320, 800})
+    void carriedPlayerStillCollidesWithTheClosedExitGate(int width) {
+        configureWidth(width);
+        TestEnvironment.activeGameplayMode();
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .startPosition((short) 0x27C0, (short) OBJECT_Y)
+                .startPositionIsCentre()
+                .build();
+        // Positioned after the puzzle so its correct bounce cannot mask the gate check.
+        // Restore the room's declared placed owner skipped by the spawn window at this entry.
+        var room = place();
+        boolean sawGate = false;
+        boolean bounced = false;
+        for (int frame = 0; frame < 50; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            // This synthetic room occupies a later slot than the placed gate, so its
+            // $38 acceleration can follow the gate's -$C00 launch in the same pass.
+            bounced |= fixture.sprite().getXSpeed() < 0;
+            for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                if (object instanceof S3kDezBumperWallObjectInstance gate
+                        && gate.isGateForTest() && !gate.isOpenForTest()) {
+                    sawGate = true;
+                    assertTrue(fixture.sprite().getCentreX() < 0x280C,
+                            "closed ROM gate must block a carried player at frame " + frame);
+                }
+            }
+        }
+        assertTrue(room.isCapturedForTest(true), "controller still owns movement");
+        assertTrue(sawGate, "placed exit gate was reached");
+        assertTrue(bounced, "airborne side contact must reverse the carried player away from the gate");
+    }
+
+    @Test
+    void puzzleContactRewindsAndReplaysThroughTheProductionLoop() {
+        TestEnvironment.activeGameplayMode();
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .startPosition((short) 0x2500, (short) OBJECT_Y)
+                .startPositionIsCentre()
+                .build();
+        fixture.stepIdleFrames(40);
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        var first = corridorReplay(fixture, 100);
+        registry.restore(before);
+        var second = corridorReplay(fixture, 100);
+        assertEquals(first, second, "movement, camera, panel bits and bounce repeat after restore");
+        assertTrue(first.stream().anyMatch(row -> row.contains("bounce=true")),
+                "ordinary airborne contact actually launched the player");
+        assertTrue(first.stream().anyMatch(row -> !row.endsWith("panels=0")),
+                "the placed puzzle actually recorded an airborne panel contact");
+    }
+
+    private java.util.List<String> corridorReplay(HeadlessTestFixture fixture, int frames) {
+        java.util.List<String> rows = new java.util.ArrayList<>();
+        for (int frame = 0; frame < frames; frame++) {
+            fixture.stepIdleFrames(1);
+            var sprite = fixture.sprite();
+            int panels = com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                    .currentDez(GameServices.zoneRuntimeRegistry()).orElseThrow().panelBits();
+            rows.add(sprite.getCentreX() + "," + sprite.getCentreY() + ","
+                    + sprite.getXSpeed() + "," + sprite.getYSpeed() + ","
+                    + GameServices.camera().getX() + "," + GameServices.camera().getY()
+                    + ",bounce=" + (sprite.getXSpeed() == -0xC00) + ",panels=" + panels);
+        }
+        return rows;
+    }
+
+    @Test
+    void controllerInputPressesAllSixPanelsBeforePassingTheGate() {
+        configureWidth(320);
+        TestEnvironment.activeGameplayMode();
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .startPosition((short) 0x2500, (short) OBJECT_Y)
+                .startPositionIsCentre()
+                .build();
+        assertEquals(320, GameServices.camera().getWidth(), "native controller route camera");
+        boolean leftRoom = false;
+        int seenPanels = 0;
+        for (int frame = 0; frame < 1500; frame++) {
+            boolean steering = frame >= 60;
+            boolean up = steering && ((frame - 60) / 30) % 2 == 0;
+            fixture.stepFrame(up, steering && !up, false, false, false);
+            int panels = com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                    .currentDez(GameServices.zoneRuntimeRegistry()).orElseThrow().panelBits();
+            seenPanels |= panels;
+            assertFalse(fixture.sprite().getDead(), "controller route must remain alive");
+            if (fixture.sprite().getCentreX() > 0x280C) {
+                assertEquals(0x3F, panels, "six panels must open the gate before this route crosses");
+            }
+            if (fixture.sprite().getCentreX() > OBJECT_X + CORRIDOR_LENGTH) {
+                leftRoom = true;
+                break;
+            }
+        }
+        assertEquals(0x3F, seenPanels, "both columns and all three rows reached by ordinary input");
+        assertTrue(leftRoom, "controller route exits the turbine room");
+    }
+
+    private void configureWidth(int width) {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
+                width == 320 ? WidescreenAspect.NATIVE_4_3.name() : WidescreenAspect.SUPER_32_9.name());
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+        assertEquals(width, GameServices.camera().getWidth(), "actual camera, not only configuration");
     }
 
     private S3kDezGravityRoomObjectInstance place() {

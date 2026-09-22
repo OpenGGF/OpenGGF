@@ -896,3 +896,65 @@ zero missing codecs and unchanged remaining buckets. Updating the count was
 followed by both rewind checks passing in a fresh `-Pguards` JVM. This is focused
 integration evidence; shared reverse-gravity changes still require the combined
 campaign validation before delivery.
+
+
+### Turbine controller lifetime and airborne solid contacts
+
+After `bf7e5175c`, the old `$262D`/`$2636` freeze was reproduced in the production
+loop: at frame 51 the placed `$5F` controller was removed while its player-control
+byte still suppressed movement. The old diagnosis ruled out the owner because
+its early acceleration worked; that inference was false. `Obj_DEZGravityRoom`
+checks `((x+$400)&$FF80)-Camera_X_pos_coarse_back` as an unsigned word against
+`$680`, after both player slots. The default engine range retired it early.
+The fix supplies that existing per-object range/timing contract. No shared
+collision algorithm changed and no native probe was needed to resolve this
+explicit ROM tail.
+
+A lifetime-only capture (`042`) then reached `$29AB`, but exposed a second
+failure: carried players passed the closed exit gate. A production-loop assertion
+failed at frame 83. Both `$60` and `$61` must admit positive `object_control=$01`:
+`SolidObjectFull2` reaches `loc_1DFFE`, which rejects only negative values.
+Their callbacks had also confused `d6` returned side bits with grounded status
+pushing bits. `loc_1E094` sets the returned bit even in air. The providers now
+admit positive control, reject bit 7 on new contact, and consume `touchSide` for
+their ROM launches/panel writes. The initial closed-gate test was masked once
+the earlier puzzle correctly bounced the player; its independent setup now
+starts after the puzzle and explicitly supplies the skipped room owner. That
+synthetic owner occupies a later slot, so its `$38` acceleration can follow the
+`-$C00` bounce in the same pass. The test checks reversal; the real placed-puzzle
+route checks the exact launch.
+
+At 21:35 BST, queued Java-21 Maven `-Dmse=off` with the absolute S3K ROM passed
+the then-14 `TestS3kDezGravityRoomHeadless` cases, zero skips; the wide
+configuration claim in that first pass was subsequently invalidated below. The unchanged neighboring
+`TestS3kDezGravityPuzzleHeadless` (12) and `TestS3kDezBumperWallHeadless` (4) passed
+in the preceding focused selections. Coverage includes unsigned retirement edges,
+the actual placed owner surviving the old stall, airborne panel writes/bounce,
+closed gate rejection, and 100 frames of identical production-loop movement,
+camera and panel state after rewind. A positioned ordinary-input route (`60`
+neutral, alternating `30` up / `30` down) hits all six panels before crossing
+the gate and leaves the room at 320 px. The initial 800 px parameter only changed configuration
+while the existing camera stayed 320 px; it is not wide-route evidence. The test
+now rebuilds the session and asserts the actual camera width. Wide capture `046`
+hits five panels but does not yet exit with the same inputs. No state is hydrated during
+these routes. Native pixel/timing, cold act entry and broader team/donor acceptance
+remain open; this is not full campaign validation.
+
+Media live under `$HOME/Videos/OGGF/s3k-dez-bring-up/`: `043` (600 neutral frames)
+and `044` (360 neutral wide frames) show real bounces; `045` (1200 frames) shows
+the six-panel controller route and exit at native width. All have zero deaths;
+full video decoding and selected phase images were inspected. `042` is explicitly
+an intermediate lifetime-only recording with the later-discovered gate bypass,
+not completion evidence. Inputs and provenance are retained outside the repo.
+
+The corrected-width route attempt remained red at 800 px (panel set `$38` after
+1500 frames). Identical pad timing is not a cross-width acceptance requirement:
+earlier spawn visibility changes the shaft's bob phase. Final tests separate the
+complete native-width route from the independent closed-gate bounce at actual
+320/800 px; all 14 room cases passed at 21:41 BST, zero skips. `046` and `047`
+wide recordings remain behind the gate and are marked as attempts. A temporary
+authoring probe reported wide completion that did not reproduce in recording,
+even when it rendered every step; that result is rejected as completion evidence.
+Wide full-room controller acceptance remains open rather than being inferred
+from config values or the probe. The source change is confined to three DEZ
+object contracts; combined shared-physics campaign validation remains owed.

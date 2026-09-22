@@ -129,9 +129,22 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // SolidObjectFull2 -> loc_1DFFE rejects only negative object_control.
+        // The turbine room writes positive $01 and must still hit this solid.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
-        // swap d6 / andi.w #1|2,d6 (:96126-96127): only the pushing bits reach the panel code.
-        if (player == null || !contact.pushing()) {
+        // swap d6 / andi.w #1|2,d6 (:96126-96127) reads returned side-contact bits,
+        // set by loc_1E094 even in air; status pushing bits are a separate value.
+        if (player == null || !contact.touchSide()) {
             return;
         }
         AbstractPlayableSprite sprite = asSprite(player);

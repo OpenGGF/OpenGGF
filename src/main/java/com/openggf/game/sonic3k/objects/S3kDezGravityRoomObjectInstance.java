@@ -89,9 +89,28 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         if (playerTwo != null) {
             runFor(playerTwo, playerTwoState);
         }
-        // Obj_DEZGravityRoom's own tail (:95823-95831) deletes the object once the camera has
-        // passed it and clears bit 7 of its respawn entry; the engine's placement cursor owns
-        // that, so nothing is written here.
+        // The manager runs this object's extended range tail after both player slots.
+        // Its normal unload path clears the placement's live respawn bit.
+    }
+
+    @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        return true;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // Obj_DEZGravityRoom (:95823-95828): unlike RememberState's normal range,
+        // the anchor is shifted $400 right and the unsigned limit is $680.
+        // Keeping the owner alive is essential while object_control suppresses movement.
+        int coarseBack = (cameraX - 0x80) & 0xFF80;
+        int shiftedAnchor = (getX() + 0x400) & 0xFF80;
+        return ((shiftedAnchor - coarseBack) & 0xFFFF) > 0x680;
     }
 
     /** {@code sub_4964A} :95843-95952. */

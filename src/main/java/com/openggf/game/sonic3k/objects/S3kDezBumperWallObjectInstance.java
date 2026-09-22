@@ -49,7 +49,7 @@ import java.util.List;
  * {@link S3kDezGravityPuzzleObjectInstance} already models: {@code x_vel = ±$C00} away from the
  * wall, airborne, {@code ground_vel = 1} negated for a left-facing player, and the endless
  * tumble ({@code flip_angle} 1 only when it was zero, {@code flips_remaining = -1},
- * {@code flip_speed = 4}, {@code anim = 0}). Only the pushing bits reach it
+ * {@code flip_speed = 4}, {@code anim = 0}). Only the returned side-contact bits reach it
  * ({@code swap d6 / andi.w #1|2,d6}, :95989-95990), and Player 1 and Player 2 are tested
  * separately.
  *
@@ -120,10 +120,22 @@ public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
         return !(isGate() && panelBits() == ALL_PANELS);
     }
 
-    /** {@code swap d6 / andi.w #1|2,d6} (:95989-95990): only a push reaches {@code sub_49848}. */
+    @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // SolidObjectFull2 -> loc_1DFFE rejects only negative object_control.
+        // The turbine room writes positive $01 and must still hit this solid.
+        return true;
+    }
+
+    @Override
+    public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        return true;
+    }
+
+    /** Returned d6 side bits also cover airborne contact (loc_1E094). */
     @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
-        if (player == null || !contact.pushing()) {
+        if (player == null || !contact.touchSide()) {
             return;
         }
         AbstractPlayableSprite sprite = player instanceof AbstractPlayableSprite s ? s : null;

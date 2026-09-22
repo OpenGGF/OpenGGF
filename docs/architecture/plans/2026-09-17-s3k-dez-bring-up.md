@@ -2718,3 +2718,17 @@ masking the `$A5` session hit, where an earlier assertion in the same test fails
 
 Census: act 1 placeholders 173 → 163, concrete 192 → 202. Act 2 is unchanged; `$60` places none
 there.
+
+
+## 2026-09-22 campaign correction: turbine room route
+
+The corridor freeze diagnosis above is superseded. A production-loop test found
+the `$5F` owner unloaded at frame 51 / X `$262D`; the ROM's shifted `$400` anchor
+and `$680` unsigned range were missing. Implementing that tail exposed `$60`/`$61`
+rejecting positive object control and mistaking returned airborne side bits for
+grounded pushing. Both are corrected using `loc_1DFFE`/`loc_1E094`. The full
+positioned six-panel route now exits at 320 px, with contact rewind and
+forward replay checked. This closes the local corridor blocker, not cold act
+traversal, native matching, team/donor breadth or the remaining object families.
+The [campaign audit](../audits/2026-09-22-sk-zone-bring-up.md) records failed
+hypotheses, tests and media; clips `043`–`045` replace the earlier unfilmable claim.
