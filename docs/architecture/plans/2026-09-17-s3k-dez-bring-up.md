@@ -3001,3 +3001,28 @@ classes from velocity offsets `$0A/$1E` to position offsets `$08/$1C`, and
 added a native-layout oracle over 400 updates. LRZ's cleared render flips also
 now match `MOVE.B #4,render_flags`; status still mirrors movement. Its actual
 Act-2 record 49 ride and forced recreation/replay pass at 320/800.
+
+### Tilting-bridge implementation notes (continuation after `6b7055cea`)
+
+`Obj_DEZTiltingBridge` places eight independent forward-allocated SST sections
+from anchor X-$70 in $20 steps. The parent snapshots and clears its P1/P2
+standing-index aggregate before dispatching its own section; each section adds
+the two signed `byte_46ED8` values, doubled, to a long 16:16 velocity and then
+adds velocity to long Y. Standing indices are collected before that section's
+solid checkpoint, so current contact does not feed the same pass's tilt.
+
+The parent's original section exceeding ±$70 sets the collapse byte. Each
+section installs `loc_46F18`, waits until its next dispatch, multiplies its
+existing velocity by four, then falls with +$1000 long acceleration. The solid
+checkpoint precedes `CheckPlayerReleaseFromObj`; it does not release riders
+merely because falling started. The camera-bottom threshold moves X and its
+retirement anchor to $7F00. Partial allocation retains the successful parts
+and still executes the parent controller. Map `$46F7A` is shared with the
+staircase but the bridge uses DEZMisc tile `$34D`, not the staircase's `$480`.
+These notes describe the implementation under test, not a passed route claim.
+
+The nine tilting checks now pass, including every table row, both native
+players, partial allocation, actual normal-gravity landing/collapse/floor
+release at 320/800, full graph recreation/replay and inverted Act-2 carry.
+Art and the fresh schema/profile guards pass. Census: 350/365 and 484/494.
+Remaining native/route/breadth and final-boss obligations are unchanged.

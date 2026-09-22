@@ -103,6 +103,8 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // Tilting sections accumulate into the exact controller SST slot.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezTiltingBridgeObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             // DEZ staircase sections read four words on their exact native parent.
             // The identity codec relinks them after complete graph recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezStaircaseObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),

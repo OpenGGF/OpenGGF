@@ -634,7 +634,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet()));
                 });
         registerStockZoneBound(Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER,
-                (spawn, registry) -> currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ
+                (spawn, registry) -> getCurrentZoneSet() == S3kZoneSet.SKL
+                        ? new S3kDezTiltingBridgeObjectInstance(spawn)
+                        : currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ
                         ? new CnzTriangleBumperObjectInstance(spawn)
                         : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.BUBBLER,

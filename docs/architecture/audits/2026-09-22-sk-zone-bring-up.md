@@ -1308,3 +1308,42 @@ Accepted recordings under `$HOME/Videos/OGGF/s3k-dez-bring-up/` are 071/072
 full ffmpeg decode and frame-120 inspection. DEZ player position/velocity rows
 match across widths for all 420 frames. Rejected 070 preserves the missed-entry
 evidence. Each capture has source hashes and explicit positioned-entry scope.
+
+
+### Tilting bridge
+
+After `6b7055cea`, SKL `$4B` is implemented as eight independent forward SST
+allocations sharing the exact parent's prior-standing aggregate. Each part
+reads signed acceleration directly from ROM `$46ED8`, adds it to a long
+16:16 velocity, and moves long Y. Parent tilt beyond ±$70 installs a fall
+routine for the following dispatch; that routine multiplies velocity by four
+once before adding `$1000` per pass. The manual solid checkpoint precedes
+the shared terrain-release check. Going below Camera_max_Y+$110 replaces
+both X and retirement anchor with `$7F00`. The one-frame map `$46F7A` uses
+DEZMisc tile `$34D`, palette 1 and bucket 5. Schema identity capture relinks
+all children after complete graph recreation, without adding bespoke codecs.
+
+At 23:55 BST, queued Java 21 with the absolute S3K ROM and
+`-Dtest=TestS3kDezTiltingBridgeHeadless,TestS3kDezPlacementCensus,
+TestCnzTriangleBumperObjectInstance` passed 18 tests, zero failures/errors/skips.
+At 23:56, the expanded eight tilting checks plus the 78-case PLC crawler and
+two renderer-corruption checks passed 88. At 23:57 the final nine tilting
+cases passed, including an inverted DEZ2 record-133 landing with declared
+reverse-gravity entry, and explicit release onto real terrain in the two
+normal-gravity routes. Unique focused coverage is 99 checks across these
+selections; this is not a broad-suite result. At 23:58, the fresh inventory,
+rewind-architecture and profile/registry guard selection passed 7, zero skips:
+1244 total / 1004 isolated / 240 graph-covered / 0 missing codec.
+
+Counts are 350/365 and 484/494 concrete, leaving 15/10 placeholders. Remaining
+placed families are lift pads `$4E`, conveyor pads `$53`, tunnel launchers `$57`,
+and the two act bosses. Counts do not cover the unplaced final-boss sequence.
+Cold routes, native comparison, donor/roster breadth, final-boss handover and
+campaign integration remain open.
+
+Clips 074/075 under the external DEZ task directory show the actual Act-1
+bridge landing, tilt, collapse and floor release at 320/800. Both record
+480 frames, zero hurt/death rows; every player position/velocity row matches
+across widths. Full decode and frame-280 inspection pass; the 320 frame 420
+shows Sonic on the floor after the sections fall away. Positioned footage is
+not cold-route or native comparison evidence.

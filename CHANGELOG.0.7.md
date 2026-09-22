@@ -127,7 +127,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   wait or shake, and lift or lower their steps. Hover machines suspend players
   above their orbiting rotors. Hanging carriers grab players, rise to the ceiling,
   travel along it and let players jump away. Act 2 floating platforms oscillate or
-  accelerate along their placed axis, carrying riders while their lights alternate. Shock floors and ceilings now hurt on
+  accelerate along their placed axis, carrying riders while their lights alternate. Tilting
+  bridges respond to where players stand, then break into falling sections and release
+  riders onto the floor. Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's

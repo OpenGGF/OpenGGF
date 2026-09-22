@@ -3213,6 +3213,10 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_DEZ_HOVER_MACHINE_ADDR,
                 Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x11, 1, null, 3));
 
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_TILTING_BRIDGE,
+                Sonic3kConstants.MAP_DEZ_TILTING_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC, 1, null, 1));
+
         // Staircase uses the bridge's one-frame map but a different art bank.
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_STAIRCASE,
                 Sonic3kConstants.MAP_DEZ_TILTING_BRIDGE_ADDR,

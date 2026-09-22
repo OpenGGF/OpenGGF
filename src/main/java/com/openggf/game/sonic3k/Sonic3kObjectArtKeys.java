@@ -668,6 +668,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String DEZ_TORPEDO = "dez_torpedo";
     public static final String DEZ_HANG_CARRIER = "dez_hang_carrier";
     public static final String DEZ_CURVED_ENERGY_BRIDGE = "dez_curved_energy_bridge";
+    public static final String DEZ_TILTING_BRIDGE = "dez_tilting_bridge";
     public static final String DEZ_FLOATING_PLATFORM = "dez_floating_platform";
     public static final String DEZ_HOVER_MACHINE = "dez_hover_machine";
     public static final String DEZ_STAIRCASE = "dez_staircase";
