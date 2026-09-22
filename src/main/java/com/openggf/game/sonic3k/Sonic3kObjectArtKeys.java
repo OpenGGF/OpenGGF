@@ -85,6 +85,8 @@ public final class Sonic3kObjectArtKeys {
     /** ObjDat3_664FA / ObjDat3_6652A: Map_KnuxFinalBossCrane over ArtKosM_KnuxFinalBossCrane. */
     public static final String KNUX_FINAL_BOSS_CRANE = "knux_final_boss_crane";
     /** ObjDat3_6653C: Map_LRZ3Platform over level tiles, palette 2. */
+    public static final String LRZ3_PLATFORM_DEBRIS = "lrz3_platform_debris";
+    public static final String LRZ3_PLATFORM = "lrz3_platform";
     public static final String HPZ_COLLAPSE_BLOCK = "hpz_collapse_block";
     public static final String END_SIGN = "EndSign";
     public static final String SIGNPOST_STUB = "SignpostStub";

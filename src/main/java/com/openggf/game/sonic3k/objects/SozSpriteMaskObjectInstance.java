@@ -6,7 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import java.util.List;
 
-/** SOZ2's placed Obj_SpriteMask $8B/$40: priority-zero mapping frame four SAT markers. */
+/** Placed Obj_SpriteMask $8B: subtype selects mapping height and SAT priority. */
 public final class SozSpriteMaskObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable, RomWorldPositionedObject {
     public SozSpriteMaskObjectInstance(ObjectSpawn spawn){super(spawn,"SOZSpriteMask");}
@@ -22,5 +22,12 @@ public final class SozSpriteMaskObjectInstance extends AbstractObjectInstance
     @Override public void offsetNativePositionWordsPreserveSubpixel(int offsetX,int offsetY){
         updateDynamicSpawn((getCollisionX()+offsetX)&0xFFFF,(getCollisionY()+offsetY)&0xFFFF);
     }
-    @Override public void appendRenderCommands(List<GLCommand> commands){S3kSpriteMaskSupport.submitFrame4(services().graphicsManager(),getX(),getY());}
+    @Override public void appendRenderCommands(List<GLCommand> commands){
+        try {
+            S3kSpriteMaskSupport.submitFrame(services().graphicsManager(), services().rom(),
+                    (spawn.subtype() >>> 4) & 15, getX(), getY());
+        } catch (java.io.IOException failure) {
+            throw new java.io.UncheckedIOException("Obj_SpriteMask mapping", failure);
+        }
+    }
 }

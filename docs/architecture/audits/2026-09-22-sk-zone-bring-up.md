@@ -381,3 +381,56 @@ after capsule completion. Two test accessor typos were corrected before those ru
 Queued `-Pguards -Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestS3kZoneEventPaletteOwnership,TestZoneRuntimeRegistryRewindSnapshot`
 passed 10 at 17:01 BST, zero failures/errors/skips. Lua syntax and diff whitespace
 checks passed. Combined campaign validation and integration remain pending.
+
+
+### Boss-act platform approach and user-reported horizon masking
+
+Parent `7542bd6b1`, worktree `.worktrees/ai-sk-zone-completion`.
+`Obj_LRZ3Platform` now generates the two initial forward children, reverses after
+32 upward movements, and creates the animated underside on the reversal dispatch.
+Generator recurrence is 384 dispatches. Partial allocation retains each successful
+prefix without retry. Stationary subtype 4 uses the shipped `FixBugs=0` palette.
+Entry-platform, stream movement and ten-fragment breakup paths are present;
+real boss allocation and encounter validation remain open. The rising branch's
+residual-D0 entry selection still needs an explicit solid-return model; normal
+checkpoint footage does not exercise it.
+
+Initial capture exposed a registry placement error: platform art was added under
+the HPZ cutscene group. Moving it to the boss-act group restored the ROM artwork.
+Whole-world removed-graph restore exposed the generic schema excluding the
+underside's `parent` field; an explicit captured-link policy fixes reconstruction.
+Four allocation tests and twelve headless graph/breakup tests passed at 17:23 BST.
+The capacity-0..10 breakup tests use a passive range target, not a completed boss.
+
+The user identified missing horizon occlusion in clip 41. Platforms already changed
+SAT bucket 5 to 3, but LRZ never enabled SAT masking. Boss-act `$8B/$44` placements
+at `($AA0,$3B2)` and `($BE0,$3B2)` occupy bucket 4, masking the rising phase below
+Y `$3A2`. Enabling the post-pass restores that transition. The shared placed-mask
+object also hardcoded frame 4; it now decodes its high-nibble-selected mapping
+from ROM `Map_SpriteMask` `$18595E`, preserving other LRZ mask heights. SOZ remains
+covered. Queued `TestLrzBossPlatforms,TestS3kLrzBossPlatformsHeadless,TestS3kSpriteMaskSupport,TestSozSpriteMaskPresentation`
+passed 24 tests at 17:32 BST, zero failures/errors/skips.
+
+Native checkpoint comparison found landing one frame early: `sub_7A064` passes
+`d2=$10,d3=$0D` to `SolidObjectTop`; `loc_1E44C` uses d3, not d2. Correcting the
+contract restored the input movie's traversal. Raw 63, input offset 434068,
+contains 900 frames with no hurt/death. Against native run 2 frames 434069–434968,
+all X, X/Y speed, ground speed and camera values match; Y matches after the first
+positioned-load frame (engine 876 versus native 872 on that first frame). These
+are observations, not inputs to the engine. Clip 42 contains all 900 frames and
+supersedes clip 41. Complete decoding of the MP4 succeeded. This is bounded native
+checkpoint evidence, not cold-route or full encounter certification.
+
+
+The same `SolidObjectTop` d3 correction applies to flat `Obj_59FC4` lava.
+Both callers now use the existing direct-top contract for overlap 1..16,
+rejecting zero and 17 and preserving relative landing snap. The boundary fixture
+initially skipped all new contacts because newly allocated objects had not taken
+their first pre-update snapshot; the diagnostic exposed `skipSolid=true`.
+Advancing that lifecycle boundary fixed the test setup. The direct-window method
+belongs to the existing optional-slope contract: the flat platform supplies no
+slope table. Queued `TestS3kLrzBossPlatformsHeadless,TestS3kLrzBossCameraHeadless,TestLrzBossLavaSurface`
+passed 37 at 17:42 BST with no failures/errors/skips. Queued `-Pguards`
+`TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestObjectPriorityBucketGuard,TestSonic3kObjectProfileRegistryGuard,TestObjectServicesMigrationGuard`
+passed 18 at 17:42 BST, no failures/errors/skips. Campaign-wide validation,
+integration and push are still pending.

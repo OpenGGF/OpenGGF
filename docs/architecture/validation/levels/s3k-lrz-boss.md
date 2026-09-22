@@ -7,7 +7,8 @@ Character route: Sonic + Tails and Tails alone only — Knuckles never enters `$
 Flash sequence, autoscroll, end boss, capsule and `Obj_StartNewLevel $2D` at `($FE8,$5E0)` to
 Hidden Palace `$1601`. Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md).
 Status: fresh-load carry/title suppression, screen stages and autoscroll implemented;
-the flash/controller graph, background presentation and end boss remain open.
+platform generation and lava presentation are implemented; the flash/controller
+graph, background stage owner and end boss remain open.
 
 Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`, `Act3_timer`,
 `Saved2_status_secondary`), level select `$1600`, star-post respawn (`LRZ3_ScreenInit` P1 X >=
@@ -23,8 +24,8 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 35 placed objects, of which **8 still build a
-`PlaceholderObjectInstance`** after slice 1 (14 at `035e48a58`); 52 live rings (53 records minus the
+Placement baseline (`TestS3kLrzPlacementCensus`): 35 placed objects, of which **1 still builds a
+`PlaceholderObjectInstance`** (`$9E`; 8 before the September 22 platform work); 52 live rings (53 records minus the
 leading `(0,0)` sentinel). The end boss, capsule, `StartNewLevel`, dome platform and Death Egg sprite are
 event-spawned and are not in the placement list.
 
@@ -40,7 +41,7 @@ event-spawned and are not in the placement list.
 | PRESENT: animated tiles and palette | `AnimateTiles_LRZ3` channel 0 only at tile `$170` (`loc_2833C` returns for `Current_zone $16`); `$1600` AniPLC entry is `AniPLC_NULL`; `AnPal_LRZ3` gate `Palette_cycle_counters+$00` in {0, `$80`, 1} | native | `TestS3kLrzPatternAnimation`, `TestS3kLrzBossPaletteCycling` | implemented | ROM pixel/color oracles pass, 2026-09-22 | flash graph must publish palette modes |
 | EVENT: Death Egg flash sequence | `LRZ3_BackgroundEvent` stages, `Obj_CollapsingBridge` spawn at `($60,$4D0)` | native | — | not implemented | open | Slice 9 |
 | EVENT: autoscroll | `Special_events_routine $14` (`loc_59E46`), seven stages; thresholds X `$410`, Y <= `$330`, X `$650`, Y <= `$2F0`, X `$910`, Y >= `$320`, X `$BBF` with P1 X >= `$C50`; `sub_59F82` push at `Camera_X + $10`, kill on `Status_Push`, right cap `Camera_X + $120` | native + wide/donor | `TestLrzBossAutoscroll`, `TestS3kLrzBossCameraHeadless` | implemented | focused pass, 2026-09-22; 1635 native moving dispatches match arithmetic | Preserve 32px right margin at wide widths; flash trigger graph and cold route still open |
-| OBJECT: `$9E` autoscroll controller, `$AD` platforms (7), `$6E` lava blocks (6), `$8B` sprite masks (2) | `Obj_LRZ3Autoscroll`, `Obj_LRZ3Platform`, `Obj_InvisibleLavaBlock`, `Obj_SpriteMask` | native | `TestS3kLrzPlacementCensus`, `TestSonic3kInvisibleHurtBlockHObjectInstance` | `$6E` implemented; `$9E`/`$AD` slice 9 | `$6E` pass, `bbd156d37` | `$8B` builds `SozSpriteMaskObjectInstance`: open question |
+| OBJECT: `$9E` autoscroll controller, `$AD` platforms (7), `$6E` lava blocks (6), `$8B` sprite masks (2) | `Obj_LRZ3Autoscroll`, `Obj_LRZ3Platform`, `Obj_InvisibleLavaBlock`, `Obj_SpriteMask` | native | `TestS3kLrzPlacementCensus`, `TestSonic3kInvisibleHurtBlockHObjectInstance` | `$6E` and `$AD` implemented; `$8B` reads ROM mapping frame and enables SAT masking | platform graph/rewind and 900-frame checkpoint capture, 2026-09-22 | `$9E` and boss-driven platform stream remain open |
 | OBJECT: `$0F` collapsing bridges (8) use `Map_HPZCollapsingBridge` | `Obj_CollapsingBridge` picks the HPZ mappings for `Current_zone $16` by ROM design | native | — | implemented (shared switch already matches) | classification pass | Art under it unverified: open question, slice 9 |
 | BOSS: end boss and lava surface | `Obj_LRZEndBoss` `collision_property $E` (14 hits), `off_79812` six routines; `Obj_59FC4` `SolidObjectTopSloped2`, push `Events_bg+$14`; shared `HScroll_table+$110` table | native | `TestLrzBossLavaSurface`, `TestS3kLrzBossCameraHeadless` | lava surface implemented; boss still absent | slope/current, real landing and removed-object restore/replay pass, 2026-09-22 | boss graph and background arena entry still open |
 | LOAD: defeat -> capsule -> `$1601` handoff | `loc_79998`/`loc_79A30`, `mus_LRZ2` fade, `$EC0` gradual, `StartNewLevel $2D` | native | — | not implemented | open | Slice 10; closes the HPZ entry dependency |

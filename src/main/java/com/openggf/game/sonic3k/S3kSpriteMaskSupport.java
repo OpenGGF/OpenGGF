@@ -8,6 +8,24 @@ import java.util.List;
 public final class S3kSpriteMaskSupport {
     private S3kSpriteMaskSupport() { }
 
+    /** Obj_SpriteMask uses subtype's high nibble as its ROM mapping frame. */
+    public static void submitFrame(GraphicsManager graphics, com.openggf.data.Rom rom,
+                                   int frame, int originX, int originY) throws java.io.IOException {
+        if (graphics == null || !graphics.isSpriteSatCollectionActive()) return;
+        graphics.requestSpriteMask();
+        // Map_SpriteMask ($18595E), six-byte S3K mapping pieces, art_tile = 0.
+        int address = 0x18595E + rom.read16BitAddr(0x18595E + frame * 2);
+        int count = rom.read16BitAddr(address);
+        byte[] pieces = rom.readBytes(address + 2, count * 6);
+        for (int i = 0; i < pieces.length; i += 6) {
+            int size = pieces[i + 1] & 15;
+            int x = (short) (((pieces[i + 4] & 255) << 8) | (pieces[i + 5] & 255));
+            int tile = ((pieces[i + 2] & 255) << 8) | (pieces[i + 3] & 255);
+            graphics.submitSpriteSatControlEntry(originX + x, originY + pieces[i],
+                    (size >> 2) + 1, (size & 3) + 1, tile & 0x7FF);
+        }
+    }
+
     /** Submits exact mapping frame $04: marker tile $7C0 followed by its companion. */
     public static void submitFrame4(GraphicsManager graphics, int originX, int originY) {
         if (graphics == null || !graphics.isSpriteSatCollectionActive()) return;

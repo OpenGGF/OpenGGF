@@ -381,6 +381,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   saves progression. The boss act restores its checkpoint entry and runs the
   staged autoscroll, camera clamps, arena release and foreground destruction.
   Its background uses the boss act’s ROM shimmer, animated tiles and palette cycles.
+  Boss-act platforms emerge behind the lava horizon and descend in front of it,
+  carrying the player through the checkpoint approach.
   Lava Reef Acts 1 and 2 now scroll their own layered background
   instead of the generic quarter-speed fallback, Act 2 animates its own lava tiles
   rather than Act 1's, and the invisible lava blocks that carry every lava-floor hit

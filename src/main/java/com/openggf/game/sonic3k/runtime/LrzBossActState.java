@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 /** LRZ3 screen and special-event words, captured by the owning zone runtime. */
 public final class LrzBossActState {
-    static final int CAPTURE_BYTES = 14 * Integer.BYTES + 192;
+    static final int CAPTURE_BYTES = 19 * Integer.BYTES + 192;
     private boolean initialized;
     private int foregroundRoutine;
     private int foregroundRequest;
@@ -31,6 +31,22 @@ public final class LrzBossActState {
         lavaFlow = lavaAmplitude * 768;
         if ((lavaDirection & 0xFF00) == 0) lavaFlow = -lavaFlow;
     }
+    // _unkFAA4, _unkFAA9, _unkFA88 bit 0, _unkFAA2 and _unkFA84.
+    private int bossSlot = -1;
+    private boolean entryPlatformClaimed;
+    private boolean entryPlatformReady;
+    private int streamDirection;
+    private int driftClock;
+    public int bossSlot() { return bossSlot; }
+    public void setBossSlot(int value) { bossSlot = value; }
+    public boolean entryPlatformClaimed() { return entryPlatformClaimed; }
+    public void claimEntryPlatform() { entryPlatformClaimed = true; }
+    public boolean entryPlatformReady() { return entryPlatformReady; }
+    public void publishEntryPlatformReady() { entryPlatformReady = true; }
+    public int streamDirection() { return streamDirection; }
+    public void setStreamDirection(int value) { streamDirection = value & 65535; }
+    public int driftClock() { return driftClock; }
+    public void setDriftClock(int value) { driftClock = value & 65535; }
     private boolean capsuleOpened;
     private final byte[] lavaHeights = new byte[192];
     public LrzBossActState() { java.util.Arrays.fill(lavaHeights, (byte) 0x30); }
@@ -81,7 +97,8 @@ public final class LrzBossActState {
     void captureTo(ByteBuffer buffer) {
         buffer.putInt(initialized ? 1 : 0).putInt(foregroundRoutine).putInt(foregroundRequest)
                 .putInt(autoscrollRoutine).putInt(autoscrollDelay).putInt(cameraFractionX)
-                .putInt(cameraFractionY).putInt(chunkEditX).putInt(chunkEditY).putInt(paletteMode).putInt(capsuleOpened ? 1 : 0).putInt(lavaDirection).putInt(lavaAmplitude).putInt(lavaFlow).put(lavaHeights);
+                .putInt(cameraFractionY).putInt(chunkEditX).putInt(chunkEditY).putInt(paletteMode).putInt(capsuleOpened ? 1 : 0).putInt(lavaDirection).putInt(lavaAmplitude).putInt(lavaFlow).putInt(bossSlot).putInt(entryPlatformClaimed ? 1 : 0)
+                .putInt(entryPlatformReady ? 1 : 0).putInt(streamDirection).putInt(driftClock).put(lavaHeights);
     }
     void restoreFrom(ByteBuffer buffer) {
         initialized = buffer.getInt() != 0;
@@ -90,6 +107,8 @@ public final class LrzBossActState {
         cameraFractionX = buffer.getInt(); cameraFractionY = buffer.getInt();
         chunkEditX = buffer.getInt(); chunkEditY = buffer.getInt(); paletteMode = buffer.getInt();
         capsuleOpened = buffer.getInt() != 0; lavaDirection = buffer.getInt(); lavaAmplitude = buffer.getInt();
-        lavaFlow = buffer.getInt(); buffer.get(lavaHeights);
+        lavaFlow = buffer.getInt(); bossSlot = buffer.getInt(); entryPlatformClaimed = buffer.getInt() != 0;
+        entryPlatformReady = buffer.getInt() != 0; streamDirection = buffer.getInt(); driftClock = buffer.getInt();
+        buffer.get(lavaHeights);
     }
 }

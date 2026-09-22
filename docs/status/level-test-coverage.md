@@ -155,7 +155,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_GLOWING_SPHERE_2` | Audit pending |
 | S3K | `S3K_SLOT_MACHINE` | Audit pending; bonus-loop player priority and native glass overlap covered by `TestGameLoopBonusPlayerPriority` and `TestS3kSlotsGlassNative` ([scope and evidence](../architecture/validation/2026-09-14-slots-glass-layering.md)). Donor/team and rewind visual breadth remain open. |
 | S3K | `S3K_SLOT_MACHINE_2` | Audit pending |
-| S3K | `S3K_LRZ_BOSS` | [Boss-act matrix](../architecture/validation/levels/s3k-lrz-boss.md) - v2 bring-up, slice 0 baseline: 35 placements with 14 still placeholders, 52 live rings; Act 3 carry, flash, autoscroll, end boss and the `$1601` handoff are open |
+| S3K | `S3K_LRZ_BOSS` | [Boss-act matrix](../architecture/validation/levels/s3k-lrz-boss.md) - 35 placements with one placeholder (`$9E`), 52 live rings; carry, checkpoint, autoscroll, platform generation and lava presentation implemented. A 900-frame native-input checkpoint approach has no hurt/death and matches P1 motion/camera after its first positioned-load frame. Platform/debris removed-graph replay and partial allocation are checked. Flash, background stage owner, end boss and `$1601` handoff remain open |
 | S3K | `S3K_HIDDEN_PALACE` | [Act matrix](../architecture/validation/levels/s3k-hpz-act.md) — in progress; entry, events, animation and teleporter breadth covered; Knuckles fight and Sonic/Tails exit open |
 | S3K | `S3K_DEZ_BOSS` | Audit pending |
 | S3K | `S3K_SPECIAL_STAGE_ARENA` | [Sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md) — partial; results-return reveal missing |

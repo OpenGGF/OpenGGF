@@ -839,7 +839,9 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         // SOZ uses Map_SOZ1EndDoor's sand-surface mask, the placed Obj_SpriteMask,
         // and the end-boss laser mask. Their marker/companion pairs require the
         // same SAT post-pass as Gumball; ordinary painter rendering drops them.
-        return zoneIndex == Sonic3kZoneIds.ZONE_GUMBALL || zoneIndex == Sonic3kZoneIds.ZONE_SOZ;
+        return zoneIndex == Sonic3kZoneIds.ZONE_GUMBALL || zoneIndex == Sonic3kZoneIds.ZONE_SOZ
+                || zoneIndex == Sonic3kZoneIds.ZONE_LRZ
+                || zoneIndex == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ;
     }
 
     protected AizZoneRuntimeState getAizState() {

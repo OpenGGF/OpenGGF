@@ -401,7 +401,10 @@ public final class Sonic3kPlcArtRegistry {
             case 0x13 -> addGumballEntries(actIndex, standalone, levelArt);
             case 0x14 -> addPachinkoEntries(actIndex, standalone, levelArt);
             case 0x15 -> addSlotsEntries(actIndex, standalone, levelArt);
-            case 0x16 -> addHpzEntries(actIndex, standalone, levelArt);
+            case 0x16 -> {
+                addHpzEntries(actIndex, standalone, levelArt);
+                if (actIndex == 0) addLrzBossEntries(standalone, levelArt);
+            }
         }
     }
 
@@ -3003,6 +3006,16 @@ public final class Sonic3kPlcArtRegistry {
      * Populates HPZ (Hidden Palace Zone) art entries.
      * Level-art: collapsing bridge.
      */
+    private static void addLrzBossEntries(List<StandaloneArtEntry> standalone,
+                                          List<LevelArtEntry> levelArt) {
+        // ObjDat3_7960E / ArtKosM_LRZ3PlatformDebris, ROM $1714C0, Map_LRZ3Debris $187860.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.LRZ3_PLATFORM_DEBRIS,
+                0x1714C0, CompressionType.KOSINSKI_MODULED, 0, 0x187860, 3, -1, 4));
+        // ObjDat3_7A16C/7A178: shipped FixBugs=0 palette 3, low priority.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LRZ3_PLATFORM,
+                Sonic3kConstants.MAP_LRZ3_PLATFORM_ADDR, 1, 3, null));
+    }
+
     private static void addHpzEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {

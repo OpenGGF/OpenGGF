@@ -39,8 +39,11 @@ public final class LrzBossLavaSurfaceObjectInstance extends AbstractObjectInstan
     }
     @Override public boolean isSlopeFlipped() { return false; }
     @Override public int getSlopeBaseline() { return 0; }
-    @Override public Integer getDirectTopLandingOverlapLimit() { return tilted ? 17 : null; }
-    @Override public boolean rejectsZeroDistanceTopSolidLanding() { return tilted; }
+    @Override public Integer getDirectTopLandingOverlapLimit() { return 17; }
+    @Override public boolean rejectsZeroDistanceTopSolidLanding() { return true; }
+    @Override public boolean usesGroundHalfHeightForTopSolidContact() { return !tilted; }
+    @Override public boolean usesPlatformObjectLandingSnap() { return false; }
+    @Override public boolean usesStickyContactBuffer() { return false; }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean usesCollisionHalfWidthForTopLanding() { return true; }
     @Override public boolean allowsObjectControlledSolidContacts() { return true; }
