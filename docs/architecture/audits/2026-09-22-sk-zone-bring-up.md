@@ -649,3 +649,22 @@ object through the manager corrected the test setup. The command was queued
 Maven with `-Dmse=off -Dtest=TestS3kSszMechaSpawnHeadless,TestRewindFieldDispositionGuard,TestRewindRecreateLinkToleranceGuard`
 and the absolute S3K ROM path. The earlier GHZ/MTZ selection passed 28 checks. The art-loader warning and
 missing launch remain separate open work; these results do not certify SSZ.
+
+
+### SSZ dash trail art
+
+`loc_7C902` / `byte_7D65F` consume only mapping frames 0..3: blank, then
+three 24x8 trails. Register that exact prefix on `ObjDat3_7D402`'s palette 0
+and high-priority bit. The complete native table still has 27 frames; frame 26
+has twelve pieces at tile $93 (through $96), outside the 139-tile KosM blob.
+It is not part of the dash consumer. Other effects remain owed and must resolve
+their own VRAM binding; no tile data was fabricated or validator weakened.
+
+At 19:41 BST, queued Maven `-Dtest=TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestS3kSszMechaSpawnHeadless`
+with the absolute S3K ROM completed 98 checks, 97 passing, one failure, no skips.
+The full ROM art crawler, new exact table/prefix regression, renderer guard,
+and Mecha tests passed. The one failure was the pre-bring-up inventory assertion
+that SSZ has seven standalone sheets; the merged registry has fifteen. Updated
+that expected inventory and reran `TestSonic3kPlcArtRegistry#sszPlanHasEggRobo`:
+one pass, no skips at 19:41 BST. This reconciles a stale merge test, not an asset
+loading fallback. Visual capture of the corrected trail is still owed.

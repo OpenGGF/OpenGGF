@@ -1045,6 +1045,37 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void mechaDashTrailBindsItsFourFrameRomPrefix() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        var entry = requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(10, 0),
+                Sonic3kObjectArtKeys.MECHA_SONIC_EXTRA);
+        assertEquals(4, entry.mappingFrameCount());
+        assertEquals(0, entry.palette());
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romFile.getPath()));
+            var reader = RomByteReader.fromRom(rom);
+            var full = S3kSpriteDataLoader.loadMappingFrames(reader,
+                    Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR);
+            assertEquals(27, full.size(), "full native table includes other effects");
+            assertEquals(12, full.get(26).pieces().size());
+            assertEquals(0x93, full.get(26).pieces().getFirst().tileIndex());
+            var sheet = new Sonic3kObjectArt(null, reader).loadStandaloneSheet(rom, entry);
+            assertEquals(139, sheet.getPatterns().length);
+            assertEquals(4, sheet.getFrameCount());
+            assertTrue(sheet.getFrame(0).pieces().isEmpty());
+            for (int frame = 1; frame <= 3; frame++) {
+                assertEquals(1, sheet.getFrame(frame).pieces().size());
+                var piece = sheet.getFrame(frame).pieces().getFirst();
+                assertEquals(3, piece.widthTiles());
+                assertEquals(1, piece.heightTiles());
+                assertEquals((frame - 1) * 3, piece.tileIndex());
+            }
+            assertMappingTilesWithinSheet(sheet, "native trail consumer");
+        }
+    }
+
+    @Test
     public void s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits() throws IOException {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
@@ -1503,7 +1534,8 @@ public class TestSonic3kPlcArtRegistry {
     public void sszPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0A, 0);
         assertNotNull(plan);
-        assertEquals(7, plan.standaloneArt().size());
+        // Arrival/traversal and three boss families now supplement the original seven.
+        assertEquals(15, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SSZ_EGG_ROBO)));
 
         // EggRobo should use palette 0

@@ -380,6 +380,8 @@ class TestS3kSszMechaSpawnHeadless {
                 .sorted(java.util.Comparator.comparingInt(SszMechaSonicTrailChild::subtypeForTest))
                 .toList();
         assertEquals(2, dash.size(), "ChildObjDat_7D486's dc.w 2-1 is two children");
+        assertTrue(dash.stream().allMatch(SszMechaSonicTrailChild::isHighPriority),
+                "ObjDat3_7D402 sets the VDP high-priority bit");
         assertEquals(4, dash.get(0).subtypeForTest(), "0 + loc_7C8FE's addq.b #4");
         assertEquals(6, dash.get(1).subtypeForTest(), "2 + 4");
         assertEquals(-8, dash.get(0).childDxForTest(), "dc.b -8 of the third row");

@@ -184,6 +184,8 @@ public final class SszMechaSonicTrailChild extends AbstractObjectInstance
 
     @Override public int getOnScreenHalfHeight() { return HALF_HEIGHT; }
 
+    @Override public boolean isHighPriority() { return true; }
+
     @Override public int getPriorityBucket() { return RenderPriority.fromS3kWord(priorityWord); }
 
     public int subtypeForTest() { return subtype; }
