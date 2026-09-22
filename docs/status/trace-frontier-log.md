@@ -111275,3 +111275,25 @@ defeat chain, which this trace does not reach.
   (sonic3k.asm:180602-180612) and the engine spawns only `Obj_IncLevEndXGradual`; and
   `Obj_EndSignControlDoStart` waits on `End_of_level_flag`, which the ROM's act 2 title card sets
   and the engine's Lava Reef path reaches later because that title card is skipped.
+
+
+## 2026-09-22 — LRZ completion campaign: four inherited segment frontiers unchanged
+
+Worktree `.worktrees/ai-sk-zone-completion`, parent `5b86353e7` plus the LRZ2
+boulder/Act3 continuation changes. Queued command:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=Test*Lrz*,*LrzTest,TestS3kLevelContinuationHeadless,TestLevelContinuationCarry,TestLevelTransitionCoordinator*,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kDdzLifecycleProduction -Ds3k.rom.path=<absolute-s3k.gen> test`.
+The wildcard also selected the four trace classes. Completed at 16:12 BST:
+461 tests, 4 failures, zero errors/skips; 457 ordinary/focused checks passed.
+
+| Test / fixture | Errors | First error |
+| --- | --- | --- |
+| SonicTails Lrz | 6729 | 208, `tails_y_speed`, expected `$07BD`, actual `$0000` |
+| TailsFullChain Lrz | 659 | 218, `y_speed`, expected `$07AA`, actual `$0000` |
+| TailsFullChain Lrz2 | 1031 | 0, `camera_y`, expected `$0409`, actual `$040D` |
+| TailsFullChain Lrz3 | 1073 | 0, `y_speed`, expected `$0000`, actual `$0038` |
+
+Each count and first-error identity matches the recorded `8875bc7f2` measurement
+above. No frontier moved; no trace pass is claimed. Positioned boulder completion
+and rewind do not replace cold route/strict trace certification. Next implementation
+frontier is the still-incomplete LRZ3 events/autoscroll/end-boss path; inherited
+LRZ1 CPU and local route frontiers remain open.

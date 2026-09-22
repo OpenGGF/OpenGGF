@@ -64,6 +64,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     // Names may differ between zone sets; membership means a concrete owner
     // exists in every zone. Zone-gated implementations remain in the sets below.
     public static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
+            0xAE, // StarPointer / LRZ2CutsceneKnuckles
             0xB3, // ICZSegmentColumn / StartNewLevel
             0x00, // Ring
             0x01, // Monitor
@@ -212,7 +213,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0xA6, // CNZMiniboss
             0xA7, // CNZEndBoss
             0xAD, // Penguinator
-            0xAE, // StarPointer
             0xAF, // ICZCrushingColumn
             0xB0, // ICZPathFollowPlatform
             0xB1, // ICZBreakableWall

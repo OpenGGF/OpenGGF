@@ -21,6 +21,12 @@ final class FreshLevelTransitionBoundaryController {
         int previousRings = level.levelGamestate != null ? level.levelGamestate.getRings() : 0;
 
         level.loadZoneAndActWithTitleCard(zone, act);
+        if (!level.getTransitions().isTitleCardRequested()) {
+            // A game-owned continuation can bypass the title loop entirely.
+            // Keep the destination assembly; there is no title owner to publish
+            // or release a deferred player boundary.
+            return;
+        }
 
         List<PlayableState> playableStates = new ArrayList<>();
         for (Sprite sprite : level.spriteManager.getAllSprites()) {

@@ -6,7 +6,8 @@ on a level-select load and none on the Act 2 handover (`Act3_flag`, `loc_62B6`).
 Character route: Sonic + Tails and Tails alone only — Knuckles never enters `$1600`.
 Flash sequence, autoscroll, end boss, capsule and `Obj_StartNewLevel $2D` at `($FE8,$5E0)` to
 Hidden Palace `$1601`. Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md).
-Status: slice 0 baseline only.
+Status: fresh-load carry/title suppression implemented; the boss-act screen stages,
+autoscroll, presentation and end boss remain open.
 
 Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`, `Act3_timer`,
 `Saved2_status_secondary`), level select `$1600`, star-post respawn (`LRZ3_ScreenInit` P1 X >=
@@ -32,7 +33,7 @@ event-spawned and are not in the placement list.
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |
 | --- | --- | --- | --- | --- | --- | --- |
 | BASELINE: placed object and ring census | `LRZ3_Sprites` `$1FCBA2` (35), `LRZ3_Rings` `$1FCD82` (53 records, 52 live) | native | `TestS3kLrzPlacementCensus` | implemented | pass, `3418eba6e` | Ratchet target 0 placeholders |
-| ENTRY: `$1600` resources, title card, Act 3 carry | `Sonic3kLevelResourceProfile`; `Act3_flag` skips the title card and the `loc_62CC` Kos/Nem drain loop; `LRZ3_ScreenEvent` stage 0 (`loc_59B1C`) restores rings and timer | native | `TestSonic3kTitleCardSublevelMappings` (card only) | not implemented (no carry owner; `GameLoop` cites `Act3_flag` in a comment only) | open | Slice 8/9; shared owner with DEZ2 -> `$1700` (`loc_7F310`) |
+| ENTRY: `$1600` resources, title card, Act 3 carry | `Sonic3kLevelResourceProfile`; `Act3_flag` skips the title card and the `loc_62CC` Kos/Nem drain loop; `LRZ3_ScreenEvent` stage 0 (`loc_59B1C`) restores rings and timer | native | `TestS3kLevelContinuationHeadless`, `TestLevelContinuationCarry`, `TestS3kLrzBoulderCutsceneHeadless` | implemented | focused pass, 2026-09-22 | DEZ adoption, native entry-loop timing and remaining screen stages still open |
 | ENTRY: star-post respawn branch | `LRZ3_ScreenInit` P1 X >= `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` -> `Target_palette_line_2`, player `($9C0,$36C)` | native | — | not implemented | open | Slice 9 |
 | PRESENT: scroll handler registration | `$1600` must not use `SwScrlHpz`; `$1601` must keep it | native | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented (act key; `$1600` falls back to the default handler and takes the Lava Reef runtime state) | pass, `bbd156d37` | `SwScrlLrz3`: slice 9 |
 | PRESENT: `SwScrlLrz3`, shimmer and per-column VScroll | `LRZ3_BackgroundEvent` five stages `0,4,8,$C,$10`; `word_5A106` = `$310` then 18 x `$10`; `sub_59D82/59DA2/59DBC`, `sub_59DDE` | native + wide | — | not implemented | open | Slice 9/10 |

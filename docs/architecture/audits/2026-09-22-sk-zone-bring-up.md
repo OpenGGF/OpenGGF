@@ -188,3 +188,69 @@ one test passed at 15:40 BST, no tails.
 External clip 39 and raw-58 record Knuckles entering HPZ from declared `(3FC8,D0)`;
 360 frames, zero hurt/dead frames, frame 120 inspected and complete MP4 decoded.
 This remains positioned evidence, not cold-route completion.
+
+## LRZ2 boulder and fresh-load continuation
+
+Continuation after `5b86353e7` supplies `$AE`, the subtype `$24` Knuckles actor
+and the pushed boulder. The ROM owns the approach/camera/control stages,
+`Animate_Raw2MultiDelay`, the 21-update rolling section, `$20` light gravity,
+`sub_65EFE` rider capture/rotation and the `$1600` request. Native P1/P2 ordering
+is preserved; extra engine participants use the existing extended ordered roster.
+`sub_8622C` was extracted unchanged from DDZ into a shared native angle helper.
+
+`LevelContinuationCarry` owns the requested/loading/loaded bank inside the
+existing transition coordinator and its rewind adapter. It preserves selected
+rings/timer/shield values across a matching fresh load, bypasses the entire title
+owner/locked loop, and consumes counters on the destination screen event.
+Replacement requests, mismatched/failed loads, second direct loads and reset
+clear the bank. No public Mod API descriptor/pin or GameLoop body change.
+The recording driver's deferred-player boundary now exists only when a title
+was actually requested. LRZ masks the saved shield to native elemental types.
+
+Evidence (all Maven commands queued, absolute S3K ROM):
+
+- `TestLevelContinuationCarry,TestLevelTransitionCoordinator,TestLevelTransitionCoordinatorPeeks`:
+  15 passed. First compilation exposed a misspelled zone constant; fixed before execution.
+- `TestS3kLevelContinuationHeadless,TestLevelContinuationCarry`: 10 passed, including
+  all elemental shields, title-art absence, consumed banks and later direct entry.
+- `TestS3kLrzBoulderCutsceneHeadless,TestRemainingRewindTailInventory,TestS3kDdzFlightControllerHeadless,TestS3kLrzPlacementCensus`:
+  24 passed, zero skips/failures/errors at 16:10 BST. The 17 boulder cases cover
+  widths 320/352/400/528/800, native Sonic+Tails, S1 Sonic, S2 Sonic+Tails and native
+  solo Sonic/Tails, including remove/recreate/restore and forward replay.
+- Rewind coverage/profile guards passed. Inventory is 1161 = 921 isolated passes
+  + 240 graph-covered, empty failure tails (ratchet updated from the observed new classes).
+- Expanded boulder tests add Knuckles exclusion and the actual controller-to-load
+  bank/shield handoff. Combined LRZ/required S3K/DDZ selection completed 461 tests:
+  457 pass, four inherited trace failures, zero errors/skips. Exact command and
+  failures are in the [frontier log](../../status/trace-frontier-log.md).
+  Their counts and first-error identities match the September 19 record.
+
+The initial scripted approach held jump while airborne and stopped at a stair;
+repeated ordinary jump input completed it. No physics change was used to make the
+route pass. Recreation then exposed a replaceable `SubpixelMotion.State` holder:
+its constructor position survived restore although scalar snapshots matched.
+Making the holder final enables the existing in-place codec; the complete world
+forward comparison now passes. Recorded in implementation pitfalls.
+
+Native `native-boulder-20260922/run2` (same verified original movie and save as the
+traversal observer) completed without host failures in 16.491 seconds. Its promoted
+read-only exporter records 901 consecutive rows, frames 428200–429100: boulder
+creation 428255, camera flags 1/3 at 428373/428385, push 428426, airborne 428447,
+first rider capture 428475, `$1600` request 428800, receiving player `(64,112)` with
+233 rings and saved timer at 428823. The relative first-49-move boulder trajectory
+is checked directly against ROM arithmetic. Screenshots and state are observations,
+never engine input. `luac5.4 -p` passed. Native entry-loop timing and pixel parity
+are not certified by these positioned tests.
+
+External clip 40 uses raw-59, declared `(3880,1C0)`, Sonic+Tails, 37 rings and
+repeated right/jump input. The first 720 frames have no hurt/death; destination
+loads at 693 and its first screen event restores rings. Frames 320/400 inspected,
+full clip decoded (12 seconds). Raw footage continues into the unfinished boss act.
+Act 2 placement census is now zero placeholders; LRZ3 retains eight.
+
+The final art guard found an earlier turbine-registration defect from `87f0bf87b`:
+`Map_445A6` and `Map_445B0` have adjacent pointer tables sharing later frame data.
+The first pointer is not the frame count. Explicit counts 5 and 4 prevent reading
+the second table/data as more frames. Queued
+`-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard,TestLrzTurbineSprites,TestS3kLrzTurbineHeadless`
+with the absolute S3K ROM passed 29 tests, zero failures/errors/skips, at 16:17 BST.

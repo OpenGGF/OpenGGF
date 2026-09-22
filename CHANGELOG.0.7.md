@@ -376,7 +376,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ROM-loaded art. Chained platforms follow their ROM paths, carry players on top
   and hurt on contact with their spiked undersides. Rewinding the miniboss preserves its arms, hit flashes and defeat
   debris without resurrecting destroyed parts; launchers retain their in-flight balls.
-  Knuckles’ Act 2 exit now leads into Hidden Palace and saves progression.
+  Act 2’s boulder cutscene carries Sonic and Tails into the boss act, preserving
+  rings, time and elemental shields. Knuckles’ exit leads into Hidden Palace and
+  saves progression.
   Lava Reef Acts 1 and 2 now scroll their own layered background
   instead of the generic quarter-speed fallback, Act 2 animates its own lava tiles
   rather than Act 1's, and the invisible lava blocks that carry every lava-floor hit

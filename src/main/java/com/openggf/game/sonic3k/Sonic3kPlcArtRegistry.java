@@ -2472,6 +2472,17 @@ public final class Sonic3kPlcArtRegistry {
     private static void addLrzEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 1) {
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_CUTSCENE_KNUCKLES,
+                    Sonic3kConstants.ART_UNC_KNUCKLES_ADDR, CompressionType.UNCOMPRESSED,
+                    Sonic3kConstants.ART_UNC_KNUCKLES_SIZE, Sonic3kConstants.MAP_KNUCKLES_ADDR,
+                    1, Sonic3kConstants.DPLC_KNUCKLES_ADDR,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, -1, 0, DplcLayout.PLAYER));
+            // ObjDat3_6647A; loc_63B84 queues the ROM art at tile $500.
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LRZ_CUTSCENE_BOULDER,
+                    0x66B4E, 0x500, 2, null));
+        }
         // StillSprite groups: subtypes 31-38
         // base 0x3A1, pal 2: subtypes 31, 32, 33 (horizontal rails)
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.STILL_LRZ_RAIL,
@@ -2760,17 +2771,18 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kObjectArtKeys.LRZ2_CHAINED_PLATFORM,
                     Sonic3kConstants.MAP_LRZ_CHAINED_PLATFORM_ADDR,
                     Sonic3kConstants.ARTTILE_LRZ2_MISC, 1, null));
-            // Obj_LRZTurbineSprites: both mapping tables address PLC-loaded ArtTile_LRZ2Drum.
+            // Adjacent pointer tables share data: the first offset is not the table size.
+            // Map_LRZTurbineSprites has five entries; Map_LRZTurbineSprites2 has four.
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES,
                     Sonic3kConstants.MAP_LRZ_TURBINE_SPRITES_ADDR,
                     Sonic3kConstants.ARTTILE_LRZ2_DRUM,
-                    1, null));
+                    1, null, 5));
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES_THIN,
                     Sonic3kConstants.MAP_LRZ_TURBINE_SPRITES2_ADDR,
                     Sonic3kConstants.ARTTILE_LRZ2_DRUM,
-                    1, null));
+                    1, null, 4));
             // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89850); the ball copies the
             // launcher's art_tile and mappings verbatim (:89864-89865).
             levelArt.add(new LevelArtEntry(

@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 20 * Short.BYTES;
+            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 21 * Short.BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -54,6 +54,10 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
 
     private int appliedScreenShakeOffset;
     private short backgroundRoutine;
+    /** ROM _unkFAB8 bits 0-2 shared by the LRZ2 boulder cutscene. */
+    private short cutsceneFlags;
+    public int cutsceneFlags() { return cutsceneFlags & 0xFF; }
+    public void setCutsceneFlag(int bit) { cutsceneFlags |= (short) (1 << bit); }
     private short chunkEditRequest;
     private short backgroundCameraX;
     private short backgroundCameraY;
@@ -292,6 +296,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         screenShake.captureTo(buffer);
         buffer.putInt(appliedScreenShakeOffset);
         buffer.putShort(backgroundRoutine);
+        buffer.putShort(cutsceneFlags);
         buffer.putShort(chunkEditRequest);
         buffer.putShort(backgroundCameraX);
         buffer.putShort(backgroundCameraY);
@@ -324,6 +329,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         screenShake.restoreFrom(buffer);
         appliedScreenShakeOffset = buffer.getInt();
         backgroundRoutine = buffer.getShort();
+        cutsceneFlags = buffer.getShort();
         chunkEditRequest = buffer.getShort();
         backgroundCameraX = buffer.getShort();
         backgroundCameraY = buffer.getShort();

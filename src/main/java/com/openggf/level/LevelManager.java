@@ -2996,6 +2996,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             playable.setLrbSolidBit(ctx.getCheckpointLrbSolidBit());
         }
         audioManager.setSpeedShoes(false);
+        LevelContinuationCarry.restoreShield(transitions, playable);
     }
 
     /**
@@ -3260,6 +3261,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void requestTitleCardIfNeeded(LevelLoadContext ctx) {
         initialPresentationPlcsCompleted = false;
         initialPresentationOmitted = false;
+        if (LevelContinuationCarry.bypassInitialPresentation(transitions)) {
+            // A continuation never creates a title owner or runs its locked PLC
+            // loop. Do not use the omitted-presentation path, which does both.
+            initialPresentationPlcsCompleted = true;
+            return;
+        }
         boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
                 && GameServices.playbackDebug().hasScheduledLevelLoadSession();
         if (!ctx.isShowTitleCard()) {
@@ -3757,6 +3764,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             int zone, int act, LevelLoadMode loadMode,
             boolean titleCardRequiredInHeadlessMode,
             boolean queueFreshLevelRuntimeArt) throws IOException {
+        LevelContinuationCarry.beginLoad(transitions, zone, act);
+        boolean succeeded = false;
         try {
             writeCurrentAct(act);
             writeApparentAct(act);
@@ -3769,7 +3778,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     false,
                     titleCardRequiredInHeadlessMode,
                     queueFreshLevelRuntimeArt);
+            succeeded = true;
         } finally {
+            LevelContinuationCarry.finishLoad(transitions, succeeded);
             // A load that fails before initCameraBounds must not leak a stage-return
             // respawn table into a later, potentially different, level.
             checkpointCoordinator.clearPendingPersistentRespawn();

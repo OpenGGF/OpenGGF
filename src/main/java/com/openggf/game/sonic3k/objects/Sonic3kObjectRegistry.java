@@ -1190,7 +1190,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new LrzBoulderCutsceneObjectInstance(spawn);
                     }
                     return new StarPointerBadnikInstance(spawn);
                 });
@@ -1315,6 +1315,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     if (subtype == 0x20) {
                         return new CutsceneKnucklesMhz2Instance(spawn);
+                    }
+                    if (subtype == 0x24) {
+                        return new CutsceneKnucklesLrz2Instance(spawn);
                     }
                     if (subtype == 0x28) {
                         return new CutsceneKnucklesHpzInstance(spawn);

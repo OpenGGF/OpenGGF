@@ -136,6 +136,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        if (state() != null && state().zoneIndex() == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && act == 0) {
+            // loc_59B1C consumes the Act3 counter banks at the first screen event.
+            com.openggf.level.LevelContinuationCarry.restoreCounters(levelManager());
+            return;
+        }
         // LRZ1_ScreenEvent reads Events_bg+$0C before anything else draws (:115201-115204); with
         // no pending edit it is loc_56B5E, DrawTilesAsYouMove only, which the engine's own tile
         // streaming already does. The stage machines arrive with their slices.

@@ -71,6 +71,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String HPZ_SMALL_EMERALDS = "hpz_small_emeralds";
     public static final String HPZ_ENTRY_TELEPORTER = "hpz_entry_teleporter";
     /** CutsceneKnux_HPZ {@code $44(a0)=0}: Map_Knuckles through PLC_Knuckles. */
+    public static final String LRZ_CUTSCENE_KNUCKLES = "lrz_cutscene_knuckles";
+    public static final String LRZ_CUTSCENE_BOULDER = "lrz_cutscene_boulder";
     public static final String HPZ_CUTSCENE_KNUCKLES = "hpz_cutscene_knuckles";
     /** CutsceneKnux_HPZ {@code $44(a0)=2}: Map_HPZKnucklesGrab. */
     public static final String HPZ_CUTSCENE_KNUCKLES_GRAB = "hpz_cutscene_knuckles_grab";

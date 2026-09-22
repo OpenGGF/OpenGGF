@@ -4746,3 +4746,13 @@ apply the X gate once before `loc_849D8` replaces their routine with
 through rewind. Applying the parent's dynamic getter to every child causes
 layer changes the native child routines never perform. Audit the routine after
 a generic debris dispatch, not only the originating object's setup table.
+
+## Adjacent mapping pointer tables can share frame data
+
+Do not infer a mapping frame count from its first offset when multiple pointer
+tables precede shared frame data. LRZ turbine `Map_445A6` has five pointers and
+`Map_445B0` has four, both followed by data starting at `$445B8`. Register explicit
+counts; the automatic inference otherwise decodes pointer/data words as frames.
+`TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits`
+caught a bogus frame with 16428 pieces in the September 22 LRZ bring-up audit.
+This applies to all games using offset-table mappings.

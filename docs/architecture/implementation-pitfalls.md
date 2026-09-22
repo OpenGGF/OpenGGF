@@ -165,6 +165,14 @@ stateful helpers before schema restore, then bind services when used: object
 recreation can run before service injection. Compare resource pixels by content;
 Java identity of re-decoded `Pattern` instances is not a rendering difference.
 
+**Motion holders need stable identity in the default rewind path.** Declare
+`SubpixelMotion.State` holders `final`; the default schema captures supported
+in-place helpers only when their identity is fixed. LRZ's new boulder initially
+used a replaceable holder, so snapshots matched immediately after recreation but
+the next update moved riders from the constructor position. Comparing complete
+world state after one forward frame caught it. Arrays use their own capture policy;
+do not apply this rule to arrays indiscriminately. Origin: 2026-09-22 LRZ bring-up.
+
 **Released solid contacts need captured provenance.** A CPU follower can retain
 its last contact after that owner is destroyed and its slot reused. Rewind must
 clear the future Java pointer, preserve the captured released-contact state and
