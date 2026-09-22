@@ -1080,3 +1080,56 @@ Clip `057` under `$HOME/Videos/OGGF/s3k-dez-bring-up/` passes full ffmpeg decode
 visible and are not firing evidence. This is positioned engine footage, not
 native parity or a cold route. Census is 316/365 and 455/494; shared campaign
 validation/integration and remaining level work are still pending.
+
+
+### Four-section staircase family
+
+After `35390ba3c`, `$4F` follows `Obj_DEZStaircase` through `loc_47814`:
+parent plus three forward-allocated solid sections, partial-allocation fallthrough,
+original-anchor range tails, separate render flips and original status word order,
+standing/underside return-bit latches, 30/60-tick waits, alternating shake and
+signed fixed-point rounding of the four step offsets. The render map is `$46F7A`
+at the staircase-specific tile `$480`, palette 1, bucket 3.
+
+The first art/census selection at 22:36 BST passed 92 checks without skips.
+The next selection passed the eight then-current staircase cases, including
+320/800 actual landing/carry and forced graph recreation; its only failure was
+the older `TestSinkingMudRegistry` assertion that SKL `$4F` was still a
+placeholder. That assertion now expects the staircase, retaining S3KL mud.
+At 22:40 BST, queued Java 21 with absolute S3K ROM path and
+`-Dtest=TestS3kDezStaircaseHeadless,TestS3kDezPlacementCensus,
+TestSinkingMudObjectInstance,TestSinkingMudRegistry,TestS3kDezColdRoutes`
+passed 27 tests, zero failures/errors/skips. The new ninth staircase case
+exhausts the actual SST pool, leaves two slots, and verifies the resulting
+three-section partial staircase and shared retirement anchor.
+
+The graph replay deletes/removes all four sections before restoring; the
+restored children point to the recreated managed parent, then reproduce the
+shake-to-extension positions for 180 dispatches. Actual placed landings also
+restore player movement and nearby hazards at 320/800. Seeded DEZ2 remains at
+1256 matching frames / row 21029 first X/camera-X difference, cold entry 0.
+
+Clips `058` (320) and `059` (800) under `$HOME/Videos/OGGF/s3k-dez-bring-up/`
+show the landing, delay and upward ride, 360 frames each, no damage/deaths.
+Both pass full ffmpeg decode and frame 160 was inspected. Census is 334/365
+and 470/494. Native parity and donor/team breadth
+remain open; the clips are positioned engine evidence only.
+
+At 22:49 BST, the ten-case `TestS3kDezStaircaseHeadless` selection passed with
+zero skips on the worktree after `35390ba3c`. The added case uses the actual
+Act-2 `$950,$790` flipped placement with explicitly declared reverse gravity:
+inverted landing starts its timer, the parent rises its assigned quarter word
+to `$770`, and player movement/gravity replay for 180 frames after restore.
+This is a component-entry check, not evidence of reaching it through the route.
+
+The first structural run rejected custom capture/restore overrides for the
+new staircase. Those overrides were removed rather than expanding the guard
+baseline. An exact `parent` field policy uses the existing identity codec;
+the ten-case rerun includes removing/recreating all four sections and asserting
+that each child binds to the newly managed parent. Clip gameplay is unchanged
+by this rewind-only revision; the capture provenance retains its original source hash.
+
+At 22:49 BST the fresh `-Pguards` inventory/architecture/profile selection
+passed all 7 checks with zero skips after the schema change. Inventory is
+1238 total / 998 isolated / 240 graph-covered / 0 missing codec.
+Combined campaign validation remains pending.

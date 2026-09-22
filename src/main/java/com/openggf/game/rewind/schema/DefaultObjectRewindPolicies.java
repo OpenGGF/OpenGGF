@@ -103,6 +103,9 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // DEZ staircase sections read four words on their exact native parent.
+            // The identity codec relinks them after complete graph recreation.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezStaircaseObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             // LRZ3 undersides must bind to their exact recreated moving platform.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzBossPlatformObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzEndBossChild", "parent"), RewindFieldPolicy.CAPTURED),

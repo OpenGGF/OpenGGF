@@ -2821,3 +2821,33 @@ player damage and restore/forward replay. Counts are 316/365 and 455/494
 concrete; native parity and route/participant breadth remain open.
 
 The final focused selection passes 105 checks and fresh inventory/architecture/profile guards pass 7, all without skips. Clip `057-torpedo-launcher-320/capture.mp4` shows 420 frames / seven seconds, zero deaths, with full ffmpeg decode and projectile frames 125/135 inspected. It is positioned engine evidence only.
+
+
+## 2026-09-22 slice 4: four-section staircases
+
+After `35390ba3c`, `$4F` implements `Obj_DEZStaircase`. The parent occupies the
+first of four solid sections and allocates the other three after its slot;
+allocation failure preserves the partial staircase. All sections retire using
+the original anchor. Original status X-flip reverses parent-word selection;
+subtype and Y-flip separately modify the rendered art flip.
+
+`swap d6 / or.b d6,$32(parent)` latches the native contact bits. Standing returns
+bits 4/5 and starts the 30-tick delay for subtypes 0/4; underside bits 2/3 start
+the 60-tick shake for 2/6. The controller runs before its own solid call, so a
+new contact takes effect on the next dispatch. Moving variants stop at ±$80,
+with the other words at floor(3/4), floor(1/2), floor(1/4), including negative
+rounding. Map `$46F7A` is shared with the tilting bridge, but the staircase owns
+DEZMisc+$133 (tile `$480`), palette 1, sprite bucket 3.
+
+Tests cover full section allocation/orientation, both triggers and exact timer
+edges, jitter/rounding/stops, forced recreation of all four sections with parent
+identity relinking, and an actual placed staircase landing/carry at verified
+320/800 camera widths with forward replay. The old sinking-mud registry test
+expected a DEZ placeholder; that expectation was updated to the new factory,
+while its S3KL mud assertion is retained. Counts are 334/365 and 470/494.
+The actual flipped Act-2 `$950,$790` placement also passes inverted landing,
+quarter-word movement and 180-frame restore/replay from declared reverse-gravity
+entry. Native matching, route entry and team/donor breadth remain open.
+The final ten-case staircase selection passes without skips. Rewind uses the
+existing parent identity codec: bespoke overrides were rejected by the
+architecture guard and removed, without expanding its baseline.

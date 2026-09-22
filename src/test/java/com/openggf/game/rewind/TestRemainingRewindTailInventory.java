@@ -164,7 +164,8 @@ class TestRemainingRewindTailInventory {
         // DEZ lightning adds one spawn-recreatable scalar animation owner.
         // DEZ conveyor belt is a stateless spawn-recreatable controller.
         // DEZ launcher and independent torpedo each own scalar rewind state.
-        return new TailInventory(1237, 997, 240, 0, buckets);
+        // DEZ staircase sections use an identity-linked parent snapshot.
+        return new TailInventory(1238, 998, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

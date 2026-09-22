@@ -3194,6 +3194,11 @@ public final class Sonic3kPlcArtRegistry {
                 DEZ_ENERGY_BRIDGE_FRAME_COUNT
         ));
 
+        // Staircase uses the bridge's one-frame map but a different art bank.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_STAIRCASE,
+                Sonic3kConstants.MAP_DEZ_TILTING_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x133, 1, null, 1));
+
         // Obj_DEZTorpedoLauncher: same ten-frame mapping, parent palette 0,
         // projectile palette 1; piece-local palette bits remain additive.
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_TORPEDO_LAUNCHER,
