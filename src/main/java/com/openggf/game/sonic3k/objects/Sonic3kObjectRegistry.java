@@ -587,6 +587,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
+        factories.put(Sonic3kObjectIds.DEZ_HOVER_MACHINE,
+                (spawn, registry) -> getCurrentZoneSet() == S3kZoneSet.SKL
+                        ? new S3kDezHoverMachineObjectInstance(spawn)
+                        : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.DEZ_GRAVITY_ROOM,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();

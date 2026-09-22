@@ -3194,6 +3194,11 @@ public final class Sonic3kPlcArtRegistry {
                 DEZ_ENERGY_BRIDGE_FRAME_COUNT
         ));
 
+        // Obj_DEZHoverMachine: two housing poses and the orbiting rotor.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_HOVER_MACHINE,
+                Sonic3kConstants.MAP_DEZ_HOVER_MACHINE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x11, 1, null, 3));
+
         // Staircase uses the bridge's one-frame map but a different art bank.
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_STAIRCASE,
                 Sonic3kConstants.MAP_DEZ_TILTING_BRIDGE_ADDR,

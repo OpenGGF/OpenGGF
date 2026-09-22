@@ -122,7 +122,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   emitters with its short damage window and sound. Conveyor belts carry grounded players
   along either face in their placed direction. Wall launchers fire torpedoes while in view
   and recoil between shots. Four-section staircases react to landing or underside contact,
-  wait or shake, and lift or lower their steps. Shock floors and ceilings now hurt on
+  wait or shake, and lift or lower their steps. Hover machines suspend players
+  above their orbiting rotors. Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's

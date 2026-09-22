@@ -286,6 +286,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     private static final Set<Integer> SKL_ONLY_IDS = Set.of(
             0x14, // Updraft
             0x5D, // DEZRetractingSpring -- S3KL $5D is the competition-only Obj_CGZTriangleBumpers
+            0x5E, // DEZHoverMachine -- S3KL is competition-only CGZBladePlatform
             0x5F, // DEZGravityRoom -- the S3KL table has no object at this number
             0x60, // DEZBumperWall -- the S3KL table has no object at this number
             0x61, // DEZGravityPuzzle -- S3KL $61 is the competition-only Obj_BPZBalloon

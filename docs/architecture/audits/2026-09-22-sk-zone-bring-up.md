@@ -1133,3 +1133,30 @@ At 22:49 BST the fresh `-Pguards` inventory/architecture/profile selection
 passed all 7 checks with zero skips after the schema change. Inventory is
 1238 total / 998 isolated / 240 graph-covered / 0 missing codec.
 Combined campaign validation remains pending.
+
+### Hover machine family
+
+After `46be7745e`, SKL `$5E` follows `loc_494DA`, `loc_494EA` and `sub_4952A`.
+The stationary housing and parentless later-slot rotor capture scalar state
+through the existing schema. Old orbit phase owns movement and bucket 4/6;
+the player's horizontal offset independently owns the semicircular lift.
+Native P1/P2 admission, fractions, jump/flip fields and Level_frame_counter
+sound cadence are covered. Exhausted allocation still animates the housing
+and is not retried. Forced removal/recreation reproduces orbit and priority.
+
+At 22:55 BST the focused object/headless/census/PLC selection passed 93 checks,
+zero skips, including actual lift and replay at verified 320/800 widths. An
+incorrectly named renderer-corruption selector matched no class; the actual
+`TestPatternSpriteRendererCorruptionGuard` is being run separately. Fresh
+inventory/architecture/profile guards passed 7 at 22:56, zero skips, with
+1240 total / 1000 isolated / 240 graph-covered / 0 missing codec.
+
+`060-hover-machine-320` and `061-hover-machine-800` under the external DEZ
+capture directory each show six seconds of positioned hovering, zero damage
+or deaths. Both videos passed full decode and frame 90 visual inspection.
+Counts are now 345/365 and 470/494 concrete placements, leaving 20/24
+placeholders. Native matching, complete routes and donor/character breadth
+remain open; campaign validation and integration remain pending.
+
+At 22:57 BST the separately selected `TestPatternSpriteRendererCorruptionGuard`
+passed both cases with zero skips, completing 95 focused checks for this slice.

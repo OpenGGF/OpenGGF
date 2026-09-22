@@ -2851,3 +2851,39 @@ entry. Native matching, route entry and team/donor breadth remain open.
 The final ten-case staircase selection passes without skips. Rewind uses the
 existing parent identity codec: bespoke overrides were rejected by the
 architecture guard and removed, without expanding its baseline.
+
+
+## 2026-09-22 slice 4: hover machines
+
+After `46be7745e`, SKL `$5E` owns a stationary housing and an independently
+allocated later-slot rotor. Housing animation alternates every dispatch,
+including init and allocation failure. `loc_494EA` reads the old angle byte
+for both cosine movement (±32 px) and bucket 4/6 selection, then increments
+by two. Both parts retire against the housing's original coarse-X anchor.
+
+`sub_4952A`'s second GetSineCosine consumes the player's horizontal offset,
+not the rotor angle. The resulting semicircular contact window drives the
+signed word Y shift without changing fractions or horizontal speed. Hurt/dead
+and any object-controlled player are rejected independently for native P1/P2.
+Lift resets jumping/Y velocity, sets ground speed 1, and initializes a tumble
+only when flip_angle is zero. Magnetic-spike sound reads Level_frame_counter,
+not V-int. The three-frame ROM map `$495D8` uses DEZMisc2+$11, palette 1;
+its housing pieces retain their local palette bits.
+
+At 22:55 BST, queued Java 21 with the absolute S3K ROM path passed 93 checks:
+`TestS3kDezHoverMachineObjectInstance,TestS3kDezHoverMachineHeadless,
+TestS3kDezPlacementCensus,TestSonic3kPlcArtRegistry`, zero skips. The command
+also named an absent `TestS3kObjectArtCorruptionRegression`; it did not run
+that guard, so its actual name is checked separately. The fresh structural
+selection passed 7 checks at 22:56 (inventory 1240/1000/240/0).
+
+Tests cover both native player slots, contact edges/flags/fractions/sound,
+full SST exhaustion without retries, forced recreation of both independent
+parts and orbit-priority replay, and real placed lift plus 180-frame replay
+at asserted camera widths 320/800. Clips 060/061 each show 360 frames with
+zero damage/deaths; full ffmpeg decode and frame 90 inspection passed.
+Counts are 345/365 and 470/494 concrete. This remains positioned engine
+validation; native parity, cold routes and participant breadth are open.
+
+At 22:57 BST the separately selected `TestPatternSpriteRendererCorruptionGuard`
+passed both cases with zero skips, completing 95 focused checks for this slice.

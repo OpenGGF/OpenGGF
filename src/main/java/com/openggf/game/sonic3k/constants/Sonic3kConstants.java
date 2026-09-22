@@ -506,6 +506,7 @@ public class Sonic3kConstants {
     public static final int MAP_DEZ_BUMPER_WALL_ADDR = 0x0498C2;
     /** Ani_DEZLightning / Map_DEZLightning, sonic3k.lst:110370-110380. */
     public static final int MAP_DEZ_TILTING_BRIDGE_ADDR = 0x046F7A;
+    public static final int MAP_DEZ_HOVER_MACHINE_ADDR = 0x0495D8;
     public static final int MAP_DEZ_TORPEDO_LAUNCHER_ADDR = 0x0472A8;
     public static final int ANI_DEZ_LIGHTNING_ADDR = 0x047926;
     public static final int MAP_DEZ_LIGHTNING_ADDR = 0x04792E;

@@ -172,6 +172,8 @@ public final class Sonic3kObjectIds {
     // Obj_CGZTriangleBumpers, a competition-zone object no zone 0-6 layout places. The two
     // tables share the number.
     public static final int DEZ_RETRACTING_SPRING = 0x5D;
+    // SKL $5E is Obj_DEZHoverMachine; S3KL $5E is competition-only CGZBladePlatform.
+    public static final int DEZ_HOVER_MACHINE = 0x5E;
     // SKL object table only: Obj_DEZGravityRoom (sonic3k.asm:95814). The S3KL table has
     // no object at $5F, so this number is named after its only owner.
     public static final int DEZ_GRAVITY_ROOM = 0x5F;
