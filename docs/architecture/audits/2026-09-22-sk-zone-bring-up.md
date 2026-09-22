@@ -796,3 +796,20 @@ stepped CSV rows are alive. The capture's provenance records source hashes.
 This is local rendered evidence, not native parity or a cold route.
 The combined change-based plan against `c91fd5ac7` now selects 2785 ordinary
 classes plus guards; that campaign-wide run remains owed.
+
+
+### SSZ runtime gate rewind follow-up
+
+After `eaf341739`, inspection found `_unkFA82` (EggRobo pairing bits) and
+`Boss_flag` absent from `SszZoneRuntimeState.captureBytes/restoreBytes`. A focused
+regression reproduced the stale boss flag across retirement. Both the unsigned
+word and boolean now round-trip, including into a newly created runtime state.
+The initial test used a nonexistent enum constant and failed compilation; after
+correcting it to `SONIC_ALONE`, the expected behavioral failure was observed.
+
+At 20:58 BST, queued Java-21 Maven `-Dmse=off` with absolute S3K/S1 ROM paths
+passed 62 checks, zero skips, across `TestSszZoneRuntimeState`,
+`TestSszLaunchState`, `TestS3kSszEggRobo`, `TestS3kSszGhzArenaHeadless`,
+`TestS3kSszMtzArenaHeadless`, and `TestS3kSszMechaSpawnHeadless`. This covers the
+expanded byte layout's consumers and existing launch graph recreation. It is a
+focused pass, not campaign-wide certification.

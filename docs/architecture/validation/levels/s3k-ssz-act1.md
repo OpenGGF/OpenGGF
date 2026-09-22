@@ -158,3 +158,8 @@ bursts and the exit pad (source frames 1680–2399, 320 px, native Sonic alone,
 checkpoint `$1700,$420`, 355 rings, zero deaths). Other widths/teams, GHZ visual
 coverage, native timing/pixels and arbitrary replacement-slot `$38` remain open.
 This adds a local defeat obligation; it does not certify either complete route.
+
+Runtime snapshot follow-up: `TestSszZoneRuntimeState` now pins the EggRobo pairing
+word and boss-active flag across retirement/fly-by changes and recreation. Both
+were omitted from the prior codec. The 62-case runtime/EggRobo/three-boss/launch
+selection passed without skips; full boundary coverage remains partial.

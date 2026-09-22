@@ -39,7 +39,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public static final int EVENTS_BG_BYTES = 0x10;
 
     private static final int CAPTURE_BYTES =
-            EVENTS_BG_BYTES + 14 * Short.BYTES + 3 * Integer.BYTES + 3 + SszLaunchState.CAPTURE_BYTES;
+            EVENTS_BG_BYTES + 15 * Short.BYTES + 3 * Integer.BYTES + 4 + SszLaunchState.CAPTURE_BYTES;
 
     private final SszLaunchState launch = new SszLaunchState();
     public SszLaunchState launch() { return launch; }
@@ -297,6 +297,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(cloudDriftAccumulator);
         buffer.put((byte) (backgroundInitApplied ? 1 : 0));
         buffer.putInt(backgroundScrollFrame);
+        buffer.putShort((short) unkFA82);
+        buffer.put((byte) (bossFlag ? 1 : 0));
         launch.capture(buffer);
         return buffer.array();
     }
@@ -328,6 +330,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         cloudDriftAccumulator = buffer.getInt();
         backgroundInitApplied = buffer.get() != 0;
         backgroundScrollFrame = buffer.getInt();
+        unkFA82 = Short.toUnsignedInt(buffer.getShort());
+        bossFlag = buffer.get() != 0;
         launch.restore(buffer);
     }
 }
