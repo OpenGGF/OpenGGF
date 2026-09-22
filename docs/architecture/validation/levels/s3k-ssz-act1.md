@@ -174,3 +174,13 @@ prefix; 23 Mecha cases plus the updated 16-sheet inventory pass without skips.
 the declared Hyper checkpoint setup, 320 px native Sonic alone. Native timing,
 other visual breadth and arbitrary replacement-slot byte semantics remain open.
 The bare `loc_7B39C` allocation is a search with no SST write, not a missing owner.
+
+
+Secondary hitbox follow-up: `secondaryHurtBoxFollowsTheRomFrameTableAndSurvivesAHitWindow`
+walks 1600 attack frames against `byte_7D280`, then verifies actual ring loss
+while the main boss box is disabled. The killing-hit test checks retirement,
+and the entry rewind spot recreates the removed collision owner. All 24 Mecha
+cases passed, followed by the explicit recreation case. Native hit-window phase
+and cold-route certification remain open. Refreshed `raw-43-mecha-complete-graph`
+includes this hitbox and reaches DEZ1 at frame 4223 with no deaths over 4800
+frames; declared Hyper checkpoint setup, not a cold route.

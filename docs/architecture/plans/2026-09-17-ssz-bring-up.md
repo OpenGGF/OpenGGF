@@ -2484,3 +2484,13 @@ matrix for the rendered checkpoint evidence and remaining native/slot-reuse gaps
 The earlier claim that a bare `AllocateObject` consumes an unwritten slot is
 rejected: its implementation only scans code pointers. `loc_7B39C` writes no
 owner after returning from that search. The missing `loc_7C9BA` child remains open.
+
+
+### Campaign follow-up: Mecha secondary collision
+
+`loc_7C9BA` is now implemented as an independently allocated collision owner.
+It reads `byte_7D280` from ROM, follows the animated offsets and hurts during
+the main boss's hit window, then retires on defeat. The focused combat test
+exercises the real touch pass; the entry rewind spot recreates the owner.
+The earlier missing-child status is superseded. Exact native hit-window phase
+and the cold route remain open; earlier controller videos predate this change.

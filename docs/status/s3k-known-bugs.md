@@ -5968,7 +5968,7 @@ That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
   `ensureBackgroundTilemapData` showing where the base is dropped. Until one of those lands, treat
   the plain-mode half as **asserted, not demonstrated**; the wide-viewport capture is owed too.
 
-## Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop
+## Sky Sanctuary Mecha Sonic Hit-Window Phase and Slot-Reuse Fidelity
 
 **2026-09-22 scope update:** production defeat/results and the Death Egg launch
 through actual DEZ1 load are now implemented. The remaining gaps below concern
@@ -5982,7 +5982,8 @@ not yet have native parity or a cold full-act route certificate.
   behind it, and the boss runs `SSZEndBoss_Index`'s act-1 entries 0 through `$28` — the entry run,
   the return, the landing, the two openings and the three-way attack cycle — with `sub_7D2D8`'s
   per-frame collision byte and `sub_7D312`'s window. The secondary collision child
-  `ChildObjDat_7D474` / `loc_7C9BA` remains missing.
+  `ChildObjDat_7D474` / `loc_7C9BA` now follows its ROM frame table and hurts the
+  player independently during the parent's hit-flash window.
 - **Implemented follow-up** — Act-1 results/launch, `word_7D842` palette rotation
   and its colour-gated spark child are implemented. The earlier claim that
   `loc_7B39C`'s bare `AllocateObject` consumes a slot was incorrect: that routine
@@ -5995,9 +5996,9 @@ not yet have native parity or a cold full-act route certificate.
   shared boss touch pass counts as the first has not been checked against the routine, and no
   test pins it. The window's duration, and the fact that `sub_7D2D8` leaves the byte alone while
   it runs, are covered.
-- **Removal condition** — the palette rotation and its spark child exist, `loc_7C9BA` exists,
-  `loc_7B39C`'s allocate is accounted for, and the hit window's phase is pinned against
-  `sub_7D312`. The attack graph is driven to a landing and to each of `byte_7B636`'s three
+- **Removal condition** — Pin the hit window's phase against `sub_7D312` and
+  verify relevant replacement-slot semantics. Palette rotation, sparks and the
+  secondary collision child are implemented; the bare allocation is accounted for. The attack graph is driven to a landing and to each of `byte_7B636`'s three
   attacks against ROM literals, and the defeat through `loc_7D056` is driven and dated.
 
 ## Sky Sanctuary Explosion Controller Replacement-Slot Stop Bit

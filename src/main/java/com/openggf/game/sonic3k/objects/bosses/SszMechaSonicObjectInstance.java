@@ -85,8 +85,9 @@ import java.util.List;
  * on its own counter, not a random choice, and only {@code loc_7B484}'s landing consults the RNG.
  *
  * <p><b>Still owed on this class</b>, recorded in {@code docs/status/s3k-known-bugs.md} rather
- * than faked: the {@code loc_7C9BA} collision child and the Knuckles act-2 graph.
- * Act-1 defeat includes the palette-driven sparks, results and launch handover.
+ * than faked: the Knuckles act-2 graph and native hit-window phase comparison.
+ * Act 1 includes the secondary collision child, palette-driven defeat sparks,
+ * results and launch handover.
  */
 public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         implements SpawnRewindRecreatable {
@@ -483,6 +484,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         // move.b #mus_EndBoss,subtype(a1). The object's own init is move.w #90,$2E(a0) and a
         // cmd_FadeOut, so the theme arrives 91 updates later, not on this frame.
         spawnFreeChild(() -> new SongFadeTransitionInstance(90, Sonic3kMusic.BOSS.id));
+        SszMechaSonicCollisionChild.spawnFor(services(), getSlotIndex(), getX(), getY());
         // loc_7B39C's trailing AllocateObject only searches and writes no SST bytes.
         // Reserving an engine slot for that bare call would create a ROM-inaccurate occupant.
     }

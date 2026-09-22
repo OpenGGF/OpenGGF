@@ -847,3 +847,27 @@ zero skips. The corrected `raw-42-mecha-defeat-sparks` recording is 1000 frames
 raw-40's declared Hyper checkpoint input. Frame 1805 shows the flash and spark;
 full ffmpeg decoding passed. Source hashes and setup are in the media provenance.
 These remain focused checks; combined campaign validation is still owed.
+
+
+### Mecha secondary collision follow-up
+
+After `d094005bb`, `ChildObjDat_7D474` now allocates the invisible `loc_7C9BA`
+owner forward from Mecha's slot. `sub_7D260` reads `(dx,dy,collision,frame)` from
+ROM `byte_7D280`, indexed by the parent's mapping frame. Position mirrors the
+parent's X orientation. This owner adds collision without drawing, so it does
+not require a render flag. The parent's ordinary hit window does not suppress
+it; status bit 7 on the killing hit stops collision and installs next-pass
+deletion. The bare allocation after it remains a no-op search.
+
+At 21:11 BST all 24 `TestS3kSszMechaSpawnHeadless` checks passed with no skips,
+including the 1600-frame secondary-table walk, real player hurt while the
+parent's collision byte is zero, killing-hit retirement, and all existing
+width/team/donor handovers. Queued Maven used Java 21, `-Dmse=off`, and absolute
+S3K/S1 paths. The explicit removed-owner recreation check also passed. The refreshed
+`raw-43-mecha-complete-graph` controller recording includes this combat change:
+4800 frames, zero deaths, DEZ1 camera reset at 4223, destination inspected at
+4700, and full 80-second decoding passed. It uses the same declared Hyper
+checkpoint and input as raw-40, not a cold-route/native-parity setup.
+Both rewind guards passed in a fresh `-Pguards` invocation at 21:14 BST,
+zero skips. Clip 25 is the decoded 2940-frame / 49-second excerpt (source
+1500–4439). Combined campaign validation/integration remains outstanding.

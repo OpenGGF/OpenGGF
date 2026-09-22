@@ -2196,6 +2196,8 @@ public class Sonic3kConstants {
     public static final int MAP_MECHA_SONIC_EXTRA_ADDR = 0x18561E;
     /** byte_7C9AA: four (dx, dy, frame, padding) spark rows. */
     public static final int SSZ_MECHA_SPARK_OFFSETS_ADDR = 0x07C9AA;
+    /** byte_7D280: (dx, dy, collision, frame) indexed by the parent's mapping frame. */
+    public static final int SSZ_MECHA_SECONDARY_COLLISION_ADDR = 0x07D280;
 
     /**
      * {@code Obj_SSZEndBoss}'s raw animation scripts, addressed by ROM address because

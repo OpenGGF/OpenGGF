@@ -135,7 +135,7 @@ matrices; never collapse skipped or unrun into pass.
 `byte_7D2FC`'s per-frame collision byte, the defeat and `loc_7D056`'s handover, by
 `TestS3kSszMechaSpawnHeadless` and dated against the run's third SSZ segment `hpz_3`;
 his palette rotation and spark child now pass source-row and launch-recreation checks.
-The `loc_7C9BA` collision child remains open; the bare allocation was verified to write no slot. The production results-to-DEZ1 launch now passes component handover/rewind checks at
+The `loc_7C9BA` collision child now has ROM-table, real-hurt and rewind checks; native hit-window phase remains open. The bare allocation was verified to write no slot. The production results-to-DEZ1 launch now passes component handover/rewind checks at
 320/400/800, native Sonic + Tails, Tails alone and S1 donor, with a controller Hyper
 checkpoint recording through the destination load; exhausted slots, transition-history
 isolation and native parity remain open. Both recreations now emit defeat explosions and have defeat-graph recreation/forward-replay checks; a refreshed Metropolis checkpoint recording shows the bursts. Replacement-slot stop-byte fidelity remains open. Both recreations' entry and defeat intervals are compared against the `hpz` segment's aux rows; their orbits, flashes and laser cadence are not, and the Metropolis fight is now filmed end to end (clips 20-22) with `GameplayCaptureTool --rings` |

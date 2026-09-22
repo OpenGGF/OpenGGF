@@ -16,6 +16,7 @@ import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicActEndObjectInstance
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicSparkChild;
+import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicCollisionChild;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
@@ -425,6 +426,8 @@ class TestS3kSszMechaSpawnHeadless {
             parkTheLeader(fixture);
             fixture.stepIdleFrames(1);
         }
+        org.junit.jupiter.api.Assertions.assertNull(active(SszMechaSonicCollisionChild.class),
+                "the killing hit retires the secondary hurt box");
         assertEquals(2, boss.routineForTest(), "loc_7B858's move.b #2,routine(a0)");
         assertEquals(0x0E, boss.mappingFrameForTest(), "move.b #$E,mapping_frame(a0)");
         assertEquals(0, boss.xVelForTest(), "clr.w x_vel(a0)");
@@ -617,6 +620,54 @@ class TestS3kSszMechaSpawnHeadless {
                 "the advanced routine never retries allocation");
     }
 
+    @Test
+    void secondaryHurtBoxFollowsTheRomFrameTableAndSurvivesAHitWindow() throws Exception {
+        var fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        var boss = runToInit(fixture);
+        var child = active(SszMechaSonicCollisionChild.class);
+        assertNotNull(child, "ChildObjDat_7D474 allocates the invisible hurt box");
+        assertTrue(child.getSlotIndex() > boss.getSlotIndex());
+        assertFalse(child.requiresRenderFlagForTouch(), "native adds collision without drawing");
+        var rom = GameServices.rom().getRom();
+        var seen = new java.util.HashSet<Integer>();
+        for (int frame = 0; frame < 1600; frame++) {
+            parkTheLeaderInTheAir(fixture);
+            fixture.sprite().setInvincibleFrames(2);
+            fixture.stepIdleFrames(1);
+            int mapping = boss.mappingFrameForTest();
+            seen.add(mapping);
+            byte[] row = rom.readBytes(0x7D280 + mapping * 4, 4);
+            assertEquals(row[2] & 0xFF, child.getCollisionFlags());
+            assertEquals(row[3] & 0xFF, child.mappingFrameForTest());
+            assertEquals((boss.getX() + (boss.renderFlippedForTest() ? -row[0] : row[0])) & 0xFFFF,
+                    child.getX());
+            assertEquals((boss.getY() + row[1]) & 0xFFFF, child.getY());
+        }
+        assertTrue(seen.size() >= 8, "exercise several attack poses, observed " + seen);
+
+        // An ordinary hit suppresses the parent's box, not this independent HURT child.
+        landOneHit(fixture, boss);
+        boolean hurt = false;
+        for (int frame = 0; frame < 20 && !hurt; frame++) {
+            var player = fixture.sprite();
+            GameServices.level().getLevelGamestate().setRings(1);
+            player.setInvulnerableFrames(0);
+            player.setInvincibleFrames(0);
+            player.setHurt(false);
+            player.setCentreX((short) child.getX());
+            player.setCentreYPreserveSubpixel((short) child.getY());
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setGSpeed((short) 0);
+            player.setAir(true);
+            player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+            assertEquals(0, boss.getCollisionFlags(), "parent remains in its hit window");
+            fixture.stepIdleFrames(1);
+            hurt = player.isHurt() || GameServices.level().getLevelGamestate().getRings() == 0;
+        }
+        assertTrue(hurt, "the secondary hurt box costs a ring even while Mecha is flashing");
+    }
+
     /** Rewind across the entry: before the spawn, with the boss live, and after. */
     @Test
     void theEntrySurvivesACaptureRestoreAndForwardReplay() {
@@ -629,7 +680,10 @@ class TestS3kSszMechaSpawnHeadless {
         fixture.stepIdleFrames(1);
         CompositeSnapshot after = registry.capture();
 
+        var manager = GameServices.level().getObjectManager();
+        manager.removeDynamicObject(active(SszMechaSonicCollisionChild.class));
         registry.restore(before);
+        assertNotNull(active(SszMechaSonicCollisionChild.class), "secondary hurt box is recreated");
         sameSnapshot(before, registry.capture(), "restore during the entry");
         SszMechaSonicObjectInstance restored = active(SszMechaSonicObjectInstance.class);
         assertNotNull(restored, "Mecha Sonic is back");
