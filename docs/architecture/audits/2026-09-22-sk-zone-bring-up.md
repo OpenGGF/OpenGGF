@@ -625,3 +625,27 @@ ending pose; all three bosses incorrectly convert ROM score 100 directly to
 The art loader also rejects `mecha_sonic_extra`: mappings reference tile $96 but
 the registered compressed blob decodes to 139 tiles. These are next-slice fixes,
 alongside the missing collapse/launch owner and the early cold-route frontier.
+
+
+### SSZ results correction
+
+The score review resolved against `HUD_AddToScore`'s 999999-unit cap, explicitly
+9999990 displayed points. Removed the unnecessary shared boss score hook and
+SSZ's 100-point overrides; all three use the existing 1000-point award.
+`sub_868F8` now creates the production results owner after a living, grounded
+leader passes the signed-word countdown gate. The owner retains control/camera
+for the pending launch; `Check_TailsEndPose` poses the native second player once.
+The allocation is first-free and attempted once, including exhaustion.
+
+The first extended test run completed 44 checks with 43 passing and one error:
+capturing after defeat found a dead trail reference retained by Mecha Sonic.
+Trail expiry now removes that bookkeeping reference at the same lifecycle edge.
+The subsequent 16-test Mecha selection passed with no failures/errors/skips,
+including real results completion and capture/restore/forward replay. At 19:38 BST, the expanded 18-test Mecha selection plus
+`TestRewindFieldDispositionGuard` and `TestRewindRecreateLinkToleranceGuard`
+passed (20 checks, zero failures/errors/skips). The added allocation test initially
+omitted manager registration and failed for missing services; registering the
+object through the manager corrected the test setup. The command was queued
+Maven with `-Dmse=off -Dtest=TestS3kSszMechaSpawnHeadless,TestRewindFieldDispositionGuard,TestRewindRecreateLinkToleranceGuard`
+and the absolute S3K ROM path. The earlier GHZ/MTZ selection passed 28 checks. The art-loader warning and
+missing launch remain separate open work; these results do not certify SSZ.

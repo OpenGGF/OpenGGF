@@ -403,12 +403,15 @@ class TestS3kSszMechaSpawnHeadless {
         HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
         SszMechaSonicObjectInstance boss = runToInit(fixture);
 
+        int scoreBefore = GameServices.gameState().getScore();
         for (int hit = 8; hit > 0; hit--) {
             landOneHit(fixture, boss);
             assertEquals(hit - 1, boss.getCollisionProperty(),
                     "collision_property counts down from 8");
         }
         assertTrue(boss.defeatedForTest(), "sub_7D35A ran at collision_property zero");
+        assertEquals(scoreBefore + 1000, GameServices.gameState().getScore(),
+                "HUD_AddToScore stores tens; the engine uses displayed points");
         assertEquals(0, boss.routineForTest(), "clr.b routine(a0)");
         assertEquals(0x7F, boss.timerForTest(), "move.w #$7F,$2E(a0)");
 
@@ -473,6 +476,48 @@ class TestS3kSszMechaSpawnHeadless {
         assertTrue(handover.resultsRequestedForTest(),
                 "the first grounded dispatch takes it");
         assertEquals(2, handover.routineForTest(), "move.b d0,routine(a0) with d0 = 2");
+        assertNotNull(active(SszMechaSonicActEndObjectInstance.Results.class),
+                "sub_868F8 allocates the production results owner");
+        assertTrue(fixture.sprite().isObjectControlled(), "Set_PlayerEndingPose writes $81");
+        assertEquals(0, fixture.sprite().getXSpeed());
+        assertEquals(0, fixture.sprite().getYSpeed());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot before = registry.capture();
+        fixture.stepIdleFrames(1);
+        CompositeSnapshot after = registry.capture();
+        registry.restore(before);
+        sameSnapshot(before, registry.capture(), "restore real results graph");
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, registry.capture(), "results graph forward replay");
+        for (int frame = 0; frame < 2400 && !GameServices.gameState().isEndOfLevelFlag(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(GameServices.gameState().isEndOfLevelFlag(),
+                "real results completion releases the SSZ launch event");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1})
+    void resultsAllocationIsAttemptedOnceEvenWhenNoSlotIsAvailable(int capacity) {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        var manager = GameServices.level().getObjectManager();
+        var handover = com.openggf.level.objects.ObjectConstructionContext.construct(
+                manager.getObjectServices(), () -> new SszMechaSonicActEndObjectInstance(
+                        new com.openggf.level.objects.ObjectSpawn(PAD_X, PAD_Y, 0, 0, 0, false, 0)));
+        manager.addDynamicObject(handover);
+        requireState().setMechaSonicBeaten(true);
+        manager.reserveAllButNFreeSlots(capacity);
+        parkTheLeader(fixture);
+        for (int frame = 0; frame < 120; frame++) handover.update(frame, fixture.sprite());
+        assertEquals(2, handover.routineForTest());
+        var results = manager.activeObjectsOfType(SszMechaSonicActEndObjectInstance.Results.class);
+        assertEquals(capacity, results.size());
+        results.forEach(manager::removeDynamicObject);
+        for (int frame = 0; frame < 5; frame++) handover.update(frame, fixture.sprite());
+        assertTrue(manager.activeObjectsOfType(SszMechaSonicActEndObjectInstance.Results.class).isEmpty(),
+                "the advanced routine never retries allocation");
     }
 
     /** Rewind across the entry: before the spawn, with the boss live, and after. */

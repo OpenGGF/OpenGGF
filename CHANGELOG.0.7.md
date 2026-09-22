@@ -58,7 +58,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   which hurt to touch change frame by frame with his animation, as they do on the cartridge.
   The eighth hit now ends him too: he is thrown back, holds still for a little over two seconds,
   drops to the floor in his beaten pose, and the act hands over to its results — which waits for
-  the player to be standing rather than ending on a timer alone. The Death Egg launch is still to
+  the player to be standing rather than ending on a timer alone. All three bosses award 1,000
+  points, and the results handover survives rewind after expired dash trails are removed. The Death Egg launch is still to
   come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter

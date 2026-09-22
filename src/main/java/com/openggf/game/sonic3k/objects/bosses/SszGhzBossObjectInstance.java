@@ -130,8 +130,6 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
 
     /** {@code move.w #$3F,$2E(a0)} in {@code BossDefeated} (sonic3k.asm:180822). */
     private static final int DEFEAT_WAIT_FRAMES = 0x3F;
-    /** {@code moveq #100,d0 / jsr (HUD_AddToScore)} in the same routine. */
-    private static final int DEFEAT_SCORE = 100;
     /** {@code move.b #$20,$20(a0)} in {@code sub_7A5A0}. */
     private static final int HIT_WINDOW_FRAMES = 0x20;
     /**
@@ -308,7 +306,6 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     @Override protected boolean usesBaseHitHandler() { return false; }
 
     /** {@code BossDefeated} is {@code moveq #100,d0} into {@code HUD_AddToScore}. */
-    @Override protected int getDefeatScore() { return DEFEAT_SCORE; }
 
     /**
      * {@code loc_7A29C} reads {@code routine(a0)} at its head, {@code jsr}s the selected arm and

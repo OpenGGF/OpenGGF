@@ -183,8 +183,6 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     /** {@code move.b #$20,$20(a0)} in {@code sub_7D312}. */
     public static final int FLASH_WINDOW = 0x20;
-    /** {@code moveq #100,d0} / {@code HUD_AddToScore} in {@code sub_7D35A}. */
-    private static final int DEFEAT_SCORE = 100;
     /** {@code move.w #$7F,$2E(a0)} in {@code sub_7D35A}. */
     public static final int DEFEAT_WAIT = 0x7F;
     /** {@code move.b #$E,mapping_frame(a0)} in {@code loc_7B858}. */
@@ -364,7 +362,6 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
      */
     @Override protected boolean defeatDeferralAppliesToThisBoss() { return true; }
 
-    @Override protected int getDefeatScore() { return DEFEAT_SCORE; }
 
     @Override protected int getBossHitSfxId() { return Sonic3kSfx.BOSS_HIT.id; }
 
@@ -823,10 +820,10 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     /**
      * {@code sub_7D35A}, the act-1 {@code (a4)}: install {@code loc_7B81A}, routine 0,
-     * {@code $34 = loc_7B858}, {@code status} bit 6, {@code $2E = $7F}, 100 points and a
+     * {@code $34 = loc_7B858}, {@code status} bit 6, {@code $2E = $7F}, 1,000 displayed points and a
      * {@code Child6_CreateBossExplosion} child with subtype 4.
      *
-     * <p>The score is the base's, because {@code commitDefeat} adds {@code getDefeatScore()}
+     * <p>The score is the base's, because {@code commitDefeat} adds 1,000 displayed points
      * before calling this. The rest of {@code loc_7B81A}'s graph — the fall at {@code loc_7B87C},
      * {@code loc_7B888}'s landing and {@code loc_7D056}'s act handover — is slice 7's remaining
      * work and is recorded in {@code docs/status/s3k-known-bugs.md} rather than approximated.
@@ -1136,6 +1133,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     public int attackChoiceForTest() { return attackChoice; }
     public boolean initExecutedForTest() { return initExecuted; }
     public boolean defeatedForTest() { return defeated; }
+    void releaseTrail(SszMechaSonicTrailChild child) { trail.remove(child); }
+
     public List<SszMechaSonicTrailChild> trailForTest() { return List.copyOf(trail); }
 
     // --- draw -------------------------------------------------------------------------------

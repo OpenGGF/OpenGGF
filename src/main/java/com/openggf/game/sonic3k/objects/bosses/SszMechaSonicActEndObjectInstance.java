@@ -1,6 +1,11 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -51,18 +56,19 @@ public final class SszMechaSonicActEndObjectInstance extends AbstractObjectInsta
     private int timer = HANDOVER_WAIT;
     private int routine;
     private boolean resultsRequested;
+    private boolean sidekickPosed;
 
     public SszMechaSonicActEndObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSZMechaSonicActEnd");
     }
 
-    private record RewindExtra(int timer, int routine, boolean resultsRequested)
+    private record RewindExtra(int timer, int routine, boolean resultsRequested, boolean sidekickPosed)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
         return super.captureRewindState(context)
-                .withObjectSubclassExtra(new RewindExtra(timer, routine, resultsRequested));
+                .withObjectSubclassExtra(new RewindExtra(timer, routine, resultsRequested, sidekickPosed));
     }
 
     @Override
@@ -72,6 +78,7 @@ public final class SszMechaSonicActEndObjectInstance extends AbstractObjectInsta
             timer = extra.timer();
             routine = extra.routine();
             resultsRequested = extra.resultsRequested();
+            sidekickPosed = extra.sidekickPosed();
         }
     }
 
@@ -93,15 +100,24 @@ public final class SszMechaSonicActEndObjectInstance extends AbstractObjectInsta
         // clears it, so this object stays put rather than restoring control and deleting.
         SszZoneRuntimeState ssz = sszState();
         if (ssz != null && ssz.mechaSonicBeaten()) {
+            if (!sidekickPosed && services().playerQuery().nativeP2OrNull()
+                    instanceof AbstractPlayableSprite sidekick && !sidekick.getDead() && !sidekick.getAir()) {
+                sidekickPosed = true;
+                sidekick.setControlLocked(false);
+                setEndingPose(sidekick);
+            }
             return;
         }
+        if (player instanceof AbstractPlayableSprite leader) restoreControl(leader);
+        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick)
+            restoreControl(sidekick);
         ObjectLifetimeOps.deleteNoRespawn(this);
     }
 
     /** {@code loc_7D062} and the {@code sub_868F8} it calls with {@code d0 = 2}. */
     private void runHandoverGate(PlayableEntity player) {
         // subq.w #1,$2E(a0) / bpl.s locret: the decrement happens before every gate test.
-        timer--;
+        timer = (short) (timer - 1);
         if (timer >= 0) {
             return;
         }
@@ -118,6 +134,42 @@ public final class SszMechaSonicActEndObjectInstance extends AbstractObjectInsta
         }
         routine = RESULTS_ROUTINE;
         resultsRequested = true;
+        setEndingPose(leader);
+        services().gameState().setEndOfLevelFlag(false);
+        services().gameState().setEndOfLevelActive(true);
+        // AllocateObject is attempted once, after advancing our routine, even if full.
+        spawnFreeChild(() -> ObjectConstructionContext.construct(services(), () -> new Results(
+                S3kRuntimeStates.resolvePlayerCharacter(services().zoneRuntimeRegistry(),
+                        services().configuration()), services().currentAct())));
+    }
+
+    private static void setEndingPose(AbstractPlayableSprite sprite) {
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        sprite.setSpindash(false);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        sprite.setGSpeed((short) 0);
+        sprite.setPushing(false);
+        // FixBugs=0: status bits 5/6 are cleared on this object, not the player.
+    }
+
+    private static void restoreControl(AbstractPlayableSprite sprite) {
+        ObjectControlState.none().applyTo(sprite);
+        sprite.setAir(false);
+        sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
+        sprite.setAnimationFrameIndex(0);
+        sprite.setAnimationFrameCount(0);
+    }
+
+    public static final class Results extends S3kResultsScreenObjectInstance {
+        Results(PlayerCharacter character, int act) { super(character, act); }
+        private Results() { super(true); }
+        @Override protected boolean shouldRestorePlayerControlsOnExit() { return false; }
+        @Override protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) { return false; }
+        @Override public Results recreateForRewind(RewindRecreateContext context) {
+            return ObjectConstructionContext.construct(context.objectServices(), Results::new);
+        }
     }
 
     private SszZoneRuntimeState sszState() {

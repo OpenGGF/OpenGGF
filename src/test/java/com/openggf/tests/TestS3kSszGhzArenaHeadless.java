@@ -572,7 +572,7 @@ class TestS3kSszGhzArenaHeadless {
      *
      * <p>The flag the rest of the act reads is not written at the killing hit: {@code loc_7A5EC}
      * only installs {@code Wait_FadeToLevelMusic} with {@code $34 = loc_7A3CE} and jumps to
-     * {@code BossDefeated}, which sets {@code $2E = $3F} and awards 100 points. Those {@code $3F}
+     * {@code BossDefeated}, which sets {@code $2E = $3F} and awards 1,000 displayed points. Those {@code $3F}
      * frames, then {@code loc_85674}'s {@code (2*60)-1} escape frames, then {@code loc_7A3F8}
      * writes {@code st (Events_bg+$00).w}.
      */
@@ -597,7 +597,7 @@ class TestS3kSszGhzArenaHeadless {
                         + "decrements nothing: loc_7A29C has already dispatched this slot before "
                         + "sub_7A5A0 installs Wait_FadeToLevelMusic, so the first decrement "
                         + "belongs to the next object pass");
-        assertEquals(scoreBefore + 100,
+        assertEquals(scoreBefore + 1000,
                 GameServices.gameState().getScore(),
                 "moveq #100,d0 / jsr (HUD_AddToScore) in the same routine");
         assertTrue(state.eventsBgByte(EV_GHZ_BOSS) > 0,

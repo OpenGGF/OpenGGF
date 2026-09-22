@@ -154,6 +154,9 @@ public final class SszMechaSonicTrailChild extends AbstractObjectInstance
         }
         if (parent == null || parent.isDestroyed() || !parent.trailVisible()) {
             // loc_7C942: Go_Delete_Sprite the moment the parent stops dashing.
+            if (parent != null) {
+                parent.releaseTrail(this);
+            }
             ObjectLifetimeOps.expireDynamic(this);
         }
     }

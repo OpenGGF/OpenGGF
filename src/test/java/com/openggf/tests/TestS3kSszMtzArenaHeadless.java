@@ -647,7 +647,7 @@ class TestS3kSszMtzArenaHeadless {
         assertEquals(0x3F, boss.waitTimerForTest(),
                 "BossDefeated's move.w #$3F,$2E(a0), undecremented: the killing frame's dispatch "
                         + "had already run when loc_7AD3A replaced (a0)");
-        assertEquals(scoreBefore + 100, GameServices.gameState().getScore(),
+        assertEquals(scoreBefore + 1000, GameServices.gameState().getScore(),
                 "moveq #100,d0 / jsr (HUD_AddToScore)");
         assertTrue(state.eventsBgByte(EV_MTZ_BOSS) > 0,
                 "loc_7AD3A writes no Events_bg flag: the killing hit only starts the escape");

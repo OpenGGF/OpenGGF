@@ -141,8 +141,6 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
     private static final int ESCAPE_FRAMES = (2 * 60) - 1;
     /** {@code move.w #$3F,$2E(a0)} in {@code BossDefeated} (sonic3k.asm:180822). */
     private static final int DEFEAT_WAIT_FRAMES = 0x3F;
-    /** {@code moveq #100,d0 / jsr (HUD_AddToScore)} in the same routine. */
-    private static final int DEFEAT_SCORE = 100;
 
     /**
      * {@code moveq #$7B,d0 / Load_PLC} in the init and, at {@code loc_7ACA4},
@@ -364,7 +362,6 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
     /** {@code sub_7ACF2} owns its own {@code $1C} window and its own three-colour flash. */
     @Override protected boolean usesBaseHitHandler() { return false; }
 
-    @Override protected int getDefeatScore() { return DEFEAT_SCORE; }
 
     /**
      * {@code loc_7A71A} reads {@code routine(a0)} at its head and only reaches {@code sub_7ACF2}
