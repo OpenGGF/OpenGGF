@@ -162,7 +162,8 @@ class TestRemainingRewindTailInventory {
         // all 57 previously uncounted campaign classes pass in isolation; no bucket grows.
         // The ROM shock-block subclass adds one spawn-recreatable scalar owner.
         // DEZ lightning adds one spawn-recreatable scalar animation owner.
-        return new TailInventory(1234, 994, 240, 0, buckets);
+        // DEZ conveyor belt is a stateless spawn-recreatable controller.
+        return new TailInventory(1235, 995, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

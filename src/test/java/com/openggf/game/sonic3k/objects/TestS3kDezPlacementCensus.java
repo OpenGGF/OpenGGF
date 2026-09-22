@@ -73,13 +73,13 @@ class TestS3kDezPlacementCensus {
      * factory exists at all ({@code $5E}).
      */
     private static final Set<Integer> CONCRETE_DEZ_IDS = Set.of(
-            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x52, 0x55, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5F, 0x60, 0x61, 0x6A, 0x6B, 0x6D, 0x78, 0xA4, 0xA5);
+            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x50, 0x52, 0x55, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5F, 0x60, 0x61, 0x6A, 0x6B, 0x6D, 0x78, 0xA4, 0xA5);
 
     /** Recorded baseline: placements that still resolve to a placeholder. Slices 3-6 drive these to 0. */
-    private static final int PLACEHOLDER_ACT_1 = 93;
-    private static final int PLACEHOLDER_ACT_2 = 82;
-    private static final int CONCRETE_ACT_1 = 272;
-    private static final int CONCRETE_ACT_2 = 412;
+    private static final int PLACEHOLDER_ACT_1 = 85;
+    private static final int PLACEHOLDER_ACT_2 = 77;
+    private static final int CONCRETE_ACT_1 = 280;
+    private static final int CONCRETE_ACT_2 = 417;
 
     @Test
     void romPlacementTablesDecodeToTheInventoriedSpawnCounts() throws IOException {

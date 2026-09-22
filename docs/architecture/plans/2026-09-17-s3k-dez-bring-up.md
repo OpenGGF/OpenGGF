@@ -2773,3 +2773,27 @@ shows 300 frames of the placed emitters with Sonic alongside, zero deaths.
 The initial positioned attempt `048` died immediately; `049` left the emitters
 below the viewport. Neither is accepted as visual evidence for this change.
 Full native matching, inverted contacts and donor/team breadth remain open.
+
+
+## 2026-09-22 slice 4: conveyor belts
+
+After `bdfd129ff`, SKL `$50` implements `Obj_DEZConveyorBelt` / `sub_47854`.
+Subtype low seven bits choose the half-width in eight-pixel units; X and Y use
+unsigned half-open word windows. Grounded Player 1 and native Player 2 receive
+±2 pixels in X, retaining fractions and velocities. The side of the Y centreline
+and placement X-flip determine direction; the routine never reads reverse gravity.
+The fixed `$280` coarse retirement check follows both player calls.
+
+Five unit checks cover rectangle edges, all flips, zero/high subtype bits,
+16-bit coordinate wrapping, both native slots, extra-team exclusion, airborne
+exclusion and preserved movement state. A positioned real placement at
+`$780,$730` carries an idle player 40 pixels across 20 dispatches at actual
+320/800 camera widths and restores/replays identically. These are mechanism
+checks, not native route certification. Census is 280/365 and 417/494 concrete.
+
+Visual attempts `051`–`054` under `$HOME/Videos/OGGF/s3k-dez-bring-up/` are not
+accepted conveyor footage: positioned entries produce carry in the state log
+but obscure the player in foreground tiles, or land outside the carry window.
+No render priority was forced to make an image pass. A valid route-based entry
+and native comparison remain open. The Act 1 matrix's stale width list was
+corrected to the actual `WidescreenAspect` presets 320/352/400/528/800.

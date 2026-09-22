@@ -119,7 +119,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   they are lit, and drop you when they go out.
   The Chainspike robots charge across both acts, slowing to a stop and turning around, and
   stab their spikes into the floor when you get close. Lightning flashes from the floor
-  emitters with its short damage window and sound. Shock floors and ceilings now hurt on
+  emitters with its short damage window and sound. Conveyor belts carry grounded players
+  along either face in their placed direction. Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's

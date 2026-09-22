@@ -42,6 +42,11 @@ S3KL set: `$4A` Bumper, `$4B` CNZ triangle bumper, `$4C-$4E` CNZ objects, `$4F` 
 `$A7` CNZEndBoss. Every new DEZ factory must be zone-set bound (`registerZoneSetBound(..., SKL, ...)`
 or the existing `zoneSet ==` branch) and, where SOZ/LRZ/SSZ reuse the ID under SKL, zone bound too.
 
+Current campaign additions after `de73bead8`: `$52` lightning (48/94 placements),
+then `$50` conveyor belts (8/5), bring the live census to 280/365 and 417/494.
+The original tables below remain the initial inventory; current validation is
+in the two act matrices and `TestS3kDezPlacementCensus`.
+
 ## Factory classification
 
 Read from `Sonic3kObjectRegistry` at `9cba6dbb6`. It is a registration fact, not route evidence.

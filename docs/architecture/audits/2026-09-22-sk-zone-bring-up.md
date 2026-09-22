@@ -1022,3 +1022,31 @@ neither supports visual acceptance. Census is 272/365 and 412/494 concrete.
 Native matching and donor/team/inverted-contact breadth remain open.
 
 Fresh `-Pguards` selection `TestRemainingRewindTailInventory,TestRewindArchitectureGuard,TestSonic3kObjectProfileRegistryGuard` passed 7 checks at 22:09 BST, zero skips. Inventory is 1234 total / 994 isolated / 240 graph-covered / 0 missing codec. Combined campaign validation remains owed.
+
+
+### Conveyor-belt family
+
+After `bdfd129ff`, `$50` implements the ROM grounded-player displacement in
+`sub_47854`, including signed direction from the centreline/X-flip, unsigned
+half-open word bounds, native P1/P2 participation, no reverse-gravity gate,
+unchanged fractional position and velocity, and the post-contact `$280` range
+tail. No sprite/art owner is added: the belt artwork is level art.
+
+At 22:17 BST, queued Java 21 with absolute S3K ROM path and
+`-Dtest=TestS3kDezConveyorBeltObjectInstance,TestS3kDezConveyorBeltHeadless,
+TestS3kDezPlacementCensus,TestS3kMgzTwistingLoopObject,TestS3kDezColdRoutes`
+passed 47 checks, zero failures/errors/skips. The placed belt carries the
+positioned player 40 pixels in 20 dispatches at verified 320/800 camera widths,
+including restore/forward replay. The S3KL `$50` twisting-loop behavior remains
+green. Seeded DEZ2 still matches 1256 frames, first difference row 21029 player
+X `$697/$696` and camera X `$5F7/$5F6`; the cold entrance remains unmatched.
+
+Census is 280/365 and 417/494 concrete. Visual attempts `051`–`054` are recorded
+as attempts, not acceptance: the positioned player is obscured by foreground
+art while the belt carries, or a higher entry lands outside the belt window.
+The previous lightning clip `050` remains the last accepted DEZ video. The
+conveyor needs a route-based visual entry; no player priority was forced.
+The Act 1 matrix's width list was corrected from stale 512/640 values to the
+actual `WidescreenAspect` presets. These focused checks do not certify DEZ.
+
+At 22:18 BST the fresh `-Pguards` inventory/architecture/profile selection passed all 7 checks, zero skips. Measured inventory is 1235 total / 995 isolated / 240 graph-covered / 0 missing codec. Combined campaign validation is still pending.
