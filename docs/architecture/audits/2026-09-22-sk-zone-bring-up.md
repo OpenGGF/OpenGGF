@@ -1050,3 +1050,33 @@ The Act 1 matrix's width list was corrected from stale 512/640 values to the
 actual `WidescreenAspect` presets. These focused checks do not certify DEZ.
 
 At 22:18 BST the fresh `-Pguards` inventory/architecture/profile selection passed all 7 checks, zero skips. Measured inventory is 1235 total / 995 isolated / 240 graph-covered / 0 missing codec. Combined campaign validation is still pending.
+
+
+### Torpedo-launcher family
+
+After `222473083`, `$4D` implements the visible-only signed word countdown,
+allocation-failure recoil path and independent later-slot torpedo of
+`Obj_DEZTorpedoLauncher` / `loc_471D6`–`loc_472A2`. Mapping `$472A8` has ten
+frames with separate parent/projectile palette bases, tile `$373`; recoil
+uses a byte timer and decrements on the firing pass. The projectile carries
+the copied visible flag into its first dispatch, publishes a touch pointer
+after moving and retires on a later off-screen flag, not coarse spawn range.
+`ObjectSpawn` intentionally keeps only placement flip bits, so the runtime
+visibility is a captured scalar seeded by the visible-only creation contract.
+
+At 22:28 BST, queued Java-21 selection
+`TestS3kDezTorpedoHeadless,TestS3kDezPlacementCensus,TestSonic3kPlcArtRegistry,
+TestPatternSpriteRendererCorruptionGuard,TestCnzBarberPoleObjectInstance`
+passed 105 tests, zero failures/errors/skips, with absolute S3K/S1 ROM paths.
+This includes actual exhausted SST allocation, inherited visibility, recoil
+boundaries, ROM piece geometry/palette, same-pass projectile movement and
+production damage/restore/replay. At 22:28–22:29, fresh `-Pguards` inventory,
+architecture and profile checks passed 7/7 without skips: 1237 total classes,
+997 isolated passes, 240 graph-covered, no missing codec.
+
+Clip `057` under `$HOME/Videos/OGGF/s3k-dez-bring-up/` passes full ffmpeg decode:
+420 frames, zero deaths, with the torpedo moving right in inspected frames
+125/135 while Sonic jumps below it. `055` and `056` did not keep the launcher
+visible and are not firing evidence. This is positioned engine footage, not
+native parity or a cold route. Census is 316/365 and 455/494; shared campaign
+validation/integration and remaining level work are still pending.

@@ -2797,3 +2797,27 @@ but obscure the player in foreground tiles, or land outside the carry window.
 No render priority was forced to make an image pass. A valid route-based entry
 and native comparison remain open. The Act 1 matrix's stale width list was
 corrected to the actual `WidescreenAspect` presets 320/352/400/528/800.
+
+
+## 2026-09-22 slice 4: torpedo launchers
+
+After `222473083`, SKL `$4D` uses `Obj_DEZTorpedoLauncher`. Its unsigned subtype
+sets a word interval of four times the value; signed pre-decrement expiry is
+paused by the carried render bit. Firing attempts `AllocateObjectAfterCurrent`;
+even exhaustion starts the muzzle recoil, while sound requires allocation.
+Pose 8's `$1F` byte timer is decremented on that firing pass; the later poses
+step down every eight dispatches. Recoil continues off screen.
+
+`loc_4728A` is a parentless projectile: copied visibility admits movement later
+in the same slot walk, velocity is ±$400 from the launcher status X-flip, and
+only the next off-screen carried flag deletes it. Its published touch pointer,
+position and visibility are rewind-owned independently of the launcher.
+The ten-frame map at `$472A8` binds DEZMisc tile `$373`, palette 0 for the
+launcher and palette 1 for the projectile, with buckets 5 and 6 respectively.
+
+Focused tests cover the timers, initial render gating, exhausted real SST pool,
+orientation/lifetime, native later-slot allocation, same-pass movement, actual
+player damage and restore/forward replay. Counts are 316/365 and 455/494
+concrete; native parity and route/participant breadth remain open.
+
+The final focused selection passes 105 checks and fresh inventory/architecture/profile guards pass 7, all without skips. Clip `057-torpedo-launcher-320/capture.mp4` shows 420 frames / seven seconds, zero deaths, with full ffmpeg decode and projectile frames 125/135 inspected. It is positioned engine evidence only.

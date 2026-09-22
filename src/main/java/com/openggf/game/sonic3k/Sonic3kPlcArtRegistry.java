@@ -3194,6 +3194,15 @@ public final class Sonic3kPlcArtRegistry {
                 DEZ_ENERGY_BRIDGE_FRAME_COUNT
         ));
 
+        // Obj_DEZTorpedoLauncher: same ten-frame mapping, parent palette 0,
+        // projectile palette 1; piece-local palette bits remain additive.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_TORPEDO_LAUNCHER,
+                Sonic3kConstants.MAP_DEZ_TORPEDO_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x26, 0, null, 10));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_TORPEDO,
+                Sonic3kConstants.MAP_DEZ_TORPEDO_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x26, 1, null, 10));
+
         // Obj_DEZLightning: ArtTile_DEZMisc+$2C, palette 0, Map_DEZLightning.
         // Five frames include the empty wait pose (sonic3k.asm:93568-93569).
         levelArt.add(new LevelArtEntry(
