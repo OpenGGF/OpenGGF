@@ -126,7 +126,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and recoil between shots. Four-section staircases react to landing or underside contact,
   wait or shake, and lift or lower their steps. Hover machines suspend players
   above their orbiting rotors. Hanging carriers grab players, rise to the ceiling,
-  travel along it and let players jump away. Shock floors and ceilings now hurt on
+  travel along it and let players jump away. Act 2 floating platforms oscillate or
+  accelerate along their placed axis, carrying riders while their lights alternate. Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
@@ -643,7 +644,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   player has walked far enough into it, where the ROM swaps them. Before this, Act 2 turned blue
   the instant the act changed.
   Act 2's solid moving platforms are in too, another 52: blocks you ride that drift along one axis
-  and back, some keeping time with the zone's shared oscillation and some easing out of each end
+  and back, some reading position from the zone's shared oscillation and some easing out of each end
   under their own acceleration, and either kind can be mirrored to start from the other side.
   Act 2's flame throwers are in, 52 of them: each one is a solid block that fires a jet of flame
   for two seconds, pauses for a length its own placement chooses, and fires again, sweeping the jet

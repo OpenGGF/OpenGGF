@@ -508,6 +508,7 @@ public class Sonic3kConstants {
     public static final int MAP_DEZ_TILTING_BRIDGE_ADDR = 0x046F7A;
     public static final int MAP_DEZ_HANG_CARRIER_ADDR = 0x04717E;
     public static final int MAP_DEZ_CURVED_ENERGY_BRIDGE_ADDR = 0x048038;
+    public static final int MAP_DEZ_FLOATING_PLATFORM_ADDR = 0x025ACA;
     public static final int MAP_DEZ_HOVER_MACHINE_ADDR = 0x0495D8;
     public static final int MAP_DEZ_TORPEDO_LAUNCHER_ADDR = 0x0472A8;
     public static final int ANI_DEZ_LIGHTNING_ADDR = 0x047926;

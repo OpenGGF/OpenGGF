@@ -533,7 +533,7 @@ an engine offset. SOZ `loc_402CC/loc_402EE` read native`+$16`, hence engine`$14`
 Reading engine`$16` selected velocity instead of position: negative velocity's
 high byte displaced sand-block spawners by roughly255pixels and changed their
 zero-position release gate. Distinguish position and velocity in routine tests;
-reset-state tests where both high bytes are zero cannot catch this error.
+reset-state tests where both high bytes are zero cannot catch this error. The DEZ floating-platform bring-up found the same error inherited from LRZ `$2D`: native `$0A/$1E` must become engine `$08/$1C`. A 180-frame placed ride exposed a 255-pixel jump that comparing both object implementations missed; test the native-layout bytes through a full turning interval.
 
 ### Independently allocated exit helpers must not retain the retiring boss
 

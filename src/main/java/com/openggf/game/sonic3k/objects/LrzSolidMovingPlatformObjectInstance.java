@@ -58,9 +58,10 @@ public final class LrzSolidMovingPlatformObjectInstance extends AbstractObjectIn
     /** {@code addi.w #$B,d1} on {@code width_pixels} (sonic3k.asm:51041). */
     private static final int SOLID_WIDTH_MARGIN = 0x0B;
     /** {@code Oscillating_table+$0A} and {@code +$1E} with their own centres (:51056-51066). */
-    private static final int OSC_NEAR_OFFSET = 0x0A;
+    // Engine offsets exclude Oscillating_table's two-byte control word.
+    private static final int OSC_NEAR_OFFSET = 0x08;
     private static final int OSC_NEAR_CENTRE = 0x20;
-    private static final int OSC_FAR_OFFSET = 0x1E;
+    private static final int OSC_FAR_OFFSET = 0x1C;
     private static final int OSC_FAR_CENTRE = 0x40;
     /** {@code move.w #$5F,d2} / {@code #$7F,d2} and their {@code subi.w} centres. */
     private static final int RAMP_SHORT_LIMIT = 0x5F;
@@ -270,6 +271,7 @@ public final class LrzSolidMovingPlatformObjectInstance extends AbstractObjectIn
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, getX(), getY(), mirrored, false);
+        // Init MOVE.B #4,render_flags clears artwork flips; status still mirrors motion.
+        renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
     }
 }

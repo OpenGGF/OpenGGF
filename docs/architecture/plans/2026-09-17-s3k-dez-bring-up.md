@@ -2984,3 +2984,20 @@ positioned engine routes, not cold-start or native comparison evidence.
 Clips 067 (320) and corrected 069 (800) each complete 504 frames with zero
 hurt/death rows. Full decode and traversal-frame inspection pass, and every
 player X/Y/X-velocity/Y-velocity/ground-speed row agrees across widths.
+
+
+### 2026-09-22 continuation: floating platforms
+
+After `8a58aafbc`, SKL `$4A` implements all nine movers selected by
+`word_25AB8`, with alternating ROM art from DEZ2Extra+$08 and full-solid carry.
+Act 2 has 481/494 concrete placements, leaving 13 placeholders; Act 1 remains
+349/365. Both widths pass an actual horizontal placement's landing, carry,
+forced recreation and 180-frame replay. Other entry/participant/native rows
+remain open; these counts do not certify the act.
+
+The longer ride found a shared transcription error in the existing LRZ `$2D`
+class: engine oscillator APIs exclude the ROM control word. Corrected both
+classes from velocity offsets `$0A/$1E` to position offsets `$08/$1C`, and
+added a native-layout oracle over 400 updates. LRZ's cleared render flips also
+now match `MOVE.B #4,render_flags`; status still mirrors movement. Its actual
+Act-2 record 49 ride and forced recreation/replay pass at 320/800.

@@ -624,6 +624,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 });
         registerStockZoneBound(Sonic3kObjectIds.BUMPER,
                 (spawn, registry) -> {
+                    if (getCurrentZoneSet() == S3kZoneSet.SKL) return new S3kDezFloatingPlatformObjectInstance(spawn);
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {
                         return new PachinkoBumperObjectInstance(spawn);
                     }

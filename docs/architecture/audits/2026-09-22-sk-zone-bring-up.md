@@ -1257,3 +1257,54 @@ positioned engine routes, not cold-start or native comparison evidence.
 Clips 067 (320) and corrected 069 (800) each complete 504 frames with zero
 hurt/death rows. Full decode and traversal-frame inspection pass, and every
 player X/Y/X-velocity/Y-velocity/ground-speed row agrees across widths.
+
+### Floating platforms and inherited LRZ oscillator correction
+
+After `8a58aafbc`, SKL `$4A` implements `Obj_DEZFloatingPlatform`, the nine
+`word_25AB8` movers, full-solid carry, original-anchor retirement and alternate
+mapping frames. ROM map `$25ACA` has 2/3 pieces; DEZ2Extra+$08 is tile `$33A`,
+palette 1. The high subtype nibble does not select a skin. Status X-flip reflects
+motion; `MOVE.B #4,render_flags` clears artwork flips. All ten Act-2 placements
+now resolve, making the census 349/365 and 481/494 (16/13 placeholders).
+
+The initial comparison against LRZ's existing implementation was insufficient:
+both read native oscillator offsets as engine data offsets. A real 180-frame
+ride caught a 255-pixel platform jump. `OscillationManager` excludes the native
+control word, so `+$0A/+$1E` must use `$08/$1C`. Both classes are corrected,
+and a 400-update test reads independently from the full ROM-format table to
+catch position/velocity confusion. LRZ's artwork also now obeys its init's
+cleared render flags. The first positioned entry at `$1570,$790` missed the
+leftward platform; the accepted landing starts at `$1540,$790`, without forcing
+collision or changing movement. A separate recreation-test error attempted to
+remove a placed object with the dynamic-object API; retiring it through a real
+manager step before restore now proves new-instance recreation.
+
+Queued Java 21 commands, absolute S3K ROM, current worktree after `8a58aafbc`:
+
+- At 23:41, floating unit (4), LRZ unit (7), DEZ census (6) and CNZ bumper (11)
+  passed. The two placed tests reached the recreation check and exposed the
+  test's removal mistake above; the invocation was not green.
+- At 23:42, `-Dtest=TestS3kDezFloatingPlatformHeadless,TestS3kDezColdRoutes,
+  TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+  TestSonic3kDecodingUtils` passed 65 tests, zero failures/errors/skips. Both
+  classes named `TestSonic3kLevelLoading` ran (35 and 7).
+- At 23:42, `TestS3kLrzSolidMovingPlatformHeadless` passed two actual Act-2
+  record-49 rides at 320/800, each with 180-frame replay after forced recreation.
+- At 23:43, fresh `-Pguards` selection of inventory, rewind architecture and
+  profile/registry passed 7 checks, zero skips: 1243 total object types,
+  1003 isolated / 240 graph-covered / 0 missing codec.
+- At 23:44, the final render-facing correction passed floating unit (now 5)
+  and LRZ unit (7). The earlier art selection passed all 78 PLC and both
+  renderer-corruption checks; that invocation's placed tests had still been red.
+
+The seeded DEZ2 frontier remains 1256 frames, first mismatch at native row
+21029 (player X 0696/0697, camera 05F6/05F7); cold entry remains 0. No trace
+frontier is claimed to have moved. Reverse-gravity placement entries, other
+characters/donors/teams, cold routes and native visual comparison remain open.
+Combined campaign verification and integration remain pending.
+
+Accepted recordings under `$HOME/Videos/OGGF/s3k-dez-bring-up/` are 071/072
+(DEZ 320/800) and 073 (LRZ 320), each 420 frames with zero hurt/death rows,
+full ffmpeg decode and frame-120 inspection. DEZ player position/velocity rows
+match across widths for all 420 frames. Rejected 070 preserves the missed-entry
+evidence. Each capture has source hashes and explicit positioned-entry scope.

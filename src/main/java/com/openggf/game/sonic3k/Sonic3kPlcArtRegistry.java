@@ -3202,6 +3202,12 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_DEZ_CURVED_ENERGY_BRIDGE_ADDR,
                 Sonic3kConstants.ARTTILE_DEZ_MISC + 0xB2, 1, null, 4));
 
+        if (actIndex == 1) {
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FLOATING_PLATFORM,
+                    Sonic3kConstants.MAP_DEZ_FLOATING_PLATFORM_ADDR,
+                    Sonic3kConstants.ARTTILE_DEZ2_EXTRA + 8, 1, null, 2));
+        }
+
         // Obj_DEZHoverMachine: two housing poses and the orbiting rotor.
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_HOVER_MACHINE,
                 Sonic3kConstants.MAP_DEZ_HOVER_MACHINE_ADDR,

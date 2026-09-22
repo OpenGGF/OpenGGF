@@ -75,7 +75,7 @@ class TestLrzSolidMovingPlatform {
         horizontal.update(0, null);
         vertical.update(0, null);
 
-        int expected = (OscillationManager.getByte(0x0A) & 0xFF) - 0x20;
+        int expected = (OscillationManager.getByte(0x08) & 0xFF) - 0x20;
         assertEquals((X + expected) & 0xFFFF, horizontal.getCentreX(),
                 "add.w $30(a0),d0 / move.w d0,x_pos(a0)");
         assertEquals(Y, horizontal.getCentreY(), "the vertical coordinate is left at the anchor");
@@ -93,7 +93,7 @@ class TestLrzSolidMovingPlatform {
         plain.update(0, null);
         mirrored.update(0, null);
 
-        int displacement = (OscillationManager.getByte(0x1E) & 0xFF) - 0x40;
+        int displacement = (OscillationManager.getByte(0x1C) & 0xFF) - 0x40;
         assertEquals((X + displacement) & 0xFFFF, plain.getCentreX());
         assertEquals((X - displacement) & 0xFFFF, mirrored.getCentreX());
     }
