@@ -2732,3 +2732,21 @@ forward replay checked. This closes the local corridor blocker, not cold act
 traversal, native matching, team/donor breadth or the remaining object families.
 The [campaign audit](../audits/2026-09-22-sk-zone-bring-up.md) records failed
 hypotheses, tests and media; clips `043`–`045` replace the earlier unfilmable claim.
+
+
+## 2026-09-22 slice 4: invisible shock blocks
+
+SKL `$6D` now uses the shared horizontal hurt-block path with reaction bit 5;
+S3KL `$6D` remains the HCZ splash. The flipped init returns before solid contact
+and the range tail once, while the top-face branch falls through. The new owner
+performs its native fixed coarse range check after solid/damage work. All face
+choices and shield types are checked, including X precedence when both flips
+are set. A real DEZ1 shock floor is checked with none/basic/fire/bubble/lightning
+shield and with 80-frame capture/restore/forward replay in each case. Lightning
+attraction collects three nearby rings on that route; the immunity invariant is
+no ring loss, not equality to the seeded seven rings.
+
+Concrete placement counts are now 224/365 in act 1 and 318/494 in act 2. The
+seeded act-2 trace frontier remains 1256 frames with the same row-21029 X/camera
+difference; cold entry remains unmatched. This slice adds no act-wide route or
+native visual claim. Visible lightning emitters `$52` remain next.

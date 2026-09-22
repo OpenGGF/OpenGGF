@@ -59,14 +59,14 @@ Read from `Sonic3kObjectRegistry` at `9cba6dbb6`. It is a registration fact, not
 | Unregistered | 23 | 13 |
 | **Total** | **365** | **494** |
 
-`$6D` resolved: `Obj_InvisibleShockBlock` is **not implemented**. Under SKL the `$6D` factory
-(`HCZ_WATER_SPLASH`, registry line 585) returns a placeholder, and no class names or models a shock
-block. ROM (sonic3k.asm:43265): `bset #5,shield_reaction(a0)` then falls into
-`Obj_InvisibleHurtBlockHorizontal`, exactly as `Obj_InvisibleLavaBlock` sets bit 4. Placement
-`status` bit 0 selects `loc_1F4C4`, bit 1 selects `loc_1F528`, neither selects `loc_1F45E`; DEZ uses
-no-flip (56) and Y-flip (22) only. The engine's `Sonic3kInvisibleHurtBlockHObjectInstance` checks
-`hasShield()` generically; the shock block needs the lightning-shield reaction bit. The LRZ plan
-adds the lava variant (`$6E`): land the shield-reaction parameter once and share it.
+`$6D` resolved and implemented in the 2026-09-22 campaign: SKL now creates
+`Sonic3kInvisibleShockBlockObjectInstance`; S3KL keeps `HCZWaterSplash`.
+`Obj_InvisibleShockBlock` (sonic3k.asm:43265) sets shield-reaction bit 5 then uses
+the horizontal hurt block shared with LRZ's fire-bit `$6E`. Status bit 0 selects
+sides before bit 1 selects the underside; no flags select the top. DEZ uses
+no-flip (56) and Y-flip (22) placements. Shield/face combinations, init return,
+placed-floor damage and rewind/forward replay are checked; native visual and
+act-wide route coverage remain open.
 
 `$78`: `Sonic3kObjectRegistry` registers `FBZ_DEZ_PLAYER_LAUNCHER` twice (line 217
 `FbzDezPlayerLauncherInstance`, line 1411 `FbzDezPlayerLauncherObjectInstance`); the later `put`
@@ -108,7 +108,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | `S3kDezGravityPuzzleObjectInstance` | 3 |
 | `$6A` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete | verify only (8) |
 | `$6B` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete | verify only (8) |
-| `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | placeholder | 4 |
+| `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | implemented | 4 |
 | `$78` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete | 4 (verify; duplicate registration above) |
 | `$A4` | `Obj_Spikebonker` | 7 | 11 | `SpikebonkerBadnikInstance` | 4 |
 | `$A5` | `Obj_Chainspike` | 6 | 12 | implemented | 4 |
@@ -294,11 +294,11 @@ so subtypes `$80+` arrive inverted.
 | `$61` | `$00` | `Obj_DEZGravityPuzzle` | 1 | 0 | implemented |
 | `$6A` | `$F1` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete |
 | `$6B` | `$F1` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete |
-| `$6D` | `$61` | `Obj_InvisibleShockBlock` | 1 | 6 | placeholder |
-| `$6D` | `$71` | `Obj_InvisibleShockBlock` | 4 | 13 | placeholder |
-| `$6D` | `$81` | `Obj_InvisibleShockBlock` | 1 | 0 | placeholder |
-| `$6D` | `$E1` | `Obj_InvisibleShockBlock` | 13 | 29 | placeholder |
-| `$6D` | `$F1` | `Obj_InvisibleShockBlock` | 3 | 8 | placeholder |
+| `$6D` | `$61` | `Obj_InvisibleShockBlock` | 1 | 6 | implemented |
+| `$6D` | `$71` | `Obj_InvisibleShockBlock` | 4 | 13 | implemented |
+| `$6D` | `$81` | `Obj_InvisibleShockBlock` | 1 | 0 | implemented |
+| `$6D` | `$E1` | `Obj_InvisibleShockBlock` | 13 | 29 | implemented |
+| `$6D` | `$F1` | `Obj_InvisibleShockBlock` | 3 | 8 | implemented |
 | `$78` | `$00` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete |
 | `$A4` | `$20` | `Obj_Spikebonker` | 4 | 10 | implemented |
 | `$A4` | `$40` | `Obj_Spikebonker` | 3 | 1 | implemented |

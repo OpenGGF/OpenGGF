@@ -194,6 +194,56 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
         assertEquals(0x11, params.groundHalfHeight());
     }
 
+    /** Obj_InvisibleShockBlock sets shield_reaction bit 5 before the shared routine. */
+    @Test
+    public void shockReactionProtectsOnlyTheLightningShieldOnEverySelectedFace() {
+        SolidContact[] faces = {
+                new SolidContact(true, false, false, true, false),
+                new SolidContact(false, true, false, false, false),
+                new SolidContact(false, false, true, false, false)};
+        for (int flags = 0; flags < 4; flags++) {
+            int activeFace = (flags & 1) != 0 ? 1 : (flags & 2) != 0 ? 2 : 0;
+            for (ShieldType shield : new ShieldType[] {null, ShieldType.BASIC,
+                    ShieldType.FIRE, ShieldType.BUBBLE, ShieldType.LIGHTNING}) {
+                for (int face = 0; face < faces.length; face++) {
+                    var block = new Sonic3kInvisibleShockBlockObjectInstance(
+                            new ObjectSpawn(0x100, 0x180, 0x6D, 0x11, flags, false, 0));
+                    var services = new RecordingServices();
+                    block.setServices(services);
+                    var player = new RecordingPlayer();
+                    player.shieldType = shield;
+                    player.setRingCount(7);
+                    block.update(0, player);
+                    block.update(1, player);
+                    block.onSolidContact(player, faces[face], 7);
+                    boolean expected = face == activeFace && shield != ShieldType.LIGHTNING;
+                    assertEquals(expected, player.hurtOrDeathCalled,
+                            "flags=" + flags + " face=" + face + " shield=" + shield);
+                    assertEquals(expected && shield == null ? 1 : 0, services.delayedLostRingSpawns);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void shockFlippedInitializationReturnsBeforeSolidAndRangeTail() {
+        for (int flags = 0; flags < 4; flags++) {
+            var block = new Sonic3kInvisibleShockBlockObjectInstance(
+                    new ObjectSpawn(0x100, 0x180, 0x6D, 0x11, flags, false, 0));
+            var player = new RecordingPlayer();
+            assertFalse(block.isSolidFor(player));
+            block.update(0, player);
+            assertEquals(flags == 0, block.isSolidFor(player));
+            assertEquals(flags == 0, block.isCustomOutOfRange(0x1000),
+                    "flipped init return skips even the range tail");
+            block.update(1, player);
+            assertTrue(block.isSolidFor(player));
+            assertTrue(block.checksOutOfRangeAfterRoutine());
+            assertFalse(block.isCustomOutOfRange(0x180), "coarse distance zero");
+            assertTrue(block.isCustomOutOfRange(0x200), "unsigned negative distance retires");
+        }
+    }
+
     private static final class RecordingPlayer extends TestPlayableSprite {
         private boolean hurtOrDeathCalled;
         private boolean hurtCalled;

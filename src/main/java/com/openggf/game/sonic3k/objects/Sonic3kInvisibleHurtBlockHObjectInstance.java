@@ -32,6 +32,9 @@ public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBl
     /** {@code Status_FireShield}: {@code bset #4,shield_reaction(a0)} in {@code Obj_InvisibleLavaBlock}. */
     public static final int REACTION_FIRE_SHIELD = 1 << 4;
 
+    /** Obj_InvisibleShockBlock: bset #5,shield_reaction(a0) (sonic3k.asm:43265). */
+    public static final int REACTION_LIGHTNING_SHIELD = 1 << 5;
+
     /** The reaction bits this block sets, already masked by {@code sub_1F58C}'s {@code andi.b #$73}. */
     // Not final: the rewind coverage guard captures scalar object fields generically.
     private int shieldReactionBits;
@@ -94,10 +97,14 @@ public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBl
 
     /** The player's {@code status_secondary} shield bits, which share offset {@code $2B}. */
     private static int playerShieldReactionBits(PlayableEntity player) {
-        if (!player.hasShield() || player.getShieldType() != ShieldType.FIRE) {
+        if (!player.hasShield() || player.getShieldType() == null) {
             return 0;
         }
-        return REACTION_FIRE_SHIELD;
+        return switch (player.getShieldType()) {
+            case FIRE -> REACTION_FIRE_SHIELD;
+            case LIGHTNING -> REACTION_LIGHTNING_SHIELD;
+            default -> 0;
+        };
     }
 
     /**

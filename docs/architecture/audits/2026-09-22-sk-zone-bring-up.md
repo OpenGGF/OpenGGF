@@ -958,3 +958,36 @@ even when it rendered every step; that result is rejected as completion evidence
 Wide full-room controller acceptance remains open rather than being inferred
 from config values or the probe. The source change is confined to three DEZ
 object contracts; combined shared-physics campaign validation remains owed.
+
+
+### Invisible shock-block family
+
+After `674a99f72`, SKL `$6D` now registers the shock variant of the shared
+horizontal hurt block; S3KL still creates HCZWaterSplash. The first focused
+reaction test failed specifically for LIGHTNING on the top face. The shared
+reaction-byte mapping now recognizes bit 5 while retaining the existing fire
+bit. The test covers all four flip combinations, five shield states and three
+contact faces, with no immunity from ordinary, fire or bubble shields.
+
+The shock owner also preserves the native flipped init return: side/underside
+variants skip both contact and range retirement for that first dispatch. Top
+init falls through. Its fixed unsigned coarse range check runs after contact,
+through the existing object-manager contract. Scalar init state is rewind-owned.
+
+Queued Java-21 `-Dmse=off` with absolute ROM paths completed 79 checks for the
+initial shared-reaction/registration change, including the four mandatory S3K
+loading regressions, zero skips. The later init/production selection completed
+22 checks: only a too-strict lightning ring-count assertion failed (10 rather
+than 7, from normal attraction of nearby rings). The corrected five shield
+cases on the actual DEZ1 record-27 floor then passed at 21:50 BST, including
+80-frame restore/forward replay of damage, position, rings and shield state,
+zero skips. The shared hurt-block cases and three cold-route checks passed;
+the seeded act-2 frontier stays 1256 frames / row 21029 X and camera X, cold
+entry remains 0 matching frames.
+
+At 21:52 BST, `-Pguards -Dtest=TestRemainingRewindTailInventory,
+TestRewindArchitectureGuard,TestSonic3kObjectProfileRegistryGuard` passed all
+7 checks, no skips, in a fresh JVM. The source-class probe is 1233 total, 993
+isolated passes and 240 graph-covered, no missing codec. Census is 224/365
+concrete in act 1 and 318/494 in act 2. These are focused checks, not combined
+campaign delivery or a full route/native visual claim.

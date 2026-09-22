@@ -118,7 +118,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The energy bridges across both acts switch on and off on their own schedules, carry you while
   they are lit, and drop you when they go out.
   The Chainspike robots charge across both acts, slowing to a stop and turning around, and
-  stab their spikes into the floor when you get close.
+  stab their spikes into the floor when you get close. Shock floors and ceilings now hurt on
+  their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

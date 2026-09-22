@@ -160,7 +160,8 @@ class TestRemainingRewindTailInventory {
         // No bucket grows.
         // Combined LRZ/SSZ campaign plus DEZ merge, measured by the source-class probe:
         // all 57 previously uncounted campaign classes pass in isolation; no bucket grows.
-        return new TailInventory(1232, 992, 240, 0, buckets);
+        // The ROM shock-block subclass adds one spawn-recreatable scalar owner.
+        return new TailInventory(1233, 993, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

@@ -73,13 +73,13 @@ class TestS3kDezPlacementCensus {
      * factory exists at all ({@code $5E}).
      */
     private static final Set<Integer> CONCRETE_DEZ_IDS = Set.of(
-            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x55, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5F, 0x60, 0x61, 0x6A, 0x6B, 0x78, 0xA4, 0xA5);
+            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x55, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5F, 0x60, 0x61, 0x6A, 0x6B, 0x6D, 0x78, 0xA4, 0xA5);
 
     /** Recorded baseline: placements that still resolve to a placeholder. Slices 3-6 drive these to 0. */
-    private static final int PLACEHOLDER_ACT_1 = 163;
-    private static final int PLACEHOLDER_ACT_2 = 232;
-    private static final int CONCRETE_ACT_1 = 202;
-    private static final int CONCRETE_ACT_2 = 262;
+    private static final int PLACEHOLDER_ACT_1 = 141;
+    private static final int PLACEHOLDER_ACT_2 = 176;
+    private static final int CONCRETE_ACT_1 = 224;
+    private static final int CONCRETE_ACT_2 = 318;
 
     @Test
     void romPlacementTablesDecodeToTheInventoriedSpawnCounts() throws IOException {
@@ -162,6 +162,17 @@ class TestS3kDezPlacementCensus {
         Sonic3kObjectRegistry registry = new DezTestRegistry();
         assertInstanceOf(FbzDezPlayerLauncherObjectInstance.class,
                 registry.create(new ObjectSpawn(0, 0, 0x78, 0, 0, false, 0)));
+    }
+
+    @Test
+    void shockRegistrationUsesOnlyTheSklPointerSet() {
+        var spawn = new ObjectSpawn(0x100, 0x180, 0x6D, 0x11, 0, false, 0);
+        assertInstanceOf(Sonic3kInvisibleShockBlockObjectInstance.class,
+                new DezTestRegistry().create(spawn));
+        var hczRegistry = new Sonic3kObjectRegistry() {
+            @Override protected int currentRomZoneId() { return Sonic3kZoneIds.ZONE_HCZ; }
+        };
+        assertInstanceOf(HCZWaterSplashObjectInstance.class, hczRegistry.create(spawn));
     }
 
     private static void assertSplit(Sonic3kObjectRegistry registry, List<ObjectSpawn> placements,
