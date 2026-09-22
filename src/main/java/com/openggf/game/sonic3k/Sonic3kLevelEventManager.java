@@ -516,6 +516,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else if (isLavaReef(zone, act)) {
             registry.install(new com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState(
                     zone, act, playerCharacter));
+            if (lrzEvents != null) lrzEvents.initializeBossScreen();
         } else {
             registry.clear();
         }
@@ -687,6 +688,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void updatePrePhysics() {
+        if (lrzEvents != null && currentZone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && currentAct == 0) {
+            lrzEvents.updateBossSpecialEvents();
+            syncSidekickBoundsToCamera();
+        }
         if (sozEvents != null && currentZone == Sonic3kZoneIds.ZONE_SOZ) {
             sozEvents.updateSpecialEvents(currentAct);
         }

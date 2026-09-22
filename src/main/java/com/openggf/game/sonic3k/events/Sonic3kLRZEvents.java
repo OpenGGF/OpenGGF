@@ -1,6 +1,12 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.level.LevelContinuationCarry;
+import java.io.IOException;
+
 import com.openggf.game.sonic3k.objects.LrzDomeLavaPlatformObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -137,8 +143,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     @Override
     public void update(int act, int frameCounter) {
         if (state() != null && state().zoneIndex() == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && act == 0) {
-            // loc_59B1C consumes the Act3 counter banks at the first screen event.
-            com.openggf.level.LevelContinuationCarry.restoreCounters(levelManager());
+            advanceBossScreen();
             return;
         }
         // LRZ1_ScreenEvent reads Events_bg+$0C before anything else draws (:115201-115204); with
@@ -155,6 +160,87 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         advanceDomeRegions(act);
         advanceAct2Background(act);
         advanceRockSpriteWindow();
+    }
+
+    /** LRZ3_ScreenInit, after player/camera load and before the first object pass. */
+    public void initializeBossScreen() {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ
+                || lrz.actIndex() != 0 || lrz.bossAct().initialized()) return;
+        var player = spriteManager().getMainPlayable();
+        if (player == null) return;
+        var boss = lrz.bossAct();
+        boss.markInitialized();
+        camera().setMaxX((short) 0);
+        if ((player.getCentreX() & 0xFFFF) >= 0x480) {
+            // loc_59A9A stages the fire palette in Target_palette before entry fade.
+            try {
+                for (int line = 1; line <= 3; line++) {
+                    byte[] patch = rom().readBytes(0x79726 + (line - 1) * 0x20, 0x20);
+                    var registry = paletteRegistryOrNull();
+                    if (registry != null) registry.applyTargetPatch(
+                            S3kPaletteOwners.LRZ_BOSS_FIRE, line, 0, patch);
+                    // Entry uses an opaque overlay; publish its revealed palette as FBZ does.
+                    S3kPaletteWriteSupport.applyLine(registry,
+                            levelManager().getCurrentLevel(), graphics(),
+                            S3kPaletteOwners.LRZ_BOSS_FIRE,
+                            S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                            line, patch, true);
+                }
+                S3kPaletteWriteSupport.resolvePendingWritesNow(
+                        paletteRegistryOrNull(), levelManager().getCurrentLevel(), graphics());
+            } catch (IOException failure) {
+                throw new IllegalStateException("LRZ3 checkpoint palette", failure);
+            }
+            NativePositionOps.writeXPosPreserveSubpixel(player, 0x9C0);
+            NativePositionOps.writeYPosPreserveSubpixel(player, 0x36C);
+            camera().setX((short) 0x920); camera().setMinX((short) 0x920); camera().setMaxX((short) 0x920);
+            camera().setY((short) 0x2F0); camera().setMinY((short) 0x2F0); camera().setMaxY((short) 0x2F0);
+            camera().setMaxYTarget((short) 0x2F0);
+            boss.setCameraFractions(0, 0);
+            boss.setAutoscrollRoutine(0x10);
+            boss.setAutoscrollDelay(0x2D);
+            boss.setForegroundRoutine(0xC);
+        }
+        levelManager().resetTileOffsetPositionActualForFullRefresh();
+        refreshPlaneFull();
+    }
+
+    private void advanceBossScreen() {
+        initializeBossScreen();
+        var boss = state().bossAct();
+        if (boss.foregroundRoutine() == 0) {
+            LevelContinuationCarry.restoreCounters(levelManager());
+            boss.setForegroundRoutine(4); // loc_59B42 falls through to loc_59B46.
+        }
+        if (boss.foregroundRoutine() == 4) {
+            if (boss.consumeForegroundRequest()) {
+                int[] ids = {0x16, 0x15, 0x16, 0x15, 0x16};
+                for (int column = 0; column < ids.length; column++) applyLayoutWrite(0, 9, column, ids[column]);
+                boss.setForegroundRoutine(8);
+                refreshPlaneFull();
+                return; // Refresh_PlaneScreenDirect replaces the common tail.
+            }
+            if (camera().getY() == camera().getMaxY()) camera().setMinY(camera().getY());
+        } else if (boss.foregroundRoutine() == 8 && boss.consumeForegroundRequest()) {
+            boss.setCameraFractions(0, 0);
+            boss.setAutoscrollRoutine(0);
+            boss.setForegroundRoutine(0xC);
+        }
+        if (boss.chunkEditX() != 0) {
+            int column = boss.chunkEditX() >>> 7, row = boss.chunkEditY() >>> 7;
+            applyLayoutWrite(0, row, column, 0x17);
+            applyLayoutWrite(0, row, column + 1, 0x17);
+            boss.clearChunkEdit();
+        }
+    }
+
+    /** SpecialEvents precedes the native player slots, independently of ScreenEvents. */
+    public void updateBossSpecialEvents() {
+        var lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ || lrz.actIndex() != 0) return;
+        LrzBossAutoscroll.advance(lrz.bossAct(), camera(), spriteManager().getMainPlayable(),
+                spriteManager().getSidekicks());
     }
 
     /**
@@ -246,7 +332,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         try {
             lrz.setAct2ArtJobOrdinal(moduleKosQueue()
                     .queue(rom(), ACT2_SECONDARY_ART_SOURCE, ACT2_SECONDARY_ART_TILE).ordinal());
-        } catch (java.io.IOException failure) {
+        } catch (IOException failure) {
             throw new IllegalStateException("Cannot queue the Lava Reef act 2 secondary art", failure);
         }
         applyPlc(ACT2_PLC);

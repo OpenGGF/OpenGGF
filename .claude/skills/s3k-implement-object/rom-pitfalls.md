@@ -4756,3 +4756,14 @@ counts; the automatic inference otherwise decodes pointer/data words as frames.
 `TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits`
 caught a bogus frame with 16428 pieces in the September 22 LRZ bring-up audit.
 This applies to all games using offset-table mappings.
+
+## MOVEM.W between native player calls truncates long arguments
+
+Trace the register save width between P1 and P2 calls, not only the common routine.
+LRZ3 `loc_59F3C` preserves `d0/d2` with `movem.w` before `sub_59F82`; P1 sees the
+full 16:16 camera velocity in `d2`, but the restore sign-extends its low word for
+P2. On a left clamp, `asr.l #8` therefore writes `$16A` ground speed to P1 and
+`$6A` to P2 during an upward diagonal (and `$1D9` versus `-$27` on the downward
+diagonal). Keep the shipped behavior; do not normalize both players to the same
+argument. Origin: September 22 LRZ3 camera bring-up; focused regression
+`TestLrzBossAutoscroll.nativeMovemWordRestoreTruncatesSecondaryVelocityAndPushingCrushes`.

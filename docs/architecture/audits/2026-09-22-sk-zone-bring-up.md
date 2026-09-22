@@ -254,3 +254,77 @@ The first pointer is not the frame count. Explicit counts 5 and 4 prevent readin
 the second table/data as more frames. Queued
 `-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard,TestLrzTurbineSprites,TestS3kLrzTurbineHeadless`
 with the absolute S3K ROM passed 29 tests, zero failures/errors/skips, at 16:17 BST.
+
+## LRZ3 encounter oracle under construction
+
+The next slice starts from `59baeab3c`. Native source ownership resolved before
+boss implementation:
+
+- `sub_79F58` consumes boss status bit 6, decrements fourteen-hit health, and
+  keeps that bit set for a 32-dispatch flash. The publisher is the floating
+  mine's `loc_79EC4` range test against its parent (`[-$30,$30)` in each axis).
+  The boss touch byte is `$B8` (hurt), not a normal player-attack health target.
+  The mine touch byte is `$9A`. Negative player-attack health/shield tests are owed.
+- Initial `ChildObjDat_7A18C` has two children: body overlay and cockpit. Each
+  of three launch callbacks per surfaced cycle invokes `7A19A`, one mine plus
+  one launch effect. Every airborne mine emits one `7A1A8` particle on
+  `V_int_run_count & 3 == 0`. Mine hit/parent death emits one boss explosion.
+  Direct counts are resolved; timed peak live counts still need the native
+  observer and the complete graph test, not a guessed constant.
+- All those tables use `CreateChild1_Normal`: forward search after the owner,
+  sequential even subtypes, first failure terminates the suffix without rollback
+  or retry. `CreateChild6_Simple` uses the same search/failure policy with one
+  repeated code pointer: platform child 1, underside child 1, debris children 10.
+  A successful later-slot child can run in the same sweep. Independent tables
+  still execute after a prior table failed.
+- Platform generator subtype 0 creates one lowered platform with timer `$37F`
+  then periodically one at `$17F` intervals with timer `$4FF`; subtypes 1/2
+  create one and delete. A selected subtype-0 platform publishes `_unkFA88` bit 0
+  when it reaches Y `$612`; that is the boss's entry gate before its 120 wait.
+  The boss allocates a separate platform stream at every surfaced entry. Its
+  `$44` link to the last platform is a graph edge and must survive recreation.
+- Killing damage publishes `Events_fg_5`, clears slope direction/acceleration,
+  stops the timer and begins the 128-dispatch sinking wait. `loc_79998` then
+  allocates the capsule and palette-restoration controller independently and
+  raises `_unkFAA8`. The capsule's `sub_865DE` publishes `_unkFACD`; only the
+  results owner's `loc_2DCF8` clears `_unkFAA8`. The boss observes that clear,
+  releases both native players, starts gradual max-X `$EC0` and allocates
+  `Obj_StartNewLevel $2D` at `($FE8,$5E0)`. A boss-only test cannot certify this chain.
+- `loc_59F3C` preserves camera delta `d2` with `movem.w` between P1 and P2.
+  Consequently P2's left-edge ground-velocity write uses the sign-extended low
+  word, whereas P1 uses the original long. Keep this shipped behavior. Wider
+  viewports retain the native 32-pixel right margin; route thresholds and P1-only
+  release authority remain fixed. Extended sidekicks follow native P2 semantics.
+
+Remaining oracle work includes exact live peaks, standalone allocator failure
+behavior for platform streams, all transient parent checks, and native evidence
+for the full completion chain. No boss implementation or certification is claimed.
+
+Native boss observer `native-boss-20260922/run2` records 20201 consecutive frames
+428800–449000 from the verified original movie/save. Run 1 had two wrong diagnostic
+addresses (foreground words and object routine); corrected from symbols and rerun.
+No gameplay RAM was written. `luac5.4 -p` passed. The recording includes the movie's
+bonus-stage detour and checkpoint re-entry, not a single uninterrupted cold route.
+All 1635 nonzero camera deltas while special-event `$14` remains active match the
+ROM fixed-point velocity/stage oracle. No unchanged emulator frame was counted as
+a gameplay dispatch.
+
+Native boss gate: platform bit 0 at 435416; root switches to active code at 435538,
+initializes 14 health at 435539. Damage at 435948/436046/436133, then groups of three
+per cycle; killing damage at 439863. Sinking ends and capsule/palette controller
+allocate at 439991. Capsule publishes completion at 440230; results clears its
+waiting flag at 441128; boss observes it at 441129; HPZ request at 441628.
+The observed boss-mapping peak is 13 at 439747: root, two body/cockpit children,
+three mines, one launch effect and six mine particles. This is a movie observation,
+not an allocation-failure or universal peak guarantee. Screenshot 437200 inspected.
+
+Camera/screen validation: 39 focused checks at 16:30 and 18 expanded world checks
+at 16:34, all passed without skips. Checkpoint tests use the fresh-load lifecycle
+to avoid the fixture's optional terrain snap; foreground rewind uses whole world
+steps rather than capturing never-dispatched sprites. The initial two fixture
+failures were resolved in test setup, not by changing native motion.
+
+Queued palette ownership integration: 3 passed at 16:37. Queued
+`-Pguards -Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestS3kZoneEventPaletteOwnership,TestZoneRuntimeRegistryRewindSnapshot`
+passed 10 at 16:38, zero skips/errors/failures. These are focused checks; combined
+campaign validation and integration remain pending.

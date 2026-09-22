@@ -378,7 +378,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   debris without resurrecting destroyed parts; launchers retain their in-flight balls.
   Act 2’s boulder cutscene carries Sonic and Tails into the boss act, preserving
   rings, time and elemental shields. Knuckles’ exit leads into Hidden Palace and
-  saves progression.
+  saves progression. The boss act restores its checkpoint entry and runs the
+  staged autoscroll, camera clamps, arena release and foreground destruction.
   Lava Reef Acts 1 and 2 now scroll their own layered background
   instead of the generic quarter-speed fallback, Act 2 animates its own lava tiles
   rather than Act 1's, and the invisible lava blocks that carry every lava-floor hit

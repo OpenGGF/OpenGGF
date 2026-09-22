@@ -6,8 +6,8 @@ on a level-select load and none on the Act 2 handover (`Act3_flag`, `loc_62B6`).
 Character route: Sonic + Tails and Tails alone only — Knuckles never enters `$1600`.
 Flash sequence, autoscroll, end boss, capsule and `Obj_StartNewLevel $2D` at `($FE8,$5E0)` to
 Hidden Palace `$1601`. Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md).
-Status: fresh-load carry/title suppression implemented; the boss-act screen stages,
-autoscroll, presentation and end boss remain open.
+Status: fresh-load carry/title suppression, screen stages and autoscroll implemented;
+the flash/controller graph, background presentation and end boss remain open.
 
 Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`, `Act3_timer`,
 `Saved2_status_secondary`), level select `$1600`, star-post respawn (`LRZ3_ScreenInit` P1 X >=
@@ -15,7 +15,7 @@ Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`,
 [HPZ matrix](s3k-hpz-act.md).
 
 Widths / donors / characters / teams (support authority `LaunchProfile.sanitizedFor`,
-same roster as HPZ and DDZ): widths 320/400/512/640/800; supported character/donor pairs
+same roster as HPZ and DDZ): widths 320/352/400/528/800; supported character/donor pairs
 off x {Sonic, Tails, Knuckles}, S1 x Sonic, S2 x {Sonic, Tails}; teams: solo, Sonic+Tails,
 S1 Sonic+Sonic duplicate, S2 Sonic+Tails, Sonic+Tails+Knuckles at 800.
 
@@ -34,12 +34,12 @@ event-spawned and are not in the placement list.
 | --- | --- | --- | --- | --- | --- | --- |
 | BASELINE: placed object and ring census | `LRZ3_Sprites` `$1FCBA2` (35), `LRZ3_Rings` `$1FCD82` (53 records, 52 live) | native | `TestS3kLrzPlacementCensus` | implemented | pass, `3418eba6e` | Ratchet target 0 placeholders |
 | ENTRY: `$1600` resources, title card, Act 3 carry | `Sonic3kLevelResourceProfile`; `Act3_flag` skips the title card and the `loc_62CC` Kos/Nem drain loop; `LRZ3_ScreenEvent` stage 0 (`loc_59B1C`) restores rings and timer | native | `TestS3kLevelContinuationHeadless`, `TestLevelContinuationCarry`, `TestS3kLrzBoulderCutsceneHeadless` | implemented | focused pass, 2026-09-22 | DEZ adoption, native entry-loop timing and remaining screen stages still open |
-| ENTRY: star-post respawn branch | `LRZ3_ScreenInit` P1 X >= `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` -> `Target_palette_line_2`, player `($9C0,$36C)` | native | — | not implemented | open | Slice 9 |
+| ENTRY: star-post respawn branch | `LRZ3_ScreenInit` P1 X >= `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` -> `Target_palette_line_2`, player `($9C0,$36C)` | native + wide/donor | `TestS3kLrzBossCameraHeadless` | implemented | 17 checkpoint cases pass, 2026-09-22 | Full respawn route still needs the platform/boss graph |
 | PRESENT: scroll handler registration | `$1600` must not use `SwScrlHpz`; `$1601` must keep it | native | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented (act key; `$1600` falls back to the default handler and takes the Lava Reef runtime state) | pass, `bbd156d37` | `SwScrlLrz3`: slice 9 |
 | PRESENT: `SwScrlLrz3`, shimmer and per-column VScroll | `LRZ3_BackgroundEvent` five stages `0,4,8,$C,$10`; `word_5A106` = `$310` then 18 x `$10`; `sub_59D82/59DA2/59DBC`, `sub_59DDE` | native + wide | — | not implemented | open | Slice 9/10 |
 | PRESENT: animated tiles and palette | `AnimateTiles_LRZ3` channel 0 only at tile `$170` (`loc_2833C` returns for `Current_zone $16`); `$1600` AniPLC entry is `AniPLC_NULL`; `AnPal_LRZ3` gate `Palette_cycle_counters+$00` in {0, `$80`, 1} | native | — | not implemented | open | Slice 9 |
 | EVENT: Death Egg flash sequence | `LRZ3_BackgroundEvent` stages, `Obj_CollapsingBridge` spawn at `($60,$4D0)` | native | — | not implemented | open | Slice 9 |
-| EVENT: autoscroll | `Special_events_routine $14` (`loc_59E46`), seven stages; thresholds X `$410`, Y <= `$330`, X `$650`, Y <= `$2F0`, X `$910`, Y >= `$320`, X `$BBF` with P1 X >= `$C50`; `sub_59F82` push at `Camera_X + $10`, kill on `Status_Push`, right cap `Camera_X + $120` | native + wide | — | not implemented | open | Slice 9; wide-viewport decision to record |
+| EVENT: autoscroll | `Special_events_routine $14` (`loc_59E46`), seven stages; thresholds X `$410`, Y <= `$330`, X `$650`, Y <= `$2F0`, X `$910`, Y >= `$320`, X `$BBF` with P1 X >= `$C50`; `sub_59F82` push at `Camera_X + $10`, kill on `Status_Push`, right cap `Camera_X + $120` | native + wide/donor | `TestLrzBossAutoscroll`, `TestS3kLrzBossCameraHeadless` | implemented | focused pass, 2026-09-22; 1635 native moving dispatches match arithmetic | Preserve 32px right margin at wide widths; flash trigger graph and cold route still open |
 | OBJECT: `$9E` autoscroll controller, `$AD` platforms (7), `$6E` lava blocks (6), `$8B` sprite masks (2) | `Obj_LRZ3Autoscroll`, `Obj_LRZ3Platform`, `Obj_InvisibleLavaBlock`, `Obj_SpriteMask` | native | `TestS3kLrzPlacementCensus`, `TestSonic3kInvisibleHurtBlockHObjectInstance` | `$6E` implemented; `$9E`/`$AD` slice 9 | `$6E` pass, `bbd156d37` | `$8B` builds `SozSpriteMaskObjectInstance`: open question |
 | OBJECT: `$0F` collapsing bridges (8) use `Map_HPZCollapsingBridge` | `Obj_CollapsingBridge` picks the HPZ mappings for `Current_zone $16` by ROM design | native | — | implemented (shared switch already matches) | classification pass | Art under it unverified: open question, slice 9 |
 | BOSS: end boss and lava surface | `Obj_LRZEndBoss` `collision_property $E` (14 hits), `off_79812` six routines; `Obj_59FC4` `SolidObjectTopSloped2`, push `Events_bg+$14`; shared `HScroll_table+$110` table | native | — | not implemented | open | Slice 10 |
@@ -50,3 +50,22 @@ event-spawned and are not in the placement list.
 
 Worktree `.worktrees/ai-lrz-bring-up`. Slice 0 evidence is shared with the
 [Act 1 matrix](s3k-lrz-act1.md). Baseline media: `~/Videos/OGGF/lrz-bring-up/raw-00-lrz3-before/`.
+
+## September 22 camera/event slice
+
+Worktree `.worktrees/ai-sk-zone-completion`, parent `59baeab3c`. Queued
+`TestLrzBossAutoscroll,TestS3kLevelContinuationHeadless,TestS3kLrzBoulderCutsceneHeadless`
+passed 39 tests at 16:30 BST, no failures/errors/skips. Expanded real-world
+`TestS3kLrzBossCameraHeadless` passed 18 at 16:34 BST, no failures/errors/skips:
+17 checkpoint viewport/donor/team cases plus foreground signals, terrain edits,
+and full-world restore/forward comparison. Initial fixture failures came from
+post-load ground snap (Tails) and capturing an unstepped sprite graph; the tests
+now use the fresh-entry lifecycle and advance the complete world before capture.
+No runtime adjustment was made for those fixture failures.
+
+The native original movie observer recorded 20201 consecutive frames. It includes
+the initial autoscroll, bonus-stage detour/checkpoint re-entry and the full boss
+completion. All 1635 moving special-event dispatches agree with the ported fixed
+point arithmetic; unchanged emulator frames were excluded from that motion check.
+This does not certify frame-clock admission, the unimplemented flash/boss graphs
+or visual parity. See the campaign audit for the native encounter observations.

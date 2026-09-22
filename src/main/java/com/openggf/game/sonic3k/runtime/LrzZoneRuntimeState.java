@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 21 * Short.BYTES;
+            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 21 * Short.BYTES + LrzBossActState.CAPTURE_BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -51,6 +51,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final S3kScreenShake screenShake = new S3kScreenShake();
+    private final LrzBossActState bossAct = new LrzBossActState();
+    public LrzBossActState bossAct() { return bossAct; }
 
     private int appliedScreenShakeOffset;
     private short backgroundRoutine;
@@ -317,6 +319,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(cameraStoredMaxX);
         buffer.putShort(cameraStoredMinY);
         buffer.putShort(cameraStoredMaxY);
+        bossAct.captureTo(buffer);
         return buffer.array();
     }
 
@@ -350,5 +353,6 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         cameraStoredMaxX = buffer.getShort();
         cameraStoredMinY = buffer.getShort();
         cameraStoredMaxY = buffer.getShort();
+        bossAct.restoreFrom(buffer);
     }
 }
