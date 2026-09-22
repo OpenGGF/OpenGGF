@@ -250,7 +250,7 @@ A background sprite object that renders the Death Egg in LRZ2's BG layer.
 1. Clears `Camera_max_X_pos`
 2. **Post-boss camera lock:** If `Player_1 X >= $480`:
    - Loads `Pal_LRZBossFire` into `Target_palette_line_2` (48 words = 3 palette lines)
-   - Writes $9C0 at Target_palette_line_4+$30 and $36C at +$34 (additional color entries)
+   - Writes $9C0/$36C to Stack_contents+$10/+$14 ($FD10/$FD14) through `.offset`; these are stack writes, not additional palette colors or player coordinates (September 22 correction)
    - Sets camera position: X = $920, Y = $2F0 (locked view)
    - Sets camera bounds: min/max X = $920, min/max Y = $2F0
    - Sets `Special_events_routine = $14` (auto-scroll handler)

@@ -435,6 +435,15 @@ the owning constants table before claiming a shipped bug; follow both the
 writer and reader. Test sustained behavior and release, not only arrival at a
 routine. The SOZ methodology-v2 plan records the correction.
 
+`LRZ3_ScreenInit` is another alias trap: after copying the fire palette, `a1`
+points at `Target_palette_line_4+$20`; `.offset` is explicitly
+`Stack_contents-(Target_palette_line_4+$20)`. The subsequent `$9C0/$36C` writes
+therefore target `$FD10/$FD14` in stack RAM, not `Player_1+x_pos/y_pos`.
+A port that teleports the player can make an incorrectly positioned checkpoint
+fixture pass. Preserve the shipped writes' lack of player effect, assert that
+screen setup retains the incoming position, and declare the real checkpoint
+coordinates in route probes. The September 22 campaign audit records the correction.
+
 ### Seamless target initialization must precede resource handoff
 
 The post-target resource handoff may install persistent palette targets, rotation

@@ -87,6 +87,8 @@ public final class Sonic3kObjectArtKeys {
     /** ObjDat3_6653C: Map_LRZ3Platform over level tiles, palette 2. */
     public static final String LRZ3_PLATFORM_DEBRIS = "lrz3_platform_debris";
     public static final String LRZ_END_BOSS = "lrz_end_boss";
+    public static final String LRZ3_AUTOSCROLL = "lrz3_autoscroll";
+    public static final String LRZ3_DEATH_EGG_FLASH = "lrz3_death_egg_flash";
     public static final String LRZ3_PLATFORM = "lrz3_platform";
     public static final String HPZ_COLLAPSE_BLOCK = "hpz_collapse_block";
     public static final String END_SIGN = "EndSign";

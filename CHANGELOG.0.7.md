@@ -380,6 +380,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   rings, time and elemental shields. Knuckles’ exit leads into Hidden Palace and
   saves progression. The boss act restores its checkpoint entry and runs the
   staged autoscroll, camera clamps, arena release and foreground destruction.
+  Its cold approach runs the Death Egg flash, palette fade, rocket launches and
+  descending missiles that break the path. Bonus-stage returns initialize the saved
+  checkpoint before selecting the arena camera.
   Its background uses the boss act’s ROM shimmer, animated tiles and palette cycles.
   Boss-act platforms emerge behind the lava horizon and descend in front of it,
   carrying the player through the checkpoint approach. The end boss launches mines

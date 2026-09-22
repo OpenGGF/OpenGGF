@@ -441,8 +441,8 @@ public class LevelTransitionCoordinator {
     /**
      * Signals that the next level load is a bonus stage return.
      * Set before {@code loadZoneAndAct()} so that {@code onInitLevel()} can
-     * detect the return and skip intros. The checkpoint index is restored
-     * to {@code CheckpointState} after the load completes.
+     * detect the return and skip intros. The return coordinator prepares
+     * {@code CheckpointState} before loading so ScreenInit sees the saved position.
      *
      * @param checkpointIndex the Last_star_post_hit value saved before bonus entry
      */

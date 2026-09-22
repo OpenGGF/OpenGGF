@@ -74,6 +74,9 @@ public class ObjectManager {
     private final Map<ObjectSpawn, ObjectInstance> activeObjects = new IdentityHashMap<>();
     private final Map<ObjectInstance, ObjectSpawn> instanceToSpawn = new IdentityHashMap<>();
     private final List<ObjectInstance> dynamicObjects = new ArrayList<>();
+    // Restore-only ordering cache, derived from the captured dynamic list. Late
+    // player-bound recreations must not change which alias last owns a fixed SST.
+    private final Map<ObjectRefId, Integer> restoredDynamicOrder = new java.util.HashMap<>();
     private final DynamicObjectOwnership dynamicOwnership = new DynamicObjectOwnership();
     private final List<ObjectInstance> dynamicFallbackScratch = new ArrayList<>();
     private final List<ObjectInstance> activeFallbackScratch = new ArrayList<>();
@@ -438,6 +441,7 @@ public class ObjectManager {
             boolean materializeInitialWindow) {
         clearActiveObjects();
         dynamicObjects.clear();
+        restoredDynamicOrder.clear();
         objectCallbacks.clear();
         dynamicOwnership.clear();
         deferredDynamicExecThisFrame.clear();
@@ -2213,7 +2217,15 @@ public class ObjectManager {
         }
         rewindObjectIds.put(object, capturedId);
         addDynamicObjectAtSlot(object, slotIndex);
+        restoreCapturedDynamicOrder();
         collisionResponseList.bindRestoredObject(capturedId, object);
+    }
+
+    private void restoreCapturedDynamicOrder() {
+        if (!restoredDynamicOrder.isEmpty()) {
+            dynamicObjects.sort(Comparator.comparingInt(object ->
+                    restoredDynamicOrder.getOrDefault(rewindObjectIds.get(object), Integer.MAX_VALUE)));
+        }
     }
 
     /**
@@ -4068,6 +4080,11 @@ public class ObjectManager {
                 dynamicOwnership.clear();
                 Arrays.fill(execOrder, null);
                 pendingPlayerBoundEntries.clear();
+                restoredDynamicOrder.clear();
+                for (int index = 0; index < s.dynamicObjects().size(); index++) {
+                    var id = s.dynamicObjects().get(index).objectId();
+                    if (id != null) restoredDynamicOrder.put(id, index);
+                }
                 // Capture construction-spawned children produced while active objects are
                 // reconstructed below, so the dynamic reconciliation loop can adopt them in
                 // place instead of recreating duplicates. (See registerRewindReconstructionChild.)
@@ -4381,6 +4398,7 @@ public class ObjectManager {
                 }
                 collisionResponseList.restoreRewindState(
                         s.collisionResponseState(), restoreTable::resolve);
+                restoreCapturedDynamicOrder();
 
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;

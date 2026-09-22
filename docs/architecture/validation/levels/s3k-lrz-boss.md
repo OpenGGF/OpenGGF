@@ -8,7 +8,7 @@ Flash sequence, autoscroll, end boss, capsule and `Obj_StartNewLevel $2D` at `($
 Hidden Palace `$1601`. Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md).
 Status: fresh-load carry/title suppression, screen stages and autoscroll implemented;
 platform generation and lava presentation are implemented; the flash/controller
-graph remains open; the background stage owner and end-boss candidate are under
+graph is implemented and under validation; the background stage owner and end-boss candidate are under
 validation (see the in-progress evidence below).
 
 Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`, `Act3_timer`,
@@ -25,8 +25,8 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 35 placed objects, of which **1 still builds a
-`PlaceholderObjectInstance`** (`$9E`; 8 before the September 22 platform work); 52 live rings (53 records minus the
+Placement baseline (`TestS3kLrzPlacementCensus`): 35 placed objects, of which **0 build a
+`PlaceholderObjectInstance`** (8 before the September 22 platform work); 52 live rings (53 records minus the
 leading `(0,0)` sentinel). The end boss, capsule, `StartNewLevel`, dome platform and Death Egg sprite are
 event-spawned and are not in the placement list.
 
@@ -36,7 +36,7 @@ event-spawned and are not in the placement list.
 | --- | --- | --- | --- | --- | --- | --- |
 | BASELINE: placed object and ring census | `LRZ3_Sprites` `$1FCBA2` (35), `LRZ3_Rings` `$1FCD82` (53 records, 52 live) | native | `TestS3kLrzPlacementCensus` | implemented | pass, `3418eba6e` | Ratchet target 0 placeholders |
 | ENTRY: `$1600` resources, title card, Act 3 carry | `Sonic3kLevelResourceProfile`; `Act3_flag` skips the title card and the `loc_62CC` Kos/Nem drain loop; `LRZ3_ScreenEvent` stage 0 (`loc_59B1C`) restores rings and timer | native | `TestS3kLevelContinuationHeadless`, `TestLevelContinuationCarry`, `TestS3kLrzBoulderCutsceneHeadless` | implemented | focused pass, 2026-09-22 | DEZ adoption, native entry-loop timing and remaining screen stages still open |
-| ENTRY: star-post respawn branch | `LRZ3_ScreenInit` P1 X >= `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` -> `Target_palette_line_2`, player `($9C0,$36C)` | native + wide/donor | `TestS3kLrzBossCameraHeadless` | implemented | 17 checkpoint cases pass, 2026-09-22 | Full respawn route still needs the platform/boss graph |
+| ENTRY: star-post respawn branch | `LRZ3_ScreenInit` P1 X >= `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` -> `Target_palette_line_2`; preserves saved player position (the `$9C0/$36C` writes address stack RAM) | native + wide/donor | `TestS3kLrzBossCameraHeadless` | implemented | 17 checkpoint cases pass, 2026-09-22 | Full respawn route still needs the platform/boss graph |
 | PRESENT: scroll handler registration | `$1600` must not use `SwScrlHpz`; `$1601` must keep it | native | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented (`$1600` selects `SwScrlLrz3`; `$1601` retains HPZ) | focused pass, 2026-09-22 | stage reachability remains open |
 | PRESENT: `SwScrlLrz3`, shimmer and per-column VScroll | `LRZ3_BackgroundEvent` five stages `0,4,8,$C,$10`; `word_5A106` = `$310` then 18 x `$10`; `sub_59D82/59DA2/59DBC`, `sub_59DDE` | native + wide | `SwScrlLrz3Test` | scroll/shimmer/column rendering implemented | 581 native frames matched, 2026-09-22 | background stage owner and boss allocation still open |
 | PRESENT: animated tiles and palette | `AnimateTiles_LRZ3` channel 0 only at tile `$170` (`loc_2833C` returns for `Current_zone $16`); `$1600` AniPLC entry is `AniPLC_NULL`; `AnPal_LRZ3` gate `Palette_cycle_counters+$00` in {0, `$80`, 1} | native | `TestS3kLrzPatternAnimation`, `TestS3kLrzBossPaletteCycling` | implemented | ROM pixel/color oracles pass, 2026-09-22 | flash graph must publish palette modes |
@@ -97,3 +97,25 @@ Capsule child-slot fidelity, native palette row timing, hardware admission and
 cold entry remain open. See the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md)
 for failures, rejected approaches and provenance. Existing obligation rows above
 retain their delivered status until the candidate passes its encounter gate.
+
+
+The subsequent cold-entry candidate implements `$9E` and reduces the census to
+zero placeholders. Five widths pass the flash/release and whole-world
+remove/restore/forward checks; failed flash allocation and partial missile
+allocation have independent short tests. Clip 45 covers the first 1500 frames.
+The native comparison matches 203 frames before an art-loading admission stall;
+this is not full trace parity. The extended route found a real bonus-return
+load-order defect and a mistaken stack-write/player-position interpretation in
+the earlier checkpoint setup. Those fixes and renewed route evidence are in
+progress; see the campaign audit. Earlier clips retain their recorded setup.
+
+
+The corrected candidate now has a continuous fresh boss-act route through the
+bonus detour, all boss phases, capsule/results and playable HPZ: 12820 recorded
+frames, no hurt/death, HPZ load at 12700. Clip 46 replaces the earlier positioned
+setup as current route evidence. Initial fire shield and 37 rings are declared;
+input alignment at bonus return is authored, not a strict native replay claim.
+125 camera/encounter/rewind/required S3K checks, 106 cold graph/return/art/burst
+checks and 23 structural checks pass (19:17–19:19 BST). The earlier fixed shield
+rebind order was replaced with captured dynamic-list ordering. Remaining native
+capsule slot/pose, timing-admission and full route-product obligations remain.

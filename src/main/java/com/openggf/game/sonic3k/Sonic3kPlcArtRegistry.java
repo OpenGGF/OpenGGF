@@ -3008,6 +3008,11 @@ public final class Sonic3kPlcArtRegistry {
      */
     private static void addLrzBossEntries(List<StandaloneArtEntry> standalone,
                                           List<LevelArtEntry> levelArt) {
+        // ObjDat3_795D2/79602; runtime queues load the same ROM payloads at $424/$3AB.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.LRZ3_AUTOSCROLL,
+                0x17093C, CompressionType.KOSINSKI_MODULED, 0, 0x1876B2, 1, -1, 20));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.LRZ3_DEATH_EGG_FLASH,
+                0x170F4E, CompressionType.KOSINSKI_MODULED, 0, 0x1877BC, 1, -1, 5));
         standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.LRZ_END_BOSS,
                 0x1715F2, CompressionType.KOSINSKI_MODULED, 0, 0x187382, 1, -1, 18));
         // ObjDat3_7960E / ArtKosM_LRZ3PlatformDebris, ROM $1714C0, Map_LRZ3Debris $187860.

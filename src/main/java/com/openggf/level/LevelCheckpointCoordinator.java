@@ -118,9 +118,6 @@ final class LevelCheckpointCoordinator {
             return;
         }
 
-        levelManager.camera.setMaxY((short) ctx.getCheckpointCameraMaxY());
-        levelManager.camera.setMaxYTarget((short) ctx.getCheckpointCameraMaxY());
-
         GameModule module = levelManager.activeGameModule();
         LevelEventProvider levelEvents = module.getLevelEventProvider();
         if (levelEvents instanceof AbstractLevelEventManager eventManager) {

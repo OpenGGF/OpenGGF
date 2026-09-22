@@ -3018,8 +3018,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // (skdisasm/sonic3k.asm:61834-61837, 38172-38178). Publish that bound
         // before either camera update below; applying it only in the later
         // title-card handoff leaves the return one camera step behind.
+        var checkpoint = checkpointCoordinator.state();
+        Integer savedCameraMaxY = null;
         if (bigRingReturn != null) {
-            camera.setMaxY((short) bigRingReturn.cameraMaxY());
+            savedCameraMaxY = bigRingReturn.cameraMaxY();
+        } else if (checkpoint instanceof CheckpointState state && state.isActive() && state.hasS3kRuntimeState()) {
+            savedCameraMaxY = state.getSavedCameraMaxY();
+        }
+        if (savedCameraMaxY != null) {
+            camera.setMaxY(savedCameraMaxY.shortValue());
+            camera.setMaxYTarget(savedCameraMaxY.shortValue());
         }
         PersistentRespawnState persistentRespawnState =
                 checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3033,8 +3041,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             camera.setMinX((short) currentLevel.getMinX());
             camera.setMaxX((short) currentLevel.getMaxX());
             camera.setMinY((short) currentLevel.getMinY());
-            camera.setMaxY((short) (bigRingReturn != null
-                    ? bigRingReturn.cameraMaxY()
+            camera.setMaxY((short) (savedCameraMaxY != null
+                    ? savedCameraMaxY
                     : currentLevel.getMaxY()));
             // Vertical wrapping: enabled when minY < 0. The wrap range differs per game:
             // S1 (UNIFIED): 0x800 (DeformLayers.asm LZ3/SBZ2 loop sections)
@@ -3770,8 +3778,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             writeCurrentAct(act);
             writeApparentAct(act);
             writeCurrentZone(zone);
-            // Clear checkpoint when manually changing level
-            checkpointCoordinator.clear();
+            // Manual changes discard checkpoints. A bonus return has already
+            // prepared its saved position for the load profile, before ScreenInit.
+            if (!transitions.isBonusStageReturn()) {
+                checkpointCoordinator.clear();
+            }
             loadCurrentLevel(
                     loadMode != LevelLoadMode.PREVIEW_CAPTURE,
                     loadMode,

@@ -31,7 +31,7 @@ class TestLrzEndBossEncounterHeadless {
     private void step() { fixture.stepFrame(false,false,false,false,false); }
     private void beforeBodyInitialization() {
         fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
-                .startPosition((short)0x480,(short)0x400).startPositionIsCentre()
+                .startPosition((short)0x9C0,(short)0x368).startPositionIsCentre()
                 .withCrossGameDonation(donor).build();
         boss=GameServices.level().getObjectManager().createDynamicObject(LrzEndBossObjectInstance::new);
         step();
@@ -139,23 +139,23 @@ class TestLrzEndBossEncounterHeadless {
         player.setAir(true); assertFalse(capsule.shouldStartResults(player));
         player.setAir(false); player.setDead(true); assertFalse(capsule.shouldStartResults(player));
     }
-    @ParameterizedTest @ValueSource(ints={0,1})
-    void mineExplosionConsumesBurstBudgetButRandomizesOnlyAllocatedChildren(int capacity) throws Exception {
+    @ParameterizedTest @org.junit.jupiter.params.provider.CsvSource({"6,3,0", "6,3,1", "0,31,0", "0,31,1"})
+    void explosionConsumesBurstBudgetButRandomizesOnlyAllocatedChildren(int subtype,int bursts,int capacity) throws Exception {
         beforeBodyInitialization(); step();
         var manager=GameServices.level().getObjectManager();
-        var emitter=manager.createDynamicObject(()->new LrzEndBossExplosion(boss,6));
+        var emitter=manager.createDynamicObject(()->new LrzEndBossExplosion(boss,subtype));
         manager.reserveAllButNFreeSlots(capacity);
         var rng=GameServices.rng();
         long seed=rng.getSeed();
         emitter.update(200,fixture.sprite());
-        assertEquals(3,field(emitter,"remaining"),"Obj_BossExpControl1 decrements before allocation");
+        assertEquals(bursts,field(emitter,"remaining"),"Obj_BossExpControl1 decrements before allocation");
         assertEquals(capacity,manager.activeObjectsOfType(S3kBossExplosionChild.class).size());
         if(capacity==0) assertEquals(seed,rng.getSeed(),"failed CreateChild6 does not call Random_Number");
         else assertNotEquals(seed,rng.getSeed());
-        for(int clock=201;clock<=209;clock++) emitter.update(clock,fixture.sprite());
-        assertEquals(0,field(emitter,"remaining"),"three attempted bursts, including allocation failures");
+        for(int clock=201;clock<=200+bursts*3;clock++) emitter.update(clock,fixture.sprite());
+        assertEquals(0,field(emitter,"remaining"),"all attempted bursts, including allocation failures");
         assertFalse(emitter.isDestroyed(),"Go_Delete_Sprite changes the next dispatch");
-        emitter.update(210,fixture.sprite());
+        emitter.update(201+bursts*3,fixture.sprite());
         assertTrue(emitter.isDestroyed());
     }
     @Test void platformStreamRetriesFailedFirstAllocationAndStopsWhenDirectionClears() throws Exception {

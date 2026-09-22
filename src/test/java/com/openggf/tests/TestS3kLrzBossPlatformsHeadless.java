@@ -27,7 +27,7 @@ class TestS3kLrzBossPlatformsHeadless {
     }
     @Test void checkpointRouteCreatesPlatformGraphAndRestoresRemovedParentsAndUndersides() {
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
-                .startPosition((short)0x480,(short)0x400).startPositionIsCentre().build();
+                .startPosition((short)0x9C0,(short)0x368).startPositionIsCentre().build();
         var renderer=GameServices.level().getObjectRenderManager().getRenderer(
                 com.openggf.game.sonic3k.Sonic3kObjectArtKeys.LRZ3_PLATFORM);
         assertNotNull(renderer,"boss-act platform art must be registered outside the HPZ cutscene group");
@@ -45,7 +45,7 @@ class TestS3kLrzBossPlatformsHeadless {
     }
     @Test void unpositionedBossRemainsAliveWhileWaitingForTheEntryPlatform() {
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
-                .startPosition((short)0x480,(short)0x400).startPositionIsCentre().build();
+                .startPosition((short)0x9C0,(short)0x368).startPositionIsCentre().build();
         var manager=GameServices.level().getObjectManager();
         var boss=manager.createDynamicObject(com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance::new);
         for(int i=0;i<3;i++) fixture.stepFrame(false,false,false,false,false);
@@ -58,7 +58,7 @@ class TestS3kLrzBossPlatformsHeadless {
 
     @Test void bossCreatesItsPersistentChildrenAndRestoresTheirParentGraph() {
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
-                .startPosition((short)0x480,(short)0x400).startPositionIsCentre().build();
+                .startPosition((short)0x9C0,(short)0x368).startPositionIsCentre().build();
         var manager=GameServices.level().getObjectManager();
         manager.createDynamicObject(com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance::new);
         fixture.stepFrame(false,false,false,false,false);

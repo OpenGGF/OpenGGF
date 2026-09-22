@@ -106,6 +106,8 @@ final class DefaultObjectRewindPolicies {
             // LRZ3 undersides must bind to their exact recreated moving platform.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzBossPlatformObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzEndBossChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzAutoscrollObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzAutoscrollObjectInstance", "fade"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzEndBossExplosion", "parent"), RewindFieldPolicy.CAPTURED),
             // Launcher must retain the exact managed ball after recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LrzSpikeBallLauncherObjectInstance", "ball"), RewindFieldPolicy.CAPTURED),

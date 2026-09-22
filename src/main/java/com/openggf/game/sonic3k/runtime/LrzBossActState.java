@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 /** LRZ3 screen and special-event words, captured by the owning zone runtime. */
 public final class LrzBossActState {
-    static final int CAPTURE_BYTES = 21 * Integer.BYTES + 192;
+    static final int CAPTURE_BYTES = 22 * Integer.BYTES + 192;
     private boolean initialized;
     private int foregroundRoutine;
     private int foregroundRequest;
@@ -57,6 +57,11 @@ public final class LrzBossActState {
     public void requestBackgroundExit() { backgroundExitRequested = true; }
     public void clearBackgroundExitRequest() { backgroundExitRequested = false; }
     private boolean capsuleOpened;
+    private int autoscrollSignals; // _unkFAB8 bits 0 (flash complete), 1 (release missiles).
+    public boolean flashComplete() { return (autoscrollSignals & 1) != 0; }
+    public void publishFlashComplete() { autoscrollSignals |= 1; }
+    public boolean missilesReleased() { return (autoscrollSignals & 2) != 0; }
+    public void publishMissilesReleased() { autoscrollSignals |= 2; }
     private final byte[] lavaHeights = new byte[192];
     public LrzBossActState() { java.util.Arrays.fill(lavaHeights, (byte) 0x30); }
     public boolean capsuleOpened() { return capsuleOpened; }
@@ -107,7 +112,7 @@ public final class LrzBossActState {
         buffer.putInt(initialized ? 1 : 0).putInt(foregroundRoutine).putInt(foregroundRequest)
                 .putInt(autoscrollRoutine).putInt(autoscrollDelay).putInt(cameraFractionX)
                 .putInt(cameraFractionY).putInt(chunkEditX).putInt(chunkEditY).putInt(paletteMode).putInt(capsuleOpened ? 1 : 0).putInt(lavaDirection).putInt(lavaAmplitude).putInt(lavaFlow).putInt(bossSlot).putInt(entryPlatformClaimed ? 1 : 0)
-                .putInt(entryPlatformReady ? 1 : 0).putInt(streamDirection).putInt(driftClock).putInt(backgroundExitRequested ? 1 : 0).putInt(primaryPaletteTimerWrite).put(lavaHeights);
+                .putInt(entryPlatformReady ? 1 : 0).putInt(streamDirection).putInt(driftClock).putInt(backgroundExitRequested ? 1 : 0).putInt(primaryPaletteTimerWrite).putInt(autoscrollSignals).put(lavaHeights);
     }
     void restoreFrom(ByteBuffer buffer) {
         initialized = buffer.getInt() != 0;
@@ -120,6 +125,7 @@ public final class LrzBossActState {
         entryPlatformReady = buffer.getInt() != 0; streamDirection = buffer.getInt(); driftClock = buffer.getInt();
         backgroundExitRequested = buffer.getInt() != 0;
         primaryPaletteTimerWrite = buffer.getInt();
+        autoscrollSignals = buffer.getInt();
         buffer.get(lavaHeights);
     }
 }

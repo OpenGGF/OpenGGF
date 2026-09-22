@@ -222,7 +222,7 @@ Write tests from these, citing the label. Line numbers are for disassembly `1a45
 | Animated tiles (`loc_282D0`) | Ch0 phase = `(Events_bg+$12 − BG_copy − 1) mod $30` by `divu.w` on the zero-extended 16-bit difference: a negative difference wraps unsigned and `$10000 mod $30 ≠ 0`, so model the wrap, not a signed modulo. Ch1 phase = `(Events_bg+$10 − BG_copy) & $1F`; skipped for zone `$16`. `word_2834C` six size pairs, `word_283D2` four. Update only when the phase differs from `Anim_Counters+1` / `+3`. A direct or star-post `$901` load has cleared counters, so phase 0 skips the first upload: test it |
 | Rock window | `loc_1CAF4`: front = `Camera_X − 8`, forced to 1 when `Camera_X ≤ 8`; back = front `+ $150`. `loc_1CB84`: drawn when `0 ≤ y − Camera_Y + 8 < 240` (unsigned compare against `d5`) |
 | LRZ3 BG (`LRZ3_BackgroundEvent`) | Five stages `0,4,8,$C,$10`. `word_5A106` = `$310` then 18 × `$10` |
-| LRZ3 respawn (`LRZ3_ScreenInit`, 119313) | P1 X ≥ `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` → `Target_palette_line_2` (`$60` bytes), player `($9C0,$36C)` |
+| LRZ3 respawn (`LRZ3_ScreenInit`, 119313) | P1 X ≥ `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` → `Target_palette_line_2` (`$60` bytes); player position is preserved (the `$9C0/$36C` writes target stack RAM) |
 | Autoscroll (`loc_59E46`) | Seven stages; thresholds X `$410`, Y ≤ `$330`, X `$650`, Y ≤ `$2F0`, X `$910`, Y ≥ `$320`, X `$BBF` with P1 X ≥ `$C50`; velocities `$20000`, `±$16A00`, `$1D900`/`$C400`. `sub_59F82`: left of `Camera_X + $10` pushed, killed if `Status_Push`; right cap `Camera_X + $120` (verifier's reading; owner rereads 119717-119818 for the stage/velocity pairing) |
 | Miniboss (`Obj_LRZMiniboss`) | `off_7854C` 11 slots, 9 distinct handlers (`loc_785E4` ×3); `collision_property` 6; children 12 (`ChildObjDat_78D84` → `loc_7880A`) + 12 (`78D8A` → `loc_787FE`) at init, later 1, 1, 11 (`78D90`, `78D98`, `78D9E`). `word_78EAA` is **not** the fight palette: `loc_78AA8` starts it only once `End_of_level_flag` is set; the end boss reuses it at `loc_7A100` |
 | End boss (`Obj_LRZEndBoss`) | `collision_property $E` (14 hits); `off_79812` six routines |
@@ -3623,3 +3623,28 @@ shows the successful authored checkpoint encounter; it does not certify cold
 entry. The remaining `$9E` flash/autoscroll object graph is the next route blocker.
 Capsule slot fidelity, separate P2 ending pose, allocation pressure and encounter
 configuration breadth remain explicit obligations. No integration/push claim yet.
+
+
+### September 22 cold-entry continuation (candidate)
+
+On boss milestone `68255ce2e`, `$9E` now supplies the flash, palette helper,
+rocket/target/missile/debris graph and terrain-edit requests; boss-act placement
+census reaches zero placeholders. Clip 45 records 1500 cold-entry frames. The
+first 203 ordinary-capture frames match the native position/controller prefix;
+subsequent art-load admission and inherited V-int timing remain uncertified.
+
+The extended route enters Gumball and exposed bonus-return load ordering: saved
+position and camera bounds must precede ScreenInit. It also exposed a source
+interpretation error: `.offset` in `LRZ3_ScreenInit` addresses `Stack_contents`,
+not Player 1. The false teleport is removed; real checkpoint tests explicitly
+start at `$9C0,$368`, and the earlier positioned captures require replacement.
+Current work is renewed route completion and return/respawn checks, followed by
+remaining capsule/native/timing gaps and the combined campaign validation.
+See the campaign audit and boss matrix for measured scope.
+
+
+Continuation result: clip 46 records the corrected fresh boss-act route through
+its bonus detour, boss, capsule/results and HPZ load (frame 12700). No hurt/death
+in 12820 rendered frames. Focused checks pass as recorded in the audit and matrix;
+remaining capsule/native/timing obligations are explicit. The campaign next
+reconciles SSZ's existing branch and its cold-route/launch blockers.

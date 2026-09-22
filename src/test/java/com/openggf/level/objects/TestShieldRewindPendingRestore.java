@@ -147,6 +147,9 @@ class TestShieldRewindPendingRestore {
         assertEquals(p1Id, idFor(reversed, restoredP1));
         assertEquals(p2Id, idFor(reversed, restoredP2));
         assertNotEquals(idFor(reversed, restoredP1), idFor(reversed, restoredP2));
+        assertEquals(source.dynamicObjects().stream().map(ObjectManagerSnapshot.DynamicObjectEntry::objectId).toList(),
+                reversed.dynamicObjects().stream().map(ObjectManagerSnapshot.DynamicObjectEntry::objectId).toList(),
+                "late player-bound recreation preserves the captured order, including fixed-slot aliases");
     }
 
     @Test

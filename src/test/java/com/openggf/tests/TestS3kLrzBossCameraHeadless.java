@@ -40,13 +40,13 @@ class TestS3kLrzBossCameraHeadless {
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,aspect.name()); config.resolveDisplayAspect();
         SessionManager.clear(); TestEnvironment.activeGameplayMode();
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
-                .startPosition((short)0x480,(short)0x400).startPositionIsCentre()
+                .startPosition((short)0x9C0,(short)0x368).startPositionIsCentre()
                 .withCrossGameDonation(donor.equals("off")?null:donor).build();
         var camera=GameServices.camera();
         var state=S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow().bossAct();
         assertEquals(width,camera.getWidth()); assertEquals(main,fixture.sprite().getCode());
         assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
-        assertEquals(0x9C0,fixture.sprite().getCentreX()); assertEquals(0x36C,fixture.sprite().getCentreY());
+        assertEquals(0x9C0,fixture.sprite().getCentreX()); assertEquals(0x368,fixture.sprite().getCentreY());
         assertEquals(0x920,camera.getX()); assertEquals(0x2F0,camera.getY());
         assertEquals(0xC,state.foregroundRoutine()); assertEquals(0x10,state.autoscrollRoutine());
         assertEquals(45,state.autoscrollDelay());

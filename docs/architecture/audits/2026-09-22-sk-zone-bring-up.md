@@ -538,3 +538,69 @@ word 4: the disassembly macro emits `frames-1`, so the correct encoded delay is
 3 and the next write is four enabled dispatches later. Runtime timing already
 used the ROM word; only the test expectation needed correction. Native palette
 row parity and capsule child-slot fidelity remain open.
+
+
+## Cold boss-act flash/controller and bonus return (in progress)
+
+On `68255ce2e`, `$9E Obj_LRZ3Autoscroll` now owns the cold-entry flash,
+white/target-palette fades, eight released rockets, target reticles, descending
+missiles, impact hitboxes, terrain edits and debris. Art/attribute/animation and
+child tables are ROM-backed; allocation keeps the forward prefix and does not
+heal failed children. The act census is now zero placeholders. This is
+implementation inventory, not certification.
+
+Clip 45 (`45-lrz3-flash-and-missiles.mp4`, external campaign directory) records
+1500 fresh-entry frames with native Sonic + Tails, width 320, initial fire shield
+and 37 rings. The first 203 frames agree with the native observer on P1 X/Y,
+vertical speed, camera Y and controller/flash positions/timers/subtypes. The
+native unchanged frame at 429070 then separates the ordinary capture from the
+reference; hardware art-work admission and inherited V-int phase remain open.
+Ten fresh-entry/width/removed-graph/allocation checks passed at 19:02 BST with no
+failures/errors/skips; 23 structural checks passed at 18:58 BST.
+
+Extending the route naturally entered Gumball, returned at engine frame 2302,
+and died at 2467 because return initialization saw fresh P1 X=$40 before the
+saved checkpoint was restored. `LRZ3_ScreenInit` consequently locked camera X=0.
+The return coordinator now prepares checkpoint position before loading, and the
+scoped bonus-return flag preserves it across the normal manual-load clear.
+The first correction passed 18 focused checks at 19:09 BST. Its longer route
+corrected camera X but exposed the later restore overwriting screen-owned Y
+bounds; checkpoint camera limits are now applied by camera initialization before
+ScreenInit, not after it. The post-load bonus handoff retains the resulting
+position/camera and still restores interior rings, timer, shield and activation.
+Reverification is pending for this expanded correction.
+
+Source review also rejected a prior interpretation in `LRZ3_ScreenInit`:
+`.offset = Stack_contents-(Target_palette_line_4+$20)` makes the two subsequent
+writes land at `$FD10/$FD14`, not player coordinates. The earlier port and camera
+fixture incorrectly encoded a teleport to `$9C0,$36C`. That teleport is removed;
+checkpoint route fixtures now explicitly start at the real saved `$9C0,$368`.
+Earlier clips 42–44 and positioned encounter results remain historical evidence
+with that setup defect; the corrected candidate needs renewed route evidence.
+
+
+The corrected cold route now reaches playable Hidden Palace at frame 12700;
+all 12820 rendered frames have zero hurt/death. Clip 46 is a 3190-frame
+(53.17-second) highlight; `raw-69-lrz3-cold-completion` keeps the uninterrupted
+capture, exact input log and setup. It starts from the default boss-act entry
+with native Sonic + Tails, width 320, declared fire shield and 37 rings. The
+original movie's Gumball visit lasts longer than the engine run, so the authored
+log re-aligns its post-bonus segment at the live return boundary, then uses
+controller-driven mine avoidance/capsule/exit actions. This does not seed runtime
+state or certify strict parity. The return now has P1 `$9C0,$368`, camera
+`$920,$2F0`, matching the observed native entry state.
+
+The expanded checkpoint/return selection initially completed 111 tests with one
+failure: a short lava rewind spot had the opposite fixed shield/insta-shield
+insertion order from the long encounter. Always rebinding either visual first
+cannot preserve both histories. That approach is superseded: ObjectManager now
+reorders delayed player-bound recreations by the captured dynamic-list order,
+using existing object identities. The earlier fixed rebinding-order change was
+removed. The regression also asserts original ordering when stars recreate in
+reverse player order. At 19:17 BST, 125 camera/encounter/shield/two-phase restore
+and required AIZ/load/bootstrap/decoding checks passed, no failures/errors/skips.
+At 19:19 BST, 106 cold-graph/bonus coordinator/water return/census/art/explosion
+checks passed, including subtype-0's 31 attempted bursts and allocation/RNG
+failure ordering. The focused structural selection passed 23 checks without
+failures/errors/skips. These are focused checks; combined delivery validation
+and integration remain pending.

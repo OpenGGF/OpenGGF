@@ -203,8 +203,8 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             } catch (IOException failure) {
                 throw new IllegalStateException("LRZ3 checkpoint palette", failure);
             }
-            NativePositionOps.writeXPosPreserveSubpixel(player, 0x9C0);
-            NativePositionOps.writeYPosPreserveSubpixel(player, 0x36C);
+            // FixBugs=0: the two .offset writes target Stack_contents+$10/$14
+            // ($FD10/$FD14), not Player_1. They do not reposition the player.
             camera().setX((short) 0x920); camera().setMinX((short) 0x920); camera().setMaxX((short) 0x920);
             camera().setY((short) 0x2F0); camera().setMinY((short) 0x2F0); camera().setMaxY((short) 0x2F0);
             camera().setMaxYTarget((short) 0x2F0);

@@ -1312,10 +1312,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * deferred until the registry's post-restore phase.
          */
         public void refreshPowerUpObjectsAfterRewindRestore() {
-                // The persistent ability visual and an equipped shield can share a fixed SST.
-                // Rebind the idle ability first, then the equipped shield, preserving the live
-                // occupant's execution order when both are recreated from pending entries.
-                refreshPersistentInstaShieldRegistration();
                 if (!shield || shieldType == null) {
                         if (shieldObject != null) {
                                 shieldObject.destroy();
@@ -1348,6 +1344,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                 }
 
+                refreshPersistentInstaShieldRegistration();
                 refreshInvincibilityStarsAfterRewindRestore();
         }
 

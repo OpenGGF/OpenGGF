@@ -5,7 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import java.util.List;
 
-/** Obj_CreateBossExplosion subtypes 4 (follow indefinitely) and 6 (three bursts). */
+/** Obj_CreateBossExplosion subtypes 0 (31 bursts), 4 (follow indefinitely), 6 (three bursts). */
 public final class LrzEndBossExplosion extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private AbstractObjectInstance parent;
     private int x,y,remaining,timer;
@@ -18,7 +18,7 @@ public final class LrzEndBossExplosion extends AbstractObjectInstance implements
     }
     @Override public void update(int clock,PlayableEntity player) {
         if(pendingDelete) { ObjectLifetimeOps.expireDynamic(this); return; }
-        if(!initialized) { initialized=true; remaining=getSpawn().subtype()==4?0x80:4; }
+        if(!initialized) { initialized=true; remaining=switch(getSpawn().subtype()) { case 0 -> 0x20; case 4 -> 0x80; default -> 4; }; }
         if(getSpawn().subtype()==4) {
             if(parent==null || parent.isDestroyed() || ((LrzEndBossObjectInstance)parent).childrenReleased()) {
                 pendingDelete=true; return;
@@ -30,7 +30,7 @@ public final class LrzEndBossExplosion extends AbstractObjectInstance implements
         timer=2;
         var child=spawnChild(()->S3kBossExplosionChild.createWithNativeInitSfx(x,y));
         if(child==null || child.getSlotIndex()<0 || child.isDestroyed()) return;
-        int range=getSpawn().subtype()==4?0x20:0x10;
+        int range=getSpawn().subtype()==6?0x10:0x20;
         int random=services().rng().nextRaw();
         child.writeNativePositionWords(x+(random&(range*2-1))-range,y+((random>>>16)&(range*2-1))-range);
     }
