@@ -1160,3 +1160,42 @@ remain open; campaign validation and integration remain pending.
 
 At 22:57 BST the separately selected `TestPatternSpriteRendererCorruptionGuard`
 passed both cases with zero skips, completing 95 focused checks for this slice.
+
+
+### Hanging carrier family
+
+After `b1c767647`, SKL `$4C` follows `Obj_DEZHangCarrier` / `sub_4703E`.
+The previous P1 grab latch installs the rise routine without executing it that
+pass; P2 can hang independently but cannot start movement. MoveSprite2 runs
+before -8 acceleration. Native upward FindFloor uses radius `$14`; ceiling
+penetration correction preserves the fractional word, then installs horizontal
+±$200 travel for unsigned subtype×4 dispatches. The current X owns retirement.
+
+Grab uses the half-open rectangle and admits positive object_control while
+rejecting bit 7, hurt/dead and debug state. It clears only Status_InAir via the
+existing native-control helper: an initial `setAir(false)` incorrectly invoked
+terrain landing resets and was removed. A regression preserves jump fields and
+custom radii. Jump release consumes the logical press edge, chooses 18/60 ticks
+from all held directions, lets right override left, and writes native radii
+without shifting the centre or fractions. Cooldown expiry returns before any
+recapture. Lost render bit or hurt/death releases without launch. Pin sound
+reads Level_frame_counter independently for both native players.
+
+At 23:06 BST, queued Java 21 and absolute S3K ROM path with
+`-Dtest=TestS3kDezHangCarrierObjectInstance,TestS3kDezHangCarrierHeadless,
+TestS3kDezPlacementCensus,TestCnzSpiralTubeMultiSidekick,
+TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard`
+passed 99 checks, zero skips. The prior unit run exposed an incorrect expected
+switch sound and the synthetic landing path; both were corrected from the
+owning ROM routine. At 23:08, the three headless cases passed again after adding
+forced carrier deletion/recreation before restore. Actual 320/800 rides rise
+against real terrain, complete the `$25` leftward travel, release on a jump,
+and reproduce 400 frames plus that release. The fresh structural selection
+passes 7 checks, zero skips (1241 total / 1001 isolated / 240 graph / 0 missing).
+
+Clips `062-hang-carrier-320` (480 frames) and `063-hang-carrier-800`
+(430 frames) show the positioned ride and release. Both pass full ffmpeg decode
+and inspected frames 100/300 (320) and 300 (800). No deaths; the longer 320 clip
+includes a post-release hazard hit with 36 hurt-state rows. Counts are 348/365
+and 471/494 concrete. Native parity, cold routes, Act-2 interaction and broader
+participants remain open. Combined validation/integration are still pending.

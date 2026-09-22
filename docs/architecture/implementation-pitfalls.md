@@ -51,6 +51,16 @@ Shipped player collision runs through the sensor (`Sonic_CheckCeiling`'s `eori.w
 form of `FindFloor`, sonic3k.asm:20242-20256), so derive expected player positions from the
 sensor or from a measured upright control, never from the convenience helper.
 
+**Clearing the air bit is not a landing.** Direct `bclr #Status_InAir,status`
+paths such as DEZ hang-carrier capture (`sub_4703E`, `loc_47104`) do not call
+`Sonic_ResetOnFloor`. `setAir(false)` synthesizes landing effects, clearing jump
+and double-jump state, changing radii and resetting score chains. Use the existing
+`clearAirForNativeControlRestore()` for a bare status clear. Likewise, when the
+ROM writes jump radii explicitly and then sets the roll bit, use
+`setRollingFlagPreserveRadii` rather than the generic rolling box transition.
+The DEZ carrier regression preserves airborne jump fields and custom radii on
+capture, and native centre/fractions on release.
+
 **Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
 object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
 the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can
