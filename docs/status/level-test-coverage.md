@@ -134,8 +134,8 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_SKY_SANCTUARY_1` | [Act 1 matrix](../architecture/validation/levels/s3k-ssz-act1.md) — v2 bring-up in progress; placement census, arrival, act-1 bounds, the opening cutscene, the background (both modes, clouds and solid cloud platforms), the animated tiles, every act-1 traversal family and the EggRobo, the death/checkpoint lifecycle and both act-1 boss recreations are covered: Green Hill (hit window, three-colour flash, ball hitbox and defeat scatter) and Metropolis (lock and spawn at both widths, the ship's two-level dispatch, the seven-orb ring and its front/back sort, the launch a hit triggers, the laser pass and the defeat that raises the `$79:$F6` pad), all driven through the real touch pass. Mecha Sonic is covered from the `$79` pad's allocation through the entry, the attack loop with
 `byte_7D2FC`'s per-frame collision byte, the defeat and `loc_7D056`'s handover, by
 `TestS3kSszMechaSpawnHeadless` and dated against the run's third SSZ segment `hpz_3`;
-his palette rotation and spark child, the `loc_7C9BA` child and `loc_7B39C`'s bare allocate are
-open. The production results-to-DEZ1 launch now passes component handover/rewind checks at
+his palette rotation and spark child now pass source-row and launch-recreation checks.
+The `loc_7C9BA` collision child remains open; the bare allocation was verified to write no slot. The production results-to-DEZ1 launch now passes component handover/rewind checks at
 320/400/800, native Sonic + Tails, Tails alone and S1 donor, with a controller Hyper
 checkpoint recording through the destination load; exhausted slots, transition-history
 isolation and native parity remain open. Both recreations now emit defeat explosions and have defeat-graph recreation/forward-replay checks; a refreshed Metropolis checkpoint recording shows the bursts. Replacement-slot stop-byte fidelity remains open. Both recreations' entry and defeat intervals are compared against the `hpz` segment's aux rows; their orbits, flashes and laser cadence are not, and the Metropolis fight is now filmed end to end (clips 20-22) with `GameplayCaptureTool --rings` |

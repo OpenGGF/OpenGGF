@@ -5981,18 +5981,14 @@ not yet have native parity or a cold full-act route certificate.
 - **Symptom** — The `$79:$00` pad at `($1A40,$670)` now allocates `Obj_SSZEndBoss` and explodes
   behind it, and the boss runs `SSZEndBoss_Index`'s act-1 entries 0 through `$28` — the entry run,
   the return, the landing, the two openings and the three-way attack cycle — with `sub_7D2D8`'s
-  per-frame collision byte and `sub_7D312`'s window. Three things below that are not there.
-- **Suspected cause** — Not a defect; slice 7 of the
-  [SSZ bring-up plan](../architecture/plans/2026-09-17-ssz-bring-up.md) is delivered in stages and
-  the stages stop short of its cosmetics. `loc_7B81A`'s act-1 routines 0, 2 and 4 and
-  `loc_7D056`'s handover are implemented and dated against native. What is missing is (a)
-  `sub_7C678`'s palette rotation over `word_7D842` together with the `ChildObjDat_7D48C`
-  (`Obj_MechaSonic_Sparks`) child it gates — the sparks' own test is a read of the rotating
-  colour, `cmpi.w #$E88,(Normal_palette_line_2+$12).w`, so neither is useful without the other,
-  and `loc_7B984`'s `Run_PalRotationScript` therefore drives nothing; (b) the
-  `ChildObjDat_7D474` child at `loc_7C9BA`; and (c) `loc_7B39C`'s bare tail-jump to
-  `AllocateObject`, a second slot the ROM consumes and never writes — slot order decides sibling
-  execution and RNG draw order, so it belongs here rather than being treated as a no-op.
+  per-frame collision byte and `sub_7D312`'s window. The secondary collision child
+  `ChildObjDat_7D474` / `loc_7C9BA` remains missing.
+- **Implemented follow-up** — Act-1 results/launch, `word_7D842` palette rotation
+  and its colour-gated spark child are implemented. The earlier claim that
+  `loc_7B39C`'s bare `AllocateObject` consumes a slot was incorrect: that routine
+  only searches code pointers and this caller performs no SST write. No engine
+  reservation should be introduced for it. Spark behavior for arbitrary reused
+  parent-slot `$38`/render bytes remains unmodelled.
 - **Untested rather than unimplemented** — the `$20`-frame hit window's *phase* is unverified.
   `sub_7D312` opens the window on the frame after the hit, because `Touch_Enemy` has already
   zeroed `collision_flags`; the duration is `$20` on both sides, but which frame the engine's

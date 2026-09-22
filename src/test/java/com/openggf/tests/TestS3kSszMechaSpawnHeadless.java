@@ -15,6 +15,8 @@ import com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicActEndObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild;
+import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicSparkChild;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -440,6 +442,43 @@ class TestS3kSszMechaSpawnHeadless {
         assertNotNull(handover, "jsr (AllocateObject).l / move.l #loc_7D056,(a1)");
         assertEquals((2 * 60) - 1, handover.timerForTest(),
                 "loc_7D056's own move.w #(2*60)-1,$2E(a0)");
+        assertNotNull(active(SszMechaSonicSparkChild.class), "loc_7B888 allocates its spark owner");
+        // word_7D842, all twelve rows and the repeat edge; keep results from taking control.
+        int[] durations = {50, 2, 1, 5, 2, 1, 50, 2, 1, 20, 2, 1, 50};
+        int[] paletteAddresses = {0x7D850, 0x7D872, 0x7D894};
+        boolean alternate = false;
+        for (int row = 0; row < durations.length; row++) {
+            int expectedColor;
+            try {
+                expectedColor = GameServices.rom().getRom().read16BitAddr(paletteAddresses[row % 3] + 18);
+            } catch (java.io.IOException failure) {
+                throw new AssertionError(failure);
+            }
+            for (int tick = 0; tick < durations[row]; tick++) {
+                if (row == 0 && tick == 10) {
+                    var paletteRegistry = GameServices.paletteOwnershipRegistry();
+                    paletteRegistry.setPaletteRotationDisabled(true);
+                    for (int frozen = 0; frozen < 3; frozen++) {
+                        parkTheLeaderInTheAir(fixture);
+                        fixture.stepIdleFrames(1);
+                    }
+                    paletteRegistry.setPaletteRotationDisabled(false);
+                }
+                parkTheLeaderInTheAir(fixture);
+                fixture.stepIdleFrames(1);
+                assertEquals(expectedColor, PaletteWriteSupport.segaWordFromColor(
+                        GameServices.level().getCurrentLevel().getPalette(1).getColor(9)),
+                        "palette row " + row + " tick " + tick);
+                var sparks = active(SszMechaSonicSparkChild.class);
+                assertNotNull(sparks);
+                assertEquals(expectedColor == 0xE88, sparks.visibleForTest(),
+                        "spark reads the palette written earlier in this same object pass");
+                if (expectedColor == 0xE88) {
+                    alternate = !alternate;
+                    assertEquals(alternate ? 5 : 4, sparks.mappingFrameForTest());
+                }
+            }
+        }
     }
 
     /**
@@ -537,7 +576,8 @@ class TestS3kSszMechaSpawnHeadless {
                 var launchAfter = registry.capture();
                 var manager = GameServices.level().getObjectManager();
                 for (var object : List.copyOf(manager.getActiveObjects())) {
-                    if (object instanceof com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance
+                    if (object instanceof SszMechaSonicSparkChild
+                            || object instanceof com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance
                             || object instanceof com.openggf.game.sonic3k.objects.SszLaunchPieceObjectInstance
                             || object instanceof com.openggf.game.sonic3k.objects.SszLaunchCrumbleObjectInstance)
                         manager.removeDynamicObject(object);

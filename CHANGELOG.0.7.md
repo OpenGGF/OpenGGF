@@ -44,7 +44,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   cartridge does — including the off-by-one that makes the flash duller than it was meant to be.
   Eight hits send it away and open the way on. Both recreated ships shed explosions
   during defeat and escape, with the cartridge's three-frame cadence and allocation order.
-  Rewind preserves the EggRobo pairing signals and boss-active state. The second one follows it: climb to the upper
+  Rewind preserves the EggRobo pairing signals and boss-active state. Mecha Sonic
+  flashes and sparks after defeat using the original palette sequence. The second one follows it: climb to the upper
   arena and the camera closes again, the Metropolis ship falls in with a ring of seven orbs
   turning around it — passing in front of the ship and behind it as it turns — patrols the
   arena and lifts its arms to swing the ring wide. Hitting it throws one orb off the ring at

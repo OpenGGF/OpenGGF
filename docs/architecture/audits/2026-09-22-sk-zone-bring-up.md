@@ -813,3 +813,37 @@ passed 62 checks, zero skips, across `TestSszZoneRuntimeState`,
 `TestS3kSszMtzArenaHeadless`, and `TestS3kSszMechaSpawnHeadless`. This covers the
 expanded byte layout's consumers and existing launch graph recreation. It is a
 focused pass, not campaign-wide certification.
+
+
+### Mecha defeat palette and spark follow-up
+
+After `3c024e515`, act-1 `loc_7B888` installs the ROM-backed `word_7D842`
+palette script and allocates `Obj_MechaSonic_Sparks` forward from the boss.
+`loc_7B984` advances the signed byte delay before animation, and the colour write
+resolves immediately so the later spark slot sees the same-pass `$E88` at line 1
+colour 9. All twelve durations and the repeat edge come from the shipped script;
+rotation-disable freezes the delay. The spark alternates ROM offset/frame rows,
+plays its own sound on each gated dispatch, and keeps native no-liveness-test
+behavior when its parent slot becomes empty. Arbitrary replacement occupants'
+`$38`/render-flag bytes remain an unmodelled semantic boundary.
+
+The spark has its own eight-frame mapping prefix on palette line 1. The existing
+four-frame dash sheet remains on line 0; the full 27-frame extra-effects table
+still must not be bound wholesale to the 139-tile art blob.
+
+ROM inspection rejected the plan's claim that `loc_7B39C` consumes an unwritten
+slot. `AllocateObject` only scans code pointers and returns an address; no SST
+write or reservation occurs. The bare tail call is therefore observationally
+inert for the later objects. A synthetic engine reservation would be wrong.
+
+The first focused selection completed 81 checks: 80 passed, zero skips, and the
+standalone inventory expected 15 rather than the new 16 sheets. The full ROM
+mapping crawler and renderer corruption guard passed, as did the complete
+palette-row/spark-gate regression. After updating the inventory, all 23 Mecha
+cases plus the inventory check passed, including rotation-disable and launch
+recreation with spark objects removed before restore. The two rewind guards passed in a fresh `-Pguards` JVM at 21:06 BST,
+zero skips. The corrected `raw-42-mecha-defeat-sparks` recording is 1000 frames
+(16.67 seconds), source 1600–2599 of 2600 stepped frames, zero deaths. It uses
+raw-40's declared Hyper checkpoint input. Frame 1805 shows the flash and spark;
+full ffmpeg decoding passed. Source hashes and setup are in the media provenance.
+These remain focused checks; combined campaign validation is still owed.

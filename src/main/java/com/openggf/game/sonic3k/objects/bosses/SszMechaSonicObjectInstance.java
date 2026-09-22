@@ -85,8 +85,8 @@ import java.util.List;
  * on its own counter, not a random choice, and only {@code loc_7B484}'s landing consults the RNG.
  *
  * <p><b>Still owed on this class</b>, recorded in {@code docs/status/s3k-known-bugs.md} rather
- * than faked: the {@code loc_7C9BA} child, {@code Obj_MechaSonic_Sparks}, and the post-defeat
- * graph at {@code loc_7B81A} beyond {@code sub_7D35A}'s immediate writes.
+ * than faked: the {@code loc_7C9BA} collision child and the Knuckles act-2 graph.
+ * Act-1 defeat includes the palette-driven sparks, results and launch handover.
  */
 public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         implements SpawnRewindRecreatable {
@@ -253,6 +253,9 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     public void deleteOnNextObjectPass() { launchDeletePending = true; }
     /** {@code PalLoad_Line1} is a one-shot; the restore belongs to the owed defeat graph. */
     private boolean paletteLoaded;
+    /** Run_PalRotationScript's live data pointer and signed byte delay, act-1 defeat script. */
+    private int defeatPaletteAddress;
+    private int defeatPaletteDelay;
 
     private final S3kRawAnimation.State anim = new S3kRawAnimation.State();
     /** A lazily sliced read-only window over the ROM's script block; nothing to restore. */
@@ -480,6 +483,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         // move.b #mus_EndBoss,subtype(a1). The object's own init is move.w #90,$2E(a0) and a
         // cmd_FadeOut, so the theme arrives 91 updates later, not on this frame.
         spawnFreeChild(() -> new SongFadeTransitionInstance(90, Sonic3kMusic.BOSS.id));
+        // loc_7B39C's trailing AllocateObject only searches and writes no SST bytes.
+        // Reserving an engine slot for that bare call would create a ROM-inaccurate occupant.
     }
 
     /** {@code SSZEndBoss_Index}, act 1 entries only. */
@@ -874,9 +879,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                 moveSpriteWithGravity(LIGHT_GRAVITY);
                 objHitFloorDoRoutine();
             }
-            // loc_7B984: Run_PalRotationScript, then the animation, then Obj_Wait. The palette
-            // rotation sub_7C678 sets up over word_7D842 is owed with the spark child it feeds.
-            case 4 -> { animate(); objWait(); }
+            // loc_7B984: palette writes precede the spark child's same-pass colour read.
+            case 4 -> { runDefeatPalette(); animate(); objWait(); }
             default -> { }
         }
     }
@@ -891,16 +895,13 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         callback = Callback.DEFEAT_LANDED;
     }
 
-    /**
-     * {@code loc_7B888}, act-1 branch. {@code sub_7C678}'s palette rotation over
-     * {@code word_7D842} and {@code ChildObjDat_7D48C}'s {@code Obj_MechaSonic_Sparks} are owed
-     * together — the sparks' own gate is a read of the rotating colour
-     * ({@code cmpi.w #$E88,(Normal_palette_line_2+$12).w}), so neither is useful without the
-     * other. Recorded in {@code docs/status/s3k-known-bugs.md} rather than half-built.
-     */
+    /** {@code loc_7B888}: install word_7D842, create sparks, then arm the act handover. */
     private void onDefeatLanded() {
         yRadius = DEFEAT_LANDED_Y_RADIUS;
         setRawAnimation(Sonic3kConstants.SSZ_MECHA_ANIM_DEFEATED_ADDR);
+        defeatPaletteAddress = Sonic3kConstants.PAL_SSZ_GHZ_MISC_ADDR;
+        defeatPaletteDelay = 0;
+        SszMechaSonicSparkChild.spawnFor(services(), getSlotIndex(), getX(), getY());
         services().playSfx(Sonic3kSfx.MECHA_LAND.id);
         super.state.routine = 4;
         // st (_unkFAA8).w: Check_TailsEndPose reads it, and loc_7D078 waits for it to clear.
@@ -917,6 +918,35 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         spawnFreeChild(() -> new SszMechaSonicActEndObjectInstance(
                 new ObjectSpawn(getX(), getY(), 0, 0, 0, false, 0)));
     }
+
+    /** word_7D842 has one 16-colour script, repeat command, and no header transition. */
+    private void runDefeatPalette() {
+        var registry = services().paletteOwnershipRegistryOrNull();
+        if (registry != null && registry.isPaletteRotationDisabled()) {
+            return;
+        }
+        defeatPaletteDelay = (byte) (defeatPaletteDelay - 1);
+        if (defeatPaletteDelay >= 0) {
+            return;
+        }
+        try {
+            var rom = services().rom();
+            // sub_859CE, header parameter zero: any negative command repeats this header.
+            if ((short) rom.read16BitAddr(defeatPaletteAddress) < 0) {
+                defeatPaletteAddress = Sonic3kConstants.PAL_SSZ_GHZ_MISC_ADDR;
+            }
+            byte[] line = rom.readBytes(defeatPaletteAddress, 32);
+            defeatPaletteDelay = (byte) rom.read16BitAddr(defeatPaletteAddress + 32);
+            defeatPaletteAddress += 34;
+            S3kPaletteWriteSupport.applyLine(registry, services().currentLevel(),
+                    services().graphicsManager(), S3kPaletteOwners.SSZ_MECHA_SONIC,
+                    S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE, 1, line, true);
+        } catch (IOException failure) {
+            throw new IllegalStateException("Mecha defeat palette requires the S3K ROM", failure);
+        }
+    }
+
+    boolean stopsSparks() { return (flags & 0x40) != 0; }
 
     /** {@code Obj_Wait}: {@code subq.w #1,$2E(a0)} and, when it goes negative, {@code jmp $34}. */
     private void objWait() {

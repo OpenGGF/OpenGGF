@@ -3072,6 +3072,12 @@ public final class Sonic3kPlcArtRegistry {
                 -1,
                 4
         ));
+        // Obj_MechaSonic_Sparks uses frames 4..7 on palette line 1.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.MECHA_SONIC_SPARKS,
+                Sonic3kConstants.ART_KOSM_MECHA_SONIC_EXTRA_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR, 1, -1, 8));
     }
 
     /**

@@ -523,3 +523,13 @@ and bypasses the sand-exit transition to `$20`, preventing boss wall art and roo
 brightening. Seed a fresh checkpoint and use the production reload; do not save
 source runtime state or bypass native event gates. Verify destination events,
 unchanged lives and rewind timeline isolation, not coordinates alone.
+
+
+### A bare native allocation search does not occupy a slot
+
+S3K `AllocateObject` and `AllocateObjectAfterCurrent` only scan SST code pointers
+and return an address/condition codes. Occupancy starts when the caller writes a
+nonzero code pointer. Mecha Sonic's `loc_7B39C` ends with a bare `AllocateObject`
+and no write; reserving an engine slot for it invents an occupant. Distinguish the
+search from the caller's initialization before translating allocation pressure.
+Origin: 2026-09-22 S&K completion campaign, SSZ Mecha graph audit.

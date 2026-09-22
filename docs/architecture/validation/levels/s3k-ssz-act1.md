@@ -163,3 +163,14 @@ Runtime snapshot follow-up: `TestSszZoneRuntimeState` now pins the EggRobo pairi
 word and boss-active flag across retirement/fly-by changes and recreation. Both
 were omitted from the prior codec. The 62-case runtime/EggRobo/three-boss/launch
 selection passed without skips; full boundary coverage remains partial.
+
+
+Mecha palette/spark follow-up: the defeat test now walks all twelve
+`word_7D842` rows, the repeat edge and a rotation-disabled pause, asserting the
+same-pass `$E88` spark gate and alternating frames. Launch recreation also removes
+and recreates sparks. The full ROM art crawler validates the new eight-frame
+prefix; 23 Mecha cases plus the updated 16-sheet inventory pass without skips.
+`raw-42-mecha-defeat-sparks` shows the effect during results (frame 1805), using
+the declared Hyper checkpoint setup, 320 px native Sonic alone. Native timing,
+other visual breadth and arbitrary replacement-slot byte semantics remain open.
+The bare `loc_7B39C` allocation is a search with no SST write, not a missing owner.

@@ -541,6 +541,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String MECHA_SONIC = "mecha_sonic";
     /** {@code ArtKosM_MechaSonicExtra} over {@code Map_MechaSonicExtra}. */
     public static final String MECHA_SONIC_EXTRA = "mecha_sonic_extra";
+    public static final String MECHA_SONIC_SPARKS = "mecha_sonic_sparks";
     /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */
     public static final String SSZ_FLOATING_PLATFORM = "ssz_floating_platform";
     /**

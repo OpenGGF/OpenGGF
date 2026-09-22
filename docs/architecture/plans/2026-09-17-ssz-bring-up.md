@@ -2473,3 +2473,14 @@ stale shield/orb references; deletion now releases them, while GHZ scatter links
 leave their former graph when they become independent `Obj_FlickerMove` objects.
 See the campaign audit and act-1 matrix for exact validation and the refreshed
 Metropolis recording. Arbitrary reused-slot `$38` fidelity remains open.
+
+
+### Campaign follow-up: Mecha defeat palette and sparks
+
+Act-1 `word_7D842` now drives the ROM palette rows and `Obj_MechaSonic_Sparks`.
+The spark reads the resolved colour in the same object pass, uses its own verified
+mapping prefix, and is included in launch recreation checks. See the audit and
+matrix for the rendered checkpoint evidence and remaining native/slot-reuse gaps.
+The earlier claim that a bare `AllocateObject` consumes an unwritten slot is
+rejected: its implementation only scans code pointers. `loc_7B39C` writes no
+owner after returning from that search. The missing `loc_7C9BA` child remains open.
