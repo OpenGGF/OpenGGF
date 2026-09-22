@@ -3026,3 +3026,15 @@ players, partial allocation, actual normal-gravity landing/collapse/floor
 release at 320/800, full graph recreation/replay and inverted Act-2 carry.
 Art and the fresh schema/profile guards pass. Census: 350/365 and 484/494.
 Remaining native/route/breadth and final-boss obligations are unchanged.
+
+### Widescreen fixed-background follow-up (2026-09-23)
+
+The native fixed-image behaviour remains unchanged at 320px. Wider views now
+centre one original image and extend its edges: mirrored outer-wall tiles for
+Act 1; ROM-derived curve continuation and reflected surface pixels for Act 2.
+The latter follows the user's choice to preserve the native centre rather
+than stretch the planet. All five widths have pixel/shape checks and inspected
+gameplay captures; native frame-120 PNGs match the earlier captures exactly.
+The [audit](../audits/2026-09-22-sk-zone-bring-up.md) records commands,
+rejected approaches, fade/load checks and external clips 078–080. This closes
+the reported repeated-background presentation issue, not the remaining routes.

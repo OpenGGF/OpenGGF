@@ -70,6 +70,19 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | ORACLE: Tails act 2 | `runs/s3k-tails-full-chain-all-emeralds/ssz_2` (5,202 rows) | — | `TestS3kTailsFullChainSsz2SegmentTraceReplay` (expected red) | — | blocked: 229 errors, first error frame 0 `camera_y` expected `0x080E` actual `0x0810` (`035e48a58`) | Whole campaign |
 | ORACLE: Tails act 2 restart | `runs/s3k-tails-full-chain-all-emeralds/ssz_3` (3,877 rows; act 2 restart, i.e. lifecycle evidence) | — | `TestS3kTailsFullChainSsz3SegmentTraceReplay` (expected red) | — | blocked: 200 errors, first error frame 0 `camera_y` expected `0x044E` actual `0x0450` (`035e48a58`) | Whole campaign |
 
+## Widescreen background follow-up (2026-09-23)
+
+`TestS3kDezWidescreenBackground` covers 320/352/400/528/800. Act 2
+retains the native centre without repeating the complete backdrop. Act 1
+reflects outer-wall tiles; Act 2 continues the planet's curve using ROM
+surface pixels. The extra scenery is a deliberate presentation extension.
+The planet projection also checks palette-fade independence, restore and
+act-load isolation. Positioned final 800-pixel clips 078/079 in the external DEZ
+task directory show six seconds each, with zero hurt/death rows. These
+checks do not certify a cold route or native pixel parity. Study 080 also
+checks all four narrower widths in gameplay; the native frame-120 PNG matches
+the earlier engine capture byte-for-byte.
+
 ## Execution evidence
 
 See the [act 1 matrix](s3k-dez-act1.md#execution-evidence) for the single frontier command;

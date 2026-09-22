@@ -60,6 +60,11 @@ public class BackgroundRenderer {
     private HScrollBuffer hScrollBuffer;
     private VScrollBuffer vScrollBuffer;
     private VScrollBuffer vScrollColumnBuffer;
+    private VScrollBuffer remapXBuffer;
+    private VScrollBuffer remapYBuffer;
+    private com.openggf.game.internal.BackgroundColumnRemap.Columns uploadedColumns;
+    private com.openggf.game.internal.BackgroundColumnRemap.Columns preparedColumns;
+    private int remapEnabledLocation, remapXLocation, remapYLocation;
     private ParallaxShaderProgram parallaxShader;
     private final QuadRenderer quadRenderer = new QuadRenderer();
     private final GraphicsManager graphicsManager;
@@ -105,6 +110,9 @@ public class BackgroundRenderer {
         // Load parallax shader
         parallaxShader = new ParallaxShaderProgram(shaderPath);
         parallaxShader.cacheUniformLocations();
+        remapEnabledLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "UseColumnRemap");
+        remapXLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapX");
+        remapYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapY");
         quadRenderer.init();
 
         // Create FBO for background tile rendering.
@@ -310,8 +318,31 @@ public class BackgroundRenderer {
             vScrollColumnBuffer.bind(3);
         }
 
+        var columns = preparedColumns;
+        if (columns != null) {
+            glActiveTexture(GL_TEXTURE4);
+            if (remapXBuffer == null || remapXBuffer.getEntryCount() != columns.sourceX().size()) {
+                if (remapXBuffer != null) { remapXBuffer.cleanup(); remapYBuffer.cleanup(); }
+                remapXBuffer = new VScrollBuffer(columns.sourceX().size());
+                remapYBuffer = new VScrollBuffer(columns.yOffsets().size());
+                remapXBuffer.init(); remapYBuffer.init();
+                uploadedColumns = null;
+            }
+            if (uploadedColumns != columns) {
+                remapXBuffer.upload(columns.sourceX()); remapYBuffer.upload(columns.yOffsets());
+                uploadedColumns = columns;
+            }
+            remapXBuffer.bind(4); remapYBuffer.bind(5);
+        } else {
+            // Valid sampler bindings are required even when the branch is disabled.
+            hScrollBuffer.bind(4); hScrollBuffer.bind(5);
+        }
+
         // Bind shader and set uniforms
         parallaxShader.use();
+        org.lwjgl.opengl.GL20.glUniform1i(remapEnabledLocation, columns != null ? 1 : 0);
+        org.lwjgl.opengl.GL20.glUniform1i(remapXLocation, 4);
+        org.lwjgl.opengl.GL20.glUniform1i(remapYLocation, 5);
         parallaxShader.cacheUniformLocations();
 
         // Set texture units
@@ -355,6 +386,7 @@ public class BackgroundRenderer {
         drawFullscreenQuad();
 
         // Cleanup
+        hScrollBuffer.unbind(4); hScrollBuffer.unbind(5);
         parallaxShader.stop();
         hScrollBuffer.unbind(1);
         if (vScrollBuffer != null) {
@@ -364,6 +396,10 @@ public class BackgroundRenderer {
             vScrollColumnBuffer.unbind(3);
         }
         glActiveTexture(GL_TEXTURE0);
+    }
+
+    void setColumns(com.openggf.game.internal.BackgroundColumnRemap.Columns columns) {
+        preparedColumns = columns;
     }
 
     private static int columnCount(int width) {
@@ -428,6 +464,11 @@ public class BackgroundRenderer {
      * Clean up all OpenGL resources.
      */
     public void cleanup() {
+        preparedColumns = null;
+        if (remapXBuffer != null) {
+            remapXBuffer.cleanup(); remapYBuffer.cleanup();
+            remapXBuffer = null; remapYBuffer = null; uploadedColumns = null;
+        }
         if (hScrollBuffer != null) {
             hScrollBuffer.cleanup();
         }

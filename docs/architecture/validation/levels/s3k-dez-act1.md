@@ -68,6 +68,19 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 | ORACLE: route timing | `runs/s3k-sonic-tails-complete-emeralds/ssz` (DEZ, `zone_id 11`, 40,049 rows, offset 468982; both acts and the handover) | — | `TestS3kSonicTailsSszSegmentTraceReplay` (expected red) | — | blocked: 7005 errors, first error frame 0 `camera_x` expected `0x0040` actual `0x0000` (`035e48a58`, `-Ptrace-replay-r7`) | Whole campaign |
 | ORACLE: Tails route timing | `runs/s3k-tails-full-chain-all-emeralds/ssz` (act 1, 23,249 rows, offset 444059) | — | `TestS3kTailsFullChainSszSegmentTraceReplay` (expected red) | — | blocked: 1661 errors, first error frame 0 `camera_x` expected `0x0040` actual `0x0018` (`035e48a58`) | Whole campaign |
 
+## Widescreen background follow-up (2026-09-23)
+
+`TestS3kDezWidescreenBackground` covers 320/352/400/528/800. Act 1
+retains the native centre without repeating the complete backdrop. Act 1
+reflects outer-wall tiles; Act 2 continues the planet's curve using ROM
+surface pixels. The extra scenery is a deliberate presentation extension.
+The planet projection also checks palette-fade independence, restore and
+act-load isolation. Positioned final 800-pixel clips 078/079 in the external DEZ
+task directory show six seconds each, with zero hurt/death rows. These
+checks do not certify a cold route or native pixel parity. Study 080 also
+checks all four narrower widths in gameplay; the native frame-120 PNG matches
+the earlier engine capture byte-for-byte.
+
 ## Execution evidence
 
 Worktree `.worktrees/ai-s3k-dez-bring-up`, ROM by absolute path, `maven_queue.py -Dmse=off`.

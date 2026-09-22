@@ -17,6 +17,9 @@ uniform sampler2D BackgroundTexture;
 uniform sampler1D HScrollTexture;
 uniform sampler1D VScrollTexture;
 uniform sampler1D VScrollColumnTexture;
+uniform sampler1D ColumnRemapX;
+uniform sampler1D ColumnRemapY;
+uniform bool UseColumnRemap;
 
 // Screen dimensions (actual viewport pixels)
 uniform float ScreenHeight;
@@ -120,6 +123,16 @@ void main()
     // Wrap X within the background period rendered into the FBO.
     float fboX = mod(worldX - fboWorldOffsetX, BGTextureWidth);
     if (fboX < 0.0) fboX += BGTextureWidth;
+
+    if (UseColumnRemap) {
+        int column = clamp(int(floor(gameX)), 0, textureSize(ColumnRemapX, 0) - 1);
+        fboX = round(texelFetch(ColumnRemapX, column, 0).r * 32767.0);
+        fboY -= round(texelFetch(ColumnRemapY, column, 0).r * 32767.0);
+        if (fboY < 0.0 || fboY >= BGTextureHeight) {
+            FragColor = vec4(BackdropColor, 1.0);
+            return;
+        }
+    }
 
     // Clamp Y to valid range
     fboY = clamp(fboY, 0.0, BGTextureHeight - 1.0);

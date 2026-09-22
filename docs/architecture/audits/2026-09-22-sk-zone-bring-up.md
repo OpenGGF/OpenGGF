@@ -1347,3 +1347,49 @@ bridge landing, tilt, collapse and floor release at 320/800. Both record
 across widths. Full decode and frame-280 inspection pass; the 320 frame 420
 shows Sonic on the floor after the sections fall away. Positioned footage is
 not cold-route or native comparison evidence.
+
+### DEZ widescreen composition (after `30ab1b14f`, 2026-09-23)
+
+User identified repeated fixed scenery in both wide acts and warned that simply
+centring the native crop exposes unfinished edges. Decoded ROM backgrounds
+confirm that Act 1 has reusable side walls, while Act 2 has no hidden complete
+planet sides. Rejected a bare centred crop and whole-image horizontal stretching;
+the user selected a curve extension that preserves the native centre.
+
+Act 1 now centres its 320px source and reflects 32px outer-wall strips. Its
+render-only descriptor owner and period cover the viewport; terrain is unchanged.
+Act 2 keeps that original centre pixel-for-pixel. Outside it, reflected 64px
+ROM surface strips follow a circle through the indexed silhouette's left edge,
+apex and right edge. Derive the outline from indexed art rather than live RGB:
+otherwise a fade-to-black can cache a false planet shape. A generic internal
+background column remap carries source X and a Y offset through the prepared
+render frame; shared renderer/shader code contains no game or zone checks.
+The extension is intentional widescreen presentation, not ROM pixel parity.
+
+`TestS3kDezWidescreenBackground` checks all five supported widths, original
+centre preservation, per-pixel wall reflection, continuous planet limbs, cache
+identity, black-palette independence, restore and act-load isolation. The first
+shared regression run passed 95 executed checks, with two explicitly opt-in
+background capture/performance diagnostics skipped. Commands used the queued
+Maven wrapper, Java 21, DISPLAY=:0 and the absolute S3K ROM. This selection
+included the required AIZ/loading/bootstrap/decoding tests and actual capture
+smoke. A follow-up checks the final prepared-frame wiring. Campaign-wide
+verification/integration remains outstanding.
+
+External clips 076/077 show the initial 800px implementation, 360 frames each,
+zero hurt/death rows. Both fully decode; frame 280 of Act 1 and frame 120 of
+Act 2 were inspected. They are positioned presentation checks, not cold-route
+or native comparison evidence. ROM-only layout and curve studies accompany
+them in `$HOME/Videos/OGGF/s3k-dez-bring-up/`.
+
+Final prepared-frame check: queued `maven_queue.py -q -Dmse=off
+-Ds3k.rom.path=<absolute-s3k.gen>
+-Dtest=TestS3kDezWidescreenBackground,TestS3kDezScrollHeadless,TestLevelRendererBackgroundViewport,TestParallaxRewindSnapshot,TestGameplayCaptureSmoke
+test` passed **34 tests, zero failures/errors/skips**. Final clips 078/079
+fully decode and have identical CSV and checked PNGs to 076/077. Width study
+080 captures frame 120 after 121 steps at 320/352/400/528 for both acts; all
+eight images were inspected, all runs have zero hurt/death rows. Native
+320px PNGs are byte-identical to the earlier frame-120 images from clips
+074 (Act 1) and 071 (Act 2). This is matched engine regression evidence,
+not native emulator pixel certification. The extension adds no object types
+or census changes. Conveyor-pad WIP remains stashed until this fix is committed.

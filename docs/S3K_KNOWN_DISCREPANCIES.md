@@ -752,3 +752,18 @@ rewind and compatibility evidence lives in the
 [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act matrices.
 
 ---
+
+## Death Egg widescreen backgrounds
+
+Both cartridge acts use a fixed 320-pixel view (`PlainDeformation` and
+`DEZ1_BackgroundInit` / `DEZ2_BackgroundInit`). Wider views intentionally keep
+one centred native image. Act 1 reflects 32-pixel strips of its outer wall
+tiles. Act 2 has no complete planet sides in the ROM: the renderer reflects
+64-pixel surface strips outside the native crop, vertically remapped onto a
+circle inferred from the indexed-art horizon. No generated bitmap or terrain
+mutation is involved. The original 320 centre pixels and native viewport are
+unchanged; the additional scenery is an engine presentation choice, not native
+pixel parity. Surface repetition can be visible at the widest aspect.
+
+See the [bring-up audit](architecture/audits/2026-09-22-sk-zone-bring-up.md)
+and `TestS3kDezWidescreenBackground` for width, fade and load-boundary checks.

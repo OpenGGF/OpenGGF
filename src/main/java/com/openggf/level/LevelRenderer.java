@@ -112,6 +112,7 @@ public final class LevelRenderer {
     private short[] pendingBgVScrollColumnData;
     private int pendingBgShaderScrollMidpoint;
     private int pendingBgShaderExtraBuffer;
+    private com.openggf.game.internal.BackgroundColumnRemap.Columns pendingBgColumns;
     private int pendingBgVOffset;
     private boolean pendingBgPerLineScroll;
     private IntIndexedView pendingBgHScrollView;
@@ -292,6 +293,7 @@ public final class LevelRenderer {
         TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
         if (bgRenderer != null && tilemapRenderer != null
                 && isBackgroundCompositeCurrent(tilemapRenderer)) {
+            com.openggf.level.render.BackgroundRendererInternalAccess.setColumns(bgRenderer, pendingBgColumns);
             bgRenderer.renderWithScrollWide(pendingBgHScrollView, pendingBgVScrollView, pendingBgVScrollColumnView,
                     pendingBgShaderScrollMidpoint, pendingBgShaderExtraBuffer,
                     pendingBgVOffset, pendingBgPerLineScroll);
@@ -539,7 +541,7 @@ public final class LevelRenderer {
         private final int[] ints = new int[22];
         private final float[] floats = new float[18];
         private final boolean[] bools = new boolean[8];
-        private final Object[] refs = new Object[8];
+        private final Object[] refs = new Object[9];
         private int[] scroll0;
         private short[] short0;
         private short[] short1;
@@ -628,6 +630,7 @@ public final class LevelRenderer {
             refs[5] = r.pendingFgUnderwaterPaletteId_high;
             refs[6] = r.pendingFboAtlasId;
             refs[7] = r.pendingFboPaletteId;
+            refs[8] = r.pendingBgColumns;
             advancedState = r.currentAdvancedRenderFrameState;
             scroll0Length = 0;
             short0Length = 0;
@@ -709,6 +712,7 @@ public final class LevelRenderer {
             r.pendingFgUnderwaterPaletteId_high = (Integer) refs[5];
             r.pendingFboAtlasId = (Integer) refs[6];
             r.pendingFboPaletteId = (Integer) refs[7];
+            r.pendingBgColumns = (com.openggf.game.internal.BackgroundColumnRemap.Columns) refs[8];
             r.currentAdvancedRenderFrameState = advancedState;
             switch (kind) {
                 case BG_RENDER -> {
@@ -1475,6 +1479,8 @@ public final class LevelRenderer {
             if (shaderVOffset < 0)
                 shaderVOffset += LevelConstants.CHUNK_HEIGHT; // Handle negative modulo
 
+            pendingBgColumns = lm.zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundColumnRemap owner
+                    ? owner.backgroundColumns() : null;
             pendingBgHScrollData = hScrollData;
             pendingBgVScrollData = vScrollData;
             pendingBgVScrollColumnData = vScrollColumnData;

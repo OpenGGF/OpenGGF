@@ -57,7 +57,7 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
     @Override
     public boolean negativeTumbleUsesUnreflectedAngle(boolean facingLeft) {
         // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24938-24984):
@@ -200,7 +200,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                 || isHcz2BackgroundPlaneWindowActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId)
                 || isSozEventBackgroundWindowActive(zoneId)
-                || isSszCloudBackgroundWindowActive(zoneId);
+                || isSszCloudBackgroundWindowActive(zoneId)
+                || extendedDezInterior();
     }
 
     /**
@@ -228,7 +229,18 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                 && SwScrlSsz.backgroundWindowActive();
     }
 
+    private final com.openggf.game.sonic3k.render.DezPlanetBackground dezPlanetBackground =
+            new com.openggf.game.sonic3k.render.DezPlanetBackground();
+
+    @Override public com.openggf.game.internal.BackgroundColumnRemap.Columns backgroundColumns() {
+        if (!GameServices.hasRuntime()) return null;
+        var manager = GameServices.level();
+        return manager.getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ && manager.getFeatureActId() == 1
+                ? dezPlanetBackground.columns(manager, GameServices.camera().getWidth()) : null;
+    }
+
     @Override public long backgroundDescriptorRevision() {
+        if (extendedDezInterior()) return -0x100000000L - GameServices.camera().getWidth();
         if (!GameServices.hasRuntime() || GameServices.level().getFeatureZoneId() != Sonic3kZoneIds.ZONE_SOZ) return 0;
         return S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
                 .map(state -> extendedSozPyramid(state) ? -1L
@@ -236,6 +248,24 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     }
 
     @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
+        if (extendedDezInterior()) {
+            // Presentation extension only: retain the native 320px centre and
+            // reflect 32px strips of the ROM wall art across the extra width.
+            // Reflect descriptors as well as tile order so the joins are continuous.
+            int x = sourceX - ((GameServices.camera().getWidth() - 320) / 16) * 8;
+            boolean flip = false;
+            if (x < 0) {
+                int tile = Math.floorMod(Math.floorDiv(x, 8), 8);
+                flip = tile >= 4;
+                x = (flip ? 7 - tile : tile) * 8;
+            } else if (x >= 320) {
+                int tile = Math.floorMod(Math.floorDiv(x - 320, 8), 8);
+                flip = tile < 4;
+                x = (flip ? 39 - tile : 32 + tile) * 8;
+            }
+            return GameServices.level().getBackgroundTileDescriptorAtWorld(x, sourceY)
+                    ^ (flip ? 0x800 : 0);
+        }
         var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (state != null && extendedSozPyramid(state)) {
             // SOZ1's authored pyramid ends at BG column 15 ($780). Wider views
@@ -247,6 +277,13 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         }
         return state != null && state.events().postBossPlane().revision() != 0
                 ? state.events().postBossPlane().descriptor(sourceX, sourceY) : 0;
+    }
+
+    private boolean extendedDezInterior() {
+        return GameServices.hasRuntime()
+                && GameServices.level().getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ
+                && GameServices.level().getFeatureActId() == 0
+                && GameServices.camera().getWidth() > 320;
     }
 
     private boolean extendedSozPyramid(com.openggf.game.sonic3k.runtime.SozZoneRuntimeState state) {

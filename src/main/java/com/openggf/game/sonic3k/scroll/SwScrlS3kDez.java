@@ -38,6 +38,8 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  */
 public class SwScrlS3kDez extends AbstractZoneScrollHandler {
 
+    private int currentAct;
+
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     @Override
@@ -46,6 +48,7 @@ public class SwScrlS3kDez extends AbstractZoneScrollHandler {
                        int cameraY,
                        int frameCounter,
                        int actId) {
+        currentAct = actId;
         resetScrollTracking();
         composer.reset();
 
@@ -61,5 +64,11 @@ public class SwScrlS3kDez extends AbstractZoneScrollHandler {
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+    @Override
+    public int getBgPeriodWidth() {
+        int width = com.openggf.game.GameServices.hasRuntime()
+                ? com.openggf.game.GameServices.camera().getWidth() : 320;
+        return currentAct == 0 ? Math.max(512, (width + 15) & ~15) : 512;
     }
 }
