@@ -24,6 +24,8 @@ Entries should include:
 
 ## Table of Contents
 
+0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
+0. [Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)](#reverse-gravity--position-integration-inverted-collision-probes-not-yet-open--blocks-the-death-egg-gravity-objects)
 1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
 2. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
 3. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
@@ -116,6 +118,116 @@ FM5 SFX, rings, and special-stage speed-shoes entry.
 Remove this entry after a positive listen and integration of the exact verified
 handoff commit. Reopen source-timing investigation if the listen identifies a
 repeatable onset defect within the scenarios above.
+
+---
+
+## AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)
+
+**Location.** `com.openggf.physics.Sensor` / `GroundSensor` stride versus
+`ObjectTerrainUtils.checkFloorDist`.
+
+**Symptom.** At the Angel Island act 1 spawn with the zone intro skipped, an airborne player
+standing on the spawn ledge gets `null` from both ground sensors on every frame — no solid tile
+found — while `ObjectTerrainUtils.checkFloorDist(x, y, 19)` at the same x reports a hit at
+distance 0. Observed 2026-09-17 while looking for a reverse-gravity fixture (Death Egg slice 2);
+the two probes were sampled in the same frame from the same sprite.
+
+**Why it is only a question.** Nothing here is known to be wrong yet. The two probes have
+different strides and different extension-search rules, so the disagreement may be correct
+behaviour for a 16 px tile boundary rather than a defect, and no ROM comparison has been made.
+It is recorded because it cost a fixture and will mislead the next agent who uses a sensor probe
+as a terrain oracle.
+
+**Kill condition.** Sample both probes across a 16 px sweep of y at that x and compare against
+`FindFloor`'s own stride (`movea.w #$10,a3`, sonic3k.asm:19998-20002). If the sensor result
+matches `FindFloor` and `checkFloorDist` is the outlier, this is a `checkFloorDist` convenience-API
+note, not an engine bug, and the entry is deleted. Explicitly **not** in scope for Death Egg
+slice 2: the slice uses measured Death Egg act 2 terrain instead
+(`TestS3kReverseGravityDezCorridor`).
+
+---
+
+## Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)
+
+**Location.** `src/main/java/com/openggf/physics/ReverseGravity.java`,
+`PlayableSpriteMovement.moveSpriteTestGravity` / `doLevelBoundary`,
+`CollisionSystem.resolveGroundWallCollision`.
+
+**Symptom.** With `Reverse_gravity_flag` forced set, a player integrates position upward
+(`MoveSprite_TestGravity`, sonic3k.asm:36068), dies at the top of the level (`loc_11722`, :23202),
+and the airborne collision wrappers `sub_11FD6`/`sub_11FEE` (:24127-24149) now select the opposite
+sensor array and mirror the angle they return. What is still missing is the grounded path —
+`Call_Player_AnglePos` (:22329) and `ChooseChkFloorEdge` (:24156) — and every row of groups B, C,
+E, F, G, H and I: player actions, solid objects, springs, spikes, monitors, rings and companions.
+Nothing in the shipped game reaches this state today: no object writes the flag yet, so the whole
+branch is unreachable outside tests and the upright game is unaffected.
+
+**Verified as of 2026-09-17.** The airborne path is no longer a selector-only claim:
+`TestS3kReverseGravityDezCorridor` drives an inverted Sonic, Tails and Knuckles into the measured
+Death Egg act 2 corridor in all four movement quadrants and asserts each rest position against an
+upright control measured in the same corridor. All six push-out and snap sites of the three
+`DoLevelCollision` routines are covered, and so is the grounded path: `Call_Player_AnglePos`
+:22330 now wraps `CollisionSystem.resolveGroundAttachment`, and an inverted player stands and runs
+along the corridor ceiling in ground mode CEILING. The player action rows landed with them: roll, unroll, jump (headroom and
+radius), spindash release, bubble-shield bounce and touch-floor, for all three characters. The camera look pans and the sprite render mirror
+landed too.
+
+**Updated 2026-09-18.** Groups D and G are complete and most of F and H are done: the CPU
+sidekick respawns from the other side of the leader, the carried player is mirrored, the lost-ring
+spill arc throws rings away from the ceiling they stand on (the engine had the sign conjugate of
+`loc_1A7E8`, which mirrored every arc), all four shields are drawn upside down, and a solid object
+is caught from its other face — overlap, push-out, landing snap and the continued platform ride.
+What remains missing is Knuckles' glide, slide and wall-climb rows, `Obj_Tails_Tail` and
+`Obj_DashDust`, the dead-player off-screen respawn test `loc_123DE`, and `sub_1E410`'s
+`loc_1E4D6`, which rebuilds its comparison rather than mirroring it. The monitor and spike rows
+modify upright structure the engine does not model and are recorded in the reference table with
+that reason.
+
+**Updated 2026-09-18, and the reachability changed.** `loc_123DE` is done, and so is the one
+row the ROM gets wrong (`Tails_Test_For_Flight` :28655 negates `d0` where the adjustment is in
+`d1`, so Tails' flight-start unroll is *not* inverted; modelled as shipped under `FixBugs = 0`).
+More importantly, **slice 3's `$5B` `Obj_DEZGravitySwap` has landed**, so the state is now
+reachable in ordinary Death Egg act 2 play for the first time. The earlier removal condition
+asked for zero missing group A-I rows before any writer shipped; that was not met, and shipping
+the writer anyway is a deliberate choice recorded here rather than a resolution.
+
+**What an inverted player in act 2 therefore still gets wrong**, eleven rows across groups A-I:
+
+- **Knuckles' glide, slide and wall climb** (:30921, :30977, :31004, :31068, :31205). His glide
+  floor probe goes through `ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle` directly, while
+  the ROM's `.continueSliding` calls `sub_11FD6` — the swapping wrapper — so the glide
+  landing, the slide get-up and the slide's floor snap all measure against the wrong surface
+  while the flag is set. The two climb rows are whole alternate bodies, not sign flips.
+- **`Obj_Tails_Tail` and `Obj_DashDust`** (:30063, :34038, :34113): Tails' trailing tails and the
+  spindash/skid dust are not mirrored and keep their upright Y offsets.
+- **`sub_1E410`'s `loc_1E4D6`** (:41999): the sloped/top solid-object landing rebuilds its
+  comparison with a deliberate one-pixel asymmetry rather than mirroring, and needs its own
+  measurement.
+- **`Touch_Monitor` :20802 and `Obj_Spikes` :48958**: both modify upright branches the engine
+  does not model at all; porting either means porting that upright branch first, which would
+  change shipped upright behaviour and belongs to those objects' own work.
+
+Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
+
+**The two gaps that arrived with `$58` are closed.** `Obj_DEZGravitySwitch` draws from
+`Map_DEZGravitySwitch` (ROM `$48BEA`) through `make_art_tile(ArtTile_DEZMisc+$143,1,0)`
+(sonic3k.asm:94801-94803), now a `Sonic3kPlcArtRegistry` level-art entry on the same
+`ArtTile_DEZMisc` block the Death Egg door already draws from, and its press plays
+`sfx_Transporter`, which the engine already carried as `Sonic3kSfx.TRANSPORTER` ($73) —
+the gap was a search for a `GameSound` constant, not a missing sound. `Obj_DEZGravitySwap`
+(`$5B`) has no art in the ROM and is correctly invisible.
+
+**Suspected cause.** Not a defect — a deliberately sliced port. 15 of the 116
+`Reverse_gravity_flag` references in the disassembly are still unimplemented (11 of them in
+groups A-I, above; the rest are the act 2 boss's three and `Obj_DEZConveyorPad`'s one). No
+Death Egg gravity object owns a missing row any more; the row-by-row inventory is
+[s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
+
+**Removal condition.** The eleven group A-I rows listed above land, each with a test that runs
+it with the flag set, and the reference table reaches zero missing rows for groups A-I. The
+`ChooseChkFloorEdge` partial and the three hurt death-plane partials stay recorded rather than
+credited: see the reference table for why each cannot be told apart from a sibling that already
+passes.
 
 ---
 
@@ -6046,3 +6158,26 @@ not yet have native parity or a cold full-act route certificate.
   would dispatch here too.
 - **Removal condition** — The teleport moves to the object that owns it in ROM, the size list gates
   the `SPECIAL` decode, and a Knuckles + Tails Metropolis clip shows Tails staying where they were.
+
+## Object `$78` Is Registered Twice; the First Implementation Is Dead Code
+
+- **Location** — `Sonic3kObjectRegistry.registerDefaultFactories`, lines 217-218 and 1411-1412; `FbzDezPlayerLauncherInstance` (303 lines) and `FbzDezPlayerLauncherObjectInstance` (95 lines)
+- **Symptom** — `Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER` (`$78`, `Obj_FBZDEZPlayerLauncher`) is `factories.put(...)` twice in the same method. The later call wins, so every `$78` placement — 10 of them in Death Egg act 1, plus the Flying Battery ones — resolves to `FbzDezPlayerLauncherObjectInstance`, and `FbzDezPlayerLauncherInstance` never runs. Both are full implementations of the same ROM object and they differ in detail (only the dead one implements `SolidRoutineProfile` and plays a `Sonic3kSfx`), so the shadowing is silent behaviour selection, not a harmless duplicate.
+- **Suspected cause** — Two independent ports of the same ROM object landed without either noticing the other; no test asserts that a given id has exactly one factory.
+- **Removal condition** — One class owns `$78`, with the behavioural difference between the two resolved against `sonic3k.asm $3B942-$3BA8A`; the other is deleted; a registry test asserts no id is registered twice.
+
+---
+
+## Death Egg `$1700` Has No Resource Profile, Events or Arena
+
+- **Location** — `Sonic3kLevelResourceProfile` (only `$1701` has a custom profile), `Sonic3kScrollHandlerProvider` (zone `$17` is keyed without the act), `Sonic3kLevelSelectConstants`
+- **Symptom** — A direct `$1700` load boots the real DEZ3 layout, art and palette but places the players from the Start Location file at centre `$60,$70` instead of `loc_7FD9E`'s `$30,$CD`/`$10,$CD`; there is no `Obj_5A7C8` arena floor, so the player falls out of the level and dies within about 100 frames. The zone also inherits `SwScrlHpz` because the provider maps `$17` to the HPZ handler without checking the act, and the engine level select has no `$1700` entry. Measured 2026-09-17 at `035e48a58`; capture `~/Videos/OGGF/s3k-dez-bring-up/raw-00-baseline-before-work/1700-final-boss`.
+- **Suspected cause** — The zone was never implemented; only its level data is registered.
+- **Removal condition** — The S3K DEZ bring-up's slices 9 and 10 land: `$1700` resource profile, `SwScrlS3kDezFinalBoss`, the `DEZ3_*` events and arena objects, `Obj_DEZ3_Boss` and the `loc_803D6` exit, with the final-boss matrix's five claims recorded.
+
+## Death Egg Act 1's Turbine Corridor Jams at `x` ≈ `$2636`
+
+- **Location** — the act 1 `$5F` `Obj_DEZGravityRoom` corridor, `DEZ1_Sprites` record 299 at `$2480,$0840`; obstruction reached at x = 9773 (`$262D`) with the player's own radius, so the face is near `$2636`
+- **Symptom** — A player the corridor catches is blown right correctly (`x_vel` grows by `$38` a frame, matching `addi.w #$38,x_vel`), and the up/down steering works in the production loop (`y_vel` reaches `-584` holding Up and `+609` holding Down). But at every steered height the player stops dead at x = 9773 with `x_vel` frozen at 2912 and never moves again, because the corridor never releases them — the release test is the same `$500` window and they are still inside it. The `$61` `Obj_DEZGravityPuzzle` at `$2690,$0840` sits 100 px beyond the jam, in mid-air 236 px above the nearest floor at y = 2348, so its `loc_49850` launch and its six `MHZ_pollen_counter` panel markers have no reachable site: they are implemented and unit-tested but cannot be filmed or reached in play. Measured 2026-09-18 at `ff1f6e977` with `GameplayCaptureTool`, S3K zone 11 act 1, positioned entry `--x 0x2500 --y 0x0840`, three runs (neutral, Up held, Down held).
+- **Suspected cause** — Not the `$5F` object: its blow and both steering directions are confirmed working in the same captures. **`$60` `Obj_DEZBumperWall` is now ruled out** (2026-09-19, `a7402643e`+): it is implemented and live, and the same positioned capture (`--x 0x2500 --y 0x0840`, 300 neutral frames) jams at the identical x = 9773 with `x_vel` frozen at 2912. The arithmetic says why the hypothesis was always weak — records 311 and 312 sit at `$2600` with `d1 = $17`, so their right face is `$2617` = 9751, and the player's left edge stops at 9764, past them. **It is not static terrain either.** A player placed at `$2620` (9760) or `$2640` (9792) at the same y `$0840` is in open space: they simply fall 236 px to the floor at y 2348, which means neither side of the jam face is inside a solid. Only a player the corridor is carrying stops there. That leaves one candidate: `move` + `resolveAirCollision` clamping a blown player against something the ROM's `MoveSprite2` + `SonicKnux_DoLevelCollision` would push out of and let continue — a wall tile a standing player never probes but a fast-moving one does.
+- **Removal condition** — A native BizHawk capture of a player blown through the act 1 turbine room says whether the ROM passes `$2636` and at what height. With `$60` and static terrain both ruled out, the fix is expected in the blown player's own collision resolution rather than in a Death Egg object; either way the `$61` launch and panel clip is filmed and the act 1 validation matrix's `$61` row gains its visual claim.

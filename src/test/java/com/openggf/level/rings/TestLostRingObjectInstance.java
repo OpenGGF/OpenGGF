@@ -192,15 +192,50 @@ class TestLostRingObjectInstance {
     @Test
     void s3kReverseGravityProbesCeilingNotFloor() {
         // ROM: S3K Reverse_gravity_flag routes Obj37 to Obj_Bouncing_Ring_Reverse_Gravity,
-        // which probes the CEILING (RingCheckFloorDist_ReverseGravity, upward) and only when
-        // yVel <= 0 (rising). Relocated from RingManager.java:1271-1294.
-        ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, /*yVel rising*/-0x0400,
+        // which probes the CEILING (RingCheckFloorDist_ReverseGravity, :20411-20423, scanning
+        // upward from y_pos - y_radius). loc_1A7E8's `bmi.s loc_1A83C` (sonic3k.asm:35679) gates
+        // that probe on y_vel being NON-NEGATIVE, exactly as the upright body's `bmi.s loc_1A7B0`
+        // (:35767) does: velocity is never inverted, so positive y_vel is "falling" toward the
+        // ceiling that serves as the floor here. The launch velocity that reaches this state is
+        // the positive half of the spill fan. Relocated from RingManager.java:1271-1294.
+        ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, /*y_vel falling*/0x0400,
                 /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
                 /*reverseGravity*/true);
         ring.setVblaForTest(0);     // 0 & 7 == 0 → probe fires this frame
         ring.stepPhysicsForTest(0x18, true);
         assertEquals(1, ring.ceilingProbeCount, "S3K reverse gravity must probe the ceiling");
         assertEquals(0, ring.floorProbeCount, "S3K reverse gravity must NOT probe the floor");
+    }
+
+    @Test
+    void s3kReverseGravitySpillArcThrowsRingsAwayFromTheCeilingFloor() {
+        // ROM Obj_Bouncing_Ring_Reverse_Gravity loc_1A7E8 (sonic3k.asm:35675-35678):
+        //   bsr.w MoveSprite_TestGravity2   ; y_pos += -y_vel  (:36089-36096)
+        //   addi.w #$18,y_vel(a0)           ; gravity stays POSITIVE
+        // Velocity is never inverted, only the position integration is — the same rule
+        // MoveSprite_TestGravity states for the player. The spill loop that hands the ring
+        // its launch velocity (loc_1A6AE..loc_1A728, :35592-35613) has NO flag branch: d3
+        // comes straight off GetSineCosine for both gravities. So an inverted ring launched
+        // with a negative y_vel must move DOWN the screen, away from the ceiling it will
+        // fall back onto, exactly as an upright ring with the same negative y_vel moves up.
+        ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, -0x0400,
+                /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
+                /*reverseGravity*/true);
+        int startY = ring.getY() & 0xFFFF;
+        ring.setVblaForTest(1);     // 1 & 7 != 0 → no probe; this asserts integration alone
+        ring.stepPhysicsForTest(0x18, true);
+        assertTrue((ring.getY() & 0xFFFF) > startY,
+                "loc_1A7E8 integrates -y_vel: a negative launch velocity throws the ring "
+                        + "down the screen, away from the ceiling it stands on");
+
+        ProbeRecordingRing upright = new ProbeRecordingRing(0x100, 0x100, 0, -0x0400,
+                /*mask*/GameRules.SONIC_2.ring().ringFloorCheckMask(),
+                /*reverseGravity*/false);
+        int uprightStartY = upright.getY() & 0xFFFF;
+        upright.setVblaForTest(1);
+        upright.stepPhysicsForTest(0x18, true);
+        assertTrue((upright.getY() & 0xFFFF) < uprightStartY,
+                "control: the same launch velocity throws an upright ring up the screen");
     }
 
     @Test

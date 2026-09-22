@@ -871,3 +871,28 @@ checkpoint and input as raw-40, not a cold-route/native-parity setup.
 Both rewind guards passed in a fresh `-Pguards` invocation at 21:14 BST,
 zero skips. Clip 25 is the decoded 2940-frame / 49-second excerpt (source
 1500–4439). Combined campaign validation/integration remains outstanding.
+
+
+### DEZ branch integration into the campaign
+
+Merged existing DEZ head `b65b5966a` into campaign head `7dc253667` locally.
+The ten textual conflicts were reconciled by retaining LRZ/SSZ registrations,
+act-specific animation and special-zone routing while adding DEZ owners. Capture
+settings preserve the existing checkpoint/rings constructors and expose reverse
+gravity independently; a combined-option regression checks all three. The DEZ
+reference worktree remains untouched.
+
+The merged Java-21 queued Maven selection `TestS3kDez*,TestS3kReverseGravity*,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry` completed 347 tests with zero
+failures, errors or skips, using absolute S3K/S1/S2 ROM paths. The seeded act-2
+frontier remains 1256 frames; row 21029 differs by one pixel in X and camera X.
+Cold act-2 entry remains zero matching frames and is not certified by this pass.
+
+The capture arguments, imported badnik checks and rewind checks initially ran
+29 tests: 28 passed, no skips; the only failure was the stale source-class count.
+The actual probe reports 1232 classes, 992 isolated passes, 240 graph-covered,
+zero missing codecs and unchanged remaining buckets. Updating the count was
+followed by both rewind checks passing in a fresh `-Pguards` JVM. This is focused
+integration evidence; shared reverse-gravity changes still require the combined
+campaign validation before delivery.

@@ -2295,6 +2295,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             // Offs_AniFunc entries 40-43: $A00 is AnimateTiles_DoAniPLC / AniPLC_SSZ,
             // $A01 is AnimateTiles_NULL, a bare rts, so act 2 runs no script at all.
             case Sonic3kZoneIds.ZONE_SSZ -> actIndex == 0 ? Sonic3kConstants.ANIPLC_SSZ_ADDR : -1;
+            // Offs_AniFunc entries 22 and 23 pair both Death Egg acts with the generic
+            // AnimateTiles_DoAniPLC and AniPLC_DEZ; nothing gates the eight scripts
+            // (sonic3k.asm:53885-53888).
+            case Sonic3kZoneIds.ZONE_DEZ -> Sonic3kConstants.ANIPLC_DEZ_ADDR;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
             // Offs_AniFunc pairs for $1601 (Hidden Palace) and $1701 (sanctuary) are
             // AnimateTiles_DoAniPLC / AniPLC_HPZ; $1600 and $1700 have no AniPLC

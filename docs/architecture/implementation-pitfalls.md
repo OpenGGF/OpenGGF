@@ -32,6 +32,25 @@ and writing the ROM animation word changes both current and previous animation.
 The [KiS2 wall investigation](research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b)
 records independent geometry, position-word and animation-restart regressions.
 
+**A player sensor is not a terrain oracle.** `Sensor.doScan` returns `null` when the
+sensor is inactive, and `AbstractPlayableSprite.updateSensors` deactivates the pair the
+current movement quadrant does not use — ceiling sensors whenever the player is grounded
+or moving mostly downward, ground sensors while moving mostly upward. A sweep that probes
+`getCeilingSensors()` without activating them therefore reports zero hits at every sample
+point, in every zone, which reads exactly like missing collision data. Activate the sensor
+(or drive the sprite into the quadrant that uses it) before believing a negative result,
+and prefer a control in a zone where the same probe is known to hit. Measured 2026-09-17:
+a 4161-point Death Egg act 2 sweep reported 0 upward hits and was recorded as an engine
+defect; forcing `setActive(true)` at one of those points returned the ceiling at distance 7.
+
+**The two vertical terrain helpers disagree by one pixel.** For the same column,
+`ObjectTerrainUtils.checkCeilingDist` reports zero distance one row higher than the ceiling
+sensor does — `checkCeilingDist` says the Death Egg act 2 corridor ceiling ends at y=$051F,
+the sensor's first clear row is $0520, and an upright head-bonk comes to rest against $0520.
+Shipped player collision runs through the sensor (`Sonic_CheckCeiling`'s `eori.w #$F,d2`
+form of `FindFloor`, sonic3k.asm:20242-20256), so derive expected player positions from the
+sensor or from a measured upright control, never from the convenience helper.
+
 **Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
 object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
 the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can
@@ -533,3 +552,21 @@ nonzero code pointer. Mecha Sonic's `loc_7B39C` ends with a bare `AllocateObject
 and no write; reserving an engine slot for it invents an occupant. Distinguish the
 search from the caller's initialization before translating allocation pressure.
 Origin: 2026-09-22 S&K completion campaign, SSZ Mecha graph audit.
+
+### `TerrainCheckResult.hasCollision()` means overlapping, not "found"
+
+A terrain sweep written around `hasCollision()` reports **no terrain anywhere**, confidently
+and silently. `ObjectTerrainUtils.checkFloorDist(x, centreY, radius)` returns
+`hasCollision() == false` with `distance() == 8` for a floor 8 px below the probe — a real
+surface it found and measured. It returns `true` only once the probe box is *inside* the
+terrain (`distance() <= 0`). Nothing found returns `distance() == 32767`.
+
+So "did this probe find a surface?" is `distance() != 32767` (in practice, a small finite
+distance), and the surface is at `centreY + radius + distance`. Measured 2026-09-18 while
+sweeping Death Egg act 2 for floors under the `$5B` gravity swaps: the first sweep reported
+that all eleven sites had no floor within `$400` px, which is obviously false for a level
+people walk through, and the fault was only located by running the same helper against the
+already-measured corridor at x=`$1ACC`.
+
+**Calibrate a terrain sweep against a known-good point before believing a negative result.**
+A sweep that finds nothing is far more often a wrong predicate than an empty level.

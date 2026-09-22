@@ -48,6 +48,24 @@ public final class NativePositionOps {
         player.shiftY(dy);
     }
 
+    /**
+     * Adds a native 16:16 fixed-point delta to {@code y_pos}, the Y twin of
+     * {@link #addXPos16_16}.
+     *
+     * <p>Object routines that move a captured player vertically do this rather than
+     * calling the shared motion code, so the whole {@code y_vel} accumulates in the
+     * subpixel half instead of being truncated each frame. {@code Obj_DEZTeleporter}'s
+     * ride (sonic3k.asm:95095-95101) is the pattern: {@code move.l y_pos(a1),d3},
+     * {@code move.w y_vel(a1),d0}, {@code ext.l d0}, {@code asl.l #8,d0},
+     * {@code add.l d0,d3}, {@code move.l d3,y_pos(a1)}.
+     */
+    public static void addYPos16_16(AbstractPlayableSprite player, int delta16_16) {
+        int nativePosition = (player.getCentreY() << 16) | player.getYSubpixelRaw();
+        nativePosition += delta16_16;
+        player.setCentreYPreserveSubpixel((short) (nativePosition >> 16));
+        player.setSubpixelRaw(player.getXSubpixelRaw(), nativePosition & 0xFFFF);
+    }
+
     public static void writeXPosResetSubpixel(AbstractPlayableSprite player, int x) {
         player.setCentreX((short) x);
     }

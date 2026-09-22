@@ -47,6 +47,25 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void checkpointRingsAndReverseGravityRemainIndependentAfterCampaignMerge() {
+        var args = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "dez", "--act", "2", "--out-dir", "out",
+                "--star-post", "--rings", "17", "--reverse-gravity"});
+        assertTrue(args.starPost());
+        assertTrue(args.reverseGravity());
+        assertEquals(17, args.rings());
+        var oldSettings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, 0x140, 0x3AC, null, false, false, null, null, true, 17);
+        assertTrue(oldSettings.starPost(), "existing positioned-capture constructor retains its meaning");
+        assertFalse(oldSettings.reverseGravity());
+        var combined = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, 0x140, 0x3AC, null, false, false, null, null, true, 17, true);
+        assertTrue(combined.starPost());
+        assertTrue(combined.reverseGravity());
+        assertEquals(17, combined.rings());
+    }
+
+    @Test
     void requiresZoneActAndOutputDirectory() {
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(
                 new String[] {"--zone", "aiz", "--out-dir", "o"}));

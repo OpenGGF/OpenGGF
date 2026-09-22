@@ -72522,11 +72522,21 @@ Not one defect across the eight-row table -- **three**:
 1. **The seven act-2 `dez23*` classes (550 errors) are one cause**: the missing
    `Obj_HPZSSEntryControl` above. Same ten fields, same values, same routine.
 2. **`Dez238` (621) is a different segment and a different cause.** Its metadata
-   is zone 23 **act 1** = Hidden Palace Zone proper (level-size row
-   `sonic3k.asm:38142`), 5118 rows, and its frame 0 is a running act-entry:
-   `x` 0x0036/0x0030, `x_speed` 0x0600/0x000C, `camera_x` 0x0080/0x0000,
-   `rings` 163/0. The rings term is the known save/run-inventory boundary; the
-   running-entry term is separate. Neither is the arena controller.
+   is zone 23 act 1 (1-based) = **act index 0 = `$1700`, the Death Egg final-boss
+   arena** (level-size row `sonic3k.asm:38143` `dc.w 0, $6000, $20, $20 ; DEZ Boss`),
+   5118 rows, and its frame 0 is a running act-entry: `x` 0x0036/0x0030,
+   `x_speed` 0x0600/0x000C, `camera_x` 0x0080/0x0000, `rings` 163/0. Neither is the
+   arena controller.
+
+   **Corrected 2026-09-17 (S3K DEZ campaign, `035e48a58`).** The original text above
+   read "act 1 = Hidden Palace Zone proper (level-size row `sonic3k.asm:38142`)".
+   That was wrong. `dez23_8/metadata.json` is `zone_id 23`, `act 1` (the fixtures
+   number acts from 1), `bk2_frame_offset` 509032, `start_x 0x0030`, `start_y 0x00CD`
+   — exactly `loc_7FD9E`'s `$1700` Player 1 start. The `camera_x` `$80` is
+   `DEZ3_ScreenInit` and the 163 rings are `Act3_ring_count` carried across
+   `loc_7F310`'s `StartNewLevel $1700`, not a save/run-inventory boundary. Hidden
+   Palace proper is `$1601`, whose segments live in the `hpz*` directories. The
+   directory names in this run are shifted one zone throughout; select by `zone_id`.
 3. **`Aiz3` (1567) is a third cause.** `tails_x` 0x0220/**0x7F00** -- the actual is
    the `sub_13ECA` off-screen respawn sentinel (P64), with
    `tails_cpu_routine` 0x0006/0x000A and `rings` 75/0. A sidekick-lifetime plus
@@ -111297,3 +111307,308 @@ above. No frontier moved; no trace pass is claimed. Positioned boulder completio
 and rewind do not replace cold route/strict trace certification. Next implementation
 frontier is the still-incomplete LRZ3 events/autoscroll/end-boss path; inherited
 LRZ1 CPU and local route frontiers remain open.
+
+
+## 2026-09-17 — S3K Death Egg (`$B00`/`$B01`) and `$1700`: campaign baseline frontiers
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, base
+develop `035e48a58`. Slice 0 of the
+[S3K DEZ bring-up](../architecture/plans/2026-09-17-s3k-dez-bring-up.md). No production
+code existed for either zone when these were measured; every class is expected red.
+
+Command (one invocation, all six classes, 0 skips — the ROM path resolved):
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen -Ptrace-replay-r7 \
+  "-Dtest=TestS3kSonicTailsSszSegmentTraceReplay,TestS3kSonicTailsDez238SegmentTraceReplay,\
+TestS3kTailsFullChainSszSegmentTraceReplay,TestS3kTailsFullChainSsz2SegmentTraceReplay,\
+TestS3kTailsFullChainSsz3SegmentTraceReplay,TestS3kTailsFullChainDez238SegmentTraceReplay" \
+  -DfailIfNoSpecifiedTests=false test
+```
+
+Result: 6 tests, 6 failures, 0 errors, 0 skipped.
+
+| Class | Fixture (select by `zone_id`, not name) | Errors | First error |
+| --- | --- | --- | --- |
+| `TestS3kSonicTailsSszSegmentTraceReplay` | `s3k-sonic-tails-complete-emeralds/ssz` — `zone_id 11` = **DEZ**, both acts and the handover, offset 468982, start `$0030,$09AC` | 7005 | frame 0 `camera_x` expected `0x0040`, actual `0x0000` |
+| `TestS3kSonicTailsDez238SegmentTraceReplay` | `…/dez23_8` — `zone_id 23` act index 0 = **`$1700`**, offset 509032, start `$0030,$00CD` | 621 | frame 0 `x_sub` expected `0x0000`, actual `0x0C00` |
+| `TestS3kTailsFullChainSszSegmentTraceReplay` | `s3k-tails-full-chain-all-emeralds/ssz` — DEZ act 1, offset 444059 | 1661 | frame 0 `camera_x` expected `0x0040`, actual `0x0018` |
+| `TestS3kTailsFullChainSsz2SegmentTraceReplay` | `…/ssz_2` — DEZ act 2 | 229 | frame 0 `camera_y` expected `0x080E`, actual `0x0810` |
+| `TestS3kTailsFullChainSsz3SegmentTraceReplay` | `…/ssz_3` — DEZ act 2 restart (lifecycle evidence) | 200 | frame 0 `camera_y` expected `0x044E`, actual `0x0450` |
+| `TestS3kTailsFullChainDez238SegmentTraceReplay` | `…/dez23_8` — `$1700` | 339 | frame 0 `camera_y` expected `0x0010`, actual `0x0020` |
+
+Every class diverges on its first compared row, so these are bootstrap/initial-state
+numbers, not route depth. None of them is a frontier that moved; they are the
+campaign's starting measurement, stamped at `035e48a58`.
+
+The stale `Dez238` identification earlier in this log (2026-08-15, "act 1 = Hidden
+Palace Zone proper") is corrected in place above from `dez23_8/metadata.json`.
+
+## 2026-09-18 — Death Egg act 2 has a route frontier: 390 frames
+
+Commit `040022c3e`, worktree `.worktrees/ai-s3k-dez-bring-up`, branch
+`feature/ai-s3k-dez-bring-up`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+`TestS3kDezColdRoutes` drives Death Egg act 2 on the controller input of the committed
+Sonic + Tails complete run (`…/ssz`, `zone_id 11`) and compares player position, camera and
+rings row for row. Two routes, and the difference between them is the finding:
+
+| Route | Frontier | First divergence |
+| --- | --- | --- |
+| Cold `$B01` from the engine's own level start | 0 frames | frame 1 (native row 18670): expected `x=01E8 y=072C cam=00C0,068C rings=123`, actual `x=0140 y=03AC cam=00A0,034C rings=0` |
+| Seeded at the first frame of act 2 free play (native row 19772) | **390 frames** | frame 391 (native row 20163): `player_y` expected `$039E`, actual `$039F`; `x`, camera and rings all exact |
+
+**The cold route's divergence is not a defect.** The movie enters act 2 through the act 1
+handover: `zone_act_state` puts `actual_act` at 1 from row 18670, `apparent_act` follows 582
+frames later, and rows 19509-19548 then carry the player up the entrance at a flat `$10` px a
+frame with `x` pinned at `$0140` and `y_vel` zero — a scripted ride, not physics. It ends with
+the player standing at `$0140,$03AC`, which is **exactly where the engine's own cold act 2 boot
+puts them**. A cold `$B01` start begins at the end of a sequence the movie plays through, so the
+two can only be compared once the entrance is implemented, or from the frame it hands control
+back. That frame is native row 19772 (first non-zero `x_speed` at 19770, first grounded row at
+19772), and it is where the seeded route starts.
+
+**A camera lock nearly read as an engine defect.** The seeded route first stopped at 39 frames
+on `camera_x` `$0080` against `$007E` — the native camera stops dead at `$0080` while the player
+keeps walking left to `$00CA`. `LevelSizes`' DEZ2 row gives a minimum camera X of `0` and the
+engine loads that faithfully, so the pin is a camera lock the entrance sequence leaves behind,
+not a boundary the engine gets wrong. Seeding the lock as declared setup moved the frontier from
+39 to 390 frames. Recorded because the two-pixel version would have been reported as a defect.
+
+The frontier is pinned in the test as a ratchet (`SEEDED_ROUTE_FRONTIER = 390`), so it cannot
+move backwards silently. The next target is the first divergence itself: at native row 20163 the
+player is airborne and rolling, and `y_vel` flips from `$003F` to `$FF89` between rows 20161 and
+20162 — an upward impulse mid-air with no jump available, so an object is most likely giving it.
+Identify that object before treating the pixel as a physics rounding difference.
+
+
+## 2026-09-18 — Death Egg act 2's 390-frame divergence is an unimplemented badnik
+
+Commit `d79a6eb7c`, worktree `.worktrees/ai-s3k-dez-bring-up`, branch
+`feature/ai-s3k-dez-bring-up`. No engine run was needed: the cause is in the fixture's own rows
+and in the ROM.
+
+The seeded act 2 route diverges at native row 20163 with `player_y` `$039E` expected against
+`$039F` actual, and the previous entry left the question open — the player is airborne and
+rolling with no jump available, and `y_vel` flips from `$003F` to `$FF89` between rows 20161 and
+20162. **It is a destroyed badnik.**
+
+```
+row=20160 x=035B y=039E xs=02CC ys=0007 air=1 roll=1
+row=20161 x=035E y=039E xs=02CC ys=003F air=1 roll=1
+row=20162 x=0361 y=039F xs=02CC ys=FF89 air=1 roll=1
+row=20163 x=0363 y=039E xs=02B6 ys=FFC1 air=1 roll=1
+```
+
+`$003F + $38` (one frame of gravity) is `$0077`, and `$FF89` is exactly `-$0077`. That is
+`neg.w y_vel(a0)` at **sonic3k.asm:20979**, the enemy-destroyed branch of `Touch_ChkHurt`:
+`tst.w y_vel(a0)` is not negative, so it falls past `.bounceplayerdown`; `cmp.w y_pos(a1),d0`
+with the player at `$039F` and the enemy at `$03B0` is *below*, so it falls past
+`.bounceplayerup` as well, and the remaining branch negates the whole velocity. The three-way
+split is what makes the arithmetic identifying: the other two arms add or subtract `$100`
+and neither produces `$FF89` from `$003F`.
+
+The enemy is **`$A4` `Obj_Spikebonker`**, `DEZ2_Sprites` record 2 at `$0380,$03B0`, subtype
+`$20` — the only placement of any object within 64 px of the divergence, and its own
+`ObjDat_Spikebonker` hitbox (`$10` x `$14`, collision flags `$1A`, sonic3k.asm:199117-199120)
+plus its `-$80`/frame patrol walk (`loc_91A0C`, :198906-198911) close the 31 px between the
+placement and the player. It is **a placeholder in the engine**: `$A4` is absent from
+`TestS3kDezPlacementCensus`'s concrete set and the object inventory lists its 11 act 2 and 7
+act 1 placements as unimplemented slice 4 work.
+
+So the frontier does not move until `Obj_Spikebonker` is implemented; there is no physics fix to
+make here, and the one-pixel difference is not a rounding difference. The air drag either side of
+the divergence is already exact (`x_vel -= x_vel >> 5` on every row whose `y_vel` is negative and
+no drag on the two rows where it is not), which is the check that the surrounding physics is not
+the suspect.
+
+## 2026-09-18 — Death Egg act 2's route frontier moves 390 → 472 on one badnik
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$A4` `SpikebonkerBadnikInstance`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 390 frames | **472 frames** |
+
+The previous entry predicted this: the divergence at native row 20163 was the enemy-destroyed
+rebound `neg.w y_vel(a0)` (sonic3k.asm:20979), which a placeholder cannot give, and the enemy was
+`$A4` `Obj_Spikebonker`. Implementing it closed that frame and the 81 after it. The prediction and
+the result are separable — the arithmetic identified the routine before any code was written, and
+the frontier is the check.
+
+A second, independent confirmation fell out of the ROM reading. `Obj_Spikebonker`'s patrol is
+`x_vel` `±$80` with `Obj_Wait` turning it after `subtype` frames and `subtype * 2` thereafter
+(`loc_91A0C`/`loc_91AB0`, :198906-198964). At subtype `$20` that is a beat reaching about 32 px
+left of the placement: `$0380 - $1F` is `$0361`, **exactly the player's x at the divergent row**.
+The badnik was at the far end of its own patrol.
+
+**The new first divergence is a spring, at native row 20245.**
+
+```
+row=20244 x=04A8 y=049B xs=0568 ys=09A0 air=1 sto=06
+row=20245 x=04AD y=04AB xs=0568 ys=F600 air=1 sto=0E
+```
+
+`y_vel` goes to `$F600` = `-$A00` in one frame, `ground_vel` is overwritten with `x_speed`, and
+`stand_on_obj` changes from `$06` to `$0E`. The engine's `y` reads `$04A4` against the ROM's
+`$04AB`, so the snap to the spring's own Y is missing as well as the launch. The only placement in
+reach is `DEZ2_Sprites` record 8, **`$5D` `Obj_DEZRetractingSpring`** at `$04B0,$04C0` with
+`render_flags` bit 1 set (Y-flipped, which is why it fires a player upward from below) and subtype
+`$02`. It has 13 act 2 placements and is still a placeholder, so it is the next class the route
+wants.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 472.
+
+### 2026-09-18 — DEZ act 2: the retracting spring moves the seeded frontier to 527
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$5D` `S3kDezRetractingSpringObjectInstance`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 472 frames | **527 frames** |
+
+**One correction to the previous entry.** It called record 8 "Y-flipped, which is why it fires a
+player upward from below". Both halves are wrong and they cancelled. `Levels/DEZ/Object Pos/2.bin`
+record 8 has Y word `$24C0`, and `CommonPlacementParser` reads the flip pair as
+`(yWord >> 13) & 3`, so the flags are `1` — **X**-flipped, not Y. And the flip bits do not choose
+the launch direction at all: they choose which way the piston extends in X
+(`loc_48124`, sonic3k.asm:94146-94157, where `btst #0` skips a negate and `btst #1` adds one, so
+the sign is the exclusive or of the two). The launch is always `$30(a0)`, which
+`word_4808A(pc,subtype & 2)` fixed at `-$A00` for every one of the thirteen subtype-`$02`
+placements. A Y-flipped retracting spring still fires upward.
+
+The 55 frames the implementation bought are the whole ballistic arc: row 20245's `-$A00`, the
+`addq.w #8,y_pos(a1)` nudge that puts the player at `$04AB` rather than the engine's old `$04A4`,
+and the fall back down through row 20299.
+
+**The new first divergence is a landing, at native row 20300.**
+
+```
+row=20299 x=0497 y=03C8 xs=FDE8 ys=01D0 air=1 sto=0E
+row=20300 x=0495 y=03CB xs=FDD0 ys=0000 air=0 sto=0D
+```
+
+The ROM lands: `air` clears, `y_vel` zeroes, `ground_vel` takes `x_speed` and `stand_on_obj`
+changes from `$0E` to `$0D`. The engine is one pixel high at `y=$03CA` and its `camera_y` is
+`$0382` against `$037C`, because it has nothing to land on. The only placements under `x $0495` at
+that height are `DEZ2_Sprites` records 5 and 6, **`$55` `Obj_DEZEnergyBridge`** at `$0400,$03E8`
+and `$0480,$03E8`, both subtype `$01` and both still placeholders. `$55` has 13 act 1 and 12 act 2
+placements, so it is the next class the route wants.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 527.
+
+### 2026-09-19 — DEZ act 2: the energy bridge and the clock the route was not carrying
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$55` `S3kDezEnergyBridgeObjectInstance`.
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 527 frames | **616 frames** |
+
+**Two separate defects had to be fixed together, and the first one was in the route, not the
+engine.** `Obj_DEZEnergyBridge` is on for `((subtype & 3) + 2) << 5` frames out of a period of
+`$7F`, `$FF`, `$1FF` or `$3FF`, phased on `Level_frame_counter` (`sub_47DDE`,
+sonic3k.asm:93879-93902). The seeded act 2 route started a fresh engine level load, so its
+counter began at zero while the native one had been running since long before the act change:
+every frame-phased object in the act was wrong by an unknown offset. The route now seeds both
+`LevelManager` and `SpriteManager` from the fixture's `gameplay_frame_counter` at row 19772
+(`$4D39`), which is what `TraceReplaySessionBootstrap` already does for trace replay, and asserts
+that value and its successor so a re-recorded fixture fails loudly.
+
+**The second was a sign error in the engine's top-solid acceptance window, found from one native
+row.** With the clock seeded, the bridge landed the player at row 20299 where the ROM leaves them
+airborne until 20300. `loc_1E45A` (:42000-42007) ends with `cmpi.w #-$10,d0 / blo.w locret`, and
+`blo` is *unsigned*: it rejects every `d0` below `$FFF0`, zero included. Together with the
+preceding `sub.w d1,d0 / bhi`, the accepted window is `-$10 <= d0 <= -1` — the player's feet must
+already be inside the surface by at least one pixel, and the exact boundary is not a landing. At
+row 20299 the player's `y $03C8` sits exactly at `$03E8 - 9 - $13 - 4`, so `d0` is 0 and the ROM
+passes; a pixel later it is `-2` and they land at `$03CB`, which is the ROM's row 20300 to the
+pixel. Both `$55` and `$5D` now declare `rejectsZeroDistanceTopSolidLanding()`, since both call the
+same `SolidObjectTop_1P`. The engine-wide profile documentation claims S3K accepts the exact
+boundary; that claim is wrong for this routine and is contradicted here rather than edited, because
+changing the shared default is not in this campaign's scope.
+
+A third reading, recorded because it was nearly mistaken for a bug: at rows 20187-20199 the player
+runs along `y $03CC` with `stand_on_obj $06` directly under the first bridge and is *not* caught by
+it. `status_byte` is `$00` there — no `Status_OnObj` — so that is terrain, the `$06` is a stale
+`interact` latch, and the bridge is simply outside its window (phase `$62` against an on-duration
+of `$60`). The riding formula `objY - d3 - y_radius` gives `$03CC` and the new-landing formula
+`objY - d3 - y_radius - 1` gives `$03CB`, which is why rows 20300 and 20301 differ by one.
+
+**The new first divergence is a hit, at native row 20389.**
+
+```
+row=20388 x=0424 y=05A1 ys=0E70 rings=4 air=1
+row=20389 x=0426 y=05B0 ys=FC00 rings=0 air=1
+```
+
+`y_vel` goes to `-$400` and `x_vel` to `-$200` — the hurt rebound — and the four rings the player
+had collected since row 20300 are lost. The engine still has them. The only placement in reach is
+`DEZ2_Sprites` record 7, **`$A5` `Obj_Chainspike`** at `$0480,$05B0` subtype `$00`, whose chain
+hangs down from there and which is still a placeholder. Six act 1 and twelve act 2 placements.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 616.
+
+### 2026-09-19 — DEZ act 2: the Chainspike, and a frontier that outran its own window
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$A5` `ChainspikeBadnikInstance`.
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 616 frames | **1256 frames** |
+
+The object closed the hit at native row 20389 and the 640 frames after it. `ROUTE_FRAMES` had to
+be widened from 1200 to 4000 to find the next divergence at all: the first run after the class
+landed reported "no divergence in 1200 frames", which is not a frontier, it is the end of the
+window.
+
+**Two readings of the ROM that the arithmetic settled before any code was written.**
+`$2E(a0)` is zero out of the RAM wipe and `SetUp_ObjAttributes` (sonic3k.asm:41043-41052) never
+writes it, so `Obj_Wait`'s first `subq.w #1` already goes negative and the badnik charges on its
+first update in routine 2 — there is no rest before the first charge. And `loc_91CC2`'s ramp runs
+*down*: `$40(a0)` steps `$C` towards zero every update (:199191-199195) and the new value is
+added to `x_vel`, so the corrections are `$174, $168, $15C, …`, largest first. The charge ends
+when the sum crosses the `-$1200` launch, which is `n*$180 - $C*n*(n+1)/2 > $1200` at
+**n = 17**.
+
+**The new first divergence is not a Death Egg object.** Native row 21029:
+
+```
+row=21026 x=0685 y=03CC xs=0600 status=08 sto=09    <- the ride starts
+row=21029 x=0697 y=03CE xs=0600 status=08 sto=09    engine x=0696, cam 05F6 vs 05F7
+```
+
+`status_byte $08` is `Status_OnObj`: the player has been riding an object since row 21026, and
+the only placement in reach is `DEZ2_Sprites` record 13, a shared **`$08`** at `$05C0,$038F`
+subtype `$20`. `y`, both speeds, the angle and the ring count all still match; the engine's `x`
+is one behind for one frame and then stays one behind. That is the shared platform's horizontal
+carry, not anything this campaign has written, and it is where the next measurement should start.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 1256 and `ROUTE_FRAMES` to 4000.

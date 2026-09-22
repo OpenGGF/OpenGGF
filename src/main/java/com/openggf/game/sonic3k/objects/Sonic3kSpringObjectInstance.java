@@ -192,7 +192,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
      */
     private void applyUpSpring(AbstractPlayableSprite player) {
         // ROM updates y_pos (centre coordinate) with a word-sized add, so preserve y_sub.
-        player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 8));
+        // sub_22F98 follows it with subi.w #2*8 under Reverse_gravity_flag
+        // (sonic3k.asm:47720-47726), a net -8.
+        player.setCentreYPreserveSubpixel((short) (player.getCentreY()
+                + com.openggf.physics.ReverseGravity.mirrorYDelta(isReverseGravityActive(player), 8)));
         player.setYSpeed((short) getStrength());
         player.setAir(true);
         // ROM sub_22F98 clears jumping(a1) after the spring overwrites y_vel;
@@ -231,7 +234,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
      */
     private void applyDownSpring(AbstractPlayableSprite player) {
         // ROM updates y_pos (centre coordinate) with a word-sized subtract, so preserve y_sub.
-        player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 8));
+        // sub_233CA follows it with addi.w #2*8 under Reverse_gravity_flag
+        // (sonic3k.asm:48093-48098), a net +8.
+        player.setCentreYPreserveSubpixel((short) (player.getCentreY()
+                + com.openggf.physics.ReverseGravity.mirrorYDelta(isReverseGravityActive(player), -8)));
 
         // ROM negates strength for down springs (positive = down)
         int yVel = -getStrength();
@@ -415,6 +421,12 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         } catch (Exception e) {
             // Prevent audio failure from breaking game logic
         }
+    }
+
+    /** {@code tst.b (Reverse_gravity_flag).w} as the spring's launch sites read it. */
+    private static boolean isReverseGravityActive(AbstractPlayableSprite player) {
+        var gameState = player.currentGameStateOrNull();
+        return gameState != null && gameState.isReverseGravityActive();
     }
 
     private void ensureInitialized() {

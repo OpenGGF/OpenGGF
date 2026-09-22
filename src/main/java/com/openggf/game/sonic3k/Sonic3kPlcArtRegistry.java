@@ -29,6 +29,18 @@ public final class Sonic3kPlcArtRegistry {
     private static final int[] DOOR_VERTICAL_HCZ_FRAMES = {0};
     private static final int[] DOOR_VERTICAL_CNZ_FRAMES = {1};
     private static final int[] DOOR_VERTICAL_DEZ_FRAMES = {2};
+    /** word_48BEE (armed) and word_48C08 (pressed), sonic3k.lst:112043-112044. */
+    private static final int DEZ_GRAVITY_SWITCH_FRAME_COUNT = 2;
+    // Map_DEZGravityPuzzle: frame 0 the six-piece shaft, 1 and 2 the mirrored marker panel,
+    // 3 and 4 both word_49AAC with zero pieces (the unpressed panels draw nothing).
+    private static final int DEZ_GRAVITY_PUZZLE_FRAME_COUNT = 5;
+    // Map_DEZRetractingSpring: word_481BC retracted, word_481D0 compressed, word_481DE
+    // extended (sonic3k.lst:111138-111140).
+    private static final int DEZ_RETRACTING_SPRING_FRAME_COUNT = 3;
+    // Map_DEZEnergyBridge: four frames of the same sliding 8x8 pair (sonic3k.asm:94088).
+    private static final int DEZ_ENERGY_BRIDGE_FRAME_COUNT = 4;
+    // Map_DEZBumperWall: one frame, two stacked 16x32 pieces (sonic3k.asm:96083).
+    private static final int DEZ_BUMPER_WALL_FRAME_COUNT = 1;
     private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
@@ -3125,6 +3137,74 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null,
                 DOOR_VERTICAL_DEZ_FRAMES
+        ));
+
+        // Gravity switch (SKL object 0x58, Obj_DEZGravitySwitch): the act 2 pressure pads.
+        // ROM header: move.l #Map_DEZGravitySwitch,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc+$143,1,0),art_tile(a0) (sonic3k.asm:94801-94802).
+        // Two frames -- word_48BEE armed, word_48C08 pressed -- from the same ArtTile_DEZMisc
+        // block the door above draws from, so no extra PLC is needed.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_GRAVITY_SWITCH,
+                Sonic3kConstants.MAP_DEZ_GRAVITY_SWITCH_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0x143,
+                1,
+                null,
+                DEZ_GRAVITY_SWITCH_FRAME_COUNT
+        ));
+
+        // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
+        // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:96088-96089),
+        // the same block Obj_DEZBumperWall draws from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_GRAVITY_PUZZLE,
+                Sonic3kConstants.MAP_DEZ_GRAVITY_PUZZLE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x31,
+                1,
+                null,
+                DEZ_GRAVITY_PUZZLE_FRAME_COUNT
+        ));
+
+        // Retracting spring (SKL object 0x5D, Obj_DEZRetractingSpring): act 2's horizontal
+        // piston. ROM header: move.l #Map_DEZRetractingSpring,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZ2Extra,1,0),art_tile(a0) (sonic3k.asm:94099-94100).
+        // ArtNem_DEZ2Extra is already queued into ArtTile_DEZ2Extra by DEZ act 2's PLC
+        // (plreq at sonic3k.lst:228636), so no extra PLC is needed.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_RETRACTING_SPRING,
+                Sonic3kConstants.MAP_DEZ_RETRACTING_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ2_EXTRA,
+                1,
+                null,
+                DEZ_RETRACTING_SPRING_FRAME_COUNT
+        ));
+
+        // Energy bridge (SKL object 0x55, Obj_DEZEnergyBridge): the intermittent top solids
+        // in both acts. ROM header: move.l #Map_DEZEnergyBridge,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc+$B2,1,0),art_tile(a0)
+        // (sonic3k.asm:93910, :93880), the same ArtTile_DEZMisc block the door and the
+        // gravity switch draw from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_ENERGY_BRIDGE,
+                Sonic3kConstants.MAP_DEZ_ENERGY_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC + 0xB2,
+                1,
+                null,
+                DEZ_ENERGY_BRIDGE_FRAME_COUNT
+        ));
+
+        // Bumper wall (SKL object 0x60, Obj_DEZBumperWall): the act 1 turbine room's walls,
+        // posts and exit gate. ROM header: move.l #Map_DEZBumperWall,mappings(a0) and
+        // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:95959-95960),
+        // the same block the $61 gravity puzzle draws from.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.DEZ_BUMPER_WALL,
+                Sonic3kConstants.MAP_DEZ_BUMPER_WALL_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MISC2 + 0x31,
+                1,
+                null,
+                DEZ_BUMPER_WALL_FRAME_COUNT
         ));
     }
 

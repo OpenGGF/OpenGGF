@@ -158,6 +158,8 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_ALARM = 0x22;
     public static final int MGZLBZ_SMASHING_PILLAR = 0x52;
     public static final int MGZ_SWINGING_PLATFORM = 0x53;
+    // SKL $55 is Obj_DEZEnergyBridge (sonic3k.asm:93909); S3KL $55 is Obj_MGZHeadTrigger.
+    // The two object tables share the number.
     public static final int MGZ_HEAD_TRIGGER = 0x55;
     public static final int MGZ_MOVING_SPIKE_PLATFORM = 0x56;
     public static final int MGZ_TRIGGER_PLATFORM = 0x57;
@@ -166,6 +168,19 @@ public final class Sonic3kObjectIds {
     public static final int MGZ_PULLEY = 0x5A;
     public static final int MGZ_TOP_PLATFORM = 0x5B;
     public static final int MGZ_TOP_LAUNCHER = 0x5C;
+    // SKL $5D is Obj_DEZRetractingSpring (sonic3k.asm:94098); S3KL $5D is
+    // Obj_CGZTriangleBumpers, a competition-zone object no zone 0-6 layout places. The two
+    // tables share the number.
+    public static final int DEZ_RETRACTING_SPRING = 0x5D;
+    // SKL object table only: Obj_DEZGravityRoom (sonic3k.asm:95814). The S3KL table has
+    // no object at $5F, so this number is named after its only owner.
+    public static final int DEZ_GRAVITY_ROOM = 0x5F;
+    // SKL object table only: Obj_DEZBumperWall (sonic3k.asm:95958). The S3KL table has no
+    // object at $60, so this number is named after its only owner.
+    public static final int DEZ_BUMPER_WALL = 0x60;
+    // SKL $61 is Obj_DEZGravityPuzzle (sonic3k.asm:96087); S3KL $61 is Obj_BPZBalloon, a
+    // competition-zone object no zone 0-6 layout places. The two tables share the number.
+    public static final int DEZ_GRAVITY_PUZZLE = 0x61;
     public static final int HCZ_SNAKE_BLOCKS = 0x67;
     public static final int TENSION_BRIDGE = 0x6C;
     public static final int INVISIBLE_HURT_BLOCK_H = 0x6A;

@@ -134,11 +134,20 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     private int itemBonus;
 
     /**
-     * Reverse gravity flag (ROM: Reverse_gravity_flag at $FFFFF768).
-     * When active, gravity is inverted for players and Y-dependent objects
-     * must flip their behavior (e.g., up springs become down springs).
-     * Used in S3K DEZ gravity-flip sections.
-     * Currently always false - will be activated by level events when implemented.
+     * Reverse gravity flag (ROM: {@code Reverse_gravity_flag} at $FFFFF7C6,
+     * sonic3k.constants.asm:684). One global byte, not per player: player 2 inverts
+     * with player 1 and every writer acts for player 1 only.
+     *
+     * <p>Velocity is never inverted — positive {@code y_vel} still means "falling",
+     * toward whichever surface is the floor. What inverts is the position integration
+     * ({@code MoveSprite_TestGravity}, sonic3k.asm:36068) and everything that follows
+     * from it: swapped floor/ceiling probes, mirrored terrain angles, negated push-out
+     * and radius adjustments, the death plane, and the vertical render mirror.
+     *
+     * <p>The ROM never checks the zone, so nothing that reads this flag may be zone- or
+     * game-keyed. Only S3K writes it (the three debug toggles, the Death Egg
+     * {@code $58}/{@code $59}/{@code $5B} objects and the act 2 boss's clearer object),
+     * so S1 and S2 behaviour cannot change.
      */
     private boolean reverseGravityActive;
 
@@ -293,6 +302,17 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         // survives into the next act and Sonic_LevelBound's `tst.b (Current_Boss_ID).w`
         // (s2.asm:37245-37250) keeps withholding the +$40 right-boundary extension.
         currentBossId = 0;
+        // Reverse_gravity_flag ($FFFFF7C6) is a level variable in the same sense:
+        // Level_ClrRam runs `clearRAM Tails_CPU_interact,$100` (sonic3k.asm:7621),
+        // which wipes $F700-$F7FF and so zeroes $F7C6 on a normal load, a death
+        // restart and StartNewLevel (Title_Screen does the same wipe at :5415).
+        // Nothing else in the ROM clears the byte except Obj_DEZGravitySwap and the
+        // clearer object the Death Egg act 2 boss spawns at defeat, so without this a
+        // death with gravity inverted would respawn the player upside down.
+        // The seamless act change is NOT this path: loc_593EC (:118724) calls
+        // Load_Level/LoadSolids with no RAM wipe, and LevelActTransitionExecutor
+        // restores the flag around its resetForLevel() call for exactly that reason.
+        reverseGravityActive = false;
         // f_bigring is a level variable, cleared by the same level-load RAM wipe:
         // S1 Level_ClrRam runs `clearRAM v_levelvariables` (docs/s1disasm/sonic.asm:2742)
         // and f_bigring (_Variables.asm:285) lies inside v_levelvariables (:179) ..
@@ -805,7 +825,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
 
     /**
      * Gets the reverse gravity flag.
-     * ROM: tst.b (Reverse_gravity_flag).w at $FFFFF768
+     * ROM: {@code tst.b (Reverse_gravity_flag).w} at $FFFFF7C6.
      *
      * @return true if reverse gravity is active
      */
