@@ -37,6 +37,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
     private SwScrlLrz lrzHandler;
     private SwScrlLrz3 lrzBossHandler;
     private SwScrlDdz ddzHandler;
+    private SwScrlSsz sszHandler;
     private SwScrlGumball gumballHandler;
     private SwScrlPachinko pachinkoHandler;
     private SwScrlSlots slotsHandler;
@@ -85,6 +86,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
         lrzHandler = new SwScrlLrz();
         lrzBossHandler = new SwScrlLrz3(rom);
         ddzHandler = new SwScrlDdz();
+        sszHandler = new SwScrlSsz();
         gumballHandler = new SwScrlGumball();
         pachinkoHandler = new SwScrlPachinko();
         slotsHandler = new SwScrlSlots();
@@ -144,6 +146,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
             case Sonic3kZoneConstants.ZONE_LRZ -> lrzHandler;
             case Sonic3kZoneIds.ZONE_HPZ -> actIndex == 0 ? lrzBossHandler : hpzHandler;
             case Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA -> actIndex == 0 ? defaultHandler : hpzHandler;
+            case Sonic3kZoneConstants.ZONE_SSZ -> sszHandler;
             case Sonic3kZoneIds.ZONE_GUMBALL -> gumballHandler;
             case Sonic3kZoneIds.ZONE_GLOWING_SPHERE -> pachinkoHandler;
             case Sonic3kZoneIds.ZONE_SLOT_MACHINE -> slotsHandler;

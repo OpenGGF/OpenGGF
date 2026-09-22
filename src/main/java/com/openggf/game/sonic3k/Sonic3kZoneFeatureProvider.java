@@ -17,6 +17,7 @@ import com.openggf.game.render.SpecialRenderEffect;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.sonic3k.features.AizBattleshipRenderFeature;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.scroll.SwScrlSsz;
 import com.openggf.game.sonic3k.features.AizTransitionRenderFeature;
 import com.openggf.game.sonic3k.render.HczBgHighPriorityForegroundOverlayEffect;
 import com.openggf.game.sonic3k.render.HczWallChaseBgOverlayEffect;
@@ -198,7 +199,33 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
                 || isHcz2BackgroundPlaneWindowActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId)
-                || isSozEventBackgroundWindowActive(zoneId);
+                || isSozEventBackgroundWindowActive(zoneId)
+                || isSszCloudBackgroundWindowActive(zoneId);
+    }
+
+    /**
+     * Sky Sanctuary act 1 runs the 512-pixel Plane B wrap model in <em>both</em> its background
+     * modes, and the scroll handler publishes the layout X for each.
+     *
+     * <p>Cloud mode is the same shape as MGZ state 8 and the ICZ1 opening: {@code loc_5786A},
+     * {@code loc_57946} and {@code loc_5799A} refresh the plane from a literal
+     * {@code move.w #$1C00,d1} instead of {@code Camera_X_pos_BG_copy}, which {@code sub_57A60}
+     * never writes.
+     *
+     * <p>Plain mode is camera-derived on the cartridge — {@code sub_57A60} writes
+     * {@code Camera_X_pos_BG_copy = Camera_X + $28} and {@code Reset_TileOffsetPositionEff} refills
+     * the plane from it — but "camera-derived" still means a 512-pixel nametable that moves with
+     * the camera, not a plane pinned at layout X 0. Leaving the wrap model off here sent
+     * {@code LevelManager.applyBackgroundTilemapWindowSelection} down its base-0 branch, so the
+     * scroll word wrapped inside layout columns 0-3 and the act's distant structures never
+     * reached the screen (s3k-known-bugs #41).
+     *
+     * <p>Act 2 is excluded: {@code SSZ2_BackgroundInit} is a different layer entirely and slice 9
+     * owns it.
+     */
+    private boolean isSszCloudBackgroundWindowActive(int zoneId) {
+        return zoneId == Sonic3kZoneIds.ZONE_SSZ && GameServices.hasRuntime()
+                && SwScrlSsz.backgroundWindowActive();
     }
 
     @Override public long backgroundDescriptorRevision() {

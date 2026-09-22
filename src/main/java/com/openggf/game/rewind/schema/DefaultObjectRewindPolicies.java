@@ -181,6 +181,30 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance", "beam"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HpzTeleporterRouteHelperObjectInstance", "teleporter"), RewindFieldPolicy.CAPTURED),
+            // loc_44BF8 reads its collapsing column through $2E(a0) every frame, both to hang
+            // from it and to report back with subq.b #1,routine(a1); the debris captures it as a
+            // typed ObjectRefId sidecar. TestS3kSszTraversalPlatforms drives the whole collapse.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszCollapsingColumnDebrisObjectInstance", "column"), RewindFieldPolicy.CAPTURED),
+            // Obj_SSZGHZBoss's ball and chain is a CreateChild9_TreeList: each link's parent3 is
+            // the link before it, not the ship, and the ship keeps the emitter and the whole list.
+            // All three are captured as typed ObjectRefId sidecars and relinked on restore;
+            // TestS3kSszGhzArenaHeadless drives the drop, the swing and the defeat across it.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossChainLinkChild", "chainParent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance", "shield"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
+            // Obj_SSZMTZBoss allocates one slot that turns itself into the first of seven orbs
+            // and allocates the other six; the ship keeps the whole list, each orb keeps the ship
+            // through a typed ObjectRefId sidecar. TestS3kSszMtzArenaHeadless drives the orbit,
+            // the launch and the defeat across a restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMtzBossObjectInstance", "orbs"), RewindFieldPolicy.CAPTURED),
+            // Obj_SSZEndBoss keeps the ChildObjDat_7D47A/_7D486/_7D480 after-images in a list and
+            // each one keeps the boss; loc_7C91C deletes itself the moment $38 bit 2 clears, so
+            // both sides are captured and relinked through typed ObjectRefId sidecars.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance", "trail"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "parent"), RewindFieldPolicy.CAPTURED),
+            // $30(a0) on the Mecha Sonic spawner pad: loc_45AB0 reads the boss slot back every
+            // frame to decide when to explode, so the pad's reference survives a restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance", "mechaBoss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             // Boss childComponents is an identity-bearing live graph. The compact collection
             // codec retains its exact managed children and their roles for restore/relink.

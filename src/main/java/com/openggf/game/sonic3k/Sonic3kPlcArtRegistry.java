@@ -2910,6 +2910,156 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 -1
         ));
+        // Obj_57C1E's arrival beam and the SSZ branch of Obj_SSZHPZTeleporter render
+        // Map_SSZHPZTeleporter from the level's own tiles: PLC_32_33_34_35 loads
+        // ArtNem_SSZMisc at ArtTile_SSZMisc, and the beam uses
+        // make_art_tile(ArtTile_SSZMisc+$88,3,1) (sonic3k.asm:116781).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_TELEPORTER,
+                Sonic3kConstants.MAP_SSZ_HPZ_TELEPORTER_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x88,
+                3,
+                null));
+        // Obj_SSZFloatingPlatform draws Map_SSZFloatingPlatform over
+        // make_art_tile(ArtTile_SSZMisc,2,0), i.e. the level's own ArtNem_SSZMisc tiles.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_FLOATING_PLATFORM,
+                Sonic3kConstants.MAP_SSZ_FLOATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC,
+                2,
+                null));
+        // Obj_SSZCollapsingColumn and its debris use the same mappings at ArtTile_SSZMisc+$10.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_COLLAPSING_COLUMN,
+                Sonic3kConstants.MAP_SSZ_FLOATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x10,
+                3,
+                null));
+        // ChildObjDat_665F6 -> loc_659CC: ObjDat3_664AA draws Map_SSZDeathEggSmall over
+        // ArtKosM_SSZDeathEggSmall at make_art_tile(ArtTile_SSZDeathEggSmall,3,0).
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.SSZ_DEATH_EGG_SMALL,
+                Sonic3kConstants.ART_KOSM_SSZ_DEATH_EGG_SMALL_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_SSZ_DEATH_EGG_SMALL_ADDR,
+                3,
+                -1
+        ));
+        // CutsceneKnux_SSZ shares CutsceneKnux_HPZ's body sheets: Map_Knuckles DPLC'd from
+        // ArtUnc_Knux into ArtTile_CutsceneKnux, and Map_SSZKnucklesTired for $38 bit 6.
+        addCutsceneKnucklesBodySheets(standalone);
+        // ObjDat_SSZCutsceneButton: make_art_tile(ArtTile_SSZCutsceneButton,0,0); the tiles come
+        // from PLC_32_33_34_35's second entry, ArtNem_GrayButton.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_CUTSCENE_BUTTON,
+                Sonic3kConstants.MAP_BUTTON_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_CUTSCENE_BUTTON,
+                0,
+                null));
+        // Obj_SSZCutsceneBridge: make_art_tile(ArtTile_SSZMisc+$20,2,1).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_CUTSCENE_BRIDGE,
+                Sonic3kConstants.MAP_SSZ_COLLAPSING_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x20,
+                2,
+                null));
+        // loc_57BB2: make_art_tile(ArtTile_SSZMisc+$3C,3,1) over Map_SSZRoamingClouds.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_ROAMING_CLOUD,
+                Sonic3kConstants.MAP_SSZ_ROAMING_CLOUDS_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x3C,
+                3,
+                null));
+        // Obj_SSZBouncyCloud and its loc_45304 puffs: make_art_tile(ArtTile_SSZMisc+$102,3,1).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_BOUNCY_CLOUD,
+                Sonic3kConstants.MAP_SSZ_BOUNCY_CLOUD_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x102,
+                3,
+                null));
+        // Obj_SSZElevatorBar, Obj_SSZSwingingCarrier and its arc and rider bar all draw
+        // Map_SSZElevatorBar; the hub and rider use palette 3 at the same tile base.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_ELEVATOR_BAR,
+                Sonic3kConstants.MAP_SSZ_ELEVATOR_BAR_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x74,
+                2,
+                null));
+        // Obj_SSZRotatingPlatform: make_art_tile(ArtTile_SSZMisc+$AA,2,0).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_ROTATING_PLATFORM,
+                Sonic3kConstants.MAP_SSZ_ROTATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0xAA,
+                2,
+                null));
+        // Obj_SSZRetractingSpring: make_art_tile(ArtTile_SSZMisc+$CE,0,0).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_RETRACTING_SPRING,
+                Sonic3kConstants.MAP_SSZ_RETRACTING_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0xCE,
+                0,
+                null));
+        // Obj_SSZGHZBoss (loc_7A268) queues ArtKosM_SSZGHZMisc into ArtTile_SSZGHZMisc as the
+        // fight starts. ObjDat3_7A660/_7A66C/_7A678 all draw Map_SSZGHZMisc on palette line 1:
+        // the first two carry a FixBugs=0 comment calling that line wrong, and the shipped ROM
+        // uses it, so line 1 is what this registers.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.SSZ_GHZ_BOSS_MISC,
+                Sonic3kConstants.ART_KOSM_SSZ_GHZ_MISC_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_SSZ_GHZ_MISC_ADDR,
+                1,
+                -1
+        ));
+        // Obj_SSZMTZBoss (loc_7A6DC) queues ArtKosM_SSZMTZOrbs into ArtTile_SSZMTZOrbs as the
+        // fight starts. loc_7ADB2 gives the orbs make_art_tile(ArtTile_SSZMTZOrbs,0,0) -- palette
+        // line 0 -- and ObjDat3_7ABFA gives the lasers make_art_tile(ArtTile_SSZMTZOrbs,1,1);
+        // the sheet is registered on the orbs' line and the laser draw passes its own.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.SSZ_MTZ_ORBS,
+                Sonic3kConstants.ART_KOSM_SSZ_MTZ_ORBS_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_SSZ_MTZ_ORBS_ADDR,
+                0,
+                -1
+        ));
+        // Obj_MechaSonicHead queues ArtKosM_MechaSonicHead into ArtTile_RobotnikShip and draws
+        // Map_MechaSonicHead on line 1 (ObjDat_MechaSonicHead).
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.MECHA_SONIC_HEAD,
+                Sonic3kConstants.ART_KOSM_MECHA_SONIC_HEAD_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_MECHA_SONIC_HEAD_ADDR,
+                1,
+                -1
+        ));
+        // Obj_SSZEndBoss runs Perform_DPLC over DPLCPtr_MechaSonic on every dispatch, so its art
+        // is dynamic exactly as a player's is: ArtUnc_MechaSonic uncompressed, DPLC_MechaSonic
+        // cues, Map_MechaSonic frames. ObjSlot_MechaSonic draws it on line 1.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.MECHA_SONIC,
+                Sonic3kConstants.ART_UNC_MECHA_SONIC_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_MECHA_SONIC_SIZE,
+                Sonic3kConstants.MAP_MECHA_SONIC_ADDR,
+                1,
+                Sonic3kConstants.DPLC_MECHA_SONIC_ADDR
+        ));
+        // loc_7B35A queues ArtKosM_MechaSonicExtra into ArtTile_MechaSonicExtra for the trail and
+        // spark children; ObjDat3_7D402 draws them on line 1.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.MECHA_SONIC_EXTRA,
+                Sonic3kConstants.ART_KOSM_MECHA_SONIC_EXTRA_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR,
+                1,
+                -1
+        ));
     }
 
     /**
@@ -3080,6 +3230,31 @@ public final class Sonic3kPlcArtRegistry {
                 2,
                 null
         ));
+    }
+
+    /**
+     * The two {@code Obj_CutsceneKnuckles} body sheets both {@code CutsceneKnux_HPZ} and
+     * {@code CutsceneKnux_SSZ} draw: {@code Map_Knuckles} DPLC'd from {@code ArtUnc_Knux} into
+     * {@code ArtTile_CutsceneKnux}, and {@code Map_SSZKnucklesTired} for {@code $38} bit 6. The
+     * key names keep their HPZ spelling because HPZ registered them first; the tired sheet is the
+     * ROM's own {@code SSZ} art.
+     */
+    private static void addCutsceneKnucklesBodySheets(List<StandaloneArtEntry> standalone) {
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES,
+                Sonic3kConstants.ART_UNC_KNUCKLES_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_KNUCKLES_SIZE,
+                Sonic3kConstants.MAP_KNUCKLES_ADDR, 1,
+                Sonic3kConstants.DPLC_KNUCKLES_ADDR,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, -1, 0, DplcLayout.PLAYER));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES_TIRED,
+                Sonic3kConstants.ART_UNC_SSZ_KNUCKLES_TIRED_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_SSZ_KNUCKLES_TIRED_SIZE,
+                Sonic3kConstants.MAP_SSZ_KNUCKLES_TIRED_ADDR, 1,
+                Sonic3kConstants.DPLC_SSZ_KNUCKLES_TIRED_ADDR));
     }
 
     /**

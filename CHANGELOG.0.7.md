@@ -6,6 +6,61 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K Sky Sanctuary:** Sky Sanctuary act 1 now plays its teleporter arrival instead of
+  dropping the player in at the level-start position. The screen init forces the arrival
+  camera and bounds, the controller beams Player 1 up the sanctuary column and hands control
+  back on the settle swing, Tails arrives on her own beam, and the act's dynamic camera bands
+  and vertical wrap follow the player. The cutscene Knuckles who opens the route — his beam,
+  the Death Egg he watches rise, the grey button and the bridge that extends over the gap,
+  with the checkpoint it leaves behind — is in place. The act's sky is its own now: the
+  background switches between the plain sanctuary framing and the banded cloud layer as the
+  camera crosses the cloud band, the clouds drift, the whole sky breathes on the act's
+  oscillator, five clouds roam across the screen and ten invisible cloud platforms can be
+  stood on, and the banded cloud layer is drawn from the part of the act's background the
+  cartridge draws it from, so the climb happens against real clouds instead of flat blue.
+  Sky Sanctuary's animated tiles run in act 1 and, as on the cartridge, not in act 2. The act's teleporter pads are real now: they draw, they can be stood on, they lift
+  the player and the camera the distance their placement asks for, and the two that wait on
+  a defeated boss sit sunk in the floor until it is beaten and then rise back into place.
+  The small floating platforms dip under a standing player, the tall columns break into eight
+  falling pieces when one is stood on, and the flat bridge sections crumble away from under the
+  player four pieces at a time — except the one section the cartridge marks permanent — and the
+  sloped walkways break into eight, sliding along their own slope as they go. The rest of
+  the act's traversal is in too: the little clouds squash under a standing player and throw
+  them up and back in a puff of four, the horizontal bars catch a player from above and swing
+  them before flinging them where they are steering, the short posts spin a player in place
+  and their invisible carriers walk them round in a circle, the swinging and rotating arms
+  carry a player at the tip of a jointed arc, and the retracting springs fold away until
+  somebody comes at them and then fire them along the deck. Sky Sanctuary's EggRobos patrol
+  the act now, in all three shapes the cartridge gives them: the distant one that crosses the
+  sky and, by crossing, lets its partner appear; the hovering one that tracks the player,
+  levels its arm and fires a laser once it has them lined up; and the one that lets four
+  animals go before it takes off and joins the others — and which, until it takes off, is the
+  harmless invisible marker the cartridge makes it rather than something that hurts a player
+  falling past, as the distant sky-crossing one is too. The first of the act's rebuilt boss
+  fights is in: walk into the lower arena and the camera closes behind you, the Green Hill ship
+  drops out of the sky with Mecha Sonic's head on it, runs the arena and pays out a six-piece
+  ball and chain whose ball hurts to touch, sweeps the floor and turns the ship around at each
+  end. The ship flashes three of its own colours while it is reeling from a hit, exactly as the
+  cartridge does — including the off-by-one that makes the flash duller than it was meant to be.
+  Eight hits send it away and open the way on. The second one follows it: climb to the upper
+  arena and the camera closes again, the Metropolis ship falls in with a ring of seven orbs
+  turning around it — passing in front of the ship and behind it as it turns — patrols the
+  arena and lifts its arms to swing the ring wide. Hitting it throws one orb off the ring at
+  you, and the ship will not come back down until every thrown orb has been dealt with; it has
+  seven of those in it. After the seventh it stops raising its arms, dives at the floor and
+  fires three pairs of lasers along it instead. The eighth hit sends it away and raises the
+  sunk pad in the arena floor. Mecha Sonic himself now turns up for the third: reach the far
+  end of the act and the pad there breaks apart as he comes tearing in from the right, runs
+  clean off the left of the screen, turns and comes back along the top with an after-image
+  trailing him. From there he works through his own repertoire — dropping on the floor, dashing
+  along it, turning to face the player, jumping, and following the jump with an air dash, a
+  ground pound or a landing that sets up two more dashes. Which parts of him can be hit and
+  which hurt to touch change frame by frame with his animation, as they do on the cartridge.
+  The eighth hit now ends him too: he is thrown back, holds still for a little over two seconds,
+  drops to the floor in his beaten pose, and the act hands over to its results — which waits for
+  the player to be standing rather than ending on a timer alone. The Death Egg launch is still to
+  come.
+
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
   instead of the Super Emerald sanctuary (`$1701`), which remains reachable from the

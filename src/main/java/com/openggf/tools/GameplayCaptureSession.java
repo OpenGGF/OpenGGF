@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
+import com.openggf.game.CheckpointState;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelBackdropResultsScreen;
@@ -160,6 +161,20 @@ public final class GameplayCaptureSession implements AutoCloseable {
                             "--camera-x-sub needs a zone that keeps a camera fraction"))
                     .setCameraXFraction(settings.cameraXSub());
         }
+        if (settings.starPost()) {
+            // Declared capture setup: a star post already hit, with Saved_X/Y at the requested
+            // start. Several acts run a scripted intro on the no-star-post path that overrides
+            // --x/--y outright — Sky Sanctuary act 1's SSZ1_ScreenInit forces the arrival camera
+            // and Obj_57C1E then writes Player 1 to Camera_Y + $65 — so positioned captures of
+            // anything past the intro need the star-post branch the ROM itself provides.
+            if (GameServices.level().getCheckpointState() instanceof CheckpointState checkpoint) {
+                checkpoint.saveCheckpoint(1,
+                        settings.startX() != null ? settings.startX() : 0,
+                        settings.startY() != null ? settings.startY() : 0,
+                        false);
+            }
+            level.initLevelEventsForLevel();
+        }
         player = GameServices.camera().getFocusedSprite();
         if (player == null) {
             throw new IllegalStateException("no focused playable sprite after boot");
@@ -176,6 +191,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
             level.initCameraForLevel();
             level.initLevelEventsForLevel();
             level.updateObjectPositions();
+        }
+        if (settings.rings() != null) {
+            // Declared capture setup: the ring count the route carried in. A boss filmed from a
+            // positioned start otherwise begins on zero rings, where the first touch is fatal and
+            // the fight cannot be filmed at all. Applied last: --star-post saves a checkpoint with
+            // restoreRings false and the reposition re-runs the level events, either of which can
+            // zero a count written earlier. Ported from the Lava Reef campaign's b35f59d33.
+            player.setRingCount(settings.rings());
         }
     }
 
@@ -343,7 +366,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
-                           Integer cameraXSub, Integer rings) {
+                           Integer cameraXSub, boolean starPost, Integer rings) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
@@ -354,7 +377,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         Path donorRom, Integer startX, Integer startY, String emeraldStates,
                         boolean showTitleCard, boolean completeSpecialStage) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, null, null, null);
+                    showTitleCard, completeSpecialStage, null, null, false, null);
         }
 
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
@@ -362,7 +385,23 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
                         Integer cameraXSub) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, null);
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false, null);
+        }
+
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub, Integer rings) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false, rings);
+        }
+
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub, boolean starPost) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, null);
         }
 
         public Settings {

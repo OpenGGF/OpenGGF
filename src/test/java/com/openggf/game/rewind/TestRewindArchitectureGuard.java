@@ -33,6 +33,85 @@ class TestRewindArchitectureGuard {
             "\\bpublic\\s+void\\s+restoreRewindState\\s*\\(");
 
     private static final Map<String, Integer> OBJECT_REWIND_OVERRIDE_BASELINE = Map.ofEntries(
+            // Sky Sanctuary arrival and cutscene graph. Each override exists for one of two
+            // reasons the generic schema cannot cover: a cross-object SST link the ROM keeps as
+            // a word ($3C the beam, $20 the cutscene Knuckles) which must survive as an
+            // ObjectRefId, or a Gradual_SwingOffset/raw-animation holder whose RewindStateful
+            // value is captured as a typed extra. Restore equality and forward replay are
+            // covered by TestS3kSszArrivalHeadless and TestS3kSszKnucklesBridgeHeadless.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszArrivalControllerObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszArrivalControllerObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszTailsArrivalHelperObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszTailsArrivalHelperObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneKnucklesSpawnerObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneKnucklesSpawnerObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesSszInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesSszInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszDeathEggSmallObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszDeathEggSmallObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneBridgeObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneBridgeObjectInstance.java#restoreRewindState", 1),
+            // Obj_SSZCollapsingColumn's debris keeps the same cross-object SST link: loc_44BF8
+            // reads its parent through $2E(a0) every frame, both to hang from it and to report
+            // back with subq.b #1,routine(a1), so the reference must survive a restore as an
+            // ObjectRefId. Restore equality is covered by TestS3kSszTraversalPlatforms and the
+            // per-object round trip in TestEveryObjectRewindRoundTrip.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCollapsingColumnDebrisObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCollapsingColumnDebrisObjectInstance.java#restoreRewindState", 1),
+            // Obj_SSZGHZBoss and its three child shapes. Same triage, four more cross-object SST
+            // links: CreateChild9_TreeList parents each chain link to the link before it rather
+            // than to the ship, the ship keeps that list plus the ChildObjDat_7A69E emitter, and
+            // Child1_MakeMechaHead's head reads the ship every frame through
+            // Refresh_ChildPositionAdjusted. None of them can be rebuilt from the spawn alone, so
+            // each captures its references as typed ObjectRefId sidecars. Restore equality is
+            // covered by TestS3kSszGhzArenaHeadless and the per-object round trip.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossChainLinkChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossChainLinkChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossShieldChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossShieldChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicHeadChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicHeadChild.java#restoreRewindState", 1),
+            // Obj_SSZMTZBoss and its two child shapes. The ship carries the 16.16 SSZ_MTZ_boss
+            // position/velocity pair, the three arm bytes and the two-level $26/$32 dispatch, none
+            // of which is a spawn decode; each orb holds the ship through a typed ObjectRefId
+            // sidecar and carries its own three orbit angles; and the laser child keeps the shot's
+            // own 16.16 X, its hold counter and the flip it copied off the ship at setup. Restore
+            // equality is covered by TestS3kSszMtzArenaHeadless and the per-object round trip.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossOrbChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossOrbChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossLaserChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossLaserChild.java#restoreRewindState", 1),
+            // Triaged: Mecha Sonic's act-1 graph is twenty-one routines over a 16.16 position, a
+            // $34 callback, a $38 flag byte and a raw-animation cursor addressed by ROM address,
+            // none of which the generic capture reaches; and the after-image children hold the
+            // boss and the subtype sub_7D236 turns into their offset and priority. Restore
+            // equality is covered by TestS3kSszMechaSpawnHeadless and the per-object round trip.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicTrailChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicTrailChild.java#restoreRewindState", 1),
+            // Triaged: loc_7D056 is a three-field countdown object -- the $2E the handover gate
+            // pre-decrements, the routine sub_868F8 writes, and whether the results allocation
+            // has happened -- none of which the generic capture reaches. Restore equality is
+            // covered by TestS3kSszMechaSpawnHeadless.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicActEndObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicActEndObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboJetFlameChildInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboJetFlameChildInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszRotatingPlatformObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszRotatingPlatformObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierArcObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierArcObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierBarObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszSwingingCarrierBarObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#captureRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#restoreRewindState", 2),
             // Explosion construction factories cannot be derived from placement or services.
@@ -237,7 +316,15 @@ class TestRewindArchitectureGuard {
             // SOZ quicksand halfExtent/variant are immutable subtype decodes.
             // Spawn recreation reconstructs both; cooldown/ownership remains captured
             // by the participant table and cold-route rewind checks.
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SozQuicksandObjectInstance.java#@RewindTransient", 2)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SozQuicksandObjectInstance.java#@RewindTransient", 2),
+            // Sky Sanctuary arrival and cutscene objects: the annotated fields are the placement
+            // X and the release/base Y each object is constructed with. recreateForRewind rebuilds
+            // every one from the same ObjectSpawn, so they are immutable spawn decodes rather than
+            // uncaptured frame state.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszArrivalControllerObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneKnucklesSpawnerObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszTailsArrivalHelperObjectInstance.java#@RewindTransient", 2),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneBridgeObjectInstance.java#@RewindTransient", 2)
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(

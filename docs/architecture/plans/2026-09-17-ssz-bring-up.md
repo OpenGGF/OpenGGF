@@ -1,8 +1,9 @@
 # Sky Sanctuary Zone: methodology v2 bring-up plan
 
 Date: 2026-09-17. Planned branch `feature/ai-ssz-bring-up` in `.worktrees/ai-ssz-bring-up`;
-execution base develop `9cba6dbb6` (pin this SHA for the combined change-based validation; re-pin
-and re-measure if the branch is cut later). Applies
+execution base develop `035e48a58` (pin this SHA for the combined change-based validation; the
+branch was cut one commit after the `9cba6dbb6` the first draft named — the difference is the docs
+merge that added this plan). Applies
 [methodology v2](../designs/2026-09-15-zone-methodology-v2.md) with the refinements from the
 [SOZ](2026-09-15-soz-methodology-v2.md), [HPZ](2026-09-16-hpz-bring-up.md) and
 [DDZ](2026-09-17-ddz-bring-up.md) campaigns to SSZ (`$A00` Sonic/Tails, `$A01` Knuckles). Design
@@ -332,6 +333,20 @@ Written together with the [LRZ](2026-09-17-lrz-bring-up.md), [SSZ](2026-09-17-ss
   DEZ lands first. SSZ does not use it.
 - **Clock-seeded RNG/aim** (`V_int_run_count`: Mecha Sonic, DEZ turrets as in DDZ) needs a declared
   seed for movie-route matching until the full cold chain supplies it; label such evidence seeded.
+- **Shared ring-sentinel fix, owned by LRZ (`3418eba6e`).** Every S3K ring list begins with a
+  `(0,0)` record that `Load_Rings` (`loc_E8BE`) always steps over, because its scan starts at
+  `max(Camera_X - 8, 1)`; the engine's window floor is `max(cameraX - 8, 0)` and so spawned it as a
+  real ring wherever the camera reaches X 0 — which SSZ1 does once the cutscene bridge retracts.
+  The LRZ branch fixes it in shared `Sonic3kRingPlacement` and it reaches this branch at merge
+  time, dropping one ring from every SSZ act's live set. **SSZ does not make this edit** (it would
+  duplicate the fix). The SSZ obligation is that no test pins the sentinel-inclusive number
+  silently: `TestS3kSszPlacementCensus#ringRecordsMatchTheRomIncludingTheLeadingZeroRecord` now
+  decodes `SSZ1_Rings`/`SSZ2_Rings` from the ROM itself, asserts the collectible totals the ROM
+  allows (**179** act 1, **0** act 2), and accepts the loader either matching those already or
+  carrying exactly one leading `(0,0)` sentinel, which it asserts *as* a sentinel with the message
+  naming `3418eba6e`. The test is correct on both sides of the merge and turns red if the extra
+  record is ever anything but that sentinel. The slice 0 gap entry in
+  [s3k-known-bugs](../../status/s3k-known-bugs.md) closes when the merge lands.
 - **Knuckles trace testing is out of scope (user decision 2026-09-17).** One Knuckles replay class
   exists (`TestS3kKnucklesLbz2BigArmTraceReplay`); the `s3k-knuckles-complete-superemeralds` run has no
   segment classes. A campaign may add one where cheap, but owes no Knuckles replay frontier; Knuckles
@@ -371,13 +386,15 @@ Still open — the named slice must resolve each **before** building on it:
 
 ## Status
 
+Last updated 2026-09-18 after slice 6, on `feature/ai-ssz-bring-up`.
+
 | Claim | State |
 | --- | --- |
-| Implemented | Not started. Exists: level load, music, title card, EggRobo art entry, HPZ-branch teleporter/beam, HPZ exit requests |
-| Cold-reachable | Not started. SSZ1 loads from the HPZ route with default scroll, no events, no objects |
-| Rewind-verified | Not started |
-| Native behaviour matched | Not started. Fixtures identified (table above); no SSZ native probes yet |
-| Visually matched | Not started |
+| Implemented | Slices 0, 1, 1b, 2, **3**, **4**, **5** and **6** delivered. All 154 act-1 slice-3 placements resolve to concrete classes (`$74 $75 $76 $79 $7A $7B $7C $7D $7E $7F $A0`); the census ratchets act 1 to zero unimplemented families and act 2 still owes `$B2` (slice 9). On top of that: the placement census, runtime state, screen init, the whole `sub_575EA` bounds machine **including** the Green Hill allocation at `loc_576E8`, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, the act-1 background, the death and checkpoint lifecycle, `Obj_SSZGHZBoss` with its six-link chain, emitter and Mecha Sonic head, and **`Obj_SSZMTZBoss`** with its seven-orb ring, laser pair and the `loc_5775C` spawn that allocates it. Slices 7-11 are not started |
+| Cold-reachable | Act 1's arrival and cutscene run from a cold load and open the route: the bridge clears `Events_bg+$05` and the camera limits become `0 … $19A0`. `TestS3kSszColdRoutes` carries the recorded movie input to X `$6EB`, past the bridge and the arrival ledge, short of the `$7B` cluster at `$740`. Everything past that — the traversal families, both arenas, the lifecycle — is exercised from **declared** star-post entries, not from a route. `SSZ1_ScreenInit` is why: with no star post it drags the leader back to the arrival column, so a walked approach to anything past the bridge does not exist yet. Act 2 still loads with no events |
+| Rewind-verified | Spots: the cloud band (slice 2), six slice-3 families, the `$7E` debris **deletion** (the first SSZ spot where an `ObjectRefId` sidecar is load-bearing, because the children really are gone at the restore), the death reload's timeline isolation, the Green Hill fight mid-swing with all six chain links out, and the Metropolis fight with one orb off the ring. Each was broken on purpose once. Still owed: a spot mid-arrival or mid-cutscene, and any spot at a wide viewport |
+| Native behaviour matched | Three places. The act-1 background layout is decoded from the ROM and matched column for column against the engine's layer. Fixture `hpz` row 0's arrival values match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference recorded as open. Fixture `hpz_2` is itself a `$34:$03` restart and its row 0's player `($14C0,$EC)` and camera `($1420,$8C)` are matched exactly. **Nothing else is.** In particular no boss, no traversal family and no EggRobo is compared against a native row, and the `hpz` fixture's Green Hill arena window (camera `$160,$7C0`, 1142 rows) is unread. There is still no SSZ native probe |
+| Visually matched | Seventeen clips, `01`-`17`, each cut from a raw capture whose frames were read before cutting; the frames looked at are in `~/Videos/OGGF/ssz-bring-up/INDEX.md`. Every slice-3 family, the death and restart, and the Green Hill fight are filmed. Not filmed: the EggRobo's nibble-0/nibble-2 pairing in one shot (the obstacle is measured in INDEX.md), a wide-viewport row for anything past slice 2, and known bug #41's before/after — which was taken and shows **no pixel difference**, reopening the rendered half of that fix |
 
 Out of scope, recorded as dependencies: DEZ presentation/route after `$B00` (DEZ campaign, which
 also owns the mislabelled `ssz*` fixtures); `sub_5B18E`, `Obj_Ending`, credits and the Knuckles
@@ -385,4 +402,2049 @@ good/bad ending (ending campaign); Sonic's post-credits Mecha/EggRobo scenes.
 
 ## Evidence log
 
-(empty — first entry is slice 0)
+### 2026-09-17 — slice 0: baseline and identity
+
+Worktree `.worktrees/ai-ssz-bring-up`, branch `feature/ai-ssz-bring-up`, base develop `035e48a58`.
+ROM by absolute path: `.worktrees/ai-ssz-bring-up/s3k.gen` (symlink, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`). All Maven through
+`python3 tools/testing/maven_queue.py -Dmse=off …`.
+
+**Placement census.** New `src/test/java/com/openggf/tests/TestS3kSszPlacementCensus.java`.
+Expectations were derived by decoding the ROM directly (a throwaway Python walk of
+`SpriteLocPtrs`/`RingLocPtrs` index `zone * 2 + act`, zone `$0A`) before writing the Java, and they
+reproduce the [inventory](../research/s3k-zones/ssz-object-inventory.md) exactly: act 1 213 records
+in 66 (ID, subtype) rows, act 2 5 records in 3 rows, union 68 rows (`$79:$00` is the shared row);
+pointer targets `$1F90EE`, `$1F95F2`, `$1F9616`, `$1F98E8`; 180 ring records in act 1 (first
+`(0,0)`, 179 positioned) and the `(0,0)` record alone in act 2; no record sets Y-word bit 15; the
+two wrap-seam `$7D` records store `$103C`/`$104C` and mask to `$03C`/`$04C` at X `$C70`/`$C94`.
+All 22 placed IDs resolve to their SKL (SK Set 2) names, not the S3KL `FBZ_*`/`ICZ_*` names the same
+numeric IDs carry for zones 0-6 — so the early check "SKL object table resolves `$74-$B2` for zone
+`$0A`" passes.
+
+- **Broken on purpose first.** With the act-1 count set to 214:
+  `-Dtest=TestS3kSszPlacementCensus` → `Tests run: 7, Failures: 1, Errors: 0, Skipped: 0`,
+  `SSZ1 live object records ==> expected: <214> but was: <213>`. Restored:
+  `Tests run: 7, Failures: 0, Errors: 0, Skipped: 0`. Zero skips both times, so the ROM path
+  resolved and the comparison is live rather than silently absent.
+
+**Media root.** `~/Videos/OGGF/ssz-bring-up/` created with `inputs/`, `native/`, `reel/` and the
+DDZ `make_clip.sh`, `make_clips.sh`, `side_by_side.sh`. `raw-00` baselines captured with
+`GameplayCaptureTool` on a neutral/right script (`90 -; 180 R; 90 -`), 320 px, 360 frames each,
+never to be overwritten:
+
+| Capture | Configuration | Start | Observed |
+| --- | --- | --- | --- |
+| `raw-00-ssz1-before` | `$A00`, Sonic | `LevelData` `(256,3072)` = `$100,$C00`, camera `(96,2976)` | Sanctuary terrain against a flat blue sky; no cloud background, no arrival, no events (frame 200 inspected) |
+| `raw-00-ssz2-before` | `$A01`, Knuckles | `Knux_Start_Locations` `(128,32)` = `$80,$20`, camera `(0,0)` | Static cloud layout; no arrival controller, camera controller or crane (frame 200 inspected) |
+
+**Fixture identity.** The plan's fixture table is confirmed from the committed metadata:
+`zone_id 10` with acts 1,1,1 for `s3k-sonic-tails-complete-emeralds/hpz{,_2,_3}` (offsets 448920 /
+460334 / 465044, starts `$100,$FAE`, `$14C0,$E8`, `$1880,$968`), acts 1,1 for
+`s3k-tails-full-chain-all-emeralds/hpz{,_2}` (423903 / 433476), act 2 for
+`s3k-knuckles-complete-superemeralds/hpz` (412501, `$80,$6AE`). The one-time trace-directory
+identity table in [trace frontier log](../../status/trace-frontier-log.md) is the **LRZ campaign's**
+edit; it is referenced here, not duplicated.
+
+`$100,$FAE` is not a start-location table value: `SSZ1_ScreenInit` forces camera `($60,$F49)` and
+`Obj_57C1E` sets Player 1 Y to `Camera_Y + $65` = `$FAE`. Row 0 of the fixture reads camera
+`$60,$F41` and player `$100,$FA6` — both exactly 8 px lower, i.e. one `loc_57D50` rise step, which
+matches the recorder sampling rows after the frame. The same explains the Knuckles `$80,$6AE`
+(`SSZ2_ScreenInit` camera Y `$649` + `$65`). This answers slice 1's "explain the `$100,$C00` vs
+ROM-forced camera difference from the ROM before coding": the level-start table is never used on
+the no-starpost path, because `SSZ1_ScreenInit` overwrites the camera and the controller overwrites
+the player.
+
+**Open question 8 (leading `(0,0)` ring record) — resolved on the ROM side, gap on the engine side.**
+`Load_Rings` `loc_E8BE` sets `d4 = Camera_X - 8` and forces `d4 = 1` when that is not above zero,
+then advances the cursor while `d4 > recordX`. With a floor of 1 the `X = 0` record is always
+stepped over, so the ROM never makes it collectible; it is a list head, not a ring. The engine's
+`RingManager.RingPlacement#ringWindowStart` floors at 0, so at `Camera_X <= 8` the record enters
+the window — and SSZ1 does reach `Camera_min_X = 0` once the cutscene bridge retracts
+(`loc_44FBA`). The margin is shared with the S2 raw window, so this is filed as a shared-owner gap
+in [s3k-known-bugs](../../status/s3k-known-bugs.md) rather than patched here. The census test
+records the decode either way.
+
+**Deferred from slice 0, with kill conditions.**
+
+| Item | Why deferred | Kill condition |
+| --- | --- | --- |
+| Native pass-1 savestates and `tools/bizhawk/capture_ssz_route_reference.lua` | The arrival window's native question is already answered by the committed fixture rows above, which are cheaper and stronger than a fresh probe. The probe is built by the first slice that asks it a question the traces cannot answer | A slice needs a field the physics/aux rows do not carry (palette lines, object slots, `_unkFAxx`); then the probe is written and pass 1 saves a state near every window |
+| Chaos vs Super emeralds in each movie | The committed manifests carry `emeralds_after` (7 before every SSZ segment in all three runs) but no Chaos/Super distinction and no `Super_emerald_count`; the run *names* claim Super Emeralds for the Knuckles run and Chaos for the others, which is a label, not a measurement. Slices 0, 1 and 1b are form-independent: the arrival and the cutscene run under `object_control 3`/`$83` scripts | Read `Collected_emeralds_array` / `Super_emerald_count` at the SSZ entry frame from a native probe or savestate. Required before any route row claims a form |
+
+**Docs.** Both matrices created
+([act 1](../validation/levels/s3k-ssz-act1.md), [act 2](../validation/levels/s3k-ssz-act2.md)) with
+the five claims kept in separate columns, and both backlog rows updated in
+[level test coverage](../../status/level-test-coverage.md).
+
+**Correction to this plan.** The execution base is `035e48a58`, not `9cba6dbb6` (updated above).
+`loc_13A10`'s starpost gate reads `Tails_CPU_star_post_flag`, not `Last_star_post_hit`.
+
+### 2026-09-17 — slices 1 and 1b: runtime state, arrival, act-1 bounds, cutscene
+
+Commit `686824e73` on `feature/ai-ssz-bring-up`. Same worktree, ROM and Maven wrapper as slice 0.
+
+**What landed.** `runtime/SszZoneRuntimeState` (the sixteen `Events_bg` bytes with byte and word
+accessors, `Events_fg_4`, both routine words, `_unkEE98`/`_unkEE9C`, `_unkFA84`, `_unkFAA4`,
+`_unkFAB8`, and the screen-init latch), registered in `S3kRuntimeStates`, installed by
+`Sonic3kLevelEventManager` and added to `currentRuntimeStateUsesThisEventInstance` so a reinstall
+cannot zero the bytes or replay the init. `events/Sonic3kSSZEvents` ports `SSZ1_ScreenInit`,
+`SSZ2_ScreenInit` and the whole of `sub_575EA`, including the `word_5778A`/`word_5779A` bands and
+both arena branches up to (not including) boss allocation. Objects: `SszArrivalControllerObjectInstance`
+(`Obj_57C1E`…`loc_57DA2`), `SszTailsArrivalHelperObjectInstance` (`Obj_57DCC`),
+`SszCutsceneKnucklesSpawnerObjectInstance` (`Obj_57E34`), `CutsceneKnucklesSszInstance`
+(`CutsceneKnux_SSZ`, all eleven routines), `SszDeathEggSmallObjectInstance` (`loc_659CC`…`loc_65A4A`),
+`SszCutsceneButtonObjectInstance` (`$AF`) and `SszCutsceneBridgeObjectInstance` (`$77`), plus the
+shared `S3kGradualSwing` (`Gradual_SwingOffset`) and `SszCheckpointOps` (the pseudo-starpost).
+Art: an `ArtNem_SSZMisc` level entry for the beam and the bridge, `ArtNem_GrayButton` for the
+button, `ArtKosM_SSZDeathEggSmall` and the two shared cutscene-Knuckles body sheets.
+
+**Where the screen init runs, and why.** `SSZ1_ScreenInit` is a load-time routine that precedes the
+first `Load_Sprites`/`Process_Sprites` pass. Calling it from `installZoneRuntimeState` (the
+Doomsday hook) was tried first and **rejected**: the engine's level load positions the camera
+*after* the runtime state is installed, so the forced `($60,$F49)` was overwritten and `Obj_57C1E`
+placed Player 1 at `Camera_Y + $65` off the level-start camera `$BA0` — the capture read
+`(256,3077)` instead of `$100,$FAE`. It now runs from `updatePrePhysics` of the first frame, which
+is the earliest hook after the camera is settled and still before the object pass. Consequence,
+recorded rather than fitted: frame 1 is `Obj_57C1E`'s init pass (player `$FAE`, camera `$F49`,
+`Events_bg+$04`/`+$05` set, no rise step) and frame 2 is the first `loc_57D50` step. The native
+fixture's row 0 reads camera `$60,$F41` / player `$100,$FA6`, i.e. one rise step already taken, so
+the engine's arrival is **one frame later** than the recorded segment's phase. That is a cold-route
+phase question for slice 10, not a bounds or arithmetic difference: every value matches.
+
+**Tests.** `src/test/java/com/openggf/tests/TestS3kSszArrivalHeadless.java` (6 cases, 320 and 800)
+and `TestS3kSszKnucklesBridgeHeadless.java` (3 cases). Both were seen red before the code was
+right, on real defects rather than on a placeholder: the arrival test caught the missing
+`Events_bg+$04`, the un-cleared `Scroll_lock`, a two-frame rise offset and the load-time camera
+problem above; the cutscene test caught the spawner's off-by-one allocation frame and the fact that
+the bridge never loads while the player stands on the arrival column (`Load_Sprites` only reaches
+X `$320` once the camera has moved). Final runs, zero skips throughout:
+
+| Command | Result |
+| --- | --- |
+| `-Dtest=TestS3kSszArrivalHeadless` | 6 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kSszKnucklesBridgeHeadless` | 3 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kHpz*,TestS3kDdz*,TestEveryObjectRewindRoundTrip,TestS3kSsz*` | 1391 tests, 0 failures, 0 skips |
+| `-Pguards test -B` | 669 tests, 0 failures, 0 skips |
+
+This is focused validation, not a suite pass.
+
+**One real regression, caught and fixed.** Giving `Obj_TeleporterBeamExpand`'s `parent2` word a
+`TeleporterBeamOwner` interface so the arrival controller could own a beam broke 35 HPZ tests with
+`Missing required object reference` on restore. The rewind identity table only registers
+`ObjectInstance`s; making the interface extend `ObjectInstance` restored it. A beam owner is an
+object, so this is the right shape as well as the working one — but the failure mode (a typed field
+narrowing to an interface silently leaving the rewind graph) is worth remembering.
+
+**Guards.** `Sonic3kObjectProfile` needed `SSZ_ONLY_IDS` (`$77`, `$AF`) for zone 10 once the SKL
+registrations existed. Two guard baselines were extended with triage: the new per-object
+capture/restore overrides (each exists for a cross-object SST link or a `RewindStateful` holder the
+generic schema cannot reach) and the `@RewindTransient` spawn decodes. `S3kGradualSwing` was made
+`RewindStateful` rather than baselined, because the helper-state baseline is deliberately empty.
+`ObjectLifetimeOps.deleteNoRespawn` replaced six raw `setDestroyed` calls and the sidekick lookups
+went through `playerQuery().nativeP2OrNull()`.
+
+**Media.** `~/Videos/OGGF/ssz-bring-up/`:
+`raw-01-arrival-sonic-tails` → `01-ssz-arrival-beam-sonic-tails.mp4` (frames 0-300);
+`raw-03-knuckles-cutscene-bridge-walk` → `02a-ssz-knuckles-beam-and-death-egg.mp4` (60-460) and
+`02b-ssz-bridge-releases-the-route.mp4` (1330-1560). `raw-02-knuckles-cutscene-bridge` is the first
+attempt, kept: its input stopped holding right, so the player never walked to the bridge.
+Frames inspected: arrival 60 (the beam columns), 175 (Knuckles beamed in over the release point),
+250 (both on the ledge); cutscene 350 (the Death Egg rising behind the player), 1200 (the camera
+pinned at `Camera_max_X $200` with Player 1 held at X `$328`), 1400 and 1450 (the bridge retracts
+and the route opens). `state.csv` confirms the bound: the camera sits at `512` from frame ~600 to
+1406 and releases at 1407, which is the bridge's `clr.b (Events_bg+$05)`.
+
+**Gaps filed** in [s3k-known-bugs](../../status/s3k-known-bugs.md): the Death Egg's `Pal_KnuxSSZEnd`
+patch, its missile and cloud children, and cutscene Knuckles' unverified resting position.
+
+**Corrections to this plan.**
+
+| Plan said | Actual |
+| --- | --- |
+| Slice 1 edits `Sonic3kSidekickCpuInitializationPolicy` | Wrong owner. `loc_13AB4`'s `$A00` branch is the one AIZ1 (`$0000`) takes: `sub_13ECA`, routine `$A`, `object_control $83`. The engine models that as `SidekickCpuController.State.DORMANT_MARKER` behind `LevelEventProvider.shouldEnterSidekickDormantMarker`, so SSZ adds a predicate there. `preservesSpawnState` is the *other* branch (`loc_13B18`, SOZ1 and zone `$17`) and SSZ does not use it |
+| `Obj_57DCC` ends with `Tails_CPU_routine = 6` | Confirmed, but the existing `releaseDormantMarkerForLevelEvent()` writes routine 2 (catch-up flight). Routine 6 needed a new package-private `releaseDormantMarkerToNormalFollow()` reached through the non-API `SidekickLevelEventRelease`, because `SidekickCpuController` is a `@ModApi` type |
+| `loc_13A10` gates on `Last_star_post_hit` | It reads `Tails_CPU_star_post_flag`, which `Tails_Init` copies from it |
+| `Obj_57E34` spawns after `$60` frames | Its counter starts on the frame `Obj_57C1E` allocates it (`CreateNewSprite4` runs it in the same pass), so Knuckles appears on frame `$60`, not `$60 + 1` |
+| Slice 1b's done-condition "cold route walks off the arrival ledge over the bridge" | Reached, with a caveat: while `Events_bg+$05` is set the camera is capped at `Camera_max_X $200`, so Player 1 runs ahead of the camera and waits at X `$328` for ~800 frames of Death Egg rise before the bridge releases him. That is what the routines say; whether the native movie spends the same time there is unmeasured |
+
+**Still open.** The one-frame arrival phase against fixture `hpz` row 0; the Death Egg's rise rate
+(`$40 = -$40` added to the `y_vel` longword is 0.25 px/frame, which is ~900 frames from `$C68` to
+above the camera — long, and unconfirmed against native); cutscene Knuckles' resting X; and
+`Super_emerald_count` per movie, carried from slice 0.
+
+### 2026-09-17 — slice 2: act-1 background, cloud objects and animated tiles
+
+Same worktree, ROM and Maven wrapper as slices 0-1b.
+
+**What landed.** `scroll/SwScrlSsz` ports `SSZ1_BackgroundInit`, `SSZ1_BackgroundEvent`'s four
+routines and both parameter subroutines, registered for zone `$0A` in
+`Sonic3kScrollHandlerProvider` (act 2 still falls back to the default handler, slice 9).
+`SszZoneRuntimeState` gained the words the machine needs — `Events_bg+$10`,
+`Camera_X/Y_pos_BG_copy`, `Camera_X_pos_BG_rounded`, the `HScroll_table+$000` drift longword and
+the frame the event last ran for — so a rewind captures the whole background. Objects:
+`SszCloudOscillatorObjectInstance` (`loc_57B6A`, the `_unkEE9C` driver),
+`SszRoamingCloudObjectInstance` (`loc_57BB2` + `sub_5758A`) and `SszSolidCloudObjectInstance`
+(`loc_57B8E`, ten invisible sloped platforms), all allocated by `Sonic3kSSZEvents` in the ROM's
+order. `Sonic3kPatternAnimator` resolves `AniPLC_SSZ` (`$28AA4`) for act 1 only.
+
+**Things the ROM decided that the first reading did not.**
+
+| Question | Answer, from the ROM |
+| --- | --- |
+| Is `Apply_FGVScroll`/`word_577B2` part of ordinary act-1 play? | No. It fills `Vscroll_buffer`, which only reaches VSRAM through `SpecialVInt_VScrollCopy`, and `Special_V_int_routine` is non-zero in Sky Sanctuary only during the Death Egg launch (`SSZ1_ScreenEvent`, sonic3k.asm:115961, 116060). The per-column path is slice 8's, not slice 2's |
+| What are the ten `word_5853E` clouds? | Invisible collision only: the rows carry no `mappings` and `loc_57B8E` never draws. The clouds the player sees are the background plane |
+| Does each solid cloud's slope table fit its half-width? | No. `SolidObjSloped2` indexes `(dx + $2E) >> 1`, so it reads `$2E + 1` bytes; eight of the ten rows ask for more than their own table holds and run on into the next (address arithmetic: only the two `$40` rows fit, and row 1 reaches into `byte_58658`'s ramp). The engine reads those bytes from the ROM rather than clamping |
+| Which clock drives the cloud drift? | `sub_57A60`'s own `addi.l #$500,-4(a1)` on `HScroll_table+$000`, once per `SSZ1_BackgroundEvent`. At `Camera_X $800` the top band's 16.16 value is `$200000`, so it takes 53 calls to carry one pixel — the test pins that arithmetic rather than a frame count |
+| Does the `$1800` switch redraw the plane? | No. `sub_579F0` flips `Events_bg+$10`, re-runs itself and re-rounds `Camera_X_pos_BG_rounded`. Only the wrapped-Y `$800`/`$F00` crossing stages a redraw |
+
+**Two engine-shaped problems, both real.**
+
+- *A once-per-frame ROM routine in a render-time hook.* `SSZ1_BackgroundEvent` has persistent
+  state, but `ParallaxManager` can compose the same frame twice — a rewind restore re-renders the
+  frame it restored. The first version advanced `$500` of drift that no frame paid for, and a
+  capture/restore/capture comparison caught it (`zone-runtime.stateBytes[45]: A=38 B=43`, exactly
+  one frame of drift). The frame the event last ran for now lives in `SszZoneRuntimeState`, so a
+  restore rewinds it too. Worth remembering for any future zone whose scroll handler keeps state.
+- *Load-time allocations that outlive the camera window.* All sixteen sky objects were created and
+  then unloaded on their first frame: `SSZ1_ScreenInit`/`BackgroundInit` are load-time routines
+  whose objects have no `Sprite_OnScreen_Test` at all, but the engine's `MarkObjGone` equivalent
+  unloads any non-persistent dynamic object whose position leaves the window. `isPersistent()`
+  is the correct opt-out and each class now carries it with the routine that justifies it. The
+  diagnostic that settled it printed the constructor results, which showed all ten being created —
+  so the fault was deletion, not allocation.
+- A third, smaller one: the generic rewind schema cannot restore a `final byte[]` whose length
+  differs between instances of the same class. The solid clouds' slope tables are `161` and `385`
+  bytes; the field is `@RewindTransient` and `recreateForRewind` re-reads the row.
+
+**Tests.** `src/test/java/com/openggf/game/sonic3k/scroll/TestS3kSszScrollBands.java` (11 cases),
+`src/test/java/com/openggf/game/sonic3k/TestS3kSszPatternAnimation.java` (3) and
+`src/test/java/com/openggf/tests/TestS3kSszBackgroundClouds.java` (6). Every expectation comes from
+the ROM: the scroll test's band walk was worked out by hand from `SSZ1_BGDeformArray` before the
+code ran, and the cloud test decodes `word_5853E` from the ROM inside the test rather than trusting
+the engine's copy of the table.
+
+- **Broken on purpose.** Four constants were perturbed at once in `SwScrlSsz` — the `$160` near-framing
+  Y offset, the second `SSZ1_BGDeformArray` band, the half-step in `sub_57A60`'s last three bands and
+  the drift increment. Result: `Tests run: 11, Failures: 5, Errors: 0, Skipped: 0`, naming the framing
+  offsets, `HScroll_table word 21` and the accumulator. Restored: 11/11. The band-array perturbation
+  alone did **not** fail the original "the background varies down the screen" assertion, which is why
+  that assertion was replaced with the seven exact per-line bands the walk predicts.
+- The drift test was wrong the first two times and the ROM was right both times: the fan reads the
+  accumulator *before* advancing it, and `$500 * 52 = $10400` is the first value to carry, not
+  `$500 * 32`. Arithmetic errors in a test expectation look exactly like implementation bugs.
+
+| Command (all `-Dmse=off`, absolute `-Ds3k.rom.path`) | Result |
+| --- | --- |
+| `-Dtest=TestS3kSszScrollBands` | 11 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kSszPatternAnimation` | 3 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kSszBackgroundClouds` | 6 tests, 0 failures, 0 skips |
+| `-Dtest=…,TestEveryObjectRewindRoundTrip,TestRewindHarnessCoverageRatchet` with the four SSZ classes | 1158 tests, 0 failures, 0 skips (1121 of them the per-object rewind round trip) |
+
+Zero skips throughout, so the ROM path resolved and the `@RequiresRom` cases really ran.
+This is focused validation, not a suite pass.
+
+**Rewind spot.** `TestS3kSszBackgroundClouds#theSkySurvivesACaptureRestoreAndForwardReplay`
+captures at frame 120 — the arrival rise has already carried the camera into the cloud band and
+the oscillator is mid-swing — steps one frame, restores, compares the whole composite snapshot,
+then replays the same frame forward and compares again. It found both of the engine-shaped
+problems above; neither was visible from the object tests.
+
+**Cold route.** Unchanged from slice 1b: the cold frontier is still the bridge release, because
+slice 2 adds no traversal. What slice 2 does change is that the route now runs under the real
+background — the arrival opens in plain sky, crosses `$F00` into the cloud band during the rise,
+and the ten solid cloud platforms and five roaming clouds are alive for the whole of it.
+
+**What `-Pguards` changed about the design.** The first version of the three cloud classes read
+their ROM tables through `GameServices` in the constructor and carried the decoded row as `final`
+fields with hand-written `captureRewindState`/`restoreRewindState` overrides. Guards rejected all
+of it — object classes must use `services()`, and both new rewind overrides and new `final` scalars
+are baselined growth — and the rework is better shaped anyway: each cloud now reads its own
+`word_5853E`/`word_58758` row lazily on its first frame through `services().rom()`, keyed only by
+the row index the spawn's subtype carries, so a spawn-based rewind recreation rebuilds it with no
+extra state. The overrides are gone: `S3kGradualSwing` is `RewindStateful` and the remaining fields
+are ordinary non-final scalars, so the generic schema captures everything. The lesson worth keeping
+is that "read a ROM table in the constructor" is the wrong shape for an object in this engine:
+the services and the spawn identity are what the constructor has, and the table is what the first
+frame has.
+
+**Media and what the frames actually show.** `~/Videos/OGGF/ssz-bring-up/raw-04-ssz1-sky-320` and
+`raw-05-ssz1-sky-800` (Sonic, 420 neutral frames from a cold `$A00` load), cut to
+`04a-ssz-sky-and-roaming-clouds-320.mp4` and `04b-ssz-sky-and-roaming-clouds-wide.mp4`. Frames
+inspected: 5 (the five roaming clouds are up before the camera has left the plain-sky band), 200
+(they have drifted left and bobbed, the sanctuary terrain and the rising Death Egg are in frame).
+Against slice 0's `raw-00-ssz1-before` frame 5, which is flat blue with no cloud at all, the
+difference is unmistakable.
+
+Two honest limits on that comparison. First, `raw-00-ssz1-before` predates slices 1 and 1b as well,
+so it is the campaign baseline rather than the slice-2-only "before" build the method asks for;
+a build with only the scroll registration and `spawnBackgroundClouds` disabled is still owed.
+Second — and this is an **open question, not a finding** — the background *plane* renders flat sky
+in both builds, at both camera framings. The scroll words, the band expansion and the background Y
+are all asserted against the ROM and the roaming cloud sprites are plainly there, but nothing in
+these frames proves the background layout is being sampled at the new rows at all: it may be that
+Sky Sanctuary's background layer really is plain sky over this stretch, or that the layer is not
+reaching the screen. Kill condition: read the SSZ background layout rows that
+`Camera_Y_pos_BG_copy` selects in each mode straight out of the ROM and compare them with what the
+renderer draws, or capture the same camera in BizHawk. Until that is done, "BG: cloud band" is
+scroll-verified and not visually verified.
+
+At 800 px the roaming clouds occupy only the left ~460 px, because `sub_5758A`'s `& $1FF` puts every
+cloud within 512 screen pixels of the camera regardless of viewport. That is the recorded
+presentation consequence of a screen-space ROM constant on a wide viewport; the geometry is native.
+
+**Ring-sentinel expectation, checked on both sides of the LRZ merge (2026-09-17).** The census
+ring test now decodes `SSZ1_Rings`/`SSZ2_Rings` from the ROM and asserts the totals `loc_E8BE` can
+reach — 179 and 0 — then compares the loader against them, accepting exactly one leading `(0,0)`
+sentinel while LRZ `3418eba6e` is in flight. Both branches were exercised: as written it is
+`7 tests, 0 failures, 0 skips` against today's loader (sentinel present), and with the loader's
+first record temporarily trimmed away in the test to stand in for the post-merge shape it is again
+`7 tests, 0 failures, 0 skips`. The simulation was reverted immediately. SSZ makes no edit to
+`Sonic3kRingPlacement`.
+
+### 2026-09-17 — slice 3, part 1: the `$79` pads, `$7F` and `$7E`; and two slice-2 carry-overs
+
+Same worktree, ROM and Maven wrapper as slices 0-2. This entry covers the two carry-over items and
+the first three inventory families of slice 3; the rest of slice 3 is **not** done and is listed at
+the end.
+
+**Carry-over (i): s3k-known-bugs #41, the flat background plane — answered from the ROM, and the
+answer is split.** The `$A00` level layout (`LevelPtrs` index `$0A * 2`, ROM `$A458E`) is uncompressed: a
+four-word header (`FG cols`, `BG cols`, `FG rows`, `BG rows`) then interleaved per-row pointers
+based at `$8000`. Act 1's background is **60 columns by 22 rows** of 128-pixel chunks, so it covers
+`Y $000`-`$AFF`. Decoded:
+
+| BG rows | Y range | Distinct chunk ids per row |
+| --- | --- | --- |
+| 0-2 | `$000`-`$17F` | 1 (a single repeated chunk across all sixty columns) |
+| 3-17 | `$180`-`$8FF` | 3 to 15 |
+| 18-21 | `$900`-`$AFF` | 2 |
+
+`sub_57A60`'s plain mode frames the background at `Camera_Y + $160`; `SSZ1_ScreenInit` forces
+`Camera_Y = $F49`; the `$1000` Y wrap makes that `$10A9 mod $1000 = $A9`, i.e. **background row 1**.
+Flat sky over the arrival stretch is the shipped layout, not a sampling fault, and the same holds
+for the bottom of the level. `TestS3kSszBackgroundLayout` decodes all of this from the ROM and, in
+the case that could have disagreed, compares the engine's background layer with the ROM rows column
+for column — 22 × 60 cells. It matches, so the layer is loaded and addressed correctly.
+
+**But that only covers plain mode, and cloud mode has a real defect.** This was corrected after the
+entry was first written, from a disassembly reading that was then verified here against
+`sonic3k.asm` and the ROM. `SSZ1_BackgroundInit`'s cloud branch (`loc_5786A`), `loc_57946` and
+`loc_5799A` each load a literal `move.w #$1C00,d1` before `Refresh_PlaneFull` / `Draw_TileRow`, and
+`loc_5799A` passes `moveq #$20,d6` — 32 cells, the full 512-pixel plane B width. `$1C00 >> 7 = 56`
+and four chunks tile the plane, so **cloud mode reads layout columns 56-59 every frame regardless of
+the camera**; `sub_57A60` never writes `Camera_X_pos_BG_copy`, so that word is stale and all
+horizontal motion comes from the `HScroll_table` fan. Decoding those four columns confirms it: rows
+3-7 carry chunks `$7A $7B $7C $7D $7E $7F $80 $81 $82 $83 $84 $86`, and every other row of that
+window is the sky chunk `$02` or blank `$00`. The engine derives its columns from the camera
+(SSZ1's camera X range `0`-`$19A0` is columns 0-52), and at background rows 1-8 columns 0-22 and
+43-55 are entirely chunk `$02` — so it draws the right pixels from the wrong columns, and the whole
+ascent from about `Camera_Y $E80` down to `Camera_max_Y_pos $BC0` is flat when it should be cloud.
+
+**Fixed.** The renderer site is `LevelManager.applyBackgroundTilemapWindowSelection`, which takes
+its window base from `ParallaxManager.getBgCameraX()` — i.e. from the active scroll handler. `SwScrlSsz`
+returned the `Integer.MIN_VALUE` "no override", so the window stayed at base 0. It now returns
+`$1C00` while the cloud mode is active (both `BG_ENTERING_CLOUDS` and `BG_CLOUDS`, because
+`loc_57946` loads the literal too, not just `loc_5799A`) and reports a 512-pixel period there; and
+`Sonic3kZoneFeatureProvider.bgWrapsHorizontally()` gained `isSszCloudBackgroundWindowActive`, which
+the branch requires before it will relocate the window at all. This is the mechanism that class's
+own Javadoc already describes for `SwScrlMgz` state 8, and it names ICZ1's `d1 = $1880` as the other
+zone that pins its plane this way — SSZ's `$1C00` is the third. Plain mode keeps `MIN_VALUE`: there
+the ROM is camera-derived too (`Reset_TileOffsetPositionEff`).
+
+The red test was seen red on the real defect — `expected: <7168> but was: <-2147483648>` — and the
+first attempt was still red because it only matched `BG_CLOUDS`; the entering routine draws with the
+same literal, which is what the ROM says and what the second attempt models.
+
+s3k-known-bugs #41 is now narrowed to what genuinely remains: whether plain mode below wrapped
+`Camera_Y $800` reaches the separate sanctuary structures the layout holds at columns ~9-52, rows
+4-17. No capture has had a camera there, and it may well be correct already.
+
+**Method note.** The first version of this entry closed #41 outright as "correct behaviour plus a
+missing observation". That was wrong, and it was wrong in the direction that retires a defect. The
+decode that produced it was real and is unchanged; what it could not see is that the two BG modes
+index the layout by different rules, so evidence about the row the arrival selects says nothing
+about the columns the cloud path reads. A decode that explains the symptom is not yet a verdict on
+the routine that produces it.
+
+**Carry-over (ii): the overlapping Sonic and Knuckles at ~3 s of
+`04a-ssz-sky-and-roaming-clouds-320.mp4` — ROM behaviour; the box below them was the real defect.**
+Read from the routines rather than guessed:
+
+- `Obj_57C1E`'s rise ends with Player 1 at `$FAE - 8 * $6C = $C4E` and stores that in `$3E(a0)`;
+  `Obj_57D64` then swings the player around it with `Gradual_SwingOffset(#$20000,#$800)`.
+- `Obj_57E34` allocates cutscene Knuckles at X `$100` and writes `$3E(a0) = $C4E`, then swings *him*
+  around the same base with the same parameters (`loc_57E64`).
+- Both are therefore at X `$100` and within a few pixels of `Y $C4E`, differing only by the phase of
+  two swings that start about fourteen frames apart. `loc_65730` gives Knuckles `priority $80`
+  against the player's `$100`, so he is drawn in front — which is what frames 160-240 of
+  `raw-04-ssz1-sky-320` show. Knuckles then falls, waits, and leaves to the right from routine `$E`
+  onward (`x_vel $200`, then `$300` until X `$2A8`), so the overlap is brief and intended.
+
+The placeholder box below them was **not** ROM behaviour: it is the `$79:$00` arrival pad at
+`($100,$C70)`, whose factory was bound to `S3KL` or to SKL zone `$16` only, so Sky Sanctuary got a
+placeholder. That is fixed below and the box is gone.
+
+**What landed.** `SSZHPZTeleporterObjectInstance` gains the Sky Sanctuary branch of its own ROM
+routine, and the `$79` factory predicate now admits SKL zone `$0A` as well as `$16`:
+
+- Init `loc_4554E`-`loc_4556A`: the placement Y moves to `$16(a0)` and the idle routine rebuilds
+  `y_pos` from it. A negative subtype is a pad gated on a boss-defeat flag — `add.b d0,d0` puts
+  subtype bit 6 into the sign, selecting `Events_bg+$02` (MTZ) over `+$00` (GHZ) — and starts `$20`
+  px sunk. Decoding `SSZ1_Sprites` shows only Sky Sanctuary places a negative `$79` subtype (HPZ act
+  2 has `$00` and `$4A`, the `$1701` arena none), so this branch never reads another zone's flags.
+- `loc_455BA`: `x_pos >= $1A00 && y_pos < $680` is the Mecha Sonic spawner, not a teleporter. It is
+  never solid and never launches; the boss allocation is slice 7's and is filed as s3k-known-bugs
+  #42 rather than faked.
+- `loc_455F8`/`loc_45616`: a sunk pad is not solid at all, and every subtype-0 receiving pad is
+  intangible while `Events_bg+$04` is set (the arrival script).
+- `loc_45640`: once the gate flag is negative the pad rises one pixel on every fourth
+  `Level_frame_counter` tick, and only behaves as a launch pad when it is flush.
+- `loc_45744`-`loc_45790`: the SSZ lift is `(subtype & $3F) * $10`, not HPZ's whole subtype. The
+  launch writes `Camera_min_Y = -$100`, `Camera_max_Y = Camera_target_max_Y = $1000`, clears
+  `Events_bg+$05` and sets `Scroll_lock`; `loc_457BE` clears `Scroll_lock` again at the top.
+- `sub_45866`'s zone `$A` branch: one `word_4670C` longword — two entries in table order — into
+  palette line 2 colours `$C`/`$D`. HPZ's branch writes the same table to line 3 colours 1-2 in the
+  **opposite** order, which is why the two cannot share a write.
+- Rendering: `make_art_tile(ArtTile_SSZMisc+$88,0,0)` over `Map_SSZHPZTeleporter`, mapping frame 0.
+  SSZ never reaches `loc_455B2`, so the frame stays at the SST's zero rather than HPZ's `$A`.
+
+New `SszFloatingPlatformObjectInstance` (`$7F`, eight placements): `loc_44AA0`'s dip counter in
+`$2E(a0)` rising to 4 and falling back one pixel a frame, `y_pos = y_vel + $2E`, `SolidObjectTop`
+with `d1 = $2B` — wider to stand on than the `$20` `width_pixels` the init writes.
+
+New `SszCollapsingColumnObjectInstance` + `SszCollapsingColumnDebrisObjectInstance` (`$7E`,
+twenty-five placements): the `Gradual_SwingOffset(#$2800,#$80)` bob whose phase comes from an
+init-time `Random_Number` draw into `$30(a0)` (the *low* word of the speed longword), the collapse
+that allocates eight `word_46618` pieces and plays `sfx_Collapse`, each piece hanging on the column
+for its own delay and then falling with a `$3800` accumulator, and `loc_44B98`'s `x_pos = $7FFF`
+park once `routine(a0)` is back to zero.
+
+**Something the ROM decided that the first reading did not.** `word_46618` row 6 hangs for a single
+frame, and the pieces are allocated after the current slot, so that piece runs in the same object
+pass as the collapse: its delay reaches zero immediately and it reports back on the collapse frame.
+The column's count at the end of that frame is **seven**, not eight. The test asserted eight first
+and was wrong; the ROM was right. The expectation now derives the number from the table.
+
+**Tests.** `TestS3kSszTeleporterPads` (7 cases), `TestS3kSszBackgroundLayout` (3) and
+`TestS3kSszTraversalPlatforms` (3). Placements, `byte_466E8`, `word_4670C`, `word_46618` and the
+whole background layout are decoded from the ROM inside the tests.
+
+Two pad cases make a **declared seeded** write: `st (Events_bg+$00)`, which is what
+`Obj_SSZGHZBoss`'s defeat does, because slice 5's boss does not exist yet. One also seeds
+`Events_bg+$06` — `sub_575EA` returns immediately while the final-arena flag is set — to isolate
+`loc_4577E`'s own camera writes. Without it, clearing `Events_bg+$05` releases the bounds machine,
+which re-derives `Camera_max_Y` from `word_5779A` in the same frame's `ScreenEvents` tail and
+replaces the launch's `$1000` with `$C60`. That is the ROM's behaviour too and is recorded, not
+worked around.
+
+**Broken on purpose, one perturbation per new comparison.** Four production constants were changed
+at once — the `$79` lift mask `$3F` → `$7F`, `GATED_SINK` `$20` → `$18`, the floating platform's
+`MAX_DIP` 4 → 6 and `DEBRIS_TABLE_ADDR` `$46618` → `$46620` — and the run went
+`Tests run: 10, Failures: 4`, naming the sink position, the rise duration, the dip saturation and
+the piece count. All four were restored immediately and `git status` is clean of them.
+
+One honest limitation that check exposed: **the lift mask produced no red on its own.** The three
+plain launch pads carry `$15`, `$1E` and `$32`, all below `$40`, so `& $3F` passes them through
+unchanged and the launch case could not see the change. A case was added for exactly that —
+`theGatedPadLiftUsesOnlyTheLowSixSubtypeBits` launches from the `$AA` pad with its GHZ flag seeded
+before the pad's init (so `loc_4556A` skips the sink and it is solid from the first frame) and
+asserts `$2A0` of lift, not `$AA0`.
+
+**Media.** `raw-06-ssz1-cloud-window-after` (Sonic, 420 neutral frames from a cold `$A00` load, 320
+px), cut to `05b-ssz-cloud-band-after.mp4`, with slice 2's `raw-04-ssz1-sky-320` — the same cold
+load at the same width, before the fix — as `05a-ssz-cloud-band-before.mp4` and the labelled
+`05-ssz-cloud-band-before-after.mp4`. Frames inspected: 250 and 400 (the layered cloud band fills
+the plane, and the `$79` arrival pad draws as a pad where slice 2's capture had the magenta
+placeholder box), 60 and 120 (the white column is `Obj_TeleporterBeamExpand` drawn over the cloud
+band, not a wrap seam — checked precisely because it looked like one). The honest limit: `raw-04` is
+the campaign's slice-2 capture, so it is "before" for the background *and* for the pad, not a
+build with only the scroll override disabled.
+
+**Earlier media, and what is still owed.** The evidence
+for carry-over (ii) is `~/Videos/OGGF/ssz-bring-up/raw-04-ssz1-sky-320/frames`, re-read frame by
+frame against `state.csv`: frame 160 (Player 1 rolling at `(256,3097)`, one red ball on screen —
+cutscene Knuckles at priority `$80` covering the player's own ball), frame 180 (`(256,3085)`, the
+two separated by the phase difference between their swings, blue quills above the red body), frame
+240 (Knuckles has landed and is standing). The magenta placeholder box below them in every one of
+those frames sits at world `($100,$C67)` — the `$79:$00` arrival pad — and is what this commit
+removes. A capture showing the pad drawn instead of the box, and one with the camera inside
+background rows 3-17, are both still owed and are the reason the two visual claims stay open.
+
+**Rows remaining in slice 3.** Implemented: `$79` (all 10 act-1 placements), `$7F` (8), `$7E` (25) —
+**43 of the 154** slice-3 placements. Still placeholders, with the lead's notes file
+`~/Videos/OGGF/ssz-bring-up/notes/ssz-objects-74-7C-disasm-spec-summary.md` as a secondhand
+starting point that must be re-read against the ASM before coding:
+
+| ID | Routine | Placements |
+| --- | --- | --- |
+| `$74` | `Obj_SSZRetractingSpring` `$46426` | 5 |
+| `$75` | `Obj_SSZSwingingCarrier` `$460D8` | 8 (`$00`×5, `$80`×1, `$82`×2) |
+| `$76` | `Obj_SSZRotatingPlatform` `$45DAE` | 7 (`$00`×3, `$01`×4) |
+| `$7A` | `Obj_SSZElevatorBar` `$4536C` | 5 |
+| `$7B` | `Obj_SSZCollapsingBridgeDiagonal` `$44D60` | 35 (`$00`×31, `$80`×4) |
+| `$7C` | `Obj_SSZCollapsingBridge` `$44C44` | 8 (`$00`×7, `$80`×1) |
+| `$7D` | `Obj_SSZBouncyCloud` `$450C8` | 27 |
+| `$A0` | `Obj_EggRobo` | 26 across 24 subtype rows |
+
+Also owed for this slice: the census test's concrete-class assertions (the file was being edited by
+another lane while this work ran, so it was left alone); the rewind spot; the 320-plus-wide and
+donor breadth rows; a cold route that actually reaches a pad past the bridge; and the demo clips.
+**Open questions 9 and 10 are answered** by two disassembly readings delivered after this entry's
+implementation work, relayed through the lead. They are secondhand: re-read each cited line before
+writing a test from them. They have not been used to write any code in this entry.
+
+- **9, subtype bits.** `$7C` and `$7B` read **only bit 7** (`tst.b subtype / bmi`), and set means
+  *never collapses*; bits 0-6 are unread. `$75` reads bit 7 (clear = a `$30`-wide pendulum bar on
+  `Gradual_SwingOffset(#$20000,#$821)` + `$41`; set = a width-8 hub rotating ±1 per frame by status
+  bit 0, which also forces the player's facing on grab and enables a `SonicOnObjHitFloor` release at
+  `x_vel ±$800`) **and bits 0-1** as the arc's chain length, `6 + (subtype & 3)`. `$76` reads
+  **only bit 0**, and only inside its invisible carrier child, selecting `width_pixels $60` or
+  `$A0` (solid half-width `$6B` or `$AB`). `$74` and `$7A` read no subtype at all. The only ROM
+  clock in that whole set is `(Level_frame_counter+1)` bit 0, gating `$74`'s proximity scan to
+  alternate frames.
+- **10, `Perform_Art_Scaling`.** Inputs are `$40(a0)` (the scale byte, clamped to `$1C` by
+  `sub_2468A` and written into `mapping_frame`), `anim(a0)` (source `+= anim * $1000` in
+  `sub_246DA`), `$42(a0)` (the scaled-art base, `ArtScaled_EggRoboFly` `$17B6E0`), `art_tile(a0)`
+  (offset by the running VRAM slot `_unkF740`) and `$3A(a0)` (the DMA destination). `word_2464A`
+  (`$2464A`, 32 words) is the per-level VRAM cell budget; over `$80` the object is skipped for the
+  frame. The fly-by's scale falls `$7F, $7C, $79, …` three per frame and sticks at 4.
+
+**Two corrections to this plan's EggRobo summary, from the same reading.** The plan's rules box and
+slice-3 row say low nibble 4 is "the shooter, gate `V_int_run_count+3 & $F`". Both halves are wrong:
+low nibble **4 is the animal releaser** (`loc_918FC` → `loc_915F6` → `loc_917C0` → `Obj_Animal`),
+which releases one animal every sixteen frames — *that* is what the `V_int_run_count+3 & $F` gate
+times — and converts into an ordinary fighter after five releases. The laser belongs to the
+fighter's gun child and is gated on `|y_pos(EggRobo) - y_pos(Player_1)| <= 8` (`cmpi.w #8,d3 /
+bhi`), with a `$5F`-frame cooldown and a `$38` bit-1 handshake; there is no shot object id, the shot
+is the bare code pointer `loc_91756`. `_unkFA82` is confirmed: a word bitmask at `$FFFFFA82`, bit
+index `subtype >> 4`, set by the fly-by at `loc_91570` and read only by the fighter's `sub_91914`,
+never cleared by EggRobo code — so the engine must clear it at level load. The `$79` spawner
+condition `x_pos >= $1A00 && y_pos < $680` is confirmed as this entry implemented it.
+
+`src/test/java/com/openggf/tests/TestS3kSszPlacementCensus.java` carries the same wrong "4 shooter"
+comment on its `$A0` rows; it is corrected here, without touching the assertions.
+
+| Command (all `-Dmse=off`, absolute `-Ds3k.rom.path`) | Result |
+| --- | --- |
+| `-Dtest=TestS3kSszTeleporterPads` | 8 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kSszBackgroundLayout` | 3 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kSszTraversalPlatforms` | 3 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kHpz*,TestS3kDdz*,TestS3kSsz*,TestEveryObjectRewindRoundTrip,TestRewindHarnessCoverageRatchet` | 1435 tests, 0 failures, 0 skips |
+| `-Pguards test -B` | 669 tests, 0 failures, 0 skips (after two baseline updates, below) |
+
+Zero skips throughout, so the ROM path resolved and the `@RequiresRom` cases really ran.
+`TestEveryObjectRewindRoundTrip` went from 1121 cases to 1124 — the three new object classes — so
+each of them has a probe construction and a captured-state round trip. This is focused validation,
+not a suite pass: no change-based category run is attributed to this entry.
+
+**Two guard baselines moved, both for the reason the guard asks for.** `-Pguards` first failed on
+exactly two things. `TestSonic3kObjectProfileRegistryGuard` wanted zone 10's implemented-id list to
+gain `79 7E 7F`, which is the transcription the guard exists to force; `SSZ_ONLY_IDS` now carries
+them with `$79` commented as the shared-with-HPZ class. `TestRewindCoverageGuard` reported
+`SszCollapsingColumnDebrisObjectInstance#objectRef#column` as a *new* gap — and the coverage
+baseline file is empty, so baselining it would have been wrong. The debris does capture its column
+as an `ObjectRefId`; what was missing was the `DefaultObjectRewindPolicies` entry that tells the
+audit so, exactly as `SSZHPZTeleporterObjectInstance#beam` and `TeleporterBeamObjectInstance#parent`
+already do. The rewind architecture guard's override baseline gained the debris pair with the same
+"cross-object SST link" triage as the slice-1 classes.
+
+### 2026-09-18 — slice 3, part 2: `$7C`, the shared bridge debris, and a capture-tool flag
+
+**`$7C` `Obj_SSZCollapsingBridge`** (8 placements) and the `loc_45052` debris both families use.
+Re-read in `sonic3k.asm` rather than taken from the relayed spec: init `bset #2,render_flags`,
+`height_pixels $10`, `width_pixels $20`, `priority $180`,
+`make_art_tile(ArtTile_SSZMisc+$20,2,1)` over `Map_SSZCollapsingBridge` — the same sheet, tile base
+and palette line `Obj_SSZCutsceneBridge` already uses, so no new art entry was needed.
+
+**Subtype, now verified rather than assumed.** `tst.b subtype(a0)` / `bmi.s loc_44C96` is the only
+read: bit 7 set means the section never collapses, bits 0-6 are never read. The ROM places seven
+`$00` and one `$80`, and the test asserts both the split and that no placement sets a bit the
+routine ignores — so the two rows really are the whole behaviour space.
+
+`loc_44C9C` records which side the player is on in `$2E(a0)` (`scc` after `cmp.w x_pos(a1),d4`) and
+lays four pieces from that side inward: first at `$18` px toward the player, stepping `$10` back,
+mapping frames alternating through the `$102` word, hang delays 6/12/18/24. `loc_44D22` then
+shrinks the solid half-width from `$20` by 8 every sixth frame, walks the object 8 px away from the
+player each step so the near edge retreats, and parks it at `x_pos $7FFF` — plus that same 8 px
+step, so the parked X is `$7FF7` or `$8007`, which the test asserts as a range rather than the bare
+literal. The section stays solid at the shrinking width the whole time.
+
+**A capture-tool flag, because the clips could not be taken without it.** `GameplayCaptureTool`'s
+`--x/--y` teleport is overridden outright in `$A00`: `SSZ1_ScreenInit` forces the arrival camera and
+`Obj_57C1E` writes Player 1 to `Camera_Y + $65`, so every positioned SSZ capture snapped back to the
+arrival column by frame 58 — visible in the first attempt's `state.csv`. The ROM's own answer is the
+star-post branch, so the tool gained `--star-post`: declared capture setup, in the same block as
+`--emeralds`, `--vint-run-count` and `--camera-x-sub`, writing `Last_star_post_hit` with `Saved_X/Y`
+at the requested start. It is generic — any act with a star-post-gated intro needs it — and it is
+what makes slice 4's respawn captures possible too.
+
+**Clips** (each cut with at least 30 frames of lead-in and lead-out):
+
+| Clip | Raw | What the frames show |
+| --- | --- | --- |
+| `05-ssz-cloud-band-before-after.mp4` (+ `05a`/`05b`) | `raw-06-ssz1-cloud-window-after` vs slice 2's `raw-04-ssz1-sky-320` | The cloud band fills the plane where the before is flat blue |
+| `06-ssz-floating-platform-dips.mp4` | `raw-07-ssz-floating-platform` | `$7F` at `($600,$C20)` carrying the player; frame 150 inspected |
+| `07-ssz-column-breaks-into-eight.mp4` | `raw-08-ssz-collapsing-column` | `$7E` at `($600,$960)` breaking; frame 90 shows the pieces falling under the player |
+| `08-ssz-teleporter-pad-launch.mp4` | `raw-09-ssz-teleporter-pad-launch` | `$79:$15` at `($1000,$7B0)` launching; frame 200 shows the rolled player mid-lift |
+
+The `$79` pad also shows drawn rather than as a placeholder box in `raw-06` frames 250 and 400.
+One placeholder box remains visible in `raw-07` and `raw-08`: the families this entry has not
+reached yet.
+
+**Tests.** `TestS3kSszTraversalPlatforms` grew to 5 cases, `TestS3kSszTeleporterPads` 8,
+`TestS3kSszBackgroundLayout` 5 — 18, 0 failures, 0 skips.
+
+**HUD legibility over the fixed cloud band — checked, not a defect.** Reviewing clip `05`, the
+"after" half's bottom-left lives counter reads washed out and the SCORE/TIME text has cloud pixels
+between its glyphs, where the "before" HUD looks solid. Two candidate causes were separated by
+measurement rather than by eye:
+
+- *Does the engine let the background occlude the HUD?* No. Comparing the raw PNGs at frame 250,
+  **zero** glyph-coloured pixels differ between before and after — 815 unchanged in the
+  SCORE/TIME/RINGS block and 364 in the lives counter, with the dark outline colour
+  `(36,36,36)` and the yellow `(255,255,0)` at identical counts in both. Every pixel that changed
+  was background. The HUD is drawn intact.
+- *Could the cloud chunks legitimately occlude it?* Also no, and this is the part worth pinning.
+  On the hardware the order is low planes, low sprites, high planes, high sprites, so a Plane B
+  tile with bit 15 set really can cover a low-priority sprite.
+  `TestS3kSszBackgroundLayout#noCloudWindowChunkCarriesAHighPriorityTile` walks every pattern
+  descriptor of every distinct chunk in the cloud window's rows 3-7 through the engine's decoded
+  tables and asserts none sets the priority bit. They are all low priority.
+
+What actually changed is what sits *behind* the HUD's transparent gaps: flat blue before, white
+cloud after. White text on white cloud reads as low contrast. That is the cartridge's own
+composition — the background is correct now, and the HUD is unchanged — so nothing is filed as a
+gap. It is recorded here because "the HUD looks wrong after a background fix" is exactly the shape
+of report that invites a renderer change that would be wrong.
+
+### 2026-09-18 — slice 3, part 3: `$7B`, the largest family
+
+**`$7B` `Obj_SSZCollapsingBridgeDiagonal`** (35 placements: 31 `$00`, 4 `$80`). Same bit-7-only
+subtype as `$7C`, same `Map_SSZCollapsingBridge` art, same `loc_45052` debris — eight pieces this
+time, from `$38` px toward the player stepping `$10` back, frames alternating through the `$405`
+word, delays 6 to 48, with a vertical stagger that flips every other piece (`btst #0,d5`).
+
+Three things the routine does that a summary would lose:
+
+- The solid is `SolidObjectTopSloped2` over `byte_46658` with `d1 = $40`, one signed byte per two
+  pixels. The index reaches `$40`, so it reads `$41` bytes and the last one is past the table's end
+  — `byte_46698[0]`. The engine reads them from the ROM at the live pointer rather than holding a
+  clamped copy, so the shipped over-read is what the geometry is. Same hazard as the solid clouds.
+- `loc_44D98` snapshots `status(a0)` *before* the solid call and then re-grounds each player who was
+  standing and is now airborne and not jumping (`bclr #Status_InAir`). Without it the slope drops
+  the player it just carried.
+- `loc_44EBA` advances the slope pointer four bytes as well as shrinking the half-width by eight,
+  so the visible surface slides along the diagonal while it retreats, and the object steps two
+  pixels vertically to keep its centre on the slope.
+
+`mainspr_childsprites` is never set despite the multi-sprite render flag, so the object draws no
+sub-sprites. Faithful, and recorded so nobody goes looking for a missing chain.
+
+**Clip** `09-ssz-diagonal-walkway-collapses.mp4` from `raw-10-ssz-diagonal-walkway`; frame 75 shows
+the player standing on the sloped walkway before it goes.
+
+**That capture also settled the open plain-mode question**, from the opposite direction to the one
+hoped for. It sits at camera `($6A0,$550)` — wrapped `Camera_Y` far below `$800`, so plain mode
+throughout and the cloud window never engaged — and the background is flat blue, while the layout's
+row 13 carries thirteen distinct chunk ids across columns ~9-52. So s3k-known-bugs #41 moves from
+"unverified" to an observed defect with a frame. The cause is *not* established and is deliberately
+not guessed: `plainParameters` does produce `Camera_X + $28` (layout column 13 here, inside the
+cluster), and `getBgCameraX()` returns `MIN_VALUE` by design so the column is meant to come from
+the scroll word as it does in every non-wrapping zone. Which of the two is not lining up is the open
+question, and the cloud-window change is not implicated because this capture never enters cloud mode.
+
+**Tests.** `TestS3kSszTraversalPlatforms` 7 cases, `TestS3kSszTeleporterPads` 8,
+`TestS3kSszBackgroundLayout` 6 — 21, 0 failures, 0 skips. `-Pguards` 669, 0 failures, 0 skips.
+
+### 2026-09-18 — slice 3, part 4: the five remaining traversal families, the EggRobo, and #41's cause
+
+Commits `2bdca80eb` (traversal) and `ac93480de` (EggRobo + census ratchet), on
+`feature/ai-ssz-bring-up` over `cbb66adca`.
+
+**`$7D` `Obj_SSZBouncyCloud`** (27 placements, all subtype 0). Three things a summary loses:
+
+- `routine(a0)` is not a routine. It is a shared bounce counter: the first player to land sets it
+  to 7, it decrements once a frame in the draw path, and a second player who lands while it runs
+  takes the current value, so two riders leave together rather than on their own clocks.
+- The Y term at `loc_450EC` is a two-branch pick. If either player's sag byte is non-zero it takes
+  the **unsigned** larger of the two and only then sign-extends it — so `$F8` beats `$12` and then
+  applies as `-8`. Otherwise it takes the recoil byte belonging to whichever player has the larger
+  *countdown index*, not the larger recoil.
+- The post-launch angle spin-down at `loc_4527A` adds or subtracts 6 while the angle byte reads on
+  one side of the sign boundary and 2 after it crosses, in both directions, and both paths take
+  exactly 80 frames to reach zero. `byte_466A0` only covers 38 of them, sticking at index 0.
+
+The four `word_466C8` puffs are allocated at the player's X, and `loc_452DA` is a cull, not an
+init: a puff outside `cloud X ± $18` deletes itself on the pass it was allocated for, so a bounce
+off the end of a cloud sheds fewer than four.
+
+**`$7A` `Obj_SSZElevatorBar`** (5, subtype 0). The throw's Y velocity is the bar's own
+`Gradual_SwingOffset` speed longword shifted down eight plus `-$400`, so a bar caught on the way up
+throws harder than one caught at the bottom; holding down drops the `-$400` and the player simply
+falls with the bar. Left leaves the bar's priority at `$80`, in front of the player; right and the
+neutral release put it back to `$180`. The hang offset is `$14` except for `Player_mode == 2`
+(Tails alone) and Player 2, which get `$11`.
+
+**`$76` `Obj_SSZRotatingPlatform`** (7: three `$00`, four `$01`). Bit 0 is the only subtype bit any
+part of it reads, and it only widens the invisible `loc_45F10` carrier from `$60` to `$A0`.
+`sub_45E6E` is a two-step latch: the frame a player first stands, it writes `$0100` and does
+nothing else, so the spin starts a frame late. The carrier's priority for a rider is a four-way
+pick on the pose angle's sign *and* on whether the other player is riding at a smaller radius.
+
+**`$75` `Obj_SSZSwingingCarrier`** (8: five `$00`, one `$80`, two `$82`). Two subtype fields, both
+read: bit 7 picks pendulum (`Gradual_SwingOffset($20000,$821)` biased `$41`) or rotator (one step a
+frame, reversed by the placement's X-flip bit); bits 0-1 give the arc `(subtype & 3) + 6` segments.
+The arc's step is `GetSineCosine` swapped, low-word-cleared and `asr.l #4` — cosine into X, sine
+into Y — so a full-scale `$100` entry is a sixteen-pixel step. Only the rider bar is solid, and it
+is a `SolidObjectFull`: a side or bottom touch runs `sub_24280`, which rewinds the player's Y by one
+frame of `y_vel` before `HurtCharacter` so the knockback starts where they were.
+
+**`$74` `Obj_SSZRetractingSpring`** (5, subtype 0). The proximity test is gated on
+`btst #0,(Level_frame_counter+1).w` — the counter's low byte — so the extension steps every other
+frame. `loc_464C6` hands the solid routine `$7FFF` while the spring is below mapping frame 2 and
+restores the real `x_pos` immediately. **Exposing that parked X through `getX()` despawned the
+object**: the placement window saw it at `$7FFF` and never loaded it. The class now reports the real
+X always and simply does not call the solid below frame 2; `solidXForTest()` keeps the ROM's value
+visible to the test.
+
+**`$A0` `Obj_EggRobo`** (26). `sub_9185E` masks with `$F` and indexes `off_9186E`, which has three
+entries; the ROM places only 0, 2 and 4, and that is asserted rather than assumed. Every high
+nibble 0-`$A` carries both a fly-by and a fighter, which is what makes `_unkFA82` a pairing gate:
+`loc_91570` sets bit `subtype >> 4` as the fly-by leaves the screen and `sub_91914` drops any
+fighter whose bit is clear before its init runs. `word_919CA` gives the shot **no collision at all**
+for its first `$1F` frames, which is why a player in the line of fire can still walk out of it, and
+the arm holds the parent for `$5F` frames after each shot, so the cadence is one per 96 frames
+rather than one per alignment.
+
+**Census.** `TestS3kSszPlacementCensus` now ratchets against `Sonic3kObjectProfile`'s zone-10 list,
+which `TestSonic3kObjectProfileRegistryGuard` pins to the registry in a fresh JVM. Act 1: **zero**
+placements without an implemented owner. Act 2: one, `$B2:$00`, the crane slice 9 owns.
+
+**Known-bug #41 — cause established, fix not taken.** Reading
+`LevelManager.applyBackgroundTilemapWindowSelection` settles it. Its middle branch, the one that
+moves the BG cache window to follow the background camera, needs both `bgCameraX != MIN_VALUE` and
+`bgWrapsHorizontally()`. In plain mode `SwScrlSsz.getBgCameraX()` returns `MIN_VALUE` and
+`isSszCloudBackgroundWindowActive` is false, so control reaches the third branch, which pins
+`bgTilemapBaseX` to 0, and `getBgPeriodWidth()` outside cloud mode is the scroll fan's width. The
+plane is therefore built from background layout X 0 for that many pixels and the `Camera_X + $28`
+word wraps inside it. Neither of the two things previously suspected is wrong on its own; the defect
+is that "camera-derived" is expressed as base 0, which only equals the cartridge when the cached
+window spans the whole background. The candidate fix and its risk are in the known-bugs entry; it
+was not taken here because it changes the plane source for every plain-mode frame in the act and
+needs its own RED layout test and before/after capture.
+
+**Tests.** `TestS3kSszCarriersAndSprings` 11, `TestS3kSszEggRobo` 5, `TestS3kSszPlacementCensus` 9 —
+all 0 failures, 0 skips. Four comparisons were broken on purpose and each was caught: the cloud's
+`byte_46698` index (`+1` -> "6(a2) is byte_46698 at the countdown index"), the spring's
+`Level_frame_counter` gate (ungated -> "the extension stepped on an even Level_frame_counter"), the
+EggRobo pairing gate (always-pass -> "a fighter survived with its _unkFA82 bit clear") and its
+animal release (suppressed -> "CreateChild6_Simple let animals go on the way"). The four mandatory
+S3K classes plus the SSZ, HPZ and DDZ suites and `TestEveryObjectRewindRoundTrip` /
+`TestRewindHarnessCoverageRatchet`: 1476, 0 failures, 0 skips. `-Pguards`: 669, 0 failures, 0 skips.
+`TestEveryObjectRewindRoundTrip` caught one real defect — the arc child forced `barSpawned` true on
+restore, so a rewind past the allocation re-spawned nothing.
+
+**Not delivered, and owed by whoever continues slice 3:** no capture for any of the six families
+(the clip numbering is still at `09`, so the next is `10`); no rewind spot for the carrier chain or
+the EggRobo pairing; no breadth matrix class; the cold act-1 route is unchanged, still stopping
+where slice 1b left it, because every class here sits past the bridge and is exercised from
+star-post entries.
+
+### 2026-09-18 — slice 3, part 5: the owed items
+
+Commits `955489d30` (#41), `c0dd69a4e` (rewind spots + breadth matrix), `3cd068e69` (cold route).
+
+**Known bug #41 — fixed, and its evidence corrected.** `SwScrlSsz.getBgCameraX()` now publishes
+`state.backgroundCameraX()` in plain mode, `backgroundWindowActive()` puts act 1 on the 512-pixel
+wrap model in both modes, and `getBgPeriodWidth()` returns the plane width for act 1. Without that
+`LevelManager.applyBackgroundTilemapWindowSelection` took its base-0 branch and the
+`Camera_X + $28` word wrapped inside layout columns 0-3.
+
+The correction matters more than the fix. Decoding the layout the way `TestS3kSszBackgroundLayout`
+does — 60 columns by 22 rows — background row 13 is the sky chunk `$02` from column 13 through 16.
+The `raw-10` frame-75 camera `($6A0,$550)` selects exactly those columns, so **the cartridge shows
+flat sky there too** and the capture never demonstrated the defect. The earlier entry read "row 13
+carries thirteen distinct chunk ids across columns ~9-52" as "structure should be on screen here";
+the row does carry structure, at columns 9, 12 and 17-22, but none of it is in front of that
+camera. The real defect was that a base-0 window ignores the camera at every camera, which is what
+the new case asserts.
+
+**Rewind spots.** Six, one per family, each mid-action. They caught nothing new, and one thing they
+cannot catch is written into the helper rather than glossed: at every spot the object instances
+survive the restore in place, so an `ObjectRefId` sidecar restore is never exercised. Disabling
+`SszRotatingPlatformObjectInstance`'s carrier restore outright leaves both these spots and
+`TestEveryObjectRewindRoundTrip` green. An `assertSame` on the resolved reference was written,
+found unable to disagree, and deleted rather than shipped.
+
+**Breadth.** `TestS3kSszCompatibilityMatrix`: ten scenarios over 320/800, no donor and the S1
+donor, three rosters and two team shapes, each walking nine checkpoints. It asserts every slice
+1b-3 class loads and that all eight ROM art keys have a ready renderer — the half that would
+otherwise be silent, because a class whose PLC entry is missing loads fine and draws nothing.
+Suppressing the retracting spring's entry fails ten of the twenty cases.
+
+**Cold route.** The fixture that carries SSZ act 1 is `hpz_completerun` (`zone_id 10`); the
+`ssz`-named ones are Death Egg. Bridge open at route frame 1390, furthest X `$6EB`, nobody dead
+across 6000 frames — past the bridge and the ledge, stopping short of the `$7B` cluster at `$740`.
+
+**Media.** Clips `10`-`13`: the bouncy cloud throwing the player with its puffs, the elevator bar
+hanging him at mapping frame `$E5`, the rotating post walking him through `byte_468C4`'s poses, and
+the swinging carrier's jointed arc. Each frame was looked at before the clip was cut.
+
+**Still owed.** The `$74` spring clip: the authored walk-in completes and nobody dies, but no
+spring is drawn at frames 180 or 270 as Sonic passes `($A60,$A30)`, while the matrix asserts its
+renderer is ready — an open question about the draw, not the capture position, and the first thing
+the next agent should chase. The `$A0` EggRobo clip: a fighter only exists once its paired fly-by
+has left the screen, so a still capture near one shows nothing; an authored input that walks the
+camera across the fly-by's placement first is the way. The #41 before/after, at a camera where a
+background column actually carries structure (row 13, columns 17-22). And a rewind spot that forces
+object recreation, which is the only way to exercise the sidecar restores.
+
+### 2026-09-18 — slice 3's tail: the spring's draw, the EggRobo's box, and what the clips settled
+
+**The `$74` spring is not a draw defect.** `Map_SSZRetractingSpring` (`$046D20`) is a six-frame
+table whose **frame 0 has a zero piece count** — the ROM's own way of saying "not out yet" — and
+`loc_46452` only leaves frame 0 while a player is inside the `$60`-wide approach box. Re-reading
+`raw-15-ssz-retracting-spring/state.csv` against the placement settles it arithmetically: the
+spring is at `($A60,$A30)`, so its box is X `[$A00,$A60]`, and Sonic is inside it only between
+capture frames ~70 and ~105. The two frames the previous entry inspected, 180 and 270, have him at
+X `$BB8` and `$B21` — well past the box, with the spring correctly retracted and correctly
+invisible. Frames 78, 85 and 95 show it extended, yellow and grey, exactly where it belongs.
+
+`TestS3kSszCarriersAndSprings#theRetractedSpringHasNoSpritePiecesAndTheExtendedOneDoes` pins both
+halves: the ROM's six piece counts (0, 1, 5, 4, 3, 4) and the engine's decoded sheet, whose frame-0
+`FrameBounds` are all-zero while frame 3's are not. Broken on purpose by pointing the empty-frame
+assertion at frame 1: `expected FrameBounds[0,0,0,0] but was FrameBounds[-8,8,23,15]`.
+
+**A real defect the EggRobo capture found: every mode wore the fighter's hitbox.**
+`EggRoboBadnikInstance` passed `FIGHTER_COLLISION_SIZE` to its superclass unconditionally, so
+`getCollisionFlags()` returned the size-6 enemy box in all three modes. The ROM disagrees, and the
+disagreement is one byte per `ObjDat3` row (`dc.b width, height, frame, collision`), verified
+against the cartridge at `$9199A`/`$919A6`/`$919B2`:
+
+| Row | Bytes | Collision |
+| --- | --- | --- |
+| `ObjDat3_9199A` (fly-by) | `20 20 00 00` | none |
+| `ObjDat3_919A6` (fighter) | `14 18 01 06` | size 6 |
+| `ObjDat3_919B2` (animal releaser) | `04 04 00 00` | none |
+
+The releaser is a 4x4 **invisible marker** and takes `ObjDat3_919A6` only at `loc_915F6`, on the
+frame its fourth animal goes. `getCollisionFlags()` now returns 0 unless the loaded attribute row
+is the fighter's, which is true for `FIGHTER` mode from its init and for a releaser once it has
+converted. RED first: `onlyTheFighterRowCarriesACollisionBox` failed with
+`expected: <0> but was: <6>` on the releaser.
+
+**The fix exposed a test that had been resting on the bug.** `theAnimalReleaserLetsFourAnimalsGoBeforeItFliesAway`
+and the EggRobo rewind spot both booted at the `$1330,$620` releaser and went red the moment the
+hitbox went away. The reason is worth recording: **that releaser hangs over a chasm**. A capture at
+`($1330,$5E0)` has the player fall straight past it and off the level; what had been keeping him near
+enough for the object to stay on screen was the invented hitbox knocking him upward. Both tests and
+the new one now use `$A0:$04` at `($1720,$E20)`, the one releaser of the three with ground under it —
+confirmed by capture, the player standing at `($172A,$E2C)` with the object on screen throughout.
+
+**Clips.**
+
+| Clip | Raw | What the frames show |
+| --- | --- | --- |
+| `14-ssz-retracting-spring-extends.mp4` | `raw-15-ssz-retracting-spring` 40-150 | The spring folded flat, then extending through frames 78-95 as Sonic enters its box, then folding away again as he leaves |
+| `15-ssz-eggrobo-releases-and-converts.mp4` | `raw-23-ssz-eggrobo-releaser` 0-137 | `$A0:$04` letting its animals go while a player stands in it unharmed, then taking `ObjDat3_919A6` at ~frame 70 and, now that it is a robot, hurting him |
+
+**The nibble-0/nibble-2 pairing is still unfilmed, and here is the measurement that says why.**
+The pairing itself is proven in tests — `theFlyByArcsOffTheScreenAndOnlyThenDoesItsFighterSurvive`
+drives group 6's fly-by to `loc_91570`, watches bit 6 of `_unkFA82` go up, and
+`aFighterWithNoReleasedFlyByNeverRuns` holds the other side. What cannot be filmed at any camera
+tried is the two of them in one shot, for a reason that is arithmetic rather than bad luck:
+
+- The fly-by's arc is tiny. `y_vel` starts `$180` and `$3C(a0)` subtracts one more each frame, so
+  it turns negative after 27 frames having descended about `$1A` pixels, and the perspective term
+  `$100 / (scale + 4)` pulls the drawn position up and left by as much as 32 px as the scale falls.
+  It therefore never gets more than a few pixels below its placement row before leaving upward.
+- Every nibble-2 partner hovers at its own placement Y, and at the camera the player can actually
+  occupy, that Y is off the top of the screen. Group 6 measured: fly-by `($1520,$C80)`, fighter
+  `($1660,$C80)`, player's standing Y on that walkway `$CEC`, camera Y `$C8C` — both objects sit 12
+  px *above* the visible area. Walking right to load the fighter (`raw-20`) runs the player off the
+  walkway at `$15C0` into the shaft below, where the camera is `$14C` too low to see it.
+- Group 1 (`raw-18`) reaches the fly-by at `($C20,$9E0)` but the return leg strands the player on a
+  carrier oscillating between X `$B1A` and `$C65`, never back inside the fighter's load window.
+
+Owed, with the next thing to try named: a capture that stands the player on the `$7B` walkway at
+`($15D0,$CEC)` **without** stepping off it — a one-frame right tap rather than a burst — so the
+fighter's load window opens while the camera is still on the walkway; or a group whose fighter Y is
+at least `$60` below its own ledge.
+
+### 2026-09-18 — slice 3's tail, part 2: #41 has no picture, and a rewind spot that can disagree
+
+**The #41 before/after was taken and it is blank.** `raw-24-ssz-bg41-before` and
+`raw-25-ssz-bg41-after`: 240 frames each, `--star-post --x 0x900 --y 0x580`, one recompile apart.
+The before build put `getBgCameraX()` back to `MIN_VALUE` in plain mode and made
+`backgroundWindowActive()` cloud-only; it was confirmed effective rather than assumed, by
+`TestS3kSszBackgroundLayout#plainModeSourcesThePlaneFromTheCameraDerivedWindow` going red on it
+(`expected: <1792> but was: <-2147483648>`). The player settles at `($938,$5EC)`, camera
+`($898,$58C)` — background column 17, row 13, the place the entry asked for — and **48 sampled
+frames are pixel-identical between the builds**. `Sonic3kZoneFeatureProvider.useFullWidthBackgroundTilemapWindow`
+is MGZ-only, so SSZ does take the branch the fix moves it to; the window base really changes from
+0 to `$890` and the period from the fan width to 512, and nothing on screen does. Either the SSZ
+act-1 plane is not built from `bgTilemapBaseX` at all, or `($898,$58C)` is the wrong camera. Filed
+as an open question with both kill conditions in `docs/status/s3k-known-bugs.md` #41, and the
+plain-mode half is downgraded there from "fixed" to **asserted, not demonstrated**. This is
+recorded rather than quietly dropped because a fix whose only evidence is the assertion it was
+written against is exactly the shape of thing a later agent would re-derive.
+
+**A rewind spot that can disagree.** The slice-3 spots all captured and restored one frame apart
+with every object alive on both sides, so a broken `ObjectRefId` restore could not have been seen
+— the previous entry proved that by disabling the rotating platform's carrier restore and finding
+everything still green.
+`TestS3kSszTraversalPlatforms#restoringPastTheDebrisDeletionRecreatesThePiecesAndTheirColumnLink`
+captures while the `$7E` column's eight `word_46618` pieces are in the air, runs on until every
+piece has been deleted (`countActive == 0`, asserted), and only then restores. The pieces have to
+be recreated — the test holds the pre-deletion instances and asserts none of the restored ones is
+the same object — and each piece's `parent3(a0)` has to resolve through the identity table to the
+live column. Broken on purpose by replacing the debris' `resolveObject` with `column = null`:
+`expected: <SszCollapsingColumnObjectInstance@…> but was: <null>`. That is the first SSZ spot where
+the sidecar is load-bearing.
+
+### 2026-09-18 — slice 4: death, checkpoint and what a load takes with it
+
+`TestS3kSszLifecycleProduction`, three cases, driven through a real `GameLoop` reload rather than
+by constructing a state.
+
+**Two ROM clears, in two different routines, and neither is in the SSZ code.** `LevelSetup`
+(sonic3k.asm:102185) runs `clr.l (Events_bg+$00/$04/$08/$0C).w` on every load, so a beaten boss is
+not remembered; the star posts simply sit past each arena. `Level:` runs `clearRAM _unkFA80,$80`
+(sonic3k.asm:7623), which covers `_unkFA82`, `_unkFA8A`, `_unkFAA2`, `_unkFAA4` and
+`_unkFAB0..B8` — the question the plan left open ("`_unkFA82` after respawn: no ROM clear") has an
+answer, and it is that block clear. `_unkFA82` is a shared scratch word used by a dozen unrelated
+routines across the ROM (grep finds writes in ICZ, MGZ and both SSZ bosses), which is exactly why
+no zone clears it individually. The engine's per-load rebuild of `SszZoneRuntimeState` is therefore
+faithful, and the test proves the load really replaces the instance: asserting `assertSame` instead
+of `assertNotSame` fails with two different objects.
+
+The lifecycle case seeds the two things a naive carry-over would keep — `Events_bg+$00` negative (a
+beaten Green Hill boss, `st (Events_bg+$00).w`) and `_unkFA82` bit 6 (a passed EggRobo fly-by) —
+calls `applyPitDeath`, and then requires all sixteen `Events_bg` bytes, the pairing word and
+`_unkFAA4` to be zero, the arrival not to run, and the rewind timeline to reset rather than
+continue the pre-death history.
+
+**`sub_575EA` after the restart, which is the observable consequence.** `$34:$03` is at
+`($14C0,$E8)`, and `$E8 < $440`, so the restart lands in the Metropolis branch. With the Green Hill
+word zeroed by the load the branch publishes `Camera_min_X = $160`; if the boss were remembered it
+would publish 0. The test reads `$160` and `Camera_max_X = $1660`, plus `Levels_1000_High`'s wrap
+still enabled over `$1000`.
+
+**Native corroboration, and a correction to this plan's own fixture table.**
+`s3k-sonic-tails-complete-emeralds/hpz_2` *is* a `$34:$03` restart: its metadata declares
+`start_x 0x14C0 / start_y 0x00E8`, the placement's own coordinates. Its row 0 reads player
+`($14C0,$EC)` and camera `($1420,$8C)`, and the engine's first frame from the same declared restart
+reads exactly those four values (broken on purpose with `nativeCameraY + 1`: `expected <141> but
+was <140>`). The table above describes `hpz_2` as carrying a "second death"; scanning
+`player_routine` across all 4352 rows finds **one** `00` span (rows 4224-4350), not two, and the
+test asserts that count so the correction cannot drift back.
+
+**Declared setup, not a route.** `SSZ1_ScreenInit` reads `Last_star_post_hit` on the load's first
+pass and, with it clear, hands Player 1 to `Obj_57C1E` under `object_control 3` — a leader placed
+near `$34:$03` with no checkpoint is dragged back to the arrival column before he can touch
+anything. The restart is therefore written the way the ROM writes it and the way
+`GameplayCaptureTool --star-post` does. A capture that walks into the post is not available at this
+placement and is not claimed.
+
+**Clip** `16-ssz-death-restarts-at-the-star-post.mp4` (`raw-27`, frames 40-280): death at 77,
+restart at the declared star post around 150, alive again by 220.
+
+**Two things the captures taught on the way.** (1) Falling in act 1 does not kill: the act wraps at
+`$1000`, so `raw-26` walks off the same ledge that "killed" in `raw-15`-era captures and comes back
+round the top. The death in `raw-27` is the converted EggRobo, which is why the clip is filmed
+there. (2) The same input that died at frame 404 in `raw-17` survives after the EggRobo collision
+fix — the pre-fix hitbox was killing players the cartridge would not have.
+
+**Owed by slice 4:** a `$34:$02`/`$34:$04` restart case (only `$34:$03` is driven), a wide-viewport
+row, and a capture of a star post being physically touched, which needs a route rather than a
+declared setup.
+
+### 2026-09-18 — slice 5: the Green Hill recreation
+
+`SszGhzBossObjectInstance` plus three child classes, the `loc_576E8` allocation in
+`Sonic3kSSZEvents`, and `TestS3kSszGhzArenaHeadless` (5 cases).
+
+**The arena is two gates, not one, and the second one is a camera.** `loc_57686` locks when Player
+1 is at or below `$7C0` with `Camera_X_pos == $160` and not in the air, and all it publishes is
+`Camera_max_X = $160` and `Camera_min_Y = Camera_target_max_Y = $7C0`. `loc_576E8` then waits for
+`Camera_Y_pos == $7C0` **exactly** — and because only the *target* moved, the boundary eases down
+from `$1000` at two pixels a frame, so about 1050 frames pass between the lock and the boss. The
+first version of the test gave that 240 frames and read the failure as a missing allocation.
+
+**A width bug the wide-viewport row found.** Two of `sub_575EA`'s three camera-X gates are equality
+tests against literals, and `Camera_X_pos` is the leader's X minus half the screen. At 800 the same
+world position gives `$70`, not `$160`, so the Green Hill lock could never fire and the arena was
+unreachable on every wide viewport. `Sonic3kSSZEvents.nativeFramedCameraX` reframes the value the
+gates read into the ROM's 320-wide framing — the same treatment, for the same reason, as
+`HczMinibossInstance.nativeFramedCameraX` — and leaves every bounds *write* in world coordinates,
+because moving the arena would move its terrain. Both viewport rows lock and spawn now.
+
+**A word that is two flags.** `move.w #$7F00,(Events_bg+$00).w` writes the fighting byte and clears
+the lock byte beside it in one instruction: `Events_bg+$01` is the low half of that word, which is
+why nothing ever clears it separately. The first version of the test polled `eventsBgWord(0)` for
+the spawn and saw `$00FF` — the lock byte alone — so it "detected" a spawn that had not happened.
+The test reads the byte now, and says why in a comment.
+
+**`SetUp_ObjAttributes` is the routine counter.** It ends `addq.b #2,routine(a0)`, which is the
+only thing that advances `routine` through `off_7A2B4`; the routine bodies never write it
+themselves except where they jump the sequence. Reading the table without that fact makes routine 0
+look like an infinite loop.
+
+**Persistence, found by a test that stalled.** The escape stopped 104 frames in and never wrote its
+flag: the ship leaves the locked arena's right edge and the engine's out-of-range unload stops
+updating it. The ROM has no `Obj_WaitOffscreen` anywhere in `loc_7A29C`'s chain, so the object is
+simply never unloaded; the boss and all three child classes now answer `isPersistent()` true. The
+diagnosis was a measurement — the escape's own `$2E` frozen at 15 with the ship at X `$380` — not a
+guess.
+
+**The defeat is three routines deep and none of them is the killing hit.** `sub_7A5A0`'s zero
+branch installs `Wait_FadeToLevelMusic` with `$34 = loc_7A3CE` and leaves `$2E` holding whatever
+the last routine left, so the ship hangs where it died; `loc_85674` then arms `(2*60)-1`, allocates
+`Obj_Song_Fade_ToLevelMusic` and hands to `loc_7A3CE`, which turns the ship right at `x_vel $400`;
+only `loc_7A3F8`, at the end of those 119 frames, writes `st (_unkFA89).w` (which deletes the head)
+and `st (Events_bg+$00).w` (which `sub_575EA` reads as beaten and the `$79:$AA` pad reads as its
+release), restores palette line 2 and reloads PLC `$32`. The test asserts the flag is still
+positive immediately after the eighth hit, which is the half that would otherwise be invisible.
+
+**The chain is a tree, not a list.** `CreateChild9_TreeList` sets each link's `parent3` to the link
+before it and only the first link's to the ship; `$44` is the ship for all six. The links pay out
+at two pixels a frame for `word_7A642`'s per-subtype counts, and the last one to finish — subtype
+`$A`, the ball — is what sets the ship's `$38` bit 2. The root then owns the angle: `$3C` steps by
+`$3A` and reverses whenever `($3C - $40)` is below `$80` unsigned, a pendulum between `$40` and
+`$BF` the long way round through zero, and at the end of the sweep that lies in the ship's
+direction of travel it sets bit 3, which is what turns the ship around. Which end that is comes
+from `sls`'s `$3C <= $40` answer combined with the ship's X-flip through a `not.b`.
+
+**Rewind.** Four cross-object SST links that no spawn can rebuild — each link's `parent3`, the
+ship's list, its emitter and the head's parent — so all four classes capture typed `ObjectRefId`
+sidecars and relink on restore, with `DefaultObjectRewindPolicies` entries and the architecture
+guard's override baseline triaged the same way slice 3's debris was. The spot is taken mid-swing
+with all six links out; nulling the links' `chainParent` restore fails it on five of the six.
+
+**Art.** `ArtKosM_SSZGHZMisc` (`$17EDB4`) over `Map_SSZGHZMisc` (`$186E7C`) on palette line 1 —
+`ObjDat3_7A660` and `_7A66C` carry a `FixBugs` comment calling that line wrong and the shipped ROM
+uses it — plus `ArtKosM_MechaSonicHead` (`$17C6E0`) over `Map_MechaSonicHead` (`$681FC`). Both are
+registered in `addSszEntries`: the engine has no runtime decompression queue for object art, so the
+ROM's `Load_PLC $7B` is served by the zone's art plan. `Pal_SSZGHZMisc` is `$07D850`.
+
+**Tests.** `TestS3kSszGhzArenaHeadless` 5 (two viewport rows plus the routine walk, the defeat and
+the rewind spot). Broken on purpose three times, each caught: suppressing `dropChain()`
+("dropped the chain when Camera_X + $A0 reached the ship"), suppressing the beaten flag
+("st (Events_bg+$00).w after the escape") and nulling the chain link restore (five links'
+compact state differing). The four mandatory S3K classes with the SSZ, HPZ and DDZ suites and the
+rewind harness: 1520 tests, 0 failures, 0 skips. `-Pguards`: 669, 0 failures, 0 skips, after two
+baseline moves the guards exist to force (the four `ObjectRefId` policy entries and the eight
+override rows).
+
+**Not delivered by slice 5, and owed.** `sub_7A5A0`'s hit flash writes three specific
+`Normal_palette` entries from `word_7A628` rather than a whole line; this uses the shared boss
+flasher instead, and the exact three-colour flash is unported. The `$79:$AA` gated pad's rise after
+the defeat is implemented but not driven end to end in a test. No capture yet. No native row
+comparison for the fight: the `hpz` fixture's Green Hill arena window (camera `$160,$7C0`, 1142
+rows) is the obvious next evidence and nothing here is compared against it, so "native behaviour
+matched" is not claimed for any of these rows.
+
+### 2026-09-18 — handover after slice 5
+
+Branch `feature/ai-ssz-bring-up`, head `0d66b1434`, base develop `035e48a58`. Nothing pushed,
+nothing merged. Commits this entry covers, oldest first: `5d746a8f2` (the `$74` finding and the
+EggRobo collision fix), `965ea8c1f` (the recreation rewind spot and #41's blank before/after),
+`664b15e76` (slice 4), `9e38c808c` (slice 5), `df1a3b85e` and `0d66b1434` (matrix and backlog).
+
+**Where slice 6 starts.** `Obj_SSZMTZBoss` (`loc_7A6B6`) and `sub_575EA`'s `loc_5775C`. Four things
+this entry learned that slice 6 will hit immediately and should not re-derive:
+
+1. **`SetUp_ObjAttributes` is the routine counter** — it ends `addq.b #2,routine(a0)`. Without that
+   fact every S&K boss's routine-0 entry reads as an infinite loop.
+2. **The arena gate is a camera, not the lock.** `loc_5775C` waits for `Camera_Y_pos == $380`
+   exactly, and the lock only publishes `Camera_target_max_Y_pos`; the boundary then eases at two
+   pixels a frame. From `$1000` that is roughly 1650 frames. Give the test the budget.
+3. **`Camera_X_pos` comparisons are width-sensitive.** `loc_5770C` tests `== $1660`. Use
+   `Sonic3kSSZEvents.nativeFramedCameraX`, which already exists, or the Metropolis arena is
+   unreachable at every wide viewport exactly as Green Hill was.
+4. **The boss and its children must be persistent.** Nothing in these dispatch chains runs
+   `Obj_WaitOffscreen`, and the escape leaves the locked arena; without `isPersistent()` the engine
+   stops updating the object part-way through and the defeat flag is never written.
+
+`Obj_SSZMTZBoss` differs from Green Hill in ways worth reading before writing anything: it has two
+routines rather than six, it writes its own `SSZ_MTZ_boss_X/Y_pos` and `_vel` words rather than
+using `MoveSprite2`'s SST fields, `loc_7A7C4` writes `$10,0,3,0,1,0` into `_unkFA82.._unkFA87` —
+the same word the EggRobo pairing uses, so an EggRobo fly-by released before the fight will look
+released afterwards unless the boss's write is modelled — and it allocates a second object at
+`loc_7AD8A` with `$34 = a0`.
+
+**The four things slice 5 did not deliver**, in the order they are worth doing: the `word_7A628`
+three-colour hit flash (`sub_7A5A0` patches `Normal_palette+$0E/$1C/$1E` from a two-row table
+indexed by `$20(a0)` bit 0, not a whole line, and the shared boss flasher is standing in); the
+`$79:$AA` gated pad driven end to end from the defeat flag to the `$2A0` lift; a native comparison
+against the `hpz` fixture's Green Hill window; and a wide-viewport capture of the fight.
+
+**Two open questions with kill conditions.**
+
+- *Known bug #41's rendered half.* The fix changes the published window (the layout test proves it)
+  and changes no pixel at camera `($898,$58C)` over 48 sampled frames. Either `LevelTilemapManager`
+  does not consume `bgTilemapBaseX` for SSZ act 1's plane, or that is the wrong camera. Killed by a
+  before/after pair at any camera whose frames differ, or by a read of the act-1 path through
+  `ensureBackgroundTilemapData` showing where the base is dropped. Recorded in
+  `docs/status/s3k-known-bugs.md` #41, where the plain-mode half is now marked asserted rather than
+  demonstrated.
+- *The EggRobo pairing shot.* Measured obstacle in `~/Videos/OGGF/ssz-bring-up/INDEX.md`: the fly-by
+  descends about `$1A` px before turning upward, and every nibble-2 partner hovers at a Y that is
+  off the top of the screen from the ledge the player must stand on to load it. Killed by a capture
+  that puts both on screen, or by establishing that none of the eleven pairs can.
+
+**One correction to make sure survives.** This plan's fixture table describes
+`s3k-sonic-tails-complete-emeralds/hpz_2` as carrying a "second death". It carries one
+`player_routine 00` span, not two, and `TestS3kSszLifecycleProduction` asserts that count so the
+claim cannot drift back in.
+
+### 2026-09-18 — slice 5 follow-up: `Boss_flag`, and a no-op that nearly shipped
+
+Reviewing the port's own citations turned up one thing slice 5 had left out and one thing it nearly
+got wrong in a way that would have read as done.
+
+`Obj_SSZGHZBoss`'s init is `move.b #1,(Boss_flag).w` and `loc_7A3F8`'s first instruction is
+`clr.b (Boss_flag).w`, before the `_unkFA89` and `Events_bg+$00` writes. Neither was ported.
+
+The obvious fix — call `Sonic3kLevelEventManager.setBossFlag` the way `MhzEndBossInstance` does —
+would have been a **no-op dressed as a port**: that method routes only to `aizEvents` and
+`cnzEvents`, so an SSZ caller writes nothing and every test that asserted it would have had to
+assert something else. The write goes to `SszZoneRuntimeState.bossFlag` instead, where it is real
+state, the rewind capture carries it, and a consumer can be added when one exists. **No SSZ
+consumer reads it yet**, which is recorded on the accessor itself rather than left to be
+rediscovered.
+
+The test asserts it true after the entry wait and false after the escape. The first version
+asserted it on the frame the allocation happens and failed — correctly: the init block is the
+object's first *execution* in the engine exactly as it is in the ROM, where the allocation only
+writes the routine pointer. That failure is left described here because "assert the init's effects
+on the allocation frame" is an easy thing to write and an easy thing to then weaken.
+
+Re-run after the change: the four mandatory S3K classes with the SSZ, HPZ and DDZ suites and the
+rewind harness, 1520 tests, 0 failures, 0 skips; `-Pguards` 669, 0 failures, 0 skips.
+
+**One precision deviation, recorded not fixed.** `MoveSprite_CircularSimple` reads and writes the
+chain links' positions as longwords — `move.l x_pos(a1),d2` / `move.l d2,x_pos(a0)` — so the ROM
+carries each link's sub-pixel fraction. `SszGhzBossChainLinkChild` keeps whole-pixel X and Y and
+re-derives the orbit from its parent every frame, so the fraction is dropped. The error cannot
+accumulate, because each frame's position is computed absolutely from the parent rather than
+integrated, but a link can sit one pixel from where the cartridge puts it. Worth knowing before
+anyone compares the chain against a native row.
+
+### 2026-09-18 — the slice-5 reviewer did not deliver, and what was checked instead
+
+An independent reviewer was spawned against commit `9e38c808c` with a specific brief: the routine
+dispatch and what advances `routine`, `Swing_UpAndDown`'s sign conventions, `MoveSprite2` versus
+`MoveSprite`, the `loc_7A496` angle machine's `sls`/`not.b`/`btst #0,render_flags` combination,
+`MoveSprite_CircularSimple`'s shift semantics, `sub_7A5A0`'s hit gate and `$25(a0)` restore,
+`loc_7A3F8`'s write order, drifted citations, and assertions that could not disagree. It ran for
+about ten minutes and twenty-four tool calls and then ended **without returning a report**; three
+requests to deliver it, including one asking only for partial findings, produced nothing. **No
+reviewer findings exist for slice 5.** This is recorded rather than quietly dropped, because "an
+independent reviewer looked at it" is exactly the kind of claim that later reads as coverage.
+
+What was checked directly instead, against the disassembly text, with the results:
+
+| Checked | Result |
+| --- | --- |
+| `SetUp_ObjAttributes` ends `addq.b #2,routine(a0)` | Correct as modelled; it is the only thing advancing `routine` through `off_7A2B4` |
+| `loc_7A496`'s reversal window and which end sets `$38` bit 3 | Traced frame by frame from angle 0. `sls` is C-or-Z on `subi.b #$40,d0`, so it means `angle <= $40`; `bhs #-$80` skips when the biased value is `>= $80`, so the reversal fires once at `$40` and once at `$BF` and the sweep runs the long way round through zero. With the ship unflipped bit 3 is set at the `$BF` end and flipped at the `$40` end. Matches the port |
+| `MoveSprite_CircularSimple`'s `asr.l d2` | `(±$100 << 16) >> 4` is 16.0 in 16.16, so `$3A = 4` really is a 16-pixel arm and `3` a 32-pixel one. Matches |
+| The same routine's longword position read/write | **Deviation found**: the ROM carries each link's sub-pixel fraction, the port keeps whole pixels. Recorded above; cannot accumulate |
+| `Obj_SSZGHZBoss`'s `Boss_flag` writes | **Gap found and fixed**; see the entry above |
+| `loc_7A32C`'s `Camera_X + $A0` trigger | Width-independent in practice, because the lock pins `Camera_max_X` to `$160` so the camera sits at `$160` at every viewport |
+| The defeat case's hit delivery | **Hole found and closed**: the eight hits are delivered by calling `onPlayerAttack` directly, so the test passed without the ship being touchable at all. It now asserts the box (`$C0 | $F`), the hit counter and the zero after defeat |
+
+Not checked by anyone: `sub_7A5A0`'s `$25(a0)` collision restore against the shared hit handler's
+equivalent, `Swing_UpAndDown`'s shared helper against the ROM routine text, and every citation in
+the four classes' Javadoc. Those remain open for slice 6's reviewer, who should be given the same
+brief and actually waited on.
+
+### 2026-09-18 — slice 5's review, applied, disputed and tested
+
+The independent review of the Green Hill port at `9e38c808c` finally reached an implementer. It
+is at `~/Videos/OGGF/ssz-bring-up/notes/ssz-ghz-boss-review-9e38c808c.md`. Every citation in it
+was re-read against `docs/skdisasm/sonic3k.asm` before anything was changed; two of its claims did
+not survive that and are recorded as disputed rather than quietly dropped.
+
+**A — the entry wait was two frames short, not one.** `Obj_SSZGHZBoss`'s body ends
+`jmp (PalLoad_Line1)`; the `move.l #Obj_Wait,(a0)` at its top only changes what the *next* frame
+runs, so the init execution does not consume a wait frame. `Obj_Wait` then decrements `$2E` from
+`$1F` and goes negative on the 32nd decrement, at which point `loc_84892` tail-calls `$34(a0)` —
+`loc_7A294`, which installs `loc_7A29C` and returns inside that same frame. `off_7A2B4` is
+therefore first dispatched on init + 33. (The first draft of this entry said `loc_7A294` spends a
+frame of its own; review 02 caught that, and the count is unaffected either way.) The port ran `loc_7A2C0` on init + 31, because it did the
+init and the first decrement in one frame and had no handover frame. Both are fixed with explicit
+`initExecuted` / `dispatcherInstalled` flags, and the test now asserts the count 33 rather than
+"routine became 2 eventually". The review said 33 counting from a different origin; the two agree
+on the shape and the test pins the number.
+
+**B — the fade wait is `$3F`, and the fight is worth 100 points.** `loc_7A5EC` ends
+`jmp (BossDefeated)` and `BossDefeated` (:180822) is `move.w #$3F,$2E(a0)` / `moveq #100,d0` /
+`jsr (HUD_AddToScore)` / `bclr #7,render_flags`. `onDefeatStarted` left `$2E` holding the last
+routine's value and the shared base awarded the S2 boss's 1000. `AbstractBossInstance` gained a
+`getDefeatScore()` hook (default 1000, both award sites route through it) and this boss overrides
+it with 100. The escape arithmetic now lands where the ROM's does: `$3F + 1` frames of
+`Wait_FadeToLevelMusic`, then `loc_85674`'s `(2*60)-1` plus the frame `loc_7A3E6` goes negative on,
+which the ROM makes `$40 + $78` = 184 frames. The engine delivers 183, because it detects the
+killing hit in the touch pass and runs this object's own update later in the same frame where the
+ROM does both inside `sub_7A5A0`; the test asserts that 183 and the one-frame offset is stated on
+the assertion rather than hidden in it.
+
+**Two things the review did not find, in the same routine.** `loc_7A5EC` installs a code pointer
+and returns: nothing there clears `$38` bit 6 and nothing deletes the chain. That reading is
+correct, but the conclusion drawn from it — that the six links therefore ride the escape out —
+was not; see the review-02 entry below.
+
+**C — the hit flash is three colours, not a line.** `sub_7A5A0` arms `$20(a0)`, then every frame
+`sub_7A614` runs `CopyWordData_3` from `word_7A628` into the three addresses in `word_7A622`:
+`Normal_palette+$0E/$1C/$1E`. `Normal_palette_line_2 = Normal_palette+$20` (sonic3k.constants.asm
+:768), so those are line 0 colours 7, 14 and 15 — the line
+`make_art_tile(ArtTile_RobotnikShip,0,0)` draws the ship on. `btst #0,$20(a0)` leaves `d0` zero on
+the odd counter values, so the odd frames write row 0 (`$8,$866,$222`, the ship's normal colours,
+which is why the ROM needs no restore) and the even frames add a byte offset. `FixBugs = 0` ships
+`addi.w #2*2,d0`, a four-*byte* offset into a six-word table — one word short of the second row —
+so the flash row is `$222,$888,$CCC` and overlaps the normal row's last colour. The `FixBugs`
+branch is `2*3` and would write `$888,$CCC,$EEE`. Ported as shipped, with both branches commented,
+a new `S3kPaletteOwners.SSZ_GHZ_BOSS_HIT_FLASH`, and `usesBaseHitHandler()` returning false so the
+boss owns `$20(a0)` — the shared handler decrements before its flash reads the counter, which
+would invert the parity. The test asserts both rows appear and that the `2*3` row never does.
+
+**D — the chain carries sub-pixels.** `MoveSprite_CircularSimple` is `move.l x_pos(a1),d2` /
+`move.l d2,x_pos(a0)` throughout, so each link reads its parent's fraction and passes its own down
+the tree; `Refresh_ChildPosition` is `move.w`, so the root's own fraction stays zero and every
+fraction in the chain is made below it. The links now keep 16.16 positions. This closes the
+precision deviation the 2026-09-18 slice-5 follow-up entry recorded.
+
+**E — the ball had no collision at all, so the fight could not hurt anyone.** `ObjDat3_7A678` is
+`dc.b 8,8,0,$8F` and only `loc_7A514` — the ball's dispatcher — ends
+`Child_DrawTouch_Sprite_FlickerMove`; the root and the four middle links end
+`Child_Draw_Sprite_FlickerMove`, which never reaches `Add_SpriteToCollisionResponseList`. Neither
+routine flickers per frame: "FlickerMove" names what they do when the parent's `status` bit 7 is
+set, which in this fight never happens, so the ball's box is live on every frame of the swing.
+`SszGhzBossChainLinkChild` now implements `TouchResponseProvider`, returning `$8F` for subtype
+`$A` and zero for the rest.
+
+**F — half right, and the wrong half was mine.** `word_7A65A`'s last byte is the
+`collision_flags` `SetUp_ObjAttributes3` writes and it is `0`, so the class comment's "harmful
+exactly on the frames it is visible" was wrong and is corrected. But this entry also claimed
+`loc_7A568`'s `btst #7,status(a1)` was dead code, on the grounds that nothing in
+`Obj_SSZGHZBoss` sets `status` bit 7. Nothing in `Obj_SSZGHZBoss` does — and the bit is set
+anyway, by the shared touch response: `Touch_Enemy`'s `.checkhurtenemy` ends
+`subq.b #1,boss_hitcount2(a1) / bne.s .bossnotdefeated / bset #7,status(a1)`
+(sonic3k.asm:20922). See the review-02 entry below for what that changes.
+
+**G — `state.x`/`state.y` were never updated.** The shared base reads them for the defeat
+explosion offsets, the debug overlay and the dynamic spawn a rewind recreation rebuilds from, and
+this object moves through its own `MoveSprite2` fields, so all three were reading the spawn. Synced
+at the end of every dispatched frame.
+
+**H — disputed, then killed by its own test, and the review was right.** The first reading here
+was that `loc_7A244`'s `Camera_X + $110` and `loc_7A32C`'s `Camera_X + $A0` must *not* be reframed,
+on the grounds recorded in slice 5's own entry: that the lock's `Camera_max_X_pos = $160` pins the
+camera at `$160` at every viewport, making those two world offsets from a fixed point rather than
+view offsets. A test was written to prove it — assert the spawn and the drop land on the same world
+position at 320 and at 800 — and it failed immediately: `camera.getX()` is `$160` at 320 px and
+`$70` at 800 px. **The slice-5 claim was false.** The lock fixes the ROM's 320-pixel frame; the
+engine's wider viewport then centres the same focus point, which moves its left edge left by half
+the extra width. Read raw, the ship spawned at `$180` and dropped its chain at `$110` on a wide
+screen — a different arena from the cartridge's, at every wide viewport, which is exactly what the
+review said. Both reads now go through a `nativeFramedCameraX` of the same shape as
+`HczMinibossInstance`'s, in the boss for the trigger and in `Sonic3kSSZEvents.allocateGhzBoss` for
+the spawn, and the test asserts the framed camera is `$160`, the spawn `($270,$780)` and the drop
+`$200` at both widths.
+
+This is worth keeping as a method note, not just a fix: "the lock pins the camera" was asserted in
+a previous entry from a reading of the lock routine, carried forward as settled, and used to argue
+against a correct review finding. One `assertEquals` at two widths killed it in under a second.
+
+**The swing arc — also disputed.** The review's "short arc `$40`→`$C0`, never through zero" is
+wrong on the second half. The reversal test is
+`subi.b #$40,d0 / cmpi.b #-$80,d0 / bhs loc_7A4C2`, so the step is negated on every angle in
+`[$40,$BF]`. Walked from zero: the step flips at `$40` (landing on `$3F`) and at `$BF` (landing on
+`$C0`), so the sweep runs `$40 -> 0 -> $BF` the long way round through zero, holding `$BF` and
+`$C0` for a frame each at the far end, and the interior `[$41,$BE]` is never visited at all. The
+existing Javadoc was right about the direction; the first version of the new test asserted the
+excluded band as `[$41,$BF]` and failed on `$BF`, which is how the endpoint was pinned.
+`theRootLinkSweepsThroughZeroAndTurnsTheShipAtOneEnd` now asserts that `$00` and `$FF` are visited,
+that no angle in `[$41,$BE]` ever is, that `$40`, `$BF` and `$C0` all are, and that the step only
+ever flips at `$3F` and `$C0`.
+
+**The seven assertions that could not disagree, and what replaced them.** The spawn identity
+(`camera.getX() + SPAWN_CAMERA_X_OFFSET == boss.getX()`) is now the literals `$270` and `$780`
+against an asserted camera of `$160`. The subtype identity (`index*2`) is now
+`List.of(0,2,4,6,8,$A)`. "Any downward motion" is now exactly `$20` pixels after exactly `$20`
+frames of routine 2, which is what `y_vel $100` with `MoveSprite2` and no gravity means.
+"`routine >= 4`" is now `== 4`. The zero-frames-stepped cooldown is gone with the direct
+`onPlayerAttack` calls: all eight hits are delivered by pinning an attacking player on the ship and
+stepping the engine's own collision pass, one hit per `$20` window, and the ball's hurt is
+delivered the same way. The entry assertion that missed finding A is the frame count above. Six new
+tests cover the angle machine and the 8/`$A` turn loop, the orbit radii and the sub-pixels, the
+emitter's flicker parity and its zero collision byte, the ball's touch path, the hit flash's two
+rows, and palette line 1's round trip.
+
+**Still not done for this fight**, unchanged from slice 5: no capture, and no native row
+comparison against the `hpz` fixture's Green Hill window. "Native behaviour matched" is still not
+claimed for any of these rows.
+
+### 2026-09-18 — review 02, and the two things it caught that the first review and this implementer both missed
+
+An independent reviewer was spawned against the uncommitted review-application tree with the same
+brief shape as slice 5's, plus two explicit asks: check every changed Javadoc citation, and name
+every assertion that cannot disagree. It ended without returning through the handback the way
+slice 5's did — but it had written its report first, at
+`~/Videos/OGGF/ssz-bring-up/notes/ssz-ghz-review-02-applied.md`, so this time the findings exist.
+**Writing the report to a file before returning it is what made the difference**; that is worth
+carrying into every future reviewer brief.
+
+**The finding that mattered, and it was mine to lose.** Both the first review and this
+implementer concluded that `loc_7A568`'s `btst #7,status(a1)` is dead code, and both reached it
+the same way: by grepping `Obj_SSZGHZBoss`'s own routines for anything setting `status` bit 7 and
+finding nothing. Nothing there sets it. The shared touch response does —
+`Touch_Enemy`'s `.checkhurtenemy`, at sonic3k.asm:20922:
+
+```
+		subq.b	#1,boss_hitcount2(a1)	; Subtract from boss hit counter
+		bne.s	.bossnotdefeated
+		bset	#7,status(a1)
+```
+
+That is the ship's `status` bit 7, set in the collision pass on the killing hit. Three things
+follow, and the port had all three wrong:
+
+1. **The emitter is deleted at the killing hit**, by `loc_7A568`'s first test taking
+   `loc_7A59A -> Delete_Current_Sprite` — not leaked, and not held until the escape finishes.
+2. **Every chain link converts to scatter debris.** Both dispatchers end in a
+   `Child_*_Sprite_FlickerMove` whose first test is the same bit on `parent3`; `loc_849D8` then
+   runs `bset #7,status(a0)`, installs `Obj_FlickerMove`, **clears `collision_flags`** and calls
+   `Set_IndexedVelocity` with `d0 = 0`, reading `Obj_VelocityIndex + subtype*2` — a different
+   velocity pair per link. Because each link's `parent3` is the link in front of it, the bit walks
+   down the tree one link a frame, so the chain comes apart from the ship outward.
+3. **The ball's hitbox goes the frame it converts**, not when the ship finally leaves.
+
+So the change this entry made three paragraphs above — removing the chain deletion from
+`onDefeatStarted` so the links "ride the escape out" — was a regression, and a gameplay one: it
+left a live HURT box orbiting through the whole 183-frame escape. It is replaced by the ROM's
+actual behaviour, `Obj_FlickerMove` and all, with `theKillingHitScattersTheChainOneLinkAFrameAnd
+TakesTheBallsHitbox` asserting the one-link-a-frame cascade, the cleared collision byte and the
+deleted emitter. The old code's unconditional delete was closer to the cartridge than the "fix".
+
+**The method note.** This is the second time in one task that a claim was reached by searching
+only the routine under the microscope. The first was the widescreen camera, where a previous
+entry's "the lock pins the camera at `$160`" was carried forward as settled. Both were killed by
+evidence that took seconds to gather once someone looked outside the file. *An empty grep is a
+fact about the grep*: for a shared SST field like `status`, the writer is very often in the shared
+subsystem that owns the interaction, not in the object.
+
+**The rest of review 02, applied.** The escape total is 184 frames in the ROM and 183 here (the
+one-frame offset is now stated on the assertion). The widescreen test's own Javadoc still argued
+the position the test had disproved, and is rewritten. `assertEquals(0x20, hitWindow + 1 > 0x20 ?
+0x20 : hitWindow + 1, ...)` accepted two values — exactly the two that distinguish the flash
+parity — and is now `assertEquals($1F, hitWindow)` with the parity spelled out. The `sawNormal`
+half of the flash test could have passed with no palette write at all if line 0 already held
+`word_7A628`'s first row, so the colours are sampled before the first hit and asserted different.
+The `assertEquals(0xC0 | $F, ...)` message claimed `$F` is category BOSS in the ROM: it is not —
+`$0F`'s top bits are `%00`, which `Touch_ChkValue` sends to `Touch_Enemy`, and the boss-ness comes
+from `boss_hitcount2`; `$C0` is the engine's own category and the message now says so. The
+chain-drop position was asserted as a four-pixel window where `x_vel -$100` from an even `$270`
+lands it exactly on `$200`. The root's zero sub-pixel word was an identity on the implementation
+and is now paired with an assertion that the link behind it does carry a fraction. And the
+emitter's "cannot hurt anything" was a statement about the Java class hierarchy; it now stands a
+player on the emitter for forty frames and asserts no hurt and no ring loss.
+
+**One review-02 finding rejected, and the question behind it settled by measurement.** Its
+finding 12 suspected the hit flash's known-bugs entry described the deviation backwards, and it
+did: `PaletteOwnershipRegistry.submit` feeds `resolveInto`, which writes into the level's own
+`Palette` objects, so the last row written persists after the boss stops submitting — exactly as
+the cartridge leaves it. Its finding 6 then asked whether `sawNormal` could disagree, which turned
+on what line 0's colours 7, 14 and 15 hold before the fight. An assertion written to defend the
+test answered it: they are `[$008,$866,$222]` — **`word_7A628`'s first row exactly**. So the
+"normal" row is the ship's own colours, which is why `sub_7A614` needs no restore when the window
+closes, and why the row the ROM leaves behind is invisible. There is no deviation and no gap, so
+the known-bugs entry that was drafted for it is deleted rather than kept as a non-finding. The
+test no longer asserts that the normal row "appeared" — that is true of a boss that writes nothing
+— but that the two rows *alternate*, at least `$E` shipped frames each followed by the `d0 = 0`
+row, which is the parity `btst #0,$20(a0)` selects.
+
+**And one review-02 finding that was right about the assertion and wrong about the fix.** Its
+finding 9 said the emitter's "cannot hurt anything" was a statement about the Java class hierarchy
+rather than about behaviour. True — so the test was changed to stand a player on the emitter for
+forty frames, and it failed: the player is hurt. Not by the emitter. The emitter sits `$1E` in
+front of the ship, comfortably inside the ship's own `$F`-index box, so a player at the emitter's
+position is touching the ship whatever the emitter does. The behavioural assertion was
+unobtainable at that position, so it is replaced by one over the object graph that can still
+disagree: of everything the fight allocates before the chain drops, nothing publishes a non-zero
+collision byte. That would fail the moment someone gave the emitter or the head one.
+
+**And one left alone.** Finding 13: `Sonic3kSSZEvents.allocateGhzBoss` still reads
+`camera.getY()` raw for the `-$40` spawn offset while X goes through `nativeFramedCameraX`. There
+is no Y equivalent of that helper and both viewports the tests exercise share a height, so this is
+untested rather than wrong. Recorded here so the next person does not have to rediscover that it
+was considered.
+
+### 2026-09-18 — slice 6 not started; the ROM reading that is already done
+
+Slice 6 (the Metropolis recreation) was not implemented in this session. Applying and then
+re-reviewing slice 5's review took the whole of it, and two of the corrections were behavioural
+regressions that had to be caught before anything new landed. What follows is the disassembly
+reading done while the suites ran, so the next implementer does not start from the label list.
+
+**The arena gate, `loc_5770C`/`loc_5775C` (sonic3k.asm:116303).** `d0` at entry is the leader's
+`y_pos`, from `sub_575EA`'s caller. The sequence is: `Events_bg+$02` negative means beaten (jump to
+`loc_5777E`, which reopens the bounds to `0`/`$19A0`); non-zero-but-positive means the fight is
+running and nothing below executes; `Events_bg+$03` non-zero means the lock has already fired, so
+skip straight to the spawn gate. Otherwise `Camera_max_X_pos = $1660` and `Camera_min_X_pos` is
+`$160` or `0` depending on whether `Events_bg+$00` (the Green Hill fight's own word) is still set —
+**the Metropolis lock reads the Green Hill flag**, which is worth knowing before writing the test.
+The lock needs `y_pos >= $420`, `Camera_X_pos == $1660` exactly and the leader not airborne
+(`btst #1,status`), and then writes `Camera_min_X_pos = $1660`,
+`Camera_min_Y_pos = Camera_target_max_Y_pos = $380` and `st (Events_bg+$03).w`. The spawn is the
+separate `loc_5775C`: `Camera_Y_pos == $380` exactly, `AllocateObject`, `st (Events_bg+$05).w`,
+`move.w #$7F00,(Events_bg+$02).w`.
+
+Two things carry over from Green Hill and are now proved rather than assumed. The
+`Camera_X_pos == $1660` compare **must** go through `Sonic3kSSZEvents.nativeFramedCameraX`: the
+lock fixes the ROM's 320-pixel frame, and this session measured `camera.getX()` as `$70` at 800 px
+where it is `$160` at 320 px in the Green Hill arena, so a raw compare is unreachable at every wide
+viewport. And the `Camera_Y_pos == $380` gate eases at two pixels a frame, so the test budget is
+~1650 frames from `$1000`.
+
+**`Obj_SSZMTZBoss` (`loc_7A6B6`, sonic3k.asm:163023).** Same init shape as Green Hill —
+`Obj_Wait` `$1F` with `$34 = loc_7A712`, `Boss_flag`, `cmd_FadeOut`, an
+`Obj_Song_Fade_Transition` carrying `mus_EndBoss`, `clr.w (_unkFA88).w`, `Load_PLC $7B`,
+`Queue_Kos_Module ArtKosM_SSZMTZOrbs`, the `Normal_palette_line_2 -> Target_palette_line_2` save
+and `PalLoad_Line1 Pal_SSZMTZOrbs` — so the frame accounting settled for Green Hill applies
+unchanged: `loc_7A712` spends its own frame installing `loc_7A71A`, and `off_7A728` is first
+dispatched on init + 33.
+
+`off_7A728` has only two entries, and the second (`loc_7A7E2`) dispatches again on `$26(a0)`
+through `off_7A7F0`, eight entries. The boss does **not** use `MoveSprite2`'s SST fields: it keeps
+`SSZ_MTZ_boss_X_pos`/`_Y_pos` as longwords and `_X_vel`/`_Y_vel` as words, moved by
+`Boss_MoveObject` (sonic3k.asm:163~; the Sonic 2 routine, `asl.l #8` into a 16.16 pair), and copies
+`x_pos` back out of them at `loc_7A8DA`. Fixed positions worth having: it starts at
+`($1700,$300)`, descends to `$420` before taking `$26 = 2`, patrols between `$1680` and `$1780`,
+hovers at `$3B0`-`$3F0`, and the laser pass fires at `$16A0`/`$1760`. `$3C(a0)` is initialised to
+7 and is the count of arm-raise cycles; `$38`/`$3A` are the arm angles (`$27` at rest, up to
+`$68`); `$1D` is the hover phase (`sub_7A85A`, `asr.w #6` on the sine, `addq.b #4`).
+
+`loc_7A7C4` writes `$10,0,3,0,1,0` into `_unkFA82.._unkFA87`, and `sub_7AC06` rewrites
+`2(a1)` of the same block on a hit (`andi.b #$F0` / `ori.b #5`) and on a player death
+(`ori.b #4`). That is the same word the EggRobo pairing uses, so an EggRobo released before the
+fight will read as released afterwards unless the write is modelled.
+
+The hit machine is `sub_7ACF2`, and it is `sub_7A5A0` with different offsets: `$1C(a0)` is the
+window counter rather than `$20(a0)`, the restore is `move.b #$F,collision_flags(a0)` rather than
+`$25(a0)`, and the same `FixBugs` `addi.w #2*2` off-by-one indexes `word_7AD7E`, which is byte for
+byte `word_7A628`. The defeat is `loc_7AD3A` -> `loc_7AC7A` -> `loc_7AC92` -> `loc_7ACA4`, ending
+`st (Events_bg+$02).w`, which is what opens the `$F6`-gated pad — and note it also does
+`st (_unkFA88).w` and `clr.b $38(a0)` where Green Hill did neither. `collision_flags` is `$11`
+here, not `$F`.
+
+**The orbs, `loc_7AD8A` (sonic3k.asm:163663).** Allocated by a second object the init creates with
+`$34 = a0`; routine 0 allocates seven of them in a loop, each with `$2E`/`$41` from `byte_7AE14`
+(`$24,$6C,$B4,$FC,$48,$90,$D8`) and `$40` from `byte_7AE1B` (`0,1,1,0,1,1,0`),
+`collision_flags $87`, `$2F = $40`. `sub_7AEB0` is the orbit: two `GetSineCosine` lookups scaled by
+the boss's `$38`/`$3A` arm lengths, `addq.b #4,$2E` a frame, and `sub_7AF5A` picks the mapping
+frame and one of four priorities (`$80`/`$100`/`$300`/`$380`) from the sign and magnitude of the
+computed `$3A(a0)` — that is the front/back sort, and it is the thing most likely to be got wrong.
+The launched orb (`loc_7AFA4`) takes `collision_flags $C6` after `$3C` frames, uses `MoveSprite`
+with a `-$20` per frame vertical term clamped at `$180`, lands at `$42C`, then `loc_7B02A`
+bounces along the floor with `$DA`. `sub_7B0C2` is the orb's own touch handler, keyed on
+`collision_property` holding which player hit it (`word_7B10E`), and `loc_7B116` is the pop.
+
+**The laser children, `ChildObjDat_7AB80` (sonic3k.asm:163458).** Two, at `(-$C,-4)` and
+`(-$18,-4)`, both `loc_7AB8E`, `ObjDat3_7ABFA` = `dc.b $28,8,$D,$9C` on
+`make_art_tile(ArtTile_SSZMTZOrbs,1,1)` priority `$280`. Subtype 1 waits 8 frames rather than 0 and
+uses mapping frame `$C` and priority `$100`. Then `x_vel = -$400` (negated when X-flipped),
+`sfx_Laser`, `MoveSprite2` and `Sprite_CheckDeleteTouch`. `sub_7AB56` fires them on the
+`SSZ_MTZ_boss_laser_timer` reaching zero with `$31(a0)` shots left, rearming `$1E`.
+
+**What slice 6 should do first.** The arena gate and the entry, as a test, before any of the boss
+machine: it is the same shape as Green Hill's and the two width lessons above are the only things
+that made that one hard. Then `$26` states 0 and 2 (descent and patrol), which are enough to see
+the ship on screen. The orbs are the large piece and their priority sort is the part that needs a
+native capture to check, not a reading.
+
+### 2026-09-18 — the Green Hill fight against native rows, and the claim it corrected
+
+The `s3k-sonic-tails-complete-emeralds` run's **`hpz` segment** is the one that carries Sky
+Sanctuary act 1's Green Hill arena — 1142 rows at camera `($160,$7C0)`, exactly as the slice-5
+entry guessed. (The segment is named for where it *ends*; per-zone segments start in the previous
+act.) Its `aux_state.jsonl.gz` carries `object_appeared`/`object_removed` rows whose
+`object_type` is the **ROM address of the slot's code pointer**, which makes the whole fight
+readable without a single physics row. Comparison only: nothing below is hydrated, and no engine
+value is taken from it.
+
+| native frame | slot 8 / children | address | what it is |
+| --- | --- | --- | --- |
+| 3792 | boss appears, `x = y = 0` | `$7A20E` `Obj_SSZGHZBoss` | `loc_576E8`'s `AllocateObject`; the init has not run |
+| 3825 | boss code changes, `($270,$780)` | `$7A29C` `loc_7A29C` | `loc_7A294` ran; the init was frame 3793 |
+| 4042 | six children appear, all `($200,$7E9)` | `$7A428`, `$7A4D0`×4, `$7A514` | `CreateChild9_TreeList` |
+| 4412 | boss code changes, `($220,$7E7)` | `$85668` `Wait_FadeToLevelMusic` | the killing hit |
+| 4412 | **all six children change on the same frame** | `$85102` `Obj_FlickerMove` | `loc_849D8` |
+| 4476 | boss code changes | `$7A3E6` `loc_7A3E6` | `loc_85674` handed to `loc_7A3CE` |
+| 4596 | slot 8 taken by another object | — | `loc_7A3F8`'s `Go_Delete_Sprite` |
+
+**Five things the port already had right, now corroborated rather than merely derived.** The spawn
+is `($270,$780)` — the literals the test asserts. The first dispatch is init + 33: the init is
+3793, `Obj_Wait` runs 3794-3825 with its 32nd decrement going negative, and `loc_7A294` hands over
+inside 3825. The chain drops with every link at `x = $200`. `4476 - 4412 = 64 = $3F + 1`, which is
+`BossDefeated`'s `move.w #$3F,$2E(a0)`. `4596 - 4476 = 120 = $78`, which is `loc_85674`'s
+`(2*60)-1`. The whole defeat is **184 frames**.
+
+**The one-frame deviation is gone, and these rows are what closed it.** The engine used to deliver
+183, because it detects the killing hit in the touch pass and then ran the object's own update
+later in the same frame, taking one decrement the cartridge does not. `4476 - 4412 = 64` is `$3F`
+decrements *plus* the one that goes negative, so the killing frame decrements nothing. That
+follows from the dispatch shape — `loc_7A29C` reads `routine(a0)` at its head and only reaches
+`sub_7A5A0` after the arm has run, so `loc_7A5EC`'s `move.l #Wait_FadeToLevelMusic,(a0)` lands
+after this slot is done for the frame. The shared base already had the mechanism:
+`AbstractBossInstance.defeatDeferralAppliesToThisBoss()`, which `HczMinibossInstance` overrides
+for exactly this ROM shape (the 2026-08-26 conflict ledger records it as `BOSS_DEFEATED_WAIT=0x3F`
+plus `pendingDefeatDispatch`). This boss overrides it too now, and the test asserts `$3F` on the
+killing frame and `$40 + $78 = 184` in total — the cartridge's number.
+
+It was written once, reverted unrun when Maven runners kept being reaped while queued, and then
+applied properly once the queue was cleared. **The queue was jammed by this worktree's own
+submissions** — seven `maven_queue.py` requests stacked up from parallel background launches, and
+the queue serialises one worktree's jobs, so they waited on each other until their `timeout`
+wrappers reaped them. Blaming the other campaigns was wrong. One Maven job at a time from a
+worktree, classes batched into a single `-Dtest=A,B,C`, waited on in the foreground.
+
+**One thing it corrected, and it was written two entries above.** That entry said `loc_849D8`
+"walks down the tree one link a frame, so the chain comes apart from the ship outward". It does
+not: **all six links convert on frame 4412**, the same frame the ship takes
+`Wait_FadeToLevelMusic`. The reason is slot order, not the tree — `CreateChild9_TreeList`
+allocates the links into ascending slots along the chain, so a single `ObjectsLoad` pass walks the
+whole thing: the root reads the ship's `status` bit 7 and sets its own, and every later link finds
+its parent's already up. The Javadoc and the plan are corrected and the test now asserts all six
+on the hit frame.
+
+**And the test that made the wrong claim could not have caught it.** It sampled the converted
+count once a frame and asserted each step was `<= 1` and that all six had converted by the eighth
+frame. If all six convert before the first sample — which is what happens — every delta is zero
+and both assertions pass. A "no more than one a frame" assertion is satisfied by "all of them at
+once". That is the third cannot-disagree assertion found in this fight's tests, and the first one
+written *while fixing* cannot-disagree assertions.
+
+**Also visible, and consistent with the review's finding E.** The native player's ring count falls
+55 → 54 → 48 → 47 → 45 across the window. The fight takes rings off the player, which the port
+could not do at all before the ball got its `$8F` box.
+
+**What these rows cannot settle.** The hit flash — palette is not in this schema. And the engine's
+own frame numbers, because the engine reaches the arena by a declared checkpoint restart and the
+native run arrives along the act's route; only the *intervals* above are comparable, and those are
+what is compared.
+
+### 2026-09-18 — clip 18, and the flag that was in the tool and not in the skill
+
+`GameplayCaptureTool` films this fight with **`--star-post`**, not with `--x/--y` alone. Two
+attempts were wasted first: `--x 0x200 --y 0x7C8` and `--y 0x860` both drop the leader through the
+arena floor and settle it at `($100,$C4C)`, and the first reading of that was "the arena's
+collision plane is a switcher a teleport skips". Wrong. `GameplayCaptureSession`'s `starPost`
+branch says what it actually is, in a comment written when the flag was added:
+`SSZ1_ScreenInit` runs a scripted intro on the no-star-post path that **overrides `--x/--y`
+outright**, and `Obj_57C1E` then writes Player 1 to `Camera_Y + $65`. The flag does what
+`TestS3kSszGhzArenaHeadless.bootAtCheckpoint` does — `saveCheckpoint` at the requested position,
+then `initLevelEventsForLevel()`.
+
+The flag is absent from the `gameplay-capture` skill's table, which is why two captures went into
+the floor before anyone looked at the tool. **Read the tool's arguments, not only the skill's
+summary of them**, and the skill's table is worth a line.
+
+With it the leader settles on the arena floor at `$86C` — the same place the native rows put it
+and the same place the headless test measures — the lock fires, the camera settles at `$7C0` and
+the boss spawns. `18-ssz-green-hill-ball-and-chain-hurts.mp4` (`raw-29-ssz-ghz-ball-hurts`) is
+that capture: the arena closing, the ship dropping in, the chain paying out, and at **frame 361**
+the ball on top of a standing Sonic, killing him. That last frame is the review's blocking finding
+made visible — before the fix the ball had no collision byte at all and an idle player could stand
+in the arena indefinitely. Clip `17` is kept, and labelled as the pre-review fight.
+
+### 2026-09-18 — slice 6's oracle, dated frame by frame before a line of it is written
+
+The same `hpz` segment carries the **Metropolis** fight as well, and reading it took one command.
+Slice 6 therefore starts with its native timeline already in hand, which is the opposite of how
+the Green Hill fight went.
+
+| native frame | slot | address | what it is |
+| --- | --- | --- | --- |
+| 6156 | 4 appears, `x = y = 0` | `$7A6A6` `Obj_SSZMTZBoss` | `loc_5775C`'s `AllocateObject`; the init has not run |
+| 6189 | 4 code changes | `$7A71A` `loc_7A71A` | `loc_7A712` ran; the init was 6157, so the first dispatch is **init + 33** |
+| 6190 | 25-32 appear, last at `($16DF,$2DB)` | `$7AD8A` | `loc_7A72C`'s second `AllocateObject`, then `loc_7ADA2` allocating its seven orbs — all in the frame after the first dispatch |
+| 6458-6652 | 25-32 removed | — | the orbs going, one at a time |
+| 6651 | 4 code changes, `($1700,$385)` | `$85668` `Wait_FadeToLevelMusic` | the killing hit |
+| 6715 | 4 code changes | `$7AC92` | `loc_7AC7A` installed it; `6715 - 6651 = 64` |
+
+**Three things this settles before any code is written.** The entry is `init + 33`, exactly as
+Green Hill's — same `Obj_Wait $1F` plus the `loc_7A712` handover inside the 32nd decrement. The
+`$3F + 1 = 64` fade wait is the same too, so **`defeatDeferralAppliesToThisBoss()` should be
+overridden from the start** rather than discovered later. And the orb controller and all seven
+orbs are allocated on a single frame, one frame after the first dispatch — `loc_7A72C` allocates
+the controller, and the controller's own routine 0 loops seven times in its first execution.
+
+**The arena, measured.** The window is 1004 rows at camera `($1660,$380)`, native frames
+`$180C`-`$1BF7`. The player is grounded (`player_air 0`) at `($1755,$42C)` at the start of it and
+moves between about `$1700` and `$1755` horizontally and `$3EE`-`$431` vertically. So the arena
+floor is `y = $42C` and **a headless test's declared restart wants roughly `($1700,$420)`** — the
+same shape as `TestS3kSszGhzArenaHeadless.bootAtCheckpoint`'s `($200,$7C8)`, and a capture wants
+the same values with `--star-post`. Rings fall 55 → 38 across the window.
+
+**Slice 6's first increment, unchanged from the entry above but now testable against numbers:**
+`allocateMtzBoss` at `loc_5775C` beside `allocateGhzBoss` (the lock in `mtzBand` is already
+written, `nativeFramedCameraX` included), then `Obj_SSZMTZBoss`'s init and `loc_7A72C`, whose
+descent from `($1700,$300)` at `Y_vel $100` reaches `loc_7A800`'s `$420` gate in `$120` frames.
+Assert the spawn position, `init + 33`, and that descent as a frame count, the way the Green Hill
+test does.
+
+### 2026-09-18 — handover after the review-application round
+
+Branch `feature/ai-ssz-bring-up`, head `6d462604b`, base develop `035e48a58`. Nothing pushed,
+nothing merged. Commits this round, oldest first: `ea8b23a9e` (the review applied),
+`96599ba13` (how it was applied, disputed and tested), `6d462604b` (the native comparison and the
+claim it corrected), and the commits below it for the defeat deferral and the clip.
+
+**Where slice 6 stands: not started, but no longer starting cold** — its native timeline is dated
+in the entry above. The three tasks this round carried were the review
+application, a re-film and a native comparison. The review application ran long, twice, because
+two of its corrections were themselves regressions that had to be caught first — so the Metropolis
+recreation has not been written. What exists for it is the disassembly reading in the slice-6
+entry above, which is enough to start from the routines rather than the label list, plus one piece
+of good news found while reading `Sonic3kSSZEvents`: **the MTZ lock is already implemented**
+(`mtzBand`, `loc_5770C` through `st (Events_bg+$03).w`), including the `nativeFramedCameraX`
+treatment of `Camera_X_pos == $1660`. Only `loc_5775C`'s spawn is missing, so the first increment
+is small: `allocateMtzBoss` beside `allocateGhzBoss`, then `Obj_SSZMTZBoss`'s init and `off_7A728`
+routine 0/2 — which is enough to put the ship on screen and test.
+
+**Three things a slice-6 implementer should take from this round rather than rediscover.**
+
+1. **The shared touch response writes the boss's SST.** `Touch_Enemy`'s `.checkhurtenemy`
+   (sonic3k.asm:20922) does `move.b collision_flags(a1),$25(a1)`, `move.b d0,$1C(a1)` (which
+   player hit it) and, at zero hits, `bset #7,status(a1)`. Two reviews and one implementer all
+   concluded `status` bit 7 was never set, because all three grepped only the boss's own routines.
+   For a shared SST field, look in the subsystem that owns the interaction. The MTZ boss's
+   `sub_7ACF2` is the same hit machine with different offsets (`$1C(a0)` for the window,
+   `move.b #$F,collision_flags(a0)` for the restore), so the same applies to it.
+2. **The `hpz` segment is the native oracle for act 1's fights, and the Metropolis one is already
+   read** — see the entry above for its frame table, arena floor and restart position. Its
+   `aux_state.jsonl.gz` `object_appeared` rows carry each slot's code-pointer ROM address, which
+   dates every phase transition without a physics row. Use it *while* implementing, not after.
+3. **`defeatDeferralAppliesToThisBoss()` is right for the MTZ boss too, and now measured.**
+   `loc_7A71A` has the same shape — dispatch first, `sub_7ACF2` after — so its `loc_7AD3A` install
+   of `Wait_FadeToLevelMusic` also lands after the slot is done for the frame, and the native rows
+   put 64 frames between that install (6651) and `loc_7AC92` (6715). Override it from the start.
+
+**Still owed on the Green Hill fight:** the `$79:$AA` gated pad driven end to end from the defeat
+flag to the `$2A0` lift. The hit flash has no native comparison because palette is not in the
+trace schema.
+
+**Queue discipline, learned the hard way.** Late in this round Maven runners kept being reaped
+while waiting for a slot, and this plan first recorded that as the other campaigns saturating the
+queue. It was not: seven of the queued requests were **this worktree's own**, launched in parallel
+in the background, and the queue serialises one worktree's jobs — so they waited on each other
+until their `timeout` wrappers killed them. Submit one Maven job at a time from a worktree, batch
+classes into a single `-Dtest=A,B,C`, give it a timeout longer than the job, and wait for it in
+the foreground. Checking `pgrep -af maven_queue.py` for your own worktree before blaming anyone
+else takes one command.
+
+### 2026-09-18 — slice 6: the Metropolis recreation, written against a dated oracle
+
+Slice 6 landed. Unlike Green Hill it started with its native timeline already in hand (the entry
+two above), and the difference shows: `defeatDeferralAppliesToThisBoss()` was overridden from the
+first line instead of discovered at the end, and the entry's init + 33 was asserted rather than
+derived.
+
+**What was written.** `allocateMtzBoss` beside `allocateGhzBoss` in `Sonic3kSSZEvents`
+(`loc_5775C`), `SszMtzBossObjectInstance` (`Obj_SSZMTZBoss` and all of `off_7A728` /
+`off_7A7F0` / `off_7AA60`), `SszMtzBossOrbChild` (`loc_7AD8A`'s five routines, `sub_7AEB0`,
+`sub_7AF5A`, `sub_7B0C2`), `SszMtzBossLaserChild` (`ChildObjDat_7AB80`), and
+`SszMechaHeadHost` — an interface extracted so `SszMechaSonicHeadChild` rides both ships instead
+of being typed to the Green Hill one. `TestS3kSszMtzArenaHeadless` is fourteen tests.
+
+**Four things the reading settled that the label list does not.**
+
+1. **There is no orb controller.** `loc_7A72C` allocates one slot with `loc_7AD8A`, and that
+   slot's routine 0 opens `movea.l a0,a1` — so the first orb it sets up is *itself*, and it
+   allocates six more. Seven, not eight. The native rows agree: slots 25-32 appear together on
+   frame 6190, which is the Mecha Sonic head plus seven orbs.
+2. **The ship's box shrinks after its first hit.** `loc_7A72C` writes
+   `move.b #$11,collision_flags(a0)`; `sub_7ACF2`'s restore writes `move.b #$F`. The two are
+   different sizes and nothing ever writes `$11` again.
+3. **The fight does not progress unless the player deals with the orbs.** `loc_7A98A` will not
+   leave the hit reaction while `$30(a0)` is non-zero, and nothing in the ROM pops a launched orb
+   on its own — `sub_7B0C2` only runs from `loc_7AFA4` and `loc_7B02A`. The tests have to play the
+   fight, not step through it; `clearTheRing` is that.
+4. **`$3C` is never reloaded at the landing, so the bouncing orb's `$DA` is unreachable.** The
+   delay expires on the 61st airborne frame and the flight is well over ninety, so the orb keeps
+   the launch's `$C6` for the whole bounce. The branch is ported as written and the reason is in
+   its Javadoc.
+
+**The laser interval is 46 frames, not 30, and the test is what says so.** `sub_7AB56` rearms
+`move.w #$1E,(SSZ_MTZ_boss_laser_timer).w`, but `loc_7AA44` tests `$33(a0)` *before* the
+`off_7AA60` dispatch and returns, so the `move.b #$10,$33(a0)` recoil freezes the timer for
+sixteen frames first. The first version of the test asserted `$1E` and failed with `2` shots seen
+where `3` were expected — because a shot also outlives the interval, so counting `0 -> 2`
+transitions misses the later pairs. Both were fixed: the test tracks the children by identity and
+asserts `LASER_INTERVAL + LASER_RECOIL_FRAMES`.
+
+**Review.** An independent reviewer read the port against the disassembly line by line and wrote
+`~/Videos/OGGF/ssz-bring-up/notes/ssz-mtz-boss-review.md`. It confirmed `sub_7AEB0`'s three
+lookups (sine for both position terms, cosine of `$2E` for the depth `sub_7AF5A` sorts on) and the
+`move.w d0,d5` low-word truncation of each `muls.w`; `loc_7ADA2`'s seven; `sub_7AC06`'s `$1F`
+accounting; the `bset #6 / beq` two-turn rule; `loc_7AFA4`'s net `+$18`; `loc_7B02A`'s `neg`
+before `asr`; the `$11 -> $F` change; the `$87 / $C6 / $DA` bytes; and the 184-frame escape. It
+raised two blocking findings and four to fix, all applied:
+
+- The laser interval, already found and fixed independently — the same conclusion from the same
+  instruction.
+- **`theOrbRingSortsItselfFrontAndBackFromTheCosineOfItsAngle` could not disagree.** It computed
+  the expected priority and mapping frame from `depthForTest()` using the production class's own
+  `DEPTH_BAND` and `PRIORITY_*` constants and the same branch structure, so swapping `$80` and
+  `$380` in `sortByDepth()` would have moved the expectation with it. It is now the literal table,
+  written out with inline hex, plus a count that every one of the four rows was exercised, plus
+  two assertions the sort cannot produce: the depth's extremes over a revolution are exactly
+  `+/-$27`, the ship's arm length. **Fourth cannot-disagree assertion found in this campaign, and
+  the second found by a reviewer rather than by a failure.**
+- The orb's `index` was captured for rewind and could not be restored — the field was `final`.
+- The launch animation ran a frame early. `loc_7AE22` sets `anim` and ends at `loc_7AE9C` without
+  calling `Animate_Sprite`; the first call is the frame after, and its `.newanim` arm zeroes the
+  duration and then loads entry 0 with a full `dc.b 3`. The port pre-seeded the frame on the
+  launch frame itself, where `sub_7AF5A` promptly overwrote it, so every entry landed early.
+- `loc_7A874`'s two-turn rule had no test: a port that advanced on the *first* turn passed
+  everything in the file. `theShipLeavesThePatrolOnItsSecondTurnAroundAndNotItsFirst` counts the
+  reversals.
+- The Javadoc claimed the `2(a1)` writes had no consumer. They do — `2(a1)` is `_unkFA84`, which
+  this engine models as `backgroundCameraDelta()`. The drop is still right, because `loc_6607E`
+  rewrites that word from the camera delta every frame; the *reason* was wrong, which under
+  invariant 3 is worse than the omission.
+
+**Three gaps recorded** in `docs/status/s3k-known-bugs.md` rather than papered over: neither act-1
+boss spawns `Child6_CreateBossExplosion` (the Green Hill sibling has the same gap); an orb still
+on the ring is deleted with its ship where the cartridge leaves it orbiting a freed slot; and the
+shared `S3K_SPECIAL_PROPERTY` touch arm teleports the sidekick onto every `$C0` object, which the
+orbs are the newest to reach.
+
+**One flag that was in the tool and not in the skill is now in both.** `--star-post` is in the
+`gameplay-capture` argument table in both skill trees, with the `SSZ1_ScreenInit` reason beside
+it.
+
+### 2026-09-18 — handover after slice 6
+
+Branch `feature/ai-ssz-bring-up`, base develop `035e48a58`. Nothing pushed, nothing merged.
+Slice 6 is complete and reviewed; **slice 7 (Mecha Sonic) was not started.**
+
+**What slice 7 needs, in the order it will want it.**
+
+1. **The spawner already exists and is documented as a gap.** `SSZHPZTeleporterObjectInstance`
+   takes `loc_455BA`'s branch for the `$79:$00` placement at `($1A40,$670)` and installs
+   `loc_45A72`; known bug #42 in `docs/status/s3k-known-bugs.md` records exactly what is missing —
+   `loc_45A84`'s `AllocateObject`, the `$30(a0)` boss handle written to `_unkFAA4`,
+   `loc_45AB0`'s `x_pos` comparison and the `Child6_CreateBossExplosion` child. The boss branch is
+   taken when `y_pos < $680` and the spawn fires when `Camera_Y_pos == Camera_max_Y_pos`, through a
+   **plain** `AllocateObject` — not `AllocateObjectAfterCurrent`, so the new slot may not run that
+   frame. The final arena's own lock (`$19A0`/`$5C0`) is already in `Sonic3kSSZEvents.dynamicResize`.
+2. **`Obj_SSZEndBoss` is a 21-entry table from `loc_7B308`** (`SSZEndBoss_Index`, sonic3k.asm:164170)
+   and it is much larger than either recreation: it runs `sub_7D312`, `sub_7D2D8` and
+   `Perform_DPLC` over `DPLCPtr_MechaSonic` on every dispatch, so its art is a per-frame DPLC and
+   not a static sheet. Budget for that before budgeting for the routines.
+3. **Its RNG is seeded from `V_int_run_count`.** That is a declared clock seed for native matching
+   and it is invariant 3 territory: cite the routine that reads it, do not key on a frame index.
+4. **Three things slice 6 learned that slice 7 will meet again.** A shared `SST` field is written
+   by the subsystem that owns the interaction, not by the boss's own routines — grep
+   `Touch_Enemy` and `Touch_Special` before concluding a bit is never set. `bset`/`bclr` set Z
+   from the *old* bit, and the second visit is the one that branches differently. And an
+   assertion that recomputes the production branch from the production output passes whatever the
+   production code says; write the ROM's table out as literals instead.
+
+**Still owed on both act-1 fights.** Neither spawns `Child6_CreateBossExplosion` (known bug). The
+Green Hill `$79:$AA` pad's post-defeat rise is implemented but still not driven end to end; the
+Metropolis `$79:$F6` one now is, in `theDefeatTakesTheCartridgesFrameCountAndOpensTheGatedPad`.
+**Neither fight's palette flash has a native comparison, because palette is not in the trace
+schema**, and **the Metropolis fight has no clip yet** — the capture script is written
+(`~/Videos/OGGF/ssz-bring-up/inputs/ssz-mtz-fight.script`, 900 neutral frames then a jump every
+24) but was not filmed. It wants `--star-post --x 0x1700 --y 0x420`; a bare teleport cannot reach
+this arena either.
+
+**Queue discipline held this round.** One Maven job at a time from this worktree, classes batched
+into a single `-Dtest=A,B,C`, waited on in the foreground. Four test runs and two guard runs, no
+reaping. The guard runs are the slow ones — the `-Pguards` profile takes several minutes and the
+worktree waits behind the LRZ and DEZ campaigns for the slot.
+
+### 2026-09-18 — clip 19, and why the Metropolis fight cannot be filmed past its first contact
+
+`19-ssz-metropolis-orb-ring.mp4` (`raw-31-ssz-mtz-fight`) is the upper arena closing,
+`Obj_SSZMTZBoss` descending from `($1700,$300)` with the Mecha Sonic head on it, and its seven-orb
+ring turning around it — orbs passing in front of the ship and behind it as `sub_7AF5A` re-sorts
+them. Frames 215, 260 and 318 are the ones to look at; 318 is an orbiting orb killing Sonic.
+
+**Two captures were spent learning why that is where it ends.** The first held the leader still:
+the ship reached `$420`, its own box overlapped a player standing on the `$42C` floor, and with
+zero rings that was a death at frame 331 before a single input had played. The second jumped
+continuously so the leader would be rolling — attacking — on contact, and died at 318 anyway,
+rolling and airborne. The reason is in `loc_7ADB2`: every orb is set up with
+`move.b #$87,collision_flags(a1)`, and `$87`'s top bits are `10`, which `Touch_ChkValue` sends to
+`Touch_ChkHurt`. An orbiting orb is plain harm. It is not something a player can attack, and the
+attack state does not protect them from it — which is the fight, and correct.
+
+So a ring-less capture of this arena cannot survive to a hit, and `GameplayCaptureTool` has no
+rings flag. The eight hits, the seven arm-raise cycles, the laser pass and the defeat raising the
+`$79:$F6` pad are driven end to end by `TestS3kSszMtzArenaHeadless` and by nothing on film. That is
+recorded as owed in `INDEX.md` and in the act-1 matrix rather than left to be rediscovered: what it
+wants is a route into the arena with rings, or a capture flag that seeds them.
+
+### 2026-09-18 — the Metropolis fight on film, and the two things that made it hard
+
+`--rings` is ported from the Lava Reef campaign's `b35f59d33` in `dae80b909`, by hand rather than
+by cherry-pick: this branch had already added `--star-post` and its `Settings` component, so the
+count becomes the last record component and the older constructors chain through a new one. One
+deliberate difference from the origin. It applied the count early, before the camera-fraction and
+star-post blocks; here the block runs last, after the reposition, because `--star-post` calls
+`CheckpointState.saveCheckpoint` with `restoreRings` false and the `--x/--y` path re-runs
+`initLevelEventsForLevel`, and either can zero a count written earlier. Sky Sanctuary act 1 needs
+`--star-post` to reach any arena at all, so the ordering matters here in a way it did not there.
+
+**Seeding rings is necessary and not sufficient.** The first attempt seeded 355 and still died at
+frame 680. `DESCENT_FLOOR_Y` is `$420` and the ring's rest radius is the ship's `$27`, so while the
+ship is descending the orbs sweep below the `$42C` arena floor: a leader standing under `$1700`
+is hurt at about frame 332 whatever it is doing, and a hurt spends the **whole** bank at once —
+the scattered rings are mostly not recovered, and in the second attempt the count went 355 → 0 →
+5 and the next contact killed. What worked (`raw-34-ssz-mtz-chase`, 2961 frames) was to stop
+standing still: alternate left and right across the arena, tapping A every ten frames, which both
+attacks and walks over the scattered rings. That run lands all eight hits, the defeat at frame
+1737, and the `$79:$F6` pad at 2113-2369.
+
+**The laser pass will not fit in the same run.** `collision_property 8` against `$3C = 7` means
+the seventh hit spends the last arm cycle and `loc_7AA02` starts the pass, and the eighth hit ends
+the fight — in `raw-34` the seventh landed at 1705 and the eighth at 1736, 31 frames later, and
+`sub_7AB56`'s three pairs are `$1E` apart. So the laser pass is filmed by branching: `raw-35`
+replays `raw-34`'s input exactly to frame 1720, then holds left with no A for 240 frames. The
+first pair leaves the nose at 1745 and three shots cross the arena before the player re-engages.
+This is the general shape for any fight whose only interesting phase is one the player can cut
+short — diverge the input from a known-good run at a frame that is already past the event that
+opens the phase.
+
+**What the clips are, and one thing they corrected.** `20` is the launch: a hit sets the ship's
+`$39(a0)`, the first orb to update takes it, and it leaves with `y_vel -$400` and the `+/-$80`
+horizontal term clamped into `[$16A0,$1760)`. On film it does not stay a grey sphere — the launch
+animation opens it through frames 2 to 8 before `loc_7AFA4` writes `$C6` and it falls to `$42C`
+and bounces, which is why the first reading of `raw-34` was "there is a second ship in the arena".
+`22` was also mis-described on the first pass: the slow 1-px-every-other-tick lift from frame 2195
+is `loc_456F4`'s charge drawing the leader onto the pad, **not** the gated pad's own `$20` of
+rise at 1 px per four ticks. That rise is over long before the leader reaches it. The launch
+proper starts at 2257 at 16 px a frame and takes him 929 px out of the arena.
+
+**Still owed on this fight.** No clip is cut to the `$68` arm extension itself, and nothing on
+film distinguishes the raised ring from the resting one. The palette flash still has no native
+comparison, because palette is not in the trace schema.
+
+### 2026-09-18 — slice 7, stage 1: Mecha Sonic's entry and its attack loop
+
+Branch `feature/ai-ssz-bring-up`, base develop `035e48a58`. `Obj_SSZEndBoss` is much the largest
+object in this zone and it is being delivered in stages; this is the first, and it ends at the
+killing hit.
+
+**What the spawner actually needed.** Known bug #42 described the gap as "the allocation, the
+`$30(a0)` handle, the `x_pos` comparison and the explosion child", and that reading held up.
+`loc_45A84` tests `Camera_Y_pos == Camera_max_Y_pos` and nothing about the player, so the pad
+fires the frame the final arena's own `$5C0` has finished easing the camera down; the allocation
+is a **plain** `AllocateObject`, which in this engine is `spawnFreeChild` and not
+`spawnChild`, so the boss can take a slot below the pad's and may not run in the same frame. The
+test steps for that rather than assuming it.
+
+**Four calls, not one.** `Obj_SSZEndBoss` runs the routine, then `sub_7D312`, then `sub_7D2D8`,
+then `Perform_DPLC` over `DPLCPtr_MechaSonic`. The last of those is why the art is registered as
+`ArtUnc_MechaSonic` ($175A9E, $56E0 bytes) plus `DPLC_MechaSonic` ($185852) over
+`Map_MechaSonic` ($1853AA) — a DPLC'd sheet exactly like a player's, not a flat one. The
+committed `Mecha Sonic.bin` is 22240 bytes, which is the gap to `ArtKosM_EggRoboBadnik`; that
+agreement is the only check on the size.
+
+**`sub_7D2D8` is the finding worth keeping.** The collision byte is not a state this object
+holds: it is `byte_7D2FC` indexed by `mapping_frame`, rewritten every frame the boss is not
+flashing. Frames 3 to 6 are `$86` (harm), frame `$F` is `$00` (nothing at all), and the rest are
+`$23`, `$09`, `$1A` or `$06` — attackable. So which part of Mecha Sonic's animation can be hit is
+a property of the animation and of nothing else, and a test that asserted "the boss is
+attackable in phase X" would be asserting the wrong thing. The twenty-two bytes are written out
+as literals in both the class and the test.
+
+**`sub_7D312` splits across the engine's touch pass.** The ROM does the decrement, `sfx_BossHit`
+and `status` bit 6 inside this routine because `Touch_Enemy` has already zeroed
+`collision_flags`; the engine's shared boss touch pass is where those live, and its default
+invulnerability duration is `$20`, which is `sub_7D312`'s own `move.b #$20,$20(a0)`. What this
+class keeps is the countdown and the `bclr`, because without them `sub_7D2D8` would put the
+collision byte straight back on the next frame and the window would not exist.
+
+**One animation detail that is not a tidy-up.** `Set_Raw_Animation` clears `anim_frame` and
+`anim_frame_timer`; a bare `move.l #script,$30(a0)` does not. The act-1 graph uses the bare form
+at seven places and `Set_Raw_Animation` at exactly one, `loc_7B5E8`, so seven of the eight
+script changes resume at whatever index the previous script left behind. The first draft of this
+class cleared them everywhere, which is a different object.
+
+(The first write-up of this said "four of five". The distinction was right and the count was
+wrong — `grep '$30(a0)'` over the block gives seven bare writes plus the one
+`Set_Raw_Animation`, and the `$F8` command rewrites the pointer again from inside the script.
+The reviewer caught it; the code already had the right split.)
+
+**The attacks are a cycle, not a draw.** `loc_7B5E8` reads `byte_7B62E[$3B & 7]` — `0,1,2,0,1,2,
+0,1` — and steps `$3B`; `byte_7B636` turns that into routine `$16`, `$1A` or `$1E`. The RNG is
+consulted in exactly one place, `loc_7B484`'s choice of landing animation, and `loc_7B2DC` seeds
+it from `V_int_run_count`. That is a declared clock seed for native matching, as DDZ's was, and
+the clock is `V_int_run_count` — not `Level_frame_counter` and not the executed-frame count.
+
+**`sub_7D236`, and the reading the first RED run killed.** The after-image children index
+`byte_7D24C` at `subtype * 2` against rows that are four bytes wide, which looks like an
+overlapping read and was written up as one. It is not: `CreateChild6_Simple` numbers its children
+with `addq.w #2,d2`, so the subtypes are 0, 2, 4 and the doubling lands on whole rows.
+`loc_7C8FE` adds four before the shared init, so `ChildObjDat_7D486`'s pair takes rows 2 and 3
+where `ChildObjDat_7D47A`'s takes 0 and 1, and `ChildObjDat_7D480`'s `move.b #8,subtype(a1)`
+takes row 4 — five rows, each used once.
+
+The first run of `TestS3kSszMechaSpawnHeadless` failed all seven of its live cases with
+`not an S3K sprite priority word: 0x81c`, which is what the wrong stride produces for subtype 1,
+and `RenderPriority.fromS3kWord` refuses to clamp. A priority word in S3K is a raw byte offset
+into `Sprite_table_input` (`Draw_Sprite`, `adda.w priority(a0),a1`), so `$81C` is not a rounding
+error, it is off the end of the table; the engine rejecting it is what turned a plausible
+write-up into a caught misreading. The lesson is the ordinary one — the child-numbering routine
+had to be read before the table that consumes its numbers could be.
+
+**What this stage does not do**, recorded in `docs/status/s3k-known-bugs.md` #42 rather than
+approximated: `loc_7B81A`'s post-defeat graph beyond `sub_7D35A`'s own writes (the `loc_7B87C`
+fall, `loc_7B888`'s landing, and the `loc_7D056` object that runs `sub_868F8` and hands the act
+over), the `ChildObjDat_7D474` child at `loc_7C9BA`, and `Obj_MechaSonic_Sparks` — whose gate is
+a palette read, `cmpi.w #$E88,(Normal_palette_line_2+$12).w`, rather than a state. No clip and no
+native comparison for this stage either.
+
+**Verification.** `python3 tools/testing/maven_queue.py -Dmse=off -Dtest=<batch>
+-Ds3k.rom.path=…/ai-ssz-bring-up/s3k.gen test` over `TestS3kSszMechaSpawnHeadless`,
+`TestS3kSszMtzArenaHeadless`, `TestS3kSszGhzArenaHeadless`, `TestS3kSszTeleporterPads`,
+`TestS3kSszArrivalHeadless`, `TestS3kSszLifecycleProduction`, `TestS3kSszPlacementCensus`,
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`, `TestEveryObjectRewindRoundTrip`,
+`TestRewindHarnessCoverageRatchet` and `TestGameplayCaptureToolArgs`: **1275 run, 0 failures,
+0 errors, 0 skipped.** Then `-Pguards`: **669 run, 0 failures, 0 errors, 0 skipped**, after
+three rewind ratchets were triaged rather than silenced — the two new capture/restore overrides
+into `TestRewindArchitectureGuard`'s baseline with their reason, the child's four spawn-derived
+finals into `coverage-baseline.txt` (which is what that file is for), and the two cached
+`S3kRawAnimation` windows given the `transient` disposition instead of being added to the
+field-disposition debt file, which says never to grow it. Focused validation, not a suite pass.
+
+**The comparison was broken on purpose, by accident.** The first run of the new test failed
+seven of its eight cases and passed the eighth; the seven were the ones that boot the level and
+the eighth is the pure table assertion, which is exactly the split that proves the live cases
+reach production code rather than passing vacuously.
+
+### 2026-09-18 — what the first Mecha Sonic clip found that the tests could not
+
+`23-ssz-mecha-sonic-entry-and-attacks.mp4` took three captures, and the first two were both real
+defects rather than capture mistakes.
+
+`raw-36` drew him orange. `loc_7B35A` ends `PalLoad_Line1 Pal_SSZGHZMisc` — the same palette and
+the same line the Green Hill recreation loads — and that call was simply missing from the init;
+`ObjSlot_MechaSonic` is `make_art_tile(ArtTile_MechaSonic,1,1)`, so without it he takes whatever
+the level left on line 1.
+
+`raw-37` had the palette loaded and was still orange, because the draw passed `0` as
+`PatternSpriteRenderer.drawFrameIndex`'s palette override — copied from the Metropolis ship,
+where passing a line explicitly is correct because its sheet is shared between the orbs' line and
+the lasers'. Here it forced line 0 over the line that had just been loaded. `raw-38` passes `-1`
+and takes the sheet's own registered line, and the after-image child passes `0` because
+`ObjDat3_7D402` really is `make_art_tile(ArtTile_MechaSonicExtra,0,1)` where the spark object's
+`ObjDat_MechaSonic_Sparks` is line 1 off the same sheet.
+
+**Neither of those could fail a headless test as written**, because nothing in this slice asserts
+a rendered pixel — the palette owner and the draw call are presentation. That is the argument for
+the campaign's one-clip-per-feature rule, and it is worth saying plainly: the tests were green
+across both wrong versions.
+
+### 2026-09-18 — slice 7's review, applied
+
+The reviewer's file is `~/Videos/OGGF/ssz-bring-up/notes/ssz-mecha-review.md`. Its blocking
+finding, B1, was the missing `PalLoad_Line1 Pal_SSZGHZMisc`, which this round had already found
+independently by filming the fight and fixed in `be3b09bff` — two routes to the same defect, and
+worth noting that the clip found it first.
+
+**S1, applied.** `Obj_SSZEndBoss`'s tail is unconditional. The init frame was returning before
+`sub_7D312` and `sub_7D2D8`, so the frame on which `loc_7B308` sets `mapping_frame 2` kept the
+slot table's `$23` instead of `byte_7D2FC[2]`'s `$09`. One frame of the wrong collision size.
+
+**S2, applied, and it was a misreading of the slot table.** `ObjSlot_MechaSonic`'s
+`dc.b $20,$20,0,$23` are `width_pixels`, `height_pixels`, `mapping_frame` and `collision_flags` —
+`SetUp_ObjAttributesSlotted` says so in its own comments — not radii. `y_radius` is a different
+SST field that routine never writes; it is zero until `loc_7B484` sets `$1F`. The cull box is
+therefore the constant `height_pixels`, where this class had it following `y_radius` down to
+`$F` for the whole jump graph.
+
+**S3, applied.** `onDefeatStarted` was writing `mapping_frame $E`, zeroed velocities and a
+cleared trail bit, none of which `sub_7D35A` writes; the `$E` was invented outright. It now
+writes what the routine writes and says which of the routine's own writes belong to the owed
+graph.
+
+**S4 and S5, applied — this was the real one.** Nothing drove routines `$0A` to `$28`: the
+attack-cycle test asserted two production constants against ROM literals and never booted a
+level, so deleting the entire attack graph would have left it green, and rows 2 to 4 of
+`byte_7D24C` were asserted nowhere. Six new cases now drive the graph with the leader parked and
+not attacking: the light-gravity fall and its `$1F` radius, the three attacks coming out in
+`byte_7B62E`'s order with `$3B` stepping once per jump, the ground dash's `$820`/`-$20` and the
+`loc_7D216` limit it stops on, the ground pound's `-$900`, the slam's `$F` timer and its row-4
+after-image, the final dash and hop, and the dash pair's `loc_7C8FE` subtypes 4 and 6.
+
+One of those six failed first, on an assertion of mine rather than on the production code:
+`loc_7B4EC` is `clr.w $16(a0)`, the low word of the 16.16 `y_pos`, and the test had read it as
+clearing `y_vel`. It now asserts the subpixel and, separately, that `y_vel` is *not* what that
+instruction clears.
+
+**Observations taken:** the after-image now refreshes its position before the delete test as
+`loc_7C91C` does; the dash accumulator is a word add like the gravity gain; the RNG is guarded
+the same way in both places; the spawner says why giving the boss the pad's position agrees with
+the ROM's cleared slot; and `_unkFAB0` says why it has no reader in act 1. `loc_7B39C`'s bare
+tail-jump to `AllocateObject` is recorded in known bug #42 with the two missing children, since
+slot order decides sibling execution and RNG draw order.
+
+`TestS3kSszMechaSpawnHeadless` is 14 cases; with the SSZ, mandatory S3K and rewind round-trip
+batch, **1277 run, 0 failures, 0 errors, 0 skipped**.
+
+### 2026-09-19 — slice 7 stage 2, and the native segment this campaign had been missing
+
+**The SSZ fight is in `hpz_3`, not `hpz`.** Three segments of the Sonic + Tails run carry
+`zone_id 10`: `hpz` (start `($100,$FAE)`), `hpz_2` (`($14C0,$E8)`, the star-post restart) and
+`hpz_3` (`($1880,$968)`). The Mecha Sonic fight is entirely inside `hpz_3`, and stage 1's matrix
+row said it was "not compared" because only `hpz` had been looked at. That was wrong, and the
+correction came from the lead rather than from this lane.
+
+**What `hpz_3` dates**, all comparison-only. Camera `($19A0,$5C0)` at the allocation, so
+`loc_7B308`'s `Cam_X + $160` and `Cam_Y + $A0` are exactly the native `($1B00,$660)`; the routine
+dump's two resting X values, `$1AC0` and `$19C0`, are `_unkFAB6` and `_unkFAB4` — `loc_7D216`'s
+limits, confirmed from the other end. The pad appears at 358, the boss at 402, routine 4 is first
+recorded at 406, and the pad is removed at 460: the boss crosses `$1A40` at about 426 at eight
+pixels a frame, and `loc_45AB0`'s `$20` follows. The graph runs 4 → 8 → `$0A` → `$0C` → `$0E` →
+`$10` → `$12` → `$14` → `$16` → `$18` → `$0A`, then a landing that goes straight to `$14` →
+`$1A` → `$1C`: the two `loc_7B484` branches, with `byte_7B62E` stepping 0 then 1.
+
+**Routine 6 never appears in the dump.** It is not skipped — `loc_7B3E6` plainly sets it — the
+boss is simply off screen for all 64 frames of it and the recorder does not emit `object_state`
+for off-screen slots. Worth writing down: an absent routine in an aux dump is a fact about the
+recorder first.
+
+**The defeat dating found a real bug.** Native: `loc_7B81A` at 1310, routine 2 at 1438, routine 4
+and the `loc_7D056` slot both at 1439. 1310 → 1438 is 128 dispatches, which is `$7F` decremented
+to negative **starting at 1311**, not at 1310. `sub_7D312` runs at the tail of the boss's own
+dispatch, so the killing frame selects `loc_7B81A` and stops; the engine's touch pass runs before
+the slot, so without `defeatDeferralAppliesToThisBoss()` it spent a decrement on the killing frame
+and reached routine 2 a frame early. The test caught the off-by-one and the native rows said which
+side was right. The single frame from routine 2 to routine 4 is also explained rather than fitted:
+at `y $660` with `loc_7B858`'s `$1F` radius his feet are already below the `$67C` floor, so
+`ObjHitFloor_DoRoutine` lands him on the first dispatch.
+
+**The act-1 handover is the results screen, not a level request.** `loc_7D056` waits
+`(2*60)-1` and then calls `sub_868F8` with `d0 = 2`, which pre-decrements, refuses while Player 1
+is dead, airborne or already in routine 6 or above, and then sets the ending pose and allocates
+`Obj_LevelResults`. `StartNewLevel $B00` is `loc_581D2`, in the Death Egg launch, which runs from
+`End_of_level_flag` afterwards and belongs to slice 8. One approximation is recorded in the class:
+the engine's player exposes no routine byte, so `cmpi.b #6,routine(a1)` is stood in for by
+`getDead()`.
+
+`loc_7D078`'s wait for `_unkFAA8` to clear is implemented as the branch it is — nothing in act 1
+clears that flag, so the object holds rather than restoring control, which is the shipped
+behaviour and not an omission.
+
+Tests: `TestS3kSszMechaSpawnHeadless` is 16 cases; with the SSZ, mandatory S3K and rewind
+round-trip batch, **1280 run, 0 failures, 0 errors, 0 skipped**; `-Pguards` **669 run, 0
+failures**, after triaging the handover object's capture/restore override with its reason.

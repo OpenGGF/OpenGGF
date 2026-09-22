@@ -2292,6 +2292,9 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             // take AniPLC_LRZ1, LRZ2 takes AniPLC_LRZ2 (sonic3k.asm:53873-53880).
             case 0x08 -> ANIPLC_LRZ1_ADDR;
             case Sonic3kZoneIds.ZONE_LRZ -> actIndex == 0 ? ANIPLC_LRZ1_ADDR : ANIPLC_LRZ2_ADDR;
+            // Offs_AniFunc entries 40-43: $A00 is AnimateTiles_DoAniPLC / AniPLC_SSZ,
+            // $A01 is AnimateTiles_NULL, a bare rts, so act 2 runs no script at all.
+            case Sonic3kZoneIds.ZONE_SSZ -> actIndex == 0 ? Sonic3kConstants.ANIPLC_SSZ_ADDR : -1;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
             // Offs_AniFunc pairs for $1601 (Hidden Palace) and $1701 (sanctuary) are
             // AnimateTiles_DoAniPLC / AniPLC_HPZ; $1600 and $1700 have no AniPLC

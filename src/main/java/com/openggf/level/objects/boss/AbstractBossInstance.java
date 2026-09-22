@@ -258,6 +258,16 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     }
 
     /**
+     * Points awarded when the boss is beaten. The S2 bosses this class was written from call
+     * {@code AddPoints} with {@code moveq #100,d0} — 1000 points — but the shared S3K
+     * {@code BossDefeated} (sonic3k.asm:180822) is {@code moveq #100,d0} into
+     * {@code HUD_AddToScore}, which is 100 points, so bosses that route through it override this.
+     */
+    protected int getDefeatScore() {
+        return 1000;
+    }
+
+    /**
      * SFX played when the boss takes damage.
      */
     protected abstract int getBossHitSfxId();
@@ -455,7 +465,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
             if (usesDefeatSequencer()) {
                 defeatSequencer.startDefeat();
             } else {
-                services().gameState().addScore(1000);
+                services().gameState().addScore(getDefeatScore());
                 onDefeatStarted();
                 // onDefeatStarted() switched state.routine to the defeat handler.
                 // For the S2 post-physics ordering this triggerDefeat() runs in the
@@ -589,7 +599,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
             defeatState = DefeatState.EXPLODING;
             defeatTimer = EXPLOSION_DURATION;
             // ROM: s2.asm:63150-63151 - moveq #100,d0 / jsrto JmpTo3_AddPoints (100 = 1000 points)
-            services().gameState().addScore(1000);
+            services().gameState().addScore(getDefeatScore());
             onDefeatStarted();
         }
 

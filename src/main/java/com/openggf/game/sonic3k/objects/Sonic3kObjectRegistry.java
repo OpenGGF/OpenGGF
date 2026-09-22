@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance;
+
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance;
@@ -1440,8 +1442,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                         context -> context.zoneSet() == S3kZoneSet.S3KL
                                 || (context.source() == S3kObjectCreationContext.Source.STOCK
                                 && context.zoneSet() == S3kZoneSet.SKL
-                                && context.stockRomZoneId().orElse(-1)
-                                == Sonic3kZoneIds.ZONE_HPZ)));
+                                && (context.stockRomZoneId().orElse(-1)
+                                        == Sonic3kZoneIds.ZONE_HPZ
+                                || context.stockRomZoneId().orElse(-1)
+                                        == Sonic3kZoneIds.ZONE_SSZ))));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SCREW_DOOR, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzScrewDoorObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SPINNING_POLE, S3kZoneSet.S3KL,
@@ -1605,6 +1609,46 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
+
+        // Sky Sanctuary's SKL object set. The same numeric IDs carry S3KL names
+        // (FBZ_ROTATING_PLATFORM $77, ICZ_CRUSHING_COLUMN $AF) whose factories are
+        // S3KL-bound, so these are additional stock-zone entries rather than edits.
+        registerStockRomZoneBound(Sonic3kObjectIds.FBZ_ROTATING_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCutsceneBridgeObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.ICZ_CRUSHING_COLUMN,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCutsceneButtonObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_FLOATING_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszFloatingPlatformObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_COLLAPSING_COLUMN,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCollapsingColumnObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_COLLAPSING_BRIDGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCollapsingBridgeObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_COLLAPSING_BRIDGE_DIAGONAL,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCollapsingBridgeDiagonalObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_BOUNCY_CLOUD,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszBouncyCloudObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_ELEVATOR_BAR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszElevatorBarObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_ROTATING_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszRotatingPlatformObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_SWINGING_CARRIER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszSwingingCarrierObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_RETRACTING_SPRING,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszRetractingSpringObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_EGG_ROBO,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new EggRoboBadnikInstance(spawn));
 
         // The Doomsday Zone's SKL object set.
         registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,

@@ -506,6 +506,47 @@ public final class Sonic3kObjectArtKeys {
 
     // SSZ badniks
     public static final String SSZ_EGG_ROBO = "ssz_egg_robo";
+    /** Obj_57C1E's arrival beam and the SSZ teleporter pads: make_art_tile(ArtTile_SSZMisc+$88,3,1). */
+    public static final String SSZ_TELEPORTER = "ssz_teleporter";
+    /** ObjDat3_664AA: Map_SSZDeathEggSmall over ArtKosM_SSZDeathEggSmall, palette 3. */
+    public static final String SSZ_DEATH_EGG_SMALL = "ssz_death_egg_small";
+    /** ObjDat_SSZCutsceneButton: Map_Button over ArtTile_SSZCutsceneButton (ArtNem_GrayButton). */
+    public static final String SSZ_CUTSCENE_BUTTON = "ssz_cutscene_button";
+    /** Obj_SSZCutsceneBridge: Map_SSZCollapsingBridge over ArtTile_SSZMisc+$20, palette 2. */
+    public static final String SSZ_CUTSCENE_BRIDGE = "ssz_cutscene_bridge";
+    /** loc_57BB2: Map_SSZRoamingClouds over make_art_tile(ArtTile_SSZMisc+$3C,3,1). */
+    public static final String SSZ_ROAMING_CLOUD = "ssz_roaming_cloud";
+    /** Obj_SSZBouncyCloud and its loc_452DA puffs: make_art_tile(ArtTile_SSZMisc+$102,3,1). */
+    public static final String SSZ_BOUNCY_CLOUD = "ssz_bouncy_cloud";
+    /** Obj_SSZElevatorBar and Obj_SSZSwingingCarrier: make_art_tile(ArtTile_SSZMisc+$74,2,0). */
+    public static final String SSZ_ELEVATOR_BAR = "ssz_elevator_bar";
+    /** Obj_SSZRotatingPlatform: make_art_tile(ArtTile_SSZMisc+$AA,2,0). */
+    public static final String SSZ_ROTATING_PLATFORM = "ssz_rotating_platform";
+    /** Obj_SSZRetractingSpring: make_art_tile(ArtTile_SSZMisc+$CE,0,0). */
+    public static final String SSZ_RETRACTING_SPRING = "ssz_retracting_spring";
+    /** {@code ArtKosM_SSZGHZMisc} over {@code Map_SSZGHZMisc}: the GHZ boss ball and chain. */
+    public static final String SSZ_GHZ_BOSS_MISC = "ssz_ghz_boss_misc";
+    /**
+     * {@code ArtKosM_SSZMTZOrbs} over {@code Map_SSZMTZOrbs}: the Metropolis recreation's seven
+     * orbs and its two laser children. The orbs take {@code make_art_tile(ArtTile_SSZMTZOrbs,0,0)}
+     * and the lasers {@code make_art_tile(ArtTile_SSZMTZOrbs,1,1)}, so the sheet is registered on
+     * line 0 and the laser draws override the line.
+     */
+    public static final String SSZ_MTZ_ORBS = "ssz_mtz_orbs";
+    /** {@code ArtKosM_MechaSonicHead} over {@code Map_MechaSonicHead}. */
+    public static final String MECHA_SONIC_HEAD = "mecha_sonic_head";
+
+    /** {@code ArtUnc_MechaSonic} DPLC'd through {@code DPLCPtr_MechaSonic} over {@code Map_MechaSonic}. */
+    public static final String MECHA_SONIC = "mecha_sonic";
+    /** {@code ArtKosM_MechaSonicExtra} over {@code Map_MechaSonicExtra}. */
+    public static final String MECHA_SONIC_EXTRA = "mecha_sonic_extra";
+    /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */
+    public static final String SSZ_FLOATING_PLATFORM = "ssz_floating_platform";
+    /**
+     * Obj_SSZCollapsingColumn and its loc_44BCC debris: the same Map_SSZFloatingPlatform over
+     * make_art_tile(ArtTile_SSZMisc+$10,3,1), a different tile base and palette line.
+     */
+    public static final String SSZ_COLLAPSING_COLUMN = "ssz_collapsing_column";
 
     // DEZ badniks
     public static final String SPIKEBONKER = "dez_spikebonker";

@@ -604,3 +604,24 @@ checks passed, including subtype-0's 31 attempted bursts and allocation/RNG
 failure ordering. The focused structural selection passed 23 checks without
 failures/errors/skips. These are focused checks; combined delivery validation
 and integration remain pending.
+
+
+## SSZ branch reconciliation
+
+Merge candidate combines `feature/ai-ssz-bring-up` at `55a999030` with campaign
+milestone `9e12d6b3f`. Nine content conflicts were resolved by retaining both zone
+owners/registrations, preserving LRZ's distinct Act 2 animation and boss scroll,
+and retaining both capture `--star-post` and rings options (including the
+rings-only Settings constructor used by existing probes). Both campaigns' status
+entries remain; stale historical claims are reconciled in subsequent slices.
+The 24-class SSZ/capture-arguments/LRZ-entry and required S3K selection passed
+240 tests at 19:23 BST, no failures/errors/skips. This is focused merge validation,
+not the campaign delivery suite.
+
+Review found implementation gaps despite those passing tests: the Mecha act-end
+object only sets `resultsRequested`, with no production results allocation or
+ending pose; all three bosses incorrectly convert ROM score 100 directly to
+100 displayed points (`HUD_AddToScore` stores tens, so the engine award is 1000).
+The art loader also rejects `mecha_sonic_extra`: mappings reference tile $96 but
+the registered compressed blob decodes to 139 tiles. These are next-slice fixes,
+alongside the missing collapse/launch owner and the early cold-route frontier.
