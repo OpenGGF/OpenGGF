@@ -31,9 +31,9 @@ class TestControlCodecPolymorphism {
     @Test
     void unknownAndMissingDiscriminatorsAreRejected() {
         assertThrows(ProtocolViolationException.class,
-                () -> ControlCodec.decode("{\"v\":1,\"token\":null,\"msg\":{}}"));
+                () -> ControlCodec.decode("{\"v\":2,\"token\":null,\"msg\":{}}"));
         assertThrows(ProtocolViolationException.class,
-                () -> ControlCodec.decode("{\"v\":1,\"token\":null,\"msg\":{\"type\":\"FutureType\"}}"));
+                () -> ControlCodec.decode("{\"v\":2,\"token\":null,\"msg\":{\"type\":\"FutureType\"}}"));
     }
 
     private static Object instantiate(Class<?> type) throws Exception {

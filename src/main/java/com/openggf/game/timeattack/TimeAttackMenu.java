@@ -28,7 +28,7 @@ public final class TimeAttackMenu {
     private final PixelFont font;
     private InputHandler menuInput;
     private final LaunchStarter launchStarter;
-    private final MenuTextField joinAddress = new MenuTextField(64, ".:-");
+    private final MenuTextField joinAddress = new MenuTextField(192, ".:/#-_[]");
     private NetworkStarter networkStarter = NetworkStarter.NONE;
 
     public TimeAttackMenu(List<String> availableGameIds, String initialGameId,
@@ -68,7 +68,7 @@ public final class TimeAttackMenu {
                 if (state.currentTrack() == null || state.currentCharacter() == null) MenuFeedback.emit(ERROR);
             }
             else if (focus == count && state.mode() == TimeAttackMenuState.Mode.JOIN_LAN) {
-                editor = new MenuTextEditor("JOIN ADDRESS", joinAddress.text(), 64, null, MenuTextEditor.Mode.ADDRESS);
+                editor = new MenuTextEditor("LAN INVITE", joinAddress.text(), 192, null, MenuTextEditor.Mode.ADDRESS);
                 MenuFeedback.emit(CONFIRM);
             } else { focus = Math.min(focus + 1, go); MenuFeedback.emit(CONFIRM); }
         }
@@ -118,7 +118,7 @@ public final class TimeAttackMenu {
             drawRow(label, value, index++, false);
         }
         if (state.mode() == TimeAttackMenuState.Mode.JOIN_LAN)
-            drawRow("Address", joinAddress.text().isBlank() ? "Select to enter" : joinAddress.text(), index++, true);
+            drawRow("Invite", joinAddress.text().isBlank() ? "Select to enter" : "Code entered", index++, true);
         String action = switch (state.mode()) {
             case SOLO -> "START RUN";
             case HOST_LAN -> "CREATE LAN ROOM";

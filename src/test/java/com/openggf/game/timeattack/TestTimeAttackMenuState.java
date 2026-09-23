@@ -17,6 +17,29 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestTimeAttackMenuState {
 
     @Test
+    void joinLanAcceptsFullPinnedInvite(@TempDir Path root) {
+        TimeAttackMenu menu = new TimeAttackMenu(List.of("s2"), "s2", new GhostStore(root), null,
+                request -> fail("solo launch"));
+        menu.state().moveFocus(-1); // MODE
+        menu.state().adjust(2); // JOIN_LAN
+        String invite = "[2001:db8::1]:27888#" +
+                com.openggf.net.client.DirectJoinAddress.shareCode("ab".repeat(32), "cd".repeat(32));
+        assertTrue(invite.length() > 64);
+        java.util.concurrent.atomic.AtomicReference<String> joined = new java.util.concurrent.atomic.AtomicReference<>();
+        menu.setNetworkStarter(new TimeAttackMenu.NetworkStarter() {
+            @Override public void host(TimeAttackLaunchRequest request, String policy,
+                                       String character, int seconds) { fail("host launch"); }
+            @Override public void join(TimeAttackLaunchRequest request, String address) {
+                joined.set(address);
+            }
+        });
+        menu.setJoinAddress(invite);
+        menu.state().pressGo();
+        menu.update(new InputHandler());
+        assertEquals(invite, joined.get());
+    }
+
+    @Test
     void controllerBackDoesNotQueueOrDispatchLaunch(@TempDir Path root) {
         java.util.concurrent.atomic.AtomicInteger launches = new java.util.concurrent.atomic.AtomicInteger();
         TimeAttackMenu menu = new TimeAttackMenu(List.of("s2"), "s2", new GhostStore(root), null,

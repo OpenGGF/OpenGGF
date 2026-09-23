@@ -36,8 +36,8 @@ class TestControlCodec {
         List<ControlMessage.StandingsRow> rows =
                 List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 3600, 1, "NONE"));
         List<ControlMessage> all = List.of(
-                new ControlMessage.Hello(1, "a", "b", "c"),
-                new ControlMessage.Welcome(1, "bm9uY2U=", "serverfp"),
+                new ControlMessage.Hello(Protocol.VERSION, "a", "b", "c"),
+                new ControlMessage.Welcome(Protocol.VERSION, "bm9uY2U=", "serverfp"),
                 new ControlMessage.AuthProof("c2ln"),
                 new ControlMessage.JoinRejected("room full"),
                 new ControlMessage.Kick("protocol violation"),
@@ -66,7 +66,7 @@ class TestControlCodec {
 
     @Test
     void rejectsOversizedText() {
-        String big = "{\"v\":1,\"msg\":{\"type\":\"Chat\",\"text\":\""
+        String big = "{\"v\":2,\"msg\":{\"type\":\"Chat\",\"text\":\""
                 + "x".repeat(Protocol.MAX_CONTROL_BYTES) + "\"}}";
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(big));
     }
@@ -74,32 +74,32 @@ class TestControlCodec {
     @Test
     void rejectsUnknownTypeWrongVersionAndGarbage() {
         assertThrows(ProtocolViolationException.class,
-                () -> ControlCodec.decode("{\"v\":1,\"msg\":{\"type\":\"Nope\"}}"));
+                () -> ControlCodec.decode("{\"v\":2,\"msg\":{\"type\":\"Nope\"}}"));
         assertThrows(ProtocolViolationException.class,
                 () -> ControlCodec.decode(
-                        "{\"v\":2,\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":1}}"));
+                        "{\"v\":1,\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":1}}"));
         assertThrows(ProtocolViolationException.class,
-                () -> ControlCodec.decode("{\"v\":1}"));
+                () -> ControlCodec.decode("{\"v\":2}"));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode("not json at all"));
     }
 
     @Test
     void rejectsUnknownEnvelopeAndMessageFields() {
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":1,\"token\":null,\"futureField\":true,"
+                "{\"v\":2,\"token\":null,\"futureField\":true,"
                         + "\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":7}}"));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"Ping\","
+                "{\"v\":2,\"token\":null,\"msg\":{\"type\":\"Ping\","
                         + "\"t0ClientMillis\":7,\"futureField\":true}}"));
     }
 
     @Test
     void rejectsDuplicateSecuritySensitiveFields() {
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":1,\"token\":\"first\",\"token\":\"second\","
+                "{\"v\":2,\"token\":\"first\",\"token\":\"second\","
                         + "\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":7}}"));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
-                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"Ping\","
+                "{\"v\":2,\"token\":null,\"msg\":{\"type\":\"Ping\","
                         + "\"t0ClientMillis\":7,\"t0ClientMillis\":8}}"));
     }
 }

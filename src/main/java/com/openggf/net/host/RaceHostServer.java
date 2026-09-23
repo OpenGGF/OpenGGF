@@ -18,8 +18,13 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import java.net.InetSocketAddress;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,12 +38,17 @@ public final class RaceHostServer implements AutoCloseable {
     private final EventLoopGroup group;
     private final Channel serverChannel;
     private final RoomHost room;
+    private final SelfSignedCertificate tlsCertificate;
+    private final String tlsCertificateSha256;
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    private RaceHostServer(EventLoopGroup group, Channel serverChannel, RoomHost room) {
+    private RaceHostServer(EventLoopGroup group, Channel serverChannel, RoomHost room,
+                           SelfSignedCertificate tlsCertificate, String tlsCertificateSha256) {
         this.group = group;
         this.serverChannel = serverChannel;
         this.room = room;
+        this.tlsCertificate = tlsCertificate;
+        this.tlsCertificateSha256 = tlsCertificateSha256;
     }
 
     public static RaceHostServer start(int port, RoomHostConfig config,
@@ -47,12 +57,45 @@ public final class RaceHostServer implements AutoCloseable {
         return start(port, config, hostIdentity, profiles, System::currentTimeMillis);
     }
 
+    /** Starts a direct room with a fresh TLS key whose certificate digest is advertised by the broker. */
+    static RaceHostServer startAuthenticated(int port, RoomHostConfig config,
+                                                    PlayerIdentity hostIdentity,
+                                                    TrackValidationProfileSource profiles) {
+        return start(port, config, hostIdentity, profiles, System::currentTimeMillis, true);
+    }
+
     // Package-private clock seam: public transport behavior keeps wall time.
     static RaceHostServer start(int port, RoomHostConfig config,
                                 PlayerIdentity hostIdentity,
                                 TrackValidationProfileSource profiles,
                                 LongSupplier clockMillis) {
+        return start(port, config, hostIdentity, profiles, clockMillis, false);
+    }
+
+    private static RaceHostServer start(int port, RoomHostConfig config,
+                                PlayerIdentity hostIdentity,
+                                TrackValidationProfileSource profiles,
+                                LongSupplier clockMillis, boolean authenticated) {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
+        SelfSignedCertificate certificate = null;
+        SslContext ssl = null;
+        String certificateSha256 = null;
+        if (authenticated) {
+            try {
+                certificate = new SelfSignedCertificate("openggf-direct-room");
+                ssl = SslContextBuilder.forServer(certificate.certificate(),
+                        certificate.privateKey()).build();
+                certificateSha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                        .digest(certificate.cert().getEncoded()));
+            } catch (Exception e) {
+                if (certificate != null) {
+                    certificate.delete();
+                }
+                group.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
+                throw new IllegalStateException("cannot start authenticated direct room", e);
+            }
+        }
+        final SslContext tls = ssl;
         RoomHost room = new RoomHost(config, hostIdentity, clockMillis, profiles);
         ConnectionHygiene.ConnectionCounter counter =
                 new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
@@ -64,6 +107,9 @@ public final class RaceHostServer implements AutoCloseable {
                         @Override
                         protected void initChannel(SocketChannel channel) {
                             ChannelPipeline pipeline = channel.pipeline();
+                            if (tls != null) {
+                                pipeline.addLast(tls.newHandler(channel.alloc()));
+                            }
                             pipeline.addLast(new HttpServerCodec());
                             pipeline.addLast(new HttpObjectAggregator(Protocol.MAX_CONTROL_BYTES));
                             pipeline.addLast(new WebSocketServerProtocolHandler(
@@ -78,8 +124,12 @@ public final class RaceHostServer implements AutoCloseable {
                     .channel();
             group.next().scheduleAtFixedRate(room::tick,
                     TICK_MILLIS, TICK_MILLIS, TimeUnit.MILLISECONDS);
-            return new RaceHostServer(group, serverChannel, room);
+            return new RaceHostServer(group, serverChannel, room, certificate,
+                    certificateSha256);
         } catch (RuntimeException | Error e) {
+            if (certificate != null) {
+                certificate.delete();
+            }
             group.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
             throw e;
         }
@@ -87,6 +137,10 @@ public final class RaceHostServer implements AutoCloseable {
 
     public int port() {
         return ((InetSocketAddress) serverChannel.localAddress()).getPort();
+    }
+
+    String tlsCertificateSha256() {
+        return tlsCertificateSha256;
     }
 
     public void execute(Runnable task) {
@@ -107,5 +161,8 @@ public final class RaceHostServer implements AutoCloseable {
         }
         serverChannel.close().syncUninterruptibly();
         group.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
+        if (tlsCertificate != null) {
+            tlsCertificate.delete();
+        }
     }
 }

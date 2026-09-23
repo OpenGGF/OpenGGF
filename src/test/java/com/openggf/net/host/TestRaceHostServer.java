@@ -1,6 +1,8 @@
 package com.openggf.net.host;
 
 import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.DirectJoinAddress;
+import com.openggf.net.client.RaceClient;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
@@ -12,8 +14,12 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.net.URI;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionStage;
@@ -100,6 +106,78 @@ class TestRaceHostServer {
         assertEquals(0, accepted.playerSlot());
         assertFalse(accepted.room().verified());
         socket.sendClose(WebSocket.NORMAL_CLOSURE, "done").join();
+    }
+
+    @Test
+    void brokerPinnedTlsDirectRoomAdmitsOnlyItsOwnCertificate(@TempDir Path dir)
+            throws Exception {
+        PlayerIdentity host = PlayerIdentity.loadOrCreate(dir.resolve("host"));
+        PlayerIdentity guest = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
+        server = RaceHostServer.startAuthenticated(0,
+                new RoomHostConfig("LAN", "s3k", 0, 0, "OPEN", null, 8, FP),
+                host, TrackValidationProfileSource.none());
+        String invite = "127.0.0.1:" + server.port() + "#"
+                + DirectJoinAddress.shareCode(server.tlsCertificateSha256(), host.fingerprint());
+        DirectJoinAddress parsed = DirectJoinAddress.parse(invite, 27888);
+
+        RaceClient joined = RaceClient.connect(parsed.uri(), guest, "Guest", FP,
+                parsed.certificateSha256(), parsed.hostFingerprint())
+                .get(10, TimeUnit.SECONDS);
+        assertEquals(0, joined.playerSlot());
+        joined.close();
+
+        assertThrows(Exception.class, () -> RaceClient.connect(parsed.uri(), guest, "Guest", FP,
+                "00".repeat(32), host.fingerprint()).get(10, TimeUnit.SECONDS));
+    }
+
+    @Test
+    void liveTcpRelayCannotReadJoinedSessionToken(@TempDir Path dir) throws Exception {
+        PlayerIdentity host = PlayerIdentity.loadOrCreate(dir.resolve("host"));
+        PlayerIdentity guest = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
+        server = RaceHostServer.startAuthenticated(0,
+                new RoomHostConfig("LAN", "s3k", 0, 0, "OPEN", null, 8, FP),
+                host, TrackValidationProfileSource.none());
+        ByteArrayOutputStream serverToClient = new ByteArrayOutputStream();
+        try (ServerSocket proxy = new ServerSocket(0)) {
+            Thread relay = Thread.ofVirtual().start(() -> {
+                try (Socket victim = proxy.accept();
+                     Socket realHost = new Socket("127.0.0.1", server.port())) {
+                    Thread.ofVirtual().start(() -> copy(victim, realHost, null));
+                    copy(realHost, victim, serverToClient);
+                } catch (Exception ignored) {
+                    // The client closes the joined socket after the assertion.
+                }
+            });
+            URI uri = URI.create("wss://127.0.0.1:" + proxy.getLocalPort() + "/race");
+            RaceClient joined = RaceClient.connect(uri, guest, "Guest", FP,
+                    server.tlsCertificateSha256(), host.fingerprint())
+                    .get(10, TimeUnit.SECONDS);
+            synchronized (serverToClient) {
+                assertTrue(serverToClient.size() > 0);
+                assertFalse(serverToClient.toString(StandardCharsets.ISO_8859_1)
+                        .contains(joined.sessionToken()));
+            }
+            joined.close();
+            relay.join(1000);
+        }
+    }
+
+    private static void copy(Socket source, Socket destination, ByteArrayOutputStream capture) {
+        try {
+            byte[] buffer = new byte[4096];
+            int count;
+            while ((count = source.getInputStream().read(buffer)) >= 0) {
+                if (capture != null) {
+                    synchronized (capture) {
+                        capture.write(buffer, 0, count);
+                    }
+                }
+                destination.getOutputStream().write(buffer, 0, count);
+                destination.getOutputStream().flush();
+            }
+        } catch (Exception ignored) {
+            // Socket closure ends each relay direction.
+        }
     }
 
     @Test

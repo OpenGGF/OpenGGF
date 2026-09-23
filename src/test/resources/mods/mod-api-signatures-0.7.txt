@@ -1708,12 +1708,14 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayGuestOpen public  <init
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayGuestText public  <init>(int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreateRejected public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreated public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinRejected public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinRequest public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinResult public  <init>(java.lang.String,java.lang.String,java.lang.String,int,java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinResult public  <init>(java.lang.String,java.lang.String,java.lang.String,int,java.lang.String,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomLeave public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomListRequest public  <init>(java.lang.String,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomListResult public  <init>(java.util.List<com.openggf.net.protocol.ControlMessage$RoomSummary>,int,int)
@@ -11599,6 +11601,7 @@ METHOD com.openggf.net.protocol.ControlMessage$RelayGuestText public,final  int 
 METHOD com.openggf.net.protocol.ControlMessage$RelayGuestText public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  com.openggf.net.protocol.ControlMessage$RoomDescriptor room()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  int directPort()
+METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.lang.String certificateSha256()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.lang.String determinismFingerprint()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.lang.String routing()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.util.List<java.lang.String> voteTrackKeys()
@@ -11633,6 +11636,7 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRequest public,final  boo
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRequest public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRequest public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  int directPort()
+METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String certificateSha256()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String determinismFingerprint()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String directHost()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String hostServerId()
@@ -16226,6 +16230,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RelayGuestClose reason 
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RelayGuestOpen guestId int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RelayGuestText guestId int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RelayGuestText text java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate certificateSha256 java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate determinismFingerprint java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate directPort int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate room com.openggf.net.protocol.ControlMessage$RoomDescriptor
@@ -16243,6 +16248,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor verified
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor zone int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinRejected reason java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinRequest roomId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult certificateSha256 java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult determinismFingerprint java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult directHost java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult directPort int

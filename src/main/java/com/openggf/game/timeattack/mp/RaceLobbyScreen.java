@@ -34,6 +34,8 @@ public final class RaceLobbyScreen {
     private final Consumer<TimeAttackLaunchRequest> roundLauncher;
     private final Runnable leaveHandler;
     private boolean launchedCurrentRound;
+    private String shareCode;
+    private Consumer<String> shareCodeClipboard;
 
     public RaceLobbyScreen(MultiplayerRaceCoordinator coordinator, PixelFont font,
                            boolean host, ControlMessage.RoundConfig configuredRound,
@@ -93,8 +95,15 @@ public final class RaceLobbyScreen {
                         else MenuFeedback.emit(ERROR);
                     }
                     case HISTORY -> {
-                        details = new MenuDetailsScreen("CHAT HISTORY",
-                                String.join("\n\n", coordinator.session().chatLines()));
+                        String history = String.join("\n\n", coordinator.session().chatLines());
+                        if (shareCode != null && shareCodeClipboard != null) {
+                            shareCodeClipboard.accept(shareCode);
+                        }
+                        details = new MenuDetailsScreen(shareCode == null
+                                ? "CHAT HISTORY" : "LAN INVITE COPIED",
+                                shareCode == null ? history : "Replace HOST_IP with this computer's"
+                                        + " LAN address before sharing. The template was copied to clipboard:\n\n"
+                                        + shareCode + "\n\n" + history);
                         MenuFeedback.emit(CONFIRM);
                     }
                     case PLAYERS -> { }
@@ -143,7 +152,8 @@ public final class RaceLobbyScreen {
         List<String> history = coordinator.session().chatLines();
         chatPage = Math.min(chatPage, Math.max(0, (history.size() - 1) / 2));
         if (focus == Focus.HISTORY) MenuStyle.focus(font, 7, 103, 306, 34);
-        text("CHAT HISTORY  < " + (chatPage + 1) + " >", 10, 105, 300, .5f, .9f, 1);
+        text((shareCode == null ? "CHAT HISTORY" : "COPY LAN INVITE / CHAT")
+                + "  < " + (chatPage + 1) + " >", 10, 105, 300, .5f, .9f, 1);
         int last = Math.max(0, history.size() - chatPage * 2);
         int first = Math.max(0, last - 2);
         for (int i = first; i < last; i++) text(history.get(i), 12, 117 + (i - first) * 10, 296, .8f, .85f, .95f);
@@ -164,6 +174,11 @@ public final class RaceLobbyScreen {
         if (focus == action) MenuStyle.focusLabel(font, 7, y, 306, 16);
         float brightness = enabled ? 1 : .55f;
         MenuStyle.label(font, label, 12, y, 296, brightness, brightness, brightness);
+    }
+
+    public void setShareCode(String shareCode, Consumer<String> clipboardWriter) {
+        this.shareCode = Objects.requireNonNull(shareCode, "shareCode");
+        this.shareCodeClipboard = Objects.requireNonNull(clipboardWriter, "clipboardWriter");
     }
 
     private void text(String value, int x, int y, int maxWidth, float r, float g, float b) {

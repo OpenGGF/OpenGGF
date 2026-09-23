@@ -7,6 +7,7 @@ import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -40,6 +41,15 @@ public final class MenuTextEditor {
     private String error;
     private boolean deferAcceptanceFeedback;
     private boolean errorFeedback;
+    private Supplier<String> clipboardReader = () -> {
+        long window = glfwGetCurrentContext();
+        return window == 0 ? null : glfwGetClipboardString(window);
+    };
+
+    /** Allows the address editor to paste a complete LAN invite with Ctrl/Cmd+V. */
+    public void setClipboardReader(Supplier<String> clipboardReader) {
+        this.clipboardReader = Objects.requireNonNull(clipboardReader, "clipboardReader");
+    }
 
     /** Owners that validate on acceptance emit confirm only after successful validation. */
     public void deferAcceptanceFeedback() { deferAcceptanceFeedback = true; }
@@ -112,7 +122,16 @@ public final class MenuTextEditor {
         controller = MenuInput.controller(input);
         String typed = MenuInput.consumeText(input);
         // Physical typing edits the field directly; device presentation never owns focus.
-        if (!typed.isEmpty()) { keypadFocused = false; insert(typed); }
+        boolean paste = mode == Mode.ADDRESS
+                && (input.isPhysicalControlDown() || input.isPhysicalSuperDown())
+                && MenuInput.textKeyPressed(input, GLFW_KEY_V);
+        if (paste) {
+            String copied = clipboardReader.get();
+            if (copied != null && !copied.isEmpty()) {
+                keypadFocused = false;
+                insert(copied.substring(0, Math.min(copied.length(), maxLength + 1)));
+            }
+        } else if (!typed.isEmpty()) { keypadFocused = false; insert(typed); }
         if (MenuInput.textKeyRepeated(input, GLFW_KEY_BACKSPACE)) { keypadFocused = false; eraseBefore(); }
         if (MenuInput.textKeyRepeated(input, GLFW_KEY_DELETE)) { keypadFocused = false; eraseAfter(); }
         if (MenuInput.textKeyPressed(input, GLFW_KEY_HOME)) { keypadFocused = false; caret = 0; }
@@ -221,7 +240,7 @@ public final class MenuTextEditor {
             return keys + " ".repeat(CHARACTER_CELLS - keys.length());
         }
         if (mode == Mode.ADDRESS && page == 0) {
-            String keys = "1234567890abcdefABCDEF.:[]%-_localhost";
+            String keys = "1234567890abcdefABCDEF.:[]%-_#localhost";
             return keys + " ".repeat(CHARACTER_CELLS - keys.length());
         }
         return page == 0 ? LOWER : page == 1 ? LOWER.toUpperCase(java.util.Locale.ROOT) : SYMBOLS; }

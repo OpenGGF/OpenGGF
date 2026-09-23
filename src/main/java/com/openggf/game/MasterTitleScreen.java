@@ -1444,6 +1444,12 @@ public class MasterTitleScreen {
         serverBrowserScreen = null;
     }
 
+    void setRaceLobbyShareCode(String inviteTemplate, java.util.function.Consumer<String> clipboardWriter) {
+        if (raceLobbyScreen != null) {
+            raceLobbyScreen.setShareCode(inviteTemplate, clipboardWriter);
+        }
+    }
+
     public void openServerBrowser(ServerBrowserScreen browser) {
         timeAttackMenu = null;
         raceLobbyScreen = null;

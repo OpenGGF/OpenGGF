@@ -21,7 +21,8 @@ public final class SessionRegistry {
     public record RoomEntry(String roomId, ControlMessage.RoomDescriptor descriptor,
                             String routing, String hostFingerprint, String hostAddress,
                             int directPort, String determinismFingerprint, int playerCount,
-                            long lastHeartbeatMillis, List<String> voteTrackKeys) {
+                            long lastHeartbeatMillis, List<String> voteTrackKeys,
+                            String certificateSha256) {
         public RoomEntry {
             voteTrackKeys = List.copyOf(voteTrackKeys == null ? List.of() : voteTrackKeys);
         }
@@ -41,13 +42,21 @@ public final class SessionRegistry {
                             String hostFingerprint, String hostAddress, int directPort,
                             String determinismFingerprint) throws RoomCreateException {
         return create(descriptor, routing, hostFingerprint, hostAddress, directPort,
-                determinismFingerprint, List.of());
+                determinismFingerprint, List.of(), null);
     }
 
     public RoomEntry create(ControlMessage.RoomDescriptor descriptor, String routing,
                             String hostFingerprint, String hostAddress, int directPort,
                             String determinismFingerprint, List<String> voteTrackKeys)
             throws RoomCreateException {
+        return create(descriptor, routing, hostFingerprint, hostAddress, directPort,
+                determinismFingerprint, voteTrackKeys, null);
+    }
+
+    public RoomEntry create(ControlMessage.RoomDescriptor descriptor, String routing,
+                            String hostFingerprint, String hostAddress, int directPort,
+                            String determinismFingerprint, List<String> voteTrackKeys,
+                            String certificateSha256) throws RoomCreateException {
         long byIdentity = rooms.values().stream().filter(room ->
                 room.hostFingerprint().equals(hostFingerprint)).count();
         if (byIdentity >= config.maxRoomsPerIdentity()) {
@@ -60,7 +69,7 @@ public final class SessionRegistry {
         }
         RoomEntry entry = new RoomEntry("r-" + ++counter, descriptor, routing,
                 hostFingerprint, hostAddress, directPort, determinismFingerprint, 0,
-                clock.getAsLong(), voteTrackKeys);
+                clock.getAsLong(), voteTrackKeys, certificateSha256);
         rooms.put(entry.roomId(), entry);
         return entry;
     }
@@ -72,7 +81,7 @@ public final class SessionRegistry {
                     entry.routing(), entry.hostFingerprint(), entry.hostAddress(),
                     entry.directPort(), entry.determinismFingerprint(),
                     Math.max(0, Math.min(playerCount, entry.descriptor().maxPlayers())),
-                    clock.getAsLong(), entry.voteTrackKeys()));
+                    clock.getAsLong(), entry.voteTrackKeys(), entry.certificateSha256()));
         }
     }
 
@@ -88,7 +97,8 @@ public final class SessionRegistry {
         rooms.put(roomId, new RoomEntry(entry.roomId(), updated, entry.routing(),
                 entry.hostFingerprint(), entry.hostAddress(), entry.directPort(),
                 entry.determinismFingerprint(), entry.playerCount(),
-                entry.lastHeartbeatMillis(), entry.voteTrackKeys()));
+                entry.lastHeartbeatMillis(), entry.voteTrackKeys(),
+                entry.certificateSha256()));
         return true;
     }
 

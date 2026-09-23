@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** Envelope codec for control messages: {@code {"v":1,"token":...,"msg":{...}}}. */
+/** Envelope codec for control messages: {@code {"v":2,"token":...,"msg":{...}}}. */
 public final class ControlCodec {
     private static final ObjectMapper MAPPER = new ObjectMapper(JsonFactory.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
