@@ -141,7 +141,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   where the floor opens, the launch plays and normal control returns. Act 2's gravity boss
   now releases spiked enemies, takes damage from their return impacts, breaks apart,
   opens the door and releases the camera into the final-stage transition. Its transporter
-  columns stop accepting new riders after defeat. The destination final boss is still incomplete.
+  columns stop accepting new riders after defeat. The destination final boss now creates its entry floor and starts the forced run-in; its rendering and complete encounter remain incomplete.
   Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** the Master Emerald palette cycle and boss flash colors now

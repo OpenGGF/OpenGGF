@@ -3928,3 +3928,19 @@ preserve independent core/emerald allocation and the two-hand successful prefix,
 without healing missing hands after capacity becomes available. Total distinct
 controller cases: five. All local Maven work used the queue and the absolute
 root locked-on ROM path; waits were for a confirmed live shared Maven run.
+
+### Production entry connection after `72d4997ca`
+
+The final arena now allocates its two floor supports and root on the first
+pre-physics pass. Native `DEZ3_ScreenInit` allocates one first-free sprite and
+two forward sprites, stopping on any failure; contiguous calls to the engine's
+first-free allocator are equivalent here because constructors allocate no
+children between them. Boss event positions are initialized only on successful
+root allocation. The camera setup still executes for a partial prefix.
+
+The once-only marker belongs to captured zone state. A production-frame test
+and graph-restored forward replay pass, as do capacity 0..3 cases. Focused
+root/scroll/entry selection: 11 pass, zero skips. The remaining integration is
+layout alias/clear behavior, both retained render planes, background stage
+updates, queue servicing and scroll registration. No final encounter visual
+or complete route claim is made by the entry connection.

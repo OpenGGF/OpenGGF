@@ -721,6 +721,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void updatePrePhysics() {
+        if (currentZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && currentAct == 0
+                && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {
+            com.openggf.game.sonic3k.events.DezFinalScreenEvents.initializeObjectsAndCamera(
+                    GameServices.level().getObjectManager(), state);
+        }
         if (lrzEvents != null && currentZone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && currentAct == 0) {
             lrzEvents.updateBossSpecialEvents();
             syncSidekickBoundsToCamera();

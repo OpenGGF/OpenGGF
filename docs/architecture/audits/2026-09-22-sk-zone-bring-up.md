@@ -2101,3 +2101,32 @@ preserve independent core/emerald allocation and the two-hand successful prefix,
 without healing missing hands after capacity becomes available. Total distinct
 controller cases: five. All local Maven work used the queue and the absolute
 root locked-on ROM path; waits were for a confirmed live shared Maven run.
+
+### DEZ final arena entry connection (after `72d4997ca`)
+
+Connected the first pre-physics pass to native-ordered moving support, entry
+support and boss allocation. Camera initialization survives allocation failure;
+boss position is published only after root allocation. Captured initialization
+state prevents duplicate allocation after rewind. The real first frame and
+three-frame replay, plus all four allocation capacities, pass alongside existing
+root/scroll checks (11 tests, zero skips). Remaining work includes retained-plane
+rendering, layout setup, background updates, art servicing and the full route.
+
+Validation follow-up: the combined `TestDezFinal*` plus mandatory S3K loading,
+bootstrap, decoding and AIZ selection ran 143 tests, zero skips, initially with
+two failures. The floor and retired-hand-slot fixtures manually construct their
+encounters and were receiving a second production root on their first loop
+step. Marking their component setup as already initialized preserves the
+intended isolation; the independent production-entry test retains the real
+initialization path. The repaired floor/hand/entry selection passed all 16,
+zero skips. Commands used `tools/testing/maven_queue.py -Dmse=off` and
+`-Ds3k.rom.path=$ROOT/s3k.gen`. This is focused validation; the change-based
+plan selects the full ordinary suite and guards, deferred to combined campaign
+validation after remaining implementation.
+
+A production capture at native width ran 180 frames with neutral input and no
+deaths, ending at Sonic `$360,$CD`, camera `$2C0,$20`. Video decode and still 90
+were inspected. Durable work-in-progress files are under
+`$HOME/Videos/OGGF/s3k-dez-bring-up/106-final-entry-wip-320/`. The planet/body
+presentation is not certified: retained-plane rendering and subsequent event
+updates still require connection.

@@ -22,6 +22,10 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     public void escapeCameraSpeed(int value) { escapeCameraSpeed=value; }
     public int escapeCameraFraction() { return escapeCameraFraction; }
     public void escapeCameraFraction(int value) { escapeCameraFraction=value&0xFFFF; }
+    private boolean screenInitApplied;
+    public boolean screenInitApplied() { return screenInitApplied; }
+    public void markScreenInitApplied() { screenInitApplied = true; }
+
     private short windowBase = 0x6C0;
     private short bossX = 0x3C0;
     private short bossY = 0xF8;
@@ -96,7 +100,8 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     @Override public byte[] captureBytes() {
-        var buffer = ByteBuffer.allocate(18 * Short.BYTES + 2 * Integer.BYTES + art.snapshotBytes() + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + DezFinalPlaneState.SNAPSHOT_BYTES);
+        var buffer = ByteBuffer.allocate(1 + 18 * Short.BYTES + 2 * Integer.BYTES + art.snapshotBytes() + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + DezFinalPlaneState.SNAPSHOT_BYTES);
+        buffer.put((byte) (screenInitApplied ? 1 : 0));
         buffer.putInt(escapeCameraSpeed).putInt(escapeCameraFraction);
         art.captureTo(buffer);
         emeraldPalette.captureTo(buffer);
@@ -112,6 +117,7 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
     @Override public void restoreBytes(byte[] bytes) {
         var buffer = ByteBuffer.wrap(bytes);
+        screenInitApplied = buffer.get() != 0;
         escapeCameraSpeed=buffer.getInt(); escapeCameraFraction=buffer.getInt();
         art.restoreFrom(buffer);
         emeraldPalette.restoreFrom(buffer);

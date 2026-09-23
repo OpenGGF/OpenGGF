@@ -24,7 +24,11 @@ class TestDezFinalHand {
     }
     private HeadlessTestFixture boot() {
         com.openggf.game.session.SessionManager.clear(); TestEnvironment.activeGameplayMode();
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(23, 0).build(); fixture.sprite().setDebugMode(true); return fixture;
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(23, 0).build();
+        // This fixture supplies its own Root and SST layout. Do not also enter the arena.
+        ((com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState) GameServices.zoneRuntimeState())
+                .markScreenInitApplied();
+        fixture.sprite().setDebugMode(true); return fixture;
     }
     private Root root() {
         var root = new Root(new ObjectSpawn(0x500, 0x98, 0, 0, 0, false, 0));

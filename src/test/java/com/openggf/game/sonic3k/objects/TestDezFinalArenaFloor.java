@@ -15,6 +15,9 @@ class TestDezFinalArenaFloor {
     private HeadlessTestFixture boot() {
         com.openggf.game.session.SessionManager.clear(); TestEnvironment.activeGameplayMode();
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(23, 0).build();
+        // This fixture assembles individual floor/laser workers, not a complete arrival.
+        // Production ScreenInit is exercised independently by TestDezFinalScreenEntry.
+        state().markScreenInitApplied();
         fixture.sprite().setDebugMode(true);
         GameServices.camera().setX((short) 0x80); GameServices.camera().setXCopy((short) 0x80);
         return fixture;

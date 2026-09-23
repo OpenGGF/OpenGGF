@@ -31,9 +31,9 @@ level and dies at frame 98. No title card is drawn. Capture:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Independent runtime owner; floor/collapse, laser-upload and scroll components. Screen events and final boss are not connected. The provider already separates the sanctuary; `$1700` still selects the default scroll handler until its new handler is connected |
-| Cold-reachable | Not started |
-| Rewind-verified | Component state bytes, falling-block reconstruction/replay and laser-upload gate; full arena/boss graph remains open |
+| Implemented | Independent runtime owner; floor/collapse, laser-upload and scroll components. The first pre-physics pass now allocates the floor supports and final boss; retained-plane screen/background events are not yet connected. The provider already separates the sanctuary; `$1700` still selects the default scroll handler until its new handler is connected |
+| Cold-reachable | First production frame and forced entry tested; complete encounter route remains open |
+| Rewind-verified | Component state bytes, falling-block reconstruction/replay, laser-upload gate and production entry replay; full arena/boss lifecycle remains open |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` below |
 | Visually matched | Not started; `raw-00-baseline-before-work/1700-final-boss` is the "before" capture |
 
@@ -242,3 +242,39 @@ preserve independent core/emerald allocation and the two-hand successful prefix,
 without healing missing hands after capacity becomes available. Total distinct
 controller cases: five. All local Maven work used the queue and the absolute
 root locked-on ROM path; waits were for a confirmed live shared Maven run.
+
+### Production entry connection (after `72d4997ca`)
+
+`DezFinalScreenEvents.initializeObjectsAndCamera` runs before the first object
+pass through the production level event manager. It preserves the native
+AllocateObject/CreateNewSprite4 prefix (moving support, entry support, root),
+sets boss position only after root allocation succeeds, and always installs the
+scroll lock, camera/copy X `$80`, window `$6C0` and initial laser upload. A
+captured marker prevents recreation on subsequent frames or rewind restore.
+
+`TestDezFinalScreenEntry` verifies a real first gameplay frame, forced player
+entry and three-frame replay after graph restore, plus available capacities
+0..3 and no retry after capacity returns. These two tests and the existing
+root/scroll component selection passed 11 total, zero skips, with the absolute
+locked-on ROM property. This establishes entry initialization only: layout row
+pointers, retained planes, per-frame screen/background updates and complete
+route/presentation remain open.
+
+Validation follow-up: the combined `TestDezFinal*` plus mandatory S3K loading,
+bootstrap, decoding and AIZ selection ran 143 tests, zero skips, initially with
+two failures. The floor and retired-hand-slot fixtures manually construct their
+encounters and were receiving a second production root on their first loop
+step. Marking their component setup as already initialized preserves the
+intended isolation; the independent production-entry test retains the real
+initialization path. The repaired floor/hand/entry selection passed all 16,
+zero skips. Commands used `tools/testing/maven_queue.py -Dmse=off` and
+`-Ds3k.rom.path=$ROOT/s3k.gen`. This is focused validation; the change-based
+plan selects the full ordinary suite and guards, deferred to combined campaign
+validation after remaining implementation.
+
+A production capture at native width ran 180 frames with neutral input and no
+deaths, ending at Sonic `$360,$CD`, camera `$2C0,$20`. Video decode and still 90
+were inspected. Durable work-in-progress files are under
+`$HOME/Videos/OGGF/s3k-dez-bring-up/106-final-entry-wip-320/`. The planet/body
+presentation is not certified: retained-plane rendering and subsequent event
+updates still require connection.
