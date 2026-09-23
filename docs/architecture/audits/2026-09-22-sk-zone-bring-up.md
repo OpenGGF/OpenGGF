@@ -1843,3 +1843,26 @@ Structural follow-up: `-Pguards
 -Dtest=TestObjectPhysicsStandardizationGuard,TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard test`
 passes 35 checks, zero skips. The object inventory is intentionally left for
 the separate, still-uncommitted DEZ hand graph; no guard allowance was changed.
+
+
+### Final DEZ hand/finger component (after `e76abdb1b`)
+
+Completed the saved hand controller and finger graph against `loc_80B22..80D64`.
+The new retirement scenario reproduced a rewind capture error from an already
+unregistered parent. Dying fingers now retain the native SST slot address,
+release their obsolete identity link, read cleared/reused slot positions and
+complete their timer after restore. No parent lifetime was extended to hide it.
+
+Queued commands in the task tree, `-Dmse=off`, absolute root `s3k.gen` supplied:
+- `-Dtest=TestDezFinalHand test`: five passed, zero skipped, after the reproduced
+  reference error was corrected. Covers allocation prefixes, damage, open phase,
+  recreation, parent retirement and slot reuse.
+- `-Pguards -Dtest=TestRemainingRewindTailInventory,TestObjectPhysicsStandardizationGuard,TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard test`:
+  36 passed, zero skipped. Measured inventory is 1279 total / 1039 isolated /
+  240 graph / zero missing codecs. Two new concrete classes pass their probes;
+  no exception bucket changed.
+
+This graph remains unregistered until the rest of the final boss and its event
+surface are connected. No live route, visual or native parity claim is made.
+Next: actual root/core/button/mouth/beam/fireball/escape graph and connected
+screen/plane pipeline; campaign-wide remaining zones and delivery stay open.

@@ -103,3 +103,14 @@ and camera threshold pass in eight focused cases. The final-act runner uses tile
 $58C, separate from Act 2's destination. Source mappings pass the art registry
 checks. Root allocation, connected ScreenInit and moving rendered evidence remain
 open. Final focused loading/floor/entry selection: 76 passed, zero skips.
+
+
+#### Hand component coverage (2026-09-23)
+
+`TestDezFinalHand` covers partial-prefix allocations 0..3, no retry/healing,
+ROM finger offsets and open-only touch/priority, three real attacks per finger,
+hand-byte publication/deferred deletion, live graph recreation and dying fingers
+after their parent's slot is cleared/reused. Five ROM-backed tests pass without
+skips. This is unregistered component coverage; root/route/native/video and
+viewport/roster/donor obligations remain open. In particular it does not certify
+the complete boss graph or its downstream transition.

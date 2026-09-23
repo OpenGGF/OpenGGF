@@ -618,3 +618,17 @@ at construction; asserting the config value alone can report wide coverage while
 the production camera remains 320 px. Rendered captures exposed this in the DEZ
 room follow-up; matching the actual width also changes when the puzzle spawns and
 therefore its bob phase, so identical pad timings need not solve both views.
+
+
+### A dying child can outlive its parent's SST identity
+
+DEZ final fingers (`loc_80D64`, 2026-09-23) wait 32 updates while their hand
+(`loc_80B42`) deletes itself first. `Refresh_ChildPosition` dereferences the
+stored slot address, so cleared position words read zero and a reused slot
+provides the replacement's position. Keeping a Java parent reference reads
+stale coordinates and can crash rewind capture after that parent is removed
+from the identity table. For this phase, capture the native slot address and
+release the identity link when entering the dying code. Test an empty slot,
+reused slot, and capture/restore after parent retirement. Do not delay parent
+deletion or freeze its last position to avoid the dangling reference: both
+change native allocation/position behavior.

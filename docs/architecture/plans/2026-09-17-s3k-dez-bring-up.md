@@ -3582,3 +3582,46 @@ After the parent-policy correction, the separate fresh-JVM selection
 `-Pguards -Dtest=TestRemainingRewindTailInventory,TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard test`
 passed all three checks with zero skips. The ordinary focused results and these
 guards are not a campaign-wide validation result.
+
+
+### 2026-09-23 — Final-boss hand/finger graph
+
+`DezFinalHand` ports `loc_80B22..loc_80D64`: each hand makes the available
+forward prefix of three `$81316` fingers, tracks P1 with the native dead-finger
+correction and asymmetric offset limits, and drives lift/open/hold/close/return
+through ROM raw scripts `$8133E/$81349`. Fingers are separate three-hit targets;
+only the open phase publishes touch entries. Their flash uses the parent frame
+plus `$13` on even flash counts. All three dead bits publish one `_unkFA82` byte
+through the root owner contract, then `Go_Delete_Sprite` defers hand removal.
+The actual root will own that shared publication; the test root is not runtime
+registration. This remains an unregistered component, not a playable final boss.
+
+The retirement test exposed a real graph defect before integration: the last
+dying finger retains its 32-update wait after the hand's slot is cleared.
+Native `loc_80D64` runs `Refresh_ChildPosition` against the stored SST address.
+A Java identity link both read stale coordinates and made snapshot capture throw
+`Invalid rewind reference ... Finger#parent` once the hand was unregistered.
+The dying code now retains the scalar slot address, releases the identity link,
+and reads zeroed coordinates for an empty slot or the current replacement's
+coordinates when reused. The test crosses deletion, captures/restores, reuses
+the exact freed slot, verifies tracking and completes the death callback.
+
+Queued `-Dmse=off -Ds3k.rom.path=<root>/s3k.gen -Dtest=TestDezFinalHand test`:
+five passed, zero skips (after fixing the reproduced reference failure).
+The initial three structural checks passed helper/field guards and reported only
+the expected two-class inventory increase: 1279 total / 1039 isolated / 240 graph /
+zero missing codecs. Inventory and header now reflect the measured result; no
+exception bucket grows. Final guard rerun is recorded in the campaign audit.
+
+Next integration still needs the root, core/button/mouth/beam and fireball graphs,
+escape/ending handoff, connected ScreenInit/plane surfaces, and actual route/media
+validation. ROM details for the next graph: the mouth uses `ObjDat3_812AA` art
+base **tile 1**, unlike fingers/core/charge's `$38F`; do not reuse their art base.
+`Child_Draw_Sprite2` checks root control bit 4, while ordinary Child_Draw/Check
+check status bit 7. Core health is eight, with native P1/P2 hit credit deciding
+the `$600/-$300` rebound. Beam's final `<$28` charge hold skips `sub_80FFA`:
+`d0` retains even code address `$80810` from `sub_1AAFC`, so the frame is `$1F`
+there, not a timer-fitted flash. Before that, `sub_80FFA` supplies `V_int_run_count
+& 3`; its allocation branch's return registers need checking before porting
+that branch's visible phase. These notes are disassembly research, not implemented
+or tested beam behavior.
