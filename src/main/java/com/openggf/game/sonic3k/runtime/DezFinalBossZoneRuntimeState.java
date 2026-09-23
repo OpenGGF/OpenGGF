@@ -7,6 +7,7 @@ import java.util.Objects;
 /** DEZ3 ($1700) event words shared by the arena, plane renderer and final boss. */
 public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     private final PlayerCharacter playerCharacter;
+    private final DezFinalPlaneState plane = new DezFinalPlaneState();
     private final S3kScreenShake screenShake = new S3kScreenShake();
     private short windowBase = 0x6C0;
     private short bossX = 0x3C0;
@@ -34,6 +35,8 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return 0; }
     @Override public boolean isActTransitionFlagActive() { return false; }
+
+    public DezFinalPlaneState plane() { return plane; }
 
     public S3kScreenShake screenShake() { return screenShake; }
 
@@ -76,8 +79,9 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     @Override public byte[] captureBytes() {
-        var buffer = ByteBuffer.allocate(17 * Short.BYTES + S3kScreenShake.captureBytes());
+        var buffer = ByteBuffer.allocate(17 * Short.BYTES + S3kScreenShake.captureBytes() + DezFinalPlaneState.SNAPSHOT_BYTES);
         screenShake.captureTo(buffer);
+        plane.capture(buffer);
         return buffer
                 .putShort(windowBase).putShort(bossX).putShort(bossY)
                 .putShort(redrawRequest).putShort(breakRequest).putShort(mouthPhase)
@@ -89,6 +93,7 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public void restoreBytes(byte[] bytes) {
         var buffer = ByteBuffer.wrap(bytes);
         screenShake.restoreFrom(buffer);
+        plane.restore(buffer);
         windowBase = buffer.getShort(); bossX = buffer.getShort(); bossY = buffer.getShort();
         redrawRequest = buffer.getShort(); breakRequest = buffer.getShort(); mouthPhase = buffer.getShort();
         retainedPlaneX = buffer.getShort(); laserOffset = buffer.getShort(); uploadedLaserOffset = buffer.getShort();

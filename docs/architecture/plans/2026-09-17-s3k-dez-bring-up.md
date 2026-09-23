@@ -3464,3 +3464,36 @@ Entry Robotnik `$80DE0` reaches X $3D0 and publishes FAB8 bit 0; `$80D72` then
 moves left for 32 passes, publishes bit 1 and Events_fg_5, and deletes. That
 publication, not a fitted timer on the root, releases the players. Expand the
 remaining child tables and allocation branches before connecting this encounter.
+
+
+### Retained final-arena plane (2026-09-23, after `6ba7eff23`)
+
+`DezFinalPlaneState` now owns the native 64x32 Plane A descriptors inside the
+final-arena runtime snapshot. `Setup_TileRowDraw` aligns the source to 16px and
+wraps only its destination cells; `Refresh_PlaneFull` reads sixteen rows.
+`Draw_PlaneVertBottomUp`, called with d1=d2=0 by all three DEZ3 transitions,
+starts at $F0, copies two rows per call and completes after eight calls, including
+row zero. Reusing DEZ2's $E0 initial position would omit the bottom row and was
+rejected from the call-site and single-row routine. Rendering integration and
+widescreen presentation remain pending: repeating this native storage every
+512px would repeat the giant boss and is not an acceptable wide presentation.
+
+Focused command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestDezFinalPlaneState,TestSwScrlS3kDezFinalBoss,TestSonic3kHpzRuntimeStateRegistration test`:
+10 passed, zero failures/errors/skips. Four new tests cover eight-pass row
+retention, destination wrap versus source coordinates, camera-aligned full
+refresh and capture/restore followed by identical completion. Separate
+`-Pguards -Dtest=TestRemainingRewindTailInventory,TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard,TestObjectPhysicsStandardizationGuard test`:
+36 passed, zero failures/errors/skips. These runs validate components only.
+
+Additional chase oracle: `sub_80F0E` adds $1000 to the stored 16.16 camera speed,
+stores it only while <= $40000, but adds the computed value to camera X even
+when the store is rejected. Thus after the stored value reaches $40000, actual
+camera increments are $41000; clamping the computed increment to $40000 would
+silently change shipped behavior. `loc_80382` also has a real allocation-failure
+fallback: after crossing camera+$80 it forcibly clears dynamic slot 61 and
+installs `loc_85E64` there, retaining its pointer at parent+$44. The exit waits
+on that exact child's status bit 7. It does not retry indefinitely or search
+for any fade object. The existing DDZ fade uses $3A=7; this DEZ call writes 3.
+These are implementation obligations for the unfinished chase, not claims that
+the existing DDZ helper already supplies the needed behavior.

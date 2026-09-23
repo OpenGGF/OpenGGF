@@ -78,3 +78,11 @@ selection all passed with zero skips. The object inventory is 1275 total,
 checks, not the full campaign suite. No final-arena movie or native parity claim.
 ScreenInit allocations, initial layout edits, retained redraws, boss, chase and
 exit remain open; the current live route still reaches an incomplete destination.
+
+
+Retained-plane follow-up after `6ba7eff23`: four `TestDezFinalPlaneState` checks
+pass for the native eight-pass $F0-to-zero replacement, source/destination wrap,
+full refresh and rewind/replay. Together with scroll and runtime registration,
+the focused run passed 10 checks without skips; the separate rewind/physics
+selection passed 36 without skips. The plane is not yet consumed by the live
+renderer; ScreenInit, connected stages and wide presentation remain open.
