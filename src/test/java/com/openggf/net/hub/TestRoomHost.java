@@ -6,6 +6,7 @@ import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.GhostPackets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -86,7 +89,23 @@ class TestRoomHost {
         assertEquals("tails", room.players().getFirst().character());
         assertTrue(accepted.text.stream().filter(text -> ControlCodec.decode(text).message()
                         instanceof ControlMessage.RoomState)
-                .allMatch(text -> text.getBytes(StandardCharsets.UTF_8).length <= 8192));
+                .allMatch(text -> text.getBytes(StandardCharsets.UTF_8).length
+                        <= Protocol.MAX_CONTROL_BYTES));
+    }
+
+    @Test
+    void maximalTwoHundredFiftySixPlayerRosterFitsClientFrame() {
+        List<ControlMessage.PlayerInfo> players = new ArrayList<>();
+        for (int slot = 0; slot < Protocol.MAX_PLAYERS_RELAY; slot++) {
+            players.add(new ControlMessage.PlayerInfo(slot, "f".repeat(64),
+                    "n".repeat(64), "c".repeat(32), false));
+        }
+        String wire = ControlCodec.encode(null, new ControlMessage.RoomState(players));
+        assertTrue(wire.getBytes(StandardCharsets.UTF_8).length
+                <= Protocol.MAX_CONTROL_BYTES);
+        assertEquals(Protocol.MAX_PLAYERS_RELAY,
+                ((ControlMessage.RoomState) ControlCodec.decode(wire).message())
+                        .players().size());
     }
 
     @Test

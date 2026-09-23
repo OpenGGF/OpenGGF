@@ -487,7 +487,9 @@ public final class RoomHost {
 
     private static boolean boundedLabel(String value, int maxBytes) {
         return value != null && !value.isBlank()
-                && value.getBytes(StandardCharsets.UTF_8).length <= maxBytes;
+                && value.getBytes(StandardCharsets.UTF_8).length <= maxBytes
+                && value.codePoints().noneMatch(codePoint -> codePoint < 0x20
+                || codePoint == '"' || codePoint == '\\');
     }
 
     private static void send(Member member, ControlMessage message) {

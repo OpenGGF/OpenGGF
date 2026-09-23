@@ -550,7 +550,9 @@ public final class RoomBroker {
 
     private static boolean boundedField(String value, int maxBytes) {
         return value != null && !value.isBlank()
-                && value.getBytes(StandardCharsets.UTF_8).length <= maxBytes;
+                && value.getBytes(StandardCharsets.UTF_8).length <= maxBytes
+                && value.codePoints().noneMatch(codePoint -> codePoint < 0x20
+                || codePoint == '"' || codePoint == '\\');
     }
 
     private void leaveRoom(Member member, String roomId) {

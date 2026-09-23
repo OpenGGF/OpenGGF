@@ -47,7 +47,8 @@ Within a round, finishes retain the admitted participant session and identity ev
 departed player's slot is reused. Clean-round credit, replay verdicts, and spot checks use
 that retained ownership. Room display names and selected characters are bounded to 64 and
 32 UTF-8 bytes respectively; admission and character changes must keep the serialized
-room roster within the 8 KiB client control-frame limit. Broker room descriptor fields
+room roster within the 64 KiB client control-frame limit, including a full 256-player
+relay roster. Broker room descriptor fields
 are bounded before they enter browser results.
 
 Operator commands:
