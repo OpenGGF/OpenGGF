@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The Hidden Palace sanctuary ({@code $1701} and the engine alias {@code $1601})
+ * The Hidden Palace sanctuary ({@code $1701}) and playable Hidden Palace ({@code $1601})
  * installs a runtime state that owns the {@code Screen_shake_flag} countdown;
- * the paired Death Egg boss act ({@code $1700}) does not.
+ * the paired Death Egg boss act ({@code $1700}) has its own independent owner.
  */
 class TestSonic3kHpzRuntimeStateRegistration {
 
@@ -63,5 +63,18 @@ class TestSonic3kHpzRuntimeStateRegistration {
 
         assertTrue(S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry()).isEmpty());
         assertFalse(GameServices.zoneRuntimeRegistry().current() instanceof HpzZoneRuntimeState);
+        var state = assertInstanceOf(com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState.class,
+                GameServices.zoneRuntimeRegistry().current());
+        state.windowBase(0x2C0); state.breakRequest(0x2D0); state.bossSignals(7);
+        manager.ensureZoneRuntimeStateInstalled();
+        org.junit.jupiter.api.Assertions.assertSame(state, GameServices.zoneRuntimeRegistry().current());
+        assertEquals(0x2C0, state.windowBase()); assertEquals(0x2D0, state.breakRequest());
+        assertEquals(7, state.bossSignals());
+        manager.initLevel(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1);
+        assertInstanceOf(HpzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+        manager.initLevel(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 0);
+        var fresh = assertInstanceOf(com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState.class,
+                GameServices.zoneRuntimeRegistry().current());
+        assertEquals(0, fresh.bossSignals()); assertEquals(0, fresh.breakRequest());
     }
 }

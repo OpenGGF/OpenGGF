@@ -3414,3 +3414,53 @@ checks including every entry/launch/landing prefix; 36 rewind/physics guards;
 and skips. Commands used `tools/testing/maven_queue.py -Dmse=off`, explicit root
 `s3k.gen`, named test classes and a separate `-Pguards` JVM. The final 14-test encounter rerun also passed without skips, including capture/remove/restore and 200 forward passes across breakup, foreground and camera publication. Full campaign
 validation and integration remain pending. Next: `$1700` events, arena and boss.
+
+### Final arena component work (2026-09-23, after `7a324bdd4`)
+
+The final arena now has a distinct rewind runtime owner, an unregistered scroll
+handler, moving/entry/falling floor objects, the two collapse workers and a laser
+art updater. Screen initialization and the boss graph are not connected yet.
+The native `ApplyDeformation2` call starts at `HScroll_table+$08`: its first word
+is zero, its second is Camera_X, and the `$E0` band starts at Camera_Y_copy.
+Consequently the normal 224-line output has 192 fixed-background lines and only
+32 camera-scrolled floor lines. Filling every line with -Camera_X was rejected
+on reading the actual intermediate table consumption. Plane A uses the boss
+window; Plane B uses the arena. No public render API extension is needed merely
+for independent scroll, but staged retained tile rows still require implementation.
+
+Floor oracle: `Obj_5A7C8` starts at ($130,$F0), with a $B0 half-width and prior
+camera column $80. It consumes a break request even when it is below the live
+frontier. A qualifying request advances the frontier by $20 even when its forward
+falling-block allocation fails; only successful allocation can publish the redraw
+request. A changed camera column moves support by one $20 step, not the camera
+delta. `Obj_5A8E6` is the ($40,$F0), half-width $40 entry support and retires when
+the boss window ceases to be $6C0. Falling blocks integrate old velocity before
+adding $1A and select one of four ROM mapping frames from X bits 5-6.
+
+`Obj_5A922` publishes nineteen columns starting at $2D0, first pass immediately,
+then every sixteen own passes; its last publication clears screen shake.
+`Obj_5A94C` gates on boss Y < $110 and a fourteen-pass timer while the window is
+nonzero. Once it becomes zero the camera+$9C threshold publishes without a timer.
+`sub_5A79E` reads $80 bytes from ArtUnc_DEZFBLaser ($15A674) plus the **word-sized**
+(frame+2)*4 result into tiles $208-$20B, only when the frame changes. ScreenInit's
+`st (Events_bg+$12)` writes the high byte of the cleared word, yielding $FF00,
+not $FFFF. The runtime owns both the gate and screen-shake snapshot.
+
+A first landing probe began at ($40,$B0) and hit existing, not-yet-initialized
+layout terrain at Y $B9: `onObject` stayed false while `air` alternated. This was
+not evidence about the new floor. The replacement short check begins one pixel
+above the native scripted entry height $CD and asserts `onObject` remains true
+through thirty production frames. Thirteen component checks passed after this correction and the laser-pixel follow-up. The separate 36 structural guards, 137 loading/PLC checks and two runtime-isolation checks also passed without skips. This is component validation, not a playable-arena claim.
+
+Final-boss graph research to carry into slice 10: the main plane owner is not
+itself the damage target. The two `ChildObjDat_81310` hand controllers each invoke
+the three-entry `$81316` finger table: six independently damageable fingers,
+three hits each. Finger destruction sets its subtype/2 bit on its own hand;
+all three bits make that hand publish one byte of `_unkFA82` and defer deletion.
+The root waits for the combined word $FFFF before sinking and reappearing. The
+core child `$804F0` has eight hits and the mouth/laser publication chain controls
+its exposure. The later escape ship `$80160` is another eight-hit target.
+Entry Robotnik `$80DE0` reaches X $3D0 and publishes FAB8 bit 0; `$80D72` then
+moves left for 32 passes, publishes bit 1 and Events_fg_5, and deletes. That
+publication, not a fitted timer on the root, releases the players. Expand the
+remaining child tables and allocation branches before connecting this encounter.

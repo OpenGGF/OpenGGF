@@ -535,6 +535,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else if (zone == Sonic3kZoneIds.ZONE_DDZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(act, playerCharacter));
             allocateDdzFlightController();
+        } else if (zone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && act == 0) {
+            registry.install(new com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState(playerCharacter));
         } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)
                 || Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
             registry.install(new HpzZoneRuntimeState(zone, act, playerCharacter));
@@ -1737,8 +1739,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             case Sonic3kZoneIds.ZONE_DEZ ->
                     state instanceof com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState dezState
                             && dezState.actIndex() == currentAct;
-            case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
-                    currentZone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && currentAct == 0
+            case Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA -> currentAct == 0
+                    ? state instanceof com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState
+                    : state instanceof HpzZoneRuntimeState hpzState
+                            && hpzState.zoneIndex() == currentZone && hpzState.actIndex() == currentAct;
+            case Sonic3kZoneIds.ZONE_HPZ ->
+                    currentAct == 0
                             ? state instanceof com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState
                             : state instanceof HpzZoneRuntimeState hpzState
                                     && hpzState.zoneIndex() == currentZone

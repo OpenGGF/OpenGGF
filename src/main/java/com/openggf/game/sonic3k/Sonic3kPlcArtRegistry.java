@@ -410,6 +410,12 @@ public final class Sonic3kPlcArtRegistry {
             case 0x0A -> addSszEntries(actIndex, standalone, levelArt);
             case 0x0B -> addDezEntries(actIndex, standalone, levelArt);
             case 0x0C -> addDdzEntries(actIndex, standalone, levelArt);
+            case 0x17 -> {
+                // $1701 has already returned through the sanctuary profile above.
+                // Obj_5A872 uses level-loaded tile $001, palette 2.
+                levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FINAL_ARENA_BLOCK,
+                        0x5A9AC, 1, 2, null, 4));
+            }
             case 0x13 -> addGumballEntries(actIndex, standalone, levelArt);
             case 0x14 -> addPachinkoEntries(actIndex, standalone, levelArt);
             case 0x15 -> addSlotsEntries(actIndex, standalone, levelArt);
