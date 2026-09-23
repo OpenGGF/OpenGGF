@@ -33,7 +33,7 @@ import java.util.Objects;
  * stays in {@code GameStateManager} where rewind already captures it.
  */
 public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 9 * Short.BYTES;
+    private static final int CAPTURE_BYTES = 10 * Short.BYTES + 2 * Long.BYTES + DezTransitionPlaneState.SNAPSHOT_BYTES;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -47,6 +47,10 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     private short cameraStoredMinY;
     private short cameraStoredMaxY;
     private short panelBits;
+    private boolean bossFlag;
+    private long blockJobOrdinal = -1;
+    private long artJobOrdinal = -1;
+    private final DezTransitionPlaneState transitionPlane = new DezTransitionPlaneState();
 
     public S3kDezZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -68,6 +72,15 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     @Override public int getDynamicResizeRoutine() { return 0; }
 
     @Override public boolean isActTransitionFlagActive() { return false; }
+
+    public long blockJobOrdinal() { return blockJobOrdinal; }
+    public void blockJobOrdinal(long value) { blockJobOrdinal = value; }
+    public long artJobOrdinal() { return artJobOrdinal; }
+    public void artJobOrdinal(long value) { artJobOrdinal = value; }
+    public DezTransitionPlaneState transitionPlane() { return transitionPlane; }
+
+    public boolean bossFlag() { return bossFlag; }
+    public void setBossFlag(boolean value) { bossFlag=value; }
 
     /** {@code Events_fg_4}. */
     public int eventsFg4() { return eventsFg4 & 0xFFFF; }
@@ -136,6 +149,9 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         buffer.putShort(cameraStoredMinY);
         buffer.putShort(cameraStoredMaxY);
         buffer.putShort(panelBits);
+        buffer.putShort((short)(bossFlag?1:0));
+        buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal);
+        transitionPlane.capture(buffer);
         return buffer.array();
     }
 
@@ -154,5 +170,9 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         cameraStoredMinY = buffer.getShort();
         cameraStoredMaxY = buffer.getShort();
         panelBits = buffer.getShort();
+        bossFlag = buffer.getShort()!=0;
+        blockJobOrdinal = buffer.getLong();
+        artJobOrdinal = buffer.getLong();
+        transitionPlane.restore(buffer);
     }
 }

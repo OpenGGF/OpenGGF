@@ -117,7 +117,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$78` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete | 4 (verify; duplicate registration above) |
 | `$A4` | `Obj_Spikebonker` | 7 | 11 | `SpikebonkerBadnikInstance` | 4 |
 | `$A5` | `Obj_Chainspike` | 6 | 12 | implemented | 4 |
-| `$A6` | `Obj_DEZMiniboss` | 1 | 0 | placeholder | 6 |
+| `$A6` | `Obj_DEZMiniboss` | 1 | 0 | `DezMinibossInstance` (connected route validation in progress) | 6 |
 | `$A7` | `Obj_DEZEndBoss` | 0 | 1 | placeholder | 8 |
 
 Both bosses are **placed** objects gated by `Check_CameraInRange`, not event spawns.
@@ -308,7 +308,7 @@ so subtypes `$80+` arrive inverted.
 | `$A4` | `$20` | `Obj_Spikebonker` | 4 | 10 | implemented |
 | `$A4` | `$40` | `Obj_Spikebonker` | 3 | 1 | implemented |
 | `$A5` | `$00` | `Obj_Chainspike` | 6 | 12 | implemented |
-| `$A6` | `$00` | `Obj_DEZMiniboss` | 1 | 0 | placeholder |
+| `$A6` | `$00` | `Obj_DEZMiniboss` | 1 | 0 | `DezMinibossInstance` |
 | `$A7` | `$00` | `Obj_DEZEndBoss` | 0 | 1 | placeholder |
 
 ## Dynamic objects not in the placement files

@@ -27,7 +27,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | Claim | State |
 | --- | --- |
 | Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, dust-free solid objects, springs and the sidekick (94 of 116 ROM references — the 11 open group A-I rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (493/494 concrete placements) |
-| Cold-reachable | Seeded from the first frame of act 2 free play: **1256 frames** of exact player x, y, camera and ring parity (`TestS3kDezColdRoutes`, ratcheted). The cold `$B01` route is 0 frames and stays incomparable until the act 2 entrance lands |
+| Cold-reachable | Seeded from the first frame of act 2 free play: **1256 frames** of exact player x, y, camera and ring parity (`TestS3kDezColdRoutes`, ratcheted). The cold `$B01` route remains recorded at 0 frames; the connected entrance now lands, but its strict trace has not been remeasured |
 | Rewind-verified | Event routine words (`TestS3kDezPresentationRewind`) and the `$5B` write plus its side latch, capture/restore/forward replay (`TestS3kDezGravityObjectsHeadless`) |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
 | Visually matched | Clips `030` (320 and 528), `031` and `032` show the flag being written by a real `$5B` and the inverted run, jump, roll, rings and Knuckles that follow; no native pixel comparison. The sidekick, hit/lost-ring, shield and solid-object clips are blocked on slice 3's remaining objects and the act 2 route — see `INDEX.md` for the measurements. Slice 4: clips `037-spikebonker-320`, `038-retracting-spring-320` and `039-energy-bridge-320`; the `$5D` extension stroke, the `$55` relight and the `$A5` slam have no positioned-entry site and are recorded as such in `INDEX.md` |
@@ -119,3 +119,16 @@ The S3KL MGZ trigger-platform alias retains its own implementation and checks.
 Placement counts are 364/365 and 493/494: each act's boss remains a placeholder.
 Native per-mode cadence, all seven cold entries, Act-2 positioned traversal,
 full character/donor/team breadth and the final-boss route remain open.
+
+### Seamless entry connected (2026-09-23)
+
+`TestS3kDezSeamlessActChange` traverses the actual result signal and production
+Kos queues into the synchronous reload. It checks player/camera rebasing,
+reverse-gravity retention, palette lines 0–1, event routines and eight-pass
+retained-background redraw with capture/restore/forward replay.
+`TestDezMinibossEncounter` checks the complete defeat/results/transport chain
+from left, centre and right finishing positions; `TestDezMinibossTransport`
+checks the native transport clocks, independent camera workers and title owner.
+Solo Hyper recordings 098/099 in the external task capture directory reach Act 2
+and return control at 800/320. These positioned runs do not certify the cold
+entry trace, full-act route or character/team/donor breadth.

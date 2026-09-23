@@ -4779,3 +4779,22 @@ word; child writes are ignored but the parent's computed position still changes.
 For FixBugs=0, trace reads and writes through their actual address space before
 replacing failed allocation with an early return. Cross-game applicable.
 Origin: September 23 DEZ lift bring-up; `TestS3kDezLiftPadHeadless`.
+
+## Invisible transition owners do not carry world-coordinate render flags
+
+An AbstractObjectInstance defaults to world-positioned participation. Invisible
+S3K SST routines such as DEZ `loc_7E25C` never set render_flags bit 2, so explicitly
+exclude them from `Offset_ObjectsDuringTransition`. Giving them a coordinate
+interface just to satisfy reload would incorrectly rebase scratch words. Verify
+the actual surviving graph through the reload, not only its isolated restore.
+Origin: September 23 DEZ miniboss; `TestDezMinibossEncounter`.
+
+## Locked scripted walks need an explicit logical-input owner
+
+S3K `Ctrl_1_locked` suppresses the hardware-to-logical copy, while transport
+routines can still write `Ctrl_1_logical` and move normally. Use the existing
+forced-input mask to admit that scripted input; a plain logical setter while
+locked intentionally preserves the old latch. Clear the mask at arrival. Test
+finishes on both sides of the target: a centre-only check never executes the
+walk and can conceal a permanent stall. Origin: DEZ `loc_7E2C0/7E2DE`, September
+23; `TestDezMinibossEncounter` left/centre/right connected regressions.

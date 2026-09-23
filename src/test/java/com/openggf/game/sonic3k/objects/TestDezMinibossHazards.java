@@ -32,7 +32,7 @@ class TestDezMinibossHazards {
     private HeadlessTestFixture boot() {
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(11,0)
                 .startPosition((short)0x3740,(short)0x2C0).startPositionIsCentre().build();
-        fixture.sprite().setDebugMode(true); return fixture;
+        fixture.sprite().setDebugMode(true); DezMinibossTestSupport.retirePlacedEncounter(fixture); return fixture;
     }
 
     @Test void orbitUsesRomPriorityBandsAndHidesTheRearCentreWithoutClearingCollision() throws Exception {

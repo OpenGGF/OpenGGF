@@ -3223,3 +3223,84 @@ structural guards. See the [campaign audit](../audits/2026-09-22-sk-zone-bring-u
 for exact selectors, rejected test assumptions and limits. The full root and
 transport remain unregistered; these child-graph checks use minimal test parents
 and do not discharge the encounter-wide graph or transition gates.
+
+Root targeting clarification for integration: `sub_7EB8E` and `loc_7E1FC` load
+`a1=Player_1` then call `Find_OtherObject` (`$84B9C`, asm 178332). That helper
+compares only the supplied object; it does **not** select nearest P1/P2. Both
+angular-direction updates and landing horizontal direction are P1-only. The
+beam's `Check_PlayerInRange` is separately native P1/P2. Do not substitute a
+nearest-player query for either root call.
+
+### 2026-09-23 — A6 root, transport and production reload connection (development)
+
+The root now connects the committed eye/orb/arm/beam components through both
+native eight-hit phases, the double first-defeat explosion allocation, the
+second defeat's retained sign controller, and `loc_7E25C`'s surviving transport.
+The ROM placement is registered under SKL `$A6`; S3KL `$A6` remains CNZ's boss.
+The 365 Act-1 placements now resolve to concrete factories. This is an
+implementation inventory, not cold-route certification.
+
+`TestDezMinibossEncounter` exercises the native gate/descent, both hit counts,
+the exact root-slot replacement, and forced recreation plus 180 forward frames
+of the eye/arm/cross-link/beam graph. Hits in those short phase tests call the
+eye attack entry directly; they are not proof of a player-controlled fight.
+`TestDezMinibossTransport` separately checks the result handshake, 32-pass floor
+opening, 96-pass spin-up, 37-pass lift, 16.16 flight, character pose, title owner,
+120-pass release, camera workers' distinct equality branches, and recreation.
+The shared title owner's default idle SOZ behavior still passes its five tests.
+
+The new results-to-reload integration test first exposed a missing DEZ branch in
+`setEventsFg5ForActTransition`; that branch now publishes the typed runtime word.
+`loc_593A8` submits actual direct-Kos blocks `$1D7E3A -> Block_table+$15E0`, module
+art `$1D7FCA -> tile $292`, and PLC `$38`. The synchronous reload waits for the
+submitted resources and an empty physical module FIFO, carries live SST slots,
+rebases native world-positioned slots 4–93 and players by `(-$3600,+$400)`,
+preserves reverse gravity and palette lines 0–1, and replaces lines 2–3 from
+`Pal_DEZ2+$20`. The background keeps its old descriptors and replaces two rows
+per pass. The final delayed source row is negative and fails the ROM's unsigned
+clipping test: the bottom physical strip stays old. The headless integration
+check passes through the real queues/reload and replays all eight redraw passes.
+Hardware queue tests currently use deterministic estimates for resources lacking
+measured profiles; this establishes admission ordering, not exact native duration.
+
+The first positioned 800px recording at `($3740,$3AC)` did not enter the fight.
+A probe proved the root and nine initial children were loaded; the vertical
+camera was below `maxY+$60`, and the wider camera's left edge had not crossed the
+raw horizontal gate. No art fallback or artificial timeout was added. Entry
+validation now starts above the platform at `($3740,$2E0)` and the DEZ caller
+supplies native-framed X to the shared gate, following the existing HCZ/SSZ
+camera convention. The existing shared-gate calls keep their previous behavior.
+
+Outstanding before certifying this slice: real controlled damage and defeat,
+continuous results/transport/title/release footage, native comparison, allocation
+prefix exhaustion for the connected root, character/donor/team breadth, and
+widescreen inspection of the eight-pass background change. This development
+record does not replace the campaign's final combined validation/integration.
+
+The connected controller probe subsequently exposed two gaps that the short
+fixtures did not: the invisible transport inherited the default world-position
+flag (reload rejected its missing native-position contract), and a finish to
+one side stalled in the walk-to-centre state because a locked logical-input
+write without a forced mask was ignored. Invisible transport/P2/camera workers
+now explicitly clear world-offset participation. The walk publishes the same
+forced-mask ownership token as `LevelIntroPlayerRunInstance`, then clears it at
+arrival. The connected regression now starts from left, centre and right;
+component graph fixtures retire the real A6 placement before injecting their
+minimal parents so their allocation counts remain independent.
+
+The final short checks pass, including both off-centre finishes and every
+initial eye/orb allocation prefix. The first prefix loop reused pending art
+jobs across cases and exhausted the native four-entry FIFO; separate sessions
+fixed the fixture without weakening production queue capacity. The 39 focused
+encounter/component cases and 153 integration/resource cases have no remaining
+failures or skips; four structural guard classes pass 36 tests. The audit records
+exact commands and the full-suite coverage limit.
+
+Final controller movies 098/099 (800/320) run 4000 frames from `($3740,$2E0)`
+with declared Super Emeralds and 200 rings. Both reach Act-2 released control,
+with no hurt/death and `sk_present=0`. The earlier direct-session probe passed
+literal "none" where the API requires an empty sidekick string and thus carried
+a follower; its seemingly non-reproducing input replay was a roster mismatch,
+not engine nondeterminism. The corrected solo movie was authored and re-parsed
+through InputLogAuthorTool. Native duration/pixel oracles and cold/breadth
+certification remain open.

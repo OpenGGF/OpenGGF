@@ -240,6 +240,11 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     }
 
     @Override public long backgroundDescriptorRevision() {
+        if (GameServices.hasRuntime() && GameServices.level().getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ
+                && GameServices.level().getFeatureActId() == 1) {
+            return S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry())
+                    .map(state -> (long) state.transitionPlane().revision()).orElse(0L);
+        }
         if (extendedDezInterior()) return -0x100000000L - GameServices.camera().getWidth();
         if (!GameServices.hasRuntime() || GameServices.level().getFeatureZoneId() != Sonic3kZoneIds.ZONE_SOZ) return 0;
         return S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
@@ -248,6 +253,11 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     }
 
     @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
+        if (GameServices.level().getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ
+                && GameServices.level().getFeatureActId() == 1) {
+            var state = S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry()).orElseThrow();
+            if (state.transitionPlane().revision() != 0) return state.transitionPlane().descriptor(sourceX, sourceY);
+        }
         if (extendedDezInterior()) {
             // Presentation extension only: retain the native 320px centre and
             // reflect 32px strips of the ROM wall art across the extra width.

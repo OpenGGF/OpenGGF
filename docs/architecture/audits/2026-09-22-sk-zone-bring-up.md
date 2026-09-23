@@ -1623,3 +1623,64 @@ The root must reproduce both; component tests do not yet prove that chain.
 Root arena/health dispatch, mask, sign/results, surviving transport, seamless
 act change and complete native/wide moving captures remain open. No new gameplay
 video or whole-boss certification is claimed.
+
+### September 23: DEZ A6 root and continuous Act-2 transport
+
+Development follows `5c0483e74` in `ai-sk-zone-completion`. SKL A6 is now
+registered, completing the 365/365 Act-1 placement inventory while A7 remains
+Act 2's one placeholder. The root connects the existing eye/orb/platform/beam
+components, both eight-hit phases, first-defeat double explosion allocation,
+second-defeat sign/results slot, surviving transport, physical resource queues,
+synchronous reload and retained Plane-B redraw. Native player targeting remains
+P1-only where the ROM calls Find_OtherObject; the beam checks native P1/P2.
+
+Focused verification (all Maven calls through `tools/testing/maven_queue.py`,
+Java 21, `-Dmse=off`, absolute `$HOME/code/projects/OpenGGF/s3k.gen` for
+ROM checks):
+
+- `-Dtest=TestDezMinibossEncounter,TestDezMinibossTransport,TestDezMinibossArm,TestDezMinibossBeam,TestDezMinibossHazards,TestDezMinibossEye test`:
+  39 cases, 38 passed and one allocation-prefix fixture error (reused full KosM
+  FIFO across cases). Giving each prefix its own gameplay session and rerunning
+  `-Dtest=TestDezMinibossEncounter#initialEyeAndOrbAllocationsKeepEveryAvailablePrefixWithoutRetry test`
+  passed the remaining case; no failure or skip remains in this focused set.
+  The connected regression covers left/centre/right finishes through released
+  Act-2 control. Child checks retire the newly registered placement before their
+  intentionally isolated graph probes.
+- `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestSozHyudoroTitleLifecycle,TestS3kDezSeamlessActChange,TestS3kDezPlacementCensus,TestS3kSharedBossCameraGate test`:
+  153 tests, zero failures/errors/skips (both classes named TestSonic3kLevelLoading
+  selected). Includes the mandatory AIZ/loading/bootstrap/decoder checks and
+  unchanged SOZ title lifecycle.
+- `-Pguards -Dtest=TestObjectPhysicsStandardizationGuard,TestRemainingRewindTailInventory,TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard test`:
+  36 tests, zero failures/errors/skips. Inventory is 1265 total / 1025 isolated /
+  240 graph / 0 without codec; no guard allowance increased.
+- The combined selection from campaign base `c91fd5ac70aad2c6cd73dcfc3525d962a45ef4d5`
+  now selects 2846 ordinary classes and all guards, full=true. This was a plan
+  inspection only; final combined validation and main-workspace integration/push
+  remain owed for the campaign.
+
+Controller evidence: 098 (800px) and 099 (320px), outside the repository under
+`$HOME/Videos/OGGF/s3k-dez-bring-up/`, replay the same authored solo log for 4000
+frames. Declared positioned start `($3740,$2E0)`, 200 rings and all Super Emeralds.
+Both phases are hit through normal touch handling; both runs reach results,
+reload, floor collapse, spin/launch, landing and released control with zero hurt
+or death frames. CSV confirms no follower. Full movies decoded; stills at entry,
+phase two, results, floor collapse, launch and landing inspected. The wide
+42-second excerpt is source seconds 12–54. This is positioned Hyper evidence,
+not cold traversal, ordinary-Sonic fight completion or native-clock matching.
+
+The first width-dependent player-state difference is the resource-gated reload
+(1653 wide / 1652 native). Results children remain visible longer in the wider
+viewport (`S3kResultsElementObjectInstance.isWithinRenderWindow`), adding eight
+passes before transport (landing 2964 wide / 2956 native). The one-pass queue
+readiness difference remains unmeasured against a native duration oracle; no
+artificial wait was added. The two fight phases have identical player state
+before that reload boundary.
+
+Rejected evidence and corrections are in the owning plan: low positioned entry
+that never crossed the camera gate; root gate missing native widescreen framing;
+invisible transport incorrectly inheriting world-offset participation; a locked
+walk missing its forced-input owner; and a temporary direct-session probe using
+literal "none" instead of empty sidekick code, silently creating a follower.
+The latter explains the initially non-reproducing input replay and is added to
+the measurement-hazard catalogue. Cold route, native comparison, donor/roster
+breadth and connected defeat allocation-exhaustion tails remain open.

@@ -135,7 +135,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   vertical distance, and reverse their belts for newly arriving riders and inverted gravity.
   Lift pads swing Sonic upward, wait while he stands on them, then return after he leaves.
   Light-tunnel launchers count down, carry captured players through the winding paths
-  with glowing ring trails, and release them at the exit.
+  with glowing ring trails, and release them at the exit. The Act 1 miniboss now fights
+  through its orbiting-sphere and moving-platform phases, including its eye, beam,
+  spikes and breakup. Defeating it runs the results and carries the player into Act 2,
+  where the floor opens, the launch plays and normal control returns.
   Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with

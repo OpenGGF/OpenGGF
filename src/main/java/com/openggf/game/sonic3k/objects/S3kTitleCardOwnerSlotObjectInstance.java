@@ -13,8 +13,24 @@ import java.util.List;
  * allocations run and {@code Delete_Current_Sprite} frees it (sonic3k.asm:62263-62302).
  */
 public final class S3kTitleCardOwnerSlotObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    private boolean requestsInLevelCard;
+    private int cardZone;
+    private int cardAct;
+
+    /** Native dynamically allocated Obj_TitleCard with $3E set for an in-level card. */
+    public static S3kTitleCardOwnerSlotObjectInstance inLevel(int zone,int act) {
+        var owner=new S3kTitleCardOwnerSlotObjectInstance(new ObjectSpawn(0,0,0,0,0,false,0));
+        owner.requestsInLevelCard=true; owner.cardZone=zone; owner.cardAct=act;
+        return owner;
+    }
     public S3kTitleCardOwnerSlotObjectInstance(ObjectSpawn spawn) { super(spawn, "TitleCardOwnerSlot"); }
-    @Override public void update(int vIntRunCount, PlayableEntity leader) {}
+    @Override public void update(int vIntRunCount, PlayableEntity leader) {
+        if(requestsInLevelCard) {
+            requestsInLevelCard=false;
+            services().levelManager().requestInLevelTitleCard(cardZone,cardAct,true,
+                    com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
+        }
+    }
     @Override public boolean isPersistent() { return true; }
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     @Override public boolean isCustomOutOfRange(int cameraX) { return false; }

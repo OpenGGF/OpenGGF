@@ -27,7 +27,7 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation, runtime event words and 364/365 concrete placements, including gravity tubes, turbine room/puzzle/bumper walls, energy bridges, Spikebonkers and Chainspikes. Remaining objects, miniboss and act change are open |
+| Implemented | Presentation foundation, runtime event words and 365/365 concrete placements, including gravity tubes, turbine room/puzzle/bumper walls, energy bridges, Spikebonkers and Chainspikes. Miniboss and act-change code is connected; continuous positioned defeat/transport is verified; cold route and native comparison remain open |
 | Cold-reachable | Not started |
 | Rewind-verified | Palette/event state plus implemented object spot checks; turbine approach/contact now has production-loop restore and forward replay. Cold route and load-boundary coverage remain open |
 | Native behaviour matched | Not started; replay frontier measured at `035e48a58`, see the row below |
@@ -44,7 +44,7 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 | PRESENT: shared AnPal channels B and C | B: `Palette_cycle_counter1` reload 4, `counter0` step 4 limit `$30`, `AnPal_PalDEZ12_1` ($3444) → line 3 colours 13-14. C: `counters+$08` reload `$13`, `counters+$02` step `$A` limit `$28`, `AnPal_PalDEZ12_2` ($3474) → line 3 colours 8-12 | 320 | `TestS3kDezPaletteCycling` | implemented | pass, `4e7655bf9`; clip `01b` | `AnPal_PalDEZ12_2` frames 1 and 3 are byte-identical; native comparison open |
 | PRESENT: `AniPLC_DEZ` 8 scripts | `AniPLC_DEZ` ($28AEE), durations `0,1,3,-1,4,4,1,0`, script 7 = 132 frames; generic `AnimateTiles_DoAniPLC`, no gate | 320 | `TestS3kDezAnimatedTiles` (7 tests) | implemented | pass, `4e7655bf9`; clip `01c` | Per-frame DMA order not compared against native |
 | EVENT: `DEZ1_ScreenEvent` chunk `$BD` | `Events_fg_4` → `movea.w $14(a3),a1; move.b #$BD,$6E(a1)` = FG layout row 5, column `$6E` | 320 | `TestS3kDezScreenEvents` (6 tests) | implemented (`Sonic3kDEZEvents`) | pass, `4e7655bf9`, driven from the runtime state | Production trigger is the miniboss (slice 6); not yet reachable cold |
-| PLACEMENT: 365 act 1 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | 364 concrete / 1 placeholder | pass | Remaining families are listed in the census and bring-up plan; implementation counts do not certify a route |
+| PLACEMENT: 365 act 1 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | 365 concrete / 0 placeholders | pass | Remaining families are listed in the census and bring-up plan; implementation counts do not certify a route |
 | GRAVITY: `$5A` gravity tube, 24 act 1 placements | `loc_48EEC`/`sub_48F12` and `loc_4906A`/`sub_49090` (sonic3k.asm:95169-95401) | — | `TestS3kDezGravityTubeHeadless` | implemented (`S3kDezGravityTubeObjectInstance`) | pass 11/11 | Behaviour is act-independent; the tests place it at the act 2 site beside the `$5B` at `$1A40,$08C0`. No act 1 route reaches one yet (slice 6) |
 | GRAVITY: `$5F` turbine corridor, 1 act 1 placement (`$2480,$0840`) | `sub_4964A`, sonic3k.asm:95814-95952 | — | `TestS3kDezGravityRoomHeadless` | implemented (`S3kDezGravityRoomObjectInstance`) | pass 14/14 at 21:41 BST after `bf7e5175c` | Includes actual placed-controller lifetime, unsigned range edges, puzzle/closed-gate contact, production rewind and 320 px six-panel controller route and actual 320/800 closed-gate bounce; cold entry, native matching and team/donor breadth remain open |
 | GRAVITY: `$61` gravity puzzle, 1 act 1 placement (`$2690,$0840`, inside the `$5F` corridor) | `Obj_DEZGravityPuzzle`, sonic3k.asm:96087-96245 | — | `TestS3kDezGravityPuzzleHeadless` | implemented (`S3kDezGravityPuzzleObjectInstance`) | pass 12/12 | Twelve mechanisms, fifteen deliberate breaks, every one red. The six panel bits live in `S3kDezZoneRuntimeState` because the ROM keeps them in `MHZ_pollen_counter`, a level RAM byte. Filmed standing on the solid top (`036`), airborne bounce (`043`/`044`) and six-panel controller traversal (`045`). Corrected positive object-control admission and airborne returned side bits; native matching remains open |
@@ -61,7 +61,7 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 | TRAVERSAL: SKL `$4C` hang carrier | `loc_46FC2`–`sub_4703E`: P1 start, accelerated rise, native ceiling probe, finite horizontal travel, P1/P2 grabbing | unit contact/control/input boundaries; actual DEZ1 ride at 320/800 | `TestS3kDezHangCarrierObjectInstance`, `TestS3kDezHangCarrierHeadless` | implemented after `b1c767647` | real terrain, jump release and forced recreation/forward replay | native comparison, Act-2 entry and donor/character breadth remain open |
 | TRAVERSAL: SKL `$56` curved energy bridge | `loc_47F2C`–`sub_47F9C`: phase timer, P1/P2 collision paths, expiry air bit | native contact-edge tests; actual `$880,$920` at 320/800 | `TestS3kDezCurvedEnergyBridgeObjectInstance`, `TestS3kDezCurvedEnergyBridgeHeadless` | implemented after `33e6b66d5` | timer/path transitions, forced recreation/300-frame replay, and controller-driven curve-to-carrier approach/replay at 320/800 | native comparison, cold route and donor/character breadth remain open |
 | TRAVERSAL: SKL `$4B` tilting bridge | `loc_46E1C`–`loc_46F54`, signed ROM `byte_46ED8`, prior-standing aggregate, long velocity and delayed free fall | all eight standing rows, P1/P2 sum/cancellation, exhausted forward allocation; DEZ1 320/800; inverted DEZ2 declared entry | `TestS3kDezTiltingBridgeHeadless`, census, PLC registry | implemented after `6b7055cea` | nine focused checks: real landing/carry/collapse/floor release, complete graph recreation and forward replay; inverted carry/replay | Cold route, native comparison and donor/roster breadth remain open |
-| BOSS: `$A6` miniboss | `word_7DDA4` range Y `$18C`-`$38C` X `$3400`-`$3780`; arena `$28C,$28C,$3680,$36C0`; two eight-hit phases | — | `TestS3kDezMinibossHeadless` | missing | unrun | Slice 6 |
+| BOSS: `$A6` miniboss | `word_7DDA4` range Y `$18C`-`$38C` X `$3400`-`$3780`; arena `$28C,$28C,$3680,$36C0`; two eight-hit phases | native Sonic 320/800 entry; isolated graph at 320 | `TestDezMinibossEncounter`, `TestDezMinibossTransport`, component suites | implemented in development | both eight-hit phases, real placed entry and graph replay pass; continuous transition under validation | Cold route, native comparison, allocation prefixes and roster/donor breadth remain open |
 | ROUTE (Sonic + Tails cold): `$B00` entry → results | Complete-run BK2 from movie frame 468982 (segment directory `ssz`, `zone_id 11`) | native 320 | `TestS3kDezColdRoutes` | missing | unrun | Slice 6 |
 | ROUTE (Tails cold) | `runs/s3k-tails-full-chain-all-emeralds` `ssz`, offset 444059 | native 320 | `TestS3kDezColdRoutes` | missing | unrun | Slice 6 |
 | REWIND: cycle counters, event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` (2 tests) | implemented | pass, `4e7655bf9` | Entry, object and load-boundary spots not started |
@@ -133,3 +133,28 @@ release and recreated chain/cross-link graphs. These use minimal test parents;
 A6 remains a placeholder until the real root, sign/results, surviving transport
 and seamless act transition are connected. The BOSS row remains missing, with
 native/widescreen moving evidence and character/donor/team breadth outstanding.
+
+### Root and Act-2 handoff connection (2026-09-23, development)
+
+The missing BOSS row above is now partially covered by the connected root and
+transport tests. A separate production-queue reload test checks the actual
+results signal, coordinate/camera rebase, gravity retention, retained palette
+lines, the eight-pass background rewrite and forward replay. The 320/800
+positioned opening recordings (093/094 in the external DEZ capture directory)
+run 900 frames with matching player damage/motion and no deaths. They are
+opening-cycle evidence, not a completed fight or cold-route certificate.
+
+A controller-driven Hyper probe reached all sixteen hits through normal touch
+handling and then exposed the invisible transport's inherited world-position
+flag at reload. The transport now explicitly keeps native render_flags bit 2
+clear; its connected regression passes for left, centre and right finishing positions.
+
+The final positioned solo Hyper recordings 098 (800px) and 099 (320px) replay
+the same authored controller log for 4000 frames with no hurt/death and no
+follower. They include both phases, results, the reload, floor opening, launch,
+landing and released control. The first player-state difference between widths
+is the resource-gated reload (frame 1653 wide / 1652 native); results elements
+then take eight additional passes to leave the wider viewport before transport.
+Landing is 2964 wide / 2956 native. The native queue-duration oracle remains open;
+no delay was fitted to align these captures. Native pixel/clock comparison and
+non-Hyper/player-roster/donor routes are still owed.

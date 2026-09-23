@@ -26,7 +26,7 @@ class TestDezMinibossBeam {
     private HeadlessTestFixture boot() {
         var game=HeadlessTestFixture.builder().withZoneAndAct(11,0)
                 .startPosition((short)0x3740,(short)0x2C0).startPositionIsCentre().build();
-        game.sprite().setDebugMode(true); game.stepIdleFrames(1); return game;
+        game.sprite().setDebugMode(true); DezMinibossTestSupport.retirePlacedEncounter(game); return game;
     }
     @Test void beamChargesOnVintParityWaitsSixtyFourPassesAndGrowsBeforeDamage() {
         var parent=new Parent(); var beam=new DezMinibossBeam(parent,0x28C);

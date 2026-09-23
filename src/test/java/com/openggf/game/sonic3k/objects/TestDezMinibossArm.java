@@ -25,7 +25,7 @@ class TestDezMinibossArm {
         var game=HeadlessTestFixture.builder().withZoneAndAct(11,0)
                 .startPosition((short)0x3740,(short)0x2C0).startPositionIsCentre().build();
         game.sprite().setDebugMode(true);
-        game.stepIdleFrames(1); // Finish the load/bootstrap pass before counting encounter SST entries.
+        DezMinibossTestSupport.retirePlacedEncounter(game);
         var manager=GameServices.level().getObjectManager(); var parent=new Parent(); manager.addDynamicObject(parent);
         if(free>=0) manager.reserveAllButNFreeSlots(free);
         DezMinibossArm.spawnPair(parent); return new Fixture(game,manager,parent);

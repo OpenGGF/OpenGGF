@@ -103,6 +103,7 @@ class TestDezMinibossEye {
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(11,0)
                 .startPosition((short)0x3740,(short)0x2C0).startPositionIsCentre().build();
         fixture.sprite().setDebugMode(true);
+        DezMinibossTestSupport.retirePlacedEncounter(fixture);
         var manager=GameServices.level().getObjectManager();
         var parent=new Parent(); parent.codePointer=0x7DE6E;
         manager.addDynamicObject(parent);

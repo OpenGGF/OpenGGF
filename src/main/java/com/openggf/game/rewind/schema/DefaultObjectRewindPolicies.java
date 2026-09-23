@@ -112,6 +112,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossArm$Spike", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossBeam", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossBeam$Foot", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossInstance$Mask", "parent"), RewindFieldPolicy.CAPTURED),
             // The tunnel controller advances its exact independently allocated trail slot.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance$Controller", "spawner"), RewindFieldPolicy.CAPTURED),
             // Lift geometry writes its exact Draw_Sprite arm slot; preserve it through graph recreation.

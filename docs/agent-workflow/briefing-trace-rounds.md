@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+DEZ boss probe versus capture (2026-09-23): `GameplayCaptureTool` normalizes CLI
+`--sidekick none` to an empty character string; direct `GameplayCaptureSession.Settings`
+callers must supply that empty string themselves. Passing the literal `"none"`
+to the session API produced a fallback follower. The probe and solo capture
+then took different boss hits despite identical P1 input masks. Compare the
+recorded `sk_present`/team as well as positions before diagnosing nondeterminism.
+The corrected solo input replay completed both viewport runs.
+
 LRZ cold-route comparison against a fixture (2026-09-18): a `GameplayCaptureTool`
 capture compared frame for frame against a trace fixture manufactures divergences
 that read exactly like engine defects unless three alignments are right. The tool

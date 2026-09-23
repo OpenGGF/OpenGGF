@@ -1074,9 +1074,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * reloads: their intro suppression does not suppress the native controller.
      */
     public void onTitleCardOwnerRetired() {
-        if (currentZone != Sonic3kZoneIds.ZONE_SOZ || currentAct != 1) {
-            return;
-        }
         var objectManager = GameServices.level().getObjectManager();
         if (objectManager == null) {
             return;
@@ -1084,7 +1081,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         var titleOwnerSlot = objectManager.getActiveObjects().stream()
                 .filter(com.openggf.game.sonic3k.objects.S3kTitleCardOwnerSlotObjectInstance.class::isInstance)
                 .findFirst().orElse(null);
-        if (objectManager.getActiveObjects().stream()
+        if (currentZone == Sonic3kZoneIds.ZONE_SOZ && currentAct == 1
+                && objectManager.getActiveObjects().stream()
                 .noneMatch(com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance.class::isInstance)) {
             // The owner is still in its SST here, so AllocateObject skips that slot.
             objectManager.createDynamicObject(() ->
@@ -1460,6 +1458,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void setBossFlag(boolean value) {
+        if (currentZone == Sonic3kZoneIds.ZONE_DEZ) {
+            com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry())
+                    .ifPresent(state -> state.setBossFlag(value));
+        }
         if (aizEvents != null) {
             aizEvents.setBossFlag(value);
         }
@@ -1879,6 +1881,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (lrzEvents != null) {
             lrzEvents.setEventsFg5(true);
+        }
+        if (currentZone == Sonic3kZoneIds.ZONE_DEZ) {
+            S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry())
+                    .ifPresent(com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState::raiseEventsFg5);
         }
         // Other zones' event handlers will be added here as implemented.
     }
