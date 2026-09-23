@@ -3,6 +3,7 @@ package com.openggf.net.hub;
 import com.openggf.ghost.GhostFrame;
 import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HexFormat;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -256,6 +258,62 @@ class TestRoomHost {
         assertEquals("ghost stream violations", sender.closedReason);
         room.onDisconnected(sender);
         assertEquals(0, room.playerCount());
+    }
+
+    @Test
+    void activeAttemptCanFinishAfterDeadlineTickWithinTransitGrace() throws Exception {
+        FakeHubConnection player = new FakeHubConnection();
+        String token = admit(player, "A", dir.resolve("a")).sessionToken();
+        assertTrue(room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 1, "OPEN", null)));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        room.tick();
+        room.onText(player, ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
+
+        GhostStreamPublisher publisher = new GhostStreamPublisher(
+                packet -> room.onBinary(player, packet));
+        publisher.beginAttempt(1);
+        publisher.onFrame(new GhostFrame(100, 200, 1,
+                false, false, false, 2, false));
+        publisher.onFrame(new GhostFrame(101, 200, 1,
+                false, false, false, 2, false));
+        publisher.finishAttempt();
+
+        now += 1001;
+        room.tick();
+        room.onText(player, ControlCodec.encode(token,
+                new ControlMessage.AttemptFinish(1, 1, 0, 1,
+                        "ab".repeat(32), HexFormat.of().formatHex(
+                        publisher.streamHashSha256()), null)));
+        assertEquals(HostRoundEngine.Phase.RUNNING, room.round().phase());
+        assertEquals(1, room.round().standings().size());
+    }
+
+    @Test
+    void attemptCannotStartAfterDeadlineEvenWhileFinishesHaveGrace() throws Exception {
+        FakeHubConnection player = new FakeHubConnection();
+        String token = admit(player, "A", dir.resolve("a")).sessionToken();
+        assertTrue(room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 1, "OPEN", null)));
+        now += HostRoundEngine.COUNTDOWN_MILLIS + 1001;
+        room.tick();
+        assertEquals(HostRoundEngine.Phase.RUNNING, room.round().phase());
+
+        room.onText(player, ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
+        GhostStreamPublisher publisher = new GhostStreamPublisher(
+                packet -> room.onBinary(player, packet));
+        publisher.beginAttempt(1);
+        publisher.onFrame(new GhostFrame(100, 200, 1,
+                false, false, false, 2, false));
+        publisher.onFrame(new GhostFrame(101, 200, 1,
+                false, false, false, 2, false));
+        publisher.finishAttempt();
+        room.onText(player, ControlCodec.encode(token,
+                new ControlMessage.AttemptFinish(1, 1, 0, 1,
+                        "ab".repeat(32), HexFormat.of().formatHex(
+                        publisher.streamHashSha256()), null)));
+
+        assertTrue(room.round().standings().isEmpty());
     }
 
     @Test

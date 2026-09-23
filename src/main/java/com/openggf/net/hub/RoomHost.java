@@ -444,7 +444,7 @@ public final class RoomHost {
     }
 
     private void startAttempt(Member member, int attemptId) {
-        if (round.phase() != HostRoundEngine.Phase.RUNNING
+        if (!round.mayStartAttempt()
                 || member.activeAttemptId >= 0 || attemptId <= member.lastAttemptId) {
             recordAttemptViolation(member, "invalid attempt start " + attemptId);
             return;
