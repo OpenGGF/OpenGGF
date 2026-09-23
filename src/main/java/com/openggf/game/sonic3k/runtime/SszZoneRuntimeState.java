@@ -39,7 +39,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public static final int EVENTS_BG_BYTES = 0x10;
 
     private static final int CAPTURE_BYTES =
-            EVENTS_BG_BYTES + 15 * Short.BYTES + 3 * Integer.BYTES + 4 + SszLaunchState.CAPTURE_BYTES;
+            EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 4 + SszLaunchState.CAPTURE_BYTES;
 
     private final SszLaunchState launch = new SszLaunchState();
     public SszLaunchState launch() { return launch; }
@@ -52,7 +52,11 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     private short eventsRoutineFg;
     private short eventsRoutineBg;
     private short unkEE98;
-    private short unkEE9C;
+    private int unkEE9C;
+    /** SSZ2's Special_V_int_routine, separate from the foreground event stride. */
+    private int specialVIntRoutine;
+    public int specialVIntRoutine() { return specialVIntRoutine; }
+    public void setSpecialVIntRoutine(int value) { specialVIntRoutine = value & 0xFFFF; }
     /** {@code _unkFAA4}: the SST slot of the object the launch carries; written by the bosses. */
     private short unkFAA4;
     /**
@@ -167,8 +171,11 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public void setUnkEE98(int value) { unkEE98 = (short) value; }
 
     /** {@code _unkEE9C}: the solid-cloud oscillator offset added to the background Y. */
-    public int cloudOscillator() { return unkEE9C; }
-    public void setCloudOscillator(int value) { unkEE9C = (short) value; }
+    public int cloudOscillator() { return (short) (unkEE9C >> 16); }
+    public void setCloudOscillator(int value) { unkEE9C = (value << 16) | (unkEE9C & 0xFFFF); }
+    /** Act 2 adds/subtracts longwords; Act 1 still reads/writes the integer word. */
+    public int cloudOffsetFixed() { return unkEE9C; }
+    public void setCloudOffsetFixed(int value) { unkEE9C = value; }
 
     /** {@code _unkFAA4}. */
     public int carriedObjectSlot() { return unkFAA4 & 0xFFFF; }
@@ -281,7 +288,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putShort(eventsRoutineFg);
         buffer.putShort(eventsRoutineBg);
         buffer.putShort(unkEE98);
-        buffer.putShort(unkEE9C);
+        buffer.putInt(unkEE9C);
+        buffer.putInt(specialVIntRoutine);
         buffer.putShort(unkFAA4);
         buffer.putShort(unkFAB0);
         buffer.putShort(unkFAB4);
@@ -314,7 +322,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         eventsRoutineFg = buffer.getShort();
         eventsRoutineBg = buffer.getShort();
         unkEE98 = buffer.getShort();
-        unkEE9C = buffer.getShort();
+        unkEE9C = buffer.getInt();
+        specialVIntRoutine = buffer.getInt();
         unkFAA4 = buffer.getShort();
         unkFAB0 = buffer.getShort();
         unkFAB4 = buffer.getShort();

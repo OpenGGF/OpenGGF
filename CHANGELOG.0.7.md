@@ -69,6 +69,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Act 1. The sequence and its retained background survive rewind; Mecha's arena stays over
   its floor at wider viewports.
 
+  Act 2 now allocates its encounter camera oscillator after Knuckles’ arrival and preserves
+  its fractional cloud offset through rewind; the remaining act-2 sequence is still in progress.
+
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
   instead of the Super Emerald sanctuary (`$1701`), which remains reachable from the

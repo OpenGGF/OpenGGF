@@ -106,6 +106,12 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             state.markScreenInitApplied();
             applyScreenInit(act, state);
         }
+        if (act == 1 && state.foregroundRoutine() == 0
+                && camera().getMinY() == camera().getMaxY()) {
+            // loc_58ACC falls through to stage4 after the arrival closes the bounds.
+            state.setSpecialVIntRoutine(state.specialVIntRoutine() + 4);
+            state.setForegroundRoutine(4);
+        }
         if (act == 0) {
             var services = levelManager().getObjectManager().getObjectServices();
             state.launch().advanceShake(frameCounter,
@@ -147,6 +153,10 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
      */
     private void applyScreenInit(int act, SszZoneRuntimeState state) {
         Camera camera = camera();
+        if (act == 1) {
+            applyAct2ScreenInit(state);
+            return;
+        }
         // Levels_1000_High: SSZ1 wraps vertically over $1000 and the dynamic bounds reach -$100.
         camera.setVerticalWrapEnabled(true, LEVEL_MAX_Y);
         if (!startsAtStarPost()) {
@@ -176,6 +186,24 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
         if (act == 0) {
             spawnBackgroundClouds();
         }
+    }
+
+    /** SSZ2_ScreenInit: camera writes are inside the first successful allocation. */
+    private void applyAct2ScreenInit(SszZoneRuntimeState state) {
+        var arrival = spawnObject(() -> new SszArrivalControllerObjectInstance(
+                new ObjectSpawn(ACT2_CONTROLLER_X, 0x1000, 0, ACT2_CONTROLLER_RISE_FRAMES, 0, false, 0)));
+        if (arrival != null) {
+            var camera = camera();
+            camera.setX((short) ACT2_CAMERA_X); camera.setXCopy((short) ACT2_CAMERA_X);
+            camera.setY((short) ACT2_CAMERA_Y); camera.setYCopy((short) ACT2_CAMERA_Y);
+            camera.setScrollLocked(true);
+            // AllocateObject found the first free slot. With no intervening frees,
+            // the next lowest-free allocation is CreateNewSprite4's forward scan.
+            spawnObject(() -> new com.openggf.game.sonic3k.objects.SszAct2CameraController(
+                    new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        }
+        // SSZ2_BackgroundInit clears the whole longword, not just its integer half.
+        state.setCloudOffsetFixed(0);
     }
 
     /**

@@ -29,7 +29,7 @@ Five claims are tracked separately per row: **implemented**, **cold-reachable**,
 | LOAD: identity, resources, music, title card | `Sonic3kZoneRegistry` zone 10 act 1; `Pal_SSZ2` `$34` | 320 | — | pre-existing | yes (cold load) | — | — | baseline capture `raw-00-ssz2-before` | Resource identity not yet asserted by a test |
 | CENSUS: placed objects and rings | `SSZ2_Sprites $1F95F2` (5 records: `$00:$00` ×3, `$79:$00`, `$B2:$00`), `SSZ2_Rings $1F98E8` (the `(0,0)` record only) | ROM decode | `TestS3kSszPlacementCensus` | yes | n/a | n/a | yes (decode pinned to the ROM) | n/a | Concrete `$B2` class is slice 9 |
 | ARRIVAL: screen init and controller | `SSZ2_ScreenInit` (`Obj_57C1E` X `$A0`, `$2D = $44`, camera `(0,$649)`, `Scroll_lock`, `loc_59078` with `$30 = 1`) | 320 + one wide | `TestS3kSszKnucklesArrivalHeadless` | partial: shared ScreenInit and arrival object | direct act load through release | mid-rise replay passes | source-backed rise/release assertions | unverified | Add the missing loc_59078 owner and validate Knuckles release |
-| CAMERA: act-2 controller `loc_59078` | `loc_59078` routines 0/4/8 | — | slice 9 | open | open | open | open | open | Slice 9 |
+| CAMERA: act-2 controller `loc_59078` | Encounter routine0; routines4/8 are ending camera | Native allocation/gate, fractional drift and replay | `TestSszAct2CameraController` | encounter oscillator connected | short production entry | graph replay passes | ROM-derived math | background consumer pending | Complete encounter and presentation; ending camera excluded |
 | BG: parallax and column waves | `SSZ2_*DeformArray`, `word_58C80` (FG per-line HScroll), `loc_5904A` (20-column VScroll waves) | 320 + one wide | slice 9 | open | open | open | open | open | Slice 9; widescreen column waves are the named risk |
 | CUTSCENE: crane `$B2` | `Obj_KnuxFinalBossCrane`, `loc_7CB64` (`mus_EndBoss` then `mus_FinalBoss`), `loc_7D11C` | — | slice 9 | open | open | open | open | open | Slice 9 |
 | BOSS: Mecha Sonic phase, forced run, Super phase, Master Emerald | `Obj_SSZEndBoss` act-2 init `($220,$4A0)`, `loc_7BBE0`, `Obj_SSZ2_Boss` (36 routines), `loc_7B996` (`mus_DDZ`) | — | slice 9 | open | open | open | open | open | Slice 9 |
@@ -74,3 +74,18 @@ passes with the last camera decrement omitted, `$A0` pad alignment, the high
 priority/swing release branch, and a mid-rise capture/restore plus forward replay.
 The queued selection with the existing act-1 arrival regression passed eight tests with zero failures/errors/skips on 2026-09-23.
 This deliberately does not certify `loc_59078`, the crane, final fight or ending.
+
+
+Act2 camera foundation (2026-09-23, after `68352274e`): the queued camera,
+runtime, act1/act2 arrival and cloud selections pass19 cases with zero skips.
+The new controller occupies the next slot after arrival, stays inert until
+Special_V_int_routine enables it, retains long fractional drift, and restores
+its swing plus shared state through actual recreation/forward replay. Existing
+act1 cloud behavior and arrival remain green. Act2's renderer, palette, crane,
+boss and in-scope defeat presentation remain unfinished.
+
+Consumer checkpoint: queued `-Dtest=TestS3kSszScrollBands,TestEveryObjectRewindRoundTrip,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+with Java21/absolute S3K ROM passes1364 cases, no failures/errors/skips, including
+1294 every-object recreation checks. Together with the19 foundation cases this
+validates the bounded camera/state change, not the unfinished act2 presentation
+or full campaign suite.

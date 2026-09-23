@@ -144,7 +144,7 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     // VSRAM words to deltas, or the arena/Death Egg samples camera Y twice.
     @Override public short[] getPerColumnVScrollFG() {
         var state = state();
-        if (state == null || state.foregroundRoutine() == 0) return null;
+        if (state == null || state.actIndex() != 0 || state.foregroundRoutine() == 0) return null;
         int width = viewportWidth();
         short[] columns = new short[(width + 15) / 16];
         var camera = GameServices.camera();

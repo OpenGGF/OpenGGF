@@ -2494,3 +2494,45 @@ the main boss's hit window, then retires on defeat. The focused combat test
 exercises the real touch pass; the entry rewind spot recreates the owner.
 The earlier missing-child status is superseded. Exact native hit-window phase
 and the cold route remain open; earlier controller videos predate this change.
+
+### Act-2 camera foundation, 2026-09-23 campaign
+
+After `68352274e`, source re-reading starts slice9 with the missing encounter
+controller `loc_59078/loc_5908E`. `SSZ2_ScreenInit` allocates arrival first, writes
+camera/Scroll_lock only on success, then continues forward with CreateNewSprite4
+and seeds `$30=1`. Unlike act1 it has no starpost gate. The dedicated act2 init
+now follows that prefix. `loc_58ACC` enables Special_V_int_routine and foreground
+stage4 only after arrival closes min/max Y; the new controller then adds `$11B`
+to the long `_unkEE9C` and drives Gradual_SwingOffset (`$2000`, `$4A`).
+
+The shared runtime previously held `_unkEE9C` as a short. Preserve its full
+longword now, while the existing act1 API still reads/writes only its high word.
+Capture both the fraction and Special_V_int_routine, and exercise actual object
+recreation plus forward replay. The act1 foreground-column getter must exclude
+act2: its stage4 means a different event, not the act1 launch collapse.
+
+The two changed zero crossings under a negative Events_fg_4 signal are modeled;
+subsequent loc_590E4/loc_59194 camera movement belongs to the excluded ending
+beyond the cold stop. Background deformation, palette rotation, crane, boss and
+post-defeat in-scope presentation are still outstanding. This foundation is not
+an act2 completion claim. Focused checks are pending at this checkpoint.
+
+Focused command through queued Maven/Java21 with `-Dmse=off` and the absolute
+S3K ROM: `-Dtest=TestSszAct2CameraController,TestSszZoneRuntimeState,TestS3kSszKnucklesArrivalHeadless,TestS3kSszArrivalHeadless,TestS3kSszBackgroundClouds test`.
+Result:19 passed, no failures/errors/skips. The separate scroll-consumer,
+every-object rewind and four mandatory S3K classes are queued next. No act2
+presentation or completed fight claim follows from these tests.
+
+Next background source notes: `sub_58FBC` applies `word_58C80` to foreground
+horizontal scroll, while `loc_5904A` writes camera Y to every FG VSRAM word and
+the `$170` table to BG VSRAM words. The wave is therefore BG per-column scroll,
+not an act1-style FG collapse. `loc_58F46` copies20 words forward from a source
+inside the shared HScroll table into `$170`; preserve overlapping reads/writes
+when transcribing that table, rather than replacing it with independent arrays.
+Runtime deformation tables must be read from ROM for the new act2 handler.
+
+Consumer checkpoint: queued `-Dtest=TestS3kSszScrollBands,TestEveryObjectRewindRoundTrip,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+with Java21/absolute S3K ROM passes1364 cases, no failures/errors/skips, including
+1294 every-object recreation checks. Together with the19 foundation cases this
+validates the bounded camera/state change, not the unfinished act2 presentation
+or full campaign suite.
