@@ -16,6 +16,7 @@ public final class GhostStreamValidator {
     public static final int KICK_THRESHOLD = 10;
     public static final int RATE_BURST_FRAMES = 300;
     public static final int RATE_REFILL_PER_SECOND = 66;
+    public static final int MAX_FRAME_LEAD = 12;
     public static final long PACING_WARMUP_MILLIS = 3000;
     public static final int PACING_MIN_FPS = 54;
 
@@ -81,6 +82,15 @@ public final class GhostStreamValidator {
         if (batch.startFrameIndex() != nextExpectedFrameIndex) {
             return violate("frame-gap", "expected frame " + nextExpectedFrameIndex
                     + " got " + batch.startFrameIndex());
+        }
+
+        long elapsed = Math.max(0, now - attemptFirstSeenMillis);
+        long maxProgress = MAX_FRAME_LEAD
+                + elapsed * RATE_REFILL_PER_SECOND / 1000;
+        long proposedProgress = (long) nextExpectedFrameIndex + batch.frameCount();
+        if (proposedProgress > maxProgress) {
+            return violate("rate-cap", "attempt " + currentAttemptId + " advanced to "
+                    + proposedProgress + " frames after " + elapsed + " ms");
         }
 
         refillTokens(now);

@@ -84,10 +84,22 @@ class TestControlCodec {
     }
 
     @Test
-    void ignoresUnknownFieldsForForwardCompat() {
-        ControlCodec.DecodedControl back = ControlCodec.decode(
+    void rejectsUnknownEnvelopeAndMessageFields() {
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":1,\"token\":null,\"futureField\":true,"
+                        + "\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":7}}"));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
                 "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"Ping\","
-                        + "\"t0ClientMillis\":7,\"futureField\":true}}");
-        assertEquals(new ControlMessage.Ping(7L), back.message());
+                        + "\"t0ClientMillis\":7,\"futureField\":true}}"));
+    }
+
+    @Test
+    void rejectsDuplicateSecuritySensitiveFields() {
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":1,\"token\":\"first\",\"token\":\"second\","
+                        + "\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":7}}"));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"Ping\","
+                        + "\"t0ClientMillis\":7,\"t0ClientMillis\":8}}"));
     }
 }

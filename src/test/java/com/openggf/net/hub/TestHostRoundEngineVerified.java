@@ -87,6 +87,32 @@ class TestHostRoundEngineVerified {
         assertNull(engine.bestFinish(1));
     }
 
+    @Test
+    void duplicateAttemptCannotReplacePendingClaimBeforeVerdict() {
+        long[] now = {0};
+        HostRoundEngine engine = running(now);
+        engine.setVerifiedRoom(true);
+        ControlMessage.AttemptFinish original = finish(1, 200, "a");
+        engine.onAttemptFinish(1, "a", "sonic", original, false);
+
+        assertNull(engine.onAttemptFinish(
+                1, "a", "sonic", finish(1, 100, "b"), false));
+        assertEquals(original, engine.bestFinish(1));
+        engine.onVerdict(1, 1, true);
+        assertEquals("VERIFIED", engine.standings().getFirst().verifyState());
+        assertEquals(200, engine.standings().getFirst().bestTimeFrames());
+    }
+
+    @Test
+    void malformedInputRecordingHashesAreRejectedBeforeStandings() {
+        assertNull(running(new long[]{0}).onAttemptFinish(1, "a", "sonic",
+                finishWithInputHash(1, 100, null), false));
+        assertNull(running(new long[]{0}).onAttemptFinish(1, "a", "sonic",
+                finishWithInputHash(1, 100, "a".repeat(63)), false));
+        assertNull(running(new long[]{0}).onAttemptFinish(1, "a", "sonic",
+                finishWithInputHash(1, 100, "z".repeat(64)), false));
+    }
+
     private static HostRoundEngine running(long[] now) {
         HostRoundEngine engine = new HostRoundEngine(() -> now[0], ignored -> { });
         assertTrue(engine.startRound(CONFIG));
@@ -96,7 +122,12 @@ class TestHostRoundEngineVerified {
     }
 
     private static ControlMessage.AttemptFinish finish(int id, int time, String hash) {
+        return finishWithInputHash(id, time, hash.repeat(64));
+    }
+
+    private static ControlMessage.AttemptFinish finishWithInputHash(
+            int id, int time, String inputHash) {
         return new ControlMessage.AttemptFinish(id, time, 1, time + 1,
-                hash, "ghost", null);
+                inputHash, "ghost", null);
     }
 }

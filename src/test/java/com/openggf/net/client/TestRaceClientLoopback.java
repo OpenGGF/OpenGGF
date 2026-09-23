@@ -3,6 +3,8 @@ package com.openggf.net.client;
 import com.openggf.ghost.GhostFrame;
 import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.host.RaceHostServer;
+import com.openggf.net.host.ControlledRaceHost;
+import com.openggf.net.hub.HostRoundEngine;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestRaceClientLoopback {
     private static final String FP = "0.6:cafe1234";
     private RaceHostServer server;
+    private ControlledRaceHost controlled;
 
     @AfterEach
     void tearDown() {
@@ -34,7 +37,8 @@ class TestRaceClientLoopback {
     }
 
     private RaceHostServer startServer(Path dir, String policy) throws Exception {
-        return RaceHostServer.start(0,
+        controlled = new ControlledRaceHost();
+        return controlled.start(0,
                 new RoomHostConfig("LAN", "s3k", 0, 0, policy, null, 8, FP),
                 PlayerIdentity.loadOrCreate(dir.resolve("host")),
                 TrackValidationProfileSource.none());
@@ -73,6 +77,12 @@ class TestRaceClientLoopback {
                 && c.message() instanceof ControlMessage.ChatBroadcast);
         assertEquals("hello lan",
                 ((ControlMessage.ChatBroadcast) ((RaceClient.Control) chat).message()).text());
+
+        controlled.startRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 10, "OPEN", null));
+        await(a, e -> e instanceof RaceClient.Control c
+                && c.message() instanceof ControlMessage.RoundStart);
+        controlled.advance(HostRoundEngine.COUNTDOWN_MILLIS);
 
         byte[] frame = new byte[GhostFrameCodec.BYTES];
         GhostFrameCodec.encode(new GhostFrame(100, 200, 1,

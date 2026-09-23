@@ -199,13 +199,14 @@ class TestRelayRoomManager {
                     new ControlMessage.AttemptStart(1)));
             publisher.beginAttempt(1);
             for (int frame = 0; frame <= 101; frame++) {
+                now[0] += 17;
                 publisher.onFrame(new GhostFrame(100 + frame, 200, 1,
                         false, false, false, 2, false));
             }
             publisher.finishAttempt();
             access.room().onText(connection, ControlCodec.encode(token,
                     new ControlMessage.AttemptFinish(1, 100, 1, 101,
-                            "aa", HexFormat.of().formatHex(
+                            "aa".repeat(32), HexFormat.of().formatHex(
                             publisher.streamHashSha256()), null)));
 
             assertInstanceOf(ControlMessage.RecordingRequest.class,
@@ -214,7 +215,7 @@ class TestRelayRoomManager {
                     jobs.stateOf("vj-1"));
             assertEquals("PENDING",
                     access.room().round().standings().getFirst().verifyState());
-            jobs.onRecordingUploaded("aa", player.fingerprint());
+            jobs.onRecordingUploaded("aa".repeat(32), player.fingerprint());
             VerificationJobQueue.Job job = jobs.lease("worker", java.util.Set.of("0.6:cafe"))
                     .orElseThrow();
             jobs.complete(job.jobId(), "worker").orElseThrow();

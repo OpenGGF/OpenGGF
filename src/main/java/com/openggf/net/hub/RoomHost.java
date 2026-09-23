@@ -36,6 +36,8 @@ public final class RoomHost {
         int tokenStrikes;
         int violationsThisRound;
         boolean finishedThisRound;
+        int activeAttemptId = -1;
+        int lastAttemptId = -1;
 
         Member(HubConnection connection, HostHandshake handshake, long connectedAt) {
             this.connection = connection;
@@ -141,6 +143,11 @@ public final class RoomHost {
             members.remove(connection);
             return;
         }
+        if (round.phase() != HostRoundEngine.Phase.RUNNING
+                || member.activeAttemptId < 0) {
+            recordAttemptViolation(member, "binary outside active attempt");
+            return;
+        }
         hub.onBinary(member.slot, data);
     }
 
@@ -168,12 +175,14 @@ public final class RoomHost {
         HostRoundEngine.Phase previousPhase = round.phase();
         round.onTick();
         if (previousPhase == HostRoundEngine.Phase.RUNNING
-                && round.phase() == HostRoundEngine.Phase.ROUND_END
-                && hooks.roundOutcomeListener() != null) {
+                && round.phase() == HostRoundEngine.Phase.ROUND_END) {
             for (Member member : List.copyOf(members.values())) {
                 if (member.admitted) {
-                    hooks.roundOutcomeListener().onRoundComplete(member.fingerprint,
-                            member.finishedThisRound && member.violationsThisRound == 0);
+                    clearActiveAttempt(member);
+                    if (hooks.roundOutcomeListener() != null) {
+                        hooks.roundOutcomeListener().onRoundComplete(member.fingerprint,
+                                member.finishedThisRound && member.violationsThisRound == 0);
+                    }
                 }
             }
         }
@@ -189,6 +198,8 @@ public final class RoomHost {
         for (Member member : members.values()) {
             member.violationsThisRound = 0;
             member.finishedThisRound = false;
+            member.activeAttemptId = -1;
+            member.lastAttemptId = -1;
         }
         hub.setTrack(roundConfig.gameId(), roundConfig.zone(), roundConfig.act());
         roomGameId = roundConfig.gameId();
@@ -333,18 +344,22 @@ public final class RoomHost {
                     requestStartRound(configure.config());
                 }
             }
-            case ControlMessage.AttemptStart start ->
-                    hub.onAttemptStart(member.slot, start.attemptId());
-            case ControlMessage.AttemptReset reset ->
-                    hub.onAttemptReset(member.slot, reset.attemptId());
+            case ControlMessage.AttemptStart start -> startAttempt(member, start.attemptId());
+            case ControlMessage.AttemptReset reset -> resetAttempt(member, reset.attemptId());
             case ControlMessage.TrackVote vote ->
                     round.onTrackVote(member.slot, vote.trackKey());
             case ControlMessage.AttemptFinish finish -> {
+                if (round.phase() != HostRoundEngine.Phase.RUNNING
+                        || finish.attemptId() != member.activeAttemptId) {
+                    recordAttemptViolation(member, "finish outside matching active attempt");
+                    break;
+                }
                 HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
                         member.slot, member.displayName, member.character,
                         finish, !hub.hasFinishEvidence(member.slot,
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
+                clearActiveAttempt(member);
                 member.finishedThisRound = round.standings().stream()
                         .anyMatch(row -> row.slot() == member.slot);
                 if (outcome != null && outcome.outsideBroadcastCap()) {
@@ -392,6 +407,43 @@ public final class RoomHost {
             text = text.substring(0, Protocol.MAX_CHAT_CHARS);
         }
         broadcast(new ControlMessage.ChatBroadcast(member.slot, member.displayName, text));
+    }
+
+    private void startAttempt(Member member, int attemptId) {
+        if (round.phase() != HostRoundEngine.Phase.RUNNING
+                || member.activeAttemptId >= 0 || attemptId <= member.lastAttemptId) {
+            recordAttemptViolation(member, "invalid attempt start " + attemptId);
+            return;
+        }
+        member.activeAttemptId = attemptId;
+        member.lastAttemptId = attemptId;
+        hub.onAttemptStart(member.slot, attemptId);
+    }
+
+    private void resetAttempt(Member member, int attemptId) {
+        if (attemptId != member.activeAttemptId) {
+            recordAttemptViolation(member, "reset outside matching active attempt");
+            return;
+        }
+        clearActiveAttempt(member);
+    }
+
+    private void clearActiveAttempt(Member member) {
+        if (member.activeAttemptId >= 0) {
+            hub.onAttemptReset(member.slot, member.activeAttemptId);
+            member.activeAttemptId = -1;
+        }
+    }
+
+    private void recordAttemptViolation(Member member, String detail) {
+        member.violationsThisRound++;
+        System.getLogger(RoomHost.class.getName()).log(
+                System.Logger.Level.WARNING,
+                "attempt violation slot=" + member.slot + " fp=" + member.fingerprint
+                        + ": " + detail);
+        if (member.violationsThisRound >= GhostStreamValidator.KICK_THRESHOLD) {
+            drop(member, "attempt protocol violations");
+        }
     }
 
     private void broadcast(ControlMessage message) {
