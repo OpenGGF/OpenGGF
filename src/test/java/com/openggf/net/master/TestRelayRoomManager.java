@@ -20,6 +20,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRelayRoomManager {
@@ -54,6 +55,108 @@ class TestRelayRoomManager {
         return new RelayRoomManager(master, ladder, TrackValidationProfileSource.none(),
                 List.of(Runnable::run), Runnable::run, () -> now[0],
                 (roomId, count) -> { });
+    }
+
+    private static String admit(RelayRoomManager manager,
+                                RelayRoomManager.RoomAccess access, String roomId,
+                                FakeConnection connection, PlayerIdentity identity,
+                                String name) throws Exception {
+        assertTrue(manager.attach(connection, roomId, identity.fingerprint(), name));
+        ClientHandshake handshake = new ClientHandshake(identity, name, "0.6:cafe");
+        access.room().onText(connection, ControlCodec.encode(null, handshake.hello()));
+        access.room().onText(connection, ControlCodec.encode(null,
+                handshake.onWelcome((ControlMessage.Welcome) lastMessage(connection))));
+        return lastOfType(connection, ControlMessage.JoinAccepted.class).sessionToken();
+    }
+
+    private static void finish(RelayRoomManager.RoomAccess access,
+                               FakeConnection connection, String token, long[] now) {
+        GhostStreamPublisher publisher = new GhostStreamPublisher(
+                packet -> access.room().onBinary(connection, packet));
+        access.room().onText(connection, ControlCodec.encode(token,
+                new ControlMessage.AttemptStart(1)));
+        publisher.beginAttempt(1);
+        for (int frame = 0; frame <= 101; frame++) {
+            now[0] += 17;
+            publisher.onFrame(new GhostFrame(100 + frame, 200, 1,
+                    false, false, false, 2, false));
+        }
+        publisher.finishAttempt();
+        access.room().onText(connection, ControlCodec.encode(token,
+                new ControlMessage.AttemptFinish(1, 100, 1, 101,
+                        "aa".repeat(32), HexFormat.of().formatHex(
+                        publisher.streamHashSha256()), null)));
+    }
+
+    @Test
+    void oldVerdictCannotVerifySameIdentityRejoinWithSameClaim(@TempDir Path dir)
+            throws Exception {
+        long[] now = {1_000_000};
+        try (var store = new SqliteIdentityStore(dir.resolve("ids.db"))) {
+            var ladder = new TrustLadder(store,
+                    new NewIdentityCache(100, 3_600_000, () -> now[0]),
+                    TrustLadder.Thresholds.defaults(), () -> now[0]);
+            MasterConfig config = MasterConfig.defaults();
+            VerificationJobQueue jobs = new VerificationJobQueue(() -> now[0], 1000);
+            RelayRoomManager manager = new RelayRoomManager(
+                    PlayerIdentity.loadOrCreate(dir.resolve("master")), ladder,
+                    TrackValidationProfileSource.none(), List.of(Runnable::run),
+                    Runnable::run, () -> now[0], (roomId, count) -> { },
+                    (roomId, owner, zone, act) -> { }, config, jobs,
+                    new VerdictConsequences(store, ladder, () -> now[0], 0));
+            PlayerIdentity player = PlayerIdentity.loadOrCreate(dir.resolve("player"));
+            SessionRegistry.RoomEntry entry = new SessionRegistry(() -> now[0], config)
+                    .create(new ControlMessage.RoomDescriptor(
+                                    "Verified", "s3k", 0, 0, "OPEN", null, 8, true),
+                            "RELAY", player.fingerprint(), "1.1.1.1", 0, "0.6:cafe");
+            manager.createRelayRoom(entry);
+            var access = manager.find(entry.roomId()).orElseThrow();
+            FakeConnection oldConnection = new FakeConnection();
+            String oldToken = admit(manager, access, entry.roomId(), oldConnection,
+                    player, "Old");
+            access.room().onText(oldConnection, ControlCodec.encode(oldToken,
+                    new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
+                            "s3k", 0, 0, 60, "OPEN", null))));
+            now[0] += 3_000;
+            access.room().tick();
+            finish(access, oldConnection, oldToken, now);
+            assertTrue(jobs.onRecordingUploaded("aa".repeat(32), player.fingerprint()));
+            access.room().onDisconnected(oldConnection);
+
+            FakeConnection newConnection = new FakeConnection();
+            String newToken = admit(manager, access, entry.roomId(), newConnection,
+                    player, "New");
+            finish(access, newConnection, newToken, now);
+            assertEquals(2, access.room().round().standings().size());
+            assertNotEquals(jobs.find("vj-1").orElseThrow().attemptRef(),
+                    jobs.find("vj-2").orElseThrow().attemptRef());
+            VerificationJobQueue.Job oldJob = jobs.lease("worker", java.util.Set.of("0.6:cafe"))
+                    .orElseThrow();
+            jobs.complete(oldJob.jobId(), "worker").orElseThrow();
+            manager.onVerdict(oldJob, true);
+
+            var stateByName = access.room().round().standings().stream().collect(
+                    java.util.stream.Collectors.toMap(ControlMessage.StandingsRow::displayName,
+                            ControlMessage.StandingsRow::verifyState));
+            assertEquals("VERIFIED", stateByName.get("Old"));
+            assertEquals("PENDING", stateByName.get("New"));
+
+            VerificationJobQueue.Job filler = jobs.find("vj-2").orElseThrow();
+            for (int i = 2; i < VerificationJobQueue.MAX_TRACKED_JOBS; i++) {
+                jobs.submit(filler, now[0] + 60_000);
+            }
+            access.room().onDisconnected(newConnection);
+            FakeConnection thirdConnection = new FakeConnection();
+            String thirdToken = admit(manager, access, entry.roomId(), thirdConnection,
+                    player, "Third");
+            finish(access, thirdConnection, thirdToken, now);
+            stateByName = access.room().round().standings().stream().collect(
+                    java.util.stream.Collectors.toMap(ControlMessage.StandingsRow::displayName,
+                            ControlMessage.StandingsRow::verifyState));
+            assertEquals("VERIFIED", stateByName.get("Old"));
+            assertEquals("PENDING", stateByName.get("New"));
+            assertFalse(stateByName.containsKey("Third"));
+        }
     }
 
     @Test

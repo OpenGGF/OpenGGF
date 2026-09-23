@@ -199,12 +199,13 @@ public final class HostRoundEngine {
         Best best = bests.values().stream().filter(value -> value.slot() == slot
                 && value.finish().attemptId() == attemptId).findFirst().orElse(null);
         if (best != null) {
-            onVerdict(best.participantId(), attemptId, best.finish().inputRecordingHashHex(), pass);
+            onVerdictForParticipant(best.participantId(), attemptId,
+                    best.finish().inputRecordingHashHex(), pass);
         }
     }
 
-    private void onVerdict(String participantId, int attemptId, String recordingHash,
-                           boolean pass) {
+    void onVerdictForParticipant(String participantId, int attemptId,
+                                 String recordingHash, boolean pass) {
         Best best = bests.get(participantId);
         if (best == null || !"PENDING".equals(best.verifyState())
                 || best.finish().attemptId() != attemptId
@@ -219,17 +220,6 @@ public final class HostRoundEngine {
             bests.remove(participantId);
         }
         broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings()));
-    }
-
-    void onVerdictEvidence(String fingerprint, int attemptId,
-                           String recordingHash, boolean pass) {
-        for (Best best : List.copyOf(bests.values())) {
-            if (Objects.equals(fingerprint, best.fingerprint())
-                    && best.finish().attemptId() == attemptId
-                    && best.finish().inputRecordingHashHex().equals(recordingHash)) {
-                onVerdict(best.participantId(), attemptId, recordingHash, pass);
-            }
-        }
     }
 
     public void onTrackVote(int slot, String trackKey) {

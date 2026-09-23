@@ -52,7 +52,12 @@ recording blobs and durable verdicts have separate retention.
 
 Within a round, finishes retain the admitted participant session and identity even when a
 departed player's slot is reused. Clean-round credit, replay verdicts, and spot checks use
-that retained ownership. Room display names and selected characters are bounded to 64 and
+that retained ownership. Each admission receives a non-secret participant ID, which is
+captured when a finish enters the verifier queue; a verdict, pending-result expiry,
+recording request, or queue-full fallback applies only to that participant's claim,
+even when the same identity reconnects and repeats the attempt ID and recording hash.
+The ID also distinguishes durable verifier attempt references without changing the
+worker job schema. Room display names and selected characters are bounded to 64 and
 32 UTF-8 bytes respectively; admission and character changes must keep the serialized
 room roster within the 64 KiB client control-frame limit, including a full 256-player
 relay roster. Broker room descriptor fields

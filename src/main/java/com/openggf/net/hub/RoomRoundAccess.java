@@ -19,10 +19,11 @@ public final class RoomRoundAccess {
                 .toList();
     }
 
-    public static void onVerdictEvidence(RoomHost room, String fingerprint,
-                                         int attemptId, String recordingHash,
-                                         boolean pass) {
-        room.round().onVerdictEvidence(fingerprint, attemptId, recordingHash, pass);
+    public static void onVerdictForParticipant(RoomHost room, String participantId,
+                                                int attemptId, String recordingHash,
+                                                boolean pass) {
+        room.round().onVerdictForParticipant(participantId, attemptId,
+                recordingHash, pass);
     }
 
     public static void onPendingResultExpiry(RoomHost room,
@@ -32,8 +33,14 @@ public final class RoomRoundAccess {
                 result.character(), result.finish())));
     }
 
-    public static void sendToIdentityInSlot(RoomHost room, int slot,
-                                            String fingerprint, ControlMessage message) {
-        room.sendToIdentityInSlot(slot, fingerprint, message);
+    public static String participantIdForSlot(RoomHost room, int slot,
+                                               String fingerprint) {
+        return room.participantIdForSlot(slot, fingerprint);
+    }
+
+    public static void sendToParticipantInSlot(RoomHost room, int slot,
+                                                String participantId,
+                                                ControlMessage message) {
+        room.sendToParticipantInSlot(slot, participantId, message);
     }
 }
