@@ -7,6 +7,7 @@ import com.openggf.net.protocol.GhostPackets;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -135,5 +136,29 @@ class TestRemoteGhostPlayback {
                     new GhostPackets.AggregateEntry(0, 1, i, 3, frames(i, 3)))));
         }
         assertEquals("A", registry.advanceAll(-1).get(0).displayName());
+    }
+
+    @Test
+    void sparseFutureFramesCannotGrowPlaybackBufferWithoutBound() throws Exception {
+        RemoteGhostPlayback playback = new RemoteGhostPlayback();
+        for (int i = 0; i < 500; i++) {
+            playback.onEntry(entry(1, i * 31, 1));
+            playback.advance();
+        }
+        var field = RemoteGhostPlayback.class.getDeclaredField("frames");
+        field.setAccessible(true);
+        assertTrue(((Map<?, ?>) field.get(playback)).size() <= 128);
+    }
+
+    @Test
+    void aggregateCannotAllocatePlaybackForUnrosteredSlot() {
+        RemoteGhostRegistry registry = new RemoteGhostRegistry();
+        registry.onRoomState(List.of());
+        for (int i = 0; i < 12; i += 3) {
+            registry.onAggregate(new GhostPackets.Aggregate(i,
+                    List.of(new GhostPackets.AggregateEntry(
+                            99, 1, i, 3, frames(i, 3)))));
+        }
+        assertTrue(registry.advanceAll(-1).isEmpty());
     }
 }

@@ -15,7 +15,6 @@ import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -29,8 +28,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class MasterClient implements AutoCloseable {
     public static final long MASTER_REPLY_TIMEOUT_MILLIS = 5_000;
 
-    private final ConcurrentLinkedQueue<RaceClient.InboundEvent> inbound =
-            new ConcurrentLinkedQueue<>();
+    private final BoundedInboundQueue<RaceClient.InboundEvent> inbound =
+            new BoundedInboundQueue<>();
     private final ConcurrentLinkedQueue<CompletableFuture<ControlMessage.RoomListResult>>
             pendingLists = new ConcurrentLinkedQueue<>();
     private final ConcurrentLinkedQueue<CompletableFuture<ControlMessage.RoomCreated>>
@@ -256,12 +255,23 @@ public final class MasterClient implements AutoCloseable {
     }
 
     public List<RaceClient.InboundEvent> drainInbound() {
-        List<RaceClient.InboundEvent> result = new ArrayList<>();
-        RaceClient.InboundEvent event;
-        while ((event = inbound.poll()) != null) {
-            result.add(event);
+        return inbound.drain();
+    }
+
+    private void enqueueInbound(WebSocket socket, RaceClient.InboundEvent event) {
+        if (!inbound.offer(event)) {
+            open = false;
+            signalDisconnected("inbound event limit exceeded");
+            socket.abort();
         }
-        return result;
+    }
+
+    private void signalDisconnected(String reason) {
+        RaceClient.Disconnected event = new RaceClient.Disconnected(reason);
+        if (!inbound.offer(event)) {
+            inbound.clear();
+            inbound.offer(event);
+        }
     }
 
     public boolean isOpen() {
@@ -321,9 +331,9 @@ public final class MasterClient implements AutoCloseable {
                         reason == null || reason.isBlank() ? "connection closed" : reason);
                 RelayRaceConnection relay = attached.get();
                 if (relay != null) {
-                    relay.inbound.add(disconnected);
+                    relay.signalDisconnected(disconnected.reason());
                 } else {
-                    inbound.add(disconnected);
+                    signalDisconnected(disconnected.reason());
                 }
                 admitted.completeExceptionally(new RaceClient.JoinRejectedException(
                         "master closed during admission"));
@@ -338,9 +348,9 @@ public final class MasterClient implements AutoCloseable {
                                 : error.getMessage());
                 RelayRaceConnection relay = attached.get();
                 if (relay != null) {
-                    relay.inbound.add(disconnected);
+                    relay.signalDisconnected(disconnected.reason());
                 } else {
-                    inbound.add(disconnected);
+                    signalDisconnected(disconnected.reason());
                 }
                 admitted.completeExceptionally(error);
             }
@@ -375,7 +385,7 @@ public final class MasterClient implements AutoCloseable {
             link.onMasterControl(message);
             return;
         }
-        inbound.add(new RaceClient.Control(message));
+        enqueueInbound(socket, new RaceClient.Control(message));
     }
 
     private void receiveAdmission(WebSocket socket, ControlMessage message,
@@ -507,8 +517,8 @@ public final class MasterClient implements AutoCloseable {
 
     private static final class RelayRaceConnection implements RaceConnection {
         private final MasterClient parent;
-        private final ConcurrentLinkedQueue<RaceClient.InboundEvent> inbound =
-                new ConcurrentLinkedQueue<>();
+        private final BoundedInboundQueue<RaceClient.InboundEvent> inbound =
+                new BoundedInboundQueue<>();
         private volatile ControlMessage.JoinAccepted joined;
         private volatile boolean open = true;
 
@@ -516,11 +526,26 @@ public final class MasterClient implements AutoCloseable {
             this.parent = parent;
         }
 
+        private void enqueue(RaceClient.InboundEvent event) {
+            if (!inbound.offer(event)) {
+                signalDisconnected("inbound event limit exceeded");
+                close();
+            }
+        }
+
+        private void signalDisconnected(String reason) {
+            RaceClient.Disconnected event = new RaceClient.Disconnected(reason);
+            if (!inbound.offer(event)) {
+                inbound.clear();
+                inbound.offer(event);
+            }
+        }
+
         void acceptText(String text) {
             try {
-                inbound.add(new RaceClient.Control(ControlCodec.decode(text).message()));
+                enqueue(new RaceClient.Control(ControlCodec.decode(text).message()));
             } catch (ProtocolViolationException e) {
-                inbound.add(new RaceClient.Disconnected("protocol violation"));
+                signalDisconnected("protocol violation");
                 close();
             }
         }
@@ -532,15 +557,15 @@ public final class MasterClient implements AutoCloseable {
                 }
                 int type = data[0] & 0xFF;
                 if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
-                    inbound.add(new RaceClient.GhostData(GhostPackets.decodeAggregate(data)));
+                    enqueue(new RaceClient.GhostData(GhostPackets.decodeAggregate(data)));
                 } else if (type == GhostPackets.TYPE_ROSTER) {
-                    inbound.add(new RaceClient.Roster(GhostPackets.decodeRoster(data)));
+                    enqueue(new RaceClient.Roster(GhostPackets.decodeRoster(data)));
                 } else {
                     throw new ProtocolViolationException(
                             "unexpected room binary packet type " + type);
                 }
             } catch (ProtocolViolationException e) {
-                inbound.add(new RaceClient.Disconnected("protocol violation"));
+                signalDisconnected("protocol violation");
                 close();
             }
         }
@@ -550,16 +575,13 @@ public final class MasterClient implements AutoCloseable {
         }
 
         void restore(List<RaceClient.InboundEvent> events) {
-            inbound.addAll(events);
+            for (RaceClient.InboundEvent event : events) {
+                enqueue(event);
+            }
         }
 
         @Override public List<RaceClient.InboundEvent> drainInbound() {
-            List<RaceClient.InboundEvent> result = new ArrayList<>();
-            RaceClient.InboundEvent event;
-            while ((event = inbound.poll()) != null) {
-                result.add(event);
-            }
-            return result;
+            return inbound.drain();
         }
 
         @Override public void sendControl(ControlMessage message) {

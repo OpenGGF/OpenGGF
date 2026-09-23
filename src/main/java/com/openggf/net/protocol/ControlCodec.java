@@ -19,7 +19,8 @@ public final class ControlCodec {
     private static final ObjectMapper MAPPER = new ObjectMapper(JsonFactory.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
             .build())
-            .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+            .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES);
     private static final Set<String> ENVELOPE_FIELDS = Set.of("v", "token", "msg");
     private static final Map<String, Class<? extends ControlMessage>> MESSAGE_TYPES =
             Arrays.stream(ControlMessage.class.getPermittedSubclasses())
@@ -102,6 +103,7 @@ public final class ControlCodec {
             ObjectNode messageBody = ((ObjectNode) msg).deepCopy();
             messageBody.remove("type");
             ControlMessage message = MAPPER.treeToValue(messageBody, messageType);
+            validateClientState(message);
             if (message instanceof ControlMessage.RelayGuestText relay
                     && relay.text().getBytes(StandardCharsets.UTF_8).length
                     > Protocol.MAX_CONTROL_BYTES) {
@@ -112,6 +114,95 @@ public final class ControlCodec {
             throw e;
         } catch (Exception e) {
             throw new ProtocolViolationException("undecodable control frame", e);
+        }
+    }
+
+    private static void validateClientState(ControlMessage message) {
+        switch (message) {
+            case ControlMessage.RoomState state -> validatePlayers(state.players());
+            case ControlMessage.JoinAccepted accepted -> {
+                requireText(accepted.sessionToken(), "session token");
+                if (accepted.round() != null) {
+                    ControlMessage.RoundSnapshot snapshot = accepted.round();
+                    if (snapshot.phase() == null
+                            || !Set.of("LOBBY", "COUNTDOWN", "RUNNING", "ROUND_END", "VOTE")
+                            .contains(snapshot.phase())) {
+                        throw new ProtocolViolationException("invalid round phase");
+                    }
+                    if (("COUNTDOWN".equals(snapshot.phase())
+                            || "RUNNING".equals(snapshot.phase()))
+                            && snapshot.config() == null) {
+                        throw new ProtocolViolationException("missing active round config");
+                    }
+                    if (snapshot.config() != null) {
+                        validateRoundConfig(snapshot.config());
+                    }
+                    validateStandings(snapshot.standings(), "snapshot standings");
+                }
+            }
+            case ControlMessage.RoundStart start -> {
+                if (start.config() == null) {
+                    throw new ProtocolViolationException("missing round config");
+                }
+                validateRoundConfig(start.config());
+            }
+            case ControlMessage.RoundEnd end ->
+                    validateStandings(end.finalStandings(), "final standings");
+            case ControlMessage.StandingsDelta delta ->
+                    validateStandings(delta.rows(), "standings rows");
+            case ControlMessage.StandingsPage page ->
+                    validateStandings(page.rows(), "standings page");
+            default -> { }
+        }
+    }
+
+    private static void validatePlayers(java.util.List<ControlMessage.PlayerInfo> players) {
+        requireItems(players, "players");
+        for (ControlMessage.PlayerInfo player : players) {
+            if (player.slot() < 0 || player.slot() >= Protocol.MAX_PLAYERS_RELAY) {
+                throw new ProtocolViolationException("invalid player slot");
+            }
+            requireText(player.fingerprint(), "player identity");
+            requireText(player.displayName(), "player name");
+            requireText(player.character(), "player character");
+        }
+    }
+
+    private static void validateRoundConfig(ControlMessage.RoundConfig config) {
+        requireText(config.gameId(), "round game");
+        if (config.zone() < 0 || config.act() < 0 || config.windowSeconds() <= 0
+                || (!"OPEN".equals(config.characterPolicy())
+                && !"LOCKED".equals(config.characterPolicy()))) {
+            throw new ProtocolViolationException("invalid round config");
+        }
+        if ("LOCKED".equals(config.characterPolicy())) {
+            requireText(config.lockedCharacter(), "locked character");
+        }
+    }
+
+    private static void validateStandings(
+            java.util.List<ControlMessage.StandingsRow> rows, String field) {
+        requireItems(rows, field);
+        for (ControlMessage.StandingsRow row : rows) {
+            if (row.slot() < 0 || row.slot() >= Protocol.MAX_PLAYERS_RELAY
+                    || row.bestTimeFrames() <= 0 || row.rank() <= 0) {
+                throw new ProtocolViolationException("invalid " + field);
+            }
+            requireText(row.displayName(), "standing name");
+            requireText(row.character(), "standing character");
+            requireText(row.verifyState(), "standing verification state");
+        }
+    }
+
+    private static void requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new ProtocolViolationException("invalid " + field);
+        }
+    }
+
+    private static void requireItems(java.util.List<?> items, String field) {
+        if (items == null || items.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new ProtocolViolationException("invalid " + field);
         }
     }
 }
