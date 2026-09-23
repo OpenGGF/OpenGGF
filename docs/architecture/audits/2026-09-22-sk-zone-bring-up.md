@@ -1918,3 +1918,26 @@ active graph restoration and particle retirement/replay. These are overlapping
 focused selections, not a broad campaign pass. Next: root/emerald/fireball/escape
 and production screen/plane integration, then actual entry-to-exit media and
 remaining seven-zone acceptance. Integration/push/cleanup remain pending.
+
+### 2026-09-23 — Final DEZ fireball checkpoint after `79b516486`
+
+Added the invisible airborne/floor emitter and its three ROM-script flame
+variants. Preserved the shipped undoubled table index at `$809A6`, the ground
+transition's removed return address, allocation cadence, subtype-specific XY/X
+tracking and native root-slot lifetime. No live registration or completion claim.
+
+Task-tree queued `-Dmse=off -Ds3k.rom.path=<absolute root S3K ROM> -Dtest=TestDezFinalFireball test`:
+five passed, zero skips. Separate queued `-Pguards` selection of
+`TestRemainingRewindTailInventory,TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard`:
+three passed, zero skips. The guard confirms the two added isolated classes:
+1286 total / 1046 isolated / 240 graph / zero missing codecs; no tail exception
+was added. These are focused checks, not campaign-wide validation.
+
+Next dependency research found `DdzBossMasterEmeraldObjectInstance` currently
+embeds its `$8141E` color scripts in Java. The equivalent DEZ `$813AA` scripts
+must load palette bytes from ROM; reconcile the existing DDZ implementation
+against the same runtime-asset invariant during that work. Native scripts use
+shared `Palette_rotation_data`, so check overlap/reset ownership across root
+emerald retirement and escape-ship emerald initialization before choosing the
+state owner. This is a newly identified validation/implementation obligation,
+not a claim that DDZ was fully verified before it.

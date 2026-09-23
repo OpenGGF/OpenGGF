@@ -3688,3 +3688,32 @@ fireballs, escape/ending and connected screen/plane surfaces are still required
 before live route/media and native parity claims. The earlier six sequence
 checks plus five core checks and 78 art checks passed (89 total, zero skips);
 extended boundary/retirement and loading verification follows in the audit.
+
+### 2026-09-23 — Final fireball emission after `79b516486`
+
+`DezFinalFireball` ports `Obj_DEZ3_Boss_Fireball` / `$80956..$80A26` and its
+`$80A3A` flame children. The controller is invisible: every second airborne
+pass attempts one forward child, then at Y >= `$C7` it fixes Y to `$CF` and
+enters a three-pass floor cadence. Floor emissions alternate subtypes 1/2
+and Y `$D7/$CF`, ending immediately when relative X reaches `$300`. Failed
+allocations still consume movement and cadence; there is no retry/healing.
+
+Shipped-ROM detail at `loc_809A6`: d1 receives the old frame index doubled,
+but the lookup uses the **new undoubled d0**. Consequently `byte_809EE` yields
+`(8,-4),(-4,4),(8,8)` repeatedly, not its visually formatted table pairs
+`(8,8),(-4,4),(12,12)`. The implementation preserves this indexing rather
+than repairing the apparent intent. `loc_809CA` discards the caller return
+address, avoiding the normal parent-Y refresh on the ground-entry dispatch.
+
+All flame subtypes initialize from `ObjDat3_8129E` at frame 6, high priority,
+collision `$8B` and fire-shield reaction `$10`. Four-byte scripts advance past
+their initial record on the next dispatch. Airborne subtype 0 tracks both
+parent coordinates; floor flames track X only, so script Y-offset changes
+must not move the fixed world Y. The script sentinel schedules deletion but
+its current dispatch still draws and publishes touch.
+
+Neither controller nor flames checks the root's lifetime bits. Their parent
+is a native SST address: empty slots contribute zero words and reused slots
+contribute the new occupant's coordinates. Captured scalar slots preserve that
+behavior without dangling Java graph identities. This remains an unregistered
+component until the root and production final-arena entry are connected.

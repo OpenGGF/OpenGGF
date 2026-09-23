@@ -142,3 +142,14 @@ The root is still a test owner, laser layout surfaces remain unconnected, and
 attack input is delivered directly in component tests. Live controller entry,
 full graph completion, moving render/native matching and viewport/roster/donor
 obligations remain open. No new final-arena video is claimed by this checkpoint.
+
+#### Fireball component coverage (2026-09-23)
+
+Five ROM-backed `TestDezFinalFireball` cases pass with zero skips for the shipped
+undoubled airborne lookup, two-pass cadence, ground-entry Y-refresh bypass,
+three-pass floor alternation and immediate range deletion, all three flame
+scripts, collision/fire-shield declarations, exhausted allocation and root-slot
+retirement with restore/replay. The separate helper/field/inventory guards pass
+three cases without skips; inventory is 1286 total / 1046 isolated / 240 graph /
+zero missing codecs. Root-triggered emissions, actual shield contact, full
+encounter route and rendered/native acceptance remain open.

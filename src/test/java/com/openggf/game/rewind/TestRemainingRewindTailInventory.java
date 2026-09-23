@@ -171,7 +171,8 @@ class TestRemainingRewindTailInventory {
         // Final DEZ hand/finger probes pass in isolation; dying-slot graph has focused coverage.
         // Final DEZ core adds one isolated pass; pending-hit parent graph is covered separately.
         // Mouth/button and beam/particle add four isolated passes with focused graph coverage.
-        return new TailInventory(1284, 1044, 240, 0, buckets);
+        // Final fire emitter and flame retain scalar SST addresses and probe independently.
+        return new TailInventory(1286, 1046, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
