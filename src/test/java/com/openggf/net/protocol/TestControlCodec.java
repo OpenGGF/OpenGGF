@@ -137,4 +137,38 @@ class TestControlCodec {
                 null, 0, null, null));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(token));
     }
+
+    @Test
+    void rejectsMalformedJoinMetadataButPreservesMasterAdmission() {
+        String masterAdmission = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("master-token", -1, null, null));
+        assertInstanceOf(ControlMessage.JoinAccepted.class,
+                ControlCodec.decode(masterAdmission).message());
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decodeRoom(masterAdmission));
+
+        String negativeRoomSlot = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("room-token", -2, null, null));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(negativeRoomSlot));
+
+        String missingRoom = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("room-token", 0, null, null));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(missingRoom));
+
+        String invalidSlot = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("room-token", Protocol.MAX_PLAYERS_RELAY,
+                        new ControlMessage.RoomDescriptor("LAN Room", "s3k", 0, 0,
+                                "OPEN", null, 8, false), null));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(invalidSlot));
+
+        String missingSnapshot = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("room-token", 0,
+                        new ControlMessage.RoomDescriptor("LAN Room", "s3k", 0, 0,
+                                "OPEN", null, 8, false), null));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(missingSnapshot));
+    }
 }

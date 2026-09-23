@@ -417,6 +417,10 @@ public final class MasterClient implements AutoCloseable {
                 case ControlMessage.PowChallenge challenge ->
                         Thread.ofVirtual().start(() -> solveChallenge(socket, challenge, admitted));
                 case ControlMessage.JoinAccepted accepted -> {
+                    if (accepted.playerSlot() != -1 || accepted.room() != null
+                            || accepted.round() != null) {
+                        throw new ProtocolViolationException("invalid master admission");
+                    }
                     joinAccepted = accepted;
                     open = true;
                     admitted.complete(this);
@@ -520,12 +524,14 @@ public final class MasterClient implements AutoCloseable {
 
     private static <T> boolean completeNext(
             ConcurrentLinkedQueue<CompletableFuture<T>> queue, T value, Throwable error) {
-        CompletableFuture<T> future;
-        while ((future = queue.poll()) != null && future.isDone()) {
-            // discard timed-out/cancelled requests before matching the next reply
-        }
+        CompletableFuture<T> future = queue.poll();
         if (future == null) {
             return false;
+        }
+        // A timed-out request still owns its reply position. Dropping that reply
+        // is safer than completing a later request with stale room metadata.
+        if (future.isDone()) {
+            return true;
         }
         if (error == null) {
             future.complete(value);
@@ -563,7 +569,7 @@ public final class MasterClient implements AutoCloseable {
 
         void acceptText(String text) {
             try {
-                enqueue(new RaceClient.Control(ControlCodec.decode(text).message()));
+                enqueue(new RaceClient.Control(ControlCodec.decodeRoom(text).message()));
             } catch (ProtocolViolationException e) {
                 signalDisconnected("protocol violation");
                 close();
