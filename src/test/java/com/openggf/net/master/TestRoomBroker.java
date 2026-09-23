@@ -35,6 +35,7 @@ class TestRoomBroker {
     static final class FakeRelays implements RoomBroker.RelayRoomDirectory {
         final List<String> created = new ArrayList<>();
         final List<String> attached = new ArrayList<>();
+        final List<String> removed = new ArrayList<>();
 
         @Override public String createRelayRoom(SessionRegistry.RoomEntry entry) {
             created.add(entry.roomId());
@@ -46,7 +47,7 @@ class TestRoomBroker {
             attached.add(roomId + ":" + fingerprint);
             return true;
         }
-        @Override public void hostLeft(String roomId) { }
+        @Override public void hostLeft(String roomId) { removed.add(roomId); }
     }
 
     static final class FakeTunnels implements RoomBroker.DirectTunnelDirectory {
@@ -234,6 +235,39 @@ class TestRoomBroker {
         broker.onText(browser, ControlCodec.encode(browserToken,
                 new ControlMessage.RoomListRequest(null, 0)));
         assertTrue(((ControlMessage.RoomListResult) lastMessage(browser)).rooms().isEmpty());
+    }
+
+    @Test
+    void strikeLimitRemovesRelayRoomBeforeDisconnectCallback(@TempDir Path hostDir)
+            throws Exception {
+        FakeConnection host = new FakeConnection();
+        String token = admit(host, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
+                "RELAY", 0, "0.6:cafe")));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        for (int i = 0; i < 3; i++) {
+            broker.onText(host, ControlCodec.encode(token, new ControlMessage.Chat("illegal")));
+        }
+        assertEquals(List.of(roomId), relays.removed);
+        assertTrue(registry.find(roomId).isEmpty());
+        assertTrue(broker.fingerprintForSessionToken(token).isEmpty());
+        broker.onDisconnected(host);
+        assertEquals(List.of(roomId), relays.removed);
+    }
+
+    @Test
+    void rejectsRoomDescriptorFieldsThatCouldPoisonBrowserFrames(@TempDir Path hostDir)
+            throws Exception {
+        FakeConnection host = new FakeConnection();
+        String token = admit(host, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("x".repeat(65), "s3k", 0, 0,
+                        "OPEN", null, 8, false), "RELAY", 0, "0.6:cafe")));
+        assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(host));
+        assertTrue(registry.list(null).isEmpty());
     }
 
     @Test

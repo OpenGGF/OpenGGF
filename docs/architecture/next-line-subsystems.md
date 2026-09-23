@@ -41,7 +41,17 @@ attempt at a time per player, and allows ghost progress no more than 12 frames a
 server-observed elapsed time. A finish is one-shot: its input hash must be a SHA-256 digest,
 and a pending verifier verdict remains bound to that exact claim. JSON control envelopes
 reject duplicate and unknown fields. Completed or void verification jobs are retained only
-for the configured recording-retention window. Operator commands:
+for the configured recording-retention window.
+
+Within a round, finishes retain the admitted participant session and identity even when a
+departed player's slot is reused. Clean-round credit, replay verdicts, and spot checks use
+that retained ownership. Room display names and selected characters are bounded to 64 and
+32 UTF-8 bytes respectively; admission and character changes must keep the serialized
+room roster within the 64 KiB client control-frame limit, including a full 256-player
+relay roster. Broker room descriptor fields
+are bounded before they enter browser results.
+
+Operator commands:
 
 ```bash
 java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.net.GhostLoadTestTool --n 256 --duration 30 --mix adversarial

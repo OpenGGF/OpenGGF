@@ -118,6 +118,27 @@ class TestHostRoundEngine {
     }
 
     @Test
+    void reusedSlotKeepsFinishAndVerificationBoundToOriginalParticipant() {
+        engine.setVerifiedRoom(true);
+        engine.startRound(config);
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        engine.onTick();
+        engine.onAttemptFinish(0, "old-session", "old-fingerprint", "Old", "sonic",
+                finish(1, 4000), false);
+        engine.onPlayerLeft(0);
+        engine.onAttemptFinish(0, "new-session", "new-fingerprint", "New", "tails",
+                finish(1, 3000), false);
+
+        assertTrue(engine.hasBestForParticipant("old-session"));
+        assertTrue(engine.hasBestForParticipant("new-session"));
+        assertEquals(List.of("new-fingerprint", "old-fingerprint"),
+                engine.results().stream().map(HostRoundEngine.Result::fingerprint).toList());
+        engine.onVerdictEvidence("old-fingerprint", 1, "ab".repeat(32), false);
+        assertFalse(engine.hasBestForParticipant("old-session"));
+        assertTrue(engine.hasBestForParticipant("new-session"));
+    }
+
+    @Test
     void snapshotCarriesPhaseConfigAndStandings() {
         engine.startRound(config);
         ControlMessage.RoundSnapshot snapshot = engine.snapshot();

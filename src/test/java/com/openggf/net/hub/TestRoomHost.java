@@ -6,12 +6,16 @@ import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.GhostPackets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,6 +65,53 @@ class TestRoomHost {
         assertEquals("LOBBY", joinA.round().phase());
         assertEquals(2, ((ControlMessage.RoomState) lastMessage(a)).players().size());
         assertEquals(2, room.playerCount());
+    }
+
+    @Test
+    void rejectsOversizeDisplayNameAndIgnoresOversizeCharacter() throws Exception {
+        FakeHubConnection rejected = new FakeHubConnection();
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("oversize"));
+        ClientHandshake handshake = new ClientHandshake(identity, "x".repeat(65), FP);
+        room.onConnected(rejected);
+        room.onText(rejected, ControlCodec.encode(null, handshake.hello()));
+        room.onText(rejected, ControlCodec.encode(null,
+                handshake.onWelcome((ControlMessage.Welcome) lastMessage(rejected))));
+        assertInstanceOf(ControlMessage.JoinRejected.class, lastMessage(rejected));
+        assertEquals(0, room.playerCount());
+
+        FakeHubConnection accepted = new FakeHubConnection();
+        String token = admit(accepted, "Player", dir.resolve("accepted")).sessionToken();
+        room.onText(accepted, ControlCodec.encode(token,
+                new ControlMessage.SelectCharacter("x".repeat(33))));
+        assertEquals("sonic", room.players().getFirst().character());
+        room.onText(accepted, ControlCodec.encode(token,
+                new ControlMessage.SelectCharacter("tails")));
+        assertEquals("tails", room.players().getFirst().character());
+        assertTrue(accepted.text.stream().filter(text -> ControlCodec.decode(text).message()
+                        instanceof ControlMessage.RoomState)
+                .allMatch(text -> text.getBytes(StandardCharsets.UTF_8).length
+                        <= Protocol.MAX_CONTROL_BYTES));
+    }
+
+    @Test
+    void maximalTwoHundredFiftySixPlayerRosterFitsClientFrame() {
+        List<ControlMessage.PlayerInfo> players = new ArrayList<>();
+        for (int slot = 0; slot < Protocol.MAX_PLAYERS_RELAY; slot++) {
+            players.add(new ControlMessage.PlayerInfo(slot, "f".repeat(64),
+                    "n".repeat(64), "c".repeat(32), false));
+        }
+        String wire = ControlCodec.encode(null, new ControlMessage.RoomState(players));
+        assertTrue(wire.getBytes(StandardCharsets.UTF_8).length
+                <= Protocol.MAX_CONTROL_BYTES);
+        String tunneled = ControlCodec.encode("t".repeat(32),
+                new ControlMessage.RelayGuestText(255, wire));
+        assertTrue(tunneled.getBytes(StandardCharsets.UTF_8).length
+                <= Protocol.MAX_MASTER_FRAME_BYTES);
+        assertEquals(wire, ((ControlMessage.RelayGuestText) ControlCodec.decode(
+                tunneled, Protocol.MAX_MASTER_FRAME_BYTES).message()).text());
+        assertEquals(Protocol.MAX_PLAYERS_RELAY,
+                ((ControlMessage.RoomState) ControlCodec.decode(wire).message())
+                        .players().size());
     }
 
     @Test
