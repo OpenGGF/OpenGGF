@@ -2,7 +2,7 @@ package com.openggf.net.protocol;
 
 /** Wire-protocol constants for multiplayer time attack. */
 public final class Protocol {
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
     public static final int MAX_CONTROL_BYTES = 8192;
     public static final int MAX_BINARY_BYTES = 4096;
     public static final int MAX_CHAT_CHARS = 200;

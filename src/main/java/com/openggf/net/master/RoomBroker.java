@@ -383,6 +383,12 @@ public final class RoomBroker {
             send(member, new ControlMessage.RoomCreateRejected("invalid direct port"));
             return;
         }
+        if ("DIRECT".equals(routing) && (create.certificateSha256() == null
+                || !create.certificateSha256().matches("[0-9a-f]{64}"))) {
+            send(member, new ControlMessage.RoomCreateRejected(
+                    "direct rooms require a TLS certificate pin"));
+            return;
+        }
         if (!ladder.canCreateRoom(member.fingerprint)) {
             send(member, new ControlMessage.RoomCreateRejected(
                     "new identities cannot create rooms"));
@@ -392,7 +398,8 @@ public final class RoomBroker {
         try {
             entry = registry.create(descriptor, routing,
                     member.fingerprint, member.connection.remoteHost(), create.directPort(),
-                    create.determinismFingerprint(), create.voteTrackKeys());
+                    create.determinismFingerprint(), create.voteTrackKeys(),
+                    create.certificateSha256());
             if ("RELAY".equals(routing)) {
                 relays.createRelayRoom(entry);
                 member.joinGrantedRooms.add(entry.roomId());
@@ -476,7 +483,7 @@ public final class RoomBroker {
                 "DIRECT".equals(room.routing()) ? room.hostAddress() : null,
                 room.directPort(), "DIRECT".equals(room.routing())
                 ? room.hostFingerprint() : masterIdentity.fingerprint(),
-                room.determinismFingerprint()));
+                room.determinismFingerprint(), room.certificateSha256()));
     }
 
     private void attach(Member member, String roomId) {

@@ -1580,6 +1580,12 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
             <artifactId>netty-all</artifactId>
             <version>4.1.115.Final</version>
         </dependency>
+        <!-- Netty's runtime self-signed TLS certificates require Bouncy Castle on Java 21. -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.86</version>
+        </dependency>
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>

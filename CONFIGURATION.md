@@ -331,12 +331,20 @@ settings. Playback shortcuts do not run on the master title.
 
 Recordings has a separate options page for the target frame, pause-on-desync,
 fast-forward, playback, and full recording details. Time Attack exposes a
-visible **Start Run**, **Create LAN Room**, **Join LAN Room**, or **Browse Rooms** action; network addresses and lobby chat support the same
+visible **Start Run**, **Create LAN Room**, **Join LAN Room**, or **Browse Rooms** action; LAN invite codes and lobby chat support the same
 keyboard/controller editor. Room creation, refresh, paging, and lobby actions
 are visible choices. Mods exposes **Details**, **Order**, **Notices**, and
 **Save + Back**, with paginated findings and confirmations. Trace replay lists,
 loading/failure pages, standalone New Game/Continue, and help share the same
 native typography and keyboard/controller navigation.
+
+Creating a LAN room shows **Copy LAN Invite / Chat** in the host lobby. Opening it
+copies a template such as `HOST_IP:27888#<share-code>`; replace `HOST_IP` with the
+host's reachable LAN IP or name before sharing the entire code. Joining requires
+that complete invite, including its certificate and host-identity pins. Plain
+addresses and `ws://` connections are rejected; the code should be shared through
+a trusted channel. The invite editor accepts up to 192 characters for IPv6 and
+long hostnames.
 
 Profiles are persistent defaults for future manual launches, but applying a profile is
 session-only. A launch can temporarily override live rewind, cross-game donation, debug
@@ -634,8 +642,8 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 |-----|-----------|------|---------|-------------|
 | `TIME_ATTACK_RETRY_KEY` | `timeAttack.retryKey` | key | `R` | Instant retry to act start during solo time attack. |
 | `TIME_ATTACK_MENU_KEY` | `timeAttack.menuKey` | key | `F10` | Opens the solo Time Attack menu from the master title screen. |
-| `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | int | `27888` | TCP/WebSocket port for player-hosted LAN race rooms. |
-| `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | string | `""` | Most recently joined LAN race address. |
+| `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | int | `27888` | Port for player-hosted rooms using pinned TLS WebSocket for both manual LAN and master-listed direct joins. |
+| `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | string | `""` | Most recently joined complete LAN invite (address and share code). |
 | `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | string | `""` | Multiplayer display name; blank uses the identity prefix. |
 | `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | string | `""` | Master-server WebSocket URL for internet race browsing. |
 | `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | bool | `false` | Development-only trust-all TLS mode for the master server. |
@@ -918,8 +926,8 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `LIVE_REWIND_DOUBLE_SPEED_KEY` | `rewind.liveDoubleSpeedKey` | `340` | Left Shift | Modifier held together with the rewind key for double-speed rewind (two engine steps per frame; reverse audio pitches up, and the VHS effect shows a third tear band). The mirrored left/right variant of a modifier key also counts. |
 | `TIME_ATTACK_RETRY_KEY` | `timeAttack.retryKey` | `82` | R | Instantly retry the current solo time attack from the act start. |
 | `TIME_ATTACK_MENU_KEY` | `timeAttack.menuKey` | `299` | F10 | Opens the solo Time Attack menu from the master title screen. |
-| `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | `27888` |  | TCP/WebSocket port for player-hosted LAN race rooms. |
-| `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | `""` |  | Most recently joined LAN race address. |
+| `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | `27888` |  | Port for player-hosted rooms using pinned TLS WebSocket for both manual LAN and master-listed direct joins. |
+| `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | `""` |  | Most recently joined complete LAN invite (address and share code). |
 | `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | `""` |  | Multiplayer display name; blank uses the identity prefix. |
 | `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | `""` |  | Master-server WebSocket URL for internet race browsing. |
 | `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | `false` |  | Development-only trust-all TLS mode for the master server. |

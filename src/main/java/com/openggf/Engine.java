@@ -285,6 +285,7 @@ public class Engine {
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
 	private RaceHostServer raceHostServer;
+	private String lanInviteTemplate;
 	private RaceConnection raceConnection;
 	private MasterClient masterClient;
 	private String masterRoomId;
@@ -2060,12 +2061,19 @@ public class Engine {
 			RoomHostConfig room = new RoomHostConfig(displayName + "'s room",
 					request.gameId(), request.zone(), request.act(), policy, lockedCharacter,
 					8, fingerprint, VoteTrackPools.forGame(request.gameId()));
-			raceHostServer = RaceHostServer.start(
+			raceHostServer = com.openggf.net.host.DirectRoomTls.start(
 					configService.getInt(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT),
 					room, identity, TrackValidationProfileSource.none());
+			String certificatePin = com.openggf.net.host.DirectRoomTls
+					.certificateSha256(raceHostServer);
+			lanInviteTemplate = "HOST_IP:" + raceHostServer.port() + "#"
+					+ com.openggf.net.client.DirectJoinAddress.shareCode(
+							certificatePin, identity.fingerprint());
+			LOGGER.info("LAN invite (replace HOST_IP with this computer's LAN address): "
+					+ lanInviteTemplate);
 			RaceClient client = RaceClient.connect(
-					URI.create("ws://127.0.0.1:" + raceHostServer.port() + "/race"),
-					identity, displayName, fingerprint)
+					URI.create("wss://127.0.0.1:" + raceHostServer.port() + "/race"),
+					identity, displayName, fingerprint, certificatePin, identity.fingerprint())
 					.get(RaceClient.JOIN_TIMEOUT_MILLIS + 2000, TimeUnit.MILLISECONDS);
 			finishRoomJoin(client);
 		} catch (Exception e) {
@@ -2080,9 +2088,11 @@ public class Engine {
 			PlayerIdentity identity = PlayerIdentity.loadOrCreate(Path.of("identity"));
 			String displayName = multiplayerDisplayName(identity);
 			String fingerprint = fingerprintForGame(request.gameId());
-			URI uri = joinUri(address,
+			com.openggf.net.client.DirectJoinAddress invite =
+					com.openggf.net.client.DirectJoinAddress.parse(address,
 					configService.getInt(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT));
-			RaceClient client = RaceClient.connect(uri, identity, displayName, fingerprint)
+			RaceClient client = RaceClient.connect(invite.uri(), identity, displayName,
+					fingerprint, invite.certificateSha256(), invite.hostFingerprint())
 					.get(RaceClient.JOIN_TIMEOUT_MILLIS + 2000, TimeUnit.MILLISECONDS);
 			ControlMessage.RoomDescriptor room = client.joinAccepted().room();
 			multiplayerRoundConfig = new ControlMessage.RoundConfig(room.gameId(),
@@ -2203,7 +2213,7 @@ public class Engine {
 						multiplayerRoundConfig.act(), multiplayerRoundConfig.characterPolicy(),
 						multiplayerRoundConfig.lockedCharacter(), 8, fingerprint,
 						VoteTrackPools.forGame(multiplayerRoundConfig.gameId()));
-				raceHostServer = RaceHostServer.start(
+				raceHostServer = com.openggf.net.host.DirectRoomTls.start(
 						configService.getInt(SonicConfiguration.TIME_ATTACK_NET_HOST_PORT),
 						room, identity, TrackValidationProfileSource.none());
 			}
@@ -2212,9 +2222,10 @@ public class Engine {
 					multiplayerRoundConfig.zone(), multiplayerRoundConfig.act(),
 					multiplayerRoundConfig.characterPolicy(),
 					multiplayerRoundConfig.lockedCharacter(), 8, false);
-			ControlMessage.RoomCreated created = masterClient.createRoom(descriptor,
+			ControlMessage.RoomCreated created = com.openggf.net.client.DirectRoomRegistration.createRoom(masterClient, descriptor,
 					routing, direct ? raceHostServer.port() : 0, fingerprint,
-					VoteTrackPools.forGame(multiplayerRoundConfig.gameId()))
+					VoteTrackPools.forGame(multiplayerRoundConfig.gameId()),
+					direct ? com.openggf.net.host.DirectRoomTls.certificateSha256(raceHostServer) : null)
 					.get(MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, TimeUnit.MILLISECONDS);
 			masterRoomId = created.roomId();
 			masterAdvertisedZone = descriptor.zone();
@@ -2309,6 +2320,10 @@ public class Engine {
 		masterTitleScreen.openRaceLobby(multiplayerRaceCoordinator,
 				hostingTimeAttackRoom, multiplayerRoundConfig, multiplayerCharacter,
 				this::launchMultiplayerRound, this::leaveTimeAttackRoom);
+		if (lanInviteTemplate != null) {
+            com.openggf.game.RaceLobbyShareCode.show(masterTitleScreen, lanInviteTemplate,
+                    value -> org.lwjgl.glfw.GLFW.glfwSetClipboardString(window, value));
+		}
 	}
 
 	private void launchMultiplayerRound(TimeAttackLaunchRequest request) {
@@ -2335,26 +2350,6 @@ public class Engine {
 		String configured = configService.getString(SonicConfiguration.TIME_ATTACK_NET_DISPLAY_NAME);
 		return configured == null || configured.isBlank()
 				? identity.fingerprint().substring(0, 8) : configured.trim();
-	}
-
-	private static URI joinUri(String address, int defaultPort) {
-		String value = address == null ? "" : address.trim();
-		if (value.isEmpty()) {
-			throw new IllegalArgumentException("join address is empty");
-		}
-		if (value.startsWith("ws://") || value.startsWith("wss://")) {
-			URI supplied = URI.create(value);
-			return supplied.getPath() == null || supplied.getPath().isBlank()
-					? URI.create(value + "/race") : supplied;
-		}
-		String host = value;
-		int port = defaultPort;
-		int colon = value.lastIndexOf(':');
-		if (colon > 0 && value.indexOf(':') == colon) {
-			host = value.substring(0, colon);
-			port = Integer.parseInt(value.substring(colon + 1));
-		}
-		return URI.create("ws://" + host + ":" + port + "/race");
 	}
 
 	private static String rootMessage(Throwable failure) {
@@ -2389,6 +2384,7 @@ public class Engine {
 			masterClient = null;
 		}
 		masterRoomId = null;
+		lanInviteTemplate = null;
 		masterAdvertisedZone = -1;
 		masterAdvertisedAct = -1;
 		if (raceHostServer != null) {

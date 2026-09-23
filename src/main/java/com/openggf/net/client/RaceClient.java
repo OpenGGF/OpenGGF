@@ -7,9 +7,14 @@ import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.net.URI;
+import java.net.Socket;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +23,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.HexFormat;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 /**
  * Network-thread WebSocket client. Listener callbacks only enqueue typed events;
@@ -75,9 +85,26 @@ public final class RaceClient implements RaceConnection {
     public static CompletableFuture<RaceClient> connect(
             URI wsUri, PlayerIdentity identity, String displayName,
             String determinismFingerprint) {
+        return connect(wsUri, identity, displayName, determinismFingerprint, null, null);
+    }
+
+    /** Connects to a broker-listed direct room using its pinned certificate and host identity. */
+    public static CompletableFuture<RaceClient> connect(
+            URI wsUri, PlayerIdentity identity, String displayName,
+            String determinismFingerprint, String certificateSha256,
+            String expectedServerId) {
+        if ((certificateSha256 == null) != (expectedServerId == null)
+                || (expectedServerId != null && expectedServerId.isBlank())) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException(
+                    "direct-room certificate pin and host identity are both required"));
+        }
+        if (certificateSha256 != null && !"wss".equalsIgnoreCase(wsUri.getScheme())) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException(
+                    "pinned direct rooms require wss"));
+        }
         RaceClient client = new RaceClient();
         ClientHandshake handshake = new ClientHandshake(
-                identity, displayName, determinismFingerprint);
+                identity, displayName, determinismFingerprint, expectedServerId);
         CompletableFuture<RaceClient> joined = new CompletableFuture<>();
 
         WebSocket.Listener listener = new WebSocket.Listener() {
@@ -196,9 +223,16 @@ public final class RaceClient implements RaceConnection {
             }
         };
 
-        HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(JOIN_TIMEOUT_MILLIS))
-                .build()
+        HttpClient.Builder http = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(JOIN_TIMEOUT_MILLIS));
+        if (certificateSha256 != null) {
+            try {
+                http.sslContext(pinnedSslContext(certificateSha256));
+            } catch (GeneralSecurityException | IllegalArgumentException e) {
+                return CompletableFuture.failedFuture(e);
+            }
+        }
+        http.build()
                 .newWebSocketBuilder()
                 .buildAsync(wsUri, listener)
                 .whenComplete((ws, error) -> {
@@ -225,6 +259,76 @@ public final class RaceClient implements RaceConnection {
                     }
                 });
         return joined;
+    }
+
+    private static SSLContext pinnedSslContext(String certificateSha256)
+            throws GeneralSecurityException {
+        final byte[] expected;
+        try {
+            expected = HexFormat.of().parseHex(certificateSha256);
+        } catch (IllegalArgumentException e) {
+            throw new GeneralSecurityException("invalid direct-room certificate pin", e);
+        }
+        if (expected.length != 32) {
+            throw new GeneralSecurityException("invalid direct-room certificate pin length");
+        }
+        X509ExtendedTrustManager pinning = new X509ExtendedTrustManager() {
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType)
+                    throws CertificateException {
+                throw new CertificateException("client certificates are not accepted");
+            }
+
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType,
+                                           Socket socket) throws CertificateException {
+                checkClientTrusted(chain, authType);
+            }
+
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType,
+                                           SSLEngine engine) throws CertificateException {
+                checkClientTrusted(chain, authType);
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType)
+                    throws CertificateException {
+                if (chain == null || chain.length != 1) {
+                    throw new CertificateException("unexpected direct-room certificate chain");
+                }
+                byte[] actual;
+                try {
+                    actual = MessageDigest.getInstance("SHA-256").digest(chain[0].getEncoded());
+                } catch (GeneralSecurityException e) {
+                    throw new CertificateException("cannot inspect direct-room certificate", e);
+                }
+                if (!MessageDigest.isEqual(expected, actual)) {
+                    throw new CertificateException("direct-room certificate mismatch");
+                }
+                chain[0].checkValidity();
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType,
+                                           Socket socket) throws CertificateException {
+                checkServerTrusted(chain, authType);
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType,
+                                           SSLEngine engine) throws CertificateException {
+                checkServerTrusted(chain, authType);
+            }
+
+            @Override
+            public X509Certificate[] getAcceptedIssuers() {
+                return new X509Certificate[0];
+            }
+        };
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(null, new TrustManager[] {pinning}, null);
+        return context;
     }
 
     public List<InboundEvent> drainInbound() {

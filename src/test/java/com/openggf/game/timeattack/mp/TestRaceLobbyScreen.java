@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.glfw.GLFW.*;
@@ -75,6 +76,19 @@ class TestRaceLobbyScreen {
         assertEquals(0, leaves.get());
         press(screen, input, GLFW_KEY_ESCAPE);
         assertEquals(1, leaves.get());
+    }
+
+    @Test
+    void hostInviteActionCopiesCompleteTemplate() {
+        RaceLobbyScreen screen = screen(new ArrayList<>(), new ClientRaceSession(() -> 0),
+                true, new AtomicInteger(), new AtomicInteger());
+        String invite = "HOST_IP:27888#" + "A".repeat(86);
+        AtomicReference<String> clipboard = new AtomicReference<>();
+        screen.setShareCode(invite, clipboard::set);
+        InputHandler input = new InputHandler();
+        press(screen, input, GLFW_KEY_UP); // Invite/history.
+        press(screen, input, GLFW_KEY_ENTER);
+        assertEquals(invite, clipboard.get());
     }
 
     private static RaceLobbyScreen screen(List<ControlMessage> sent, ClientRaceSession session,

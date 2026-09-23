@@ -2,6 +2,7 @@ package com.openggf.net.client;
 
 import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.host.RaceHostServer;
+import com.openggf.net.host.DirectRoomTls;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
@@ -15,11 +16,13 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Timeout(120)
 class TestMasterClient {
@@ -82,7 +85,8 @@ class TestMasterClient {
         establish(dir.resolve("host"));
         ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
                 "Lan", "s3k", 0, 0, "OPEN", null, 8, false);
-        String roomId = host.createRoom(descriptor, "DIRECT", 1, FP)
+        String roomId = host.createRoom(descriptor, "DIRECT", 1, FP,
+                List.of(), "ab".repeat(32))
                 .get(10, TimeUnit.SECONDS).roomId();
 
         try (RaceHostServer hostServer = RaceHostServer.start(0,
@@ -104,6 +108,66 @@ class TestMasterClient {
             assertTrue(room.isOpen());
             assertEquals(0, room.playerSlot());
             room.close();
+            host.close();
+        }
+    }
+
+    @Test
+    void directTunnelFallbackRejectsRelayedWelcomeFromDifferentHost(@TempDir Path dir)
+            throws Exception {
+        server = MasterServer.start(TestMasterServer.testConfig(), dir);
+        MasterClient advertisedHost = connect(dir.resolve("advertised"), "HOST");
+        establish(dir.resolve("advertised"));
+        ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
+                "Lan", "s3k", 0, 0, "OPEN", null, 8, false);
+        String roomId = advertisedHost.createRoom(descriptor, "DIRECT", 1, FP,
+                List.of(), "ab".repeat(32)).get(10, TimeUnit.SECONDS).roomId();
+
+        try (RaceHostServer otherHostServer = RaceHostServer.start(0,
+                new RoomHostConfig("Lan", "s3k", 0, 0, "OPEN", null, 8, FP),
+                PlayerIdentity.loadOrCreate(dir.resolve("differentHost")),
+                TrackValidationProfileSource.none())) {
+            advertisedHost.bindHostLink(HostMasterLink.forServer(otherHostServer,
+                    new HostMasterLink.MessageSink() {
+                        @Override public void sendControl(ControlMessage message) {
+                            advertisedHost.sendControl(message);
+                        }
+                        @Override public void sendBinary(byte[] data) {
+                            advertisedHost.sendBinary(data);
+                        }
+                    }));
+            MasterClient guest = connect(dir.resolve("guest"), "GUEST");
+            Exception failure = assertThrows(Exception.class, () -> guest.joinRoom(roomId,
+                    PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", FP)
+                    .get(30, TimeUnit.SECONDS));
+            assertTrue(failure.toString().contains("host identity mismatch"), failure.toString());
+            guest.close();
+            advertisedHost.close();
+        }
+    }
+
+    @Test
+    void brokerPinnedDirectRoomJoinsOverTls(@TempDir Path dir) throws Exception {
+        server = MasterServer.start(TestMasterServer.testConfig(), dir);
+        MasterClient host = connect(dir.resolve("host"), "HOST");
+        establish(dir.resolve("host"));
+        PlayerIdentity hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
+        ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
+                "Secure", "s3k", 0, 0, "OPEN", null, 8, false);
+        try (RaceHostServer hostServer = DirectRoomTls.start(0,
+                new RoomHostConfig("Secure", "s3k", 0, 0, "OPEN", null, 8, FP),
+                hostIdentity, TrackValidationProfileSource.none())) {
+            String roomId = host.createRoom(descriptor, "DIRECT", hostServer.port(), FP,
+                    List.of(), DirectRoomTls.certificateSha256(hostServer))
+                    .get(10, TimeUnit.SECONDS).roomId();
+            MasterClient guest = connect(dir.resolve("guest"), "GUEST");
+            RaceConnection room = guest.joinRoom(roomId,
+                            PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", FP)
+                    .get(15, TimeUnit.SECONDS);
+            assertTrue(room instanceof RaceClient);
+            assertTrue(room.isOpen());
+            room.close();
+            guest.close();
             host.close();
         }
     }

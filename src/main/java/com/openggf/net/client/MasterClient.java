@@ -110,10 +110,18 @@ public final class MasterClient implements AutoCloseable {
     public CompletableFuture<ControlMessage.RoomCreated> createRoom(
             ControlMessage.RoomDescriptor descriptor, String routing, int directPort,
             String determinismFingerprint, List<String> voteTrackKeys) {
+        return createRoom(descriptor, routing, directPort, determinismFingerprint,
+                voteTrackKeys, null);
+    }
+
+    CompletableFuture<ControlMessage.RoomCreated> createRoom(
+            ControlMessage.RoomDescriptor descriptor, String routing, int directPort,
+            String determinismFingerprint, List<String> voteTrackKeys,
+            String certificateSha256) {
         CompletableFuture<ControlMessage.RoomCreated> future = new CompletableFuture<>();
         pendingCreates.add(future);
         sendControl(new ControlMessage.RoomCreate(descriptor, routing, directPort,
-                determinismFingerprint, voteTrackKeys));
+                determinismFingerprint, voteTrackKeys, certificateSha256));
         return future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
@@ -130,12 +138,17 @@ public final class MasterClient implements AutoCloseable {
         return requestJoin(roomId).thenCompose(result -> {
             if ("RELAY".equals(result.routing())) {
                 return relayHandshake(roomId, roomIdentity, displayName,
-                        determinismFingerprint);
+                        determinismFingerprint, result.hostServerId());
             }
-            URI directUri = URI.create("ws://" + result.directHost() + ":"
+            if (result.certificateSha256() == null || result.hostServerId() == null) {
+                return CompletableFuture.failedFuture(new RaceClient.JoinRejectedException(
+                        "direct room has no authenticated host identity"));
+            }
+            URI directUri = URI.create("wss://" + result.directHost() + ":"
                     + result.directPort() + "/race");
             return RaceClient.connect(directUri, roomIdentity, displayName,
-                            determinismFingerprint)
+                            determinismFingerprint, result.certificateSha256(),
+                            result.hostServerId())
                     .thenApply(client -> {
                         if (!java.util.Objects.equals(
                                 result.hostServerId(), client.serverId())) {
@@ -145,16 +158,16 @@ public final class MasterClient implements AutoCloseable {
                         }
                         return (RaceConnection) client;
                     }).exceptionallyCompose(error -> relayHandshake(roomId, roomIdentity,
-                            displayName, determinismFingerprint));
+                            displayName, determinismFingerprint, result.hostServerId()));
         });
     }
 
     private CompletableFuture<RaceConnection> relayHandshake(
             String roomId, PlayerIdentity roomIdentity, String displayName,
-            String determinismFingerprint) {
+            String determinismFingerprint, String expectedServerId) {
         try {
             return completeRoomHandshake(attachRelay(roomId), roomIdentity,
-                    displayName, determinismFingerprint);
+                    displayName, determinismFingerprint, expectedServerId);
         } catch (RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -172,10 +185,17 @@ public final class MasterClient implements AutoCloseable {
     public static CompletableFuture<RaceConnection> completeRoomHandshake(
             RaceConnection raw, PlayerIdentity identity, String displayName,
             String determinismFingerprint) {
+        return completeRoomHandshake(raw, identity, displayName,
+                determinismFingerprint, null);
+    }
+
+    private static CompletableFuture<RaceConnection> completeRoomHandshake(
+            RaceConnection raw, PlayerIdentity identity, String displayName,
+            String determinismFingerprint, String expectedServerId) {
         CompletableFuture<RaceConnection> joined = new CompletableFuture<>();
         Thread.ofVirtual().name("relay-room-handshake").start(() -> {
             ClientHandshake handshake = new ClientHandshake(
-                    identity, displayName, determinismFingerprint);
+                    identity, displayName, determinismFingerprint, expectedServerId);
             raw.sendControl(handshake.hello());
             long deadline = System.nanoTime()
                     + TimeUnit.MILLISECONDS.toNanos(RaceClient.JOIN_TIMEOUT_MILLIS);

@@ -302,8 +302,11 @@ caps, a global speed ceiling from the repo's physics constants).
 - Pre-parse per-connection and per-IP message/byte rate caps.
 - Handshake timeout, idle timeout, max concurrent connections per IP.
 - **TLS (`wss://`) required on the master** — integrity, privacy, and
-  front-proxy compatibility. Player-hosted direct connect may be plaintext
-  (LAN/VPN context).
+  front-proxy compatibility. Broker-listed player-hosted direct rooms also
+  require `wss://` with a fresh certificate digest pinned through the
+  authenticated broker session. Manual LAN joins likewise require `wss://`
+  and a complete invite carrying the certificate and host-identity pins;
+  a bare address or plaintext `ws://` is rejected before authentication.
 - Session tokens are issued by the **room authority** — whoever admits you:
   the master for brokered/relay rooms, the player-host for direct-connect
   rooms. The envelope carries the token from day 1 in both cases. Phase 2
@@ -364,7 +367,9 @@ caps, a global speed ceiling from the repo's physics constants).
 
 The rule embedded in this table: **every protocol field, storage interface,
 and hub check exists by phase 2–3; only the verifier service and its
-enforcement flip are deferred.** Nothing post-v1 requires a protocol break.
+enforcement flip are deferred.** Direct-room authentication subsequently added
+required certificate-pin fields and advanced the wire protocol from 1 to 2;
+version 1 peers cannot join version 2 control sessions.
 
 ## 12. Out of scope
 

@@ -43,6 +43,25 @@ and a pending verifier verdict remains bound to that exact claim. JSON control e
 reject duplicate and unknown fields. Completed or void verification jobs are retained only
 for the configured recording-retention window. Operator commands:
 
+Broker-listed `DIRECT` rooms use `wss://`. The host creates a fresh self-signed TLS
+certificate when its direct server starts; Netty's Java 21 certificate generator
+uses Bouncy Castle at runtime. The authenticated host registers the certificate's
+SHA-256 digest with the broker, which stores it with the room and returns it to
+joiners. A joining client pins that exact certificate and checks the broker-pinned
+host identity in `Welcome` before signing its challenge. The session token travels
+only after this TLS and identity check, so a fake endpoint cannot collect it and a
+live TCP relay sees ciphertext. The private certificate key is temporary and is
+deleted when the direct server closes. Manual LAN hosting uses the same authenticated
+server; its lobby displays and copies `HOST_IP:port#<share-code>`. The host replaces
+`HOST_IP` with a reachable LAN address before sharing. The 86-character unpadded
+base64url code contains both 32-byte pins. Manual join decodes those pins, requires
+`wss://`, and verifies both the certificate and host `Welcome` identity before
+sending any proof. A bare address or `ws://` has no safe identity source and is rejected.
+The code is a trust-on-sharing capability: guests must receive it through a trusted
+channel and should not accept an invite edited by an untrusted party.
+This required wire-field change uses protocol version 2; version 1 clients and
+servers cannot mix on control connections.
+
 ```bash
 java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.net.GhostLoadTestTool --n 256 --duration 30 --mix adversarial
 java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.verifier.VerifierMain --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data
