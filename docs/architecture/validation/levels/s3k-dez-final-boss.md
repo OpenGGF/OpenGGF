@@ -153,3 +153,20 @@ retirement with restore/replay. The separate helper/field/inventory guards pass
 three cases without skips; inventory is 1286 total / 1046 isolated / 240 graph /
 zero missing codecs. Root-triggered emissions, actual shield contact, full
 encounter route and rendered/native acceptance remain open.
+
+#### Emerald and palette component coverage (2026-09-23)
+
+Five ROM-backed `TestDezFinalEmerald` cases pass with zero skips: body visibility
+and immediate control-bit retirement, ship release/gravity/landing and parentless
+rewind, both ROM palette tables' 94-tick wrap and disabled pause, zone-owned cursor
+capture/replay/reset, and all-seven-Super-Emerald gating. `TestDdzRomPalettes`
+adds two passing cases for the actual DDZ emerald's shared state and both native
+boss flash rows/destinations. The combined focused rerun passed seven, zero skips.
+An earlier new test incorrectly assumed one fixture step meant one object update;
+it now tests the falling dispatch directly before advancing the fixture.
+
+Art registry (78), DDZ compatibility (34) and DDZ lifecycle (2) passed separately
+in the initial selection without skips. No rendered DEZ emerald claim is made:
+its native tile-$4D0 art still requires the pending root's module upload and the
+production final encounter remains unconnected. Controller route, full graph,
+native visuals and supported breadth obligations remain open.

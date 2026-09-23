@@ -6,6 +6,9 @@ import java.util.Objects;
 
 /** DEZ3 ($1700) event words shared by the arena, plane renderer and final boss. */
 public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
+    private final S3kEmeraldPaletteState emeraldPalette = new S3kEmeraldPaletteState();
+    public S3kEmeraldPaletteState emeraldPalette() { return emeraldPalette; }
+
     private final PlayerCharacter playerCharacter;
     private final DezFinalPlaneState plane = new DezFinalPlaneState();
     private final S3kScreenShake screenShake = new S3kScreenShake();
@@ -83,7 +86,8 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     @Override public byte[] captureBytes() {
-        var buffer = ByteBuffer.allocate(18 * Short.BYTES + S3kScreenShake.captureBytes() + DezFinalPlaneState.SNAPSHOT_BYTES);
+        var buffer = ByteBuffer.allocate(18 * Short.BYTES + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + DezFinalPlaneState.SNAPSHOT_BYTES);
+        emeraldPalette.captureTo(buffer);
         screenShake.captureTo(buffer);
         plane.capture(buffer);
         return buffer
@@ -96,6 +100,7 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
     @Override public void restoreBytes(byte[] bytes) {
         var buffer = ByteBuffer.wrap(bytes);
+        emeraldPalette.restoreFrom(buffer);
         screenShake.restoreFrom(buffer);
         plane.restore(buffer);
         windowBase = buffer.getShort(); bossX = buffer.getShort(); bossY = buffer.getShort();

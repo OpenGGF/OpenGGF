@@ -3717,3 +3717,34 @@ is a native SST address: empty slots contribute zero words and reused slots
 contribute the new occupant's coordinates. Captured scalar slots preserve that
 behavior without dangling Java graph identities. This remains an unregistered
 component until the root and production final-arena entry are connected.
+
+### 2026-09-23 — Emerald and shared ROM palette ownership after `ef83c4ff2`
+
+`DezFinalEmerald` ports `$806DA..$807BC`: subtype zero tracks the final body at
+`$58,+8`, hides while `_unkFAA9` is zero, ignores root defeat status bit 7, and
+**immediately** deletes on root control bit 4 (`loc_8073A -> loc_810D0`). This
+is distinct from the core's deferred `Child_Draw_Sprite2` retirement. The escape
+ship variant uses its supplied child offsets, changes from tracking to falling
+on `_unkFAB8` bit 4, then runs `MoveSprite` gravity `$38` from the next dispatch
+until Y reaches `$CF`; the emerald remains there. Art is ROM mapping `$187B34`,
+native tile `$4D0`, palette line 3 (engine 2), bucket 6, frame 1/body or 0/ship.
+
+The two Super Emerald palette scripts use native shared `Palette_rotation_data`,
+not object-local cursors. `S3kEmeraldPaletteState` is owned and captured by the
+DEZ-final and DDZ zone runtime states. Installation reads the two pointers from
+`$813AA` / `$8141E`; ticks read colors, destinations and delays from ROM, freeze
+while palette rotation is disabled, and implement the zero-parameter infinite
+repeat branch of `Run_PalRotationScript`. New emerald initialization replaces
+both cursors, matching the global RAM copy when body/ship owners overlap.
+
+DDZ's existing emerald now uses this ROM-backed state instead of embedded color
+arrays. Its boss-hit flash destinations `$82D86` and rows `$82D9E` are likewise
+read from ROM through the palette registry; the previous Java asset tables were
+removed. These changes preserve the source palette values/timing while correcting
+runtime asset provenance. The complete incoming DEZ route remains unimplemented.
+
+A separate DDZ inspection obligation remains: `loc_81D44` falls through into
+`loc_81D4A` on the dispatch that starts player-following, while the existing
+DDZ emerald currently only starts following on its next update. Reproduce and
+repair that transition during the pending full DDZ encounter validation; the
+ROM-table conversion does not certify that unrelated motion edge.

@@ -2014,6 +2014,12 @@ public class Sonic3kConstants {
     public static final int ARTTILE_DDZ_MISC = 0x02DB;
     /** {@code ArtKosM_BossMasterEmerald} / {@code Map_BossMasterEmerald}. */
     public static final int ART_KOSM_BOSS_MASTER_EMERALD_ADDR = 0x182BE6;
+    /** Two-entry infinite Run_PalRotationScript tables, DEZ line 2 / DDZ line 3. */
+    public static final int PAL_DEZ_MASTER_EMERALD_SCRIPT_ADDR = 0x813AA;
+    public static final int PAL_DDZ_MASTER_EMERALD_SCRIPT_ADDR = 0x8141E;
+    /** sub_82D72: twelve destinations and two rows of boss flash colors. */
+    public static final int PAL_DDZ_BOSS_FLASH_DESTINATIONS_ADDR = 0x82D86;
+    public static final int PAL_DDZ_BOSS_FLASH_COLORS_ADDR = 0x82D9E;
     public static final int MAP_BOSS_MASTER_EMERALD_ADDR = 0x187B34;
     /** {@code byte_832BF}: rocket body frames; {@code byte_832C3}: rocket flame; {@code byte_832D0}/{@code byte_832D9}: ship parts. */
     public static final int DDZ_ANIM_ROCKET_ADDR = 0x0832BF;

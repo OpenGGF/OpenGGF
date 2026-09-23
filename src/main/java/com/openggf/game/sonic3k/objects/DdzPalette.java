@@ -22,10 +22,16 @@ final class DdzPalette {
 
     /** {@code sub_82D72} with {@code d0 = row * $18}: twelve colours of palette line 3. */
     static void applyFlashRow(ObjectServices services, int row) {
-        int[] colours = DdzEndBossObjectInstance.FLASH_ROWS[row];
-        S3kPaletteWriteSupport.applyColors(services.paletteOwnershipRegistryOrNull(), services.currentLevel(),
-                services.graphicsManager(), OWNER, S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE, 2,
-                DdzEndBossObjectInstance.FLASH_COLOUR_INDICES, colours);
+        try {
+            var rom=services.rom();
+            for(int i=0;i<12;i++) {
+                int destination=rom.read16BitAddr(Sonic3kConstants.PAL_DDZ_BOSS_FLASH_DESTINATIONS_ADDR+i*2);
+                int color=(destination-0xFC00)/2;
+                S3kPaletteWriteSupport.applyContiguousPatch(services.paletteOwnershipRegistryOrNull(),
+                        services.currentLevel(),services.graphicsManager(),OWNER,S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                        color/16,color%16,rom.readBytes(Sonic3kConstants.PAL_DDZ_BOSS_FLASH_COLORS_ADDR+row*24+i*2,2));
+            }
+        } catch(IOException failure) { throw new java.io.UncheckedIOException(failure); }
     }
 
     /** Sixteen {@code DecColor_Obj} calls with {@code d1 = $E}, {@code d2 = $E0} on one line. */

@@ -68,3 +68,20 @@ the `AbstractDdzObjectInstance` parent link, and 14 final-scalar coverage gaps (
 the four ordinary classes with the DDZ suites and `TestEveryObjectRewindRoundTrip` (1243 tests) and the four guard
 classes under `-Pguards` (8 tests) pass. Four ICZ trace replays swept in by a `*Icz*` filter are red identically with
 and without the registry change (inherited).
+
+### 2026-09-23 ROM palette follow-up
+
+Removed embedded Master Emerald and boss-flash color assets. Emerald scripts
+`$8141E` now read ROM pointers, destinations, words and delays, with the shared
+cursors in captured `DdzZoneRuntimeState`; flash destinations/rows use
+`$82D86/$82D9E`. Two focused `TestDdzRomPalettes` cases pass without skips for
+both flash rows and the actual emerald owner, including restoration/reset.
+The corresponding DEZ helper tests cover both scripts' 94-tick repetition and
+palette-disable freezing. Existing DDZ compatibility (34) and lifecycle (2)
+checks passed without skips. These are focused checks, not a rerun of the full
+DDZ route or proof of native pixels. Incoming DEZ and other open rows remain.
+
+Source review also identified an unverified motion discrepancy to repair before
+final acceptance: `$81D44` immediately falls into `$81D4A` when the boss starts
+exit; the current emerald delays that first following update until the next
+object pass. The palette changes do not alter or certify that edge.

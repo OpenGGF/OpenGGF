@@ -52,12 +52,6 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
     static final int ROUTINE_RISE = 0xC;
     static final int ROUTINE_CHASE = 0xE;
 
-    /** {@code word_82D86} colour offsets on palette line 3 and the two {@code word_82D9E} rows. */
-    static final int[] FLASH_COLOUR_INDICES = {3, 4, 6, 7, 8, 9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
-    static final int[][] FLASH_ROWS = {
-            {0x00A, 0x006, 0xCAA, 0xA88, 0x866, 0x444, 0xE42, 0xE00, 0xC00, 0x600, 0x200, 0x000},
-            {0x888, 0xAAA, 0xCCC, 0xAAA, 0x888, 0x666, 0xECC, 0xECA, 0xAAA, 0xAAA, 0xCCC, 0xEEE}};
-    /** {@code word_82E92}: phase-2 overlap box. */
     private static final int[] CHASE_TOUCH_BOX = {0x20, 0x40, 0x20, 0x40};
 
     private boolean exitMode;

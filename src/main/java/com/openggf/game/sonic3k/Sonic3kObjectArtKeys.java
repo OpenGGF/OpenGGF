@@ -679,6 +679,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String DEZ_STAIRCASE = "dez_staircase";
     public static final String DEZ_LIGHTNING = "dez_lightning";
     public static final String DEZ_MINIBOSS = "dez_miniboss";
+    public static final String DEZ_FINAL_EMERALD = "DEZ_FINAL_EMERALD";
     public static final String DEZ_FINAL_MOUTH = "DEZ_FINAL_MOUTH";
     public static final String DEZ_FINAL_BOSS_MISC = "DEZ_FINAL_BOSS_MISC";
     public static final String DEZ_FINAL_ARENA_BLOCK = "DEZ_FINAL_ARENA_BLOCK";

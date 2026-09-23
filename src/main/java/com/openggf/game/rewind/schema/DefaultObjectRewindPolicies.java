@@ -103,6 +103,7 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezFinalEmerald", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezFinalMouth", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezFinalMouth$Button", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezFinalBeam", "parent"), RewindFieldPolicy.CAPTURED),

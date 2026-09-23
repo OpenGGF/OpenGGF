@@ -1941,3 +1941,33 @@ shared `Palette_rotation_data`, so check overlap/reset ownership across root
 emerald retirement and escape-ship emerald initialization before choosing the
 state owner. This is a newly identified validation/implementation obligation,
 not a claim that DDZ was fully verified before it.
+
+### 2026-09-23 — DEZ emerald / DDZ ROM palette checkpoint after `ef83c4ff2`
+
+Implemented body/escape emerald motion, visibility, control-bit retirement and
+ROM-backed art registration. Two infinite palette script entries are captured
+in each owning zone runtime, preserving the shared-cursor reset on a new emerald.
+DDZ now reads its emerald script and boss-flash destination/color tables from
+ROM rather than Java asset arrays. The DEZ root and art upload remain pending;
+DDZ's already identified first-following-dispatch discrepancy remains an explicit
+matrix obligation. No new route, renderer or native parity claim.
+
+Queued Maven in the task tree based on `ef83c4ff2`, `-Dmse=off` and explicit
+absolute root S3K ROM property for ROM-backed selections:
+
+- Initial `TestDezFinalEmerald,TestSonic3kPlcArtRegistry,TestS3kDdzLifecycleProduction,TestS3kDdzCompatibilityMatrix`:
+  art 78, DDZ lifecycle 2 and DDZ compatibility 34 passed with zero skips. Four
+  of five new emerald cases passed; the fifth incorrectly assumed the fixture's
+  first step dispatched the object once. Corrected the test to assert a direct
+  falling update before fixture advancement; no timing change was made to pass it.
+- Final `TestDezFinalEmerald,TestDdzRomPalettes`: seven passed, zero skips,
+  including both script periods, pause/reset/rewind, actual DDZ owner and both
+  flash rows/destinations.
+- Required `TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+  59 passed, zero skips (both matching loading classes included).
+- Separate `-Pguards` inventory/helper/field selection: three passed, zero skips;
+  confirmed 1287 total / 1047 isolated / 240 graph / zero missing codec, no new
+  exception bucket. All are focused checks, not the campaign combined suite.
+
+Continue with root/escape and connected screen/plane entry, then moving evidence,
+remaining zone obligations and combined integration/push/cleanup.

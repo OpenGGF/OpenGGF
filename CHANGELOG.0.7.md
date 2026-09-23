@@ -144,7 +144,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   columns stop accepting new riders after defeat. The destination final boss is still incomplete.
   Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
-- **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
+- **S3K The Doomsday Zone:** the Master Emerald palette cycle and boss flash colors now
+  read their script, destinations and color words from the ROM; rewind preserves the shared
+  emerald script cursors. Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.
   Asteroids shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
