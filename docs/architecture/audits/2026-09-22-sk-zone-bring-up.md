@@ -1721,3 +1721,27 @@ The resource/loading regression selection
 passed 137 tests with zero skips. The four-class guard selection ran 36 tests:
 35 passed before the inventory correction, and the corrected inventory passed
 its focused rerun. No executable behavior changed after those checks.
+
+### DEZ Act 2 shield and enemy components after `a88f2f756`
+
+Implemented the shield with its independent visor and the released enemy with
+its three projectiles. The shots rewrite their parent from enemy to root on the
+initial nondrawing pass. Allocation keeps every available forward prefix and
+never retries a missing suffix. The floor/ceiling probes use the injected level;
+the new upward-probe overload delegates to the existing native algorithm.
+
+Java 21 queued focused commands, ordinary checks with the existing absolute
+S3K ROM property:
+
+- `-Dtest=TestDezEndBossShield test`: 5 passed, zero skips.
+- Initial `-Dtest=TestDezEndBossEnemy test`: 7 passed, zero skips.
+- Source review then corrected projectile offscreen removal to the ROM's delayed
+  `Go_Delete_Sprite` (root death still deletes immediately), with a regression.
+- Final `-Dtest=TestDezEndBossEnemy,TestObjectTerrainUtils test`: 18 passed,
+  zero skips (9 enemy + 9 terrain). Includes all four burst allocation prefixes.
+- `-Pguards -Dtest=TestObjectPhysicsStandardizationGuard,TestRemainingRewindTailInventory,TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard test`:
+  36 passed, zero skips. Inventory is 1270 total / 1030 isolated / 240 graph /
+  zero missing codecs. No guard allowance changed.
+
+No integrated boss, cold route, native cadence or media claim yet. The next
+work is the root's launch/camera and Robotnik/door/defeat publication chain.

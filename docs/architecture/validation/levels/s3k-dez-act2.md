@@ -146,3 +146,12 @@ orientation, publication versus consumption, thirty-two flash passes, six CRAM
 words and pending-eighth-hit restoration. These component checks do not establish
 the enemy lifecycle, actual fight, final child allocation prefixes or `$1700`
 exit. The full source-backed encounter graph is recorded in the bring-up plan.
+
+The subsequent child checks add `TestDezEndBossShield` (5) and
+`TestDezEndBossEnemy` (9), all with zero skips. They cover opening/retraction touch
+windows, same-sweep visor creation, gravity-before-motion under both signs,
+actual arena ceiling/floor probes, kick/flip timing, three-shot allocation
+prefixes and parent rewrites, and linked reconstruction with forward replay.
+`TestObjectTerrainUtils` adds nine passing regressions for the injected ceiling
+entry. These remain component proofs; the root is still unregistered and the
+boss/exit coverage obligations stay open.

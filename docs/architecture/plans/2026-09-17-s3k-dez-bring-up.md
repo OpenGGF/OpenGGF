@@ -3360,3 +3360,23 @@ ROM resources verified directly from the locked-on listing: art `$181002`,
 `$1B80` decompressed bytes, destination tile `$38A`; mappings `$185B82`, forty
 frames; palette `$7FD08`; PLC `$76`. The bumper's `$7FD28` angle lookup and
 `$7FB0A/$7FB12` frame thresholds remain runtime ROM reads.
+
+Act 2 child follow-up after `a88f2f756`: the shield/visor and released enemy
+families now have component implementations. `loc_7F708` uses `Child_Draw_Sprite`:
+the visor's `$9C` header does **not** publish touch. The shield's sixteen opening
+passes and seven hold passes suppress its own touch; retraction restores it.
+The enemy's nominal seven-pass release wait falls through into gravity movement
+on every pass (`loc_7F40A → loc_7F414`). `sub_7F8A0` adds gravity before integrating
+Y. `loc_7F43E` loads the parent but tests **status(a0)**, so the FixBugs=0 falling
+enemy does not retire when only its parent dies. The grounded dispatcher tests
+the parent's death bit later. Preserve this register distinction.
+
+`TestDezEndBossShield` covers same-sweep visor creation, timing/touch windows,
+failed visor allocation without retry, death propagation and nested graph
+recreation. `TestDezEndBossEnemy` covers both acceleration signs, actual arena
+floor/ceiling landing, gravity release, grounded kick and seven-pass flip,
+airborne rolling destruction, the timed burst, all four three-shot allocation
+prefixes, parent rewrite and replay, and delayed culling versus immediate
+root-death removal. The short hit-producer test deliberately sets orientation;
+it is not a player-driven fight claim. Boss registration, complete launch
+allocation prefixes, the root/camera/escape chain and movies remain pending.

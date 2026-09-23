@@ -166,7 +166,8 @@ class TestRemainingRewindTailInventory {
         // DEZ launcher and independent torpedo each own scalar rewind state.
         // DEZ staircase sections use an identity-linked parent snapshot.
         // DEZ Act 2 bumper probes cleanly in isolation; its real linked graph also has focused coverage.
-        return new TailInventory(1266, 1026, 240, 0, buckets);
+        // DEZ Act 2 shield/visor and enemy/projectile also probe in isolation with linked graph tests.
+        return new TailInventory(1270, 1030, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
