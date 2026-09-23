@@ -13,6 +13,7 @@ that they are fixed or independently tested.
 | Late master reply binds a later request | `MasterClient.completeNext` skips a timed-out future and gives its late response to the next same-type request. | Time out join A, send join B, then deliver A's and B's replies in order; assert B cannot resolve to A's room. |
 | Finish grace ends at the first tick | `HostRoundEngine.onAttemptFinish` advertises a two-second grace but requires `RUNNING`; `onTick` moves to `ROUND_END` immediately after the deadline. This is a timing/availability defect, not an authentication bypass. | Tick just beyond the deadline and send a valid finish inside the declared grace. |
 | Identity key creation window | `PlayerIdentity.loadOrCreate` writes the private key before restricting POSIX permissions. On a shared host with a traversable identity directory and permissive umask, another local user could read it during creation. | Create identities under a controlled multi-user directory with umask 022; inspect mode at creation and confirm atomic restrictive creation. |
+| Invalid join metadata accepted | `ControlCodec` accepts a `JoinAccepted` with a negative slot and null room; current engine join flows catch and fail it, so this is protocol hardening rather than a game-thread crash. | Send malformed join metadata through both direct and relay joins; reject at decode and check UI teardown. |
 
 The next audit should revisit these scenarios after the current transport,
 authority, sanction, and resource-limit fixes have landed. Re-run the threat
