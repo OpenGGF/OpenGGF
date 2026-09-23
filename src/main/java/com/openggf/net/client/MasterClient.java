@@ -457,6 +457,10 @@ public final class MasterClient implements AutoCloseable {
     private boolean completeReply(ControlMessage message) {
         switch (message) {
             case ControlMessage.RoomListResult result -> {
+                if (result.totalPages() == Protocol.ROOM_LIST_RATE_LIMITED) {
+                    return completeNext(pendingLists, null,
+                            new IllegalStateException("room list rate limited"));
+                }
                 return completeNext(pendingLists, result, null);
             }
             case ControlMessage.RoomCreated created -> {

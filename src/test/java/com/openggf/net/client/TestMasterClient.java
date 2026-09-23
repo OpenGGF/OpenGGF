@@ -198,4 +198,25 @@ class TestMasterClient {
         completeNext.invoke(null, pending, replyB, null);
         assertEquals("room-b", joinB.get(1, TimeUnit.SECONDS).roomId());
     }
+
+    @Test
+    void rateLimitedListFailsWithoutStealingLaterListReply(@TempDir Path dir)
+            throws Exception {
+        server = MasterServer.start(TestMasterServer.testConfig(), dir);
+        MasterClient guest = connect(dir.resolve("guest"), "GUEST");
+        try {
+            assertEquals(0, guest.listRooms(null, 0)
+                    .get(5, TimeUnit.SECONDS).page());
+            CompletableFuture<ControlMessage.RoomListResult> limited =
+                    guest.listRooms(null, 1);
+            assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> limited.get(1, TimeUnit.SECONDS));
+
+            Thread.sleep(2_100);
+            assertEquals(2, guest.listRooms(null, 2)
+                    .get(5, TimeUnit.SECONDS).page());
+        } finally {
+            guest.close();
+        }
+    }
 }

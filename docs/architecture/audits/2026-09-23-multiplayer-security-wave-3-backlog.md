@@ -41,14 +41,35 @@ The risks are narrower than some of the shorthand above:
 - New private keys are written before `0600` permissions are applied. On a
   traversable shared directory with a permissive umask, a local user has a
   transient read window. Reloading a legacy permissive key leaves it exposed.
-- `(-1, null)` join metadata is a deliberate intermediate master admission,
+- `(-1, null, null)` join metadata is a deliberate intermediate master admission,
   not a valid final room join. Validation must keep that broker marker while
   rejecting malformed host or relay joins before the client treats them as
   established.
 
-The repair branches add behavior-level regressions for each mechanism. Their
-integration and validation outcome will be recorded here once the combined
-candidate has been checked.
+## Wave 3 candidate disposition
+
+Each finding has a regression that failed on the original behavior and passed
+after its fix. The combined candidate merges `2cf64bf7c` (finish sanctions),
+`3a31a1312` (recording and identity storage), `f4225c5bf` (request and join
+protocol), and `960909130` (votes and grace). The overlapping `TestRoomHost`
+additions were reconciled by retaining all three tests; the combined focused
+run executed 71 tests with no failures, errors, or skips. The protocol branch's
+network category separately executed 1,317 tests without failure, error, or
+skip; its diagnostics were acknowledged. Broad candidate and post-integration
+results belong in the delivery report, not inferred from these focused runs.
+
+The grace fix deliberately closes new attempts at the deadline but keeps an
+existing attempt open for finish transit. It does not establish a trusted
+predeadline completion time. FIFO request tombstones prevent stale-room
+misbinding when requests receive ordered replies. Review exposed two broker
+exceptions to that prerequisite: rate-limited room lists and invalid-routing
+room creation were silently dropped. Both now send typed responses; the list
+reply uses a negative `totalPages` sentinel that the client reports as an error.
+A missing earlier response can still cause the next request to time out.
+POSIX key creation and mode repair were tested; the Windows ACL
+path was source-reviewed but not runtime-tested on this Linux host. These and
+the separate shared-parent path race are recorded as questions in the
+[wave 4 backlog](2026-09-23-multiplayer-security-wave-4-backlog.md).
 
 Wave 2 remediation chose a broker-pinned certificate plus host identity for direct
 joins: a signature-only challenge still exposes the session token to a live relay,

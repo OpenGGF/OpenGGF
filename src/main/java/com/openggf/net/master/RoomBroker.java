@@ -349,6 +349,7 @@ public final class RoomBroker {
         String routing = create.routing();
         ControlMessage.RoomDescriptor descriptor = create.room();
         if (!("DIRECT".equals(routing) || "RELAY".equals(routing)) || descriptor == null) {
+            send(member, new ControlMessage.RoomCreateRejected("invalid room routing"));
             strike(member, "invalid room routing");
             return;
         }
@@ -433,6 +434,10 @@ public final class RoomBroker {
         long now = clock.getAsLong();
         if (member.lastListMillis != Long.MIN_VALUE
                 && now - member.lastListMillis < LIST_INTERVAL_MILLIS) {
+            // Every list request needs a reply to preserve the client's FIFO
+            // request/reply positions, even when enumeration is throttled.
+            send(member, new ControlMessage.RoomListResult(List.of(), request.page(),
+                    Protocol.ROOM_LIST_RATE_LIMITED));
             return;
         }
         member.lastListMillis = now;
