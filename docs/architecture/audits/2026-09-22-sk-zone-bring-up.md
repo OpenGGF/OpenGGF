@@ -1866,3 +1866,24 @@ This graph remains unregistered until the rest of the final boss and its event
 surface are connected. No live route, visual or native parity claim is made.
 Next: actual root/core/button/mouth/beam/fireball/escape graph and connected
 screen/plane pipeline; campaign-wide remaining zones and delivery stay open.
+
+### 2026-09-23 — Final DEZ core checkpoint after `6e0316523`
+
+Added the eight-hit core and captured mouth-status byte. ROM `loc_804F0`,
+`sub_8119A` and `sub_8125C` own the phase/damage ordering; `loc_80584` waits
+for root control bit 4 rather than defeat status bit 7. Five focused ROM-backed
+`TestDezFinalCore` tests passed, zero skips, through queued Maven with the
+absolute root S3K ROM property. Coverage includes exact flash words/timing,
+P1/P2 credit, closed/open collision publication, single score/timer defeat and
+pending-hit graph reconstruction/replay. Tests call attack callbacks directly;
+this is not a controller-driven encounter or rendered evidence.
+
+Separate queued `-Pguards` selection of `TestRemainingRewindTailInventory`,
+`TestHelperStateRewindCoverageGuard`, and `TestRewindFieldDispositionGuard`
+initially passed the latter two and reported only the new class count. Measured
+inventory: 1280 total / 1040 isolated / 240 graph / zero missing codecs, no
+exception growth. After updating the count and header, all three passed with
+zero skips. Commands ran in the task tree based on `6e0316523`; combined campaign
+validation/integration/push remain pending. The core is unregistered, and the
+final encounter remains incomplete; continue with button/mouth/beam, fireball,
+root, escape and connected arena/rendering before route validation.

@@ -103,6 +103,7 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezFinalCore", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezFinalHand", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezFinalHand$Finger", "parent"), RewindFieldPolicy.CAPTURED),
             // The DEZ eye publishes damage into its exact parent SST, including after recreation.

@@ -169,7 +169,8 @@ class TestRemainingRewindTailInventory {
         // DEZ Act 2 shield/visor and enemy/projectile also probe in isolation with linked graph tests.
         // DEZ Act 2 root, escape roles and persistent gravity clearer add three scalar owners.
         // Final DEZ hand/finger probes pass in isolation; dying-slot graph has focused coverage.
-        return new TailInventory(1279, 1039, 240, 0, buckets);
+        // Final DEZ core adds one isolated pass; pending-hit parent graph is covered separately.
+        return new TailInventory(1280, 1040, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

@@ -3625,3 +3625,28 @@ there, not a timer-fitted flash. Before that, `sub_80FFA` supplies `V_int_run_co
 & 3`; its allocation branch's return registers need checking before porting
 that branch's visible phase. These notes are disassembly research, not implemented
 or tested beam behavior.
+
+
+### 2026-09-23 — Final-boss vulnerable core
+
+After `6e0316523`, `DezFinalCore` ports `loc_804F0..loc_80584` and
+`sub_8119A/sub_8125C`. The mouth publication (`_unkFAA9`) is captured in the
+final-zone runtime: hidden, opening/closing, or fully open. Only the fully-open
+branch publishes touch. Opening services damage before tracking; closing tracks
+before damage. Eight hits set the root status bit 7, allocate the available
+forward explosion, stop the timer and award 1000 points once. The dead core
+clears the laser word and follows `Child_Draw_Sprite2`: root **control bit 4**,
+not its already-set status bit 7, initiates deferred removal. The root's later
+`loc_8013A` uses `Go_Delete_Sprite_2`, supplying that distinct control signal.
+
+Flash colors come from ROM `$81248` into line 1 colors `$A..$E`; nonfatal hits
+kick the credited native P1/P2 at `$600,-$300`. Closing/hidden flash servicing
+does not restore collision flags; the next fully-open publication rearms them.
+The parent identity is captured explicitly and released on deferred retirement.
+
+Queued `-Dmse=off -Ds3k.rom.path=<root>/s3k.gen -Dtest=TestDezFinalCore test`
+passed five cases, zero skips: phase gating/offsets, 32 exact palette passes
+and player credit, closing/reopening, eight-hit defeat/retirement, and pending-hit
+graph reconstruction with mouth-state restoration. This is an unregistered
+component, not completed live final-boss gameplay. Button/mouth/beam, fireball,
+root, escape/ending, connected screen/plane surfaces and route/media remain open.

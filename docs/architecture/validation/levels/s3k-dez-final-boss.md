@@ -114,3 +114,14 @@ after their parent's slot is cleared/reused. Five ROM-backed tests pass without
 skips. This is unregistered component coverage; root/route/native/video and
 viewport/roster/donor obligations remain open. In particular it does not certify
 the complete boss graph or its downstream transition.
+
+
+#### Core component coverage (2026-09-23)
+
+`TestDezFinalCore`: five ROM-backed cases pass, zero skips, for mouth-only
+vulnerability, five-color flash timing, native P1/P2 knockback credit, closing
+and reopening, eight-hit defeat and single score/timer publication, distinct
+root control/status retirement, and pending-hit graph reconstruction/replay.
+The test uses an isolated root and direct attack callbacks. It does not prove
+controller reachability, the complete encounter, viewport/donor breadth or
+rendered/native parity. Those obligations remain open above.
