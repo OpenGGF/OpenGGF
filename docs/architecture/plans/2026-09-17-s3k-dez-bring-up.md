@@ -3650,3 +3650,41 @@ and player credit, closing/reopening, eight-hit defeat/retirement, and pending-h
 graph reconstruction with mouth-state restoration. This is an unregistered
 component, not completed live final-boss gameplay. Button/mouth/beam, fireball,
 root, escape/ending, connected screen/plane surfaces and route/media remain open.
+
+### 2026-09-23 — Final mouth and beam graph after `e6fa6d95a`
+
+`DezFinalMouth.Button` ports the invisible `$80590` collision owner. A hit
+publishes root control bit 2 (`$04`) and the high byte of Events_fg_5, then makes
+one forward mouth allocation. The mouth slides `$28..$68` by four per dispatch
+(including initialization), publishes `_unkFAA9=$80`, and makes one lowest-free
+beam allocation. Allocation failure in either branch leaves its native latch
+set; there is no healing/retry. Fully open, the mouth does not draw. Its art
+entry uses the same mapping table as the misc sprites but **tile `$001`**, from
+`ObjDat3_812AA`, rather than their `$38F` base.
+
+`DezFinalBeam` ports `$807BC..$8089E`: raw `$8135A` charging, 120-count hold,
+raw `$81397` foreground-laser publication, the sole damaging frame `$1E`, then
+`$5F` predecrement release and mouth closure. Collision checks native P1 then P2
+centres in `[x,x+$120)` / `[y-$20,y+$20)` before refreshing the beam's parent
+position. The laser is foreground-plane output, not a stretched sprite. Closing
+publishes `_unkFAA9=1`, retracts in 16 passes, clears root control bit 2 and its
+`$1C` fire clock, then publishes zero mouth status and deferred deletion.
+
+Resolved the earlier d0 uncertainty: successful `CreateChild6_Simple` returns
+zero; exhausted `AllocateObjectAfterCurrent` leaves low byte `$FF`, hence the
+charge frame is `$1A` on that failure. For nonzero VInt phases it uses `VInt&3`.
+The final `<$28` hold skips the helper and inherits even dispatch address
+`$80810`, selecting `$1F`. This preserves the shipped allocation-sensitive
+presentation instead of substituting a generic timer alternation.
+
+Charge particles are children of the **beam**, not the root. Their ROM RNG,
+raw `$8138E` frames and accelerating/sine movement use that parent's SST address.
+They keep a scalar slot reference so early beam retirement does not retain a
+stale Java identity or break rewind. Mouth/root and beam/root/mouth identities
+are explicitly captured, with deferred retirement releasing them.
+
+These remain unregistered final-encounter components. The root, emerald,
+fireballs, escape/ending and connected screen/plane surfaces are still required
+before live route/media and native parity claims. The earlier six sequence
+checks plus five core checks and 78 art checks passed (89 total, zero skips);
+extended boundary/retirement and loading verification follows in the audit.

@@ -7,6 +7,9 @@ import java.util.List;
 
 /** Native position/render words shared by the final DEZ encounter. */
 abstract class DezFinalBossSprite extends DezEndBossSprite {
+    /** Root SST $1C: reset by mouth closure and consumed by sub_81046. */
+    protected int fireClock;
+
     DezFinalBossSprite(ObjectSpawn spawn, String name) { super(spawn, name); }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (!visible || isDestroyed()) return;

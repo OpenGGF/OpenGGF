@@ -1887,3 +1887,34 @@ zero skips. Commands ran in the task tree based on `6e0316523`; combined campaig
 validation/integration/push remain pending. The core is unregistered, and the
 final encounter remains incomplete; continue with button/mouth/beam, fireball,
 root, escape and connected arena/rendering before route validation.
+
+### 2026-09-23 — Final DEZ mouth/beam checkpoint after `e6fa6d95a`
+
+Implemented `$80590` button, `$8060C` mouth, `$807BC` charge/laser/release and
+`$808AE` particles. Explicit parent/root/mouth rewind links and scalar particle
+SST address preserve both active and retiring graphs. The mouth uses native
+level tile `$001`; laser publication uses the existing retained-plane consumer
+contract, which is still not connected to the live arena. No new movie/native
+pixel claim, and no final-boss completion claim.
+
+Queued commands in the task tree based on `e6fa6d95a`, with explicit absolute
+root S3K ROM property and `-Dmse=off`:
+
+- `-Dtest=TestDezFinalMouthSequence,TestDezFinalCore,TestSonic3kPlcArtRegistry test`:
+  89 passed, zero skips (initial six mouth checks, five core, 78 art).
+- `-Dtest=TestDezFinalMouthSequence,TestDezFinalHand,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:
+  73 passed, zero skips, including nine extended mouth/beam tests. An intervening
+  test-only compile failure used int rather than short mocked coordinates and
+  an incorrect record accessor; both were corrected before this completed run.
+- Separate `-Pguards` helper-state and field-disposition checks passed. The
+  inventory check initially reported the expected four new isolated passes:
+  1284 total / 1044 isolated / 240 graph / zero missing codec and no exception
+  growth. After updating the measured count/header, its focused rerun passed
+  one case, zero skips. No repeated helper/field run was needed.
+
+Coverage includes native P1/P2 laser centre boundaries, charge allocation-failure
+register behavior, all laser publications, delayed release, mouth closure,
+active graph restoration and particle retirement/replay. These are overlapping
+focused selections, not a broad campaign pass. Next: root/emerald/fireball/escape
+and production screen/plane integration, then actual entry-to-exit media and
+remaining seven-zone acceptance. Integration/push/cleanup remain pending.

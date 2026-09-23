@@ -125,3 +125,20 @@ root control/status retirement, and pending-hit graph reconstruction/replay.
 The test uses an isolated root and direct attack callbacks. It does not prove
 controller reachability, the complete encounter, viewport/donor breadth or
 rendered/native parity. Those obligations remain open above.
+
+#### Mouth/beam component coverage (2026-09-23)
+
+`TestDezFinalMouthSequence` passes nine ROM-backed cases without skips:
+button publication and forward allocation, button and beam allocation failure,
+16-update opening/closing, invisible open hold, ROM laser-frame progression,
+96-update release from the final zero frame, allocation-sensitive charge frame,
+native P1/P2 half-open damage boundaries, tile-$001 mouth registration,
+active graph restoration/replay and particles surviving beam retirement.
+The focused selection with hand regression and required AIZ/loading/bootstrap/
+decoding checks passed 73 cases, zero skips. Earlier core/art/sequence selection
+passed 89, zero skips. These overlap and are not a combined-suite total.
+
+The root is still a test owner, laser layout surfaces remain unconnected, and
+attack input is delivered directly in component tests. Live controller entry,
+full graph completion, moving render/native matching and viewport/roster/donor
+obligations remain open. No new final-arena video is claimed by this checkpoint.
