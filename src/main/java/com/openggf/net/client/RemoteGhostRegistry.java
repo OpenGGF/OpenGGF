@@ -29,6 +29,9 @@ public final class RemoteGhostRegistry {
 
     public void onAggregate(GhostPackets.Aggregate aggregate) {
         for (GhostPackets.AggregateEntry entry : aggregate.entries()) {
+            if (!roster.containsKey(entry.playerSlot())) {
+                continue;
+            }
             playbacks.computeIfAbsent(entry.playerSlot(), ignored -> new RemoteGhostPlayback())
                     .onEntry(entry);
         }

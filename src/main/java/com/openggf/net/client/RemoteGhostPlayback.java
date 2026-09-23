@@ -4,9 +4,9 @@ import com.openggf.ghost.GhostFrame;
 import com.openggf.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Optional;
+import java.util.TreeMap;
 
 /** Adaptive jitter-buffered playback for one remote cosmetic ghost. */
 public final class RemoteGhostPlayback {
@@ -18,11 +18,12 @@ public final class RemoteGhostPlayback {
     public static final int EXTRAPOLATE_MAX_FRAMES = 6;
     public static final int DELAY_GROW_FRAMES = 3;
     public static final int DELAY_SHRINK_CLEAN_STREAK = 600;
+    private static final int MAX_BUFFERED_FRAMES = 128;
 
     public record RenderState(GhostFrame frame, float opacityScale, boolean snapped) {
     }
 
-    private final Map<Integer, GhostFrame> frames = new HashMap<>();
+    private final NavigableMap<Integer, GhostFrame> frames = new TreeMap<>();
     private int attemptId = Integer.MIN_VALUE;
     private int newestIndex = -1;
     private int cursor = -1;
@@ -34,6 +35,10 @@ public final class RemoteGhostPlayback {
     private boolean stalled;
 
     public void onEntry(GhostPackets.AggregateEntry entry) {
+        if (entry.startFrameIndex() < 0 || entry.frameCount() < 1
+                || entry.startFrameIndex() > Integer.MAX_VALUE - entry.frameCount()) {
+            return;
+        }
         if (entry.attemptId() < attemptId) {
             return;
         }
@@ -54,6 +59,9 @@ public final class RemoteGhostPlayback {
             frames.put(index, GhostFrameCodec.decode(data, i * GhostFrameCodec.BYTES));
             newestIndex = Math.max(newestIndex, index);
         }
+        while (frames.size() > MAX_BUFFERED_FRAMES) {
+            frames.pollFirstEntry();
+        }
     }
 
     public Optional<RenderState> advance() {
@@ -61,7 +69,7 @@ public final class RemoteGhostPlayback {
             if (newestIndex + 1 < delay) {
                 return Optional.empty();
             }
-            cursor = 0;
+            cursor = frames.containsKey(0) ? 0 : frames.firstKey();
             return clean(cursor, false);
         }
         int backlog = newestIndex - cursor;

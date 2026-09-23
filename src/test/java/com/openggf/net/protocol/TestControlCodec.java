@@ -102,4 +102,39 @@ class TestControlCodec {
                 "{\"v\":2,\"token\":null,\"msg\":{\"type\":\"Ping\","
                         + "\"t0ClientMillis\":7,\"t0ClientMillis\":8}}"));
     }
+
+    @Test
+    void rejectsMissingOrNullRoomStatePlayers() {
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"RoomState\"}}"));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"RoomState\",\"players\":null}}"));
+    }
+
+    @Test
+    void rejectsInvalidRoundPhaseBeforeClientPump() {
+        String wire = ControlCodec.encode(null, new ControlMessage.JoinAccepted(
+                "tok", 0, null,
+                new ControlMessage.RoundSnapshot("BOGUS", null, 0, 0, List.of())));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(wire));
+    }
+
+    @Test
+    void rejectsIncompleteNestedClientState() {
+        String player = ControlCodec.encode(null, new ControlMessage.RoomState(
+                List.of(new ControlMessage.PlayerInfo(0, "fp", null, "sonic"))));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(player));
+
+        String config = ControlCodec.encode(null, new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig(null, 0, 0, 30, "OPEN", null), 0, 30_000));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(config));
+
+        String standings = ControlCodec.encode(null, new ControlMessage.StandingsDelta(
+                List.of(new ControlMessage.StandingsRow(0, "A", null, 120, 1, "NONE"))));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(standings));
+
+        String token = ControlCodec.encode(null, new ControlMessage.JoinAccepted(
+                null, 0, null, null));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(token));
+    }
 }

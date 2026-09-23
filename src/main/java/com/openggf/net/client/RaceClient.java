@@ -16,12 +16,10 @@ import java.security.MessageDigest;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.HexFormat;
 import javax.net.ssl.SSLContext;
@@ -71,7 +69,7 @@ public final class RaceClient implements RaceConnection {
     public record Disconnected(String reason) implements InboundEvent {
     }
 
-    private final ConcurrentLinkedQueue<InboundEvent> inbound = new ConcurrentLinkedQueue<>();
+    private final BoundedInboundQueue<InboundEvent> inbound = new BoundedInboundQueue<>();
     private final Object sendLock = new Object();
     private volatile WebSocket webSocket;
     private volatile ControlMessage.JoinAccepted joinAccepted;
@@ -141,10 +139,10 @@ public final class RaceClient implements RaceConnection {
                         }
                         int type = packet[0] & 0xFF;
                         if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
-                            client.inbound.add(new GhostData(
+                            client.enqueueInbound(ws, new GhostData(
                                     GhostPackets.decodeAggregate(packet)));
                         } else if (type == GhostPackets.TYPE_ROSTER) {
-                            client.inbound.add(new Roster(GhostPackets.decodeRoster(packet)));
+                            client.enqueueInbound(ws, new Roster(GhostPackets.decodeRoster(packet)));
                         } else {
                             throw new ProtocolViolationException(
                                     "unexpected room binary packet type " + type);
@@ -163,7 +161,7 @@ public final class RaceClient implements RaceConnection {
                 client.open = false;
                 String detail = reason == null || reason.isBlank()
                         ? "connection closed" : reason;
-                client.inbound.add(new Disconnected(detail));
+                client.signalDisconnected(detail);
                 joined.completeExceptionally(
                         new JoinRejectedException("connection closed during join: " + detail));
                 return null;
@@ -172,9 +170,9 @@ public final class RaceClient implements RaceConnection {
             @Override
             public void onError(WebSocket ws, Throwable error) {
                 client.open = false;
-                client.inbound.add(new Disconnected(
+                client.signalDisconnected(
                         error.getMessage() == null ? error.getClass().getSimpleName()
-                                : error.getMessage()));
+                                : error.getMessage());
                 joined.completeExceptionally(error);
             }
 
@@ -187,7 +185,7 @@ public final class RaceClient implements RaceConnection {
                     return;
                 }
                 if (client.joinAccepted != null) {
-                    client.inbound.add(new Control(message));
+                    client.enqueueInbound(ws, new Control(message));
                     return;
                 }
                 try {
@@ -207,7 +205,7 @@ public final class RaceClient implements RaceConnection {
                                     new JoinRejectedException(rejected.reason()));
                             ws.abort();
                         }
-                        default -> client.inbound.add(new Control(message));
+                        default -> client.enqueueInbound(ws, new Control(message));
                     }
                 } catch (Exception e) {
                     joined.completeExceptionally(e);
@@ -217,7 +215,7 @@ public final class RaceClient implements RaceConnection {
 
             private void fail(WebSocket ws, ProtocolViolationException cause) {
                 client.open = false;
-                client.inbound.add(new Disconnected("protocol violation"));
+                client.signalDisconnected("protocol violation");
                 joined.completeExceptionally(cause);
                 ws.abort();
             }
@@ -332,12 +330,22 @@ public final class RaceClient implements RaceConnection {
     }
 
     public List<InboundEvent> drainInbound() {
-        List<InboundEvent> events = new ArrayList<>();
-        InboundEvent event;
-        while ((event = inbound.poll()) != null) {
-            events.add(event);
+        return inbound.drain();
+    }
+
+    private void enqueueInbound(WebSocket socket, InboundEvent event) {
+        if (!inbound.offer(event)) {
+            open = false;
+            signalDisconnected("inbound event limit exceeded");
+            socket.abort();
         }
-        return events;
+    }
+
+    private void signalDisconnected(String reason) {
+        if (!inbound.offer(new Disconnected(reason))) {
+            inbound.clear();
+            inbound.offer(new Disconnected(reason));
+        }
     }
 
     public void sendControl(ControlMessage message) {
