@@ -65,6 +65,9 @@ final class DdzWhiteFadeObjectInstance extends AbstractDdzObjectInstance {
         return finished || isDestroyed();
     }
 
+    /** Exact native status-bit publication, independent of external removal. */
+    boolean nativeFadeCompleted() { return finished; }
+
     @Override
     protected void updateObject(int vIntRunCount, PlayableEntity player) {
         var registry = services().paletteOwnershipRegistryOrNull();

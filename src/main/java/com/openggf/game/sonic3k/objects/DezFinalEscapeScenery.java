@@ -43,7 +43,7 @@ final class DezFinalEscapeScenery extends DezFinalBossSprite implements RewindRe
     }
     private void updateCrane() {
         if(routine==0) {
-            routine=1; priority=4; halfWidth=0x14; halfHeight=0x10; highPriority=false; frame=0;
+            routine=1; priority=4; halfWidth=0x14; halfHeight=0x14; highPriority=false; frame=0;
         } else if(routine==1) {
             if((((DezFinalBossZoneRuntimeState)services().zoneRuntimeState()).bossSignals()&8)!=0) {
                 routine=2; parent=null;

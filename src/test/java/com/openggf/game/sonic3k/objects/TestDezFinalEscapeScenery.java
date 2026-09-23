@@ -41,7 +41,7 @@ class TestDezFinalEscapeScenery {
         boot(); var manager=GameServices.level().getObjectManager();
         var root=new TestDezFinalHand.Root(new ObjectSpawn(0x500,0x80,0,0,0,false,0)); manager.addDynamicObject(root);
         var crane=DezFinalEscapeScenery.crane(root); manager.addDynamicObject(crane);
-        crane.update(0,null); assertTrue(crane.visible); assertEquals(0xA3,crane.getY());
+        crane.update(0,null); assertTrue(crane.visible); assertEquals(0xA3,crane.getY()); assertEquals(0x14,crane.getOnScreenHalfHeight());
         root.flipY=true; crane.update(1,null); assertEquals(0x5D,crane.getY()); assertTrue(crane.flipY);
         ((DezFinalBossZoneRuntimeState)GameServices.zoneRuntimeState()).bossSignals(8);
         root.writeX(0x600); crane.update(2,null); assertEquals(0x500,crane.getX()); assertTrue(crane.visible);

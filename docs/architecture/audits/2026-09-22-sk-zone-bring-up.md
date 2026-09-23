@@ -2042,3 +2042,28 @@ only in `cam_x`. The unchanged positioned solo controller log completes eight
 hits and enters zone 23 in 6835 steps, no hurt/death. The exit is two steps earlier
 than with moving X; hit timing remains unchanged. Shared-camera combined validation,
 campaign integration/push and full final-arena implementation remain pending.
+
+
+### Final DEZ escape ship (after `294aff6ec`)
+
+Ported the complete ship's dispatch through native exit selection, including
+ROM-backed flash palettes, credited-player brake, native camera fraction/overshoot,
+ordered children, release signals, explosions and exact fade completion. Added
+captured zone words for the chase camera. The native forced fade overwrite targets
+absolute SST 64; tests caught and fixed the assumption that failed spawn helpers
+return null. Actual failed objects are destroyed and slotless. Native ROM behavior
+and necessary engine adaptations are commented, including the Sega/title request.
+
+Queued `-Dmse=off -Ds3k.rom.path=<root>/s3k.gen -Dtest=TestDezFinalEscapeShip,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passes 69, zero skips (10 ship, 59 required loading/bootstrap). Scenery 3 and DDZ
+lifecycle 2 pass separately. `-Pguards` selection of remaining-tail inventory,
+helper-state coverage and field-disposition passes all 3, zero skips; inventory
+1,290 / 1,050 isolated / 240 graph-covered / 0 unaccounted. Initial graph tests
+were corrected to use real SST occupants through restore and compare encounter
+objects rather than also counting the fixed player effect installed at restore.
+The root, screen/retained planes and live final route remain pending. Neither this
+nor the separate DEZ2 camera fix completes the campaign or its integration gates.
+
+An eleventh ship case then passed alone (zero skips): a real ObjectManager
+sweep runs the forward head, crane and emerald on their allocation pass, with
+the head still on its initial raw-animation frame. Total distinct ship cases: 11.

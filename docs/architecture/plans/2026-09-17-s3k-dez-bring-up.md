@@ -3842,3 +3842,47 @@ From frame 1 onward X stays `$3380`; frames 200..899 keep camera Y in `$218..$28
 while Sonic traverses 384px horizontally. Comparing the first 700 rows with capture
 104 changes only `cam_x` (697 rows). Shared-camera combined delivery validation
 remains required before campaign integration/push.
+
+
+### Final escape ship dispatch (after `294aff6ec`, 2026-09-23)
+
+`DezFinalEscapeShip` now ports `$80160..$80424`: copy-camera spawn, live-camera
+rise threshold, independent head/crane+emerald tables, Swing_Setup1/UpAndDown,
+acceleration/chase/wait, eight-hit collision and native credited-player braking,
+48-pass then 16-pass release, offscreen departure, four explosion workers,
+white fade and character/emerald-dependent transition request.
+
+Preserved shipped details and adaptations are inline:
+- `sub_80F0E` adds `$1000`, stores only through `$40000`, but subsequently moves
+  by the unstored `$41000`. Zone state captures the accumulator and camera's low
+  word, since Camera exposes only the native position word.
+- `FixBugs=0` in `sub_80E2C` advances two palette words rather than the fixed
+  three. Even flashes therefore read `$222,$888,$CCC`; destinations and colors
+  are ROM-backed. Killing the ship does not set its status bit 7.
+- `loc_803B4` overwrites dynamic index 61 (absolute SST slot 64) on fade allocation
+  failure. Java retires/removes/releases its occupant before the fixed-slot insert
+  so later cleanup cannot free the replacement. The exit polls that exact fade's
+  completion publication; arbitrary external removal is not completion.
+- `loc_8041E`'s Knuckles-only `Game_mode=0` uses the existing engine Sega/title
+  exit request. Sonic modes with exactly seven Chaos Emeralds request `$C00`;
+  all other non-Knuckles paths request `$D01`, after the progression save.
+
+The allocation-pressure test rejected a null-only fallback check: `spawnFreeChild`
+returns a constructed but destroyed object when the pool is full. Check that
+result's destruction/slot as well. Apply the same check to the crane prefix before
+trying the emerald. A separate test uses real occupied SSTs through rewind;
+allocator-only pressure reservations are intentionally not surviving object state.
+The graph assertion compares encounter occupants: full-session restore also
+installs the native fixed-slot Insta-Shield, which is not a duplicate ship child.
+
+Source reread corrected the crane ObjDat3 half-height from `$10` to `$14`.
+Three scenery tests pass. Ten ship tests plus the four mandated S3K bootstrap/
+loading classes pass 69 cases, zero skips. Prior DDZ production lifecycle checks
+pass two, zero skips. Three focused rewind guards pass: 1,290 object classes,
+1,050 isolated passes, 240 graph-covered, no unaccounted classes. These do not
+replace combined delivery validation. Root, final screen/retained rendering,
+live route/media and full root-to-ship production integration remain open.
+
+An eleventh ship case then passed alone (zero skips): a real ObjectManager
+sweep runs the forward head, crane and emerald on their allocation pass, with
+the head still on its initial raw-animation frame. Total distinct ship cases: 11.

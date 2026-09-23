@@ -15,6 +15,13 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     private final PlayerCharacter playerCharacter;
     private final DezFinalPlaneState plane = new DezFinalPlaneState();
     private final S3kScreenShake screenShake = new S3kScreenShake();
+    /** _unkFA84 and Camera_X_pos low word, retained across the escape phases. */
+    private int escapeCameraSpeed;
+    private int escapeCameraFraction;
+    public int escapeCameraSpeed() { return escapeCameraSpeed; }
+    public void escapeCameraSpeed(int value) { escapeCameraSpeed=value; }
+    public int escapeCameraFraction() { return escapeCameraFraction; }
+    public void escapeCameraFraction(int value) { escapeCameraFraction=value&0xFFFF; }
     private short windowBase = 0x6C0;
     private short bossX = 0x3C0;
     private short bossY = 0xF8;
@@ -89,7 +96,8 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     @Override public byte[] captureBytes() {
-        var buffer = ByteBuffer.allocate(18 * Short.BYTES + art.snapshotBytes() + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + DezFinalPlaneState.SNAPSHOT_BYTES);
+        var buffer = ByteBuffer.allocate(18 * Short.BYTES + 2 * Integer.BYTES + art.snapshotBytes() + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + DezFinalPlaneState.SNAPSHOT_BYTES);
+        buffer.putInt(escapeCameraSpeed).putInt(escapeCameraFraction);
         art.captureTo(buffer);
         emeraldPalette.captureTo(buffer);
         screenShake.captureTo(buffer);
@@ -104,6 +112,7 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
     @Override public void restoreBytes(byte[] bytes) {
         var buffer = ByteBuffer.wrap(bytes);
+        escapeCameraSpeed=buffer.getInt(); escapeCameraFraction=buffer.getInt();
         art.restoreFrom(buffer);
         emeraldPalette.restoreFrom(buffer);
         screenShake.restoreFrom(buffer);

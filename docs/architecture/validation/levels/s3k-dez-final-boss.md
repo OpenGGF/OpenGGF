@@ -202,3 +202,26 @@ first inventory check identified its stale Java count (the text header was alrea
 updated). After updating that count, the isolated inventory rerun passed:
 1,289 classes, 1,049 isolated passes, 240 graph-covered, zero unaccounted classes.
 All three distinct guard cases pass without skips; this is not a full guard sweep.
+
+
+#### Escape ship sequence (2026-09-23)
+
+Ten `TestDezFinalEscapeShip` cases cover copy/live camera use, ordered child
+creation, fractional chase overshoot and rewind, both credited players and the
+shipped flash-row bug, exact defeat waits, all character/emerald exit requests,
+independent partial prefixes, forced-slot-64 fade replacement and replay,
+non-completion on external fade deletion, restored ship/child references and the
+natural chase-to-defeat-to-fade sequence. With the four mandatory S3K load/bootstrap
+classes, 69 cases pass without skips. Scenery (3) and DDZ production lifecycle (2)
+also pass. Three focused rewind guards pass, including the updated object count.
+
+Initial pressure testing found the production null-only allocation check wrong;
+failed spawn helpers return destroyed instances. Fixed it before the passing run.
+The test then replaced synthetic allocator reservations with real occupants for
+rewind and limited topology comparison to the encounter (session restore adds a
+fixed-slot Insta-Shield). No live root or final screen path invokes the ship yet;
+this sequence does not certify controller completion or final-arena presentation.
+
+An eleventh ship case then passed alone (zero skips): a real ObjectManager
+sweep runs the forward head, crane and emerald on their allocation pass, with
+the head still on its initial raw-animation frame. Total distinct ship cases: 11.
