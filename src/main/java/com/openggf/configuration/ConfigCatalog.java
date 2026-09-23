@@ -68,6 +68,11 @@ public final class ConfigCatalog {
         put(WIDESCREEN_DEADZONE_MODE, ofEnum("display", "deadzoneMode",
                 "Camera horizontal deadzone behaviour on wide screens",
                 Set.of("CENTER_SCALED", "PROPORTIONAL")));
+        put(DISPLAY_HUD_ANCHOR, ofEnum("display", "hudAnchor",
+                "Horizontal anchor for the score/time/rings/lives HUD on widescreen profiles; "
+                + "DEFAULT keeps its centered native-frame position, LEFT_EDGE aligns it to the screen left edge; "
+                + "no effect at native 320-pixel width",
+                Set.of("DEFAULT", "LEFT_EDGE")));
         put(DISPLAY_COLOR_PROFILE, ofEnum("display", "colorProfile",
                 "Display-only color profile for Mega Drive palette presentation",
                 Set.of("RAW_RGB", "MD_ANALOG", "NTSC_SOFT")));

@@ -14,6 +14,7 @@ display:
   shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
   shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
+  hudAnchor: "DEFAULT"   # Widescreen HUD position: centered native frame or screen left edge
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
   fps: 60   # Frames per second to render (changes game speed)

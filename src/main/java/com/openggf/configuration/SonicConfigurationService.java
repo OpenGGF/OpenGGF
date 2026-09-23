@@ -695,6 +695,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
+		putDefault(SonicConfiguration.DISPLAY_HUD_ANCHOR, "DEFAULT");
 		putDefault(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, true);
 		putDefault(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT, "shaders");
 		putDefault(SonicConfiguration.DISPLAY_SHADER_SELECTION, "OFF");

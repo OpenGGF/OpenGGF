@@ -28,6 +28,7 @@ final class EngineSettingLabels {
             case DISPLAY_COLOR_PROFILE -> "Colour profile";
             case DISPLAY_COLOR_PROFILE_TOGGLE_KEY -> "Colour profile shortcut";
             case WIDESCREEN_DEADZONE_MODE -> "Wide camera movement";
+            case DISPLAY_HUD_ANCHOR -> "Widescreen HUD position";
             case AUDIO_ENABLED -> "Music and sound effects";
             case AUDIO_FM_CORE -> "FM sound chip";
             case REGION -> "Audio region";
@@ -93,6 +94,13 @@ final class EngineSettingLabels {
         if (raw.isEmpty()) return ConfigCatalog.meta(key).type() == ConfigType.KEY ? "Unbound" : "(empty)";
         if (ConfigCatalog.meta(key).type() == ConfigType.BOOL) return Boolean.parseBoolean(raw) ? "On" : "Off";
         if (ConfigCatalog.meta(key).type() != ConfigType.ENUM) return raw;
+        if (key == SonicConfiguration.DISPLAY_HUD_ANCHOR) {
+            return switch (raw) {
+                case "DEFAULT" -> "Centered native position";
+                case "LEFT_EDGE" -> "Screen left edge";
+                default -> raw;
+            };
+        }
         return switch (raw) {
             case "NATIVE_4_3" -> "Native 4:3";
             case "WIDE_16_10" -> "Wide 16:10";

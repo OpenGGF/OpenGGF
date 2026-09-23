@@ -66,6 +66,7 @@ public class HudRenderManager {
 
     private HudProfile profile = HudProfile.stock();
     private int viewportWidth = 320;
+    private boolean screenLeftAnchorEnabled;
 
     public HudRenderManager(GraphicsManager graphicsManager, Camera camera, GameStateManager gameState) {
         this.graphicsManager = graphicsManager;
@@ -99,6 +100,10 @@ public class HudRenderManager {
     /** Supplies the current gameplay logical width for the next HUD draw. */
     public void setViewportWidth(int viewportWidth) {
         this.viewportWidth = Math.max(320, viewportWidth);
+    }
+
+    void setScreenLeftAnchorEnabled(boolean enabled) {
+        this.screenLeftAnchorEnabled = enabled;
     }
 
     void installProfile(HudProfile profile) {
@@ -546,6 +551,9 @@ public class HudRenderManager {
 
     private int nativeOrigin() {
         int liveWidth = Math.max(viewportWidth, graphicsManager.getProjectionWidth());
+        if (screenLeftAnchorEnabled && liveWidth > 320) {
+            return 0;
+        }
         return (liveWidth - 320) / 2;
     }
 

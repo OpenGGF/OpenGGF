@@ -190,6 +190,8 @@ public enum SonicConfiguration {
 	DISPLAY_ASPECT,
 	/** Camera horizontal deadzone behaviour on wide screens: CENTER_SCALED keeps the native 16px deadzone band; PROPORTIONAL scales the band width with the screen width. */
 	WIDESCREEN_DEADZONE_MODE,
+	/** Horizontal anchor for the score/time/rings/lives HUD on widescreen profiles. */
+	DISPLAY_HUD_ANCHOR,
 	/** When true, the display window is derived from DISPLAY_ASPECT at the 2x baseline; when false, SCREEN_WIDTH/SCREEN_HEIGHT are used verbatim. */
 	DISPLAY_WINDOW_AUTOSIZE,
 	/** Root directory scanned for user display shaders (relative to working dir). */

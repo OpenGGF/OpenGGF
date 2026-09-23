@@ -52,6 +52,76 @@ class TestHudRenderManagerWidescreen {
     }
 
     @Test
+    void leftEdgeAnchorMovesTheStandardHudToTheWideViewportEdge() {
+        GraphicsManager graphics = mock(GraphicsManager.class);
+        Camera camera = mock(Camera.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        LevelState levelState = mock(LevelState.class);
+        when(camera.getXWithShake()).thenReturn((short) 0);
+        when(camera.getYWithShake()).thenReturn((short) 0);
+        when(levelState.getRings()).thenReturn(7);
+        when(levelState.getFlashCycle()).thenReturn(false);
+        when(levelState.shouldFlashTimer()).thenReturn(false);
+        when(levelState.getDisplayTime()).thenReturn("0:10");
+        when(gameState.getScore()).thenReturn(123);
+        when(gameState.getLives()).thenReturn(3);
+
+        List<RenderCall> calls = new ArrayList<>();
+        doAnswer(invocation -> {
+            calls.add(new RenderCall(invocation.getArgument(0),
+                    invocation.getArgument(2), invocation.getArgument(3)));
+            return null;
+        }).when(graphics).renderPatternWithId(anyInt(), any(), anyInt(), anyInt());
+
+        HudRenderManager hud = new HudRenderManager(graphics, camera, gameState);
+        HudProfileAccess.setScreenLeftAnchorEnabled(hud, true);
+        hud.setViewportWidth(400);
+        hud.setDigitPatternIndex(200);
+        hud.setLivesNumbersPatternIndex(220);
+        hud.draw(levelState, null);
+
+        assertTrue(calls.contains(new RenderCall(202, 88, 8)), "score should anchor at screen left");
+        assertTrue(calls.contains(new RenderCall(200, 56, 24)), "time should anchor at screen left");
+        assertTrue(calls.contains(new RenderCall(214, 80, 40)), "rings should anchor at screen left");
+        assertTrue(calls.contains(new RenderCall(223, 56, 208)), "lives should anchor at screen left");
+    }
+
+    @Test
+    void leftEdgeAnchorHasNoEffectAtNativeWidth() {
+        GraphicsManager graphics = mock(GraphicsManager.class);
+        Camera camera = mock(Camera.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        LevelState levelState = mock(LevelState.class);
+        when(camera.getXWithShake()).thenReturn((short) 0);
+        when(camera.getYWithShake()).thenReturn((short) 0);
+        when(levelState.getRings()).thenReturn(7);
+        when(levelState.getFlashCycle()).thenReturn(false);
+        when(levelState.shouldFlashTimer()).thenReturn(false);
+        when(levelState.getDisplayTime()).thenReturn("0:10");
+        when(gameState.getScore()).thenReturn(123);
+        when(gameState.getLives()).thenReturn(3);
+
+        List<RenderCall> calls = new ArrayList<>();
+        doAnswer(invocation -> {
+            calls.add(new RenderCall(invocation.getArgument(0),
+                    invocation.getArgument(2), invocation.getArgument(3)));
+            return null;
+        }).when(graphics).renderPatternWithId(anyInt(), any(), anyInt(), anyInt());
+
+        HudRenderManager hud = new HudRenderManager(graphics, camera, gameState);
+        HudProfileAccess.setScreenLeftAnchorEnabled(hud, true);
+        hud.setViewportWidth(320);
+        hud.setDigitPatternIndex(200);
+        hud.setLivesNumbersPatternIndex(220);
+        hud.draw(levelState, null);
+
+        assertTrue(calls.contains(new RenderCall(202, 88, 8)), "score should keep its native position");
+        assertTrue(calls.contains(new RenderCall(200, 56, 24)), "time should keep its native position");
+        assertTrue(calls.contains(new RenderCall(214, 80, 40)), "rings should keep their native position");
+        assertTrue(calls.contains(new RenderCall(223, 56, 208)), "lives should keep their native position");
+    }
+
+    @Test
     void bonusHudKeepsNativeOriginAtWidescreen() {
         GraphicsManager graphics = mock(GraphicsManager.class);
         Camera camera = mock(Camera.class);

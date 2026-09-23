@@ -5,6 +5,10 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`next` / 0.8)
 
+- **Configurable widescreen HUD anchor:** the score, time, rings, and lives HUD can
+  keep its centered native-frame position or align to the left edge of the screen.
+  Native 4:3 positioning is unchanged.
+
 - **Multiplayer time-attack integrity:** Race hosts now enforce one active,
   strictly ordered attempt per player during the running phase, reject ghost
   streams that advance ahead of server-observed time, and bind each finish and

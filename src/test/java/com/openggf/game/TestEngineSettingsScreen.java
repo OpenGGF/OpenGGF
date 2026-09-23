@@ -23,6 +23,13 @@ class TestEngineSettingsScreen {
     @TempDir Path directory;
 
     @Test
+    void widescreenHudAnchorHasReadableChoiceLabels() {
+        assertEquals("Widescreen HUD position", EngineSettingLabels.label(DISPLAY_HUD_ANCHOR));
+        assertEquals("Centered native position", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "DEFAULT"));
+        assertEquals("Screen left edge", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "LEFT_EDGE"));
+    }
+
+    @Test
     void backLeavesFieldsBeforeClosingTheScreen() {
         Fixture f = new Fixture();
         f.press(GLFW_KEY_ENTER);

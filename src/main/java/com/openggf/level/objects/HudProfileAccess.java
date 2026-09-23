@@ -11,6 +11,10 @@ public final class HudProfileAccess {
         Objects.requireNonNull(hud, "hud").installProfile(profile);
     }
 
+    public static void setScreenLeftAnchorEnabled(HudRenderManager hud, boolean enabled) {
+        Objects.requireNonNull(hud, "hud").setScreenLeftAnchorEnabled(enabled);
+    }
+
     public static void installWarningPolicy(HudRenderManager hud,
             com.openggf.game.internal.HudWarningPolicyProvider policy, java.util.function.IntSupplier clock) {
         Objects.requireNonNull(hud, "hud").setWarningPolicy(

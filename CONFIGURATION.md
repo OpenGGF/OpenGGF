@@ -102,6 +102,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `DISPLAY_SHADER_PICKER_KEY` | `display.shaderPickerKey` | key | `BACKSLASH` | Runtime key used to open the searchable display shader picker. |
 | `DISPLAY_SHADER_DEFAULT_PHASE` | `display.shaderDefaultPhase` | enum | `"PRESENTATION"` | Fallback render phase for standalone display shaders. Accepted values: `"SCENE"`, `"PRESENTATION"`, `"FINAL"`. |
 | `WIDESCREEN_DEADZONE_MODE` | `display.deadzoneMode` | string | `"PROPORTIONAL"` | Camera horizontal deadzone behaviour on wide screens: `"CENTER_SCALED"` keeps the native 16px deadzone band; `"PROPORTIONAL"` scales the band width with the screen width. **EXPERIMENTAL** — takes effect only when a widescreen preset is active. |
+| `DISPLAY_HUD_ANCHOR` | `display.hudAnchor` | string | `"DEFAULT"` | Horizontal position of the score/time/rings/lives HUD on widescreen profiles: `"DEFAULT"` keeps the centered native-frame position; `"LEFT_EDGE"` anchors it to the screen's left edge. Both settings produce the same position at native 4:3. |
 
 ### Display shader library
 
