@@ -229,6 +229,36 @@ class TestRoomHost {
     }
 
     @Test
+    void repeatedBadFinishHashesCloseGhostConnectionAtStrikeThreshold() throws Exception {
+        FakeHubConnection sender = new FakeHubConnection();
+        String token = admit(sender, "A", dir.resolve("a")).sessionToken();
+        room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 300, "OPEN", null));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        room.tick();
+
+        byte[] frames = new byte[GhostFrameCodec.BYTES * 2];
+        GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
+                false, false, false, 2, false), frames, 0);
+        GhostFrameCodec.encode(new GhostFrame(101, 200, 1,
+                false, false, false, 2, true), frames, GhostFrameCodec.BYTES);
+        for (int attemptId = 1; attemptId <= GhostStreamValidator.KICK_THRESHOLD; attemptId++) {
+            room.onText(sender, ControlCodec.encode(token,
+                    new ControlMessage.AttemptStart(attemptId)));
+            room.onBinary(sender, GhostPackets.encodeFrames(attemptId, 0, frames));
+            room.onText(sender, ControlCodec.encode(token,
+                    new ControlMessage.AttemptFinish(attemptId, 1, 0, 1,
+                            "ab".repeat(32), "00".repeat(32), null)));
+            if (attemptId < GhostStreamValidator.KICK_THRESHOLD) {
+                assertNull(sender.closedReason);
+            }
+        }
+        assertEquals("ghost stream violations", sender.closedReason);
+        room.onDisconnected(sender);
+        assertEquals(0, room.playerCount());
+    }
+
+    @Test
     void attemptTrafficOutsideRunningRoundIsNotRelayed() throws Exception {
         FakeHubConnection sender = new FakeHubConnection();
         FakeHubConnection recipient = new FakeHubConnection();

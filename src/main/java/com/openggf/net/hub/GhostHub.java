@@ -209,9 +209,13 @@ public final class GhostHub {
     public boolean hasFinishEvidence(int slot, int attemptId, int finishFrame,
                                      String claimedStreamHashHex) {
         Player player = players.get(slot);
-        return player != null
-                && player.validator.hasFinishEvidence(
+        if (player == null) {
+            return false;
+        }
+        boolean accepted = player.validator.hasFinishEvidence(
                 attemptId, finishFrame, claimedStreamHashHex);
+        closeIfThresholdReached(player);
+        return accepted;
     }
 
     public int tickCount() {
