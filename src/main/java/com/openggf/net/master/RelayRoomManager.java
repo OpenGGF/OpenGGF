@@ -11,6 +11,7 @@ import com.openggf.net.protocol.ControlMessage;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -21,7 +22,7 @@ import com.openggf.net.protocol.VerdictCodec;
 /** Master-owned relay rooms, each confined to one event-loop executor. */
 public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     public record RoomAccess(RoomHost room, Executor loop) { }
-    private record RoomRef(String roomId, int slot, String fingerprint,
+    private record RoomRef(String roomId, String participantId,
                            int attemptId, String recordingHash, boolean spotCheck) { }
     private record TierHint(boolean isNew, long observedAtMillis) { }
 
@@ -167,7 +168,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                 });
         RoomHost room = new RoomHost(config, masterIdentity, clock, profiles, hooks);
         RoomRoundAccess.onPendingResultExpiry(room, result -> brokerLoop.execute(() ->
-                voidPendingRoute(entry.roomId(), result.slot(), result.fingerprint(),
+                voidPendingRoute(entry.roomId(), result.participantId(),
                         result.finish().attemptId(),
                         result.finish().inputRecordingHashHex())));
         if (descriptor.verified() && verificationConfig != null) {
@@ -282,7 +283,8 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                                     entry.getKey()));
                 }
                 lastSpotCheckByFingerprint.put(candidate.fingerprint(), now);
-                submitVerification(roomId, candidate.slot(), candidate.fingerprint(),
+                submitVerification(roomId, candidate.slot(), candidate.participantId(),
+                        candidate.fingerprint(),
                         candidate.finish(), trackKey, candidate.character(),
                         fingerprint, true);
             }
@@ -296,8 +298,9 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         }
         RoomAccess access = rooms.get(route.roomId());
         if (access != null) {
-            access.loop().execute(() -> RoomRoundAccess.onVerdictEvidence(access.room(),
-                    route.fingerprint(), route.attemptId(), route.recordingHash(), pass));
+            access.loop().execute(() -> RoomRoundAccess.onVerdictForParticipant(
+                    access.room(), route.participantId(), route.attemptId(),
+                    route.recordingHash(), pass));
         }
     }
 
@@ -343,11 +346,19 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                                     String trackKey, String character,
                                     String determinismFingerprint,
                                     boolean spotCheck) {
-        brokerLoop.execute(() -> submitVerification(roomId, slot, identityFingerprint,
-                finish, trackKey, character, determinismFingerprint, spotCheck));
+        RoomAccess access = rooms.get(roomId);
+        String participantId = access == null ? null
+                : RoomRoundAccess.participantIdForSlot(access.room(), slot,
+                        identityFingerprint);
+        if (!spotCheck && participantId == null) {
+            return;
+        }
+        brokerLoop.execute(() -> submitVerification(roomId, slot, participantId,
+                identityFingerprint, finish, trackKey, character,
+                determinismFingerprint, spotCheck));
     }
 
-    private void submitVerification(String roomId, int slot,
+    private void submitVerification(String roomId, int slot, String participantId,
                                     String identityFingerprint,
                                     ControlMessage.AttemptFinish finish,
                                     String trackKey, String character,
@@ -360,7 +371,9 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                 : verificationConfig.verifiedUploadDeadlineSeconds();
         VerificationJobQueue.Job candidate = new VerificationJobQueue.Job(
                 null, roomId, slot, identityFingerprint,
-                roomId + "#" + slot + "#" + finish.attemptId(),
+                roomId + "#" + slot + "#"
+                        + (participantId == null ? "" : participantId + "#")
+                        + finish.attemptId(),
                 determinismFingerprint, trackKey, character, finish.timeFrames(),
                 finish.firstInputFrame(), finish.finishFrame(),
                 finish.inputRecordingHashHex(), finish.ghostStreamHashHex(),
@@ -374,35 +387,34 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                 recordUnavailable(candidate);
             }
             RoomAccess rejected = rooms.get(roomId);
-            if (rejected != null && !spotCheck) {
-                rejected.loop().execute(() -> RoomRoundAccess.onVerdictEvidence(
-                        rejected.room(), identityFingerprint, finish.attemptId(),
+            if (rejected != null && !spotCheck && participantId != null) {
+                rejected.loop().execute(() -> RoomRoundAccess.onVerdictForParticipant(
+                        rejected.room(), participantId, finish.attemptId(),
                         finish.inputRecordingHashHex(), false));
             }
             return;
         }
         verificationRoutes.put(jobId,
-                new RoomRef(roomId, slot, identityFingerprint, finish.attemptId(),
+                new RoomRef(roomId, participantId, finish.attemptId(),
                         finish.inputRecordingHashHex(), spotCheck));
         RoomAccess access = rooms.get(roomId);
-        if (access != null) {
+        if (access != null && participantId != null) {
             String base = verificationConfig.publicBaseUrl();
             String path = "/recordings/" + finish.inputRecordingHashHex();
             String uploadUrl = base == null || base.isBlank() ? path
                     : base.replaceAll("/+$", "") + path;
-            access.loop().execute(() -> RoomRoundAccess.sendToIdentityInSlot(
-                    access.room(), slot, identityFingerprint,
+            access.loop().execute(() -> RoomRoundAccess.sendToParticipantInSlot(
+                    access.room(), slot, participantId,
                     new ControlMessage.RecordingRequest(finish.attemptId(),
                             finish.inputRecordingHashHex(), uploadUrl)));
         }
     }
 
-    private void voidPendingRoute(String roomId, int slot, String fingerprint,
+    private void voidPendingRoute(String roomId, String participantId,
                                   int attemptId, String recordingHash) {
         verificationRoutes.entrySet().stream()
                 .filter(entry -> entry.getValue().roomId().equals(roomId)
-                        && entry.getValue().slot() == slot
-                        && entry.getValue().fingerprint().equals(fingerprint)
+                        && Objects.equals(entry.getValue().participantId(), participantId)
                         && entry.getValue().attemptId() == attemptId
                         && entry.getValue().recordingHash().equals(recordingHash)
                         && !entry.getValue().spotCheck())

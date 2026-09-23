@@ -133,7 +133,7 @@ class TestHostRoundEngine {
         assertTrue(engine.hasBestForParticipant("new-session"));
         assertEquals(List.of("new-fingerprint", "old-fingerprint"),
                 engine.results().stream().map(HostRoundEngine.Result::fingerprint).toList());
-        engine.onVerdictEvidence("old-fingerprint", 1, "ab".repeat(32), false);
+        engine.onVerdictForParticipant("old-session", 1, "ab".repeat(32), false);
         assertFalse(engine.hasBestForParticipant("old-session"));
         assertTrue(engine.hasBestForParticipant("new-session"));
     }

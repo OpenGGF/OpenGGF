@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.LongSupplier;
 
 /** Single-threaded room protocol driver and owner of its hub and round state. */
@@ -30,6 +31,7 @@ public final class RoomHost {
         boolean admitted;
         int slot = -1;
         String token;
+        String participantId;
         String fingerprint;
         String displayName;
         String character;
@@ -261,12 +263,18 @@ public final class RoomHost {
         }
     }
 
-    void sendToIdentityInSlot(int slot, String fingerprint,
-                              ControlMessage message) {
+    void sendToParticipantInSlot(int slot, String participantId,
+                                 ControlMessage message) {
         Member member = memberForSlot(slot);
-        if (member != null && member.fingerprint.equals(fingerprint)) {
+        if (member != null && member.participantId.equals(participantId)) {
             send(member, message);
         }
+    }
+
+    String participantIdForSlot(int slot, String fingerprint) {
+        Member member = memberForSlot(slot);
+        return member != null && member.fingerprint.equals(fingerprint)
+                ? member.participantId : null;
     }
 
     public String identityFingerprintForSlot(int slot) {
@@ -336,6 +344,7 @@ public final class RoomHost {
         }
         member.memberSinceMillis = wallClockMillis.getAsLong();
         member.token = tokens.issue();
+        member.participantId = UUID.randomUUID().toString();
         hub.addPlayer(slot, member.fingerprint, member.connection);
         member.connection.sendText(ControlCodec.encode(null,
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
@@ -380,13 +389,13 @@ public final class RoomHost {
                     break;
                 }
                 HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
-                        member.slot, member.token, member.fingerprint,
+                        member.slot, member.participantId, member.fingerprint,
                         member.displayName, member.character,
                         finish, !hub.hasFinishEvidence(member.slot,
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
                 clearActiveAttempt(member);
-                member.finishedThisRound = round.hasBestForParticipant(member.token);
+                member.finishedThisRound = round.hasBestForParticipant(member.participantId);
                 if (outcome != null && outcome.outsideBroadcastCap()) {
                     send(member, new ControlMessage.RankUpdate(
                             outcome.rank(), finish.timeFrames()));
