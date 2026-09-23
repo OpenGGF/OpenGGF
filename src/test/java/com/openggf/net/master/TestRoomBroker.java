@@ -258,7 +258,7 @@ class TestRoomBroker {
         establish(fingerprint);
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
-                "DIRECT", 27888, "0.6:cafe")));
+                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
         String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
         ladder.sanction(new IdentityStore.SanctionRecord(fingerprint, "BAN", "cheat",
                 "operator", now, Long.MAX_VALUE));
