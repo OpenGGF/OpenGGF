@@ -22,7 +22,7 @@ its original unimplemented counts must not be read as current production status.
 
 | Zone | Current evidence and next obligation |
 | --- | --- |
-| MHZ | Integrated Sonic/Tails route and miniboss fixes; reconcile the original audit's accepted Knuckles/trace exclusions and create the missing per-act evidence matrices before certification. |
+| MHZ | Integrated Sonic/Tails route and miniboss fixes; accepted Knuckles/trace exclusions reconciled in the new per-act matrices; current route/lifecycle/breadth validation remains before certification. |
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; finish matrix reconciliation, checkpoint geometry and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Repair the Act 1 miniboss's missing runtime art submission; then retain distinct cold-route, strict-parity and breadth gaps. |
@@ -37,7 +37,7 @@ pending. Local component commits are checkpoints, not completion or delivery.
 
 | Zone | Actual implementation location | Evidence and remaining work |
 | --- | --- | --- |
-| MHZ | Integrated in develop; [completion audit](../research/s3k-zones/mhz-completion-audit.md) | Sonic/Tails implementation reviewed, followed by miniboss lifetime/defeat/transition fixes. Original audit explicitly excluded further Knuckles work and stopped traces. No conformant per-act matrix yet; current route, lifecycle, visual and breadth validation still needed. Historical broad failures were not attributed to baseline and must not become a green claim. |
+| MHZ | Integrated in develop; [completion audit](../research/s3k-zones/mhz-completion-audit.md) | Sonic/Tails implementation reviewed, followed by miniboss lifetime/defeat/transition fixes. Original audit explicitly excluded further Knuckles work and stopped traces. Per-act matrices now separate accepted scope and historical evidence from current gaps; route, lifecycle, visual and breadth validation still needed. Historical broad failures were not attributed to baseline and must not become a green claim. |
 | FBZ | Integrated; [outstanding actions](../research/s3k-zones/fbz-outstanding-actions.md), [Act 1](../validation/levels/s3k-fbz-act1.md), [Act 2](../validation/levels/s3k-fbz-act2.md) | Cold native Act 1 completion and 13 Act 2 completion rows are recorded; bounded reload/transition/rewind and native afterstates exist. Native checkpoint geometry, strict parity, SAT presentation and remaining matrix obligations stay open. Preserve the explicitly accepted S1 elevator challenge. |
 | SOZ | Integrated; [plan and evidence](../plans/2026-09-15-soz-methodology-v2.md) | Both acts, bosses and exits implemented; cold-route, recording and native pixel follow-ups greatly exceed the early plan summaries. Full supported route products, remaining lifecycle/participant obligations and native presentation certification need reconciliation against the two act matrices. Trace deferrals are not silently revoked by this audit. |
 | LRZ | Local `feature/ai-lrz-bring-up` at `c708e1a2b` | Act 1 census is zero placeholders; miniboss defeat, seamless act change, post-defeat palette/camera releases and Act 2 background stages exist. Act 2 has 23 placeholder placements; boss act has 8. Latest commit adds spike-ball launchers **and an unregistered turbine draft**, absent from the status summary. Remaining turbine/chained platforms, cutscenes, boss act, exits, palette rotation, breadth, rewind, cold completion and native comparisons are substantive work. |
@@ -2067,3 +2067,16 @@ nor the separate DEZ2 camera fix completes the campaign or its integration gates
 An eleventh ship case then passed alone (zero skips): a real ObjectManager
 sweep runs the forward head, crane and emerald on their allocation pass, with
 the head still on its initial raw-animation frame. Total distinct ship cases: 11.
+
+
+### MHZ matrix reconciliation (2026-09-23)
+
+Added both act matrices and linked the coverage backlog. Inspected the original
+completion audit, September 12 miniboss/transition follow-ups and current event,
+boss and graph-test source. Preserve the explicit no-further-Knuckles and stopped
+trace-work scope; these are not unsupported-configuration claims. Historical
+focused passes remain attributed to their original candidates, and red/interrupted
+full runs remain red/incomplete. No fresh MHZ run or full-act certification is
+claimed. The matrices enumerate every standard obligation, breadth and rewind
+gaps, including current controller routes and checkpoint/death lifecycle work.
+Local links were resolved successfully; this is documentation-only progress.
