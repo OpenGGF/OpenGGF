@@ -427,6 +427,10 @@ public final class Sonic3kPlcArtRegistry {
                         Sonic3kConstants.MAP_KNUX_FINAL_BOSS_CRANE_ADDR, 0x49D, 0, null, 29));
                 levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FINAL_DEBRIS,
                         0x187B66, 0x100, 2, null, 3));
+                levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FINAL_SHIP,
+                        Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0x52E, 0, null, 13));
+                levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FINAL_EGGROBO_HEAD,
+                        Sonic3kConstants.MAP_EGG_ROBO_HEAD_ADDR, 0x52E, 0, null, 4));
                 // ObjDat3_812E0 differs from the Act 2 runner's $4A9 destination.
                 levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_ROBOTNIK_RUN,
                         Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR, 0x58C, 0, null, 7));

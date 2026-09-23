@@ -1999,3 +1999,30 @@ three passed, zero skips; confirmed 1288 total / 1048 isolated / 240 graph /
 zero missing codec and no exception growth. `git diff --check` clean. These are
 focused component checks; no complete escape, new capture or campaign delivery
 claim. Continue with root/ship and pending production screen/plane integration.
+
+
+### DEZ final escape decorations and persistent art jobs (after `389c43c76`)
+
+Added the ROM head/flame dispatch and final-zone module-job ownership needed by
+the retiring root. The source's head-end routine explicitly selects Robotnik's
+five-tick raw script even for EggRobo mappings; preserve it and document it in
+code. Flame init does not draw; V-int parity and parent X velocity gate later
+drawing. Head control-bit retirement is deferred, while flame deletion is immediate.
+Pending crane/debris module jobs now survive the root through captured zone state,
+matching the native global FIFO's lifetime without introducing a readiness wait.
+The production event/root/ship still must call that owner's service method.
+
+Queued command, Java 21, root `s3k.gen`:
+`-Dmse=off -Ds3k.rom.path=<root>/s3k.gen -Dtest=TestDezFinalShipDecoration,TestDezFinalArtState,TestSonic3kPlcArtRegistry test`:
+82 passed, zero skipped. Coverage includes flipped head tracking, both raw scripts,
+Knuckles upload, retirement rewind, flame motion/parity, restored FIFO drain and
+all decoded crane/debris pixels. Initial compile accessor typo and direct-update
+manager-sweep test assumption were corrected before this run. Final integration,
+route/media, shared-camera broad validation, other-zone obligations and push remain
+open; these components do not certify DEZ completion.
+
+Focused rewind guards: helper-state and field-disposition checks passed; the
+first inventory check identified its stale Java count (the text header was already
+updated). After updating that count, the isolated inventory rerun passed:
+1,289 classes, 1,049 isolated passes, 240 graph-covered, zero unaccounted classes.
+All three distinct guard cases pass without skips; this is not a full guard sweep.

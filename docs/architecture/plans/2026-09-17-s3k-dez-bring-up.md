@@ -3788,3 +3788,28 @@ escape ship, root, forced-slot-61 fade allocation, screen/plane surfaces and
 live route/media remain open. Root module submissions must outlive root deletion:
 put pending prepared-job ownership in the captured final-zone runtime/event
 owner rather than losing the crane/debris handles with the retiring root.
+
+
+### Escape head/flame and persistent art owner (after `389c43c76`)
+
+`DezFinalShipDecoration` ports `Obj_RobotnikHead3` and
+`Obj_RobotnikShipFlame`: adjusted parent flips, bucket 5, raw ROM scripts,
+parent status bits 6/7, head deferred control-bit-4 retirement and flame immediate
+retirement. Flame initialization returns without drawing; subsequent drawing uses
+V-int parity and nonzero parent X speed. `Obj_RobotnikHead3End` explicitly chooses
+the Robotnik script even after Knuckles selected EggRobo mappings at initialization;
+this shipped behavior is documented beside the branch. EggRobo submits its native
+module once. Registrations use ROM mappings `$6820C` (13 frames) and `$681D4`
+(four frames), both tile `$52E`, palette 0.
+
+`DezFinalArtState` captures pending prepared module ordinals in the final-zone
+runtime so root deletion cannot abandon crane/debris jobs. The native global FIFO
+already outlives sprites; this owner adapts that lifetime to engine job claiming,
+without adding a gameplay readiness wait. A test queues both handoff archives,
+restores the physical queue, coordinator, timing and zone owners, then compares
+all decoded pixels and the drain duration. The connected event/ship must service
+this owner every update. Raw Nemesis uploads remain synchronous in the existing
+loader; this does not claim native Nemesis timing.
+
+The full root/escape graph, forced-slot-61 fade allocation, screen/plane surfaces
+and actual final-arena controller route/media remain open.

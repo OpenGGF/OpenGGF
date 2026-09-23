@@ -179,3 +179,26 @@ retirement replay without its parent; and eight-pass white fade at native DEZ
 reload 3 and DDZ reload 7, including mid-fade restoration. Three cases passed,
 plus art registry 78 and DDZ lifecycle 2, with zero skips. Neither art uploads
 nor the root-to-escape-to-next-level chain is connected by these tests.
+
+
+#### Escape decoration and module handoff dependencies (2026-09-23)
+
+Three `TestDezFinalShipDecoration` cases exercise ROM raw-animation cadence,
+status/flip tracking, Knuckles' single module submission and end-script selection,
+head retirement/restore without its retired parent, and flame V-int/motion gating
+with immediate retirement. `TestDezFinalArtState` restores the zone, hardware,
+physical FIFO and coordinator after crane/debris submission, then compares the
+complete decoded tile pixels and drain duration. Combined with
+`TestSonic3kPlcArtRegistry`, the queued Maven selection passes 82 cases, zero skips.
+The first attempt exposed a private-field accessor typo at compile time; the next
+found a test assertion expecting manager sweeping after a direct object update.
+Both were corrected; no gameplay behavior was adjusted to accommodate the test.
+
+These are dependency checks. Neither the escape ship nor its event owner is live,
+and no new final-arena video, controller completion or full-graph claim follows.
+
+Focused rewind guards: helper-state and field-disposition checks passed; the
+first inventory check identified its stale Java count (the text header was already
+updated). After updating that count, the isolated inventory rerun passed:
+1,289 classes, 1,049 isolated passes, 240 graph-covered, zero unaccounted classes.
+All three distinct guard cases pass without skips; this is not a full guard sweep.
