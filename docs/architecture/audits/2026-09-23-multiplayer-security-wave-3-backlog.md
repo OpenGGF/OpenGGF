@@ -19,6 +19,37 @@ The next audit should revisit these scenarios after the current transport,
 authority, sanction, and resource-limit fixes have landed. Re-run the threat
 model against the integrated code before promoting any item to a fix task.
 
+## Wave 3 triage at `9c4d944a8`
+
+Read-only call-path review confirmed all seven mechanisms after wave 2 landed.
+The risks are narrower than some of the shorthand above:
+
+- A reused slot carries a departed ballot only until its new occupant votes;
+  it does not double-count both players. Abstention can still change the result.
+- Finish-evidence mismatches increment ghost strikes, but the evidence call
+  does not apply the kick threshold. Ten otherwise valid attempts with bad
+  stream hashes reproduce an open connection.
+- Recording deletion needs an old blob still present before the next hourly
+  sweep, followed by a fresh matching upload and a sweep before verifier fetch.
+  It is an availability failure, not unauthorized recording access.
+- A late master response can complete the next request of the same type because
+  the client skips a timed-out future. Direct joins can then target the wrong
+  room, while relay joins can use inconsistent metadata.
+- The first tick after the round deadline ends the round, despite the two-second
+  finish grace. Extending grace alone cannot prove the client's completion was
+  predeadline; the wire format has no trusted completion timestamp.
+- New private keys are written before `0600` permissions are applied. On a
+  traversable shared directory with a permissive umask, a local user has a
+  transient read window. Reloading a legacy permissive key leaves it exposed.
+- `(-1, null)` join metadata is a deliberate intermediate master admission,
+  not a valid final room join. Validation must keep that broker marker while
+  rejecting malformed host or relay joins before the client treats them as
+  established.
+
+The repair branches add behavior-level regressions for each mechanism. Their
+integration and validation outcome will be recorded here once the combined
+candidate has been checked.
+
 Wave 2 remediation chose a broker-pinned certificate plus host identity for direct
 joins: a signature-only challenge still exposes the session token to a live relay,
 and pinning both TLS and `Welcome` identity makes the intended host explicit for
