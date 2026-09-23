@@ -137,7 +137,7 @@ class TestDezEndBossEncounter {
         camera.setMaxX((short)0x361E);
         f.root.update(0,null);
         assertEquals(0x7F2DC,f.root.codePointer,"worker has not finished");
-        assertEquals(0x3620-framing(800),camera.getMinX()&65535);
+        assertEquals(0x3620,camera.getMinX()&65535,"native player wall is independent of view inset");
         assertEquals(0x3620-framing(800),camera.getX()&65535);
         camera.setMaxX((short)0x3620);
         f.root.update(1,null);

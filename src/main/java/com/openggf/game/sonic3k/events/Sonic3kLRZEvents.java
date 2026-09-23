@@ -427,7 +427,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         // loc_56CAA never calls LRZ2_BackgroundInit: the act 2 background arrives through
         // LRZ2_BackgroundEvent's stage 0 (loc_5700C), which the cleared routine word selects.
         act2BackgroundInitialised = true;
+        boolean centeredArena = state().centerNativeArenaCamera();
         levelManager().applySynchronousScreenEventTransition(request);
+        // Carry the presentation choice with the native bounds/position rebase;
+        // clearing it here would jump the wide view right by half its excess width.
+        state().setCenterNativeArenaCamera(centeredArena);
         restoreFightPaletteAcrossTheChange();
         // The synchronous reload has finished: this is the first legal post-change rewind state.
         if (hasRuntime()) {

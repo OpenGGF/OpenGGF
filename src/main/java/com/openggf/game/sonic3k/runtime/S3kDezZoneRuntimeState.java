@@ -33,10 +33,15 @@ import java.util.Objects;
  * stays in {@code GameStateManager} where rewind already captures it.
  */
 public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 11 * Short.BYTES + 2 * Long.BYTES + DezTransitionPlaneState.SNAPSHOT_BYTES;
+    private static final int CAPTURE_BYTES = 12 * Short.BYTES + 2 * Long.BYTES + DezTransitionPlaneState.SNAPSHOT_BYTES;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
+    /** Engine presentation state, not ROM RAM; survives rewind, resets on a fresh load. */
+    private boolean centerNativeArenaCamera;
+    public boolean centerNativeArenaCamera() { return centerNativeArenaCamera; }
+    public void setCenterNativeArenaCamera(boolean value) { centerNativeArenaCamera = value; }
+
 
     private short eventsFg4;
     private short eventsFg5;
@@ -157,6 +162,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         buffer.putShort((short)(bossFlag?1:0));
         buffer.putShort(bossSignals);
         buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal);
+        buffer.putShort((short) (centerNativeArenaCamera ? 1 : 0));
         transitionPlane.capture(buffer);
         return buffer.array();
     }
@@ -180,6 +186,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         bossSignals = buffer.getShort();
         blockJobOrdinal = buffer.getLong();
         artJobOrdinal = buffer.getLong();
+        centerNativeArenaCamera = buffer.getShort() != 0;
         transitionPlane.restore(buffer);
     }
 }

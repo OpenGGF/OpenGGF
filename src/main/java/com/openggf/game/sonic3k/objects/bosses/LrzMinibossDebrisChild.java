@@ -130,7 +130,9 @@ final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRe
         if (objectServices == null || objectServices.camera() == null) {
             return true;
         }
-        int cameraX = Short.toUnsignedInt(objectServices.camera().getX());
+        // ROM reads the 320px camera word; retain its spawn/cull window when
+        // the viewport is centered, rather than shifting gameplay with the view.
+        int cameraX = LrzMinibossInstance.nativeFramedCameraX(objectServices.camera());
         int cameraY = Short.toUnsignedInt(objectServices.camera().getY());
         int coarseBack = (cameraX - 0x80) & 0xFF80;
         if ((((currentX & 0xFF80) - coarseBack) & 0xFFFF) > 0x280) {

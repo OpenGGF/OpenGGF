@@ -188,7 +188,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// If max < min, treat the upper bound as wrapped/unbounded for this signed domain.
 			// SCZ ObjB2 writes Camera_Max_X_pos = Camera_X_pos - $40, which can transiently
 			// produce max < min at low X in this engine representation.
-			x = clampAxisWithWrap(x, minX, maxX);
+			x = clampAxisWithWrap(x, (short) (minX - nativeArenaInset()),
+					(short) (maxX - nativeArenaInset()));
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
 			forcedScrollRequested = false;
@@ -552,10 +553,22 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
-	 * ROM SH_MoveCameraLeft clamp: enforce only the left boundary (v_limitleft2).
+	 * A zone may project its native camera window into the viewport without
+	 * rewriting minX/maxX: those ROM words also define player movement walls.
+	 * Ordinary cameras and 320px views retain the original clamp unchanged.
+	 * The owning zone captures its opt-in, avoiding a second rewind owner here.
 	 */
+	private int nativeArenaInset() {
+		var level = GameServices.levelOrNull();
+		return level != null
+				&& level.getZoneFeatureProvider() instanceof com.openggf.game.internal.NativeArenaCameraFraming framing
+				&& framing.centerNativeArenaCamera() ? NativeViewportFraming.inset(width) : 0;
+	}
+
+	/** ROM SH_MoveCameraLeft: enforce only the projected left boundary. */
 	private short clampLeftBoundary(short value) {
-		return value < minX ? minX : value;
+		short visibleMin = (short) (minX - nativeArenaInset());
+		return value < visibleMin ? visibleMin : value;
 	}
 
 	/**
@@ -565,7 +578,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * normalize the pair first.
 	 */
 	private short clampRightBoundary(short value) {
-		return value > maxX ? maxX : value;
+		short visibleMax = (short) (maxX - nativeArenaInset());
+		return value > visibleMax ? visibleMax : value;
 	}
 
 	/**

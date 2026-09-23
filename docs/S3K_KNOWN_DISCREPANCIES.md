@@ -767,3 +767,23 @@ pixel parity. Surface repetition can be visible at the widest aspect.
 
 See the [bring-up audit](architecture/audits/2026-09-22-sk-zone-bring-up.md)
 and `TestS3kDezWidescreenBackground` for width, fade and load-boundary checks.
+
+
+## LRZ1 and DEZ2 widescreen arena framing
+
+The cartridge renders 320 pixels: LRZ1 `word_784E8` fixes camera X at `$2C00`,
+and DEZ2 `word_7F0C6` permits `$3400..$34E0`. On wider displays, the engine
+centers that original camera window by subtracting half the extra width from
+its visible limits (240 pixels at 800). This is an intentional presentation
+difference; surrounding level art that the cartridge never displayed at those
+locks becomes visible. Native min/max words still define player walls.
+`NativeViewportFraming` provides the calculation; the internal zone policy
+`NativeArenaCameraFraming` opts in through captured runtime state. It does not
+apply indiscriminately to other zones or rewrite their camera behavior.
+
+LRZ arm placement, projectile/debris lifetimes and release thresholds use the
+native-framed camera, preserving their world positions. The choice survives
+LRZ's seamless act rebase and DEZ's escape, then resets with fresh zone state.
+The native 320px LRZ arrival matches all 600 pre-change CSV rows; the 800px
+arrival matches the same gameplay rows with camera X exactly 240 pixels left.
+This is engine regression evidence, not a new native parity certification.

@@ -173,3 +173,21 @@ runs have zero hurt/death rows. Player states match through the killing hit at
 The 320 recording loads `$1700`; the 800 recording ends during its fade, and the
 longer controller probe confirms that load. The destination arena is still missing.
 The final 14-test encounter run includes 120 replayed attack passes and 200 replayed defeat passes after graph removal/recreation, checking shared parent links and event/camera state. Cold route, non-Hyper fight, donor and full team breadth remain open.
+
+
+#### Shared arena centering (2026-09-23)
+
+The native viewport is centered at wide resolutions without changing player
+boundary words. `TestNativeArenaCameraFraming` covers LRZ1 and DEZ2 at all five
+widths, both view limits, unchanged bounds, fresh state and captured policy
+restoration. The LRZ arm regression retains world anchors `$2C20/$2D20`;
+release checks exercise either side of both rebased thresholds and the
+production seamless transition carries the framing flag. DEZ encounter tests
+cover the native exit wall and the original final-act request threshold.
+Positioned captures live under the campaign archive: LRZ
+`miniboss-centered-20260923-800-v2`, DEZ `104-end-boss-centered-800`.
+The 600-frame LRZ native run is unchanged and its wide gameplay CSV matches
+exactly except for camera X minus 240. The DEZ 800px controller replay completes
+eight real enemy hits and loads zone 23 after 6837 steps, no hurt/death rows.
+These bounded checks do not close inherited cold-route, donor/team, native
+parity or whole-zone rewind obligations. Combined delivery validation remains due.

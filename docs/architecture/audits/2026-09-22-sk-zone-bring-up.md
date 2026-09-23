@@ -1805,3 +1805,41 @@ last camera X 11073, no fight arrival claim. Both are positioned captures.
 This further motivates the requested shared centering treatment for LRZ1 and
 DEZ2. It remains pending; moving raw camera bounds would incorrectly move
 player boundary walls too. See the LRZ plan's centering follow-up.
+
+
+### Shared native-window arena framing (after `c4cf93390`)
+
+User requested centering LRZ1 and DEZ2 while preserving the original behavior
+in source comments. The internal zone policy now projects camera view limits
+through `NativeViewportFraming`; native boundary words remain authoritative for
+player walls. Captured zone state owns the opt-in and LRZ carries it across the
+act rebase. ROM lock sources: `word_784E8`, `word_7F0C6`. DEZ's native-framed exit
+writes now retain native min-X rather than shifting its gameplay wall.
+
+The first wide LRZ movie revealed that arm anchors also used raw camera X;
+reject that `miniboss-centered-20260923-800` movie. The `-v2` replacement restores
+native arm world positions and keeps projectile/debris native lifetime windows.
+At 320px all 600 recorded CSV rows equal the pre-change capture. At 800px all
+non-camera fields equal the 320px rows, and every camera X is exactly 240 less.
+Both the final wide LRZ and DEZ opening videos decode and inspected stills show
+the intended centering. DEZ's `dez-end-boss-solo.txt` replay produces eight real
+hits, defeat at 6344, exit code $7F2FE at 6787, and zone 23 load after 6837 steps;
+zero hurt/death rows. Capture setup remains positioned, not cold/native parity.
+
+Focused queued Maven commands, all `-Dmse=off`, ROM path root `s3k.gen`:
+- `-Dtest=TestNativeArenaCameraFraming,TestCamera,TestLrzMinibossInstance,TestLrzPostDefeatCameraRelease,TestDezEndBossEncounter test`:
+  82/83 passed; the new arm test omitted the parent's same-frame dispatch.
+  Correcting its setup and rerunning `TestLrzMinibossInstance` passes all 25.
+  The preceding DEZ assertion correction reflects the intended native wall,
+  not an engine workaround. Final production code passes all 83 distinct cases.
+- `-Dtest=TestLrzPostDefeatCameraRelease,TestS3kLrzSeamlessActChangeHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:
+  65 passed, zero skips, including the added wide release threshold case.
+
+The shared camera edit requires normal combined delivery validation; these are
+focused checks. DEZ final-hand work remains separate and uncommitted. Full
+campaign integration/push and remaining level obligations are still open.
+
+Structural follow-up: `-Pguards
+-Dtest=TestObjectPhysicsStandardizationGuard,TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard test`
+passes 35 checks, zero skips. The object inventory is intentionally left for
+the separate, still-uncommitted DEZ hand graph; no guard allowance was changed.

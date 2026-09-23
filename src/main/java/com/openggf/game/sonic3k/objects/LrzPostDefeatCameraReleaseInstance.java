@@ -127,7 +127,13 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
             // loc_78AE0 runs the rotation script and falls through into loc_78AE6 on this frame.
         }
         int threshold = gate == Gate.WAITER ? WAITER_CAMERA_X : SIBLING_CAMERA_X;
-        if ((services().camera().getX() & 0xFFFF) < threshold) {
+        var camera = services().camera();
+        int nativeX = camera.getX();
+        if (services().zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState lrz
+                && lrz.centerNativeArenaCamera()) {
+            nativeX = com.openggf.camera.NativeViewportFraming.nativeLeft(nativeX, camera.getWidth());
+        }
+        if ((nativeX & 0xFFFF) < threshold) {
             return;
         }
         services().camera().setMinX((short) threshold);

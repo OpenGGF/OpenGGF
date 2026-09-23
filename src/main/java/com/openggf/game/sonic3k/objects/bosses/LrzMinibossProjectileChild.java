@@ -102,7 +102,9 @@ final class LrzMinibossProjectileChild extends AbstractObjectInstance
         if (services == null || services.camera() == null) {
             return true;
         }
-        int cameraX = Short.toUnsignedInt(services.camera().getX());
+        // ROM reads the 320px camera word; retain its spawn/cull window when
+        // the viewport is centered, rather than shifting gameplay with the view.
+        int cameraX = LrzMinibossInstance.nativeFramedCameraX(services.camera());
         int cameraY = Short.toUnsignedInt(services.camera().getY());
         int coarseBack = (cameraX - 0x80) & 0xFF80;
         int xDistance = ((getCentreX() & 0xFF80) - coarseBack) & 0xFFFF;

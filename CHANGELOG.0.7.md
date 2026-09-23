@@ -621,7 +621,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   `bk2-input-authoring` document the workflow. Native BizHawk reference capture
   uses a shared host with explicit zone plans, input hashes and failed-export
   detection; existing FBZ commands remain compatible.
-- **S3K Lava Reef:** the Act 1 miniboss arrives as an object -- the hovering drill with its
+- **S3K Lava Reef:** the Act 1 miniboss arena and Death Egg Act 2 boss arena
+  center their native camera windows in widescreen while retaining original player
+  bounds. The Act 1 miniboss arrives as an object -- the hovering drill with its
   climb, swing, drop, slam and fall-back cycle, its player tracking, and both of its articulated
   arms with their firing hands and shots. Every Act 1 placement in the zone now builds a real
   class. The two arms unroll link by link from the bottom of the screen rather than snapping out

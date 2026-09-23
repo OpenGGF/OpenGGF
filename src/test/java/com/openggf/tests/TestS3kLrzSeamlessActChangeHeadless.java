@@ -76,6 +76,7 @@ class TestS3kLrzSeamlessActChangeHeadless {
         LrzZoneRuntimeState before =
                 S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         assertEquals(0, before.actIndex(), "precondition: act 1");
+        before.setCenterNativeArenaCamera(true);
         assertEquals(0, before.eventsFg5(), "precondition: Events_fg_5 is clear");
 
         // The ROM reaches this with the miniboss arena lock still on the camera. The arena's
@@ -163,6 +164,7 @@ class TestS3kLrzSeamlessActChangeHeadless {
         // own rock-sprite renderer re-arms the routine on the very frame the change lands, as the
         // ROM's does. What is assertable is that act 1's state did not survive the swap at all.
         assertNotSame(before, after, "loc_56CAA's Load_Level installs the act 2 state");
+        assertTrue(after.centerNativeArenaCamera(), "carry presentation framing with the native camera rebase");
         assertTrue(!Sonic3kLevelTriggerManager.testBit(0, 0),
                 "Clear_Switches wipes the trigger array (sonic3k.asm:115355, 104284-104291)");
 

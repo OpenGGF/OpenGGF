@@ -78,13 +78,13 @@ public final class DezEndBossInstance extends DezEndBossSprite implements SpawnR
                 } else if(timer==0x30) runtime().setEventsFg4(0xFF);
             }
             case 0x7F2DC -> {
-                camera.setMinX(camera.getX());
+                camera.setMinX((short) nativeFramedCameraX());
                 // Native Camera_X cannot reach $3620 before the max-X worker does.
                 // A wide viewport's centre can: preserve that ordering and anchor its
                 // native 320-pixel window at the ROM exit before locking the camera.
                 if((camera.getMaxX()&0xFFFF)>=0x3620 && nativeFramedCameraX()>=0x3620) {
                     int framing=nativeFramedCameraX()-(camera.getX()&0xFFFF);
-                    camera.setX((short)(0x3620-framing)); camera.setMinX(camera.getX());
+                    camera.setX((short)(0x3620-framing)); camera.setMinX((short) nativeFramedCameraX());
                     codePointer=0x7F2FE; camera.setScrollLocked(true);
                     camera.setMaxX((short)(camera.getMaxX()+0x40));
                 }
@@ -108,7 +108,13 @@ public final class DezEndBossInstance extends DezEndBossSprite implements SpawnR
             if(isCoarseXOutOfRange(getX(),x,coarseXCullRange())) ObjectLifetimeOps.destroyRespawnableOffscreen(this);
             return;
         }
-        var state=runtime(); state.setBossFlag(true); state.setBossSignals(0);
+        var state=runtime();
+        // ROM word_7F0C6 permits X $3400..$34E0, a moving 320px window.
+        // Widescreen projects both view limits left by half the extra width;
+        // native player walls and escape thresholds retain their original words.
+        // Keep this presentation policy through escape; fresh level state resets it.
+        state.setCenterNativeArenaCamera(true);
+        state.setBossFlag(true); state.setBossSignals(0);
         state.setCameraStoredMinX(camera.getMinX()); state.setCameraStoredMaxX(camera.getMaxX());
         state.setCameraStoredMinY(camera.getMinY()); state.setCameraStoredMaxY(camera.getMaxYTarget());
         services().fadeOutMusic();
@@ -124,8 +130,7 @@ public final class DezEndBossInstance extends DezEndBossSprite implements SpawnR
     }
     private int nativeFramedCameraX() {
         var camera=services().camera();
-        return (camera.getX()+Math.max(0,com.openggf.camera.DeadzoneGeometry.rightEdge(camera.getWidth())
-                -com.openggf.camera.DeadzoneGeometry.rightEdge(320)))&0xFFFF;
+        return com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(),camera.getWidth())&0xFFFF;
     }
     private void fight() {
         switch(routine) {

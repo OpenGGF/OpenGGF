@@ -1014,6 +1014,13 @@ public final class LrzMinibossInstance extends AbstractBossInstance
                 return;
             }
             arenaGateStarted = true;
+            // ROM word_784E8 locks X at $2C00 in a 320-pixel display. Widescreen
+            // projects that view left by half the extra width ($F0 at 800px),
+            // keeping its centre $2CA0 and the ROM player-boundary words intact.
+            // This presentation choice is not native behavior; extra scenery is exposed.
+            if (objectServices.zoneRuntimeState() instanceof LrzZoneRuntimeState lrz) {
+                lrz.setCenterNativeArenaCamera(true);
+            }
             objectServices.fadeOutMusic();
             // jmp (PalLoad_Line1).l with Pal_LRZMiniboss1 (sonic3k.asm:160008-160009) is the
             // init dispatch's own tail, and it only runs when Check_CameraInRange let the init
@@ -1023,7 +1030,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
             cameraGate.begin(objectServices.camera(),
                     new S3kSharedBossCameraGate.LockBounds(
                             ARENA_LOCK_Y, ARENA_LOCK_Y, ARENA_LOCK_X, ARENA_LOCK_X),
-                    BOSS_GATE_FADE_FRAMES);
+                    BOSS_GATE_FADE_FRAMES, nativeFramedCameraX(objectServices.camera()));
             // sub_85D6A is the init dispatch's own tail: loc_85CA4's first moving bound write is
             // the following frame, exactly as it is for the Ice Cap miniboss.
             return;
@@ -1038,7 +1045,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
                 // than an audible change.
                 objectServices.playMusic(Sonic3kMusic.MINIBOSS_S3.id);
             }
-        });
+        }, nativeFramedCameraX(objectServices.camera()));
         if (arenaGateComplete && !wasComplete) {
             // loc_78528 (sonic3k.asm:160017-160020): the handoff dispatch installs the routine
             // table and calls sub_78B38 with Pal_LRZMiniboss2, which copies $40 bytes from
@@ -1081,9 +1088,14 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         }
     }
 
+    /** Native camera-relative spawn/cull arithmetic must not follow the wider view's left edge. */
+    static int nativeFramedCameraX(com.openggf.camera.Camera camera) {
+        return com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
+    }
+
     /** {@code Check_CameraInRange} on {@code word_784E0}. */
     private boolean isCameraInRange(com.openggf.level.objects.ObjectServices objectServices) {
-        int cameraX = objectServices.camera().getX() & 0xFFFF;
+        int cameraX = nativeFramedCameraX(objectServices.camera());
         int cameraY = objectServices.camera().getY() & 0xFFFF;
         return cameraX >= RANGE_MIN_CAMERA_X && cameraX <= RANGE_MAX_CAMERA_X
                 && cameraY >= RANGE_MIN_CAMERA_Y && cameraY <= RANGE_MAX_CAMERA_Y;

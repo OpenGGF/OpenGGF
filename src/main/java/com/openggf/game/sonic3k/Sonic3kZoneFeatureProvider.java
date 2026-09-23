@@ -57,7 +57,20 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+    @Override public boolean centerNativeArenaCamera() {
+        if (!GameServices.hasRuntime()) return false;
+        int zone = getFeatureZoneId();
+        if (zone == Sonic3kZoneIds.ZONE_LRZ) {
+            return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry())
+                    .map(LrzZoneRuntimeState::centerNativeArenaCamera).orElse(false);
+        }
+        return zone == Sonic3kZoneIds.ZONE_DEZ
+                && S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry())
+                    .map(com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState::centerNativeArenaCamera)
+                    .orElse(false);
+    }
+
     @Override
     public boolean negativeTumbleUsesUnreflectedAngle(boolean facingLeft) {
         // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24938-24984):

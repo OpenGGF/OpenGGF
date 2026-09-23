@@ -3698,3 +3698,25 @@ both walls, rewind, defeat release and seamless/load boundaries. DEZ2's native
 lock is a range (`$3400..$34E0`), not a single point; its follow-up escape uses
 native-framed X checks and must remain reachable. At every use site, document
 the ROM routine/constants and why wider presentation differs.
+
+
+#### Shared centering implementation
+
+`NativeViewportFraming` shares the 320px-to-viewport conversion;
+`NativeArenaCameraFraming` is an internal semantic zone policy. Camera projects
+only the view clamps, leaving min/max words native for player bounds. LRZ's
+captured runtime flag is carried through the synchronous act rebase; fresh
+runtime state resets it. Gate coordinates, arm anchors, projectile/debris
+lifetime windows and post-defeat release thresholds use the native-framed X.
+DEZ2 opts into the same mechanism and retains it through the exit sequence.
+Neither game names nor zone identifiers enter the shared camera algorithm.
+
+The first 800px render proved that adjusting only the camera is insufficient:
+`sub_78BEE` arm anchors read camera X and moved $F0 left along with the view.
+They must read native-framed X to remain at `$2C20/$2D20`. That intermediate
+capture (`miniboss-centered-20260923-800`) is **rejected**, not a finished demo.
+Ten tests exercise both native limit words at all five widths and captured
+policy restoration. The existing DEZ exit test originally expected a shifted
+player wall; it now expects the native `$3620` wall and the separate `$3530`
+visible camera. The follow-up validation below replaces that intermediate result. Shared camera
+code still requires normal combined delivery validation.

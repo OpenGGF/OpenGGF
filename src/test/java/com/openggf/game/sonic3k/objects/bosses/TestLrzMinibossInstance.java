@@ -45,6 +45,23 @@ class TestLrzMinibossInstance {
     private Camera camera;
     private TestObjectServices services;
 
+    @Test
+    void wideViewportKeepsBothArmAnchorsAtTheirNativeWorldPositions() {
+        var wideCamera = org.mockito.Mockito.mock(Camera.class);
+        org.mockito.Mockito.when(wideCamera.getWidth()).thenReturn((short)800);
+        org.mockito.Mockito.when(wideCamera.getX()).thenReturn((short)0x2B10);
+        org.mockito.Mockito.when(wideCamera.getY()).thenReturn((short)0x710);
+        var wideServices = new TestObjectServices().withIsolatedObjectManager().withCamera(wideCamera);
+        boss.setServices(wideServices);
+        boss.update(1000,null);
+        for (boolean mirrored : new boolean[]{false,true}) {
+            var arm = new LrzMinibossArmSegmentChild(boss,0,mirrored);
+            arm.setServices(wideServices);
+            arm.update(1000,null);
+            assertEquals(mirrored ? 0x2D20 : 0x2C20,arm.getX());
+        }
+    }
+
     @BeforeEach
     void setUp() {
         TestEnvironment.resetAll();

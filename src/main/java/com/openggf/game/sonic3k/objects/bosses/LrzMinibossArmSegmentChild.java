@@ -116,7 +116,9 @@ final class LrzMinibossArmSegmentChild extends LrzMinibossRingChildBase implemen
         if (services == null || services.camera() == null) {
             return;
         }
-        int cameraX = Short.toUnsignedInt(services.camera().getX());
+        // ROM reads the 320px camera word; retain its spawn/cull window when
+        // the viewport is centered, rather than shifting gameplay with the view.
+        int cameraX = LrzMinibossInstance.nativeFramedCameraX(services.camera());
         int cameraY = Short.toUnsignedInt(services.camera().getY());
         currentX = cameraX + (mirrored ? CAMERA_X_OFFSET_MIRRORED : CAMERA_X_OFFSET);
         currentY = cameraY + CAMERA_Y_OFFSET;

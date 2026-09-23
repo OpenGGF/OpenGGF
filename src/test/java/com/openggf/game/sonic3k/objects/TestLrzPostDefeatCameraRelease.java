@@ -37,6 +37,35 @@ class TestLrzPostDefeatCameraRelease {
                 .withGameState(com.openggf.game.GameServices.gameState());
     }
 
+    @Test
+    void centeredActTwoViewReleasesAtNativeThresholds() {
+        var config = org.mockito.Mockito.mock(com.openggf.configuration.SonicConfigurationService.class);
+        org.mockito.Mockito.when(config.getShort(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS))
+                .thenReturn((short)800);
+        org.mockito.Mockito.when(config.getString(com.openggf.configuration.SonicConfiguration.WIDESCREEN_DEADZONE_MODE))
+                .thenReturn("CENTER_SCALED");
+        camera = new Camera(config);
+        var state = new com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState(9,1,
+                com.openggf.game.PlayerCharacter.SONIC_ALONE);
+        state.setCenterNativeArenaCamera(true);
+        services.withCamera(camera).zoneRuntimeRegistry().install(state);
+        services.gameState().setEndOfLevelFlag(true);
+        for (var gate : LrzPostDefeatCameraReleaseInstance.Gate.values()) {
+            int threshold = gate == LrzPostDefeatCameraReleaseInstance.Gate.WAITER ? 0x940 : 0x2C0;
+            var release = new LrzPostDefeatCameraReleaseInstance(gate);
+            release.setServices(services);
+            camera.setMinX((short)0);
+            camera.setX((short)(threshold-240-1));
+            release.update(0,null);
+            assertFalse(release.isDestroyed());
+            assertEquals(0,camera.getMinX());
+            camera.setX((short)(threshold-240));
+            release.update(1,null);
+            assertTrue(release.isDestroyed());
+            assertEquals(threshold,camera.getMinX(),"write the native boundary, not the visible left edge");
+        }
+    }
+
     private LrzPostDefeatCameraReleaseInstance waiter() {
         LrzPostDefeatCameraReleaseInstance object = new LrzPostDefeatCameraReleaseInstance(
                 LrzPostDefeatCameraReleaseInstance.Gate.WAITER);
