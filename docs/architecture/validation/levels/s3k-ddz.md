@@ -81,7 +81,11 @@ palette-disable freezing. Existing DDZ compatibility (34) and lifecycle (2)
 checks passed without skips. These are focused checks, not a rerun of the full
 DDZ route or proof of native pixels. Incoming DEZ and other open rows remain.
 
-Source review also identified an unverified motion discrepancy to repair before
-final acceptance: `$81D44` immediately falls into `$81D4A` when the boss starts
-exit; the current emerald delays that first following update until the next
-object pass. The palette changes do not alter or certify that edge.
+The `$81D44 -> $81D4A` exit edge is now repaired: the first following update
+applies wrap, the P1 clamp and camera delta in the publication dispatch. A new
+regression reproduced the old delay (X 9500 instead of 9527), then passed for
+both zero and `$2000` wrap. The emerald drops its unused parent identity, and
+capture/restore plus forward replay succeeds after ship/root retirement.
+Queued `TestDdzRomPalettes,TestS3kDdzLifecycleProduction`: five passed, zero
+skips. This remains focused component/lifecycle evidence, not an updated movie
+or end-to-end route/native-pixel comparison.

@@ -1971,3 +1971,16 @@ absolute root S3K ROM property for ROM-backed selections:
 
 Continue with root/escape and connected screen/plane entry, then moving evidence,
 remaining zone obligations and combined integration/push/cleanup.
+
+### 2026-09-23 — DDZ emerald exit edge after `ae36c875a`
+
+Closed the motion obligation found in the previous palette review. Source
+`loc_81D44` falls into `loc_81D4A` immediately; a new focused test first failed
+against the prior implementation (expected X 9527, actual 9500). The production
+update now applies wrap, player clamp and camera delta in that dispatch and
+releases parent3's Java identity because following never reads it again.
+The regression exercises zero and `$2000` wrap and captures/restores/replays
+after removing the root and ship. Queued `-Dmse=off` with explicit root S3K ROM,
+`-Dtest=TestDdzRomPalettes,TestS3kDdzLifecycleProduction test`: five passed, zero
+skips. No shared algorithm or new state fields changed; broad campaign validation
+and fresh route/media remain outstanding. Task tree based on `ae36c875a`.

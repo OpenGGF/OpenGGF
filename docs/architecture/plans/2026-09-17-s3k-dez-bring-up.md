@@ -3748,3 +3748,12 @@ A separate DDZ inspection obligation remains: `loc_81D44` falls through into
 DDZ emerald currently only starts following on its next update. Reproduce and
 repair that transition during the pending full DDZ encounter validation; the
 ROM-table conversion does not certify that unrelated motion edge.
+
+
+DDZ exit follow-up after `ae36c875a`: the pending `$81D44` fallthrough defect
+was reproduced by the isolated native publication test (expected X 9527, actual
+9500). The emerald now enters `$81D4A` in the same dispatch, applying wrap,
+P1 clamp and camera delta immediately. It releases its Java parent reference
+because that phase never reads parent3 again. Zero/`$2000` wrap cases also
+capture/restore and replay after the ship/root are retired. Five focused
+palette/exit/lifecycle checks pass without skips; full route/media remain open.

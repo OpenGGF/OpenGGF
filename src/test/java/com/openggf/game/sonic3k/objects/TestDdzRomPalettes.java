@@ -55,4 +55,29 @@ class TestDdzRomPalettes {
         var replacement=new DdzBossMasterEmeraldObjectInstance(part); manager.addDynamicObject(replacement); replacement.setServices(services);
         replacement.update(0,null); emerald.update(1,null); assertArrayEquals(saved,state.captureBytes());
     }
+    @Test void exitSignalAppliesWrapPlayerClampAndCameraDeltaImmediatelyAndReleasesParent() throws Exception {
+        for(int wrap:new int[]{0,0x2000}) {
+            boot(); var manager=GameServices.level().getObjectManager();
+            var boss=new DdzEndBossObjectInstance(new ObjectSpawn(0x2500,0x80,0,0,0,false,0)); manager.addDynamicObject(boss);
+            var part=new DdzEndBossShipPartObjectInstance(boss,0); manager.addDynamicObject(part);
+            var emerald=new DdzBossMasterEmeraldObjectInstance(part); manager.addDynamicObject(emerald);
+            emerald.update(0,null); emerald.update(1,null);
+            int anchoredX=emerald.getX(), anchoredY=emerald.getY();
+            var state=(DdzZoneRuntimeState)GameServices.zoneRuntimeState(); state.setWrapOffset(wrap); state.setCameraDelta(7);
+            // Isolate the ROM publication consumed at loc_81D32; the full boss route
+            // owns the preceding defeat. No gameplay trace data supplies this state.
+            var flag=DdzEndBossObjectInstance.class.getDeclaredField("flags"); flag.setAccessible(true); flag.setInt(boss,0x10);
+            var player=TestEnvironment.objectServices().playerQuery().mainPlayerOrNull();
+            int playerX=(anchoredX-wrap+20)&0xFFFF; player.setCentreX((short)playerX);
+            emerald.update(2,null);
+            assertEquals((playerX+7)&0xFFFF,emerald.getX(),"loc_81D44 falls directly into loc_81D4A");
+            assertEquals(anchoredY,emerald.getY());
+            part.setDestroyed(true); boss.setDestroyed(true);
+            var registry=TestEnvironment.activeGameplayMode().getRewindRegistry(); var saved=registry.capture();
+            emerald.update(3,null); int expected=emerald.getX(); registry.restore(saved);
+            var restored=manager.activeObjectsOfType(DdzBossMasterEmeraldObjectInstance.class).getFirst();
+            restored.update(3,null); assertEquals(expected,restored.getX());
+        }
+    }
+
 }

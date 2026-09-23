@@ -71,12 +71,7 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
             return;
         }
         if (followingPlayer) {
-            x = (x - DdzObjectSupport.wrapOffset(services())) & 0xFFFF;
-            AbstractPlayableSprite player = DdzObjectSupport.player(services());
-            if (player != null && (player.getCentreX() & 0xFFFF) >= x) {
-                x = player.getCentreX() & 0xFFFF;
-            }
-            x = (x + DdzObjectSupport.cameraDelta(services())) & 0xFFFF;
+            followPlayer();
             return;
         }
         if (!(parent instanceof DdzEndBossShipPartObjectInstance part) || part.isDestroyed()) {
@@ -92,7 +87,21 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
         DdzEndBossObjectInstance boss = part.boss();
         if (boss != null && boss.flag(4)) {
             followingPlayer = true;
+            // loc_81D44 changes the code pointer and falls into loc_81D4A in
+            // this dispatch. The following code never reads parent3 again;
+            // releasing the Java link lets the ship retire without dangling rewind refs.
+            parent = null;
+            followPlayer();
         }
+    }
+
+    private void followPlayer() {
+        x = (x - DdzObjectSupport.wrapOffset(services())) & 0xFFFF;
+        AbstractPlayableSprite player = DdzObjectSupport.player(services());
+        if (player != null && (player.getCentreX() & 0xFFFF) >= x) {
+            x = player.getCentreX() & 0xFFFF;
+        }
+        x = (x + DdzObjectSupport.cameraDelta(services())) & 0xFFFF;
     }
 
     private com.openggf.game.sonic3k.runtime.S3kEmeraldPaletteState palette() {
