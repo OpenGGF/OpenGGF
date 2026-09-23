@@ -1,9 +1,8 @@
 # Multiplayer security wave 3 backlog
 
 The second read-only audit at `e406e24ba256b58dae8d5303a8dc2fe33a4ad461`
-found the following lower-priority items. They are deferred from the current
-remediation wave for the next security audit. Their presence here is not a claim
-that they are fixed or independently tested.
+found the following lower-priority items. They were deferred from wave 2 and
+then addressed in wave 3; the table preserves the original audit probes.
 
 | Item | Evidence and risk | Next audit probe |
 | --- | --- | --- |
@@ -15,9 +14,9 @@ that they are fixed or independently tested.
 | Identity key creation window | `PlayerIdentity.loadOrCreate` writes the private key before restricting POSIX permissions. On a shared host with a traversable identity directory and permissive umask, another local user could read it during creation. | Create identities under a controlled multi-user directory with umask 022; inspect mode at creation and confirm atomic restrictive creation. |
 | Invalid join metadata accepted | `ControlCodec` accepts a `JoinAccepted` with a negative slot and null room; current engine join flows catch and fail it, so this is protocol hardening rather than a game-thread crash. | Send malformed join metadata through both direct and relay joins; reject at decode and check UI teardown. |
 
-The next audit should revisit these scenarios after the current transport,
-authority, sanction, and resource-limit fixes have landed. Re-run the threat
-model against the integrated code before promoting any item to a fix task.
+The next audit should revisit the residual questions in the
+[wave 4 backlog](2026-09-23-multiplayer-security-wave-4-backlog.md) against
+the integrated code.
 
 ## Wave 3 triage at `9c4d944a8`
 
@@ -46,7 +45,7 @@ The risks are narrower than some of the shorthand above:
   rejecting malformed host or relay joins before the client treats them as
   established.
 
-## Wave 3 candidate disposition
+## Wave 3 disposition and delivery
 
 Each finding has a regression that failed on the original behavior and passed
 after its fix. The combined candidate merges `2cf64bf7c` (finish sanctions),
@@ -55,8 +54,9 @@ protocol), and `960909130` (votes and grace). The overlapping `TestRoomHost`
 additions were reconciled by retaining all three tests; the combined focused
 run executed 71 tests with no failures, errors, or skips. The protocol branch's
 network category separately executed 1,317 tests without failure, error, or
-skip; its diagnostics were acknowledged. Broad candidate and post-integration
-results belong in the delivery report, not inferred from these focused runs.
+skip; its diagnostics were acknowledged. Review then found silent broker drops
+for rate-limited room lists and invalid-routing room creation; regressions and
+typed responses were added before the broad validation.
 
 The grace fix deliberately closes new attempts at the deadline but keeps an
 existing attempt open for finish transit. It does not establish a trusted
@@ -70,6 +70,18 @@ POSIX key creation and mode repair were tested; the Windows ACL
 path was source-reviewed but not runtime-tested on this Linux host. These and
 the separate shared-parent path race are recorded as questions in the
 [wave 4 backlog](2026-09-23-multiplayer-security-wave-4-backlog.md).
+
+The combined change landed on `next` in merge `05503f232`. Against pre-task
+base `9c4d944a8`, the clean candidate change-based run selected 2,268 of
+2,698 ordinary classes: 17,648 tests passed, 20 optional/assumption skips,
+no failures or errors; 670 structural guard tests passed without skips.
+Post-integration package ran 21,998 tests with 122 skips and the same three
+failure identities as the 21,981-test base package: the Sonic 2 lives-HUD
+palette assertion and two S3K Tails donor tests unable to open the existing
+broken `s3k.gen` link in the main checkout. No new or worsened failure was
+observed. Post-integration guards passed 670 tests, and the smoke profile
+passed 19,700 tests with 2,999 profile skips. The integrated `next` branch was
+pushed; these results do not claim the ordinary full suite is wholly green.
 
 Wave 2 remediation chose a broker-pinned certificate plus host identity for direct
 joins: a signature-only challenge still exposes the session token to a live relay,
