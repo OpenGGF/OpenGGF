@@ -86,3 +86,12 @@ full refresh and rewind/replay. Together with scroll and runtime registration,
 the focused run passed 10 checks without skips; the separate rewind/physics
 selection passed 36 without skips. The plane is not yet consumed by the live
 renderer; ScreenInit, connected stages and wide presentation remain open.
+
+
+Background event follow-up after `80d67c7fb`: seven event-program cases pass for
+publication, opening allocation retry, chase allocation failure/success, all
+three redraw phases, laser fallthrough and four mouth layouts. Six plane checks
+include native edge redraw and byte-sized direction semantics; four scroll and
+two runtime checks also pass. Three structural checks pass separately. All runs
+have zero skips. The event program is still unregistered pending production
+layout surface, entry graph and renderer integration; no live completion claim.

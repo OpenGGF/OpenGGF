@@ -42,6 +42,34 @@ class TestDezFinalPlaneState {
         assertEquals(0x8000 | (0x578 / 8 + 0x198 / 8), plane.descriptor(0x578, 0x198));
     }
 
+    @Test void ordinaryScrollDrawsOnlyTheLeadingColumnOrRow() {
+        var plane = new DezFinalPlaneState();
+        plane.refresh(0, 0, (x, y) -> 1);
+        plane.resetDrawPosition(0x380, 0xA8);
+        int[] reads = {0};
+        plane.drawAsYouMove(0x390, 0xA8, (x, y) -> { reads[0]++; return x; });
+        assertEquals(60, reads[0]); // 15 blocks, four descriptors each.
+        assertEquals(0x4D0, plane.descriptor(0x4D0, 0xA0));
+        assertEquals(1, plane.descriptor(0x4C0, 0xA0));
+        plane.drawAsYouMove(0x390, 0xB0, (x, y) -> y);
+        assertEquals(0x190, plane.descriptor(0x390, 0x90));
+        assertEquals(0x198, plane.descriptor(0x390, 0x98));
+        // Twenty-one blocks end at $4DF; the adjacent column retains its old cell.
+        assertEquals(1, plane.descriptor(0x4E0, 0x90));
+    }
+
+    @Test void largeScrollUsesTheNativeByteDirectionAndTwoWriteCap() {
+        var plane = new DezFinalPlaneState();
+        plane.resetDrawPosition(0x380, 0xA0);
+        int[] reads = {0};
+        plane.drawAsYouMove(0x480, 0xA0, (x, y) -> { reads[0]++; return x; });
+        // $380-$480 = $FF00: tst.b is zero, so ROM chooses the new left edge.
+        assertEquals(120, reads[0]);
+        assertEquals(0x480, plane.descriptor(0x480, 0xA0));
+        assertEquals(0x490, plane.descriptor(0x490, 0xA0));
+        assertEquals(0, plane.descriptor(0x4A0, 0xA0));
+    }
+
     @Test void runtimeRewindRestoresRetainedCellsAndResumesTheSameRedraw() {
         var state = new DezFinalBossZoneRuntimeState(PlayerCharacter.SONIC_ALONE);
         state.plane().refresh(0, 0, (x, y) -> 0xFFFF);

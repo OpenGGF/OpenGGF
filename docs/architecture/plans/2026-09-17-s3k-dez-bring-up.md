@@ -3461,7 +3461,7 @@ The root waits for the combined word $FFFF before sinking and reappearing. The
 core child `$804F0` has eight hits and the mouth/laser publication chain controls
 its exposure. The later escape ship `$80160` is another eight-hit target.
 Entry Robotnik `$80DE0` reaches X $3D0 and publishes FAB8 bit 0; `$80D72` then
-moves left for 32 passes, publishes bit 1 and Events_fg_5, and deletes. That
+moves left for 31 passes, then on the 32nd wait dispatch publishes bit 1 and Events_fg_5 and deletes. (`loc_80DBE` decrements $1F before testing and moving.) That
 publication, not a fitted timer on the root, releases the players. Expand the
 remaining child tables and allocation branches before connecting this encounter.
 
@@ -3497,3 +3497,44 @@ on that exact child's status bit 7. It does not retry indefinitely or search
 for any fade object. The existing DDZ fade uses $3A=7; this DEZ call writes 3.
 These are implementation obligations for the unfinished chase, not claims that
 the existing DDZ helper already supplies the needed behavior.
+
+
+### Final-arena background event program (after `80d67c7fb`)
+
+`DezFinalBackgroundEvents` ports the nine $5A542 dispatch entries through a
+layout/allocation surface. It is not registered in the live level yet. The next
+integration must supply the mutation-pipeline-backed surface and real entry
+objects, then register both scroll and retained-plane rendering together.
+
+Source details preserved:
+
+- Stage 0's `Refresh_PlaneDirect` is **fifteen** rows of twenty-one blocks and
+  branches straight to deformation, skipping ordinary edge redraws that pass.
+- Stage 4 retries failed opening-collapse allocation; neither its frontier nor
+  stage advances on failure. The later chase allocation is attempted once and
+  only successful allocation writes the new break frontier.
+- Both intermediate bottom-up redraws fall through into the next window/laser
+  checks while incomplete. Replacing these branches with a high-level
+  wait-until-finished state transition changes native behavior.
+- Mouth publications write the four native chunk pairs $0603, $0903, $0603,
+  $0807, advance/reset the phase word, then copy the literal $700/$160 slice.
+- `DrawBGAsYouMove` updates only entering columns/rows. Direction uses `tst.b`
+  on the word delta, not a signed-word comparison, and each axis is capped at
+  two writes. Its rounded camera words now survive the retained-plane snapshot.
+
+Verification: the queued background/plane/scroll/runtime selection passed 17
+checks without skips. After adding two leading-edge regression cases, the final
+`-Dtest=TestDezFinalPlaneState test` passed six checks without skips (four earlier
+cases plus two new ones); together these cover 19 distinct cases. The separate
+`-Pguards -Dtest=TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard,TestRemainingRewindTailInventory test`
+passed three checks without skips. No live arena, full suite or video claim.
+
+Entry integration oracle corrected while preparing the next slice: `$80D72`
+starts at parent X-$10/Y-$3C, frame 5, low priority. Once FAB8 bit 0 is set it
+loads $1F; `loc_80DBE` moves on 31 nonnegative post-decrement values, then signals
+and deletes on the 32nd dispatch **without** moving. Robotnik `$80DE0` uses
+Map_FBZRobotnikRun at tile **$58C** in this act (not the Act 2 boss's $4A9),
+starts at ($70,$C0), flips X and animates/moves +6 on its initialization pass.
+`loc_8642E` is the quake/sound worker: st shake flag, then on V-int low nibble
+zero play Rumble2 until the flag clears. `loc_810A0` publishes FAB8 bit 2 and
+window $2C0 only at camera X >= $520, then locks [$520,$5C0] and deletes.
