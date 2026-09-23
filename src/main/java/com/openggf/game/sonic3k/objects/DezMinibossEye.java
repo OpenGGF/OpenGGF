@@ -96,7 +96,7 @@ final class DezMinibossEye extends DezMinibossSprite
         move(0x38);
         if(isCoarseXOutOfRange(getX(),cameraLeft(),coarseXCullRange())
                 || ((getY()-cameraTop()+0x80)&0xFFFF)>0x200) {
-            pendingDelete=true; return;
+            status|=0x80; control|=0x10; pendingDelete=true; return;
         }
         // Obj_FlickerMove bchg tests the OLD bit: its first pass is hidden.
         visible=(control&0x40)!=0;

@@ -1580,3 +1580,46 @@ These are focused checks, not the outstanding combined campaign delivery run.
 No new boss video is claimed: its production encounter is not connected yet.
 The lifecycle/profile corrections preserve the recorded presentation; existing
 video links remain the relevant visual evidence for those completed slices.
+
+### DEZ miniboss child graph preparation (after `595ec0cd9`)
+
+A6 is still unregistered: these are components, not a completed encounter or
+cold-route advance. ROM-backed orbiters, eight-way fragments, explosion
+controllers, chained platform arms/spikes, beam/feet and three debris roles now
+exist. The arms rewire after 32 own entries; both initially point `$44` at the
+root, and a missing second arm deliberately leaves that alias in place. Extended
+orbits accelerate the root angular word in both arm slots. The beam damages
+native P1/P2 directly, with a half-open centre rectangle and standing/immunity
+exemptions; it is not a touch-list enemy. Eye and arm flicker culling now publish
+both native death status and the child-cleanup bit before deferred deletion.
+
+Queued Java-21 Maven with `-Dmse=off`, absolute S3&K ROM path and selectors
+`TestDezMinibossBeam,TestDezMinibossHazards,TestDezMinibossArm,TestDezMinibossEye`
+completed **24 tests, zero failures/errors/skips**. This covers every orb-burst
+capacity prefix, arm/spike and beam-foot prefixes, actual platform riding and
+airborne defeat release, both angular alignment directions, beam charge/growth
+and direct damage boundaries, native explosion count/RNG failure semantics,
+stationary cover delay and first-pass spark/body behavior. Real ObjectManager
+recreation/replay covers arm chain and settled cross-links, orbit/launch/burst,
+beam charge/growth/live feet. Parents are test shells, not the absent root.
+
+Initial test invocations had two compilation-fixture errors (slot-interface
+cast and checked ROM accessor), a nonexistent test-service builder, an incorrect
+expectation that the second orb would be visible behind the centre, and an
+arm clock check that counted a load setup pass. Fixed the test assumptions from
+the ROM and completed setup before counting encounter entries; no ROM timers
+were tuned to fit those tests. Production support classes compiled successfully.
+
+Fresh `-Pguards` selection of `TestObjectPhysicsStandardizationGuard`,
+`TestRemainingRewindTailInventory`, `TestRewindFieldDispositionGuard` and
+`TestHelperStateRewindCoverageGuard`: **36 passed, zero failures/errors/skips**.
+The verified inventory is 1260 total / 1020 isolated / 240 graph-covered / zero
+no-codec. This is focused validation, not the campaign's combined delivery run.
+
+The first-defeat oracle also needed a correction: ROM bytes at `$7EE70` are
+`61 00 00 02`, a `bsr.w` whose target is its return address `$7EE74`. The helper
+therefore executes twice, making two independent explosion-controller attempts.
+The root must reproduce both; component tests do not yet prove that chain.
+Root arena/health dispatch, mask, sign/results, surviving transport, seamless
+act change and complete native/wide moving captures remain open. No new gameplay
+video or whole-boss certification is claimed.

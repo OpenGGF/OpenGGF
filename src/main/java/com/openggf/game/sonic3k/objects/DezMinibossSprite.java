@@ -24,6 +24,10 @@ abstract class DezMinibossSprite extends AbstractObjectInstance implements RomWo
     protected int codePointer;
     protected int collisionProperty;
     protected int word44;
+    /** $3A/$3C: radius/vertical offset in phase 1, shared angular motion in phase 2. */
+    protected int word3A;
+    protected int word3C;
+    protected int childDy;
     protected boolean flipX;
     protected boolean flipY;
     protected boolean highPriority = true;
@@ -35,6 +39,8 @@ abstract class DezMinibossSprite extends AbstractObjectInstance implements RomWo
         posX = spawn.x() << 16;
         posY = spawn.y() << 16;
     }
+
+    final com.openggf.level.objects.ObjectServices encounterServices() { return services(); }
 
     protected final int romByte(int address) {
         try { return services().romReader().readU8(address); }

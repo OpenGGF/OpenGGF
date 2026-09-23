@@ -61,7 +61,7 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 | TRAVERSAL: SKL `$4C` hang carrier | `loc_46FC2`–`sub_4703E`: P1 start, accelerated rise, native ceiling probe, finite horizontal travel, P1/P2 grabbing | unit contact/control/input boundaries; actual DEZ1 ride at 320/800 | `TestS3kDezHangCarrierObjectInstance`, `TestS3kDezHangCarrierHeadless` | implemented after `b1c767647` | real terrain, jump release and forced recreation/forward replay | native comparison, Act-2 entry and donor/character breadth remain open |
 | TRAVERSAL: SKL `$56` curved energy bridge | `loc_47F2C`–`sub_47F9C`: phase timer, P1/P2 collision paths, expiry air bit | native contact-edge tests; actual `$880,$920` at 320/800 | `TestS3kDezCurvedEnergyBridgeObjectInstance`, `TestS3kDezCurvedEnergyBridgeHeadless` | implemented after `33e6b66d5` | timer/path transitions, forced recreation/300-frame replay, and controller-driven curve-to-carrier approach/replay at 320/800 | native comparison, cold route and donor/character breadth remain open |
 | TRAVERSAL: SKL `$4B` tilting bridge | `loc_46E1C`–`loc_46F54`, signed ROM `byte_46ED8`, prior-standing aggregate, long velocity and delayed free fall | all eight standing rows, P1/P2 sum/cancellation, exhausted forward allocation; DEZ1 320/800; inverted DEZ2 declared entry | `TestS3kDezTiltingBridgeHeadless`, census, PLC registry | implemented after `6b7055cea` | nine focused checks: real landing/carry/collapse/floor release, complete graph recreation and forward replay; inverted carry/replay | Cold route, native comparison and donor/roster breadth remain open |
-| BOSS: `$A6` miniboss | `word_7DDA4` range Y `$18C`-`$38C` X `$3400`-`$3780`; arena `$28C,$28C,$3680,$36C0`; 8 hits | — | `TestS3kDezMinibossHeadless` | missing | unrun | Slice 6 |
+| BOSS: `$A6` miniboss | `word_7DDA4` range Y `$18C`-`$38C` X `$3400`-`$3780`; arena `$28C,$28C,$3680,$36C0`; two eight-hit phases | — | `TestS3kDezMinibossHeadless` | missing | unrun | Slice 6 |
 | ROUTE (Sonic + Tails cold): `$B00` entry → results | Complete-run BK2 from movie frame 468982 (segment directory `ssz`, `zone_id 11`) | native 320 | `TestS3kDezColdRoutes` | missing | unrun | Slice 6 |
 | ROUTE (Tails cold) | `runs/s3k-tails-full-chain-all-emeralds` `ssz`, offset 444059 | native 320 | `TestS3kDezColdRoutes` | missing | unrun | Slice 6 |
 | REWIND: cycle counters, event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` (2 tests) | implemented | pass, `4e7655bf9` | Entry, object and load-boundary spots not started |
@@ -125,3 +125,11 @@ The S3KL MGZ trigger-platform alias retains its own implementation and checks.
 Placement counts are 364/365 and 493/494: each act's boss remains a placeholder.
 Native per-mode cadence, all seven cold entries, Act-2 positioned traversal,
 full character/donor/team breadth and the final-boss route remain open.
+
+Miniboss preparation after `595ec0cd9`: eye/art/palette owners and orb/explosion,
+arm/spike, beam/feet and debris components have focused checks. The latest child
+selection passes 24 tests with no skips, including actual platform contact and
+release and recreated chain/cross-link graphs. These use minimal test parents;
+A6 remains a placeholder until the real root, sign/results, surviving transport
+and seamless act transition are connected. The BOSS row remains missing, with
+native/widescreen moving evidence and character/donor/team breadth outstanding.

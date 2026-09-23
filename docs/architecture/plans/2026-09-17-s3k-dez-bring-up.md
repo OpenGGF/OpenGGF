@@ -3205,3 +3205,21 @@ the exact captured-reference declaration fixes it. The full encounter graph is
 still open. See the campaign audit's matching entry for the 112 affected checks,
 61 loading/renderer checks and structural guard corrections found during this
 preparation; no production A6 registration or cold-route advance is claimed.
+
+#### DEZ first-defeat allocation correction (component implementation)
+
+`loc_7EE42` does **two** independent subtype `$0E` controller attempts: the
+`bsr.w loc_7EE74` at `$7EE70` returns to `$7EE74`, falling directly into the same
+helper again. The locked-on ROM bytes corroborate the call-to-next-instruction.
+A single controller was an incomplete reading of the earlier oracle. Both
+controllers use forward allocation from the root and consume no random value
+on allocation failure. Their explosion children each allocate separately every
+three controller passes until root control bit 5 stops them. Include both
+attempts in the first-defeat graph and partial-capacity tests.
+
+The orb/explosion, arm/spike, beam/feet and debris components now have 24 passing
+focused tests (including the existing five eye checks), plus 36 passing selected
+structural guards. See the [campaign audit](../audits/2026-09-22-sk-zone-bring-up.md)
+for exact selectors, rejected test assumptions and limits. The full root and
+transport remain unregistered; these child-graph checks use minimal test parents
+and do not discharge the encounter-wide graph or transition gates.

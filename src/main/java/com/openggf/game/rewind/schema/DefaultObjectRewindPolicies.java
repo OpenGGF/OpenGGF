@@ -105,6 +105,13 @@ final class DefaultObjectRewindPolicies {
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
             // The DEZ eye publishes damage into its exact parent SST, including after recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossEye", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossOrb", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossExplosionController", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossArm", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossArm", "crossLink"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossArm$Spike", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossBeam", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.DezMinibossBeam$Foot", "parent"), RewindFieldPolicy.CAPTURED),
             // The tunnel controller advances its exact independently allocated trail slot.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance$Controller", "spawner"), RewindFieldPolicy.CAPTURED),
             // Lift geometry writes its exact Draw_Sprite arm slot; preserve it through graph recreation.
