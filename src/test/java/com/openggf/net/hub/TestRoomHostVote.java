@@ -33,7 +33,8 @@ class TestRoomHostVote {
                 "s3k", 0, 0, 2, "OPEN", null);
         room.onText(host, ControlCodec.encode(hostToken,
                 new ControlMessage.RoundConfigure(first)));
-        now[0] += HostRoundEngine.COUNTDOWN_MILLIS + 2001;
+        now[0] += HostRoundEngine.COUNTDOWN_MILLIS + 2001
+                + HostRoundEngine.FINISH_GRACE_MILLIS;
         room.tick();
         now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
         room.tick();
@@ -56,8 +57,64 @@ class TestRoomHostVote {
         assertEquals(next.act(), room.descriptor().act());
     }
 
+    @Test
+    void disconnectAndSlotReuseDoNotCarryPreviousMembersVote(@TempDir Path dir)
+            throws Exception {
+        long[] now = {1_000_000};
+        PlayerIdentity hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
+        RoomHost room = new RoomHost(new RoomHostConfig("Vote", "s3k", 0, 0,
+                "OPEN", null, 8, FP,
+                List.of("s3k:0:0", "s3k:0:1", "s3k:1:0")),
+                hostIdentity, () -> now[0], TrackValidationProfileSource.none());
+        FakeHubConnection host = new FakeHubConnection();
+        FakeHubConnection departing = new FakeHubConnection();
+        FakeHubConnection staying = new FakeHubConnection();
+        admit(room, host, hostIdentity, "HOST");
+        String departingToken = admit(room, departing,
+                PlayerIdentity.loadOrCreate(dir.resolve("departing")), "DEPARTING");
+        String stayingToken = admit(room, staying,
+                PlayerIdentity.loadOrCreate(dir.resolve("staying")), "STAYING");
+        room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 1, "OPEN", null));
+        now[0] += HostRoundEngine.COUNTDOWN_MILLIS + 1001
+                + HostRoundEngine.FINISH_GRACE_MILLIS;
+        room.tick();
+        now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
+        room.tick();
+        List<String> options = room.round().voteOptions();
+
+        room.onText(departing, ControlCodec.encode(departingToken,
+                new ControlMessage.TrackVote(options.getFirst())));
+        room.onText(staying, ControlCodec.encode(stayingToken,
+                new ControlMessage.TrackVote(options.get(1))));
+        room.onDisconnected(departing);
+        FakeHubConnection replacement = new FakeHubConnection();
+        assertEquals(1, ((ControlMessage.JoinAccepted) admitMessage(room, replacement,
+                PlayerIdentity.loadOrCreate(dir.resolve("replacement")), "REPLACEMENT"))
+                .playerSlot());
+
+        ControlMessage.TrackVoteTally tally = staying.text.stream()
+                .map(ControlCodec::decode).map(ControlCodec.DecodedControl::message)
+                .filter(ControlMessage.TrackVoteTally.class::isInstance)
+                .map(ControlMessage.TrackVoteTally.class::cast).reduce((a, b) -> b).orElseThrow();
+        assertEquals(0, tally.counts().getFirst().votes());
+        assertEquals(1, tally.counts().get(1).votes());
+        now[0] += HostRoundEngine.VOTE_WINDOW_MILLIS;
+        room.tick();
+        assertEquals(options.get(1), room.round().votedNextConfig().gameId() + ":"
+                + room.round().votedNextConfig().zone() + ":"
+                + room.round().votedNextConfig().act());
+    }
+
     private static String admit(RoomHost room, FakeHubConnection connection,
                                 PlayerIdentity identity, String name) throws Exception {
+        return ((ControlMessage.JoinAccepted) admitMessage(room, connection, identity, name))
+                .sessionToken();
+    }
+
+    private static ControlMessage admitMessage(RoomHost room, FakeHubConnection connection,
+                                               PlayerIdentity identity, String name)
+            throws Exception {
         ClientHandshake handshake = new ClientHandshake(identity, name, FP);
         room.onConnected(connection);
         room.onText(connection, ControlCodec.encode(null, handshake.hello()));
@@ -66,7 +123,7 @@ class TestRoomHostVote {
         return connection.text.stream().map(value -> ControlCodec.decode(value).message())
                 .filter(ControlMessage.JoinAccepted.class::isInstance)
                 .map(ControlMessage.JoinAccepted.class::cast)
-                .findFirst().orElseThrow().sessionToken();
+                .findFirst().orElseThrow();
     }
 
     private static ControlMessage last(FakeHubConnection connection) {

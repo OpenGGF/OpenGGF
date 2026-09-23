@@ -31,7 +31,8 @@ class TestHostRoundEngineVote {
         assertTrue(engine.startRound(config));
         now += HostRoundEngine.COUNTDOWN_MILLIS;
         engine.onTick();
-        now += config.windowSeconds() * 1000L + 1;
+        now += config.windowSeconds() * 1000L
+                + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
         engine.onTick();
         assertEquals(HostRoundEngine.Phase.ROUND_END, engine.phase());
         now += HostRoundEngine.ROUND_END_LINGER_MILLIS;
@@ -71,6 +72,29 @@ class TestHostRoundEngineVote {
     }
 
     @Test
+    void departedVoteStopsCountingAndCannotBreakTieForNextTrack() {
+        reachVote();
+        List<String> options = engine.voteOptions();
+        engine.onTrackVote(1, options.getFirst());
+        engine.onTrackVote(2, options.get(1));
+
+        engine.onPlayerLeft(1);
+        ControlMessage.TrackVoteTally tally = sent.stream()
+                .filter(ControlMessage.TrackVoteTally.class::isInstance)
+                .map(ControlMessage.TrackVoteTally.class::cast).reduce((a, b) -> b).orElseThrow();
+        assertEquals(List.of(new ControlMessage.VoteCount(options.getFirst(), 0),
+                        new ControlMessage.VoteCount(options.get(1), 1),
+                        new ControlMessage.VoteCount(options.get(2), 0)), tally.counts());
+
+        now += HostRoundEngine.VOTE_WINDOW_MILLIS;
+        engine.onTick();
+        ControlMessage.TrackVoteResult result = sent.stream()
+                .filter(ControlMessage.TrackVoteResult.class::isInstance)
+                .map(ControlMessage.TrackVoteResult.class::cast).reduce((a, b) -> b).orElseThrow();
+        assertEquals(options.get(1), result.trackKey());
+    }
+
+    @Test
     void zeroVotesBroadcastsRetainedTrackAndKeepsConfigNull() {
         reachVote();
         now += HostRoundEngine.VOTE_WINDOW_MILLIS;
@@ -95,7 +119,8 @@ class TestHostRoundEngineVote {
     void emptyPoolPreservesOriginalRoundEndLifecycle() {
         engine.setVoteTrackPool(List.of());
         assertTrue(engine.startRound(config));
-        now += HostRoundEngine.COUNTDOWN_MILLIS + config.windowSeconds() * 1000L + 1;
+        now += HostRoundEngine.COUNTDOWN_MILLIS + config.windowSeconds() * 1000L
+                + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
         engine.onTick();
         now += HostRoundEngine.ROUND_END_LINGER_MILLIS;
         engine.onTick();
