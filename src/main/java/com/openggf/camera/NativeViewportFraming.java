@@ -8,6 +8,15 @@ package com.openggf.camera;
 public final class NativeViewportFraming {
     private NativeViewportFraming() { }
 
+    /**
+     * The ROM camera range covers world [minLeft, maxLeft + 320]. Its centre
+     * minus the native half-width is the midpoint of the two camera origins.
+     * Preserve those origins separately as player/event boundaries.
+     */
+    public static int centeredNativeLeft(int minLeft, int maxLeft) {
+        return minLeft + (maxLeft - minLeft) / 2;
+    }
+
     public static int inset(int viewportWidth) {
         return Math.max(0, viewportWidth - 320) / 2;
     }

@@ -33,12 +33,21 @@ import java.util.Objects;
  * stays in {@code GameStateManager} where rewind already captures it.
  */
 public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 12 * Short.BYTES + 2 * Long.BYTES + DezTransitionPlaneState.SNAPSHOT_BYTES;
+    private static final int CAPTURE_BYTES = 12 * Short.BYTES + Integer.BYTES + 2 * Long.BYTES + DezTransitionPlaneState.SNAPSHOT_BYTES;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     /** Engine presentation state, not ROM RAM; survives rewind, resets on a fresh load. */
     private boolean centerNativeArenaCamera;
+    private int widescreenHorizontalAnchor = -1;
+    public java.util.OptionalInt lockedNativeHorizontalCamera() {
+        return widescreenHorizontalAnchor < 0 ? java.util.OptionalInt.empty()
+                : java.util.OptionalInt.of(widescreenHorizontalAnchor);
+    }
+    public void lockWidescreenHorizontalArena(int nativeMinX, int nativeMaxX) {
+        widescreenHorizontalAnchor = com.openggf.camera.NativeViewportFraming.centeredNativeLeft(nativeMinX, nativeMaxX);
+    }
+    public void clearWidescreenHorizontalArenaLock() { widescreenHorizontalAnchor = -1; }
     public boolean centerNativeArenaCamera() { return centerNativeArenaCamera; }
     public void setCenterNativeArenaCamera(boolean value) { centerNativeArenaCamera = value; }
 
@@ -163,6 +172,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         buffer.putShort(bossSignals);
         buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal);
         buffer.putShort((short) (centerNativeArenaCamera ? 1 : 0));
+        buffer.putInt(widescreenHorizontalAnchor);
         transitionPlane.capture(buffer);
         return buffer.array();
     }
@@ -187,6 +197,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         blockJobOrdinal = buffer.getLong();
         artJobOrdinal = buffer.getLong();
         centerNativeArenaCamera = buffer.getShort() != 0;
+        widescreenHorizontalAnchor = buffer.getInt();
         transitionPlane.restore(buffer);
     }
 }

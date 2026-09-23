@@ -3813,3 +3813,32 @@ loader; this does not claim native Nemesis timing.
 
 The full root/escape graph, forced-slot-61 fade allocation, screen/plane surfaces
 and actual final-arena controller route/media remain open.
+
+
+### Widescreen-only horizontal arena lock (2026-09-23)
+
+The user clarified that DEZ2 should hold X at the arena centre while Y remains
+free to track Sonic. The earlier inset alone preserved ROM horizontal tracking,
+which still panned across `$3400..$34E0`. `NativeArenaCameraFraming` now exposes
+an optional native horizontal anchor, and `NativeViewportFraming.centeredNativeLeft`
+derives it from original lock bounds. DEZ stores/captures `$3470`, giving a visible
+left of `$3380` at 800px. Camera uses it only above 320px, for both forced placement
+and normal/preview horizontal steps. It does not freeze Y or rewrite player walls.
+`loc_7F2DC` releases that anchor when the corridor opens; the earlier viewport inset
+continues through the exit. Native code, rationale and release are commented inline.
+
+Focused `TestNativeArenaCameraFraming,TestCamera,TestDezEndBossEncounter` selection
+passed 60 cases, zero skips. Added checks cover 320/352/400/528/800 widths,
+horizontal independence, live vertical tracking, unchanged native boundaries,
+restoration, forced placement and corridor release. Positioned solo replay with
+`inputs/dez-end-boss-solo.txt` takes all eight hits, defeats at step 6344 and loads
+zone 23 after 6835 steps, with zero hurt/death rows. Release reaches `$7F2FE` at
+6785, two steps earlier than the previous moving-X presentation; the boss-hit
+steps remain unchanged. This is controller evidence, not cold-route/native parity.
+
+Replacement capture: `$HOME/Videos/OGGF/s3k-dez-bring-up/105-end-boss-x-locked-800`.
+900 frames decode successfully; inspected frame 400 shows the arena and Sonic.
+From frame 1 onward X stays `$3380`; frames 200..899 keep camera Y in `$218..$288`
+while Sonic traverses 384px horizontally. Comparing the first 700 rows with capture
+104 changes only `cam_x` (697 rows). Shared-camera combined delivery validation
+remains required before campaign integration/push.

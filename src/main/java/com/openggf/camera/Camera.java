@@ -190,6 +190,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// produce max < min at low X in this engine representation.
 			x = clampAxisWithWrap(x, (short) (minX - nativeArenaInset()),
 					(short) (maxX - nativeArenaInset()));
+			var horizontalLock = widescreenHorizontalArenaLock();
+			if (horizontalLock.isPresent()) x = (short) horizontalLock.getAsInt();
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
 			forcedScrollRequested = false;
@@ -476,6 +478,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	private short computeNextHorizontalCameraX(boolean consumeDelayState, boolean applyBoundaryClamp) {
+		// Widescreen-only presentation policy: hold X even inside the deadzone.
+		// Do not use the full camera freeze: the native vertical routine below
+		// must still follow the player (e.g. DEZ2's gravity-reversing arena).
+		var horizontalLock = widescreenHorizontalArenaLock();
+		if (horizontalLock.isPresent()) return (short) horizontalLock.getAsInt();
 		short nextX = x;
 		short focusedSpriteRealX;
 		if (horizScrollDelayFrames > 0) {
@@ -563,6 +570,18 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		return level != null
 				&& level.getZoneFeatureProvider() instanceof com.openggf.game.internal.NativeArenaCameraFraming framing
 				&& framing.centerNativeArenaCamera() ? NativeViewportFraming.inset(width) : 0;
+	}
+
+	private java.util.OptionalInt widescreenHorizontalArenaLock() {
+		if (width <= 320) return java.util.OptionalInt.empty();
+		var level = GameServices.levelOrNull();
+		if (level != null && level.getZoneFeatureProvider()
+				instanceof com.openggf.game.internal.NativeArenaCameraFraming framing) {
+			var nativeLeft = framing.lockedNativeHorizontalCamera();
+			if (nativeLeft.isPresent()) return java.util.OptionalInt.of(
+					NativeViewportFraming.visibleLeft(nativeLeft.getAsInt(), width));
+		}
+		return java.util.OptionalInt.empty();
 	}
 
 	/** ROM SH_MoveCameraLeft: enforce only the projected left boundary. */

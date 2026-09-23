@@ -2026,3 +2026,19 @@ first inventory check identified its stale Java count (the text header was alrea
 updated). After updating that count, the isolated inventory rerun passed:
 1,289 classes, 1,049 isolated passes, 240 graph-covered, zero unaccounted classes.
 All three distinct guard cases pass without skips; this is not a full guard sweep.
+
+
+### DEZ2 fixed horizontal widescreen arena (2026-09-23)
+
+User refinement: keep the wide boss camera centred horizontally regardless of
+Sonic's X, retaining vertical tracking. Added an optional internal zone-owned
+native X anchor and a shared midpoint calculation; DEZ captures `$3470` and
+releases it at `$7F2DC`. Camera applies it above 320px only. Original locks and
+custom rationale are documented in code. Focused queued command
+`-Dmse=off -Ds3k.rom.path=<root>/s3k.gen -Dtest=TestNativeArenaCameraFraming,TestCamera,TestDezEndBossEncounter test`
+passes 60, zero skips. The new 900-frame capture 105 decodes and was inspected;
+X is `$3380` after entry, Y remains active. The first 700 rows differ from 104
+only in `cam_x`. The unchanged positioned solo controller log completes eight
+hits and enters zone 23 in 6835 steps, no hurt/death. The exit is two steps earlier
+than with moving X; hit timing remains unchanged. Shared-camera combined validation,
+campaign integration/push and full final-arena implementation remain pending.

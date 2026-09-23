@@ -55,4 +55,41 @@ class TestNativeArenaCameraFraming {
         camera.updatePosition(true);
         assertEquals(max-(width-320)/2,camera.getX());
     }
+    @ParameterizedTest
+    @CsvSource({"320", "352", "400", "528", "800"})
+    void horizontalArenaLockIgnoresSonicXButKeepsVerticalTrackingAndNativeBounds(int width) {
+        var fixture=HeadlessTestFixture.builder().withZoneAndAct(11,1).build();
+        var state=(S3kDezZoneRuntimeState)TestEnvironment.objectServices().zoneRuntimeState();
+        state.setCenterNativeArenaCamera(true); state.lockWidescreenHorizontalArena(0x3400,0x34E0);
+        var provider=(NativeArenaCameraFraming)GameServices.level().getZoneFeatureProvider();
+        assertEquals(0x3470,provider.lockedNativeHorizontalCamera().orElseThrow());
+        var config=mock(SonicConfigurationService.class);
+        when(config.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS)).thenReturn((short)width);
+        when(config.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS)).thenReturn((short)224);
+        when(config.getString(SonicConfiguration.WIDESCREEN_DEADZONE_MODE)).thenReturn("CENTER_SCALED");
+        var camera=new Camera(config); var player=fixture.sprite(); camera.setFocusedSprite(player);
+        camera.setMinX((short)0x3400); camera.setMaxX((short)0x34E0);
+        camera.setMinY((short)0x218); camera.setMaxY((short)0x288);
+        int anchor=NativeViewportFraming.visibleLeft(0x3470,width);
+        for(int playerX:new int[]{0x33E0,0x3470,0x35A0,0x3680}) {
+            player.setCentreX((short)playerX); player.setCentreY((short)0x2B0);
+            camera.updatePosition(true);
+            if(width>320) assertEquals(anchor,camera.getX());
+            else assertEquals(Math.max(0x3400,Math.min(0x34E0,playerX-160)),camera.getX());
+            if(width>320) assertEquals((short)anchor,camera.previewNextX());
+        }
+        camera.setY((short)0x250); player.setAir(false); player.setGSpeed((short)0);
+        player.setCentreY((short)0x240); camera.updatePosition(); int up=camera.getY();
+        assertTrue(up<0x250,"horizontal lock leaves vertical tracking live");
+        player.setCentreY((short)0x380); camera.updatePosition(); assertTrue(camera.getY()>up);
+        if(width>320) assertEquals(anchor,camera.getX());
+        assertEquals(0x3400,camera.getMinX()); assertEquals(0x34E0,camera.getMaxX());
+        byte[] saved=state.captureBytes(); state.clearWidescreenHorizontalArenaLock();
+        assertTrue(provider.lockedNativeHorizontalCamera().isEmpty());
+        player.setCentreX((short)0x3800); camera.updatePosition(true);
+        assertEquals(NativeViewportFraming.visibleLeft(0x34E0,width),camera.getX());
+        state.restoreBytes(saved); camera.updatePosition(true);
+        if(width>320) assertEquals(anchor,camera.getX());
+    }
+
 }

@@ -72,6 +72,7 @@ public final class DezEndBossInstance extends DezEndBossSprite implements SpawnR
                 timer=(short)(timer-1);
                 if(timer==0) {
                     codePointer=0x7F2DC; runtime().setBossFlag(false);
+                    runtime().clearWidescreenHorizontalArenaLock();
                     services().playMusic(Sonic3kMusic.DEZ2.id);
                     runtime().setCameraStoredMaxX(0x3620);
                     spawnFreeChild(()->new S3kCameraGradualObjectInstance(S3kCameraGradualObjectInstance.INC_END_X));
@@ -110,10 +111,14 @@ public final class DezEndBossInstance extends DezEndBossSprite implements SpawnR
         }
         var state=runtime();
         // ROM word_7F0C6 permits X $3400..$34E0, a moving 320px window.
-        // Widescreen projects both view limits left by half the extra width;
-        // native player walls and escape thresholds retain their original words.
-        // Keep this presentation policy through escape; fresh level state resets it.
+        // Native 320px follows Sonic horizontally within this range. Widescreen
+        // can show the arena at once, so fix its X at the range midpoint ($3470)
+        // minus half the extra width. Y still follows Sonic inside $218..$288;
+        // changing minX/maxX would also change player walls, so keep them native.
+        // Release this X-only lock at loc_7F2DC when the escape corridor opens.
+        // The ordinary centred-window policy continues through the exit.
         state.setCenterNativeArenaCamera(true);
+        state.lockWidescreenHorizontalArena(0x3400,0x34E0);
         state.setBossFlag(true); state.setBossSignals(0);
         state.setCameraStoredMinX(camera.getMinX()); state.setCameraStoredMaxX(camera.getMaxX());
         state.setCameraStoredMinY(camera.getMinY()); state.setCameraStoredMaxY(camera.getMaxYTarget());

@@ -115,6 +115,7 @@ class TestDezEndBossEncounter {
         f.root.enemyContact(f.root.getX(),f.root.getY(),false,-1); f.game.stepIdleFrames(1);
         for(int i=0;i<700&&f.root.codePointer!=0x7F2DC;i++) f.game.stepIdleFrames(1);
         assertEquals(0x7F2DC,f.root.codePointer); assertFalse(f.root.runtime().bossFlag());
+        assertTrue(f.root.runtime().lockedNativeHorizontalCamera().isEmpty(),"corridor release removes only the wide X lock");
         assertEquals(8,f.root.runtime().foregroundRoutine(),"actual event consumes the door request");
         assertTrue((f.root.runtime().bossSignals()&2)!=0);
         assertEquals(0x3620,f.root.runtime().cameraStoredMaxX());

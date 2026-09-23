@@ -191,3 +191,16 @@ exactly except for camera X minus 240. The DEZ 800px controller replay completes
 eight real enemy hits and loads zone 23 after 6837 steps, no hurt/death rows.
 These bounded checks do not close inherited cold-route, donor/team, native
 parity or whole-zone rewind obligations. Combined delivery validation remains due.
+
+
+#### Fixed widescreen X, live Y (2026-09-23)
+
+The camera policy now fixes wide-view X at the centre of the ROM camera range,
+keeps Y tracking and native player boundaries, and releases at corridor opening.
+320px retains horizontal tracking. Five width cases plus existing camera and
+encounter checks pass in a 60-case selection, zero skips; capture/restore includes
+the anchor. Capture `105-end-boss-x-locked-800` holds X `$3380` after entry and
+shows moving Y; its first 700 state rows match capture 104 except `cam_x`.
+The positioned input replay still defeats all eight hits (last hit 6344) and
+loads `$1700` after 6835 steps without hurt/death. Full cold-route, native and
+breadth obligations remain open; no final-arena completion is implied.
