@@ -316,6 +316,41 @@ class TestRoomBroker {
     }
 
     @Test
+    void rateLimitedRoomListStillReceivesOneReply(@TempDir Path identityDir)
+            throws Exception {
+        FakeConnection browser = new FakeConnection();
+        String token = admit(browser, identityDir, "BROWSER");
+        broker.onText(browser, ControlCodec.encode(token,
+                new ControlMessage.RoomListRequest(null, 0)));
+        int before = browser.text.size();
+
+        broker.onText(browser, ControlCodec.encode(token,
+                new ControlMessage.RoomListRequest(null, 1)));
+
+        assertEquals(before + 1, browser.text.size());
+        ControlMessage.RoomListResult limited = assertInstanceOf(
+                ControlMessage.RoomListResult.class, lastMessage(browser));
+        assertEquals(1, limited.page());
+        assertEquals(-1, limited.totalPages());
+        assertTrue(limited.rooms().isEmpty());
+    }
+
+    @Test
+    void invalidRoomCreateStillReceivesRejection(@TempDir Path identityDir)
+            throws Exception {
+        FakeConnection host = new FakeConnection();
+        String token = admit(host, identityDir, "HOST");
+        int before = host.text.size();
+
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("R", "s3k", 0, 0,
+                        "OPEN", null, 8, false), "INVALID", 0, "0.6:cafe")));
+
+        assertEquals(before + 1, host.text.size());
+        assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(host));
+    }
+
+    @Test
     void strikeLimitRemovesRelayRoomBeforeDisconnectCallback(@TempDir Path hostDir)
             throws Exception {
         FakeConnection host = new FakeConnection();

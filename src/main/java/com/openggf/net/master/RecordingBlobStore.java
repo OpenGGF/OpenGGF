@@ -2,7 +2,10 @@ package com.openggf.net.master;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.FileTime;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -31,8 +34,18 @@ public final class RecordingBlobStore {
 
     public boolean putIfWithinLimit(String hashHex, byte[] bytes, long maxTotalBytes) {
         Path target = pathFor(hashHex);
-        if (Files.isRegularFile(target)) {
-            return true;
+        if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+            if (!Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
+                throw new IllegalStateException("recording path is not a regular file");
+            }
+            try {
+                Files.getFileAttributeView(target, BasicFileAttributeView.class,
+                        LinkOption.NOFOLLOW_LINKS)
+                        .setTimes(FileTime.fromMillis(System.currentTimeMillis()), null, null);
+                return true;
+            } catch (IOException failure) {
+                throw new IllegalStateException("unable to refresh recording retention", failure);
+            }
         }
         if (totalBytes() + bytes.length > maxTotalBytes) {
             return false;

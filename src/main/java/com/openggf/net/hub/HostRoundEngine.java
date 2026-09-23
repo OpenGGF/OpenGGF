@@ -73,6 +73,10 @@ public final class HostRoundEngine {
         return phase;
     }
 
+    boolean mayStartAttempt() {
+        return phase == Phase.RUNNING && hubClockMillis.getAsLong() <= deadline;
+    }
+
     public boolean startRound(ControlMessage.RoundConfig newConfig) {
         if (phase != Phase.LOBBY
                 && (phase != Phase.ROUND_END || !voteTrackPool.isEmpty())) {
@@ -96,7 +100,10 @@ public final class HostRoundEngine {
         if (phase == Phase.COUNTDOWN && now >= countdownEndsAt) {
             phase = Phase.RUNNING;
         }
-        if (phase == Phase.RUNNING && now > deadline) {
+        // Keep accepted attempts alive for finishes in transit. The protocol has no
+        // trusted completion timestamp, so the host cannot prove a finish happened
+        // before the deadline; RoomHost separately stops new attempts at deadline.
+        if (phase == Phase.RUNNING && now > deadline + FINISH_GRACE_MILLIS) {
             phase = Phase.ROUND_END;
             roundEndAt = now;
             broadcaster.accept(new ControlMessage.RoundEnd(broadcastStandings()));
@@ -271,6 +278,9 @@ public final class HostRoundEngine {
 
     public void onPlayerLeft(int slot) {
         // Best remains visible for the rest of the round.
+        if (votesBySlot.remove(slot) != null && phase == Phase.VOTE) {
+            broadcaster.accept(new ControlMessage.TrackVoteTally(currentTally()));
+        }
     }
 
     public List<ControlMessage.StandingsRow> standings() {

@@ -42,7 +42,7 @@ class TestHostRoundEngineVerified {
         engine.setPendingExpiryListener((slot, attempt) ->
                 expired.add(slot + ":" + attempt));
         engine.onAttemptFinish(1, "a", "sonic", finish(7, 100, "a"), false);
-        now[0] = 4_001;
+        now[0] = 4_001 + HostRoundEngine.FINISH_GRACE_MILLIS;
         engine.onTick();
         now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
         engine.onTick();
@@ -60,7 +60,7 @@ class TestHostRoundEngineVerified {
         HostRoundEngine engine = running(now);
         engine.onAttemptFinish(1, "a", "sonic", finish(1, 100, "a"), false);
         assertEquals("NONE", engine.standings().getFirst().verifyState());
-        now[0] = 4_001;
+        now[0] = 4_001 + HostRoundEngine.FINISH_GRACE_MILLIS;
         engine.onTick();
         now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
         engine.onTick();
@@ -79,7 +79,7 @@ class TestHostRoundEngineVerified {
         engine.onAttemptFinish(1, "a", "sonic", faster, false);
         assertEquals(faster, engine.bestFinish(1));
         assertNull(engine.bestFinish(99));
-        now[0] = 4_001;
+        now[0] = 4_001 + HostRoundEngine.FINISH_GRACE_MILLIS;
         engine.onTick();
         now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
         engine.onTick();

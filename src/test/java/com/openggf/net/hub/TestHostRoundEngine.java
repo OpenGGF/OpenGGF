@@ -40,7 +40,10 @@ class TestHostRoundEngine {
         now = start.countdownEndsAtHubMillis();
         engine.onTick();
         assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
-        now = start.deadlineHubMillis() + 1;
+        now = start.deadlineHubMillis() + HostRoundEngine.FINISH_GRACE_MILLIS;
+        engine.onTick();
+        assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
+        now++;
         engine.onTick();
         assertEquals(HostRoundEngine.Phase.ROUND_END, engine.phase());
         assertInstanceOf(ControlMessage.RoundEnd.class, broadcast.get(broadcast.size() - 1));
@@ -105,6 +108,21 @@ class TestHostRoundEngine {
         now += 300_000 + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
         engine.onAttemptFinish(2, "C", "sonic", finish(1, 3000), false);
         assertTrue(engine.standings().isEmpty());
+    }
+
+    @Test
+    void acceptsFinishAfterDeadlineTickDuringGrace() {
+        assertTrue(engine.startRound(config));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        engine.onTick();
+        long deadline = engine.snapshot().deadlineHubMillis();
+        now = deadline + 1;
+        engine.onTick();
+
+        assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
+        assertNotNull(engine.onAttemptFinish(0, "A", "sonic", finish(1, 4000), false));
+        assertEquals(1, engine.standings().size());
+        assertTrue(broadcast.stream().noneMatch(ControlMessage.RoundEnd.class::isInstance));
     }
 
     @Test

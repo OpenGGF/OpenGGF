@@ -34,7 +34,7 @@ class TestVoteRoundTrip {
         engine.onAttemptFinish(1, "ana", "sonic",
                 new ControlMessage.AttemptFinish(
                         1, 1885, 10, 1895, "aa".repeat(32), "bb", null), false);
-        now[0] += 60_001;
+        now[0] += 60_000 + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
         engine.onTick();
         assertEquals("ana", clientA.podiumTop(3).getFirst().displayName());
 

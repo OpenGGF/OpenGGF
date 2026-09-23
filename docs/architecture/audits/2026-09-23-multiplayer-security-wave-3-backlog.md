@@ -19,6 +19,58 @@ The next audit should revisit these scenarios after the current transport,
 authority, sanction, and resource-limit fixes have landed. Re-run the threat
 model against the integrated code before promoting any item to a fix task.
 
+## Wave 3 triage at `9c4d944a8`
+
+Read-only call-path review confirmed all seven mechanisms after wave 2 landed.
+The risks are narrower than some of the shorthand above:
+
+- A reused slot carries a departed ballot only until its new occupant votes;
+  it does not double-count both players. Abstention can still change the result.
+- Finish-evidence mismatches increment ghost strikes, but the evidence call
+  does not apply the kick threshold. Ten otherwise valid attempts with bad
+  stream hashes reproduce an open connection.
+- Recording deletion needs an old blob still present before the next hourly
+  sweep, followed by a fresh matching upload and a sweep before verifier fetch.
+  It is an availability failure, not unauthorized recording access.
+- A late master response can complete the next request of the same type because
+  the client skips a timed-out future. Direct joins can then target the wrong
+  room, while relay joins can use inconsistent metadata.
+- The first tick after the round deadline ends the round, despite the two-second
+  finish grace. Extending grace alone cannot prove the client's completion was
+  predeadline; the wire format has no trusted completion timestamp.
+- New private keys are written before `0600` permissions are applied. On a
+  traversable shared directory with a permissive umask, a local user has a
+  transient read window. Reloading a legacy permissive key leaves it exposed.
+- `(-1, null, null)` join metadata is a deliberate intermediate master admission,
+  not a valid final room join. Validation must keep that broker marker while
+  rejecting malformed host or relay joins before the client treats them as
+  established.
+
+## Wave 3 candidate disposition
+
+Each finding has a regression that failed on the original behavior and passed
+after its fix. The combined candidate merges `2cf64bf7c` (finish sanctions),
+`3a31a1312` (recording and identity storage), `f4225c5bf` (request and join
+protocol), and `960909130` (votes and grace). The overlapping `TestRoomHost`
+additions were reconciled by retaining all three tests; the combined focused
+run executed 71 tests with no failures, errors, or skips. The protocol branch's
+network category separately executed 1,317 tests without failure, error, or
+skip; its diagnostics were acknowledged. Broad candidate and post-integration
+results belong in the delivery report, not inferred from these focused runs.
+
+The grace fix deliberately closes new attempts at the deadline but keeps an
+existing attempt open for finish transit. It does not establish a trusted
+predeadline completion time. FIFO request tombstones prevent stale-room
+misbinding when requests receive ordered replies. Review exposed two broker
+exceptions to that prerequisite: rate-limited room lists and invalid-routing
+room creation were silently dropped. Both now send typed responses; the list
+reply uses a negative `totalPages` sentinel that the client reports as an error.
+A missing earlier response can still cause the next request to time out.
+POSIX key creation and mode repair were tested; the Windows ACL
+path was source-reviewed but not runtime-tested on this Linux host. These and
+the separate shared-parent path race are recorded as questions in the
+[wave 4 backlog](2026-09-23-multiplayer-security-wave-4-backlog.md).
+
 Wave 2 remediation chose a broker-pinned certificate plus host identity for direct
 joins: a signature-only challenge still exposes the session token to a live relay,
 and pinning both TLS and `Welcome` identity makes the intended host explicit for

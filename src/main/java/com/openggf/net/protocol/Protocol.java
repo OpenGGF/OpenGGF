@@ -11,6 +11,8 @@ public final class Protocol {
     public static final int MAX_PLAYERS_DIRECT = 8;
     public static final int MAX_PLAYERS_RELAY = 256;
     public static final int MAX_MASTER_FRAME_BYTES = 2 * MAX_CONTROL_BYTES + 1024;
+    /** Reserved RoomListResult totalPages value for a rate-limited request. */
+    public static final int ROOM_LIST_RATE_LIMITED = -1;
 
     private Protocol() {
     }
