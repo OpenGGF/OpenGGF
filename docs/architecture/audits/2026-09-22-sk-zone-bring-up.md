@@ -1684,3 +1684,40 @@ literal "none" instead of empty sidekick code, silently creating a follower.
 The latter explains the initially non-reproducing input replay and is added to
 the measurement-hazard catalogue. Cold route, native comparison, donor/roster
 breadth and connected defeat allocation-exhaustion tails remain open.
+
+### DEZ Act 2 boss foundations after `81768e6ee` (2026-09-23)
+
+Reviewed the entire `$7F06C–$7FD28` encounter and its allocation, angle, range and
+wait helpers before registering `$A7`. The plan now records damage authority,
+child topology, independent allocation prefixes and defeat publication. Native
+health is published by a released enemy, never by ordinary player attacks.
+`Check_InMyRange` is centred on that enemy (signed, asymmetric endpoints), and
+`Wait_NewDelay` inherits the root's current timer on the killing hit. These are
+explicit implementation constraints for the remaining encounter.
+
+Prepared the forty-frame runtime ROM sheet and real PLC/module queues, the
+tracking bumpers, and the eight-hit/flash state. Commands use Java 21 and
+`python3 tools/testing/maven_queue.py -Dmse=off`, with the absolute existing ROM
+passed as `-Ds3k.rom.path=$HOME/code/projects/OpenGGF/s3k.gen` for ordinary checks:
+
+- `-Dtest=TestDezEndBossResources test`: 2 passed, zero skips, including every
+  uploaded pixel and own prepared-job claim.
+- `-Dtest=TestDezEndBossBumper test`: 6 passed, zero skips, including real manager
+  capture/remove/recreate and forty-pass forward replay of the shared parent.
+- `-Dtest=TestDezEndBossDamageState test`: 4 passed, zero skips; helper state and
+  palette publication, not an integrated fight.
+- Focused structural checks covered physics ownership, helper state, field
+  disposition and inventory. Initial inventory expectation incorrectly counted
+  the bumper as graph-only: the probe also passes in isolation. Correct inventory
+  is 1266 total, 1026 isolated, 240 graph-covered, zero missing codecs; no failure
+  allowance was raised.
+
+The placement remains a placeholder until enemy/shield/debris/exit integration
+is ready. No new movie or native parity claim accompanies this preparation.
+Full campaign validation, destination integration and push remain pending.
+
+The resource/loading regression selection
+`-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry test`
+passed 137 tests with zero skips. The four-class guard selection ran 36 tests:
+35 passed before the inventory correction, and the corrected inventory passed
+its focused rerun. No executable behavior changed after those checks.

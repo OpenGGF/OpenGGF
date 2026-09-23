@@ -498,6 +498,14 @@ public class Sonic3kConstants {
     public static final int PAL_DEZ_MINIBOSS_ATTACK_SCRIPT_ADDR = 0x7F03C;
     public static final int PAL_DEZ_MINIBOSS_HIT_FLASH_ADDR = 0x7EE26;
 
+    /** Obj_DEZEndBoss $7F06C: independently queued from the Act 1 sheet. */
+    public static final int ARTTILE_DEZ_END_BOSS = 0x038A;
+    public static final int ART_KOSM_DEZ_END_BOSS_ADDR = 0x181002;
+    public static final int MAP_DEZ_END_BOSS_ADDR = 0x185B82;
+    public static final int PAL_DEZ_END_BOSS_ADDR = 0x7FD08;
+    public static final int PAL_DEZ_END_BOSS_HIT_FLASH_ADDR = 0x7FC26;
+
+
     // ===== DEZ Gravity Switch (Obj_DEZGravitySwitch, SKL ID 0x58) =====
     // Map_DEZGravitySwitch (sonic3k.asm:94909, sonic3k.lst:112040). Two frames:
     // word_48BEE is the armed 32x16 pad, word_48C08 the two-piece pressed pose.

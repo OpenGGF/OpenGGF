@@ -3304,3 +3304,59 @@ a follower; its seemingly non-reproducing input replay was a roster mismatch,
 not engine nondeterminism. The corrected solo movie was authored and re-parsed
 through InputLogAuthorTool. Native duration/pixel oracles and cold/breadth
 certification remain open.
+
+### Act 2 encounter oracle (2026-09-23, after `81768e6ee`)
+
+`Obj_DEZEndBoss` is **not a player-hit boss**. Its root collision byte is zero
+(`ObjDat_DEZEndBoss`, `$7FC44`). `sub_7FB4E` runs in each released enemy's own
+slot, tests the root against the half-open `$50`-pixel box around the enemy, and consumes the enemy
+on contact. Only the matching vertical velocity/render-Y orientation publishes
+root `$42 = $FF` and status bit 6. `sub_7FB92`, in the later root pass, decrements
+health once, flashes six palette words for 32 passes, then clears both latch and
+status bit. During this interval enemies skip the entire root-contact check.
+The eighth hit changes the root to `Wait_NewDelay`, which consumes the **existing**
+`$2E` timer; it is not a fresh fixed defeat delay. Ordinary attacks need negative
+health tests, including Hyper screen attacks.
+
+Reachable child graph and allocation rules:
+
+- Entry table `$7FC8C`: Robotnik and the door, one ordered two-entry forward-only
+  prefix. Both initially retain the root link. The door watches root control bit 4.
+- Routine zero: one bumper through `$7FC9A`; a separate allocation attempt for a
+  second bumper only if the native P2 code pointer is nonzero. A successful second
+  allocation gets subtype 2. Each bumper tracks its assigned native slot, but its
+  latched contact selects P1/P2 with `Check_PlayerCollision` (both bits select P2).
+- Launch table `$7FCA0`: shield at `(0,$14)`, then enemy at `(0,$C)`; the shield
+  independently creates its visor through `$7FCAE`. These are forward allocations,
+  not a transaction. Root live-enemy counter increments **before** allocation;
+  a missing enemy suffix leaves the increment in place, without a retry/refund.
+  At most three counter reservations are permitted. Two background children plus
+  one/two bumpers form the steady root graph; each active launch adds shield,
+  visor and enemy until the shield retracts.
+- Enemy timeout/impact: independent boss explosion subtype 6, eight-pass wait,
+  then the three-entry `$7FCB4` projectile prefix. Each projectile initially links
+  to the enemy, reads its orientation/position, and rewrites its parent to the
+  root on its first pass. Destroying an enemy through a player contact uses the
+  same explosion/wait but skips the projectile callback.
+- Killing hit: forward boss-explosion allocation, then an independent free-slot
+  allocation of `$7FC3E`, an invisible persistent gravity clearer. The clearer
+  writes every own pass until the load, so a later gravity-switch write must be
+  undone on its following pass. Failure to allocate it is preserved.
+- Body landing: independent forward prefixes of two explosion-path controllers
+  (`$7FCCE`), six debris pieces (`$7FCC8`), then a boss explosion. The first path
+  controller publishes `_unkFAB8` bit 1 at X `$35D0`; the second never publishes it.
+  The root then sets control bit 4, requests the foreground change when its timer
+  reaches `$30`, releases the camera at zero, and eventually requests `$1700`.
+
+All these tables use `CreateChild1_Normal` or `CreateChild6_Simple`, both backed
+by `AllocateObjectAfterCurrent`: successful children may enter later in the same
+sweep; failure stops only that table. Root completion is not inferred from an
+empty child list. Final graph tests must exercise every independent prefix, the
+projectile parent rewrite, simultaneous contacts, both gravity signs and the real
+foreground/camera/load publication chain. Component tests are not that completion
+proof.
+
+ROM resources verified directly from the locked-on listing: art `$181002`,
+`$1B80` decompressed bytes, destination tile `$38A`; mappings `$185B82`, forty
+frames; palette `$7FD08`; PLC `$76`. The bumper's `$7FD28` angle lookup and
+`$7FB0A/$7FB12` frame thresholds remain runtime ROM reads.

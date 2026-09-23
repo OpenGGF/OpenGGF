@@ -78,6 +78,7 @@ public final class S3kPaletteOwners {
     /** {@code AnPal_DEZ1} / {@code AnPal_DEZ2}: Death Egg lines 3 and 4. */
     public static final String DEZ_ZONE_CYCLE = "s3k.dez.zoneCycle";
     public static final String DEZ_MINIBOSS = "s3k.dez.miniboss";
+    public static final String DEZ_END_BOSS = "s3k.dez.end-boss";
     /**
      * CNZ AnPal palette ownership for the bumper, background, and tertiary
      * animation tables.

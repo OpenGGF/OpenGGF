@@ -3159,6 +3159,11 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_DEZ_MINIBOSS_ADDR,
                 Sonic3kConstants.ARTTILE_DEZ_MINIBOSS, 1, null, 39));
 
+        // Obj_DEZEndBoss $7F06C queues this archive; render from the physical DMA destination.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_END_BOSS,
+                Sonic3kConstants.MAP_DEZ_END_BOSS_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_END_BOSS, 1, null, 40));
+
         // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
         // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and
         // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:96088-96089),

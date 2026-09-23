@@ -132,3 +132,17 @@ checks the native transport clocks, independent camera workers and title owner.
 Solo Hyper recordings 098/099 in the external task capture directory reach Act 2
 and return control at 800/320. These positioned runs do not certify the cold
 entry trace, full-act route or character/team/donor breadth.
+
+### Act 2 boss component preparation (2026-09-23)
+
+The encounter remains unregistered; its placement and completion obligations are
+still open. `TestDezEndBossResources` checks all forty mapping frames against the
+ROM archive and the real physical/module queues through final uploaded pixels.
+`TestDezEndBossBumper` checks native-slot tracking, opening-angle clamping, all
+four launch phases, deferred P1/P2 contact, defeat conversion and reconstruction
+of two bumpers with their common parent through forty replayed passes.
+`TestDezEndBossDamageState` checks the enemy-centred signed hitbox edges, vertical
+orientation, publication versus consumption, thirty-two flash passes, six CRAM
+words and pending-eighth-hit restoration. These component checks do not establish
+the enemy lifecycle, actual fight, final child allocation prefixes or `$1700`
+exit. The full source-backed encounter graph is recorded in the bring-up plan.
