@@ -1984,3 +1984,18 @@ after removing the root and ship. Queued `-Dmse=off` with explicit root S3K ROM,
 `-Dtest=TestDdzRomPalettes,TestS3kDdzLifecycleProduction test`: five passed, zero
 skips. No shared algorithm or new state fields changed; broad campaign validation
 and fresh route/media remain outstanding. Task tree based on `ae36c875a`.
+
+### 2026-09-23 — Escape scenery/fade after `d1b2b3e2b`
+
+Added native crane/debris lifetimes and art registrations, and parameterized the
+existing shared `loc_85E64` fade by its caller-supplied `$3A` reload. DDZ defaults
+remain unchanged; DEZ can supply 3. Explicit crane identity capture ends when
+its wait begins; midpoint fade capture retains the selected cadence.
+
+Task-tree queued `-Dmse=off` with absolute root S3K ROM,
+`-Dtest=TestDezFinalEscapeScenery,TestSonic3kPlcArtRegistry,TestS3kDdzLifecycleProduction test`:
+83 passed, zero skips. Separate queued `-Pguards` inventory/helper/field checks:
+three passed, zero skips; confirmed 1288 total / 1048 isolated / 240 graph /
+zero missing codec and no exception growth. `git diff --check` clean. These are
+focused component checks; no complete escape, new capture or campaign delivery
+claim. Continue with root/ship and pending production screen/plane integration.

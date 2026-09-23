@@ -170,3 +170,12 @@ in the initial selection without skips. No rendered DEZ emerald claim is made:
 its native tile-$4D0 art still requires the pending root's module upload and the
 production final encounter remains unconnected. Controller route, full graph,
 native visuals and supported breadth obligations remain open.
+
+#### Escape scenery/fade dependency coverage (2026-09-23)
+
+`TestDezFinalEscapeScenery` covers native RNG fields, debris init/draw and strict
+retirement boundary; crane flip tracking, release, draw-through callback and
+retirement replay without its parent; and eight-pass white fade at native DEZ
+reload 3 and DDZ reload 7, including mid-fade restoration. Three cases passed,
+plus art registry 78 and DDZ lifecycle 2, with zero skips. Neither art uploads
+nor the root-to-escape-to-next-level chain is connected by these tests.

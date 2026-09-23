@@ -173,7 +173,8 @@ class TestRemainingRewindTailInventory {
         // Mouth/button and beam/particle add four isolated passes with focused graph coverage.
         // Final fire emitter and flame retain scalar SST addresses and probe independently.
         // Final emerald probes independently; palette cursors are captured by each zone runtime.
-        return new TailInventory(1287, 1047, 240, 0, buckets);
+        // Final escape scenery adds one scalar/parent-captured recreate owner.
+        return new TailInventory(1288, 1048, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

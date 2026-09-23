@@ -3757,3 +3757,34 @@ P1 clamp and camera delta immediately. It releases its Java parent reference
 because that phase never reads parent3 again. Zero/`$2000` wrap cases also
 capture/restore and replay after the ship/root are retired. Five focused
 palette/exit/lifecycle checks pass without skips; full route/media remain open.
+
+### 2026-09-23 — Escape scenery and fade dependency after `d1b2b3e2b`
+
+`DezFinalEscapeScenery` ports `$80426` debris and `$804B0` crane. Debris takes
+one native RNG long: low-word sign selects bucket 0/6, low nine bits select
+camera-relative X, two low bits select flips, high-word low two bits index ROM
+`RawAni_80490`, and high bits `$300` select Y speed `$100..$400`. Initialization
+does not draw; subsequent motion has no gravity and uses the signed word
+`cameraY+$108 < y` retirement test. It publishes the native zero-collision touch
+entry without inventing a damaging hitbox.
+
+The crane starts at the ship table's `(0,$23)`, follows adjusted parent flips,
+then `_unkFAB8` bit 3 installs `Wait_Draw` without moving it. Its zero timer
+expires on the next dispatch, schedules deletion while still drawing, and
+removes it on the following dispatch. The unused parent identity is released
+when waiting starts, allowing capture after ship retirement.
+
+ROM art registrations: crane mapping `$67116` / tile `$49D` / palette 0,
+29 frames; debris mapping `$187B66` / tile `$100` / palette 2, three frames.
+Root handoff still must queue modules `$1607D8` and `$182ED8` respectively.
+The existing white-fade helper now accepts native `$3A` as a captured reload
+word: DEZ supplies 3, DDZ keeps its default 7. No zone-name branch or gameplay
+wait was substituted. Both produce eight whitening passes and the native
+completion-before-deletion publication; the tests restore midway through both.
+
+Queued scenery/art/DDZ-lifecycle selection passed 83 cases without skips. The
+scenery and fade remain dependencies, not a connected escape. Head/flame,
+escape ship, root, forced-slot-61 fade allocation, screen/plane surfaces and
+live route/media remain open. Root module submissions must outlive root deletion:
+put pending prepared-job ownership in the captured final-zone runtime/event
+owner rather than losing the crane/debris handles with the retiring root.

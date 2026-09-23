@@ -32,11 +32,17 @@ final class DdzWhiteFadeObjectInstance extends AbstractDdzObjectInstance {
     private int steps;
     private boolean finished;
     private boolean started;
+    /** Native $3A reload: DDZ passes 7; DEZ final escape passes 3. */
+    private int holdDelay;
 
 
-    DdzWhiteFadeObjectInstance(Mode mode) {
+    DdzWhiteFadeObjectInstance(Mode mode) { this(mode, 7); }
+
+    /** Shared loc_85E64 helper: callers supply the ROM $3A word, without zone gates. */
+    DdzWhiteFadeObjectInstance(Mode mode, int holdDelay) {
         super(new ObjectSpawn(0, 0, 0, mode.ordinal(), 0, false, 0), "DDZWhiteFade", null);
         this.mode = mode;
+        this.holdDelay = holdDelay;
         steps = mode == Mode.DDZ_FLASH ? 4 : 7;
     }
 
@@ -83,7 +89,7 @@ final class DdzWhiteFadeObjectInstance extends AbstractDdzObjectInstance {
             }
             return;
         }
-        wait = mode == Mode.DDZ_FLASH ? 3 : 7;
+        wait = mode == Mode.DDZ_FLASH ? 3 : holdDelay;
         DdzPalette.whitenAll(services());
         steps = (steps - 1) & 0xFF;
         if ((byte) steps >= 0) {
