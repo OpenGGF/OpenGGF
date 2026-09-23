@@ -225,3 +225,20 @@ this sequence does not certify controller completion or final-arena presentation
 An eleventh ship case then passed alone (zero skips): a real ObjectManager
 sweep runs the forward head, crane and emerald on their allocation pass, with
 the head still on its initial raw-animation frame. Total distinct ship cases: 11.
+
+
+#### Main controller and child handoff (2026-09-23)
+
+Four `TestDezFinalBossController` cases pass, zero skips: native script entry,
+cover gate and exact 192-move rise; independent core/emerald/two-hand/six-finger
+graph and restoration; post-hand plane change, mouth-gated fire and forward
+replay; fatal stack-unwind equivalent, pending modules and deferred retirement.
+The tests drive phase signals directly where noted; they do not establish a
+complete production route. Existing hand/core cases pass 10 and focused rewind
+guards pass 3 without skips. Production screen/plane wiring remains absent.
+
+A fifth controller case passed separately, zero skips: 0..4 available slots
+preserve independent core/emerald allocation and the two-hand successful prefix,
+without healing missing hands after capacity becomes available. Total distinct
+controller cases: five. All local Maven work used the queue and the absolute
+root locked-on ROM path; waits were for a confirmed live shared Maven run.

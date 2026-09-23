@@ -3886,3 +3886,45 @@ live route/media and full root-to-ship production integration remain open.
 An eleventh ship case then passed alone (zero skips): a real ObjectManager
 sweep runs the forward head, crane and emerald on their allocation pass, with
 the head still on its initial raw-animation frame. Total distinct ship cases: 11.
+
+
+### Main final-boss controller (after `3e63d37a7`, 2026-09-23)
+
+`DezFinalBossController` ports `Obj_DEZ3_Boss` (`$7FD68`) and its thirteen
+routine entries through `$80102`/`$8013A`. It owns the background position and
+hand signal word, not a touch-damage target. Entry writes native P1/P2 positions,
+uses full script control, advances P2 then P1 by six pixels, stops both at P1
+`$360`, and releases only after the cover signal. Tails receives the native +4 Y.
+The rise consumes 192 moves of -$80, then camera signal bit 2 permits independent
+core/emerald allocations and a two-hand forward prefix. Hand/finger child topology
+continues to use the existing captured owner interface.
+
+Walking preserves signed sine/word arithmetic and the native landing callback
+order. Both hand bytes defeated trigger the sink/plane swap, button spawn and
+Master Emerald module. Fire clocks pause while mouth bit 2 is set; expiry consumes
+the clock even if the free-slot allocation fails. Fatal status skips the rest of
+the walk/camera caller (the ROM unwinds one return address), loads ship art and
+publishes root position through the ordinary wrapper. The direct sink routine
+stops publishing at the final threshold, clears shake/window state, independently
+attempts the ship, queues crane/debris and schedules control-bit-4 deletion.
+Pending module claims remain owned by the zone after root retirement.
+
+Four ROM-backed controller cases pass without skips: forced-entry/control and
+exact rise timing; core/emerald/two-hand/six-finger topology and restoration;
+plane transition/fire gate/replayed camera state; fatal short-circuit and queued
+handoff before deletion. Existing hand/core selection passes 10, zero skips.
+The three focused rewind guards pass: 1,291 classes, 1,051 isolated passes,
+240 graph-covered, no unaccounted classes. These remain focused checks; the
+controller is not yet invoked by production DEZ3 ScreenInit. Do not interpret
+these manually driven phase tests as controller-route or visual parity evidence.
+
+Next integration preserves the screen-init prefix `moving floor -> entry floor
+-> root`, with boss X/Y published only if root allocation succeeds. Screen-event
+carry, retained Plane B floor writes, retained Plane A rendering, scroll dispatch,
+laser mutation flush and live route/media still need to be connected and verified.
+
+A fifth controller case passed separately, zero skips: 0..4 available slots
+preserve independent core/emerald allocation and the two-hand successful prefix,
+without healing missing hands after capacity becomes available. Total distinct
+controller cases: five. All local Maven work used the queue and the absolute
+root locked-on ROM path; waits were for a confirmed live shared Maven run.

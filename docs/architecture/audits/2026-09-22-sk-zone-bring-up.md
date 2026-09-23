@@ -2080,3 +2080,24 @@ full runs remain red/incomplete. No fresh MHZ run or full-act certification is
 claimed. The matrices enumerate every standard obligation, breadth and rewind
 gaps, including current controller routes and checkpoint/death lifecycle work.
 Local links were resolved successfully; this is documentation-only progress.
+
+
+### DEZ final main controller (after `3e63d37a7`)
+
+Added the ROM's plane-owning root and its entry, walking, hands, exposed-core chase,
+fatal callback and escape-ship handoff. It has no ordinary touch attack interface;
+existing fingers/core publish the damage state. Native player word writes use
+NativePositionOps and scripted control. Controller captures only its owned scalar
+state; child references and pending art continue through established graph/zone
+owners. Four new ROM-backed tests pass, zero skips; the existing hand/core selection
+passes 10, and focused inventory/helper/field guards pass all 3. Inventory is now
+1,291 total, 1,051 isolated, 240 graph-covered, zero unaccounted. The controller
+has not yet been connected to ScreenInit or retained-plane rendering, so there is
+no new final-arena movie or production-completion claim. The next integration
+must preserve partial allocation and initialize boss position only on success.
+
+A fifth controller case passed separately, zero skips: 0..4 available slots
+preserve independent core/emerald allocation and the two-hand successful prefix,
+without healing missing hands after capacity becomes available. Total distinct
+controller cases: five. All local Maven work used the queue and the absolute
+root locked-on ROM path; waits were for a confirmed live shared Maven run.
