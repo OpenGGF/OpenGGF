@@ -3671,3 +3671,30 @@ real boss-graph reconstruction/replay checks remain green. Separate `-Pguards
 -Dtest=TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard,TestRemainingRewindTailInventory test`:
 3 passed, zero failures/errors/skips. This is focused validation; the campaign's
 combined delivery selection remains pending.
+
+### 2026-09-23 arrival priority correction and widescreen follow-up
+
+User review of `miniboss-art-queue-20260923-320/capture.mp4` identified Sonic
+behind the lava. That recording started at `$2C00,$600`, beyond the ROM's
+`$02/$22` marker at `$2BA0,$750` (placement offset `$E22`). `Obj_PathSwap`
+initializes the current side; only crossing right within the `$80` Y half-span
+executes `loc_1CE54` and sets art-tile priority bit 15. The engine already
+performs that write. Do not change sprite/tile ordering or force priority to
+cover up the omitted approach. Replacement capture starts at `$2B70,$750`
+with the same controller input; this is positioned approach evidence, not a
+cold route or native comparison. The capture CSV now includes `high_priority`.
+Regression covers skipped setup, crossing in both directions and restoration
+of the switcher's previous-side latch.
+
+Widescreen centering is requested for both this arena and DEZ2. Original
+LRZ lock `word_784E8` is X `$2C00..$2C00`, Y `$710..$710`. Proposed shared
+framing calculation: native lock minus `(viewportWidth - 320) / 2`; at 800 px,
+LRZ's visible left edge should be `$2B10`, preserving centre `$2CA0`.
+**Implementation/validation pending:** camera min/max also feed player movement
+limits (`PlayableSpriteMovement.doLevelBoundary`). Changing those words directly
+would move the arena's playable walls. Preserve native bounds and distinguish
+presentation framing before applying this to either arena; verify gate timing,
+both walls, rewind, defeat release and seamless/load boundaries. DEZ2's native
+lock is a range (`$3400..$34E0`), not a single point; its follow-up escape uses
+native-framed X checks and must remain reachable. At every use site, document
+the ROM routine/constants and why wider presentation differs.

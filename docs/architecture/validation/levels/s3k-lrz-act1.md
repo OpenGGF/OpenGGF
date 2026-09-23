@@ -87,3 +87,13 @@ boss's one-time submission and all module pixels. The resource/boss/rewind/art
 selection passed 108 tests with no skips; three separate rewind structural
 checks also passed without skips. Native Nemesis scheduling is not established
 by this repair because the existing S3K PLC application is synchronous.
+
+#### Arrival capture correction (2026-09-23)
+
+The runtime-art arrival videos starting at `$2C00,$600` omitted the ROM
+priority switch at `$2BA0,$750`; their low-priority Sonic is invalid approach
+setup, not priority-parity evidence. Replacement setup `$2B70,$750` crosses
+that marker using production controller input. Capture CSV includes
+`high_priority`; the latch regression also exercises restore/forward crossing.
+Widescreen arena centering remains an open obligation: keep ROM gameplay bounds
+while centering the original 320-pixel window, including release/transition checks.

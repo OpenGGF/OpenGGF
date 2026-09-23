@@ -398,13 +398,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 + "," + (camera.getX() & 0xFFFF)
                 + "," + (camera.getY() & 0xFFFF)
                 + "," + sidekickState()
+                + "," + (player.isHighPriority() ? 1 : 0)
                 + "," + loop.getCurrentGameMode()
                 + "," + (input == null ? "" : input.rawLine());
     }
 
     public static String stateHeader() {
         return "frame,x,y,xvel,yvel,gspeed,air,rolling,spindash,hurt,dead,rings,mapping_frame,cam_x,cam_y,"
-                + "sk_present,sk_x,sk_y,mode,input";
+                + "sk_present,sk_x,sk_y,high_priority,mode,input";
     }
 
     private static Bk2FrameInput neutral(Bk2FrameInput previous) {

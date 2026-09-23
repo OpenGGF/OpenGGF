@@ -615,7 +615,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **Gameplay capture tooling:** `GameplayCaptureTool` pictures or films any
   gameplay section on the production boot path (any game, zone, act, position,
   width, donor or team), driven by a BizHawk input log, and writes PNG frames, a
-  per-frame state CSV and an MP4. `InputLogAuthorTool` compiles a short controller
+  per-frame state CSV (including live player priority) and an MP4. `InputLogAuthorTool` compiles a short controller
   script into that input log and proves it loads through `Bk2MovieLoader`, which now
   also reads a bare `Input Log.txt`. Skills `gameplay-capture` and
   `bk2-input-authoring` document the workflow. Native BizHawk reference capture

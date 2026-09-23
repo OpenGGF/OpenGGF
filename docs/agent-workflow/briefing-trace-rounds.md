@@ -102,6 +102,15 @@ and falling through it sets both priorities via production logic. Record live
 priority flags; do not force high priority or weaken background priority to repair
 a capture that omitted the entry interaction.
 
+LRZ miniboss capture (2026-09-23): the arrival movie positioned at
+`$2C00,$600` skipped the placed `$02/$22` path switch at `$2BA0,$750`
+(`Levels/LRZ/Object Pos/1.bin + $E22`). `loc_1CE54` sets high priority from
+subtype bit 5 on a rightward crossing inside Y `[$6D0,$7D0)`; loading on
+the far side merely initializes the side latch. Start at `$2B70,$750` and
+walk across it. The resulting Sonic-in-front-of-lava image is a corrected
+capture setup, not an engine priority fix. Capture CSV now exposes
+`high_priority` so this missing state is inspectable without guessing from pixels.
+
 SOZ allocation profiling (2026-09-16): aggregate JFR allocation samples include
 recorder/control threads, which can dominate with `HashMap$KeySet` allocations.
 Attribute stacks before calling them gameplay churn. Measure the gameplay thread

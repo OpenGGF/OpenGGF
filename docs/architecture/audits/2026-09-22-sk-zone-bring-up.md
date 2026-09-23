@@ -1780,3 +1780,28 @@ death frames; the 800px CSV has 88 hurt frames, zero death frames. This is a
 positioned visual check, not equivalent combat trajectory or cold completion.
 Both videos decode successfully; arm/hand scenes at frames 380/500 were inspected.
 The larger viewport's combat difference remains uncharacterized.
+
+
+### LRZ arrival priority correction (after `5b1f04e39`)
+
+User review correctly identified Sonic behind the lava in the preceding arrival
+videos. Those starts skipped the `$2BA0,$750` path switch, leaving fresh-load
+low priority. The ROM and existing engine set high priority only on crossing;
+no renderer/priority behavior was changed. `GameplayCaptureSession.state.csv`
+now exposes `high_priority`. Nine switcher tests pass, zero skips, via
+`python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestPlaneSwitcherStateIsolation,TestSlotOwnedPlaneSwitcherDispatch test`.
+New regression covers the omitted interaction, right/left crossings and
+switcher-latch restore/forward replay; no native parity claim.
+
+Replacement `$HOME/Videos/OGGF/lrz-bring-up/miniboss-priority-crossing-20260923-320-v2/capture.mp4`
+starts at `$2B70,$750`, 355 rings, same 95R/30L/neutral input. Its CSV changes
+priority 0 to 1 at frame 32 (`$2BA1,$7AF`) and retains it. At 320 px it reaches
+the locked arena and visibly renders Sonic above the lava; 43 hurt frames,
+zero death frames across 600 steps. An 800px companion at
+`miniboss-priority-crossing-20260923-800` confirms the same priority transition,
+but this shorter approach does **not** reach the existing raw-X camera gate:
+last camera X 11073, no fight arrival claim. Both are positioned captures.
+This further motivates the requested shared centering treatment for LRZ1 and
+DEZ2. It remains pending; moving raw camera bounds would incorrectly move
+player boundary walls too. See the LRZ plan's centering follow-up.
