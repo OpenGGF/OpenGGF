@@ -4,9 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TestPlayerIdentity {
     @Test
@@ -40,5 +43,44 @@ class TestPlayerIdentity {
         byte[] sig = id.sign(msg);
         byte[] garbageKey = new byte[] {1, 2, 3, 4, 5};
         assertFalse(PlayerIdentity.verify(garbageKey, msg, sig)); // must not throw
+    }
+
+    @Test
+    void newlyCreatedIdentityDirectoryIsPrivate(@TempDir Path parent) throws Exception {
+        assumeTrue(Files.getFileStore(parent).supportsFileAttributeView("posix"));
+        Path dir = parent.resolve("identity");
+        PlayerIdentity.loadOrCreate(dir);
+        assertEquals(PosixFilePermissions.fromString("rwx------"),
+                Files.getPosixFilePermissions(dir));
+        assertEquals(PosixFilePermissions.fromString("rw-------"),
+                Files.getPosixFilePermissions(dir.resolve("player-identity.key")));
+    }
+
+    @Test
+    void reloadRestrictsLegacyPrivateKeyBeforeUse(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.getFileStore(dir).supportsFileAttributeView("posix"));
+        PlayerIdentity created = PlayerIdentity.loadOrCreate(dir);
+        Path key = dir.resolve("player-identity.key");
+        Files.setPosixFilePermissions(key, PosixFilePermissions.fromString("rw-r--r--"));
+
+        PlayerIdentity reloaded = PlayerIdentity.loadOrCreate(dir);
+
+        assertEquals(created.fingerprint(), reloaded.fingerprint());
+        assertEquals(PosixFilePermissions.fromString("rw-------"),
+                Files.getPosixFilePermissions(key));
+    }
+
+    @Test
+    void refusesSymlinkPrivateKey(@TempDir Path dir) throws Exception {
+        assumeTrue(Files.getFileStore(dir).supportsFileAttributeView("posix"));
+        Path identityDir = dir.resolve("identity");
+        PlayerIdentity.loadOrCreate(identityDir);
+        Path key = identityDir.resolve("player-identity.key");
+        Path external = dir.resolve("external.key");
+        Files.move(key, external);
+        Files.createSymbolicLink(key, external);
+
+        assertThrows(java.io.IOException.class,
+                () -> PlayerIdentity.loadOrCreate(identityDir));
     }
 }
