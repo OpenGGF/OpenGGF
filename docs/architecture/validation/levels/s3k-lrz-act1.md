@@ -77,3 +77,13 @@ rewind evidence, not controller-route completion. The inherited missing child
 constructors and resurrection of retired arms are fixed; see the
 [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#rewind-findings-from-the-continuation).
 Cold route, donor/team/viewport fight breadth and native comparison remain open.
+
+
+### Runtime art queue follow-up (2026-09-23)
+
+The miniboss now submits its ROM module and explosion PLC at `loc_78592`,
+retaining the native 48-update wait. `TestLrzMinibossResources` tests the actual
+boss's one-time submission and all module pixels. The resource/boss/rewind/art
+selection passed 108 tests with no skips; three separate rewind structural
+checks also passed without skips. Native Nemesis scheduling is not established
+by this repair because the existing S3K PLC application is synchronous.

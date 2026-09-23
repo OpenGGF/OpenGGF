@@ -50,6 +50,8 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         implements SpawnRewindRecreatable, SolidObjectProvider,
         com.openggf.level.objects.RomWorldPositionedObject {
 
+    private final LrzMinibossArtState art = new LrzMinibossArtState();
+
     /**
      * {@code word_784E0} (sonic3k.asm:159994), the {@code Check_CameraInRange} box the object's
      * first dispatch tests: {@code dc.w $610,$810,$2B00,$2D00} -- camera Y in
@@ -334,6 +336,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
+        art.service(services());
         if (!arenaGateComplete && defeatPhase == DEFEAT_NONE) {
             updateArenaGate();
             return;
@@ -407,6 +410,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     private void queueArt() {
         state.routine = ROUTINE_ART_DELAY;
         waitTimer = ART_DELAY_TIMER;
+        art.submit(services());
     }
 
     /** {@code loc_785C2} (sonic3k.asm:160071-160081). */

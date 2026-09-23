@@ -15,7 +15,25 @@ below are inherited evidence until explicitly re-executed. Implementation,
 cold reachability, rewind, native behaviour and visual matching remain separate.
 Existing ending/credits and route exclusions remain as documented in each plan.
 
-## Reconciled inventory
+## Current campaign priorities (2026-09-23, after `6b016ccc5`)
+
+The target remains all seven zones. The initial inventory below is historical;
+its original unimplemented counts must not be read as current production status.
+
+| Zone | Current evidence and next obligation |
+| --- | --- |
+| MHZ | Integrated Sonic/Tails route and miniboss fixes; reconcile the original audit's accepted Knuckles/trace exclusions and create the missing per-act evidence matrices before certification. |
+| FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; finish matrix reconciliation, checkpoint geometry and presentation obligations without undoing the accepted S1 elevator challenge. |
+| SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
+| LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Repair the Act 1 miniboss's missing runtime art submission; then retain distinct cold-route, strict-parity and breadth gaps. |
+| SSZ | Main-route bosses, collapse, results and DEZ launch implemented; Knuckles arrival/finale and cold-route breadth remain substantive acceptance work. |
+| DEZ | Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. `$1700` remains the main implementation blocker: floor/laser/scroll/retained-plane components exist, but connected ScreenInit, final boss, chase and ending/DDZ exit are unfinished. |
+| DDZ | Both boss phases and exit request implemented; seeded completion and unseeded/strict-bootstrap frontiers remain separate. Validate the real incoming DEZ transition once available and reconcile star/HUD presentation gaps. |
+
+Combined campaign validation, main-workspace integration, push and cleanup remain
+pending. Local component commits are checkpoints, not completion or delivery.
+
+## Initial reconciled inventory (2026-09-22)
 
 | Zone | Actual implementation location | Evidence and remaining work |
 | --- | --- | --- |
@@ -1745,3 +1763,20 @@ S3K ROM property:
 
 No integrated boss, cold route, native cadence or media claim yet. The next
 work is the root's launch/camera and Robotnik/door/defeat publication chain.
+
+
+### LRZ runtime miniboss art queue (after `6b016ccc5`)
+
+The actual miniboss previously entered ART_DELAY without submitting art. Its
+new captured art helper queues $16FCDA -> tile $3FB and the raw boss explosion
+PLC, preserving the native 48-update delay. 108 focused resource/boss/rewind/art
+checks and three separate structural checks passed with no skips. Exact commands
+and the synchronous-Nemesis limitation are recorded in the LRZ plan.
+
+Two new external `miniboss-art-queue-20260923-{320,800}` captures replay the same
+arrival input for 600 frames, starting at ($2C00,$600), 355 rings, solo Sonic.
+Both reach the camera-locked, unrolled-arm fight. The 320px CSV has zero hurt or
+death frames; the 800px CSV has 88 hurt frames, zero death frames. This is a
+positioned visual check, not equivalent combat trajectory or cold completion.
+Both videos decode successfully; arm/hand scenes at frames 380/500 were inspected.
+The larger viewport's combat difference remains uncharacterized.

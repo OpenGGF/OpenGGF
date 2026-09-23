@@ -3648,3 +3648,26 @@ its bonus detour, boss, capsule/results and HPZ load (frame 12700). No hurt/deat
 in 12820 rendered frames. Focused checks pass as recorded in the audit and matrix;
 remaining capsule/native/timing obligations are explicit. The campaign next
 reconciles SSZ's existing branch and its cold-route/launch blockers.
+
+
+### Runtime miniboss art submission repair (2026-09-23 campaign continuation)
+
+At campaign checkpoint `6b016ccc5`, `loc_78592`'s Java owner advanced into the
+$2F art-delay state without either Queue_Kos_Module or PLC_BossExplosion.
+`LrzMinibossArtState` now submits ArtKosM_LRZMiniboss ($16FCDA) to tile $3FB
+through the production physical and prepared module queues, then applies the
+raw explosion entry ($D73CE -> tile $500) through the existing S3K PLC loader.
+The captured helper retains its own prepared-job ordinal and claims only that
+job when ready. The native 48-update delay remains independent of readiness;
+there is no fitted wait or replay-row input. The engine's S3K Nemesis loader is
+synchronous, so native Nemesis FIFO service timing remains outside this fix.
+
+Queued validation with the absolute existing S3K ROM:
+`-Dmse=off -Dtest=TestLrzMinibossResources,TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard test`:
+108 passed, zero failures/errors/skips. The two resource regressions prove actual
+boss submission exactly once at routine 2, the 48-pass delay, correct source and
+VRAM destination, independent queued-job claim and every uploaded pixel. Existing
+real boss-graph reconstruction/replay checks remain green. Separate `-Pguards
+-Dtest=TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard,TestRemainingRewindTailInventory test`:
+3 passed, zero failures/errors/skips. This is focused validation; the campaign's
+combined delivery selection remains pending.

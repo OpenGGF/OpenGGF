@@ -492,6 +492,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ROM-loaded art. Chained platforms follow their ROM paths, carry players on top
   and hurt on contact with their spiked undersides. Rewinding the miniboss preserves its arms, hit flashes and defeat
   debris without resurrecting destroyed parts; launchers retain their in-flight balls.
+  The Act 1 miniboss submits its ROM art to the runtime module queue before its
+  native arm-extension delay, including the explosion art needed by its children.
   Act 2’s boulder cutscene carries Sonic and Tails into the boss act, preserving
   rings, time and elemental shields. Knuckles’ exit leads into Hidden Palace and
   saves progression. The boss act restores its checkpoint entry and runs the
