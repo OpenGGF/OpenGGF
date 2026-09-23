@@ -218,6 +218,7 @@ public class PlayableSpriteAnimation {
                 return;
             }
             updateScriptedAnimation(frameCounter);
+            applyReverseGravityRenderFlipAfterAnimation();
             return;
         }
 
@@ -225,15 +226,14 @@ public class PlayableSpriteAnimation {
             return;
         }
         applyDefaultFacingRenderFlips();
-        if (profile == null) {
-            return;
+        if (profile != null) {
+            int frameCount = sprite.getAnimationFrameCount();
+            if (frameCount > 0) {
+                int frame = profile.resolveFrame(sprite, frameCounter, frameCount);
+                sprite.setMappingFrame(frame);
+            }
         }
-        int frameCount = sprite.getAnimationFrameCount();
-        if (frameCount <= 0) {
-            return;
-        }
-        int frame = profile.resolveFrame(sprite, frameCounter, frameCount);
-        sprite.setMappingFrame(frame);
+        applyReverseGravityRenderFlipAfterAnimation();
     }
 
     /**
@@ -356,6 +356,19 @@ public class PlayableSpriteAnimation {
     private void applyDefaultFacingRenderFlips() {
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
         sprite.setRenderFlips(facingLeft, false);
+    }
+
+    private void applyReverseGravityRenderFlipAfterAnimation() {
+        if (sprite.isObjectMappingFrameControl()) {
+            return;
+        }
+        var gameState = sprite.currentGameStateOrNull();
+        if (gameState != null && gameState.isReverseGravityActive()) {
+            // S3K runs Animate_Sonic/Tails/Knuckles, then eori.b #2,render_flags
+            // under Reverse_gravity_flag (sonic3k.asm:22010-22013, 26254-26258,
+            // 30452-30456). object_control bit 1 skips both operations.
+            sprite.setRenderFlips(sprite.getRenderHFlip(), !sprite.getRenderVFlip());
+        }
     }
 
     private void updateSpecialScript(int startFlag, SpriteAnimationScript script, int remaining) {

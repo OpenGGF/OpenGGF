@@ -31,7 +31,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.
-  Asteroids shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
+  Hyper's afterimages now mirror vertically with Sonic when gravity reverses. Asteroids
+  shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
   or ramming costs speed. The end boss runs both phases: turrets, launchers, missiles that can
   be steered back into the ship, the chase with bombs, rockets and the Master Emerald, the
   level wrap that repeats the field, and the defeat, explosions and white fade before the
