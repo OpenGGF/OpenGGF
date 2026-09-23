@@ -103,6 +103,12 @@ class TestRoomHost {
         String wire = ControlCodec.encode(null, new ControlMessage.RoomState(players));
         assertTrue(wire.getBytes(StandardCharsets.UTF_8).length
                 <= Protocol.MAX_CONTROL_BYTES);
+        String tunneled = ControlCodec.encode("t".repeat(32),
+                new ControlMessage.RelayGuestText(255, wire));
+        assertTrue(tunneled.getBytes(StandardCharsets.UTF_8).length
+                <= Protocol.MAX_MASTER_FRAME_BYTES);
+        assertEquals(wire, ((ControlMessage.RelayGuestText) ControlCodec.decode(
+                tunneled, Protocol.MAX_MASTER_FRAME_BYTES).message()).text());
         assertEquals(Protocol.MAX_PLAYERS_RELAY,
                 ((ControlMessage.RoomState) ControlCodec.decode(wire).message())
                         .players().size());
