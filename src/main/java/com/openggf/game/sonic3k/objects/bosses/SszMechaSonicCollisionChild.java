@@ -85,6 +85,9 @@ public final class SszMechaSonicCollisionChild extends AbstractObjectInstance
         }
     }
 
+    @Override public com.openggf.level.objects.TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return com.openggf.level.objects.TouchResponseProfile.fromProvider(this, multiRegionSource);
+    }
     @Override public int getCollisionFlags() { return collisionFlags; }
     @Override public int getCollisionProperty() { return 0; }
     @Override public boolean requiresRenderFlagForTouch() { return false; }

@@ -3103,3 +3103,105 @@ capture overrides were rejected by the architecture guard and removed.
 This is implementation progress, not completion of slice 5: all seven cold
 entries, per-mode native cadence and full character/donor/team breadth remain
 required. The act bosses and final-boss route remain open.
+
+### DEZ Act-1 boss encounter oracle in progress (after `a427d8a03`)
+
+The ROM encounter is two eight-hit phases, not one health counter. The root has
+no damaging collision; `loc_7E768` is the eye and publishes hits through
+`sub_7EDD0`: first zero collision byte installs a 32-pass flash, plays BossHit
+and increments the root's collision property. `loc_7EE42` sees the changed
+counter on the next root pass, signals the first orbiting orb to consume bit 1,
+and at eight installs the phase-change wait. `loc_7E044` resets the count and
+clears status bit 6; the same eye subsequently takes routine 8 and `$17` contact
+again. Second-phase health uses `sub_7EE88`; its eighth hit sets status bit 7,
+waits for level-music fade, then reaches `loc_7E23C` and `Obj_EndSignControl`.
+The ordinary root is not a player-attack target. Negative root/hazard attack
+checks and real eye touch are required, rather than injecting root health.
+
+Reachable graph and allocation facts from the literal helper bodies:
+
+| Owner/call | Allocation and children | Shared writes / lifetime |
+| --- | --- | --- |
+| Root init | independent `CreateChild1_Normal` eye ×1, then `CreateChild6_Simple` orb ×8; both forward SST searches | second table is attempted independently even if the eye table fails; initial steady population is root + eye + eight orbs = 10 |
+| Orbiting orb after consuming root bit 1 | throws upward, then one explosion-helper table and `CreateChild6_Simple` shard ×8 at its apex | no retry or rollback; shards use original orb as owner and run independently; first live orb in slot order consumes the signal |
+| Root first-phase defeat wait | spark ×1 every V-int low-three-bits zero; cover ×2 at `loc_7DFB8` | cover dispatch waits 64 passes before becoming flickering moving debris; root publishes `Events_fg_4` here, not directly on the eighth hit |
+| `loc_7E016` | `CreateChild8_TreeListRepeated`, table word **1** means two platform arms (subtypes 0 and 2) | initial first.parent=root, first.$44=root; second.parent=first, second.$44=root |
+| Each platform arm init | independent spike child ×1 via `ChildObjDat_7EFBC` | two children in total, not one table globally |
+| Second platform after 32-pass spread | writes first.$44=second, then restores second.parent=second.$44 (root) | settled graph: both parents root; first cross-link second; second cross-link root. Partial first-only allocation leaves first.$44=root, so its later bit write aliases the root |
+| `loc_7E044` | free-slot `AllocateObject` mask at `$3740,$360`, subtype `$89` | mask frame 8, bucket 1, height `$20`; follows root `$38` bit 5 for deletion. This is the parent-controlled mask path, not the placed mask's coarse cull |
+| Second-phase nonfatal eye hit | one laser/beam child if root bit 1 was previously clear; beam later allocates two feet | phase-two steady base is root + eye + two arms + two spike children + mask = 7, before transient beam/feet/explosions/debris |
+| Final defeat callback | free-slot transport controller `loc_7E25C`, four debris children, then existing root slot becomes `Obj_EndSignControl` | transport watches `_unkFAA8` set then clear, survives act change, aligns P1 at `$140`, raises Act-2 terrain event, lifts/lands P1 and releases after title-card delay |
+
+Transient/peak counts still need a real object-manager oracle over the complete
+state machine; the steady counts above do not substitute for it. Every table's
+partial-prefix allocation and same-sweep child initialization need independent
+checks. No reconstruction may fill a missing suffix.
+
+Arena trigger `word_7DDA4`: camera Y `$18C..$38C`, X `$3400..$3780`, inclusive.
+Shared camera lock uses Y `$28C..$28C`, X `$3680..$36C0`, music delay 120; the
+existing `S3kSharedBossCameraGate` matches the owner. After completion the boss
+adjusts local motion bounds by Y-max +`$E0`, X-min +`$40`, X-max +`$100`.
+Dedicated art is `ArtKosM_DEZMinibossMisc` `$1805A0` at tile `$400`, mappings
+`$184FBA`, palettes `$7EFFC/$7F01C`; init appends PLC `$7B` as well. Runtime queue
+submission/claim and renderer refresh must be exercised, not replaced by a
+standalone visual preload. The existing LRZ miniboss queue method merits a later
+campaign audit: it currently changes only its state/delay; verify the actual art
+submission owner before treating that encounter as timing-complete.
+
+Additional helper constraints resolved before coding the encounter:
+
+- `Touch_Enemy` backs up the eye's collision byte at `$25`, clears collision,
+  decrements its `$FF` property and reverses the attacker's X/Y/ground velocity.
+  The eye's next pass publishes one hit; the root subsequently consumes it.
+- `Swing_UpAndDown` is asymmetric at its limits: crossing the negative limit
+  changes direction and applies positive acceleration in that same pass;
+  crossing the positive limit subtracts one acceleration step. A triangular
+  oscillator with symmetric endpoint clamping would drift from the ROM.
+- `word_7F03C` has four three-colour rows, each with stored delay **7**
+  (`palscriptdata 8` subtracts one), and header repeat count **10** (`11-1`).
+  `loc_7E108` advances it; its first pass writes, then every eighth pass writes,
+  and pass 321 invokes `loc_7E124` without another write. Disable freezes the
+  entire script, and another nonfatal hit restarts its cursor/count/delay.
+  Eye flash writes four colours later in the SST sweep, including colour 14
+  which the attack script does not touch. Native palette order must remain.
+- The final hit installs the fade-wait pointer but `loc_7E0B8` still dispatches
+  the current second-phase routine in that same pass. `BossDefeated` installs
+  `$3F`, awards 100 score units and clears the old render bit; the new wait
+  starts next pass. Fade expiry allocates its independent music worker before
+  transport/debris allocation and the same-slot sign conversion.
+- `Obj_EndSignControl` publishes `_unkFAA8` immediately and installs `$77`.
+  Its sign callback clears the boss flag, allocates the sign, loads the raw
+  sign PLC and runs cleanup. Results publishes `Events_fg_5`; DEZ's background
+  owner queues secondary blocks at `$15E0`, tile art at `$292` and PLC `$38`,
+  waits for the module queue, and offsets native players, objects and camera
+  by X `-$3600`, Y `+$400`. Reverse gravity survives this handoff.
+- The transport's `loc_863C0` worker locks only native P2 and clears its logical
+  input each pass until released. `sub_5FD88` selects landing mapping frame
+  `$BA/$BA/$AD/$56` by native player mode and calls the player's PLC loader.
+  `Stop_Object` writes **a1**, so both `loc_7E2E8` and `loc_7E384` stop P1's
+  X/Y/ground velocity, not the transport. The initial interpretation that it
+  stopped a0 was rejected by the helper's three literal writes at `$8458E`.
+- `Child_DrawTouch_Sprite2` suppresses touch on parent status bit 7 but still
+  draws; parent control bit 4 installs deletion. These are different from
+  `Child_Draw_Sprite`, which installs deletion on status bit 7 itself.
+
+Preparation in the task worktree (not a registered boss): a local rewindable
+palette-script owner and its four ROM-backed focused checks passed with no
+skips using `-Dtest=TestDezMinibossPaletteState` and the absolute S3&K ROM path.
+The first invocation failed test compilation because the fixture did not declare
+`IOException`; the corrected invocation completed all four tests. This checks
+script/flash semantics, disable/restart and restored continuation only; it does
+not establish the eye's real touch order, the full graph or encounter completion.
+
+The next focused resource run (`-Dtest=TestDezMinibossResources,TestDezMinibossPaletteState,TestSonic3kPlcArtRegistry` with the absolute S3&K ROM path) completed **84 tests, zero failures/errors/skips**. It checks the 39 mapping frames against the 177-tile ROM archive, the exact timing submission descriptor, deferred readiness/claim and every physical uploaded pixel at tile `$400`. The renderer entry is level-backed so the runtime DMA path refreshes it; there is no standalone preload. These are supporting-component checks, not a registered or playable miniboss, and the root/eye/arm graph, independent partial allocations, sign/results/transition chain and native/wide moving captures remain open.
+
+The eye component now separates its live collision byte from touch-list
+publication, preserves the one-eye-pass damage publication, freezes during the
+phase-change gap, and converts to flickering debris after the final parent's
+status write. Five focused checks pass, including real object-manager removal /
+recreation of the eye and a minimal parent followed by 32 replayed passes. That
+check initially failed because the default `parent` policy omitted the link;
+the exact captured-reference declaration fixes it. The full encounter graph is
+still open. See the campaign audit's matching entry for the 112 affected checks,
+61 loading/renderer checks and structural guard corrections found during this
+preparation; no production A6 registration or cold-route advance is claimed.

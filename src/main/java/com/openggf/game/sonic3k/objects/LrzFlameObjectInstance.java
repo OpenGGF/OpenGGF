@@ -113,7 +113,7 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
             mappingFrame = (mappingFrame + 2) & 0xFF;
             if (mappingFrame >= FRAME_LIMIT) {
                 // loc_44084: jmp (Delete_Current_Sprite). The flicker below does not run.
-                setDestroyed(true);
+                com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
                 return;
             }
         }

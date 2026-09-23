@@ -313,7 +313,7 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
                 }
                 services().playSfx(Sonic3kSfx.LIGHT_TUNNEL.id);
             }
-            if (!body.controlled) setDestroyed(true);
+            if (!body.controlled) com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
         }
         @Override public int getX() { return body.x >> 16; }
         @Override public int getY() { return body.y >> 16; }
@@ -335,7 +335,7 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
                 int script = 0x488C2 + rom.readU16BE(0x488C2 + animation * 2);
                 delay = rom.readU8(script);
                 int frame = rom.readU8(script + 1 + animationFrame);
-                if (frame == 0xFC) setDestroyed(true);
+                if (frame == 0xFC) com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
                 else { mappingFrame = frame & 0x1F; animationFrame = (animationFrame + 1) & 0xFF; }
             } catch (IOException failure) { throw new IllegalStateException("DEZ ring requires ROM animation", failure); }
         }

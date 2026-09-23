@@ -55,11 +55,18 @@ public final class SszLaunchCrumbleObjectInstance extends AbstractObjectInstance
             int delay = byteAt(0x58A3E + ((seed + i) & 7));
             int x = 0x1A08 + i * 0x10;
             int particleY = row - 0x178;
-            var child = ObjectConstructionContext.construct(services(),
-                    () -> new SszLaunchCrumbleObjectInstance(x, particleY, art, delay));
-            services().objectManager().addDynamicObjectAfterSlot(child, previous);
-            if (child.isDestroyed() || child.getSlotIndex() < 0) break;
-            previous = child.getSlotIndex();
+            var manager = services().objectManager();
+            int slot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(manager, previous);
+            if (slot < 0) break;
+            try {
+                var child = ObjectConstructionContext.with(services(), slot,
+                        () -> new SszLaunchCrumbleObjectInstance(x, particleY, art, delay));
+                ObjectLifetimeOps.addDynamicAtReservedSlot(manager, child, slot);
+                previous = slot;
+            } catch (RuntimeException | Error failure) {
+                manager.releaseDynamicSlot(slot);
+                throw failure;
+            }
         }
         row = (row - 0x10) & 65535;
         timer = 7;

@@ -113,7 +113,12 @@ public final class S3kDezLiftPadObjectInstance extends AbstractObjectInstance
         currentX=(anchorX+(cos>>16)-0x20+((spawn.renderFlags()&1)!=0?0x40:0))&0xFFFF;
     }
 
-    @Override public void onUnload(){if(arm!=null)arm.setDestroyed(true);setDestroyed(true);}
+    @Override public void onUnload(){
+        if(arm!=null)ObjectLifetimeOps.expireDynamic(arm);
+        // Keep the placement's existing offscreen/latched decision during cleanup.
+        if(isDestroyedRespawnable())ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+        else ObjectLifetimeOps.deleteNoRespawn(this);
+    }
     @Override public int getX(){return currentX;}
     @Override public int getY(){return currentY;}
     @Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of(0x18,9,9);}

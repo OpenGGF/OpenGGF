@@ -94,6 +94,9 @@ public final class S3kDezLightningObjectInstance extends AbstractObjectInstance
     @Override public int getOnScreenHalfWidth() { return 8; }
     @Override public int getOnScreenHalfHeight() { return 0x18; }
     @Override public int getPriorityBucket() { return 5; } // move.w #$280,priority
+    @Override public com.openggf.level.objects.TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return com.openggf.level.objects.TouchResponseProfile.fromProvider(this, multiRegionSource);
+    }
     @Override public int getCollisionFlags() { return 0x9F; }
     @Override public int getCollisionProperty() { return 0; }
     @Override public boolean requiresRenderFlagForTouch() { return false; }

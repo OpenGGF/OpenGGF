@@ -76,6 +76,17 @@ class TestS3kDezLiftPadHeadless {
         manager.removeDynamicObject(fillers.getLast());pad.update(0,null);assertNull(pad.armForTest());assertEquals(0xE5D0,pad.getX());
     }
 
+    @Test void unloadRetiresTheArmWithoutChangingThePadsRespawnDecision(){
+        boot(320,0x100,0x400);
+        for(boolean respawnable:new boolean[]{false,true}){
+            var pad=create(0x600,0x500,7,0);pad.update(0,null);var arm=pad.armForTest();
+            if(respawnable)ObjectLifetimeOps.destroyRespawnableOffscreen(pad);
+            pad.onUnload();
+            assertTrue(pad.isDestroyed());assertEquals(respawnable,pad.isDestroyedRespawnable());
+            assertTrue(arm.isDestroyed());assertFalse(arm.isDestroyedRespawnable());
+        }
+    }
+
     @Test void mapUsesMiscTwoArtAndHasPadJointAndAnchorFrames() throws Exception {
         var frames=S3kSpriteDataLoader.loadMappingFrames(TestEnvironment.objectServices().romReader(),0x47614,3);
         assertEquals(List.of(3,1,1),frames.stream().map(f->f.pieces().size()).toList());

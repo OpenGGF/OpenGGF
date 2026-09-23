@@ -1537,3 +1537,46 @@ decoded eight-second `traversal-excerpt.mp4` contains frames 0–479 and no dama
 Neutral input, Sonic solo and seven initial rings throughout. All eight ROM
 paths reach their endpoints in focused checks, but all seven cold entries,
 native per-mode cadence and character/donor/team breadth remain open.
+
+### DEZ miniboss preparation and campaign guard corrections (after `a427d8a03`)
+
+The Act-1 encounter remains unregistered. Its two-phase root, orbiters, platform
+cross-links, laser and surviving transport are still required; the placement
+census and cold DEZ2 frontier have not advanced. The expanded encounter oracle
+is in the DEZ bring-up plan. Supporting code now supplies the 39-frame
+level-backed sheet, real KosM submission/claim and physical DMA, the ROM attack
+palette script, and the independently collidable eye. Eye collision flags and
+publication are separate, as in `Add_SpriteToCollisionResponseList`; phase-change
+immunity must not erase the underlying `$17` collision byte.
+
+Focused checks in the task worktree, Java 21, queued Maven with `-Dmse=off` and
+absolute ROM paths:
+
+- `TestDezMinibossResources,TestDezMinibossPaletteState,TestSonic3kPlcArtRegistry`:
+  84 passed, no skips. All 177 tiles upload byte-for-byte; palette callback is
+  pass 321 after forty eight-pass rows, with disable/restart and restore checks.
+- `TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestPatternSpriteRendererCorruptionGuard`:
+  61 passed, no skips (the loading selector matches two classes).
+- The eye's object-manager recreation test initially exposed an omitted parent
+  link. An exact `CAPTURED` policy fixes it; all five eye checks pass, including
+  forced parent/eye recreation and 32-pass replay. The test parent is a minimal
+  shell, not the unfinished boss root: this is not the whole-encounter graph gate.
+- Combined affected eye/lift/lightning/torpedo/tunnel, LRZ boulder/flame and SSZ
+  GHZ/MTZ/Mecha checks: 112 passed, no skips. The lift check also asserts that
+  cleanup retires its arm while preserving the placement's respawn decision.
+- Broader structural selection exposed campaign omissions that earlier focused
+  profile-registry checks did not cover: explicit touch-profile declarations
+  missing on three existing collision objects, nine raw destruction calls, and
+  one raw forward allocation in SSZ launch crumble. These now use the existing
+  profile mapper and lifecycle operations, without relaxing guard budgets.
+  Crumble retains successive forward slot searches and same-sweep publication.
+- Final `TestObjectPhysicsStandardizationGuard`: all 33 checks pass. Rewind
+  inventory passes at 1252 total / 1012 isolated / 240 graph-covered / zero
+  no-codec; architecture (4), field disposition (1) and coverage (1) also passed.
+  After the crumble edit, all 24 `TestS3kSszMechaSpawnHeadless` checks passed again,
+  including complete launch to DEZ and recreated launch graphs. No skips.
+
+These are focused checks, not the outstanding combined campaign delivery run.
+No new boss video is claimed: its production encounter is not connected yet.
+The lifecycle/profile corrections preserve the recorded presentation; existing
+video links remain the relevant visual evidence for those completed slices.

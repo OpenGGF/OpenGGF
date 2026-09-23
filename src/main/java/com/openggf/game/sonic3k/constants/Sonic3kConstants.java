@@ -488,6 +488,16 @@ public class Sonic3kConstants {
     /** {@code ArtTile_DEZMisc2 = $02FC} (sonic3k.constants.asm:1355). */
     public static final int ARTTILE_DEZ_MISC2 = 0x02FC;
 
+    /** Obj_DEZMiniboss and its children share this runtime-uploaded sheet. */
+    public static final int ARTTILE_DEZ_MINIBOSS = 0x0400;
+    public static final int ART_KOSM_DEZ_MINIBOSS_ADDR = 0x1805A0;
+    public static final int MAP_DEZ_MINIBOSS_ADDR = 0x184FBA;
+    public static final int PAL_DEZ_MINIBOSS_1_ADDR = 0x7EFFC;
+    public static final int PAL_DEZ_MINIBOSS_2_ADDR = 0x7F01C;
+    /** word_7F03C: Run_PalRotationScript entry installed by sub_7EE88. */
+    public static final int PAL_DEZ_MINIBOSS_ATTACK_SCRIPT_ADDR = 0x7F03C;
+    public static final int PAL_DEZ_MINIBOSS_HIT_FLASH_ADDR = 0x7EE26;
+
     // ===== DEZ Gravity Switch (Obj_DEZGravitySwitch, SKL ID 0x58) =====
     // Map_DEZGravitySwitch (sonic3k.asm:94909, sonic3k.lst:112040). Two frames:
     // word_48BEE is the armed 32x16 pad, word_48C08 the two-piece pressed pose.

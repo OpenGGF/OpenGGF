@@ -3153,6 +3153,12 @@ public final class Sonic3kPlcArtRegistry {
                 DEZ_GRAVITY_SWITCH_FRAME_COUNT
         ));
 
+        // Obj_DEZMiniboss uploads ArtKosM_DEZMinibossMisc at runtime. All children copy
+        // this sheet's mappings/art_tile; keep it level-backed so queue DMA refreshes it.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_MINIBOSS,
+                Sonic3kConstants.MAP_DEZ_MINIBOSS_ADDR,
+                Sonic3kConstants.ARTTILE_DEZ_MINIBOSS, 1, null, 39));
+
         // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
         // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and
         // move.w #make_art_tile(ArtTile_DEZMisc2+$31,1,0),art_tile(a0) (sonic3k.asm:96088-96089),

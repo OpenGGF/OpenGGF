@@ -19,7 +19,7 @@ public final class CutsceneKnucklesLrz2Instance extends AbstractObjectInstance i
     public CutsceneKnucklesLrz2Instance(ObjectSpawn spawn) { super(spawn, "LRZ2CutsceneKnucklesActor"); }
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {
-        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite && "knuckles".equals(sprite.getCode())) { setDestroyed(true); return; }
+        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite && "knuckles".equals(sprite.getCode())) { com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this); return; }
         var runtime = S3kRuntimeStates.currentLrz(services().zoneRuntimeRegistry()).orElseThrow();
         if (routine == 0) {
             routine = 2;

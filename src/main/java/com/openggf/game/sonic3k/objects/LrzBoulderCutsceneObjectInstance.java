@@ -24,7 +24,7 @@ public final class LrzBoulderCutsceneObjectInstance extends AbstractObjectInstan
 
     @Override public void update(int vIntRunCount, PlayableEntity entity) {
         if (!(entity instanceof AbstractPlayableSprite player)) return;
-        if ("knuckles".equals(player.getCode())) { setDestroyed(true); return; }
+        if ("knuckles".equals(player.getCode())) { com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this); return; }
         var runtime = S3kRuntimeStates.currentLrz(services().zoneRuntimeRegistry()).orElseThrow();
         var camera = services().camera();
         if (!initialized) {

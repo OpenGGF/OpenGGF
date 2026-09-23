@@ -55,7 +55,7 @@ public final class SszBossExplosionController extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (pendingDelete) {
-            setDestroyed(true);
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
         // Obj_WaitForParent reads the SST address, not a lifetime-owned Java parent.

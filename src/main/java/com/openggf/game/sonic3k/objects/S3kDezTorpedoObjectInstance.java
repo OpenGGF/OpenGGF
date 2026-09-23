@@ -28,7 +28,7 @@ public final class S3kDezTorpedoObjectInstance extends AbstractObjectInstance
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         published = false;
         if (!renderedOnScreen) {
-            setDestroyed(true);
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
         // MoveSprite2 with x_vel=±$400 and y_vel=0; no fractional accumulation.
@@ -45,6 +45,9 @@ public final class S3kDezTorpedoObjectInstance extends AbstractObjectInstance
     @Override public int getOnScreenHalfWidth() { return 8; }
     @Override public int getOnScreenHalfHeight() { return 8; }
     @Override public int getPriorityBucket() { return 6; } // priority=$300, art bit 15 clear
+    @Override public com.openggf.level.objects.TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return com.openggf.level.objects.TouchResponseProfile.fromProvider(this, multiRegionSource);
+    }
     @Override public int getCollisionFlags() { return 0x9B; }
     @Override public int getCollisionProperty() { return 0; }
     @Override public boolean requiresRenderFlagForTouch() { return false; }
