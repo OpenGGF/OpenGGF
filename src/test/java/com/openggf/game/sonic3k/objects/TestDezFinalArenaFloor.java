@@ -92,6 +92,26 @@ class TestDezFinalArenaFloor {
         GameServices.camera().setXCopy((short) 0xA0); floor.update(3, null);
         assertEquals(0x130, floor.getX());
     }
+    @Test void movingSupportRepositionsItsCollisionWindowWithoutDraggingTheRider() {
+        var fixture=boot(); var sprite=fixture.sprite(); sprite.setDebugMode(false);
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(sprite,0x130);
+        com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(sprite,0xCC);
+        sprite.setAir(true); sprite.setYSpeed((short)0x100);
+        var camera=GameServices.camera(); camera.setScrollLocked(true);
+        var floor=DezFinalArenaFloor.moving();
+        GameServices.level().getObjectManager().addDynamicObject(floor);
+        fixture.stepIdleFrames(2);
+        assertTrue(sprite.isOnObject()); assertEquals(0x130,sprite.getCentreX());
+        camera.setX((short)0xA0); camera.setXCopy((short)0xA0);
+        fixture.stepIdleFrames(1);
+        assertEquals(0x150,floor.getX());
+        assertTrue(sprite.isOnObject());
+        assertEquals(0x130,sprite.getCentreX(),"loc_5A860 passes post-move x_pos in d4, giving zero carry");
+        camera.setX((short)0x80); camera.setXCopy((short)0x80);
+        fixture.stepIdleFrames(1);
+        assertEquals(0x130,floor.getX()); assertEquals(0x130,sprite.getCentreX());
+    }
+
     @Test void entrySupportRetiresWhenTheBossWindowChanges() {
         boot(); var entry = DezFinalArenaFloor.entry();
         GameServices.level().getObjectManager().addDynamicObject(entry); entry.update(0, null);

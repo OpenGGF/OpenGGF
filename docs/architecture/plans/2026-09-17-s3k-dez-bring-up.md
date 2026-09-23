@@ -4165,3 +4165,34 @@ apart from input text; no death, one earlier hurt lasting 44 rows. Stills
 14173/14300/14450/14550 show the last hit, escaped emerald, fade and DDZ start.
 Full MP4 decode passes. External provenance records production hashes and input.
 The video establishes connected presentation, not frame-matched native parity.
+
+Wide replay rejection after `961a04516`: capture 114 applies the exact successful
+native input at 800px. It dies at 14045, so is not an accepted progress movie.
+The first gameplay difference is much earlier: at 443, native x=1577 versus
+wide x=1609 with equal velocity/y. At 442 native camera moves 1472→1468,
+while the wide camera stays at 1232 (native projection 1472); the floor's
+camera-column tracking then carries the native player left by 32. Investigate
+camera follow-window behavior before changing input. The native replay remains
+valid, but cannot certify wide encounter behavior.
+
+### Final support carry, 2026-09-23
+
+The first wide difference is explained by the documented `PROPORTIONAL` camera
+deadzone (40px at 800, versus 16px native), not a defect in the camera setting.
+It exposed a solid-carry defect: `loc_5A860` and `loc_5A8C4` load `d4` from
+post-move `x_pos`, so `SolidObjectTop -> MvSonicOnPtfm` computes zero horizontal
+carry. The engine default instead dragged the rider by each $20 support shift.
+The real-rider regression failed exactly as predicted: expected X304, got336;
+10 cases ran, one failure, no skips. Override the existing semantic carry hook
+for this object, retaining ROM support movement and the configured deadzone.
+Camera overrides or adjusted input are rejected as repairs for this defect.
+
+Capture 113 remains evidence of connected dispatch on `961a04516`, but predates
+this fidelity repair. Re-author/replay routes on the corrected support before
+using them as current route certification. The original input and old capture
+are retained outside the repo as historical evidence, not current acceptance.
+
+Focused verification: queued Maven with Java21, `-Dmse=off`, the absolute S3K ROM,
+`-Dtest=TestDezFinalArenaFloor,TestDezFinalScreenEntry,TestDezFinalBossController,TestDezFinalEscapeShip test`
+passes 38 cases without failures/errors/skips. This includes the previously red
+real-rider regression, both column directions, and existing floor rewind checks.

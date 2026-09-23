@@ -338,3 +338,13 @@ $80-count branch. A direct native-width controller-only route (solo Sonic,
 200 initial rings, seven Super Emeralds) completes all phases and loads DDZ at
 frame 14458. Full incoming DEZ2 continuity, widescreen/team/donor breadth and
 whole-route rewind remain open; this does not certify the act.
+
+
+Support carry correction after `961a04516`: native `loc_5A860`/`loc_5A8C4`
+pass post-move X as the carry reference. A real grounded-rider regression
+reproduced an erroneous $20 displacement (expected304, actual336), then passed
+with horizontal carry disabled through the existing solid contract. The queued
+arena-floor, screen-entry, boss-controller and escape-ship selection passes
+38 cases, no skips. Capture113 and its route predate this correction; corrected
+route replay is pending. The configured proportional widescreen deadzone remains
+intentional and is not overridden to manufacture identical controller outcomes.

@@ -3138,6 +3138,15 @@ rider's `x_pos` explicitly. Its return-to-home routine `loc_3BA4A` instead does
 (`:79475`, `:79486`) -- full carry. `Obj_FBZRotatingPlatform`'s `loc_3B86A`
 (`:79328`) is another pre-move stacker.
 
+**DEZ final arena (2026-09-23).** `loc_5A860` and `loc_5A8C4` also
+load the current X after repositioning the invisible support/falling block.
+The default carry moved a grounded player by $20 at camera-column crossings.
+A native/wide replay first exposed this as different X at frame 443, because
+the intentional proportional camera deadzone crossed that column at different
+times. Fix the solid's zero-carry contract, not the camera setting or input.
+`TestDezFinalArenaFloor.movingSupportRepositionsItsCollisionWindowWithoutDraggingTheRider`
+reproduces the extra $20 with a real rider before the fix.
+
 **What to check.** For every top-solid port, find the instruction that loads
 `d4` and ask whether the platform has already moved at that point. Then set
 `SolidObjectProvider.carriesRiderOnHorizontalMove` accordingly -- and make it
