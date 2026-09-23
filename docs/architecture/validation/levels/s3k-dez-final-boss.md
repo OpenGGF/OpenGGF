@@ -32,7 +32,7 @@ level and dies at frame 98. No title card is drawn. Capture:
 | Claim | State |
 | --- | --- |
 | Implemented | Production entry, background stages, captured retained planes, floor/laser/art owners, final root/children, chase and escape dispatch are connected. Widescreen support and planet composition are corrected; exposed boss-body margins use ROM layout outside the preserved native view. |
-| Cold-reachable | Direct final-arena load reaches hands; a controller-only probe destroys six fingers and defeats the core and reaches the escape-ship chase. Complete incoming DEZ2 route, fight and outgoing transition remain open. |
+| Cold-reachable | Direct final-arena load reaches hands; a controller-only solo 320px route destroys all six fingers, defeats core and ship, and loads DDZ. Complete incoming DEZ2 continuity and route breadth remain open. |
 | Rewind-verified | Component graphs, retained planes and production entry replay at 320/352/400/528/800 pass. Full encounter lifecycle/route breadth remains open. |
 | Native behaviour matched | ROM routine-backed components; native movie screenshots/VRAM collected. Strict trace rows below are historical and remain red/unrerun. |
 | Visually matched | Native and 800px entry captures inspected; retained boss and moving floor present. Wide planet extension inspected; full phase matching remains open. |
@@ -330,3 +330,11 @@ The next controller attempt defeats the core: hit eight is observed at probe
 frame 11806, and the ship chase continues to the 15000-frame limit without death.
 The preceding seven-hit fall remains a rejected input attempt, not a physics fix.
 Ship defeat and live outgoing transition are the remaining route frontier.
+
+
+Final escape follow-up after `e2120af4d`: 40 focused cases pass, zero skips,
+including real explosion-child execution and owner-link rewind plus the finite
+$80-count branch. A direct native-width controller-only route (solo Sonic,
+200 initial rings, seven Super Emeralds) completes all phases and loads DDZ at
+frame 14458. Full incoming DEZ2 continuity, widescreen/team/donor breadth and
+whole-route rewind remain open; this does not certify the act.

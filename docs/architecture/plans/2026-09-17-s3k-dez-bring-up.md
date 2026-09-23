@@ -4129,3 +4129,39 @@ route still has the earlier finger-phase hurt; no invulnerability or extra
 runtime rings were injected. Temporary replay source is
 `target/dez-final-core-defeated-320.script`, with matching state CSV. Ship defeat
 and the actual outgoing load remain the next check.
+
+### Final escape explosion dispatch, 2026-09-23
+
+After `e2120af4d`, the controller-only run defeated the core at 11806 and the
+escape ship at 14173, then failed in the real object sweep with
+`Unexpected DEZ explosion routine set 40`. Earlier ship-only tests counted
+explosion workers without executing them, so did not exercise their dispatch.
+Native `CreateBossExp18` selects `$28`, `Obj_WaitForParent` followed by
+`Obj_NormalExpControl`: its initial byte `$80` decrements to `$7F`, unlike the
+negative infinite count used by `Obj_BossExpControl1`. Implement that finite
+parented regular-explosion branch and test expiry after 127 emission attempts.
+
+The same inspection found coordinate-only creation had lost `parent3` for the
+final root's two `$16` workers (`sub_80F3A`) and the ship's four `$16/$18` workers
+(`loc_8030E`). They now retain the actual moving owner through a semantic
+position/control contract shared by both DEZ encounter families. A real-sweep
+regression exercises both child types and restores their owner links through
+rewind. This is a ROM behavior repair, not a controller/physics adjustment.
+Focused verification and replay of the actual outgoing load are pending at this
+checkpoint; the earlier ship-defeat observation alone does not prove the exit.
+
+The focused queued command (`-Dmse=off`, absolute S3K ROM,
+`-Dtest=TestDezFinalEscapeShip,TestDezFinalBossController,TestDezMinibossHazards,TestDezMinibossEncounter,TestDezMinibossTransport test`)
+completed with 40 passes, zero failures/errors/skips. The repaired controller-only
+run then defeated core/ship at 11806/14173 and loaded zone 12 act 0 at 14458.
+This is direct-arena solo Sonic, native 320, 200 declared initial rings and all
+seven Super Emeralds; one earlier hurt, no death or runtime state injection.
+Its compressed controller script is external `inputs/dez-final-complete-320.script`.
+Actual incoming DEZ2 continuity and other configurations remain open.
+
+Capture 113 (`113-final-escape-to-doomsday-320`) replays that input for 14600
+frames and films 13900 onward. All 14459 overlapping probe rows match exactly
+apart from input text; no death, one earlier hurt lasting 44 rows. Stills
+14173/14300/14450/14550 show the last hit, escaped emerald, fade and DDZ start.
+Full MP4 decode passes. External provenance records production hashes and input.
+The video establishes connected presentation, not frame-matched native parity.

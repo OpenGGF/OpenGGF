@@ -8,7 +8,7 @@ import java.util.List;
 
 /** Real Obj_CreateBossExplosion SSTs used by the DEZ miniboss and its transport. */
 final class DezMinibossExplosionController extends DezMinibossSprite implements RewindRecreatable {
-    private DezMinibossSprite parent;
+    private DezExplosionOwner parent;
     private boolean initialized;
     private int remaining;
     private int xRange;
@@ -17,7 +17,7 @@ final class DezMinibossExplosionController extends DezMinibossSprite implements 
     private int timer;
 
     private DezMinibossExplosionController(ObjectSpawn spawn) { super(spawn,"DEZMinibossExplosions"); }
-    DezMinibossExplosionController(DezMinibossSprite parent,int subtype) {
+    DezMinibossExplosionController(DezExplosionOwner parent,int subtype) {
         this(new ObjectSpawn(parent.getX(),parent.getY(),0,subtype,0,false,0));
         this.parent=parent;
     }
@@ -34,19 +34,23 @@ final class DezMinibossExplosionController extends DezMinibossSprite implements 
             int address=0x83DE6+romWord(0x83DE6+spawn.subtype());
             remaining=romByte(address); xRange=romByte(address+1); yRange=romByte(address+2);
             routineSet=romByte(address+3);
-            if(routineSet!=0 && routineSet!=8 && routineSet!=0x10)
+            if(routineSet!=0 && routineSet!=8 && routineSet!=0x10 && routineSet!=0x28)
                 throw new IllegalStateException("Unexpected DEZ explosion routine set "+routineSet);
         }
-        if(routineSet==8) {
-            if(parent==null || parent.isDestroyed() || (parent.control&0x20)!=0) {
-                status|=0x80; pendingDelete=true; return;
+        // CreateBossExp18 selects $28: Obj_WaitForParent -> Obj_NormalExpControl.
+        // Unlike the infinite boss burst ($08), its initial $80 count decrements
+        // as a byte to $7F and eventually expires. The final escape uses both.
+        boolean normal = routineSet==0x10 || routineSet==0x28;
+        if(routineSet==8 || routineSet==0x28) {
+            if(parent==null || parent.isDestroyed() || (parent.explosionControl()&0x20)!=0) {
+                parent=null; status|=0x80; pendingDelete=true; return;
             }
             writeX(parent.getX()); writeY(parent.getY());
         }
         timer=(short)(timer-1);
         if(timer>=0) return;
         // Obj_BossExpControl1 treats negative $39 as infinite; NormalExpControl does not.
-        if(routineSet==0x10 || (byte)remaining>=0) {
+        if(normal || (byte)remaining>=0) {
             remaining=(remaining-1)&0xFF;
             if(remaining==0) { status|=0x80; pendingDelete=true; return; }
         }
@@ -59,14 +63,14 @@ final class DezMinibossExplosionController extends DezMinibossSprite implements 
             int x=(getX()+(random&(xRange*2-1))-xRange)&0xFFFF;
             int y=(getY()+((random>>>16)&(yRange*2-1))-yRange)&0xFFFF;
             AbstractObjectInstance child=ObjectConstructionContext.with(services(),slot,()->
-                    routineSet==0x10?new NormalExplosion(new ObjectSpawn(x,y,0,0,0,false,0))
+                    normal?new NormalExplosion(new ObjectSpawn(x,y,0,0,0,false,0))
                             :S3kBossExplosionChild.createWithNativeInitSfx(x,y));
             ObjectLifetimeOps.addDynamicAtReservedSlot(manager,child,slot);
         } catch(RuntimeException | Error failure) {
             manager.releaseDynamicSlot(slot); throw failure;
         }
     }
-    DezMinibossSprite parentForTest() { return parent; }
+    DezExplosionOwner parentForTest() { return parent; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
 
     /** Obj_NormalExpControl installs routine 2 and high art priority before first entry. */

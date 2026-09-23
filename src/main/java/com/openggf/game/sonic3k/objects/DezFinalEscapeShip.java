@@ -126,7 +126,9 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
     }
     private void debris(int clock) { if((clock&15)==0) spawnFreeChild(DezFinalEscapeScenery::debris); }
     private void signal(int mask) { state().bossSignals(state().bossSignals()|mask); }
-    private void explosion(int subtype) { spawnChild(()->new DezMinibossExplosionController(getX(),getY(),subtype)); }
+    // loc_8030E uses CreateChild6_Simple: parent3 is the moving ship, not
+    // a copied position. $16/$18 workers track it until bit 5 or retirement.
+    private void explosion(int subtype) { spawnChild(()->new DezMinibossExplosionController(this,subtype)); }
     private void waitCallback() {
         timer=(short)(timer-1); if(timer>=0) return;
         switch(callback) {

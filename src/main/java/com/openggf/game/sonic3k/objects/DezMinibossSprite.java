@@ -10,7 +10,7 @@ import java.io.UncheckedIOException;
 import java.util.List;
 
 /** Native sprite words shared by the DEZ Act-1 encounter's SST objects. */
-abstract class DezMinibossSprite extends AbstractObjectInstance implements RomWorldPositionedObject {
+abstract class DezMinibossSprite extends AbstractObjectInstance implements RomWorldPositionedObject, DezExplosionOwner {
     protected int posX;
     protected int posY;
     protected int xVelocity;
@@ -60,6 +60,8 @@ abstract class DezMinibossSprite extends AbstractObjectInstance implements RomWo
 
     protected final void writeX(int value) { posX = (value << 16) | (posX & 0xFFFF); }
     protected final void writeY(int value) { posY = (value << 16) | (posY & 0xFFFF); }
+
+    @Override public int explosionControl() { return control; }
 
     @Override public int getX() { return posX >>> 16; }
     @Override public int getY() { return posY >>> 16; }

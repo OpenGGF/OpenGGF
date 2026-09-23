@@ -203,6 +203,27 @@ class TestDezFinalEscapeShip {
         assertTrue(ship.pendingDelete); ship.update(frame,null); assertTrue(ship.isDestroyed());
     }
 
+    @Test void realSweepExecutesBothParentedExplosionKindsAndRestoresTheirOwner() {
+        var f=boot(); f.stepIdleFrames(1); var ship=ship();
+        ship.codePointer=0x8030E;
+        f.stepIdleFrames(1);
+        var manager=GameServices.level().getObjectManager();
+        var workers=manager.activeObjectsOfType(DezMinibossExplosionController.class);
+        assertEquals(4,workers.size());
+        for(var worker:workers) assertSame(ship,worker.parentForTest());
+        assertEquals(2,manager.activeObjectsOfType(DezMinibossExplosionController.NormalExplosion.class).size());
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var saved=registry.capture(); f.stepIdleFrames(4);
+        int x=ship.getX();
+        int normals=manager.activeObjectsOfType(DezMinibossExplosionController.NormalExplosion.class).size();
+        registry.restore(saved); f.stepIdleFrames(4);
+        var restored=manager.activeObjectsOfType(DezFinalEscapeShip.class).getFirst();
+        assertEquals(x,restored.getX());
+        assertEquals(normals,manager.activeObjectsOfType(DezMinibossExplosionController.NormalExplosion.class).size());
+        for(var worker:manager.activeObjectsOfType(DezMinibossExplosionController.class))
+            assertSame(restored,worker.parentForTest());
+    }
+
     @Test void realObjectSweepExecutesForwardChildrenOnTheirAllocationPass() {
         var f=boot(); f.stepIdleFrames(1); var ship=ship(); f.stepIdleFrames(1);
         var m=GameServices.level().getObjectManager();

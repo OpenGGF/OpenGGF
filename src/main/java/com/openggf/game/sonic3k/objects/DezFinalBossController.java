@@ -160,8 +160,9 @@ public final class DezFinalBossController extends DezFinalBossSprite
         if((status&0x80)==0) return false;
         codePointer=0x80102; xVelocity=yVelocity=0x80; control&=~0x20;
         spawnFreeChild(DezFinalArenaSignal::quake);
-        spawnChild(()->new DezMinibossExplosionController(getX(),getY(),0x16));
-        spawnChild(()->new DezMinibossExplosionController(getX(),getY(),0x16));
+        // sub_80F3A's CreateChild6_Simple keeps parent3 through the sinking sweep.
+        spawnChild(()->new DezMinibossExplosionController(this,0x16));
+        spawnChild(()->new DezMinibossExplosionController(this,0x16));
         state().art().loadRaw(services(),0xD771E,0x52E); return true;
     }
     private void sinkAndHandOff() {

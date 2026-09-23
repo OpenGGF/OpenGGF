@@ -121,6 +121,22 @@ class TestDezMinibossHazards {
         controller.update(401,null); assertTrue(controller.isDestroyed()); verifyNoInteractions(rng);
     }
 
+    @Test void parentedNormalBurstDecrementsInitialNegativeByteAndExpires() throws Exception {
+        var parent=new Parent(); var manager=mock(ObjectManager.class); var rng=mock(GameRng.class);
+        when(manager.allocateSlotAfter(anyInt())).thenReturn(-1);
+        var controller=new DezMinibossExplosionController(parent,0x18);
+        controller.setServices(services(manager,rng)); controller.setSlotIndex(4);
+        for(int i=0;i<381;i++) {
+            parent.writeX(0x3700+i); controller.update(i,null);
+            assertEquals(parent.getX(),controller.getX());
+            assertFalse(controller.pendingDelete,"pass="+i);
+        }
+        controller.update(381,null);
+        assertTrue(controller.pendingDelete); assertFalse(controller.isDestroyed());
+        controller.update(382,null); assertTrue(controller.isDestroyed());
+        verify(manager,times(127)).allocateSlotAfter(4); verifyNoInteractions(rng);
+    }
+
     @Test void normalExplosionHasNoAnimalAndUsesThreeThenEightPassFrames() throws Exception {
         var manager=mock(ObjectManager.class); var services=services(manager,null);
         var explosion=new DezMinibossExplosionController.NormalExplosion(new ObjectSpawn(0,0,0,0,0,false,0));
