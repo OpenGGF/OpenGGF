@@ -6,6 +6,7 @@ import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,6 +20,8 @@ public final class RoomHost {
     public static final long STANDINGS_PAGE_INTERVAL_MILLIS = 2000;
     public static final int STANDINGS_PAGE_SIZE = 10;
     private static final int TOKEN_STRIKE_LIMIT = 3;
+    private static final int MAX_DISPLAY_NAME_BYTES = 64;
+    private static final int MAX_CHARACTER_BYTES = 32;
 
     private static final class Member {
         final HubConnection connection;
@@ -258,6 +261,14 @@ public final class RoomHost {
         }
     }
 
+    void sendToIdentityInSlot(int slot, String fingerprint,
+                              ControlMessage message) {
+        Member member = memberForSlot(slot);
+        if (member != null && member.fingerprint.equals(fingerprint)) {
+            send(member, message);
+        }
+    }
+
     public String identityFingerprintForSlot(int slot) {
         Member member = memberForSlot(slot);
         return member == null ? null : member.fingerprint;
@@ -314,6 +325,15 @@ public final class RoomHost {
                 ? admit.fingerprint().substring(0, 8) : admit.displayName();
         member.character = "LOCKED".equals(config.characterPolicy())
                 ? config.lockedCharacter() : "sonic";
+        if (!boundedLabel(member.displayName, MAX_DISPLAY_NAME_BYTES)
+                || !boundedLabel(member.character, MAX_CHARACTER_BYTES)
+                || !roomStateFits()) {
+            member.admitted = false;
+            member.connection.sendText(ControlCodec.encode(null,
+                    new ControlMessage.JoinRejected("room state limit exceeded")));
+            drop(member, "room state limit exceeded");
+            return;
+        }
         member.memberSinceMillis = wallClockMillis.getAsLong();
         member.token = tokens.issue();
         hub.addPlayer(slot, member.fingerprint, member.connection);
@@ -332,9 +352,14 @@ public final class RoomHost {
             case ControlMessage.SelectCharacter select -> {
                 if (round.phase() == HostRoundEngine.Phase.LOBBY
                         && !"LOCKED".equals(config.characterPolicy())
-                        && select.character() != null && !select.character().isBlank()) {
+                        && boundedLabel(select.character(), MAX_CHARACTER_BYTES)) {
+                    String previous = member.character;
                     member.character = select.character();
-                    broadcast(new ControlMessage.RoomState(players()));
+                    if (roomStateFits()) {
+                        broadcast(new ControlMessage.RoomState(players()));
+                    } else {
+                        member.character = previous;
+                    }
                 }
             }
             case ControlMessage.RoundConfigure configure -> {
@@ -355,13 +380,13 @@ public final class RoomHost {
                     break;
                 }
                 HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
-                        member.slot, member.displayName, member.character,
+                        member.slot, member.token, member.fingerprint,
+                        member.displayName, member.character,
                         finish, !hub.hasFinishEvidence(member.slot,
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
                 clearActiveAttempt(member);
-                member.finishedThisRound = round.standings().stream()
-                        .anyMatch(row -> row.slot() == member.slot);
+                member.finishedThisRound = round.hasBestForParticipant(member.token);
                 if (outcome != null && outcome.outsideBroadcastCap()) {
                     send(member, new ControlMessage.RankUpdate(
                             outcome.rank(), finish.timeFrames()));
@@ -453,6 +478,16 @@ public final class RoomHost {
                 member.connection.sendText(encoded);
             }
         }
+    }
+
+    private boolean roomStateFits() {
+        return ControlCodec.encode(null, new ControlMessage.RoomState(players()))
+                .getBytes(StandardCharsets.UTF_8).length <= Protocol.MAX_CONTROL_BYTES;
+    }
+
+    private static boolean boundedLabel(String value, int maxBytes) {
+        return value != null && !value.isBlank()
+                && value.getBytes(StandardCharsets.UTF_8).length <= maxBytes;
     }
 
     private static void send(Member member, ControlMessage message) {

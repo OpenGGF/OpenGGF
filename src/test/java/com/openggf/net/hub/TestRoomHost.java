@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,6 +62,31 @@ class TestRoomHost {
         assertEquals("LOBBY", joinA.round().phase());
         assertEquals(2, ((ControlMessage.RoomState) lastMessage(a)).players().size());
         assertEquals(2, room.playerCount());
+    }
+
+    @Test
+    void rejectsOversizeDisplayNameAndIgnoresOversizeCharacter() throws Exception {
+        FakeHubConnection rejected = new FakeHubConnection();
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("oversize"));
+        ClientHandshake handshake = new ClientHandshake(identity, "x".repeat(65), FP);
+        room.onConnected(rejected);
+        room.onText(rejected, ControlCodec.encode(null, handshake.hello()));
+        room.onText(rejected, ControlCodec.encode(null,
+                handshake.onWelcome((ControlMessage.Welcome) lastMessage(rejected))));
+        assertInstanceOf(ControlMessage.JoinRejected.class, lastMessage(rejected));
+        assertEquals(0, room.playerCount());
+
+        FakeHubConnection accepted = new FakeHubConnection();
+        String token = admit(accepted, "Player", dir.resolve("accepted")).sessionToken();
+        room.onText(accepted, ControlCodec.encode(token,
+                new ControlMessage.SelectCharacter("x".repeat(33))));
+        assertEquals("sonic", room.players().getFirst().character());
+        room.onText(accepted, ControlCodec.encode(token,
+                new ControlMessage.SelectCharacter("tails")));
+        assertEquals("tails", room.players().getFirst().character());
+        assertTrue(accepted.text.stream().filter(text -> ControlCodec.decode(text).message()
+                        instanceof ControlMessage.RoomState)
+                .allMatch(text -> text.getBytes(StandardCharsets.UTF_8).length <= 8192));
     }
 
     @Test

@@ -11,6 +11,7 @@ import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -190,16 +191,7 @@ public final class RoomBroker {
         }
         tokens.revoke(member.token);
         tokenFingerprints.remove(member.token);
-        if (member.fingerprint != null) {
-            for (SessionRegistry.RoomEntry room
-                    : registry.removeByHostFingerprint(member.fingerprint)) {
-                if ("RELAY".equals(room.routing())) {
-                    relays.hostLeft(room.roomId());
-                } else {
-                    tunnels.unregisterHost(room.roomId());
-                }
-            }
-        }
+        removeHostedRooms(member);
     }
 
     public void tick() {
@@ -345,6 +337,10 @@ public final class RoomBroker {
         ControlMessage.RoomDescriptor descriptor = create.room();
         if (!("DIRECT".equals(routing) || "RELAY".equals(routing)) || descriptor == null) {
             strike(member, "invalid room routing");
+            return;
+        }
+        if (!validDescriptorFields(descriptor, create.determinismFingerprint())) {
+            send(member, new ControlMessage.RoomCreateRejected("invalid room fields"));
             return;
         }
         if (descriptor.maxPlayers() < 1 || descriptor.maxPlayers() > Protocol.MAX_PLAYERS_RELAY) {
@@ -541,6 +537,22 @@ public final class RoomBroker {
         return true;
     }
 
+    private static boolean validDescriptorFields(ControlMessage.RoomDescriptor descriptor,
+                                                 String determinismFingerprint) {
+        return boundedField(descriptor.name(), 64)
+                && boundedField(descriptor.gameId(), 32)
+                && ("OPEN".equals(descriptor.characterPolicy())
+                || "LOCKED".equals(descriptor.characterPolicy()))
+                && (!"LOCKED".equals(descriptor.characterPolicy())
+                || boundedField(descriptor.lockedCharacter(), 32))
+                && boundedField(determinismFingerprint, 128);
+    }
+
+    private static boolean boundedField(String value, int maxBytes) {
+        return value != null && !value.isBlank()
+                && value.getBytes(StandardCharsets.UTF_8).length <= maxBytes;
+    }
+
     private void leaveRoom(Member member, String roomId) {
         SessionRegistry.RoomEntry room = registry.find(roomId).orElse(null);
         if (room == null || !room.hostFingerprint().equals(member.fingerprint)) {
@@ -566,10 +578,28 @@ public final class RoomBroker {
     }
 
     private void drop(Member member, String reason) {
-        members.remove(member.connection);
+        if (members.remove(member.connection) == null) {
+            return;
+        }
+        attachResults.remove(member.connection);
         tokens.revoke(member.token);
         tokenFingerprints.remove(member.token);
+        removeHostedRooms(member);
         member.connection.close(reason);
+    }
+
+    private void removeHostedRooms(Member member) {
+        if (member.fingerprint == null) {
+            return;
+        }
+        for (SessionRegistry.RoomEntry room
+                : registry.removeByHostFingerprint(member.fingerprint)) {
+            if ("RELAY".equals(room.routing())) {
+                relays.hostLeft(room.roomId());
+            } else {
+                tunnels.unregisterHost(room.roomId());
+            }
+        }
     }
 
     private static void send(Member member, ControlMessage message) {
