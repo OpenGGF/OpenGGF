@@ -62,9 +62,15 @@ class TestDirectConnectEndToEnd {
     }
 
     private static void runAttempt(
-            RaceClient client, int attemptId, int frames, int timeFrames) {
+            RaceClient client, ControlledRaceHost clock, int attemptId,
+            int frames, int timeFrames) throws Exception {
         GhostStreamPublisher publisher = new GhostStreamPublisher(client::sendBinary);
         client.sendControl(new ControlMessage.AttemptStart(attemptId));
+        client.sendControl(new ControlMessage.Ping(attemptId));
+        await(client, event -> event instanceof RaceClient.Control control
+                && control.message() instanceof ControlMessage.Pong pong
+                && pong.t0ClientMillis() == attemptId, 10_000);
+        clock.advance(frames * 1000L / 60);
         publisher.beginAttempt(attemptId);
         for (int i = 0; i < frames; i++) {
             publisher.onFrame(frame(100 + i));
@@ -106,8 +112,12 @@ class TestDirectConnectEndToEnd {
         await(guest, event -> isMessage(event, ControlMessage.RoundStart.class), 10_000);
         clock.advance(HostRoundEngine.COUNTDOWN_MILLIS);
 
-        runAttempt(host, 1, 30, 24);
-        runAttempt(guest, 1, 30, 20);
+        runAttempt(host, clock, 1, 30, 24);
+        RemoteGhostPlayback playback = new RemoteGhostPlayback();
+        RaceClient.GhostData hostGhost = (RaceClient.GhostData) await(
+                guest, RaceClient.GhostData.class::isInstance, 15_000);
+        hostGhost.aggregate().entries().forEach(playback::onEntry);
+        runAttempt(guest, clock, 1, 30, 20);
 
         RaceClient.InboundEvent delta = await(host,
                 event -> event instanceof RaceClient.Control control
@@ -119,9 +129,8 @@ class TestDirectConnectEndToEnd {
         assertEquals("GUEST", rows.get(0).displayName());
         assertEquals(20, rows.get(0).bestTimeFrames());
 
-        RemoteGhostPlayback playback = new RemoteGhostPlayback();
         long ghostDeadline = System.currentTimeMillis() + 15_000;
-        boolean rendered = false;
+        boolean rendered = playback.advance().isPresent();
         while (!rendered && System.currentTimeMillis() < ghostDeadline) {
             for (RaceClient.InboundEvent event : guest.drainInbound()) {
                 if (event instanceof RaceClient.GhostData ghost) {

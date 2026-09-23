@@ -35,7 +35,13 @@ require TLS (`plaintextForTest: true` is loopback-test only); the localhost admi
 endpoint requires its bearer token and appends to `admin-audit.jsonl`. Identity age, clean
 rounds, sanctions, and trust tiers persist in SQLite. Verified rooms are relay-only and
 need a live replay-verifier worker matching the room's determinism fingerprint; ROM bytes
-never cross the network and worker verdicts are Ed25519-signed. Operator commands:
+never cross the network and worker verdicts are Ed25519-signed. The host accepts attempt
+controls and ghost data only during the running phase, permits one strictly increasing
+attempt at a time per player, and allows ghost progress no more than 12 frames ahead of
+server-observed elapsed time. A finish is one-shot: its input hash must be a SHA-256 digest,
+and a pending verifier verdict remains bound to that exact claim. JSON control envelopes
+reject duplicate and unknown fields. Completed or void verification jobs are retained only
+for the configured recording-retention window. Operator commands:
 
 ```bash
 java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.net.GhostLoadTestTool --n 256 --duration 30 --mix adversarial

@@ -83,4 +83,25 @@ class TestVerificationJobQueue {
         assertTrue(queue.onRecordingUploaded("aa", "player"));
         assertEquals(VerificationJobQueue.State.QUEUED, queue.stateOf(id));
     }
+
+    @Test
+    void pruningRemovesOnlyTerminalJobsPastRetention() {
+        long[] now = {10};
+        VerificationJobQueue queue = new VerificationJobQueue(() -> now[0], 100);
+        String done = queue.submit(job("fp", "aa"), 1000);
+        queue.onRecordingUploaded("aa", "player");
+        queue.lease("worker", Set.of("fp")).orElseThrow();
+        queue.complete(done, "worker").orElseThrow();
+
+        String voided = queue.submit(job("fp", "bb"), 1000);
+        queue.voidJob(voided).orElseThrow();
+        String active = queue.submit(job("fp", "cc"), 1000);
+
+        now[0] = 20;
+        assertEquals(0, queue.pruneTerminalBefore(10));
+        assertEquals(2, queue.pruneTerminalBefore(11));
+        assertTrue(queue.find(done).isEmpty());
+        assertTrue(queue.find(voided).isEmpty());
+        assertTrue(queue.find(active).isPresent());
+    }
 }

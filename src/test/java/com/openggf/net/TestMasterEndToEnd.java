@@ -79,10 +79,10 @@ class TestMasterEndToEnd {
         awaitControl(guest3, ControlMessage.RoundStart.class, 10_000);
         controlled.finishCountdown(roomId);
 
-        runAttempt(host, 24, 100);
-        runAttempt(guest1, 20, 104);
-        runAttempt(guest2, 22, 108);
-        runAttempt(guest3, 26, 112);
+        runAttempt(host, controlled, roomId, 24, 100);
+        runAttempt(guest1, controlled, roomId, 20, 104);
+        runAttempt(guest2, controlled, roomId, 22, 108);
+        runAttempt(guest3, controlled, roomId, 26, 112);
         await(guest1, RaceClient.GhostData.class::isInstance, 10_000);
         await(guest1, RaceClient.Roster.class::isInstance, 10_000);
 
@@ -143,9 +143,16 @@ class TestMasterEndToEnd {
         assertTrue(done.await(5, TimeUnit.SECONDS));
     }
 
-    private static void runAttempt(RaceConnection connection, int timeFrames, int x) {
+    private static void runAttempt(RaceConnection connection,
+                                   ControlledMasterServer controlled, String roomId,
+                                   int timeFrames, int x) throws Exception {
         GhostStreamPublisher publisher = new GhostStreamPublisher(connection::sendBinary);
         connection.sendControl(new ControlMessage.AttemptStart(1));
+        connection.sendControl(new ControlMessage.Ping(x));
+        await(connection, event -> event instanceof RaceClient.Control control
+                && control.message() instanceof ControlMessage.Pong pong
+                && pong.t0ClientMillis() == x, 10_000);
+        controlled.advanceRaceTime(roomId, 500);
         publisher.beginAttempt(1);
         for (int frame = 0; frame < 30; frame++) {
             publisher.onFrame(frame(x + frame));

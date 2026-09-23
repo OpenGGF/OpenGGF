@@ -64,4 +64,21 @@ public final class ControlledMasterServer {
         });
         completed.get(5, TimeUnit.SECONDS);
     }
+
+    /** Advances race wall time after a client-side attempt-start barrier. */
+    public void advanceRaceTime(String roomId, long millis) throws Exception {
+        CompletableFuture<Void> completed = new CompletableFuture<>();
+        server.execute(() -> {
+            try {
+                RelayRoomManager.RoomAccess access = server.relays().find(roomId).orElseThrow();
+                access.loop().execute(() -> {
+                    offsetMillis.addAndGet(millis);
+                    completed.complete(null);
+                });
+            } catch (Throwable failure) {
+                completed.completeExceptionally(failure);
+            }
+        });
+        completed.get(5, TimeUnit.SECONDS);
+    }
 }

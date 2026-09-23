@@ -180,11 +180,12 @@ public final class MasterServer implements AutoCloseable {
                 verificationJobs.requeueExpiredLeases();
                 verifiers.expireStale();
             }, 1, 1, TimeUnit.SECONDS));
-            scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(
-                    () -> recordingBlobs.deleteOlderThan(
-                            clock.getAsLong() - config.recordingRetentionDays()
-                                    * 24L * 3_600_000L),
-                    1, 1, TimeUnit.HOURS));
+            scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(() -> {
+                long cutoffMillis = clock.getAsLong()
+                        - config.recordingRetentionDays() * 24L * 3_600_000L;
+                recordingBlobs.deleteOlderThan(cutoffMillis);
+                verificationJobs.pruneTerminalBefore(cutoffMillis);
+            }, 1, 1, TimeUnit.HOURS));
             MasterServer server = new MasterServer(config, dataDir, brokerGroup,
                     relayGroup, channel, clientChannels, List.copyOf(scheduledTasks),
                     store, ladder, registry, tunnels, relays, broker,

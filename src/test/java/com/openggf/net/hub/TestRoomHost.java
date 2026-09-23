@@ -162,6 +162,10 @@ class TestRoomHost {
         FakeHubConnection b = new FakeHubConnection();
         String token = admit(a, "A", dir.resolve("a")).sessionToken();
         admit(b, "B", dir.resolve("b"));
+        room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 300, "OPEN", null));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        room.tick();
         room.onText(a, ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
         byte[] frame = new byte[GhostFrameCodec.BYTES];
         GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
@@ -171,6 +175,24 @@ class TestRoomHost {
         assertEquals(1, b.binary.size());
         assertEquals(0,
                 GhostPackets.decodeAggregate(b.binary.get(0)).entries().get(0).playerSlot());
+    }
+
+    @Test
+    void attemptTrafficOutsideRunningRoundIsNotRelayed() throws Exception {
+        FakeHubConnection sender = new FakeHubConnection();
+        FakeHubConnection recipient = new FakeHubConnection();
+        String token = admit(sender, "A", dir.resolve("a")).sessionToken();
+        admit(recipient, "B", dir.resolve("b"));
+
+        room.onText(sender,
+                ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
+        byte[] frame = new byte[GhostFrameCodec.BYTES];
+        GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
+                false, false, false, 2, false), frame, 0);
+        room.onBinary(sender, GhostPackets.encodeFrames(1, 0, frame));
+        room.tick();
+
+        assertTrue(recipient.binary.isEmpty());
     }
 
     @Test

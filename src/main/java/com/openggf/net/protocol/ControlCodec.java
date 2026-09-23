@@ -1,5 +1,7 @@
 package com.openggf.net.protocol;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,13 +10,17 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** Envelope codec for control messages: {@code {"v":1,"token":...,"msg":{...}}}. */
 public final class ControlCodec {
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+    private static final ObjectMapper MAPPER = new ObjectMapper(JsonFactory.builder()
+            .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+            .build())
+            .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+    private static final Set<String> ENVELOPE_FIELDS = Set.of("v", "token", "msg");
     private static final Map<String, Class<? extends ControlMessage>> MESSAGE_TYPES =
             Arrays.stream(ControlMessage.class.getPermittedSubclasses())
                     .map(type -> type.asSubclass(ControlMessage.class))
@@ -66,6 +72,12 @@ public final class ControlCodec {
             if (root == null || !root.isObject()) {
                 throw new ProtocolViolationException("control envelope must be an object");
             }
+            root.fieldNames().forEachRemaining(field -> {
+                if (!ENVELOPE_FIELDS.contains(field)) {
+                    throw new ProtocolViolationException(
+                            "unsupported control envelope field " + field);
+                }
+            });
             JsonNode version = root.get("v");
             if (version == null || !version.isIntegralNumber()
                     || version.intValue() != Protocol.VERSION) {
@@ -76,14 +88,20 @@ public final class ControlCodec {
                 throw new ProtocolViolationException("missing msg body");
             }
             JsonNode token = root.get("token");
-            String tokenValue = token == null || token.isNull() ? null : token.asText();
+            if (token == null || (!token.isNull() && !token.isTextual())) {
+                throw new ProtocolViolationException("token must be a string or null");
+            }
+            String tokenValue = token.isNull() ? null : token.textValue();
             JsonNode typeNode = msg.get("type");
             Class<? extends ControlMessage> messageType =
-                    typeNode == null ? null : MESSAGE_TYPES.get(typeNode.asText());
+                    typeNode == null || !typeNode.isTextual()
+                            ? null : MESSAGE_TYPES.get(typeNode.textValue());
             if (messageType == null) {
                 throw new ProtocolViolationException("unsupported control message type " + typeNode);
             }
-            ControlMessage message = MAPPER.treeToValue(msg, messageType);
+            ObjectNode messageBody = ((ObjectNode) msg).deepCopy();
+            messageBody.remove("type");
+            ControlMessage message = MAPPER.treeToValue(messageBody, messageType);
             if (message instanceof ControlMessage.RelayGuestText relay
                     && relay.text().getBytes(StandardCharsets.UTF_8).length
                     > Protocol.MAX_CONTROL_BYTES) {

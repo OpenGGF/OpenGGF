@@ -154,6 +154,20 @@ class TestGhostStreamValidator {
     }
 
     @Test
+    void rejectsStreamThatRunsAheadOfWallClockInsideTokenBurst() {
+        GhostStreamValidator v = validator(PROFILE);
+        v.onAttemptStart(1);
+        for (int start = 0; start < 12; start += 3) {
+            assertEquals(GhostStreamValidator.Verdict.ACCEPT,
+                    v.onBatch(batch(1, start, frames(100 + start * 2, 2, 3))));
+        }
+
+        assertEquals(GhostStreamValidator.Verdict.DROP,
+                v.onBatch(batch(1, 12, frames(124, 2, 3))));
+        assertEquals(List.of("rate-cap"), violations);
+    }
+
+    @Test
     void updateProfileTightensChecksWithoutResettingStreamState() {
         GhostStreamValidator v = validator(null);
         v.onAttemptStart(1);

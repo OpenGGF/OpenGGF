@@ -26,6 +26,7 @@ public final class VerificationJobQueue {
         private State state = State.AWAITING_UPLOAD;
         private String leasedWorkerId;
         private long leaseExpiresAtMillis;
+        private long terminalAtMillis = Long.MAX_VALUE;
 
         private Entry(Job job, long uploadDeadlineAtMillis) {
             this.job = job;
@@ -101,6 +102,7 @@ public final class VerificationJobQueue {
             return Optional.empty();
         }
         entry.state = State.DONE;
+        entry.terminalAtMillis = clock.getAsLong();
         entry.leasedWorkerId = null;
         return Optional.of(entry.job);
     }
@@ -112,6 +114,7 @@ public final class VerificationJobQueue {
             if (entry.state == State.AWAITING_UPLOAD
                     && now >= entry.uploadDeadlineAtMillis) {
                 entry.state = State.VOID;
+                entry.terminalAtMillis = now;
                 expired.add(entry.job);
             }
         }
@@ -147,11 +150,21 @@ public final class VerificationJobQueue {
             return Optional.empty();
         }
         entry.state = State.VOID;
+        entry.terminalAtMillis = clock.getAsLong();
         entry.leasedWorkerId = null;
         return Optional.of(entry.job);
     }
 
     public int size() {
         return entries.size();
+    }
+
+    public int pruneTerminalBefore(long cutoffMillis) {
+        int sizeBefore = entries.size();
+        entries.entrySet().removeIf(entry ->
+                (entry.getValue().state == State.DONE
+                        || entry.getValue().state == State.VOID)
+                        && entry.getValue().terminalAtMillis < cutoffMillis);
+        return sizeBefore - entries.size();
     }
 }

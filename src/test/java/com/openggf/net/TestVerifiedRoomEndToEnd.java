@@ -109,6 +109,11 @@ class TestVerifiedRoomEndToEnd {
             String hash = HexFormat.of().formatHex(recording.sha256());
             GhostStreamPublisher publisher = new GhostStreamPublisher(race::sendBinary);
             race.sendControl(new ControlMessage.AttemptStart(1));
+            race.sendControl(new ControlMessage.Ping(1));
+            await(race, event -> event instanceof RaceClient.Control control
+                    && control.message() instanceof ControlMessage.Pong pong
+                    && pong.t0ClientMillis() == 1, 10_000);
+            controlled.advanceRaceTime(roomId, 1_700);
             publisher.beginAttempt(1);
             for (int frame = 0; frame <= 101; frame++) {
                 publisher.onFrame(new GhostFrame(100 + frame, 200, 1,

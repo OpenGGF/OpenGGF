@@ -38,6 +38,7 @@ public final class HostRoundEngine {
     private final LongSupplier hubClockMillis;
     private final Consumer<ControlMessage> broadcaster;
     private final Map<Integer, Best> bests = new LinkedHashMap<>();
+    private final Map<Integer, Integer> lastFinishedAttemptBySlot = new LinkedHashMap<>();
     private final List<String> voteTrackPool = new ArrayList<>();
     private final Map<Integer, String> votesBySlot = new LinkedHashMap<>();
 
@@ -76,6 +77,7 @@ public final class HostRoundEngine {
         countdownEndsAt = now + COUNTDOWN_MILLIS;
         deadline = countdownEndsAt + newConfig.windowSeconds() * 1000L;
         bests.clear();
+        lastFinishedAttemptBySlot.clear();
         achievedCounter = 0;
         votedNextConfig = null;
         phase = Phase.COUNTDOWN;
@@ -195,12 +197,16 @@ public final class HostRoundEngine {
         long now = hubClockMillis.getAsLong();
         if (phase != Phase.RUNNING || now > deadline + FINISH_GRACE_MILLIS
                 || attemptFlagged || finish.timeFrames() <= 0
+                || finish.attemptId() <= lastFinishedAttemptBySlot
+                .getOrDefault(slot, Integer.MIN_VALUE)
                 || finish.firstInputFrame() < 0
                 || finish.finishFrame() < finish.firstInputFrame()
                 || finish.finishFrame() - finish.firstInputFrame()
-                != finish.timeFrames()) {
+                != finish.timeFrames()
+                || !isSha256Hex(finish.inputRecordingHashHex())) {
             return null;
         }
+        lastFinishedAttemptBySlot.put(slot, finish.attemptId());
         Best existing = bests.get(slot);
         if (existing != null && existing.timeFrames() <= finish.timeFrames()) {
             return null;
@@ -354,5 +360,20 @@ public final class HostRoundEngine {
 
     private String currentTrackKey() {
         return config == null ? "" : config.gameId() + ":" + config.zone() + ":" + config.act();
+    }
+
+    private static boolean isSha256Hex(String value) {
+        if (value == null || value.length() != 64) {
+            return false;
+        }
+        for (int index = 0; index < value.length(); index++) {
+            char digit = value.charAt(index);
+            if (!((digit >= '0' && digit <= '9')
+                    || (digit >= 'a' && digit <= 'f')
+                    || (digit >= 'A' && digit <= 'F'))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

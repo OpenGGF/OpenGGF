@@ -67,16 +67,18 @@ class TestSpotCheck {
                     ControlMessage.JoinAccepted.class).sessionToken();
             access.room().onText(firstConnection, ControlCodec.encode(firstToken,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
-                            "s3k", 0, 0, 1, "OPEN", null))));
+                            "s3k", 0, 0, 10, "OPEN", null))));
             now[0] += 3_000;
             access.room().tick();
             String secondToken = last(secondConnection,
                     ControlMessage.JoinAccepted.class).sessionToken();
             ControlMessage.AttemptFinish firstFinish = finish(
-                    access, firstConnection, firstToken, 1, 100, 5, "aa", 100);
+                    access, firstConnection, firstToken, 1, 100, 5,
+                    "aa".repeat(32), 100, now);
             ControlMessage.AttemptFinish secondFinish = finish(
-                    access, secondConnection, secondToken, 1, 120, 7, "bb", 300);
-            now[0] += 1_001;
+                    access, secondConnection, secondToken, 1, 120, 7,
+                    "bb".repeat(32), 300, now);
+            now[0] += 10_001;
             manager.tickAll();
 
             assertEquals(2, jobs.size());
@@ -90,12 +92,12 @@ class TestSpotCheck {
             assertEquals(secondFinish.finishFrame(), secondJob.finishFrame());
             List<ControlMessage.StandingsRow> before = access.room().round().standings();
 
-            jobs.onRecordingUploaded("aa", first.fingerprint());
+            jobs.onRecordingUploaded("aa".repeat(32), first.fingerprint());
             VerificationJobQueue.Job leased = jobs.lease("worker", Set.of("0.6:cafe"))
                     .orElseThrow();
             jobs.complete(leased.jobId(), "worker").orElseThrow();
             consequences.apply(new IdentityStore.VerdictRecord(
-                    first.fingerprint(), leased.attemptRef(), "aa",
+                    first.fingerprint(), leased.attemptRef(), "aa".repeat(32),
                     VerdictCodec.RESULT_FAIL_DIVERGENT, "sig", now[0]), "worker");
             manager.onVerdict(leased, false);
             assertEquals(before, access.room().round().standings());
@@ -112,7 +114,8 @@ class TestSpotCheck {
                     "s3k", 0, 0, 1, "OPEN", null));
             now[0] += 3_000;
             access.room().tick();
-            finish(access, firstConnection, firstToken, 2, 90, 1, "cc", 500);
+            finish(access, firstConnection, firstToken, 2, 90, 1,
+                    "cc".repeat(32), 500, now);
             now[0] += 1_001;
             manager.tickAll();
             assertEquals(2, jobs.size(), "hourly throttle must suppress repeat spot-check");
@@ -122,7 +125,7 @@ class TestSpotCheck {
     private static ControlMessage.AttemptFinish finish(
             RelayRoomManager.RoomAccess access, Connection connection, String token,
             int attemptId, int timeFrames, int firstInputFrame, String inputHash,
-            int startX) {
+            int startX, long[] now) {
         int finishFrame = firstInputFrame + timeFrames;
         GhostStreamPublisher publisher = new GhostStreamPublisher(
                 packet -> access.room().onBinary(connection, packet));
@@ -130,6 +133,7 @@ class TestSpotCheck {
                 new ControlMessage.AttemptStart(attemptId)));
         publisher.beginAttempt(attemptId);
         for (int frame = 0; frame <= finishFrame; frame++) {
+            now[0] += 17;
             publisher.onFrame(new GhostFrame(startX + frame, 200, 1,
                     false, false, false, 2, false));
         }

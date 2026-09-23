@@ -5,8 +5,14 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`next` / 0.8)
 
-No 0.8-only release entries yet. Work promoted from `next` is recorded in
-[CHANGELOG.0.7.md](CHANGELOG.0.7.md).
+- **Multiplayer time-attack integrity:** Race hosts now enforce one active,
+  strictly ordered attempt per player during the running phase, reject ghost
+  streams that advance ahead of server-observed time, and bind each finish and
+  verifier verdict to one immutable attempt with valid recording evidence.
+  Control messages reject ambiguous duplicate or unknown fields, while terminal
+  verification jobs expire with their retained recordings.
+
+Work promoted from `next` is recorded in [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 
 ## Release files
 
