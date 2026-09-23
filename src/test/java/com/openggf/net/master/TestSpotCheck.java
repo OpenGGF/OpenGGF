@@ -4,6 +4,7 @@ import com.openggf.ghost.GhostFrame;
 import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.HostRoundEngine;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlCodec;
@@ -74,7 +75,7 @@ class TestSpotCheck {
                     replacement, "New");
             assertEquals(0, last(newConnection, ControlMessage.JoinAccepted.class).playerSlot());
 
-            now[0] += 10_001;
+            now[0] += 10_000 + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
             manager.tickAll();
             VerificationJobQueue.Job job = jobs.find("vj-1").orElseThrow();
             assertEquals(original.fingerprint(), job.identityFingerprint());
@@ -132,7 +133,7 @@ class TestSpotCheck {
             ControlMessage.AttemptFinish secondFinish = finish(
                     access, secondConnection, secondToken, 1, 120, 7,
                     "bb".repeat(32), 300, now);
-            now[0] += 10_001;
+            now[0] += 10_000 + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
             manager.tickAll();
 
             assertEquals(2, jobs.size());
@@ -162,7 +163,7 @@ class TestSpotCheck {
             assertEquals(before, access.room().round().standings());
             assertEquals(1, store.verdictsFor(second.fingerprint()).size());
 
-            now[0] += com.openggf.net.hub.HostRoundEngine.ROUND_END_LINGER_MILLIS;
+            now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
             manager.tickAll();
             access.room().requestStartRound(new ControlMessage.RoundConfig(
                     "s3k", 0, 0, 1, "OPEN", null));
