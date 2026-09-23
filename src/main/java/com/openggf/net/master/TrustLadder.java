@@ -44,7 +44,8 @@ public final class TrustLadder {
     public Tier tierOf(String fingerprint) {
         long now = clock.getAsLong();
         if (store.activeSanctions(fingerprint, now).stream()
-                .anyMatch(sanction -> "BAN".equals(sanction.type()))) {
+                .anyMatch(sanction -> "BAN".equals(sanction.type())
+                        || "TIMEOUT".equals(sanction.type()))) {
             return Tier.SANCTIONED;
         }
         IdentityStore.IdentityRecord record = store.find(fingerprint).orElse(null);
@@ -70,6 +71,9 @@ public final class TrustLadder {
     }
 
     public void onCleanRound(String fingerprint) {
+        if (isBanned(fingerprint)) {
+            return;
+        }
         long now = clock.getAsLong();
         Long previous = lastAccrualMillis.get(fingerprint);
         if (previous != null && now - previous < ACCRUAL_MIN_INTERVAL_MILLIS) {
@@ -117,7 +121,8 @@ public final class TrustLadder {
     }
 
     public boolean canChatYet(String fingerprint, long memberSinceMillis) {
-        return tierOf(fingerprint) != Tier.NEW
-                || clock.getAsLong() - memberSinceMillis > NEW_CHAT_MUTE_MILLIS;
+        Tier tier = tierOf(fingerprint);
+        return tier != Tier.SANCTIONED && (tier != Tier.NEW
+                || clock.getAsLong() - memberSinceMillis > NEW_CHAT_MUTE_MILLIS);
     }
 }

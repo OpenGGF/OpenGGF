@@ -127,4 +127,36 @@ public class TestMasterServer {
         assertTrue(java.nio.file.Files.readString(dir.resolve("admin-audit.jsonl"))
                 .contains("cheating"));
     }
+
+    @Test
+    void adminTimeoutImmediatelyRevokesAnActiveSession(@TempDir Path dir) throws Exception {
+        server = MasterServer.start(testConfig(), dir);
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("id"));
+        ClientHandshake handshake = new ClientHandshake(identity, "A", "0.6:cafe");
+        Probe probe = new Probe();
+        WebSocket socket = HttpClient.newHttpClient().newWebSocketBuilder()
+                .buildAsync(URI.create("ws://127.0.0.1:" + server.port() + "/master"), probe)
+                .get(10, TimeUnit.SECONDS);
+        socket.sendText(ControlCodec.encode(null, handshake.hello()), true).join();
+        ControlMessage.Welcome welcome = (ControlMessage.Welcome) await(
+                probe, ControlMessage.Welcome.class);
+        socket.sendText(ControlCodec.encode(null, handshake.onWelcome(welcome)), true).join();
+        ControlMessage.PowChallenge challenge = (ControlMessage.PowChallenge) await(
+                probe, ControlMessage.PowChallenge.class);
+        socket.sendText(ControlCodec.encode(null, new ControlMessage.PowSolution("IDENTITY",
+                identity.creationPowNonce(challenge.difficultyBits()))), true).join();
+        String token = ((ControlMessage.JoinAccepted) await(probe,
+                ControlMessage.JoinAccepted.class)).sessionToken();
+
+        HttpResponse<String> result = HttpClient.newHttpClient().send(HttpRequest.newBuilder()
+                        .uri(URI.create("http://127.0.0.1:" + server.adminPort()
+                                + "/admin/sanction"))
+                        .header("Authorization", "Bearer secret-admin-token")
+                        .POST(HttpRequest.BodyPublishers.ofString("{\"fingerprint\":\""
+                                + identity.fingerprint() + "\",\"type\":\"TIMEOUT\","
+                                + "\"reason\":\"spam\",\"durationHours\":1}"))
+                        .build(), HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, result.statusCode());
+        assertTrue(server.broker().fingerprintForSessionToken(token).isEmpty());
+    }
 }

@@ -33,15 +33,22 @@ to a single event-loop thread, and the master server reuses those room classes u
 Engine and UI adapters belong in `com.openggf.game.timeattack.mp`. Production masters
 require TLS (`plaintextForTest: true` is loopback-test only); the localhost admin HTTP
 endpoint requires its bearer token and appends to `admin-audit.jsonl`. Identity age, clean
-rounds, sanctions, and trust tiers persist in SQLite. Verified rooms are relay-only and
+rounds, sanctions, and trust tiers persist in SQLite. An active BAN or TIMEOUT rejects
+admission and immediately closes existing master sessions, their tokens, hosted rooms,
+and attached relay connections. TIMEOUT preserves earned standing after expiry; BAN
+resets clean-round standing. Verified rooms are relay-only and
 need a live replay-verifier worker matching the room's determinism fingerprint; ROM bytes
 never cross the network and worker verdicts are Ed25519-signed. The host accepts attempt
 controls and ghost data only during the running phase, permits one strictly increasing
 attempt at a time per player, and allows ghost progress no more than 12 frames ahead of
 server-observed elapsed time. A finish is one-shot: its input hash must be a SHA-256 digest,
 and a pending verifier verdict remains bound to that exact claim. JSON control envelopes
-reject duplicate and unknown fields. Completed or void verification jobs are retained only
-for the configured recording-retention window. Operator commands:
+reject duplicate and unknown fields. The in-memory verification queue holds at most
+4,096 tracked jobs. Uploaded jobs still queued or leased after one hour become durable
+`VOID_VERIFIER_UNAVAILABLE` verdicts without a cheating sanction; a late worker result
+cannot complete them. Queue exhaustion produces the same void result for a new claim.
+Terminal queue entries are pruned on the next submission after 60 seconds, while
+recording blobs and durable verdicts have separate retention. Operator commands:
 
 ```bash
 java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.net.GhostLoadTestTool --n 256 --duration 30 --mix adversarial

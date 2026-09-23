@@ -219,6 +219,54 @@ class TestRoomBroker {
     }
 
     @Test
+    void liveSanctionRevokesTokenAndClosesHostedRoom(@TempDir Path hostDir)
+            throws Exception {
+        FakeConnection host = new FakeConnection();
+        String token = admit(host, hostDir, "HOST");
+        String fingerprint = PlayerIdentity.loadOrCreate(hostDir).fingerprint();
+        establish(fingerprint);
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
+                "DIRECT", 27888, "0.6:cafe")));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        ladder.sanction(new IdentityStore.SanctionRecord(fingerprint, "BAN", "cheat",
+                "operator", now, Long.MAX_VALUE));
+        broker.revokeSanctioned(fingerprint);
+
+        assertNotNull(host.closedReason);
+        assertTrue(broker.fingerprintForSessionToken(token).isEmpty());
+        assertTrue(registry.find(roomId).isEmpty());
+        assertTrue(tunnels.registered.isEmpty());
+    }
+
+    @Test
+    void timeoutClosesAlreadyAttachedRelayGuest(@TempDir Path hostDir,
+                                                 @TempDir Path guestDir) throws Exception {
+        FakeConnection host = new FakeConnection();
+        String hostToken = admit(host, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(host, ControlCodec.encode(hostToken, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
+                "RELAY", 0, "0.6:cafe")));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        FakeConnection guest = new FakeConnection();
+        String guestToken = admit(guest, guestDir, "GUEST");
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomJoinRequest(roomId)));
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RelayAttach(roomId)));
+
+        String guestFingerprint = PlayerIdentity.loadOrCreate(guestDir).fingerprint();
+        ladder.sanction(new IdentityStore.SanctionRecord(guestFingerprint, "TIMEOUT",
+                "spam", "operator", now, now + 10_000));
+        broker.revokeSanctioned(guestFingerprint);
+
+        assertNotNull(guest.closedReason);
+        assertTrue(broker.fingerprintForSessionToken(guestToken).isEmpty());
+        assertTrue(registry.find(roomId).isPresent());
+    }
+
+    @Test
     void hostDisconnectRemovesTheirRooms(@TempDir Path hostDir) throws Exception {
         FakeConnection host = new FakeConnection();
         String token = admit(host, hostDir, "HOST");

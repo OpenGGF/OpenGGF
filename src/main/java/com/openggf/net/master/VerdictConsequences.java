@@ -22,7 +22,8 @@ public final class VerdictConsequences {
 
     public boolean apply(IdentityStore.VerdictRecord verdict, String workerId) {
         if (!VerdictCodec.isWorkerResult(verdict.result())
-                && !VerdictCodec.RESULT_VOID_NO_UPLOAD.equals(verdict.result())) {
+                && !VerdictCodec.RESULT_VOID_NO_UPLOAD.equals(verdict.result())
+                && !VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE.equals(verdict.result())) {
             throw new IllegalArgumentException("unknown verdict result");
         }
         store.addVerdict(verdict);

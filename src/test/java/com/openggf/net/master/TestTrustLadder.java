@@ -102,6 +102,25 @@ class TestTrustLadder {
     }
 
     @Test
+    void timeoutBlocksPrivilegesUntilExpiryWithoutErasingStanding(@TempDir Path dir) {
+        TrustLadder ladder = ladder(dir);
+        ladder.onCleanRound("fp");
+        now += TrustLadder.Thresholds.defaults().establishedAgeMillis() + 1;
+        for (int i = 0; i < 9; i++) {
+            now += TrustLadder.ACCRUAL_MIN_INTERVAL_MILLIS + 1;
+            ladder.onCleanRound("fp");
+        }
+        assertEquals(TrustLadder.Tier.ESTABLISHED, ladder.tierOf("fp"));
+        ladder.sanction(new IdentityStore.SanctionRecord("fp", "TIMEOUT", "spam",
+                "operator", now, now + 10_000));
+        assertEquals(TrustLadder.Tier.SANCTIONED, ladder.tierOf("fp"));
+        assertFalse(ladder.canCreateRoom("fp"));
+        now += 10_001;
+        assertEquals(TrustLadder.Tier.ESTABLISHED, ladder.tierOf("fp"));
+        assertTrue(ladder.canCreateRoom("fp"));
+    }
+
+    @Test
     void accrualPacingIgnoresBackToBackRounds(@TempDir Path dir) {
         TrustLadder ladder = ladder(dir);
         ladder.onCleanRound("fp");

@@ -10,7 +10,9 @@ readable and historical versions can be referenced directly.
   streams that advance ahead of server-observed time, and bind each finish and
   verifier verdict to one immutable attempt with valid recording evidence.
   Control messages reject ambiguous duplicate or unknown fields, while terminal
-  verification jobs expire with their retained recordings.
+  verification jobs expire after a brief cache window. Active bans and timeouts
+  immediately revoke master access, and verification work has bounded capacity
+  and lifetime with auditable non-cheating void outcomes when workers disappear.
 
 Work promoted from `next` is recorded in [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 
