@@ -283,6 +283,35 @@ class TestS3kDezTeleporterHeadless {
         }
     }
 
+    @Test
+    void bossDefeatBlocksNewRidersForBothPlayersButLetsAnExistingRideFinish() {
+        var fixture = fixtureWithSidekick();
+        var player = fixture.sprite();
+        var partner = sidekick();
+        org.junit.jupiter.api.Assertions.assertNotNull(partner);
+        var runtime = (com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState)
+                GameServices.zoneRuntimeState();
+        var pad = place(0, 0x01);
+        moveTo(player, OBJECT_X, OBJECT_Y);
+        moveTo(partner, OBJECT_X, OBJECT_Y);
+        player.setAir(false);
+        partner.setAir(false);
+        runtime.setBossSignals(1);
+        pad.update(0, player);
+        assertFalse(pad.isRidingForTest(true));
+        assertFalse(pad.isRidingForTest(false));
+        runtime.setBossSignals(0);
+        pad.update(1, player);
+        assertTrue(pad.isRidingForTest(true));
+        assertTrue(pad.isRidingForTest(false));
+        runtime.setBossSignals(1);
+        for (int i = 0; i < SPIN_UPDATES + 8; i++) pad.update(i + 2, player);
+        assertFalse(pad.isRidingForTest(true));
+        assertFalse(pad.isRidingForTest(false));
+        assertFalse(player.isObjectControlled());
+        assertFalse(partner.isObjectControlled());
+    }
+
     // --- helpers ---
 
     private boolean rideToMidpoint(int subtype, boolean initialFlag) {

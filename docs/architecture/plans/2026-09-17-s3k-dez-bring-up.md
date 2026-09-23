@@ -1805,9 +1805,11 @@ routines per player over two independent ten-byte state blocks (`$30(a0)`, `$3A(
 **Two corrections to the handover's reading.** The `$A` bias does not *widen* the capture
 window, it **mirrors** it: `$10` px either way, on the other side of the object's centre,
 which is what a flipped placement needs. And `_unkFAB8` bit 0 (:94965) is deliberately not
-modelled — its only writer in the whole disassembly is `Ending_ScreenInit`'s `Obj_5D86A`
-(:123769), so during Death Egg gameplay the bit is always clear and the refusal is
-unreachable. Recorded rather than invented as a global.
+modelled in this earlier slice, on the mistaken claim that its only writer was
+`Ending_ScreenInit`'s `Obj_5D86A` (:123769). **Corrected during Act 2 boss integration
+on 2026-09-23:** `loc_7FBD6` sets the same bit on defeat, so the refusal is reachable.
+The boss signal now blocks fresh P1/P2 captures while allowing already active rides
+to finish. The full controller-driven fight exposed this omission.
 
 **Two of the nine assertions could not fail on their first version, and the break found both.**
 `aPlayerAnotherTeleporterStillHoldsIsNotCapturedAgain` captured the player on one teleporter
@@ -3380,3 +3382,35 @@ prefixes, parent rewrite and replay, and delayed culling versus immediate
 root-death removal. The short hit-producer test deliberately sets orientation;
 it is not a player-driven fight claim. Boss registration, complete launch
 allocation prefixes, the root/camera/escape chain and movies remain pending.
+
+
+### Act 2 encounter connection (2026-09-23, after `5712654ae`)
+
+`DezEndBossInstance` and its Robotnik/door/path/debris children now connect the
+component families to the SKL `$A7` placement. The actual controller probe landed
+all eight enemy-published hits (last at capture frame 6344), reached the right
+explosion-path publication, foreground door edit, camera worker and `$1700` load.
+The replayed solo Hyper capture starts at `$34B0,$300` with 200 rings and seven
+Super Emeralds; it does not write health or player physics during the fight.
+Movies 100/101 (neutral opening) and 102/103 (defeat/exit) are in
+`$HOME/Videos/OGGF/s3k-dez-bring-up`. Both defeat recordings have 6830 rows with
+zero hurt/death; their first player-state difference is frame 6346, after the
+killing hit. Native cadence and the viewport-dependent cleanup difference remain
+unmeasured. No new trace frontier is claimed.
+
+Two rejected escape approaches were caught by that controller run. Setting
+camera min-X to the native-framed widescreen centre advanced the raw camera by
+240 pixels each pass, then locked it before `Obj_IncLevEndXGradual` finished;
+the worker overwrote the final +$40 and trapped the player short of the exit.
+The root now follows native raw min-X, waits for the worker to reach $3620, and
+anchors the viewport's native window before locking. The earlier transporter
+claim that `_unkFAB8` bit 0 was unreachable was false: `loc_7FBD6` sets it on the
+killing hit. Restoring `loc_48C44`'s fresh-entry gate prevents post-defeat recapture;
+ongoing rides remain legal and the persistent gravity clearer runs in its own slot.
+
+Focused validation: 20 encounter/teleporter checks; 39 encounter/child/census
+checks including every entry/launch/landing prefix; 36 rewind/physics guards;
+144 loading/PLC/seamless-change/carry checks. All completed with zero failures
+and skips. Commands used `tools/testing/maven_queue.py -Dmse=off`, explicit root
+`s3k.gen`, named test classes and a separate `-Pguards` JVM. The final 14-test encounter rerun also passed without skips, including capture/remove/restore and 200 forward passes across breakup, foreground and camera publication. Full campaign
+validation and integration remain pending. Next: `$1700` events, arena and boss.

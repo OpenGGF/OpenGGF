@@ -26,7 +26,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, dust-free solid objects, springs and the sidekick (94 of 116 ROM references — the 11 open group A-I rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (493/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, dust-free solid objects, springs and the sidekick (94 of 116 ROM references — the 11 open group A-I rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Seeded from the first frame of act 2 free play: **1256 frames** of exact player x, y, camera and ring parity (`TestS3kDezColdRoutes`, ratcheted). The cold `$B01` route remains recorded at 0 frames; the connected entrance now lands, but its strict trace has not been remeasured |
 | Rewind-verified | Event routine words (`TestS3kDezPresentationRewind`) and the `$5B` write plus its side latch, capture/restore/forward replay (`TestS3kDezGravityObjectsHeadless`) |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -44,7 +44,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | EVENT: `DEZ2_ScreenEvent` stage 0 chunks | `movea.w $38(a3),a1; addq.w #1,a1` = FG layout row 14, columns 1-3 = `$D7,$DC,$D7`; reachable only after the seamless change | 320 | `TestS3kDezScreenEvents` | implemented | pass, `4e7655bf9`, with the routine driven back to 0 | Not cold-reachable until the seamless change lands (slice 7) |
 | EVENT: `DEZ2_ScreenEvent` stage 1 chunk | `movea.w $18(a3),a1; move.b #$BC,$6B(a1)` = FG layout row 6, column `$6B` | 320 | `TestS3kDezScreenEvents` | implemented | pass, `4e7655bf9` | Production trigger is the end boss (slice 8) |
 | EVENT: `DEZ2_BackgroundEvent` bottom-up redraw | stages 0-1 `Draw_PlaneVertBottomUp` (`loc_59532`/`loc_59556`) | — | — | missing | unrun | Slice 7 |
-| PLACEMENT: 494 act 2 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | 493 concrete / 1 placeholder | pass | Slices 3-5 |
+| PLACEMENT: 494 act 2 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | 494 concrete / 0 placeholders | pass | Slices 3-5 |
 | BADNIK: `$A4` `Obj_Spikebonker`, 11 act 2 and 7 act 1 placements | `Obj_Spikebonker`, sonic3k.asm:198893-199124 | — | `TestSpikebonkerBadnikInstance` | implemented (`SpikebonkerBadnikInstance`) | pass 10/10 | Ten mechanisms, seventeen deliberate breaks. Landing it moved the seeded act 2 route frontier from 390 to 472 frames, which is the strongest evidence any object in this campaign has: the divergence it closed was the badnik's own destruction rebound. Filmed: `037-spikebonker-320` (patrol and hover only; the slam and the kill want a route-driven capture) |
 | BADNIK: `$A5` `Obj_Chainspike`, 6 act 1 and 12 act 2 placements | `Obj_Chainspike`, sonic3k.asm:199132-199420 | 320 | `TestChainspikeBadnikInstance` | implemented (`ChainspikeBadnikInstance`) | pass 9/9 | Nine assertions, twelve deliberate breaks. Landing it took the seeded act 2 route past the end of its 1200-frame window: the frontier is now 1256 frames and the first divergence is a shared `$08` platform ride, not a Death Egg object. Filmed: `040-chainspike-800` |
 | TRAVERSAL: `$55` `Obj_DEZEnergyBridge`, 13 act 1 and 12 act 2 placements in six subtypes | `Obj_DEZEnergyBridge`, sonic3k.asm:93909-93990, subtype decoder `sub_47DDE` :93879-93902 | 320 | `TestS3kDezEnergyBridgeHeadless` | implemented (`S3kDezEnergyBridgeObjectInstance`) | pass 11/11 | Eleven assertions, twelve deliberate breaks. Landing it, together with the route carrying the ROM's `Level_frame_counter`, moved the seeded act 2 frontier from 527 to 616 frames. One coverage limit is stated in the suite: a headless fixture has no pattern renderer, so the off-state draw gate is not observable there. Filmed: `039-energy-bridge-320` |
@@ -65,7 +65,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | TRAVERSAL: SKL `$4C` hang carrier | `loc_46FC2`–`sub_4703E`: P1 start, accelerated rise, native ceiling probe, finite horizontal travel, P1/P2 grabbing | unit contact/control/input boundaries; actual DEZ1 ride at 320/800 | `TestS3kDezHangCarrierObjectInstance`, `TestS3kDezHangCarrierHeadless` | implemented after `b1c767647` | real terrain, jump release and forced recreation/forward replay | native comparison, Act-2 entry and donor/character breadth remain open |
 | TRAVERSAL: SKL `$4A` floating platforms (10) | `loc_25A7E`, `word_25AB8`, shared `sub_25974`; table offsets include native control word | all nine movers and four status flips; placed horizontal ride at 320/800 | `TestS3kDezFloatingPlatformObjectInstance`, `TestS3kDezFloatingPlatformHeadless`, census and PLC registry | implemented after `8a58aafbc` | ROM art, oscillator bytes, ramp thresholds, real carry and forced recreation/180-frame replay pass | Inverted entry, native comparison, donor/team/character breadth and cold route remain open |
 | TRAVERSAL: SKL `$4B` tilting bridge | `loc_46E1C`–`loc_46F54`, signed ROM `byte_46ED8`, prior-standing aggregate, long velocity and delayed free fall | all eight standing rows, P1/P2 sum/cancellation, exhausted forward allocation; DEZ1 320/800; inverted DEZ2 declared entry | `TestS3kDezTiltingBridgeHeadless`, census, PLC registry | implemented after `6b7055cea` | nine focused checks: real landing/carry/collapse/floor release, complete graph recreation and forward replay; inverted carry/replay | Cold route, native comparison and donor/roster breadth remain open |
-| BOSS: `$A7` end boss | `word_7F0BE` range, `word_7F0C6` arena `$218,$288,$3400,$34E0`, 8 hits, `sub_7F8A0` gravity | — | `TestS3kDezAct2BossHeadless` | missing | unrun | Slice 8 |
+| BOSS: `$A7` end boss | `word_7F0BE` range, `word_7F0C6` arena, enemy-published eight hits, allocation prefixes, breakup and `$1700` request | 320/800; native P1/P2 component cases; solo Hyper movie | `TestDezEndBossEncounter`, child/resource suites, `TestS3kDezTeleporterHeadless` | implemented | focused checks pass, 2026-09-23 local campaign | Native parity, full route and remaining character/donor/team breadth open |
 | REWIND: event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` | implemented | pass, `4e7655bf9` | Mid-flip, act change and boss spots not started |
 | ORACLE: Tails act 2 | `runs/s3k-tails-full-chain-all-emeralds/ssz_2` (5,202 rows) | — | `TestS3kTailsFullChainSsz2SegmentTraceReplay` (expected red) | — | blocked: 229 errors, first error frame 0 `camera_y` expected `0x080E` actual `0x0810` (`035e48a58`) | Whole campaign |
 | ORACLE: Tails act 2 restart | `runs/s3k-tails-full-chain-all-emeralds/ssz_3` (3,877 rows; act 2 restart, i.e. lifecycle evidence) | — | `TestS3kTailsFullChainSsz3SegmentTraceReplay` (expected red) | — | blocked: 200 errors, first error frame 0 `camera_y` expected `0x044E` actual `0x0450` (`035e48a58`) | Whole campaign |
@@ -116,7 +116,7 @@ first circle's exact position/fraction/velocity writes, allocation exhaustion,
 P2 versus extra followers, ring-animation termination and actual Act-1 entry
 at 320/800 with countdown, transport graph recreation, release and exit replay.
 The S3KL MGZ trigger-platform alias retains its own implementation and checks.
-Placement counts are 364/365 and 493/494: each act's boss remains a placeholder.
+At that checkpoint placement counts were 364/365 and 493/494. Both bosses are now registered: 365/365 and 494/494; this census does not certify either act.
 Native per-mode cadence, all seven cold entries, Act-2 positioned traversal,
 full character/donor/team breadth and the final-boss route remain open.
 
@@ -135,8 +135,7 @@ entry trace, full-act route or character/team/donor breadth.
 
 ### Act 2 boss component preparation (2026-09-23)
 
-The encounter remains unregistered; its placement and completion obligations are
-still open. `TestDezEndBossResources` checks all forty mapping frames against the
+At the component checkpoint the encounter remained unregistered. `TestDezEndBossResources` checks all forty mapping frames against the
 ROM archive and the real physical/module queues through final uploaded pixels.
 `TestDezEndBossBumper` checks native-slot tracking, opening-angle clamping, all
 four launch phases, deferred P1/P2 contact, defeat conversion and reconstruction
@@ -153,5 +152,24 @@ windows, same-sweep visor creation, gravity-before-motion under both signs,
 actual arena ceiling/floor probes, kick/flip timing, three-shot allocation
 prefixes and parent rewrites, and linked reconstruction with forward replay.
 `TestObjectTerrainUtils` adds nine passing regressions for the injected ceiling
-entry. These remain component proofs; the root is still unregistered and the
-boss/exit coverage obligations stay open.
+entry. These are component proofs; the subsequent encounter checkpoint below connects the root.
+
+
+### Act 2 encounter connection (2026-09-23, after `5712654ae`)
+
+The SKL `$A7` factory now owns the complete gravity-boss encounter; the S3KL
+Carnival Night mapping is unchanged. Short tests exercise the entry, 192-pass
+descent, launch/shield/visor graph, actual enemy hit publication, inherited
+killing-hit wait, independent allocation prefixes and allocation failure without
+healing, persistent gravity cleanup, explosion paths, door/foreground publication,
+camera release and `$1700` request. The teleporter gate now consumes `_unkFAB8`
+bit 0 for fresh P1/P2 riders while allowing active rides to finish.
+
+Recordings 100/101 show neutral opening runs; 102/103 show the last hit, breakup
+and escape at 800/320. The input uses a declared positioned start `$34B0,$300`,
+200 rings and seven Super Emeralds, then controller inputs only. Both 6830-frame
+runs have zero hurt/death rows. Player states match through the killing hit at
+6344 and first differ at 6346 during gravity cleanup; no native parity is claimed.
+The 320 recording loads `$1700`; the 800 recording ends during its fade, and the
+longer controller probe confirms that load. The destination arena is still missing.
+The final 14-test encounter run includes 120 replayed attack passes and 200 replayed defeat passes after graph removal/recreation, checking shared parent links and event/camera state. Cold route, non-Hyper fight, donor and full team breadth remain open.

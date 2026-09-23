@@ -167,7 +167,8 @@ class TestRemainingRewindTailInventory {
         // DEZ staircase sections use an identity-linked parent snapshot.
         // DEZ Act 2 bumper probes cleanly in isolation; its real linked graph also has focused coverage.
         // DEZ Act 2 shield/visor and enemy/projectile also probe in isolation with linked graph tests.
-        return new TailInventory(1270, 1030, 240, 0, buckets);
+        // DEZ Act 2 root, escape roles and persistent gravity clearer add three scalar owners.
+        return new TailInventory(1273, 1033, 240, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

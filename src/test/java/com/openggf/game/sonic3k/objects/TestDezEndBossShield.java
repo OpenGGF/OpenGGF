@@ -24,7 +24,7 @@ class TestDezEndBossShield {
     private Fixture fixture() {
         var game=HeadlessTestFixture.builder().withZoneAndAct(11,1)
                 .startPosition((short)0x3500,(short)0x320).startPositionIsCentre().build();
-        game.sprite().setDebugMode(true); game.stepIdleFrames(2);
+        game.sprite().setDebugMode(true); DezEndBossTestSupport.retirePlacedEncounter(game);
         var manager=GameServices.level().getObjectManager(); var parent=new Parent(); manager.addDynamicObject(parent);
         var shield=new DezEndBossShield(parent); manager.addDynamicObject(shield);
         return new Fixture(game,manager,parent,shield);

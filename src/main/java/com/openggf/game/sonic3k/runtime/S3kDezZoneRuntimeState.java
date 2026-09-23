@@ -33,7 +33,7 @@ import java.util.Objects;
  * stays in {@code GameStateManager} where rewind already captures it.
  */
 public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 10 * Short.BYTES + 2 * Long.BYTES + DezTransitionPlaneState.SNAPSHOT_BYTES;
+    private static final int CAPTURE_BYTES = 11 * Short.BYTES + 2 * Long.BYTES + DezTransitionPlaneState.SNAPSHOT_BYTES;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -48,6 +48,8 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     private short cameraStoredMaxY;
     private short panelBits;
     private boolean bossFlag;
+    /** _unkFAB8, shared by the Act 2 boss and its escape workers. */
+    private short bossSignals;
     private long blockJobOrdinal = -1;
     private long artJobOrdinal = -1;
     private final DezTransitionPlaneState transitionPlane = new DezTransitionPlaneState();
@@ -78,6 +80,9 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
     public long artJobOrdinal() { return artJobOrdinal; }
     public void artJobOrdinal(long value) { artJobOrdinal = value; }
     public DezTransitionPlaneState transitionPlane() { return transitionPlane; }
+
+    public int bossSignals() { return bossSignals & 0xFF; }
+    public void setBossSignals(int value) { bossSignals=(short)(value&0xFF); }
 
     public boolean bossFlag() { return bossFlag; }
     public void setBossFlag(boolean value) { bossFlag=value; }
@@ -150,6 +155,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         buffer.putShort(cameraStoredMaxY);
         buffer.putShort(panelBits);
         buffer.putShort((short)(bossFlag?1:0));
+        buffer.putShort(bossSignals);
         buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal);
         transitionPlane.capture(buffer);
         return buffer.array();
@@ -171,6 +177,7 @@ public final class S3kDezZoneRuntimeState implements S3kZoneRuntimeState, S3kCam
         cameraStoredMaxY = buffer.getShort();
         panelBits = buffer.getShort();
         bossFlag = buffer.getShort()!=0;
+        bossSignals = buffer.getShort();
         blockJobOrdinal = buffer.getLong();
         artJobOrdinal = buffer.getLong();
         transitionPlane.restore(buffer);

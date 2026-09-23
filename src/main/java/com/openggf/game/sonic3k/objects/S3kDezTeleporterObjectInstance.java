@@ -152,10 +152,13 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         if (dy >= CAPTURE_Y_HEIGHT) {
             return;
         }
-        // The four refusals, in ROM order (:94958-94973). _unkFAB8 bit 0 is not among them:
-        // the only writer of that bit is Ending_ScreenInit's Obj_5D86A (:123769), so it is
-        // always clear during Death Egg gameplay and the branch is unreachable here.
+        // loc_48C44: boss defeat ($7FBD6) sets _unkFAB8 bit 0. Existing riders
+        // finish their routine, but neither native player may enter a fresh ride.
         if (player.isObjectControlled() || player.getAir()) {
+            return;
+        }
+        if (services().zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState dez
+                && (dez.bossSignals() & 1) != 0) {
             return;
         }
         if (anotherTeleporterStillHolds(state == playerOneState)) {

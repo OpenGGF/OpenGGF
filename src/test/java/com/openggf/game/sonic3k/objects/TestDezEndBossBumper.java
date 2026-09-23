@@ -96,7 +96,7 @@ class TestDezEndBossBumper {
     @Test void realObjectManagerRecreatesParentAndBothBumpersWithoutHealingOrDuplicating() {
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(11,1)
                 .startPosition((short)0x3500,(short)0x320).startPositionIsCentre().build();
-        fixture.sprite().setDebugMode(true); fixture.stepIdleFrames(2);
+        fixture.sprite().setDebugMode(true); DezEndBossTestSupport.retirePlacedEncounter(fixture);
         var manager=GameServices.level().getObjectManager();
         var parent=new Parent(); manager.addDynamicObject(parent);
         var first=new DezEndBossBumper(parent,0); var second=new DezEndBossBumper(parent,2);

@@ -138,7 +138,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   with glowing ring trails, and release them at the exit. The Act 1 miniboss now fights
   through its orbiting-sphere and moving-platform phases, including its eye, beam,
   spikes and breakup. Defeating it runs the results and carries the player into Act 2,
-  where the floor opens, the launch plays and normal control returns.
+  where the floor opens, the launch plays and normal control returns. Act 2's gravity boss
+  now releases spiked enemies, takes damage from their return impacts, breaks apart,
+  opens the door and releases the camera into the final-stage transition. Its transporter
+  columns stop accepting new riders after defeat. The destination final boss is still incomplete.
   Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with

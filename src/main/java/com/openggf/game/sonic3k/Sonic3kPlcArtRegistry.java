@@ -3163,6 +3163,13 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_END_BOSS,
                 Sonic3kConstants.MAP_DEZ_END_BOSS_ADDR,
                 Sonic3kConstants.ARTTILE_DEZ_END_BOSS, 1, null, 40));
+        // PLC $76 supplies the original stand/run art at these adjacent destinations.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_ROBOTNIK_STAND,
+                Sonic3kConstants.MAP_FBZ_ROBOTNIK_STAND_ADDR, 0x466, 0, null, 4));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_ROBOTNIK_RUN,
+                Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR, 0x4A9, 0, null, 7));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_EGGROBO_RUN,
+                Sonic3kConstants.MAP_FBZ_EGGROBO_RUN_ADDR, 0x4A9, 0, null, 4));
 
         // Gravity puzzle (SKL object 0x61, Obj_DEZGravityPuzzle): act 1's turbine-room
         // obstacle. ROM header: move.l #Map_DEZGravityPuzzle,mappings(a0) and

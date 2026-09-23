@@ -32,7 +32,7 @@ class TestDezEndBossEnemy {
     private Fixture fixture(boolean reverse) {
         var game=HeadlessTestFixture.builder().withZoneAndAct(11,1)
                 .startPosition((short)0x3500,(short)0x320).startPositionIsCentre().build();
-        game.sprite().setDebugMode(true); game.stepIdleFrames(2);
+        game.sprite().setDebugMode(true); DezEndBossTestSupport.retirePlacedEncounter(game);
         var manager=GameServices.level().getObjectManager(); var parent=new Parent(); manager.addDynamicObject(parent);
         var enemy=new DezEndBossEnemy(parent); manager.addDynamicObject(enemy);
         GameServices.gameState().setReverseGravityActive(reverse);
