@@ -64,6 +64,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     // Names may differ between zone sets; membership means a concrete owner
     // exists in every zone. Zone-gated implementations remain in the sets below.
     public static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
+            0x4E, // CNZWireCage (S3KL) / DEZLiftPad (SKL)
             0x53, // MGZSwingingPlatform (S3KL) / DEZConveyorPad (SKL)
             0x4C, // CNZSpiralTube (S3KL) / DEZHangCarrier (SKL)
             0x56, // MGZMovingSpikePlatform (S3KL) / DEZEnergyBridgeCurved (SKL)
@@ -178,7 +179,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x2E, // AIZSpikedLog
             0x36, // HCZBreakableBar
             0x37, // HCZWaterRush
-            0x4E, // CNZWireCage
             0x55, // MGZHeadTrigger
             0x57, // MGZTriggerPlatform
             0x58, // MGZSwingingSpikeBall

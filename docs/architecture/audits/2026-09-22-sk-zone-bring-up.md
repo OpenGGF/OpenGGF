@@ -1446,3 +1446,41 @@ Act-2 horizontal clip 085 records 300 frames, 43 hurt rows and zero death rows;
 its torpedo hazard remains visible. Both shared videos fully decode and their
 mechanism frames were inspected. These are component demonstrations, not clean
 full routes. The original conveyor-pad stash is accounted for by this commit.
+
+### DEZ lift pads (after `ffe39535a`, 2026-09-23)
+
+Implemented SKL `$4E` from `Obj_DEZLiftPad` `$47378`, `sub_4748E` and
+`sub_4757A`; the S3KL CNZ wire cage remains unchanged. P1 standing/debug gates,
+word acceleration and angle, orientation bits, 30-frame held return pause,
+independent forward draw slot, original-anchor cull and graph recreation follow
+the disassembly. Art uses three ROM frames at `$47614`, DEZMisc2+$6, palette 1.
+
+Two rejected interpretations matter. `$24/$26` in the arm are multisprite sub4
+coordinates, not delayed joint storage. The completed joint loop already wrote
+link two there; the following moves reorder the sprites. The constants table
+and loop order killed the apparent one-frame lag model. Allocation failure also
+cannot simply leave the pad at its anchor: zero `$3E` points at ROM, whose `$16`
+vector word is `$200`. Ignored ROM child writes still leave the parent displaced
+by 513 links. The regression checks `$600` becomes `$E5D0`, no child and no retry.
+Both lessons are recorded in the mirrored ROM pitfall catalogue.
+
+Validation in `.worktrees/ai-sk-zone-completion`, Java 21, absolute S3K ROM:
+`maven_queue.py -q -Dmse=off -Ds3k.rom.path=<abs>/s3k.gen
+-Dtest=TestS3kDezLiftPadHeadless,TestS3kDezPlacementCensus test` completed after
+the allocation correction: 13 tests, zero failures/errors/skips. Earlier focused
+runs passed the seven lift checks plus 78 PLC and two corruption checks (87),
+and 22 CNZ cage alias checks. The separate schema/profile guard run passed eight
+checks with inventory 1247 total / 1007 trivial / 240 stateful / zero remaining.
+No fields or registration changed after that guard run. This is focused local
+validation; combined campaign validation and integration are still pending.
+
+Actual DEZ1 lift entry `$498,$708`, Sonic solo, seven rings: 40-frame landing,
+140-frame ride, forced parent/arm recreation, forward replay and paused jump
+release are covered at 320/800. External clips
+`$HOME/Videos/OGGF/s3k-dez-bring-up/086-lift-pad-320/capture.mp4` and
+`087-lift-pad-800/capture.mp4` each contain 420 frames / seven seconds, no hurt
+or death rows, and identical player position/velocity rows across widths.
+Both fully decoded; ride/pause/release stills inspected. Authored input is
+`180 -; 1 R+A; 59 R; 180 -`. Normal-path footage predates only the allocation
+failure correction. No cold route, native parity or breadth certification is
+claimed. Census is now 361/365 and 489/494: `$57` and the act bosses remain.

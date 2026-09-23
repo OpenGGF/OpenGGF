@@ -482,6 +482,15 @@ the owning constants table before claiming a shipped bug; follow both the
 writer and reader. Test sustained behavior and release, not only arrival at a
 routine. The SOZ methodology-v2 plan records the correction.
 
+The DEZ lift arm uses the multisprite layout: `$24/angle($26)` are
+`sub4_x_pos/sub4_y_pos`, not unused saved coordinates. `sub_4748E` fills the
+links, reads those just-written coordinates into the main sprite, then moves
+the end joint into sub4. Treating the numeric fields as previous-frame storage
+invented a delayed joint and placed the first main sprite at zero; a test built
+from that interpretation also passed. Resolve the active layout from
+`render_flags` bit 6 and `sonic3k.constants.asm`, then check the complete draw
+order and positions. The September 22 campaign audit records this correction.
+
 `LRZ3_ScreenInit` is another alias trap: after copying the fire palette, `a1`
 points at `Target_palette_line_4+$20`; `.offset` is explicitly
 `Stack_contents-(Target_palette_line_4+$20)`. The subsequent `$9C0/$36C` writes

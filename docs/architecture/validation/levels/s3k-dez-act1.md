@@ -27,7 +27,7 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation, runtime event words and 354/365 concrete placements, including gravity tubes, turbine room/puzzle/bumper walls, energy bridges, Spikebonkers and Chainspikes. Remaining objects, miniboss and act change are open |
+| Implemented | Presentation foundation, runtime event words and 361/365 concrete placements, including gravity tubes, turbine room/puzzle/bumper walls, energy bridges, Spikebonkers and Chainspikes. Remaining objects, miniboss and act change are open |
 | Cold-reachable | Not started |
 | Rewind-verified | Palette/event state plus implemented object spot checks; turbine approach/contact now has production-loop restore and forward replay. Cold route and load-boundary coverage remain open |
 | Native behaviour matched | Not started; replay frontier measured at `035e48a58`, see the row below |
@@ -44,7 +44,7 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 | PRESENT: shared AnPal channels B and C | B: `Palette_cycle_counter1` reload 4, `counter0` step 4 limit `$30`, `AnPal_PalDEZ12_1` ($3444) → line 3 colours 13-14. C: `counters+$08` reload `$13`, `counters+$02` step `$A` limit `$28`, `AnPal_PalDEZ12_2` ($3474) → line 3 colours 8-12 | 320 | `TestS3kDezPaletteCycling` | implemented | pass, `4e7655bf9`; clip `01b` | `AnPal_PalDEZ12_2` frames 1 and 3 are byte-identical; native comparison open |
 | PRESENT: `AniPLC_DEZ` 8 scripts | `AniPLC_DEZ` ($28AEE), durations `0,1,3,-1,4,4,1,0`, script 7 = 132 frames; generic `AnimateTiles_DoAniPLC`, no gate | 320 | `TestS3kDezAnimatedTiles` (7 tests) | implemented | pass, `4e7655bf9`; clip `01c` | Per-frame DMA order not compared against native |
 | EVENT: `DEZ1_ScreenEvent` chunk `$BD` | `Events_fg_4` → `movea.w $14(a3),a1; move.b #$BD,$6E(a1)` = FG layout row 5, column `$6E` | 320 | `TestS3kDezScreenEvents` (6 tests) | implemented (`Sonic3kDEZEvents`) | pass, `4e7655bf9`, driven from the runtime state | Production trigger is the miniboss (slice 6); not yet reachable cold |
-| PLACEMENT: 365 act 1 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | 354 concrete / 11 placeholder | pass | Remaining families are listed in the census and bring-up plan; implementation counts do not certify a route |
+| PLACEMENT: 365 act 1 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | 361 concrete / 4 placeholder | pass | Remaining families are listed in the census and bring-up plan; implementation counts do not certify a route |
 | GRAVITY: `$5A` gravity tube, 24 act 1 placements | `loc_48EEC`/`sub_48F12` and `loc_4906A`/`sub_49090` (sonic3k.asm:95169-95401) | — | `TestS3kDezGravityTubeHeadless` | implemented (`S3kDezGravityTubeObjectInstance`) | pass 11/11 | Behaviour is act-independent; the tests place it at the act 2 site beside the `$5B` at `$1A40,$08C0`. No act 1 route reaches one yet (slice 6) |
 | GRAVITY: `$5F` turbine corridor, 1 act 1 placement (`$2480,$0840`) | `sub_4964A`, sonic3k.asm:95814-95952 | — | `TestS3kDezGravityRoomHeadless` | implemented (`S3kDezGravityRoomObjectInstance`) | pass 14/14 at 21:41 BST after `bf7e5175c` | Includes actual placed-controller lifetime, unsigned range edges, puzzle/closed-gate contact, production rewind and 320 px six-panel controller route and actual 320/800 closed-gate bounce; cold entry, native matching and team/donor breadth remain open |
 | GRAVITY: `$61` gravity puzzle, 1 act 1 placement (`$2690,$0840`, inside the `$5F` corridor) | `Obj_DEZGravityPuzzle`, sonic3k.asm:96087-96245 | — | `TestS3kDezGravityPuzzleHeadless` | implemented (`S3kDezGravityPuzzleObjectInstance`) | pass 12/12 | Twelve mechanisms, fifteen deliberate breaks, every one red. The six panel bits live in `S3kDezZoneRuntimeState` because the ROM keeps them in `MHZ_pollen_counter`, a level RAM byte. Filmed standing on the solid top (`036`), airborne bounce (`043`/`044`) and six-panel controller traversal (`045`). Corrected positive object-control admission and airborne returned side bits; native matching remains open |
@@ -98,3 +98,16 @@ Worktree `.worktrees/ai-s3k-dez-bring-up`, ROM by absolute path, `maven_queue.py
 Frontier command (2026-09-17, `035e48a58`):
 `python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=<abs>/s3k.gen -Ptrace-replay-r7 "-Dtest=TestS3kSonicTailsSszSegmentTraceReplay,TestS3kSonicTailsDez238SegmentTraceReplay,TestS3kTailsFullChainSszSegmentTraceReplay,TestS3kTailsFullChainSsz2SegmentTraceReplay,TestS3kTailsFullChainSsz3SegmentTraceReplay,TestS3kTailsFullChainDez238SegmentTraceReplay" -DfailIfNoSpecifiedTests=false test`
 — 6 tests, 6 failures, 0 errors, **0 skipped** (the ROM path resolved).
+
+## Lift-pad follow-up (2026-09-23)
+
+SKL `$4E` now implements `Obj_DEZLiftPad`, `sub_4748E` and `sub_4757A`:
+P1 standing starts the accelerating arm; a standing P1 holds the endpoint's
+30-frame return pause. P2 alone does neither. Seven checks cover orientation,
+independent forward allocation and failure, sprite-coordinate aliasing, the
+complete out/pause/back cycle, ROM art and actual placed rides at 320/800.
+Forced parent/arm recreation and forward replay match, including jump release.
+Counts are 361/365 and 489/494; tunnel launchers and the bosses remain open.
+External clips 086/087 show seven seconds at 320/800 with no hurt/death rows.
+These positioned component checks do not establish cold routes, native parity
+or donor/character/team breadth.

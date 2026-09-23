@@ -3062,3 +3062,19 @@ real horizontal/vertical rides at 320/800, forced recreation/replay and declared
 inverted Act-2 entry. The last group J gravity reader is now implemented.
 Census is 354/365 and 489/494. Remaining placed families are lift pads, tunnel
 launchers and act bosses; final-boss flow and route/breadth obligations remain.
+
+### Lift-pad implementation notes (after `ffe39535a`)
+
+SKL `$4E` uses the original P1-only standing/debug gates, signed word angular
+acceleration, angle-high-byte geometry and endpoint pause held by P1. Its arm
+is an independent forward SST allocation, preserved with the parent through
+rewind. All placed counts are seven. `$24/$26` alias the third multisprite
+child coordinates: the ROM moves that joint to the main sprite and writes the
+end joint into its former slot. A previous-frame interpretation was rejected
+against `sonic3k.constants.asm` and the loop's write order.
+With allocation exhausted, the zero child pointer reads ROM word `$16` (`$200`)
+as the count. ROM writes are ignored; the pad still moves by 513 links. This
+shipped failure path is tested without creating a synthetic child or retrying.
+Seven object checks include actual 320/800 rides and graph recreation/replay.
+Census is 361/365 and 489/494: tunnel launchers and bosses remain, together with
+final-boss flow, cold routes and the inherited breadth/native obligations.

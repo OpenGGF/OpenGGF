@@ -3217,6 +3217,9 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_DEZ_TILTING_BRIDGE_ADDR,
                 Sonic3kConstants.ARTTILE_DEZ_MISC, 1, null, 1));
 
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_LIFT_PAD,
+                0x47614, Sonic3kConstants.ARTTILE_DEZ_MISC2 + 6, 1, null, 3));
+
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_CONVEYOR_PAD,
                 0x47C08, Sonic3kConstants.ARTTILE_DEZ_MISC + 0xBB, 1, null, 5));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_CONVEYOR_PAD_WIDE,

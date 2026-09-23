@@ -4767,3 +4767,15 @@ P2. On a left clamp, `asr.l #8` therefore writes `$16A` ground speed to P1 and
 diagonal). Keep the shipped behavior; do not normalize both players to the same
 argument. Origin: September 22 LRZ3 camera bring-up; focused regression
 `TestLrzBossAutoscroll.nativeMovemWordRestoreTruncatesSecondaryVelocityAndPushingCrushes`.
+
+## Multisprite aliases and failed child pointers need address-space checks
+
+DEZ lift `sub_4748E` reads `$24/$26` after its joint loop. The constants table
+identifies these as `sub4_x_pos/sub4_y_pos`, so this is sprite ordering, not a
+previous-frame lag buffer. Resolve raw offsets before assigning semantic names.
+Its failed `AllocateObjectAfterCurrent` leaves `$3E` zero: `movea.w` then points
+at ROM, not an absent abstract child. The count read at `$16` is a ROM vector
+word; child writes are ignored but the parent's computed position still changes.
+For FixBugs=0, trace reads and writes through their actual address space before
+replacing failed allocation with an early return. Cross-game applicable.
+Origin: September 23 DEZ lift bring-up; `TestS3kDezLiftPadHeadless`.
