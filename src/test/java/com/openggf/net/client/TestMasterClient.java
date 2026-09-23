@@ -15,8 +15,11 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.net.URI;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -170,5 +173,29 @@ class TestMasterClient {
             guest.close();
             host.close();
         }
+    }
+
+    @Test
+    void lateJoinReplyCannotCompleteLaterRequest() throws Exception {
+        ConcurrentLinkedQueue<CompletableFuture<ControlMessage.RoomJoinResult>> pending =
+                new ConcurrentLinkedQueue<>();
+        CompletableFuture<ControlMessage.RoomJoinResult> joinA = new CompletableFuture<>();
+        CompletableFuture<ControlMessage.RoomJoinResult> joinB = new CompletableFuture<>();
+        pending.add(joinA);
+        pending.add(joinB);
+        joinA.completeExceptionally(new java.util.concurrent.TimeoutException());
+
+        Method completeNext = MasterClient.class.getDeclaredMethod("completeNext",
+                ConcurrentLinkedQueue.class, Object.class, Throwable.class);
+        completeNext.setAccessible(true);
+        ControlMessage.RoomJoinResult replyA = new ControlMessage.RoomJoinResult(
+                "room-a", "DIRECT", "a.example", 1234, "host-a", FP, "ab".repeat(32));
+        ControlMessage.RoomJoinResult replyB = new ControlMessage.RoomJoinResult(
+                "room-b", "DIRECT", "b.example", 5678, "host-b", FP, "cd".repeat(32));
+
+        completeNext.invoke(null, pending, replyA, null);
+        assertTrue(!joinB.isDone(), "A's late result must not bind join B");
+        completeNext.invoke(null, pending, replyB, null);
+        assertEquals("room-b", joinB.get(1, TimeUnit.SECONDS).roomId());
     }
 }

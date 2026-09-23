@@ -9,7 +9,20 @@ import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlCodec;
 import com.openggf.net.protocol.GhostPackets;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -19,6 +32,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -135,6 +149,52 @@ class TestRaceClientLoopback {
             long elapsed = System.currentTimeMillis() - start;
             assertTrue(elapsed < 10_000, "failed in " + elapsed + "ms — join timeout did not fire");
             assertNotNull(failure.getCause());
+        }
+    }
+
+    @Test
+    void malformedFinalJoinClosesDirectConnection(@TempDir Path dir) throws Exception {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        AtomicReference<Channel> peer = new AtomicReference<>();
+        Channel listening = null;
+        try {
+            String invalidJoin = ControlCodec.encode(null,
+                    new ControlMessage.JoinAccepted("room-token", -1, null, null));
+            listening = new ServerBootstrap().group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override protected void initChannel(SocketChannel channel) {
+                            channel.pipeline().addLast(new HttpServerCodec());
+                            channel.pipeline().addLast(new HttpObjectAggregator(8192));
+                            channel.pipeline().addLast(
+                                    new WebSocketServerProtocolHandler("/race"));
+                            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override public void userEventTriggered(
+                                        ChannelHandlerContext context, Object event)
+                                        throws Exception {
+                                    if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                                        peer.set(context.channel());
+                                        context.writeAndFlush(new TextWebSocketFrame(invalidJoin));
+                                    }
+                                    super.userEventTriggered(context, event);
+                                }
+                            });
+                        }
+                    }).bind(0).sync().channel();
+            int port = ((java.net.InetSocketAddress) listening.localAddress()).getPort();
+            ExecutionException rejected = assertThrows(ExecutionException.class,
+                    () -> RaceClient.connect(URI.create("ws://127.0.0.1:" + port + "/race"),
+                                    PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Guest", FP)
+                            .get(5, TimeUnit.SECONDS));
+            assertInstanceOf(com.openggf.net.protocol.ProtocolViolationException.class,
+                    rejected.getCause());
+            Channel connection = peer.get();
+            assertNotNull(connection);
+            assertTrue(connection.closeFuture().await(5, TimeUnit.SECONDS),
+                    "malformed room admission must close the direct socket");
+        } finally {
+            if (listening != null) listening.close().sync();
+            group.shutdownGracefully().sync();
         }
     }
 }

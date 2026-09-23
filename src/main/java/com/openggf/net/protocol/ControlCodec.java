@@ -56,6 +56,16 @@ public final class ControlCodec {
         return decode(text, Protocol.MAX_CONTROL_BYTES);
     }
 
+    /** Room traffic cannot use the broker's slotless master-admission marker. */
+    public static DecodedControl decodeRoom(String text) {
+        DecodedControl decoded = decode(text);
+        if (decoded.message() instanceof ControlMessage.JoinAccepted accepted
+                && (accepted.playerSlot() < 0 || accepted.room() == null)) {
+            throw new ProtocolViolationException("invalid room admission");
+        }
+        return decoded;
+    }
+
     /** Decodes under an explicit transport cap; master tunnel wrappers use the larger cap. */
     public static DecodedControl decode(String text, int maxBytes) {
         if (text == null) {
@@ -122,6 +132,14 @@ public final class ControlCodec {
             case ControlMessage.RoomState state -> validatePlayers(state.players());
             case ControlMessage.JoinAccepted accepted -> {
                 requireText(accepted.sessionToken(), "session token");
+                boolean masterAdmission = accepted.playerSlot() == -1
+                        && accepted.room() == null && accepted.round() == null;
+                boolean roomAdmission = accepted.playerSlot() >= 0
+                        && accepted.playerSlot() < Protocol.MAX_PLAYERS_RELAY
+                        && accepted.room() != null && accepted.round() != null;
+                if (!masterAdmission && !roomAdmission) {
+                    throw new ProtocolViolationException("invalid join metadata");
+                }
                 if (accepted.round() != null) {
                     ControlMessage.RoundSnapshot snapshot = accepted.round();
                     if (snapshot.phase() == null

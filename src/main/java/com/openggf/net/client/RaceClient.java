@@ -179,7 +179,7 @@ public final class RaceClient implements RaceConnection {
             private void handleText(WebSocket ws, String text) {
                 final ControlMessage message;
                 try {
-                    message = ControlCodec.decode(text).message();
+                    message = ControlCodec.decodeRoom(text).message();
                 } catch (ProtocolViolationException e) {
                     fail(ws, e);
                     return;
