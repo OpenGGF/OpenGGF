@@ -348,3 +348,18 @@ arena-floor, screen-entry, boss-controller and escape-ship selection passes
 38 cases, no skips. Capture113 and its route predate this correction; corrected
 route replay is pending. The configured proportional widescreen deadzone remains
 intentional and is not overridden to manufacture identical controller outcomes.
+
+
+Destination projection regression (after `37cba17bc`): a short real final-DEZ→DDZ
+load passes at320 but fails at800 with camera -240 instead of0. The final-arena
+projection was reading the previous runtime during destination camera init.
+The provider now also checks the destination zone/act; verification is pending.
+The reusable `DezFinalRouteAuthorTool` preserves the successful controller-only
+method with explicit ROM/width/output arguments, no private runtime API expansion
+and no gameplay writes after boot. It is an input author, not a parity oracle.
+
+The destination-framing selection subsequently passed30 cases without skips
+(`TestDezFinalScreenEntry`, `TestNativeArenaCameraFraming`, `TestS3kDdzColdRoutes`).
+Capture115 verifies the corrected actual800px final-DEZ→DDZ load and initial
+flight, with no death and exact replay of the authored state. Full widescreen
+DDZ completion and other incoming-route breadth remain open.

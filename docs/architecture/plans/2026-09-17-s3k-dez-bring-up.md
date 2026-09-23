@@ -4196,3 +4196,41 @@ Focused verification: queued Maven with Java21, `-Dmse=off`, the absolute S3K RO
 `-Dtest=TestDezFinalArenaFloor,TestDezFinalScreenEntry,TestDezFinalBossController,TestDezFinalEscapeShip test`
 passes 38 cases without failures/errors/skips. This includes the previously red
 real-rider regression, both column directions, and existing floor rewind checks.
+
+After `37cba17bc`, controller exploration completes corrected native final DEZ
+and loads DDZ at 14032 (core11806, ship13746). The 800px strategy also completes
+and loads DDZ at 14034. Compressed input scripts are external
+`inputs/dez-final-zero-carry-{320,800}.script`. No state writes occur after the
+declared boot. However, the wide destination's first row has player X32497 and
+camera X32529, unlike the expected near-origin entry; investigate this real
+handoff before certifying widescreen DDZ continuity. New captures and promotion
+of the reusable controller probe remain pending. Earlier V11–V17 input attempts
+were rejected for last-hit misses or falling after defeat; production physics
+were not adjusted to rescue them.
+
+### Destination framing isolation, 2026-09-23
+
+The short final-DEZ→DDZ reload regression confirms the leak: native320 passes,
+800 fails with camera -240 instead of0 before any DDZ object runs (13 cases,
+one failure, no skips). `InitCamera` runs before `InitLevelEvents` replaces the
+previous runtime. `centerNativeArenaCamera()` used that old final-DEZ runtime
+without checking the destination zone/act. Restrict its final-arena branch to
+current `$1700`; retain the separate `$1701` sanctuary behavior. DDZ's native
+`sub_82920` then correctly starts at0 instead of masking the negative wide origin
+to `$7F11`. Do not change that ROM autoscroll mask to hide the stale policy.
+
+The queued Java21 command with `-Dmse=off`, absolute S3K ROM and
+`-Dtest=TestDezFinalScreenEntry,TestNativeArenaCameraFraming,TestS3kDdzColdRoutes test`
+passes 30 cases, zero failures/errors/skips. The promoted author at800 completes
+14035 frames with no death, emits input byte-identical to the successful scratch
+probe, and enters DDZ at camera1/player65505 (native -31), correcting the stale
+projection. The tool reads object identities and public touch state only; it
+neither exposes private boss types nor writes runtime gameplay. This verifies
+the actual handoff, not the subsequent complete DDZ route at800.
+
+Capture115 (`115-final-corrected-handoff-800`) records frames13400–14199 of
+that route, no death, exact match to all14035 overlapping author state rows
+except input text. Full MP4 decode passes; stills13750/13870/14130 show final hit,
+explosions/emerald and correctly positioned DDZ flight. External provenance
+records source and input hashes. Current incoming DDZ handoff is verified at800;
+complete DDZ route/breadth and incoming DEZ2-to-final continuity remain open.

@@ -16,6 +16,16 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Destination camera policies must check the destination.** S3K's `InitCamera`
+runs before `InitLevelEvents` replaces the previous zone runtime. A provider
+that selects a camera policy solely from `GameServices.zoneRuntimeState()` can
+therefore apply the source arena's policy to the destination. Final DEZ's
+widescreen projection moved DDZ's initial camera to -240; native DDZ autoscroll
+then masked it to $7F11. Keep the ROM scroll arithmetic and gate the presentation
+policy on current zone/act as well as its runtime owner. The short
+`TestDezFinalScreenEntry.outgoingDoomsdayLoadDoesNotInheritFinalArenaCameraProjection`
+regression exercises this boundary without replaying the full fight.
+
 **Reused position words.** A field named `x_sub` is not always a fraction.
 KiS2 `Knuckles_BeginClimb` and S3K `Knuckles_Gliding_HitWall` store the grab's
 native X word there, then the climbing routine compares it with `x_pos` and

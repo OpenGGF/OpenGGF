@@ -30,6 +30,18 @@ class TestDezFinalScreenEntry {
     private DezFinalBossZoneRuntimeState state() {
         return (DezFinalBossZoneRuntimeState) GameServices.zoneRuntimeState();
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints={320,800})
+    void outgoingDoomsdayLoadDoesNotInheritFinalArenaCameraProjection(int width) throws Exception {
+        var fixture=boot(width); fixture.stepIdleFrames(1);
+        assertTrue(((com.openggf.game.internal.NativeArenaCameraFraming)
+                GameServices.level().getZoneFeatureProvider()).centerNativeArenaCamera());
+        GameServices.level().loadZoneAndAct(12,0);
+        assertEquals(0,GameServices.camera().getX(),"DDZ Get_LevelSizeStart begins at the native origin");
+        assertFalse(((com.openggf.game.internal.NativeArenaCameraFraming)
+                GameServices.level().getZoneFeatureProvider()).centerNativeArenaCamera());
+    }
+
     @Test void firstProductionFrameAllocatesSupportsAndStartsForcedEntryOnlyOnce() {
         var fixture = boot();
         var manager = GameServices.level().getObjectManager();

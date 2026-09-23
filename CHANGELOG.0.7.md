@@ -141,7 +141,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   where the floor opens, the launch plays and normal control returns. Act 2's gravity boss
   now releases spiked enemies, takes damage from their return impacts, breaks apart,
   opens the door and releases the camera into the final-stage transition. Its transporter
-  columns stop accepting new riders after defeat. The destination final boss now creates its entry floor, restores carried rings/time and progresses through the forced run-in to the hand phase, with retained boss/floor rendering and a single centred widescreen planet. Its invisible floor support repositions without dragging the player sideways, and its defeat explosions follow the moving boss and escape ship, including the finite regular-explosion burst. Complete encounter validation remains in progress.
+  columns stop accepting new riders after defeat. The destination final boss now creates its entry floor, restores carried rings/time and progresses through the forced run-in to the hand phase, with retained boss/floor rendering and a single centred widescreen planet. Its invisible floor support repositions without dragging the player sideways, and its defeat explosions follow the moving boss and escape ship, including the finite regular-explosion burst. The widescreen arena framing is released before loading Doomsday. Complete encounter validation remains in progress.
   Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** the Master Emerald palette cycle and boss flash colors now

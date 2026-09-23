@@ -68,9 +68,15 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
 
     @Override public boolean centerNativeArenaCamera() {
         if (!GameServices.hasRuntime()) return false;
-        if (GameServices.zoneRuntimeState() instanceof
-                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState) return true;
         int zone = getFeatureZoneId();
+        // Get_LevelSizeStart initializes the destination camera before InitLevelEvents
+        // replaces the old runtime state. The native ROM has no viewport projection;
+        // our widescreen inset belongs only to the current final arena, not a stale
+        // DEZ runtime during DDZ/other loads (a negative DDZ start wraps at $8000).
+        if (zone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA
+                && GameServices.level().getFeatureActId() == 0
+                && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState) return true;
         if (zone == Sonic3kZoneIds.ZONE_LRZ) {
             return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry())
                     .map(LrzZoneRuntimeState::centerNativeArenaCamera).orElse(false);

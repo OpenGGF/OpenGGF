@@ -89,3 +89,17 @@ capture/restore plus forward replay succeeds after ship/root retirement.
 Queued `TestDdzRomPalettes,TestS3kDdzLifecycleProduction`: five passed, zero
 skips. This remains focused component/lifecycle evidence, not an updated movie
 or end-to-end route/native-pixel comparison.
+
+
+Incoming final-DEZ check (2026-09-23, after `37cba17bc`): both direct final-boss
+controller routes reach DDZ, but the 800px load initially inherited the previous
+arena's -240px camera projection. The native DDZ autoscroll masks it to $7F11.
+A short load-boundary regression isolates that stale source policy before DDZ
+runs; the source framing is being restricted to current $1700. This is not yet
+wide DDZ route certification. See the DEZ plan for corrected incoming evidence.
+
+The destination-framing selection subsequently passed30 cases without skips
+(`TestDezFinalScreenEntry`, `TestNativeArenaCameraFraming`, `TestS3kDdzColdRoutes`).
+Capture115 verifies the corrected actual800px final-DEZ→DDZ load and initial
+flight, with no death and exact replay of the authored state. Full widescreen
+DDZ completion and other incoming-route breadth remain open.
