@@ -3078,3 +3078,28 @@ shipped failure path is tested without creating a synthetic child or retrying.
 Seven object checks include actual 320/800 rides and graph recreation/replay.
 Census is 361/365 and 489/494: tunnel launchers and bosses remain, together with
 final-boss flow, cold routes and the inherited breadth/native obligations.
+
+### Light-tunnel implementation under validation (after `408b95256`)
+
+SKL `$57` now has a launcher, independent forward-allocated controller, ring
+spawner and transient ring sprites. They share a source file as nested concrete
+classes but retain separate object slots and lifetimes. `DEZTunnelPaths` at
+`$1E4058`, scale and wait tables, mappings and animation scripts are read through
+the ROM pipeline. The existing automatic tunnel provided the straight-motion
+comparison; its hardcoded paths, different reverse traversal and absence of
+curve/fraction aliases are not reused as a new generic mover.
+
+The launcher preserves P1-only numbered countdown, P2-only waiting, 180-pass
+launch and 60-pass reset, capture on grounded native slots only, and the locked
+failure outcome if controller allocation is exhausted. Controller Setup waits
+11 passes for players and starts the trail immediately. Normal movement uses
+signed division and 16:16 addition; circle and sine modes retain curve centres
+inside the native position fractions. Word snaps preserve these fractions on
+release. Trail allocation/sound, mode-dependent cadence, sine priority/flips and
+ROM animation termination have separate owners. Generic rewind schema captures
+the controller link and the spawner's plain state holder; custom per-object
+capture overrides were rejected by the architecture guard and removed.
+
+This is implementation progress, not completion of slice 5: all seven cold
+entries, per-mode native cadence and full character/donor/team breadth remain
+required. The act bosses and final-boss route remain open.

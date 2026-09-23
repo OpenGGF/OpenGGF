@@ -1484,3 +1484,56 @@ Both fully decoded; ride/pause/release stills inspected. Authored input is
 `180 -; 1 R+A; 59 R; 180 -`. Normal-path footage predates only the allocation
 failure correction. No cold route, native parity or breadth certification is
 claimed. Census is now 361/365 and 489/494: `$57` and the act bosses remain.
+
+### DEZ light tunnels (after `408b95256`, 2026-09-23)
+
+Implemented SKL `$57` and its independent controller, trail spawner and ring
+sprites from `$481F2`–`$488BC`. The S3KL MGZ trigger-platform factory is retained.
+Countdown only starts numerically for P1; P2 alone waits. A failed controller
+allocation still consumes the countdown while captured players remain locked.
+ROM paths, scaling/wait tables, eleven launcher mappings, fourteen ring mappings
+and sixteen animation pointers are loaded through the ROM reader. Setup waits
+11 player passes but starts the trail immediately; circle/sine centres occupy
+`x_pos/y_pos` fractional words and persist into following straight segments.
+This is why a separate idealized geometric interpolation was not used.
+
+The generic automatic tunnel was inspected for its straight movement contract;
+its hardcoded paths/reverse handling do not cover the DEZ curve descriptor
+format. The trail was first given a hand-written rewind override; the architecture
+guard rejected new overrides. Replacing that with a plain `BodyState` holder
+uses the existing schema without changing the guard baseline. Final inventory
+is 1251 / 1011 / 240 / zero no-codec, with exact controller-to-trail identity.
+
+Commands in `.worktrees/ai-sk-zone-completion`, Java 21, absolute S3K ROM:
+- `maven_queue.py -q -Dmse=off -Ds3k.rom.path=<abs>/s3k.gen
+  -Dtest=TestS3kDezTunnelLauncherHeadless,TestS3kDezPlacementCensus test`:
+  initial 11 checks passed, no skips.
+- Expanded tunnel checks, `TestSonic3kPlcArtRegistry` and `TestS3kDezColdRoutes`:
+  89 checks passed, no skips. The command also named a nonexistent
+  `TestSonic3kPlcArtCorruption`; that name executed no tests. The correct
+  `TestPatternSpriteRendererCorruptionGuard` was run explicitly next.
+- `-Dtest=TestS3kDezTunnelLauncherHeadless,TestPatternSpriteRendererCorruptionGuard,TestS3kMgzTriggerPlatformObject`:
+  22 checks passed, no skips, including the first circle's exact fraction and
+  signed velocity writes. The final plain-state rewind adjustment reran all nine
+  tunnel checks, including release and exit replay, with no failures/skips.
+- Fresh `-Pguards -Dtest=TestRemainingRewindTailInventory,TestRewindFieldDispositionGuard,TestRewindArchitectureGuard,TestSonic3kObjectProfileRegistryGuard`:
+  eight passed after removing the custom rewind overrides. No guard baseline
+  was weakened; only the four new object classes changed the inventory totals.
+
+The seeded Act-2 frontier remains 1256: native row 21029 expects X `$697` and
+camera `$5F7`, versus `$696/$5F6`; Y `$3CE`, camera Y `$36E` and five rings agree.
+Cold Act-2 entry remains zero because the miniboss transport is not implemented.
+These frontier checks passing means the recorded limits were retained, not
+that the cold route is complete. Placement census is 364/365 and 493/494.
+Both act bosses and final-boss flow remain unimplemented.
+
+External footage under `$HOME/Videos/OGGF/s3k-dez-bring-up`:
+088/089 are matching 900-frame circular-route segments at 320/800, no hurt/death,
+but stop just short of release. Final 090 runs 1080 frames / 18 seconds through
+the exit at 800, zero hurt/death; full decode and circle/exit stills inspected.
+091 shows the upward sine path from `$2C00,$690`, 600 frames / ten seconds;
+a post-release hazard hits at frame 539 (23 hurt rows, no death). Its fully
+decoded eight-second `traversal-excerpt.mp4` contains frames 0–479 and no damage.
+Neutral input, Sonic solo and seven initial rings throughout. All eight ROM
+paths reach their endpoints in focused checks, but all seven cold entries,
+native per-mode cadence and character/donor/team breadth remain open.

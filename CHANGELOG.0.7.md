@@ -134,6 +134,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   riders onto the floor. Conveyor pads start when ridden, follow the floor or travel a fixed
   vertical distance, and reverse their belts for newly arriving riders and inverted gravity.
   Lift pads swing Sonic upward, wait while he stands on them, then return after he leaves.
+  Light-tunnel launchers count down, carry captured players through the winding paths
+  with glowing ring trails, and release them at the exit.
   Shock floors and ceilings now hurt on
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with

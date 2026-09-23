@@ -103,6 +103,8 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // The tunnel controller advances its exact independently allocated trail slot.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance$Controller", "spawner"), RewindFieldPolicy.CAPTURED),
             // Lift geometry writes its exact Draw_Sprite arm slot; preserve it through graph recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kDezLiftPadObjectInstance", "arm"), RewindFieldPolicy.CAPTURED),
             // Tilting sections accumulate into the exact controller SST slot.
