@@ -3538,3 +3538,47 @@ starts at ($70,$C0), flips X and animates/moves +6 on its initialization pass.
 `loc_8642E` is the quake/sound worker: st shake flag, then on V-int low nibble
 zero play Rumble2 until the flag clears. `loc_810A0` publishes FAB8 bit 2 and
 window $2C0 only at camera X >= $520, then locks [$520,$5C0] and deletes.
+
+
+### Final-arena entry objects (after `75d411b9b`)
+
+`DezFinalEntrySprite` implements the separately allocated Robotnik runner and
+body cover; `DezFinalArenaSignal` implements the independent quake and camera
+workers. The root encounter and ScreenInit allocation prefix remain unconnected.
+The runner starts moving/animating on initialization and signals at $3D0. The
+cover preserves its $1F predecrement schedule (31 moves, then publication), and
+both `st` publications preserve the low byte of their destination word. The
+quake reads V_int_run_count's low nibble, and the camera worker publishes only
+at $520. The art plan now binds the final-act runner to $58C and the 32-frame
+miscellaneous mapping to $38F; this registration does not preload the root's
+pending $181D44 module.
+
+A new test captures the cover and parent **before** the cover's initialization,
+removes both and restores them. It initially failed: the restored cover stayed
+at its construction X $3C0 instead of copying parent X-$10. The exact parent
+field needed a CAPTURED policy. Mid-animation recreation alone passed because
+that path no longer reads the parent. The corrected test now passes alongside
+the 31-move test and runner-before-cover publication ordering.
+
+Validation used the queued Maven wrapper with the absolute root S3K ROM:
+`-Dtest=TestDezFinalEntryObjects,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard test`
+passed 86 checks (six initial entry cases), zero skips. After the reconstruction
+regression and parent-policy fix, `-Dtest=TestDezFinalEntryObjects,TestDezFinalArenaFloor,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed 76 checks, including all eight final entry cases, zero skips. The initial
+structural run passed 35/36: only the stale inventory count failed, with both new
+classes independently passing the probe. Updated inventory is 1277 total / 1037
+isolated / 240 graph-covered / zero missing codecs. The resource-file summary
+was also stale and now agrees with the executable inventory.
+
+A temporary production-load probe confirmed the current `$1700` layout is 20x32
+128px chunks. FG rows 0 and 1 are zero; row 2 contains the alternate body at
+columns 4-6 and main body at columns 12-14, with corresponding lower halves on
+row 3. BG rows 0/1 supply the arena, and row 3 supplies chunk $18 for floor-hole
+redraw. Native ScreenInit aliases FG row 0 into FG/BG rows 4 and 31; these are
+already zero in the initial decoder but still need their intended load/event
+ownership in the connected handler. This probe does not verify live rendering.
+
+After the parent-policy correction, the separate fresh-JVM selection
+`-Pguards -Dtest=TestRemainingRewindTailInventory,TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard test`
+passed all three checks with zero skips. The ordinary focused results and these
+guards are not a campaign-wide validation result.

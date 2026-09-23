@@ -95,3 +95,11 @@ include native edge redraw and byte-sized direction semantics; four scroll and
 two runtime checks also pass. Three structural checks pass separately. All runs
 have zero skips. The event program is still unregistered pending production
 layout surface, entry graph and renderer integration; no live completion claim.
+
+
+Entry-object follow-up after `75d411b9b`: Robotnik/cover publications, fractional
+movement, pre-init and mid-movement graph reconstruction, quake clock/flag writes
+and camera threshold pass in eight focused cases. The final-act runner uses tile
+$58C, separate from Act 2's destination. Source mappings pass the art registry
+checks. Root allocation, connected ScreenInit and moving rendered evidence remain
+open. Final focused loading/floor/entry selection: 76 passed, zero skips.

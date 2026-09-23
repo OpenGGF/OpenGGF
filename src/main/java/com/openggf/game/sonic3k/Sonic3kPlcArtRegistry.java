@@ -415,6 +415,11 @@ public final class Sonic3kPlcArtRegistry {
                 // Obj_5A872 uses level-loaded tile $001, palette 2.
                 levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FINAL_ARENA_BLOCK,
                         0x5A9AC, 1, 2, null, 4));
+                levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC,
+                        0x187888, 0x38F, 1, null, 32));
+                // ObjDat3_812E0 differs from the Act 2 runner's $4A9 destination.
+                levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.DEZ_ROBOTNIK_RUN,
+                        Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR, 0x58C, 0, null, 7));
             }
             case 0x13 -> addGumballEntries(actIndex, standalone, levelArt);
             case 0x14 -> addPachinkoEntries(actIndex, standalone, levelArt);
