@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.runtime.DezFinalCamera;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState;
@@ -40,7 +42,7 @@ public final class DezFinalArenaFloor extends AbstractObjectInstance
         }
         if (mode == FALLING) {
             // loc_5A8B2 tests the previous render sign before MoveSprite2 and +$1A gravity.
-            if (!renderOnScreen) motion.x = (services().camera().getX() & 0xFF80) - 0x80 + 0x400;
+            if (!renderOnScreen) motion.x = (DezFinalCamera.nativeX(services().camera()) & 0xFF80) - 0x80 + 0x400;
             SubpixelMotion.moveSprite2(motion); motion.yVel = (short) (motion.yVel + 0x1A);
             solid(); coarseXCullViewport(getX()); return;
         }
@@ -60,7 +62,7 @@ public final class DezFinalArenaFloor extends AbstractObjectInstance
                     if (request >= previousCameraX) motion.x = (motion.x + 0x20) & 0xFFFF;
                 }
             }
-            int camera = services().camera().getXCopy() & 0xFFE0;
+            int camera = DezFinalCamera.nativeCopyX(services().camera()) & 0xFFE0;
             if (camera != previousCameraX) {
                 if (camera < previousCameraX) motion.x = (motion.x - 0x20) & 0xFFFF;
                 else if (previousCameraX >= state().breakFrontier()) motion.x = (motion.x + 0x20) & 0xFFFF;

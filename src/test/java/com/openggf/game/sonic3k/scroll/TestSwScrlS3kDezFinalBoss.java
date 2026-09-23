@@ -6,6 +6,23 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSwScrlS3kDezFinalBoss {
+    @Test void providerSeparatesFinalBossFromSanctuary() throws Exception {
+        var provider = new Sonic3kScrollHandlerProvider();
+        provider.load(new com.openggf.data.Rom());
+        assertInstanceOf(SwScrlS3kDezFinalBoss.class, provider.getHandler(23, 0));
+        assertInstanceOf(SwScrlHpz.class, provider.getHandler(23, 1));
+    }
+    @Test void displayedWindowChangesOnlyAfterRetainedScrollIsReleasedAndRewinds() {
+        var state = new DezFinalBossZoneRuntimeState(PlayerCharacter.SONIC_ALONE);
+        state.retainedPlaneX(0x580); state.windowBase(0x2C0);
+        state.publishDisplayedWindow();
+        assertEquals(0x6C0, state.displayedWindowBase());
+        byte[] saved = state.captureBytes();
+        state.retainedPlaneX(0); state.publishDisplayedWindow();
+        assertEquals(0x2C0, state.displayedWindowBase());
+        state.restoreBytes(saved);
+        assertEquals(0x6C0, state.displayedWindowBase());
+    }
     @Test void initialPlaneWindowAndFloorSplitMatchTheNativeWords() {
         var state = new DezFinalBossZoneRuntimeState(PlayerCharacter.SONIC_ALONE);
         state.publishPlanePosition(0x80, 0);

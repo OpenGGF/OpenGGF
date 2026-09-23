@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.runtime.DezFinalCamera;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState;
@@ -31,7 +33,7 @@ final class DezFinalEscapeScenery extends DezFinalBossSprite implements RewindRe
         if(routine==0) {
             routine=1; halfWidth=0x18; halfHeight=0x10; highPriority=true;
             int random=services().rng().nextRaw(); priority=(short)random<0?6:0;
-            writeX((camera.getX()&0xFFFF)+(random&0x1FF)+0x20); writeY((camera.getY()&0xFFFF)-0x20);
+            writeX(DezFinalCamera.nativeX(camera)+(random&0x1FF)+0x20); writeY((camera.getY()&0xFFFF)-0x20);
             flipX=(random&1)!=0; flipY=(random&2)!=0;
             frame=romByte(0x80490+((random>>>16)&3)); yVelocity=((random>>>16)&0x300)+0x100;
             return; // Init does not draw or enter the touch list.

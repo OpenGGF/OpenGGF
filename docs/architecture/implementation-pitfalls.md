@@ -471,6 +471,14 @@ while the foreground Death Egg artwork is entirely absent. Check the final
 shader sum and a rendered frame, not just the handler's array.
 
 
+DEZ final-arena column remapping exposed two further coordinate boundaries.
+The BG FBO starts at aligned scroll Y, so a native `$E0` band boundary becomes
+FBO `$C0` when that origin is `$20`. Remapped world X must also subtract the
+moving cache origin before wrapping. Testing only scroll arrays or a static
+camera misses both errors: the first bends the independently moving floor,
+the second shifts the planet as the cache advances. Inspect a moving wide
+capture with the native centre and the lower band both visible.
+
 ### Resolve raw object offsets through the constants table
 
 The SOZ rappel wire final swing reads `$46(a0)` in `loc_4AC98`, while its

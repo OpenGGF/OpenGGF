@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.runtime.DezFinalCamera;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState;
@@ -27,7 +29,7 @@ public final class DezFinalArenaSignal extends AbstractObjectInstance implements
             else if ((vIntRunCount & 15) == 0) services().playSfx(Sonic3kSfx.RUMBLE_2.id);
         } else {
             var camera = services().camera();
-            int x = camera.getX() & 0xFFFF;
+            int x = DezFinalCamera.nativeX(camera);
             camera.setMinX((short) x);
             if (x >= 0x520) {
                 state.bossSignals(state.bossSignals() | 4);

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.runtime.DezFinalCamera;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -28,7 +30,7 @@ public final class DezFinalBossController extends DezFinalBossSprite
     public DezFinalBossController() { this(new ObjectSpawn(0x3C0,0xF8,0,0,0,false,0)); }
     @Override public DezFinalBossController recreateForRewind(RewindRecreateContext context) { return new DezFinalBossController(context.spawn()); }
     private DezFinalBossZoneRuntimeState state() { return (DezFinalBossZoneRuntimeState)services().zoneRuntimeState(); }
-    private int cameraX() { return services().camera().getX()&0xFFFF; }
+    private int cameraX() { return DezFinalCamera.nativeX(services().camera()); }
     @Override public void update(int clock,PlayableEntity ignored) {
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         state().art().service(services());

@@ -20,6 +20,7 @@ uniform sampler1D VScrollColumnTexture;
 uniform sampler1D ColumnRemapX;
 uniform sampler1D ColumnRemapY;
 uniform bool UseColumnRemap;
+uniform float ColumnRemapEndY;
 
 // Screen dimensions (actual viewport pixels)
 uniform float ScreenHeight;
@@ -124,9 +125,13 @@ void main()
     float fboX = mod(worldX - fboWorldOffsetX, BGTextureWidth);
     if (fboX < 0.0) fboX += BGTextureWidth;
 
-    if (UseColumnRemap) {
+    // Test the ordinary source row first: independent lower bands keep their
+    // own horizontal scroll and retained pixels instead of following the curve.
+    if (UseColumnRemap && fboY < ColumnRemapEndY) {
         int column = clamp(int(floor(gameX)), 0, textureSize(ColumnRemapX, 0) - 1);
-        fboX = round(texelFetch(ColumnRemapX, column, 0).r * 32767.0);
+        float mappedWorldX = round(texelFetch(ColumnRemapX, column, 0).r * 32767.0);
+        fboX = mod(mappedWorldX - fboWorldOffsetX, BGTextureWidth);
+        if (fboX < 0.0) fboX += BGTextureWidth;
         fboY -= round(texelFetch(ColumnRemapY, column, 0).r * 32767.0);
         if (fboY < 0.0 || fboY >= BGTextureHeight) {
             FragColor = vec4(BackdropColor, 1.0);

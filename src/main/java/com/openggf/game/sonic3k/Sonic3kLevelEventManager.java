@@ -704,6 +704,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (dezEvents != null && currentZone == Sonic3kZoneIds.ZONE_DEZ) {
             dezEvents.update(currentAct, frameCounter);
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && currentAct == 0
+                && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {
+            com.openggf.game.sonic3k.events.DezFinalScreenEvents.update(
+                    GameServices.level().getObjectManager(), state, GameServices.level().getFrameCounter());
+        }
         releasePendingMgzPostTransition();
         syncSidekickBoundsToCamera();
     }

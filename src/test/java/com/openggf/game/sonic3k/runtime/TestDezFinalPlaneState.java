@@ -84,4 +84,23 @@ class TestDezFinalPlaneState {
         for (int i = 0; i < 7; i++) state.plane().advanceRedraw((x, y) -> y);
         assertArrayEquals(completed, state.captureBytes());
     }
+    @org.junit.jupiter.api.Test void movingFloorBandRetainsSkyAndUsesNativeTwoColumnCap() {
+        var plane = new DezFinalPlaneState();
+        plane.refresh(0, 0, (x, y) -> 0x111);
+        plane.resetDrawPosition(0x80, 0x20);
+        var reads = new java.util.ArrayList<Integer>();
+        plane.drawHorizontalBand(0xA0, 0xE0, 3, (x, y) -> {
+            reads.add(x); return 0x222;
+        });
+        org.junit.jupiter.api.Assertions.assertEquals(24, reads.size());
+        org.junit.jupiter.api.Assertions.assertEquals(0x1D0, reads.getFirst());
+        org.junit.jupiter.api.Assertions.assertEquals(0x1E8, reads.getLast());
+        org.junit.jupiter.api.Assertions.assertEquals(0x111, plane.descriptor(0x1D0, 0xD0));
+        org.junit.jupiter.api.Assertions.assertEquals(0x222, plane.descriptor(0x1D0, 0xE0));
+        org.junit.jupiter.api.Assertions.assertEquals(0x222, plane.descriptor(0x1E0, 0x100));
+        plane.writeRow(0x20, 0x1E0, 2, (x, y) -> 0x333);
+        org.junit.jupiter.api.Assertions.assertEquals(0x333, plane.descriptor(0x20, 0xE0));
+        org.junit.jupiter.api.Assertions.assertEquals(0x111, plane.descriptor(0x40, 0xE0));
+    }
+
 }

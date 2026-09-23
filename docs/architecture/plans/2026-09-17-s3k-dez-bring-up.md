@@ -3944,3 +3944,188 @@ root/scroll/entry selection: 11 pass, zero skips. The remaining integration is
 layout alias/clear behavior, both retained render planes, background stage
 updates, queue servicing and scroll registration. No final encounter visual
 or complete route claim is made by the entry connection.
+
+### Live background events after `ddf517a54`
+
+Connected initial Plane A refresh, native row aliases, per-frame plane/camera
+publication, background-stage mutations and collapse allocation. Mutation
+surfaces apply chunk changes immediately without a full redraw, preserving
+retained-name-table behavior. Zone-owned module claims continue independently
+of root lifetime. Shake setup follows the background pass using the level clock.
+DEZ's previously missing continuation-counter restore now runs at FG stage 0.
+
+A controller-driven 410-frame production test reaches both hands and all six
+fingers with window `$2C0` and stage `$10`, then replays 12 frames after graph
+restore. Remaining visual integration: feed the retained boss descriptors into
+Plane A rendering, retain/update the arena's Plane B floor cells, register the
+scroll handler and validate native/wide presentations without repeated bodies.
+The latest capture deliberately remains labelled WIP; no complete boss or exit
+route has been certified.
+
+A ROM-backed live map probe confirms FG header 20x4 and BG 8x4. FG rows 0/1
+are blank. FG rows 2/3 place the hand-phase body at chunk columns 4..6
+(`0A 0F 0B` / `0C 0D 0E`) and core body at 12..14
+(`01 02 07` / `04 05 08`), followed by repeating laser-region chunks
+`1B`/`1C` at 15..19. BG rows 0/1 hold sky/floor (`10 11 12`,
+`13 14 15 16...`), row 2 is blank, row 3 contains `18` repeated.
+This confirms why ordinary raw-layout rendering cannot display the moving boss
+correctly: its retained Plane A and independent scroll words must own the draw.
+
+Renderer integration candidate to verify, not implemented: the two body windows
+start at source `$200` and `$600` (both physical Plane A column 0) around anchors
+`$2C0`/`$6C0`. A wide view must show one logical copy of the retained 512px
+plane, not repeat the body every 512px. Keep the previous logical source window
+while `retainedPlaneX` holds the old scroll during staged refill, then change
+the window when the refill completes; switching it at the gameplay window write
+would blank or move the partially retained body too early. Validate this against
+native-width pixels and both delayed-refill boundaries before adopting it.
+
+### Retained renderer connection under verification
+
+The working tree now registers `SwScrlS3kDezFinalBoss` for `$1700`, exposes
+Plane A through an internal foreground descriptor owner and invalidates that
+retained owner on rewind (ordinary flat foreground caching remains unchanged).
+Its logical source window stays captured across staged refill, so wide views
+do not repeat the boss body. Plane B now has a captured 64x32 descriptor ring:
+initial deformation fills sixteen rows starting at `$20`, and Draw_BGNoVert's
+moving band updates the three rows beginning at `$E0`. Floor break redraws copy
+two blocks from `$1E0/$1F0` into physical `$E0/$F0`. The renderer/rewind selection completed with 37 passes and zero skips; the
+counter restore selection passed all seven cases. Capture 108 at 320px reaches
+the hand phase across 1200 frames without hurt or death; inspected frames 190
+and 1000 show the retained boss body. Prior captures 106/107 predate this
+renderer connection. The larger final-arena regression remains queued.
+
+Static renderer review found an additional required connection before capture:
+`LevelRenderer.applyForegroundScrollFeatures` uses the handler's FG HScroll
+only when an advanced mode enables it. The final arena now registers its own
+mode, enabling Plane A HScroll and explicitly overriding VScroll even at zero
+(the ordinary handler path treats zero as a fallback). A production-fixture
+case covers the zero offset and ensures the sanctuary does not register this
+mode. This is included in the already queued final-arena selections; results
+and new captures remain pending.
+
+### Native final-arena reference, 2026-09-23
+
+While Maven waited for the main workspace's full ordinary suite, BizHawk 2.11 /
+GPGX replayed the existing Sonic+Tails complete-emeralds movie from the declared
+LRZ state at movie frame 415400 to final DEZ. No RAM writes or gameplay state
+seeding were used. The locked-on ROM SHA-1 was verified against the repository
+authority; movie SHA-256 is
+`AD40FB0B0A74FA12B08AB71B2E48A7455B388D14F43F4CDED502AC4A15D1B3C0`.
+
+External task directory: `$HOME/Videos/OGGF/s3k-dez-bring-up/native-final-20260923`.
+The first pass (`run1`, 103.289 seconds, completed without host failures) saved
+`entry.State` at frame 509032, SHA-256
+`B4AD0B5F26B007DC518BE6EA95EC3CB7EE35F75AA687B7893B60099E0E49DDF2`.
+It used the existing checkpoint exporter with only the `and not state` save
+guard removed, permitting a later checkpoint to be saved after loading an
+earlier movie state. The second pass (`phases`, 7.176 seconds, no host failures)
+used the unmodified `tools/bizhawk/capture_movie_checkpoints.lua`, `phases.lua`,
+and the saved entry state. Both use `capture_native_references.py`, the main
+checkout's `docs/BizHawk-2.11-linux-x64` installation and the movie in its
+`Movies/` directory, `--require-output frames.csv --require-output done.txt`.
+The first timeout was 300 seconds; the second 180. Host receipts preserve the
+full commands and hashes.
+
+Inspected native checkpoints: 509400/509550 still precede hand-arena arrival
+in this movie; 510500 shows the hand-phase body and fingers; 511500/512500 show
+the core body/chase; 513000 shows the escape ship and emerald; 514000 the final
+fall. Whole VRAM/CRAM/VSRAM accompany each screenshot. These are ROM reference
+pixels and phase evidence, not a matched engine trajectory: the current engine
+diagnostic uses different input and a solo team. Never hydrate engine state
+from these observations. They provide the native visual target for the queued
+retained-plane renderer work and a reusable read-only starting state.
+
+### Final-arena widescreen support correction (in progress)
+
+Capture 109 at 800px rejected the first retained-render candidate: Sonic reached
+X `$360` while the visible camera origin was `$1D0`, then fell when forced
+control released (death at frame 201). The original moving support uses native
+`Camera_X+$B0`; feeding it the visible origin shifts support left by the viewport
+inset. Widening the solid platform would conceal that coordinate error and was
+rejected before implementation. `DezFinalCamera` now converts event/object camera
+reads back to the native 320px window and projects explicit writes into the
+visible viewport. Original camera bounds and floor geometry remain unchanged.
+The final arena opts into the shared boundary projection; HScroll words receive
+the corresponding presentation inset. Entry, floor, collapse frontier, root and
+escape camera offsets use native words. Added production entry/replay checks cover
+320, 352, 400, 528 and 800px; their results remain pending.
+
+The rejected 800px still also exposes repeated planet imagery. That is a separate
+presentation obligation: the final arena's static sky and moving retained floor
+must be treated independently, rather than applying DEZ2's whole-plane planet
+column remap to its floor. A replacement wide capture remains required after the
+support correction. Capture 109 is failure evidence, not validation.
+
+The follow-up now scopes `BackgroundColumnRemap` by its original source-row end.
+Existing two-argument callers keep the full-plane behavior. Final DEZ supplies
+`$E0`, matching `sub_5A508`; the shader tests the ordinary source Y before any
+curve displacement. Thus the approved ROM-surface extension applies only to the
+planet, while lower-band HScroll and retained collapse descriptors remain native.
+The projection is cached by level/width/band and does not derive its shape from
+faded RGB. Five-width production tests also assert an unchanged 320px centre and
+the native split. Compilation and GPU capture are still pending.
+
+
+Validation checkpoint: the final-object plus mandatory S3K selection completed
+152 cases with zero failures/errors/skips; the separate entry/scroll/shared-camera
+selection passed 31. The expanded five-width entry route and restore/replay pass.
+Capture 110 at 800px completes 1200 frames without death. Against native-width
+capture 108, every recorded field except camera X matches across all 1200 rows;
+X differs only by the 240px inset (modulo 16-bit reporting). This is a matched
+engine viewport check, not native parity. Visual inspection rejected its planet
+composition: the cutoff needed the FBO's aligned Y removed, and remapped X must
+be translated by the moving background-cache origin before wrapping. Both are
+corrected in source; replacement GPU evidence is pending. Native source `$E0`
+therefore becomes FBO row `$C0` when aligned scroll Y is `$20`.
+
+A controller-only adaptive probe on the compiled 11:29 candidate destroyed all
+six fingers by frame 4103 (final finger SST retired at 4137), without object/player
+state writes. It reached the subsequent phase, then died at 5100; first hurt was
+1936. Inputs/state are temporarily in `target/dez-final-fingers-320.*` for replay
+and footage. This moves the playable hand-phase frontier, not full-encounter or
+cold DEZ2-to-final certification. The next probe targets the mouth button/core.
+
+
+Capture 111 (`111-final-planet-floor-800`) validates the corrected background
+projection over 1200 frames with no hurt/death. Full video decoding passes.
+Its central 320x224 crop exactly matches native capture 108 at frames 190, 600,
+1000 and 1199 (zero differing RGB pixels); the planet stays centred and the floor
+stays flat as the source cache moves. Wider body inspection exposed a separate
+retained-plane limitation: native column draws never populated some offscreen
+body cells. The pending margin extension samples the authored ROM layout only
+outside tiles intersecting the native 320px window, retains the exact plane
+inside that window, and clips to one logical body bank. A revision component
+tracks 8px native-window boundary crossings independently of 16px ROM redraws.
+Focused descriptor-oracle and rewind tests plus a replacement capture are pending.
+
+The second controller probe opened the mouth and took the core from eight hits
+to six, then fell behind the collapse at frame 4989 (one ring remained, so it
+was not ring-loss death). The next controller attempt retreats to the surviving
+floor after a hit; no gameplay constants or object state were changed to fit it.
+
+
+Final body-margin checkpoint: `-Dtest=TestDezFinalScreenEntry,TestLevelTilemapManagerRewindReset`
+passed 22 cases, zero skips, with queued Maven and the absolute S3K ROM. The added
+one-pixel edge regression demonstrates that the descriptor cache changes when a
+tile first overlaps the native view, without requiring a new ROM column write.
+Capture 112 (`112-final-body-margins-800`) completes 1200 frames with no hurt/death,
+passes full video decode, and preserves the native 320px crop at frames
+190/600/1000/1199 exactly. Its wider margins show the ROM-authored body. The external
+`provenance.json` records base commit and compiled-candidate production source hashes.
+
+Controller exploration now reaches seven core hits. The earlier stationary
+post-hit controller died in the laser; timing an ordinary jump against the ROM's
+50-pass charge animation plus 120-pass wait avoids that shot. The seven-hit attempt
+then fell during a later approach. These are input experiments, not production
+physics changes or full-fight success. The probe and raw data remain temporary
+until a useful stable replay is promoted. Combined campaign verification and
+integration are still pending.
+
+
+The closer takeoff controller then defeats the core at probe frame 11806 and
+continues the real escape-ship chase to the 15000-frame cap with no death. The
+route still has the earlier finger-phase hurt; no invulnerability or extra
+runtime rings were injected. Temporary replay source is
+`target/dez-final-core-defeated-320.script`, with matching state CSV. Ship defeat
+and the actual outgoing load remain the next check.

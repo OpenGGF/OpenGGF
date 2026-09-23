@@ -31,26 +31,26 @@ level and dies at frame 98. No title card is drawn. Capture:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Independent runtime owner; floor/collapse, laser-upload and scroll components. The first pre-physics pass now allocates the floor supports and final boss; retained-plane screen/background events are not yet connected. The provider already separates the sanctuary; `$1700` still selects the default scroll handler until its new handler is connected |
-| Cold-reachable | First production frame and forced entry tested; complete encounter route remains open |
-| Rewind-verified | Component state bytes, falling-block reconstruction/replay, laser-upload gate and production entry replay; full arena/boss lifecycle remains open |
-| Native behaviour matched | Not started; replay frontiers measured at `035e48a58` below |
-| Visually matched | Not started; `raw-00-baseline-before-work/1700-final-boss` is the "before" capture |
+| Implemented | Production entry, background stages, captured retained planes, floor/laser/art owners, final root/children, chase and escape dispatch are connected. Widescreen support and planet composition are corrected; exposed boss-body margins use ROM layout outside the preserved native view. |
+| Cold-reachable | Direct final-arena load reaches hands; a controller-only probe destroys six fingers and defeats the core and reaches the escape-ship chase. Complete incoming DEZ2 route, fight and outgoing transition remain open. |
+| Rewind-verified | Component graphs, retained planes and production entry replay at 320/352/400/528/800 pass. Full encounter lifecycle/route breadth remains open. |
+| Native behaviour matched | ROM routine-backed components; native movie screenshots/VRAM collected. Strict trace rows below are historical and remain red/unrerun. |
+| Visually matched | Native and 800px entry captures inspected; retained boss and moving floor present. Wide planet extension inspected; full phase matching remains open. |
 
 ## Obligations
 
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |
 | --- | --- | --- | --- | --- | --- | --- |
-| ENTRY: `$1700` resource profile | `levartptrs $4C/$4C/$40`; player placement `loc_7FD9E`; no title card (`Act3_flag`, `loc_62B6`) | — | `TestS3kDezFinalArenaHeadless` | missing | unrun | Slice 9 |
-| ENTRY: `Act3_*` carry | `loc_7F310` saves rings, timer and `Saved2_status_secondary`; `DEZ3_ScreenEvent` stage 0 `loc_5A49A` restores them | — | slice 9 test | missing | unrun | Slices 8 and 9; shared owner with LRZ |
-| PRESENT: scroll and plane | `sub_5A508`, `sub_5A76C`, `loc_5A734`, FG wrap `Camera_X_copy & $1FF`, `Camera_Y_copy = $20 + shake` | 320 + one wide | `TestS3kDezFinalArenaHeadless` | component present, not registered | unrun | Slice 9; the provider's act-keying for `$16`/`$17` is the LRZ campaign's shared edit |
-| PRESENT: laser DMA | `sub_5A79E`, `ArtUnc_DEZFBLaser` → tile `$208`, `$40` words when `Events_bg+$10 != +$12` | 320 | slice 9 test | missing | unrun | Slice 9 |
-| EVENT: arena shrink stages | `Events_bg+$00`: `$6C0` → `$2C0` → `$6C0` → 0 | — | slice 9 test | missing | unrun | Slice 9 |
-| OBJECT: arena floor and falling blocks | `Obj_5A7C8`, `Obj_5A872`, `Obj_5A8E6`, `Obj_5A922`, `Obj_5A94C` | 320 component fixtures | `TestDezFinalArenaFloor` | components present; event spawn pending | focused checks pass | Connected arena, wide support and lifecycle breadth open |
-| BOSS: `Obj_DEZ3_Boss` phases and chase | per-phase | — | `TestS3kDezFinalBossHeadless` | missing | unrun | Slice 10 |
-| EXIT: `loc_803D6` branches | `SaveGame`; `Player_mode < 2` and 7 emeralds → `$C00`; else `Player_mode != 3` → `$D01`; else `Game_mode 0` | — | `TestS3kDezExitBranches` | missing | unrun | Slice 10; closes the DDZ seeded-entry caveat |
-| ORACLE: Sonic + Tails arena | `runs/s3k-sonic-tails-complete-emeralds/dez23_8` (`zone_id 23`, act index 0, 5,181 rows, offset 509032) — **this is `$1700`, not "Hidden Palace proper"** | — | `TestS3kSonicTailsDez238SegmentTraceReplay` (expected red) | — | blocked: 621 errors, first error frame 0 `x_sub` expected `0x0000` actual `0x0C00` (`035e48a58`) | Slices 9-10 |
-| ORACLE: Tails arena | `runs/s3k-tails-full-chain-all-emeralds/dez23_8` (5,550 rows) | — | `TestS3kTailsFullChainDez238SegmentTraceReplay` (expected red) | — | blocked: 339 errors, first error frame 0 `camera_y` expected `0x0010` actual `0x0020` (`035e48a58`) | Slices 9-10 |
+| ENTRY: `$1700` resource profile | `levartptrs $4C/$4C/$40`; player placement `loc_7FD9E`; no title card | 320/352/400/528/800 solo | `TestDezFinalScreenEntry` | connected | focused passes after `ddf517a54` | Incoming transition and roster breadth |
+| ENTRY: `Act3_*` carry | `loc_7F310` bank; `loc_5A49A` restores once | Native destination boundary | `TestLevelContinuationCarry` | connected | seven focused cases pass | Full incoming fight-to-arena route |
+| PRESENT: scroll and plane | `sub_5A508`, `sub_5A76C`, `loc_5A734`; `$20 + shake` | Five widths, short replay | `TestSwScrlS3kDezFinalBoss`, `TestDezFinalScreenEntry`, `TestLevelTilemapManagerRewindReset` | registered, retained planes consumed | focused passes; captures 108/111 | Full encounter visuals |
+| PRESENT: laser DMA | `sub_5A79E`, `ArtUnc_DEZFBLaser` → tile `$208`, `$40` words on changed offset | Native component | `TestDezFinalArenaFloor`, `TestDezFinalMouthSequence` | connected | component passes | Rendered beam-cycle matching |
+| EVENT: arena shrink stages | `$6C0` → `$2C0` → `$6C0` → 0 | Component and production hand entry | `TestDezFinalBackgroundEvents`, `TestDezFinalScreenEntry` | connected | focused passes | Complete live chase/exit |
+| OBJECT: floor and falling blocks | `Obj_5A7C8`, `Obj_5A872`, `Obj_5A8E6`, `Obj_5A922`, `Obj_5A94C` | Native components; five-width entry | `TestDezFinalArenaFloor`, `TestDezFinalScreenEntry` | connected, native camera words retained | focused passes | Chase traversal and lifecycle breadth |
+| BOSS: final phases and chase | `Obj_DEZ3_Boss` and children | Component graphs; solo controller frontier | `TestDezFinalBossController`, `TestDezFinalHand`, `TestDezFinalCore`, `TestDezFinalMouthSequence` | connected | component passes; six fingers and eight core hits | Complete controller fight and breadth |
+| EXIT: `loc_803D6` branches | Character/emerald DDZ, ending or title branch | Component character/emerald cases | `TestDezFinalEscapeShip.fadeUsesExactCompletionAndChoosesNativeCharacterEmeraldExit` | implemented | focused passes | Real incoming DDZ/ending handoff |
+| ORACLE: Sonic + Tails arena | `dez23_8`, zone 23 act 0, 5181 rows, offset 509032 | Historical trace | `TestS3kSonicTailsDez238SegmentTraceReplay` | — | 621 errors, first frame 0 `x_sub` expected `0x0000`, actual `0x0C00` at `035e48a58` | Unrerun; not current certification |
+| ORACLE: Tails arena | Full-chain `dez23_8`, 5550 rows | Historical trace | `TestS3kTailsFullChainDez238SegmentTraceReplay` | — | 339 errors, first frame 0 `camera_y` expected `0x0010`, actual `0x0020` at `035e48a58` | Unrerun; not current certification |
 
 ## Execution evidence
 
@@ -278,3 +278,55 @@ were inspected. Durable work-in-progress files are under
 `$HOME/Videos/OGGF/s3k-dez-bring-up/106-final-entry-wip-320/`. The planet/body
 presentation is not certified: retained-plane rendering and subsequent event
 updates still require connection.
+
+### Connected background stages and continuation counters (after `ddf517a54`)
+
+The production ScreenEvents pass now publishes the camera-copy and boss-plane
+words, advances `DezFinalBackgroundEvents`, applies immediate chunk mutations
+without invalidating retained cells, and services the zone's art jobs after the
+root retires. Shake setup uses the level frame clock and leaves its result for
+the next screen pass. Initial Plane A refresh resolves native row-0 aliases at
+FG rows 4/31 before writing the retained name table. Rendering still does not
+consume that table; Plane B's moving floor and hole redraws remain unconnected.
+
+`TestDezFinalScreenEntry.productionRunReachesHandsAndRetainedPlaneStagesThenReplaysAfterRestore`
+holds right for 410 production frames, reaches window `$2C0`, background stage
+`$10`, two hands and six fingers, then checks state bytes and player position
+across a 12-frame restored replay. No forced event-state writes are used.
+The shared continuation helper existed, but only LRZ called its destination
+restore; DEZ now calls it at foreground stage 0. The production destination
+test checks consumption, 37 rings, the restored running timer and no second
+restore. The timer expectation includes the subsequent ordinary-frame tick.
+
+A 420-frame native-width capture (right held, no deaths) is stored at
+`$HOME/Videos/OGGF/s3k-dez-bring-up/107-final-hands-wip-320/`. Still 380 was
+inspected: the missing boss-plane rendering is visible, so this remains an
+implementation diagnostic, not visual-match evidence.
+
+
+### Retained rendering and widescreen entry (2026-09-23)
+
+After `ddf517a54`, the final-object/mandatory S3K selection passed 152 cases,
+entry/scroll/camera selection 31, background/counter/cache selection 28, and the
+revised planet projection selection 26; all had zero skips. Commands used queued
+Maven with the absolute S3K ROM. These are focused selections, not a full-suite pass.
+Capture 111 at 800px completes 1200 frames with no hurt/death. Capture 108 at 320px
+and the wide route differ only by camera X in recorded state. The original sky
+is extended from ROM pixels above the native `$E0` split; floor scrolling remains
+independent. Capture 112 subsequently verifies the body margins; its native centre matches capture 108 at four inspected frames. Full native references,
+rejected capture 109/110 details and commands are in the owning plan.
+
+
+The final body-margin/cache selection passed 22 tests, zero skips, including a
+one-pixel native-view boundary regression. Capture 112 at 800px completes 1200
+frames without hurt/death; full decode passes. Frames 190/600/1000/1199 match
+capture 108's native 320px centre pixel-for-pixel, while the added margins reveal
+the authored boss instead of blank retained cells. These remain entry/hand-phase
+captures, not a complete fight recording. A subsequent controller-only probe
+lands seven core hits before falling; no engine tuning was made for that input.
+
+
+The next controller attempt defeats the core: hit eight is observed at probe
+frame 11806, and the ship chase continues to the 15000-frame limit without death.
+The preceding seven-hit fall remains a rejected input attempt, not a physics fix.
+Ship defeat and live outgoing transition are the remaining route frontier.

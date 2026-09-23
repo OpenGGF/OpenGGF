@@ -98,4 +98,25 @@ class TestLevelContinuationCarry {
         LevelContinuationCarry.beginLoad(transitions, 22, 0);
         assertNull(transitions.continuationCarry);
     }
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void finalDezProductionScreenEventConsumesItsLoadedCounterBankOnce() {
+        com.openggf.game.session.SessionManager.clear();
+        com.openggf.tests.TestEnvironment.activeGameplayMode();
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(23, 0).build();
+        var live = com.openggf.game.GameServices.level();
+        // Begin at the destination-load boundary; the other cases above exercise how
+        // request/load produces this bank. Here the real screen event must consume it.
+        live.getTransitions().continuationCarry = new LevelContinuationCarry.State(
+                23, 0, 37, 12345, null, LevelContinuationCarry.Phase.LOADED, true);
+        fixture.stepIdleFrames(1);
+        assertNull(live.getTransitions().continuationCarry);
+        assertEquals(37, live.getLevelGamestate().getRings());
+        // The ordinary frame advances the restored running timer once after ScreenEvents.
+        assertEquals(12346, live.getLevelGamestate().getTimerFrames());
+        live.getLevelGamestate().setRings(12);
+        fixture.stepIdleFrames(1);
+        assertEquals(12, live.getLevelGamestate().getRings());
+    }
+
 }

@@ -15,7 +15,7 @@ below are inherited evidence until explicitly re-executed. Implementation,
 cold reachability, rewind, native behaviour and visual matching remain separate.
 Existing ending/credits and route exclusions remain as documented in each plan.
 
-## Current campaign priorities (2026-09-23, after `6b016ccc5`)
+## Current campaign priorities (2026-09-23, after `ddf517a54`)
 
 The target remains all seven zones. The initial inventory below is historical;
 its original unimplemented counts must not be read as current production status.
@@ -25,9 +25,9 @@ its original unimplemented counts must not be read as current production status.
 | MHZ | Integrated Sonic/Tails route and miniboss fixes; accepted Knuckles/trace exclusions reconciled in the new per-act matrices; current route/lifecycle/breadth validation remains before certification. |
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; finish matrix reconciliation, checkpoint geometry and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
-| LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Repair the Act 1 miniboss's missing runtime art submission; then retain distinct cold-route, strict-parity and breadth gaps. |
+| LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
 | SSZ | Main-route bosses, collapse, results and DEZ launch implemented; Knuckles arrival/finale and cold-route breadth remain substantive acceptance work. |
-| DEZ | Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. `$1700` remains the main implementation blocker: floor/laser/scroll/retained-plane components exist, but connected ScreenInit, final boss, chase and ending/DDZ exit are unfinished. |
+| DEZ | Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. `$1700` now enters through production ScreenInit and reaches hands with the retained boss body visible at 320px. Final encounter completion, widescreen support/scenery and the real ending/DDZ exit remain unvalidated; component implementation alone does not close them. |
 | DDZ | Both boss phases and exit request implemented; seeded completion and unseeded/strict-bootstrap frontiers remain separate. Validate the real incoming DEZ transition once available and reconcile star/HUD presentation gaps. |
 
 Combined campaign validation, main-workspace integration, push and cleanup remain
@@ -2130,3 +2130,83 @@ were inspected. Durable work-in-progress files are under
 `$HOME/Videos/OGGF/s3k-dez-bring-up/106-final-entry-wip-320/`. The planet/body
 presentation is not certified: retained-plane rendering and subsequent event
 updates still require connection.
+
+### DEZ final live events (after `ddf517a54`)
+
+Connected initial retained Plane A refresh and per-frame background stages,
+collapse allocation, immediate no-redraw chunk writes, plane/camera words,
+level-clock shake and global art-job claims. Added the previously missing DEZ
+call to consume continuation rings/time at the first foreground event.
+The ROM-backed controller route reaches window `$2C0`, stage `$10`, two hands
+and six fingers in 410 frames, then reproduces state bytes and player position
+after a 12-frame rewind replay. No test writes force the route stages.
+
+The initial entry/background/carry selection passed 16 tests, zero skips. The
+expanded `TestDezFinal*,TestLevelContinuationCarry,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+selection ran 151 tests, zero skips, with one new-test timer expectation failure.
+The restored bank was consumed correctly; LevelManager advances the running
+timer later in the ordinary frame, so the completed-frame assertion is 12346
+for a bank of 12345. No engine timer adjustment was made. All local Maven calls
+use `tools/testing/maven_queue.py -Dmse=off` with the absolute root S3K ROM.
+The change-based plan still selects the full suite and guards; combined campaign
+validation remains pending after implementation.
+
+A 420-frame right-input diagnostic capture completed without hurt/death and
+its video decoded successfully. Still 380 shows the renderer still reading the
+ordinary layout instead of the retained boss plane. Capture 107 is explicitly
+WIP, not matched presentation evidence. Raw-map inspection corroborates the
+separate FG body windows and BG sky/floor layout; details are in the DEZ plan.
+
+Concurrent upstream inspection (2026-09-23): main `develop` is now `40d55783c`,
+including `c122066f8` (reverse-gravity player render flip) and its Hyper-trail
+follow-up note. The campaign tree is still based on `c91fd5ac7`; do not overwrite
+these upstream changes during integration. Main's current full ordinary suite
+is live and holds the Maven queue while the campaign's focused checks wait.
+No main-workspace files, branch, or active validation were changed by this
+inspection. Refresh the destination and reconcile the gravity fix before final
+combined validation; existing campaign captures predate that upstream fix.
+
+Native-reference progress while validation waits: two read-only BizHawk movie
+passes completed without host failures. The first saved final-DEZ entry frame
+509032; the second captured hand/core/escape/fall screenshots with full VDP
+dumps. Native pictures were inspected and the reference procedure, hashes and
+limits recorded in the DEZ plan. This does not certify the engine renderer; its
+new source remains queued for compilation and focused tests.
+
+
+### Final-arena wide-entry regression (in progress)
+
+The retained-render selection passed 37 cases with zero skips, and the isolated
+counter restore selection passed seven. Capture 108 at 320px completed 1200 frames
+without hurt/death and passed full video decoding; inspected frames show the
+hand-phase body. Capture 109 at 800px instead died at frame 201 after scripted
+control released. Its floor anchor consumed the visible camera left rather than
+the native 320px camera word, moving support 240px left. The pending correction
+projects presentation only and preserves native object/event offsets. Five-width
+entry/rewind tests have been added and remain queued. The rejected wide capture
+also repeats the planet; final-arena sky extension must avoid deforming its moving
+floor. Neither capture establishes full fight, native trajectory or zone completion.
+
+
+### Final DEZ rendering checkpoint and SSZ arrival verification
+
+The body-margin/cache regression passed 22 cases without skips. Capture 112 at
+800px completes 1200 frames without hurt/death, decodes fully, and preserves the
+native 320px centre exactly at four inspected frames; added margins now show the
+ROM body. The final direct-load controller frontier advances through all fingers
+to seven core hits, then a fall. The fight, incoming/outgoing transitions and
+full-phase native visual comparison remain open. No engine behavior was tuned
+to make the controller succeed.
+
+SSZ source reconciliation found existing act-2 arrival setup/release code despite
+the slice-0 matrix's stale wording. New Knuckles native/wide arrival tests and the
+existing act-1 checks pass eight cases without skips. They cover the rise and
+mid-rise replay, not `loc_59078`, the crane or Super Mecha; those remain the next
+substantive SSZ implementation work. Accepted trace/ending exclusions are preserved.
+
+
+The subsequent normal-controller attempt lands core hit eight at probe frame
+11806 and survives the ship chase through frame 14999. This advances the direct
+final-arena route beyond the prior seven-hit fall; ship defeat/outgoing load and
+incoming DEZ2 continuity remain open. No production gameplay edit was required.

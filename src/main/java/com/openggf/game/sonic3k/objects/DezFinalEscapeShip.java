@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.runtime.DezFinalCamera;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.GameOverExit;
@@ -32,7 +34,7 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
     private DezFinalEscapeShip(ObjectSpawn spawn) { super(spawn,"DEZFinalEscapeShip"); codePointer=0x80160; }
     @Override public DezFinalEscapeShip recreateForRewind(RewindRecreateContext context) { return new DezFinalEscapeShip(context.spawn()); }
     private DezFinalBossZoneRuntimeState state() { return (DezFinalBossZoneRuntimeState)services().zoneRuntimeState(); }
-    private int cameraX() { return services().camera().getX()&0xFFFF; }
+    private int cameraX() { return DezFinalCamera.nativeX(services().camera()); }
     @Override public void update(int clock,PlayableEntity player) {
         visible=touchPublished=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
@@ -73,7 +75,7 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
             case 0 -> {
                 routine=2; frame=5; priority=4; halfWidth=halfHeight=0x20; highPriority=false; flipX=true;
                 collision=0xF; collisionProperty=8;
-                writeX((services().camera().getXCopy()&0xFFFF)+0x60);
+                writeX(DezFinalCamera.nativeCopyX(services().camera())+0x60);
                 writeY((services().camera().getYCopy()&0xFFFF)+0x140);
                 spawnFreeChild(DezFinalArenaSignal::quake);
                 // Independent CreateChild1 tables; a failed head never suppresses the crane table.
@@ -109,7 +111,7 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
         if(Integer.compareUnsigned(next,0x40000)<=0) state.escapeCameraSpeed(next);
         int fixed=(cameraX()<<16)|state.escapeCameraFraction(); fixed+=next;
         state.escapeCameraFraction(fixed); short x=(short)(fixed>>>16);
-        var camera=services().camera(); camera.setXAfterRenderCopy(x); camera.setMinX(x); camera.setMaxX(x);
+        var camera=services().camera(); camera.setXAfterRenderCopy(DezFinalCamera.visibleX(camera, x & 0xFFFF)); camera.setMinX(x); camera.setMaxX(x);
     }
     private void swing() {
         int velocity=(short)yVelocity;

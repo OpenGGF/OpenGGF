@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.runtime.DezFinalCamera;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -39,7 +41,7 @@ public final class DezFinalArenaBreakup extends AbstractObjectInstance implement
         }
         if (state.windowBase() == 0) {
             // loc_5A95A has no timer gate: one column per pass once the camera catches it.
-            if (((services().camera().getXCopy() + 0x9C) & 0xFFFF) >= nextX) publish(state);
+            if (((DezFinalCamera.nativeCopyX(services().camera()) + 0x9C) & 0xFFFF) >= nextX) publish(state);
         } else if (state.bossY() < 0x110) {
             timer = (short) (timer - 1);
             if (timer < 0 && ((state.bossX() + 0x90) & 0xFFFF) >= nextX) {

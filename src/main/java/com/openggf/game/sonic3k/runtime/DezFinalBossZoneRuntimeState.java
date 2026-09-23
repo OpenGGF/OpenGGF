@@ -14,6 +14,8 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
 
     private final PlayerCharacter playerCharacter;
     private final DezFinalPlaneState plane = new DezFinalPlaneState();
+    private final DezFinalPlaneState arenaPlane = new DezFinalPlaneState();
+    public DezFinalPlaneState arenaPlane() { return arenaPlane; }
     private final S3kScreenShake screenShake = new S3kScreenShake();
     /** _unkFA84 and Camera_X_pos low word, retained across the escape phases. */
     private int escapeCameraSpeed;
@@ -27,6 +29,11 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     public void markScreenInitApplied() { screenInitApplied = true; }
 
     private short windowBase = 0x6C0;
+    private short displayedWindowBase = 0x6C0;
+    public int displayedWindowBase() { return displayedWindowBase & 0xFFFF; }
+    public void publishDisplayedWindow() {
+        if (retainedPlaneX == 0) displayedWindowBase = windowBase;
+    }
     private short bossX = 0x3C0;
     private short bossY = 0xF8;
     private short redrawRequest;
@@ -100,15 +107,16 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     @Override public byte[] captureBytes() {
-        var buffer = ByteBuffer.allocate(1 + 18 * Short.BYTES + 2 * Integer.BYTES + art.snapshotBytes() + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + DezFinalPlaneState.SNAPSHOT_BYTES);
+        var buffer = ByteBuffer.allocate(1 + 19 * Short.BYTES + 2 * Integer.BYTES + art.snapshotBytes() + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + 2 * DezFinalPlaneState.SNAPSHOT_BYTES);
         buffer.put((byte) (screenInitApplied ? 1 : 0));
         buffer.putInt(escapeCameraSpeed).putInt(escapeCameraFraction);
         art.captureTo(buffer);
         emeraldPalette.captureTo(buffer);
         screenShake.captureTo(buffer);
         plane.capture(buffer);
+        arenaPlane.capture(buffer);
         return buffer
-                .putShort(windowBase).putShort(bossX).putShort(bossY)
+                .putShort(windowBase).putShort(displayedWindowBase).putShort(bossX).putShort(bossY)
                 .putShort(redrawRequest).putShort(breakRequest).putShort(mouthPhase).putShort(mouthStatus)
                 .putShort(retainedPlaneX).putShort(laserOffset).putShort(uploadedLaserOffset)
                 .putShort(breakFrontier).putShort(foregroundRoutine).putShort(backgroundRoutine)
@@ -123,7 +131,8 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
         emeraldPalette.restoreFrom(buffer);
         screenShake.restoreFrom(buffer);
         plane.restore(buffer);
-        windowBase = buffer.getShort(); bossX = buffer.getShort(); bossY = buffer.getShort();
+        arenaPlane.restore(buffer);
+        windowBase = buffer.getShort(); displayedWindowBase = buffer.getShort(); bossX = buffer.getShort(); bossY = buffer.getShort();
         redrawRequest = buffer.getShort(); breakRequest = buffer.getShort(); mouthPhase = buffer.getShort(); mouthStatus = buffer.getShort();
         retainedPlaneX = buffer.getShort(); laserOffset = buffer.getShort(); uploadedLaserOffset = buffer.getShort();
         breakFrontier = buffer.getShort(); foregroundRoutine = buffer.getShort(); backgroundRoutine = buffer.getShort();

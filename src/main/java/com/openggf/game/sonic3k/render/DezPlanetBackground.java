@@ -14,12 +14,17 @@ import com.openggf.util.ShortIndexedView;
 public final class DezPlanetBackground {
     private Level sourceLevel;
     private int sourceWidth;
+    private int sourceEndY;
     private Columns columns;
 
     public Columns columns(LevelManager manager, int width) {
+        return columns(manager, width, Integer.MAX_VALUE);
+    }
+
+    public Columns columns(LevelManager manager, int width, int endY) {
         Level level = manager.getCurrentLevel();
         if (level == null || width <= 320) return null;
-        if (sourceLevel == level && sourceWidth == width) return columns;
+        if (sourceLevel == level && sourceWidth == width && sourceEndY == endY) return columns;
         int[] horizon = new int[320];
         int minimum = 224, first = 0, last = 0;
         for (int x = 0; x < 320; x++) {
@@ -60,9 +65,10 @@ public final class DezPlanetBackground {
             }
             xs[x] = (short) sourceX;
         }
-        columns = new Columns(view(xs), view(ys));
+        columns = new Columns(view(xs), view(ys), endY);
         sourceLevel = level;
         sourceWidth = width;
+        sourceEndY = endY;
         return columns;
     }
 

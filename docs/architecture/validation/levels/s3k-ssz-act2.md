@@ -5,7 +5,7 @@ ROM `Current_zone_and_act = $A01`, SKL object set.
 Character route: Knuckles only (`LevelSelect_CheckSonicTails` denies Sonic and Tails except with
 `Debug_cheat_flag != 0`; no Sonic/Tails art or route exists for act 2).
 Owning plan: [SSZ bring-up](../../plans/2026-09-17-ssz-bring-up.md).
-Status: in progress (slice 0 only). Nothing below certifies the act.
+Status: in progress. Shared arrival setup exists; the act-2 controller, presentation and final fight remain incomplete. Nothing below certifies the act.
 
 Incoming: HPZ Knuckles teleporter pad → `$A01` (`HpzTeleporterRouteHelperObjectInstance`), level
 select, save progression. Outgoing: the cold stop line is `loc_7BCFC`, 120 frames after the defeat
@@ -28,7 +28,7 @@ Five claims are tracked separately per row: **implemented**, **cold-reachable**,
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | LOAD: identity, resources, music, title card | `Sonic3kZoneRegistry` zone 10 act 1; `Pal_SSZ2` `$34` | 320 | — | pre-existing | yes (cold load) | — | — | baseline capture `raw-00-ssz2-before` | Resource identity not yet asserted by a test |
 | CENSUS: placed objects and rings | `SSZ2_Sprites $1F95F2` (5 records: `$00:$00` ×3, `$79:$00`, `$B2:$00`), `SSZ2_Rings $1F98E8` (the `(0,0)` record only) | ROM decode | `TestS3kSszPlacementCensus` | yes | n/a | n/a | yes (decode pinned to the ROM) | n/a | Concrete `$B2` class is slice 9 |
-| ARRIVAL: screen init and controller | `SSZ2_ScreenInit` (`Obj_57C1E` X `$A0`, `$2D = $44`, camera `(0,$649)`, `Scroll_lock`, `loc_59078` with `$30 = 1`) | 320 + one wide | slice 9 | open | open | open | open | open | Slice 9 |
+| ARRIVAL: screen init and controller | `SSZ2_ScreenInit` (`Obj_57C1E` X `$A0`, `$2D = $44`, camera `(0,$649)`, `Scroll_lock`, `loc_59078` with `$30 = 1`) | 320 + one wide | `TestS3kSszKnucklesArrivalHeadless` | partial: shared ScreenInit and arrival object | direct act load through release | mid-rise replay passes | source-backed rise/release assertions | unverified | Add the missing loc_59078 owner and validate Knuckles release |
 | CAMERA: act-2 controller `loc_59078` | `loc_59078` routines 0/4/8 | — | slice 9 | open | open | open | open | open | Slice 9 |
 | BG: parallax and column waves | `SSZ2_*DeformArray`, `word_58C80` (FG per-line HScroll), `loc_5904A` (20-column VScroll waves) | 320 + one wide | slice 9 | open | open | open | open | open | Slice 9; widescreen column waves are the named risk |
 | CUTSCENE: crane `$B2` | `Obj_KnuxFinalBossCrane`, `loc_7CB64` (`mus_EndBoss` then `mus_FinalBoss`), `loc_7D11C` | — | slice 9 | open | open | open | open | open | Slice 9 |
@@ -52,3 +52,25 @@ after a deliberate break confirmed the comparison runs. Baseline capture
 camera `(0,0)`); frame 200 inspected — the act renders its static cloud layout with no arrival
 controller, camera controller or crane. The ROM's `$80,$6AE` start in the native fixture is written
 by `Obj_57C1E` (`Camera_Y + $65` with camera Y `$649`), not by the start-location table.
+
+
+### Campaign source reconciliation (2026-09-23, `ddf517a54` development tree)
+
+The slice-0 baseline above is historical. `Sonic3kSSZEvents.applyScreenInit`
+already selects act-2 arrival X `$A0`, rise counter `$44` and camera `(0,$649)`;
+`SszArrivalControllerObjectInstance` has the act-2 release priority branch and
+omits the act-1 cutscene spawner. `TestS3kSszArrivalHeadless` covers act 1 only,
+so this source presence is not act-2 route/rewind evidence. The event update
+currently advances act 1 only, and `SwScrlSsz` explicitly leaves act-2 background
+init/events to this slice. No concrete Knuckles crane or Super Mecha final-phase
+owner was found in the production S3K object inventory. Continue from these
+existing arrival pieces rather than rewriting them from the old baseline.
+The accepted Knuckles-trace and ending/credits exclusions above still apply.
+
+
+The campaign now adds `TestS3kSszKnucklesArrivalHeadless` at 320/800: actual
+Knuckles roster, `$649/$6AE` initial camera/player Y, `$44` eight-pixel rise
+passes with the last camera decrement omitted, `$A0` pad alignment, the high
+priority/swing release branch, and a mid-rise capture/restore plus forward replay.
+The queued selection with the existing act-1 arrival regression passed eight tests with zero failures/errors/skips on 2026-09-23.
+This deliberately does not certify `loc_59078`, the crane, final fight or ending.

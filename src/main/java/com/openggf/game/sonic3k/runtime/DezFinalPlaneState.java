@@ -81,6 +81,18 @@ public final class DezFinalPlaneState {
         }
     }
 
+    /** Draw_BGNoVert's moving band, using Draw_TileColumn's byte direction and two-column cap. */
+    public void drawHorizontalBand(int x, int y, int blocks, IntBinaryOperator source) {
+        int nextX = x & 0xFFF0;
+        int dx = (short) (roundedX - nextX);
+        int column = nextX;
+        if ((byte) dx < 0) { column = (roundedX + 0x150) & 0xFFFF; dx = -dx; }
+        roundedX = nextX;
+        if (dx == 0) return;
+        writeColumn(column, y, blocks, source);
+        if ((dx & 0x30) != 0x10) writeColumn(column + 16, y, blocks, source);
+    }
+
     /** loc_5A5E0/5A61A/5A6FE, unlike DEZ2's initial $E0 delayed position. */
     public void beginRedraw() {
         delayedPosition = 0xF0;

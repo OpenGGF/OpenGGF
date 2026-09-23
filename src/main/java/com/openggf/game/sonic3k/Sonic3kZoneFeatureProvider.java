@@ -57,7 +57,7 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
     @Override public java.util.OptionalInt lockedNativeHorizontalCamera() {
         if (!GameServices.hasRuntime() || getFeatureZoneId() != Sonic3kZoneIds.ZONE_DEZ)
             return java.util.OptionalInt.empty();
@@ -68,6 +68,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Nat
 
     @Override public boolean centerNativeArenaCamera() {
         if (!GameServices.hasRuntime()) return false;
+        if (GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState) return true;
         int zone = getFeatureZoneId();
         if (zone == Sonic3kZoneIds.ZONE_LRZ) {
             return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry())
@@ -101,6 +103,18 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Nat
     private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
     private final AdvancedRenderMode fbzBossPlaneRenderMode = new FbzBossPlaneRenderMode();
     private final AdvancedRenderMode ddzForegroundPlaneRenderMode = new DdzForegroundPlaneRenderMode();
+    private final AdvancedRenderMode dezFinalForegroundMode = new AdvancedRenderMode() {
+        @Override public String id() { return "s3k-dez-final-foreground-plane"; }
+        @Override public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            if (context.zoneIndex() == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && context.actIndex() == 0
+                    && GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                    com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {
+                // loc_5A734 writes the boss Plane A HScroll and absolute VScroll.
+                // Sprite camera words remain independent, including when Plane A Y is zero.
+                builder.enablePerLineForegroundScroll().setForegroundVScrollOverride((short) state.planeY());
+            }
+        }
+    };
     private final AdvancedRenderMode sozForegroundHeatHazeMode = new AdvancedRenderMode() {
         @Override
         public String id() {
@@ -215,7 +229,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Nat
             return false;
         }
         int zoneId = levelManager.getFeatureZoneId();
-        return zoneId == Sonic3kZoneIds.ZONE_MGZ
+        return GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState
+                || zoneId == Sonic3kZoneIds.ZONE_MGZ
                 || zoneId == Sonic3kZoneIds.ZONE_FBZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
                 || isHcz2BackgroundPlaneWindowActive(zoneId)
@@ -256,11 +271,63 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Nat
     @Override public com.openggf.game.internal.BackgroundColumnRemap.Columns backgroundColumns() {
         if (!GameServices.hasRuntime()) return null;
         var manager = GameServices.level();
+        if (GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {
+            // sub_5A508 keeps the planet fixed above source Y=$E0 and scrolls
+            // the floor below it. The ROM's 320px crop has no complete planet
+            // sides: reuse its surface pixels along the inferred curve only
+            // above that split. Floor holes/scroll remain the retained ROM plane.
+            // The tile pass starts at the aligned scroll Y; the column-remap
+            // cutoff is measured in that FBO, not in the original name table.
+            int tileHeight = com.openggf.level.LevelConstants.CHUNK_HEIGHT;
+            int originY = Math.floorDiv(state.screenY(), tileHeight) * tileHeight;
+            return dezPlanetBackground.columns(manager, GameServices.camera().getWidth(), 0xE0 - originY);
+        }
         return manager.getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ && manager.getFeatureActId() == 1
                 ? dezPlanetBackground.columns(manager, GameServices.camera().getWidth()) : null;
     }
 
+    @Override public long foregroundDescriptorRevision() {
+        if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state
+                && state.screenInitApplied()) {
+            int nativeLeft = state.retainedPlaneX() != 0 ? state.retainedPlaneX() : state.planeX();
+            // Extra columns switch from ROM layout to retained cells when they
+            // enter the native view, even before the next 16px drawing step.
+            int tileBoundary = (nativeLeft >>> 3) * 2 + ((nativeLeft & 7) == 0 ? 0 : 1);
+            return ((long) state.plane().revision() << 32)
+                    | ((long) state.displayedWindowBase() << 16) | tileBoundary;
+        }
+        return 0;
+    }
+
+    @Override public int foregroundDescriptorAt(int sourceX, int sourceY) {
+        if (!(GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)) return 0;
+        // ROM Plane A is a 512px ring; native draw updates hide its stale cells offscreen.
+        // Wide views expose those cells as repeated bodies. Project just the original
+        // logical body window, retaining its old source bank until delayed refill ends.
+        int firstX = state.displayedWindowBase() & ~0x1FF;
+        if (sourceX < firstX || sourceX >= firstX + 512) return 0;
+        int nativeLeft = state.retainedPlaneX() != 0 ? state.retainedPlaneX() : state.planeX();
+        if (GameServices.camera().getWidth() > 320
+                && (sourceX + 8 <= nativeLeft || sourceX >= nativeLeft + 320)) {
+            // DrawBGAsYouMove only refreshes the ROM's 320px view plus its
+            // leading column. Newly exposed widescreen margins otherwise show
+            // stale/blank retained cells, cutting the body off at that view.
+            // Read the authored body in those margins only; overlapping native
+            // tiles still use the exact retained plane, including staged redraws.
+            int y = sourceY & 0xFFF;
+            if ((y >>> 7) == 4 || (y >>> 7) == 31) y &= 0x7F;
+            return GameServices.level().getForegroundTileDescriptorAtWorld(sourceX, y);
+        }
+        return state.plane().descriptor(sourceX, sourceY);
+    }
+
     @Override public long backgroundDescriptorRevision() {
+        if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)
+            return state.arenaPlane().revision();
         if (GameServices.hasRuntime() && GameServices.level().getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ
                 && GameServices.level().getFeatureActId() == 1) {
             return S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry())
@@ -274,6 +341,9 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Nat
     }
 
     @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
+        if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)
+            return state.arenaPlane().descriptor(sourceX, sourceY);
         if (GameServices.level().getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ
                 && GameServices.level().getFeatureActId() == 1) {
             var state = S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry()).orElseThrow();
@@ -844,6 +914,9 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Nat
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_DDZ) {
             controller.register(ddzForegroundPlaneRenderMode);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 0) {
+            controller.register(dezFinalForegroundMode);
         }
     }
 

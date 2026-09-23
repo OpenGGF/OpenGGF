@@ -64,7 +64,7 @@ public class BackgroundRenderer {
     private VScrollBuffer remapYBuffer;
     private com.openggf.game.internal.BackgroundColumnRemap.Columns uploadedColumns;
     private com.openggf.game.internal.BackgroundColumnRemap.Columns preparedColumns;
-    private int remapEnabledLocation, remapXLocation, remapYLocation;
+    private int remapEnabledLocation, remapXLocation, remapYLocation, remapEndYLocation;
     private ParallaxShaderProgram parallaxShader;
     private final QuadRenderer quadRenderer = new QuadRenderer();
     private final GraphicsManager graphicsManager;
@@ -113,6 +113,7 @@ public class BackgroundRenderer {
         remapEnabledLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "UseColumnRemap");
         remapXLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapX");
         remapYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapY");
+        remapEndYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapEndY");
         quadRenderer.init();
 
         // Create FBO for background tile rendering.
@@ -343,6 +344,8 @@ public class BackgroundRenderer {
         org.lwjgl.opengl.GL20.glUniform1i(remapEnabledLocation, columns != null ? 1 : 0);
         org.lwjgl.opengl.GL20.glUniform1i(remapXLocation, 4);
         org.lwjgl.opengl.GL20.glUniform1i(remapYLocation, 5);
+        org.lwjgl.opengl.GL20.glUniform1f(remapEndYLocation,
+                columns != null ? columns.sourceYEndExclusive() : 0);
         parallaxShader.cacheUniformLocations();
 
         // Set texture units
