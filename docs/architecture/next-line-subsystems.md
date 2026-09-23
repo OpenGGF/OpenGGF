@@ -56,7 +56,11 @@ that retained ownership. Room display names and selected characters are bounded 
 32 UTF-8 bytes respectively; admission and character changes must keep the serialized
 room roster within the 64 KiB client control-frame limit, including a full 256-player
 relay roster. Broker room descriptor fields
-are bounded before they enter browser results.
+are bounded before they enter browser results. Client inbound control/ghost event
+queues hold at most 512 events and close an overflowing connection; remote ghost
+playback retains at most 128 samples per admitted roster member. Decoding rejects
+missing required creator fields and invalid nested room/round/standings state before
+the game loop consumes it.
 
 Operator commands:
 

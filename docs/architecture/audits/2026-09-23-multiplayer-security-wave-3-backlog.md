@@ -17,3 +17,11 @@ that they are fixed or independently tested.
 The next audit should revisit these scenarios after the current transport,
 authority, sanction, and resource-limit fixes have landed. Re-run the threat
 model against the integrated code before promoting any item to a fix task.
+
+Wave 2 remediation chose a broker-pinned certificate plus host identity for direct
+joins: a signature-only challenge still exposes the session token to a live relay,
+and pinning both TLS and `Welcome` identity makes the intended host explicit for
+broker and manual invites. The 8 KiB control-frame proposal was
+rejected because a bounded 256-player roster needs 61,389 bytes before the relay
+wrapper; the adopted client cap is 64 KiB. Queue-full verifier fallback retains
+the same identity and recording-hash claim binding as an ordinary verdict.

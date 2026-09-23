@@ -13,6 +13,11 @@ readable and historical versions can be referenced directly.
   verification jobs expire after a brief cache window. Active bans and timeouts
   immediately revoke master access, and verification work has bounded capacity
   and lifetime with auditable non-cheating void outcomes when workers disappear.
+  Direct and manual LAN joins now pin the host's TLS certificate and identity
+  before sending credentials. Results and spot checks retain the admitted
+  participant across slot reuse, broker strikes clean up hosted rooms, and
+  bounded room fields, client event/ghost queues, and nested-message validation
+  contain malformed or excessive traffic.
 
 Work promoted from `next` is recorded in [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 
