@@ -37,6 +37,13 @@ class TestControlCodecPolymorphism {
     }
 
     private static Object instantiate(Class<?> type) throws Exception {
+        // Polymorphism fixtures must satisfy the client-side semantic checks too.
+        if (type == ControlMessage.RoundSnapshot.class) {
+            return new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of());
+        }
+        if (type == ControlMessage.RoundConfig.class) {
+            return new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null);
+        }
         if (type == String.class) return "s3k:0:0";
         if (type == boolean.class || type == Boolean.class) return false;
         if (type == byte.class || type == Byte.class) return (byte) 0;
