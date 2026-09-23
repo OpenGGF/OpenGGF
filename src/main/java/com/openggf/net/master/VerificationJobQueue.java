@@ -9,6 +9,8 @@ import java.util.function.LongSupplier;
 
 /** Broker-loop verification queue with upload and worker-lease ownership. */
 public final class VerificationJobQueue {
+    public static final int MAX_TRACKED_JOBS = 4_096;
+    private static final long TERMINAL_CACHE_MILLIS = 60_000;
     public enum State { AWAITING_UPLOAD, QUEUED, LEASED, DONE, VOID }
 
     public record Job(String jobId, String roomId, int slot,
@@ -45,6 +47,11 @@ public final class VerificationJobQueue {
     }
 
     public String submit(Job candidate, long uploadDeadlineAtMillis) {
+        long now = clock.getAsLong();
+        pruneTerminalBefore(now - TERMINAL_CACHE_MILLIS);
+        if (entries.size() >= MAX_TRACKED_JOBS) {
+            throw new IllegalStateException("verification queue full");
+        }
         String id = "vj-" + (++counter);
         Job job = new Job(id, candidate.roomId(), candidate.slot(),
                 candidate.identityFingerprint(), candidate.attemptRef(),
@@ -52,7 +59,7 @@ public final class VerificationJobQueue {
                 candidate.character(), candidate.claimedTimeFrames(),
                 candidate.firstInputFrame(), candidate.finishFrame(),
                 candidate.inputRecordingHashHex(), candidate.ghostStreamHashHex(),
-                candidate.spotCheck(), clock.getAsLong());
+                candidate.spotCheck(), now);
         entries.put(id, new Entry(job, uploadDeadlineAtMillis));
         return id;
     }
@@ -132,6 +139,22 @@ public final class VerificationJobQueue {
             }
         }
         return requeued;
+    }
+
+    /** Void uploaded jobs that can no longer wait for verifier recovery. */
+    public List<Job> expireStalledJobs(long maxAgeMillis) {
+        long now = clock.getAsLong();
+        java.util.ArrayList<Job> expired = new java.util.ArrayList<>();
+        for (Entry entry : entries.values()) {
+            if ((entry.state == State.QUEUED || entry.state == State.LEASED)
+                    && now - entry.job.createdAtMillis() > maxAgeMillis) {
+                entry.state = State.VOID;
+                entry.terminalAtMillis = now;
+                entry.leasedWorkerId = null;
+                expired.add(entry.job);
+            }
+        }
+        return List.copyOf(expired);
     }
 
     public State stateOf(String jobId) {

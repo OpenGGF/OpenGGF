@@ -158,7 +158,12 @@ public final class MasterServer implements AutoCloseable {
                             pipeline.addLast(new MasterHttpRoutes(config,
                                     broker::fingerprintForSessionToken, recordingBlobs,
                                     verifiers, verificationJobs, verdictConsequences,
-                                    clock, brokerLoop, relays::onVerdict,
+                                    clock, brokerLoop, (job, pass) -> {
+                                        if (!pass) {
+                                            broker.revokeSanctioned(job.identityFingerprint());
+                                        }
+                                        relays.onVerdict(job, pass);
+                                    },
                                     lastUploadByIdentity));
                             pipeline.addLast(new WebSocketServerProtocolHandler(
                                     "/master", null, true,
@@ -178,6 +183,7 @@ public final class MasterServer implements AutoCloseable {
             scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(() -> {
                 relays.voidExpiredUploads();
                 verificationJobs.requeueExpiredLeases();
+                relays.voidStalledVerificationJobs();
                 verifiers.expireStale();
             }, 1, 1, TimeUnit.SECONDS));
             scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(() -> {
@@ -229,6 +235,7 @@ public final class MasterServer implements AutoCloseable {
 
     public void sanction(IdentityStore.SanctionRecord sanction) {
         ladder.sanction(sanction);
+        broker.revokeSanctioned(sanction.fingerprint());
     }
 
     /** Test-only deterministic promotion, invoked on the broker loop. */

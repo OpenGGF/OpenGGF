@@ -185,6 +185,8 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
             return response(HttpResponseStatus.CONFLICT);
         }
         long now = clock.getAsLong();
+        lastUploadByIdentity.entrySet().removeIf(entry ->
+                now - entry.getValue() >= config.recordingUploadMinIntervalMillis());
         Long lastUpload = lastUploadByIdentity.get(identity.orElseThrow());
         if (lastUpload != null
                 && now - lastUpload < config.recordingUploadMinIntervalMillis()) {

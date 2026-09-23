@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestVerificationJobQueue {
@@ -103,5 +104,30 @@ class TestVerificationJobQueue {
         assertTrue(queue.find(done).isEmpty());
         assertTrue(queue.find(voided).isEmpty());
         assertTrue(queue.find(active).isPresent());
+    }
+
+    @Test
+    void uploadedJobExpiresWhenVerifierNeverReturnsButCannotBeCompletedLater() {
+        long[] now = {0};
+        VerificationJobQueue queue = new VerificationJobQueue(() -> now[0], 100);
+        String id = queue.submit(job("fp", "aa"), 10);
+        queue.onRecordingUploaded("aa", "player");
+        queue.lease("worker", Set.of("fp")).orElseThrow();
+        now[0] = 3_600_001;
+        assertEquals(id, queue.expireStalledJobs(3_600_000).getFirst().jobId());
+        assertEquals(VerificationJobQueue.State.VOID, queue.stateOf(id));
+        assertTrue(queue.complete(id, "worker").isEmpty());
+        assertTrue(queue.expireStalledJobs(3_600_000).isEmpty());
+    }
+
+    @Test
+    void queueRefusesNewJobsAtCapacityInsteadOfGrowingWithoutBound() {
+        VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
+        for (int i = 0; i < VerificationJobQueue.MAX_TRACKED_JOBS; i++) {
+            queue.submit(job("fp", "aa"), 1000);
+        }
+        assertThrows(IllegalStateException.class,
+                () -> queue.submit(job("fp", "aa"), 1000));
+        assertEquals(VerificationJobQueue.MAX_TRACKED_JOBS, queue.size());
     }
 }

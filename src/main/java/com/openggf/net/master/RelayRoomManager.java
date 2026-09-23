@@ -23,6 +23,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     public record RoomAccess(RoomHost room, Executor loop) { }
     private record RoomRef(String roomId, int slot, String fingerprint,
                            int attemptId, String recordingHash, boolean spotCheck) { }
+    private record TierHint(boolean isNew, long observedAtMillis) { }
 
     @FunctionalInterface
     public interface PlayerCountSink {
@@ -35,6 +36,9 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     }
 
     public static final int PLAYER_COUNT_INTERVAL_TICKS = 20;
+    public static final long MAX_STALLED_JOB_MILLIS = 3_600_000L;
+    private static final long TIER_HINT_MILLIS = 24L * 3_600_000L;
+    private static final int MAX_IDENTITY_HINTS = 10_000;
 
     private final PlayerIdentity masterIdentity;
     private final TrustLadder ladder;
@@ -49,7 +53,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     private final VerdictConsequences verdictConsequences;
     private final VerifierRegistry verifiers;
     private final Map<String, RoomAccess> rooms = new ConcurrentHashMap<>();
-    private final Map<String, Boolean> newTierByFingerprint = new ConcurrentHashMap<>();
+    private final Map<String, TierHint> newTierByFingerprint = new ConcurrentHashMap<>();
     private final Map<String, String> roomOwners = new ConcurrentHashMap<>();
     private final Map<String, String> lastTrackKeys = new ConcurrentHashMap<>();
     private final Map<String, RoomRef> verificationRoutes = new ConcurrentHashMap<>();
@@ -112,7 +116,23 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
 
     @Override
     public void noteGuestTier(String fingerprint, boolean isNew) {
-        newTierByFingerprint.put(fingerprint, isNew);
+        long now = clock.getAsLong();
+        newTierByFingerprint.entrySet().removeIf(entry ->
+                now - entry.getValue().observedAtMillis() >= TIER_HINT_MILLIS);
+        if (!newTierByFingerprint.containsKey(fingerprint)
+                && newTierByFingerprint.size() >= MAX_IDENTITY_HINTS) {
+            newTierByFingerprint.entrySet().stream()
+                    .min(java.util.Comparator.comparingLong(entry ->
+                            entry.getValue().observedAtMillis()))
+                    .ifPresent(entry -> newTierByFingerprint.remove(entry.getKey()));
+        }
+        newTierByFingerprint.put(fingerprint, new TierHint(isNew, now));
+    }
+
+    private boolean isNewPlayer(String fingerprint) {
+        TierHint hint = newTierByFingerprint.get(fingerprint);
+        return hint == null || clock.getAsLong() - hint.observedAtMillis()
+                >= TIER_HINT_MILLIS || hint.isNew();
     }
 
     @Override
@@ -125,7 +145,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                 descriptor.verified());
         RoomHostHooks hooks = new RoomHostHooks(descriptor.maxPlayers() > 8,
                 (fingerprint, memberSince) ->
-                        !newTierByFingerprint.getOrDefault(fingerprint, false)
+                        !isNewPlayer(fingerprint)
                                 || clock.getAsLong() - memberSince
                                 > TrustLadder.NEW_CHAT_MUTE_MILLIS,
                 (fingerprint, clean) -> brokerLoop.execute(() -> {
@@ -133,7 +153,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                         ladder.onCleanRound(fingerprint);
                     }
                 }), entry.hostFingerprint(), fingerprint ->
-                newTierByFingerprint.getOrDefault(fingerprint, false),
+                isNewPlayer(fingerprint),
                 this::knownVoteTrack, entry.roomId(), new RoomHostHooks.VerificationHooks() {
                     @Override
                     public void onFinishNeedingVerification(String roomId, int slot,
@@ -247,10 +267,19 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                 return;
             }
             long now = clock.getAsLong();
+            lastSpotCheckByFingerprint.entrySet().removeIf(entry ->
+                    now - entry.getValue() >= 3_600_000L);
             for (RoomRoundAccess.Result candidate : candidates) {
                 Long last = lastSpotCheckByFingerprint.get(candidate.fingerprint());
                 if (last != null && now - last < 3_600_000L) {
                     continue;
+                }
+                if (!lastSpotCheckByFingerprint.containsKey(candidate.fingerprint())
+                        && lastSpotCheckByFingerprint.size() >= MAX_IDENTITY_HINTS) {
+                    lastSpotCheckByFingerprint.entrySet().stream()
+                            .min(java.util.Map.Entry.comparingByValue())
+                            .ifPresent(entry -> lastSpotCheckByFingerprint.remove(
+                                    entry.getKey()));
                 }
                 lastSpotCheckByFingerprint.put(candidate.fingerprint(), now);
                 submitVerification(roomId, candidate.slot(), candidate.fingerprint(),
@@ -287,6 +316,27 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         return expired.size();
     }
 
+    public int voidStalledVerificationJobs() {
+        if (verificationJobs == null || verdictConsequences == null) {
+            return 0;
+        }
+        List<VerificationJobQueue.Job> expired = verificationJobs
+                .expireStalledJobs(MAX_STALLED_JOB_MILLIS);
+        for (VerificationJobQueue.Job job : expired) {
+            recordUnavailable(job);
+            onVerdict(job, false);
+        }
+        return expired.size();
+    }
+
+    private void recordUnavailable(VerificationJobQueue.Job job) {
+        verdictConsequences.apply(new IdentityStore.VerdictRecord(
+                job.identityFingerprint(), job.attemptRef(),
+                job.inputRecordingHashHex(),
+                VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE,
+                null, clock.getAsLong()), "master");
+    }
+
     public void requestVerification(String roomId, int slot,
                                     String identityFingerprint,
                                     ControlMessage.AttemptFinish finish,
@@ -315,8 +365,22 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                 finish.firstInputFrame(), finish.finishFrame(),
                 finish.inputRecordingHashHex(), finish.ghostStreamHashHex(),
                 spotCheck, clock.getAsLong());
-        String jobId = verificationJobs.submit(candidate,
-                clock.getAsLong() + deadlineSeconds * 1000L);
+        String jobId;
+        try {
+            jobId = verificationJobs.submit(candidate,
+                    clock.getAsLong() + deadlineSeconds * 1000L);
+        } catch (IllegalStateException full) {
+            if (verdictConsequences != null) {
+                recordUnavailable(candidate);
+            }
+            RoomAccess rejected = rooms.get(roomId);
+            if (rejected != null && !spotCheck) {
+                rejected.loop().execute(() -> RoomRoundAccess.onVerdictEvidence(
+                        rejected.room(), identityFingerprint, finish.attemptId(),
+                        finish.inputRecordingHashHex(), false));
+            }
+            return;
+        }
         verificationRoutes.put(jobId,
                 new RoomRef(roomId, slot, identityFingerprint, finish.attemptId(),
                         finish.inputRecordingHashHex(), spotCheck));

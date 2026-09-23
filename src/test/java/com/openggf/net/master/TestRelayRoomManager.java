@@ -8,6 +8,7 @@ import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.VerdictCodec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -222,6 +223,40 @@ class TestRelayRoomManager {
             manager.onVerdict(job, true);
             assertEquals("VERIFIED",
                     access.room().round().standings().getFirst().verifyState());
+        }
+    }
+
+    @Test
+    void stalledUploadedJobGetsDurableVoidVerdictWithoutSanction(@TempDir Path dir)
+            throws Exception {
+        long[] now = {1_000_000};
+        try (var store = new SqliteIdentityStore(dir.resolve("ids.db"))) {
+            var ladder = new TrustLadder(store,
+                    new NewIdentityCache(100, 3_600_000, () -> now[0]),
+                    TrustLadder.Thresholds.defaults(), () -> now[0]);
+            VerificationJobQueue jobs = new VerificationJobQueue(() -> now[0], 1_000);
+            VerdictConsequences consequences = new VerdictConsequences(
+                    store, ladder, () -> now[0], 0);
+            RelayRoomManager manager = new RelayRoomManager(
+                    PlayerIdentity.loadOrCreate(dir.resolve("master")), ladder,
+                    TrackValidationProfileSource.none(), List.of(Runnable::run),
+                    Runnable::run, () -> now[0], (roomId, count) -> { },
+                    (roomId, owner, zone, act) -> { }, MasterConfig.defaults(),
+                    jobs, consequences);
+            manager.requestVerification("r-1", 1, "player",
+                    new ControlMessage.AttemptFinish(1, 100, 1, 101,
+                            "aa".repeat(32), "bb".repeat(32), null),
+                    "s3k:0:0", "sonic", "0.6:cafe", true);
+            assertEquals(true, jobs.onRecordingUploaded("aa".repeat(32), "player"));
+            jobs.lease("worker", java.util.Set.of("0.6:cafe")).orElseThrow();
+            now[0] += 3_600_001;
+
+            assertEquals(1, manager.voidStalledVerificationJobs());
+            assertEquals(VerificationJobQueue.State.VOID, jobs.stateOf("vj-1"));
+            assertEquals(VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE,
+                    store.verdictsFor("player").getFirst().result());
+            assertEquals(0, store.activeSanctions("player", now[0]).size());
+            assertEquals(0, manager.voidStalledVerificationJobs());
         }
     }
 }

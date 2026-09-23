@@ -72,7 +72,7 @@ client changes):
 | NEW | fresh identity | "new player" badge; cannot enter verified rooms; cannot create rooms; tight rate limits; chat delayed (read-only first N minutes per room) |
 | ESTABLISHED | ≥ 48 h wall-clock age **and** ≥ 10 clean completed rounds | normal limits; can create casual rooms |
 | TRUSTED | ≥ 14 days **and** ≥ 50 clean rounds, no sanctions | can enter/create verified rooms; eligible for future ranked play |
-| SANCTIONED | ban/timeout verdict | rejected at handshake (permanent) or per-scope restricted (timeout) |
+| SANCTIONED | active ban or timeout | admission rejected and live master sessions closed for the sanction's duration |
 
 - Accrual requires **wall-clock time + participation**, so trust cannot be
   farmed quickly in bulk. Demotion is instant on a cheat verdict (§6) or

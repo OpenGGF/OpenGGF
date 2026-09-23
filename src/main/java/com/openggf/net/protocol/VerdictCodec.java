@@ -11,6 +11,7 @@ public final class VerdictCodec {
     public static final String RESULT_FAIL_GHOST_HASH = "FAIL_GHOST_HASH";
     public static final String RESULT_FAIL_TRACK_MISMATCH = "FAIL_TRACK_MISMATCH";
     public static final String RESULT_VOID_NO_UPLOAD = "VOID_NO_UPLOAD";
+    public static final String RESULT_VOID_VERIFIER_UNAVAILABLE = "VOID_VERIFIER_UNAVAILABLE";
 
     private VerdictCodec() {
     }

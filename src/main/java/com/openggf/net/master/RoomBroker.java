@@ -142,6 +142,19 @@ public final class RoomBroker {
                 new HostHandshake(masterIdentity.fingerprint(), null), clock.getAsLong()));
     }
 
+    /** Evict every live connection for a newly sanctioned identity on the broker loop. */
+    public void revokeSanctioned(String fingerprint) {
+        if (!ladder.isBanned(fingerprint)) {
+            return;
+        }
+        for (Member member : List.copyOf(members.values())) {
+            if (fingerprint.equals(member.fingerprint)) {
+                onDisconnected(member.connection);
+                member.connection.close("account sanctioned");
+            }
+        }
+    }
+
     public boolean isSessionTokenValid(String token) {
         return tokens.isValid(token) && tokenFingerprints.containsKey(token);
     }
