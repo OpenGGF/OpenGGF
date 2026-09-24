@@ -254,9 +254,9 @@ the broader inventory snapshot from `9cba6dbb6`.
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 170329 | `sub_7F8A0` | `Obj_DEZEndBoss` `sub_7F8A0`: its own acceleration `$38` becomes `-$38`, integrated normally (exception to the inversion model) | new | missing |
-| 170349 | `sub_7F8CA` | `sub_7F8CA`: inverts the `$3A` test that starts routine 4 | new | missing |
-| 170746 | `loc_7FC3E` | `loc_7FC3E`: **writer** — persistent clearer object spawned at boss defeat (`loc_7FBD6`); clears the flag every frame | new | missing |
+| 170329 | `sub_7F8A0` | Enemy acceleration `$38` becomes `-$38`, applied before Y integration | `DezEndBossEnemy.gravityMove`; `TestDezEndBossEnemy.bothGravitySignsIntegrateAccelerationBeforeYDuringTheReleaseWait` | covered |
+| 170349 | `sub_7F8CA` | Inverts the `$3A` test that starts routine 4 | `DezEndBossEnemy.releaseForGravity`; `TestDezEndBossEnemy.normalFloorEnemyReleasesWhenGravityChangesAndKeepsItsXVelocityForLanding` | covered |
+| 170746 | `loc_7FC3E` | **Writer** — persistent clearer object spawned at boss defeat (`loc_7FBD6`); clears the flag every frame | `DezEndBossEscape.GravityClearer`; encounter tests cover next-pass clear and allocation failure | covered |
 
 Groups the brief asked for that have **no** reference: camera code proper (the look up/down bias
 lives in the player routines, groups B/C/E), other zones' objects (the FBZ wire cage's engine
@@ -278,8 +278,8 @@ is the RAM wipe described above).
 | H. Solid objects and platforms | 6 | 4 | 1 | 0 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
-| K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **98** | **5** | **9** | **4** |
+| K. DEZ act 2 boss | 3 | 3 | 0 | 0 | 0 |
+| **Total** | **116** | **101** | **5** | **6** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:
@@ -425,3 +425,8 @@ set followed by forward replay.
 
 Validation for the whole of step 2 is normal change-based validation plus matched before/after S1,
 S2 and S3K trace profiles. It is a shared timing/physics change: never proportionate validation.
+
+2026-09-24 inventory reconciliation at `26730dcaa`: group K was stale. Its three
+ROM branches are implemented and covered by the existing enemy/encounter tests,
+with prior focused campaign results in the DEZ2 matrix and campaign audit. This
+is documentation reconciliation, not a new test run or native parity claim.
