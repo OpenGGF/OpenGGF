@@ -87,6 +87,22 @@ class TestS3kDezLightningHeadless {
         assertEquals(afterLiveList, contactFrames(fixture, 4), "rewind preserves a pending damaging pointer");
     }
 
+    @Test
+    void placedLightningStillHurtsALightningShieldBeforeTheShockFloor() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .startPosition((short) 0x780, (short) 0x780).startPositionIsCentre().build();
+        fixture.sprite().giveShield(com.openggf.game.ShieldType.LIGHTNING);
+        fixture.sprite().setRingCount(7);
+        // Obj_DEZLightning writes collision_flags=$9F but never sets the
+        // shield_reaction bit5 that Obj_InvisibleShockBlock sets separately.
+        for (int i=0; i<12 && !fixture.sprite().isHurt(); i++) fixture.stepIdleFrames(1);
+        assertTrue(fixture.sprite().isHurt());
+        assertFalse(fixture.sprite().hasShield());
+        assertTrue(fixture.sprite().getCentreY() < 0x7D2 - 32,
+                "damage precedes solid contact with the separately immune floor");
+    }
+
     private List<String> contactFrames(HeadlessTestFixture fixture, int count) {
         List<String> rows = new ArrayList<>();
         for (int i = 0; i < count; i++) {

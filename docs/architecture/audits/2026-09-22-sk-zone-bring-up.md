@@ -3659,3 +3659,47 @@ Focused fresh-JVM guards also pass: queued Maven `-Pguards
 test` ran three tests, zero failures/errors/skips. This is the selected rewind
 guard scope, not the withheld full guard lane. The consumed broad-run diagnostics
 were acknowledged and deleted after recording their findings above.
+
+
+### 2026-09-24 — fade accepted; campaign failure follow-up
+
+User accepted the mask transition work through `9f20ead7c` and requested resuming
+the full seven-zone goal. Current-bound source/target crossfade is the accepted
+presentation; the intermediate destination/feather experiments remain history.
+No main integration or push has occurred yet.
+
+The ordinary-run failures above were narrowed by a queued Java21/absolute-ROM
+170-test run of their12 classes. The bonus-stage bumper was a real registration
+regression: the new SKL DEZ fallback ran before the glowing-sphere identity check.
+The explicit bonus identity now takes precedence. Four LBZ tests expected LRZ
+placeholders; they now assert the actual LRZ classes while preserving LBZ checks.
+CNZ/StarPointer audit assertions confused numeric-slot coverage with class identity
+across the two pointer tables. SSZ's art test no longer fixes the count of unrelated
+entries; it still verifies EggRobo's key/palette, with separate Eggmobile art checks.
+
+The remaining failures were evidence-backed test corrections. SSZ's actual
+loc_13AB4 branch includes $0A00 and parks Tails; its test now checks act1 versus
+act2 with a module-scoped runtime. The registry source audit omitted literal
+registrations, wrongly attributing stock slot$25's read to preceding slot$29;
+a new positive/negative literal regression guards that boundary. Its explicit
+inventory and compatibility expectations now include LRZ/SSZ overrides and the
+independent base factories they retain.
+
+DEZ floor probe: the old start at($780,$780) hits Obj_DEZLightning at frame4,
+well before the floor at($780,$7D2). That object writes collision_flags=$9F but
+no shield_reaction bit5 (loc_478BE..loc_4791A); immunity belongs to the separate
+shock floor. Starting between the bolts at x$76C reaches and stays on the actual
+placed floor with lightning shield intact. A separate production-loop test now
+asserts that the bolt does remove that shield. The reverse-gravity draw test had
+advanced physics over terrain before requiring the animator's own flip to remain
+unchanged; the probe shows flag=true and storedFlip=true, whose draw XOR isfalse.
+It now tests the draw composition immediately, without an unrelated physics step.
+
+The first focused run had170tests,5failures,1error,0skips; remaining three audit
+assertions, the two DEZ setups, and the SSZ test's missing runtime explain those
+results. The corrected five-class rerun (`TestS3kSidekickIntroPresentationGate,
+TestSonic3kModZoneObjectSet,TestS3kReverseGravityRenderMirror,
+TestS3kDezShockBlockHeadless,TestS3kDezLightningHeadless`) passed31tests with no
+failures/errors/skips. The other original failure classes passed in the first
+run. These are focused attribution/correction results, not a new broad pass.
+Combined campaign ordinary/guard validation remains required.

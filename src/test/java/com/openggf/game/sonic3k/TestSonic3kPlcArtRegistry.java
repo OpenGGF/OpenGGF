@@ -1534,8 +1534,7 @@ public class TestSonic3kPlcArtRegistry {
     public void sszPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0A, 0);
         assertNotNull(plan);
-        // Arrival/traversal and three boss families now supplement the original seven.
-        assertEquals(16, plan.standaloneArt().size());
+        // Assert EggRobo itself; other traversal/boss art can grow independently.
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SSZ_EGG_ROBO)));
 
         // EggRobo should use palette 0

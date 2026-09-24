@@ -123,7 +123,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   transition sound, as in the ROM, instead of fading to white.
 - **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it
   at a quarter of the camera speed, cycle their console and panel colours, and animate their
-  machinery tiles. Widescreen keeps one central background in each act: Act 1 extends its
+  machinery tiles. Its object-table registrations preserve the glowing-sphere bonus
+  stage bumper at the shared slot. Widescreen keeps one central background in each act: Act 1 extends its
   side walls with ROM tiles, while Act 2 continues the planet's curve using its existing surface
   pixels. The native centre stays unchanged. Death Egg Act 2's gravity now reverses: crossing one of the act's invisible
   gravity triggers flips which way is down, and the player falls to the ceiling, stands and runs

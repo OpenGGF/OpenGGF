@@ -51,13 +51,13 @@ class TestS3kReverseGravityRenderMirror {
             boolean storedWhileUpright = sprite.getRenderVFlip();
 
             GameServices.gameState().setReverseGravityActive(true);
-            fixture.stepIdleFrames(1);
+            // Test draw composition without another physics step: reversed
+            // terrain contact can legitimately change the animator's own flip.
             assertTrue(sprite.renderVFlipForDraw(), "loc_10C62 sets render_flags bit 1");
             assertFalse(sprite.getRenderVFlip() != storedWhileUpright,
                     "the animator's own flip must be untouched — it carries mapping orientation");
 
             GameServices.gameState().setReverseGravityActive(false);
-            fixture.stepIdleFrames(1);
             assertFalse(sprite.renderVFlipForDraw(), "and the mirror goes away with the flag");
         } finally {
             SessionManager.clear();

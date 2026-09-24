@@ -27,7 +27,9 @@ class TestS3kDezShockBlockHeadless {
         TestEnvironment.activeGameplayMode();
         var fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
-                .startPosition((short) 0x780, (short) 0x780)
+                // Between the placed lightning bolts at $758/$780: unlike the
+                // $6D floor, Obj_DEZLightning has no shield_reaction bit5.
+                .startPosition((short) 0x76C, (short) 0x780)
                 .startPositionIsCentre().build();
         fixture.sprite().setRingCount(7);
         if (!shield.equals("NONE")) fixture.sprite().giveShield(ShieldType.valueOf(shield));

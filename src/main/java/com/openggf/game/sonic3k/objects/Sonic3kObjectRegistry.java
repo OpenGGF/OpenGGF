@@ -625,10 +625,12 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 });
         registerStockZoneBound(Sonic3kObjectIds.BUMPER,
                 (spawn, registry) -> {
-                    if (getCurrentZoneSet() == S3kZoneSet.SKL) return new S3kDezFloatingPlatformObjectInstance(spawn);
+                    // The bonus-stage placement table reuses $62. Its explicit
+                    // identity wins over the ordinary SKL-half fallback for DEZ.
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {
                         return new PachinkoBumperObjectInstance(spawn);
                     }
+                    if (getCurrentZoneSet() == S3kZoneSet.SKL) return new S3kDezFloatingPlatformObjectInstance(spawn);
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ) {
                         return new CnzBumperObjectInstance(spawn);
                     }
