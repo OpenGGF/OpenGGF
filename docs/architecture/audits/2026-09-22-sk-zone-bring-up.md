@@ -3983,3 +3983,35 @@ were compared exactly with the explored movie. The inspected native320 clip
 `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-vertical-tube-320/capture.mp4`
 films15780–16599; all16,600 state rows are death-free and full video decode passes.
 This is engine visual evidence; native pixel parity and other widths remain open.
+
+### Reverse-gravity dust consumers (2026-09-24)
+
+On `b89b2c41f` plus this patch, `loc_18C20` now composes the spindash-dust Y flip
+and reverses Tails's four-pixel centre adjustment. `loc_18D14` now negates the
+complete per-character skid-dust foot offset at spawn. Detached skid puffs keep
+their own world coordinates; gravity changes do not relocate an existing puff.
+No new state, ROM assets, game/zone carve-out or public API was added.
+
+The new `TestS3kReverseGravityRenderMirror` case failed before the change, then
+passed for Sonic and Tails, upright→inverted→upright, using the renderer call and
+actual spawned skid coordinates. Queued Java21, absolute S3K ROM, `-Dmse=off`:
+`-Dtest=TestS3kReverseGravityRenderMirror,TestSpindashDustControllerSplash,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed71 tests, zero skips. The change-based plan selects the full ordinary suite
+through shared code; this is focused iteration, with campaign-wide validation
+still pending. Group F's two remaining rows are now covered; the table records97
+covered ROM references and eight remaining group A-I gaps rather than certifying
+the whole reverse-gravity implementation.
+
+Positioned visual evidence:
+`$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-inverted-tails-dust-320/capture.mp4`
+uses Tails at(4700,1267), declared reverse gravity,181 controller frames,
+`30 -;20 D;1 D+A;90 D;40 R`. Frames70/120 are charging; the visible dust sits at
+the ceiling with Tails's mirrored centre offset. This is engine inspection,
+not cold-route or native-pixel evidence.
+
+Independent ordinary route authoring continued from the preserved first hub:
+release Right before the hub's fresh Right press; jump the ceiling steps, and
+wait120frames before the Spikebonker crossing. The explored cold route reaches
+(5899,1171) without changing the enemy. Later traversal and route breadth remain
+open; exploratory inputs stay in the external campaign route-author directory
+until the next stable route is preserved.

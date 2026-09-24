@@ -194,15 +194,16 @@ the writer anyway is a deliberate choice recorded here rather than a resolution.
 **Updated 2026-09-24.** `Obj_Tails_Tail` now mirrors standard tail animations under
 the gravity flag while preserving directional animation 3, as `loc_1613C` requires.
 
-**What an inverted player in act 2 still gets wrong**, ten rows across groups A-I:
+Spindash dust now mirrors with the flag and reverses Tails's four-pixel centre
+offset; skid dust spawns on the correct contact side. These close both dust rows.
+
+**What an inverted player in act 2 still gets wrong**, eight rows across groups A-I:
 
 - **Knuckles' glide, slide and wall climb** (:30921, :30977, :31004, :31068, :31205). His glide
   floor probe goes through `ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle` directly, while
   the ROM's `.continueSliding` calls `sub_11FD6` — the swapping wrapper — so the glide
   landing, the slide get-up and the slide's floor snap all measure against the wrong surface
   while the flag is set. The two climb rows are whole alternate bodies, not sign flips.
-- **`Obj_DashDust`** (:34038, :34113): spindash/skid dust is not mirrored and keeps its
-  upright Y offsets.
 - **`sub_1E410`'s `loc_1E4D6`** (:41999): the sloped/top solid-object landing rebuilds its
   comparison with a deliberate one-pixel asymmetry rather than mirroring, and needs its own
   measurement.
@@ -220,14 +221,14 @@ Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
 the gap was a search for a `GameSound` constant, not a missing sound. `Obj_DEZGravitySwap`
 (`$5B`) has no art in the ROM and is correctly invisible.
 
-**Suspected cause.** Not a defect — a deliberately sliced port. 13 of the 116
-`Reverse_gravity_flag` references in the disassembly are still unimplemented (10 of them in
+**Suspected cause.** Not a defect — a deliberately sliced port. 11 of the 116
+`Reverse_gravity_flag` references in the disassembly are still unimplemented (8 of them in
 groups A-I, above; the rest are the act 2 boss's three). The conveyor pad's
 carry reversal now has native-player and inverted placed-ride/replay checks. No
 Death Egg gravity object owns a missing row any more; the row-by-row inventory is
 [s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
 
-**Removal condition.** The ten group A-I rows listed above land, each with a test that runs
+**Removal condition.** The eight group A-I rows listed above land, each with a test that runs
 it with the flag set, and the reference table reaches zero missing rows for groups A-I. The
 `ChooseChkFloorEdge` partial and the three hurt death-plane partials stay recorded rather than
 credited: see the reference table for why each cannot be told apart from a sibling that already

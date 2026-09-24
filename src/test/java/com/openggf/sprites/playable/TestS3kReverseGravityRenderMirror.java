@@ -138,4 +138,37 @@ class TestS3kReverseGravityRenderMirror {
         }
     }
 
+    @Test
+    void reverseGravityMirrorsSpindashDustAndMovesSkidDustToTheContactSide() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 1).build();
+        for (var player : new AbstractPlayableSprite[] {
+                fixture.sprite(), new Tails("tails", (short) 320, (short) 940)}) {
+            var renderer = org.mockito.Mockito.mock(com.openggf.sprites.render.PlayerSpriteRenderer.class);
+            var dust = new com.openggf.sprites.managers.SpindashDustController(player, renderer);
+            player.setSpindashDustController(dust);
+            player.setSpindash(true);
+            player.setAir(false);
+            for (boolean reversed : new boolean[] {false, true, false}) {
+                GameServices.gameState().setReverseGravityActive(reversed);
+                org.mockito.Mockito.clearInvocations(renderer);
+                dust.update();
+                dust.draw();
+                int tailAdjustment = player instanceof Tails ? (reversed ? 4 : -4) : 0;
+                org.mockito.Mockito.verify(renderer).drawFrame(
+                        org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.eq((int) player.getRenderCentreX()),
+                        org.mockito.ArgumentMatchers.eq(player.getRenderCentreY() + tailAdjustment),
+                        org.mockito.ArgumentMatchers.anyBoolean(),
+                        org.mockito.ArgumentMatchers.eq(reversed));
+                var skid = com.openggf.level.objects.SkidDustObjectInstance.create(player);
+                org.junit.jupiter.api.Assertions.assertNotNull(skid);
+                int offset = player instanceof Tails ? 12 : 16;
+                org.junit.jupiter.api.Assertions.assertEquals(
+                        player.getCentreY() + (reversed ? -offset : offset), skid.getY(),
+                        "loc_18D14 negates the complete per-character foot offset");
+            }
+        }
+    }
+
 }
