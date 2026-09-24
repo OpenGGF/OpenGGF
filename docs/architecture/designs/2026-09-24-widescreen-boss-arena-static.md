@@ -26,10 +26,9 @@ The user proposed matching the existing rewind shader's noise character.
   12-pixel feather outside the active rectangle hides unusable scenery. Feather
   pixels must never enter the original view. The active area's pixels, scale,
   colours, and camera sampling remain unchanged.
-- Use dark, slightly cool monochrome grain, updated at 12 Hz, plus a faint slow
-  moving tape band. Borrow `hash21` and the band vocabulary from
-  `src/main/resources/shaders/shader_vhs_rewind.glsl`; do not apply that effect's
-  full-screen wobble, chroma split, bright dropouts, or horizontal displacement.
+- Use dark, slightly cool monochrome grain, refreshed with an independent field
+  at 12 Hz. Keep the subdued noise character of the rewind effect, but no spatial
+  scrolling, moving tape band, wobble, chroma split or picture displacement.
   This is an original presentation adaptation, not Genesis behavior.
 - Keep HUD, lives, menus and accessibility overlays readable. The preview footage
   already places its HUD within the central rectangle. A production pass must
@@ -92,7 +91,7 @@ checks clear fade endpoints and opaque outer wings, and fully decodes both
 finished MP4s. Lossy MP4 encoding is not a pixel-parity oracle; the PNGs retain
 the exact composed pixels.
 
-Demo archive: `$HOME/Videos/OGGF/ssz-arena-static-demo-20260924`.
+Demo archive: `$HOME/Videos/OGGF/ssz-arena-static-random-20260924`.
 Footage is from the separate bring-up campaign's corrected GHZ/MTZ Eggmobile
 captures. This branch does not include or duplicate those engine changes.
 
@@ -121,3 +120,16 @@ full MP4 decode checks passed. Inspected both composed PNGs. Browser playback
 loaded successfully; original/static switching, encounter selection and replay
 were exercised. Python compilation, JavaScript syntax and Git whitespace checks
 passed. These checks validate the demo only, not engine integration.
+
+## Revision: remove vertical drift
+
+The initial prototype (`fce524948`) used `y + tick*13` in a spatial hash. This
+translated the same field upward by 13 pixels at each refresh; it was not fresh
+random static. A separate moving brightness band reinforced the apparent motion.
+User review identified the drift. Both are replaced with independent, seeded
+noise fields per refresh, preserving deterministic playback and the 12 Hz cadence.
+A regression check compares consecutive fields at zero and 13-pixel vertical
+offsets; neither may retain significant correlation.
+
+Regenerated both demos: all 600 centre-preservation checks, fade endpoint checks,
+full movie decodes, temporal correlation checks and deterministic replay passed.
