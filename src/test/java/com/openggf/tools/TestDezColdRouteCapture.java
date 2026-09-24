@@ -29,14 +29,19 @@ class TestDezColdRouteCapture {
         runColdRoute("complete");
     }
 
+    @Test void coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind() throws Exception {
+        runColdRoute("lower");
+    }
+
     private void runColdRoute(String route) throws Exception {
         boolean complete = route.equals("complete");
+        boolean lower = route.equals("lower");
         boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/dez1-sonic-tails-cold-"
-                        + route + "-320.bk2"));
+                "src/test/resources/routes/s3k/" + (lower ? "dez2-sonic-tails-incoming-lower"
+                        : "dez1-sonic-tails-cold-" + route) + "-320.bk2"));
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
         // Intro/bridge, lift catches/releases, tube, conveyor lift, timed bridge,
@@ -51,6 +56,15 @@ class TestDezColdRouteCapture {
             spots.addAll(Set.of(8800, 8900, 9350, 9490, 9650, 9930, 10070, 10500,
                     11080, 11260, 11420, 11570, 12190, 12320, 12470, 12640,
                     12740, 13100, 13270, 13860, 13950, 14100));
+        }
+        if (lower) {
+            // Independent earlier tests cover DEZ1. These spots exercise incoming
+            // release, gravity tube entry/exit, hub launch, moving belt, staircase,
+            // the second tube's polarity release and the lower corridor.
+            spots.clear();
+            spots.addAll(Set.of(15190, 15300, 16070, 16110, 16190, 16210,
+                    16580, 16750, 16940, 17050, 17240, 17340, 17440, 17560,
+                    17640, 17680, 17820));
         }
         var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
                 .getSuperclass().getDeclaredField("collisionProperty");
@@ -115,7 +129,14 @@ class TestDezColdRouteCapture {
                 previousInput.set(session, movie.getFrame(frame));
             }
             assertEquals(11, GameServices.level().getCurrentZone());
-            assertEquals(complete ? 1 : 0, GameServices.level().getCurrentAct());
+            assertEquals(complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
+            if (lower) {
+                assertEquals(3196, session.player().getCentreX());
+                assertEquals(2476, session.player().getCentreY());
+                assertEquals(7, session.player().getRingCount());
+                assertFalse(session.player().isObjectControlled(), "lower tube releases movement");
+                assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
+            }
             if (complete) {
                 assertEquals(2, completedBossPhases, "both eight-hit phases must be cleared");
                 assertTrue(largestOutgoingRewindFrame > 10, "outgoing history must have been recorded");
@@ -128,7 +149,7 @@ class TestDezColdRouteCapture {
                 assertTrue(rewind.earliestAvailableFrame() > largestOutgoingRewindFrame,
                         "Act 2 must not retain the outgoing level's rewind history");
             }
-            if (turbine && !complete) {
+            if (turbine && !complete && !lower) {
                 assertEquals(10763, session.player().getCentreX());
                 assertEquals(2096, session.player().getCentreY());
                 assertFalse(session.player().isObjectControlled(), "turbine releases movement past its corridor");

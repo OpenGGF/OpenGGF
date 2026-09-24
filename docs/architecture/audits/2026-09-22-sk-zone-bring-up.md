@@ -4056,3 +4056,32 @@ films16200–17179; state rows, selected stills16750/16900/17150 and full MP4 de
 checked. `campaign-20260924-route-author/act2-lower-centred-belt.{script,bk2,csv}`
 preserves the external exploration, with no gameplay state writes. The next
 obstacle is the corridor's spiked overhang; no collision change was made for it.
+
+
+### DEZ2 lower staircase and second tube cold route (2026-09-24)
+
+On `1ccf38505` plus this validation change, the ordinary cold DEZ1 Sonic+Tails
+route now reaches DEZ2(3196,2476), seven rings, in17921frames with zero deaths.
+The preserved `dez2-sonic-tails-incoming-lower-320.{script,bk2}` continues through
+the incoming sequence, first gravity hub, descending conveyor, spiked overhang,
+Spikebonker, moving staircase and second tube's polarity release. Jumping before
+the overhang removes the stationary approach problem; waiting120frames at the
+next step avoids the Spikebonker. No runtime collision or enemy adjustment was
+needed. A later hit in the lower corridor loses rings but does not kill the player.
+
+`TestDezColdRouteCapture#coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind`
+passed1test, zero failures/errors/skips, with17 full-registry capture/restore and
+45-frame forward-replay comparisons. Command: queued Maven, Java21,
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`
+plus that method's `-Dtest` selection and `test`. Earlier independent DEZ1 tests
+own the outgoing act's rewind spots; this test adds Act2 arrival, hub, belt,
+staircase and tube spots and asserts the carried endpoint and follower roster.
+This is focused route validation; combined campaign delivery remains pending.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-lower-route-320/capture.mp4`
+films16940–17920. All17921state rows, stills17080/17440/17660, and full MP4 decode
+were checked. This is engine presentation evidence, not native pixel parity.
+The next frontier is the timed energy-bridge ascent nearX3264–3328. Running past
+it drops into the curved lower floor. Braking over the floating platform reaches
+(3253,2556); the first jump's timing misses the bridge. These rejected inputs do
+not establish a collision defect. Full Act2 completion and breadth remain open.
