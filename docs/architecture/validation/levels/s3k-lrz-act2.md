@@ -339,3 +339,29 @@ focused validation: the inspected selection falls back to2912 ordinary classes
 plus guards for unclassified route assets, whereas its full production consumer
 is directly exercised here and independently in the fresh capture. Earlier
 shared runtime changes still require combined campaign validation.
+
+
+### Cold eastern turbine bank (2026-09-24)
+
+Fresh replay on ff9343838 extends the ordinary native320 Sonic+Tails route to
+36871 inputs, endpoint7824/684, zero rings and zero deaths. The controller
+sequence clears the Toxomister corridor, steps up the pipe, catches the turbine
+at7816/1224, releases into7824/968 and launches onto the high ledge. Subsequent
+exploratory inputs reach the upper spring and walkway at7652/428. The full Act2
+exit is still open; the committed31 replay spots end at the earlier pipe passage.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-turbine-bank-320/capture.mp4`
+contains667 frames, input36204–36870. All36871 state rows checked for death,
+stills36750/36870 inspected and full decode passes. Reproducible input lives at
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-route-author/east-turbine-upper-exit/variant-0.bk2`.
+The turbine's phase-dependent release, not a runtime change, supplies the
+height. Native comparison-only rows423225–423500 show the same two-turbine route
+and high-ledge destination; the reference is Super Sonic, not an ordinary
+trajectory oracle. Whole-scene matching and new-section rewind coverage remain open.
+
+A separate120-frame positioned direct-load recheck at `$2438,$629` on ff9343838
+(`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-direct-background-recheck-320`) ends
+at9272/1580 with camera9112/1484. Still60 shows purple background forms without
+the obvious HUD lettering in the historical report. This observation does not
+close the direct-load background issue: art ownership and a matched native
+view still need verification. It is not evidence from the cold route.

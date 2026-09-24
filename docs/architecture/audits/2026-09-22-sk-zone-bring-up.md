@@ -4784,3 +4784,16 @@ and independent capture are proportionate for this test/input-only slice.
 Shared runtime fixes retain the combined campaign validation obligation.
 A further exploratory branch crosses the Toxomister corridor to7349/1452
 without death; the ledge beyond it and full cold Act2 completion remain open.
+
+
+### Eastern LRZ2 turbine bank reached (2026-09-24)
+
+On ff9343838, controller-only trials and a fresh36871-input replay reach the
+upper ledge at7824/684 with zero deaths. Native comparison confirms the two
+turbines form this climb; ordinary launch timing was authored without gameplay
+changes. The667-frame moving evidence, inspected states/stills and scope are
+recorded in the [Act2 matrix](../validation/levels/s3k-lrz-act2.md#cold-eastern-turbine-bank-2026-09-24).
+The next exploratory route reaches7652/428 at input37080 via the spring; continuing east
+is the next cold-route step. Direct-load background recheck is recorded separately
+and leaves native acceptance open. This slice changes evidence only; engine
+checks from ff9343838 are unchanged and were not repeated.
