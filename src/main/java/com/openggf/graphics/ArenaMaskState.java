@@ -14,7 +14,6 @@ public record ArenaMaskState(int left, int right, int noiseFrame, float[] opacit
         // Exact pixel boundary. A 12px spatial feather made the apparent left edge
         // sit about 6–8px outside the derived bound. Fade over time, not across
         // playable geometry, so the settled edge and the camera interval agree.
-        // The transition may use feather strength to delay opacity, never its endpoint.
         return x >= left && x < right ? 0 : 1;
     }
     @Override public boolean equals(Object other) {

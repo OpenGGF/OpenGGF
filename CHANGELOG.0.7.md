@@ -6,11 +6,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
-- Automatically mask widescreen pixels beyond the destination of native horizontal
-  camera bounds, including asymmetric arena and level edges. Occupied transition
-  space follows the current bounds until the player enters the destination. Static fades in world
-  space, with a staggered fade across the 12px edge strip; changing bounds immediately redirect an
-  in-progress fade. Presentation history rewinds, and native-width output is unchanged.
+- Automatically mask widescreen pixels beyond current native horizontal camera
+  bounds, including asymmetric arena and level edges. During staged boss entry,
+  the mask follows the earlier boundary until the final lock arrives. Each side
+  crossfades in world space with one shared completion time; reversals start from
+  the displayed opacity. Presentation history rewinds, and native-width output
+  is unchanged.
 
 - **S3K Sky Sanctuary:** Both Act 1 replica bosses now draw their ROM-backed
   Eggmobile bodies alongside Mecha Sonic’s head, and keep the widescreen camera

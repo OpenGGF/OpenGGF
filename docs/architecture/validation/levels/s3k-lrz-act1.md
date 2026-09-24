@@ -164,3 +164,13 @@ fade-in. TestLevelBoundsMaskGeometry covers body extent, both edges, multiple
 participants, follower suppression and inverted bounds. The focused78-test
 selection plus corrected geometry-fixture rerun is described in the arena design;
 this adds no cold-route, donor or complete viewport-breadth claim.
+
+
+Latest mask revision supersedes the destination/player-aware trials above:
+current native bounds remain authoritative throughout staged entry, and each
+side has one shared crossfade deadline. Production 800px previews are in
+`campaign-20260924-shared-edge-mask/{original-input,turn-back}/capture.mp4`
+under the same external LRZ archive. Both600-frame runs retain identical gameplay,
+zero deaths and complete decodes. Sixteen focused transition/geometry/GPU/gate/
+presentation tests pass without skips; see the arena design for exact selection.
+This is positioned presentation evidence, not additional cold-route coverage.

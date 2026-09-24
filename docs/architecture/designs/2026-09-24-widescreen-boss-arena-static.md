@@ -461,3 +461,47 @@ its setup and rerunning all four geometry tests passed. The other 74 tests were
 unchanged and green. An earlier fixture compile error used a nonexistent width
 setter and was replaced by a width spy. These were test setup errors, not reasons
 to change gameplay. Combined campaign delivery validation remains outstanding.
+
+
+## Shared edge transition and current-bound correction
+
+The player-aware trial at `3918c4da0` exposed separate fade ages in the
+current-bound strip and destination strip. Replace per-column fade clocks and
+staggered border activation with one 23-tick completion deadline per side.
+Retarget from displayed world-column opacity; same-direction motion keeps the
+remaining deadline rather than restarting on every native boundary step.
+Reversal interrupts immediately with a new fade from the displayed values.
+Already opaque outer columns stay opaque. Left and right retain independent
+transitions, and rewind captures both deadlines and immutable opacity samples.
+There is no spatial feather or delayed 12px wipe in this version.
+
+The turn-back movie also made the earlier gameplay boundary visible. This is
+ROM behavior: `loc_85D06` ratchets Camera_min_X_pos with Camera_X_pos on approach;
+`loc_85D28` is its right-entry counterpart. `loc_85D36` installs the final bounds
+from _unkFAB4/6 only when reached. In the recorded turn-back input, current minX
+stops at11196 while the final minX is11264; Sonic returns to centre11212 before
+resuming the approach. This is not an extra lock introduced by the mask.
+
+Following the user's correction, presentation now follows current bounds even
+when Sonic is inside the destination. This supersedes player-aware destination
+selection: space still admitted by the earlier lock stays visible. Native camera
+and movement logic are unchanged. The destination sidecar remains available as
+recorded transition geometry, but no longer selects the mask boundary.
+
+Validation of this revision: queued Java21 Maven with native GL ran
+`TestLevelBoundsMaskTransition,TestLevelBoundsMaskGeometry,TestArenaMaskRenderer,TestLevelSpritePresentation,TestS3kSharedBossCameraGate`:
+16 tests, zero failures/errors/skips. These are focused checks, not the pending
+combined campaign delivery run. Regressions cover shared completion under a
+moving boundary, reversal, independent sides, world projection, pause, rewind,
+teleport, current-bound selection and final-lock handoff. The GPU test exercises
+multiple viewport widths and scales.
+
+Both production-code demos are archived under
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260924-shared-edge-mask/`:
+`original-input/capture.mp4` and `turn-back/capture.mp4`. Each has 600 gameplay
+rows identical to the corresponding prior input/probe, zero deaths and a complete
+MP4 decode. The classpath contains production classes only, without the former
+preview transition/shader overrides. Reviewed approach frame65 and turn-back
+frame155: the temporary boundary leaves Sonic visible. Input/source hashes and
+exact capture commands are in each external provenance.json. User visual review
+and combined campaign integration remain outstanding.

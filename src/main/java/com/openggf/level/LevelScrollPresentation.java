@@ -47,7 +47,6 @@ final class LevelScrollPresentation {
      */
     static ArenaMaskState captureArenaMask(LevelManager level) {
         var camera = level.camera;
-        int maxX = com.openggf.camera.CameraBoundaryPresentation.maxX(camera);
         int currentMaxX = camera.getMaxX();
         var rules = level.gameModule == null ? null : level.gameModule.getRules().playerMovement();
         if (rules != null && !rules.levelBoundaryRightStrict()) {
@@ -57,12 +56,10 @@ final class LevelScrollPresentation {
             // S1/S2 permit another $40 pixels in ordinary play. Do not conceal
             // playable space merely because the camera itself stops earlier.
             if (!locked && !state.isEndOfLevelActive()) {
-                maxX += 64;
                 currentMaxX += 64;
             }
         }
-        var bounds = LevelBoundsMaskGeometry.select(level,
-                com.openggf.camera.CameraBoundaryPresentation.minX(camera), maxX, currentMaxX);
+        var bounds = LevelBoundsMaskGeometry.select(level, currentMaxX);
         return ArenaMaskState.fromBounds(bounds.minX(), bounds.maxX(), camera.getXWithShake(),
                 camera.getWidth(), level.objectManager == null ? level.frameCounter : level.objectManager.getFrameCounter(),
                 level.zoneFeatureProvider != null && level.zoneFeatureProvider.foregroundWrapsHorizontally());
