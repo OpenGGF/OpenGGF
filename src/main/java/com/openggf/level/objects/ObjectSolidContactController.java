@@ -3909,7 +3909,14 @@ public final class ObjectSolidContactController {
         if (!solidProfile.usesPlatformLandingSnap()) {
             return;
         }
-        int targetCentreY = anchorY - params.groundHalfHeight() - player.getYRadius() - 1;
+        // S3K SolidObjectTop loc_1E45A snaps above the top with the -1 bias.
+        // Its reverse branch loc_1E4D6 instead ends exactly at object bottom
+        // plus the live radius (SUB.W d1,d2; SUBQ.W #4,d2). It is not the
+        // same +/-3 lift used by SolidObjectFull. This final height override
+        // must preserve that asymmetry after Player_TouchFloor restores radii.
+        int targetCentreY = isReverseGravityActive(player)
+                ? anchorY + params.groundHalfHeight() + player.getYRadius()
+                : anchorY - params.groundHalfHeight() - player.getYRadius() - 1;
         if (player instanceof AbstractPlayableSprite sprite) {
             NativePositionOps.writeYPosPreserveSubpixel(sprite, targetCentreY);
             return;

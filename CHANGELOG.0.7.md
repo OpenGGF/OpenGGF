@@ -152,7 +152,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and the following door admits the player while the turbine still owns movement. The Spikebonker mace robots patrol both acts, hover, and swing at
   you when you come at them from the side they are walking toward. Act 2's retracting springs
   work: they push out of the wall while you are below them, pull back in once you are well
-  above, latch as they start and finish each stroke, and fling you upward when you land on one.
+  above, latch as they start and finish each stroke, and launch from the correct contact face
+  in either gravity direction, including when arriving in a roll.
   The energy bridges across both acts switch on and off on their own schedules, carry you while
   they are lit, and drop you when they go out. The curved bridge enables its terrain
   path while lit; both forms retain the final displayed phase when they switch off.

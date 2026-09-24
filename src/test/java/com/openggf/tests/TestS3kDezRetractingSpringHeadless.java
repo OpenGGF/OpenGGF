@@ -249,6 +249,45 @@ class TestS3kDezRetractingSpringHeadless {
         }
     }
 
+    @Test
+    void realSolidContactLaunchesFromTheCorrectFaceWithStandingAndRollingRadii() {
+        for (boolean reverse : new boolean[] {false, true}) {
+            for (boolean rolling : new boolean[] {false, true}) {
+                HeadlessTestFixture fixture = fixture();
+                try {
+                    // A clear column in the ROM-backed DEZ2 layout, isolated from terrain.
+                    int x = 672, y = 928;
+                    assertFalse(com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y, 19).hasCollision());
+                    assertFalse(com.openggf.physics.ObjectTerrainUtils.checkCeilingDist(x, y, 19).hasCollision());
+                    GameServices.gameState().setReverseGravityActive(reverse);
+                    var spring = new S3kDezRetractingSpringObjectInstance(
+                            new ObjectSpawn(x, y, 0x5D, SUBTYPE, 2, false, y));
+                    GameServices.level().getObjectManager().addDynamicObject(spring);
+                    var sprite = fixture.sprite();
+                    sprite.setRolling(rolling);
+                    int reach = 9 + sprite.getYRadius() + 2;
+                    moveTo(sprite, x, y + (reverse ? reach : -reach));
+                    sprite.setAir(true);
+                    sprite.setOnObject(false);
+                    sprite.setXSpeed((short) 0);
+                    sprite.setGSpeed((short) 0);
+                    sprite.setYSpeed((short) 0x100);
+                    fixture.camera().updatePosition(true);
+                    fixture.stepIdleFrames(1);
+                    // loc_1E45A: y_obj-d3-radius-1; loc_1E4D6: y_obj+d3+radius.
+                    // Player_TouchFloor restores standing radii; sub_22F98 adds +/-8.
+                    int expectedY = reverse ? y + 9 + 19 - 8 : y - 9 - 19 - 1 + 8;
+                    assertEquals(-0xA00, sprite.getYSpeed(), "real contact must launch");
+                    assertEquals(expectedY, sprite.getCentreY(),
+                            "reverse=" + reverse + ", rolling=" + rolling);
+                } finally {
+                    GameServices.gameState().setReverseGravityActive(false);
+                    SessionManager.clear();
+                }
+            }
+        }
+    }
+
     /**
      * {@code tst.b (Reverse_gravity_flag).w / subi.w #2*8,y_pos(a1)} (:47722-47724): the
      * {@code +8} becomes a net {@code -8}. The velocity word is <em>not</em> mirrored.

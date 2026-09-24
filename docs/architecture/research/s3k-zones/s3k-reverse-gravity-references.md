@@ -220,7 +220,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 41623 | `loc_1E154` | `sub_1E0C2` `loc_1E154`: landing from "above" is from below (`neg d3`, `+2`), turning `y - d3 + 3` into `y + d3 - 3` | both top-landing writes in `ObjectSolidContactController` | covered |
 | 41648 | `MvSonicOnPtfm` | `MvSonicOnPtfm`: rider placed under the platform (`loc_1E1AA`/`loc_1E1F4`), `y_pos(a0) + d3 + y_radius(a1)` | both continued-ride sites in `ObjectSolidContactController` | covered |
 | 41661 | `loc_1E1AA` | `MvSonicOnPtfm` unused S1 branch (`y + 9`); unreachable, record only | — | n/a |
-| 41999 | `loc_1E44C` | `sub_1E410` (`SolidObjectTop` landing): reverse variant `loc_1E4D6` | — **not a sign flip.** `loc_1E4D6` (:42053-42071) rebuilds the whole comparison — feet at `y_pos - y_radius - 4` against `y_pos(a0) + d3`, and a final `y = objBottom + y_radius` against the upright path's `objTop - y_radius - 1`, a deliberate one-pixel asymmetry. The engine's sloped/top path carries its own compensations, so this needs its own measurement rather than the mirror the other four rows share | missing |
+| 41999 | `loc_1E44C` | `sub_1E410` (`SolidObjectTop` landing): reverse variant `loc_1E4D6` | Flat top-solid final snap now uses `objBottom + liveRadius`, preserving the deliberate one-pixel asymmetry against upright `objTop - liveRadius - 1`. `TestS3kDezRetractingSpringHeadless#realSolidContactLaunchesFromTheCorrectFaceWithStandingAndRollingRadii` exercises real contact in both gravity states and both radii. Sloped variants and exact comparison-window boundaries remain unmeasured | partial |
 
 ### I. Monitors, springs, spikes
 
@@ -275,11 +275,11 @@ is the RAM wipe described above).
 | E. Knuckles routines | 24 | 18 | 1 | 4 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 9 | 0 | 0 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
-| H. Solid objects and platforms | 6 | 4 | 0 | 1 | 1 |
+| H. Solid objects and platforms | 6 | 4 | 1 | 0 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **98** | **4** | **10** | **4** |
+| **Total** | **116** | **98** | **5** | **9** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:

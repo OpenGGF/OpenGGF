@@ -4198,5 +4198,27 @@ films20480–22959. All22960state rows, stills20780/21200/21880/22040 and comple
 MP4 decode were checked. This is engine moving presentation, not native pixel
 matching. Continuing left reaches the lower shaft near(7507,1250); holding Left
 rides its edge and returns upward. Steering toward its centre too early also
-returns to the entry ledge. The next task is the deeper conveyor descent and
+returns to the entry ledge. The next task is the deeper curved-wall/retracting-spring shaft and
 route onward to the boss; full Act2 completion and breadth remain open.
+
+### Inverted flat top-solid spring contact (2026-09-24)
+
+On `831ba74c7` plus this fix, a real DEZ2 retracting-spring contact exposed the
+final landing-height override forcing the upright face after the mirrored contact
+and radius restoration. The isolated inverted standing case ended at Y891 rather
+than ROM-derived Y948: a 57-pixel error. `loc_1E45A` uses
+`objectY - d3 - radius - 1`; `loc_1E4D6` uses `objectY + d3 + radius`, then
+`sub_22F98` applies its inverted -8 spring nudge. The override now preserves this
+asymmetry. No spring velocity or terrain physics was tuned to the route.
+
+Queued Java21 validation with native GL and the absolute S3K ROM path:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestS3kDezRetractingSpringHeadless,TestS3kReverseGravitySolidObject,TestDezColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed 81 tests, zero failures/errors/skips. The new real-contact regression
+failed before the fix and passes upright/inverted, standing/rolling afterward.
+All seven preserved DEZ cold routes still pass. This is focused validation;
+combined campaign checks remain pending. The inventory row is partial because
+sloped variants and exact comparison-window boundaries need separate evidence.
+
+Shared-consumer follow-up: queued `-Dmse=off
+-Dtest=TestObjectSolidContactController,com.openggf.game.sonic2.objects.TestTopSolidRoutineProfileAdoption,com.openggf.game.sonic3k.objects.TestTopSolidRoutineProfileAdoption test`
+passed 8 tests, zero failures/errors/skips on the same candidate.
