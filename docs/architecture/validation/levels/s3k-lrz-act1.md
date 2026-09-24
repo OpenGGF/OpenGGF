@@ -10,8 +10,9 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
 full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
-Eight preserved native320 ordinary Sonic+Tails cold routes now extend through
-crusher descent and the second dash elevator to7671 inputs, with65 full-registry replay spots. Later
+Nine preserved native320 ordinary Sonic+Tails cold routes now extend through
+crusher descent, the second dash elevator and spike-platform ascent to8750 inputs.
+The nine routes cover74 full-registry replay spots; current checks are below. Later
 ordinary traversal is being authored; current verification is recorded in the
 dated follow-ups below.
 
@@ -557,3 +558,29 @@ films6200–7670 after the full cold prefix;7671state rows,zero deaths, inspecte
 different route after the6234lag boundary; no raw-row parity claim is made.
 Continue east from the ledge. Full-act completion, roster/viewport breadth and
 combined campaign integration remain open.
+
+### Cold rock wall and spike-platform ascent (2026-09-24)
+
+On `01e3ac68f` plus these route/test additions, the ordinary cold Sonic+Tails
+route extends to8750 inputs, ending(5696,1484)with107rings,zero deaths and
+the live sidekick. `lrz1-sonic-tails-cold-upper-ledge-320` preserves the authored
+inputs: spin dash through the rock wall, timed crossing of the spike platform,
+then board it from the eastern ledge, ride upward and jump into the upper tier.
+Running underneath and jumping too early were rejected controller attempts:
+the low ceiling cuts the jump short, and the platform can crush the player.
+No runtime change was needed. The later eastern giant-ring entry is excluded
+from the committed prefix; the onward upper route remains open.
+
+Queued Java21, native GL and absolute S3K ROM:
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzColdRouteCapture#coldTeamBreaksRockWallAndRidesSpikePlatformToUpperLedge test`
+passes1 test,zero failures/errors/skips. Nine45-frame full-registry replay
+spots are7800,8030,8210,8300,8364,8390,8550,8620,8700;74 across the nine
+independent cold routes. Authored script is compiled and round-trip checked
+by InputLogAuthorTool.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cold-upper-ledge-320/capture.mp4`
+films8000–8749 after the full cold prefix.8750state rows,zero deaths,8665/8749
+stills inspected and whole MP4 decode passes. The upper corridor's foreground
+obscures Sonic in the latter still; matched native visual acceptance remains
+open. This is ordinary route/replay evidence, not strict trace or pixel parity.
+Full Act1/Act2 cold completion and campaign integration remain owed.

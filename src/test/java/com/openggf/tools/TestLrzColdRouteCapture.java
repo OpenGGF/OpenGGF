@@ -49,8 +49,13 @@ class TestLrzColdRouteCapture {
         runColdRoute("lower-east");
     }
 
+    @Test void coldTeamBreaksRockWallAndRidesSpikePlatformToUpperLedge() throws Exception {
+        runColdRoute("upper-ledge");
+    }
+
     private void runColdRoute(String route) throws Exception {
-        boolean lowerEastRoute = route.equals("lower-east");
+        boolean upperLedgeRoute = route.equals("upper-ledge");
+        boolean lowerEastRoute = route.equals("lower-east") || upperLedgeRoute;
         boolean crusherRoute = route.equals("crusher") || lowerEastRoute;
         boolean fireRoute = route.equals("fire") || crusherRoute;
         boolean shrapnelRoute = route.equals("shrapnel") || fireRoute;
@@ -64,7 +69,8 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = lowerEastRoute ? Set.of(6230, 6320, 6450, 6540, 6700, 7180, 7260, 7420, 7500)
+        var spots = upperLedgeRoute ? Set.of(7800, 8030, 8210, 8300, 8364, 8390, 8550, 8620, 8700)
+                : lowerEastRoute ? Set.of(6230, 6320, 6450, 6540, 6700, 7180, 7260, 7420, 7500)
                 : crusherRoute ? Set.of(6020, 6055, 6066, 6090, 6140)
                 : fireRoute ? Set.of(5750, 5775, 5800, 5860, 5907, 5908, 5939, 5950)
                 : shrapnelRoute ? Set.of(5550, 5585, 5591, 5620, 5650)
@@ -191,11 +197,14 @@ class TestLrzColdRouteCapture {
                 assertEquals(shieldRoute ? 2206 : 2746, session.player().getCentreX());
                 assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
             }
-            if (lowerEastRoute) {
+            if (upperLedgeRoute) {
+                assertEquals(5696, session.player().getCentreX());
+                assertEquals(1484, session.player().getCentreY());
+            } else if (lowerEastRoute) {
                 assertEquals(4917, session.player().getCentreX());
                 assertEquals(1712, session.player().getCentreY());
             }
-            assertEquals(lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
+            assertEquals(upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
                     session.player().getRingCount());
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
         }
