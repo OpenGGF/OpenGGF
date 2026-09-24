@@ -54,7 +54,7 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = fireRoute ? Set.of(5750, 5775, 5800, 5860, 5950)
+        var spots = fireRoute ? Set.of(5750, 5775, 5800, 5860, 5907, 5908, 5939, 5950)
                 : shrapnelRoute ? Set.of(5550, 5585, 5591, 5620, 5650)
                 : chargeRoute ? Set.of(5140, 5175, 5200, 5300, 5400)
                 : elevatorRoute ? Set.of(4900, 4930, 4945, 4951) : shieldRoute ? Set.of(4510, 4540, 4563, 4590, 4650, 4700, 4780, 4850)
@@ -69,6 +69,19 @@ class TestLrzColdRouteCapture {
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame)); session.render();
                 assertFalse(session.player().getDead(), "death at " + frame);
+                if (frame == 2000) {
+                    // Camera is beyond $D00. Sprite_OnScreen_Test must release
+                    // earlier LRZ solids, not retain them in the native slot pool.
+                    for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                        if (object instanceof com.openggf.game.sonic3k.objects.LrzSinkingRockObjectInstance
+                                || object instanceof com.openggf.game.sonic3k.objects.LrzFallingSpikeObjectInstance
+                                || object instanceof com.openggf.game.sonic3k.objects.LrzSmashingSpikePlatformObjectInstance
+                                || object instanceof com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance) {
+                            assertTrue(object.getX() >= 2000,
+                                    "stale slot: " + object.getClass().getSimpleName() + " x=" + object.getX());
+                        }
+                    }
+                }
                 if (frame == 3394) {
                     assertTrue(session.player().isObjectControlled());
                     assertEquals(0, session.player().getAngle(), "loc_422E6 clears approach angle");
@@ -124,6 +137,12 @@ class TestLrzColdRouteCapture {
                     assertFalse(session.player().isHurt());
                     assertEquals(3224, session.player().getCentreX());
                     assertEquals(1807, session.player().getCentreY());
+                }
+                if (fireRoute && frame == 5940) {
+                    // Native button slot precedes its door: the opening starts
+                    // on contact, leaving room to advance here without a side hit.
+                    assertEquals(3574, session.player().getCentreX());
+                    assertEquals(72, session.player().getXSpeed());
                 }
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);

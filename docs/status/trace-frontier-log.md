@@ -111725,3 +111725,16 @@ first differs after5700 atX5940: engine3573/native3574 andspeed0/native72.
 Checkpoint observation identifies `LrzDoorObjectInstance` SIDE while on the
 button. First laterY5968:1826vs1827. Door/button timing is the next target.
 No strict trace-suite run or whole-act parity claim; earlier gaps remain.
+
+### 2026-09-24 — LRZ stale object slots delayed the button-driven door
+
+Tree`feature/ai-sk-zone-completion`,base`bc4e3285d`: native opens door5908;
+engine5909 because button27 ran after door10, while native button5 ran before
+door10. Old LRZ solids wrongly suppressed `Sprite_OnScreen_Test` unload.
+Corrected four family lifetimes (preserving collapsed-bridge countdown) and
+the originating guide error. Before-fix cold test fails on stale bridgeX328;
+96 focused tests and the added button/door replay regression pass,zero skips.
+See LRZ1 matrix for commands/media. Corrected door starts5908 and local
+coordinates match5700–6066. NextX6067:3941vs3956,Y1758vs1759 in rock-crusher
+interaction; owner not yet attributed. Strict trace suite not run; earlier
+transient/intro/ring differences and whole-act certification remain open.

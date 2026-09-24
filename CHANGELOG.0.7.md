@@ -610,6 +610,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   towards you; on the other half it passes behind and cannot hurt you.
   The wall rides work in both acts: run into one with any speed at all and it takes hold,
   sweeps you up over the curve and drops you back on the floor heading the other way.
+  Rocks, landed spikes, smashing platforms and intact collapsing bridges now unload outside
+  the camera range, freeing object slots so later buttons and doors execute in their proper order.
   The act 1 falling spikes drop: walk directly underneath one and it lets go, hurting anything
   it lands on, and once it hits the floor it stops hurting and stays as a solid block.
   The act 1 fireball launchers spit their fireballs again, each on its own period, and the

@@ -829,3 +829,21 @@ ROM-backed static visual precursor in wide views until `loc_7C818` starts drawin
 this intentionally differs from the ROM's invisible-until-dash allocation, with
 no early object slot, collision, palette or PLC activity. Mecha's high hardware
 priority is original ROM behaviour, not a widescreen exception.
+
+
+## Sprite_OnScreen_Test lifetime audit
+
+The LRZ cold-route audit based on `bc4e3285d` disproved the old guide claim
+that `Sprite_OnScreen_Test` only draws. Its out-of-range branch clears the
+respawn entry and deletes through `loc_1B5A0` (sonic3k.asm:37262–37278).
+LRZ sinking rocks, landed spikes, smashing platforms and intact collapsing
+bridges incorrectly suppressed this unload, retaining slots that change later
+button/door execution order. The LRZ1 matrix records the correction and checks.
+
+A sibling source audit found the same incorrect rationale in
+`HCZWaterWallObjectInstance`. Its per-phase range contract still needs a
+separate ROM audit: the actual cleanup countdown must remain persistent, but
+phases reaching `Sprite_OnScreen_Test` cannot be dismissed as drawing only.
+HCZ runtime behavior is unchanged by the LRZ correction; existing trace success
+is not evidence that every offscreen phase is faithful. The DEZ energy-bridge
+and LBZ cup providers checked during this audit already implement range tests.

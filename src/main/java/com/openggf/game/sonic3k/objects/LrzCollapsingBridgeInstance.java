@@ -218,7 +218,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
         // loc_39CCC (sonic3k.asm:77429-77435) is the SolidObjectTop call, run by
         // the engine's solid checkpoint from getSolidParams(). The tail is
-        // Sprite_OnScreen_Test (:77436), a draw test -- not an unload.
+        // Sprite_OnScreen_Test (:77436), whose loc_1B5A0 deletes out of range.
     }
 
     /** ROM {@code loc_39CE8} (sonic3k.asm:77439-77453). */
@@ -382,12 +382,10 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
     @Override
     public boolean usesCustomOutOfRangeCheck() {
-        // Audited per P53: Obj_LRZCollapsingBridge contains NO out_of_range,
-        // MarkObjGone, Delete_Sprite_If_Not_In_Range or Go_Delete_SpriteSlotted
-        // in any routine. Its only delete is the post-collapse countdown expiry
-        // in loc_39CE8 (sonic3k.asm:77453). Sprite_OnScreen_Test (:77436) is a
-        // draw test, not an unload. The shared camera unload must not apply.
-        return true;
+        // loc_39CCC ends in Sprite_OnScreen_Test: release/delete out of range.
+        // After collapse, loc_39CE8 instead owns a short countdown and returns
+        // without that helper until it explicitly deletes. Keep only that phase.
+        return collapsed;
     }
 
     @Override

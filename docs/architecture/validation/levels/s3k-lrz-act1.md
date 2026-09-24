@@ -420,3 +420,51 @@ isX5940 (3573vs3574): collision tracing reports a side hit on
 `LrzDoorObjectInstance` while standing on the button. Engine speed is reset to0
 where native advances with72. First laterY5968 is1826vs1827. Select the
 door/button interaction next; earlier transient and intro/ring gaps remain.
+
+### Slot lifetime behind the button-operated door (2026-09-24)
+
+At `bc4e3285d`, door3600,1817 starts moving5909 while native starts5908.
+At5940 engineY1772/native1771 produces the first side blockage. Native button
+slot5 precedes door10; engine door10 precedes button27. A cold observation
+shows old bridge328, sinking rocks1272/1344/1416 and landed spikes640/704/768
+still allocated long after the camera has left them.
+
+`Sprite_OnScreen_Test` is not drawing-only: its unsigned coarse-X comparison
+branches to `loc_1B5A0`, clears respawn bit7 and deletes. The LRZ implementations
+had disabled shared unload after following that mistaken guide assertion.
+Removed the overrides for sinking rocks, falling spikes and smashing platforms;
+intact collapsing bridges use normal unload, while their post-collapse
+`loc_39CE8` countdown genuinely has no range tail and remains independently
+owned. Door timing is not patched or keyed to the route.
+
+The guide claim originated in`e45a2428cf`; the sinking-rock override was
+introduced in`d38a4aa343`. Both skill mirrors now explain the helper body and
+phase distinction. The sibling audit finds an unresolved HCZWaterWall rationale
+and records it in S3K discrepancies without changing HCZ behavior. Checked
+DEZ energy-bridge and LBZ cup providers already have real range predicates.
+The cold regression at2000 fails before correction on stale bridgeX328.
+
+Verification: queued native-GL absolute-ROM
+`-Dtest=TestLrzColdRouteCapture,TestLrzSinkingRockObjectInstance,TestLrzFallingSpikeObjectInstance,
+TestLrzSmashingSpikePlatformObjectInstance,TestLrzSinkingRockRewindSpot,
+TestLrzFallingSpikeRewindSpot,TestLrzSmashingSpikePlatformRewindSpot,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+with`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`
+passes96 tests,zero failures/errors/skips,104seconds. Added3 full-registry
+spots5907/5908/5939 and a5940 native X/speed assertion to the existing6001-frame
+fixture; focused `TestLrzColdRouteCapture#coldTeamCrossesFallingLavaWithoutLosingFireShield`
+then passes1 test,zero skips,26.944seconds. Six cold routes now cover51 spots.
+The development selection plan against`bc4e3285d` is full; these are iteration
+checks, and combined delivery validation remains required for slot-lifetime impact.
+
+Corrected observation: the button occupies slot5 and runs before the door;
+the door opens5908, matching native. Player coordinates match locally from5700
+through6066. NextX6067 is3941vs3956 andY1758vs1759, in the rock-crusher area
+with falling pieces nearby. That interaction is the next target, not attributed
+yet. The12000-frame diagnostic remains alive but does not finish the act.
+Earlier transient/intro/ring differences remain open.
+
+Verified`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-door-slot-release-320/capture.mp4`:
+131 rendered frames5870–6000,6001 state rows,zero deaths; inspected5908/5940/5990
+and full video decode succeeds. Native-state comparison supports timing and
+coordinates; the engine recording alone is not native pixel matching.

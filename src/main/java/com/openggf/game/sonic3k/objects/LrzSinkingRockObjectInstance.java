@@ -41,10 +41,9 @@ import java.util.List;
  *       {@code :87924-87927}, position and collision {@code loc_42804} {@code :87929-87940}</li>
  * </ul>
  *
- * <p>The routine's only tail is {@code Sprite_OnScreen_Test} (:87940), which is a draw test. There
- * is no {@code out_of_range}, {@code MarkObjGone}, {@code Delete_Sprite_If_Not_In_Range} or
- * {@code Go_Delete_SpriteSlotted} anywhere in the object, so the shared camera unload must not
- * apply -- the same audit {@link LrzCollapsingBridgeInstance} records for {@code $31}.
+ * <p>The {@code Sprite_OnScreen_Test} tail (:87940) draws only in range;
+ * {@code loc_1B5A0} releases the respawn entry and deletes it outside the
+ * coarse X window. The shared post-routine unload models that path.
  *
  * <p>No zone or act gate lives in this class: it reaches Lava Reef only because
  * {@code Sonic3kObjectRegistry} resolves id {@code $17} through
@@ -200,15 +199,9 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
         return false;
     }
 
-    @Override
-    public boolean usesCustomOutOfRangeCheck() {
-        return true;
-    }
-
-    @Override
-    public boolean isCustomOutOfRange(int cameraX) {
-        return false;
-    }
+    // The routine tail calls Sprite_OnScreen_Test (loc_1B5A0): outside
+    // the coarse X window it clears respawn bit7 and deletes the object.
+    // Use the shared post-routine unload in every movement phase.
 
     /** ROM x_pos/y_pos are object centres. */
     public int getCentreX() {

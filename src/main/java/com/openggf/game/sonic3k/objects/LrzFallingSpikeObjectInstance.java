@@ -46,8 +46,9 @@ import java.util.List;
  * with word arithmetic and a {@code neg.w}, and the comparison is unsigned ({@code bhs}).
  *
  * <p>The waiting and falling routines end in {@code Sprite_CheckDeleteTouch3}, so the shared camera
- * unload applies to them; the landed routine ends in {@code Sprite_OnScreen_Test} (:88008), a draw
- * test, so a spike that has landed stays for the rest of the act.
+ * unload applies to them. The landed routine's {@code Sprite_OnScreen_Test}
+ * also releases its respawn entry and deletes outside the coarse X window;
+ * landing does not make the spike permanent.
  */
 public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable,
@@ -200,17 +201,9 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
         return false;
     }
 
-    @Override
-    public boolean usesCustomOutOfRangeCheck() {
-        // Sprite_OnScreen_Test is a draw test, so the landed routine never unloads; the waiting and
-        // falling routines end in Sprite_CheckDeleteTouch3 and keep the shared camera unload.
-        return phase == Phase.LANDED;
-    }
-
-    @Override
-    public boolean isCustomOutOfRange(int cameraX) {
-        return false;
-    }
+    // The routine tail calls Sprite_OnScreen_Test (loc_1B5A0): outside
+    // the coarse X window it clears respawn bit7 and deletes the object.
+    // Use the shared post-routine unload, including after a spike has landed.
 
     /** ROM x_pos/y_pos are object centres. */
     public int getCentreX() {

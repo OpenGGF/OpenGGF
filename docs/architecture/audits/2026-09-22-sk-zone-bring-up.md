@@ -4464,3 +4464,23 @@ Long unchanged input survives12000 frames, but next local X difference5940
 is a button-operated door side contact (3573vs3574; speed0vs72). Matrix
 records commands/evidence and inherited gaps. No shared damage logic changed;
 combined delivery remains pending.
+
+## LRZ stale slots and incorrect helper guidance (2026-09-24)
+
+At `bc4e3285d`, button/door opening differs by one frame because retained old
+solids put the button after its door. The guide assertion from`e45a2428cf`
+that `Sprite_OnScreen_Test` only draws is false: its helper body releases
+respawn bit7 and deletes outside the coarse X window. Sinking-rock code from
+`d38a4aa343` and related LRZ implementations followed that rationale.
+Corrected both guide mirrors, removed persistence for sinking rocks/landed
+spikes/smashing platforms, and kept only the collapsing bridge's genuinely
+independent post-collapse countdown persistent. No door timing workaround.
+
+Cold regression fails on stale bridgeX328 before correction.96 focused tests
+pass with zero skips; added button/door replay spots and native advance
+assertion also pass in a targeted rerun. Six cold routes total51 full-registry
+spots. Door starts5908 like native; local coordinates match5700–6066.
+Next6067 mismatch is in the rock-crusher area. Matrix records commands and
+inspected recording. Sibling audit flags HCZWaterWall's same false rationale
+for separate phase audit; DEZ energy bridges/LBZ cup already use real range
+predicates. Combined campaign verification/integration remains pending.

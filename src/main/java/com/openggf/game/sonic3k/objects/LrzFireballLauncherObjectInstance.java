@@ -36,8 +36,8 @@ import java.util.List;
  * sets that bit (their render flags are {@code 0} or {@code 2}, X-flip clear), so the leftward
  * branch is implemented from the ROM rather than from a placement.
  *
- * <p>The routine's tail is {@code Sprite_OnScreen_Test} (:88194), a draw test, and the object has
- * no unload of its own.
+ * <p>The {@code Sprite_OnScreen_Test} tail draws while in range and releases
+ * the respawn entry/deletes outside the coarse X window via {@code loc_1B5A0}.
  *
  * <p>{@code loc_42BF6} sets the shot's {@code shield_reaction} bit4, selecting
  * fire-shield immunity. Bit3 would select deflection; it is not set here.

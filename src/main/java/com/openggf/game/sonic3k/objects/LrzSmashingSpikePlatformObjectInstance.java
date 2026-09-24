@@ -62,10 +62,9 @@ import java.util.List;
  *       and each such player is passed to {@code sub_24280} (:49205-49222).</li>
  * </ul>
  *
- * <p>The routine's only tail is {@code Sprite_OnScreen_Test} (:88631, :88644): no
- * {@code out_of_range}, {@code MarkObjGone} or {@code Delete_Sprite_If_Not_In_Range} anywhere, so
- * the shared camera unload must not apply -- the same audit {@link LrzSinkingRockObjectInstance}
- * records for {@code $17}.
+ * <p>Both {@code Sprite_OnScreen_Test} tails (:88631, :88644) draw in range
+ * and release the respawn entry/delete outside it through {@code loc_1B5A0}.
+ * The shared post-routine unload applies in every movement phase.
  */
 public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable,
@@ -284,15 +283,9 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
 
     // ===== Lifetime =====
 
-    @Override
-    public boolean usesCustomOutOfRangeCheck() {
-        return true;
-    }
-
-    @Override
-    public boolean isCustomOutOfRange(int cameraX) {
-        return false;
-    }
+    // The routine tail calls Sprite_OnScreen_Test (loc_1B5A0): outside
+    // the coarse X window it clears respawn bit7 and deletes the object.
+    // Use the shared post-routine unload in every movement phase.
 
     // ===== Position and accessors =====
 

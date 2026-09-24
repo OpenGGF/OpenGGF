@@ -3080,7 +3080,17 @@ that was fully implemented and simply killed early.
 **What to check / fix.**
 1. Audit the object's ENTIRE body for `out_of_range`, `MarkObjGone`,
    `Delete_Sprite_If_Not_In_Range` and `Go_Delete_SpriteSlotted`. Count the deletes and
-   name each one. `Sprite_OnScreen_Test` is a DRAW, not an unload -- do not read it as one.
+   name each one, including helper bodies. `Sprite_OnScreen_Test` **does unload**:
+   it masks object X with `$FF80`, compares the unsigned distance from
+   `Camera_X_pos_coarse_back` with `$280`, then clears respawn bit7 and deletes
+   at `loc_1B5A0` when outside (sonic3k.asm:37262–37278). `Sprite_OnScreen_Test2`
+   uses caller-provided X and has the same release path. Only its in-range
+   branch draws. The former claim that this helper only draws was disproved
+   during the LRZ cold-route campaign based on `bc4e3285d`: retained rocks,
+   spikes and bridges changed native slot order, delaying a button-driven door.
+   Do not suppress shared unload for those tails. Audit routine-specific
+   exceptions separately; a collapsed bridge or geyser cleanup countdown that
+   genuinely returns without this helper may still require persistence.
 2. If none of the deletes is the shared camera macro, set
    `usesCustomOutOfRangeCheck() = true` and have `isCustomOutOfRange()` return the ROM's
    answer (often just `false`; the object already owns its own delete tests).
