@@ -15,7 +15,7 @@ below are inherited evidence until explicitly re-executed. Implementation,
 cold reachability, rewind, native behaviour and visual matching remain separate.
 Existing ending/credits and route exclusions remain as documented in each plan.
 
-## Current campaign priorities (2026-09-23, after `b6c1147a2`)
+## Current campaign priorities (updated 2026-09-24)
 
 The target remains all seven zones. The initial inventory below is historical;
 its original unimplemented counts must not be read as current production status.
@@ -26,7 +26,7 @@ its original unimplemented counts must not be read as current production status.
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; finish matrix reconciliation, checkpoint geometry and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
-| SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; source audit confirms arrival Death Egg palette/RNG/cloud/mask/missile omissions still need implementation. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and lifecycle isolation remain open. |
+| SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails reaches both replica defeats and the upper platform with16full-registry replay spots. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and lifecycle isolation remain open. |
 | DEZ | Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold main-act traversal and remaining Hyper/HUD/native presentation still need validation. |
 
@@ -3703,3 +3703,27 @@ TestS3kDezShockBlockHeadless,TestS3kDezLightningHeadless`) passed31tests with no
 failures/errors/skips. The other original failure classes passed in the first
 run. These are focused attribution/correction results, not a new broad pass.
 Combined campaign ordinary/guard validation remains required.
+
+
+### 2026-09-24 — second SSZ replica cold-route closure
+
+After merging develop `e6c6ac79a` without conflicts (`093938e94`), the fixed-input
+SSZ1 native320 Sonic+Tails route now reaches both replica defeats and the second
+pad's upper platform in11051frames,0deaths,2rings. Its16rewind spots include the
+MTZ approach, live fight, defeat, ascent and receiving platform. Queued
+`-Dtest=TestSszColdRouteCapture -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen test` passes
+1test with0skips. The first launch preceded the authored movie and failed on that
+missing file; the completed input's author round-trip and rerun pass.
+
+The external `ssz-bring-up/campaign-20260924-cold-second-replica-exit-320/capture.mp4`
+films the new portion (frames8000–11050) after a real cold boot. All11051 state
+rows match the input probe, and the video fully decodes. Upper traversal remains
+under input authoring; walking right off the pad is not the route. Native trace
+positions show a leftward platform traversal; they inform navigation only, never
+hydrate or correct gameplay state. No route completion beyond the upper-platform
+frontier is claimed yet.
+
+Combined selection against updated develop `e6c6ac79a` is full ordinary2906classes
+plus guards. Java21/Lua5.4/PowerShell preflight passes when launched with explicit
+JAVA_HOME and LUA_BIN. A first preflight without the known Lua override rejected
+system Lua before running tests. The campaign validation remains pending.

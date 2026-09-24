@@ -7,7 +7,7 @@ with `Debug_cheat_flag != 0`, and no Knuckles art or route exists for act 1).
 Owning plan: [SSZ bring-up](../../plans/2026-09-17-ssz-bring-up.md).
 Status: all 213 placed records have concrete owners; arrival Death Egg, bosses,
 results and the DEZ launch are implemented. The native320 cold route reaches
-beyond the first replica through the carrier section; complete cold traversal,
+through both replica defeats and the second pad to the upper platform; complete cold traversal,
 wide cold routes and remaining matrix breadth/native acceptance remain open.
 Nothing below certifies the act.
 
@@ -480,3 +480,27 @@ footage is under `campaign-20260924-bounds-activation-800` in this zone's extern
 capture directory. SSZ additionally has GHZ800/400 and MTZ800/352 defeat/release
 captures; all zero deaths. This does not close cold-route or cross-game breadth
 obligations; combined delivery checks remain pending.
+
+
+### Cold second-replica completion and upper-platform frontier (2026-09-24)
+
+`routes/s3k/ssz1-sonic-tails-cold-upper-320.{script,bk2}` extends the prior7912-frame
+middle route to11051 ordinary controller frames. It reaches the real MTZ replica,
+delivers all eight hits, waits through its escape, uses the released pad and ends
+at(5888,140),2rings,on the upper platform with player control free. No gameplay
+position/speed/health writes occur. The BK2 author validates the compiled script
+round trip. Both prior GHZ and MTZ bosses are absent at the endpoint.
+
+`TestSszColdRouteCapture` now asserts both live killing hits and both exits, the
+previous middle frontier, and sixteen full-registry capture/restore/forward spots:
+3440,3818,4168,4400,5100,5600,6300,6459,7076,7460,8063,8750,9250,9850,10850,11000.
+Queued Java21/absolute-ROM focused verification passed1test without skips. Its
+initial launch ran before authoring finished and failed for a missing movie;
+the completed input was then independently authored and the test rerun.
+
+Production capture `campaign-20260924-cold-second-replica-exit-320` in the external
+SSZ archive boots cold, records all11051 state rows and films frames8000–11050.
+Every row matches the earlier input-authoring probe; zero deaths, full MP4 decode.
+Frame11050 visibly places Sonic on the upper pad while Tails remains below.
+This closes cold native-team reachability and the tested rewind spots for the
+second replica/transport, not the rest of the act, wide input or native parity.
