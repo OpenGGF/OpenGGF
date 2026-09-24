@@ -375,3 +375,36 @@ Every fade tick approaches the latest desired opacity from its last value.
 An opening rectangle immediately reverses an incomplete fade-in; a renewed lock
 can reverse that fade-out again. There is no queued fade or wait for an endpoint.
 A focused regression exercises both reversals, including the slower edge strip.
+
+
+## Staggered border activation (supersedes proportional fade speeds)
+
+User review of `9721b4fa8` rejected simultaneously fading all twelve edge columns
+at different speeds. The requested half-fade/half-wipe requires transparent inner
+columns to wait until the outer columns have filled. The main wing still fades
+for 45 ticks. Each border column then waits for its outward neighbour to become
+opaque, and fades over four ticks before allowing the next column to begin.
+The innermost column therefore remains clear until all eleven preceding columns
+have filled; the final boundary remains exact. Both sides use mirrored order.
+
+History remains world-relative, derived from destination bounds. There is no
+independent queued wipe timer: release immediately reduces each column's current
+opacity at the normal fade rate, and renewed activation resumes partially faded
+columns from their current value. Columns still transparent do not appear after
+an interrupted activation. Existing opaque scenery stays opaque. Rewind needs
+only the opacity history, so the obsolete per-column fade-rate array is removed.
+
+This replaces the earlier simultaneous 45–90-tick rate interpolation, rather
+than adding another layer to it. Tests check every intermediate quarter-opacity
+step and every waiting inner column, camera movement, interruption and rewind.
+
+Staggered-border verification: queued Java21 Maven selection
+`TestLevelBoundsMaskTransition,TestArenaMaskState,TestArenaMaskRenderer,TestS3kSharedBossCameraGate,TestLevelSpritePresentation`
+with native GL passed 19 tests without skips. After adding early-cancellation
+and mid-border rewind assertions, rerunning TestLevelBoundsMaskTransition passed
+all seven tests. External SSZ450/LRZ600 previews in
+`campaign-20260924-bounds-staggered-border-800` fully decode, retain identical
+CSV gameplay to the destination-feather recordings, and contain zero deaths.
+The change-based selector still selects the full suite because this is shared
+presentation code; the combined campaign delivery run remains required. These
+focused results do not replace that outstanding gate.

@@ -37,46 +37,51 @@ class TestLevelBoundsMaskTransition {
         }
     }
 
-    @Test void twelvePixelFeatherLagsActivationAndReleaseWithoutLeavingAPermanentGap() {
+    @Test void borderColumnsWaitForTheirOuterNeighbourThenFadeIn() {
         var transition = new LevelBoundsMaskTransition();
         transition.advance(new ArenaMaskState(0, 800, 0), 0, 800);
         for (int tick = 1; tick <= 45; tick++) {
             transition.advance(new ArenaMaskState(240, 560, tick), 0, 800);
         }
-        var halfway = transition.capture();
         assertEquals(1, transition.sample().opacityAt(227));
-        assertTrue(transition.sample().opacityAt(233) < transition.sample().opacityAt(228));
-        assertTrue(transition.sample().opacityAt(239) < transition.sample().opacityAt(233));
-        assertEquals(transition.sample().opacityAt(239), transition.sample().opacityAt(560));
-        assertEquals(0, transition.sample().opacityAt(240));
-        halfway.fadeRates()[239] = 1; // Captured history cannot be mutated by a consumer.
-        for (int tick = 46; tick <= 90; tick++) {
-            transition.advance(new ArenaMaskState(240, 560, tick), 0, 800);
+        for (int x = 228; x < 240; x++) assertEquals(0, transition.sample().opacityAt(x));
+        for (int column = 0; column < 12; column++) {
+            for (int frame = 1; frame <= 4; frame++) {
+                int tick = 45 + column * 4 + frame;
+                transition.advance(new ArenaMaskState(240, 560, tick), 0, 800);
+                assertEquals(frame / 4f, transition.sample().opacityAt(228 + column));
+                assertEquals(frame / 4f, transition.sample().opacityAt(571 - column));
+                for (int inner = 229 + column; inner < 240; inner++) {
+                    assertEquals(0, transition.sample().opacityAt(inner), "inner columns wait, not merely fade slower");
+                }
+            }
         }
         assertEquals(1, transition.sample().opacityAt(239));
-        for (int tick = 91; tick <= 135; tick++) {
-            transition.advance(new ArenaMaskState(0, 800, tick), 0, 800);
-        }
-        assertEquals(0, transition.sample().opacityAt(227));
-        assertTrue(transition.sample().opacityAt(239) > transition.sample().opacityAt(233));
-        for (int tick = 136; tick <= 180; tick++) {
+        assertEquals(0, transition.sample().opacityAt(240));
+        var saved = transition.capture();
+        for (int tick = 94; tick <= 138; tick++) {
             transition.advance(new ArenaMaskState(0, 800, tick), 0, 800);
         }
         assertFalse(transition.sample().visible(800));
-        transition.restore(halfway);
-        transition.advance(new ArenaMaskState(0, 800, 46), 0, 800);
-        assertTrue(transition.sample().opacityAt(239) > 0.45,
-                "rewind restores the slow release rate as well as opacity");
+        transition.restore(saved);
+        assertEquals(1, transition.sample().opacityAt(239));
     }
 
     @Test void fadeAndFeatherFollowWorldCoordinatesAndTeleportDoesNotCarryOldMask() {
         var transition = new LevelBoundsMaskTransition();
         transition.advance(new ArenaMaskState(0, 800, 0), 0, 800);
-        transition.advance(new ArenaMaskState(240, 560, 1), 0, 800);
-        float edge = transition.sample().opacityAt(239);
-        transition.advance(new ArenaMaskState(232, 552, 2), 8, 800);
-        assertEquals(2 * edge, transition.sample().opacityAt(231), 0.000001,
-                "the slow feather belongs to world column 239, now viewport column 231");
+        for (int tick = 1; tick <= 47; tick++) {
+            transition.advance(new ArenaMaskState(240, 560, tick), 0, 800);
+        }
+        var saved = transition.capture();
+        transition.advance(new ArenaMaskState(232, 552, 48), 8, 800);
+        var replay = transition.sample();
+        transition.restore(saved);
+        transition.advance(new ArenaMaskState(232, 552, 48), 8, 800);
+        assertEquals(replay, transition.sample(), "rewind resumes the pending border progression exactly");
+        assertEquals(0.75f, transition.sample().opacityAt(220),
+                "partially fading world column 228 follows the camera shift");
+        assertEquals(0, transition.sample().opacityAt(221));
         transition.advance(new ArenaMaskState(0, 800, 3), 10000, 800);
         assertFalse(transition.sample().visible(800), "a distant new view has no overlapping fade history");
     }
@@ -84,21 +89,34 @@ class TestLevelBoundsMaskTransition {
     @Test void briefLockReversesImmediatelyAndCanReverseAgainFromCurrentOpacity() {
         var transition = new LevelBoundsMaskTransition();
         transition.advance(new ArenaMaskState(0, 800, 0), 0, 800);
-        for (int tick = 1; tick <= 10; tick++) {
+        for (int tick = 1; tick <= 47; tick++) {
             transition.advance(new ArenaMaskState(240, 560, tick), 0, 800);
         }
         float outer = transition.sample().opacityAt(20);
-        float edge = transition.sample().opacityAt(239);
-        transition.advance(new ArenaMaskState(0, 800, 11), 0, 800);
+        float edge = transition.sample().opacityAt(228);
+        transition.advance(new ArenaMaskState(0, 800, 48), 0, 800);
         assertTrue(transition.sample().opacityAt(20) < outer);
-        assertTrue(transition.sample().opacityAt(239) < edge);
-        float interruptedEdge = transition.sample().opacityAt(239);
-        transition.advance(new ArenaMaskState(240, 560, 12), 0, 800);
-        assertTrue(transition.sample().opacityAt(239) > interruptedEdge);
-        assertEquals(edge, transition.sample().opacityAt(239), 0.000001,
+        assertTrue(transition.sample().opacityAt(228) < edge);
+        float interruptedEdge = transition.sample().opacityAt(228);
+        transition.advance(new ArenaMaskState(240, 560, 49), 0, 800);
+        assertTrue(transition.sample().opacityAt(228) > interruptedEdge);
+        assertEquals(interruptedEdge + 0.25f, transition.sample().opacityAt(228), 0.000001,
                 "resuming starts at current opacity, not zero or the previous destination");
-        for (int tick = 13; tick <= 23; tick++) {
+        for (int tick = 50; tick <= 94; tick++) {
             transition.advance(new ArenaMaskState(0, 800, tick), 0, 800);
+        }
+        assertFalse(transition.sample().visible(800));
+    }
+
+    @Test void cancellingBeforeTheBorderStartsNeverRevealsQueuedColumns() {
+        var transition = new LevelBoundsMaskTransition();
+        transition.advance(new ArenaMaskState(0, 800, 0), 0, 800);
+        for (int tick = 1; tick <= 10; tick++) {
+            transition.advance(new ArenaMaskState(240, 560, tick), 0, 800);
+        }
+        for (int tick = 11; tick <= 110; tick++) {
+            transition.advance(new ArenaMaskState(0, 800, tick), 0, 800);
+            for (int x = 228; x < 240; x++) assertEquals(0, transition.sample().opacityAt(x));
         }
         assertFalse(transition.sample().visible(800));
     }

@@ -8,7 +8,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - Automatically mask widescreen pixels beyond the destination of native horizontal
   camera bounds, including asymmetric arena and level edges. Static fades in world
-  space, with a slower 12px edge strip; changing bounds immediately redirect an
+  space, with a staggered fade across the 12px edge strip; changing bounds immediately redirect an
   in-progress fade. Presentation history rewinds, and native-width output is unchanged.
 
 - **S3K Sky Sanctuary:** Both Act 1 replica bosses now draw their ROM-backed
