@@ -10,9 +10,10 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
 full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
-A preserved4501-frame native320 ordinary Sonic+Tails cold route now crosses the
-corkscrew and continues west through the lower platforms; current verification
-is recorded in the dated follow-up below.
+Eight preserved native320 ordinary Sonic+Tails cold routes now extend through
+crusher descent and the second dash elevator to7671 inputs, with65 full-registry replay spots. Later
+ordinary traversal is being authored; current verification is recorded in the
+dated follow-ups below.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
 load at the end of the campaign, not the route entry). Outgoing: seamless `$901`.
@@ -533,3 +534,26 @@ native GL, absolute S3K ROM and
 19 tests passed, zero failures/errors/skips,102seconds. This includes seven
 cold routes and56 full-registry replay spots. Combined campaign validation
 remains owed.
+
+### Cold crusher descent and second elevator (2026-09-24)
+
+On `5f70b27ea` plus route/test additions, `lrz1-sonic-tails-cold-lower-east-320`
+extends the6201-input prefix to7671 ordinary controller frames. A short retreat
+and timed jump clear the lower passage; charging the second dash elevator raises
+Sonic to the eastern ledge. No engine change, state override or native hydration
+is used. The endpoint is(4917,1712),103rings,live Sonic+Tails,zero deaths.
+The script recompiles to identical BK2 inputs.
+
+`TestLrzColdRouteCapture#coldTeamLeavesCrusherAndRidesSecondDashElevator`
+passes with zero failures/errors/skips using queued Java21, native GL, absolute
+S3K ROM and `-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzColdRouteCapture#coldTeamLeavesCrusherAndRidesSecondDashElevator test`
+(28.594seconds). Nine new45-frame full-registry replay spots are6230,6320,6450,
+6540,6700,7180,7260,7420,7500. Earlier56 spots remain independently covered.
+This validates authored reachability and replay, not native pixel/trace parity.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cold-lower-east-320/capture.mp4`
+films6200–7670 after the full cold prefix;7671state rows,zero deaths, inspected
+6600/7300stills and successful full MP4 decode. The native recording takes a
+different route after the6234lag boundary; no raw-row parity claim is made.
+Continue east from the ledge. Full-act completion, roster/viewport breadth and
+combined campaign integration remain open.
