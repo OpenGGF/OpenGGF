@@ -1,8 +1,9 @@
 package com.openggf.sprites.managers;
 
-import com.openggf.tests.TestEnvironment;
-import com.openggf.game.session.SessionManager;
+import com.openggf.game.GameServices;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.HyperFormTrailSample;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
@@ -11,6 +12,7 @@ import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +54,22 @@ public class TestPlayableSpriteAnimation {
                 "S3K Animate_Tails2P clears Status_Push when MoveRight changes anim from idle to walk");
         assertEquals(0, sprite.getAnimationId(),
                 "After the push clear, animation resolution should choose walk instead of push");
+    }
+
+    @Test
+    public void s3kReverseGravityMirrorsTheLiveOrientationUsedByHyperTrail() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        GameServices.gameState().setReverseGravityActive(true);
+        try {
+            sprite.getAnimationManager().update(0);
+
+            assertTrue(sprite.getRenderVFlip(),
+                    "reverse gravity toggles the player's vertical mirror after Animate_Sonic");
+            assertTrue(HyperFormTrailSample.sample(sprite, 0).verticalFlip(),
+                    "Hyper trail copies the player's live vertical mirror flag");
+        } finally {
+            GameServices.gameState().setReverseGravityActive(false);
+        }
     }
 
     @Test

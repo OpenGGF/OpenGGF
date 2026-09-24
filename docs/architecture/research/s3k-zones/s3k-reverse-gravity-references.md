@@ -68,6 +68,23 @@ consumer" is what exists today; "new" means the owning object does not exist yet
   `MoveSprite_TestGravity` (9) and `MoveSprite_TestGravity2` (16) spread the behaviour to every
   caller: port the wrapper once and route every engine equivalent of those callers through it.
 
+## Follow-up: Hyper afterimage vertical mirror (2026-09-23)
+
+Commit `c122066f827871c768dfb22db358e2e186efa5b4` adds the post-animation reverse-gravity
+vertical mirror to `PlayableSpriteAnimation`. It models the ROM's `eori.b #2,render_flags`
+after `Animate_Sonic` (`sonic3k.asm:22010-22013`); the corresponding Tails and Knuckles paths
+are at `26254-26258` and `30452-30456`. The existing object-controlled animation early return
+still skips this step, matching `object_control` bit 1.
+
+`Obj_HyperSonicKnux_Trail` copies `Player_1+render_flags` live at `sonic3k.asm:35396`, so the
+player's post-animation flip fixes both the body and its afterimages. A trail-only gravity check
+was rejected because it would stop following the source sprite's live flags. The focused
+`TestPlayableSpriteAnimation.s3kReverseGravityMirrorsTheLiveOrientationUsedByHyperTrail` case
+failed on the false vertical flip before the change and passed afterward as part of
+`python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestPlayableSpriteAnimation,TestHyperFormTrailSample" test`
+(50 tests, 0 failures). This follow-up records the Hyper route behavior; the tables below remain
+the broader inventory snapshot from `9cba6dbb6`.
+
 ## References by owner
 
 ### A. Shared integration and sensor wrappers

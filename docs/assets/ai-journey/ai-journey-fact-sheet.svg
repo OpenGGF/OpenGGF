@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">AI and ROM accuracy in OpenGGF, 2013 to 2026</title>
+  <desc id="desc">A technical fact sheet showing the OpenGGF accuracy loop, commit history, and evidence boundaries for model usage.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08101f"/>
+      <stop offset="1" stop-color="#10162c"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#64e4ff"/>
+      <stop offset="1" stop-color="#4da7ff"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0E0E10" stroke-opacity=".055"/>
+    </pattern>
+    <style>
+      .label { font: 700 18px Inter, ui-sans-serif, sans-serif; letter-spacing: 3px; fill: #1A4FE6; }
+      .title { font: 800 58px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .subtitle { font: 400 25px Inter, ui-sans-serif, sans-serif; fill: #414149; }
+      .big { font: 800 54px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .metric { font: 700 21px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .small { font: 400 17px Inter, ui-sans-serif, sans-serif; fill: #575760; }
+      .body { font: 400 20px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .panel { fill: #ffffff; stroke: #0E0E10; stroke-width: 3; }
+      .line { stroke: #0E0E10; stroke-width: 3; }
+      .mono { font: 600 18px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #0E0E10; }
+      .light { fill: #ffffff; }
+      .dark { fill: #0E0E10; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#f5f6fb"/>
+  <rect width="1600" height="1000" fill="url(#grid)"/>
+  <rect x="0" y="0" width="800" height="10" fill="#1A4FE6"/>
+  <rect x="800" y="0" width="400" height="10" fill="#E62B33"/>
+  <rect x="1200" y="0" width="400" height="10" fill="#FFD81F"/>
+
+  <text x="80" y="78" class="label">OPEN GGF / FIELD NOTE 01</text>
+  <text x="80" y="145" class="title">AI × ROM ACCURACY</text>
+  <text x="80" y="188" class="subtitle">How a hand-built engine became an oracle-driven AI development system</text>
+
+  <rect x="80" y="235" width="320" height="172" rx="14" class="panel"/>
+  <rect x="80" y="235" width="320" height="12" rx="6" fill="#1A4FE6"/>
+  <text x="108" y="278" class="label">DEVELOP HISTORY</text>
+  <text x="108" y="340" class="big">16,161</text>
+  <text x="108" y="378" class="metric">commits on origin/develop</text>
+  <text x="108" y="398" class="small">through 19 Sep 2026</text>
+
+  <rect x="425" y="235" width="320" height="172" rx="14" class="panel"/>
+  <rect x="425" y="235" width="320" height="12" rx="6" fill="#E62B33"/>
+  <text x="453" y="278" class="label">LATE FRONTIER</text>
+  <text x="453" y="340" class="big">5,004</text>
+  <text x="453" y="378" class="metric">commits, 27 Jul–19 Sep</text>
+  <text x="453" y="398" class="small">3,772 non-merge · 1,232 merges</text>
+
+  <rect x="770" y="235" width="320" height="172" rx="14" class="panel"/>
+  <rect x="770" y="235" width="320" height="12" rx="6" fill="#FFD81F"/>
+  <text x="798" y="278" class="label">OPEN GGF CCUSAGE</text>
+  <text x="798" y="340" class="big">140.6B</text>
+  <text x="798" y="378" class="metric">tokens, 1 Jun–20 Sep</text>
+  <text x="798" y="398" class="small">$93.0k recorded cost · June+ only</text>
+
+  <rect x="1115" y="235" width="405" height="172" rx="14" class="panel"/>
+  <rect x="1115" y="235" width="405" height="12" rx="6" fill="#E62B33"/>
+  <text x="1143" y="278" class="label">CREDITED PHASE</text>
+  <text x="1143" y="340" class="big">366</text>
+  <text x="1143" y="378" class="metric">Fable 5.1 trailers</text>
+  <text x="1143" y="398" class="small">2–17 Sep · 189 subjects mention audio</text>
+
+  <rect x="80" y="455" width="1440" height="255" rx="14" class="panel"/>
+  <text x="112" y="505" class="label">THE LOOP</text>
+  <text x="112" y="553" class="body">The model is not the oracle. The shipped ROM is.</text>
+
+  <g transform="translate(112 590)">
+    <rect width="204" height="68" rx="10" fill="#1A4FE6" stroke="#0E0E10" stroke-width="3"/>
+    <text x="102" y="30" text-anchor="middle" class="metric light">ROM / BizHawk</text>
+    <text x="102" y="52" text-anchor="middle" class="small light">reference behaviour</text>
+    <path d="M216 34 H260" class="line"/><path d="M252 27 L260 34 L252 41" fill="none" stroke="#E62B33" stroke-width="4"/>
+  </g>
+  <g transform="translate(382 590)">
+    <rect width="204" height="68" rx="10" fill="#E62B33" stroke="#0E0E10" stroke-width="3"/>
+    <text x="102" y="30" text-anchor="middle" class="metric light">trace / audio / pixel</text>
+    <text x="102" y="52" text-anchor="middle" class="small light">comparison oracle</text>
+    <path d="M216 34 H260" class="line"/><path d="M252 27 L260 34 L252 41" fill="none" stroke="#1A4FE6" stroke-width="4"/>
+  </g>
+  <g transform="translate(652 590)">
+    <rect width="204" height="68" rx="10" fill="#FFD81F" stroke="#0E0E10" stroke-width="3"/>
+    <text x="102" y="30" text-anchor="middle" class="metric">first mismatch</text>
+    <text x="102" y="52" text-anchor="middle" class="small">frame / field / sample</text>
+    <path d="M216 34 H260" class="line"/><path d="M252 27 L260 34 L252 41" fill="none" stroke="#E62B33" stroke-width="4"/>
+  </g>
+  <g transform="translate(922 590)">
+    <rect width="204" height="68" rx="10" fill="#ffffff" stroke="#0E0E10" stroke-width="3"/>
+    <text x="102" y="30" text-anchor="middle" class="metric">ROM hypothesis</text>
+    <text x="102" y="52" text-anchor="middle" class="small">disassembly-backed</text>
+    <path d="M216 34 H260" class="line"/><path d="M252 27 L260 34 L252 41" fill="none" stroke="#1A4FE6" stroke-width="4"/>
+  </g>
+  <g transform="translate(1192 590)">
+    <rect width="204" height="68" rx="10" fill="#0E0E10" stroke="#0E0E10" stroke-width="3"/>
+    <text x="102" y="30" text-anchor="middle" class="metric light">patch &amp; replay</text>
+    <text x="102" y="52" text-anchor="middle" class="small light">frontier moves or fails</text>
+  </g>
+
+  <rect x="80" y="758" width="690" height="150" rx="14" class="panel"/>
+  <text x="112" y="800" class="label">WHAT CHANGED BY SEPTEMBER</text>
+  <text x="112" y="840" class="body">The oracle grew from bytes → frames → audio buses → pixels.</text>
+  <text x="112" y="872" class="small">The method scaled because each new frontier gained a measurable failure signal.</text>
+
+  <rect x="800" y="758" width="720" height="150" rx="14" class="panel"/>
+  <text x="832" y="800" class="label">READ THE NUMBERS CORRECTLY</text>
+  <text x="832" y="838" class="small">Git = what landed · trailers = credited collaboration · ccusage = June+ project volume</text>
+  <text x="832" y="868" class="small">pre-June history is mixed · model metadata is incomplete</text>
+
+  <line x1="80" y1="942" x2="1520" y2="942" class="line"/>
+  <text x="80" y="970" class="small">Source: origin/develop 98f5fe5af · ccusage 1 Jun–20 Sep 2026 · June+ usage confirmed OpenGGF-only</text>
+  <text x="1520" y="970" text-anchor="end" class="mono">OPEN GG F / AI JOURNEY</text>
+</svg>

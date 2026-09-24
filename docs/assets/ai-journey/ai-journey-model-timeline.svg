@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1000" viewBox="0 0 1800 1000" role="img" aria-labelledby="title desc">
+  <title id="title">OpenGGF AI and oracle timeline, 2013 to September 2026</title>
+  <desc id="desc">A horizontal timeline from the hand-built engine through GPT-4, Codex, Jules, Claude, Fable, GPT-5.6, and GPT-6 Astra, showing the expansion of verification oracles.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08101f"/>
+      <stop offset="1" stop-color="#15152d"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0E0E10" stroke-opacity=".055"/>
+    </pattern>
+    <style>
+      .label { font: 700 18px Inter, ui-sans-serif, sans-serif; letter-spacing: 3px; fill: #1A4FE6; }
+      .title { font: 800 56px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .subtitle { font: 400 25px Inter, ui-sans-serif, sans-serif; fill: #414149; }
+      .year { font: 800 26px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .head { font: 800 24px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .body { font: 400 18px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .small { font: 400 16px Inter, ui-sans-serif, sans-serif; fill: #5b5b63; }
+      .panel { fill: #ffffff; stroke: #0E0E10; stroke-width: 3; }
+      .line { stroke: #0E0E10; stroke-width: 5; }
+      .dash { stroke: #0E0E10; stroke-width: 2; stroke-dasharray: 8 10; }
+      .cyan { fill: #1A4FE6; }
+      .orange { fill: #FFD81F; }
+      .purple { fill: #E62B33; }
+      .pink { fill: #E62B33; }
+      .green { fill: #FFD81F; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1000" fill="#f5f6fb"/>
+  <rect width="1800" height="1000" fill="url(#grid)"/>
+  <rect width="900" height="10" fill="#1A4FE6"/>
+  <rect x="900" width="450" height="10" fill="#E62B33"/>
+  <rect x="1350" width="450" height="10" fill="#FFD81F"/>
+  <text x="80" y="78" class="label">OPEN GGF / FIELD NOTE 02</text>
+  <text x="80" y="145" class="title">THE ORACLE GOT BIGGER</text>
+  <text x="80" y="188" class="subtitle">A model timeline is only useful when paired with the thing that judged the output</text>
+
+  <line x1="120" y1="485" x2="1680" y2="485" class="line"/>
+
+  <g transform="translate(145 0)">
+    <circle cx="0" cy="485" r="15" class="orange"/>
+    <line x1="0" y1="468" x2="0" y2="295" class="dash"/>
+    <text x="0" y="260" text-anchor="middle" class="year">2013–2024</text>
+    <text x="0" y="305" text-anchor="middle" class="head">James, by hand</text>
+    <text x="0" y="340" text-anchor="middle" class="body">engine foundation</text>
+    <text x="0" y="370" text-anchor="middle" class="small">engine · physics · collision</text>
+    <line x1="0" y1="502" x2="0" y2="660" class="dash"/>
+    <text x="0" y="706" text-anchor="middle" class="label">ORACLE</text>
+    <text x="0" y="738" text-anchor="middle" class="small">the shipped ROM exists</text>
+  </g>
+
+  <g transform="translate(375 0)">
+    <circle cx="0" cy="485" r="15" class="cyan"/>
+    <line x1="0" y1="468" x2="0" y2="295" class="dash"/>
+    <text x="0" y="260" text-anchor="middle" class="year">Sep–Oct 2024</text>
+    <text x="0" y="305" text-anchor="middle" class="head">GPT-4 → o1</text>
+    <text x="0" y="340" text-anchor="middle" class="body">Kosinski</text>
+    <text x="0" y="370" text-anchor="middle" class="small">scratchpad → byte exact</text>
+    <line x1="0" y1="502" x2="0" y2="660" class="dash"/>
+    <text x="0" y="706" text-anchor="middle" class="label">ORACLE</text>
+    <text x="0" y="738" text-anchor="middle" class="small">compressed bytes / ROM</text>
+  </g>
+
+  <g transform="translate(605 0)">
+    <circle cx="0" cy="485" r="15" class="cyan"/>
+    <line x1="0" y1="502" x2="0" y2="660" class="dash"/>
+    <text x="0" y="535" text-anchor="middle" class="year">Jun 2025</text>
+    <text x="0" y="580" text-anchor="middle" class="head">Online Codex</text>
+    <text x="0" y="615" text-anchor="middle" class="body">agentic loop</text>
+    <text x="0" y="645" text-anchor="middle" class="small">AGENTS.md · VM · PR review</text>
+    <text x="0" y="706" text-anchor="middle" class="label">ORACLE</text>
+    <text x="0" y="738" text-anchor="middle" class="small">tests + human review</text>
+  </g>
+
+  <g transform="translate(835 0)">
+    <circle cx="0" cy="485" r="15" class="purple"/>
+    <line x1="0" y1="468" x2="0" y2="295" class="dash"/>
+    <text x="0" y="260" text-anchor="middle" class="year">Nov–Dec 2025</text>
+    <text x="0" y="305" text-anchor="middle" class="head">Jules + Codex</text>
+    <text x="0" y="340" text-anchor="middle" class="body">audio scaffold</text>
+    <text x="0" y="370" text-anchor="middle" class="small">capable output, no sound oracle yet</text>
+    <line x1="0" y1="502" x2="0" y2="660" class="dash"/>
+    <text x="0" y="706" text-anchor="middle" class="label">ORACLE</text>
+    <text x="0" y="738" text-anchor="middle" class="small">human ear + debugger</text>
+  </g>
+
+  <g transform="translate(1065 0)">
+    <circle cx="0" cy="485" r="15" class="green"/>
+    <line x1="0" y1="502" x2="0" y2="660" class="dash"/>
+    <text x="0" y="535" text-anchor="middle" class="year">Mar 2026</text>
+    <text x="0" y="580" text-anchor="middle" class="head">Trace replay</text>
+    <text x="0" y="615" text-anchor="middle" class="body">first mismatch</text>
+    <text x="0" y="645" text-anchor="middle" class="small">frame · field · disassembly</text>
+    <text x="0" y="706" text-anchor="middle" class="label">ORACLE</text>
+    <text x="0" y="738" text-anchor="middle" class="small">ROM state, frame by frame</text>
+  </g>
+
+  <g transform="translate(1295 0)">
+    <circle cx="0" cy="485" r="15" class="pink"/>
+    <line x1="0" y1="468" x2="0" y2="295" class="dash"/>
+    <text x="0" y="260" text-anchor="middle" class="year">Jul–Aug 2026</text>
+    <text x="0" y="305" text-anchor="middle" class="head">Fable 5 + Opus 5</text>
+    <text x="0" y="340" text-anchor="middle" class="body">frontier at scale</text>
+    <text x="0" y="370" text-anchor="middle" class="small">S3K · trace · docs · integration</text>
+    <line x1="0" y1="502" x2="0" y2="660" class="dash"/>
+    <text x="0" y="706" text-anchor="middle" class="label">ORACLE</text>
+    <text x="0" y="738" text-anchor="middle" class="small">replay sweep + review</text>
+  </g>
+
+  <g transform="translate(1525 0)">
+    <circle cx="0" cy="485" r="15" class="orange"/>
+    <line x1="0" y1="502" x2="0" y2="660" class="dash"/>
+    <text x="0" y="535" text-anchor="middle" class="year">Sep 2026</text>
+    <text x="0" y="580" text-anchor="middle" class="head">Fable 5.1 + Astra</text>
+    <text x="0" y="615" text-anchor="middle" class="body">audio + pixels</text>
+    <text x="0" y="645" text-anchor="middle" class="small">Sol · Terra · Luna also in the mix</text>
+    <text x="0" y="706" text-anchor="middle" class="label">ORACLE</text>
+    <text x="0" y="738" text-anchor="middle" class="small">chip buses + native pixels</text>
+  </g>
+
+  <rect x="115" y="820" width="1570" height="102" rx="14" class="panel"/>
+  <text x="150" y="862" class="label">THROUGHLINE</text>
+  <text x="150" y="895" class="body">The model changed repeatedly. The winning invariant was always the same: make the failure measurable, then let the ROM judge.</text>
+  <text x="150" y="950" class="small">Dates are first observed local usage or dated Git evidence, not release dates. See ai-journey.md for source boundaries.</text>
+  <text x="1685" y="950" text-anchor="end" class="small">OPEN GGF / AI JOURNEY</text>
+</svg>

@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200" viewBox="0 0 1800 1200" role="img" aria-labelledby="title desc">
+  <title id="title">OpenGGF model roles and evidence</title>
+  <desc id="desc">A technical comparison of model roles, Git trailer attribution, project-scoped session tokens, and equal 14-day launch windows whose June-onward usage is confirmed OpenGGF-only.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08101f"/>
+      <stop offset="1" stop-color="#15152d"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0E0E10" stroke-opacity=".055"/>
+    </pattern>
+    <style>
+      .label { font: 700 18px Inter, ui-sans-serif, sans-serif; letter-spacing: 3px; fill: #1A4FE6; }
+      .title { font: 800 54px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .subtitle { font: 400 24px Inter, ui-sans-serif, sans-serif; fill: #414149; }
+      .head { font: 800 22px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .rowhead { font: 800 21px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .body { font: 400 18px Inter, ui-sans-serif, sans-serif; fill: #0E0E10; }
+      .small { font: 400 16px Inter, ui-sans-serif, sans-serif; fill: #5b5b63; }
+      .mono { font: 600 16px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #0E0E10; }
+      .panel { fill: #ffffff; stroke: #0E0E10; stroke-width: 3; }
+      .line { stroke: #0E0E10; stroke-width: 3; }
+      .accent { fill: #1A4FE6; }
+      .purple { fill: #E62B33; }
+      .orange { fill: #FFD81F; }
+      .pink { fill: #E62B33; }
+      .green { fill: #FFD81F; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1200" fill="#f5f6fb"/>
+  <rect width="1800" height="1200" fill="url(#grid)"/>
+  <rect width="900" height="10" fill="#1A4FE6"/>
+  <rect x="900" width="450" height="10" fill="#E62B33"/>
+  <rect x="1350" width="450" height="10" fill="#FFD81F"/>
+  <text x="80" y="78" class="label">OPEN GGF / FIELD NOTE 03</text>
+  <text x="80" y="145" class="title">MODELS ARE ROLES, NOT AUTHORS</text>
+  <text x="80" y="188" class="subtitle">Read Git, session logs, and ccusage as different instruments</text>
+
+  <rect x="80" y="235" width="1640" height="390" rx="14" class="panel"/>
+  <text x="112" y="280" class="label">LANDED WORK + RECOVERABLE PROJECT SESSIONS</text>
+  <line x1="112" y1="310" x2="1688" y2="310" class="line"/>
+  <text x="112" y="345" class="head">MODEL / PHASE</text>
+  <text x="470" y="345" class="head">GIT TRAILERS</text>
+  <text x="790" y="345" class="head">OPEN GGF SESSION TOKENS</text>
+  <text x="1180" y="345" class="head">SIGNAL IN THE WORK</text>
+  <line x1="112" y1="365" x2="1688" y2="365" class="line"/>
+
+  <g transform="translate(0 0)">
+    <text x="112" y="405" class="rowhead">Claude Opus 5</text>
+    <text x="470" y="405" class="body">726 · 24 Jul–18 Sep</text>
+    <text x="790" y="405" class="body">7.88B</text>
+    <text x="1180" y="405" class="body">S3K · trace · docs · integration</text>
+    <line x1="112" y1="425" x2="1688" y2="425" class="line"/>
+    <text x="112" y="465" class="rowhead">Claude Fable 5</text>
+    <text x="470" y="465" class="body">507 · 10 Jun–31 Aug</text>
+    <text x="790" y="465" class="body">194M</text>
+    <text x="1180" y="465" class="body">trace · S3K · tests · plans</text>
+    <line x1="112" y1="485" x2="1688" y2="485" class="line"/>
+    <text x="112" y="525" class="rowhead">Claude Fable 5.1</text>
+    <text x="470" y="525" class="body">366 · 2–17 Sep</text>
+    <text x="790" y="525" class="body">1.83B</text>
+    <text x="1180" y="525" class="body">audio parity · FM · DAC · buses</text>
+    <line x1="112" y1="545" x2="1688" y2="545" class="line"/>
+    <text x="112" y="585" class="rowhead">GPT-5.6 Sol / Luna / Astra</text>
+    <text x="470" y="585" class="body">quiet / no reliable trailer</text>
+    <text x="790" y="585" class="body">9.34B / 3.38B / 4.24B</text>
+    <text x="1180" y="585" class="body">Codex work under @raiscan</text>
+  </g>
+
+  <rect x="80" y="665" width="1640" height="330" rx="14" class="panel"/>
+  <text x="112" y="710" class="label">EQUAL 14-DAY LAUNCH WINDOWS / JUNE+ OPEN GGF</text>
+  <text x="112" y="742" class="small">Each row uses the first 14 calendar days in which the model appears; June+ usage is confirmed OpenGGF-only.</text>
+  <line x1="112" y1="765" x2="1688" y2="765" class="line"/>
+  <text x="112" y="800" class="head">MODEL</text>
+  <text x="420" y="800" class="head">WINDOW</text>
+  <text x="735" y="800" class="head">ACTIVE</text>
+  <text x="920" y="800" class="head">TOKENS</text>
+  <text x="1165" y="800" class="head">COST</text>
+  <text x="1380" y="800" class="head">CONCURRENT COMMITS</text>
+  <line x1="112" y1="818" x2="1688" y2="818" class="line"/>
+  <text x="112" y="852" class="rowhead">Fable 5</text><text x="420" y="852" class="body">2–15 Jul</text><text x="735" y="852" class="body">11/14</text><text x="920" y="852" class="body">1.61B</text><text x="1165" y="852" class="body">$2.54k</text><text x="1380" y="852" class="body">1,414</text>
+  <text x="112" y="892" class="rowhead">Sol</text><text x="420" y="892" class="body">9–22 Jul</text><text x="735" y="892" class="body">14/14</text><text x="920" y="892" class="body">26.85B</text><text x="1165" y="892" class="body">$14.37k</text><text x="1380" y="892" class="body">1,748</text>
+  <text x="112" y="932" class="rowhead">Opus 5</text><text x="420" y="932" class="body">24 Jul–6 Aug</text><text x="735" y="932" class="body">11/14</text><text x="920" y="932" class="body">6.05B</text><text x="1165" y="932" class="body">$4.33k</text><text x="1380" y="932" class="body">1,039</text>
+  <text x="112" y="972" class="rowhead">Fable 5.1 / Astra</text><text x="420" y="972" class="body">2–15 / 4–17 Sep</text><text x="735" y="972" class="body">12/14 each</text><text x="920" y="972" class="body">2.09B / 4.35B</text><text x="1165" y="972" class="body">$1.27k / $5.64k</text><text x="1380" y="972" class="body">1,436 / 1,515</text>
+
+  <rect x="80" y="1030" width="1640" height="105" rx="14" fill="#FFD81F" stroke="#0E0E10" stroke-width="3"/>
+  <text x="112" y="1070" class="label">BOUNDARY</text>
+  <text x="112" y="1102" class="body">Usage is not authorship. Authors are not oracles. Quality is not accuracy until the ROM agrees.</text>
+  <text x="1688" y="1102" text-anchor="end" class="small">See ai-journey.md for full windows and caveats.</text>
+  <text x="80" y="1175" class="small">Source: origin/develop 98f5fe5af · ccusage June+ confirmed OpenGGF-only · recoverable cwd-scoped session logs</text>
+  <text x="1720" y="1175" text-anchor="end" class="mono">OPEN GGF / AI JOURNEY</text>
+</svg>
