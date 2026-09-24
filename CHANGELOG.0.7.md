@@ -4,6 +4,8 @@ Unreleased. This line carries the work promoted from `next` after 0.6.20260911.
 The [0.7 roadmap](docs/project/v0.7-roadmap.md) prioritizes complete stock-game
 campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
+
+- Add an explicitly activated, rewindable widescreen arena static mask shared by level events and bosses; native-width output remains unchanged.
 ## Gameplay and presentation
 
 - **S3K Sky Sanctuary:** Both Act 1 replica bosses now draw their ROM-backed
@@ -174,7 +176,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ship, whose body is drawn on the foreground plane over the six-band space background.
   Background scroll words now retain integer-pixel wrapping, preventing thin black seams
   where widescreen rendering repeats the native background plane.
-  Asteroids shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
+  Hyper's afterimages now mirror vertically with Sonic when gravity reverses. Asteroids
+  shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
   or ramming costs speed. The end boss runs both phases: turrets, launchers, missiles that can
   be steered back into the ship, the chase with bombs, rockets and the Master Emerald, the
   level wrap that repeats the field, and the defeat, explosions and white fade before the
