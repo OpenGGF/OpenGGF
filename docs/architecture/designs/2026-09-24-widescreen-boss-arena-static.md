@@ -1,6 +1,6 @@
 # Widescreen boss arenas: signal-static side mask
 
-Status: presentation prototype for review, not engine behavior. Separate local
+Status: activation/hold appearance approved; defeat/release review and delivery validation pending. Separate local
 branch `codex/ssz-arena-static-demo`, based on develop `40d55783c`. The level
 bring-up worktree remains independent. Do not merge or enable this prototype as
 a finished gameplay feature.
@@ -160,3 +160,57 @@ each. Native320 recordings retain352 and5728 respectively.
 Noise now refreshes at60Hz, not the initially chosen12Hz. Both finished MP4s
 were decoded; all167 consecutive frame pairs tested during the fully opaque
 interval have changing noise. All600 centre-preservation checks still pass.
+
+## In-engine trial architecture — awaiting user confirmation
+
+The user approved GHZ and MTZ replica arenas only. All other events remain off.
+Common `ArenaMaskState` exposes `activate(activeWidth)`, `release()` and
+`advance()`. The level event coordinator is the single owner; a boss can request
+activation through that coordinator. No automatic boss/lock detection lives in
+common code. An opted-in runtime implements `ArenaMaskSource` and includes the
+state's16bytes in its own rewind snapshot. Advance once per executed gameplay
+pass, never per draw; pause therefore freezes it and rewind restores the noise
+clock and45-frame fade. Fresh runtime state is clear. Repeated activation is
+idempotent; releasing mid-fade reverses smoothly. Native-width output is a no-op.
+
+`ArenaMaskRenderer` uses an independent integer hash per pixel and gameplay frame.
+It draws directly into the currently bound framebuffer before HUD composition,
+restores GL state, and is cleaned up with GraphicsManager. It neither samples
+framebuffer0 nor consumes gameplay RNG. This works with offscreen capture and
+preserves the active centre by discarding its fragments.
+
+Shared implementation remains in the separate prototype worktree. A context patch
+and exact copies of its new files are also applied to the dirty bring-up worktree
+for the two SSZ adapters, whose runtime/event classes are not yet in develop.
+These are trial working changes, not independently integrated copies. Reconcile
+this shared patch once when the campaign and feature are delivered. Do not merge
+or push until the user confirms the in-engine result.
+
+The change-based plan at develop40d55783c selects2697ordinary classes plus guards
+for the shared render integration. That combined delivery run remains pending;
+focused trial checks and captures must not be called a full-suite pass.
+
+### Trial results
+
+Focused queued Java21/Maven run (absolute S3K ROM, DISPLAY=:0, native GL enabled):
+TestArenaMaskState, TestArenaMaskRenderer, TestNativeArenaCameraFraming,
+TestS3kSszGhzArenaHeadless, TestS3kSszMtzArenaHeadless, TestSszColdRouteCapture,
+TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils:115tests, zero failures/errors/skips. After making the
+GraphicsManager entry package-private through an internal bridge and adding
+event activation assertions, reran mask state/realGPU/both replica events/cold
+route:31tests, zero failures/errors/skips, finished09:24:53BST. GPU checks cover
+all five widths at1x/2x, offset viewports, capture FBO, centre identity, per-frame
+noise and deterministic replay, and GL state restoration. Cold route retains
+its ten full-registry rewind/replay spots with the additional presentation state.
+
+Live shader recordings: campaign-20260924-{ghz,mtz}-live-static-{320,800},450
+frames each from explicit checkpoint/40rings/neutral input. Full MP4 decodes pass.
+All450 gameplay CSV rows per recording match pre-mask camera-fixed recordings
+exactly. All300 common filmed frames preserve the central320 pixels exactly
+before encoding; native320 entire frames are identical. Wide frame400 of both
+fights inspected: mask remains active through knockback, HUD readable.
+Shared implementation is also present as uncommitted trial code in separate
+codex/ssz-arena-static-demo. Reconcile the common patch once at integration.
+Full combined suite/guards, broader lifecycle/display-shader coverage and user
+confirmation remain pending. No runtime feature commit or push claimed.

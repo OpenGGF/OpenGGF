@@ -4,6 +4,8 @@ Unreleased. This line carries the work promoted from `next` after 0.6.20260911.
 The [0.7 roadmap](docs/project/v0.7-roadmap.md) prioritizes complete stock-game
 campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
+
+- Add an explicitly activated, rewindable widescreen arena static mask shared by level events and bosses; native-width output remains unchanged.
 ## Gameplay and presentation
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter

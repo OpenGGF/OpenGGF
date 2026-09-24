@@ -1203,6 +1203,11 @@ public final class LevelRenderer {
             lm.graphicsManager.registerCommand(disableWaterShaderCommand);
         }
 
+        // Explicit opt-in only; world masking precedes every HUD layout and title overlay.
+        if (options.hasGameplayPass() && GameServices.zoneRuntimeState()
+                instanceof com.openggf.game.internal.ArenaMaskSource source) {
+            com.openggf.graphics.ArenaMaskRenderer.enqueue(lm.graphicsManager, source.arenaMask());
+        }
         profiler.beginSection("render.hud");
         if (options.includeHud() && lm.hudRenderManager != null
                 && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
