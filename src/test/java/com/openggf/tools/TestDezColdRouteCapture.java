@@ -45,12 +45,17 @@ class TestDezColdRouteCapture {
         runColdRoute("roof");
     }
 
+    @Test void coldIncomingActTwoDescendsInvertedSpringShaftWithRewind() throws Exception {
+        runColdRoute("shaft");
+    }
+
     private void runColdRoute(String route) throws Exception {
         boolean complete = route.equals("complete");
+        boolean shaft = route.equals("shaft");
         boolean roof = route.equals("roof");
         boolean transporters = route.equals("transporters");
         boolean middle = route.equals("middle");
-        boolean lower = route.equals("lower") || middle || transporters || roof;
+        boolean lower = route.equals("lower") || middle || transporters || roof || shaft;
         boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
@@ -103,6 +108,13 @@ class TestDezColdRouteCapture {
                     20620, 20670, 20740, 20775, 20940, 21000, 21050, 21100,
                     21180, 21320, 21340, 21570, 21790, 21840, 21960, 22000,
                     22030, 22200, 22400, 22520, 22680, 22890));
+        }
+        if (shaft) {
+            // Curved-wall departure, both inverted spring contacts, corridor
+            // spring avoidance and the first ceiling step; earlier tests own the prefix.
+            spots.clear();
+            spots.addAll(Set.of(23020, 23180, 23270, 23310, 23330, 23345,
+                    23385, 23400, 23415, 23455, 23485, 23510, 23640, 23690));
         }
         var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
                 .getSuperclass().getDeclaredField("collisionProperty");
@@ -177,9 +189,9 @@ class TestDezColdRouteCapture {
             assertEquals(11, GameServices.level().getCurrentZone());
             assertEquals(complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
-                assertEquals(roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
-                assertEquals(roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
-                assertEquals(roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
+                assertEquals(shaft ? 8211 : roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
+                assertEquals(shaft ? 1683 : roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
+                assertEquals(shaft ? 3 : roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
                 assertFalse(session.player().isObjectControlled(), "lower tube releases movement");
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             }

@@ -525,3 +525,27 @@ sloped variants and exact comparison-window boundaries need separate evidence.
 Shared-consumer follow-up: queued `-Dmse=off
 -Dtest=TestObjectSolidContactController,com.openggf.game.sonic2.objects.TestTopSolidRoutineProfileAdoption,com.openggf.game.sonic3k.objects.TestTopSolidRoutineProfileAdoption test`
 passed 8 tests, zero failures/errors/skips on the same candidate.
+
+### Cold inverted spring shaft route (2026-09-24)
+
+On `2cc685260`, the preserved
+`dez2-sonic-tails-incoming-shaft-320.{script,bk2}` reaches (8211,1683)
+with 3 rings in 23741 ordinary controller frames from cold DEZ1 Sonic+Tails,
+without death or gameplay-state writes. It crosses the curved wall, both inverted
+retracting springs, the return-facing corridor spring and the first ceiling step.
+Holding Left too long after the second spring returns to the shaft; steering
+right during its launch arc clears the exit. This is input authoring, not an
+additional physics correction.
+
+Queued Java21 `-Dmse=off -Dopenggf.test.gl.native=true
+-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestDezColdRouteCapture#coldIncomingActTwoDescendsInvertedSpringShaftWithRewind test`
+passed 1 test, zero failures/errors/skips. Fourteen full-registry capture/restore
+and 45-frame replay spots cover the new interactions, bringing the five preserved
+Act2 routes to 87 spots. Combined campaign validation is still pending.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-inverted-spring-shaft-320/capture.mp4`
+shows frames23240–23499. All23500 state rows, stills23340/23416/23480 and full
+MP4 decode were inspected; zero deaths. This is engine presentation evidence,
+not native pixel parity. Later exploratory input has reached the lower corridor
+near (8501,2292); full Act2 traversal and its remaining breadth are open.
