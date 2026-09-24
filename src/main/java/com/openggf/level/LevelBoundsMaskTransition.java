@@ -7,9 +7,9 @@ import com.openggf.graphics.ArenaMaskState;
  * fades when bounds begin covering it. Camera motion projects that history into the
  * viewport; newly exposed columns inherit the adjacent fade instead of arriving opaque. */
 final class LevelBoundsMaskTransition implements RewindSnapshottable<LevelBoundsMaskTransition.State> {
-    static final int FADE_FRAMES = 45;
+    static final int FADE_FRAMES = 23;
     static final int FEATHER_PIXELS = 12;
-    static final int FEATHER_COLUMN_FRAMES = 4;
+    static final int FEATHER_COLUMN_FRAMES = 2;
     record State(int cameraX, int width, int tick, ArenaMaskState sample) { }
     private static final State EMPTY = new State(0, 0, 0, null);
     private State state;

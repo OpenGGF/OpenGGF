@@ -408,3 +408,12 @@ CSV gameplay to the destination-feather recordings, and contain zero deaths.
 The change-based selector still selects the full suite because this is shared
 presentation code; the combined campaign delivery run remains required. These
 focused results do not replace that outstanding gate.
+
+User accepted the staggered shape and requested approximately twice the speed.
+The main fade/release now takes 23 ticks (rounded from 22.5), and each border
+column takes two ticks. A fresh complete activation takes 47 ticks instead of
+93; the 12px width, world-space placement and interruption behavior are unchanged.
+
+The timing refinement passed eight focused transition/GPU tests, zero skips,
+using queued Maven `-Dtest=TestLevelBoundsMaskTransition,TestArenaMaskRenderer
+-Dopenggf.test.gl.native=true test` under Java21.
