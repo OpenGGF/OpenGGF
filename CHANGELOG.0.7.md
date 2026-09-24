@@ -568,6 +568,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   first-free object allocation order. Rewinding in Act 2 keeps its current object
   graphics instead of restoring obsolete miniboss pixels; the shared art journal
   also preserves later overlapping writes and replacement level data.
+  A controller-only Sonic and Tails route now completes both acts from a cold
+  Act 1 start, reaching the boss act without a death; Act 2 has81 full-world
+  rewind/replay spots across traversal and its boulder handoff.
   Act 2 also draws its ROM-backed Death Egg background sprite, with continuous
   widescreen entry and preserved art-load/position state on rewind. Finite
   widescreen foregrounds no longer repeat opposite-edge terrain outside the layout.

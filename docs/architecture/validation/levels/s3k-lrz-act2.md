@@ -11,7 +11,9 @@ continuation. Both exits and the boulder cutscene are implemented. Route certifi
 and the remaining breadth/lifecycle/native obligations are still separate gates.
 The ordinary native320 Sonic+Tails cold Act1 route now reaches playable Act2
 (2357,1980),zero deaths; see the [handoff evidence](s3k-lrz-act1.md#ordinary-cold-miniboss-clear-and-act2-handoff-2026-09-24).
-This closes cold arrival, not Act2 traversal or its other route products.
+The native320 Sonic+Tails route now completes Act2 and reaches the boss act
+from cold Act1 in43761 inputs without a death. See the
+[completion evidence](#ordinary-cold-act2-completion-2026-09-24); broader products remain open.
 
 Incoming: seamless `$900` handover, level select `$901`, star-post reload.
 Outgoing: `$1600` (Sonic/Tails, with the Act 3 carry) and `$1601` (Knuckles, with `SaveGame`).
@@ -468,3 +470,43 @@ and41640 inspected and full decode passes. Input is
 The recording ends back on the safe platform after a jump encounters the second
 oscillating lift while it is too high; that next lift at12344/1120 is still being
 authored. Full-act completion and added-section rewind coverage remain open.
+
+
+### Ordinary cold Act2 completion (2026-09-24)
+
+On619eca534 plus the new input/test fixture, ordinary native320 Sonic+Tails
+completes Act2 from cold Act1 in43761 inputs, with zero deaths and no initial
+position, shield, ring or emerald writes. The boulder carries five rings into
+zone22/act0; Sonic ends at296/1196 with six rings and a live Tails. The boss-act
+flash is still active at the endpoint. This closes this Act2 traversal, not the
+subsequent fight, native pixel matching, or other width/donor/roster products.
+
+The preserved fixture is `lrz2-sonic-tails-cold-boss-act-arrival-320.script`/`.bk2`
+in `src/test/resources/routes/s3k/`. `TestLrzActTwoColdRouteCapture` adds50
+full-registry restore/45-input replay spots over the remaining traversal and
+boulder phases, with separate post-load checks. No replay window crosses the
+level load. Door5/6 opening, boulder control, carried rings, destination and
+roster are asserted. The initial door6 assertion at39950 was premature: the
+measured timer was40, with opening starting39911 and reaching the ROM's64-step
+completion at39974. The final assertion samples39980; no runtime change.
+
+Fresh moving evidence:
+- `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-high-bridges-320/capture.mp4`:450frames,41862–42311; stills42100/42251 inspected.
+- `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-cold-boss-act-arrival-320/capture.mp4`:1449frames,42312–43760; stills43350/43760 inspected.
+
+Both complete CSVs have zero deaths and both videos pass full decode. The second
+lift requires a run-up; the next bridge jump must happen before running off its
+edge. The rejected automated continuation dies in the boss act at44805 and is
+not part of this fixture. Its first lava crossing is the next cold-route frontier.
+
+Validation selection from619eca534 chooses2912 ordinary classes plus guards
+because new route files are unclassified. This slice changes only controller
+fixtures and their regression test, so focused route/replay validation is
+proportionate; it is not a full-suite pass. Combined campaign validation,
+including the earlier shared DMA journal change, remains owed.
+
+Final focused command: `JAVA_HOME=<JDK21> DISPLAY=:0 python3
+tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestLrzActTwoColdRouteCapture test` on619eca534 plus this slice:
+2 tests pass,0 failures/errors/skips,81 total full-registry replay spots.
+The new script/BK2 passes the production author/loader round trip.

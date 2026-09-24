@@ -4848,3 +4848,17 @@ was disproved by the input log and matched-prefix state comparison. The
 [Act2 matrix](../validation/levels/s3k-lrz-act2.md#lift-flame-pause-and-ceiling-route-2026-09-24)
 records1236 verified video frames and the second-lift frontier. No runtime
 changes or repeated engine tests in this evidence-only slice.
+
+
+### Ordinary cold LRZ2 completion (2026-09-24)
+
+The native320 Sonic+Tails cold Act1 chain now completes Act2 in43761 inputs,
+zero deaths, and reaches zone22/act0 with six rings and live Tails. Preserved
+controller input and50 new full-registry replay spots cover the remaining
+traversal, boulder and independent post-load state. The
+[Act2 matrix](../validation/levels/s3k-lrz-act2.md#ordinary-cold-act2-completion-2026-09-24)
+records the videos, setup and door6 assertion timing correction. No runtime
+logic changed in this slice. The earlier12820-input standalone boss-act success
+used declared fire shield/37rings; it does not certify this actual incoming
+six-ring/no-shield state. The first attempted continuation dies at44805;
+controller authoring continues from the actual cold carry.
