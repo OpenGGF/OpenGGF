@@ -387,3 +387,36 @@ above; the drop currently lacks that reaction declaration. This is the next
 implementation target, together with the same omission on launcher fireballs.
 The long run dies7040; survival duration is not proof of parity. Earlier
 transientY5248, intro/ring differences and full-act completion remain open.
+
+### Fire-shield immunity on falling lava and fireballs (2026-09-24)
+
+At `51f6670eb`, contact5776 takes the fire shield while overlapping falling
+lava at3264,1824/1776. Native remains at3224,1807 without recoil.
+`loc_436EE` and `loc_42BF6` both write shield-reaction bit4 on their respective
+children. The drop/fireball providers omitted it; their comments incorrectly
+called this a missing deflection capability. Bit4 selects fire-shield immunity
+in `Touch_ChkHurt`; bit3 selects the distinct projectile-deflection path.
+Both providers now publish`$10` through the existing touch-profile mapper;
+shared damage handling is unchanged. Unit tests fail before the change
+(expected16,actual0 for both) and distinguish immunity from deflection.
+A6001-frame cold fixture adds5 whole-registry replay spots around the real
+falling-lava crossing, checking retained shield and native position5776.
+
+Queued verification with native GL and absolute ROM:
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestLrzFireballLauncher,TestLrzLavaFall,TestTouchResponseManager,TestLrzColdRouteCapture test`
+passes95 tests,zero failures/errors/skips,108seconds (six cold routes38.60s).
+There are48 full-registry replay spots. The selection plan against`51f6670eb`
+is broad; focused iteration exercises the two providers, shared touch contracts
+and real crossing without claiming a full-suite pass. Campaign delivery
+selection remains required.
+
+Verified video`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-fire-immunity-320/capture.mp4`
+contains271 rendered frames5730–6000,6001 state rows,zero deaths; inspected
+5776/5805/5950 and full decode passes. The unchanged12000-frame diagnostic
+input now reaches its budget alive, including special-stage return; this does
+not certify the act or special-stage parity. The next local post5700 difference
+isX5940 (3573vs3574): collision tracing reports a side hit on
+`LrzDoorObjectInstance` while standing on the button. Engine speed is reset to0
+where native advances with72. First laterY5968 is1826vs1827. Select the
+door/button interaction next; earlier transient and intro/ring gaps remain.

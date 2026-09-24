@@ -39,10 +39,8 @@ import java.util.List;
  * <p>The routine's tail is {@code Sprite_OnScreen_Test} (:88194), a draw test, and the object has
  * no unload of its own.
  *
- * <p><b>Gap.</b> The shot sets {@code bset #4,shield_reaction(a1)} (:88182), the bit that makes a
- * shield deflect it. The engine can only express that through a canonical
- * {@code TouchResponseProfile} whose remaining fields were not traced, so it is a plain harmful
- * object and a shielded player absorbs it -- the same gap recorded for the shooting trigger's shot.
+ * <p>{@code loc_42BF6} sets the shot's {@code shield_reaction} bit4, selecting
+ * fire-shield immunity. Bit3 would select deflection; it is not set here.
  */
 public final class LrzFireballLauncherObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, RomObjectCodePointerProvider {

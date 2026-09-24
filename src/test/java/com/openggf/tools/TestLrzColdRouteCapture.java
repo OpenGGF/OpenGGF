@@ -37,8 +37,13 @@ class TestLrzColdRouteCapture {
         runColdRoute("shrapnel");
     }
 
+    @Test void coldTeamCrossesFallingLavaWithoutLosingFireShield() throws Exception {
+        runColdRoute("fire");
+    }
+
     private void runColdRoute(String route) throws Exception {
-        boolean shrapnelRoute = route.equals("shrapnel");
+        boolean fireRoute = route.equals("fire");
+        boolean shrapnelRoute = route.equals("shrapnel") || fireRoute;
         boolean chargeRoute = route.equals("charge") || shrapnelRoute;
         boolean elevatorRoute = route.equals("elevator") || chargeRoute;
         boolean shieldRoute = !route.equals("corkscrew");
@@ -49,7 +54,8 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = shrapnelRoute ? Set.of(5550, 5585, 5591, 5620, 5650)
+        var spots = fireRoute ? Set.of(5750, 5775, 5800, 5860, 5950)
+                : shrapnelRoute ? Set.of(5550, 5585, 5591, 5620, 5650)
                 : chargeRoute ? Set.of(5140, 5175, 5200, 5300, 5400)
                 : elevatorRoute ? Set.of(4900, 4930, 4945, 4951) : shieldRoute ? Set.of(4510, 4540, 4563, 4590, 4650, 4700, 4780, 4850)
                 : Set.of(200, 600, 950, 1300, 1800, 2200, 2600, 2900,
@@ -112,6 +118,12 @@ class TestLrzColdRouteCapture {
                             com.openggf.game.sonic3k.objects.badniks.IwamodokiShrapnelInstance.class)
                             .stream().anyMatch(fragment -> fragment.getCollisionFlags() == 0),
                             "production shield touch must deflect an actual fragment");
+                }
+                if (fireRoute && frame == 5776) {
+                    assertTrue(session.player().hasShield());
+                    assertFalse(session.player().isHurt());
+                    assertEquals(3224, session.player().getCentreX());
+                    assertEquals(1807, session.player().getCentreY());
                 }
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);

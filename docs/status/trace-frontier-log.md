@@ -111713,3 +111713,15 @@ in LRZ1 matrix. Post-fix player coordinates match locally through5775; next
 Y5776 is1802vs1807, X5777 is3222vs3226. Nearby lava-fall drops lack the ROM's
 fire-shield reaction bit4. Select that owner next; earlier differences and
 strict trace replay remain open.
+
+### 2026-09-24 — LRZ fire-shield immunity and door frontier
+
+Tree`feature/ai-sk-zone-completion`,base`51f6670eb`: added omitted bit4 from
+`loc_436EE`/`loc_42BF6` to lava-drop/fireball touch profiles. Both unit oracles
+fail before fix; queued providers/TouchResponseManager/six cold-route tests
+pass95,zero failures/errors/skips. Commands and video in LRZ1 matrix.
+Ordinary12000-frame diagnostic now survives the budget, but local comparison
+first differs after5700 atX5940: engine3573/native3574 andspeed0/native72.
+Checkpoint observation identifies `LrzDoorObjectInstance` SIDE while on the
+button. First laterY5968:1826vs1827. Door/button timing is the next target.
+No strict trace-suite run or whole-act parity claim; earlier gaps remain.

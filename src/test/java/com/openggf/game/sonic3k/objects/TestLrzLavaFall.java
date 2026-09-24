@@ -134,6 +134,17 @@ class TestLrzLavaFall {
         assertEquals(0x99, harness.drop(false, false).getCollisionFlags());
     }
 
+    @Test
+    void fireDamageUsesImmunityWithoutShieldDeflection() {
+        var hazard = Harness.create().drop(false, false);
+        // Both parent routines set bit4. Touch_ChkHurt checks this against
+        // the fire shield; only bit3 selects projectile deflection.
+        assertEquals(0x10, hazard.getShieldReactionFlags());
+        assertEquals(0x10, hazard.getTouchResponseProfile().shieldReactionFlags());
+        assertEquals(com.openggf.level.objects.TouchShieldDeflectCapability.NONE,
+                hazard.getTouchResponseProfile().shieldDeflectCapability());
+    }
+
     private record Harness(ObjectManager objectManager) {
 
         static Harness create() {

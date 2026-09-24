@@ -35,9 +35,8 @@ import java.util.List;
  * where {@code Level_frame_counter+1} is a multiple of {@code $10} and the previous render pass
  * left it on screen (:88813-88818).
  *
- * <p><b>Gap.</b> {@code bset #4,shield_reaction(a1)} (:88803) is the bit that makes a shield
- * deflect it; the engine has no canonical {@code TouchResponseProfile} for it, so it is a plain
- * harmful object -- the same gap recorded for the shooting trigger and fireball shots.
+ * <p>{@code loc_436EE} sets {@code shield_reaction} bit4, so the fire shield
+ * blocks these drops. Other shields still take the normal harmful-object hit.
  */
 public final class LrzLavaFallDropInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
@@ -139,6 +138,13 @@ public final class LrzLavaFallDropInstance extends AbstractObjectInstance
     @Override
     public int getCollisionFlags() {
         return COLLISION_FLAGS;
+    }
+
+    @Override
+    public int getShieldReactionFlags() {
+        // loc_436EE: bset #4,shield_reaction(a1). This selects fire-shield
+        // immunity in Touch_ChkHurt, not bit3's projectile deflection.
+        return 0x10;
     }
 
     @Override

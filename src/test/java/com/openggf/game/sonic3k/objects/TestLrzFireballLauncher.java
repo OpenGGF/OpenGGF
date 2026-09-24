@@ -132,6 +132,17 @@ class TestLrzFireballLauncher {
                 mirrored ? 1 : 0, false, 0));
     }
 
+    @Test
+    void fireDamageUsesImmunityWithoutShieldDeflection() {
+        var hazard = Harness.create().fireball(BASE_X, BASE_Y, false);
+        // Both parent routines set bit4. Touch_ChkHurt checks this against
+        // the fire shield; only bit3 selects projectile deflection.
+        assertEquals(0x10, hazard.getShieldReactionFlags());
+        assertEquals(0x10, hazard.getTouchResponseProfile().shieldReactionFlags());
+        assertEquals(com.openggf.level.objects.TouchShieldDeflectCapability.NONE,
+                hazard.getTouchResponseProfile().shieldDeflectCapability());
+    }
+
     private record Harness(ObjectManager objectManager) {
 
         static Harness create() {

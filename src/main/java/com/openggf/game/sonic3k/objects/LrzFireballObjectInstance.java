@@ -133,6 +133,13 @@ public final class LrzFireballObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getShieldReactionFlags() {
+        // loc_42BF6: bset #4,shield_reaction(a1). This selects fire-shield
+        // immunity in Touch_ChkHurt, not bit3's projectile deflection.
+        return 0x10;
+    }
+
+    @Override
     public int getCollisionProperty() {
         return 0;
     }

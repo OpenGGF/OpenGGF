@@ -615,7 +615,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The act 1 fireball launchers spit their fireballs again, each on its own period, and the
   shooting triggers' shots now travel at the speed the ROM gives them instead of creeping.
   The act 1 lava falls pour: each one runs for part of every four-second cycle, dropping a
-  blob every sixth frame, and every second blob carries the falling-lava sound.
+  blob every sixth frame, and every second blob carries the falling-lava sound. Fire shields
+  protect against both the falling lava and launcher fireballs.
   The swinging spike balls sweep their circles in both acts, chain and all, with act 2 using
   its own artwork.
   Act 1's smashing spike platforms work: each one accelerates down its own shaft, slams with a

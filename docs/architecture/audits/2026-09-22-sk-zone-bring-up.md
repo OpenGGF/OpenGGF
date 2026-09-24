@@ -4450,3 +4450,17 @@ with zero skips. Matrix records commands, inspected video and limits.
 Next actual hit5776 is a lava-fall drop lacking native fire-shield immunity;
 launcher fireballs have the same documented omission. Combined delivery remains
 pending; no complete-LRZ claim.
+
+## LRZ fire-shield immunity (2026-09-24)
+
+After `51f6670eb`, lava-drop contact5776 loses Sonic's fire shield.
+`loc_436EE` and launcher`loc_42BF6` both set shield-reaction bit4; provider
+declarations were absent and comments misidentified it as deflection. Added
+fire-immunity declarations to drops/fireballs and corrected those comments.
+Both unit tests fail before the fix. Final queued provider/touch/cold-route
+run passes95 tests,zero skips,including48 full-registry replay spots across
+six cold routes. The6001-frame lava-crossing video is inspected and decodes.
+Long unchanged input survives12000 frames, but next local X difference5940
+is a button-operated door side contact (3573vs3574; speed0vs72). Matrix
+records commands/evidence and inherited gaps. No shared damage logic changed;
+combined delivery remains pending.
