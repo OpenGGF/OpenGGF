@@ -98,6 +98,8 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
     private int timer = HOVER_FRAMES;
     /** ROM {@code $44(a0)} as an index, so the blob carries it: 1 = P1, 2 = P2, 0 = none. */
     private int attachedPlayerSlot;
+    /** Touch_Special's byte, consumed by sub_8FF8C on the next object pass. */
+    private int collisionProperty;
     /** ROM {@code status(a0)} bit 7: the puffs read it to start dispersing. */
     private boolean dispersing;
     /** ROM {@code $38(a0)} bit 2: set only by the spindash escape. */
@@ -146,10 +148,21 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        // sub_8FF8C may change routine, but the already-dispatched routine still runs
+        // its tail: Obj_Wait decrements the new timer, or falling still moves/lands.
         switch (routine) {
-            case 2 -> hover();
-            case 4 -> fall();
-            case 6 -> settle();
+            case 2 -> {
+                consumeContact(playerEntity);
+                hover();
+            }
+            case 4 -> {
+                consumeContact(playerEntity);
+                fall();
+            }
+            case 6 -> {
+                consumeContact(playerEntity);
+                settle();
+            }
             default -> stayAttached(playerEntity);
         }
         // Child_AddToTouchList (sonic3k.asm:84962-84966) runs after loc_8FDBA's own dispatch:
@@ -319,6 +332,22 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
         if (routine == 8 || player == null) {
             return;
         }
+        // loc_103FA: +1 for native P1, +2 for native P2. Touch merely publishes the
+        // byte; the object's next sub_8FF8C call chooses the player and checks their anim.
+        collisionProperty = (collisionProperty + (player == nativeP2OrNull() ? 2 : 1)) & 0xFF;
+    }
+
+    private void consumeContact(PlayableEntity primaryPlayer) {
+        if (collisionProperty == 0) {
+            return;
+        }
+        int contacts = collisionProperty & 3;
+        collisionProperty = 0;
+        // word_8FFD4: simultaneous contact (3) selects P1, just like P1-only (1).
+        PlayableEntity player = contacts == 2 ? nativeP2OrNull() : primaryPlayer;
+        if (player == null) {
+            return;
+        }
         // cmpi.b #2,anim(a2) / beq: a rolling player passes straight through.
         if (player.getAnimationId() == Sonic3kAnimationIds.ROLL.id()) {
             return;
@@ -411,7 +440,20 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionProperty() {
-        return 0;
+        return collisionProperty;
+    }
+
+    @Override
+    public boolean usesS3kTouchSpecialPropertyResponse() {
+        // Touch_ChkValue -> Touch_Special -> loc_103FA for $D8. The shared default
+        // interprets $C0 as boss contact and would hurt/bounce the player after our latch.
+        return true;
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // A rolling/bubble-shield contact is discarded each object pass, not until exit.
+        return true;
     }
 
     @Override

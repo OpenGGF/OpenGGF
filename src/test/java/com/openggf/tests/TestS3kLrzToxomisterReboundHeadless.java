@@ -11,6 +11,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -110,6 +111,50 @@ class TestS3kLrzToxomisterReboundHeadless {
         assertTrue(reboundedTo < 0,
                 "Touch_EnemyNormal's third branch negates y_vel for a player above the enemy "
                         + "(sonic3k.asm:20985-20987); y_speed stayed " + player.getYSpeed() + log);
+    }
+
+    @Test
+    void cloudContactIsDeferredWithoutDamageOrBossBounceAndRepeatsWhileOverlapping() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0)
+                .startPosition((short) BODY_X, (short) (BODY_Y - 68))
+                .startPositionIsCentre().withSkippedZoneIntro().build();
+        fixture.stepFrame(false, false, false, false, false);
+        ToxomisterBadnikInstance body = bodyAt(fixture);
+        assertNotNull(body);
+        var cloud = body.cloud();
+        assertNotNull(cloud);
+        var player = fixture.sprite();
+        var manager = fixture.runtime().getLevelManager().getObjectManager();
+        assertEquals(0, player.getRingCount(), "zero-ring contact distinguishes attachment from damage");
+        // Isolate the cloud's touch box from the neighbouring body. Exercise the actual
+        // controller, without advancing player physics between the contact and its checks.
+        player.setCentreX((short) (cloud.getCentreX() - 4));
+        player.setCentreY((short) (cloud.getCentreY() + 12));
+        player.setForcedAnimationId(-1);
+        player.setAir(true);
+        player.setRolling(true);
+        player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+        player.setYSpeed((short) -0x400);
+        manager.runTouchResponsesForPlayer(player, 2);
+        assertEquals(-0x400, player.getYSpeed(), "Touch_Special never applies a boss rebound");
+        assertEquals(1, cloud.getCollisionProperty(), "Touch_Special publishes P1 contact");
+        assertEquals(2, cloud.routine(), "sub_8FF8C consumes contact on the object pass");
+        cloud.update(2, player);
+        assertEquals(2, cloud.routine(), "rolling contact is discarded");
+        assertEquals(0, cloud.getCollisionProperty());
+
+        // Unroll without leaving the cloud: every touch pass must publish contact anew.
+        player.setRolling(false);
+        player.setAnimationId(Sonic3kAnimationIds.WALK.id());
+        manager.runTouchResponsesForPlayer(player, 3);
+        assertFalse(player.getDead(), "a cloud must not kill a zero-ring player on contact");
+        assertEquals(-0x400, player.getYSpeed(), "contact must not apply ordinary hurt either");
+        assertEquals(1, cloud.getCollisionProperty());
+        cloud.update(3, player);
+        assertEquals(8, cloud.routine());
+        assertEquals(1, cloud.attachedPlayerSlot());
+        assertEquals(58, cloud.timer(), "the attaching hover pass still executes Obj_Wait");
     }
 
     private static ToxomisterBadnikInstance bodyAt(HeadlessTestFixture fixture) {

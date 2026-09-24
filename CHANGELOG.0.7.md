@@ -630,7 +630,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The zone's mist-breathing badniks are in as well: each one turns to face you and breathes a
   cloud that drifts, settles on the ground and, if it catches you, clings on - dragging your speed
   down an eighth a frame and taking a ring a second until you shake it off by rocking left and
-  right, or blow it apart with a spindash. The badnik itself can now be destroyed: rolling or
+  right, or blow it apart with a spindash. Cloud contact uses its own attachment response
+  without ordinary hurt or boss rebound; rolling and bubble shields prevent attachment.
+  The badnik itself can now be destroyed: rolling or
   jumping into its body bursts it, scatters its cloud and rebounds you, where before a rolling
   player fell straight through it.
   The zone's fire worms are in, 29 of them across the two acts: swim within a few steps of one and

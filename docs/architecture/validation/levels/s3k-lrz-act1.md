@@ -11,10 +11,9 @@ Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
 full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
 Twelve preserved native320 ordinary Sonic+Tails cold routes now extend through
-the late spike-platform ascent and western steps to16275 inputs.
-The twelve routes cover126 full-registry replay spots; current checks are below. Later
-ordinary traversal is being authored; current verification is recorded in the
-dated follow-ups below.
+the late spike-platform ascent and western steps to17067 inputs.
+The twelve routes cover128 full-registry replay spots. The late route was reauthored
+after the cloud-contact correction below; later ordinary traversal remains open.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
 load at the end of the campaign, not the route entry). Outgoing: seamless `$901`.
@@ -672,3 +671,53 @@ films14680–16274 after the full cold prefix;16275state rows,zero deaths,
 15680/16274stills inspected and whole MP4 decode passes. This establishes
 ordinary reachability and replay, not complete act/native visual acceptance.
 Full Act1/Act2 completion and combined campaign integration remain owed.
+
+
+### Cloud special contact and revised late ascent (2026-09-24)
+
+On35b3e481d plus this correction, the real touch controller now sends the
+Toxomister cloud's `$D8` to S3K `Touch_Special`, not BOSS. `loc_103FA` publishes
+P1/P2 contact; `sub_8FF8C` consumes it on the next object pass and selects P1
+for simultaneous contact. Continuous overlap is reconsidered after unrolling;
+rolling and bubble shields are checked when consuming the byte. Pending contact
+survives snapshot/restore. Hover/settled attachment still executes `Obj_Wait`,
+so its newly written59 timer becomes58 in the same update.
+
+`TestS3kLrzToxomisterReboundHeadless` failed before the correction: rising Y speed
+-1024 became+1024 on cloud contact. It now covers rolling contact, unrolling
+without leaving, zero-ring non-damaging contact, deferred attachment and timer
+fallthrough through the actual controller. `TestToxomisterBadnikInstance` adds
+pending-contact rewind and native P2/simultaneous P1 selection. Existing tests
+now consume the contact before checking attachment instead of validating an
+immediate callback mutation.
+
+The first changed ordinary-route state is14973, delayed slowdown. Eleven earlier
+routes passed unchanged; the former late-ascent input ended at6975 instead of8039.
+The reauthored late-ascent fixture keeps the cold prefix and uses ordinary inputs
+to recover, wait for the spike platform, clear the upper rock and climb west.
+It now ends at(8042,624),8rings,17067inputs,zero deaths. Its23 full-registry
+45-frame restore/replay spots are11980,12300,13200,14100,14680,14860,14868,14930,
+14972,14985,15040,15330,15940,16075,16180,16220,16320,16440,16575,16650,16760,
+16958,17010. These replace the prior21 late-ascent spots; other105 remain.
+
+Queued Java21 commands used `-Dmse=off -Dopenggf.test.gl.native=true`, absolute
+`-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`, and:
+
+- `-Dtest=TestToxomisterBadnikInstance,TestS3kLrzToxomisterReboundHeadless,TestLrzColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:
+  85tests,1failure,0errors/skips; only the superseded late-ascent endpoint failed.
+- After reauthoring, `-Dtest=TestToxomisterBadnikInstance,TestS3kLrzToxomisterReboundHeadless,TestLrzColdRouteCapture#coldTeamRecoversFromDamageAndClimbsLateSpikePlatform test`:
+  15passed,0failures/errors/skips; route15.72s.
+
+The change-based plan against35b3e481d selected2909 ordinary classes plus guards.
+This checkpoint uses focused validation because the runtime change is confined
+to this object's existing response profile and contact latch; real controller,
+P1/P2, rewind and all existing cold route consumers were exercised. Combined
+campaign validation remains owed; these results are not a full-suite claim.
+Other viewport/donor/character lifecycle and complete cold-act obligations remain
+open. The exploratory later preboss input sequence is not certified by this run.
+
+Replacement video:
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cloud-corrected-ascent-320/capture.mp4`,
+frames14940–17066,17067state rows,zero deaths. Inspected platform and upper-ledge
+stills16240/17066 and decoded the complete MP4. This supersedes the earlier late
+ascent demonstration for current runtime behavior; it is not native trace parity.

@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+LRZ1 cloud-contact follow-up: the [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#cloud-special-contact-and-revised-late-ascent-2026-09-24) records the real-controller regression, deferred contact rewind and reauthored cold ascent. Twelve routes now cover128 replay spots; full cold-act completion and breadth remain open.
+
 FBZ2 laser-room graphics: the [Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md)
 tracks native child sprite priority and an independent rendered-tile comparison
 at the room-exit plane swap. Execution and inherited visual gaps are recorded

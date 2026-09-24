@@ -125,18 +125,23 @@ class TestToxomisterBadnikInstance {
         TestablePlayableSprite roller = player();
         roller.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         rolling.onTouchResponse(roller, null, 1);
+        rolling.update(1, roller);
         assertEquals(2, rolling.routine(), "cmpi.b #2,anim(a2) / beq");
 
         ToxomisterCloudInstance shielded = cloud();
         TestablePlayableSprite bubbled = player();
         bubbled.setShieldStateForTest(true, ShieldType.BUBBLE);
         shielded.onTouchResponse(bubbled, null, 1);
+        shielded.update(1, bubbled);
         assertEquals(2, shielded.routine(), "btst #Status_BublShield / bne");
 
         ToxomisterCloudInstance latched = cloud();
-        latched.onTouchResponse(player(), null, 1);
+        TestablePlayableSprite toucher = player();
+        latched.onTouchResponse(toucher, null, 1);
+        assertEquals(2, latched.routine(), "touch publishes a byte, not immediate attachment");
+        latched.update(1, toucher);
         assertEquals(8, latched.routine(), "move.b #8,routine(a0)");
-        assertEquals(59, latched.timer(), "move.w #60-1,$2E(a0)");
+        assertEquals(58, latched.timer(), "timer 59, then the same-pass Obj_Wait");
         assertEquals(1, latched.attachedPlayerSlot(), "$44(a0)");
         assertEquals(0, latched.getCollisionFlags(), "an attached cloud stops being touchable");
     }
@@ -152,6 +157,7 @@ class TestToxomisterBadnikInstance {
         TestablePlayableSprite player = player();
         player.setAirForTest(false);
         cloud.onTouchResponse(player, null, 1);
+        cloud.update(1, player);
 
         player.setXSpeed((short) 0x0800);
         player.setGSpeed((short) 0x0800);
@@ -178,6 +184,7 @@ class TestToxomisterBadnikInstance {
         ToxomisterCloudInstance cloud = cloud();
         TestablePlayableSprite player = player();
         cloud.onTouchResponse(player, null, 1);
+        cloud.update(1, player);
 
         player.setAnimationId(Sonic3kAnimationIds.SPINDASH.id());
         cloud.update(2, player);
@@ -198,6 +205,7 @@ class TestToxomisterBadnikInstance {
         ToxomisterCloudInstance cloud = cloud();
         TestablePlayableSprite player = player();
         cloud.onTouchResponse(player, null, 1);
+        cloud.update(1, player);
         assertEquals(5, cloud.shakeReversalsLeft(), "move.b #5,$3C(a0)");
 
         boolean left = true;
@@ -221,12 +229,52 @@ class TestToxomisterBadnikInstance {
         TestablePlayableSprite player = player();
         player.setDirectionalInputPressed(false, false, false, true);
         cloud.onTouchResponse(player, null, 1);
+        cloud.update(1, player);
 
         for (int frame = 2; frame <= 40; frame++) {
             cloud.update(frame, player);
         }
         assertFalse(cloud.isDestroyed(), "a held direction is not a change");
         assertEquals(5, cloud.shakeReversalsLeft(), "$3C(a0) is untouched");
+    }
+
+    @Test
+    void pendingContactSurvivesRewindAndUsesAnimationAtConsumption() {
+        ToxomisterCloudInstance cloud = cloud();
+        TestablePlayableSprite player = player();
+        player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+        cloud.onTouchResponse(player, null, 1);
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.none();
+        var saved = cloud.captureRewindState(context);
+        cloud.update(2, player);
+        assertEquals(0, cloud.getCollisionProperty());
+        assertEquals(2, cloud.routine());
+        cloud.restoreRewindState(saved, context);
+        assertEquals(1, cloud.getCollisionProperty());
+        player.setAnimationId(Sonic3kAnimationIds.WALK.id());
+        cloud.update(2, player);
+        assertEquals(8, cloud.routine(), "sub_8FF8C reads the current animation, not the touch-time one");
+        assertEquals(58, cloud.timer());
+    }
+
+    @Test
+    void nativeSecondPlayerCanAttachButSimultaneousContactSelectsFirstPlayer() {
+        TestablePlayableSprite primary = player();
+        TestablePlayableSprite secondary = player();
+        ToxomisterCloudInstance cloud = cloud();
+        cloud.setServices(services().withSidekicks(List.of(secondary)));
+        cloud.onTouchResponse(secondary, null, 1);
+        assertEquals(2, cloud.getCollisionProperty());
+        cloud.update(2, primary);
+        assertEquals(2, cloud.attachedPlayerSlot(), "word_8FFD4 entry 2 selects native P2");
+
+        ToxomisterCloudInstance shared = cloud();
+        shared.setServices(services().withSidekicks(List.of(secondary)));
+        shared.onTouchResponse(secondary, null, 1);
+        shared.onTouchResponse(primary, null, 1);
+        assertEquals(3, shared.getCollisionProperty());
+        shared.update(2, primary);
+        assertEquals(1, shared.attachedPlayerSlot(), "word_8FFD4 entry 3 selects native P1");
     }
 
     // ----- harness ------------------------------------------------------------------------------

@@ -84,7 +84,7 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = lateAscentRoute ? Set.of(11980, 12300, 13200, 14100, 14680, 14860, 14868, 14930, 15040, 15410, 15445, 15580, 15620, 15655, 15730, 15780, 15850, 15900, 16120, 16190, 16220)
+        var spots = lateAscentRoute ? Set.of(11980, 12300, 13200, 14100, 14680, 14860, 14868, 14930, 14972, 14985, 15040, 15330, 15940, 16075, 16180, 16220, 16320, 16440, 16575, 16650, 16760, 16958, 17010)
                 : middleSpringRoute ? Set.of(10085, 10097, 10105, 10125, 10165, 10325, 10400, 10650, 10700, 10960, 11190, 11220, 11570, 11730, 11775, 11820, 11900)
                 : highClimbRoute ? Set.of(8700, 8730, 8775, 8890, 8920, 9030, 9080, 9130, 9300, 9380, 9410, 9500, 9720, 9830)
                 : upperLedgeRoute ? Set.of(7800, 8030, 8210, 8300, 8364, 8390, 8550, 8620, 8700)
@@ -229,7 +229,7 @@ class TestLrzColdRouteCapture {
                 assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
             }
             if (lateAscentRoute) {
-                assertEquals(8039, session.player().getCentreX());
+                assertEquals(8042, session.player().getCentreX());
                 assertEquals(624, session.player().getCentreY());
             } else if (middleSpringRoute) {
                 assertEquals(7652, session.player().getCentreX());
@@ -244,7 +244,7 @@ class TestLrzColdRouteCapture {
                 assertEquals(4917, session.player().getCentreX());
                 assertEquals(1712, session.player().getCentreY());
             }
-            assertEquals(lateAscentRoute ? 7 : middleSpringRoute ? 119 : highClimbRoute ? 111 : upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
+            assertEquals(lateAscentRoute ? 8 : middleSpringRoute ? 119 : highClimbRoute ? 111 : upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
                     session.player().getRingCount());
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
         }
