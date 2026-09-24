@@ -18,22 +18,28 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzColdRouteCapture {
     @Test void coldTeamTraversesCorkscrewAndRestoresItsHorizontalExit() throws Exception {
-        runColdRoute(false);
+        runColdRoute("corkscrew");
     }
 
     @Test void coldTeamDeflectsShootingTriggerProjectileAndRetainsShield() throws Exception {
-        runColdRoute(true);
+        runColdRoute("shield");
     }
 
-    private void runColdRoute(boolean shieldRoute) throws Exception {
+    @Test void coldTeamJumpsOffDashElevatorWithoutBeingLiftedAgain() throws Exception {
+        runColdRoute("elevator");
+    }
+
+    private void runColdRoute(String route) throws Exception {
+        boolean elevatorRoute = route.equals("elevator");
+        boolean shieldRoute = !route.equals("corkscrew");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz1-sonic-tails-cold-"
-                        + (shieldRoute ? "shield" : "corkscrew") + "-320.bk2"));
+                        + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = shieldRoute ? Set.of(4510, 4540, 4563, 4590, 4650, 4700, 4780, 4850)
+        var spots = elevatorRoute ? Set.of(4900, 4930, 4945, 4951) : shieldRoute ? Set.of(4510, 4540, 4563, 4590, 4650, 4700, 4780, 4850)
                 : Set.of(200, 600, 950, 1300, 1800, 2200, 2600, 2900,
                 3100, 3140, 3250, 3370, 3410, 3470, 3530, 3555, 3600,
                 3750, 4000, 4200, 4400);
@@ -69,6 +75,14 @@ class TestLrzColdRouteCapture {
                             .stream().anyMatch(shot -> shot.getCollisionFlags() == 0 && shot.xVelocity() < 0),
                             "actual shield touch must turn the incoming shot away and clear its damage");
                 }
+                if (elevatorRoute && frame == 4951) {
+                    // Sonic_Jump skips position integration on launch; the
+                    // elevator's SolidObjectFull stale-rider branch only unseats.
+                    assertTrue(session.player().getAir());
+                    assertEquals(1421, session.player().getCentreY());
+                    assertEquals(-0x680, session.player().getYSpeed());
+                    assertFalse(session.player().isOnObject());
+                }
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
@@ -94,8 +108,10 @@ class TestLrzColdRouteCapture {
             assertEquals(spots, checked);
             assertEquals(9, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
-            assertEquals(shieldRoute ? 2206 : 2746, session.player().getCentreX());
-            assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
+            if (!elevatorRoute) {
+                assertEquals(shieldRoute ? 2206 : 2746, session.player().getCentreX());
+                assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
+            }
             assertEquals(shieldRoute ? 95 : 93, session.player().getRingCount());
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
         }

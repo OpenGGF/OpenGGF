@@ -267,3 +267,51 @@ now first diverges in player Y at4951 (1417 versus1421), X at5021 (2188 versus21
 and dies at7040. The dash-elevator continuation is the next cold-route frontier;
 this does not erase the earlier ring-count or intro comparison differences.
 Combined campaign checks and native whole-scene acceptance remain pending.
+
+
+### Dash-elevator jump-off (2026-09-24)
+
+After `3e7f4f80b`, the next difference is input4951: native Y1421 with launch
+velocity`-$680`, engine Y1417 with the same velocity. The collision-trace hook
+shows Y1421 before the dash elevator's solid checkpoint and Y1417 afterwards;
+the checkpoint reports no contact. Every preceding checkpoint retains Y1421.
+The lift's movement itself matches through4950.
+
+`loc_43000` calls `SolidObjectFull`, whose standing-bit/airborne branch
+`loc_1DC98` clears support and returns. The engine's old generic standing record
+had already been cleared by an earlier object checkpoint. With no provider
+declaration for the remaining per-object standing bit, the lift fell through
+into new-contact overlap correction. `airborneStaleStandingBitReturnsNoContact`
+already models the native early return; the elevator now opts into it together
+with `airborneRiderUnseatRequiresOwnCheckpoint`. The first flag alone fails the
+same regression: earlier checkpoints have already consumed the riding record.
+Both declarations are required to retain ownership through the native return.
+Shared collision code is unchanged. The real cold-route regression fails before this
+change (expected1421,actual1417), preserving the exact native launch assertion.
+
+`lrz1-sonic-tails-cold-elevator-320` preserves5001 ordinary input frames, with4
+additional whole-registry replay spots around charging, descent and jump-off.
+The earlier two route tests remain independently runnable. Final queued native-GL
+`-Dtest=TestLrzDashElevatorObjectInstance,TestLrzColdRouteCapture test` with
+`-Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen` passes10 tests,zero failures/errors/
+skips (85 seconds including compilation; three route tests19.71 seconds).
+The preceding broader focused run passed the mandatory S3K loading/bootstrap
+classes but failed the new launch assertion; it is not reported as a green run.
+There are33 full-registry replay spots across the three cold route fixtures.
+
+The longer unchanged input now matches player Y through5175 and X through5591
+in this local post-elevator comparison. The next disagreement is Y5176:
+engine1474,native1444; X5592:engine2785,native2790. The route dies9527 versus7040
+before this fix. Earlier intro/ring disagreements remain; strict whole-prefix
+parity and full-act completion are not claimed.
+
+The selection plan against `3e7f4f80b` falls back to full ordinary categories
+for the route-test change. This iteration uses focused validation because the
+production change only declares the existing per-provider full-solid contract;
+actual launch, descent, contact release and rewind are exercised directly.
+The combined campaign still requires its full delivery selection.
+
+Verified engine recording: `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-elevator-jump-fixed-320/capture.mp4`
+shows inputs4800–5000 (201 rendered frames); the5001-row state log has zero
+deaths. Inspected descent4880, launch4951 and airborne5000; the full video
+decodes successfully. This is engine presentation evidence, not native pixel matching.

@@ -325,6 +325,22 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // loc_43000 calls SolidObjectFull. Its loc_1DC98 jump-off branch
+        // clears the existing standing bit and returns without a fresh contact.
+        // Otherwise a rider jumping from the descending lift is lifted again
+        // by SolidObject_cont's overlap correction on that same launch frame.
+        return true;
+    }
+
+    @Override
+    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
+        // loc_1DC98 belongs to this elevator's SolidObjectFull call. Earlier
+        // objects must not consume its ride record before that early return.
+        return true;
+    }
+
+    @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
         // d4 = x_pos(a0) (sonic3k.asm:88466); the platform only ever moves vertically.
         return false;

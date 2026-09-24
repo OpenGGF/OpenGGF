@@ -4408,3 +4408,18 @@ Both cold route tests pass with29 total whole-registry replay spots; the new
 The [LRZ1 matrix](../validation/levels/s3k-lrz-act1.md) records commands/media.
 Native player Y next disagrees at4951 in the dash-elevator sequence. Remaining
 cold completion, breadth and combined integration checks stay open.
+
+
+## LRZ1 elevator launch ordering (2026-09-24)
+
+After `3e7f4f80b`, the cold jump at4951 isolates a four-pixel extra lift inside
+the dash elevator's solid checkpoint. `loc_43000` uses `SolidObjectFull`, whose
+`loc_1DC98` must retain this object's standing ownership until its own checkpoint,
+then clear support and return without new overlap correction. Both existing
+provider declarations are required; the early-return flag alone reproduces the
+same failure. Shared collision logic is unchanged. The real cold regression is
+red before, green after; final focused elevator and three cold-route tests pass10,
+zero failures/errors/skips. There are33 cold replay spots across the three fixtures.
+The unchanged input now survives to9527; Y first differs next at5176, X at5592.
+See the [LRZ1 matrix](../validation/levels/s3k-lrz-act1.md). Full completion and
+combined campaign delivery remain open.

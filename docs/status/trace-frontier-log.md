@@ -111665,3 +111665,24 @@ engine1417,native1421. First X disagreement5021:2188 versus2187. The unchanged
 input dies7040,previous6914. Earlier intro and ring differences remain unchanged;
 no whole-prefix parity or final act completion is claimed. Next investigation:
 dash-elevator movement/ride handoff around4951. Full campaign validation pending.
+
+
+## 2026-09-24 — LRZ dash-elevator jump-off checkpoint ownership
+
+Campaign base `3e7f4f80b`, `.worktrees/ai-sk-zone-completion`, local candidate.
+Matched cold320 Sonic+Tails capture with the preserved native input, same12000-
+frame command as preceding entries. The collision trace reads Y1421 before the
+lift checkpoint and Y1417 after on input4951, with correct launch velocity`-$680`.
+`SolidObjectFull`'s `loc_1DC98` instead clears the old ride and returns without
+new-contact correction. Both provider flags (own-checkpoint unseat and stale-bit
+no-contact return) are needed; the second alone fails the same assertion.
+
+Final focused elevator+three cold routes:10 tests,zero failures/errors/skips,
+including the native launch assertion and4 added full-registry replay spots.
+Earlier mandatory S3K classes passed in the intermediate69-test run whose new
+route still failed; that intermediate run is not a green delivery result.
+Post-fix Y first disagrees after the elevator at5176 (1474 versus1444), X at5592
+(2785 versus2790). The unchanged controller route dies9527, previously7040.
+Earlier intro/ring differences remain. This is a bounded controller-route
+comparison, not a strict trace-suite pass. Next cold target is the5176 handoff;
+combined campaign verification is pending.
