@@ -10,6 +10,9 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -51,6 +54,9 @@ public final class LrzShootingTriggerProjectileInstance extends AbstractObjectIn
     /** 16.16 positions, since {@code MoveSprite2} accumulates sub-pixels. */
     private int xPosition;
     private int yPosition;
+    private boolean collisionEnabled = true;
+    private static final TouchResponseProfile TOUCH_PROFILE = TouchResponseProfile.fromCanonical(
+            com.openggf.game.profiles.touchresponse.TouchResponseProfile.singleRegionShieldDeflect());
 
     /** Production constructor; {@code flipped} is the parent's {@code status} bit 0. */
     public LrzShootingTriggerProjectileInstance(ObjectSpawn spawn, boolean flipped) {
@@ -111,7 +117,37 @@ public final class LrzShootingTriggerProjectileInstance extends AbstractObjectIn
     @Override
     public int getCollisionFlags() {
         // move.b #$98,collision_flags(a1) (sonic3k.asm:88321): a harmful projectile.
-        return 0x98;
+        return collisionEnabled ? 0x98 : 0;
+    }
+
+    @Override
+    public int getShieldReactionFlags() {
+        // loc_42E00: bset #3,$2B(a1), i.e. shield_reaction's deflection bit.
+        return 1 << 3;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public boolean onShieldDeflect(PlayableEntity entity) {
+        if (!(entity instanceof AbstractPlayableSprite player)) return false;
+        // Touch_ChkHurt_Bounce_Projectile: signed word deltas, GetArcTan,
+        // GetSineCosine, then muls #-$800 / asr.l #8 and clear collision_flags.
+        // Preserve the position fractions; loc_42EE8 continues MoveSprite2.
+        int angle = TrigLookupTable.calcAngle((short) (player.getCentreX() - getCentreX()),
+                (short) (player.getCentreY() - getCentreY()));
+        xVelocity = (TrigLookupTable.cosHex(angle) * -0x800) >> 8;
+        yVelocity = (TrigLookupTable.sinHex(angle) * -0x800) >> 8;
+        collisionEnabled = false;
+        return true;
     }
 
     @Override

@@ -18,13 +18,23 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzColdRouteCapture {
     @Test void coldTeamTraversesCorkscrewAndRestoresItsHorizontalExit() throws Exception {
+        runColdRoute(false);
+    }
+
+    @Test void coldTeamDeflectsShootingTriggerProjectileAndRetainsShield() throws Exception {
+        runColdRoute(true);
+    }
+
+    private void runColdRoute(boolean shieldRoute) throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/lrz1-sonic-tails-cold-corkscrew-320.bk2"));
+                "src/test/resources/routes/s3k/lrz1-sonic-tails-cold-"
+                        + (shieldRoute ? "shield" : "corkscrew") + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = Set.of(200, 600, 950, 1300, 1800, 2200, 2600, 2900,
+        var spots = shieldRoute ? Set.of(4510, 4540, 4563, 4590, 4650, 4700, 4780, 4850)
+                : Set.of(200, 600, 950, 1300, 1800, 2200, 2600, 2900,
                 3100, 3140, 3250, 3370, 3410, 3470, 3530, 3555, 3600,
                 3750, 4000, 4200, 4400);
         var checked = new java.util.HashSet<Integer>();
@@ -48,6 +58,16 @@ class TestLrzColdRouteCapture {
                     assertEquals(-0x1000, session.player().getXSpeed());
                     assertEquals(0, session.player().getYSpeed());
                     assertEquals(-0x1000, session.player().getGSpeed());
+                }
+                if (shieldRoute && frame == 4568) {
+                    assertTrue(session.player().hasShield(), "projectile must be deflected, not consume shield");
+                    assertFalse(session.player().isHurt());
+                    assertEquals(2424, session.player().getCentreX());
+                    assertEquals(1233, session.player().getCentreY());
+                    assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.LrzShootingTriggerProjectileInstance.class)
+                            .stream().anyMatch(shot -> shot.getCollisionFlags() == 0 && shot.xVelocity() < 0),
+                            "actual shield touch must turn the incoming shot away and clear its damage");
                 }
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
@@ -74,9 +94,9 @@ class TestLrzColdRouteCapture {
             assertEquals(spots, checked);
             assertEquals(9, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
-            assertEquals(2746, session.player().getCentreX());
-            assertEquals(1186, session.player().getCentreY());
-            assertEquals(93, session.player().getRingCount());
+            assertEquals(shieldRoute ? 2206 : 2746, session.player().getCentreX());
+            assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
+            assertEquals(shieldRoute ? 95 : 93, session.player().getRingCount());
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
         }
     }

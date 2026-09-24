@@ -229,3 +229,41 @@ inspected and the full MP4 decodes cleanly. The subsequent Fireworm change only
 corrects restored worlds and does not alter this uninterrupted forward capture.
 See the [frontier log](../../../status/trace-frontier-log.md) for the bounded
 native comparison and later unresolved position/ring disagreements.
+
+
+### Shooting-trigger shield response (2026-09-24)
+
+After `71e341556`, the next cold-route disagreement is a projectile hit at4568.
+Native aux slot23 (`loc_42EE8`) travels `(2409,1221)` at4564, then deflects to
+`(2401,1220)`, `(2393,1219)`, `(2385,1219)`, `(2377,1218)` at4565–4568.
+The engine continued to `(2417,1229)` and hurt Sonic at `(2424,1233)`.
+Native `status_secondary=$11` identifies a fire shield. The initial informal
+lightning-shield description was wrong; deflection uses bit3 independently of
+the fire-immunity bit4.
+
+`loc_42E00` writes `bset #3,$2B(a1)` when creating this shot. The projectile
+omitted both that shield-reaction bit and the deflection callback. The new
+response uses the existing canonical single-region shield profile and transcribes
+`Touch_ChkHurt_Bounce_Projectile`: word deltas, native angle/trig, multiplication
+by`-$800`, arithmetic shift8, then permanent collision clear. Motion fractions
+remain intact for the existing `MoveSprite2` update and the new collision-enabled
+state is captured by the generic rewind owner. A focused four-direction test
+fails before the change (expected reaction8,actual0).
+
+Queued Maven `-Dtest=TestLrzShootingTriggerProjectile,TestLrzDoorsButtonsAndTriggers,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+with `-Dmse=off` and absolute S3K ROM passes79 tests,zero failures/errors/skips
+(75 seconds including compilation). The subsequent native-GL `TestLrzColdRouteCapture`
+run passes both routes,zero failures/errors/skips (11.64 seconds test,30.868 total).
+`lrz1-sonic-tails-cold-shield-320` preserves4901 inputs from normal entry and adds
+8 full-registry replay spots around projectile deflection and its following
+route (29 across the two cold routes). At4568 the test requires a live deflected
+shot with collision0 and negative X velocity, Sonic's retained shield, no hurt,
+and native centre `(2424,1233)`. Endpoint `(2206,1334)`,95 rings, live team.
+
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-shield-deflection-320/capture.mp4`
+shows4500–4900. All4901 state rows have zero deaths; stills4563/4568/4630/4820
+were inspected and the full video decoded cleanly. The longer unchanged input
+now first diverges in player Y at4951 (1417 versus1421), X at5021 (2188 versus2187),
+and dies at7040. The dash-elevator continuation is the next cold-route frontier;
+this does not erase the earlier ring-count or intro comparison differences.
+Combined campaign checks and native whole-scene acceptance remain pending.

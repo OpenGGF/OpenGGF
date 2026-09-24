@@ -551,7 +551,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and release on a fresh jump press, with separate state for Sonic and Tails and
   restored ride/cooldown state when rewinding. Both turbine variants draw their
   ROM-loaded art. The Act 1 corkscrew clears the approach slope when taking
-  control, preserving its horizontal release into the lower route.
+  control, preserving its horizontal release into the lower route. Shooting-trigger
+  projectiles rebound from shields and stop dealing damage after deflection.
   Chained platforms follow their ROM paths, carry players on top
   and hurt on contact with their spiked undersides. Rewinding the miniboss preserves its arms, hit flashes and defeat
   debris without resurrecting destroyed parts; launchers retain their in-flight balls.

@@ -111642,3 +111642,26 @@ Focused queued Maven corkscrew/unit-rewind plus the four mandatory S3K bootstrap
 classes:72 tests,zero failures/errors/skips,68 seconds including compilation.
 Combined campaign checks and strict trace rerun remain pending. Cold regression
 and capture evidence are recorded in the LRZ1 matrix once completed.
+
+
+## 2026-09-24 — LRZ shooting-trigger projectile deflection
+
+Campaign worktree `.worktrees/ai-sk-zone-completion`, base `71e341556`, local
+candidate. Same12000-frame cold native-input capture command as the corkscrew
+entry above, absolute ROM, native320 Sonic+Tails. This remains controller-route
+comparison, not a full strict trace-suite result.
+
+Native aux slot23 (`loc_42EE8`) turns away at4565, after `(2409,1221)` at4564.
+The engine instead continues down/right and hurts Sonic at4568. Native shield
+state`$11` is fire. `loc_42E00` sets `shield_reaction` bit3 on the shot; its
+engine class had neither that flag nor `Touch_ChkHurt_Bounce_Projectile`'s
+callback. Adding the canonical deflect profile and ROM velocity/collision writes
+preserves Sonic's shield and position at the old disagreement. The new cold
+route test checks actual touch handling and8 full-registry replay windows.
+
+79 object/bootstrap tests and2 cold route tests pass,zero failures/errors/skips.
+After this fix the first player-Y disagreement following the old hit is4951:
+engine1417,native1421. First X disagreement5021:2188 versus2187. The unchanged
+input dies7040,previous6914. Earlier intro and ring differences remain unchanged;
+no whole-prefix parity or final act completion is claimed. Next investigation:
+dash-elevator movement/ride handoff around4951. Full campaign validation pending.

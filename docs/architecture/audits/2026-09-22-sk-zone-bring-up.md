@@ -4394,3 +4394,17 @@ Final focused Fireworm+cold-route follow-up passes11 tests,zero failures/errors/
 skips (75 seconds including compilation). All21 route replay checkpoints pass.
 The earlier72-test corkscrew/required-bootstrap run remains valid for the unchanged
 angle fix. These are focused checks, not a combined campaign suite pass.
+
+
+## LRZ1 shooting-trigger shield continuation (2026-09-24)
+
+After `71e341556`, native projectile evidence at4565 identifies omitted
+shield-reaction bit3 and deflection callback on `LrzShootingTriggerProjectileInstance`.
+The projectile now uses the canonical shield profile and ROM `-$800` trig
+rebound/clear-collision behavior. A four-direction regression fails before the
+fix (expected8,actual0);79 focused object/bootstrap checks pass afterwards.
+Both cold route tests pass with29 total whole-registry replay spots; the new
+4901-frame route asserts real projectile deflection, retained shield and no hurt.
+The [LRZ1 matrix](../validation/levels/s3k-lrz-act1.md) records commands/media.
+Native player Y next disagrees at4951 in the dash-elevator sequence. Remaining
+cold completion, breadth and combined integration checks stay open.
