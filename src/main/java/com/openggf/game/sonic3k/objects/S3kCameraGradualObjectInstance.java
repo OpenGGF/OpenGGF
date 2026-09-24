@@ -32,10 +32,24 @@ public final class S3kCameraGradualObjectInstance extends AbstractObjectInstance
 
     private int kind;
     private int accumulator;
+    private boolean actTwoLevelSizes;
 
     public S3kCameraGradualObjectInstance(int kind) {
         super(new ObjectSpawn(0, 0, 0, kind, 0, false, 0), "S3kCameraGradual");
         this.kind = kind;
+    }
+
+    /**
+     * Change_Act2Sizes copies the loaded act's LevelSizes into Camera_stored_*.
+     * For this shared handoff the loaded level supplies those targets, including
+     * zones without a cutscene-owned S3kCameraStoredBounds runtime. Cutscene
+     * workers retain their mutable runtime source; only the handoff opts in.
+     * The source selector and accumulator are both captured by generic rewind.
+     */
+    static S3kCameraGradualObjectInstance forActTwoLevelSizes(int kind) {
+        var worker = new S3kCameraGradualObjectInstance(kind);
+        worker.actTwoLevelSizes = true;
+        return worker;
     }
 
     /**
@@ -58,7 +72,10 @@ public final class S3kCameraGradualObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         var registry = services().zoneRuntimeRegistry();
-        if (registry == null || !(registry.current() instanceof S3kCameraStoredBounds hpz)) {
+        S3kCameraStoredBounds storedBounds = registry != null
+                && registry.current() instanceof S3kCameraStoredBounds bounds ? bounds : null;
+        var level = actTwoLevelSizes ? services().currentLevel() : null;
+        if (actTwoLevelSizes ? level == null : storedBounds == null) {
             return;
         }
         var camera = services().camera();
@@ -66,7 +83,7 @@ public final class S3kCameraGradualObjectInstance extends AbstractObjectInstance
         int step = (accumulator >>> 16) & 0xFFFF;
         switch (kind) {
             case INC_END_X -> {
-                int stored = hpz.cameraStoredMaxX();
+                int stored = (actTwoLevelSizes ? level.getMaxX() : storedBounds.cameraStoredMaxX());
                 int next = ((camera.getMaxX() & 0xFFFF) + step) & 0xFFFF;
                 camera.claimCustomMaxXBoundaryEasing();
                 // cmp.w (Camera_stored_max_X_pos).w,d0 / bhs.s
@@ -78,7 +95,7 @@ public final class S3kCameraGradualObjectInstance extends AbstractObjectInstance
                 }
             }
             case DEC_START_X -> {
-                short stored = (short) hpz.cameraStoredMinX();
+                short stored = (short) (actTwoLevelSizes ? level.getMinX() : storedBounds.cameraStoredMinX());
                 short next = (short) (camera.getMinX() - step);
                 // cmp.w (Camera_stored_min_X_pos).w,d0 / ble.s
                 if (next <= stored) {
@@ -89,7 +106,7 @@ public final class S3kCameraGradualObjectInstance extends AbstractObjectInstance
                 }
             }
             case DEC_START_Y -> {
-                short stored = (short) hpz.cameraStoredMinY();
+                short stored = (short) (actTwoLevelSizes ? level.getMinY() : storedBounds.cameraStoredMinY());
                 short next = (short) (camera.getMinY() - step);
                 if (next <= stored) {
                     camera.setMinY(stored);
@@ -99,7 +116,7 @@ public final class S3kCameraGradualObjectInstance extends AbstractObjectInstance
                 }
             }
             default -> {
-                short stored = (short) hpz.cameraStoredMaxY();
+                short stored = (short) (actTwoLevelSizes ? level.getMaxY() : storedBounds.cameraStoredMaxY());
                 short next = (short) (camera.getMaxY() + step);
                 // cmp.w (Camera_stored_max_Y_pos).w,d0 / bgt.s
                 if (next > stored) {

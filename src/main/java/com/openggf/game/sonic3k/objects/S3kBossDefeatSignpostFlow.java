@@ -471,11 +471,16 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
                     services().camera().setMaxXTarget((short) level.getMaxX());
                     services().camera().setMaxYTarget((short) level.getMaxY());
                 }
-                // Change_Act2Sizes creates Child1_Act2LevelSize before deleting
-                // EndSignControl. MHZ needs the shared max-X worker to release
-                // the carried miniboss camera lock (sonic3k.asm:180415-180419,
-                // 180575-180609,178154-178169).
+                // Change_Act2Sizes creates all three Child1_Act2LevelSize
+                // siblings in this order before deleting EndSignControl
+                // (sonic3k.asm:180580-180615). Releasing only X leaves the
+                // miniboss min-Y carried into Act 2, hiding its upward route.
+                // Preserve the native accelerating release, not a reload snap.
                 spawnAfterCurrentSibling(() -> new S3kIncLevelEndXGradualInstance(0, 0));
+                spawnAfterCurrentSibling(() -> S3kCameraGradualObjectInstance.forActTwoLevelSizes(
+                        S3kCameraGradualObjectInstance.DEC_START_Y));
+                spawnAfterCurrentSibling(() -> S3kCameraGradualObjectInstance.forActTwoLevelSizes(
+                        S3kCameraGradualObjectInstance.INC_END_Y));
             }
             setDestroyed(true);
             LOG.fine("S3K defeat flow complete — destroyed");

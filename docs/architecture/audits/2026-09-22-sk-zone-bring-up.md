@@ -4666,3 +4666,18 @@ with no failures;1111 state observations and frame416600 inspected. Evidence:
 `s3k-sonic-tails-complete-emeralds.bk2`, ROM SHA1
 CFBF98C36C776677290A872547AC47C53D2761D6. This is a scene observation, not strict
 trajectory or pixel parity with the ordinary engine route.
+
+
+### LRZ Act2 climb camera release (2026-09-24)
+
+The ordinary cold continuation exposed min-Y still clamped at1808 while Sonic
+climbed to1554. `Change_Act2Sizes` was allocating only max-X, omitting the
+min-Y/max-Y children from `Child1_Act2LevelSize`. The shared title flow now
+allocates both native accelerating workers; LRZ's earlier reload still preserves
+Y as the ROM does. Source selection is explicit and rewind-captured, without
+changing cutscene workers' runtime-owned targets. The new endpoint regression
+fails on6df1ba780 and the fixed focused set passes188 tests, zero skips.
+See the [Act2 evidence](../validation/levels/s3k-lrz-act2.md#act-title-vertical-camera-release-2026-09-24)
+for commands, native observation, clip and remaining route work. A sparse-looking
+floor was rejected as a bug after native screenshots confirmed it; the locked
+vertical camera was independently demonstrated by camera/player coordinates.

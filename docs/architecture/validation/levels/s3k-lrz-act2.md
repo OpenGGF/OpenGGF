@@ -186,3 +186,45 @@ and one-shot reset. Existing4200frame handoff gameplay rows are unchanged; nativ
 layout extent. The newly exposed area shows Plane B, leaving a visible vertical
 transition at X=0: scene-extension polish remains open, distinct from the fixed
 unrelated-terrain repeat. Shared-renderer broad validation remains due.
+
+
+### Act-title vertical camera release (2026-09-24)
+
+On `6df1ba780` plus this fix, the cold Act1 handoff exposed a missing
+`Change_Act2Sizes` child pair: min-Y remained `$710` while the player climbed
+above the viewport. Native observation at movie417000 already has camera-Y1707
+(player2737,1803), whereas the old engine remained at1808. The ROM's
+`Child1_Act2LevelSize` creates max-X, min-Y and max-Y workers, in that order,
+after the title; the engine previously created only max-X. The shared flow now
+also creates the existing native gradual worker for min-Y and max-Y. Its
+explicit act-level target source supplies the loaded ROM LevelSizes where no
+cutscene runtime owns Camera_stored_*. Existing cutscene workers retain their
+mutable runtime source. Rewind captures the source selection and accumulator.
+The LRZ reload continues to preserve Y bounds: snapping them there would move
+the release earlier than the ROM. The LRZ-specific post-defeat children only
+advance min-X and are not substitutes for the title workers.
+
+A new cold-clear assertion failed on the old code (expected min-Y0, actual1808).
+Queued Java21/native GL verification, explicit `-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`,
+`-Dtest=TestS3kBossDefeatSignpostFlow,TestLrzColdRouteCapture#coldTeamDefeatsMinibossAndReachesPlayableActTwo,TestLrzPostBossPaletteRouteCapture,TestMhzBossObjects,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passes188 tests, zero failures/errors/skips. This includes the26 whole-registry
+cold-clear replay spots and both positioned handoff widths; the short worker
+check proves quarter/half-pixel acceleration, target preservation and retirement.
+This is focused evidence, not the outstanding combined campaign suite.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-camera-release-320/capture.mp4`
+films31440–32199 after the full cold prefix. At31800 the camera is1707; at32000
+it is1482 with Sonic at1563. The player stays visible through the climb.
+The inspected32000 still and full MP4 decode pass. The760-frame clip is ordinary
+Sonic+Tails native320, zero deaths; Sonic does take a hit later in the clip.
+Inputs authored against the previously stuck camera need further route work,
+because correct camera movement changes which objects are active. Full Act2
+cold traversal and the existing breadth/lifecycle/native obligations remain open.
+
+Additional focused checks in the same Java21/ROM environment:
+`-Dtest=TestS3kMhzAuthoredRoute test` passes1, zero skips, preserving MHZ's
+cold defeat/title handoff; a separate JVM with
+`-Pguards -Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard test`
+passes2, zero skips. The change-based plan was inspected against6df1ba780;
+its broad run remains part of the combined campaign delivery, not repeated at
+this local implementation checkpoint.

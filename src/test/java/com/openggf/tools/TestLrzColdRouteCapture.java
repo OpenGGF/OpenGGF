@@ -268,6 +268,8 @@ class TestLrzColdRouteCapture {
                 assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
             }
             if (minibossClearRoute) {
+                assertEquals(0, GameServices.camera().getMinY(),
+                        "Change_Act2Sizes must release the carried miniboss min-Y before the climb");
                 assertEquals(2357, session.player().getCentreX());
                 assertEquals(1980, session.player().getCentreY());
                 assertFalse(session.player().isObjectControlled(), "Act2 movement is released");

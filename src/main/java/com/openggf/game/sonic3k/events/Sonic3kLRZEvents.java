@@ -422,7 +422,8 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
                 // sub.w d0,(Camera_min_X_pos) / (Camera_max_X_pos) (:115368-115369). loc_56CAA
                 // touches no Y word at all and Load_Level writes no camera word, so the Y bounds
                 // the arena left behind have to be carried across unchanged rather than taking
-                // act 2's own -- the two camera releases that follow are what widen them.
+                // act 2's own. Change_Act2Sizes releases Y after the title; the two
+                // LRZ-specific post-defeat workers only advance min-X.
                 .postTransitionMinX((int) camera.getMinX() - ACT2_REBASE_X)
                 .postTransitionMaxX((int) camera.getMaxX() - ACT2_REBASE_X)
                 .postTransitionMinXTarget((int) camera.getMinXTarget() - ACT2_REBASE_X)

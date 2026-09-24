@@ -11,6 +11,45 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kBossDefeatSignpostFlow {
 
+    @Test
+    void actTwoVerticalWorkersAccelerateIndependentlyAndRetireAtLevelBounds() {
+        var camera = new com.openggf.camera.Camera();
+        camera.setMinY((short) 0x710);
+        camera.setMaxY((short) 0x710);
+        camera.setMaxYTarget((short) 0x800);
+        var level = org.mockito.Mockito.mock(com.openggf.level.Level.class);
+        org.mockito.Mockito.when(level.getMinY()).thenReturn(0);
+        org.mockito.Mockito.when(level.getMaxY()).thenReturn(0x800);
+        var services = new com.openggf.level.objects.TestObjectServices() {
+            @Override public com.openggf.level.Level currentLevel() { return level; }
+        }.withCamera(camera);
+        var min = S3kCameraGradualObjectInstance.forActTwoLevelSizes(
+                S3kCameraGradualObjectInstance.DEC_START_Y);
+        var max = S3kCameraGradualObjectInstance.forActTwoLevelSizes(
+                S3kCameraGradualObjectInstance.INC_END_Y);
+        min.setServices(services);
+        max.setServices(services);
+        for (int pass = 1; pass <= 3; pass++) {
+            min.update(pass, null);
+            max.update(pass, null);
+        }
+        assertEquals(0x710, camera.getMinY(), "$4000 has not carried before pass four");
+        assertEquals(0x712, camera.getMaxY(), "$8000 yields integer steps 0, 1, 1");
+        min.update(4, null);
+        max.update(4, null);
+        assertEquals(0x70F, camera.getMinY());
+        assertEquals(0x714, camera.getMaxY());
+        assertEquals(0x800, camera.getMaxYTarget(), "current writes preserve the native target");
+        for (int pass = 5; pass < 200; pass++) {
+            if (!min.isDestroyed()) min.update(pass, null);
+            if (!max.isDestroyed()) max.update(pass, null);
+        }
+        assertTrue(min.isDestroyed());
+        assertTrue(max.isDestroyed());
+        assertEquals(0, camera.getMinY());
+        assertEquals(0x800, camera.getMaxY());
+    }
+
     /**
      * A seamless act change moves this flow with every other world-space slot.
      *
