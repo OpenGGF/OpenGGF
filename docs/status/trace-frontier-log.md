@@ -111738,3 +111738,15 @@ See LRZ1 matrix for commands/media. Corrected door starts5908 and local
 coordinates match5700–6066. NextX6067:3941vs3956,Y1758vs1759 in rock-crusher
 interaction; owner not yet attributed. Strict trace suite not run; earlier
 transient/intro/ring differences and whole-act certification remain open.
+
+### 2026-09-24 — LRZ crusher hit recovery
+
+Tree`feature/ai-sk-zone-completion`,base`ce6c2741a`:6066 fire-dash velocity
+is`-$800` instead of native`$800` because an already-hit upper piece still
+collides. Added `Touch_Enemy` collision clearing and `sub_905A8` recovery/ROM
+palette flash to body and upper pieces. Unit regression fails before fix;
+queued object/seven cold-route tests pass19,zero failures/errors/skips.
+Commands and inspected media are in LRZ1 matrix. Positions now match locally
+6000–6233; next6234 engine3889,1820/native3887,1826,not yet attributed.
+Strict trace replay and earlier discrepancies remain open. Also inspect the
+piece release routine's missing same-pass countdown fallthrough.

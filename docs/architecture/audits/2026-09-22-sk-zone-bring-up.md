@@ -4484,3 +4484,17 @@ Next6067 mismatch is in the rock-crusher area. Matrix records commands and
 inspected recording. Sibling audit flags HCZWaterWall's same false rationale
 for separate phase audit; DEZ energy bridges/LBZ cup already use real range
 predicates. Combined campaign verification/integration remains pending.
+
+## LRZ crusher hit state (2026-09-24)
+
+At `ce6c2741a`, the6067 position mismatch starts with6066 velocity: native
+fire dash remains`$800`, engine bounces again to`-$800`. Body/upper pieces
+omitted `Touch_Enemy` collision clearing and `sub_905A8`'s32-tick recovery.
+Added independent captured state, attack callbacks and shared source-backed
+flash helper. The three colors per phase come from ROM`word_905FC`, through
+the palette registry. The unit oracle fails before the callback exists.
+Final focused object/seven cold-route run passes19,zero skips;56 full-registry
+replay spots now cover the prefix. Inspected6201-frame rebound capture.
+Local coordinates match6000–6233; next6234 unassigned. Matrix also records
+adjacent release-to-shake fallthrough still needing audit and native visual
+acceptance limits. Combined delivery is pending.

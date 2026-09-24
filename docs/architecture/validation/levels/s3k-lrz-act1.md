@@ -468,3 +468,44 @@ Verified`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-door-slot-release-320/captur
 131 rendered frames5870–6000,6001 state rows,zero deaths; inspected5908/5940/5990
 and full video decode succeeds. Native-state comparison supports timing and
 coordinates; the engine recording alone is not native pixel matching.
+
+### Rock-crusher hit lockout (2026-09-24)
+
+At `ce6c2741a`, positions first differ6067, but the causative velocity change
+is6066: both players are3948,1758 after fire dash; nativeX velocity`$800`,
+engine`-$800`. The body and upper pieces expose nonzero collision property
+but did not implement `Touch_Enemy`'s collision clearing or `sub_905A8`.
+They could rebound again during the native32-tick disabled interval.
+
+Implemented per-body/per-upper-piece collision-disable and flash timer. The
+shared touch owner still applies player rebound; each object's native update
+then starts32, plays BossHit, alternates `word_905FC` banks into line2 colors
+11/13/14, decrements and restores its saved collision byte at zero. Palette
+bytes come from verified ROM address`$905FC` (12bytes); normal/white banks
+match the disassembly and writes use the existing palette registry. Position
+and gravity behavior are unchanged. The independent unit test fails before
+correction because the crusher lacks the attack callback; it covers all32
+ticks for body and an upper piece. The6201-frame ordinary cold fixture adds
+5 whole-registry replay spots around first hit, renewed dash and recovery.
+
+Queued native-GL absolute-ROM
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestLrzRockCrusher,TestLrzColdRouteCapture test` passes19 tests,zero
+failures/errors/skips,100seconds (seven routes37.62s). There are56
+whole-registry replay spots. The plan against`ce6c2741a` is broad; these are
+focused iteration checks, not the still-pending combined delivery selection.
+
+Verified engine video
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-crusher-hit-recovery-320/capture.mp4`
+contains201 rendered frames6000–6200,6201 state rows,zero deaths; inspected
+6055/6066/6090 and full decode succeeds. It demonstrates the corrected rebound
+exchange; complete native visual acceptance of the underground crusher/flash
+remains open. Corrected player coordinates match locally from6000 through6233.
+Next input6234 is engine3889,1820 vs native3887,1826; ownership is not yet
+attributed. The unchanged long input dies11040; duration is not a correctness
+metric. Earlier transient/intro/ring differences remain.
+
+Source follow-up: `loc_903F4` falls directly into `loc_90408` when a piece is
+released; the existing Java switch advances its routine without that same-pass
+countdown. Audit this adjacent shake phase and its current unit expectations
+before certifying the entire crusher sequence.

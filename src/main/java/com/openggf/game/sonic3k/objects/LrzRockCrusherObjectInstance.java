@@ -20,6 +20,8 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseAttackable;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -88,7 +90,7 @@ import java.util.List;
  * is 0 and this class reproduces the ROM's inert read by not modelling bit 6 at all.
  */
 public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable, RomObjectCodePointerProvider {
 
     /** {@code ObjDat_LRZRockCrusher}: {@code dc.w $180} (sonic3k.asm:197427). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0180);
@@ -146,6 +148,9 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
 
     private final SubpixelMotion.State motion;
     private transient boolean paletteLoaded;
+    /** sub_905A8's $20 timer; Touch_Enemy clears collision until it expires. */
+    private int hitFlashTimer;
+    private boolean hitCollisionDisabled;
     private transient S3kBossExplosionController explosionController;
 
     public LrzRockCrusherObjectInstance(ObjectSpawn spawn) {
@@ -187,6 +192,10 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
             default -> explodeAndClean();
         }
         updateDynamicSpawn(motion.x, motion.y);
+        if (hitCollisionDisabled && !isDestroyed()) {
+            hitFlashTimer = advanceHitFlash(services(), hitFlashTimer);
+            if (hitFlashTimer == 0) hitCollisionDisabled = false;
+        }
     }
 
     /** {@code Check_CameraInRange} (sonic3k.asm:180433-180446). */
@@ -429,6 +438,33 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         applyPaletteLine(Sonic3kConstants.PAL_LRZ1_ADDR);
     }
 
+    /** Shared ROM sub_905A8, called independently by body and upper pieces. */
+    static int advanceHitFlash(ObjectServices services, int timer) {
+        if (timer == 0) {
+            timer = 0x20;
+            services.playSfx(Sonic3kSfx.BOSS_HIT.id);
+        }
+        try {
+            // sub_905E8/word_905F6 write line2+$16/$1A/$1C. Read the
+            // even (white) or odd (normal) three-word bank from the ROM.
+            int offset = (timer & 1) == 0 ? 6 : 0;
+            byte[] colors = services.rom().readBytes(
+                    Sonic3kConstants.PAL_LRZ_ROCK_CRUSHER_FLASH_ADDR + offset, 6);
+            int[] slots = {0x16 / 2, 0x1A / 2, 0x1C / 2};
+            for (int i = 0; i < slots.length; i++) {
+                S3kPaletteWriteSupport.applyContiguousPatch(
+                        services.paletteOwnershipRegistryOrNull(), services.currentLevel(),
+                        services.graphicsManager(), S3kPaletteOwners.LRZ_ROCK_CRUSHER,
+                        S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE, 1, slots[i],
+                        new byte[] {colors[i * 2], colors[i * 2 + 1]});
+            }
+        } catch (Exception unavailable) {
+            // Minimal object harnesses omit the ROM/palette backend.
+        }
+        // subq.b #1,$20(a0), restoring saved collision_flags only at zero.
+        return timer - 1;
+    }
+
     private void applyPaletteLine(int address) {
         try {
             byte[] line = services().rom().readBytes(address, 32);
@@ -537,7 +573,15 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return COLLISION_FLAGS;
+        return hitCollisionDisabled ? 0 : COLLISION_FLAGS;
+    }
+
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        // Touch_Enemy saves/clears collision_flags before sub_905A8 sees the hit.
+        // The shared touch controller owns the player's rebound. A second hit
+        // must not restart this object's native lockout.
+        if (!hitCollisionDisabled) hitCollisionDisabled = true;
     }
 
     @Override

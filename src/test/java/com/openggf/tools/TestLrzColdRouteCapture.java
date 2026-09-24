@@ -41,8 +41,13 @@ class TestLrzColdRouteCapture {
         runColdRoute("fire");
     }
 
+    @Test void coldTeamBouncesFromCrusherWithoutPrematureRepeatHit() throws Exception {
+        runColdRoute("crusher");
+    }
+
     private void runColdRoute(String route) throws Exception {
-        boolean fireRoute = route.equals("fire");
+        boolean crusherRoute = route.equals("crusher");
+        boolean fireRoute = route.equals("fire") || crusherRoute;
         boolean shrapnelRoute = route.equals("shrapnel") || fireRoute;
         boolean chargeRoute = route.equals("charge") || shrapnelRoute;
         boolean elevatorRoute = route.equals("elevator") || chargeRoute;
@@ -54,7 +59,8 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = fireRoute ? Set.of(5750, 5775, 5800, 5860, 5907, 5908, 5939, 5950)
+        var spots = crusherRoute ? Set.of(6020, 6055, 6066, 6090, 6140)
+                : fireRoute ? Set.of(5750, 5775, 5800, 5860, 5907, 5908, 5939, 5950)
                 : shrapnelRoute ? Set.of(5550, 5585, 5591, 5620, 5650)
                 : chargeRoute ? Set.of(5140, 5175, 5200, 5300, 5400)
                 : elevatorRoute ? Set.of(4900, 4930, 4945, 4951) : shieldRoute ? Set.of(4510, 4540, 4563, 4590, 4650, 4700, 4780, 4850)
@@ -143,6 +149,12 @@ class TestLrzColdRouteCapture {
                     // on contact, leaving room to advance here without a side hit.
                     assertEquals(3574, session.player().getCentreX());
                     assertEquals(72, session.player().getXSpeed());
+                }
+                if (crusherRoute && frame == 6066) {
+                    assertEquals(3948, session.player().getCentreX());
+                    assertEquals(1758, session.player().getCentreY());
+                    assertEquals(0x800, session.player().getXSpeed(),
+                            "an already-hit piece cannot bounce the new fire dash again");
                 }
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);

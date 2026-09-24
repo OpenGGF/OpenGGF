@@ -27,6 +27,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestLrzRockCrusher {
 
+    @Test
+    void bodyAndUpperPiecesSuppressFurtherHitsForThirtyTwoObjectTicks() {
+        var harness = harness(0, 0xE40, 0x680);
+        harness.crusher.update(0, null);
+        var piece = new LrzRockCrusherPieceInstance(8, 0, 0);
+        piece.setServices(harness.services);
+        piece.attachTo(harness.crusher);
+        for (var object : java.util.List.of(harness.crusher, piece)) {
+            var provider = (com.openggf.level.objects.TouchResponseProvider) object;
+            int flags = provider.getCollisionFlags();
+            var attack = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                    com.openggf.level.objects.TouchResponseAttackable.class, object);
+            attack.onPlayerAttack(null, null);
+            assertEquals(0, provider.getCollisionFlags(), "Touch_Enemy clears collision immediately");
+            for (int tick = 1; tick <= 31; tick++) {
+                object.update(tick, null);
+                assertEquals(0, provider.getCollisionFlags(), "sub_905A8 lockout tick " + tick);
+            }
+            object.update(32, null);
+            assertEquals(flags, provider.getCollisionFlags(), "restore saved collision at timer zero");
+        }
+    }
+
     /** The act 1 placement of subtype 0 is inside {@code word_901B8}'s window. */
     private static final int CRUSHER_X = 0x0E40;
     private static final int CRUSHER_Y = 0x0700;

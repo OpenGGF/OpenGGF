@@ -1804,6 +1804,8 @@ public class Sonic3kConstants {
     public static final int ARTTILE_LRZ_ROCK_CRUSHER = 0x052E;
     /** {@code Pal_LRZRockCrusher} (sonic3k.lst: $90680), one 32-byte line. */
     public static final int PAL_LRZ_ROCK_CRUSHER_ADDR = 0x090680;
+    /** word_905FC: two three-word flash palettes used by sub_905A8/sub_905E8. */
+    public static final int PAL_LRZ_ROCK_CRUSHER_FLASH_ADDR = 0x0905FC;
     /** {@code Map_LRZMiniboss} (sonic3k.lst: $186EC8). */
     public static final int MAP_LRZ_MINIBOSS_ADDR = 0x186EC8;
     /** {@code ArtKosM_LRZMiniboss} (sonic3k.lst: $16FCDA); {@code loc_78592} queues it. */

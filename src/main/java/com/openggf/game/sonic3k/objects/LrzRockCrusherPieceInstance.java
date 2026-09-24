@@ -15,6 +15,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseAttackable;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -42,7 +44,7 @@ import java.util.List;
  * routine 4 with {@code $2E = (subtype & 8) >> 1 + 4} (:197509-197516).
  */
 public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
 
     /** {@code word_90614}: {@code dc.w $200} (sonic3k.asm:197435). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0200);
@@ -62,6 +64,9 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
 
     /** ROM {@code subtype(a0)} = the child index times two. */
     private int subtype;
+    /** sub_905A8's $20 timer; Touch_Enemy clears collision until it expires. */
+    private int hitFlashTimer;
+    private boolean hitCollisionDisabled;
     /** ROM {@code child_dx(a0)} / {@code child_dy(a0)}. */
     private int childDx;
     private int childDy;
@@ -134,6 +139,10 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
             }
         }
         refreshPosition();
+        if (hitCollisionDisabled) {
+            hitFlashTimer = LrzRockCrusherObjectInstance.advanceHitFlash(services(), hitFlashTimer);
+            if (hitFlashTimer == 0) hitCollisionDisabled = false;
+        }
     }
 
     /** {@code loc_90436} (sonic3k.asm:197486-197508). */
@@ -218,7 +227,15 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return collisionFlags;
+        return hitCollisionDisabled ? 0 : collisionFlags;
+    }
+
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        // Touch_Enemy saves/clears collision_flags before sub_905A8 sees the hit.
+        // The shared touch controller owns the player's rebound. A second hit
+        // must not restart this object's native lockout.
+        if (subtype >= 8 && !hitCollisionDisabled) hitCollisionDisabled = true;
     }
 
     @Override
