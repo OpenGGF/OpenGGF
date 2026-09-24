@@ -57,8 +57,13 @@ class TestLrzColdRouteCapture {
         runColdRoute("high-climb");
     }
 
+    @Test void coldTeamOpensDoorSevenDropsBridgeAndTakesUpperSpring() throws Exception {
+        runColdRoute("middle-spring");
+    }
+
     private void runColdRoute(String route) throws Exception {
-        boolean highClimbRoute = route.equals("high-climb");
+        boolean middleSpringRoute = route.equals("middle-spring");
+        boolean highClimbRoute = route.equals("high-climb") || middleSpringRoute;
         boolean upperLedgeRoute = route.equals("upper-ledge") || highClimbRoute;
         boolean lowerEastRoute = route.equals("lower-east") || upperLedgeRoute;
         boolean crusherRoute = route.equals("crusher") || lowerEastRoute;
@@ -74,7 +79,8 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = highClimbRoute ? Set.of(8700, 8730, 8775, 8890, 8920, 9030, 9080, 9130, 9300, 9380, 9410, 9500, 9720, 9830)
+        var spots = middleSpringRoute ? Set.of(10085, 10097, 10105, 10125, 10165, 10325, 10400, 10650, 10700, 10960, 11190, 11220, 11570, 11730, 11775, 11820, 11900)
+                : highClimbRoute ? Set.of(8700, 8730, 8775, 8890, 8920, 9030, 9080, 9130, 9300, 9380, 9410, 9500, 9720, 9830)
                 : upperLedgeRoute ? Set.of(7800, 8030, 8210, 8300, 8364, 8390, 8550, 8620, 8700)
                 : lowerEastRoute ? Set.of(6230, 6320, 6450, 6540, 6700, 7180, 7260, 7420, 7500)
                 : crusherRoute ? Set.of(6020, 6055, 6066, 6090, 6140)
@@ -174,6 +180,19 @@ class TestLrzColdRouteCapture {
                     assertEquals(0x800, session.player().getXSpeed(),
                             "an already-hit piece cannot bounce the new fire dash again");
                 }
+                if (middleSpringRoute && (frame == 10105 || frame == 10165)) {
+                    var door = GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.LrzDoorObjectInstance.class).stream()
+                            .filter(candidate -> candidate.triggerIndex() == 7).findFirst().orElseThrow();
+                    if (frame == 10105) {
+                        assertTrue(com.openggf.game.sonic3k.Sonic3kLevelTriggerManager.testAny(7));
+                        assertTrue(door.isOpening());
+                    } else {
+                        assertTrue(door.isFullyOpen());
+                        assertFalse(com.openggf.game.sonic3k.Sonic3kLevelTriggerManager.testAny(7),
+                                "door stays open after the momentary side button is released");
+                    }
+                }
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
@@ -203,7 +222,10 @@ class TestLrzColdRouteCapture {
                 assertEquals(shieldRoute ? 2206 : 2746, session.player().getCentreX());
                 assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
             }
-            if (highClimbRoute) {
+            if (middleSpringRoute) {
+                assertEquals(7652, session.player().getCentreX());
+                assertEquals(1201, session.player().getCentreY());
+            } else if (highClimbRoute) {
                 assertEquals(5557, session.player().getCentreX());
                 assertEquals(940, session.player().getCentreY());
             } else if (upperLedgeRoute) {
@@ -213,7 +235,7 @@ class TestLrzColdRouteCapture {
                 assertEquals(4917, session.player().getCentreX());
                 assertEquals(1712, session.player().getCentreY());
             }
-            assertEquals(highClimbRoute ? 111 : upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
+            assertEquals(middleSpringRoute ? 119 : highClimbRoute ? 111 : upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
                     session.player().getRingCount());
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
         }

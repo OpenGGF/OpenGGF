@@ -10,9 +10,9 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
 full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
-Ten preserved native320 ordinary Sonic+Tails cold routes now extend through
-crusher descent, the dash elevators and upper spike-platform climb to9915 inputs.
-The ten routes cover88 full-registry replay spots; current checks are below. Later
+Eleven preserved native320 ordinary Sonic+Tails cold routes now extend through
+door7, the middle collapsing bridge and the upper-route spring to11950 inputs.
+The eleven routes cover105 full-registry replay spots; current checks are below. Later
 ordinary traversal is being authored; current verification is recorded in the
 dated follow-ups below.
 
@@ -611,3 +611,32 @@ $1F74D4 is `$19:07` LRZ door(5664,860), not an unexplained terrain wall or lava
 fall. The matching `$1C:07` button is(5444,912); native rows8770–8810 detour
 west toward it. This authored route bypassed it. Reach the button before
 judging door behavior; full-act completion and combined integration remain open.
+
+### Door7, bridge descent and upper-route spring (2026-09-24)
+
+On `b9efc99ef` plus route/test additions, `lrz1-sonic-tails-cold-middle-spring-320`
+reaches(7652,1201),119rings at11950inputs,zero deaths and a live sidekick.
+The side button is contacted in flight; trigger7 becomes active and the door
+opens. A first attempt landed on the button's top without activating it.
+The route then descends through the collapsing bridge near(5792,1248),
+returns east and approaches spring(6851,1457) from the right to launch onto
+the upper route. Continuing east below that spring leads into a lower loop;
+it is traversal coverage, not progress toward the boss. Native rows18000–18300
+identify the successful spring approach after earlier unsuccessful passes.
+No runtime changes or gameplay overrides are used.
+
+Queued Java21/native GL/absolute S3K ROM:
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzColdRouteCapture#coldTeamOpensDoorSevenDropsBridgeAndTakesUpperSpring test`
+passes1 test,zero failures/errors/skips. It asserts trigger7 and opening travel
+at10105, completed travel with the momentary trigger released at10165, and17
+full-registry45-frame replay spots:10085,10097,10105,10125,10165,10325,10400,
+10650,10700,10960,11190,11220,11570,11730,11775,11820,11900.
+InputLogAuthorTool compiles and round-trip verifies the script/BK2.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cold-middle-spring-320/capture.mp4`
+films9915–11949 after the full cold prefix;11950state rows,zero deaths,
+10105/11790stills inspected and full MP4 decode passes. Native full-scene
+acceptance remains open. Exploratory continuation eventually reaches the
+X8600area but dies15391; neither that duration nor the lower loop is certified
+completion. Continue the successful upper route and audit its next hazard.
+Full Act1/Act2 cold completion and campaign integration remain owed.
