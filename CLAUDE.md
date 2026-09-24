@@ -89,14 +89,16 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   Submit the command even if another agent is testing: it waits, reports status and
   starts automatically. Waiting requires no permission or manual lock cleanup.
   Linux admission allows different worktrees to overlap when conservative memory/CPU
-  reservations fit (two runs by default); one worktree remains exclusive. Other platforms
-  retain serialization. Waiting requests favour short estimates; after five minutes,
+  reservations fit (three runs by default, crediting each running job's measured usage);
+  one worktree remains exclusive. Single-fork trace/audio profiles share the queue; see
+  the guide for exclusive shapes. Other platforms retain serialization. Waiting requests favour short estimates; after five minutes,
   aged requests take priority in arrival order. An aged blocked request pauses new
   admissions so existing jobs can drain. Running jobs are never preempted. Temporary
   OS-leased waiting records are automatic and pruned after cancellation/death;
   older wrappers retain lock safety but cannot honour priority. See the testing guide.
   Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
-  Git policy settings and profiling are documented in `tools/testing/README.md`.
+  Git policy settings and profiling are documented in `tools/testing/README.md`;
+  `maven_queue.py --stats` summarises recorded queue waits, holds and peak memory.
   The queue holds a slot only during execution; cancellation releases a waiting
   request or stops its running Maven process tree. Keep the command session alive
   while waiting. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.

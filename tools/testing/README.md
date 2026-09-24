@@ -138,12 +138,27 @@ python3 tools/testing/maven_queue.py -Dmse=off package
 
 Submit checks when ready, even while another agent is testing. Leave the command session
 running: it prints a waiting notice every 30 seconds and starts automatically when it
-acquires a slot. On Linux, the queue admits up to two invocations in different
+acquires a slot. On Linux, the queue admits up to three invocations in different
 worktrees when memory and CPU budgets fit; category ordinary/guard lanes stay together.
 The same worktree always remains exclusive. Unsupported resource probes/platforms
 and CPU allocations smaller than two per-run reservations retain serial execution.
 There is no background service, task owner or approval step. Participating waiters
 use short-run priority with aging; different clones have separate queues. Each command still uses its own worktree and `target/` directory.
+
+#### Queue telemetry
+
+Each admitted or cancelled request appends one line to `.git/maven-queue-log.jsonl`:
+kind (`focused`, `full`, `category`, `category-full`, `profile:<names>`, `exclusive`,
+`cleanup`), worktree name, wait and hold seconds, sampled peak RSS and mean CPU. It
+records no Maven arguments and no test results, so it is not a validation receipt.
+The log is trimmed to its newest half above 512 KiB. Summarise it with:
+
+```bash
+python3 tools/testing/maven_queue.py --stats
+```
+
+Peak RSS sums shared pages and two-second sampling misses short peaks; see the
+[2026-09-15 profiling](../../docs/architecture/research/2026-09-15-maven-resource-admission.md).
 
 #### Waiting order
 
@@ -187,13 +202,23 @@ Avoid editing that worktree during execution; the category runner rejects change
 
 Admission uses available memory, CPU affinity, visible cgroup v2 limits and one-minute
 system load. Each prospective run reserves **7 GiB RAM and 8 CPU cores**, with **2 GiB
-memory headroom**. Existing runs also count as full reservations, in addition to their
-usage already reflected in OS counters. This deliberate overestimate covers startup
-bursts; it may queue work even when a less conservative estimate would fit. These are
-admission estimates, not hard limits or a guarantee against unrelated host load.
-No running command is preempted when resources later fall. The estimate covers the
-single-worker default suite and `smoke`/`guards`. Category `--workers 2`, other explicit
-Maven profiles, Maven thread/fork/heap overrides, and nonempty `MAVEN_OPTS`,
+memory headroom**. Existing runs also count as full reservations. While a run holds a
+slot, its wrapper samples the run's process tree every two seconds and publishes RSS and
+recent CPU in an OS-leased `.git/maven-running/*.lease` record. Admission credits that
+realised usage, capped at the run's own reservation, because OS counters already
+contain it: without the credit, one grown full suite made a second run look unaffordable
+on a 30 GiB host. A young run is uncredited until measured; a stale, malformed or
+unlocked record (older wrapper, killed parent) earns no credit and keeps the full
+reservation. These are admission estimates, not hard limits or a guarantee against
+unrelated host load. No running command is preempted when resources later fall.
+
+The estimate covers one reused test fork with the shared 3 GiB heap. That is the
+single-worker default suite and the profiles that keep it: `smoke`, `guards`, `ci`,
+`trace-replay`, `trace-segments`, `trace-replay-r7`, `trace-diagnostics`, `fbz-routes`,
+`audio-reference` and `audio-local-wave`. A Python test pins that shape against `pom.xml`.
+`benchmarks` (wall-clock sensitive), `test-concurrent` (two forks), `audio-stress`,
+`tracechaser-integration`, packaging and other profiles, category `--workers 2`,
+Maven thread/fork/heap overrides, and nonempty `MAVEN_OPTS`,
 `JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
 or heap settings in custom project/user Maven configuration are not detected; use the
 serial override for those unmeasured shapes.
@@ -204,7 +229,7 @@ previous single-lock wrapper exclude resource-aware callers in both directions.
 Shared Git settings tune the policy across linked worktrees:
 
 ```bash
-git config openggf.mavenMaxRuns 2
+git config openggf.mavenMaxRuns 3
 git config openggf.mavenMemoryGiB 7
 git config openggf.mavenCpuCores 8
 git config openggf.mavenHeadroomGiB 2

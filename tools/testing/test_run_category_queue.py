@@ -40,25 +40,31 @@ class QueueTests(unittest.TestCase):
             process.communicate(timeout=5)
 
     def launch(self, name, root=None, resource_snapshot=(100 * 1024**3, 128, 0),
-               estimate=900, aging_seconds=300):
+               estimate=900, aging_seconds=300, realised_rss=0):
         code = '''
 import sys, time, json
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
-from maven_queue import maven_slot
+from maven_queue import maven_slot, handle_termination
 import maven_resources, maven_schedule
 maven_schedule.AGING_SECONDS = float(sys.argv[6])
 maven_resources.snapshot = lambda: json.loads(sys.argv[4])
+if float(sys.argv[7]):
+    # Stand-in for a grown Maven tree: one descendant with this RSS.
+    maven_resources.tree_usage = lambda pid, proc=None: {(1, 1): (float(sys.argv[7]), 0.0)}
 root, marker = map(Path, sys.argv[2:4])
-with maven_slot(root, estimate=float(sys.argv[5])):
-    marker.with_suffix('.started').touch()
-    while not marker.with_suffix('.release').exists():
-        time.sleep(.02)
+try:
+    with handle_termination(), maven_slot(root, estimate=float(sys.argv[5])):
+        marker.with_suffix('.started').touch()
+        while not marker.with_suffix('.release').exists():
+            time.sleep(.02)
+except KeyboardInterrupt:
+    sys.exit(130)
 '''
         marker = Path(self.temp.name) / name
         process = subprocess.Popen([sys.executable, '-c', code, str(TOOLS),
                                     str(root or self.root), str(marker), json.dumps(resource_snapshot),
-                                    str(estimate), str(aging_seconds)],
+                                    str(estimate), str(aging_seconds), str(realised_rss)],
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         self.processes.append(process)
         return process, marker
@@ -234,6 +240,57 @@ with maven_slot(root, estimate=float(sys.argv[5])):
         self.assertFalse(marker.with_suffix('.started').exists())
 
     @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_realised_usage_credit_admits_a_run_that_double_counting_blocked(self):
+        # 15 GiB free: one 7 GiB reservation plus 2 GiB headroom fits; two do not,
+        # unless the running job's own 3 GiB is credited instead of counted twice.
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        snapshot = (15 * 1024**3, 128, 0)
+        for realised, admitted in ((0, False), (3 * 1024**3, True)):
+            with self.subTest(realised=realised):
+                holder, first = self.launch(f'holder-{realised}', resource_snapshot=snapshot,
+                                            realised_rss=realised)
+                self.wait_started(holder, first)
+                waiter, second = self.launch(f'second-{realised}', self.linked, resource_snapshot=snapshot)
+                if admitted:
+                    self.wait_started(waiter, second)
+                    second.with_suffix('.release').touch()
+                    waiter.wait(timeout=5)
+                else:
+                    time.sleep(.5)
+                    self.assertFalse(second.with_suffix('.started').exists())
+                first.with_suffix('.release').touch()
+                holder.wait(timeout=5)
+                if not admitted:
+                    self.wait_started(waiter, second)
+                    second.with_suffix('.release').touch()
+                    waiter.wait(timeout=5)
+        self.assertEqual([], list((self.root / '.git/maven-running').glob('*.lease')))
+
+    def test_finished_and_cancelled_requests_leave_one_telemetry_line_each(self):
+        from maven_running import summarise
+        holder, first = self.launch('holder', estimate=30)
+        self.wait_started(holder, first)
+        waiter, second = self.launch('cancelled', self.linked)
+        self.wait_queued(1)
+        waiter.terminate()
+        waiter.wait(timeout=5)
+        time.sleep(.3)  # Hold long enough to register at 0.1-second resolution.
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        log = self.root / '.git/maven-queue-log.jsonl'
+        deadline = time.monotonic() + 5
+        while len(log.read_text().splitlines()) < 2 and time.monotonic() < deadline:
+            time.sleep(.02)
+        rows = sorted((json.loads(line) for line in log.read_text().splitlines()), key=lambda r: r['outcome'])
+        self.assertEqual(['cancelled-waiting', 'completed'], [row['outcome'] for row in rows])
+        self.assertEqual(0, rows[0]['holdSeconds'])
+        self.assertGreater(rows[1]['holdSeconds'], 0)
+        self.assertEqual({'maven'}, {row['kind'] for row in rows})
+        self.assertNotIn('args', rows[1])
+        self.assertIn('maven', summarise(self.root / '.git'))
+        self.assertEqual([], list((self.root / '.git/maven-running').glob('*.lease')))
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
     def test_serial_holder_excludes_auto_request(self):
         holder, first = self.launch('serial')
         self.wait_started(holder, first)
@@ -244,22 +301,26 @@ with maven_slot(root, estimate=float(sys.argv[5])):
         self.assertIsNone(waiter.poll())
 
     @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
-    def test_auto_ceiling_blocks_a_third_distinct_worktree(self):
+    def test_auto_ceiling_blocks_a_fourth_distinct_worktree(self):
         os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
-        other = Path(self.temp.name) / 'other'
-        self.git('worktree', 'add', '--detach', '-q', str(other))
+        trees = []
+        for name in ('other', 'another'):
+            trees.append(Path(self.temp.name) / name)
+            self.git('worktree', 'add', '--detach', '-q', str(trees[-1]))
         holder, first = self.launch('first')
         self.wait_started(holder, first)
         second_process, second = self.launch('second', self.linked)
         self.wait_started(second_process, second)
-        third_process, third = self.launch('third', other)
+        third_process, third = self.launch('third', trees[0])
+        self.wait_started(third_process, third)
+        fourth_process, fourth = self.launch('fourth', trees[1])
         time.sleep(.3)
-        self.assertFalse(third.with_suffix('.started').exists())
+        self.assertFalse(fourth.with_suffix('.started').exists())
         first.with_suffix('.release').touch()
         holder.wait(timeout=5)
-        self.wait_started(third_process, third)
-        second.with_suffix('.release').touch()
-        third.with_suffix('.release').touch()
+        self.wait_started(fourth_process, fourth)
+        for marker in (second, third, fourth):
+            marker.with_suffix('.release').touch()
 
     @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
     def test_auto_holder_excludes_serial_request(self):
