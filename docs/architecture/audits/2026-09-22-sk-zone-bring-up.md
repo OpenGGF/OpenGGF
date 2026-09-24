@@ -4797,3 +4797,17 @@ The next exploratory route reaches7652/428 at input37080 via the spring; continu
 is the next cold-route step. Direct-load background recheck is recorded separately
 and leaves native acceptance open. This slice changes evidence only; engine
 checks from ff9343838 are unchanged and were not repeated.
+
+
+### Eastern wall and tunnel continuation (2026-09-24)
+
+On a3af3f566, fresh38552-input cold replay reaches8782/1289 with14 rings and
+zero deaths. Wall spindash, spring rebound, slower shaft approach and westward
+tunnel entry are authored inputs, not geometry fixes. The moving capture,
+inspected stills and native425000–429000 reference are recorded in the
+[Act2 matrix](../validation/levels/s3k-lrz-act2.md#eastern-walls-and-lower-tunnel-reached-2026-09-24).
+An exploratory tail reaches the following lower corridor then dies at39488;
+the next route work starts before that hazard. A native/cold colour observation
+is under investigation; the palette helper does install its ROM tables, so a
+missing palette load must not be assumed. This evidence-only slice does not
+repeat unchanged engine tests.

@@ -365,3 +365,32 @@ at9272/1580 with camera9112/1484. Still60 shows purple background forms without
 the obvious HUD lettering in the historical report. This observation does not
 close the direct-load background issue: art ownership and a matched native
 view still need verification. It is not evidence from the cold route.
+
+
+### Eastern walls and lower tunnel reached (2026-09-24)
+
+Fresh replay on a3af3f566 reaches8782/1289 after38552 cold inputs,14 rings and
+zero deaths. Spindashing breaks the paired walls at8912/736 and8944/736. A
+fast first approach rebounds from the upper spring; braking on the return lets
+Sonic fall onto the lower pipe, then running west enters the tunnel at8832/976.
+These were controller-route choices; no runtime change was made. Further
+exploration takes the return drop to9260/1614, then reaches10528/1132 before
+a lethal hazard. That failed tail is not part of the fresh video.
+
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-wall-tunnel-320/capture.mp4`
+films37951–38551 (601frames). All38552 state rows checked for death, stills38340
+and38551 inspected and full decode passes. Input is
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-route-author/lower-tunnel-entry/variant-0.bk2`.
+The latest committed rewind fixture still ends at36204; new-section rewind
+coverage and full-act completion remain open.
+
+Native read-only `far-east` reference under `campaign-20260924-native-act2-floor`
+adds4001 continuous rows425000–429000 from the existing415400 save/movie.
+The host verifies the same ROM/movie/state identities and reports zero failures.
+Inspected425500 confirms the lower tunnel;426000 shows the subsequent corridor.
+The native reference is Super Sonic and cannot supply ordinary trajectory
+expectations. Visual comparison also prompted a palette check: the cold route
+does install Pal_LRZ2 and Pal_LRZMiniboss3, with later differences in cycling
+entries. A complete native palette sample is being compared before attributing
+the apparent colour difference to a runtime defect. Native pixel acceptance
+remains open.
