@@ -349,3 +349,13 @@ hub. Controller authoring also reaches the lower route directly with a fresh
 Left press. The descending conveyor between spiked walls requires staying near
 its middle until the lower exit; immediate Right drift or an early jump hits
 the wall. Native rows are comparison/route research only, never gameplay writes.
+
+The corrected controller input keeps the rider nearX1560 against the conveyor's
+belt untilY1960, then exits right. The full cold route reaches(1937,2003),19rings,
+zero deaths in17,180frames. This is a lower-route frontier, distinct from the
+previous monitor-alcove X maximum. The inspected
+`$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-lower-conveyor-320/capture.mp4`
+films16200–17179; state rows, selected stills16750/16900/17150 and full MP4 decode
+checked. `campaign-20260924-route-author/act2-lower-centred-belt.{script,bk2,csv}`
+preserves the external exploration, with no gameplay state writes. The next
+obstacle is the corridor's spiked overhang; no collision change was made for it.
