@@ -24,6 +24,20 @@ Tests are configured for parallel execution across 4 JVM forks locally (`1` fork
 This significantly speeds up the full test suite but means tests must be independent of
 each other.
 
+## CI in GitHub
+
+| Event | What runs |
+|---|---|
+| Push to `develop` or `next` | Basic CI: the `smoke` profile (about seven minutes). |
+| Non-draft pull request, any base | Full CI: branch policy, the complete ordinary suite and `-Pguards`. Draft PRs run nothing until marked ready; a newer push cancels the older run. |
+| Push to `master` | The Release workflow below: full validation, native packaging, publication. |
+| Push to a feature or bugfix branch | Nothing. Open a pull request, or run CI by hand. |
+| Manual dispatch | Full CI on the chosen ref. `trace_replay` adds the ROM-fixture develop trace replay on the self-hosted runner. |
+
+Guards are not part of push CI, so run `-Pguards` locally before pushing
+straight to `develop` or `next`. Pull requests do not build native packages;
+packaging failures first show on the master push that would publish.
+
 ## Release builds in GitHub
 
 The Release workflow builds Windows, macOS, Linux, and the universal JAR on
@@ -32,9 +46,9 @@ structural guards on Ubuntu, installing Lua 5.4 first. Private ROMs are absent
 on these runners, so ROM-dependent skips remain visible in the uploaded test
 evidence; a successful cloud build does not establish ROM replay parity.
 
-A push to `master` builds artifacts without creating a tag. Manual dispatch on
-`master` also publishes a release and creates its version tag. When tagging
-manually, use the push-triggered run's artifacts.
+A push to `master` validates, builds and publishes a release with a new
+version tag; see [publishing a GitHub release](../../project/release-publishing.md).
+Manual dispatch validates and builds without publishing.
 
 ROM-backed release evidence is collected locally with the existing release
 comparison and skip-classification tools. The optional `validate_roms` manual

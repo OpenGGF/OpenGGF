@@ -473,6 +473,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Full CI and release validation remain unchanged.
 
+- **CI trigger policy:** `develop` and `next` pushes run the smoke suite; non-draft
+  pull requests into any branch run branch policy, the full suite and structural guards;
+  master pushes keep full release validation, packaging and publication. Feature and
+  bugfix pushes no longer start CI, and the ROM-fixture jobs are manual opt-ins again.
 - **Release-line integration:** preserve hosted release builds, snapshot policy
   checks, current launcher artifact selection, Linux packaging, and automatic
   publication on master pushes from the 0.6 release branch.

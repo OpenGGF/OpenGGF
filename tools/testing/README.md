@@ -299,7 +299,7 @@ test is not limited by the retention limit. Build caches, ROMs, unrelated target
 and other worktrees are not pruned. Do not copy local logs into another archive to evade
 cleanup. Dedicated release/partition evidence uses its existing explicit workflow below.
 
-The selector, queue and retention tests run in the CI smoke job. Run them locally after changes:
+The selector, queue and retention tests run in the CI smoke and full test jobs. Run them locally after changes:
 
 ```bash
 python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'

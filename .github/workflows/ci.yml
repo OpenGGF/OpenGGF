@@ -1,17 +1,45 @@
 name: CI
 
+# Which events run what (TestBuildToolingGuard pins this):
+#
+#   develop / next push   basic CI: the bounded smoke suite. Enough to show the
+#                         code is broken or a release build is likely to fail.
+#   non-draft PR          full CI: branch policy, the complete ordinary suite and
+#                         the structural guards. Draft PRs run nothing until they
+#                         are marked ready for review.
+#   master push           nothing here; release.yml runs full validation, builds
+#                         the native packages and publishes.
+#   feature/bugfix push   nothing. Open a PR, or run the workflow by hand.
+#   manual dispatch       full CI on the chosen ref, plus the ROM-fixture develop
+#                         trace replay when trace_replay is ticked.
+#
+# Native packaging is not built here; release.yml builds it on master pushes.
 on:
   push:
     branches:
-      - master
+      - develop
+      - next
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      trace_replay:
+        description: 'Also replay develop traces against the ROM fixtures on the self-hosted runner'
+        type: boolean
+        default: false
+
+# A new push to a pull request supersedes its running check. Integration pushes
+# are never cancelled, so every develop/next commit keeps its own result.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Pull requests only. Branch/trailer/changelog policy is enforced locally by
-  # .githooks on every commit, and on master by release.yml's own ci-push step;
-  # running it again on every branch push only produced failure mail for upkeep
-  # that had not been staged yet, on branches nobody was proposing to merge.
+  # Branch/trailer/changelog policy for the proposed range. The .githooks enforce
+  # the same policy at commit time, and release.yml's ci-push step covers master
+  # pushes.
   policy:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,22 +47,29 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Refs arrive through the environment: a fork names its own head branch,
+      # and an expression expanded into the script would run as shell.
       - name: Validate pull request branch policy
-        if: github.event_name == 'pull_request'
-        run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: bash .githooks/validate-policy.sh ci-pr "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF"
 
-  # The fast lane for pull requests and deliberate manual runs.
+  # Basic CI for develop and next pushes.
   #
-  # `-Psmoke` is the default suite minus ten @Tag("slow-suite") classes that were
-  # 93 percent of its wall clock (about 23 of 25 minutes); see the profile comment
-  # in pom.xml. What remains still executes every other test class in the tree, so
-  # this is a real regression check rather than a token compile, and it finishes in
-  # a few minutes instead of half an hour.
+  # `-Psmoke` is the default suite minus the @Tag("slow-suite") classes and the
+  # other groups excluded by the profile in pom.xml, which were most of its wall
+  # clock. What remains still executes every other test class in the tree, so this
+  # is a real regression check rather than a token compile, and it finishes in
+  # about seven minutes. Pull requests run the full `test` job instead, which is a
+  # superset.
   #
-  # It is a subset, not a replacement: the full `test` job below still runs the
-  # tagged classes on pull requests and manual dispatch, and release.yml runs
-  # the whole suite before a release.
+  # Structural guards are not part of basic CI; they run on pull requests and in
+  # release.yml. Run `mvn -Dmse=off -Pguards test -B` locally before delivery.
   smoke:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -50,20 +85,10 @@ jobs:
       - name: Verify test category selection and retention
         run: python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
 
-      - name: Run smoke suite (pull request)
-        if: github.event_name == 'pull_request'
-        shell: bash
-        run: mvn -Dmse=off -Psmoke test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
-
-      - name: Run smoke suite (master push)
+      - name: Run smoke suite (push)
         if: github.event_name == 'push'
         shell: bash
-        run: mvn -Dmse=off -Psmoke test -B -DmodApi.destinationBranch=master
-
-      - name: Run smoke suite (manual)
-        if: github.event_name == 'workflow_dispatch'
-        shell: bash
-        run: mvn -Dmse=off -Psmoke test -B
+        run: mvn -Dmse=off -Psmoke test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
 
       - name: Assert smoke coverage
         shell: bash
@@ -96,19 +121,11 @@ jobs:
           print(f"Smoke coverage: executed={executed} total={total} skipped={skipped}")
           PY
 
-  # Structural guards: the invariants no trace fixture can prove. About nine
-  # minutes, so like the full `test` job they are off the push path -- pull
-  # requests and manual dispatch only.
-  #
-  # They were pinned to develop and master pushes because work lands there by
-  # direct push and TestS1S2PlcComparisonOnlyGuard had sat red for weeks with
-  # nothing selecting it. That is a real risk being reaccepted here: a guard can
-  # now go red on develop and stay red until someone opens a pull request or
-  # dispatches a run. `smoke` does not select the guard classes -- the default
-  # Surefire execution excludes them by name convention -- so it will not catch
-  # this for you. Run `mvn -Dmse=off -Pguards test -B` locally before delivery.
+  # Structural guards: the invariants no trace fixture can prove. Full CI only
+  # (non-draft pull requests and manual dispatch); release.yml runs them again
+  # before publishing.
   guards:
-    if: github.event_name != 'push'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     env:
       LUA_BIN: lua5.4
@@ -142,19 +159,12 @@ jobs:
       - name: Run structural guards
         run: mvn -Dmse=off -Pguards test -B
 
-  # The complete suite, including the @Tag("slow-suite") classes `smoke` drops.
-  # About 26 minutes, so it is off the push path: pull requests and manual
-  # dispatch (Actions -> CI -> Run workflow).
-  #
-  # It did run on develop pushes for a while, after develop carried a
-  # deterministic red test and an order-dependent one unnoticed. Nothing runs
-  # it unattended now -- there is no schedule -- so a regression confined to
-  # the tagged oracle sweeps waits for a pull request or for someone to
-  # dispatch a run.
+  # The complete ordinary suite, including the tagged classes `smoke` drops. Full
+  # CI only (non-draft pull requests and manual dispatch).
   #
   # ROM-free either way: ROM-gated classes error only when a path is supplied.
   test:
-    if: github.event_name != 'push'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -166,6 +176,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+
+      - name: Verify test category selection and retention
+        run: python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
 
       - name: Run tests (pull request)
         if: github.event_name == 'pull_request'
@@ -205,8 +218,10 @@ jobs:
           print(f"Default CI coverage: executed={executed} total={total} skipped={skipped}")
           PY
 
+  # Manual opt-in only (Actions -> CI -> Run workflow, tick trace_replay). It
+  # needs the self-hosted runner that holds the ROM fixtures.
   develop-trace-replay:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.trace_replay
     runs-on: [self-hosted, release-fixtures]
     env:
       SONIC1_ROM_PATH: ${{ vars.SONIC1_ROM_PATH }}

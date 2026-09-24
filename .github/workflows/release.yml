@@ -1,23 +1,29 @@
 name: Release
 
+# Full CI for master: every master push is validated, packaged on all three
+# platforms and published. Pull requests (including those into master) get full
+# CI from ci.yml, without native packaging. A manual run validates and packages
+# the chosen ref without publishing, and adds the ROM-fixture validation job only
+# when validate_roms is ticked. TestBuildToolingGuard pins these triggers.
 on:
   push:
     branches: [master]
-
+  workflow_dispatch:
+    inputs:
+      validate_roms:
+        description: 'Also run ROM-backed validation on a configured fixture runner'
+        type: boolean
+        default: false
 
 jobs:
   policy:
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Validate branch policy
-        if: github.event_name == 'pull_request'
-        run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
 
       - name: Validate branch policy (push)
         if: github.event_name == 'push' && github.event.deleted == false
@@ -49,7 +55,12 @@ jobs:
           command -v "$LUA_BIN"
           "$LUA_BIN" -e 'assert(_VERSION == "Lua 5.4")'
 
-      - name: Run tests
+      - name: Run tests (push)
+        if: github.event_name == 'push'
+        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
+
+      - name: Run tests (manual)
+        if: github.event_name == 'workflow_dispatch'
         run: mvn -Dmse=off test -B
 
       - name: Assert cloud test coverage
@@ -86,6 +97,7 @@ jobs:
 
   # Opt-in evidence collection retains strict ROM/skip/trace checks. It is
   # separate from the hosted build graph; local validation uses the same tools.
+  # Manual dispatch only, so it has no pull-request or push variants.
   rom-validation:
     if: github.event_name == 'workflow_dispatch' && inputs.validate_roms
     runs-on: [self-hosted, release-fixtures]
@@ -138,30 +150,7 @@ jobs:
           python3 -m unittest discover -s tools/testing -p 'test_*release*.py'
           python3 -m unittest discover -s tools/testing -p 'test_classify_surefire_skips.py'
 
-      - name: Run tests (pull request)
-        if: github.event_name == 'pull_request'
-        shell: bash
-        run: |
-          mvn -Dmse=off test -B \
-            -DmodApi.destinationBranch="${{ github.base_ref }}" \
-            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
-            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
-            -Ds3k.rom.path="${S3K_ROM_PATH}"
-
-
-      - name: Run tests (push)
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          mvn -Dmse=off test -B \
-            -DmodApi.destinationBranch="${{ github.ref_name }}" \
-            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
-            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
-            -Ds3k.rom.path="${S3K_ROM_PATH}"
-
-
-      - name: Run tests (manual)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Run tests with ROM fixtures
         shell: bash
         run: |
           mvn -Dmse=off test -B \
@@ -196,62 +185,7 @@ jobs:
           cp -R target/surefire-reports target/release-evidence/guard-reports
           rm -rf target/surefire-reports target/trace-reports
 
-      - name: Run trace replay policy tests (pull request)
-        if: github.event_name == 'pull_request'
-        shell: bash
-        run: |
-          helper="$PWD/tools/testing/compare_release_traces.py"
-          candidate_tree="$PWD"
-          for tree in "$RELEASE_BASELINE_TREE" "$candidate_tree"; do
-            cd "$tree"
-            python3 "$helper" begin --tree "$tree" --output target/release-evidence/trace-start.json
-            # Assertion exit 1 is evidence. Collection rejects errors/crashes and
-            # incomplete runs; comparison decides whether known debt is unchanged.
-            set +e
-            mvn -Dmse=off test -Ptrace-replay -B \
-              -DmodApi.destinationBranch="${{ github.base_ref }}" \
-              -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
-              -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
-              -Ds3k.rom.path="${S3K_ROM_PATH}" > target/release-evidence/trace.log 2>&1
-            trace_exit=$?
-            set -e
-            echo "$trace_exit" > target/release-evidence/trace-exit.txt
-            tail -80 target/release-evidence/trace.log
-            python3 "$helper" collect --tree "$tree" \
-              --start target/release-evidence/trace-start.json --log target/release-evidence/trace.log \
-              --exit-code "$trace_exit" --output target/release-evidence/trace.json
-          done
-
-
-      - name: Run trace replay policy tests (push)
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          helper="$PWD/tools/testing/compare_release_traces.py"
-          candidate_tree="$PWD"
-          for tree in "$RELEASE_BASELINE_TREE" "$candidate_tree"; do
-            cd "$tree"
-            python3 "$helper" begin --tree "$tree" --output target/release-evidence/trace-start.json
-            # Assertion exit 1 is evidence. Collection rejects errors/crashes and
-            # incomplete runs; comparison decides whether known debt is unchanged.
-            set +e
-            mvn -Dmse=off test -Ptrace-replay -B \
-              -DmodApi.destinationBranch="${{ github.ref_name }}" \
-              -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
-              -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
-              -Ds3k.rom.path="${S3K_ROM_PATH}" > target/release-evidence/trace.log 2>&1
-            trace_exit=$?
-            set -e
-            echo "$trace_exit" > target/release-evidence/trace-exit.txt
-            tail -80 target/release-evidence/trace.log
-            python3 "$helper" collect --tree "$tree" \
-              --start target/release-evidence/trace-start.json --log target/release-evidence/trace.log \
-              --exit-code "$trace_exit" --output target/release-evidence/trace.json
-          done
-
-
-      - name: Run trace replay policy tests (manual)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Run trace replay policy tests
         shell: bash
         run: |
           helper="$PWD/tools/testing/compare_release_traces.py"
