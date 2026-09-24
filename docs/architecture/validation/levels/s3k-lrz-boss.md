@@ -270,3 +270,35 @@ The targeted fresh-JVM `-Pguards` selection
 passed 8 tests, no failures/errors/skips, after queue admission. This is not the
 full guard suite. The corrected campaign base SHA above supersedes an invalid
 transcribed SHA in an earlier attempted plan command; that failed before testing.
+
+
+## September 25 widescreen platform activation correction
+
+On `6b1667adc`, matched positioned checkpoint sessions (Sonic+Tails, fire shield,
+37 rings, position `$9C0/$368`, historical movie starting at input2428) have
+identical player/camera state through input174 at widths320 and800. At input175,
+native320 lands at Y935 while width800 falls through to Y943. Width800 dies at257.
+These are bounded presentation sessions, not cold-route certification.
+
+`sub_7A040` admits the invisible platform generators only within the unsigned
+half-open camera rectangle `$140 x $E0`. The implementation incorrectly widened
+this gameplay trigger to the display width, advancing the platforms' lifetime
+before Sonic reached them. The correction preserves the native320 trigger while
+leaving rendering and culling aware of the real viewport. A focused boundary
+regression fails on all four wide widths before the correction (4 failures,
+0 errors/skips); it covers the excluded right edge and first admitted pixel for
+all three generator subtypes at320/352/400/528/800. Existing platform graph and
+camera full-world rewind checks accompany it. Queued
+`-Dmse=off -Dtest=TestLrzBossPlatforms,TestS3kLrzBossPlatformsHeadless,TestS3kLrzBossCameraHeadless
+-Ds3k.rom.path=$REPO_ROOT/s3k.gen test` passes47 tests,
+0 failures/errors/skips on `6b1667adc` plus this correction.
+
+The corrected width800 checkpoint replay matches all2634 native320 player rows
+(X/Y, velocity, ground speed, air, hurt, death and rings). The camera first differs
+at387 during the wider free-follow region; player state remains identical. Both
+sessions eventually die at2633 from this inherited controller/setup combination;
+this is not a completed route. The ten-second excerpt records1500–2099, before
+that death, and shows the restored floor pool:
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260925-platform-window-fixed-800/capture.mp4`.
+Its full ffmpeg decode passes. Frame1900 was inspected. The arena remains
+left-aligned with a large right mask at800; presentation centering remains open.

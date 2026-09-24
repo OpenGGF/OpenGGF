@@ -144,9 +144,13 @@ public final class LrzBossPlatformObjectInstance extends AbstractObjectInstance
 
     private void generator() {
         if(!generatorActive) {
-            // sub_7A040 unsigned half-open rectangle; extend only visible width for widescreen.
+            // sub_7A040 uses an unsigned $140 x $E0 activation rectangle.
+            // Keep the ROM's 320px gameplay trigger even on wider displays:
+            // widening it starts these invisible generators early, changing
+            // platform heights before Sonic reaches them. Rendering/culling
+            // still uses the actual viewport; activation is not visibility.
             var camera=services().camera();
-            if(((getX()-camera.getX())&65535)>=camera.getWidth()
+            if(((getX()-camera.getX())&65535)>=0x140
                     || ((getY()-camera.getY())&65535)>=0xE0) return;
             if(subtype!=0) {
                 spawnPlatform(RISING,subtype,0,0x4FF,null); expire(); return;

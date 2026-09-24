@@ -568,6 +568,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   first-free object allocation order. Rewinding in Act 2 keeps its current object
   graphics instead of restoring obsolete miniboss pixels; the shared art journal
   also preserves later overlapping writes and replacement level data.
+  Invisible boss-approach platform generators retain their native activation
+  window on widescreen, keeping the platforms on their original schedule.
   A controller-only Sonic and Tails route now completes both acts from a cold
   Act 1 start through the boss, capsule and playable Hidden Palace without a
   death, collecting the fire shield from its placed monitor. Act 2 has81 full-world

@@ -21,6 +21,30 @@ class TestLrzBossPlatforms {
         return manager.getActiveObjects().stream().filter(o->o instanceof LrzBossPlatformObjectInstance)
                 .map(o->(LrzBossPlatformObjectInstance)o).toList();
     }
+    @ParameterizedTest @ValueSource(ints={320,352,400,528,800})
+    void generatorWaitsForNativeWindowEvenWhenVisibleInWidescreen(int width) {
+        for (int subtype=0; subtype<=2; subtype++) {
+            var services=setup();
+            var camera=org.mockito.Mockito.spy(services.camera());
+            org.mockito.Mockito.doReturn((short)width).when(camera).getWidth();
+            services.withCamera(camera);
+            var manager=services.objectManager();
+            int kind=subtype;
+            var root=manager.createDynamicObject(()->new LrzBossPlatformObjectInstance(
+                    new ObjectSpawn(0xB40,0x3B0,0xAD,kind,0,false,0)));
+            // sub_7A040: x == Camera_X_pos + $140 is excluded. Extra
+            // displayed pixels must not advance the generator's gameplay clock.
+            manager.update(0xA00,null,List.of(),1);
+            assertEquals(List.of(root),platforms(manager),"width="+width+" subtype="+subtype);
+            camera.setX((short)0xA01);
+            manager.update(0xA01,null,List.of(),2);
+            var children=platforms(manager).stream().filter(p->p!=root).toList();
+            assertEquals(subtype==0 ? 2 : 1,children.size());
+            assertTrue(children.stream().anyMatch(p->p.getY()==0x3AF),
+                    "newly activated child moves on the activation sweep");
+            assertEquals(subtype!=0,root.isDestroyed());
+        }
+    }
     @Test void initialGeneratorCreatesTwoChildrenThatMoveInTheSameSweepAndReverseAfter32Steps() {
         var services=setup(); var manager=services.objectManager();
         var root=manager.createDynamicObject(()->new LrzBossPlatformObjectInstance(new ObjectSpawn(0xA80,0x3B0,0xAD,0,0,false,0)));
