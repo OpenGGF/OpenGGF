@@ -279,6 +279,9 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         for (int i = 0; i < participants.size(); i++) {
             AbstractPlayableSprite player = participants.get(i);
             ObjectControlState.nativeBit7FullControl().applyTo(player);
+            // sub_65E72 bsets render_flags bit 1 alongside the raw $B4/$A7
+            // mapping selection, turning these into the floor-grab poses.
+            player.setRenderFlips(player.getRenderHFlip(), true);
             player.setObjectMappingFrameControl(true);
             player.setAnimationId(0);
             int baseMapping = i == 0 ? 0xB4 : 0xA7;

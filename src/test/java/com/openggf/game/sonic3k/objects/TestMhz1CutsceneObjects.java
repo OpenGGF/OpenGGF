@@ -494,6 +494,36 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void mhz2CutsceneAppliesRomVerticalFlipWhenSonicGrabsTheFloor() {
+        Camera camera = mhz2TriggerCamera();
+        TestablePlayableSprite sonic = new TestablePlayableSprite(
+                "sonic", (short) 0x052A, (short) 0x0748);
+        sonic.setAir(false);
+        CutsceneKnucklesMhz2Instance cutscene = new CutsceneKnucklesMhz2Instance(new ObjectSpawn(
+                0x03D0, 0x0748, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0));
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> sonic, List::of);
+            }
+        };
+        cutscene.setServices(services
+                .withCamera(camera)
+                .withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_ALONE)));
+
+        for (int frame = 0; frame < 400 && !sonic.isObjectMappingFrameControl(); frame++) {
+            cutscene.update(frame, sonic);
+        }
+
+        assertTrue(sonic.isObjectMappingFrameControl(),
+                "sub_65E72 switches to raw floor-grab mappings at animation frame $0C");
+        assertTrue(sonic.getRenderVFlip(),
+                "ROM bsets render_flags bit 1 while Sonic uses the raw floor-grab mappings");
+        assertTrue(sonic.getMappingFrame() == 0xB4 || sonic.getMappingFrame() == 0xB5,
+                "Sonic alternates raw mapping frames $B4/$B5 in this phase");
+    }
+
+    @Test
     void mhz2CutsceneKnucklesRouteSpawnsSwitchChildBeforeDeletingController() {
         ObjectManager objectManager = mock(ObjectManager.class);
         List<ObjectInstance> spawned = new ArrayList<>();
