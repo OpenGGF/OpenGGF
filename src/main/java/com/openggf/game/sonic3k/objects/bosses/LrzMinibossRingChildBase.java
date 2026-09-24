@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -83,6 +84,7 @@ abstract class LrzMinibossRingChildBase extends AbstractBossChild implements Lrz
         }
         retirePhase = RETIRE_PARKED;
         retireTimer = LrzMinibossRingChild.retireParkFrames(this);
-        priority = RETIRE_PRIORITY;
+        // sub_78B46 writes a ROM display-list offset, not a bucket index.
+        priority = RenderPriority.fromS3kWord(RETIRE_PRIORITY);
     }
 }

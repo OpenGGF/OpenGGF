@@ -895,3 +895,26 @@ films29580–31439, with31440 state rows and1860 rendered frames. Inspected29760
 29800 stills and decoded the entire video. This is a refreshed engine demo, not
 strict native whole-scene pixel acceptance. Other route products and lifecycle
 breadth remain open.
+
+
+### Retiring arm priority follow-up (2026-09-24)
+
+The same raw-word mistake also existed in the inherited field write at
+`LrzMinibossRingChildBase.sub78B46`: `$80` became bucket7. It now uses
+`RenderPriority.fromS3kWord`, selecting bucket1 only for the retiring ring;
+the other ring stays in bucket0. The hand-peel regression fails on16b34ba8b
+(expected1, actual7), then passes with the fix. Queued Java21/native GL,
+`-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`,
+`-Dtest=TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestLrzColdRouteCapture#coldTeamDefeatsMinibossAndReachesPlayableActTwo test`
+passes30 tests, zero failures/errors/skips, including the unchanged cold endpoint
+and26 full-registry replay spots. This is focused follow-up evidence.
+
+A read-only engine probe locates the first `$38` bit6 transition at input21593.
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-hand-peel-priority-320/capture.mp4`
+films21540–21719 (180frames after21720cold inputs); the21594 still shows Sonic
+behind the retiring arm. The guessed21890 window was too late and is discarded.
+The final drill breakup is also refreshed in
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-miniboss-retirement-priority-320/capture.mp4`
+(29580–29939,360frames). Both videos fully decode, with zero deaths; inspected
+21594 and29700 stills. These clips exercise the corrected overlap/sequence but
+are not strict native whole-scene pixel matching.

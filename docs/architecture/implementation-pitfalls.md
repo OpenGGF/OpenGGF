@@ -201,7 +201,9 @@ through `RenderPriority.bucket(n)` / `RenderPriority.fromS3kWord(word)`; `clamp`
 a raw S3K word into bucket 7 without complaint (four CNZ/LRZ objects shipped that way).
 Boss-child constructor arguments need the same conversion: LRZ drill debris
 passed `$80` into `AbstractBossChild` and silently drew in bucket7 rather than1
-until the 2026-09-24 cold-route cleanup. Test the normalized result, not merely
+until the 2026-09-24 cold-route cleanup. The same bug occurred on the retiring
+arm path assigning `$80` into the inherited bucket field. Check phase writes as
+well as constructors. Test the normalized result, not merely
 the presence of an override.
 `getPriorityBucket()` defaults to bucket 0, the front-most, so every class that draws
 must override it; `TestObjectPriorityBucketGuard` enforces this and a ROM priority of 0

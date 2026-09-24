@@ -4695,3 +4695,10 @@ regressions fail;98 final focused checks pass, zero skips. See the
 for exact commands, intermediate error attribution and refreshed video.
 Act2 input authoring now reaches the vertical lift and first upper turbine;
 that exploratory extension is not yet a certified fixture or full cold clear.
+
+
+The subsequent LRZ family scan found the same raw `$80` assignment in the
+retiring arms' shared phase. Its normalized conversion and phase assertion
+pass30 focused tests, including cold clear/replay. The corrected hand-peel
+clip is located by the first bit6 transition at21593, rather than the guessed
+later attack window. See the [phase evidence](../validation/levels/s3k-lrz-act1.md#retiring-arm-priority-follow-up-2026-09-24).

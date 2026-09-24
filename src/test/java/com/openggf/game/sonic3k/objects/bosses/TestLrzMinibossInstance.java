@@ -424,6 +424,14 @@ class TestLrzMinibossInstance {
         for (int i = 0; i < 0x60; i++) {
             int frame = nextFrame();
             boss.update(frame, null);
+            if (i == 0) {
+                for (var child : boss.getChildComponents()) {
+                    if (child instanceof LrzMinibossRingChild ring) {
+                        assertEquals(ring.ringMirrored() ? 0 : 1, child.getPriorityBucket(),
+                                "sub_78B46 changes only the retiring ring from $00 to $80");
+                    }
+                }
+            }
             for (int subtype = 2; subtype <= 0x14; subtype += 2) {
                 final int s = subtype;
                 boolean present = boss.getChildComponents().stream()
