@@ -308,3 +308,34 @@ while its balls pass behind it, and the exit jump. State35770 and35830 inspected
 35830 still inspected and full video decode passes. This confirms the authored
 route independently of branch restoration; the separate restored image and
 regressions above establish the journal fix. Full-act completion remains open.
+
+
+### Cold climb, door eight and pipe passage (2026-09-24)
+
+`lrz2-sonic-tails-cold-pipe-passage-320.{script,bk2}` preserves36204 ordinary
+controller inputs from cold LRZ1 entry, through the miniboss and seamless Act2
+arrival, to6741/1484 with one ring and zero deaths. It climbs the opening steps,
+rising platforms and two turbines, follows the upper route and descending
+platforms, crosses the orbiting-ball pipe, presses door8's horizontal button
+and passes beneath the following flamethrower. It does not complete Act2.
+
+`TestLrzActTwoColdRouteCapture` exercises31 whole-registry restore/45-frame
+forward-replay spots across those Act2 interactions and checks the real door8
+is open, the final position, retained Tails roster and released player control.
+The Act1 prefix is replayed normally; its existing test owns earlier rewind
+spots. No replay window straddles a level load.
+
+Fresh uninterrupted video on cfc53e5a9 plus these test inputs:
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-door-eight-320/capture.mp4`
+films35750–36203 (454frames). All36204 state rows contain no death; stills35930
+and36090 inspected and full video decode passes. This establishes native320
+Sonic+Tails reachability and engine presentation, not native pixel parity or
+wide/donor coverage. The next enemy corridor and cold Act2 exit remain open.
+
+Queued Java21/native GL, explicit `-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`,
+`-Dmse=off -Dtest=TestLrzActTwoColdRouteCapture test`:1 test passed,
+31 replay spots, zero failures/errors/skips. This test/input-only addition uses
+focused validation: the inspected selection falls back to2912 ordinary classes
+plus guards for unclassified route assets, whereas its full production consumer
+is directly exercised here and independently in the fresh capture. Earlier
+shared runtime changes still require combined campaign validation.

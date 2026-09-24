@@ -4762,3 +4762,25 @@ This is exploratory progress, not yet a certified Act2 fixture. Walking, jumping
 at the door face and spindashing there were rejected as input choices after the
 placement data and native422420–422480 jump showed the earlier approach. No
 door/button runtime adjustment was needed.
+
+
+### Preserved cold LRZ2 climb and pipe route (2026-09-24)
+
+On cfc53e5a9, a shorter eight-input held jump passes below the flamethrower
+after door8; a full jump instead lands on its housing. The object at6592/1424
+is `$25` chained platforms, not a path switch. No collision/geometry fix was
+needed. Preserved36204 controller inputs now reach6741/1484 with one ring and
+zero deaths from cold LRZ1. `TestLrzActTwoColdRouteCapture` passes31 whole-world
+45-frame replay spots covering the Act2 climb, turbines, descending platforms,
+orbiting balls and door8. The test also checks the opened door, endpoint and
+Tails roster. Java21/native GL, explicit S3K ROM, queued
+`-Dmse=off -Dtest=TestLrzActTwoColdRouteCapture test`:1 pass, zero skips.
+
+Fresh454-frame door/pipe video and inspected stills35930/36090 are recorded in
+the [Act2 matrix](../validation/levels/s3k-lrz-act2.md#cold-climb-door-eight-and-pipe-passage-2026-09-24).
+Full video decode passes. The change-based plan selects2912 ordinary classes
+plus guards because route assets are unclassified; focused production replay
+and independent capture are proportionate for this test/input-only slice.
+Shared runtime fixes retain the combined campaign validation obligation.
+A further exploratory branch crosses the Toxomister corridor to7349/1452
+without death; the ledge beyond it and full cold Act2 completion remain open.
