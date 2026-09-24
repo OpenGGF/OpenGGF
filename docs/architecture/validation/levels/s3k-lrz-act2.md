@@ -406,3 +406,23 @@ Native still425734 shows the blue crystal phase, unlike the gold phase in
 justify changing the palette owner. This is table/phase corroboration, not
 synchronized whole-scene pixel matching; the direct-load background acceptance
 remains separate. Temporary probes are not promoted as runtime oracles.
+
+
+### Cold lower corridor and door five (2026-09-24)
+
+Fresh replay on eaf1529ae extends the cold Sonic+Tails native320 route to39830
+inputs, endpoint11149/1805 with11 rings and zero deaths. It steers left from
+the spring at9264/1660, returns over the pit, drops onto the floor button at
+9816/1652 and crosses door5 at10160/1576 into the downhill section. The adjacent
+giant ring made an overlong leftward jump enter a special stage; that candidate
+was rejected. A12-input left jump lands on the button without entering it,
+followed by a separate jump after landing. No runtime change was required.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-door-five-320/capture.mp4`
+films38971–39829 (859frames). All39830 rows checked for death, stills39486
+(button top,9824/1632) and39607 (past the door,10279/1603) inspected and full
+decode passes. Input is
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-route-author/deep-door-exit/variant-1.bk2`.
+The following attempt reaches door6 at11600/1760; its elevated side button
+requires a different approach from the low ceiling at the door face. Full-act
+completion and rewind checks for the new section remain open.

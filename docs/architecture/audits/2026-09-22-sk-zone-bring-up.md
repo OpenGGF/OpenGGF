@@ -4811,3 +4811,16 @@ the next route work starts before that hazard. A native/cold colour observation
 is under investigation; the palette helper does install its ROM tables, so a
 missing palette load must not be assumed. This evidence-only slice does not
 repeat unchanged engine tests.
+
+
+### Lower LRZ2 corridor and fifth door (2026-09-24)
+
+On eaf1529ae, a fresh39830-input cold route reaches11149/1805 with11 rings and
+zero deaths. The floor button at9816/1652 is pressed by landing on its top,
+opening door5. Avoiding the adjacent giant ring required a shorter left jump;
+walking into the button's side and jumping again before landing did not work.
+The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#cold-lower-corridor-and-door-five-2026-09-24)
+records859 frames of verified moving evidence. The next controller frontier is
+door6's elevated side button. No engine changes or repeated engine tests in
+this evidence-only slice. The palette follow-up now attributes the earlier
+colour observation to documented cycling windows, not a missing palette load.
