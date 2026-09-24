@@ -144,3 +144,13 @@ footage is under `campaign-20260924-bounds-activation-800` in this zone's extern
 capture directory. SSZ additionally has GHZ800/400 and MTZ800/352 defeat/release
 captures; all zero deaths. This does not close cold-route or cross-game breadth
 obligations; combined delivery checks remain pending.
+
+The follow-up destination-bound trial uses the shared boss gate's already-known
+`_unkFAB4/_unkFAB6` rectangle, preserving `loc_85D06`'s live native ramp. Static
+fades on level columns toward that destination rather than following the moving
+current boundary. A 12px edge strip fades more slowly (45–90 ticks); interruptions
+reverse from current opacity. The refreshed positioned800 preview is
+`campaign-20260924-bounds-destination-feather-800/capture.mp4`; all 600 gameplay
+rows match the prior capture and no deaths occur. Shared presentation/GPU/gate
+checks pass 46 tests; LRZ boss/rewind/camera and required S3K regressions pass 109
+with no skips. Full delivery and inherited breadth obligations remain open.

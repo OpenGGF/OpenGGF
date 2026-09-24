@@ -3580,3 +3580,82 @@ previously opaque wing stays opaque, and both replica exits restore full width.
 Archives: `campaign-20260924-{ghz,mtz}-bounds-derived-fade-{width}` under SSZ,
 and `campaign-20260924-bounds-activation-800` under each SSZ/LRZ external task root.
 LRZ demonstrates automatic activation without a new level-specific call.
+
+
+### 2026-09-24 — bounds-mask feedback and ordinary delivery run
+
+At compiled candidate `89e7f0791`, `JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+LUA_BIN=/usr/bin/lua5.4 DISPLAY=:0 python3 tools/testing/run_categories.py --base
+1adf27cb5c6324adafab134821a33d944a60bbe1 --run` completed 2,905 ordinary
+classes / 23,646 tests in 1,308.64 seconds: 14 failures, 2 errors, 29 skips.
+The working tree changed during that lane as user-requested mask corrections
+were implemented; the runner refused the guard lane. This is incomplete delivery
+validation, not a suite pass. The compiled ordinary candidate predates the latest
+world-space fade/temporal feather and null-renderer registration corrections.
+
+Exact failing test identities (unattributed unless stated):
+
+- `com.openggf.game.rewind.TestSonic1StomperDoorRewindOwnership#productionLevelRegistrationRunsSbz3ReconcileAfterObjectManagerRestore` — new mask registration dereferenced an unattached renderer; correction pending focused verification
+- `com.openggf.game.session.TestGameplayModeContextRewindRegistry#decoratedStockEventsRegisterRewindStateAndCustomZonesRemoveIt` — new mask registration dereferenced an unattached renderer; correction pending focused verification
+- `com.openggf.game.sonic3k.TestS3kSidekickIntroPresentationGate#sszDormantCpuBranchDoesNotArmAizOrIczPresentationLatch` — SSZ's separate ROM $0A00 branch must not acquire the AIZ/ICZ presentation gate ==> expected: <false> but was: <true>
+- `com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry#sszPlanHasEggRobo` — expected: <16> but was: <22>
+- `com.openggf.game.sonic3k.objects.TestCnzMinibossRegistered#cnzMinibossIdIsNotInSharedSet` — CNZMiniboss (0xA6) must NOT be in SHARED_IMPLEMENTED_IDS — it is zone-set-specific ==> expected: <false> but was: <true>
+- `com.openggf.game.sonic3k.objects.TestLbzGateLaserObjectInstance#registryRoutesS3klSlot21ToLbzGateLaserOnly` — SKL slot $21 is Obj_LRZSmashingSpikePlatform, not the LBZ gate laser ==> Unexpected type, expected: <com.openggf.level.objects.PlaceholderObjectInstance> but was: <com.openggf.game.sonic3k.objects.LrzSmashingSpikePlatformObjectInstance>
+- `com.openggf.game.sonic3k.objects.TestLbzLoweringGrappleObjectInstance#registryRoutesS3klSlot1fToLoweringGrappleOnlyForLbz` — Unexpected type, expected: <com.openggf.level.objects.PlaceholderObjectInstance> but was: <com.openggf.game.sonic3k.objects.LrzLavaFallObjectInstance>
+- `com.openggf.game.sonic3k.objects.TestLbzPipePlugObjectInstance#registryRoutesS3klSlot1bToLbzPipePlugOnlyForLbz` — SKL slot $1B is Obj_LRZFireballLauncher, not the LBZ pipe plug ==> Unexpected type, expected: <com.openggf.level.objects.PlaceholderObjectInstance> but was: <com.openggf.game.sonic3k.objects.LrzFireballLauncherObjectInstance>
+- `com.openggf.game.sonic3k.objects.TestLbzSpinLauncherObjectInstance#registryCreatesSpinLauncherOnlyForS3klLbz` — Unexpected type, expected: <com.openggf.level.objects.PlaceholderObjectInstance> but was: <com.openggf.game.sonic3k.objects.LrzDashElevatorObjectInstance>
+- `com.openggf.game.sonic3k.objects.TestPachinkoRegistry#registryCreatesPachinkoBumper` — expected: <true> but was: <false>
+- `com.openggf.game.sonic3k.objects.TestSonic3kModZoneObjectSet#customCompatibleFactoriesCannotReadStockZoneIdentity` — expected: <[]> but was: <[41]>
+- `com.openggf.game.sonic3k.objects.TestSonic3kModZoneObjectSet#everyStockZoneDependentFactoryIsExplicitlyInventoried` — expected: <[236, 237, 145, 146, 147, 255, 74, 75, 176, 180, 181, 182, 183, 184, 3, 196, 197, 6, 195, 200, 9, 10, 203, 12, 202, 204, 205, 201, 16, 198, 115, 116, 19, 18, 17, 11, 20, 27, 30, 31, 33, 131, 35, 230, 231, 232, 234, 139]> but was:
+- `com.openggf.game.sonic3k.objects.TestSonic3kModZoneObjectSet#stockZoneDependencyInventoryRemainsExplicitFactoryMetadata` — S3KL custom-compatible collision at object $75 ==> expected: <false> but was: <true>
+- `com.openggf.game.sonic3k.objects.badniks.TestStarPointerBadnikInstance#profileMarksStarPointerImplementedForS3klLevelsOnly` — expected: <false> but was: <true>
+- `com.openggf.sprites.playable.TestS3kReverseGravityRenderMirror#theFlagMirrorsTheDrawWithoutTouchingTheAnimatorsOwnFlip` — loc_10C62 sets render_flags bit 1 ==> expected: <true> but was: <false>
+- `com.openggf.tests.TestS3kDezShockBlockHeadless#placedShockFloorUsesTheShieldReactionAndReplaysAfterRewind(String)[5]` — only bit 5 answers the shock reaction ==> expected: <false> but was: <true>
+
+Skips were explicit diagnostics/capture/soak opt-ins, four unavailable EGL/OpenGL
+checks, one CPZ spin-tube assumption, and local audio reference/output prerequisites.
+No missing-ROM skip was reported. The arena GPU check was separately exercised
+with `-Dopenggf.test.gl.native=true`.
+
+The user's second clarification rejects screen-space fade history: coverage and
+its fade must move with level coordinates. Restore world-space mapping but let
+new viewport columns inherit adjacent fade progress rather than full opacity.
+The 12px feather now controls duration (45–90 ticks), not final opacity; release
+retains the old world-column rate. Isolated JUnit Console validation of
+TestArenaMaskState, TestArenaMaskRenderer, TestLevelBoundsMaskTransition and
+TestLevelSpritePresentation passed 16 tests with no skips, using the actual native
+GPU. These classes were compiled under target/bounds-visual-classes without
+changing the delivery run's target/classes. Maven verification is pending.
+
+Refreshed positioned previews live in external SSZ/LRZ capture directories
+`campaign-20260924-bounds-world-feather-800`. All 450/600 CSV rows exactly match
+the prior recordings, no deaths; both movies fully decode. They demonstrate the
+corrected presentation, not cold-route completion. See the arena design for the
+rejected screen-space trial and startup camera-coordinate evidence.
+
+
+Destination refinement: the user identified the native camera-lock ramp as the
+remaining spatial delay. Read `loc_85D06`, `loc_85D28`, `loc_85D36` and
+`sub_85D6A` in the ROM disassembly: they distinguish the live boundary from the
+stored destination. `CameraBoundaryPresentation` exposes that destination through
+an internal rewind sidecar, and S3kSharedBossCameraGate supplies it without any
+mask-specific boss/level switch. Native movement remains unchanged. Interrupting
+boundary assignments supersede the pending rectangle; per-column fades reverse
+from their current value immediately.
+
+Queued Maven focused validation (Java21, native GL, absolute s3k.gen):
+- `-Dtest=TestS3kSharedBossCameraGate,TestLevelBoundsMaskTransition,TestLevelSpritePresentation,TestGameplayModeContextRewindRegistry,TestArenaMaskState,TestArenaMaskRenderer -Dopenggf.test.gl.native=true test`: 46 tests, no failures/errors/skips.
+- `-Dtest=TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestS3kLrzBossCameraHeadless,TestCameraRewindSnapshot,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`: 109 tests, no failures/errors/skips.
+- Previous world-space correction plus the two null-renderer registration failures:
+  48 focused tests passed, no skips, before destination refinement.
+
+SSZ450/LRZ600 positioned destination previews under external
+`campaign-20260924-bounds-destination-feather-800` directories fully decode and
+have identical gameplay CSVs to their preceding world-space captures, zero deaths.
+Earlier screen-space and live-bound videos are superseded visual experiments.
+
+Focused fresh-JVM guards also pass: queued Maven `-Pguards
+-Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard
+test` ran three tests, zero failures/errors/skips. This is the selected rewind
+guard scope, not the withheld full guard lane. The consumed broad-run diagnostics
+were acknowledged and deleted after recording their findings above.

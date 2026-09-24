@@ -11,9 +11,11 @@ public record ArenaMaskState(int left, int right, int noiseFrame, float[] opacit
     @Override public float[] opacity() { return opacity == null ? null : opacity.clone(); }
     public float opacityAt(int x) { return opacity == null ? targetOpacity(x) : opacity[x]; }
     public float targetOpacity(int x) {
-        if (x >= left && x < right) return 0;
-        float t = Math.min(1, Math.max(left - x, x - (right - 1)) / 12f);
-        return t * t * (3 - 2 * t);
+        // Exact pixel boundary. A 12px spatial feather made the apparent left edge
+        // sit about 6–8px outside the derived bound. Fade over time, not across
+        // playable geometry, so the settled edge and the camera interval agree.
+        // The transition may use feather strength to delay opacity, never its endpoint.
+        return x >= left && x < right ? 0 : 1;
     }
     @Override public boolean equals(Object other) {
         return other instanceof ArenaMaskState state && left == state.left && right == state.right

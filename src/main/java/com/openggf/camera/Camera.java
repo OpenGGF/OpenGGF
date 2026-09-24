@@ -29,6 +29,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short renderCopyX = 0;
 	private short renderCopyY = 0;
 
+	// Independently registered rewind sidecar for destination-only presentation.
+	final CameraBoundaryPresentation.Destination boundaryDestination = new CameraBoundaryPresentation.Destination();
 	private short minX;
 	private short minY;
 	private short maxX;
@@ -1081,6 +1083,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Use setMinXTarget() for smooth easing.
 	 */
 	public void setMinX(short minX) {
+		boundaryDestination.resetForMissingSnapshot();
 		this.minX = minX;
 		this.minXTarget = minX;
 	}
@@ -1095,6 +1098,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Current minX will ease toward this value at 2px/frame.
 	 */
 	public void setMinXTarget(short minXTarget) {
+		boundaryDestination.resetForMissingSnapshot();
 		this.minXTarget = minXTarget;
 	}
 
@@ -1213,6 +1217,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Use setMaxXTarget() for smooth easing.
 	 */
 	public void setMaxX(short maxX) {
+		boundaryDestination.resetForMissingSnapshot();
 		this.maxX = maxX;
 		this.maxXTarget = maxX;
 		this.maxXBeforeBoundaryEasing = maxX;
@@ -1234,6 +1239,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Current maxX will ease toward this value at 2px/frame.
 	 */
 	public void setMaxXTarget(short maxXTarget) {
+		boundaryDestination.resetForMissingSnapshot();
 		this.maxXTarget = maxXTarget;
 	}
 
@@ -1459,6 +1465,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Preserves width/height (configuration), clears all runtime state.
 	 */
 	public void resetState() {
+		boundaryDestination.resetForMissingSnapshot();
 		x = 0;
 		y = 0;
 		renderCopyX = 0;

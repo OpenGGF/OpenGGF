@@ -55,6 +55,7 @@ public final class S3kSharedBossCameraGate
         musicStarted = false;
         complete = false;
         musicWaitTimer = musicWaitFrames;
+        publishDestination(camera);
     }
 
     public boolean update(Camera camera, Runnable onMusicStart) {
@@ -79,8 +80,19 @@ public final class S3kSharedBossCameraGate
 
         updateY(camera);
         updateX(camera, gateCameraX);
+        if (!xLocked) publishDestination(camera);
         complete = musicStarted && yLocked && xLocked;
         return complete;
+    }
+
+    private void publishDestination(Camera camera) {
+        // sub_85D6A stores the intended rectangle in _unkFAB0..6. loc_85CA4
+        // advances the current ROM bounds separately. Widescreen presentation
+        // follows that destination immediately; physics retains the native ramp.
+        if (camera != null) {
+            com.openggf.camera.CameraBoundaryPresentation.approach(
+                    camera, lockBounds.minX(), lockBounds.maxX());
+        }
     }
 
     public boolean isComplete() {

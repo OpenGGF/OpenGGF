@@ -7,10 +7,14 @@ with seven Super Emeralds) → free flight through the autoscrolling asteroid fi
 1 (turrets, launchers, missiles into the body) → phase 2 chase with two `$7400 → $5400` wraps →
 defeat → exit fade → `StartNewLevel $D01`. Owning plan:
 [DDZ bring-up](../../plans/2026-09-17-ddz-bring-up.md).
-Status: in progress. Nothing below certifies the zone.
+Status: fresh Super and DEZ2-incoming Hyper controller routes reach both boss
+phases and the accepted ending request at320/800, with phase/wrap/defeat rewind
+evidence. Native scene matching, remaining roster/donor breadth and history
+isolation remain open. Nothing below certifies the zone.
 
-Incoming: DEZ final boss → `$C00` verified from direct final-boss entry at 320/800;
-full DEZ2-to-DDZ continuity remains open. Level select is also supported. Outgoing: `$D01` ending
+Incoming: DEZ final boss → `$C00` verified at320/800, including a positioned
+DEZ2-boss start with no reseeding across either load. Full cold DEZ2 traversal
+remains separate and open. Level select is also supported. Outgoing: `$D01` ending
 (not implemented; the request is asserted, the destination is out of scope).
 
 Widths / donors / characters / teams (support authority `LaunchProfile.sanitizedFor`, same roster

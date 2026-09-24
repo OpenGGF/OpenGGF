@@ -5,7 +5,10 @@ ROM `Current_zone_and_act = $1700`. **Not Sonic 2's Death Egg**, and not the
 `$1701` Super Emerald sanctuary, which has its own
 [matrix](s3k-hpz-sanctuary.md). Owning plan:
 [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
-Status: arena components in progress. Nothing below certifies the act.
+Status: hands, core, escape and DDZ handoff are implemented, with positioned
+DEZ2-incoming continuity through complete DDZ at320/800 and whole-registry replay
+evidence. Native scene matching, remaining roster/donor breadth and load-history
+isolation remain open. Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art
 `levartptrs $4C,$4C,$40` (PLC `$4C`, palette `$40`, `ArtKosM_DEZ3`,

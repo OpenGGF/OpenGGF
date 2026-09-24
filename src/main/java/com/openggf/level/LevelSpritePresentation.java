@@ -102,7 +102,15 @@ public final class LevelSpritePresentation {
     public static void register(LevelManager level, RewindRegistry registry) {
         registry.deregister("level-sprite-presentation");
         registry.deregister("level-bounds-mask");
-        registry.register(level.spritePresentationRenderer().boundsMask);
-        if (enabled(level)) registry.register(level.spritePresentationRenderer().spriteTables);
+        registry.deregister("camera-boundary-presentation");
+        var renderer = level == null ? null : level.spritePresentationRenderer();
+        // Registration can precede renderer attachment (including headless sessions).
+        // Remove the previous scene's adapters even when this scene has none yet.
+        if (renderer == null) return;
+        registry.register(renderer.boundsMask);
+        if (level.camera != null) {
+            registry.register(com.openggf.camera.CameraBoundaryPresentation.rewindAdapter(level.camera));
+        }
+        if (enabled(level)) registry.register(renderer.spriteTables);
     }
 }

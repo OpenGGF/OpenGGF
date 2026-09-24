@@ -4,7 +4,11 @@ Game / canonical zone / act: S3K `S3K_DEATH_EGG_1`, engine zone `$0B` act index 
 ROM `Current_zone_and_act = $B00`, SKL object set. **Not Sonic 2's Death Egg**: the
 `TestDEZ*`/`TestS2Dez*` classes and the `*dez-boss-fixes*` documents are Sonic 2.
 Owning plan: [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
-Status: slice 1 (presentation foundation) delivered at `4e7655bf9`. Nothing below certifies the act.
+Status: traversal families and the two-phase miniboss/results/Act 2 transport are
+implemented. Positioned solo Hyper completion at320/800 is recorded below; cold
+full-act completion, ordinary-character/roster/donor breadth and native timing
+acceptance remain open. Historical slice rows below are superseded by the dated
+follow-ups where explicitly stated. Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38119): x `0`-`$6000`, y `0`-`$B20`. Start location `$30,$9AC`
 (measured: the engine's cold `$B00` load places Sonic at centre `$30,$9AC`).

@@ -4,6 +4,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestArenaMaskState {
+    @Test void boundaryHasNoSpatialFeatherOffset() {
+        var state = new ArenaMaskState(240,560,1);
+        assertEquals(1,state.targetOpacity(239));
+        assertEquals(0,state.targetOpacity(240));
+        assertEquals(0,state.targetOpacity(559));
+        assertEquals(1,state.targetOpacity(560));
+    }
     @Test void fixedArenaKeepsNativeViewAtEverySupportedWidth() {
         for (int width : new int[]{320, 352, 400, 528, 800}) {
             int inset = (width - 320) / 2;

@@ -1035,6 +1035,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     void resetZoneScopedRegistriesForLevelLoad() {
         levelRenderer.spriteTables.reset();
         levelRenderer.boundsMask.reset();
+        if (camera != null) com.openggf.camera.CameraBoundaryPresentation.reset(camera);
         LevelZoneScopedRegistryResetter.reset();
     }
 

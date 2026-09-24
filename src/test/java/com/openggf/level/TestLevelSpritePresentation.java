@@ -8,6 +8,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelSpritePresentation {
+    @Test void registrationBeforeRendererAttachmentRemovesStalePresentationAdapters() {
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(new LevelBoundsMaskTransition());
+        registry.register(new LevelSpritePresentation.Tables());
+        LevelSpritePresentation.register(org.mockito.Mockito.mock(LevelManager.class), registry);
+        assertFalse(registry.capture().containsKey("level-bounds-mask"));
+        assertFalse(registry.capture().containsKey("level-sprite-presentation"));
+    }
+
     @Test void preparationDoesNotPublishAndRewindRestoresBothTables() {
         var tables = new LevelSpritePresentation.Tables();
         var first = frame(1);

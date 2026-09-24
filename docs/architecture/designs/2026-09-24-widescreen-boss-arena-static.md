@@ -295,12 +295,12 @@ right extension is preserved. No camera freeze, player hurt flag, HP or zone nam
 activates the effect. Camera/player geometry remains unchanged. Existing centring
 policies remain independently owned by their camera events.
 
-Spatial 12px feather and independently hashed per-gameplay-frame noise remain.
+Independently hashed per-gameplay-frame noise remains.
 The initial conversion removed the 45-frame event fade; the user correctly
 requested retaining activation fade when already-visible scenery becomes masked.
-The shared transition now tracks per-column opacity in world coordinates: newly
-covered visible pixels fade in, existing masked wings remain opaque, and newly
-exposed offscreen pixels arrive masked. Release fades out over 45 gameplay ticks. Noise
+The first conversion tracked per-column opacity in world coordinates. User review
+rejected its moving activation wipe; the correction below replaces that history
+mapping with viewport columns. Release fades out over 45 gameplay ticks. Noise
 uses the captured object-execution counter (which keeps advancing when a ROM
 event holds Level_frame_counter), never render count or gameplay RNG.
 The shader accepts an asymmetric interval instead of a centred width.
@@ -312,3 +312,66 @@ SSZ replica lifecycle and the cold-route replay. Refresh the in-engine captures
 and combined delivery tests before claiming acceptance of the converted behavior.
 The previous combined run was deliberately interrupted for this changed scope;
 its partial results do not certify this implementation.
+
+
+## Correction: world-space fade without opaque incoming columns
+
+Review of the LRZ entry demo exposed a moving wipe in `4d89506dd`: columns
+entering the viewport inherited full target opacity immediately. A screen-space
+history trial removed that sweep but was also rejected: it pinned the fading
+scenery to the display instead of the level, and retained a spurious right wing
+after the initial camera moved. The corrected history remains in world space.
+Newly exposed columns inherit the adjacent column's fade progress; they do not
+arrive opaque. A camera jump to a non-overlapping view starts fresh presentation
+history. Rewind captures opacity and each column's fade rate; drawing cannot age it.
+
+The original 12px spatial feather made the apparent left edge sit approximately
+6–8px outside the computed edge. A diagnostic found the settled LRZ1 800px
+interval is exactly `[240,560)`; during entry its actual left edge is 234–237px
+while the native gate and camera ease. Do not add a fitted +8 coordinate offset.
+
+The user requested retaining that 12px feather as a temporal lag instead of a
+permanent transparency gradient. Outside the native window, use its smoothstep
+strength to interpolate fade duration from 90 ticks nearest the edge to 45 ticks
+in the outer wing. Both activation and release use that duration. Release retains
+the previous world column's rate when its bound disappears. Every covered pixel
+ultimately reaches full opacity, and every released pixel ultimately clears.
+The native clear interval is unchanged. This timing is a widescreen presentation
+choice, not behavior attributed to the ROM.
+
+A positioned LRZ capture diagnosed the initial flash: the setup pass prepared its
+mask at camera X11110, then the first ordinary view moved to X10720. Screen-space
+history dragged the right wing into different scenery. World-space remapping
+keeps that opacity on its original level columns. LRZ's left and right world
+bounds genuinely enter the viewport at different points during approach; the
+mask must not invent a simultaneous centred lock before the event creates one.
+
+Isolated validation compiles changed presentation classes separately from the
+ongoing delivery run, preserving that run's compiled candidate. JUnit Console
+checks geometry, world-space history, temporal feather activation/release,
+rewind, registration and real GPU output. These checks and the refreshed captures
+are focused evidence, not a claim that the ongoing broad run includes corrections.
+
+
+## Destination bounds and interrupted fades
+
+Further review identified the remaining left-edge motion as the ROM gate itself:
+`loc_85D06` walks Camera_min_X_pos behind Camera_X_pos until reaching _unkFAB4;
+`loc_85D28` does the corresponding right-side approach. `sub_85D6A` already
+knows the full intended rectangle (_unkFAB0..6). Camera's ordinary min/max target
+getters alone cannot reveal it because those native ramp writes synchronize the
+engine easing targets with current bounds.
+
+Common `CameraBoundaryPresentation` therefore exposes a pending horizontal
+transition destination, captured by a separately registered rewind sidecar.
+The shared S3K gate publishes that existing destination at begin and while
+approaching; the mask derives its geometry from it. Normal boundary assignments
+supersede the pending intent, and completed gates fall back to Camera's ordinary
+targets. No level name, boss identity or mask-on flag is involved. Gameplay retains
+all original ramp writes; the destination is presentation-only, and native320
+still has no mask. Fresh loads/reset clear the sidecar.
+
+Every fade tick approaches the latest desired opacity from its last value.
+An opening rectangle immediately reverses an incomplete fade-in; a renewed lock
+can reverse that fade-out again. There is no queued fade or wait for an endpoint.
+A focused regression exercises both reversals, including the slower edge strip.

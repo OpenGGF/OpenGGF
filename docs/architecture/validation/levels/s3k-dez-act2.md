@@ -3,8 +3,11 @@
 Game / canonical zone / act: S3K `S3K_DEATH_EGG_2`, engine zone `$0B` act index 1,
 ROM `Current_zone_and_act = $B01`, SKL object set. **Not Sonic 2's Death Egg.**
 Owning plan: [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
-Status: slice 1 (presentation foundation) delivered at `4e7655bf9`; slice 2 (reverse gravity core)
-delivered and gated twice; slice 3 part-delivered (`$5B` only). Nothing below certifies the act.
+Status: traversal/gravity families and end boss are implemented. Positioned
+DEZ2-boss → final arena → complete DDZ controller routes at320/800 have eleven
+whole-registry replay spots per width. Cold DEZ2 traversal, roster/donor breadth,
+history isolation and native whole-scene acceptance remain open. Historical slice
+rows below are superseded by the dated follow-ups. Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38120): x `0`-`$6000`, y `0`-`$F10`. The engine's direct `$B01`
 load places Sonic at centre `$140,$3AC`, which is also the ROM's post-act-change

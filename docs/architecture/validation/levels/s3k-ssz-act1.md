@@ -5,7 +5,11 @@ ROM `Current_zone_and_act = $A00`, SKL object set.
 Character routes: Sonic, Sonic + Tails, Tails (`LevelSelect_CheckKnuckles` denies Knuckles except
 with `Debug_cheat_flag != 0`, and no Knuckles art or route exists for act 1).
 Owning plan: [SSZ bring-up](../../plans/2026-09-17-ssz-bring-up.md).
-Status: all 213 placed records have concrete owners; bosses, results and the DEZ launch are implemented. Arrival Death Egg presentation, cold completion and other matrix obligations remain open. Nothing below certifies the act.
+Status: all 213 placed records have concrete owners; arrival Death Egg, bosses,
+results and the DEZ launch are implemented. The native320 cold route reaches
+beyond the first replica through the carrier section; complete cold traversal,
+wide cold routes and remaining matrix breadth/native acceptance remain open.
+Nothing below certifies the act.
 
 Incoming: HPZ teleporter altar ending → `$A00` (`HpzTeleporterRouteHelperObjectInstance`), level
 select, save progression. Outgoing: `StartNewLevel $B00` from the Death Egg launch (`loc_581D2`);
