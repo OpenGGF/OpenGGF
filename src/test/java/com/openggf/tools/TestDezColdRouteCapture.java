@@ -57,15 +57,22 @@ class TestDezColdRouteCapture {
         runColdRoute("chain");
     }
 
+    @Test void coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation() throws Exception {
+        runColdRoute("clear");
+    }
+
     private void runColdRoute(String route) throws Exception {
         boolean complete = route.equals("complete");
+        boolean clear = route.equals("clear");
+        boolean transition = complete || clear;
+        int historyStart = clear ? 40300 : 14150;
         boolean chain = route.equals("chain");
         boolean tilt = route.equals("tilt");
         boolean shaft = route.equals("shaft");
         boolean roof = route.equals("roof");
         boolean transporters = route.equals("transporters");
         boolean middle = route.equals("middle");
-        boolean lower = route.equals("lower") || middle || transporters || roof || shaft || tilt || chain;
+        boolean lower = route.equals("lower") || middle || transporters || roof || shaft || tilt || chain || clear;
         boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
@@ -145,6 +152,24 @@ class TestDezColdRouteCapture {
                     26940, 26980, 27050, 27150, 27250, 27350, 27420, 27470,
                     28190, 28210));
         }
+        if (clear) {
+            // Return transports, final traversal, column entries/releases,
+            // all eight enemy-published boss hits, breakup and actual exit load.
+            spots.clear();
+            spots.addAll(Set.of(28265, 28330, 28420, 28495, 28560, 28620,
+                    28670, 28820, 28860, 28960, 29080, 29210, 29350, 29440,
+                    29520, 29580, 29660, 29720, 29830, 29880, 29940, 29990,
+                    30070, 30110, 30220, 30270, 30360, 30410, 30460, 30530,
+                    30620, 30700, 30800, 30880, 30970, 31040, 31140, 31240,
+                    31320, 31430, 31500, 31680, 31800, 32000, 32500, 33000,
+                    34000, 35250, 35600, 35960, 36260, 37640, 38300, 39620,
+                    39970, 40020, 40100, 40200, 40260));
+        }
+        var endBossHealth = com.openggf.game.sonic3k.objects.DezEndBossInstance.class
+                .getDeclaredMethod("healthForTest");
+        endBossHealth.setAccessible(true);
+        int lastEndBossHealth = 8, endBossHits = 0;
+        boolean endBossSeen = false;
         var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
                 .getSuperclass().getDeclaredField("collisionProperty");
         bossHits.setAccessible(true);
@@ -156,11 +181,12 @@ class TestDezColdRouteCapture {
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 // Keep live history near the real load boundary, after snapshot spots.
-                if (complete && frame == 14150) GameServices.configuration().setSessionOverride(
+                if (transition && frame == historyStart) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
                 session.render();
-                if (complete && frame >= 14150 && GameServices.level().getCurrentAct() == 0) {
+                if (transition && frame >= historyStart && GameServices.level().getCurrentZone() == 11
+                        && GameServices.level().getCurrentAct() == (clear ? 1 : 0)) {
                     var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                     if (rewind != null) largestOutgoingRewindFrame = Math.max(largestOutgoingRewindFrame,
                             rewind.currentFrame());
@@ -173,6 +199,19 @@ class TestDezColdRouteCapture {
                     boolean nowEight = boss != null && bossHits.getInt(boss) == 8;
                     if (nowEight && !eightHits) completedBossPhases++;
                     eightHits = nowEight;
+                }
+                if (clear) {
+                    assertFalse(session.player().isSuperSonic(), "cold clear uses ordinary Sonic");
+                    var boss = GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.DezEndBossInstance.class)
+                            .stream().findFirst().orElse(null);
+                    if (boss != null) {
+                        endBossSeen = true;
+                        int health = (int) endBossHealth.invoke(boss);
+                        assertTrue(health <= lastEndBossHealth, "boss must not respawn or regain health");
+                        endBossHits += lastEndBossHealth - health;
+                        lastEndBossHealth = health;
+                    }
                 }
                 if (frame == 5300) {
                     assertEquals(9589, session.player().getCentreX());
@@ -218,27 +257,44 @@ class TestDezColdRouteCapture {
                 // Capture-session held input belongs to the external input driver.
                 previousInput.set(session, movie.getFrame(frame));
             }
-            assertEquals(11, GameServices.level().getCurrentZone());
-            assertEquals(complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
+            assertEquals(clear ? 23 : 11, GameServices.level().getCurrentZone());
+            assertEquals(clear ? 0 : complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
-                assertEquals(chain ? 12992 : tilt ? 9525 : shaft ? 8211 : roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
-                assertEquals(chain ? 2112 : tilt ? 2156 : shaft ? 1683 : roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
-                assertEquals(chain ? 4 : tilt ? 7 : shaft ? 3 : roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
+                assertEquals(clear ? 96 : chain ? 12992 : tilt ? 9525 : shaft ? 8211 : roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
+                assertEquals(clear ? 112 : chain ? 2112 : tilt ? 2156 : shaft ? 1683 : roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
+                assertEquals(clear ? 0 : chain ? 4 : tilt ? 7 : shaft ? 3 : roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
                 assertEquals(chain, session.player().isObjectControlled(),
                         "chain ends captured in the hub; other routes finish with movement released");
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             }
-            if (complete) {
-                assertEquals(2, completedBossPhases, "both eight-hit phases must be cleared");
+            if (clear) {
+                assertTrue(endBossSeen, "gravity boss must be encountered");
+                assertEquals(8, endBossHits, "all eight enemy-published hits must be consumed");
+            }
+            if (transition) {
+                if (complete) assertEquals(2, completedBossPhases, "both eight-hit phases must be cleared");
                 assertTrue(largestOutgoingRewindFrame > 10, "outgoing history must have been recorded");
                 var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
                 for (int n = 0; n < 30; n++) { session.step(neutral); session.render(); }
                 var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                 assertNotNull(rewind);
-                // Seamless loads retain the logical frame counter, but re-root
-                // the oldest seekable snapshot after the outgoing act's last frame.
-                assertTrue(rewind.earliestAvailableFrame() > largestOutgoingRewindFrame,
-                        "Act 2 must not retain the outgoing level's rewind history");
+                if (clear) {
+                    // A full LEVEL_LOAD resets controller and input numbering to
+                    // zero; unlike the seamless DEZ1 handoff, comparing absolute
+                    // frame numbers would reject a correctly isolated timeline.
+                    assertEquals(0, rewind.earliestAvailableFrame());
+                    assertTrue(rewind.currentFrame() < largestOutgoingRewindFrame,
+                            "full load starts a fresh frame origin");
+                    rewind.seekTo(0);
+                    assertEquals(0, rewind.currentFrame());
+                    assertEquals(23, GameServices.level().getCurrentZone(),
+                            "earliest snapshot belongs to the final stage, not the outgoing boss");
+                    assertEquals(0, GameServices.level().getCurrentAct());
+                } else {
+                    // Seamless loads retain numbering and re-root at the boundary.
+                    assertTrue(rewind.earliestAvailableFrame() > largestOutgoingRewindFrame,
+                            "destination must not retain the outgoing level's rewind history");
+                }
             }
             if (turbine && !complete && !lower) {
                 assertEquals(10763, session.player().getCentreX());

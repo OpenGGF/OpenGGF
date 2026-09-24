@@ -5,8 +5,12 @@ ROM `Current_zone_and_act = $B01`, SKL object set. **Not Sonic 2's Death Egg.**
 Owning plan: [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
 Status: traversal/gravity families and end boss are implemented. Positioned
 DEZ2-boss → final arena → complete DDZ controller routes at320/800 have eleven
-whole-registry replay spots per width. Cold DEZ2 traversal, roster/donor breadth,
-history isolation and native whole-scene acceptance remain open. Historical slice
+whole-registry replay spots per width. Cold native320 Sonic+Tails now completes
+both main DEZ acts and loads the final stage in40410 controller frames, zero
+deaths. Eight Act2 routes carry204 full-registry replay spots; the actual final
+load starts an isolated frame-zero timeline. Width/roster/donor and remaining
+lifecycle breadth, cold final-stage completion and native whole-scene acceptance
+remain open. Historical slice
 rows below are superseded by the dated follow-ups. Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38120): x `0`-`$6000`, y `0`-`$F10`. The engine's direct `$B01`
@@ -29,11 +33,11 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, dust-free solid objects, springs and the sidekick (98 of 116 ROM references — the 7 open group A-I rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
-| Cold-reachable | Seeded from the first frame of act 2 free play: **1256 frames** of exact player x, y, camera and ring parity (`TestS3kDezColdRoutes`, ratcheted). The cold `$B01` route remains recorded at 0 frames; the connected entrance now lands, but its strict trace has not been remeasured |
-| Rewind-verified | Event routine words (`TestS3kDezPresentationRewind`) and the `$5B` write plus its side latch, capture/restore/forward replay (`TestS3kDezGravityObjectsHeadless`) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (101 of 116 ROM references covered, 5 partial and 6 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
+| Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
-| Visually matched | Clips `030` (320 and 528), `031` and `032` show the flag being written by a real `$5B` and the inverted run, jump, roll, rings and Knuckles that follow; no native pixel comparison. The sidekick, hit/lost-ring, shield and solid-object clips are blocked on slice 3's remaining objects and the act 2 route — see `INDEX.md` for the measurements. Slice 4: clips `037-spikebonker-320`, `038-retracting-spring-320` and `039-energy-bridge-320`; the `$5D` extension stroke, the `$55` relight and the `$A5` slam have no positioned-entry site and are recorded as such in `INDEX.md` |
+| Visually matched | Cold-route moving captures cover traversal, gravity switches, springs, carrier/launchers, unshielded tilting bridge, winding transports, eight-hit gravity boss defeat and final-stage arrival. Latest native320 clips and inspected frames are linked in the dated follow-ups. This is engine presentation evidence; matched native pixel acceptance and full width/roster breadth remain open |
 
 ## Obligations
 
@@ -68,7 +72,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | TRAVERSAL: SKL `$4C` hang carrier | `loc_46FC2`–`sub_4703E`: P1 start, accelerated rise, native ceiling probe, finite horizontal travel, P1/P2 grabbing | unit contact/control/input boundaries; actual DEZ1 ride at 320/800 | `TestS3kDezHangCarrierObjectInstance`, `TestS3kDezHangCarrierHeadless` | implemented after `b1c767647` | real terrain, jump release and forced recreation/forward replay | Cold native320 Sonic+Tails carrier entry/travel/release/replay covered by the incoming roof route; native comparison and donor/character breadth remain open |
 | TRAVERSAL: SKL `$4A` floating platforms (10) | `loc_25A7E`, `word_25AB8`, shared `sub_25974`; table offsets include native control word | all nine movers and four status flips; placed horizontal ride at 320/800 | `TestS3kDezFloatingPlatformObjectInstance`, `TestS3kDezFloatingPlatformHeadless`, census and PLC registry | implemented after `8a58aafbc` | ROM art, oscillator bytes, ramp thresholds, real carry and forced recreation/180-frame replay pass | Inverted entry, native comparison, donor/team/character breadth and cold route remain open |
 | TRAVERSAL: SKL `$4B` tilting bridge | `loc_46E1C`–`loc_46F54`, signed ROM `byte_46ED8`, prior-standing aggregate, long velocity and delayed free fall | all eight standing rows, P1/P2 sum/cancellation, exhausted forward allocation; DEZ1 320/800; inverted DEZ2 declared entry | `TestS3kDezTiltingBridgeHeadless`, census, PLC registry | implemented after `6b7055cea` | nine focused checks: real landing/carry/collapse/floor release, complete graph recreation and forward replay; inverted carry/replay | Cold native320 Sonic+Tails traversal and full-registry replay now covered by the incoming tilt route; native comparison and donor/roster breadth remain open |
-| BOSS: `$A7` end boss | `word_7F0BE` range, `word_7F0C6` arena, enemy-published eight hits, allocation prefixes, breakup and `$1700` request | 320/800; native P1/P2 component cases; solo Hyper movie | `TestDezEndBossEncounter`, child/resource suites, `TestS3kDezTeleporterHeadless` | implemented | focused checks pass, 2026-09-23 local campaign | Native parity, full route and remaining character/donor/team breadth open |
+| BOSS: `$A7` end boss | `word_7F0BE` range, `word_7F0C6` arena, enemy-published eight hits, allocation prefixes, breakup and `$1700` request | 320/800; native P1/P2 component cases; solo Hyper movie | `TestDezEndBossEncounter`, child/resource suites, `TestS3kDezTeleporterHeadless` | implemented | focused checks pass, 2026-09-23 local campaign | Cold native320 Sonic+Tails route through all eight hits and real final-stage load now passes; native parity and remaining character/donor/team/width breadth open |
 | REWIND: event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` | implemented | pass, `4e7655bf9` | Incoming route gravity flips, DEZ1-to-Act2 timeline isolation and positioned boss graph replay now covered by campaign suites; full Act2 cold completion and remaining breadth open |
 | ORACLE: Tails act 2 | `runs/s3k-tails-full-chain-all-emeralds/ssz_2` (5,202 rows) | — | `TestS3kTailsFullChainSsz2SegmentTraceReplay` (expected red) | — | blocked: 229 errors, first error frame 0 `camera_y` expected `0x080E` actual `0x0810` (`035e48a58`) | Whole campaign |
 | ORACLE: Tails act 2 restart | `runs/s3k-tails-full-chain-all-emeralds/ssz_3` (3,877 rows; act 2 restart, i.e. lifecycle evidence) | — | `TestS3kTailsFullChainSsz3SegmentTraceReplay` (expected red) | — | blocked: 200 errors, first error frame 0 `camera_y` expected `0x044E` actual `0x0450` (`035e48a58`) | Whole campaign |
@@ -622,3 +626,43 @@ At28260 the continuation deliberately presses Left while the recording holds
 Right, accounting for its only velocity difference. This is engine presentation,
 not native pixel parity. Further exploratory controls traverse the return loop
 and reach the upper corridor at (13781,812); boss completion and breadth remain open.
+
+### Cold main-act completion and final-stage load (2026-09-24)
+
+On `6672feb84` plus this route-only change,
+`dez2-sonic-tails-incoming-clear-320.{script,bk2}` completes DEZ1, DEZ2 and
+the actual `$1700` final-stage load in40410 ordinary controller frames, zero
+deaths, with the real Sonic+Tails team and no health/emerald/shield setup or
+transformation. The remaining return loops and upper corridor use normal jumps,
+tubes and countdown paths. At the gravity boss, repeatedly leaving and re-entering
+the left column reverses gravity through production capture logic; released
+enemies publish all eight hits. A first cross-arena rolling attempt dealt one
+hit but died after repeated enemy contact. The safer column input preserves
+11 rings through the fight; the final load briefly initializes zero before the
+production carry restores them during arrival. No boss/player state is written.
+
+`TestDezColdRouteCapture#coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation`
+passed1test, zero failures/errors/skips, with59 new full-registry capture/restore
+and45-frame replay spots. It asserts no transformation/death, eight consumed
+boss hits, final zone23/act0, roster, and actual live-history isolation. This
+brings eight Act2 routes to204 replay spots. Queued Java21 command uses
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`
+and the named test method's `-Dtest` selection followed by `test`. The affected
+DEZ1 seamless-handoff test was also rerun separately:1pass, zero skips/failures.
+Combined campaign validation remains pending.
+
+The initial new test passed all replay spots and boss assertions but failed its
+last history assertion: it incorrectly reused the seamless handoff's monotonic
+frame-number assumption. `LiveRewindManager.handleLevelLoadBoundary` resets both
+input and controller numbering to zero; the seamless handler retains numbering.
+The corrected test seeks to frame zero and verifies the restored world is final
+DEZ, alongside the reset-origin check. This was a test-oracle correction, not a
+runtime fix or a relaxed history-isolation obligation.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-cold-clear-320/capture.mp4`
+shows39600–40439, including both remaining hits, breakup, exit and final arrival.
+All40440 state rows, stills39680/39990/40190/40340/40420 and complete MP4 decode
+were checked; zero deaths. This is engine presentation rather than native pixel
+parity. A first ordinary-Sonic continuation clears the final hands and core but
+falls in the escape-ship chase at51716 with six ship hits remaining; that cold
+final-stage route and remaining viewport/roster/lifecycle/native breadth are open.
