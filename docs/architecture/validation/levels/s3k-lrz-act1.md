@@ -10,9 +10,9 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
 full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
-Nine preserved native320 ordinary Sonic+Tails cold routes now extend through
-crusher descent, the second dash elevator and spike-platform ascent to8750 inputs.
-The nine routes cover74 full-registry replay spots; current checks are below. Later
+Ten preserved native320 ordinary Sonic+Tails cold routes now extend through
+crusher descent, the dash elevators and upper spike-platform climb to9915 inputs.
+The ten routes cover88 full-registry replay spots; current checks are below. Later
 ordinary traversal is being authored; current verification is recorded in the
 dated follow-ups below.
 
@@ -584,3 +584,30 @@ stills inspected and whole MP4 decode passes. The upper corridor's foreground
 obscures Sonic in the latter still; matched native visual acceptance remains
 open. This is ordinary route/replay evidence, not strict trace or pixel parity.
 Full Act1/Act2 cold completion and campaign integration remain owed.
+
+### Cold upper crusher climb and fire dash (2026-09-24)
+
+On `7a2604421` plus these route/test additions, `lrz1-sonic-tails-cold-high-climb-320`
+takes the western ascent from the earlier platform prefix, rather than the
+giant-ring corridor. It reaches(5557,940),111rings at9915 inputs,zero deaths,
+live Sonic+Tails. Waiting for the platform's high phase reaches the first rock;
+waiting for the next platform's low phase avoids the overhead rock clipping the
+jump. The fire-shield dash then crosses the upper gap. Failed controller
+attempts overshot ledges or went beneath a crusher; no engine change was made.
+
+Queued Java21/native GL/absolute S3K ROM with
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzColdRouteCapture#coldTeamClimbsUpperCrushersAndCrossesWithFireDash test`
+passes1 test,zero failures/errors/skips. Fourteen45-frame full-registry replay
+spots:8700,8730,8775,8890,8920,9030,9080,9130,9300,9380,9410,9500,9720,9830.
+InputLogAuthorTool compiles and round-trip verifies the preserved script/BK2.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cold-high-climb-320/capture.mp4`
+films8680–9914 after the cold prefix;9915state rows,zero deaths,9130still
+inspected and full MP4 decode passes. Native route observations corroborate the
+platform/ledge sequence, not frame timing or complete pixel parity.
+
+Next route prerequisite: ordinary eastward attempts stop atX5637. ROM placement
+$1F74D4 is `$19:07` LRZ door(5664,860), not an unexplained terrain wall or lava
+fall. The matching `$1C:07` button is(5444,912); native rows8770–8810 detour
+west toward it. This authored route bypassed it. Reach the button before
+judging door behavior; full-act completion and combined integration remain open.
