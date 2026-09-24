@@ -1034,6 +1034,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void resetZoneScopedRegistriesForLevelLoad() {
         levelRenderer.spriteTables.reset();
+        levelRenderer.boundsMask.reset();
         LevelZoneScopedRegistryResetter.reset();
     }
 

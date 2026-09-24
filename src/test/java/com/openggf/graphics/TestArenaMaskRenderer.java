@@ -40,7 +40,7 @@ class TestArenaMaskRenderer {
                 glDisable(GL_BLEND); glEnable(GL_DEPTH_TEST);
                 glEnable(GL_SCISSOR_TEST);glScissor(13,11,w,h);
                 glClearColor(1,0,0,1);glClear(GL_COLOR_BUFFER_BIT);
-                renderer.draw(width,224,320,1,100);
+                renderer.draw(width,224,(width-320)/2,(width+320)/2,100);
                 assertFalse(glIsEnabled(GL_BLEND));assertTrue(glIsEnabled(GL_DEPTH_TEST));
                 assertTrue(glIsEnabled(GL_SCISSOR_TEST)); assertEquals(fbo,glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING));
                 assertEquals(0,glGetInteger(GL_CURRENT_PROGRAM));assertEquals(0,glGetInteger(GL_VERTEX_ARRAY_BINDING));
@@ -51,13 +51,37 @@ class TestArenaMaskRenderer {
                 }
                 if(width>320) {
                     assertTrue((first[0]&255)<60,"outer wing is opaque dark grain");
-                    glClear(GL_COLOR_BUFFER_BIT);renderer.draw(width,224,320,1,101);
+                    glClear(GL_COLOR_BUFFER_BIT);renderer.draw(width,224,(width-320)/2,(width+320)/2,101);
                     assertFalse(Arrays.equals(first,pixels(w,h)),"fresh noise on immediately next frame");
-                    glClear(GL_COLOR_BUFFER_BIT);renderer.draw(width,224,320,1,100);
+                    glClear(GL_COLOR_BUFFER_BIT);renderer.draw(width,224,(width-320)/2,(width+320)/2,100);
                     assertArrayEquals(first,pixels(w,h),"rewind restores exact noise");
                 }
                 assertEquals(GL_NO_ERROR,glGetError());
             }
+            // A bounds-derived interval need not be centred or 320 pixels wide.
+            glViewport(13,11,800,224); glScissor(13,11,800,224);
+            for (int[] interval : new int[][]{{0,420}, {100,548}, {240,800}, {0,800}}) {
+                glClear(GL_COLOR_BUFFER_BIT);
+                renderer.draw(800,224,interval[0],interval[1],123);
+                byte[] actual=pixels(800,224);
+                for(int x=0;x<800;x++) {
+                    int red=actual[(100*800+x)*4]&255;
+                    if(x>=interval[0] && x<interval[1]) assertEquals(255,red);
+                    else if(x<interval[0]-12 || x>=interval[1]+12)
+                        assertTrue(red<60,"only pixels outside the asymmetric world interval are masked");
+                }
+            }
+            float[] faded = new float[800];
+            java.util.Arrays.fill(faded, 0, 100, 1f);
+            java.util.Arrays.fill(faded, 100, 200, 0.5f);
+            var sample = new ArenaMaskState(240,560,124,faded);
+            faded[20] = 0; sample.opacity()[20] = 0;
+            glClear(GL_COLOR_BUFFER_BIT); renderer.draw(800,224,sample);
+            byte[] fadePixels = pixels(800,224);
+            assertTrue((fadePixels[20*4]&255)<60,"snapshot owns opacity history");
+            int halfRed=fadePixels[150*4]&255;
+            assertTrue(halfRed>=127 && halfRed<160,"newly masked region blends while old wing stays opaque");
+            assertEquals(255,fadePixels[300*4]&255);
         } finally {
             if(window!=0) { renderer.cleanup();if(texture!=0)glDeleteTextures(texture);if(fbo!=0)glDeleteFramebuffers(fbo);glfwDestroyWindow(window);GL.setCapabilities(null); }
             glfwTerminate();

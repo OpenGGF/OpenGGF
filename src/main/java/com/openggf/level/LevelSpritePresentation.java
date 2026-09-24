@@ -65,6 +65,10 @@ public final class LevelSpritePresentation {
     }
 
     public static void prepare(LevelManager level, SpriteManager sprites) {
+        if (level != null && level.camera != null) {
+            level.spritePresentationRenderer().boundsMask.advance(LevelScrollPresentation.captureArenaMask(level),
+                    level.camera.getXWithShake(), level.camera.getWidth());
+        }
         if (enabled(level)) level.spritePresentationRenderer().prepareSpritePresentation(sprites);
     }
 
@@ -97,6 +101,8 @@ public final class LevelSpritePresentation {
 
     public static void register(LevelManager level, RewindRegistry registry) {
         registry.deregister("level-sprite-presentation");
+        registry.deregister("level-bounds-mask");
+        registry.register(level.spritePresentationRenderer().boundsMask);
         if (enabled(level)) registry.register(level.spritePresentationRenderer().spriteTables);
     }
 }

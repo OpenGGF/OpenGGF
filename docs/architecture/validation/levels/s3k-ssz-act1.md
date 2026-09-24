@@ -464,3 +464,15 @@ Earlier campaign-20260924-ghz-unlock-{400,528,800} attempts replayed the320cold
 route, diverged in earlier traversal and never reached the boss. They are failed
 route attempts, NOT release evidence; wide cold-route traversal remains open.
 Read-only independent review of shared mask/SSZ adapter found no actionable issues.
+
+### Automatic bounds mask follow-up (2026-09-24)
+
+The user replaced per-arena activation with a shared bounds-derived default.
+Native camera/player words remain unchanged; presentation masks outside the
+native view union, with world-relative fade history for newly covered visible
+pixels and deterministic rewind. The 99-case focused geometry/GPU/presentation/
+SSZ-route/required-S3K selection passes without skips. Positioned800 activation
+footage is under `campaign-20260924-bounds-activation-800` in this zone's external
+capture directory. SSZ additionally has GHZ800/400 and MTZ800/352 defeat/release
+captures; all zero deaths. This does not close cold-route or cross-game breadth
+obligations; combined delivery checks remain pending.

@@ -193,12 +193,10 @@ public class GraphicsManager {
 
     /** Queue a frozen presentation sample so later simulation cannot alter this frame. */
     void drawArenaMask(ArenaMaskState state) {
-        if (headlessMode || state.intensity() <= 0 || getProjectionWidth() <= state.activeWidth()) return;
-        int activeWidth = state.activeWidth(), tick = state.noiseFrame();
-        float intensity = state.intensity();
+        if (headlessMode || !state.visible(getProjectionWidth())) return;
         flushPatternBatch();
         registerCommand((cameraX, cameraY, width, height) -> {
-            arenaMaskRenderer.draw(width, height, activeWidth, intensity, tick);
+            arenaMaskRenderer.draw(width, height, state);
         });
     }
 

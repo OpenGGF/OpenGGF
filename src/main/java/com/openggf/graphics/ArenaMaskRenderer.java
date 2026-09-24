@@ -18,9 +18,15 @@ public final class ArenaMaskRenderer {
     }
 
     private ShaderProgram shader;
-    private int vao;
-    void draw(int width, int height, int activeWidth, float intensity, int noiseFrame) {
-        if (width <= activeWidth || intensity <= 0) return;
+    private int vao, opacityTexture;
+    void draw(int width, int height, int left, int right, int noiseFrame) {
+        draw(width, height, new ArenaMaskState(left, right, noiseFrame));
+    }
+    void draw(int width, int height, ArenaMaskState state) {
+        if (!state.visible(width)) return;
+        int activeTexture = glGetInteger(org.lwjgl.opengl.GL13.GL_ACTIVE_TEXTURE);
+        org.lwjgl.opengl.GL13.glActiveTexture(org.lwjgl.opengl.GL13.GL_TEXTURE0);
+        int oldTexture = glGetInteger(GL_TEXTURE_BINDING_1D);
         int program = glGetInteger(GL_CURRENT_PROGRAM), oldVao = glGetInteger(GL_VERTEX_ARRAY_BINDING);
         boolean blend = glIsEnabled(GL_BLEND), depth = glIsEnabled(GL_DEPTH_TEST);
         boolean scissor = glIsEnabled(GL_SCISSOR_TEST);
@@ -31,14 +37,21 @@ public final class ArenaMaskRenderer {
             if (shader == null) {
                 shader = new ShaderProgram(ShaderProgram.FULLSCREEN_VERTEX_SHADER, "shaders/shader_arena_mask.frag");
                 vao = glGenVertexArrays();
+                opacityTexture = glGenTextures();
             }
             int[] viewport = new int[4]; glGetIntegerv(GL_VIEWPORT, viewport);
             shader.use(); int id = shader.getProgramId();
             glUniform4f(glGetUniformLocation(id, "Viewport"), viewport[0], viewport[1], viewport[2], viewport[3]);
             glUniform2f(glGetUniformLocation(id, "LogicalSize"), width, height);
-            glUniform1f(glGetUniformLocation(id, "ActiveWidth"), activeWidth);
-            glUniform1f(glGetUniformLocation(id, "Intensity"), intensity);
-            glUniform1ui(glGetUniformLocation(id, "NoiseFrame"), noiseFrame);
+            glUniform1ui(glGetUniformLocation(id, "NoiseFrame"), state.noiseFrame());
+            var opacity = org.lwjgl.BufferUtils.createFloatBuffer(width);
+            for (int x = 0; x < width; x++) opacity.put(state.opacityAt(x));
+            opacity.flip();
+            glBindTexture(GL_TEXTURE_1D, opacityTexture);
+            glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, width, 0, GL_RED, GL_FLOAT, opacity);
+            glUniform1i(glGetUniformLocation(id, "Opacity"), 0);
             glDisable(GL_DEPTH_TEST); glDisable(GL_SCISSOR_TEST); glEnable(GL_BLEND);
             glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
@@ -46,6 +59,8 @@ public final class ArenaMaskRenderer {
         } catch (IOException e) {
             cleanup(); throw new UncheckedIOException(e);
         } finally {
+            glBindTexture(GL_TEXTURE_1D, oldTexture);
+            org.lwjgl.opengl.GL13.glActiveTexture(activeTexture);
             glBindVertexArray(oldVao); glUseProgram(program);
             glBlendEquationSeparate(eqRgb, eqAlpha);
             glBlendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
@@ -56,6 +71,7 @@ public final class ArenaMaskRenderer {
     }
     void cleanup() {
         if (shader != null) { shader.cleanup(); shader = null; }
+        if (opacityTexture != 0) { glDeleteTextures(opacityTexture); opacityTexture = 0; }
         if (vao != 0) { glDeleteVertexArrays(vao); vao = 0; }
     }
 }

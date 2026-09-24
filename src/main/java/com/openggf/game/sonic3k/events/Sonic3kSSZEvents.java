@@ -138,12 +138,6 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                 SszLaunchWorld.update(services, state);
             }
         }
-        // User-confirmed widescreen exceptions: GHZ and MTZ replica arenas only.
-        // ROM has no mask; preserve its gameplay bounds and derive release from
-        // the event owner, not player damage or boss HP. Native width renders no mask.
-        if (act == 0 && state.centerNativeArenaCamera()) state.arenaMask().activate(320);
-        else state.arenaMask().release();
-        state.arenaMask().advance();
     }
 
     /** loc_58C68 calls sub_5928C; redraw stages return without ticking it. */

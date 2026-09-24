@@ -132,3 +132,15 @@ remain owed. See the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.m
 This is not cold full-act or whole-scene native certification. The800px capture
 reveals left-of-start scenery while the centered Act2 camera is negative; that
 separate edge and the missing Act2 Death Egg sprite remain open.
+
+### Automatic bounds mask follow-up (2026-09-24)
+
+The user replaced per-arena activation with a shared bounds-derived default.
+Native camera/player words remain unchanged; presentation masks outside the
+native view union, with world-relative fade history for newly covered visible
+pixels and deterministic rewind. The 99-case focused geometry/GPU/presentation/
+SSZ-route/required-S3K selection passes without skips. Positioned800 activation
+footage is under `campaign-20260924-bounds-activation-800` in this zone's external
+capture directory. SSZ additionally has GHZ800/400 and MTZ800/352 defeat/release
+captures; all zero deaths. This does not close cold-route or cross-game breadth
+obligations; combined delivery checks remain pending.

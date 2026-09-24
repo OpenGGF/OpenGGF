@@ -3545,3 +3545,38 @@ undeclared final-fade fields; these now declare spawn reconstruction and managed
 reference capture. The final-fight test adds a live-fade checkpoint restored after
 retirement, at both 320 and 800 pixels. This covers the link that a pre-fade
 checkpoint cannot exercise. Java21/Lua5.4/PowerShell preflight passed.
+
+### Automatic bounds-derived mask conversion — 2026-09-24
+
+The user superseded the approved two-arena opt-in with an automatic default.
+Interrupted broad run `20260924T090401Z-a941c19f` intentionally before changing
+runtime code; it is incomplete and is not delivery evidence. Shared code now
+derives the clear horizontal world interval from native camera origins and the
+native view width, retaining independent left/right edges in the displayed scroll
+generation. SSZ activation calls and runtime mask bytes are removed. Ordinary
+finite level edges also participate; native width, wrapping foregrounds and
+transient inverted bounds do not fabricate a mask.
+
+The first conversion's 38 focused geometry/GPU/retained-presentation/replica/cold
+route tests passed with no skips. Its no-fade videos are intermediate evidence
+only: the user requested that already-visible scenery fade when newly covered.
+A common captured transition now tracks opacity by world column. Newly revealed
+offscreen pixels arrive masked, old opaque wings stay opaque, newly covered
+visible pixels fade in and released pixels fade out. No event activation switch
+is reintroduced. The first fade run exposed a floating-point release residue;
+clamping the final epsilon to its target fixes that endpoint. Final verification
+and replacement videos remain required. The entire level campaign remains open.
+
+Final focused conversion check (queued Java21, DISPLAY=:0, native GL, absolute
+S3K ROM): mask geometry/GPU/transition, retained sprite presentation, both SSZ
+replicas, SSZ cold-route replay and the required AIZ/load/bootstrap/decode classes:
+99 tests, zero failures/errors/skips, completed 10:17:13 BST. This is focused
+validation, not the combined delivery suite. Six replacement videos decode fully:
+SSZ GHZ800/400 and MTZ800/352 defeat/release; SSZ and LRZ800 approach/activation.
+All have zero deaths. GHZ800's1707 and MTZ800's2600 gameplay CSV rows match the
+preceding approved explicit-mask runs exactly. Inspected both800 release stills
+and LRZ before/during activation: the newly covered visible region fades, the
+previously opaque wing stays opaque, and both replica exits restore full width.
+Archives: `campaign-20260924-{ghz,mtz}-bounds-derived-fade-{width}` under SSZ,
+and `campaign-20260924-bounds-activation-800` under each SSZ/LRZ external task root.
+LRZ demonstrates automatic activation without a new level-specific call.

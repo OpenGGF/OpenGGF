@@ -879,6 +879,7 @@ public final class LevelRenderer {
     }
 
     final LevelSpritePresentation.Tables spriteTables = new LevelSpritePresentation.Tables();
+    final LevelBoundsMaskTransition boundsMask = new LevelBoundsMaskTransition();
     private boolean preparingSpritePresentation;
     private LevelScrollPresentation currentScrollPresentation;
 
@@ -963,6 +964,7 @@ public final class LevelRenderer {
     /** Resets per-frame derived state (used when the level is unloaded). */
     void resetState() {
         spriteTables.reset();
+        boundsMask.reset();
         currentScrollPresentation = null;
         frameCommandPool.cancelOutstanding();
         currentShimmerStyle = 0;
@@ -1218,10 +1220,13 @@ public final class LevelRenderer {
             lm.graphicsManager.registerCommand(disableWaterShaderCommand);
         }
 
-        // Explicit opt-in only; world masking precedes every HUD layout and title overlay.
-        if (options.hasGameplayPass() && GameServices.zoneRuntimeState()
-                instanceof com.openggf.game.internal.ArenaMaskSource source) {
-            com.openggf.graphics.ArenaMaskRenderer.enqueue(lm.graphicsManager, source.arenaMask());
+        // Derive visible wings from the native bounds paired with this displayed frame.
+        // Camera freezes alone do not define an arena; ordinary finite level edges also apply.
+        if (options.hasGameplayPass()) {
+            var mask = currentScrollPresentation == null
+                    ? (boundsMask.sample() == null ? LevelScrollPresentation.captureArenaMask(lm) : boundsMask.sample())
+                    : currentScrollPresentation.registers().arenaMask();
+            com.openggf.graphics.ArenaMaskRenderer.enqueue(lm.graphicsManager, mask);
         }
         profiler.beginSection("render.hud");
         if (options.includeHud() && lm.hudRenderManager != null

@@ -34,15 +34,12 @@ import java.util.Objects;
  * {@code SSZ2_ScreenInit} has run for this load. It lives here rather than on the event
  * instance so a rewind restore cannot replay the init.
  */
-public final class SszZoneRuntimeState implements S3kZoneRuntimeState, com.openggf.game.internal.ArenaMaskSource {
+public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     /** {@code Events_bg} is sixteen bytes; {@code LevelSetup} clears all of them. */
     public static final int EVENTS_BG_BYTES = 0x10;
 
-    private static final int CAPTURE_BYTES = com.openggf.graphics.ArenaMaskState.SNAPSHOT_BYTES +
-            EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 8 + 5 * Short.BYTES + SszLaunchState.CAPTURE_BYTES + 0x198 + SszEndingPlaneState.CAPTURE_BYTES;
+    private static final int CAPTURE_BYTES = EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 8 + 5 * Short.BYTES + SszLaunchState.CAPTURE_BYTES + 0x198 + SszEndingPlaneState.CAPTURE_BYTES;
 
-    private final com.openggf.graphics.ArenaMaskState arenaMask = new com.openggf.graphics.ArenaMaskState();
-    @Override public com.openggf.graphics.ArenaMaskState arenaMask() { return arenaMask; }
 
     private boolean centerNativeArenaCamera;
     public boolean centerNativeArenaCamera() {
@@ -379,7 +376,6 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState, com.openg
         endingPlane.capture(buffer);
         launch.capture(buffer);
         for (short word : act2ScrollTable) buffer.putShort(word);
-        arenaMask.writeTo(buffer);
         return buffer.array();
     }
 
@@ -421,6 +417,5 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState, com.openg
         endingPlane.restore(buffer);
         launch.restore(buffer);
         for (int i = 0; i < act2ScrollTable.length; i++) act2ScrollTable[i] = buffer.getShort();
-        arenaMask.readFrom(buffer);
     }
 }

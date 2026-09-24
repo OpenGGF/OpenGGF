@@ -1,6 +1,6 @@
 # Widescreen boss arenas: signal-static side mask
 
-Status: activation/hold and defeat/release appearance approved; delivery validation pending. Separate local
+Status: explicit activation prototype superseded by user-requested automatic bounds derivation; conversion under validation. Separate local
 branch `codex/ssz-arena-static-demo`, based on develop `40d55783c`. The level
 bring-up worktree remains independent. Do not merge or enable this prototype as
 a finished gameplay feature.
@@ -275,3 +275,40 @@ than the two manually approved fights. Verify off-centre cameras, moving and
 easing bounds, wrap rebases, cinematic actors beyond player limits, death,
 respawn, pause, rewind and all supported widths before replacing the explicit
 implementation. No physics or player-bound changes are implied.
+
+## Automatic conversion — authorized 2026-09-24
+
+The user chose to replace explicit per-arena activation with a default derived
+from bounds. The earlier manual-only policy and approvals describe the previous
+prototype, not the scope of this conversion. Keep the shader but remove
+`ArenaMaskSource`, SSZ event calls and SSZ-owned animation state. Derive immutable
+left/right edges and noise time alongside `LevelScrollPresentation`, which already
+retains and rewinds the camera generation paired with the displayed sprite table.
+Other publication modes derive from the current camera and captured level clock.
+A common `LevelBoundsMaskTransition` retains and snapshots fade history; this
+avoids duplicated event lifecycle and changes to published snapshot APIs.
+
+The mask covers only horizontal excess beyond the union of native views, including
+ordinary level edges. Wrapping foreground domains and transient inverted bounds
+produce no finite mask; native320 output is unchanged. S1/S2's ordinary-play
+right extension is preserved. No camera freeze, player hurt flag, HP or zone name
+activates the effect. Camera/player geometry remains unchanged. Existing centring
+policies remain independently owned by their camera events.
+
+Spatial 12px feather and independently hashed per-gameplay-frame noise remain.
+The initial conversion removed the 45-frame event fade; the user correctly
+requested retaining activation fade when already-visible scenery becomes masked.
+The shared transition now tracks per-column opacity in world coordinates: newly
+covered visible pixels fade in, existing masked wings remain opaque, and newly
+exposed offscreen pixels arrive masked. Release fades out over 45 gameplay ticks. Noise
+uses the captured object-execution counter (which keeps advancing when a ROM
+event holds Level_frame_counter), never render count or gameplay RNG.
+The shader accepts an asymmetric interval instead of a centred width.
+
+Conversion validation includes geometry at all five widths, variable-width arena
+and one-sided edges, bounds expansion, native/inverted/wrapping no-ops, actual GPU
+clear-interval preservation and noise cadence, retained scroll/rewind state,
+SSZ replica lifecycle and the cold-route replay. Refresh the in-engine captures
+and combined delivery tests before claiming acceptance of the converted behavior.
+The previous combined run was deliberately interrupted for this changed scope;
+its partial results do not certify this implementation.

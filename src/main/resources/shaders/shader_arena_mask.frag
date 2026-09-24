@@ -3,8 +3,7 @@
 // Independent integer hash per pixel AND gameplay frame; never translate the field.
 uniform vec4 Viewport;
 uniform vec2 LogicalSize;
-uniform float ActiveWidth;
-uniform float Intensity;
+uniform sampler1D Opacity;
 uniform uint NoiseFrame;
 out vec4 FragColor;
 uint hash(uint v) {
@@ -14,11 +13,8 @@ uint hash(uint v) {
 }
 void main() {
     vec2 pixel = floor((gl_FragCoord.xy - Viewport.xy) * LogicalSize / Viewport.zw);
-    float left = floor((LogicalSize.x - ActiveWidth) * 0.5);
-    float right = left + ActiveWidth;
-    if (pixel.x >= left && pixel.x < right) discard;
-    float distance = max(left - pixel.x, pixel.x - (right - 1.0));
-    float alpha = smoothstep(0.0, 12.0, distance) * Intensity;
+    float alpha = texelFetch(Opacity, int(pixel.x), 0).r;
+    if (alpha <= 0.0) discard;
     uint seed = hash(uint(pixel.x)) ^ hash(uint(pixel.y) + 0x9e3779b9u) ^ hash(NoiseFrame + 0x85ebca6bu);
     float grain = float(hash(seed) & 0x00ffffffu) / 16777215.0;
     vec3 color = ((13.0 + 35.0 * grain) / 255.0) * vec3(0.94, 0.98, 1.06);

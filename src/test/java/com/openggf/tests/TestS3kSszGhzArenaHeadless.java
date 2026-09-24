@@ -129,8 +129,6 @@ class TestS3kSszGhzArenaHeadless {
         assertEquals(ARENA_Y, camera.getY() & 0xFFFF,
                 "loc_576E8 gates on Camera_Y_pos == $7C0 exactly, which the $1000 -> $7C0 ease "
                         + "at 2 px a frame takes about 1050 frames to reach");
-        assertTrue(state.arenaMask().requested(), "approved replica event explicitly activates shared mask");
-        assertTrue(state.arenaMask().intensity() > 0, "mask advances in gameplay, not drawing");
         assertEquals(BOSS_FIGHTING_WORD, state.eventsBgWord(EV_GHZ_BOSS),
                 "move.w #$7F00,(Events_bg+$00).w");
         assertEquals(0, state.eventsBgByte(EV_GHZ_LOCK),
