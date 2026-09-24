@@ -388,3 +388,35 @@ The next frontier is the timed energy-bridge ascent nearX3264–3328. Running pa
 it drops into the curved lower floor. Braking over the floating platform reaches
 (3253,2556); the first jump's timing misses the bridge. These rejected inputs do
 not establish a collision defect. Full Act2 completion and breadth remain open.
+
+
+### DEZ2 energy-bridge ascent and gravity-switch cold route (2026-09-24)
+
+On `7d39f684a` plus this validation change, the new preserved
+`dez2-sonic-tails-incoming-middle-320.{script,bk2}` reaches(4853,2371),14rings,
+in18931frames from ordinary cold DEZ1 Sonic+Tails, zero deaths. It retains the
+previous lower-route input and adds braking onto the floating platform, three
+jumps through sequential energy bridges, the launcher crossing, gravity-switch
+landing and the next corridor. The two lower bridges activate before the higher
+bridge: jumping into their off phase was the route issue, not a demonstrated
+collision defect. Horizontal steering onto the gravity switch was authored with
+a read-only feedback probe and preserved as fixed ordinary controller inputs;
+no gameplay state is hydrated or overridden.
+
+`TestDezColdRouteCapture#coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind`
+passed1test, zero failures/errors/skips, with14 full-registry capture/restore and
+45-frame replay spots. Queued Java21 command: `-Dmse=off`
+`-Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`, the named
+method's `-Dtest` selection, and `test`. This adds coverage beyond the shorter
+lower route's17 spots; combined campaign validation and full Act2 remain open.
+
+`$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-middle-route-320/capture.mp4`
+films17920–18930. Its18931state rows, stills18180/18340/18820 and complete MP4
+decode were checked. This is moving engine presentation evidence, not native
+pixel matching. Later external exploration in
+`campaign-20260924-route-author/act2-spring-pair-late-jump.{script,bk2,csv}` jumps
+at18960 before the spring trap, passes both transporters atX5456 and5968, and
+reaches the upper corridor nearX6400. Earlier jumps hit the nearby geometry or
+arrived between the opposed springs; the later jump crosses normally. That
+extension still needs preserved route/rewind and video evidence; no runtime
+change was made for these route-authoring failures.

@@ -33,14 +33,19 @@ class TestDezColdRouteCapture {
         runColdRoute("lower");
     }
 
+    @Test void coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind() throws Exception {
+        runColdRoute("middle");
+    }
+
     private void runColdRoute(String route) throws Exception {
         boolean complete = route.equals("complete");
-        boolean lower = route.equals("lower");
+        boolean middle = route.equals("middle");
+        boolean lower = route.equals("lower") || middle;
         boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/" + (lower ? "dez2-sonic-tails-incoming-lower"
+                "src/test/resources/routes/s3k/" + (lower ? "dez2-sonic-tails-incoming-" + route
                         : "dez1-sonic-tails-cold-" + route) + "-320.bk2"));
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
@@ -65,6 +70,13 @@ class TestDezColdRouteCapture {
             spots.addAll(Set.of(15190, 15300, 16070, 16110, 16190, 16210,
                     16580, 16750, 16940, 17050, 17240, 17340, 17440, 17560,
                     17640, 17680, 17820));
+        }
+        if (middle) {
+            // The shorter lower route owns the earlier Act2 spots. Follow the
+            // timed energy bridges, pressure-pad gravity toggle and corridor ride.
+            spots.clear();
+            spots.addAll(Set.of(17930, 17980, 18090, 18135, 18175, 18230,
+                    18305, 18330, 18360, 18470, 18540, 18700, 18810, 18850));
         }
         var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
                 .getSuperclass().getDeclaredField("collisionProperty");
@@ -131,9 +143,9 @@ class TestDezColdRouteCapture {
             assertEquals(11, GameServices.level().getCurrentZone());
             assertEquals(complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
-                assertEquals(3196, session.player().getCentreX());
-                assertEquals(2476, session.player().getCentreY());
-                assertEquals(7, session.player().getRingCount());
+                assertEquals(middle ? 4853 : 3196, session.player().getCentreX());
+                assertEquals(middle ? 2371 : 2476, session.player().getCentreY());
+                assertEquals(middle ? 14 : 7, session.player().getRingCount());
                 assertFalse(session.player().isObjectControlled(), "lower tube releases movement");
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             }
