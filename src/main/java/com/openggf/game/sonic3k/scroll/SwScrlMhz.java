@@ -66,6 +66,24 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         maxScrollOffset = composer.getMaxScrollOffset();
     }
 
+    private record LoopScrollState(boolean initialized, int actualX, int adjustedX) { }
+
+    @Override
+    public Object captureRewindState() {
+        return new LoopScrollState(loopScrollInitialized, loopActualCameraX, loopAdjustedCameraX);
+    }
+
+    @Override
+    public void restoreRewindState(Object snapshot) {
+        if (snapshot instanceof LoopScrollState saved) {
+            // A rewind camera jump is not the ROM's $200 arena repeat. Restore
+            // the logical accumulator before the parallax rebuild observes it.
+            loopScrollInitialized = saved.initialized();
+            loopActualCameraX = saved.actualX();
+            loopAdjustedCameraX = saved.adjustedX();
+        }
+    }
+
     @Override
     public int getBgCameraX() {
         return bgCameraX;

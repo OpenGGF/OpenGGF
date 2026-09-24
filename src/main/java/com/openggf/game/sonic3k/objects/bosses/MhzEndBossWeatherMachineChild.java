@@ -94,6 +94,13 @@ public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isPersistent() {
+        // loc_7656E uses Draw_And_Touch_Sprite; loc_76574 owns the retirement timer.
+        // Those routines have no range cull; update owns native retirement.
+        return true;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         spawnVisualChildrenOnce();
         if (collisionFlags == 0) {

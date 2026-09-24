@@ -9,7 +9,8 @@ defeat → exit fade → `StartNewLevel $D01`. Owning plan:
 [DDZ bring-up](../../plans/2026-09-17-ddz-bring-up.md).
 Status: in progress. Nothing below certifies the zone.
 
-Incoming: DEZ final boss → `$C00` (blocked: DEZ campaign), level select. Outgoing: `$D01` ending
+Incoming: DEZ final boss → `$C00` verified from direct final-boss entry at 320/800;
+full DEZ2-to-DDZ continuity remains open. Level select is also supported. Outgoing: `$D01` ending
 (not implemented; the request is asserted, the destination is out of scope).
 
 Widths / donors / characters / teams (support authority `LaunchProfile.sanitizedFor`, same roster
@@ -25,14 +26,16 @@ branch; only Sonic is the native route.
 | ENTRY: controller, Player 2 clear, fall-in, transformation timing, release | `loc_81554`/`loc_8160A`/`loc_8167C`; `SuperHyper_PalCycle`; native pass-1 frames 1/24/49/50/51 | native, Sonic + Super Emeralds | `TestS3kDdzFlightControllerHeadless` | implemented; native behaviour matched | pass | — |
 | ENTRY breadth: fall-in, transformation, release, 400 flight frames through the asteroid field | same | 34 width × character/donor/team rows | `TestS3kDdzCompatibilityMatrix` | implemented | see execution evidence | Hyper upgrade asserted only on the Sonic route |
 | ROUTE (Sonic cold, seeded clocks): entry → both phases → three wraps → defeat → `$D01` request | Complete-run BK2 input from movie frame 514214 (`zone0c` row 0); physics rows compared every frame; declared inherited `V_int_run_count` 512489 and camera fraction `$2700` | native 320, Sonic (+Tails configured, suppressed) | `TestS3kDdzColdRoutes#seededNativeRouteMatchesPositionsCameraAndRingsThroughTheExitRequest` | implemented; native behaviour matched (player x/y, camera x/y and rings identical for all 10058 gameplay rows; boss exit routines on the native frames) | see execution evidence | Without the seeds the route diverges at 4178 (turret aim phase) and dies in phase 1 |
+| ROUTE (Sonic cold, seeded clocks, Super): entry through `$D01` | Same controller movie with declared Chaos-only progression; no Hyper-trace parity claim | 320 | `TestS3kDdzColdRoutes#seededSuperRouteCompletesWithItsFixedStarsAndReplaysTheFight` | implemented | passes, with fight/wrap/fade restore checks | 800px reuse of the native movie dies6340; independent fresh routes below now complete both widths |
+| ROUTE / REWIND (fresh Super): entry → both phases → wraps → `$D01` | Authored controller-only BK2; seven Chaos Emeralds, no inherited clock/fraction/position seed; restore and 45-frame replay at first body damage, first chase wrap and exit | Sonic solo, donor off, actual320/800 | `TestS3kDdzAuthoredRoutes` | implemented | 2 passed, no skips, 2026-09-23 19:08 BST | Completion evidence, not native parity or full incoming DEZ continuity |
 | REWIND: phase-1 fight, first wrap, exit fade | Restore equals capture (object graph summary); 45 divergent frames discarded; recorded route continues with exact native parity to the exit | native 320 | `TestS3kDdzColdRoutes#rewindAtBossWrapAndExitRestoresTheNativeRoute` | implemented | see execution evidence | Hurt spin, asteroid split and final-hit spots are covered only inside these windows |
 | REWIND: mid-transformation, mid-flight | Registry restore equals capture; forward replay equals original | 34 rows × 2 spots | `TestS3kDdzCompatibilityMatrix` | implemented | see execution evidence | — |
-| PRESENT: background bands, FG-plane boss body, explosions, wrap | `sub_596EA` six speeds from `Events_bg+6`, `DDZ_BGDeformArray`; `DDZ_ScreenEvent` stages 0/4/8/`$C`; `PLC_BossExplosion` | native 320 every frame at entry, boss arrival, first wrap, exit | side-by-side clips `30-33-ddz-native-vs-engine-*.mp4` (engine capture exact to native positions) | implemented | visual inspection: matched except the known-bugs Doomsday items (Hyper sparkle size, Super-form stars, HUD entry rings) and Master Emerald flicker phase / white-fade tint | Pixel comparison not automated |
-| OBJECT: asteroids, missiles, boss graph, slot/load order | `Obj_DDZAsteroid`, `Obj_DDZMissile`, `Obj_DDZEndBoss`; native slot histories `probe-slots0/1` | native route | seeded route test (slot order drives hit order) | implemented; native behaviour matched through the route | pass | Super/Hyper transformation stars (`$2D690`/`$2D95C`) not implemented |
+| PRESENT: background bands, FG-plane boss body, explosions, wrap | `sub_596EA` six speeds from `Events_bg+6`, `DDZ_BGDeformArray`; `DDZ_ScreenEvent` stages 0/4/8/`$C`; `PLC_BossExplosion` | native 320 every frame at entry, boss arrival, first wrap, exit | side-by-side clips `30-33-ddz-native-vs-engine-*.mp4` (engine capture exact to native positions) | implemented | visual inspection: matched except the known-bugs Doomsday items (Hyper sparkle size and HUD entry rings) and Master Emerald flicker phase / white-fade tint | Pixel comparison not automated |
+| OBJECT: asteroids, missiles, boss graph, slot/load order | `Obj_DDZAsteroid`, `Obj_DDZMissile`, `Obj_DDZEndBoss`; native slot histories `probe-slots0/1` | native route | seeded route test (slot order drives hit order) | implemented; native behaviour matched through the route | pass | Super branch now has `loc_8242A/82452` fixed-slot stars and six ROM frames; Hyper owner pre-exists, native sparkle phase remains open |
 | LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | 320, 800 | `TestS3kDdzLifecycleProduction` | implemented | pass, 2 | Timeline isolation across the reload not asserted; donor/team rows only through the breadth matrix |
 | LOAD: `$D01` handover freeze | `StartNewLevel` leaves the level loop; native fade frozen | GameLoop only | — | GameLoop freezes (`isNonRewindableTransitionPending`); recording frame driver keeps stepping | open | Harness gap, frames 10059-10079 |
 | ORACLE: strict segment replay | `TestS3kSonicTailsZone0cSegmentTraceReplay` | — | `-Ptrace-segments` | — | red: bootstrap camera Y and missing clock seeds (plan evidence) | Replay harness bootstrap |
-| LOAD: DEZ → `$C00` incoming | DEZ events | — | — | missing (DEZ) | blocked | DEZ campaign |
+| LOAD: DEZ → `$C00` incoming | `loc_803D6` and source camera-policy retirement | solo320/800 direct final-DEZ routes | `TestDezFinalScreenEntry`, capture115 | connected | corrected load/initial flight;30-case destination selection passes without skips (2026-09-23) | Full incoming DEZ2 continuity and roster breadth remain open |
 
 ## Execution evidence
 
@@ -103,3 +106,125 @@ The destination-framing selection subsequently passed30 cases without skips
 Capture115 verifies the corrected actual800px final-DEZ→DDZ load and initial
 flight, with no death and exact replay of the authored state. Full widescreen
 DDZ completion and other incoming-route breadth remain open.
+
+
+2026-09-23 Super-star follow-up: the six-frame `loc_8242A/82452` effect now
+uses the reserved Super_stars slot and ROM art/mappings, with separate bit15
+hardware priority and queue$80. A native entry probe with declared zero Super
+Emeralds confirms first initialization at50, anchor at51, two-pass animation
+and reanchor at63. An800px ordinary-entry capture has300no-death rows, no
+follower and a fully decoded video; its frame57 star-region pixels match all
+2401native pixels after 3-bit RGB quantization. This is a bounded effect match,
+not whole-scene certification. The Hyper phase/HUD items stay open.
+
+Art checks corrected a DMA-word/byte mistake ($1A0words=$340bytes=26tiles).
+Corrected mapping/length checks pass. Five actual viewport presets now pass
+release-boundary restore/replay; together with Hyper selection, native cadence
+and wrap/reanchor components this is8passing cases, zero skips. Every-object
+rewind passes1313cases including the new effect. Initial wide fixture rows
+were still320px until SCREEN_WIDTH_PIXELS and session reset were explicit;
+all width claims now assert the live camera width. Complete Super routes are
+being checked separately from Hyper-native timing assertions.
+
+
+Full Super-route result: the seeded320px controller route reaches the exit with
+fight/wrap/fade restore checks. Actual800px reuse of those same native-width
+inputs dies at6340; it is not a completed wide route. An intermediate run first
+hit a native-width-only orphan-burst assertion at5495; gating that native oracle
+to the matching Hyper reference allowed the independent wide run to expose its
+real death frontier. The committed completion test covers320 only. Wide route
+authoring/diagnosis stays open; no gameplay was tuned to make those inputs pass.
+The final five-preset star selection passes8cases, zero skips.
+
+
+The isolated800px controller probe confirms ring exhaustion: first boss fight
+routine4 begins3957 with39rings versus native-width3806 with77rings; the wide
+route lands one body hit at4296, drains its last ring at6307 and dies6340.
+The320px route lands seven body hits3919..5133 and completes. These are observed
+route differences, not proof of a runtime bug: viewport-dependent loading and
+object lifetime need matched inspection before revising gameplay. Adaptive
+wide input authoring and the actual final-DEZ incoming route remain open.
+
+
+### 2026-09-23 — fresh DDZ controller completion
+
+At `b6c1147a2` plus campaign edits, independently authored Super Sonic inputs
+now complete fresh level-select entry at both actual320/800 widths. The only
+declared gameplay setup is seven Chaos Emeralds; there is no inherited V-int,
+camera fraction, position, health or ring seed. The scripts and reproducible BK2s
+are `routes/s3k/ddz-super-fresh-{320,800}`. Native320 reaches the ending request
+after10396 capture passes with12rings; wide800 after9923 with20rings. Three
+rings during the wide exit explain the earlier17ring observation at fade entry.
+No production gameplay was changed to make these inputs complete.
+
+`TestS3kDdzAuthoredRoutes` checks no death, the `$D01` request, and restore plus
+45-input forward replay at first body damage, first chase wrap and exit. It
+compares player/camera/object summaries, palette words and all DDZ runtime bytes.
+Queued Java21 Maven `-Dmse=off -Dtest=TestS3kDdzAuthoredRoutes test`, with the
+absolute S3K ROM, passes2cases with zero failures/errors/skips at19:08 BST. The
+first diagnostic failure was a null-spawn fixed-object summary; the next was
+the stale17ring endpoint expectation. Neither required a gameplay change.
+
+This closes fresh native/wide controller completion, independently of the
+seeded Hyper movie parity result. It does not close strict trace bootstrap,
+full incoming DEZ2 continuity, Hyper/HUD presentation, or load-history isolation.
+The wide `campaign-20260923-fresh-completion-800` recording has9923 state rows,
+zero deaths/followers and1673 images (8250..9922); full video decode passes.
+Visual inspection exposed intermittent background wrap seams; diagnosis and
+corrected presentation evidence are recorded separately.
+
+
+Corrected presentation verification: queued Java21 Maven with the absolute S3K
+ROM, `DISPLAY=:0`, `-Dopenggf.test.gl.native=true` and
+`-Dtest=TestDdzBackgroundWrapCapture,TestBackgroundScrollWrapPixels,TestShaderPixelCentreSampling`
+passes3cases with zero failures/errors/skips at19:18 BST. The background tests
+include all normalized scroll words -32767..32767 and the actual route render;
+pixel-centre coverage includes native, integer and fractional scaling. These
+are focused checks; the campaign's combined category/guard run is still owed.
+
+`campaign-20260923-fresh-completion-800-wrap-fixed` supersedes the earlier
+wide fresh-route movie. All9923 CSV rows are byte-identical to the original,
+including zero deaths/followers and20 final rings. The1673-frame movie fully
+decodes; stills8400/9000/9681/9922 were inspected. Controller source and provenance
+are alongside the external video. No native whole-scene parity claim is made.
+
+
+### Incoming DEZ2 encounter chain (2026-09-23)
+
+`TestDezIncomingFinalRouteCapture` native320 passes1test with zero failures,
+errors or skips at22:29:25 BST on b6c1147a2 plus campaign edits. Positioned
+DEZ2 ($34B0,$300), solo Sonic, donor off, boot-only200rings/sevenSuperEmeralds
+continues through actual final-arena and DDZ loads without reseeding. The
+21102-frame BK2 independently replays without death, matching all20862 author
+rows before its240-input DDZ tail. Eight whole-registry restore/45-input replay
+spots cover hands, core, escape ship and live destination flight. Captures116/117
+show the two handoffs; see the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
+This closes that native positioned continuity row, not cold DEZ2 traversal,
+complete incoming DDZ combat, native parity or roster/donor/lifecycle breadth.
+
+
+Two-width incoming follow-up: queued `-Dtest=TestDezIncomingFinalRouteCapture`
+passes2cases, zero failures/errors/skips,22:34:53 BST (52.002s Maven). Both320
+and800 verify every registry key at all eight restore/45-input replay spots.
+The wide21109-input movie independently matches all20869 author rows, no deaths
+or follower; capture118 fully decodes and stills20582/21050 were inspected.
+The remaining240inputs show actual DDZ flight. No gameplay change was needed.
+Complete incoming DDZ combat and cold DEZ2 traversal remain separate open rows.
+
+
+Complete incoming DDZ verification now passes at320/800: queued Java21 with
+absolute S3K ROM, `-Dtest=TestDezIncomingFinalRouteCapture test`,2cases, zero
+failures/errors/skips, BUILD SUCCESS22:43:32 BST (62s Maven). The30918/31531
+controller inputs run from the positioned DEZ2 boss through the final arena,
+both DDZ phases and actual $D01 request, without deaths or reseeds. All11
+required spots per width compare every registered key on restore and45-input
+replay, including DDZ body damage, chase wrap and defeat. The11-family child
+spawn regression plus59 mandatory S3K checks separately pass70cases, no skips
+(22:42:16 BST). Earlier freshSuper route cases also pass; these are focused
+checks, not the combined campaign suite. Wide incoming completion video is
+`$VIDEO_ROOT/ddz-bring-up/campaign-20260923-incoming-dez2-completion-800/capture.mp4`:
+31531state rows, no deaths/followers,7finalrings,1531filmed frames, full decode
+passed;30369/31291/31530 inspected (last is white exit fade). It predates the
+recreation-only fix, which does not run during normal forward playback.
+Cold DEZ2 traversal, roster/donor breadth, history isolation and native whole-scene
+matching remain open. Ending/credits remain excluded.

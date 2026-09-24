@@ -436,3 +436,15 @@ excludes the results renderer's rebuildable cache flag while retaining its
 gameplay readiness/timing state. The existing full-registry oracle passes in
 the final 158-case focused run, with no skips; the full strict FBZ replay also
 passes. All 36 fresh B2 capture PNGs match the reviewed v2 inputs exactly.
+
+
+Incoming MHZ2 campaign follow-up (2026-09-23): the cold MHZ1→MHZ2→FBZ1 route
+now restores and forward-replays45 neutral inputs in released FBZ1. It exposed
+retained-plane reconciliation resubmitting the historical background palette
+write after both palette adapters had restored their captured state. The
+reconcile path now rebuilds only the tile plane. The independent
+`TestFbzAct1RomRuntimeLifecycle.restoredPlaneDoesNotRepublishItsHistoricalPaletteWrite`
+and retained-plane/native-row/event regressions pass in the24-case focused
+selection at22:20 BST on b6c1147a2 plus campaign edits; exact command and
+limitations are in the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
+This is native320 Sonic incoming/replay evidence, not broader act certification.

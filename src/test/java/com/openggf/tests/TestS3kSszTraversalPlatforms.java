@@ -253,12 +253,12 @@ class TestS3kSszTraversalPlatforms {
     }
 
     /**
-     * {@code byte_46658} is one signed byte per two pixels, and {@code d1 = $40} makes the index
-     * reach {@code $40} — {@code $41} bytes, so the last sample comes from past the table's end.
-     * The engine reads them from the ROM rather than clamping, which is what the 68000 does.
+     * {@code byte_46658} is one signed byte per two pixels. Normal contact uses indices 0..63;
+     * the raw diagnostic sampler can also read the following ROM byte. That extra direct query
+     * must not be mistaken for proof that the exclusive native collision window over-reads.
      */
     @Test
-    void theDiagonalSlopeSamplesComeFromTheRomTableIncludingTheOverRead() throws IOException {
+    void theDiagonalSlopeAndRawDiagnosticSampleComeFromTheRomTable() throws IOException {
         RomByteReader rom = RomByteReader.fromRom(RomManager.getInstance().getRom());
         HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x740, 0x5B0);
         SszCollapsingBridgeDiagonalObjectInstance walkway = null;
@@ -274,7 +274,7 @@ class TestS3kSszTraversalPlatforms {
                     walkway.sampleSlopeByte(index) & 0xFF,
                     "slope sample " + index);
         }
-        // The table itself is 64 bytes of a 1:2 diagonal; sample $40 is already past its end.
+        // The normal table is 64 bytes; diagnostic sample $40 is outside normal contact.
         assertEquals(-6, (byte) rom.readU8(
                 SszCollapsingBridgeDiagonalObjectInstance.SLOPE_TABLE_ADDR), "byte_46658[0]");
         assertEquals(25, (byte) rom.readU8(

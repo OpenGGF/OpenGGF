@@ -34,15 +34,52 @@ import java.util.Objects;
  * {@code SSZ2_ScreenInit} has run for this load. It lives here rather than on the event
  * instance so a rewind restore cannot replay the init.
  */
-public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
+public final class SszZoneRuntimeState implements S3kZoneRuntimeState, com.openggf.game.internal.ArenaMaskSource {
     /** {@code Events_bg} is sixteen bytes; {@code LevelSetup} clears all of them. */
     public static final int EVENTS_BG_BYTES = 0x10;
 
-    private static final int CAPTURE_BYTES =
-            EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 4 + SszLaunchState.CAPTURE_BYTES;
+    private static final int CAPTURE_BYTES = com.openggf.graphics.ArenaMaskState.SNAPSHOT_BYTES +
+            EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 8 + 5 * Short.BYTES + SszLaunchState.CAPTURE_BYTES + 0x198 + SszEndingPlaneState.CAPTURE_BYTES;
+
+    private final com.openggf.graphics.ArenaMaskState arenaMask = new com.openggf.graphics.ArenaMaskState();
+    @Override public com.openggf.graphics.ArenaMaskState arenaMask() { return arenaMask; }
+
+    private boolean centerNativeArenaCamera;
+    public boolean centerNativeArenaCamera() {
+        // ROM sub_575EA pins GHZ/MTZ camera bounds at $160/$1660. Those are
+        // native 320px left edges. Wider views must project BOTH bounds by the
+        // same inset used by the entry gates; otherwise knockback follows Sonic
+        // (GHZ) or snaps to the unprojected left bound (MTZ). Derive ownership
+        // from captured ROM flags, including the lock-to-allocation transition.
+        // Keep framing through defeat until the launch event releases bounds.
+        if (actIndex == 0) {
+            return eventsBgByte(1) != 0 || eventsBgByte(3) != 0
+                    || (eventsBgByte(5) != 0
+                    && (eventsBgByte(0) != 0 || eventsBgByte(2) != 0));
+        }
+        return centerNativeArenaCamera;
+    }
+    public void setCenterNativeArenaCamera(boolean active) { centerNativeArenaCamera = active; }
+
+    /** SSZ2's shared HScroll_table through the twenty VSRAM column words. */
+    private final short[] act2ScrollTable = new short[0x198 / 2];
+    public int act2ScrollWord(int byteOffset) { return act2ScrollTable[byteOffset / 2]; }
+    public void setAct2ScrollWord(int byteOffset, int value) { act2ScrollTable[byteOffset / 2] = (short) value; }
+
+    private final SszEndingPlaneState endingPlane = new SszEndingPlaneState();
+    public SszEndingPlaneState endingPlane() { return endingPlane; }
 
     private final SszLaunchState launch = new SszLaunchState();
     public SszLaunchState launch() { return launch; }
+
+    // Both acts share the ROM's Screen_shake_* globals. Keep their existing captured
+    // storage in the launch snapshot, while exposing a semantic owner to act2 callers.
+    public S3kScreenShake screenShake() { return launch.shake(); }
+    public int appliedScreenShakeOffset() { return launch.appliedShake(); }
+    public void advanceScreenShake(int levelFrameCounter, boolean dead) {
+        launch.advanceShake(levelFrameCounter, dead);
+    }
+
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -84,9 +121,36 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
 
     /** {@code _unkFA84}: this frame's halved camera X delta, added by {@code MoveSprite_SSZBGAdjust}. */
     private short unkFA84;
+    /** FA86..FA8E complete the seven act2 attack positions begun at FA82/FA84. */
+    private final short[] act2AttackPositions = new short[5];
+    public int act2AttackPosition(int index) {
+        if (index == 0) return unkFA82 & 0xFFFF;
+        if (index == 1) return unkFA84 & 0xFFFF;
+        return act2AttackPositions[index - 2] & 0xFFFF;
+    }
+    public void setAct2AttackPosition(int index, int x) {
+        if (index == 0) unkFA82 = x & 0xFFFF;
+        else if (index == 1) unkFA84 = (short) x;
+        else act2AttackPositions[index - 2] = (short) x;
+    }
+
     private int unkFAB8;
     private boolean screenInitApplied;
     private boolean bossFlag;
+    /** _unkFAA2, set by loc_7BCB0 before the excluded ending starts. */
+    /** _unkFAA9: loc_59124/59176 signals camera/cloud alignment to the ending owner. */
+    private boolean endingCloudAligned;
+    public boolean endingCloudAligned() { return endingCloudAligned; }
+    public void setEndingCloudAligned(boolean aligned) { endingCloudAligned = aligned; }
+    /** Ending_running_flag, distinct from the boss's _unkFAA2 retirement signal. */
+    private boolean endingRunning;
+    public boolean endingRunning() { return endingRunning; }
+    public void setEndingRunning(boolean active) { endingRunning = active; }
+
+    private boolean act2EndingActive;
+    public boolean act2EndingActive() { return act2EndingActive; }
+    public void setAct2EndingActive(boolean active) { act2EndingActive = active; }
+
     /**
      * {@code Events_bg+$10}: the background-framing toggle {@code sub_579F0} flips at
      * {@code Camera_X_pos $1800}. It sits outside the sixteen bytes {@code LevelSetup} clears,
@@ -307,7 +371,15 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(backgroundScrollFrame);
         buffer.putShort((short) unkFA82);
         buffer.put((byte) (bossFlag ? 1 : 0));
+        buffer.put((byte) (act2EndingActive ? 1 : 0));
+        buffer.put((byte) (endingRunning ? 1 : 0));
+        buffer.put((byte) (endingCloudAligned ? 1 : 0));
+        buffer.put((byte) (centerNativeArenaCamera ? 1 : 0));
+        for (short x : act2AttackPositions) buffer.putShort(x);
+        endingPlane.capture(buffer);
         launch.capture(buffer);
+        for (short word : act2ScrollTable) buffer.putShort(word);
+        arenaMask.writeTo(buffer);
         return buffer.array();
     }
 
@@ -341,6 +413,14 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         backgroundScrollFrame = buffer.getInt();
         unkFA82 = Short.toUnsignedInt(buffer.getShort());
         bossFlag = buffer.get() != 0;
+        act2EndingActive = buffer.get() != 0;
+        endingRunning = buffer.get() != 0;
+        endingCloudAligned = buffer.get() != 0;
+        centerNativeArenaCamera = buffer.get() != 0;
+        for (int i = 0; i < act2AttackPositions.length; i++) act2AttackPositions[i] = buffer.getShort();
+        endingPlane.restore(buffer);
         launch.restore(buffer);
+        for (int i = 0; i < act2ScrollTable.length; i++) act2ScrollTable[i] = buffer.getShort();
+        arenaMask.readFrom(buffer);
     }
 }

@@ -270,6 +270,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         }
         if (!act2BackgroundInitialised) {
             act2BackgroundInitialised = true;
+            spawnDeathEggBackground();
             // loc_56FD2: Events_routine_bg = 8, sub_57082, Reset_TileOffsetPositionEff,
             // Refresh_PlaneFull, ApplyDeformation. The deformation is SwScrlLrz's already.
             lrz.setBackgroundRoutine(Lrz2BackgroundStageMachine.BG_STAGE_STEADY);
@@ -277,7 +278,18 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             refreshPlaneFull();
             return;
         }
+        if (lrz.backgroundRoutine() == Lrz2BackgroundStageMachine.BG_STAGE_ARM_REFRESH) {
+            spawnDeathEggBackground();
+        }
         Lrz2BackgroundStageMachine.advance(lrz, this::resetEffectiveTileOffsets);
+    }
+
+    /** LRZ2_BackgroundInit / loc_5700C each attempt AllocateObject once, without retry. */
+    private void spawnDeathEggBackground() {
+        var manager = levelManager() == null ? null : levelManager().getObjectManager();
+        if (manager != null) manager.createDynamicObject(() ->
+                new com.openggf.game.sonic3k.objects.LrzDeathEggBackgroundInstance(
+                        new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
     }
 
     /** ROM {@code Reset_TileOffsetPositionEff}. */

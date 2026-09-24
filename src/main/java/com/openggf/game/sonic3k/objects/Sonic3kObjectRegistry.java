@@ -1701,6 +1701,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(0x9E,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ,
                 (spawn, registry) -> new LrzAutoscrollObjectInstance(spawn));
+        // SKL $B2: Obj_KnuxFinalBossCrane, placed in SSZ act 2.
+        registerStockRomZoneBound(0xB2, S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCraneShip(spawn));
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZMasterEmeraldObjectInstance(spawn));

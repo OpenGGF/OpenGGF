@@ -84,7 +84,12 @@ void main()
     float scanline = clamp(gameY, 0.0, 223.0);  // Clamp to valid scanline range
     float scanlineTexCoord = (scanline + 0.5) / 224.0;
     if (NoHScroll == 0) {
-        hScrollThis = texture(HScrollTexture, scanlineTexCoord).r * 32767.0;
+        // VDP HScroll RAM stores integer pixel words. Restore that integer after
+        // normalized R32F transport, before the modulo below: GPU arithmetic can
+        // leave a tiny residue at an exact wrap. A 512px plane in an 800px FBO
+        // then samples unrendered column 512 instead of column 0 (DDZ clouds).
+        // The ROM has no fractional scroll here; wider allocation must not change it.
+        hScrollThis = round(texture(HScrollTexture, scanlineTexCoord).r * 32767.0);
     }
     if (UsePerLineVScroll != 0) {
         vScrollThis = texture(VScrollTexture, scanlineTexCoord).r * 32767.0;

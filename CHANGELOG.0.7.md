@@ -6,31 +6,48 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
-- **S3K Sky Sanctuary:** Sky Sanctuary act 1 now plays its teleporter arrival instead of
+- **S3K Sky Sanctuary:** Both Act 1 replica bosses now draw their ROM-backed
+  Eggmobile bodies alongside Mecha Sonic’s head, and keep the widescreen camera
+  centred on their native arenas through knockback.
+  Sky Sanctuary act 1 now plays its teleporter arrival instead of
   dropping the player in at the level-start position. The screen init forces the arrival
   camera and bounds, the controller beams Player 1 up the sanctuary column and hands control
   back on the settle swing, Tails arrives on her own beam, and the act's dynamic camera bands
   and vertical wrap follow the player. The cutscene Knuckles who opens the route — his beam,
   the Death Egg he watches rise, the grey button and the bridge that extends over the gap,
-  with the checkpoint it leaves behind — is in place. The act's sky is its own now: the
+  with the checkpoint it leaves behind — is in place. The rising Death Egg applies and restores
+  its ROM cutscene palette, cloud, mask and animated trails, and launches its
+  decorative missiles on the V-int cadence. The act's sky is its own now: the
   background switches between the plain sanctuary framing and the banded cloud layer as the
   camera crosses the cloud band, the clouds drift, the whole sky breathes on the act's
   oscillator, five clouds roam across the screen and ten invisible cloud platforms can be
   stood on, and the banded cloud layer is drawn from the part of the act's background the
   cartridge draws it from, so the climb happens against real clouds instead of flat blue.
+  Knuckles' act-2 encounter now has its own camera oscillator and ROM-backed foreground
+  bands and background waves, including rewindable scroll state and the island
+  priority overlay. Its crane grabs Knuckles, pans into the arena and releases him
+  into Mecha Sonic's first phase. His first defeat now leads through the Master Emerald
+  transformation and forced run into Super Mecha, with both fights reaching the pre-ending
+  stop and recording Knuckles’ clear state. Widescreen pans keep the native arena
+  timing and player limits while centring the visible window; the Master Emerald
+  appears before the dash reaches it, and Mecha stays in front of the floating island.
   Sky Sanctuary's animated tiles run in act 1 and, as on the cartridge, not in act 2. The act's teleporter pads are real now: they draw, they can be stood on, they lift
   the player and the camera the distance their placement asks for, and the two that wait on
   a defeated boss sit sunk in the floor until it is beaten and then rise back into place.
   The small floating platforms dip under a standing player, the tall columns break into eight
   falling pieces when one is stood on, and the flat bridge sections crumble away from under the
   player four pieces at a time — except the one section the cartridge marks permanent — and the
-  sloped walkways break into eight, sliding along their own slope as they go. The rest of
+  sloped walkways follow their ROM collision surfaces and break into eight, sliding
+  along their own slope as they go. The permanent staircase now carries players
+  uphill instead of letting them fall beneath its tiles. The rest of
   the act's traversal is in too: the little clouds squash under a standing player and throw
   them up and back in a puff of four, the horizontal bars catch a player from above and swing
   them before flinging them where they are steering, the short posts spin a player in place
   and their invisible carriers walk them round in a circle, the swinging and rotating arms
   carry a player at the tip of a jointed arc, and the retracting springs fold away until
-  somebody comes at them and then fire them along the deck. Sky Sanctuary's EggRobos patrol
+  somebody comes at them and then fire them along the deck. Swinging carrier arms and rider bars
+  now remain alive until their hub releases them, preserving the platform at camera edges
+  and avoiding dangling rewind references. Sky Sanctuary's EggRobos patrol
   the act now, in all three shapes the cartridge gives them: the distant one that crosses the
   sky and, by crossing, lets its partner appear; the hovering one that tracks the player,
   levels its arm and fires a laser once it has them lined up; and the one that lets four
@@ -70,7 +87,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   its floor at wider viewports.
 
   Act 2 now allocates its encounter camera oscillator after Knuckles’ arrival and preserves
-  its fractional cloud offset through rewind; the remaining act-2 sequence is still in progress.
+  its fractional cloud offset through rewind. Its post-defeat floor patch and
+  emerald-dependent presentation camera movement also survive rewind; the remaining
+  act-2 sequence and complete-route validation are still in progress.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
@@ -149,10 +168,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   their intended face; the lightning shield protects you while other shields do not.
 - **S3K The Doomsday Zone:** the Master Emerald palette cycle and boss flash colors now
   read their script, destinations and color words from the ROM; rewind preserves the shared
-  emerald script cursors. The emerald starts following Sonic on the boss exit
+  emerald script cursors and child creation coordinates through boss-graph recreation. The emerald starts following Sonic on the boss exit
   signal immediately and survives rewind after the ship disappears. Doomsday is now playable. Sonic falls in, transforms (Hyper with
-  all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
+  all Super Emeralds, with the ROM-backed trailing stars on the Super branch) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.
+  Background scroll words now retain integer-pixel wrapping, preventing thin black seams
+  where widescreen rendering repeats the native background plane.
   Asteroids shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
   or ramming costs speed. The end boss runs both phases: turrets, launchers, missiles that can
   be steered back into the ship, the chase with bombs, rockets and the Master Emerald, the
@@ -467,7 +488,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   intact during art loading and redraw in order, including widescreen margins.
   The independent exit follower
   survives boss retirement and rewind. Mechanism state survives kept
-  stage returns, and object graphs—including promoted collapsing platforms—reconstruct
+  stage returns, retained-plane rewind preserves captured palette ownership,
+  and object graphs—including promoted collapsing platforms—reconstruct
   across rewind using stable object and player identities. Live rewind preserves
   the host audio clock across repeated death/reloads. Sonic 2 and S3K companions
   copy the leader's collision plane and art priority when flight recovery ends,
@@ -480,7 +502,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
-  loading, including the ROM’s `$1701` level identity. MHZ end-boss debris
+  loading, including the ROM’s `$1701` level identity. Offscreen giant rings wait
+  for art-queue capacity when wider visibility overlaps startup loading. MHZ end-boss debris
   retains the ROM trajectory when the boss faces left, and Madmole’s submerged
   body keeps its final collision position until the ROM’s deferred deletion.
   Cutscene doors retain their lowered state when streamed out and back in, and
@@ -488,9 +511,19 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   camera limits use the locked-on ROM’s height rule for all characters, and
   the Act 1 boss and its thrusters stay alive during offscreen attack phases.
   Its defeat loads the explosion art and finishes the full burst sequence
-  across the signpost handoff.
+  across the signpost handoff. MHZ Act 2 retains the waiting Knuckles controller
+  until its camera trigger opens, allowing the leaf blower to lift Sonic out of
+  the blocked lower entrance. The press actor retires offscreen while its
+  independent lift finishes, restores the level palette, and centers the native
+  leaf span in wider views. The Act 2 endboss survives forward-window admission,
+  and its encounter parts retain explicit lifetime during offscreen phases.
+  Its final-hit acknowledgement, capsule results and ship controllers now retain
+  the correct arena/control ownership through the actual FBZ load. The ship's
+  foreground scroll split draws its body and applies the same tile priority to
+  sprite occlusion. Rewind preserves the arena scroll accumulator and spike subtype.
   Seamless act handoffs retain fixed object owners without duplicates, avoiding
-  a rewind-capture crash after the MHZ signpost.
+  a rewind-capture crash after the MHZ signpost. The first player update also retains
+  one Insta-Shield owner after the handoff, so post-load rewind does not remove a duplicate.
   Complete routes, finales, and continuous replay chains remain gates.
 - **S3K Lava Reef:** Act 2 turbines carry the player around their rotating drums
   and release on a fresh jump press, with separate state for Sonic and Tails and
@@ -500,6 +533,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   debris without resurrecting destroyed parts; launchers retain their in-flight balls.
   The Act 1 miniboss submits its ROM art to the runtime module queue before its
   native arm-extension delay, including the explosion art needed by its children.
+  Its post-results handoff now runs the ROM’s thirteen-step palette ramp and holds
+  the normal lava/crystal palette clock until the camera reaches the native release.
+  Act 2 also draws its ROM-backed Death Egg background sprite, with continuous
+  widescreen entry and preserved art-load/position state on rewind. Finite
+  widescreen foregrounds no longer repeat opposite-edge terrain outside the layout.
   Act 2’s boulder cutscene carries Sonic and Tails into the boss act, preserving
   rings, time and elemental shields. Knuckles’ exit leads into Hidden Palace and
   saves progression. The boss act restores its checkpoint entry and runs the

@@ -28,10 +28,9 @@ import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
  * {@code Draw_delayed_position} is deliberately not modelled: it selects which plane rows the ROM
  * writes next, and an engine that rebuilds the whole plane has nothing to select.
  *
- * <p>Two pieces of stage 0 are <b>not</b> here and are recorded as owed: {@code loc_5711E}, the
- * act-2 Death Egg background sprite the stage allocates into {@code Events_bg+$06}, and the
- * {@code sub_57082} call, whose background camera copies {@code SwScrlLrz} already publishes from
- * the same arithmetic.
+ * <p>The event owner allocates {@code loc_5711E}'s Death Egg sprite before advancing stage 0.
+ * {@code SwScrlLrz} publishes {@code sub_57082}'s scroll word and background camera copies;
+ * the sprite consumes those words without duplicating the deformation arithmetic.
  */
 public final class Lrz2BackgroundStageMachine {
 

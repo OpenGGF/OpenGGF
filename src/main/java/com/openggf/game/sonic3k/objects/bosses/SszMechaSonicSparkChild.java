@@ -20,6 +20,7 @@ import java.util.List;
 public final class SszMechaSonicSparkChild extends AbstractObjectInstance
         implements SpawnCoordinateRewindRecreatable {
     private int parentSlot = -1;
+    private int subtypeOffset;
     private boolean alternate;
     private boolean visible;
     private boolean flipped;
@@ -30,6 +31,10 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
     }
 
     static void spawnFor(ObjectServices services, int parentSlot, int x, int y) {
+        spawnFor(services, parentSlot, x, y, 0);
+    }
+
+    static void spawnFor(ObjectServices services, int parentSlot, int x, int y, int subtype) {
         var manager = services.objectManager();
         if (manager == null) return;
         int slot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(manager, parentSlot);
@@ -38,6 +43,7 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
             var child = ObjectConstructionContext.with(services, slot,
                     () -> new SszMechaSonicSparkChild(x, y));
             child.parentSlot = parentSlot;
+            child.subtypeOffset = subtype;
             ObjectLifetimeOps.addDynamicAtReservedSlot(manager, child, slot);
         } catch (RuntimeException | Error failure) {
             manager.releaseDynamicSlot(slot);
@@ -70,7 +76,7 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
         }
         services().playSfx(Sonic3kSfx.MECHA_SPARK.id);
         alternate = !alternate;
-        int row = Sonic3kConstants.SSZ_MECHA_SPARK_OFFSETS_ADDR + (alternate ? 4 : 0);
+        int row = Sonic3kConstants.SSZ_MECHA_SPARK_OFFSETS_ADDR + subtypeOffset + (alternate ? 4 : 0);
         try {
             var reader = services().romReader();
             int dx = (byte) reader.readU8(row);

@@ -84,10 +84,13 @@ public final class Sonic3kObjectArtKeys {
     public static final String HPZ_KNUX_BOSS_DUST = "hpz_knux_boss_dust";
     /** ObjDat3_664FA / ObjDat3_6652A: Map_KnuxFinalBossCrane over ArtKosM_KnuxFinalBossCrane. */
     public static final String KNUX_FINAL_BOSS_CRANE = "knux_final_boss_crane";
+    /** ObjDat3_7D45C: Map_RoboshipPieces over the ship's ROM Nemesis art. */
+    public static final String SSZ_CRANE_SHIP_DEBRIS = "ssz_crane_ship_debris";
     /** ObjDat3_6653C: Map_LRZ3Platform over level tiles, palette 2. */
     public static final String LRZ3_PLATFORM_DEBRIS = "lrz3_platform_debris";
     public static final String LRZ_END_BOSS = "lrz_end_boss";
     public static final String LRZ3_AUTOSCROLL = "lrz3_autoscroll";
+    public static final String LRZ2_DEATH_EGG_BACKGROUND = "lrz2_death_egg_background";
     public static final String LRZ3_DEATH_EGG_FLASH = "lrz3_death_egg_flash";
     public static final String LRZ3_PLATFORM = "lrz3_platform";
     public static final String HPZ_COLLAPSE_BLOCK = "hpz_collapse_block";
@@ -511,6 +514,7 @@ public final class Sonic3kObjectArtKeys {
     /** ObjDat3_664AA: Map_SSZDeathEggSmall over ArtKosM_SSZDeathEggSmall, palette 3. */
     public static final String SSZ_LAUNCH_RAMP = "ssz_launch_ramp";
     public static final String SSZ_DEATH_EGG_SMALL = "ssz_death_egg_small";
+    public static final String SSZ_DEATH_EGG_CLOUD = "ssz_death_egg_cloud";
     /** ObjDat_SSZCutsceneButton: Map_Button over ArtTile_SSZCutsceneButton (ArtNem_GrayButton). */
     public static final String SSZ_CUTSCENE_BUTTON = "ssz_cutscene_button";
     /** Obj_SSZCutsceneBridge: Map_SSZCollapsingBridge over ArtTile_SSZMisc+$20, palette 2. */
@@ -539,8 +543,13 @@ public final class Sonic3kObjectArtKeys {
 
     /** {@code ArtUnc_MechaSonic} DPLC'd through {@code DPLCPtr_MechaSonic} over {@code Map_MechaSonic}. */
     public static final String MECHA_SONIC = "mecha_sonic";
+    public static final String MECHA_SONIC_PIECES = "mecha_sonic_pieces";
     /** {@code ArtKosM_MechaSonicExtra} over {@code Map_MechaSonicExtra}. */
     public static final String MECHA_SONIC_EXTRA = "mecha_sonic_extra";
+    public static final String SSZ_ENDING_ISLAND_MASK = "ssz_ending_island_mask";
+    public static final String SSZ_MASTER_EMERALD = "ssz_master_emerald";
+    public static final String MECHA_SONIC_SUPER_EFFECTS = "mecha_sonic_super_effects";
+    public static final String MECHA_SONIC_CHARGE = "mecha_sonic_charge";
     public static final String MECHA_SONIC_SPARKS = "mecha_sonic_sparks";
     /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */
     public static final String SSZ_FLOATING_PLATFORM = "ssz_floating_platform";
@@ -557,6 +566,7 @@ public final class Sonic3kObjectArtKeys {
     // DDZ badniks
     public static final String DDZ_EGG_ROBO = "ddz_egg_robo";
     /** {@code Map_DDZMissileAsteroid} over {@code ArtKosM_DDZMisc}. */
+    public static final String DDZ_SUPER_STARS = "ddz_super_stars";
     public static final String DDZ_MISC = "ddz_misc";
     /** {@code Map_BossMasterEmerald} over {@code ArtKosM_BossMasterEmerald}. */
     public static final String DDZ_MASTER_EMERALD = "ddz_master_emerald";

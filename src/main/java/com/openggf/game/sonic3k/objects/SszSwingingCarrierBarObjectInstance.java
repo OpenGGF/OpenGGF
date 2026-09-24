@@ -113,6 +113,11 @@ public final class SszSwingingCarrierBarObjectInstance extends AbstractObjectIns
         killed = true;
     }
 
+    // loc_462B6 deletes only after the arc signals routine=$FF. Its swinging tip
+    // may leave the load window while the hub remains active; generic culling removed the
+    // bar early and left the arc with a dangling reference during rewind capture.
+    @Override public boolean isPersistent() { return true; }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (tryServices() == null) {

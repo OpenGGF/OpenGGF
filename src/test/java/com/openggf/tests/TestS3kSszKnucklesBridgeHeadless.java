@@ -61,9 +61,11 @@ class TestS3kSszKnucklesBridgeHeadless {
     @Test
     void theSpawnerBeamsKnucklesInAfterNinetySixFrames() {
         HeadlessTestFixture fixture = boot(320);
-        // Frame 1 is Obj_57C1E's init pass. AllocateObjectAfterCurrent runs the spawner in that
-        // same pass, so its $60 counter reaches zero on frame $60.
-        fixture.stepIdleFrames(SPAWNER_DELAY - 1);
+        // Obj_57C1E's setup-only initial pass also runs its forward-allocated
+        // spawner once. The runner counts ordinary passes, so consume that first
+        // pass explicitly and leave one of the native $60 decrements outstanding.
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        fixture.stepIdleFrames(SPAWNER_DELAY - 2);
         assertNull(knuckles(), "Obj_CutsceneKnuckles not yet allocated");
 
         fixture.stepIdleFrames(1);
@@ -81,7 +83,7 @@ class TestS3kSszKnucklesBridgeHeadless {
     @Test
     void theCutsceneReleasesTheBridgeAndOpensTheAct() {
         HeadlessTestFixture fixture = boot(320);
-        // SSZ1_ScreenInit runs in frame 1's pre-physics pass.
+        // SSZ1_ScreenInit runs before the setup-only initial sprite pass.
         fixture.stepIdleFrames(1);
         SszZoneRuntimeState state = state();
         assertEquals(-1, state.eventsBgByte(0x05),
@@ -97,6 +99,10 @@ class TestS3kSszKnucklesBridgeHeadless {
             fixture.stepFrame(false, false, false, right, false);
             if (buttonFrame < 0 && state.eventsBgWord(0x08) != 0) {
                 buttonFrame = frame;
+                // Read-only native movie observation, 2026-09-24: loc_658F2
+                // reaches ($3A0,$C64). $2A8 is the start of the leap, not its end.
+                assertEquals(0x3A0, knuckles().getX(), "native Knuckles button landing X");
+                assertEquals(0xC64, knuckles().getY(), "native Knuckles button landing Y");
             }
             if (buttonFrame >= 0 && state.eventsBgByte(0x05) == 0) {
                 bridgeFrame = frame;

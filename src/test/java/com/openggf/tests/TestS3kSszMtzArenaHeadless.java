@@ -125,6 +125,8 @@ class TestS3kSszMtzArenaHeadless {
         assertEquals(ARENA_Y, camera.getY() & 0xFFFF,
                 "loc_5775C gates on Camera_Y_pos == $380 exactly, which the ease at two pixels a "
                         + "frame has to land on");
+        assertTrue(state.arenaMask().requested(), "approved replica event explicitly activates shared mask");
+        assertTrue(state.arenaMask().intensity() > 0, "mask advances in gameplay, not drawing");
         assertEquals(BOSS_FIGHTING_WORD, state.eventsBgWord(EV_MTZ_BOSS),
                 "move.w #$7F00,(Events_bg+$02).w");
         assertEquals(0, state.eventsBgByte(EV_MTZ_LOCK),

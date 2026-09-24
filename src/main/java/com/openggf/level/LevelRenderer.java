@@ -1010,8 +1010,19 @@ public final class LevelRenderer {
     }
 
     private void applyForegroundScrollFeatures(TilemapGpuRenderer tilemapRenderer) {
+        // Native cameras hide finite layout edges behind their 320px bounds; the
+        // Genesis nametable itself wraps. Widescreen can expose those hidden edges
+        // (e.g. a centered arena carried into a seamless act's negative camera X).
+        // Do not sample unrelated far-end terrain there. This affects rendering only:
+        // native boundary words, player walls and intentional foreground rings remain.
+        com.openggf.graphics.TilemapGpuRendererInternalAccess.setClipHorizontal(tilemapRenderer, lm.camera.getWidth() > 320
+                && foregroundPlaneSource(currentAdvancedRenderFrameState) == TilemapGpuRenderer.Layer.FOREGROUND
+                && (lm.zoneFeatureProvider == null || !lm.zoneFeatureProvider.foregroundWrapsHorizontally()));
         tilemapRenderer.setForegroundWindow(lm.zoneFeatureProvider == null
                 ? null : lm.zoneFeatureProvider.foregroundWindow());
+        com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundVerticalScrollSplit(tilemapRenderer, lm.zoneFeatureProvider instanceof
+                com.openggf.game.internal.ForegroundVerticalScrollSplit owner
+                ? owner.foregroundVerticalScrollSplit() : null);
         if (currentAdvancedRenderFrameState.enableForegroundHeatHaze()
                 || currentAdvancedRenderFrameState.enablePerLineForegroundScroll()) {
             tilemapRenderer.enablePerLineForegroundScroll(pendingFgHScrollView);
@@ -1207,6 +1218,11 @@ public final class LevelRenderer {
             lm.graphicsManager.registerCommand(disableWaterShaderCommand);
         }
 
+        // Explicit opt-in only; world masking precedes every HUD layout and title overlay.
+        if (options.hasGameplayPass() && GameServices.zoneRuntimeState()
+                instanceof com.openggf.game.internal.ArenaMaskSource source) {
+            com.openggf.graphics.ArenaMaskRenderer.enqueue(lm.graphicsManager, source.arenaMask());
+        }
         profiler.beginSection("render.hud");
         if (options.includeHud() && lm.hudRenderManager != null
                 && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())

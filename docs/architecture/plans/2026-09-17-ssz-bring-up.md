@@ -2536,3 +2536,970 @@ with Java21/absolute S3K ROM passes1364 cases, no failures/errors/skips, includi
 1294 every-object recreation checks. Together with the19 foundation cases this
 validates the bounded camera/state change, not the unfinished act2 presentation
 or full campaign suite.
+
+### Act-2 encounter deformation, 2026-09-23
+
+After `b6c1147a2`, the new act2 composer transcribes sub_58D3E's longword
+scroll/drift scatter, the128-word horizontal wave, the16-word vertical wave,
+and loc_58F46's overlapping20-word forward copy. The shared table is captured
+in SszZoneRuntimeState rather than rebuilt from only the final columns. The
+foreground band heights at ROM $58C80 are read through the ROM reader.
+ApplyFGDeformation publishes the high half of H_scroll_buffer; loc_59036
+replaces only the visible $100..$17F BG window. A registered foreground mode
+makes the renderer consume these per-line FG values.
+
+Special_V_int_routine gates the BG column array; the FG remains at camera Y.
+The default act1 launch-column getter stays excluded. Wider views preserve all
+20 native columns and currently continue the last column's offset beyond them,
+a declared presentation extension instead of reading unrelated RAM. This needs
+visual inspection, especially the inherited native overlapping-copy edge.
+Encounter stages below $C are implemented; ending redraw/deformation branches
+remain outside this checkpoint. Numeric, replay and rendered checks are pending.
+
+
+Rendered checkpoint: cold solo Knuckles, neutral input,720 frames at320/800,
+under `~/Videos/OGGF/ssz-bring-up/campaign-20260923-act2-01-320` and
+`campaign-20260923-act2-02-800`. Both MP4s decode completely, no deaths; all720
+CSV rows agree exactly. Frames70/300/600 world crop x[0,320),y[52,190) has no
+pixel differences across widths (HUD pixels above it intentionally shift).
+Native300/600 and wide600 were inspected. This establishes width preservation
+and engine rendering, not native-console visual parity. The pink crane is still
+unimplemented. Each archive contains provenance with the rendered class hashes.
+The22-case arithmetic/camera/arrival selection passes without failures or skips;
+the public-handler rerender/registry-restore cases and mandatory S3K consumers
+are queued separately. No complete act-2 route claim follows.
+
+Next crane source audit: `Obj_KnuxFinalBossCrane` is the placed `$B2` root;
+`loc_7CA3A` waits for Player1 airborne before showing the ship, allocating head,
+claw and flame, then `loc_7CAAA` moves left at-$80 to X<$120. Shared `_unkFAB8`
+bits0/1/2/3 coordinate lower, chase, grab and lift; `loc_7CD42` increments a BYTE
+height (the high byte at y_vel), unlike HPZ's word+$80 crane motion. Do not reuse
+the HPZ crane movement verbatim. Claw children use `ChildObjDat_66610`'s same
+mappings and priorities. At return X>=$120, a59 decrement-to-zero wait starts
+FinalBoss music, freezes scrolling, allocates `loc_7D11C` then Mecha, and saves
+Mecha's slot in `_unkFAA4`. The pan adds1 to camera/current min/max X through$100
+before setting bit4. Mecha's act2 init must use($220,$4A0), routine2, and skip
+act1's offscreen sprint/music. Release (`loc_7CC3A`) and ship destruction are
+range checks against that actual Mecha slot; controller-only tests must cover
+these handshakes before calling the crane sequence complete. Existing crane
+art declarations belong to HPZ; verify SSZ availability when registering$B2.
+
+
+Native follow-up found and localized a missing island (not an arithmetic error).
+`native-act2-20260923/run1` replays the actual Knuckles movie without RAM writes;
+BizHawk2.11 completes with no host failures in177.493s. Frames412502/412571/
+412801/413101/413501/414001 all report `$A01`, camera Y1601/1065/1024/1024/1024/1024
+and camera X0/0/0/0/161/256. The entry state at412502 is saved for later crane
+work. Movie SHA256 `AA892856DF22B7BB1FE5ACCB48DB10B90DC26845D1DCCEE90352DA30349F53CC`;
+ROM SHA1 is the canonical locked-on image. `host.json` records exporter/plan hashes.
+
+An isolated calculator check (no gameplay boot or player hydration) passes native
+camera copies, old HScroll longword (observed value minus$1000), cloud offset,
+swing and routine gates into `SszAct2Deformation`. At all six observations every
+written intermediate word ($004..$196, excluding unwritten$04E) and all224 packed
+HScroll-buffer scanlines match RAM exactly. This validates the arithmetic at
+those source states, not engine timeline parity. The movie inherits a nonzero
+HScroll drift from HPZ; direct cold entry starts fresh, so screenshots do not have
+identical cloud phase and must not be claimed pixel-identical to native.
+
+Native frame412801 shows the island missing from engine frame300. VRAM decoding
+locates it on high-priority Plane B (example descriptor$C100) over Plane A's low
+opaque sky (example$6006). New SSZ2-specific effect registration uses the existing
+BG-high replay plus low-sprite mask; the shared replay now captures column VScroll
+so it samples the same wave as the main pass. Rejected engine captures01/02 remain
+width-consistency evidence but not acceptable complete-background presentation.
+New captures and priority checks are pending.
+
+The first public-handler restore check ran too early at idle frame80, before the
+arrival settled the Y bounds and enabled column VScroll. It failed its non-null
+column assertion at both widths; moving the setup to production frame300 tests
+the intended gate. The same completed run passes all five arithmetic cases and
+all59 mandatory S3K consumer cases without skips (68total, two harness failures).
+Revised restore and priority selections are queued; no green claim for them yet.
+
+
+Crane native boundary observations are now in `native-act2-20260923/crane`
+(read-only replay from the entry state,1598 movie frames, host completes in2.92s).
+Root slot$B32E enters flight at412636, reaches X<$120 at412829, starts chasing
+at412876, carries after the grab at413078, returns to X$120 at413281, and starts
+the camera/Mecha pair at413340. The59-to-zero wait is therefore59 updates.
+Camera completion/flag4 occurs at413597:256 increments followed by the next
+comparison/release pass, not a256-update whole pan. Slot$B250 is the actual Mecha
+parent used for the root's range checks. Flag5/player release triggers at413754;
+player control is restored by413838. These are observations of this BK2, not
+frame gates for production. `crane-events.csv` logs recognized routine changes;
+root_slot0 at413774 means the address whitelist stopped recognizing Wait_Draw,
+not that the ship had already been deleted. The exporter has no RAM writes.
+Entry-state SHA256 `DDE60CDF87B78496EAFA7743AC970D861F4794F3310AF6D8DFEAB975FD7EFC10`.
+
+
+Native boss reference now covers both eight-hit phases through the pre-ending
+stop: `native-act2-20260923/boss-confirmed` completes with no host failures
+in6.425s,169 change rows and58 images. First-phase defeat is movie414879;
+Super-phase entry415644; second defeat419283; save/control stop code loc_7BCFC
+begins419725 with timer119. The sampler stops at timer0 on movie419846, before
+the following update would enter the excluded ending. Movie-frame differences
+include lag and are not update counts. The Super-entry image shows the Master
+Emerald and changed boss palette; the cold-stop image is white, consistent with
+the preceding palette fade (not a substitute for earlier fight images).
+The initial `boss` pass read Events_fg_4 at the wrong address$EEC8; the listing
+places it at$EEC4. The corrected pass has identical other fields and stop frame;
+only `boss-confirmed` is authoritative for that signal. Exporters are preserved
+beside the native captures, with input/exporter hashes in each host receipt.
+This is reference evidence for the remaining implementation, not engine fight
+completion. Native registration also confirms `Obj_RobotnikHead3Init` calls
+sub_67B14 for Knuckles; SSZ2 needs EggRobo head art/animation rather than copying
+HPZ's current Robotnik-head consumer unchanged.
+
+
+Crane implementation checkpoint (2026-09-23, development tree after `b6c1147a2`):
+`SszCraneCameraPan` transcribes loc_7D11C/loc_7D134 (256 increments from zero,
+then a separate release/signalling update). It preserves Y and the parked
+horizontal history delay when clearing Scroll_lock. `SszCranePlayerRelease`
+transcribes loc_7CC3A/loc_7CC68/loc_7CCB0: init falls through to the first $400/$80
+movement, reaching _unkFAB6 starts the six-update pose delay, and MoveSprite
+adds old velocity before $38 gravity during that delay. Player word-position
+writes preserve player subpixels. SSZ2 now plans the ship, crane and four-frame
+EggRobo head sheets through the ROM art registry. These components are not yet
+wired into the crane graph, so this does not unblock the fight.
+
+New focused tests cover the pan's release boundary, unchanged Y/history delay,
+recreation and forward replay; player-release pose/gravity timing and replay;
+and ROM decoding/mapping bounds for all three art sheets. Commands submitted
+through the shared Maven queue (Java 21 and the absolute S3K ROM property):
+`-Dtest=TestSszCraneCameraPan,TestSonic3kPlcArtRegistry#sszAct2CraneGraphHasRomBackedSheetsIncludingKnucklesHead+sszPlanHasEggRobo test`
+and `-Dtest=TestSszCranePlayerRelease test`. Both are pending, as is the earlier
+priority/rewind selection; no compilation or test pass is claimed for these
+new components. Next: consume those results, repair as required, wire the
+source-ordered crane children/flags and act-2 Mecha branch, and recapture the
+island priority fix at native and wide widths.
+
+
+Act-2 Mecha entry is now transcribed in the same development tree: loc_7B2DC
+keeps routine2 and sets ($220,$4A0), omitting act1's sprint/trails/music child.
+loc_7B3AC waits for crane bit4, then writes the box from the completed camera
+pan, seeds attack counter2, and enters the shared loc_7B57A attack animation.
+The focused entry test exercises both sides of that signal and recreation;
+the existing act1 Mecha suite is selected alongside it to guard the shared
+init/dispatch change. Queued command: `-Dtest=TestSszAct2MechaEntry,TestS3kSszMechaSpawnHeadless test`.
+The player-release tests additionally use the real act2 floor to check landing
+at ($220,$4AC) and velocity/control release, matching the native crane reference.
+All new selections remain pending; crane allocation, first-defeat act2 branch,
+transformation and Super fight remain required before route completion.
+
+
+Completed checks at this checkpoint: the priority/deformation selection compiled
+and ran20 tests, with18 passes, two rewind-harness failures and no skips. All11
+native/arithmetic deformation cases, four overlay-pool cases and act2 effect
+registration passed. The two restore comparisons captured an invented future
+render clock; the registry post-restore callback correctly recomposes at the
+captured LevelManager clock. The test now uses that actual clock (and expects a
+drift increment only when it differs from the last rendered frame). Its narrow
+rerun is queued; production scroll behavior was not changed to accommodate it.
+The crane camera/art selection completed4 tests with no failures/errors/skips,
+including native boundary timing, rewind/recreation and decoding all three ROM
+sheets. Player-release and Mecha-entry selections remain pending.
+
+Corrected presentation captures are now `campaign-20260923-act2-03-800` and
+`campaign-20260923-act2-04-320` under the SSZ capture root. Both720-frame MP4s fully
+decode; all720 state rows match between widths. World crop (0,52)-(320,190) is
+pixel-identical at70/300/600. Frame300 visibly contains the floating island that
+01/02 lost behind low-priority sky. External provenance includes compiled-class
+hashes, dimensions and checks. These captures still contain the crane placeholder
+and unfinished palette/encounter work, so they are progress evidence only.
+
+
+Claw graph checkpoint (same development tree): `SszCraneClaw` now transcribes
+loc_7CCFE..loc_7CE66, with its source-ordered ChildObjDat_66610 pair in
+`SszCraneClawPart`. The parent3 graph uses object identities for rewind, while
+subclass scalars use generic capture. The lowering byte increments by one;
+grab uses [x-$C,x+$C), except x<=8; raising signals bit3 on the signed-byte
+underflow pass, not merely at zero; carry begins after the grab pass and stops
+at shared bit5. Native priority words are0 for the main claw, $280 for its
+front sprite and $180 for the cable. The cable uses unadjusted parent position
+and does not inherit horizontal flip.
+`TestSszCraneClaw` covers the movement/grab/raise/release edges, child allocation,
+parent-link recreation and forward replay. Its queued command is
+`-Dtest=TestSszCraneClaw test` with Java21 and the absolute S3K ROM path. No pass
+is claimed yet. The owning ship (including head/flame, source-ordered camera
+and Mecha allocation, native range checks and destruction) remains to be wired;
+these components alone do not replace the placed $B2 placeholder yet.
+
+
+Placed crane wiring checkpoint (2026-09-23, still unverified development code):
+SKL $B2 now instantiates `SszCraneShip`. Its loc_7CA3A..loc_7CC26 state machine
+preserves flag-test fallthrough, Swing_UpAndDown's limit arithmetic, the59-update
+return wait, independent lowest-free camera/Mecha allocations, the last searched
+SST on Mecha allocation failure, signed half-open Check_InMyRange checks, and
+Wait_Draw's final draw before next-pass deletion. Head/flame and four ship debris
+children have ROM mappings and native buckets; subtype0 uses the existing
+ROM-backed Obj_CreateBossExplosion implementation. The claw's Go_Delete_Sprite
+retirement now publishes a retiring-parent signal and retires next pass.
+
+`SszCraneArtRequest` submits the crane/head Kosinski modules through the physical
+queue and timing coordinator, retaining its ordinal for rewind. The one-entry
+raw ship PLC is read at $7CA32 and applied/refreshed through Sonic3kPlcLoader's
+existing Nemesis path. Dedicated object sheets remain ROM-backed registry entries.
+The new Map_RoboshipPieces entry is $7D6D8 with four frames; the focused art
+selection now includes that sheet too. Native head init temporarily writes
+bucket5 before later Child_GetPriority copies; the flame stays bucket5 and
+inherits the ship's high art bit (SetUp_ObjAttributes3 never clears it).
+
+`TestS3kSszCraneRouteHeadless` starts Knuckles cold with neutral input at widths
+320/800 and requires actual placement, grab, camera completion, floor release
+at ($220,$4AC) and a live Mecha. Queued selection:
+`-Dtest=TestS3kSszCraneRouteHeadless,TestSszCranePlayerRelease,TestSonic3kPlcArtRegistry#sszAct2CraneGraphHasRomBackedSheetsIncludingKnucklesHead test`.
+An earlier player-release command was admitted while the ship's companion source
+files were still being added; compilation failed on their then-missing symbols,
+so it produced no test result. Those files now exist and the above selection
+includes the affected tests. The other queued selections are still live. No
+cold-route pass, full crane verification or Super-phase completion is claimed.
+
+
+Verification update: `TestS3kSszKnucklesArrivalHeadless` now passes4 cases with
+zero failures/errors/skips after aligning the captured render clock. The
+Mecha selection runs25 cases: new act2 entry passes,23 act1 cases pass, and the
+S1-donor launch errors before boot because the invocation omitted its required
+`sonic1.rom.path`. The canonical root S1 ROM SHA1 was verified as
+69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B. Only that donor case is queued again,
+alongside the domain-required ROM mapping and renderer corruption guards:
+`-Dtest=TestS3kSszMechaSpawnHeadless#sonicOneDonorCompletesTheLaunch,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard test`
+with absolute S1/S3K paths. The claw and cold crane-route selections remain
+live; do not infer a route pass from the entry/component checks.
+
+
+Crane route results: `TestSszCraneClaw` passes2 cases; the cold-route/release/art
+selection passes5 cases (two cold routes at320/800, two release cases, one
+four-sheet ROM mapping/decode case), all with zero failures/errors/skips.
+This establishes cold arrival through the crane's floor/control handoff and
+Mecha entry; it does not establish either boss defeat or the Super phase.
+
+
+The donor/art-guard selection now passes4 cases with zero failures/errors/skips,
+including the previously missing-ROM S1 launch case and mandatory mapping/render
+corruption checks. The cold route test has additionally been extended to capture
+at the grab, restore the full registry after floor release and replay the exact
+same number of updates; that added graph-level replay assertion is queued.
+
+Progress movie `campaign-20260923-act2-05-crane-800` records1500 neutral frames,
+no death rows, and fully decodes. Stills600/1350 were inspected: the former shows
+Knuckles carried by the crane, the latter the released player with first-phase
+Mecha on the arena. External provenance records compiled-class hashes. The floor and boss colours were initially flagged for native comparison. The
+subsequent native `run1/f414001.png` shows the same yellow-green floor and purple
+first-phase Mecha; its CRAM bytes32–63 exactly match ROM `$7D850..$7D86F`.
+That suspected palette defect is rejected. This movie demonstrates the handoff,
+not finished act2 presentation or boss completion; Super palette cycles remain open.
+
+
+The extended cold-route rewind test also passes both widths, zero skips:
+capture at grab, restore after floor release, then forward replay reproduces
+player position/control, camera X, complete SSZ runtime bytes and one live
+Mecha. This covers the real ship/head/flame/claw/parts graph and its handoff.
+
+
+First-defeat allocation correction: `sub_7D35A` creates subtype4 of
+`Child6_CreateBossExplosion`, not the single generic explosion previously
+called by Mecha. The existing SSZ forward-allocation worker now reads a
+semantic parent stop flag, shared with MTZ: Mecha raises native `$38` bit5
+on landing. Failed allocation consumes no RNG; parent stop schedules deletion
+for the following pass. Focused allocation/entry/act1 regression tests are
+queued; results remain pending. This does not yet implement act2 transformation.
+
+
+The initial explosion-only Maven request was cancelled while waiting for
+admission (exit130, no compilation or tests), to batch the connected first-defeat
+charge graph. `loc_7B8E6` now branches away from act1 results, waits `$BF+1`
+dispatches, then `loc_7B996` resumes the HUD timer, requests DDZ music and submits
+the ROM Master Emerald KOS module at `$17FCBA` to tile `$52E`. The reusable
+SSZ module request retains its rewind-captured ordinal. `loc_7C886` reads
+`byte_7D668` from ROM, clears the parent bit only on the animation callback,
+then follows the standing frame until it changes. Its mapping uses tiles
+`$71..$74`, within the existing139-tile MechaExtra art. A separate palette1
+sheet binds the verified21-frame prefix rather than the invalid full27-frame
+map. The new graph regression covers the first-defeat wait, child gate,
+full-registry restore during charging and deterministic callback replay.
+The following rush/emerald jump/Super graph remains unfinished.
+
+Queued focused selection: `TestSszBossExplosionAllocation,TestSszAct2MechaEntry,
+TestS3kSszMechaSpawnHeadless,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits`,
+with absolute canonical S1/S3K ROM paths. Results pending.
+
+Native corroboration from `boss-confirmed/boss-events.csv` (comparison-only):
+first defeat414879, fall415007, landing/routine8 at415008, charge/routineA at415200,
+standing/routineC at415319, spin-up/routineE at415328. Thus the native wait is
+192 dispatches, the child-controlled interval119 and the standing animation9.
+The implementation derives these from timers/scripts rather than movie frame
+indices. No trace rows hydrate engine state.
+
+The same queued selection now also includes component cases for the next
+transition: `SszMechaArenaPan` models `loc_7C9E8` (init-only lock, then six-pixel
+steps with P1 velocities cleared, final clamp without release), and
+`SszMasterEmerald` models `loc_7C818` / `off_7DD5A` (native position/frame,
+all-Super-Emerald palette gate, object-local script counters and `_unkFAA2`
+retirement). Both have rewind/forward-replay assertions. The added `_unkFAA2`
+state is captured in SSZ runtime bytes. These two components are not yet spawned
+by the incomplete routineE rush: wiring them and the jump/transformation/Super
+dispatch is the next implementation step. Neither component is claimed verified
+until the queued test result is inspected. `SszCraneArtRequest` was renamed
+`SszRuntimeArtRequest` as the same KOS module submission now serves Mecha too.
+
+Charge/component selection completed34 cases,33 passed,1 failure,0 skips.
+The failed case read the emerald's submitted palette before resolving the normal
+frame-write queue (`applyContiguousPatch` deliberately defers publication).
+The component harness now brackets each update with `beginFrame`/`resolveInto`;
+production palette behavior was not changed for that assertion. All24 existing
+act1 Mecha cases, the three explosion cases, camera pan, charge graph/rewind,
+and the expanded ROM mapping guard passed.
+
+A separate source review corrected `sub_7D35A`'s timer side effect: generic
+`commitDefeat` adds score but does not pause the timer; Mecha must call its
+existing timer-stop helper itself. The test now asserts pause on first defeat
+and resume at `loc_7B996`. The earlier comment claiming the base paused it was
+wrong and is replaced.
+
+The routineE rush now allocates the Master Emerald and six-pixel pan in native
+free/forward slot order, locks P1 input, opens maxX by `$140`, and runs through
+the `$600` dash, `$30` deceleration, flip-aware jump and emerald landing.
+`loc_7BB20`'s FA82..FA8E attack positions preserve the existing first-two-word
+aliases and capture the additional words for rewind. Landing installs the
+`word_7D9EA` palette and subtype8 sparks. Continuous SFX requests follow
+`Play_SFX_Continuous`'s **V_int_run_count low-nibble** gate, not elapsed updates.
+The routine18 forced-player run and Super dispatch remain open.
+Queued follow-up: `TestSszAct2MechaEntry,TestSszBossExplosionAllocation,
+TestS3kSszMechaSpawnHeadless` with canonical absolute S1/S3K ROM properties.
+This extends the charge test through rush/skid/jump/emerald landing.
+
+Next palette requirement, verified against `Run_PalRotationScript` / `sub_859CE`:
+Mecha's first-defeat and initial transformation tables use parameter0/infinite
+repeat; the Super tables `$7DA60`, `$7DB66`, `$7DC06` use parameter1 and the
+negative loop command to advance to a relative header after one sequence.
+`$7DC7E` uses the custom-run command; its callback is `loc_7C654`, setting
+routine`$42`. Preserve byte counters, the same-pass first write of the new
+header and custom-call's skipped write. The current repeating-only interpreter
+must be extended before claiming Super attack correctness.
+
+`SszMechaPalette` now interprets that single installed entry, including signed
+relative header jumps and the custom callback. The selected regression class
+also tests42/24/18-update command boundaries, same-pass new-header publication,
+restore/replay and custom-call's skipped colour write. Existing first-defeat
+and emerald-landing code now install the original ROM table headers rather
+than maintaining a repeating-only data pointer. Results remain pending.
+
+The shared dispatch review also found an act1 timer mismatch: routine4 is
+`loc_7B93E` (palette + animation), not `loc_7B984` (plus Obj_Wait, routine8).
+The boss's unused119 timer must remain unchanged while its independent handover
+child counts down. Removed the extra decrement and extended the existing
+act1 palette/defeat test to assert that distinction.
+
+
+Transformation checkpoint (2026-09-23, `b6c1147a2` development tree): the prior
+rush selection completed35 cases,33 passed,2 failed,0 skipped. The landing
+expectation rounded `$33D.C000` up to `$33E`; corrected the test to the native
+integer word `$33D` without changing movement. The other failure ran a compiled
+`applyHitAndFlash` that predated its source edit by3.5 seconds (confirmed with
+`javap`), so it did not exercise the new ROM flash writes. Subsequent executable
+edits are batched before submission and frozen until that run terminates.
+
+Queued command through `maven_queue.py`, Java21, canonical absolute S1/S3K ROMs:
+`-Dmse=off -Dtest=TestSszAct2MechaEntry,TestSszBossExplosionAllocation,TestS3kSszMechaSpawnHeadless,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits test`
+completed **37 cases, zero failures/errors/skips**, including the new
+`SszMechaPalette` boundaries and all25 act1 Mecha cases. This supersedes the
+pending rush/palette results above. It verifies component sequencing through
+`loc_7BBE0` player/camera release, `loc_7BDF6` rise, `loc_7BE4E` transformation,
+and `loc_7D09C` screen-flash cadence/target restore with rewind. It is not a
+cold first-defeat route or a complete Super fight result.
+
+The shared hit handler now reads the five-colour flash from the ROM, preserving
+`FixBugs=0`'s eight-byte bright-row displacement (the final dark word overlaps
+the bright row); the fixed source branch would use ten bytes. The previous
+handler advanced the timer without publishing any colours. The screen-flash
+worker brightens at passes0/6/12, restores at42/46/50, then deletes at51;
+it does not disable palette rotation. Normal-to-Target copying precedes the
+allocation attempt, including failure.
+
+Next connected batch: Super crossings (`loc_7BEB0` through `loc_7C062`), raw-slot
+glow and particles, sector selection and the dive/slam motion branches. The
+native movie has16 acceleration dispatches but only15 movement additions:
+`loc_7BF52` changes routine on the speed-cap pass without movement (native
+415801→415817, X831→771). The component assertion uses independently computed
+half-pixel velocity sums. `sub_7D1EA` compares original d0 with$50/$A0 even on
+the right side, selecting sector6 rather than renormalizing to sectors4/5.
+The aim helper preserves signed-word differences and truncated dominant-axis
+slopes from `sub_861D0`, including coincident targets moving along positive X.
+The new crossing/particle replay and aim cases are pending verification.
+Projectile, low-health hover, recharge and final-defeat/cold-stop graphs remain
+open; the first transformation passing does not certify these stages.
+
+
+Crossing checkpoint: queued `-Dtest=TestSszAct2MechaEntry,TestSszMechaAim,TestS3kSszMechaSpawnHeadless test`
+completed **40 cases, zero failures/errors/skips** on the same development tree.
+The connected component now checks the full-speed no-movement pass twice across
+registry restore, glow retirement at dash completion, allocation on both V-int
+parities, and replayed particle RNG/position followed by animation retirement.
+Seven independent aim cases cover signed targets, diagonal/coincident targets,
+truncated slopes and word wrap. The dive/slam routines were compiled in this
+batch but were not selected by the connected crossing case.
+
+Recharge checkpoint: adding `TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits`
+to that selection completed **41 cases, zero failures/errors/skips** at15:22 BST.
+The component seeds RNG once at an attack boundary (`Random_Number(1)=41`),
+then follows production sector selection into the projectile family, all
+recharge routines `$28,$2A,$2C,$2E,$30,$32,$34,$36,$38,$3A`, and routine0 on
+the Master Emerald. Projectile children execute during this sequence. This
+seed is a declared component precondition, not cold-route or frame parity proof.
+The Super dispatcher now contains all36 native table branches; low-health
+hover, radial burst and dive/slam branches still need independent behavior
+and rewind assertions. Final-defeat handling is still incomplete and must not
+be described as delivered.
+
+`SszMechaProjectile` implements charge/aimed laser and radial-orb owners, including
+same-pass animation callback followed by parent refresh, native signed-word aim,
+forward allocation and deferred offscreen deletion. The Super effects sheet
+now admits26 frames: frame$19 uses tiles90..105 inside the139-tile ROM bank;
+frame$1A uses tile147 and remains excluded as a separate VRAM binding.
+The cull window comment documents native320 behavior and its viewport-width
+extension. Allocation-pressure review remains owed: `loc_7C39E` writes subtype8
+through a1 even after failed allocation; the typed implementation currently
+only creates/marks a child when reservation succeeds, while still advancing
+the parent counter. Resolve or explicitly carry that failure-edge discrepancy
+before certifying the complete encounter graph.
+
+
+Final-defeat control checkpoint (2026-09-23, `b6c1147a2` development tree):
+queued Java21 `-Dmse=off -Dtest=TestSszAct2MechaEntry,TestS3kSszMechaSpawnHeadless test`
+with the canonical absolute S1/S3K ROM properties completed **33 cases, zero
+failures/errors/skips** at15:27 BST. The second defeat now takes `loc_7D39E`'s
+arena lock/palette reload, `loc_7B916`'s distinct landing branch,192-pass wait,
+32-pass breakup wait, `loc_85E64` white fade, `loc_7BCB0` ending flag/control/save
+publication and119 remaining passes to the accepted `loc_7BCFC` cold stop.
+The component injects the defeat callback at its declared boundary; it does not
+prove eight real Super-phase hits. It captures mid-fade and replays completion,
+including the owning fade reference, player control and SSZ runtime flags.
+
+The short transformation flash still uses its earlier cadence without disabling
+palette rotation. The final white fade disables rotation, brightens at0,8,..56,
+publishes native status7 before deletion and clears the rotation gate. The boss
+observes the completion on its following earlier-slot dispatch. Both modes are
+recreated from their spawn subtype and retain independent captured counters.
+
+The runtime deliberately holds the accepted cold stop at timer0 rather than
+claiming to execute the separately excluded `loc_5E6C0`/`loc_85EE6` ending
+allocation or Player_mode change; the code documents that original behavior
+and this scoped boundary. **Presentation remains incomplete:** `loc_8642E`
+shake, the three `loc_7CF14` explosion runners and16 `loc_7CE90` breakup pieces
+are not yet allocated. Their omission is not covered by the passing control
+sequence. Native source review confirms breakup pieces preserve `FixBugs=0`'s
+wrong-register negate (`d2` rather than `d1`) when flipped, so their horizontal
+offsets/velocities are intentionally not mirrored. Their sheet must bind the
+last defeated Mecha DPLC bank to `Map_MechaSonicPieces`, not the unremapped raw
+art bank. `SSZ2_ScreenEvent` applies the prior `Screen_shake_offset` to camera Y
+copy before its foreground dispatch; its state/scroll integration remains owed.
+
+
+Second-defeat explosion-source checkpoint (2026-09-23, `b6c1147a2` development
+tree): `loc_7B934` now allocates the three `loc_7CF14` sources with forward
+first-failure semantics. Subtype0 relocates to camera+($A0,$D0), creates the
+finite subtype$C worker and deletes itself immediately. Subtypes2/4 raise Y
+by$30, create subtype$1E workers, then move -2/+2 pixels on subsequent passes
+until strictly outside cameraX-$10 through cameraX+$150. Their creator does not
+own the finite burst's lifetime.
+
+`SszBossExplosionController` now handles the three SSZ-used parameter rows:
+4 (infinite, follow parent, ranges$20/$20), $C (count$40, independent position,
+ranges$80/$20), $1E (infinite, follow parent, ranges$10/$10). The finite count
+decrements before allocation and stops at zero, so there are63 attempts;
+failed reservations consume counts but no RNG. Existing subtype4 behavior is
+unchanged.
+
+Queued Java21/absolute S1+S3K ROM selection
+`-Dtest=TestSszBossExplosionAllocation,TestSszMechaDefeatRunner,TestSszAct2MechaEntry,TestS3kSszMechaSpawnHeadless test`
+completed40 cases with38 passing, one assertion failure and one harness error,
+zero skips. The assertion incorrectly expected boss X for the stationary source
+instead of cameraX+$A0; the mock manager omitted service injection that the real
+manager performs. Corrected those two harness assumptions without changing
+production. The subsequent queued
+`-Dtest=TestSszBossExplosionAllocation,TestSszMechaDefeatRunner test`
+passes **7 cases, zero failures/errors/skips**. The preceding connected graph
+and25 act1 cases remain passing on unchanged executable source. Moving-source
+recreation/forward replay and finite-worker independence/exhaustion are covered;
+partial-prefix three-source allocation pressure and visual corroboration remain
+owed. No full-suite or cold-defeat claim follows from these component results.
+
+Screen-shake research for the next batch: both acts own the same native global
+shake words; `SszLaunchState` already captures them for act1. SSZ2's screen event
+adds the previous offset to Camera_Y_pos_copy before dispatch, and background
+`loc_58D1E` calls ShakeScreen_Setup after deformation. `loc_58E6E` derives BG Y
+from that shaken copy without subtracting the offset. Expose the shared state
+semantically through the SSZ runtime and exercise both foreground VScroll and
+background columns, including same-frame rerender and registry restore. The
+shake and16 Mecha breakup pieces are still absent from final-defeat presentation.
+
+
+Defeat-shake checkpoint (2026-09-23, `b6c1147a2` development tree): the landing
+now allocates `loc_8642E` as an independent plain-allocation rumble owner before
+the three forward explosion sources. The high-byte ST preserves the shake flag's
+low byte; sounds follow V_int_run_count&15. Both SSZ acts share the existing
+captured shake words, exposed semantically on `SszZoneRuntimeState`. Act2 events
+retain the previous offset for the current camera copy, while preparing the
+next offset. Parallax converts physical camera Y to the shaken copy for FG bands,
+FG VScroll and BG deformation/columns; rerendering does not step the clocks.
+
+Queued Java21/absolute ROM selection
+`-Dtest=TestS3kSszKnucklesArrivalHeadless,TestSszAct2Deformation,TestSszAct2MechaEntry,TestS3kSszMechaSpawnHeadless test`
+passes **50 cases, zero failures/errors/skips** at15:38 BST. Added real-game-loop
+checks exercise nonzero shake at320/800, prior-offset consumption, FG/BG values,
+registry restore and forward replay, same-frame rerender and controller retirement
+when the flag clears. They seed the rumble owner; they do not prove cold second
+defeat or native visual shake parity.
+
+New progress capture: `~/Videos/OGGF/ssz-bring-up/campaign-20260923-act2-06-movie-input-800`.
+Cold solo Knuckles,800px, declared Super Emerald progress3333333, historical
+` s3k-knuckles-complete-superemeralds.bk2` controller input from movie index412501;
+no trace/state hydration, no position/ring override. It steps2087 frames, recording
+frames1200..2086; the leader dies at2026. Frame1500 was visually inspected and
+the complete MP4 passes `ffmpeg -v error -i capture.mp4 -f null -`. It shows the
+first Mecha fight only, not the transformation or final shake. `provenance.json`
+records ROM/input identities, dirty base and affected source/class hashes. This
+failed input route remains an investigation target; it is not evidence of a
+specific engine defect or a completed cold fight. Capture rendering and native
+movie-frame clocks are not asserted aligned.
+
+
+Breakup-piece checkpoint (2026-09-23, `b6c1147a2` development tree):
+`loc_7CE90` now creates the sixteen pieces with forward allocation and
+first-failure termination. Their initialization, gravity, alternating draw,
+coarse culling, next-pass deletion and `_unkFAA2` retirement are captured.
+The shipped wrong-register negate leaves horizontal offsets/velocities
+unmirrored even when the parent is flipped; render flip still follows it.
+
+The pieces use `Map_MechaSonicPieces` with the last loaded **frame $E** DPLC
+bank. A frame-$F assumption was rejected before validation: installing script
+`$7D5E4` does not advance the mapping; the second landing switches to `loc_7BC32`,
+which only draws. Frame $E provides thirty contiguous tiles `$1B8..$1D5`;
+frame $F provides only24 and cannot cover the fragment mappings through `$1D`.
+The ROM art test checks every remapped piece against the retained bank.
+
+Queued Java21, absolute S1/S3K ROM paths:
+`-Dtest=TestSszMechaDebris,TestSszAct2MechaEntry,TestS3kSszMechaSpawnHeadless,TestSonic3kPlcArtRegistry#sszMechaPiecesUseTheLastDefeatedDplcBankForEveryFragment+s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits test`
+passes **37 cases, zero failures/errors/skips**, completed15:45 BST. Both parent
+flip states exercise init/movement/flicker, full registry restore and replay,
+and ending retirement. The connected component checks sixteen allocations.
+Partial-prefix pressure and cold second-defeat visual corroboration remain open.
+
+
+Post-defeat floor checkpoint (2026-09-23, `b6c1147a2` development tree):
+`SSZ2_ScreenEvent` stage4 now consumes the nonzero defeat word, patches nine
+chunks in FG rows9/10, sets the separately captured `Ending_running_flag`,
+clears the signal and advances to8. `ScreenEvents` passes `Level_layout_main`
+after the eight-byte header; `$24/$28(a3)` therefore select rows9/10. The ROM's
+`$17,$18` alternation and `$19` lower row use the mutation pipeline and a full
+redraw, preserving copy-on-write terrain snapshots. `_unkFAA2`, set by the boss,
+remains a distinct retirement signal.
+
+Queued Java21/absolute S1+S3K ROM selection
+`-Dtest=TestS3kSszKnucklesArrivalHeadless,TestSszAct2MechaEntry,TestS3kSszCraneRouteHeadless test`
+completed18 cases:16 passed, two new test errors before the mutation because
+the test inspected a tenth column in the ROM's nine-column layout. Corrected
+that test to use the decoded map width; production was unchanged. The queued
+`-Dtest=TestS3kSszKnucklesArrivalHeadless test` rerun passes **8 cases, zero
+failures/errors/skips**. Both320/800 floor cases step the real loop from a
+declared `loc_7BCB0` byte signal, inspect every affected and neighboring row,
+restore the pre-patch terrain/event snapshot and replay. Stage8 stays waiting
+without its separate signal. This is not a cold eight-hit defeat result.
+
+Remaining seeded presentation: `loc_59078` currently stops its controller at
+routine4. Implement its camera-rise branches, then stage8's tile fill/island
+mask and stage$C's delayed redraw, with explicitly seeded negative event signal.
+The native mask maps four32x32 pieces to a64x64 square and repeats it at eight
+child positions; do not mistake its name alone for the hardware X=0 SAT mask.
+
+
+Seeded camera-rise checkpoint (2026-09-23, `b6c1147a2` development tree):
+`loc_590D6` now falls through into `loc_590E4` on the second changed zero crossing.
+The captured fractional speed increases by$20 up to unsigned$8000; complete
+Chaos/Super emeralds subtract it from the cloud longword, otherwise add it.
+The unsigned camera-relative comparison moves one pixel at most and publishes
+`_unkFAA9` on alignment. The complete branch signals at cameraY=$2A0 and deletes;
+the incomplete branch signals at$600 and enters routine8. Routine8's later
+stage$18 movement is still pending, as are stage8/$C's island mask and redraw.
+
+Queued Java21/absolute S3K ROM:
+`-Dtest=TestSszAct2CameraController,TestS3kSszKnucklesArrivalHeadless test`
+passes **13 cases, zero failures/errors/skips**, completed15:57 BST. Both new
+emerald branches start from the declared negative event signal, traverse the
+two zero crossings and assert same-pass acceleration, then declare cameraY=$400
+for their isolated motion check. They capture after140 passes and replay to the
+handoff, matching endpoint, cloud fraction and pass count. This proves seeded
+controller behavior; no cold fight or native presentation claim follows.
+
+
+Island-mask component checkpoint (2026-09-23, `b6c1147a2` development tree):
+`SszEndingIslandMask` implements `loc_591D6/59208`, with eight screen-coordinate
+child squares, bucket7 and low tile priority. ROM mapping `$59270` contains
+four32x32 pieces, using tile$7F0 and local palette3. The name is an opaque
+cover, not proof of an X=0 hardware SAT masking command. During the background
+transition the controller subtracts$6000 from the camera-copy longword until
+its integer word is$80; its captured low word preserves the fractional carry.
+Foreground stage$18 retires the object.
+
+Queued Java21/absolute S3K ROM
+`-Dtest=TestSszEndingIslandMask,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits test`
+passes **3 cases, zero failures/errors/skips**. This proves isolated lifetime,
+fractional movement/restore/replay and registry mapping bounds. Stage8 creation,
+tile fill, production SAT submission, widescreen coverage and delayed redraw
+are not established by that selection. The object is not yet connected to the
+event; connect it together with its required tile-fill/redraw state.
+
+
+Island-fill follow-up: the initial5-case fill/mask/renderer-guard run had4 passes
+and one harness error reading unallocated tile$7F0 before the fill. After fixing
+the preimage bounds, the3-case rerun exposed a real stale-sheet failure: the
+level pixels were6 but the registered sheet's initial placeholders stayed0.
+`refreshAffectedRenderers` only uploads existing sheet references and returns
+without GL; it does not rebind placeholders after capacity growth. The local
+fill now rebuilds the ROM-mapped sheet and calls `refreshSheetPatterns` after
+publishing the new patterns. Verification is pending in queued
+`-Dtest=TestSszEndingIslandMask,TestPatternSpriteRendererCorruptionGuard test`.
+
+Rewind limitation: `LevelSnapshot` explicitly excludes pattern bytes as derived
+state. Preservation of the cold level's original patterns does not prove that
+unused high tiles revert, nor that the new fill regenerates after restoring a
+later visual state. Connect the stage-owned redraw/art regeneration and test
+that boundary before claiming presentation rewind. The mask's object movement
+replay remains independently verified. No event dispatch currently allocates it.
+
+
+Retained redraw implementation checkpoint (2026-09-23, `b6c1147a2` development
+tree, **verification pending**): positive stage8 now fills tiles and allocates
+the cover, captures the current512x256 Plane A and starts delayed position$1F0 /
+rowcount$F. Stage$C writes two rows per pass from sourceX=$200, Y=$100..$1F0;
+on completion it clears physical X/Y and Y-copy, advancing to$10 at the accepted
+`sub_5B18E` boundary. `SszEndingPlaneState` captures mixed old/new cells and both
+delayed words; the foreground descriptor override exposes them. The scroll
+handler uses plain deformation for stages$C..$14 instead of its earlier fallback.
+
+The preceding sheet-rebind run stopped at compilation because `romReader()`
+requires checked IOException handling; that is corrected. Queued combined
+`-Dtest=TestSszEndingIslandMask,TestSszEndingPlaneState,TestS3kSszKnucklesArrivalHeadless,TestPatternSpriteRendererCorruptionGuard test`
+is live, initially waiting for Maven capacity. No green claim yet. Next checks:
+connect a real event-loop stage8/$C test, use `reconcileAfterRewindRestore` to
+regenerate fill art after restore, and preserve the native one-pass X-copy on
+the final physical-camera clear. Stage8's palette-cycle gate/counters, native
+presentation and widescreen extent are still open.
+
+
+While the combined redraw run remained queued (no compiler started), added the
+connected320/800 stage8/$C game-loop checks to its already selected arrival
+class. They capture after three redraw passes, finish after five more, compare
+all retained descriptors against the ROM layout, restore/replay, and corrupt a
+derived tile before restore. `reconcileAfterRewindRestore` now regenerates the
+island fill and sheet; plain deformation reads X-copy, preserving the final
+camera clear's native one-pass discrepancy. This is all still unverified.
+
+Also connected `sub_5928C` water cycling at the normal screen-event tail stages:
+stage8's fill opens the gate; redraw stages do not decrement it. The captured
+word timer predecrements to select a six-byte ROM row at `$592BE`, first offset6,
+then every8 passes, wrapping at$30; colors13..15 of line3 use palette ownership.
+The pure cadence/gate/wrap/replay case joins the same queued selection. Emerald
+cycle `sub_592EE`, later controller routine8, native visuals and wide mask extent
+remain open. No additional Maven request was created for these pre-compilation
+changes; session18485 remains the owned live request.
+
+
+Pending selection extension: while session18485 still reported waiting before
+compilation, added a320/800 seeded-stage$18 water-color check to its selected
+arrival class. It drives64 real-loop frames, compares line3 colors13..15 against
+the ROM at `$592BE`, crosses table wrap, and restores/replays the same sequence.
+The pure counter test alone does not establish palette write visibility.
+
+Cold capture setup investigation (read-only native evidence): `run1/f412502.ram`
+has V_int_run_count=$0006448F (410767), and the later checkpoints advance exactly
+with the six sampled movie timestamps. The previous capture06 omitted a clock
+seed, while `loc_7B2DC` uses V_int_run_count to seed Mecha RNG. Its row0 is the
+pending-load frame (P1Y32), row1 arrival init (Y1710), row2 first rise (Y1702),
+which matches native frame412502's Y=$6A6. Determine the actual executed input /
+clock boundary before a revised capture; do not infer a production defect or
+hydrate positions from these comparison-only dumps. A declared initial capture
+clock is supported by the existing tool. No new capture has run yet.
+
+
+Combined island/redraw verification completed16:21 BST (2026-09-23, `b6c1147a2`
+development tree): session18485 acquired the queue and ran the final unchanged
+source/test batch. Java21 and absolute S3K ROM command
+`-Dtest=TestSszEndingIslandMask,TestSszEndingPlaneState,TestS3kSszKnucklesArrivalHeadless,TestPatternSpriteRendererCorruptionGuard test`
+passes **19 cases, zero failures/errors/skips**: mask3, retained plane/palette2,
+renderer guard2, arrival/event integration12. The tile-sheet placeholder rebind,
+320/800 connected eight-pass redraw, mixed-plane replay, deliberately corrupted
+art regeneration, X/Y clear,64-frame ROM water-color wrap and replay are now
+verified in those paths. Native pixels, renderer SAT output, wide cover extent,
+negative-signal controller-to-redraw chaining and later emerald/controller8
+presentation remain open. The event's stop at `sub_5B18E` does not execute the
+excluded ending owner. No full-suite or full cold-fight claim follows.
+
+
+Arrival-order correction (2026-09-23, `b6c1147a2` development tree): native
+Knuckles status is grounded during the teleporter rise; the cold capture was
+already airborne. SSZ ScreenInit was deferred to ordinary pre-physics, after
+the initial player pass had finished. Knuckles then ran normal terrain physics
+before the newly allocated arrival controller acquired control. Preparing SSZ
+screen objects before the initial dispatch camera/window is captured restores
+native ordering; the ordinary hook remains an idempotent positioned-entry fallback.
+No arrival-specific status clear or crane timing adjustment was added.
+
+The new grounded assertion failed at both widths before the change. After it,
+`TestS3kSszKnucklesArrivalHeadless` passes all12 cases and the initial fixed-slot
+adapter passes2 (zero skips). The crane route initially exposed an obsolete
+assertion: `_unkFAB8` bit4 is consumed by `loc_7B484`, not a permanent completion
+flag. Its test now records the observed pan signal; the focused rerun is pending.
+The test runner retries setup-only admission, so the arrival test explicitly
+consumes setup before inspecting Obj_57C1E, then counts ordinary rise frames.
+
+A normal capture-session probe with declared initial VInt410766 now matches the
+native first-rise position, grounded status and clock. Mecha spawns at engine837,
+instead of629 with the old order. Recorded inputs land three hits (engine1610,
+1663,1875); the route still dies at2097 and does not validate the complete fight.
+Native spawn is movie413340; remaining phase/route differences are unresolved.
+This is direct state observation and ordinary controller playback, not an SSZ
+Knuckles trace test. No physics rows supply engine state.
+
+
+Input-boundary follow-up: BizHawk movie frame numbers are one-based while
+`Bk2Movie.getFrame` is zero-based. Initial controller setup is movie412501;
+therefore a no-settle capture starts input index412500, followed by the first
+rise on412502. That correction places boss creation at engine839/native413340
+and the first two hits at1611/1664, with native positions at those milestones.
+The third hit still differs (playerX299 versus native294) and the route dies
+at3231. Native320 and800 ordinary probes agree in the sampled failure path.
+This does not establish full-route parity or justify changing physics.
+
+Progress capture `campaign-20260923-act2-07-arrival-order-800` (external SSZ task
+archive) uses the earlier index412501:2000 steps,700 images from1300, no death
+inside that clip; its longer probe dies2097. Frame1610 and the complete MP4
+decode were inspected. It is presentation/progress evidence, not native timing
+proof. Its provenance records source/class hashes and the declared clock.
+
+Controller-only continuation experiments after the third hit: adaptive chase/
+jump reached five hits before death; shifting the remaining recorded buttons
+five frames earlier reached six. Neither completed the first fight. These are
+input-authoring experiments, not changes to runtime state or fixture-dependent
+engine logic. The incomplete candidates remain temporary.
+
+The crane regression now observes bit4 before `loc_7B484` consumes it. Its
+focused rerun and the Act1 arrival/lifecycle plus mandatory S3K checks are
+queued behind another workspace's Maven run. Act1 assertions were adjusted to
+inspect setup-only admission explicitly and count rise passes from LevelLoop;
+no native constants changed. No integration or current full-suite claim.
+
+
+Cold first-defeat milestone (2026-09-23, `b6c1147a2` development tree): authored
+controller input now lands all eight real first-phase hits at frame 3294 and
+reaches Super Mecha entry (eight restored hits, routine 2) at 4016. The route
+uses the corrected SSZ arrival and declared VInt 410766 / seven Super Emeralds;
+no position, velocity, health or collision writes supply progress. The original
+movie input is the prefix; subsequent controller edits dodge the returning boss.
+`routes/s3k/ssz2-first-defeat.script` and its production-author-tool round-tripped
+BK2 preserve the 4017-frame route. `TestS3kSszAct2ColdFight` adds 320/800 first
+fight plus first-defeat-to-Super-entry registry replay, currently queued.
+
+External capture `campaign-20260923-act2-08-first-defeat-800` continues that input
+with neutral buttons: 4557 steps, 1357 images from frame 3200, death at 4496.
+Frame 4000 and the full MP4 decode were inspected. It shows the last hits, first
+defeat, Master Emerald charge, forced run/camera transition and Super attack.
+The longer neutral tail is not a successful Super route. A separate ordinary
+probe splicing the native Super-phase controller input at authored frame 4017
+lands three Super hits (4815, 4847, 4993), then dies at 5845. No full Super defeat,
+stop-line, or native timing parity claim follows. Capture provenance contains
+compiled-class and input hashes; camera routine 8 is not exercised by this clip.
+
+Seeded island camera routine 8 is now implemented from loc_59194: gate on screen
+stage $18; add the captured fractional speed into Camera_Y; subtract $98 per pass
+from speed at/above $7D0; retire when speed is negative and integer Y equals $804.
+The integer-only shared camera keeps its fractional word in this captured owner.
+The actual-ending allocation Obj_5EF68 stays outside scope. A focused test walks
+routine 4 into 8, checks the redraw gate/half-pixel motion, snapshots during
+slowdown and replays retirement. This test is queued; no green claim yet.
+
+
+2026-09-23 validation follow-up: first-defeat/transformation route and rewind
+now pass at320/800 (two cases); the camera suite passes eight cases, including
+negative-signal entry through delayed redraw and routine8 fractional replay.
+The native seeded island checkpoint matches40,320 non-HUD pixels in the
+original viewport after Genesis RGB quantization. See the act2 matrix for
+seed prerequisites and comparison limits; wide cloud margins remain open.
+The arrival consumer sweep exposed an incorrect SSZ checkpoint gate: the
+activation mark may be empty during reload even though Last_star_post_hit's
+restored checkpoint index is present. Fix that owning gate, not the initial
+sprite ordering that corrected the premature crane trigger.
+
+
+Widescreen island margin correction under verification: the visible cloud
+strips are background layout columns beyond the native320px window, not
+retained Plane A cells. The SSZ feature provider now extends the last visible
+Plane B tile column for the seeded island presentation at wide widths. Native
+columns and priority bits are preserved, with source behavior and the viewport
+discrepancy explained beside the projection. The original-view pixel comparison
+was rechecked before this change and still has zero differences. Rendering the
+new projection and the focused regression selection remain pending.
+
+
+2026-09-23 cold final-fight milestone: the authored ordinary800px route now
+lands all eight Super hits (final at8156), then runs through breakup, fade,
+progression publication and the pre-ending hold at8703. The final two hits
+exercise the low-health hover/radial phase. The 8704-frame route is promoted
+as `src/test/resources/routes/s3k/ssz2-final-defeat.*`; its controller timing is
+a test stimulus, never a gameplay gate. Full320/800 rewind regression and a
+new video are pending. Earlier shifted-input/naive dodge attempts died during
+laser volleys; per-projectile observations showed premature player jumps, so
+only the authored controller sequence changed, not aiming or boss physics.
+
+
+Verification closure for that candidate: queued final-fight regression passes
+two cases at320/800, no failures/errors/skips (17:42 BST). Both first-phase
+transformation and low-health/final-defeat world replays reach the same stop.
+The bridge recheck passes3 cases and the island/arrival/controller selection
+passes23, all without skips. Captures12/13 respectively show the corrected
+seeded wide sky and the final Super hits through breakup/fade; decoded videos
+and selected frames were inspected. Original-view island pixels remain
+unchanged. Save-file persistence, incoming HPZ continuity, other presentation
+checkpoints and combined campaign integration checks remain separate work.
+
+
+### 2026-09-23 follow-up: body priority and widescreen arena presentation
+
+The final-fight video exposed Mecha's airborne power-down body behind the
+floating island. `ObjSlot_MechaSonic` at `$7D3EA` sets art tile bit15 as well as
+sprite queue `$280`; the body implemented only the queue and inherited the low
+hardware-priority default. Children already declared high priority. The new
+Plane B mask made this omission visible; removing the mask would reintroduce the
+island/sky defect. The body now declares the ROM bit explicitly, with a ROM-word
+regression and checks throughout the cold two-fight replay. Verification pending.
+The unused floor continuation also sets this bit; the nearby low-priority
+`Difficulty_MechaSonic_Init` is a separate difficulty-menu object, not this boss.
+
+A controller-only 800px framing probe (same final-fight BK2, declared VInt410766)
+confirmed the next requested presentation issues:
+
+- Before the dash, camera X256 shows world256..1056, so the emerald's eventual
+  X832 is already visible. Native `loc_7BA38` allocates it only at dash frame3803;
+  its next setup places it at X832. Do not advance native allocation, palette
+  scripts or slot order to hide this pop-in. Use a ROM-backed presentation-only
+  precursor outside the native view, handing over to the ordinary object.
+- The scripted pan advances raw camera X256..576, at six pixels per native pass.
+  At frame3899, displayed world576..1376 excludes the player at X550. On release
+  the camera moves back to X416 by frame4042. This confirms the complaint: the
+  320px script has been applied directly to an 800px view.
+- Player side limits already use native min+16 and max+296, independent of
+  viewport width. Keep these and the attack coordinates unchanged. A widened
+  movement box would change the boss fight rather than solve framing.
+
+The camera correction must retain a native logical pan for event timing and
+project it into a bounded visible window. When the viewport exceeds the scene's
+span, centre the scene instead of treating an inverted clamp range as valid.
+Check initial arrival, both pans, transformation handover, rewind and presets
+320/352/400/528/800, with level art bounds distinguished from player movement
+bounds. Do not substitute the displayed origin into native boss coordinates.
+Implementation and comparative captures remain pending.
+
+
+The first implementation now reuses `NativeViewportFraming` for both scripted
+pans and normal arena bounds. The crane advances native min/max, projecting only
+its visible X and holding it at zero until the extra left margin exists. The
+transformation owner captures its native six-pixel progress separately; its
+visible endpoint is X336 at800px, inside the nine-block (1152px) foreground.
+Boss camera-relative coordinates, final-defeat boundary writes and defeat
+workers recover the native word through `SszArenaCamera`. The runtime projection
+flag is captured and retired at the ending plane reset. The ROM's global level
+maxX24576 is not evidence of drawable SSZ2 layout width.
+
+`SszMasterEmeraldPreview` contributes a high-priority bucket6 sprite from the
+registered ROM sheet only in wide views, before the ordinary emerald draws.
+This adds no object slot, collision, PLC job or palette ticks. Native setup and
+its first no-draw pass remain unchanged; the preview follows restored live state
+and stays absent after ending retirement. Short tests cover handover and rewind.
+All newly changed presentation tests/captures remain pending execution.
+
+The save provider now recognizes Knuckles' captured SSZ2 ending flag when
+serializing progression (`loc_7BCB0` -> `SaveGame`, next-level code$C), rather
+than relying only on a previously loaded clear flag. A unit regression checks
+rewinding before the flag, and the cold full route checks the real disk payload.
+The tests were added before the fix but remained queued; no red result was
+observed before implementation.
+
+
+Incoming continuity follow-up: `TestS3kHpzLifecycleProduction#knucklesUpperTeleporterStartsSkySanctuaryActTwo`
+now follows the actual HPZ pad/load into SSZ's mid-rise, captures there, and
+replays through crane release at320/400/512/640/800. All five cases pass, zero
+skips. The new manager/Knuckles roster/width and empty checkpoint history are
+checked; elapsed arrival-to-release frames, player/camera words and all SSZ
+runtime bytes match after restore. The initial assertion used0 for the empty
+checkpoint index; the engine's documented empty sentinel is-1, corrected in
+the test. This starts at the real HPZ pad and is not a cold whole-HPZ route or
+proof of rewind-history isolation across the load.
+
+
+Follow-up validation completed: both five-preset pan methods pass after fixing
+the component fixture's aspect/session initialization. The body-priority,
+preview, cold fight/disk save and companion checks establish42 distinct focused
+passes without skips; HPZ incoming continuation adds five. The updated AIZ1 /
+loading / bootstrap / decoding / object-recreation consumers pass1371 cases,
+no skips. Native source timing is preserved; the wide display is intentionally
+projected, and captures14/15 plus the reframed overlap still are presentation
+evidence rather than a full native parity certificate.
+
+The priority and service structural guards pass14 cases. The profile guard
+found stale campaign inventory: DEZ $A6/$A7 are now concrete owners in SKL as
+well as CNZ owners in S3KL, and SSZ now owns $B2. Corrected the profile; both
+registry-derived guard cases pass. Companion profile expectations also needed
+the already implemented DEZ $4A/$4B and SKL $B3 StartNewLevel owners; their
+focused checks now pass all seven cases. The CNZ boundary test also retained
+stale exclusions for the implemented DEZ carrier/torpedo/lift slots$4C..$4E;
+checked all listed ids against the registry, corrected the explicit owner map,
+and reran that failing method (one pass). No gameplay was changed to satisfy
+the inventory.
+
+
+### Seeded island presentation tail, 2026-09-23
+
+The in-scope presentation now includes the shared Emerald/water palette timer,
+`loc_58C1A`'s Pal_Ending1 copy and second bottom-up redraw, and stage$18's
+`loc_58F52` ramp plus `loc_5906A` signed-height deformation bands. Stage$10
+still deliberately omits `sub_5B18E`; complete-emerald progress is not fabricated.
+The incomplete branch requires an explicitly declared signal from that omitted
+owner. These additions do not extend the cold route beyond `loc_7BCFC`.
+
+The native arithmetic probe retires the defeated boss at movie419846 before
+it can allocate the actual ending, seeds stage$18/bg0, clears the parameter
+words, and sets camera/bgX/drift words. Four samples cover positive drift,
+negative drift, signed overflow and a clipped starting band. The resulting
+404 parameter bytes and896 packed scroll bytes match the engine's SHA-256
+oracles in `TestSszAct2Deformation` exactly. Camera Y values are$880,$885,$880,
+$720; old drift values$208000,$FFFF8000,$80008000,$208000. Sentinel word$114
+and untouched word4 are included, preventing a plausible but wrong ramp fill.
+The external task's `native-act2-20260923/island-ramp` holds the declared native
+probe and raw samples. This is isolated arithmetic corroboration, not gameplay
+hydration or whole-scene pixel parity.
+
+The first second-redraw capture (16) exposed a missing consumer: the retained
+plane remained blank even while the camera and scroll table progressed. Native
+`loc_58C68` calls `Draw_TileRow` after the water palette update. The new retained
+plane drawing cursor follows its $FF0 mask, signed-low-byte direction test,
+one/two-row refresh and $F0 forward edge. Its cursor is captured for rewind.
+The initial redraw alone was insufficient: later water rows enter only as the
+camera crosses tile boundaries. Do not claim visual completion from matching
+scroll-table arithmetic or a redraw endpoint alone.
+
+Validation before the streaming repair: Java21 queued Maven with the absolute
+S3K ROM, `TestSszAct2Deformation,TestSszEndingPlaneState,TestS3kSszKnucklesArrivalHeadless,TestSszAct2CameraController`
+passed42 cases, no skips at18:26 BST. The four native hash samples were then
+added; `TestSszAct2Deformation` passed16 cases, no skips at18:32 BST. The streaming
+repair and refreshed connected capture are being checked separately.
+
+After adding the captured streaming cursor, `TestSszZoneRuntimeState,TestEveryObjectRewindRoundTrip` passes1314 cases, zero failures/errors/skips (18:35 BST, same Java21/ROM/worktree). Capture17 completes2626 steps and1226 PNGs, ends stage$18 at cameraY=$804, and fully decodes. These are focused results; combined campaign verification and integration remain open.
+
+
+Campaign structural follow-up: the crane parent3 link now uses central generic
+managed-reference capture instead of a custom transient/sidecar pair. Actual
+crane and full320/800Knuckles-fight replay passes within the15-case combined
+DDZ/SSZ focused selection (18:50 BST). Priority-bucket, rewind architecture and
+coverage-ratchet guards then pass6cases, zero failures/errors/skips at18:50 BST.
+The guard growth was removed in production, not exempted with a higher baseline.

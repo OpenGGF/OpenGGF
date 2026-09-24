@@ -32,8 +32,12 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
     private boolean rotating;
     private boolean initialized;
     DdzBossMasterEmeraldObjectInstance(DdzEndBossShipPartObjectInstance part) {
-        super(new ObjectSpawn(part == null ? 0 : part.getX() + OFFSET_X, part == null ? 0 : part.getY() + OFFSET_Y,
-                0, 0, 0, false, 0), "DDZBossMasterEmerald", part);
+        this(new ObjectSpawn(part == null ? 0 : part.getX() + OFFSET_X, part == null ? 0 : part.getY() + OFFSET_Y,
+                0, 0, 0, false, 0), part);
+    }
+
+    private DdzBossMasterEmeraldObjectInstance(ObjectSpawn spawn, DdzEndBossShipPartObjectInstance part) {
+        super(spawn, "DDZBossMasterEmerald", part);
         if (part != null) {
             x = (part.getX() + OFFSET_X) & 0xFFFF;
             y = (part.getY() + OFFSET_Y) & 0xFFFF;
@@ -42,12 +46,14 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzBossMasterEmeraldObjectInstance(ObjectSpawn spawn) {
-        this((DdzEndBossShipPartObjectInstance) null);
+        this(spawn, (DdzEndBossShipPartObjectInstance) null);
     }
 
     @Override
     public DdzBossMasterEmeraldObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzBossMasterEmeraldObjectInstance((DdzEndBossShipPartObjectInstance) null);
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzBossMasterEmeraldObjectInstance(ctx.spawn());
     }
 
     @Override

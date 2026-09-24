@@ -928,6 +928,13 @@ public class Sonic3kObjectArt {
             List<SpriteDplcFrame> dplcFrames = entry.dplcLayout() == Sonic3kPlcArtRegistry.DplcLayout.PLAYER
                     ? S3kSpriteDataLoader.loadDplcFrames(reader, entry.dplcAddr())
                     : loadObjectDplcFrames(reader, entry.dplcAddr());
+            if (Sonic3kObjectArtKeys.MECHA_SONIC_PIECES.equals(entry.key())) {
+                // loc_7B916 switches to loc_7BC32 on landing. That code draws but
+                // never animates or runs Perform_DPLC, so the installed raw animation
+                // never reaches frame$F. All16 pieces read the last frame$E VRAM bank.
+                // Reusing each piece index as a DPLC index would select unrelated art.
+                dplcFrames = java.util.Collections.nCopies(mappings.size(), dplcFrames.get(0xE));
+            }
             mappings = DplcStaticFlattener.applyDplcRemap(mappings, dplcFrames);
         } else {
             if (entry.mappingTileOffset() != 0) {

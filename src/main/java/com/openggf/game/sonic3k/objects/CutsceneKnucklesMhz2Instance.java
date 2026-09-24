@@ -1,11 +1,17 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.RespawnState;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
@@ -14,7 +20,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -97,7 +102,8 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     private boolean initialized;
     private boolean liftChildrenSpawned;
     private boolean pressPresentationStarted;
-    private boolean restartPointSaved;
+    private boolean wasOnScreen;
+    private byte[] savedPaletteLine2;
     private boolean switchChildSpawned;
 
     public CutsceneKnucklesMhz2Instance(ObjectSpawn spawn) {
@@ -138,20 +144,14 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             return;
         }
         if (!initialized && !cameraIsInsideRomTriggerRange()) {
-            // Check_CameraInRange rejects this SST; the placement cursor may
-            // materialize it again when the native camera window reaches it.
-            setDestroyed(true);
+            // CutsceneKnux_MHZ2 -> Check_CameraInRange -> loc_85C74 calls
+            // Delete_Sprite_If_Not_In_Range, not unconditional deletion. The
+            // placement window admits this actor before word_630D0's rectangle;
+            // retain its original SST slot while waiting for camera admission.
+            // Use the shared viewport-aware coarse range: native remains $280,
+            // while widescreen extends only the visible part of the load window.
+            coarseXCullViewport(getX());
             return;
-        }
-
-        if (!initialized) {
-            // Re-run FindFreeObj at the native activation gate so this
-            // prematurely materialized engine instance receives the slot the
-            // ROM load pass observes.
-            ObjectManager objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.reallocateToFirstFreeDynamicSlot(this);
-            }
         }
 
         switch (routine) {
@@ -162,18 +162,70 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             case ROUTINE_LAUNCH_PLAYERS -> routineLaunchPlayers();
             default -> routine = ROUTINE_CAMERA_LOCK;
         }
+        // ROM BuildSprites sets render_flags bit 7 after object execution. Keep
+        // that previous-pass visibility even in headless/rewind runs. ObjSlot
+        // uses width $18; the default BuildSprites Y extent is $20.
+        Camera camera = services().camera();
+        wasOnScreen = camera == null || (getX() + 0x18 >= camera.getX()
+                && getX() - 0x18 < camera.getX() + camera.getWidth()
+                && getY() + 0x20 >= camera.getY()
+                && getY() - 0x20 < camera.getY() + camera.getHeight());
     }
 
     private void routineInit() {
         initialized = true;
+        snapshotPaletteLine2();
         AizIntroArtLoader.applyKnucklesPalette(services());
         spawnSwitchChildOnce();
         setLeafBlowerCutsceneFlag(true);
         routine = ROUTINE_CAMERA_LOCK;
         Camera camera = services().camera();
         if (camera != null) {
-            camera.setMinX((short) Math.min(camera.getX() & 0xFFFF, CAMERA_LOCK_X));
+            camera.setMinX((short) Math.min(camera.getX(),
+                    NativeViewportFraming.visibleLeft(CAMERA_LOCK_X, camera.getWidth())));
         }
+    }
+
+    // loc_62422 copies Target_palette_line_2 back to Normal_palette_line_2.
+    // This object has no separate target-CRAM buffer: retain the level line before
+    // Pal_CutsceneKnux replaces it, and capture that copy for mid-cutscene rewind.
+    private void snapshotPaletteLine2() {
+        Level level = services().currentLevel();
+        if (level == null || level.getPaletteCount() <= 1) {
+            return;
+        }
+        Palette palette = level.getPalette(1);
+        savedPaletteLine2 = new byte[Palette.PALETTE_SIZE * 3];
+        for (int i = 0; i < Palette.PALETTE_SIZE; i++) {
+            Palette.Color color = palette.getColor(i);
+            savedPaletteLine2[i * 3] = color.r;
+            savedPaletteLine2[i * 3 + 1] = color.g;
+            savedPaletteLine2[i * 3 + 2] = color.b;
+        }
+    }
+
+    private void restorePaletteLine2Snapshot() {
+        Level level = services().currentLevel();
+        if (level == null || level.getPaletteCount() <= 1
+                || savedPaletteLine2 == null || savedPaletteLine2.length != Palette.PALETTE_SIZE * 3) {
+            return;
+        }
+        Palette restored = new Palette();
+        for (int i = 0; i < Palette.PALETTE_SIZE; i++) {
+            restored.setColor(i, new Palette.Color(
+                    savedPaletteLine2[i * 3],
+                    savedPaletteLine2[i * 3 + 1],
+                    savedPaletteLine2[i * 3 + 2]));
+        }
+        S3kPaletteWriteSupport.applyPaletteLine(
+                services().paletteOwnershipRegistryOrNull(),
+                level,
+                services().graphicsManager(),
+                S3kPaletteOwners.MHZ2_CUTSCENE_RESTORE,
+                S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                1,
+                restored,
+                true);
     }
 
     private void spawnSwitchChildOnce() {
@@ -191,12 +243,12 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             lockPlayer(playerEntity);
             return;
         }
-        int cameraX = camera.getX() & 0xFFFF;
+        int cameraX = nativeCameraX(camera);
         if (cameraX < CAMERA_LOCK_X) {
-            camera.setMinX((short) cameraX);
+            camera.setMinX(camera.getX());
             return;
         }
-        camera.setMinX((short) CAMERA_LOCK_X);
+        camera.setMinX((short) NativeViewportFraming.visibleLeft(CAMERA_LOCK_X, camera.getWidth()));
         enterWaitGrounded();
         lockPlayer(playerEntity);
     }
@@ -297,7 +349,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
     private LeafParticleSpec buildLeafParticleSpec() {
         Camera camera = services().camera();
-        int cameraX = camera != null ? camera.getX() & 0xFFFF : 0;
+        // loc_63324 uses Camera_X_pos_copy plus one folded random word in
+        // the native 320px span. Center that same span in widescreen instead of
+        // shifting every leaf to the left margin; do not add particles/RNG calls.
+        int cameraX = camera != null ? nativeCameraX(camera) : 0;
         int cameraY = camera != null ? camera.getY() & 0xFFFF : 0;
         int randomX = services().rng() != null ? services().rng().nextWord() & 0x01FF : 0;
         if (randomX >= 0x0140) {
@@ -329,8 +384,6 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     }
 
     private void routineLaunchPlayers() {
-        services().playSfx(Sonic3kSfx.LEAF_BLOWER.id);
-        updateLeafSpawnTimer();
         if (!liftChildrenSpawned) {
             liftChildrenSpawned = true;
             List<AbstractPlayableSprite> participants = players();
@@ -338,11 +391,23 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
                 AbstractPlayableSprite player = participants.get(i);
                 if (i == 0 || playerTwoRenderFlagsOnScreenForLift(player)) {
                     Mhz2KnucklesLiftChild child = spawnFreeChild(
-                            () -> new Mhz2KnucklesLiftChild(this, player));
-                    child.initializeLaunch(services().camera());
+                            () -> new Mhz2KnucklesLiftChild(player));
+                    if (child != null) child.initializeLaunch(services().camera());
                 }
             }
         }
+        // loc_632AE -> loc_62422 retires the press actor once its previous
+        // render_flags bit 7 clears. The independent carriers keep lifting P1/P2;
+        // only those carriers continue the blower sound (loc_633D6).
+        if (!wasOnScreen) {
+            restorePaletteLine2Snapshot();
+            // The ROM reloads PLC_Monitors over shared VRAM here. Our monitor
+            // renderer owns a separate ROM-backed sheet, unaffected by press DPLC.
+            spawnFreeChild(() -> SongFadeTransitionInstance.createNativeLevelMusicFade(Sonic3kMusic.MHZ2.id));
+            setDestroyed(true);
+            return;
+        }
+        updateLeafSpawnTimer();
     }
 
     private void lockPlayers() {
@@ -394,41 +459,6 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
     }
 
-    private void releasePlayerAfterLift(AbstractPlayableSprite player) {
-            ObjectControlState.none().applyTo(player);
-            player.setObjectMappingFrameControl(false);
-            player.setControlLocked(false);
-            if (player.getCpuController() != null) {
-                // loc_633D6 clears Ctrl_2_locked and Ctrl_2_logical when the
-                // lift arc finishes.
-                player.getCpuController().setController2SignedLocked(false);
-                player.getCpuController().clearController2LogicalLatch();
-            }
-            player.clearLogicalInputState();
-            player.clearForcedInputMask();
-            player.setAnimationId(0);
-            player.setGSpeed((short) 0x10);
-            setLeafBlowerCutsceneFlag(false);
-            savePostCutsceneRestartPoint();
-    }
-
-    private void savePostCutsceneRestartPoint() {
-        if (restartPointSaved) {
-            return;
-        }
-        RespawnState checkpointState = services().checkpointState();
-        if (checkpointState == null) {
-            return;
-        }
-        Camera camera = services().camera();
-        int cameraX = camera != null ? camera.getX() & 0xFFFF : 0;
-        int cameraY = camera != null ? camera.getY() & 0xFFFF : 0;
-        checkpointState.restoreFromSaved(POST_CUTSCENE_RESTART_X, POST_CUTSCENE_RESTART_Y,
-                cameraX, cameraY, POST_CUTSCENE_CHECKPOINT_INDEX);
-        services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
-        restartPointSaved = true;
-    }
-
     private boolean playersAreGrounded(PlayableEntity playerEntity) {
         boolean p1Grounded = !(playerEntity instanceof AbstractPlayableSprite p1) || !p1.getAir();
         PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
@@ -472,12 +502,21 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         if (camera == null) {
             return true;
         }
-        int cameraX = camera.getX() & 0xFFFF;
+        int cameraX = nativeCameraX(camera);
         int cameraY = camera.getY() & 0xFFFF;
         return cameraY >= CAMERA_TRIGGER_MIN_Y
                 && cameraY <= CAMERA_TRIGGER_MAX_Y
                 && cameraX >= CAMERA_TRIGGER_MIN_X
                 && cameraX <= CAMERA_TRIGGER_MAX_X;
+    }
+
+    private static int nativeCameraX(Camera camera) {
+        // word_630D0 and loc_63170 use the original 320px camera origin.
+        // A wider view follows Sonic with a farther-left origin; testing that
+        // display coordinate can leave him at the wall before the lock triggers.
+        // Recover the native origin for admission and project only the displayed
+        // minimum back to widescreen. The ROM thresholds and lift timing remain.
+        return NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
     }
 
     int getRoutineForTest() {
@@ -584,32 +623,28 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
     private static final class Mhz2KnucklesLiftChild extends AbstractObjectInstance
             implements RewindRecreatable {
-        private final CutsceneKnucklesMhz2Instance parent;
         private AbstractPlayableSprite player;
         private boolean initialized;
         private boolean initializationDispatchPending;
         private int carrierYFixed;
         private int carrierYVelocity;
 
-        private Mhz2KnucklesLiftChild(CutsceneKnucklesMhz2Instance parent, AbstractPlayableSprite player) {
+        private Mhz2KnucklesLiftChild(AbstractPlayableSprite player) {
             super(new ObjectSpawn(player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
                     Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0),
                     "MHZ2KnucklesLift");
-            this.parent = parent;
             this.player = player;
         }
 
-        private Mhz2KnucklesLiftChild(CutsceneKnucklesMhz2Instance parent) {
-            super(new ObjectSpawn(parent.getX(), parent.getY(),
-                    Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0),
-                    "MHZ2KnucklesLift");
-            this.parent = parent;
+        private Mhz2KnucklesLiftChild(ObjectSpawn spawn) {
+            super(spawn, "MHZ2KnucklesLift");
         }
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            CutsceneKnucklesMhz2Instance liveParent = Mhz2KnucklesRouteSwitchChild.findNearestLiveParent(ctx);
-            return liveParent == null ? null : new Mhz2KnucklesLiftChild(liveParent);
+            // loc_6338E stores only the player slot. Knuckles may already have
+            // retired while this carrier is in flight; no live parent is needed.
+            return new Mhz2KnucklesLiftChild(getSpawn());
         }
 
         @Override
@@ -647,18 +682,54 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             carrierYFixed += carrierYVelocity << 8;
             carrierYVelocity = (short) (carrierYVelocity + LIGHT_GRAVITY);
             NativePositionOps.writeYPosPreserveSubpixel(player, carrierYFixed >> 16);
-            player.setYSpeed((short) carrierYVelocity);
+            // loc_633D6 copies the carrier position, not its velocity, to P1/P2.
+            // The player's own y_vel remains the zero established by press control.
             if ((short) carrierYVelocity >= 0) {
-                parent.releasePlayerAfterLift(player);
+                releasePlayerAfterLift(player);
+                setDestroyed(true); // native Delete_Current_Sprite on the release pass
+                return;
             }
             Camera camera = services().camera();
             if (camera != null) {
                 camera.requestFastVerticalScroll();
             }
-            if (player.getYSpeed() == 0 && !player.isControlLocked()) {
-                setDestroyed(true);
-            }
         }
+
+        private void releasePlayerAfterLift(AbstractPlayableSprite player) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+            // loc_633D6 clears art_tile bit 15 when the carrier releases P1/P2.
+            player.setHighPriority(false);
+            player.setControlLocked(false);
+            if (player.getCpuController() != null) {
+                // loc_633D6 clears Ctrl_2_locked and Ctrl_2_logical when the
+                // lift arc finishes.
+                player.getCpuController().setController2SignedLocked(false);
+                player.getCpuController().clearController2LogicalLatch();
+            }
+            player.clearLogicalInputState();
+            player.clearForcedInputMask();
+            player.setAnimationId(0);
+            player.setGSpeed((short) 0x10);
+            if (services().zoneRuntimeState() instanceof MhzZoneRuntimeState state) {
+                state.setLeafBlowerCutsceneFlag(false);
+            }
+            savePostCutsceneRestartPoint();
+        }
+
+        private void savePostCutsceneRestartPoint() {
+            RespawnState checkpointState = services().checkpointState();
+            if (checkpointState == null) {
+                return;
+            }
+            Camera camera = services().camera();
+            int cameraX = camera != null ? camera.getX() & 0xFFFF : 0;
+            int cameraY = camera != null ? camera.getY() & 0xFFFF : 0;
+            checkpointState.restoreFromSaved(POST_CUTSCENE_RESTART_X, POST_CUTSCENE_RESTART_Y,
+                    cameraX, cameraY, POST_CUTSCENE_CHECKPOINT_INDEX);
+            services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+        }
+
 
         private void initializeLaunch(Camera camera) {
             if (initialized || player == null) {
@@ -668,11 +739,14 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             initializationDispatchPending = true;
             carrierYFixed = (player.getCentreY() & 0xFFFF) << 16;
             carrierYVelocity = PLAYER_LAUNCH_Y_VEL;
-            player.setYSpeed((short) PLAYER_LAUNCH_Y_VEL);
             player.setControlLocked(true);
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setObjectMappingFrameControl(false);
             player.setAnimationId(LIFT_ANIMATION);
+            // loc_6339C clears render_flags bit 1 and sets bit 7 of the high
+            // art_tile byte: the lifted player passes in front of solid terrain.
+            player.setRenderFlips(player.getRenderHFlip(), false);
+            player.setHighPriority(true);
             if (camera != null) {
                 camera.requestFastVerticalScroll();
             }
@@ -732,7 +806,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void appendRenderCommands(List<GLCommand> commands) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (!knucklesRoute && parent.isDestroyed()) {
                 setDestroyed(true);
                 return;
@@ -741,6 +815,11 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
                 setDestroyed(true);
                 return;
             }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (isDestroyed()) return;
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ2_CUTSCENE_KNUCKLES_SWITCH);
             if (renderer == null || !renderer.isReady()) {
                 return;

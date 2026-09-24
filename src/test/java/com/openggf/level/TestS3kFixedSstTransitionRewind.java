@@ -18,7 +18,7 @@ class TestS3kFixedSstTransitionRewind {
     @ParameterizedTest
     @CsvSource({"7,4", "1,5"})
     void carriedFixedOccupantReplacesFreshInitializationOwner(int zone, int slot) throws Exception {
-        HeadlessTestFixture.builder()
+        var fixture = HeadlessTestFixture.builder()
                 .withSharedLevel(SharedLevel.load(SonicGame.SONIC_3K, zone, 0)).build();
         var level = GameServices.level();
         var previous = level.getObjectManager();
@@ -35,6 +35,14 @@ class TestS3kFixedSstTransitionRewind {
                 .build());
 
         var manager = level.getObjectManager();
+        var instaShield = fixture.sprite().getInstaShieldObject();
+        assertNotNull(instaShield);
+        assertEquals(1, manager.getActiveObjects().stream().filter(o -> o == instaShield).count());
+        // Offset application follows manager rebuilding. The next player update
+        // must not register this already-carried fixed owner a second time.
+        fixture.stepFrame(false, false, false, false, false);
+        assertEquals(1, manager.getActiveObjects().stream().filter(o -> o == instaShield).count(),
+                "the first post-load player update must retain one Insta-Shield owner");
         var registry = new RewindRegistry();
         registry.register(manager.rewindSnapshottable());
         var snapshot = assertDoesNotThrow(registry::capture,

@@ -472,6 +472,8 @@ class TestS3kSszMechaSpawnHeadless {
                 assertEquals(expectedColor, PaletteWriteSupport.segaWordFromColor(
                         GameServices.level().getCurrentLevel().getPalette(1).getColor(9)),
                         "palette row " + row + " tick " + tick);
+                assertEquals(119, boss.timerForTest(),
+                        "loc_7B93E does not spend the boss timer; the handover child owns its wait");
                 var sparks = active(SszMechaSonicSparkChild.class);
                 assertNotNull(sparks);
                 assertEquals(expectedColor == 0xE88, sparks.visibleForTest(),
@@ -771,6 +773,24 @@ class TestS3kSszMechaSpawnHeadless {
     }
 
     /** One attack through the real touch pass, waited for by the boss's own hit counter. */
+    @Test void hitFlashPreservesTheShippedOverlappingBrightRow() throws Exception {
+        var fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        var boss = runToInit(fixture);
+        landOneHit(fixture, boss);
+        var rom = GameServices.rom().getRom();
+        for (int frame = 0; frame < 8; frame++) {
+            int beforeDecrement = boss.flashTimerForTest() + 1;
+            int source = 0x7D3D6 + ((beforeDecrement & 1) == 0 ? 8 : 0);
+            for (int i = 0; i < 5; i++) {
+                int color = (rom.read16BitAddr(0x7D3CC + i * 2) - 0xFC20) / 2;
+                assertEquals(rom.read16BitAddr(source + i * 2), PaletteWriteSupport.segaWordFromColor(
+                        GameServices.level().getCurrentLevel().getPalette(1).getColor(color)),
+                        "FixBugs=0 flash colour " + i + " on pass " + frame);
+            }
+            parkTheLeader(fixture); fixture.stepIdleFrames(1);
+        }
+    }
+
     private static void landOneHit(HeadlessTestFixture fixture,
                                    SszMechaSonicObjectInstance boss) {
         int before = boss.getCollisionProperty();

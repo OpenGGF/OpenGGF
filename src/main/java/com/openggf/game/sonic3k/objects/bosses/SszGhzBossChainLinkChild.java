@@ -100,6 +100,8 @@ public final class SszGhzBossChainLinkChild extends AbstractObjectInstance
     private static final int SWING_HALF = 0x80;
     /** {@code ObjDat3_7A660} / {@code _7A66C} / {@code _7A678}. */
     private static final int LINK_PRIORITY = RenderPriority.fromS3kWord(0x300);
+    // loc_57BB2 roaming clouds use bucket 0 and intentionally precede this
+    // bucket-5 ball in the ROM SAT. Cloud overlap is not a missing art priority bit.
     private static final int BALL_PRIORITY = RenderPriority.fromS3kWord(0x280);
     /** All three rows use {@code make_art_tile(ArtTile_SSZGHZMisc,1,0)} in the shipped ROM. */
     private static final int PALETTE_LINE = 1;

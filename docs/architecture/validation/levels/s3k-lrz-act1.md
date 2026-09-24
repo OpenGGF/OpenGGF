@@ -7,13 +7,15 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 `-$2C00` handover to Act 2. Owning plan:
 [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md); starting inventory:
 [LRZ placement inventory](../../research/s3k-zones/lrz-object-inventory.md).
-Status: slices 0-3 complete; slice 4 started.
+Status: traversal families, miniboss, results and seamless handoff implemented.
+Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
+full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
 load at the end of the campaign, not the route entry). Outgoing: seamless `$901`.
 
 Widths / donors / characters / teams (support authority `LaunchProfile.sanitizedFor`,
-same roster as HPZ and DDZ): widths 320/400/512/640/800; supported character/donor pairs
+same roster as HPZ and DDZ): current widths 320/352/400/528/800 (older rows retain historical presets); supported character/donor pairs
 off x {Sonic, Tails, Knuckles}, S1 x Sonic, S2 x {Sonic, Tails}; teams: solo, Sonic+Tails,
 S1 Sonic+Sonic duplicate, S2 Sonic+Tails, Sonic+Tails+Knuckles at 800.
 
@@ -21,8 +23,8 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 609 placed objects, of which **21 still build a
-`PlaceholderObjectInstance`** after slice 3, `$9A` and `$9B` (239 at `035e48a58`, 205 after slice 1,
+Current `TestS3kLrzPlacementCensus` passes with609 placed objects and zero placeholders.
+Historical slice3 baseline: **21 built a `PlaceholderObjectInstance`**, `$9A` and `$9B` (239 at `035e48a58`, 205 after slice 1,
 199 after the dash elevator, 171 after slice 3b, 170 after the corkscrew, 98 after the rest of
 3a and 3c, 83 after `$21`, 77 after `$22`, 75 after `$9C`); 331 live rings (332 records minus
 the leading `(0,0)` sentinel). The baseline only ratchets down.
@@ -115,3 +117,18 @@ exactly except for camera X minus 240. The DEZ 800px controller replay completes
 eight real enemy hits and loads zone 23 after 6837 steps, no hurt/death rows.
 These bounded checks do not close inherited cold-route, donor/team, native
 parity or whole-zone rewind obligations. Combined delivery validation remains due.
+
+
+### Post-results palette and handoff follow-up (2026-09-23)
+
+The13-row ROM palette ramp and shared clock freeze/release are implemented.
+Native111-frame observation corroborates all colors/durations, callback68 and
+post-AnPal write ordering (CRAM one frame later). Native/wide actual positioned
+boss/results/Act2 routes have no hurt/death and pass whole-registry mid-ramp
+restore/45-input replay. Final corrected selection passes77cases;24S3K palette
+consumer classes pass128cases, no skips. Earlier LRZ/required-S3K selection
+passed558cases before the native timer-order correction. Full campaign checks
+remain owed. See the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
+This is not cold full-act or whole-scene native certification. The800px capture
+reveals left-of-start scenery while the centered Act2 camera is negative; that
+separate edge and the missing Act2 Death Egg sprite remain open.

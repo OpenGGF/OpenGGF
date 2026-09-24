@@ -32,8 +32,8 @@ level and dies at frame 98. No title card is drawn. Capture:
 | Claim | State |
 | --- | --- |
 | Implemented | Production entry, background stages, captured retained planes, floor/laser/art owners, final root/children, chase and escape dispatch are connected. Widescreen support and planet composition are corrected; exposed boss-body margins use ROM layout outside the preserved native view. |
-| Cold-reachable | Direct final-arena load reaches hands; a controller-only solo 320px route destroys all six fingers, defeats core and ship, and loads DDZ. Complete incoming DEZ2 continuity and route breadth remain open. |
-| Rewind-verified | Component graphs, retained planes and production entry replay at 320/352/400/528/800 pass. Full encounter lifecycle/route breadth remains open. |
+| Cold-reachable | Direct final-arena load reaches hands; a controller-only solo 320px route destroys all six fingers, defeats core and ship, and loads DDZ. Positioned incoming DEZ2 continuity now passes at320; cold traversal and route breadth remain open. |
+| Rewind-verified | Component graphs, retained planes and production entry replay at 320/352/400/528/800 pass. Eight full-registry incoming-route spots pass at320; lifecycle/route breadth remains open. |
 | Native behaviour matched | ROM routine-backed components; native movie screenshots/VRAM collected. Strict trace rows below are historical and remain red/unrerun. |
 | Visually matched | Native and 800px entry captures inspected; retained boss and moving floor present. Wide planet extension inspected; full phase matching remains open. |
 
@@ -363,3 +363,44 @@ The destination-framing selection subsequently passed30 cases without skips
 Capture115 verifies the corrected actual800px final-DEZ→DDZ load and initial
 flight, with no death and exact replay of the authored state. Full widescreen
 DDZ completion and other incoming-route breadth remain open.
+
+
+### Incoming DEZ2 encounter chain (2026-09-23)
+
+`TestDezIncomingFinalRouteCapture` native320 passes1test with zero failures,
+errors or skips at22:29:25 BST on b6c1147a2 plus campaign edits. Positioned
+DEZ2 ($34B0,$300), solo Sonic, donor off, boot-only200rings/sevenSuperEmeralds
+continues through actual final-arena and DDZ loads without reseeding. The
+21102-frame BK2 independently replays without death, matching all20862 author
+rows before its240-input DDZ tail. Eight whole-registry restore/45-input replay
+spots cover hands, core, escape ship and live destination flight. Captures116/117
+show the two handoffs; see the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
+This closes that native positioned continuity row, not cold DEZ2 traversal,
+complete incoming DDZ combat, native parity or roster/donor/lifecycle breadth.
+
+
+Two-width incoming follow-up: queued `-Dtest=TestDezIncomingFinalRouteCapture`
+passes2cases, zero failures/errors/skips,22:34:53 BST (52.002s Maven). Both320
+and800 verify every registry key at all eight restore/45-input replay spots.
+The wide21109-input movie independently matches all20869 author rows, no deaths
+or follower; capture118 fully decodes and stills20582/21050 were inspected.
+The remaining240inputs show actual DDZ flight. No gameplay change was needed.
+Complete incoming DDZ combat and cold DEZ2 traversal remain separate open rows.
+
+
+Complete incoming DDZ verification now passes at320/800: queued Java21 with
+absolute S3K ROM, `-Dtest=TestDezIncomingFinalRouteCapture test`,2cases, zero
+failures/errors/skips, BUILD SUCCESS22:43:32 BST (62s Maven). The30918/31531
+controller inputs run from the positioned DEZ2 boss through the final arena,
+both DDZ phases and actual $D01 request, without deaths or reseeds. All11
+required spots per width compare every registered key on restore and45-input
+replay, including DDZ body damage, chase wrap and defeat. The11-family child
+spawn regression plus59 mandatory S3K checks separately pass70cases, no skips
+(22:42:16 BST). Earlier freshSuper route cases also pass; these are focused
+checks, not the combined campaign suite. Wide incoming completion video is
+`$VIDEO_ROOT/ddz-bring-up/campaign-20260923-incoming-dez2-completion-800/capture.mp4`:
+31531state rows, no deaths/followers,7finalrings,1531filmed frames, full decode
+passed;30369/31291/31530 inspected (last is white exit fade). It predates the
+recreation-only fix, which does not run during normal forward playback.
+Cold DEZ2 traversal, roster/donor breadth, history isolation and native whole-scene
+matching remain open. Ending/credits remain excluded.

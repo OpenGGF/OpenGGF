@@ -31,10 +31,10 @@ import java.util.logging.Logger;
  * ({@code tst.b subtype(a0)} / {@code bmi.s loc_44DFC}) and set means the walkway never collapses.
  *
  * <p>The solid is {@code SolidObjectTopSloped2} with {@code d1 = $40} over {@code byte_46658}, one
- * signed byte per two pixels — a 1:2 diagonal running {@code -6} to {@code $19}. The index reaches
- * {@code $40}, so it reads {@code $41} bytes and the last one comes from {@code byte_46698}
- * beyond the table's end; the bytes are read from the ROM exactly as the 68000 reads them rather
- * than clamped, because the shipped over-read is what the geometry is.
+ * signed byte per two pixels — a 1:2 diagonal running {@code -6} to {@code $19}. The normal
+ * collision window is exclusive at twice the half-width, so its samples are 0..63.
+ * The direct sampler also permits raw ROM reads beyond that window; that capability
+ * is not evidence that normal walkway contact actually over-reads the table.
  *
  * <p>{@code loc_44D98} snapshots {@code status(a0)} <em>before</em> the solid call and then, for
  * each player that was standing, clears {@code Status_InAir} again if they are airborne and not
@@ -92,6 +92,8 @@ public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObj
     private int halfWidth = HALF_WIDTH;
     /** {@code $34(a0)}: how far the live slope pointer has advanced past {@code byte_46658}. */
     private int slopeOffset;
+    private transient byte[] collisionSlope;
+    private transient int collisionSlopeOffset = -1;
 
     public SszCollapsingBridgeDiagonalObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSZCollapsingBridgeDiagonal");
@@ -184,8 +186,8 @@ public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObj
 
     /**
      * {@code SolidObjCheckSloped2} reads {@code (a2,d5.w)} with {@code a2} the live
-     * {@code $34(a0)} pointer, so the sample comes from the ROM at the advanced offset — including
-     * the byte past {@code byte_46658}'s end that {@code d1 = $40} reaches.
+     * {@code $34(a0)} pointer, so the sample comes from the ROM at the advanced offset. Ordinary contact
+     * bounds restrict the index; direct diagnostic reads do not clamp it.
      */
     @Override
     public Integer sampleSlopeByte(int sampleIndex) {
@@ -205,7 +207,21 @@ public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObj
         }
     }
 
-    @Override public byte[] getSlopeData() { return null; }
+    @Override public byte[] getSlopeData() {
+        // SolidObjectTopSloped2 and continued SolidObjSloped2 both consume the
+        // live $34 pointer. The shared solver uses this table to select its
+        // sloped path; returning null silently selects a flat 32-pixel platform,
+        // even when sampleSlopeByte itself reads the correct ROM bytes.
+        if (collisionSlope == null || collisionSlopeOffset != slopeOffset) {
+            try {
+                collisionSlope = services().rom().readBytes(SLOPE_TABLE_ADDR + slopeOffset, HALF_WIDTH + 1);
+                collisionSlopeOffset = slopeOffset;
+            } catch (IOException failure) {
+                throw new java.io.UncheckedIOException("SSZ diagonal collision slope", failure);
+            }
+        }
+        return collisionSlope;
+    }
     @Override public boolean isSlopeFlipped() { return isRenderFlipped(); }
     @Override public int getSlopeBaseline() { return 0; }
     @Override public Integer getDirectTopLandingOverlapLimit() { return 0x11; }
@@ -213,6 +229,8 @@ public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObj
     @Override public int getY() { return y; }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
+    // Obj_SSZCollapsingBridgeDiagonal: art_tile bit15 is separate from SAT queue $180.
+    @Override public boolean isHighPriority() { return true; }
     @Override public int getOnScreenHalfWidth() { return HALF_WIDTH; }
     @Override public int getOnScreenHalfHeight() { return HEIGHT; }
 

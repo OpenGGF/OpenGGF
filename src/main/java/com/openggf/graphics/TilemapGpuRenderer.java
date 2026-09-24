@@ -42,6 +42,12 @@ public class TilemapGpuRenderer {
 
     private final TilemapTexture foregroundWindowTexture = new TilemapTexture();
     private ForegroundWindow foregroundWindow;
+    private com.openggf.game.internal.ForegroundVerticalScrollSplit.Split foregroundVerticalScrollSplit;
+
+    void setForegroundVerticalScrollSplit(
+            com.openggf.game.internal.ForegroundVerticalScrollSplit.Split split) {
+        foregroundVerticalScrollSplit = split;
+    }
     private int[] uploadedWindowDescriptors;
     private final int[] savedWindowScissor = new int[4];
 
@@ -545,6 +551,7 @@ public class TilemapGpuRenderer {
         shader.setViewport(viewportX, viewportY, viewportWidth, viewportHeight);
         shader.setWorldOffset(worldOffsetX, worldOffsetY);
         shader.setWrapY(wrapY);
+        shader.setClipHorizontal(clipHorizontal);
         shader.setPriorityPass(priorityPass);
         shader.setMaskOutput(maskOutput);
         shader.setWaterSplit(useUnderwaterPalette, waterlineScreenY);
@@ -596,11 +603,37 @@ public class TilemapGpuRenderer {
 
         if (layer == Layer.FOREGROUND && foregroundWindow != null) {
             drawWithForegroundWindow(windowWidth, windowHeight, viewportX, viewportY, viewportWidth, viewportHeight);
+        } else if (layer == Layer.FOREGROUND && foregroundVerticalScrollSplit != null) {
+            drawWithForegroundVerticalScrollSplit(windowWidth, windowHeight, viewportX, viewportY,
+                    viewportWidth, viewportHeight, worldOffsetX, worldOffsetY);
         } else {
             quadRenderer.draw(0, 0, windowWidth, windowHeight);
         }
 
         shader.stop();
+    }
+
+    private void drawWithForegroundVerticalScrollSplit(int width, int height, int viewportX, int viewportY,
+                                                       int viewportWidth, int viewportHeight,
+                                                       float worldX, float lowerY) {
+        boolean scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
+        glGetIntegerv(GL_SCISSOR_BOX, savedWindowScissor);
+        glEnable(GL_SCISSOR_TEST);
+        int split = Math.min(viewportHeight, foregroundVerticalScrollSplit.scanline() * viewportHeight / height);
+        try {
+            // Both priority passes and the sprite-occlusion mask use this exact
+            // sampling. HScroll still indexes screen scanlines, independent of Y.
+            setWindowScissor(viewportX, viewportY + viewportHeight - split,
+                    viewportWidth, split, scissorEnabled);
+            shader.setWorldOffset(worldX, foregroundVerticalScrollSplit.upperScrollY());
+            quadRenderer.draw(0, 0, width, height);
+            setWindowScissor(viewportX, viewportY, viewportWidth, viewportHeight - split, scissorEnabled);
+            shader.setWorldOffset(worldX, lowerY);
+            quadRenderer.draw(0, 0, width, height);
+        } finally {
+            glScissor(savedWindowScissor[0], savedWindowScissor[1], savedWindowScissor[2], savedWindowScissor[3]);
+            if (!scissorEnabled) glDisable(GL_SCISSOR_TEST);
+        }
     }
 
     private void drawWithForegroundWindow(int width, int height, int viewportX, int viewportY,
@@ -672,8 +705,15 @@ public class TilemapGpuRenderer {
         return pixels;
     }
 
+    private boolean clipHorizontal;
+
+    /** One draw only; finite foreground layout sampling must not repeat at its edges. */
+    void setClipHorizontal(boolean value) { clipHorizontal = value; }
+
     private void resetOneShotRenderState() {
+        clipHorizontal = false;
         foregroundWindow = null;
+        foregroundVerticalScrollSplit = null;
         perLineScroll = false;
         perLineScrollSampleYOffsetPx = 0.0f;
         upperBandWrapHeightPx = 0.0f;
@@ -685,7 +725,7 @@ public class TilemapGpuRenderer {
     }
 
     protected boolean hasPendingOneShotRenderState() {
-        return foregroundWindow != null || perLineScroll || perColumnVScroll
+        return clipHorizontal || foregroundWindow != null || foregroundVerticalScrollSplit != null || perLineScroll || perColumnVScroll
                 || perLineScrollSampleYOffsetPx != 0.0f
                 || upperBandWrapHeightPx != 0.0f
                 || upperBandWrapWidthTiles != 0.0f
@@ -993,6 +1033,7 @@ public class TilemapGpuRenderer {
         foregroundWindowTexture.cleanup();
         uploadedWindowDescriptors = null;
         foregroundWindow = null;
+        foregroundVerticalScrollSplit = null;
         patternLookup.cleanup();
         quadRenderer.cleanup();
         backgroundData = null;

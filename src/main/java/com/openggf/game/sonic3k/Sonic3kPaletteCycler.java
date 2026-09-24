@@ -84,6 +84,9 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 cycle.tick(level, paletteRegistry);
             }
         }
+        if (cycles != null) {
+            for (PaletteCycle cycle : cycles) cycle.applyObjectPhaseWrites();
+        }
         // AnPal_FBZ changes gameplay state before Process_Sprites in the ROM.
         // Sonic3kLevelEventManager advances it in the fixed-object prelude so
         // dynamic objects observe the new bit on the exact $0100/$0200 edges.
@@ -485,6 +488,8 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     // ========== Base class ==========
     private static abstract class PaletteCycle {
         abstract void tick(Level level, PaletteOwnershipRegistry registry);
+        /** Captured writes made by objects after the ROM's AnimatePalettes phase. */
+        void applyObjectPhaseWrites() { }
     }
 
     // ========== AIZ1 Unified Cycle ==========
@@ -1650,6 +1655,20 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             if (dirty3) {
                 cacheFallbackPaletteTexture(registry, gm, level, 3);
                 dirty3 = false;
+            }
+        }
+        @Override void applyObjectPhaseWrites() {
+            // ROM AnimatePalettes precedes ExecuteObjects: loc_78AA8 writes $7FFF
+            // after this frame's decrement, and loc_78AE6 clears it after the tick.
+            // Engine palette resolution runs after objects, so defer these captured
+            // writes until after tick rather than advancing a newly written timer.
+            // Apply them even on a fade-only pass, without advancing either clock.
+            var runtime = GameServices.hasRuntime()
+                    ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentLrz(
+                            GameServices.zoneRuntimeRegistry()).orElse(null) : null;
+            if (runtime != null) {
+                int write = runtime.consumePrimaryPaletteTimerWrite();
+                if (write >= 0) timerAB = write;
             }
         }
     }

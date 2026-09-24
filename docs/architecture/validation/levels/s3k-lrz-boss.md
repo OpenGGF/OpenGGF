@@ -6,10 +6,10 @@ on a level-select load and none on the Act 2 handover (`Act3_flag`, `loc_62B6`).
 Character route: Sonic + Tails and Tails alone only — Knuckles never enters `$1600`.
 Flash sequence, autoscroll, end boss, capsule and `Obj_StartNewLevel $2D` at `($FE8,$5E0)` to
 Hidden Palace `$1601`. Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md).
-Status: fresh-load carry/title suppression, screen stages and autoscroll implemented;
-platform generation and lava presentation are implemented; the flash/controller
-graph is implemented and under validation; the background stage owner and end-boss candidate are under
-validation (see the in-progress evidence below).
+Status: carry/title suppression, screen stages, flash, autoscroll, platforms/lava,
+end boss and HPZ exit implemented. A12820-frame fresh boss-act route completes
+with declared initial fire shield/37rings. Native presentation/timing and the full
+route product remain incomplete; see the dated evidence below.
 
 Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`, `Act3_timer`,
 `Saved2_status_secondary`), level select `$1600`, star-post respawn (`LRZ3_ScreenInit` P1 X >=

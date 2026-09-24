@@ -96,6 +96,10 @@ public final class SszSwingingCarrierArcObjectInstance extends AbstractObjectIns
         killed = true;
     }
 
+    // loc_461FE/loc_46210 delete only after the hub signals routine=$FF.
+    // The arc has no independent range test; manager culling would break the live graph.
+    @Override public boolean isPersistent() { return true; }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (tryServices() == null) {

@@ -80,6 +80,10 @@ public final class SszSwingingCarrierObjectInstance extends AbstractObjectInstan
         this.mappingFrame = rotator ? ROTATOR_FRAME : PENDULUM_FRAME;
     }
 
+    // loc_46142 owns the coarse-X cull and signals the arc before deleting the hub.
+    // Disable manager pre-culling so this native cascade runs even at the viewport edge.
+    @Override public boolean isPersistent() { return true; }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (tryServices() == null) {

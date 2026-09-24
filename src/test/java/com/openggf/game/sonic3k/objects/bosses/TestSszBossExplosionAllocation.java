@@ -58,6 +58,28 @@ class TestSszBossExplosionAllocation {
     }
 
     @Test
+    void nativeParentStopBitRetiresWorkerBeforeAllocationOrRng() {
+        var manager = mock(ObjectManager.class);
+        var rng = mock(GameRng.class);
+        var parent = mock(SszMechaSonicObjectInstance.class);
+        when(parent.getSlotIndex()).thenReturn(5);
+        when(parent.stopsDefeatExplosions()).thenReturn(true);
+        when(manager.getActiveObjects()).thenReturn(List.of(parent));
+        var controller = new SszBossExplosionController(0, 0, 5);
+        controller.setServices(new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return manager; }
+            @Override public GameRng rng() { return rng; }
+        });
+        controller.setSlotIndex(7);
+        controller.update(0, null);
+        assertFalse(controller.isDestroyed(), "native stop installs next-pass deletion");
+        verify(manager, never()).allocateSlotAfter(anyInt());
+        verifyNoInteractions(rng);
+        controller.update(1, null);
+        assertTrue(controller.isDestroyed());
+    }
+
+    @Test
     void controllerAllocationIsOneForwardAttemptWithoutFallback() {
         var manager = mock(ObjectManager.class);
         var services = new StubObjectServices() {
@@ -68,4 +90,31 @@ class TestSszBossExplosionAllocation {
         verify(manager).allocateSlotAfter(5);
         verifyNoMoreInteractions(manager);
     }
+    @Test
+    void finiteBurstOutlivesDeletedCreatorAndSpendsCountsOnAllocationFailure() {
+        var manager = mock(ObjectManager.class);
+        var rng = mock(GameRng.class);
+        var services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return manager; }
+            @Override public GameRng rng() { return rng; }
+        };
+        when(manager.allocateSlotAfter(5)).thenReturn(7);
+        when(manager.allocateSlotAfter(7)).thenReturn(-1);
+        when(manager.getActiveObjects()).thenReturn(List.of());
+        assertTrue(SszBossExplosionController.spawnFor(services, 5, 0x300, 0x500, 0xC));
+        var captured = ArgumentCaptor.forClass(SszBossExplosionController.class);
+        verify(manager).addDynamicObjectAtSlot(captured.capture(), eq(7));
+        var controller = captured.getValue();
+        // The mocked addDynamicObjectAtSlot does not perform ObjectManager's service injection.
+        controller.setServices(services);
+        for (int frame = 0; frame < 189; frame++) controller.update(frame, null);
+        verify(manager, times(63)).allocateSlotAfter(7);
+        assertFalse(controller.isDestroyed());
+        controller.update(189, null);
+        assertFalse(controller.isDestroyed(), "count expiry installs Go_Delete_Sprite");
+        controller.update(190, null);
+        assertTrue(controller.isDestroyed());
+        verifyNoInteractions(rng);
+    }
+
 }

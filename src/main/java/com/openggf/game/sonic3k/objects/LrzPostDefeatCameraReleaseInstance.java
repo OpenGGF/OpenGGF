@@ -44,11 +44,9 @@ import java.util.List;
  * copies {@code $40} bytes from {@code line_3}, which is lines 2 and 3 and stops exactly at the
  * end of {@code Normal_palette}.
  *
- * <p><b>Not modelled, and recorded as owed:</b> {@code word_78EAA}, the thirteen-step palette
- * rotation script the waiter installs through {@code Palette_rotation_custom} and
- * {@code Palette_cycle_counter1} before its own test. It fades five colours of
- * {@code Normal_palette_line_3+$02} down over about a second and is a separate mechanism from the
- * {@code AnPal} cycles the engine already runs.
+ * <p>The waiter also executes {@code word_78EAA}'s thirteen ROM-backed colour rows.
+ * Its callback stops only that script; the camera release still waits for $940.
+ * This is a literal port of the original rotation, with no widescreen timing change.
  */
 public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInstance
         implements RewindRecreatable {
@@ -76,6 +74,8 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
     private boolean awaitingEndOfLevel;
     /** The waiter allocates its sibling exactly once. */
     private boolean siblingAllocated;
+    private int paletteHeader, paletteCursor, paletteDelay, paletteIteration;
+    private boolean paletteFinished;
 
     public LrzPostDefeatCameraReleaseInstance(Gate gate) {
         super(new ObjectSpawn(0, 0, Sonic3kObjectIds.MANTIS, 0, 0, false, 0),
@@ -118,6 +118,8 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
                 return;
             }
             awaitingEndOfLevel = false;
+            startPaletteRotation();
+            writePrimaryPaletteTimer(0x7FFF);
             if (!siblingAllocated) {
                 // jsr (AllocateObject) / move.l #loc_78B08,(a1) (:160517-160519).
                 siblingAllocated = true;
@@ -126,6 +128,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
             }
             // loc_78AE0 runs the rotation script and falls through into loc_78AE6 on this frame.
         }
+        if (gate == Gate.WAITER && !paletteFinished) advancePaletteRotation();
         int threshold = gate == Gate.WAITER ? WAITER_CAMERA_X : SIBLING_CAMERA_X;
         var camera = services().camera();
         int nativeX = camera.getX();
@@ -139,10 +142,62 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
         services().camera().setMinX((short) threshold);
         if (gate == Gate.SIBLING) {
             installActTwoPalette();
+        } else {
+            writePrimaryPaletteTimer(0);
         }
         // jmp (Delete_Current_Sprite) (sonic3k.asm:160528, :160547): neither slot is a placement
         // and neither comes back.
         com.openggf.level.objects.ObjectLifetimeOps.destroyLatched(this);
+    }
+
+    private void writePrimaryPaletteTimer(int value) {
+        if (services().zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState state) {
+            state.writePrimaryPaletteTimer(value);
+        }
+    }
+
+    private void startPaletteRotation() {
+        try {
+            var rom = services().rom();
+            int entry = Sonic3kConstants.PAL_LRZ_POST_BOSS_SCRIPT_ADDR;
+            paletteHeader = rom.read32BitAddr(entry + 4);
+            paletteCursor = paletteHeader + rom.read16BitAddr(entry);
+            paletteDelay = rom.readBytes(entry + 2, 1)[0] & 0xFF;
+            paletteIteration = 0;
+        } catch (java.io.IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
+        }
+    }
+
+    /** Run_PalRotationScript: signed byte delay, finite callback before any further copy. */
+    private void advancePaletteRotation() {
+        var registry = services().paletteOwnershipRegistryOrNull();
+        if (registry != null && registry.isPaletteRotationDisabled()) return;
+        paletteDelay = (byte) (paletteDelay - 1);
+        if (paletteDelay >= 0) return;
+        try {
+            var rom = services().rom();
+            if ((short) rom.read16BitAddr(paletteCursor) < 0) {
+                paletteIteration = (paletteIteration + 1) & 0xFF;
+                if (paletteIteration >= (rom.readBytes(paletteHeader + 3, 1)[0] & 0xFF)) {
+                    // loc_78B00 changes only this object's routine to loc_78AE6.
+                    paletteFinished = true;
+                    return;
+                }
+                paletteCursor = paletteHeader + 4;
+            }
+            int count = (rom.readBytes(paletteHeader + 2, 1)[0] & 0xFF) + 1;
+            int first = (rom.read16BitAddr(paletteHeader) - 0xFC00) / 2;
+            S3kPaletteWriteSupport.applyContiguousPatch(registry, services().currentLevel(),
+                    services().graphicsManager(), S3kPaletteOwners.ZONE_EVENT_PALETTE_LOAD,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT, first / 16, first % 16,
+                    rom.readBytes(paletteCursor, count * 2));
+            paletteCursor += count * 2;
+            paletteDelay = rom.read16BitAddr(paletteCursor) & 0xFF;
+            paletteCursor += 2;
+        } catch (java.io.IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
+        }
     }
 
     /**

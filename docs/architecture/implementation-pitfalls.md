@@ -139,6 +139,11 @@ graph instead. Boss-child spawn metadata is a derived position/ordinal cache:
 refresh it before capture, including the first frame after subclass construction.
 `TestS3kLrzBossRewindHeadless` covers arms, hit flashes and defeat debris through
 explicit removal/recreation and whole-world forward replay.
+DDZ children instead retain their creation spawn: do not call a normal parent-derived
+constructor with a null parent during recreation and silently replace that spawn
+with `(0,0)`. Pass `ctx.spawn()` through construction; relink the captured parent
+later. Compare all registered snapshot keys, not only live coordinates: the incoming
+DEZ→DDZ route exposed this metadata loss despite the earlier summary replay passing.
 
 **ROM sprite priority buckets are SAT order.** Lower priority buckets and earlier object
 slots appear in front; painter rendering reverses both orders. Folded boss parts
@@ -154,6 +159,16 @@ reverse. Merely creating a mask object is insufficient: the zone must enable
 the SAT collection/post-pass. The SOZ priority audit on 2026-09-16 exposed both
 failures with a door drawn through the sand and a same-bucket mask hiding the
 wrong object.
+**Hardware tile priority needs its own evidence.** The SSZ2 Mecha body retained
+the correct `$280` display-list bucket but inherited `isHighPriority() == false`,
+despite `ObjSlot_MechaSonic` setting `art_tile` bit15. The floating island's
+correct high-priority Plane B mask therefore hid the airborne body; glow and
+projectile children already had the correct bit. A palette-preserving draw call
+does not preserve this object attribute. Check the ROM art word independently
+of the bucket, assert the object's tile-occlusion mask through phase transitions
+and rewind, and inspect an actual sprite/high-plane overlap. Route completion
+and screenshots without overlap cannot establish priority correctness.
+
 **The bucket encoding differs per game and the engine defaults are silent.** S1/S2
 store the bucket as a byte (`move.b #4,priority(a0)` is bucket 4); S3K stores the
 display-list byte offset as a word (`move.w #$280,priority(a0)` is bucket 5, `$80` is
@@ -301,6 +316,15 @@ token and source-proven loop phases. Follow callees: `VInt_12` fades DO drain DM
 through `Do_ControllerPal`; `VInt_0` lag does not. VInt14 is Sega-art loading, not
 the level title-card loop, which arms VIntC. These distinctions were established
 by FBZ native/GPU paired evidence on 2026-09-14.
+
+**Finite layouts are not VDP rings.** Native camera bounds normally hide the
+horizontal ends of a finite foreground; a centered wide camera can expose them.
+Wrapping the full-layout GPU texture then borrows unrelated far-end terrain.
+Clip the finite wide foreground in both visible and sprite-mask passes; preserve
+explicit ring owners and background wrapping. Compare pixel bounds to the latched
+`LevelScrollPresentation`, not the later live camera logged after the CPU step.
+The LRZ seamless-handoff check caught this distinction at the last3pixels before
+camera X=0 (September23S&K completion campaign).
 
 **Retained SAT requires retained scroll.** S3K `VInt` writes `V_scroll_value`
 to VSRAM and `VInt_8_Cont` uploads `H_scroll_buffer` alongside the prepared
@@ -489,6 +513,12 @@ camera misses both errors: the first bends the independently moving floor,
 the second shifts the planet as the cache advances. Inspect a moving wide
 capture with the native centre and the lower band both visible.
 
+MHZ2's ship (2026-09-23) reproduced the missing-consumer failure: the controller,
+propellers and HScroll array moved while Plane A used ordinary camera sampling.
+The initial VSRAM word and HInt6's mid-screen reset are separate inputs. Preserve
+the same split in low/high tile passes and the sprite-occlusion mask; drawing a
+visible ship overlay alone would introduce another priority mismatch.
+
 ### Resolve raw object offsets through the constants table
 
 The SOZ rappel wire final swing reads `$46(a0)` in `loc_4AC98`, while its
@@ -638,6 +668,24 @@ room follow-up; matching the actual width also changes when the puzzle spawns an
 therefore its bob phase, so identical pad timings need not solve both views.
 
 
+MHZ2's ship controller and propellers likewise disappeared after one tick because
+the engine applied world-range retirement to their native workspace/screen
+coordinates. A ROM tail that returns or calls only Draw_Sprite has no implicit
+world deletion. Exercise it through the real object manager, not repeated direct
+updates. Its capsule/results also retained boss-owned camera/control state:
+generic results cleanup must not restore pre-boss bounds while a scripted exit
+still owns the expanded arena.
+
+SSZ swinging carriers (`loc_46142`, `loc_461FE`, `loc_462B6`, 2026-09-24)
+make the hub's coarse-X test responsible for retiring the whole group. The arc
+and rider bar draw without independent range tests. Generic manager culling of
+a swinging tip removed the bar while the arc retained its identity, both dropping
+a usable platform and crashing rewind capture. Mark all three as manager-persistent
+so the hub's own ROM range check can signal arm then bar. Verify the cascade still
+deletes/recreates the graph; do not merely null the reference during capture.
+The cold SSZ route first diverged at input7076 because the restored bar now caught
+Sonic, requiring an ordinary jump to continue along the upper walkway.
+
 ### A dying child can outlive its parent's SST identity
 
 DEZ final fingers (`loc_80D64`, 2026-09-23) wait 32 updates while their hand
@@ -650,3 +698,47 @@ release the identity link when entering the dying code. Test an empty slot,
 reused slot, and capture/restore after parent retirement. Do not delay parent
 deletion or freeze its last position to avoid the dangling reference: both
 change native allocation/position behavior.
+
+
+DDZ widescreen capture (2026-09-23): normalized float transport is not the
+VDP scroll contract. Decode HScroll back to an integer before modulo; a tiny
+wrap-boundary residue can select unrendered column512 of an800px allocation.
+The live repeated-render regression catches the cloud seam, while an isolated
+core-context shader test did not. Test the production render path as well as
+coordinate-coded textures. All declared sampler uniforms need compatible
+texture-unit bindings even when their shader branch is disabled.
+
+
+Exact-SST act transitions (MHZ/HCZ,2026-09-23): checking the rebuilt manager
+before the first player update misses delayed double registration. An offset
+step marked the already-carried Insta-Shield unregistered, so the next player
+update inserted the same identity again. Step the player, then assert one owner
+and capture/restore equality; a correct immediate carry snapshot is insufficient.
+
+
+MHZ2 entrance (2026-09-23): `Check_CameraInRange` is an activation gate, not
+an unconditional delete. Its failure branch `loc_85C74` calls
+`Delete_Sprite_If_Not_In_Range`, retaining a still-near actor in its existing
+SST slot. Deleting on every rectangle miss loses actors admitted by the wider
+placement window. The resulting missing leaf-blower cutscene looked like a
+traversal dead end; the native recording hits the same Knuckles-only wall and
+then lifts Sonic. Check the expected event owner before tuning route inputs or
+collision. Test pre-activation waiting followed by admission, not only direct
+construction inside the rectangle.
+
+
+Player-controlled cutscenes also own rendering writes. MHZ2 `loc_6339C` sets
+hardware priority while carrying Sonic through foreground rock and clears it
+at `loc_633D6`; movement/control-only tests missed an invisible lifted player.
+Audit every dynamic `art_tile` and `render_flags` write alongside position and
+control, including release/reset. Object display-list priority is independent.
+Assert the live player bit through replay and inspect an actual terrain overlap.
+
+
+A native child is not necessarily owned by the actor that allocated it.
+MHZ2 `loc_6338E` stores only a player slot; `loc_632AE` retires Knuckles while
+the lift remains active. Requiring a live Knuckles parent during carrier rewind
+recreation loses the lift mid-ascent. Follow the actual RAM references and test
+restoration after the allocating actor has gone. Likewise, `Child_Draw_Sprite`
+contains a lifetime branch despite its name: execute that branch in gameplay
+updates so headless simulation does not retain deleted actors' children.

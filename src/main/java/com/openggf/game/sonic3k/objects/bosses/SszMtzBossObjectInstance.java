@@ -82,7 +82,7 @@ import java.util.List;
  * {@code $32}.
  */
 public final class SszMtzBossObjectInstance extends AbstractBossInstance
-        implements SpawnRewindRecreatable, SszMechaHeadHost {
+        implements SpawnRewindRecreatable, SszMechaHeadHost, SszBossExplosionController.StopFlag {
 
     /** {@code move.b #8,collision_property(a0)}. */
     private static final int HIT_COUNT = 8;
@@ -824,7 +824,8 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
     }
 
     /** Obj_WaitForParent reads bit 5 of this ship's native $38 arm radius. */
-    boolean stopsDefeatExplosions() { return (armX & 0x20) != 0; }
+    @Override
+    public boolean stopsDefeatExplosions() { return (armX & 0x20) != 0; }
 
     /** {@code Wait_FadeToLevelMusic}, {@code loc_7AC7A}, {@code loc_7AC92} and {@code loc_7ACA4}. */
     private void updateEscape() {

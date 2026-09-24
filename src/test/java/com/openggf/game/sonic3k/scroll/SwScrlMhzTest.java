@@ -140,4 +140,20 @@ class SwScrlMhzTest {
         manager.initLevel(Sonic3kZoneIds.ZONE_MHZ, 1);
         manager.getMhzEvents().setAct2BackgroundRoutineForTest(routineBg);
     }
+    @org.junit.jupiter.api.Test
+    void rewindRestoresLoopAccumulatorBeforeRebuildingAtAnEarlierCamera() {
+        var handler = new SwScrlMhz();
+        handler.init(1, 0x4100, 0x280);
+        int[] before = new int[224];
+        handler.update(before, 0x4180, 0x280, 1, 1);
+        Object saved = handler.captureRewindState();
+        handler.update(new int[224], 0x4080, 0x280, 2, 1);
+        handler.update(new int[224], 0x41C0, 0x280, 3, 1);
+        handler.restoreRewindState(saved);
+        int[] restored = new int[224];
+        handler.update(restored, 0x4180, 0x280, 1, 1);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before, restored);
+        org.junit.jupiter.api.Assertions.assertEquals(saved, handler.captureRewindState());
+    }
+
 }

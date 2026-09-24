@@ -326,9 +326,9 @@ class TestS3kSszPlacementCensus {
                 "act-1 placements with no implemented owner");
     }
 
-    /** Act 2's own census, which slice 9 still owns. */
+    /** Act 2's crane and Mecha encounter are now both concrete production owners. */
     @Test
-    void actTwoRecordsItsRemainingPlaceholderFamilies() throws IOException {
+    void actTwoLeavesNoPlaceholderFamilies() throws IOException {
         Set<Integer> implemented = Sonic3kObjectProfile.implementedIdsForZone(SSZ);
         Set<String> unimplemented = new TreeSet<>();
         for (ObjectSpawn spawn : new Sonic3kObjectPlacement(rom()).load(SSZ, 1)) {
@@ -336,9 +336,9 @@ class TestS3kSszPlacementCensus {
                 unimplemented.add(String.format("$%02X:$%02X", spawn.objectId(), spawn.subtype()));
             }
         }
-        // $B2 is Obj_KnuxFinalBossCrane, the act-2 cutscene crane slice 9 owns.
-        assertEquals(Set.of("$B2:$00"), unimplemented,
-                "act-2 placements still waiting on slice 9");
+        // $B2 now resolves to SszCraneShip; its cold route and recreated children
+        // are covered by TestS3kSszCraneRouteHeadless.
+        assertEquals(Set.of(), unimplemented, "act-2 placements with no implemented owner");
     }
 
     private static Map<String, Integer> census(List<ObjectSpawn> spawns) {

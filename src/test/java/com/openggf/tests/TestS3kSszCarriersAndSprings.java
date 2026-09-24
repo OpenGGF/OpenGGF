@@ -386,6 +386,29 @@ class TestS3kSszCarriersAndSprings {
      * is a {@code Gradual_SwingOffset} biased by {@code $41}.
      */
     @Test
+    void swingingCarrierHubRetiresAndRecreatesItsWholeGraph() {
+        var fixture = bootAtCheckpoint(320, 0x0D40, 0x1C0);
+        fixture.stepIdleFrames(5);
+        var hub = active(SszSwingingCarrierObjectInstance.class);
+        var arc = active(SszSwingingCarrierArcObjectInstance.class);
+        var bar = active(SszSwingingCarrierBarObjectInstance.class);
+        assertNotNull(hub); assertNotNull(arc); assertNotNull(bar);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        // loc_46142 culls the hub, loc_461FE signals the bar, loc_462B6 deletes it.
+        GameServices.camera().setScrollLocked(true);
+        GameServices.camera().setX((short) 0);
+        fixture.stepIdleFrames(2);
+        assertTrue(hub.isDestroyed()); assertTrue(arc.isDestroyed()); assertTrue(bar.isDestroyed());
+        registry.capture(); // no references to retired members may remain in a live owner.
+        registry.restore(before);
+        sameSnapshot(before, registry.capture(), "recreate the retired carrier graph");
+        assertNotNull(active(SszSwingingCarrierObjectInstance.class));
+        assertNotNull(active(SszSwingingCarrierArcObjectInstance.class));
+        assertNotNull(active(SszSwingingCarrierBarObjectInstance.class));
+    }
+
+    @Test
     void theSwingingCarrierBuildsItsArcAndRiderBarFromTheSubtype() {
         // $75:$00 at ($D40,$200).
         HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x0D40, 0x1C0);

@@ -163,6 +163,15 @@ rows and first compared row together; an extra pass can remain invisible until
 a later moving-platform ride. Retire source-loop admission inside the title
 loop's own admission path. See the [KiS2 frontier investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
 
+SSZ seeded presentation comparison (2026-09-23): skipping an out-of-scope
+ending actor also skips its camera lock and fade-from-white worker. Setting only
+the negative camera signal produces a plausible but stationary engine/native
+comparison; restoring the lock alone produces a white reference. Declare the
+omitted owner's prerequisites from disassembly, including palette completion,
+and stop before its next excluded dispatch. Compare a documented non-HUD region
+in native 3-bit RGB without fitted offsets; a seeded checkpoint does not certify
+the cold route or widescreen margins.
+
 FBZ miniboss capture (2026-09-15): `GameplayCaptureTool --x/--y` reinitializes
 level events and executes a setup object update. That can select a different
 background state from a native position-only teleport and enqueue a one-time

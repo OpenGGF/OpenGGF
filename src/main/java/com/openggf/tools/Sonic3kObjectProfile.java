@@ -153,6 +153,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x90, // AIZMinibossCutscene / Cluckoid
             0xA4, // Sparkle / Spikebonker
             0xA5, // Batbot / Chainspike
+            0xA6, // CNZMiniboss / DEZMiniboss
+            0xA7, // CNZEndBoss / DEZEndBoss
             0xA8, // Blaster / MHZ1CutsceneKnuckles
             0xA9, // TechnoSqueek / MHZ1CutsceneButton
             0xEB // GumballItem
@@ -216,8 +218,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0xA2, // MGZEndBossKnux
             0xA3, // Clamer
             0xA5, // Batbot
-            0xA6, // CNZMiniboss
-            0xA7, // CNZEndBoss
             0xAD, // Penguinator
             0xAF, // ICZCrushingColumn
             0xB0, // ICZPathFollowPlatform
@@ -363,7 +363,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x7E, // SSZCollapsingColumn
             0x7F, // SSZFloatingPlatform
             0xA0, // EggRobo
-            0xAF // SSZCutsceneButton
+            0xAF, // SSZCutsceneButton
+            0xB2 // KnuxFinalBossCrane
     );
 
     /** Every id implemented in at least one S3KL zone. */

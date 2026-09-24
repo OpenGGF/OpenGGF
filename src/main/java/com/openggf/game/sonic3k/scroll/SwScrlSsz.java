@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.level.scroll.compose.DeformationPlan;
@@ -11,7 +12,7 @@ import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
 import static com.openggf.level.scroll.M68KMath.negWord;
 
 /**
- * Sky Sanctuary act 1 background scroll: {@code SSZ1_BackgroundInit},
+ * Sky Sanctuary background scroll. Act 1: {@code SSZ1_BackgroundInit},
  * {@code SSZ1_BackgroundEvent} and the two parameter subroutines {@code sub_579F0}
  * (plain sky) and {@code sub_57A60} (cloud band), sonic3k.asm:116385-116708.
  *
@@ -60,8 +61,11 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * shake {@code SSZ1_ScreenEvent} adds to the Y copy, which Sky Sanctuary raises during the Death
  * Egg launch, so the launch slice owns closing that gap.
  *
- * <p>Act 2 runs {@code SSZ2_BackgroundInit}/{@code SSZ2_BackgroundEvent} and is not
- * implemented here yet; it falls back to the default handler.
+ * <p>Act 2's encounter path uses {@code sub_58D3E}/{@code sub_58FBC}: ROM-backed
+ * foreground bands, background horizontal waves and gated background VSRAM columns.
+ * Its intermediate table and render clock live in the rewindable runtime state.
+ * The later ending redraw branches (foreground routine {@code $C} onward) remain
+ * unimplemented and currently use the default handler.
  */
 public class SwScrlSsz extends SwScrlS3kDefault {
 
@@ -118,9 +122,93 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     /** Whether the frame this handler last advanced rendered the cloud bands. */
     private boolean lastFrameUsedCloudBands;
 
+    private int[] act2ForegroundBands;
+    private int[] act2IslandBands;
+
+    private void updateAct2(SszZoneRuntimeState state, int[] output, int cameraX, int cameraY, int frame) {
+        // ParallaxManager supplies physical camera Y, whereas loc_58E6E and
+        // ApplyFGDeformation consume Camera_Y_pos_copy, including the full shake.
+        cameraY = (short) (cameraY + state.appliedScreenShakeOffset());
+        if (act2ForegroundBands == null) {
+            try {
+                var rom = GameServices.level().getObjectManager().getObjectServices().romReader();
+                var bands = new java.util.ArrayList<Integer>();
+                for (int address = Sonic3kConstants.SSZ2_FG_DEFORM_TABLE_ADDR; ; address += 2) {
+                    int height = rom.readU16BE(address);
+                    bands.add(height);
+                    if (height == 0x7FFF) break;
+                    if (bands.size() > 64) throw new IllegalStateException("SSZ2 deform table terminator missing");
+                }
+                act2ForegroundBands = bands.stream().mapToInt(Integer::intValue).toArray();
+            } catch (java.io.IOException failure) {
+                throw new java.io.UncheckedIOException(failure);
+            }
+        }
+        if (frame != state.backgroundScrollFrame()) {
+            state.setBackgroundScrollFrame(frame);
+            SszAct2Deformation.parameters(state, cameraX, cameraY);
+        }
+        SszAct2Deformation.compose(state, output, cameraY, act2ForegroundBands);
+        resetScrollTracking();
+        for (int i = 0; i < VISIBLE_LINES; i++) trackOffsetFromPacked(output[i]);
+        vscrollFactorBG = (short) state.backgroundCameraY();
+        currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(output, viewportWidth());
+    }
+
+    @Override public short getVscrollFactorFG() {
+        var state = state();
+        if (state != null && state.actIndex() == 1 && state.screenInitApplied())
+            return (short) (GameServices.camera().getY() + state.appliedScreenShakeOffset());
+        return super.getVscrollFactorFG();
+    }
+
+    @Override public short[] getPerColumnVScrollBG() {
+        var state = state();
+        return state != null && state.actIndex() == 1 && state.foregroundRoutine() < 0xC
+                ? SszAct2Deformation.columns(state, viewportWidth()) : null;
+    }
+
     @Override
     public void update(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
         SszZoneRuntimeState state = state();
+        if (actId == 1 && state != null && state.screenInitApplied()
+                && state.foregroundRoutine() >= 0x18 && state.backgroundRoutine() == 0) {
+            if (act2IslandBands == null) {
+                try {
+                    var rom = GameServices.level().getObjectManager().getObjectServices().romReader();
+                    act2IslandBands = new int[10];
+                    for (int i = 0; i < act2IslandBands.length; i++)
+                        act2IslandBands[i] = rom.readU16BE(0x58CCA + i * 2); // SSZ2_DeformArray
+                } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+            }
+            if (frameCounter != state.backgroundScrollFrame()) {
+                state.setBackgroundScrollFrame(frameCounter);
+                SszAct2Deformation.islandParameters(state);
+            }
+            SszAct2Deformation.composeIsland(state, horizScrollBuf,
+                    (short) (cameraY + state.appliedScreenShakeOffset()), act2IslandBands);
+            vscrollFactorBG = (short) state.backgroundCameraY();
+            resetScrollTracking();
+            for (int i = 0; i < VISIBLE_LINES; i++) trackOffsetFromPacked(horizScrollBuf[i]);
+            currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(horizScrollBuf, viewportWidth());
+            return;
+        }
+        if (actId == 1 && state != null && state.screenInitApplied()
+                && state.foregroundRoutine() >= 0xC && state.foregroundRoutine() < 0x18) {
+            // loc_58D6E stops parameter updates; loc_59064 uses PlainDeformation.
+            // loc_58B7C clears physical X but leaves this pass's X-copy intact.
+            int packed = ((-GameServices.camera().getXCopy() & 0xFFFF) << 16)
+                    | (-state.backgroundCameraX() & 0xFFFF);
+            java.util.Arrays.fill(horizScrollBuf, 0, VISIBLE_LINES, packed);
+            vscrollFactorBG = (short) state.backgroundCameraY();
+            resetScrollTracking(); trackOffsetFromPacked(packed);
+            currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(horizScrollBuf, viewportWidth());
+            return;
+        }
+        if (actId == 1 && state != null && state.screenInitApplied() && state.foregroundRoutine() < 0xC) {
+            updateAct2(state, horizScrollBuf, cameraX, cameraY, frameCounter);
+            return;
+        }
         if (actId != 0 || state == null || !state.screenInitApplied()) {
             // SSZ2_BackgroundInit/Event belong to the act-2 slice; before the screen init has
             // forced the camera there is no Sky Sanctuary framing to derive.

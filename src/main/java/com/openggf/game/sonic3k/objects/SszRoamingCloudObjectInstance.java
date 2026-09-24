@@ -42,8 +42,11 @@ import java.util.logging.Logger;
  * and the {@code $1FF} horizontal period is 512 pixels wide regardless of the viewport, so a
  * wide viewport shows the wrap seam closer to the right edge than a 320-pixel one does.
  *
- * <p>{@code render_flags $40} is the screen-coordinate flag, so the engine converts back to a
- * world position the way {@code FbzCloudInstance} does for {@code Obj_FBZCloud}.
+ * <p>{@code render_flags $40} selects multi-draw (bit 6); the clear bit 2 selects
+ * screen coordinates in {@code loc_1AE58}. The engine converts those back to world
+ * coordinates for its renderer. Bucket 0 deliberately puts these clouds in front
+ * of the player and the GHZ ball (bucket 5): native movie frames 453000/453080
+ * corroborate that overlap (2026-09-24 SSZ cloud-order observation).
  */
 public final class SszRoamingCloudObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {

@@ -22,6 +22,7 @@ uniform float ViewportOffsetX;       // GL viewport X offset
 uniform float ViewportOffsetY;       // GL viewport Y offset
 uniform float WorldOffsetX;          // World X at left edge
 uniform float WorldOffsetY;          // World Y at top edge
+uniform int ClipHorizontal;         // Finite world-layout foreground; no opposite-edge samples
 uniform int WrapY;                   // 1 to wrap vertically, 0 to clamp
 uniform int PriorityPass;            // -1 = all, 0 = low, 1 = high
 uniform int MaskOutput;              // 1 = output white mask, 0 = output actual color
@@ -142,6 +143,11 @@ void main()
         localBandY = mod(localBandY, wrapHeightPx);
         if (localBandY < 0.0) localBandY += wrapHeightPx;
     }
+
+    // Native VDP planes wrap, but a finite level's native camera bounds hide its
+    // layout edges. A wider view can expose them. Clip only the extra finite-world
+    // foreground sampling; backgrounds and explicitly looping planes retain wrap.
+    if (ClipHorizontal == 1 && (tileXf < 0.0 || tileXf >= TilemapWidth)) discard;
 
     if (UpperBandWrapWidthTiles > 0.0 && UpperBandWrapHeightPx > 0.0 && localBandY < UpperBandWrapHeightPx) {
         tileXf = mod(tileXf, UpperBandWrapWidthTiles);

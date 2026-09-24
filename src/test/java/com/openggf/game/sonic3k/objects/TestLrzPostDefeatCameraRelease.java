@@ -22,18 +22,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * rebased camera and never against act 1's {@code $2C00}. The sibling at {@code $2C0} therefore
  * fires long before the waiter at {@code $940}.
  */
+@com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
 class TestLrzPostDefeatCameraRelease {
 
     private TestObjectServices services;
     private Camera camera;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         TestEnvironment.resetAll();
         SessionManager.clear();
         camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
-        services = new TestObjectServices().withIsolatedObjectManager().withCamera(camera)
+        var rom = new com.openggf.data.Rom();
+        rom.open(com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath());
+        services = new TestObjectServices().withRom(rom).withIsolatedObjectManager().withCamera(camera)
                 .withGameState(com.openggf.game.GameServices.gameState());
     }
 

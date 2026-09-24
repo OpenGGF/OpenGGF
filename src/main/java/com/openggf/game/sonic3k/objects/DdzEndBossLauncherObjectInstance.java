@@ -31,18 +31,23 @@ final class DdzEndBossLauncherObjectInstance extends AbstractDdzObjectInstance
 
 
     DdzEndBossLauncherObjectInstance(DdzEndBossObjectInstance boss) {
-        super(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, 0, 0, false, 0),
-                "DDZEndBossLauncher", boss);
+        this(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, 0, 0, false, 0), boss);
+    }
+
+    private DdzEndBossLauncherObjectInstance(ObjectSpawn spawn, DdzEndBossObjectInstance boss) {
+        super(spawn, "DDZEndBossLauncher", boss);
     }
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzEndBossLauncherObjectInstance(ObjectSpawn spawn) {
-        this((DdzEndBossObjectInstance) null);
+        this(spawn, (DdzEndBossObjectInstance) null);
     }
 
     @Override
     public DdzEndBossLauncherObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzEndBossLauncherObjectInstance((DdzEndBossObjectInstance) null);
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzEndBossLauncherObjectInstance(ctx.spawn());
     }
 
     @Override

@@ -112,6 +112,20 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             state.setSpecialVIntRoutine(state.specialVIntRoutine() + 4);
             state.setForegroundRoutine(4);
         }
+        if (act == 1) {
+            var services = levelManager().getObjectManager().getObjectServices();
+            // SSZ2_ScreenEvent reads the previous shake offset; loc_58D1E's
+            // background tail prepares the next one. advanceScreenShake retains
+            // both values, so render/re-render consumes only the captured applied word.
+            updateAct2Foreground(services, state);
+            updateAct2WaterPalette(services, state);
+            if (state.foregroundRoutine() == 0x18)
+                state.endingPlane().streamRows(camera().getYCopy(),
+                        services.levelManager()::getForegroundTileDescriptorAtWorld);
+            state.advanceScreenShake(frameCounter,
+                    services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p && p.getDead());
+            camera().setYCopy((short) (camera().getYCopy() + state.appliedScreenShakeOffset()));
+        }
         if (act == 0) {
             var services = levelManager().getObjectManager().getObjectServices();
             state.launch().advanceShake(frameCounter,
@@ -124,14 +138,117 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                 SszLaunchWorld.update(services, state);
             }
         }
+        // User-confirmed widescreen exceptions: GHZ and MTZ replica arenas only.
+        // ROM has no mask; preserve its gameplay bounds and derive release from
+        // the event owner, not player damage or boss HP. Native width renders no mask.
+        if (act == 0 && state.centerNativeArenaCamera()) state.arenaMask().activate(320);
+        else state.arenaMask().release();
+        state.arenaMask().advance();
+    }
+
+    /** loc_58C68 calls sub_5928C; redraw stages return without ticking it. */
+    private static void updateAct2WaterPalette(com.openggf.level.objects.ObjectServices services,
+                                               SszZoneRuntimeState state) {
+        int routine = state.foregroundRoutine();
+        if (routine != 0 && routine != 4 && routine != 8 && routine != 0x18) return;
+        int offset = state.endingPlane().advanceWaterPalette();
+        if (offset < 0) return;
+        try {
+            com.openggf.game.sonic3k.S3kPaletteWriteSupport.applyContiguousPatch(
+                    services.paletteOwnershipRegistryOrNull(), services.currentLevel(), services.graphicsManager(),
+                    "ssz-ending-water", com.openggf.game.sonic3k.S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                    3, 13, services.rom().readBytes(0x592BE + offset, 6));
+        } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
+
+    /** SSZ2_ScreenEvent stage4, loc_58AE0; stage0 falls through on the same pass. */
+    private static void updateAct2Foreground(com.openggf.level.objects.ObjectServices services,
+                                             SszZoneRuntimeState state) {
+        if (state.foregroundRoutine() == 0x10) {
+            // loc_58B9E also calls sub_5B18E, the excluded actual ending owner.
+            // Retain only its independently seedable island presentation tail;
+            // no fabricated ending progress supplies Events_fg_4 or _unkFAAE.
+            if (services.gameState().hasAllSuperEmeralds() || services.gameState().hasAllEmeralds()) {
+                int offset = state.endingPlane().advanceEmeraldPalette();
+                if (offset >= 0) {
+                    try {
+                        com.openggf.game.sonic3k.S3kPaletteWriteSupport.applyContiguousPatch(
+                                services.paletteOwnershipRegistryOrNull(), services.currentLevel(), services.graphicsManager(),
+                                "ssz-ending-emerald", com.openggf.game.sonic3k.S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                                3, 11, services.rom().readBytes(0x5931A + offset, 4));
+                    } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+                }
+                return;
+            }
+            if (state.eventsFg4() == 0) return;
+            try {
+                // loc_58C1A copies Pal_Ending1 into lines2..4 before redrawing.
+                for (int line = 1; line < 4; line++)
+                    com.openggf.game.sonic3k.S3kPaletteWriteSupport.applyLine(
+                            services.paletteOwnershipRegistryOrNull(), services.currentLevel(), services.graphicsManager(),
+                            "ssz-ending-island", com.openggf.game.sonic3k.S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                            line, services.rom().readBytes(0xA97FC + (line - 1) * 32, 32), true);
+            } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+            state.endingPlane().beginSecondRedraw();
+            state.setForegroundRoutine(0x14); // native fallthrough draws its first two rows now
+        }
+        if (state.foregroundRoutine() == 0x14) {
+            if (state.endingPlane().advanceSecondRedraw(services.levelManager()::getForegroundTileDescriptorAtWorld)) {
+                services.camera().setY((short) 0x720); services.camera().setYCopy((short) 0x720);
+                state.endingPlane().finishSecondRedraw();
+                state.setForegroundRoutine(0x18);
+                // The outer palette call implements loc_58C42's fallthrough to sub_5928C.
+            }
+            return;
+        }
+        if (state.foregroundRoutine() == 8) {
+            if ((short) state.eventsFg4() <= 0) return;
+            state.setEventsFg4(0);
+            com.openggf.game.sonic3k.objects.SszEndingIslandMask.fillTiles(services);
+            services.objectManager().createDynamicObject(() ->
+                    new com.openggf.game.sonic3k.objects.SszEndingIslandMask(
+                            new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+            state.endingPlane().begin(services.camera().getYCopy(),
+                    services.levelManager()::getForegroundTileDescriptorAtWorld);
+            state.setForegroundRoutine(0xC);
+            return; // loc_58B64 does not execute the first redraw until the next pass.
+        }
+        if (state.foregroundRoutine() == 0xC) {
+            if (state.endingPlane().advance(services.levelManager()::getForegroundTileDescriptorAtWorld)) {
+                services.camera().setY((short) 0); services.camera().setYCopy((short) 0);
+                services.camera().setX((short) 0);
+                state.setCenterNativeArenaCamera(false); // arena projection ends with native plane/camera reset
+                // Next native dispatch calls sub_5B18E, the separately scoped ending.
+                state.setForegroundRoutine(0x10);
+            }
+            return;
+        }
+        if (state.foregroundRoutine() != 4 || state.eventsFg4() == 0) return;
+        var level = services.currentLevel();
+        // ScreenEvents sets a3=Level_layout_main (after the eight-byte header).
+        // Its $24/$28 pointer words select FG rows9/10, not rows7/8. The ROM
+        // writes nine chunks then Refresh_PlaneFullDirect; publish that same map
+        // change through the engine's rewind-aware mutation/redraw owner.
+        services.zoneLayoutMutationPipeline().applyImmediately(context -> {
+            for (int x = 0; x < 9; x++) {
+                context.surface().setBlockInMap(0, x, 9, (x & 1) == 0 ? 0x17 : 0x18);
+                context.surface().setBlockInMap(0, x, 10, 0x19);
+            }
+            return com.openggf.game.mutation.MutationEffects.redrawAllTilemaps();
+        }, new com.openggf.game.mutation.LayoutMutationContext(
+                com.openggf.game.mutation.LevelMutationSurface.forLevel(level),
+                services.levelManager()::applyMutationEffects));
+        state.setEventsFg4(0);
+        state.setEndingRunning(true);
+        state.setForegroundRoutine(8);
     }
 
     /**
      * {@code SSZ1_ScreenInit} / {@code SSZ2_ScreenInit} run inside the level load, before the
      * first {@code Load_Sprites}/{@code Process_Sprites} pass, so the arrival controller's own
      * init pass is frame 1 and its first {@code loc_57D50} rise step is frame 2. The event
-     * manager calls this from {@code installZoneRuntimeState}, as Doomsday does for its flight
-     * controller.
+     * manager calls this while preparing that initial pass, after host camera positioning.
+     * Ordinary pre-physics retains an idempotent fallback for positioned entries.
      */
     public void applyScreenInitAtLoad(int act) {
         if (!hasRuntime()) {
@@ -260,7 +377,11 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             return false;
         }
         var checkpoint = levelManager.getCheckpointState();
-        return checkpoint != null && checkpoint.getStarPostActivationMark() > 0;
+        // ScreenInit tests Last_star_post_hit, restored by Load_Starpost_Settings.
+        // The activation mark models the persistent post/respawn history instead;
+        // a death reload restores the checkpoint index before any post executes,
+        // while that separate activation record can still be empty.
+        return checkpoint != null && checkpoint.getLastCheckpointIndex() > 0;
     }
 
     /**

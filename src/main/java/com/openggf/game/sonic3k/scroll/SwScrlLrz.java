@@ -124,6 +124,7 @@ public class SwScrlLrz extends SwScrlS3kDefault {
         int step = base >> 2;                          // asr.l #2: s
         buildHScrollTable(actId, base, step);
         publishDeformationWords(lrz, bgY, base, step);
+        if (actId == 1 && lrz != null) lrz.setDeathEggScrollWord(hScrollTable.get(2));
 
         if (actId == 0 && lrz != null && lrz.backgroundCameraPinned()) {
             // loc_56C30's tail: a non-zero Events_bg+$02 long puts the saved copies back into

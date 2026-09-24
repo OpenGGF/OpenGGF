@@ -5,6 +5,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.TouchResponseProvider;
 import java.util.List;
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,31 +20,53 @@ import java.util.Comparator;
  * after the declared boot; this is route exploration, not a native parity oracle.
  *
  * <p>Usage: {@code DezFinalRouteAuthorTool ROM WIDTH OUTPUT_PREFIX}. Produces a
- * script accepted by InputLogAuthorTool and a state CSV. Stops on death, outgoing
+ * script accepted by InputLogAuthorTool and a state CSV. An optional fourth argument
+ * supplies a DEZ2 boss input log: boot at declared ($34B0,$300), play that prefix
+ * through the real zone23 load, then author the final fight without reseeding it.
+ * This incoming mode is positioned encounter continuity, not a cold Act2 route.
+ * Stops on death, outgoing
  * load or 22000 frames. Targets and braking distances are controller strategy,
  * not engine rules. Private encounter types are selected read-only by class name
  * so authoring does not expand the runtime's public API.
  */
 public final class DezFinalRouteAuthorTool {
     public static void main(String[] args) throws Exception {
-        if(args.length!=3) throw new IllegalArgumentException("Usage: DezFinalRouteAuthorTool ROM WIDTH OUTPUT_PREFIX");
+        if(args.length!=3 && args.length!=4) throw new IllegalArgumentException(
+                "Usage: DezFinalRouteAuthorTool ROM WIDTH OUTPUT_PREFIX [DEZ2_BOSS_INPUT]");
         Path rom=Path.of(args[0]); int width=Integer.parseInt(args[1]); Path output=Path.of(args[2]);
         Path scriptPath=Path.of(output+".script"), statePath=Path.of(output+".csv");
         if(Files.exists(scriptPath)||Files.exists(statePath)) throw new IllegalArgumentException("Output already exists: "+output);
         if(output.toAbsolutePath().getParent()!=null) Files.createDirectories(output.toAbsolutePath().getParent());
-        var settings=new GameplayCaptureSession.Settings(width,"sonic","","off",null,null,null,"3333333",false,false,null,null,false,200,false);
+        var prefix=args.length==4 ? new Bk2MovieLoader().loadMovieOrInputLog(Path.of(args[3])) : null;
+        var settings=new GameplayCaptureSession.Settings(width,"sonic","","off",null,
+                prefix==null?null:0x34B0,prefix==null?null:0x300,"3333333",false,false,null,null,false,200,false);
         var script=new StringBuilder(); var states=new StringBuilder(GameplayCaptureSession.stateHeader()+"\n");
         try(var session=new GameplayCaptureSession(settings)) {
-            session.boot(rom,23,0,settings);
-            int lastHealth=-1,lastCount=-1;
+            session.boot(rom,prefix==null?23:11,prefix==null?0:1,settings);
+            int firstFinalFrame=0;
             boolean heldJump=false;
+            if(prefix!=null) {
+                while(GameServices.level().getCurrentZone()!=23 && firstFinalFrame<prefix.getFrameCount()+600) {
+                    var input=firstFinalFrame<prefix.getFrameCount() ? prefix.getFrame(firstFinalFrame)
+                            : new Bk2FrameInput(firstFinalFrame,0,0,false,"neutral load tail");
+                    script.append("1 ").append(scriptButtons(input)).append('\n');
+                    session.step(input); session.render();
+                    states.append(session.stateLine(firstFinalFrame,input)).append('\n');
+                    heldJump=(input.p1InputMask()&AbstractPlayableSprite.INPUT_JUMP)!=0;
+                    firstFinalFrame++;
+                    if(session.player().getDead()) throw new IllegalStateException("Incoming DEZ2 death at "+(firstFinalFrame-1));
+                }
+                if(GameServices.level().getCurrentZone()!=23) throw new IllegalStateException("DEZ2 prefix did not load final arena");
+                System.out.println("INCOMING FINAL frame "+firstFinalFrame+" rings "+session.player().getRingCount());
+            }
+            int lastHealth=-1,lastCount=-1;
             int jumpTicks=0;
             boolean attackRun=false;
             int previousCoreHealth=8,previousShipHealth=-1;
             boolean brakeFinal=false;
             ObjectInstance lastBeam=null;
             int beamAge=0;
-            for(int frame=0;frame<22000;frame++) {
+            for(int frame=firstFinalFrame;frame<firstFinalFrame+22000;frame++) {
                 var p=session.player();
                 var fingers=targets("DezFinalHand$Finger");
                 var target=fingers.stream().filter(f->f.getCollisionProperty()>0)
@@ -116,6 +139,22 @@ public final class DezFinalRouteAuthorTool {
             Files.writeString(scriptPath,script,StandardOpenOption.CREATE_NEW);
             Files.writeString(statePath,states,StandardOpenOption.CREATE_NEW);
         }
+    }
+
+    private static String scriptButtons(Bk2FrameInput input) {
+        if(input.p2InputMask()!=0 || input.p2ActionMask()!=0 || input.p2StartPressed())
+            throw new IllegalArgumentException("Incoming route must be solo P1 input");
+        var buttons=new java.util.ArrayList<String>();
+        int mask=input.p1InputMask();
+        if((mask&1)!=0) buttons.add("U");
+        if((mask&2)!=0) buttons.add("D");
+        if((mask&4)!=0) buttons.add("L");
+        if((mask&8)!=0) buttons.add("R");
+        if((input.p1ActionMask()&1)!=0) buttons.add("A");
+        if((input.p1ActionMask()&2)!=0) buttons.add("B");
+        if((input.p1ActionMask()&4)!=0) buttons.add("C");
+        if(input.p1StartPressed()) buttons.add("S");
+        return buttons.isEmpty()?"-":String.join("+",buttons);
     }
 
     private static List<ObjectInstance> objects(String type) {

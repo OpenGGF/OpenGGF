@@ -21,6 +21,7 @@ public final class S3kPaletteOwners {
     public static final String AIZ1_ANPAL = "s3k.aiz1.anpal";
     public static final String AIZ2_WATER_CYCLE = "s3k.aiz2.waterCycle";
     public static final String AIZ2_TORCH_CYCLE = "s3k.aiz2.torchCycle";
+    public static final String SSZ_DEATH_EGG_CUTSCENE = "s3k.ssz.deathEggCutscene";
     public static final String ZONE_EVENT_PALETTE_LOAD = "s3k.zoneEvents.paletteLoad";
     public static final String HCZ_EVENT_PALETTE = "s3k.hcz.eventPalette";
     public static final String FBZ_EVENT_PALETTE = "s3k.fbz.eventPalette";
@@ -63,6 +64,8 @@ public final class S3kPaletteOwners {
     public static final String MGZ_TUNNELBOT = "s3k.mgz.tunnelbot";
     public static final String MGZ_END_BOSS = "s3k.mgz.endBoss";
     public static final String MGZ_POST_BOSS_FADE = "s3k.mgz.postBossFade";
+    public static final String MHZ2_CUTSCENE_RESTORE = "s3k.mhz2.cutsceneRestore";
+
     public static final String MHZ1_CUTSCENE_RESTORE = "s3k.mhz1.cutsceneRestore";
     public static final String SOZ_ZONE_CYCLE = "s3k.soz.zoneCycle";
     public static final String LBZ_ZONE_CYCLE = "s3k.lbz.zoneCycle";

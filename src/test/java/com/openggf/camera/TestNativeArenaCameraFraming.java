@@ -92,4 +92,42 @@ class TestNativeArenaCameraFraming {
         if(width>320) assertEquals(anchor,camera.getX());
     }
 
+    @ParameterizedTest
+    @CsvSource({"352,0,320", "352,0,352", "352,0,400", "352,0,528", "352,0,800",
+            "5728,2,320", "5728,2,352", "5728,2,400", "5728,2,528", "5728,2,800"})
+    void sszReplicaLocksRetainCenteredCameraAcrossPlayerDisplacementAndRewind(int anchor, int event, int width) {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(10,0).build();
+        var state = (com.openggf.game.sonic3k.runtime.SszZoneRuntimeState)
+                TestEnvironment.objectServices().zoneRuntimeState();
+        var provider = (NativeArenaCameraFraming) GameServices.level().getZoneFeatureProvider();
+        state.setEventsBgWord(0,0); state.setEventsBgWord(2,0);
+        assertFalse(provider.centerNativeArenaCamera());
+        state.setEventsBgByte(event+1,0xFF);
+        assertTrue(provider.centerNativeArenaCamera(), "lock begins before allocation");
+        state.setEventsBgWord(event,0x7F00); state.setEventsBgByte(5,0xFF);
+        byte[] saved = state.captureBytes();
+        var config = mock(SonicConfigurationService.class);
+        when(config.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS)).thenReturn((short)width);
+        when(config.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS)).thenReturn((short)224);
+        when(config.getString(SonicConfiguration.WIDESCREEN_DEADZONE_MODE)).thenReturn("CENTER_SCALED");
+        var camera = new Camera(config); var player = fixture.sprite(); camera.setFocusedSprite(player);
+        camera.setMinX((short)anchor); camera.setMaxX((short)anchor);
+        camera.setMinY((short)0); camera.setMaxY((short)0x1000);
+        int visible = NativeViewportFraming.visibleLeft(anchor,width);
+        for (int displacement : new int[]{0,88,-88,160,-160}) {
+            player.setCentreX((short)(anchor+160+displacement));
+            camera.updatePosition(true);
+            assertEquals(visible,camera.getX(), "player displacement cannot move the arena");
+            assertEquals(visible,camera.previewNextX());
+        }
+        state.setEventsBgByte(event,0xFF);
+        assertTrue(provider.centerNativeArenaCamera(), "defeat alone does not release bounds");
+        state.setEventsBgByte(5,0);
+        assertFalse(provider.centerNativeArenaCamera(), "launch releases framing");
+        state.restoreBytes(saved);
+        assertTrue(provider.centerNativeArenaCamera(), "rewind restores lock ownership");
+        camera.updatePosition(true); assertEquals(visible,camera.getX());
+        assertEquals(anchor,camera.getMinX()); assertEquals(anchor,camera.getMaxX());
+    }
+
 }

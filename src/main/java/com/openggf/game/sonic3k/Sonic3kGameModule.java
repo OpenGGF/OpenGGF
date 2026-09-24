@@ -307,6 +307,10 @@ public class Sonic3kGameModule implements GameModule {
             SpriteManager sprites,
             ObjectManager objects,
             ZoneFeatureProvider zoneFeatures) {
+        // Finish deferred ScreenInit before the coordinator captures its camera/load
+        // window and walks the initial player slots. Ordinary pre-physics is too late:
+        // Knuckles_Control would already run once before the SSZ arrival owns him.
+        levelEventManager.prepareInitialScreenObjects();
         InitialWaveSplashSstOwner waveOwner =
                 zoneFeatures instanceof Sonic3kZoneFeatureProvider provider
                         ? provider.initialWaveSplashSstOwner()

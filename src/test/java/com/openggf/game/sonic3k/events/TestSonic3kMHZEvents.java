@@ -984,6 +984,35 @@ class TestSonic3kMHZEvents {
     }
 
     @Test
+    void act2FatalHitWrapAcknowledgesSharedSignalThenGroundedWalkoffEndsRepeat() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 1)
+                .startPosition((short) 0x4300, (short) 0x0280).startPositionIsCentre().build();
+        Sonic3kMHZEvents events = getMhzEvents();
+        Camera camera = fixture.camera();
+        events.setEventRoutine(0x10);
+        events.setAct2BackgroundRoutineForTest(0x10);
+        camera.setX((short) 0x3F00);
+        events.update(1, 1);
+        events.setShipControllerSignalFlag(true); // loc_7683E, fatal hit
+        camera.setX((short) 0x427C);
+        events.updateSpecialEvents(1);
+        assertEquals(0x4080, camera.getX() & 0xFFFF);
+        assertFalse(events.isShipControllerSignalFlagSet(), "loc_55686 acknowledges the fatal hit");
+        assertFalse(events.isEndBossArenaRestoreRequested());
+        events.signalEndBossWalkoffPrep(); // loc_768D2, after landing
+        camera.setX((short) 0x427C);
+        events.updateSpecialEvents(1);
+        assertEquals(0x4280, camera.getX() & 0xFFFF, "walkoff stops the next wrap");
+        assertEquals(0xFF55, events.getEndBossWalkoffPrepEventFlag(), "ST writes the high byte of Events_fg_5");
+        assertTrue(events.isEndBossArenaRestoreRequested(), "negative event word releases background redraw");
+        camera.setX((short) 0x441C);
+        events.updateSpecialEvents(1);
+        assertEquals(0x4420, camera.getX() & 0xFFFF);
+        assertEquals(0x45A0, camera.getMaxX() & 0xFFFF);
+    }
+
+    @Test
     void act2EndBossRepeatOffsetRewindsWithLevelEventSnapshot() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 1)
@@ -1740,6 +1769,19 @@ class TestSonic3kMHZEvents {
                 "lines below the H-int region should keep PlainDeformation's foreground camera scroll");
         assertEquals(unpackBG(hScroll[128]), unpackBG(hScroll[0]),
                 "sub_5550C only replaces the first H-scroll word; BG keeps MHZ_Deform's normal value");
+        var provider = new com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider();
+        var split = provider.foregroundVerticalScrollSplit();
+        assertNotNull(split, "The live ship must publish its VSRAM split to rendering");
+        assertEquals(128, split.scanline());
+        assertEquals(runtimeState.shipEffectiveBgY(), split.upperScrollY());
+        var modes = new com.openggf.game.render.AdvancedRenderModeController();
+        provider.registerAdvancedRenderModes(modes, Sonic3kZoneIds.ZONE_MHZ, 1);
+        assertTrue(modes.resolve(new com.openggf.game.render.AdvancedRenderModeContext(
+                fixture.camera(), 2, GameServices.level(), Sonic3kZoneIds.ZONE_MHZ, 1, 0x3C90))
+                .enablePerLineForegroundScroll(), "The renderer must consume the ship HScroll words");
+        events.init(1);
+        org.junit.jupiter.api.Assertions.assertNull(provider.foregroundVerticalScrollSplit(),
+                "A reload must clear the ship render mode");
     }
 
     @Test
@@ -1887,6 +1929,10 @@ class TestSonic3kMHZEvents {
                 "loc_55814 should start Ani_MHZEndPropellers on mapping frame 5");
         assertEquals(5, propellers.get(1).getMappingFrame(),
                 "both propellers run the same Ani_MHZEndPropellers script");
+        fixture.stepIdleFrames(3);
+        assertFalse(controller.isDestroyed(), "loc_5583E survives real object-manager range checks");
+        assertTrue(propellers.stream().noneMatch(MhzShipPropellerInstance::isDestroyed),
+                "hardware screen-space propellers are not culled against world X");
     }
 
     private static Sonic3kMHZEvents getMhzEvents() {

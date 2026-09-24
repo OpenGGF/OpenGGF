@@ -2513,6 +2513,9 @@ public final class Sonic3kPlcArtRegistry {
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
         if (actIndex == 1) {
+            // loc_57130: screen-space Death Egg; loc_57156 queues art into level VRAM.
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LRZ2_DEATH_EGG_BACKGROUND,
+                    0x5719E, 0x39F, 3, null));
             standalone.add(new StandaloneArtEntry(
                     Sonic3kObjectArtKeys.LRZ_CUTSCENE_KNUCKLES,
                     Sonic3kConstants.ART_UNC_KNUCKLES_ADDR, CompressionType.UNCOMPRESSED,
@@ -2938,6 +2941,29 @@ public final class Sonic3kPlcArtRegistry {
     private static void addSszEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        // PLC_78_79_7A_7B loads ArtNem_RobotnikShip for both Act 1 replica bosses;
+        // ObjDat_SSZGHZBoss and the MTZ ship draw Map_RobotnikShip frame $A, palette 0.
+        // Act 2's crane reuses this sheet. Register it for both acts: restricting it to
+        // the crane left the Act 1 body renderer null while the separate Mecha head drew.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR, CompressionType.NEMESIS, 0,
+                Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0, -1));
+        if (actIndex == 1) {
+            // Obj_KnuxFinalBossCrane / PLC_KnuxFinalBossCrane and loc_7CA78.
+            // Obj_RobotnikHead3Init selects sub_67B14 for Knuckles: its head
+            // uses a separate ROM sheet and animation, not Robotnik's frames.
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SSZ_CRANE_SHIP_DEBRIS,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR, CompressionType.NEMESIS, 0,
+                    0x7D6D8, 0, -1, 4)); // Map_RoboshipPieces / loc_7CE6C
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.KNUX_FINAL_BOSS_CRANE,
+                    Sonic3kConstants.ART_KOSM_KNUX_FINAL_BOSS_CRANE_ADDR,
+                    CompressionType.KOSINSKI_MODULED, 0,
+                    Sonic3kConstants.MAP_KNUX_FINAL_BOSS_CRANE_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.EGG_ROBO_HEAD,
+                    Sonic3kConstants.ART_KOSM_EGG_ROBO_HEAD_ADDR,
+                    CompressionType.KOSINSKI_MODULED, 0,
+                    Sonic3kConstants.MAP_EGG_ROBO_HEAD_ADDR, 0, -1, 4));
+        }
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.SSZ_EGG_ROBO,
                 Sonic3kConstants.ART_KOSM_EGG_ROBO_BADNIK_ADDR,
@@ -2983,6 +3009,9 @@ public final class Sonic3kPlcArtRegistry {
                 3,
                 -1
         ));
+        // ObjSlot_664B6 / DPLCPtr_SSZDeathEggCloud: standalone frame-local DMA sheet.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SSZ_DEATH_EGG_CLOUD,
+                0x17C802, CompressionType.UNCOMPRESSED, 0x13C0, 0x66CD6, 3, 0x66EBA));
         // CutsceneKnux_SSZ shares CutsceneKnux_HPZ's body sheets: Map_Knuckles DPLC'd from
         // ArtUnc_Knux into ArtTile_CutsceneKnux, and Map_SSZKnucklesTired for $38 bit 6.
         addCutsceneKnucklesBodySheets(standalone);
@@ -3001,6 +3030,9 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_SSZ_MISC + 0x20,
                 2,
                 null));
+        // loc_591D6: art_tile=0, mapping-local palette3/tile$7F0; stage8 fills the tiles.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SSZ_ENDING_ISLAND_MASK,
+                0x59270, 0, 0, null, 1));
         // loc_581F2/58360 draw frames 9/10 from the separately queued spiral ramp bank.
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SSZ_LAUNCH_RAMP,
                 Sonic3kConstants.MAP_SSZ_COLLAPSING_BRIDGE_ADDR, 0x348, 2, null));
@@ -3094,6 +3126,11 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 Sonic3kConstants.DPLC_MECHA_SONIC_ADDR
         ));
+        // loc_7CE90 consumes the defeated frame$E bank still resident at ArtTile_MechaSonic.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MECHA_SONIC_PIECES,
+                Sonic3kConstants.ART_UNC_MECHA_SONIC_ADDR, CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_MECHA_SONIC_SIZE, Sonic3kConstants.MAP_MECHA_SONIC_PIECES_ADDR,
+                1, Sonic3kConstants.DPLC_MECHA_SONIC_ADDR, 16));
         // loc_7C902 / byte_7D65F use only frames 0..3 (blank, then three trails).
         // Bind that consumer's exact prefix, on ObjDat3_7D402's palette 0.
         // The full Map_MechaSonicExtra has 27 frames; its last frame references
@@ -3115,6 +3152,20 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ART_KOSM_MECHA_SONIC_EXTRA_ADDR,
                 CompressionType.KOSINSKI_MODULED, 0,
                 Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR, 1, -1, 8));
+        // loc_7C886 / byte_7D668 uses frames $11..$14 on line 1. Keep the
+        // prefix bounded: the unrelated final mapping needs a different VRAM binding.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.MECHA_SONIC_CHARGE,
+                Sonic3kConstants.ART_KOSM_MECHA_SONIC_EXTRA_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR, 1, -1, 21));
+        // Super glow/particles/lasers use frame $19 at most; frame $1A is a separate VRAM binding.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MECHA_SONIC_SUPER_EFFECTS,
+                Sonic3kConstants.ART_KOSM_MECHA_SONIC_EXTRA_ADDR, CompressionType.KOSINSKI_MODULED,
+                0, Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR, 1, -1, 26));
+        // ObjDat3_7D450: the two SSZ2 Master Emerald frames, palette 0, tile $52E.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SSZ_MASTER_EMERALD,
+                0x17FCBA, CompressionType.KOSINSKI_MODULED, 0, 0x7D712, 0, -1, 2));
     }
 
     /**
@@ -3339,6 +3390,10 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 -1
         ));
+        // loc_8242A: ArtUnc_SuperSonic_Stars, $1A0 DMA words ($340 bytes) at ArtTile_Shield.
+        // Map_SuperSonic_Stars has six frames; the adjacent four belong to Stars2.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.DDZ_SUPER_STARS,
+                0x18BD44, CompressionType.UNCOMPRESSED, 0x340, 0x192DE, 0, -1, 6));
         // loc_819CE queues ArtKosM_BossMasterEmerald for the phase-2 Master Emerald (palette 3).
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.DDZ_MASTER_EMERALD,

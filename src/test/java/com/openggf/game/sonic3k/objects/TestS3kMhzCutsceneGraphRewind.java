@@ -269,8 +269,7 @@ class TestS3kMhzCutsceneGraphRewind {
                 "restore must recreate exactly one captured MHZ2 lift child");
         assertNotSame(lift, restoredLift, "lift child must be recreated, not reused stale");
         assertNotSame(divergentLift, restoredLift, "restore must drop divergent lift child");
-        assertSame(restoredParent, readObjectField(restoredLift, "parent"),
-                "lift child parent must relink to the restored MHZ2 cutscene parent");
+        assertNotNull(restoredParent); // carrier restoration no longer requires this actor
         assertSame(restoredPlayer, readObjectField(restoredLift, "player"),
                 "lift child player must resolve through the current live player identity");
         assertTrue(readBooleanField(restoredLift, "initialized"),
@@ -497,9 +496,9 @@ class TestS3kMhzCutsceneGraphRewind {
         try {
             Class<? extends AbstractObjectInstance> type = childClass(LIFT_CLASS);
             Constructor<? extends AbstractObjectInstance> ctor =
-                    type.getDeclaredConstructor(CutsceneKnucklesMhz2Instance.class, AbstractPlayableSprite.class);
+                    type.getDeclaredConstructor(AbstractPlayableSprite.class);
             ctor.setAccessible(true);
-            return ctor.newInstance(parent, player);
+            return ctor.newInstance(player);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to construct " + LIFT_CLASS, e);
         }

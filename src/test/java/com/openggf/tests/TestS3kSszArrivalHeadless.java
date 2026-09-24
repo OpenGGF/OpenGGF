@@ -63,7 +63,7 @@ class TestS3kSszArrivalHeadless {
     @ValueSource(ints = {320, 800})
     void screenInitForcesTheArrivalCameraBoundsAndControlLock(int width) {
         HeadlessTestFixture fixture = boot(width, "");
-        fixture.stepIdleFrames(1);
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
 
         var camera = GameServices.camera();
         assertEquals(CAMERA_MAX_X, camera.getMaxX() & 0xFFFF, "Camera_max_X_pos");
@@ -82,7 +82,7 @@ class TestS3kSszArrivalHeadless {
 
         var player = fixture.sprite();
         assertTrue(player.isObjectControlled(), "move.b #3,object_control(a1)");
-        // Frame 1 is Obj_57C1E's own init pass: it places the player and sets the flags but
+        // The setup-only pass runs Obj_57C1E: it places the player and sets the flags but
         // takes no rise step, which loc_57CD2 only starts on the next pass.
         assertEquals(PLAYER_Y, player.getCentreY() & 0xFFFF, "Player_1 y_pos = Camera_Y + $65");
         assertEquals(CAMERA_Y, camera.getY() & 0xFFFF, "Camera_Y_pos");
@@ -96,8 +96,8 @@ class TestS3kSszArrivalHeadless {
     @Test
     void theRiseMovesPlayerAndCameraEightPixelsForSixtySixFrames() {
         HeadlessTestFixture fixture = boot(320, "");
-        // One frame for Obj_57C1E's init pass, then $6C rise passes.
-        fixture.stepIdleFrames(1 + RISE_FRAMES);
+        // The runner consumes setup-only admission before counting $6C gameplay passes.
+        fixture.stepIdleFrames(RISE_FRAMES);
 
         var camera = GameServices.camera();
         assertEquals(0, controller().riseRemainingForTest(), "$2D(a0) exhausted");
@@ -116,7 +116,7 @@ class TestS3kSszArrivalHeadless {
     @Test
     void theReleaseClearsScrollLockThenReturnsControlAfterTheSwing() {
         HeadlessTestFixture fixture = boot(320, "");
-        fixture.stepIdleFrames(1 + RISE_FRAMES + 1);
+        fixture.stepIdleFrames(RISE_FRAMES + 1);
 
         assertFalse(GameServices.camera().getFrozen(), "clr.b (Scroll_lock).w at loc_57D3C");
         assertEquals(SszArrivalControllerObjectInstance.PHASE_SWING, controller().phaseForTest());
@@ -165,12 +165,63 @@ class TestS3kSszArrivalHeadless {
         var checkpoint = GameServices.level().getCheckpointState();
         assertNotNull(checkpoint);
         if (checkpoint instanceof com.openggf.game.CheckpointState state) {
-            state.saveCheckpoint(1, 0x140, 0xC6C, false);
+            // Production death reload restores the saved index without re-activating a post.
+            state.restoreFromSaved(0x140, 0xC6C, 0, 0, 1);
+            assertEquals(-1, state.getStarPostActivationMark());
         }
         fixture.stepIdleFrames(1);
 
         assertEquals(0, state().eventsBgByte(0x05), "Events_bg+$05 stays clear");
         org.junit.jupiter.api.Assertions.assertNull(controller(), "no Obj_57C1E");
+    }
+
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> arrivalCases() {
+        return java.util.Arrays.stream(WidescreenAspect.values()).flatMap(aspect ->
+                java.util.stream.Stream.of(
+                        org.junit.jupiter.params.provider.Arguments.of(aspect.pixelWidth(), "sonic", ""),
+                        org.junit.jupiter.params.provider.Arguments.of(aspect.pixelWidth(), "sonic", "tails"),
+                        org.junit.jupiter.params.provider.Arguments.of(aspect.pixelWidth(), "tails", "")));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("arrivalCases")
+    void freshArrivalRestoresAndReplaysRiseSwingAndRelease(int width, String character, String sidekick) {
+        var fixture = boot(width, character, sidekick);
+        assertEquals(width, fixture.camera().getWidth());
+        assertEquals(character, fixture.sprite().getCode());
+        assertEquals(sidekick.isEmpty() ? 0 : 1, GameServices.sprites().getRegisteredSidekicks().size());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        int elapsed = 0;
+        for (int spot : new int[] {40, RISE_FRAMES, RISE_FRAMES + 65}) {
+            fixture.stepIdleFrames(spot - elapsed);
+            elapsed = spot;
+            var before = registry.capture();
+            fixture.stepIdleFrames(45);
+            var expected = registry.capture();
+            registry.restore(before);
+            same(before, registry.capture());
+            fixture.stepIdleFrames(45);
+            same(expected, registry.capture());
+            registry.restore(before);
+        }
+        fixture.stepIdleFrames(240 - elapsed);
+        assertFalse(GameServices.sprites().getMainPlayable().isObjectControlled());
+        assertEquals(0, state().eventsBgByte(0x04));
+        assertFalse(GameServices.camera().getFrozen());
+        assertFalse(GameServices.sprites().getMainPlayable().getDead());
+        for (var follower : GameServices.sprites().getRegisteredSidekicks()) {
+            assertFalse(follower.isObjectControlled());
+            assertFalse(follower.getDead());
+        }
+    }
+
+    private static void same(com.openggf.game.rewind.CompositeSnapshot expected,
+                             com.openggf.game.rewind.CompositeSnapshot actual) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet());
+        for (String key : expected.entries().keySet()) {
+            var diff = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key));
+            assertTrue(diff.isEmpty(), () -> key + ": " + diff);
+        }
     }
 
     private static SszZoneRuntimeState state() {
@@ -191,13 +242,18 @@ class TestS3kSszArrivalHeadless {
     }
 
     private static HeadlessTestFixture boot(int width, String sidekick) {
+        return boot(width, "sonic", sidekick);
+    }
+
+    private static HeadlessTestFixture boot(int width, String character, String sidekick) {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
-        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, character);
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, sidekick);
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
-                width == 320 ? WidescreenAspect.NATIVE_4_3.name() : WidescreenAspect.WIDE_16_9.name());
+                java.util.Arrays.stream(WidescreenAspect.values()).filter(a -> a.pixelWidth() == width)
+                        .findFirst().orElseThrow().name());
         config.resolveDisplayAspect();
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
         CrossGameFeatureProvider.getInstance().resetState();

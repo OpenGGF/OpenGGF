@@ -10,8 +10,8 @@ implementation reviewed historically; current campaign act certification pending
 | Claim | Evidence / state |
 | --- | --- |
 | Implemented | Original direct audit found no further missing Sonic/Tails feature; later miniboss lifetime, explosion and transition-identity fixes landed. |
-| Cold-reachable | Current campaign representative route not yet verified. |
-| Completable | Boss/results/transition components have historical focused evidence; current cold production completion remains open. |
+| Cold-reachable | Fresh320px Sonic-solo controller route reaches the miniboss and MHZ2 (2026-09-23); no position/clock/ring/health seed. |
+| Completable | Current controller route completes all six boss hits, sign/results, seamless MHZ2 load and released player movement. Other configurations remain open. |
 | Native-accurate | Disassembly-backed review plus local regressions; frame-perfect/native visual certification not claimed. |
 | Rewind/standard | Several live interaction and graph checks exist; breadth and complete before/active/after obligations remain incomplete. |
 
@@ -49,7 +49,9 @@ The console pulley debug-menu unlock is excluded; engine debug controls remain.
 Do not restart excluded trace work or expand the route scope by implication.
 
 This matrix was assembled on 2026-09-23 from current test source and historical
-validation records. **No fresh MHZ execution result is claimed here.** Existing
+validation records. **Current component execution:498 cases pass, zero skips, on2026-09-23 at19:21 BST**
+(`b6c1147a2` plus campaign edits;37 explicitly selected non-trace MHZ classes).
+The campaign audit records the selection and limits; cold route authoring is ongoing. Existing
 unit/graph tests are candidates for the listed contracts, not proof of complete
 act coverage. The historical 622-case focused pass and 656-case guards in the
 original audit belong to their stated September 12 candidates. Historical full
@@ -85,3 +87,61 @@ and presentation evidence without reinstating the excluded trace campaign.
 Fill the breadth and lifecycle gaps above before claiming the act meets the
 standard. The [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md) owns
 combined integration/verification; this documentation does not supersede it.
+
+
+### 2026-09-23 — fresh MHZ1 completion and delayed duplicate owner
+
+`routes/s3k/mhz1-sonic-fresh-320.script/.bk2` preserves9301 controller passes
+from normal locked-on level select, Sonic solo, donor off,320px. No position,
+clock, emerald, ring or health seed is supplied. The route uses the actual
+pulley grab/down-pull/release, sticky-vine spindash and terrain loops, reaches
+the miniboss with47rings, lands all six hits, completes sign/results and moves
+more than300px after the seamless Act2 handoff. There are no deaths. The
+BK2 was compiled and round-tripped through the production authoring tool.
+
+Input-authoring stalls were not runtime evidence: periodic jumps shed loop
+momentum; running into the spring shaft skipped the adjacent pulley; the sticky
+vine needs a spindash. A broad “near twisted vine” authoring heuristic also
+suppressed a needed jump on a different vertical path and was removed. No
+engine movement/collision or boss health was tuned to complete the route.
+
+`TestS3kMhzAuthoredRoute` reached and replayed the pulley, vine charge, first
+boss hit, last-hit approach and defeat. Its first post-load restore at frame9094
+failed: the live object list contained the same Insta-Shield owner twice, while
+restore retained one. The short `TestS3kFixedSstTransitionRewind` reproduction
+now steps the player after manager replacement and fails in both MHZ and HCZ
+(expected one owner, actual two). Earlier tests captured before this delayed
+registration and missed it.
+
+Root cause: `rebuildManagersForActTransition` already restores and reconciles
+exact-SST owners. The subsequent `applySeamlessOffsets` marked Insta-Shield
+unregistered for every policy except ALL_LIVE_SST, including PERSISTENT_EXACT_SST.
+The next player update registered the identical object again. The flag reset
+now applies only to legacy PERSISTENT_ONLY; both exact policies retain the
+existing identity and their already-invalidated DPLC. The code explains that
+ROM Load_Level retains the fixed shield slot outside Dynamic_object_RAM.
+This is a shared policy correction, not an MHZ-specific exception.
+
+
+Final focused verification at19:43 BST, Java21 and the absolute S3K ROM:
+`maven_queue.py -Dmse=off -Dtest=TestS3kFixedSstTransitionRewind,TestS3kMhzAuthoredRoute,TestLevelSeamlessTransitionExecutor,TestFbzActTransitionHeadless,TestS3kLrzSeamlessActChangeHeadless,TestS3kDezSeamlessActChange test`
+passes26cases, zero failures/errors/skips. This includes the full controller
+route and45-input restore/replay at all six spots, the two delayed-owner
+regressions, and neighbouring transition consumers. The earlier498-case MHZ
+component selection preceded this one-condition shared-policy fix. Neither
+selection is the campaign broad run.
+
+The corrected external `mhz-bring-up/campaign-20260923-act1-cold-320-fixed`
+movie covers frames7240..9300 (2061images) from9301ordinary input passes; all
+rows have no death/follower. Its CSV is byte-identical to the pre-fix capture.
+Full ffmpeg decode passes; fight, defeat and released-Act2 stills were inspected.
+The input source/BK2 and provenance accompany it. Native visual parity, other
+characters/widths/donors, full Act2 traversal and load-history isolation remain
+separate obligations. No excluded Knuckles or trace work was reinstated.
+
+
+Subsequent Act2 entrance fix (2026-09-23): the same9301 inputs now legitimately
+finish inside Knuckles's press sequence. The earlier released-title spot still
+proves incoming control release; the final pass is no longer required to remain
+uncontrolled. The campaign's new leaf-blower capture extends to9901 passes,
+showing the lift and upper-route movement. The Act2 matrix owns that coverage.

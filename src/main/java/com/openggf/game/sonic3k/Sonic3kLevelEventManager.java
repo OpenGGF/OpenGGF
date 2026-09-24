@@ -725,6 +725,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         camera.setYCopy((short) (camera.getYCopy() + screenShakeOffset));
     }
 
+    /**
+     * Native SSZ ScreenInit allocates the arrival before loc_6468's first
+     * Load_Sprites/Process_Sprites. The host finishes camera positioning after
+     * installing zone state, so defer these camera writes only until preparation
+     * of that initial pass, never until ordinary LevelLoop physics. Otherwise
+     * Knuckles detaches from the empty spawn terrain and the crane's InAir gate
+     * opens during the teleporter rise instead of his later jump.
+     */
+    void prepareInitialScreenObjects() {
+        if (sszEvents != null && currentZone == Sonic3kZoneIds.ZONE_SSZ) {
+            sszEvents.applyScreenInitAtLoad(currentAct);
+        }
+    }
+
     @Override
     public void updatePrePhysics() {
         if (currentZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && currentAct == 0
@@ -737,13 +751,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             lrzEvents.updateBossSpecialEvents();
             syncSidekickBoundsToCamera();
         }
-        if (sszEvents != null && currentZone == Sonic3kZoneIds.ZONE_SSZ) {
-            // SSZ1_ScreenInit/SSZ2_ScreenInit are load-time routines that run before the level
-            // loop's first Load_Sprites/Process_Sprites pass. The engine's level load finishes
-            // positioning the camera after the runtime state is installed, so the earliest hook
-            // that still precedes the first object pass is pre-physics of frame 1.
-            sszEvents.applyScreenInitAtLoad(currentAct);
-        }
+        // Non-fresh/positioned entries may omit the initial assembly pass.
+        // The captured screen-init latch makes this fallback idempotent.
+        prepareInitialScreenObjects();
         if (sozEvents != null && currentZone == Sonic3kZoneIds.ZONE_SOZ) {
             sozEvents.updateSpecialEvents(currentAct);
         }
@@ -1452,8 +1462,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Reconcile only the adapter binding here; never restore a second sidecar.
         reconcileFbzRuntimeStateAfterRestore();
         reconcileFbzCloudsAfterObjectRestore();
-        S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).ifPresent(state ->
-                com.openggf.game.sonic3k.events.SszLaunchBackground.restore(GameServices.level(), state));
+        S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).ifPresent(state -> {
+            com.openggf.game.sonic3k.events.SszLaunchBackground.restore(GameServices.level(), state);
+            // Pattern bytes are derived, unlike the captured retained nametable.
+            // Recreate stage8's CPU fill and sheet bindings after all owners restore.
+            if (state.actIndex() == 1 && state.endingPlane().revision() != 0)
+                com.openggf.game.sonic3k.objects.SszEndingIslandMask.fillTiles(
+                        GameServices.level().getObjectManager().getObjectServices());
+        });
     }
 
     @Override

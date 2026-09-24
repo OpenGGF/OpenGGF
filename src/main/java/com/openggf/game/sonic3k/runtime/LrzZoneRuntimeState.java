@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 22 * Short.BYTES + LrzBossActState.CAPTURE_BYTES;
+            S3kScreenShake.captureBytes() + 3 * Integer.BYTES + 23 * Short.BYTES + LrzBossActState.CAPTURE_BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -59,6 +59,15 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private final LrzBossActState bossAct = new LrzBossActState();
     public LrzBossActState bossAct() { return bossAct; }
 
+    /** loc_78AA8 / loc_78AE6 write the AnPal_LRZ2 shared timer across update owners. */
+    private int primaryPaletteTimerWrite = -1;
+    public void writePrimaryPaletteTimer(int value) { primaryPaletteTimerWrite = value & 0xFFFF; }
+    public int consumePrimaryPaletteTimerWrite() {
+        int value = primaryPaletteTimerWrite;
+        primaryPaletteTimerWrite = -1;
+        return value;
+    }
+
     private int appliedScreenShakeOffset;
     private short backgroundRoutine;
     /** ROM _unkFAB8 bits 0-2 shared by the LRZ2 boulder cutscene. */
@@ -68,6 +77,10 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short chunkEditRequest;
     private short backgroundCameraX;
     private short backgroundCameraY;
+    /** sub_57082 publishes HScroll_table+$004 before updating the screen sprite. */
+    private short deathEggScrollWord;
+    public int deathEggScrollWord() { return deathEggScrollWord; }
+    public void setDeathEggScrollWord(int value) { deathEggScrollWord = (short) value; }
     private short animationPhaseX0;
     private short animationPhaseX1;
     private short rocksRoutine;
@@ -307,6 +320,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(chunkEditRequest);
         buffer.putShort(backgroundCameraX);
         buffer.putShort(backgroundCameraY);
+        buffer.putShort(deathEggScrollWord);
         buffer.putShort(animationPhaseX0);
         buffer.putShort(animationPhaseX1);
         buffer.putShort(rocksRoutine);
@@ -325,6 +339,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(cameraStoredMinY);
         buffer.putShort(cameraStoredMaxY);
         buffer.putShort((short) (centerNativeArenaCamera ? 1 : 0));
+        buffer.putInt(primaryPaletteTimerWrite);
         bossAct.captureTo(buffer);
         return buffer.array();
     }
@@ -342,6 +357,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         chunkEditRequest = buffer.getShort();
         backgroundCameraX = buffer.getShort();
         backgroundCameraY = buffer.getShort();
+        deathEggScrollWord = buffer.getShort();
         animationPhaseX0 = buffer.getShort();
         animationPhaseX1 = buffer.getShort();
         rocksRoutine = buffer.getShort();
@@ -360,6 +376,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         cameraStoredMinY = buffer.getShort();
         cameraStoredMaxY = buffer.getShort();
         centerNativeArenaCamera = buffer.getShort() != 0;
+        primaryPaletteTimerWrite = buffer.getInt();
         bossAct.restoreFrom(buffer);
     }
 }

@@ -105,6 +105,54 @@ class TestForegroundWindowRendering {
             assertArrayEquals(new int[]{8, 8, 16, 48}, box);
             assertTrue(glIsEnabled(GL_SCISSOR_TEST));
             glDisable(GL_SCISSOR_TEST);
+            // A mid-frame VSRAM write must change sampling in BOTH visible and
+            // occlusion passes, leave HScroll/geometry untouched, then reset.
+            Arrays.fill(plane, 1);
+            Arrays.fill(plane, 2 * 8, 3 * 8, 0x8002);
+            renderer.setTilemapData(TilemapGpuRenderer.Layer.FOREGROUND,
+                    TilemapGpuRenderer.packWindowDescriptors(plane), 8, 8);
+            var split = new com.openggf.game.internal.ForegroundVerticalScrollSplit.Split(16, 8);
+            glClear(GL_COLOR_BUFFER_BIT);
+            renderer.setForegroundVerticalScrollSplit(split);
+            draw(renderer, atlas, palette, 24, -1, false);
+            assertPixel(12, 7, 255, 0, 0);
+            assertPixel(12, 8, 0, 255, 0);
+            assertPixel(12, 15, 0, 255, 0);
+            assertPixel(12, 16, 255, 0, 0);
+            assertPixel(12, 24, 255, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            renderer.setForegroundVerticalScrollSplit(split);
+            draw(renderer, atlas, palette, 24, 1, true);
+            assertPixel(12, 7, 0, 0, 0);
+            assertPixel(12, 8, 255, 0, 0);
+            assertPixel(12, 15, 255, 0, 0);
+            assertPixel(12, 24, 0, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            draw(renderer, atlas, palette, 0, -1, false);
+            assertPixel(12, 8, 255, 0, 0); // one-shot split did not leak
+            assertFalse(glIsEnabled(GL_SCISSOR_TEST));
+            // A finite layout may not borrow terrain from the opposite edge when
+            // a wider camera reveals negative X or X beyond its final column.
+            Arrays.fill(plane, 0x8002);
+            renderer.setTilemapData(TilemapGpuRenderer.Layer.FOREGROUND,
+                    TilemapGpuRenderer.packWindowDescriptors(plane), 8, 8);
+            for (int xOffset : new int[] {-16, 16}) {
+                int outsideX = xOffset < 0 ? 4 : 60;
+                for (boolean mask : new boolean[] {false, true}) {
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    renderer.setClipHorizontal(true);
+                    renderer.render(TilemapGpuRenderer.Layer.FOREGROUND, 64, 64, 0, 0, 64, 64,
+                            xOffset, 0, 32, 8, atlas, palette, palette, 1, true, mask, false, 64);
+                    assertPixel(outsideX, 12, 0, 0, 0);
+                    assertPixel(32, 12, mask ? 255 : 0, mask ? 0 : 255, 0);
+                    // Ordinary looping draws retain the old wrap and the one-shot
+                    // finite bound may not leak into the next pass/background.
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    renderer.render(TilemapGpuRenderer.Layer.FOREGROUND, 64, 64, 0, 0, 64, 64,
+                            xOffset, 0, 32, 8, atlas, palette, palette, 1, true, mask, false, 64);
+                    assertPixel(outsideX, 12, mask ? 255 : 0, mask ? 0 : 255, 0);
+                }
+            }
             assertEquals(GL_NO_ERROR, glGetError());
         } finally {
             if (renderer != null) renderer.cleanup();

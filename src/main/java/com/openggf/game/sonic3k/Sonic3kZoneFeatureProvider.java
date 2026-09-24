@@ -57,7 +57,7 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
     @Override public java.util.OptionalInt lockedNativeHorizontalCamera() {
         if (!GameServices.hasRuntime() || getFeatureZoneId() != Sonic3kZoneIds.ZONE_DEZ)
             return java.util.OptionalInt.empty();
@@ -80,6 +80,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
         if (zone == Sonic3kZoneIds.ZONE_LRZ) {
             return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry())
                     .map(LrzZoneRuntimeState::centerNativeArenaCamera).orElse(false);
+        }
+        if (zone == Sonic3kZoneIds.ZONE_SSZ) {
+            return S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry())
+                    .map(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState::centerNativeArenaCamera).orElse(false);
         }
         return zone == Sonic3kZoneIds.ZONE_DEZ
                 && S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry())
@@ -109,6 +113,35 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
     private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
     private final AdvancedRenderMode fbzBossPlaneRenderMode = new FbzBossPlaneRenderMode();
     private final AdvancedRenderMode ddzForegroundPlaneRenderMode = new DdzForegroundPlaneRenderMode();
+    private final AdvancedRenderMode mhzShipForegroundMode = new AdvancedRenderMode() {
+        @Override public String id() { return "s3k-mhz2-ship-foreground"; }
+        @Override public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            if (foregroundVerticalScrollSplit() != null) builder.enablePerLineForegroundScroll();
+        }
+    };
+
+    @Override public com.openggf.game.internal.ForegroundVerticalScrollSplit.Split foregroundVerticalScrollSplit() {
+        if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState state && state.isShipSequenceActive()) {
+            // loc_55486 starts Plane A at _unkEE9C. HInt6 restores Camera_Y_pos_copy
+            // at $80; sub_5550C supplies the ship HScroll above that split. The ROM
+            // streams these authored rows through its 512x256 name table. Our full
+            // ROM layout samples the two source bands directly, preserving tile
+            // priority in the visible passes and sprite mask rather than drawing
+            // the ship as a sprite overlay. Camera/player coordinates do not move.
+            return new com.openggf.game.internal.ForegroundVerticalScrollSplit.Split(
+                    state.shipHIntCounter(), (short) state.shipEffectiveBgY());
+        }
+        return null;
+    }
+
+    private final AdvancedRenderMode sszAct2ForegroundMode = new AdvancedRenderMode() {
+        @Override public String id() { return "s3k-ssz2-foreground"; }
+        @Override public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            // ApplyFGDeformation writes the plane-A half of H_scroll_buffer.
+            builder.enablePerLineForegroundScroll();
+        }
+    };
     private final AdvancedRenderMode dezFinalForegroundMode = new AdvancedRenderMode() {
         @Override public String id() { return "s3k-dez-final-foreground-plane"; }
         @Override public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
@@ -295,6 +328,9 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
 
     @Override public long foregroundDescriptorRevision() {
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && ssz.actIndex() == 1)
+            return ssz.endingPlane().revision();
+        if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state
                 && state.screenInitApplied()) {
             int nativeLeft = state.retainedPlaneX() != 0 ? state.retainedPlaneX() : state.planeX();
@@ -308,6 +344,9 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
     }
 
     @Override public int foregroundDescriptorAt(int sourceX, int sourceY) {
+        if (GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && ssz.actIndex() == 1)
+            return ssz.endingPlane().descriptor(sourceX, sourceY);
         if (!(GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)) return 0;
         // ROM Plane A is a 512px ring; native draw updates hide its stale cells offscreen.
@@ -332,6 +371,14 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
 
     @Override public long backgroundDescriptorRevision() {
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
+                && GameServices.camera().getWidth() > 320) {
+            return ((long) ssz.endingPlane().revision() << 32)
+                    | ((long) (ssz.backgroundCameraX() & 0xFFFF) << 16)
+                    | GameServices.camera().getWidth();
+        }
+        if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)
             return state.arenaPlane().revision();
         if (GameServices.hasRuntime() && GameServices.level().getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ
@@ -347,6 +394,20 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
     }
 
     @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
+        if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
+                && GameServices.camera().getWidth() > 320) {
+            // SSZ2_BackgroundEvent draws a 512px Plane B, displayed through the
+            // ROM's 320px viewport. The island presentation never shows layout
+            // columns beyond that right edge; widening our full-layout sampler
+            // exposes unrelated cloud strips. Extend the last visible sky tile
+            // column instead. Native columns (including the partly visible last
+            // tile), vertical sampling and the island's priority bits stay intact.
+            int edgeTileX = (ssz.backgroundCameraX() + 319) & ~7;
+            return GameServices.level().getBackgroundTileDescriptorAtWorld(
+                    Math.min(sourceX, edgeTileX), sourceY);
+        }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)
             return state.arenaPlane().descriptor(sourceX, sourceY);
@@ -551,6 +612,11 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
      */
     @Override
     public void appendSpritesAfterPriorityBucket(int bucket) {
+        if (bucket == 6 && GameServices.hasRuntime() && getFeatureZoneId() == Sonic3kZoneIds.ZONE_SSZ) {
+            com.openggf.game.sonic3k.render.SszMasterEmeraldPreview.draw(GameServices.camera().getWidth(),
+                    S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElse(null),
+                    GameServices.level(), GameServices.graphics());
+        }
         LrzRockSpriteRenderer renderer = lrzRockSpriteRenderer;
         if (renderer == null || bucket != com.openggf.graphics.RenderPriority.MIN
                 || !GameServices.hasRuntime()) {
@@ -888,6 +954,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
             registry.register(new com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect());
             registry.register(com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect.spritePriorityMask());
         }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_SSZ && actIndex == 1) {
+            registry.register(new com.openggf.game.sonic3k.render.SszAct2BackgroundPriorityEffect(false));
+            registry.register(new com.openggf.game.sonic3k.render.SszAct2BackgroundPriorityEffect(true));
+        }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
             registry.register(hczBgHighPriorityForegroundOverlayEffect);
             registry.register(hczWallChaseBgOverlayEffect);
@@ -917,6 +987,12 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_FBZ && actIndex == 1) {
             controller.register(fbzBossPlaneRenderMode);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_MHZ && actIndex == 1) {
+            controller.register(mhzShipForegroundMode);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_SSZ && actIndex == 1) {
+            controller.register(sszAct2ForegroundMode);
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_DDZ) {
             controller.register(ddzForegroundPlaneRenderMode);

@@ -42,8 +42,8 @@ behavior at every placement; the remaining obligations below retain that distinc
 | PRESENT: animated tiles and `AniPLC_LRZ2` | `AnimateTiles_LRZ2` / `loc_282D0` and `loc_28364`; `Offs_AniFunc` pairs `$901` with `AniPLC_LRZ2` `$28A84`; `Animate_Init` does **not** seed `Anim_Counters+1/+3` for `$901` | native | `TestS3kLrzPatternAnimation` | implemented | pass, `1ef1256ca` | A direct or star-post `$901` load whose first phase is 0 skips its first upload, as the ROM does; act 2's background art gap (known bug) still blocks a visual check |
 | PRESENT: rock sprites | `LRZ2_Rock_Placement` (10 placements, all at `y=$7C8`), same window and vertical test as act 1 | native + wide | `TestLrzRockSpriteRenderer` | implemented | pass, `fbbb793f7` | Act 2's rocks sit in the opening corridor; not yet seen on a cold route |
 | PRESENT: palette cycles | `AnPal_LRZ2` (channel D keeps the `FixBugs = 0` duplicated pair) | native | `TestS3kLrzPaletteCycling` | implemented (inherited) | pass | Not re-verified |
-| PRESENT: the post-defeat palette and camera releases | `loc_78AA8` and the `loc_78AE6`/`loc_78B08` pair (sonic3k.asm:160505-160545): `End_of_level_flag` gates both, then `Camera_min_X_pos` is written at `$2C0` (with `Pal_LRZ2` over palette line 1 and `Pal_LRZMiniboss3` over lines 2 and 3) and again at `$940`. The fight's own `Pal_LRZMiniboss1`/`Pal_LRZMiniboss2` reach act 2 because `Load_Level` copies no palette | native | `TestLrzPostDefeatCameraRelease` (3) | implemented | pass | Clip `35` shows the swap on capture frame 3539 and its gold half matches the native capture `native-lrz2-bg/run1/f416433.png`. `word_78EAA`'s rotation script between the two releases is NOT implemented ([known bug](../../../status/s3k-known-bugs.md)) |
-| PRESENT: Death Egg background sprite | End of `sub_57082`: `x = $678 - HScroll_table+$004`, kept when `x <= -$7E0`, else `0`; `y = $C0 - Camera_Y_pos_BG_copy`; `loc_5711E` deletes for `Player_mode 3` | native + wide | — | not implemented | open | Slice 7; draw path untraced |
+| PRESENT: the post-defeat palette and camera releases | `loc_78AA8` and the `loc_78AE6`/`loc_78B08` pair (sonic3k.asm:160505-160545): `End_of_level_flag` gates both, then `Camera_min_X_pos` is written at `$2C0` (with `Pal_LRZ2` over palette line 1 and `Pal_LRZMiniboss3` over lines 2 and 3) and again at `$940`. The fight's own `Pal_LRZMiniboss1`/`Pal_LRZMiniboss2` reach act 2 because `Load_Level` copies no palette | native | `TestLrzPostDefeatCameraRelease` (3) | implemented | pass | Clip `35` shows the swap on capture frame 3539 and its gold half matches the native capture `native-lrz2-bg/run1/f416433.png`. `word_78EAA` now runs its thirteen ROM rows and freezes/releases the shared palette clock; focused and actual-route rewind checks pass. Native ramp colors/timers are corroborated; full-scene matching remains open ([acceptance gap](../../../status/s3k-known-bugs.md)) |
+| PRESENT: Death Egg background sprite | End of `sub_57082`: `x = $678 - HScroll_table+$004`, kept when `x <= -$7E0`, else `0`; `y = $C0 - Camera_Y_pos_BG_copy`; `loc_5711E` deletes for `Player_mode 3` | native + wide | — | implemented | focused checks pass; native whole-scene comparison open | `TestLrzDeathEggBackground`: five widths, Knuckles deletion, recreation and45-input full-registry replay; both seamless handoffs allocate exactly one owner |
 | OBJECT: lava blocks `$6E` (4 placements) | `Obj_InvisibleLavaBlock`; `sub_1F58C` | native, all five shield states | `TestSonic3kInvisibleHurtBlockHObjectInstance` | implemented | pass, `bbd156d37` | Act-2 placements not exercised on a route |
 | OBJECT: doors and horizontal buttons `$19` (11), `$1C` (11) | `Obj_LRZDoor` act 2 skin (`mapping_frame` 1, art base `$090`, `height_pixels $20`, so a shorter solid box) and `Obj_LRZButtonHorizontal` act 2 skin (`Map_LRZButtonHorizontal2` over `ArtTile_LRZ2Misc`, palette 1) | native | `TestLrzDoorsButtonsAndTriggers` (act 1 decode), `TestS3kLrzPlacementCensus` | implemented | pass, `d2c58f148` | The act-2 skin is registered but not exercised: no act-2 unit case, no route spot. Act 2 doors `$01-$0B` each have a `$1C` button; `$33/$05` is extra |
 | OBJECT: flame throwers `$29` (52) | `Obj_LRZFlameThrower` (sonic3k.asm:89227-89448): subtype bit 7 picks the variant and the rest is `$32 = (subtype & $7F) * 4`, the idle length between `2*60`-frame bursts; emission is gated on `(Level_frame_counter+1) & 3`, `$2E = sin(angle) asr 4` with `addq.b #8,angle`, and the flame leaves at `sin/cos($2E) asl 2` from `x_pos + $10` (or `y_pos + $10`); `tst.b render_flags / bpl` makes an off-screen thrower run its cycle and its sound but allocate nothing | native | `TestLrzFlameThrower` (8) | implemented | pass | Eight cases from the ROM's immediates and its own sine table, broken on purpose once (`addq.b #4` for `#8`) and failing on the angle case only. **Owed**: no clip, no rewind spot on a route, no act 2 route position and no wide/donor/roster row |
@@ -54,8 +54,8 @@ behavior at every placement; the remaining obligations below retain that distinc
 | OBJECT: badniks `$99 $9A $9B` (52 placements) | `Obj_Fireworm`, `Obj_Iwamodoki`, `Obj_Toxomister` | native 320 + 400 | `TestFirewormBadnikInstance`, `TestIwamodokiBadnikInstance`, `TestToxomisterBadnikInstance`, `TestS3kLrzCompatibilityMatrix` | implemented (all three; the classes are act-agnostic and the badniks share one art sheet across both acts) | pass, `cad4a2e07` | Placements exercised in act 2 only through the census and the matrix's art rows; no act 2 route or clip yet |
 | BREADTH: act 2's own skins | `Obj_LRZSinkingRock`'s act branch (`mapping_frame` 1 and the `$090` tile base, sonic3k.asm:87907-87910) plus the act 2 door, button and swinging-spike-ball art keys | native 320 and 400, in act 2 | `TestS3kLrzCompatibilityMatrix#actTwoExercisesItsOwnSkins`, `#actTwoSkinsAlsoLoadWide` | implemented | pass | Asserts the load really is act 2 and that each act 2 art key has a ready ROM-backed renderer. Behaviour of the act 2 placements themselves is still unverified |
 | OBJECT: `$0F` collapsing bridges (25) and `$24` tunnel (10) | `Obj_CollapsingBridge` zone-9 mappings; `Obj_AutomaticTunnel` subtypes `$55-$59`, `$D5-$D9` | native | `TestS3kLrzPlacementCensus` (classification only) | implemented | classification pass | Per-subtype behaviour unverified |
-| EXIT: boulder cutscene and `$1600` request | `Obj_LRZ2CutsceneKnuckles` `$AE` at `($38B0,$240)`, `CutsceneKnux_LRZ2`, `loc_63C14` (Y >= `$4C0`: `Act3_flag`, ring/timer/shield carry) | native, Sonic/Tails/Tails-alone | — | not implemented | open | Slice 8 |
-| EXIT: Knuckles `Obj_StartNewLevel` `$B3` -> `$1601` | `Check_InMyRange word_86426`; word decode at `subtype` (SST `$2D` must be 0); `SaveGame` only for `Player_mode 3` | native, Knuckles | — | not implemented | open | Slice 8; open question on whether Sonic can reach it |
+| EXIT: boulder cutscene and `$1600` request | `Obj_LRZ2CutsceneKnuckles` `$AE` at `($38B0,$240)`, `CutsceneKnux_LRZ2`, `loc_63C14` (Y >= `$4C0`: `Act3_flag`, ring/timer/shield carry) | 17 width/donor/character/team rows, plus Knuckles exclusion | `TestS3kLrzBoulderCutsceneHeadless` | implemented | production approach, carry and full-world replay pass in campaign | Cold arrival, additional teams and matched native pixels remain open |
+| EXIT: Knuckles `Obj_StartNewLevel` `$B3` -> `$1601` | `Check_InMyRange word_86426`; word decode at `subtype` (SST `$2D` must be 0); `SaveGame` only for `Player_mode 3` | native Sonic/Tails/Knuckles | `TestS3kStartNewLevel`, `TestS3kLrzExitHeadless` | implemented | 20-case exit/census selection passes; real HPZ load verified | Positioned entry; cold reachability and wider roster/lifecycle breadth remain open |
 | ROUTE: act 2 from the seamless change | The `lrz` fixture's own input column from row 25558 (`~/Videos/OGGF/lrz-bring-up/inputs/lrz2-native-route-v1.txt`), driven after the production act change | native | scratch probe, recorded in the [frontier log](../../../status/trace-frontier-log.md) | measured | 923 rows exact | Player x/y match rows 25558-26481; first player divergence row 26482 (spindash release `$900` against an implied `$A00`), first camera divergence row 26416 (3 px in y). Declared positioned probe: the engine is written to the fixture's row-25558 state first, because the filmed fight is not the recorded route |
 | ORACLE: strict segment replay | `TestS3kSonicTailsLrzSegmentTraceReplay` (act 2 from row 25557), `TestS3kTailsFullChainLrz3SegmentTraceReplay` | `-Ptrace-segments` | — | — | see [trace frontier log](../../../status/trace-frontier-log.md) | Slice 11 |
 
@@ -136,3 +136,50 @@ exactly except for camera X minus 240. The DEZ 800px controller replay completes
 eight real enemy hits and loads zone 23 after 6837 steps, no hurt/death rows.
 These bounded checks do not close inherited cold-route, donor/team, native
 parity or whole-zone rewind obligations. Combined delivery validation remains due.
+
+
+### Post-results palette and handoff follow-up (2026-09-23)
+
+The13-row ROM palette ramp and shared clock freeze/release are implemented.
+Native111-frame observation corroborates all colors/durations, callback68 and
+post-AnPal write ordering (CRAM one frame later). Native/wide actual positioned
+boss/results/Act2 routes have no hurt/death and pass whole-registry mid-ramp
+restore/45-input replay. Final corrected selection passes77cases;24S3K palette
+consumer classes pass128cases, no skips. Earlier LRZ/required-S3K selection
+passed558cases before the native timer-order correction. Full campaign checks
+remain owed. See the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
+This is not cold full-act or whole-scene native certification. The800px capture
+reveals left-of-start scenery while the centered Act2 camera is negative; that
+separate edge remains open; the Death Egg follow-up below closes its missing owner.
+
+
+### Death Egg background follow-up (2026-09-23)
+
+`LrzDeathEggBackgroundInstance` now owns loc_5711E/loc_57156, allocated once by
+both direct initialization and seamless stage0. It uses ROM mapping$5719E,
+runtime-queued art$15A112/tile$39F, palette3, sprite bucket7 and low hardware
+priority. SwScrlLrz publishes the actual scroll-table word through rewind state.
+Native320 retains the signed gate; wider views extend its offscreen lead-in by
+width-minus320 and unwrap the relevant SAT coordinate turn into a single body.
+The code documents this presentation difference, including earlier wide art loading.
+Seven focused cases cover gate boundaries, all five widths' full-registry recreation
+and45-input replay, and Knuckles deletion. Both existing real miniboss/results
+handoffs now assert exactly one owner. With the required four S3K regression classes,
+68cases pass, zero skips; selected priority/services/rewind guards pass18cases.
+Native3301-row observation corroborates position/gate/priority; positioned320/800
+movement captures have240frames each and zero hurt/death. This is not full-scene
+native parity or cold-act certification. Campaign inventory and broader delivery
+checks remain outstanding; see the campaign audit for the exact failed inventory.
+
+
+### Finite foreground edges (2026-09-23)
+
+The centered handoff's negative camera no longer displays opposite-end level
+terrain. The shared renderer clips finite widescreen foreground samples outside
+the layout while preserving explicit rings and native320sampling; camera/player
+bounds are unchanged. Real-GL checks cover left/right edges, high-priority masks
+and one-shot reset. Existing4200frame handoff gameplay rows are unchanged; native
+1200PNGs are identical and wide359changed frames differ only outside the latched
+layout extent. The newly exposed area shows Plane B, leaving a visible vertical
+transition at X=0: scene-extension polish remains open, distinct from the fixed
+unrelated-terrain repeat. Shared-renderer broad validation remains due.

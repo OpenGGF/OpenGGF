@@ -30,6 +30,55 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kSszColdRoutes {
+    @Test void authoredContinuationTraversesThePermanentDiagonalStaircase() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_SSZ, 0)
+                .withFreshLevelStartLifecycle().withRecording(MOVIE)
+                .withRecordingStartFrame(FIRST_LEVEL_FRAME).build();
+        for (int frame = 0; frame < 2501; frame++) fixture.stepFrameFromRecording();
+        var player = fixture.sprite();
+        boolean rodeSlope = false;
+        boolean replayed = false;
+        for (int frame = 0; frame < 350 && player.getCentreX() < 2960; frame++) {
+            boolean jump = frame < 24 || (frame >= 84 && frame < 108);
+            fixture.stepFrame(false, false, false, true, jump);
+            assertFalse(player.getDead(), "cold continuation death at input " + frame);
+            var ride = GameServices.level().getObjectManager().getRidingObject(player);
+            if (ride instanceof com.openggf.game.sonic3k.objects.SszCollapsingBridgeDiagonalObjectInstance slope) {
+                rodeSlope = true;
+                assertTrue(slope.isHighPriority(), "ROM art_tile priority is independent of SAT bucket 3");
+                if (!replayed && frame > 108) {
+                    replayed = true;
+                    var registry = fixture.gameplayMode().getRewindRegistry();
+                    var saved = registry.capture();
+                    for (int i = 0; i < 15; i++) fixture.stepFrame(false, false, false, true, false);
+                    var forward = registry.capture();
+                    slope.setDestroyed(true); fixture.stepIdleFrames(1);
+                    registry.restore(saved);
+                    for (int i = 0; i < 15; i++) fixture.stepFrame(false, false, false, true, false);
+                    var replay = registry.capture();
+                    for (String key : forward.entries().keySet()) {
+                        var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, forward.get(key), replay.get(key));
+                        assertTrue(differences.isEmpty(), key + ": " + differences);
+                    }
+                    frame += 15;
+                    continue; // the recreated slope may have handed the player to the next piece.
+                }
+                int index = ((player.getCentreX() - slope.getX() + slope.halfWidthForTest()) & 0xFFFF) >> 1;
+                if (index >= 0 && index < 64) {
+                    int surface = slope.getY() - slope.sampleSlopeByte(index);
+                    assertTrue(Math.abs(player.getCentreY() + player.getYRadius() - surface) <= 4,
+                            "riding must follow the signed ROM slope, x=" + player.getCentreX());
+                }
+            }
+        }
+        assertTrue(replayed, "capture/recreate/forward replay on a live slope");
+        assertTrue(rodeSlope, "production contact must enter the diagonal slope path");
+        assertTrue(player.getCentreX() >= 2960, "reach the top of the four permanent walkway pieces");
+        assertTrue(player.getCentreY() < 3080, "the staircase raises the player rather than allowing a fall underneath");
+    }
 
     /** {@code hpz_completerun/metadata.json}: {@code bk2_frame_offset}. */
     private static final int FIRST_LEVEL_FRAME = 396720;

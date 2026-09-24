@@ -71,6 +71,13 @@ public final class MhzEndBossRobotnikHeadChild extends AbstractObjectInstance im
     }
 
     @Override
+    public boolean isPersistent() {
+        // Obj_RobotnikHead4 tests parent $38 bit 5, then Draw_Sprite.
+        // Those routines have no range cull; update owns native retirement.
+        return true;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         refreshFromParent();
         if ((parent.getCustomFlag(PARENT_FLAGS_OFFSET) & DELETE_WHEN_PARENT_FLAG) != 0) {

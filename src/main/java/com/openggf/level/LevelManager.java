@@ -3932,11 +3932,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             if (playable.getSpriteRenderer() != null) {
                 playable.getSpriteRenderer().invalidateDplcCache();
             }
-            // Persistent insta-shield survives transitions but the ObjectManager was rebuilt
-            // (rebuildManagersForActTransition creates a new one). Re-register + invalidate DPLC.
+            // ROM Load_Level retains the fixed shield SST outside Dynamic_object_RAM.
+            // Both exact-SST policies have already restored and reconciled that owner
+            // in rebuildManagersForActTransition. Marking it unregistered here makes
+            // the next player update insert the same identity twice (MHZ/HCZ handoff).
+            // Only the legacy policy still needs lazy registration in the new manager;
+            // exact carry has also invalidated the shield DPLC during reconciliation.
             if (playable.getInstaShieldObject() != null
                     && request.objectSurvivalPolicy()
-                    != SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST) {
+                    == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.PERSISTENT_ONLY) {
                 playable.markInstaShieldForReregistration();
                 playable.getInstaShieldObject().invalidateDplcCache();
             }

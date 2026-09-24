@@ -1816,6 +1816,8 @@ public class Sonic3kConstants {
     public static final int PAL_LRZ_MINIBOSS_2_ADDR = 0x078E2A;
     /** {@code Pal_LRZMiniboss3} (sonic3k.lst: $78E6A): the post-defeat camera release, {@code loc_78B08}. */
     public static final int PAL_LRZ_MINIBOSS_3_ADDR = 0x078E6A;
+    /** {@code word_78EAA}: finite five-color post-boss rotation, installed by loc_78AA8. */
+    public static final int PAL_LRZ_POST_BOSS_SCRIPT_ADDR = 0x078EAA;
     /** {@code Pal_LRZ2} (sonic3k.lst: $A96DC): {@code loc_78B08} copies $20 bytes over line 2. */
     public static final int PAL_LRZ2_ADDR = 0x0A96DC;
     /** {@code Pal_LRZ1} (sonic3k.lst: $A967C), the line the crusher restores on exit. */
@@ -2198,6 +2200,9 @@ public class Sonic3kConstants {
      * the column's debris.
      */
     public static final int MAP_SSZ_FLOATING_PLATFORM_ADDR = 0x046900;
+    /** {@code word_58C80}: SSZ2 encounter foreground deformation band heights. */
+    public static final int SSZ2_FG_DEFORM_TABLE_ADDR = 0x058C80;
+
     /**
      * {@code word_5853E} (sonic3k.lst:136479): the count word {@code $A-1} followed by ten
      * twelve-byte solid-cloud rows that {@code SSZ1_BackgroundInit} builds {@code loc_57B8E} from.
@@ -2260,6 +2265,8 @@ public class Sonic3kConstants {
     public static final int ART_UNC_MECHA_SONIC_SIZE = 0x56E0;
     /** {@code Map_MechaSonic} ($1853AA). */
     public static final int MAP_MECHA_SONIC_ADDR = 0x1853AA;
+    /** Map_MechaSonicPieces: sixteen final-defeat fragments using the last frame$E DPLC bank. */
+    public static final int MAP_MECHA_SONIC_PIECES_ADDR = 0x7D7A2;
     /** {@code DPLC_MechaSonic} ($185852), the second longword of {@code DPLCPtr_MechaSonic}. */
     public static final int DPLC_MECHA_SONIC_ADDR = 0x185852;
     /** {@code ArtKosM_MechaSonicExtra} ($17F738), queued into {@code ArtTile_MechaSonicExtra}. */

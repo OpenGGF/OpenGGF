@@ -87,7 +87,9 @@ class TestShaderPixelCentreSampling {
                     } else {
                         background.use();
                         int program = background.getProgramId();
-                        for (String sampler : new String[]{"HScrollTexture", "VScrollTexture", "VScrollColumnTexture"})
+                        // Disabled remap samplers still need a valid 1D unit, distinct from the 2D background.
+                        for (String sampler : new String[]{"HScrollTexture", "VScrollTexture", "VScrollColumnTexture",
+                                "ColumnRemapX", "ColumnRemapY"})
                             glUniform1i(glGetUniformLocation(program, sampler), 1);
                         glUniform1i(glGetUniformLocation(program, "BackgroundTexture"), 0);
                         glUniform1i(glGetUniformLocation(program, "NoHScroll"), 1);
