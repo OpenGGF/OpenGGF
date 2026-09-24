@@ -32,7 +32,7 @@ python3 tools/testing/run_categories.py --list
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # combined delivery selection unless proportionate validation applies
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
 python3 tools/testing/maven_queue.py -Dmse=off package              # full ordinary suite plus packaging
-python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # what every branch push runs in CI
+python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # basic CI on develop/next pushes
 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
 ```
 
@@ -128,8 +128,11 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   No validation receipts are written. Do not archive logs elsewhere to evade
   cleanup. Inspect summaries instead of streaming logs into context. The runner does not
   cache passes or enforce Git integration; queued Maven commands share its execution slot.
-- CI still runs `-Psmoke` on pushes and full tests plus `-Pguards` on pull requests and
-  manual dispatch. Releases retain full ordinary, guard and required ROM/trace validation.
+- CI runs `-Psmoke` on develop/next pushes, and branch policy, full tests plus `-Pguards`
+  on non-draft pull requests and manual dispatch; feature/bugfix pushes run nothing, so a
+  direct develop push is not guard-checked by CI. Master pushes run the Release workflow's
+  full validation, native packaging and publication; PRs build no native packages.
+  Releases retain full ordinary, guard and required ROM/trace validation.
   Category runs are partial validation, never evidence that the full suite passed.
 - Before reporting suite results, read the measurement-hazard table in
   [briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
