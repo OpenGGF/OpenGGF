@@ -132,7 +132,30 @@ class TestRemainingRewindTailInventory {
         // HPZ compatibility, fight and native-sequence graph tests.
         // Doomsday bring-up: 23 object classes, all passing the isolated sweep through their
         // private ObjectSpawn probe constructors.
-        return new TailInventory(1109, 874, 235, 0, buckets);
+        // Death Egg gravity slice: S3kDezGravitySwapObjectInstance ($5B) is one more class and
+        // one more isolated pass -- its spawn constructor is its probe constructor and its two
+        // booleans round-trip through the subclass extra. $58
+        // S3kDezGravitySwitchObjectInstance is the same shape again, and $59
+        // S3kDezTeleporterObjectInstance a third time -- its two rider blocks round-trip as one
+        // subclass extra record, $5A S3kDezGravityTubeObjectInstance a fourth and $5C
+        // S3kDezGravityHubObjectInstance a fifth, $5F S3kDezGravityRoomObjectInstance a
+        // sixth and $61 S3kDezGravityPuzzleObjectInstance a seventh. $A4
+        // SpikebonkerBadnikInstance and its SpikebonkerMace child add the eighth and ninth.
+        // $5D S3kDezRetractingSpringObjectInstance is the tenth: its extension byte and its
+        // ObjectAnimationState both round-trip through the generic subclass scalar capture, and
+        // $55 S3kDezEnergyBridgeObjectInstance the eleventh: its routine flag, countdown and
+        // mapping frame are scalars, and its two standing bits are booleans rather than player
+        // references so nothing about it needs a rewind annotation. $A5
+        // ChainspikeBadnikInstance and its ChainspikeChild are the twelfth and thirteenth:
+        // the body keeps its four children behind @RewindTransient and each child relinks to
+        // the nearest live body, the same shape as the Spikebonker's mace. $60
+        // S3kDezBumperWallObjectInstance is the fourteenth and carries no object state at all:
+        // its three shapes are read from the immutable subtype and the gate's open/shut is the
+        // zone runtime state's panel bitfield.
+        // No bucket grows.
+        // DEZ's three boss component families are exercised through their owning
+        // capture/restore graphs; the independent arena solids probe directly.
+        return new TailInventory(1148, 910, 238, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

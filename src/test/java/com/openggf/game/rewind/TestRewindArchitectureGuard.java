@@ -85,6 +85,26 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#restoreRewindState", 1),
+            // DEZ ($B01) gravity swap: the flag it writes is global and already snapshotted,
+            // but its own $32 side latch is not derivable from the placement or the player's
+            // position -- the ROM's init seeds it once and each crossing consumes it before
+            // the Y-band test. Without the sidecar a restore mid-corridor replays the wrong
+            // crossing body and sets gravity where the first run cleared it.
+            // TestS3kDezGravityObjectsHeadless captures after the write, replays forward.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwitchObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwitchObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityPuzzleObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityPuzzleObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityRoomObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityRoomObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityHubObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityHubObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityTubeObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityTubeObjectInstance.java#restoreRewindState", 1),
             // HPZ ($1601) teleporter graph and Knuckles-fight children keep object links in
             // ObjectRefId sidecars: generic capture lost the teleporter's beam link on replay.
             // TestS3kHpzCompatibilityMatrix and TestS3kHpzKnucklesFightHeadless prove restore
@@ -119,6 +139,11 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/level/objects/ShieldObjectInstance.java#@RewindTransient", 3),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/SpikebonkerBadnikInstance.java#@RewindTransient", 2),
+            // Chainspike's body holds its four children and each child holds the body; both
+            // links are structural and both sides relink to the nearest live body in
+            // recreateForRewind, the same triage as the Spikebonker's mace above.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ChainspikeBadnikInstance.java#@RewindTransient", 2),
             // HPZ Knuckles-fight object links are restored by ObjectRefId sidecars.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#@RewindTransient", 1),
             // DDZ parent3 link, restored by the ObjectRefId sidecar in AbstractDdzObjectInstance.

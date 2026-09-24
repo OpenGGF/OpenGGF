@@ -47,6 +47,7 @@ import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.physics.PlayerSensorActivation;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.managers.SpriteMovementManager;
@@ -1893,6 +1894,29 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public boolean getRenderVFlip() {
                 return renderVFlip;
+        }
+
+        /**
+         * The Y flip the player's own draw uses, with the reverse-gravity mirror composed in.
+         *
+         * <p>{@code loc_10C62} / {@code loc_138C8} / {@code loc_16614} (sonic3k.asm:22007-22013,
+         * 26251-26257, 30450-30456) apply {@code eori.b #2,render_flags(a0)} after the animator,
+         * and {@code sub_125E0} (:24711-24718), {@code sub_15842} (:29336), {@code sub_17D1E}
+         * (:33017) and {@code loc_15A7A} (:29591-29597) repeat it in the hurt, dead and rotation
+         * paths — every one of them an XOR of the flip the animator just produced.
+         *
+         * <p>It is composed here rather than written into {@link #renderVFlip} because the engine's
+         * stored flag is not the ROM's {@code render_flags} bit 1. The ROM's animator clears that
+         * bit every frame; the engine's keeps a flip that encodes native mapping orientation (the
+         * flipped slope banks and the negative-flip-type tumble), and objects read the stored value
+         * back to write it again. Mutating it would corrupt both. Package-private so that only
+         * {@code Sonic}, {@code Tails} and {@code Knuckles} — this package — see it, which also
+         * keeps it off the {@code @ModApi} surface this class pins.
+         */
+        boolean renderVFlipForDraw() {
+                var gameState = currentGameStateOrNull();
+                boolean reverseGravity = gameState != null && gameState.isReverseGravityActive();
+                return renderVFlip ^ reverseGravity;
         }
 
         public void setRenderFlips(boolean hFlip, boolean vFlip) {
@@ -4975,86 +4999,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Refactored to avoid per-frame array allocations by directly setting sensor states.
          */
         public void updateSensors(short originalX, short originalY) {
-                Sensor groundA = groundSensors[0];
-                Sensor groundB = groundSensors[1];
-                Sensor ceilingC = ceilingSensors[0];
-                Sensor ceilingD = ceilingSensors[1];
-                Sensor pushE = pushSensors[0];
-                Sensor pushF = pushSensors[1];
-
-                if (getAir()) {
-                        // Use ROM-accurate angle calculation via TrigLookupTable.calcAngle
-                        // ROM: Sonic_DoLevelCollision (s2.asm:37547-37557)
-                        int motionAngle = TrigLookupTable.calcAngle(xSpeed, ySpeed);
-
-                        // ROM quadrant calculation: subi.b #$20,d0 / andi.b #$C0,d0
-                        // This creates quadrants offset by 32 degrees:
-                        // - 0xC0: Angles 0-31 or 224-255 (mostly right)
-                        // - 0x00: Angles 32-95 (mostly down)
-                        // - 0x40: Angles 96-159 (mostly left)
-                        // - 0x80: Angles 160-223 (mostly up)
-                        int quadrant = ((motionAngle - 0x20) & 0xC0) & 0xFF;
-
-                        switch (quadrant) {
-                                case 0xC0 -> {
-                                        // Mostly Right (angles 0-31, 224-255): A, B, C, D, F active; E inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(false);
-                                        pushF.setActive(true);
-                                }
-                                case 0x40 -> {
-                                        // Mostly Left (angles 96-159): A, B, C, D, E active; F inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(true);
-                                        pushF.setActive(false);
-                                }
-                                case 0x80 -> {
-                                        // Mostly Up (angles 160-223): C, D, E, F active; A, B inactive
-                                        groundA.setActive(false);
-                                        groundB.setActive(false);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(true);
-                                        pushF.setActive(true);
-                                }
-                                default -> {
-                                        // 0x00: Mostly Down (angles 32-95): A, B, E, F active; C, D inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(false);
-                                        ceilingD.setActive(false);
-                                        pushE.setActive(true);
-                                        pushF.setActive(true);
-                                }
-                        }
-                } else {
-                        // Ground sensors always active when grounded
-                        groundA.setActive(true);
-                        groundB.setActive(true);
-                        // Ceiling sensors always inactive when grounded
-                        ceilingC.setActive(false);
-                        ceilingD.setActive(false);
-
-                        // Push sensors active on floor/ceiling, disabled on walls
-                        boolean pushActive = (runningMode == GroundMode.GROUND || runningMode == GroundMode.CEILING);
-                        // Use gSpeed (speed along surface) instead of xSpeed for direction
-                        if (gSpeed > 0) {
-                                pushE.setActive(false);
-                                pushF.setActive(pushActive);
-                        } else if (gSpeed < 0) {
-                                pushE.setActive(pushActive);
-                                pushF.setActive(false);
-                        } else {
-                                pushE.setActive(false);
-                                pushF.setActive(false);
-                        }
-                }
+                PlayerSensorActivation.update(this, groundSensors, ceilingSensors, pushSensors);
         }
 
         public Sensor[] getAllSensors() {

@@ -485,6 +485,59 @@ public class Sonic3kConstants {
     public static final int ARTTILE_LBZ_MISC = 0x03C3;
     public static final int ARTTILE_FBZ_MISC = 0x0379;
     public static final int ARTTILE_DEZ_MISC = 0x034D;
+    /** {@code ArtTile_DEZMisc2 = $02FC} (sonic3k.constants.asm:1355). */
+    public static final int ARTTILE_DEZ_MISC2 = 0x02FC;
+
+    // ===== DEZ Gravity Switch (Obj_DEZGravitySwitch, SKL ID 0x58) =====
+    // Map_DEZGravitySwitch (sonic3k.asm:94909, sonic3k.lst:112040). Two frames:
+    // word_48BEE is the armed 32x16 pad, word_48C08 the two-piece pressed pose.
+    // The header takes make_art_tile(ArtTile_DEZMisc+$143,1,0) (sonic3k.asm:94802).
+    public static final int MAP_DEZ_GRAVITY_SWITCH_ADDR = 0x048BEA;
+    public static final int MAP_DEZ_LIGHTNING_ADDR = 0x04792E;
+    public static final int MAP_DEZ_TORPEDO_LAUNCHER_ADDR = 0x0472A8;
+    public static final int MAP_DEZ_HOVER_MACHINE_ADDR = 0x0495D8;
+    /** {@code Map_DEZLiftPad} (sonic3k.asm:93359; first frame at ROM $0004761A). */
+    public static final int MAP_DEZ_LIFT_PAD_ADDR = 0x047614;
+    public static final int MAP_DEZ_CONVEYOR_PAD_ADDR = 0x047C08;
+    public static final int MAP_DEZ_CONVEYOR_PAD_WIDE_ADDR = 0x047CA8;
+    public static final int MAP_DEZ_FLOATING_PLATFORM_ADDR = 0x025ACA;
+    public static final int MAP_DEZ_HANG_CARRIER_ADDR = 0x04717E;
+    public static final int MAP_DEZ_TILTING_BRIDGE_ADDR = 0x046F7A;
+    public static final int MAP_DEZ_TUNNEL_LAUNCHER_ADDR = 0x048424;
+    /** {@code Map_DEZGravityPuzzle} (sonic3k.lst: ROM $00049A6C). */
+    public static final int MAP_DEZ_GRAVITY_PUZZLE_ADDR = 0x049A6C;
+
+    /** {@code ArtTile_DEZ2Extra = $0332} (sonic3k.lst:1945). */
+    public static final int ARTTILE_DEZ2_EXTRA = 0x0332;
+    /** {@code Map_DEZRetractingSpring} (sonic3k.lst: ROM $000481B6). */
+    public static final int MAP_DEZ_RETRACTING_SPRING_ADDR = 0x0481B6;
+    /** {@code Map_DEZEnergyBridge} (sonic3k.lst: ROM $00047FF8). */
+    public static final int MAP_DEZ_ENERGY_BRIDGE_ADDR = 0x047FF8;
+    public static final int MAP_DEZ_ENERGY_BRIDGE_CURVED_ADDR = 0x048038;
+    /** {@code Map_DEZBumperWall} (sonic3k.lst: ROM $000498C2). */
+    public static final int MAP_DEZ_BUMPER_WALL_ADDR = 0x0498C2;
+
+    // ===== DEZ Act 1 miniboss (Obj_DEZMiniboss, SKL $A6) =====
+    // Verified against the locked-on World ROM with RomOffsetFinder --game s3k.
+    public static final int ART_KOSM_DEZ_MINIBOSS_MISC_ADDR = 0x1805A0;
+    public static final int ART_KOSM_DEZ_MINIBOSS_MISC_SIZE = 5664;
+    public static final int MAP_DEZ_MINIBOSS_ADDR = 0x184FBA;
+    public static final int PAL_DEZ_MINIBOSS_1_ADDR = 0x07EFFC;
+    public static final int PAL_DEZ_MINIBOSS_2_ADDR = 0x07F01C;
+    public static final int ART_KOSM_DEZ_END_BOSS_ADDR = 0x181002;
+    public static final int ART_KOSM_DEZ_END_BOSS_SIZE = 7040;
+    public static final int MAP_DEZ_END_BOSS_ADDR = 0x185B82;
+    public static final int PAL_DEZ_END_BOSS_ADDR = 0x07FD08;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_MISC_ADDR = 0x181D44;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_MISC_SIZE = 0x26A0;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_MASTER_EMERALD_ADDR = 0x182BE6;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_MASTER_EMERALD_SIZE = 0x0600;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_DEBRIS_ADDR = 0x182ED8;
+    public static final int ART_KOSM_DEZ_FINAL_BOSS_DEBRIS_SIZE = 0x0520;
+    public static final int MAP_DEZ_FINAL_BOSS_MISC_ADDR = 0x187888;
+    public static final int MAP_DEZ_FINAL_BOSS_MASTER_EMERALD_ADDR = 0x187B34;
+    public static final int MAP_DEZ_FINAL_BOSS_DEBRIS_ADDR = 0x187B66;
+    public static final int MAP_DEZ3_BLOCKS_ADDR = 0x05A9AC;
 
     // ===== Tension Bridge mappings (Obj_TensionBridge, ID 0x6C) =====
     public static final int MAP_TENSION_BRIDGE_ADDR = 0x038FF2;   // Map_TensionBridge
@@ -976,6 +1029,20 @@ public class Sonic3kConstants {
     public static final int ANPAL_LRZ2_3_SIZE = 256;
     // BPZ balloons (palette 2, colors 13-15): 3 frames x 6 bytes = 18 bytes
     // Verified by ROM binary search for pattern 00EE 00AE 006C 00AE 006E 00EE 006E 00EE 00AE
+    // Death Egg. AnPal_DEZ1 (sonic3k.asm:3661) runs channel A and then falls through into
+    // AnPal_DEZ2 (:3676); act 2 enters at the AnPal_DEZ2 label, so it runs only B and C.
+    // Channel B (both acts): AnPal_PalDEZ12_1, palette line 3 colours 13-14 (1 longword),
+    // 12 frames x 4 bytes = 48 bytes; counter step +4, wraps at $30 (sonic3k.lst: $3444).
+    public static final int ANPAL_DEZ12_1_ADDR = 0x003444;
+    public static final int ANPAL_DEZ12_1_SIZE = 0x30;
+    // Channel C (both acts): AnPal_PalDEZ12_2, palette line 3 colours 8-12 (long, long, word),
+    // 4 frames x 10 bytes = 40 bytes; counter step +$A, wraps at $28 (sonic3k.lst: $3474).
+    public static final int ANPAL_DEZ12_2_ADDR = 0x003474;
+    public static final int ANPAL_DEZ12_2_SIZE = 0x28;
+    // Channel A (act 1 only): AnPal_PalDEZ1, palette line 4 colours 12-15 (2 longwords),
+    // 6 frames x 8 bytes = 48 bytes; counter step +8, wraps at $30 (sonic3k.lst: $349C).
+    public static final int ANPAL_DEZ1_ADDR = 0x00349C;
+    public static final int ANPAL_DEZ1_SIZE = 0x30;
     public static final int ANPAL_BPZ_1_ADDR = 0x0034CC;
     public static final int ANPAL_BPZ_1_SIZE = 18;
     // BPZ background (palette 3, colors 2-4): 21 frames x 6 bytes = 126 bytes
@@ -1045,6 +1112,12 @@ public class Sonic3kConstants {
     // AniPLC_MHZ: 4 scripts (mushroom caps and foreground foliage, both acts)
     // Verified by table position immediately before AniPLC_LRZ1 at 0x028A6A.
     public static final int ANIPLC_MHZ_ADDR = 0x0289E8;
+    /**
+     * {@code AniPLC_DEZ} (sonic3k.asm:56079, sonic3k.lst: $28AEE): eight always-running scripts
+     * shared by both Death Egg acts. {@code Offs_AniFunc} pairs both acts with the generic
+     * {@code AnimateTiles_DoAniPLC}, so nothing gates them.
+     */
+    public static final int ANIPLC_DEZ_ADDR = 0x028AEE;
     /** {@code AniPLC_HPZ} (sonic3k.lst:67357). */
     public static final int ANIPLC_HPZ_ADDR = 0x028C40;
 

@@ -101,10 +101,15 @@ public final class Sonic3kObjectIds {
     public static final int AIZ_DRAW_BRIDGE = 0x32;
     public static final int SINKING_MUD = 0x4F;
     public static final int MGZ_TWISTING_LOOP = 0x50;
+    public static final int DEZ_CONVEYOR_BELT = 0x50;
     public static final int FLOATING_PLATFORM = 0x51;
     public static final int BUMPER = 0x4A;
+    public static final int DEZ_FLOATING_PLATFORM = 0x4A;
     // S3KL object table: Obj_CNZTriangleBumpers.
     public static final int CNZ_TRIANGLE_BUMPER = 0x4B;
+    public static final int DEZ_TILTING_BRIDGE = 0x4B;
+    public static final int DEZ_STAIRCASE = 0x4F;
+    public static final int DEZ_TUNNEL_LAUNCHER = 0x57;
     public static final int BUBBLER = 0x54;
     public static final int BUTTON = 0x33;
     public static final int STAR_POST = 0x34;
@@ -141,29 +146,57 @@ public final class Sonic3kObjectIds {
     public static final int CNZ_GIANT_WHEEL = 0x49;
     // S3KL object table: Obj_CNZSpiralTube. Controller-only object; no separate mapping/art owner.
     public static final int CNZ_SPIRAL_TUBE = 0x4C;
+    public static final int DEZ_HANG_CARRIER = 0x4C;
     // S3KL object table: Obj_CNZBarberPoleSprite.
     public static final int CNZ_BARBER_POLE = 0x4D;
+    // SKL $4D is Obj_DEZTorpedoLauncher; S3KL $4D is the CNZ barber pole.
+    public static final int DEZ_TORPEDO_LAUNCHER = 0x4D;
     // S3KL object table: Obj_CNZWireCage.
     public static final int CNZ_WIRE_CAGE = 0x4E;
+    // SKL $4E is Obj_DEZLiftPad; S3KL $4E is the CNZ wire cage.
+    public static final int DEZ_LIFT_PAD = 0x4E;
     public static final int MGZLBZ_SMASHING_PILLAR_ALT = 0x20;
     // S3KL object table: Obj_LBZGateLaser. SKL reuses $21 for Obj_LRZSmashingSpikePlatform.
     public static final int LBZ_GATE_LASER = 0x21;
     // S3KL object table: Obj_LBZAlarm.
     public static final int LBZ_ALARM = 0x22;
+    // SKL $52 is Obj_DEZLightning; S3KL $52 is the MGZ/LBZ smashing pillar.
     public static final int MGZLBZ_SMASHING_PILLAR = 0x52;
+    public static final int DEZ_LIGHTNING = 0x52;
     public static final int MGZ_SWINGING_PLATFORM = 0x53;
+    public static final int DEZ_CONVEYOR_PAD = 0x53;
+    // SKL $55 is Obj_DEZEnergyBridge (sonic3k.asm:93909); S3KL $55 is Obj_MGZHeadTrigger.
+    // The two object tables share the number.
     public static final int MGZ_HEAD_TRIGGER = 0x55;
     public static final int MGZ_MOVING_SPIKE_PLATFORM = 0x56;
+    // SKL $56 is Obj_DEZEnergyBridgeCurved; S3KL $56 is the MGZ spike platform.
+    public static final int DEZ_ENERGY_BRIDGE_CURVED = 0x56;
     public static final int MGZ_TRIGGER_PLATFORM = 0x57;
     public static final int MGZ_SWINGING_SPIKE_BALL = 0x58;
     public static final int MGZ_DASH_TRIGGER = 0x59;
     public static final int MGZ_PULLEY = 0x5A;
     public static final int MGZ_TOP_PLATFORM = 0x5B;
     public static final int MGZ_TOP_LAUNCHER = 0x5C;
+    // SKL $5D is Obj_DEZRetractingSpring (sonic3k.asm:94098); S3KL $5D is
+    // Obj_CGZTriangleBumpers, a competition-zone object no zone 0-6 layout places. The two
+    // tables share the number.
+    public static final int DEZ_RETRACTING_SPRING = 0x5D;
+    public static final int DEZ_HOVER_MACHINE = 0x5E;
+    // SKL object table only: Obj_DEZGravityRoom (sonic3k.asm:95814). The S3KL table has
+    // no object at $5F, so this number is named after its only owner.
+    public static final int DEZ_GRAVITY_ROOM = 0x5F;
+    // SKL object table only: Obj_DEZBumperWall (sonic3k.asm:95958). The S3KL table has no
+    // object at $60, so this number is named after its only owner.
+    public static final int DEZ_BUMPER_WALL = 0x60;
+    // SKL $61 is Obj_DEZGravityPuzzle (sonic3k.asm:96087); S3KL $61 is Obj_BPZBalloon, a
+    // competition-zone object no zone 0-6 layout places. The two tables share the number.
+    public static final int DEZ_GRAVITY_PUZZLE = 0x61;
     public static final int HCZ_SNAKE_BLOCKS = 0x67;
     public static final int TENSION_BRIDGE = 0x6C;
     public static final int INVISIBLE_HURT_BLOCK_H = 0x6A;
     public static final int INVISIBLE_HURT_BLOCK_V = 0x6B;
+    // SKL $6D is Obj_InvisibleShockBlock; S3KL $6D is the HCZ water splash.
+    public static final int INVISIBLE_SHOCK_BLOCK = 0x6D;
     public static final int SS_ENTRY_RING = 0x85;
     public static final int GUMBALL_MACHINE = 0x86;
     public static final int GUMBALL_TRIANGLE_BUMPER = 0x87;
@@ -290,8 +323,10 @@ public final class Sonic3kObjectIds {
     public static final int BATBOT = 0xA5;
     // S3KL object table: Obj_CNZMiniboss. SKL reuses $A6 for DEZMiniboss.
     public static final int CNZ_MINIBOSS = 0xA6;
+    public static final int DEZ_MINIBOSS = 0xA6;
     // S3KL object table: Obj_CNZEndBoss. SKL reuses $A7 for DEZEndBoss.
     public static final int CNZ_END_BOSS = 0xA7;
+    public static final int DEZ_END_BOSS = 0xA7;
     // S3KL object table: Obj_FBZMiniboss. SKL reuses $AA for Hyudoro.
     public static final int FBZ_MINIBOSS = 0xAA;
     public static final int FBZ2_SUBBOSS = 0xAB;

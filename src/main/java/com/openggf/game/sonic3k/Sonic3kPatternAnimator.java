@@ -2091,6 +2091,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                     : Sonic3kConstants.ANIPLC_LBZ2_ADDR;
             case 0x07 -> Sonic3kConstants.ANIPLC_MHZ_ADDR;
             case 0x08, Sonic3kZoneIds.ZONE_LRZ -> ANIPLC_LRZ1_ADDR;
+            // Offs_AniFunc entries 22 and 23 pair both Death Egg acts with the generic
+            // AnimateTiles_DoAniPLC and AniPLC_DEZ; nothing gates the eight scripts
+            // (sonic3k.asm:53885-53888).
+            case Sonic3kZoneIds.ZONE_DEZ -> Sonic3kConstants.ANIPLC_DEZ_ADDR;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
             // Offs_AniFunc pairs for $1601 (Hidden Palace) and $1701 (sanctuary) are
             // AnimateTiles_DoAniPLC / AniPLC_HPZ; $1600 and $1700 have no AniPLC

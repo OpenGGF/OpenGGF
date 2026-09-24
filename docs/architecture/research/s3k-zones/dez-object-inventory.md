@@ -84,36 +84,36 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$2F` | `Obj_StillSprite` | 19 | 20 | shared concrete | 4 (verify DEZ frames `$30-$32` art) |
 | `$34` | `Obj_StarPost` | 3 | 4 | shared concrete | 6, 8 (respawn rows) |
 | `$3C` | `Obj_Door` | 11 | 6 | shared concrete | 4 (verify DEZ art and trigger) |
-| `$4A` | `Obj_DEZFloatingPlatform` | 0 | 10 | placeholder | 4 |
-| `$4B` | `Obj_DEZTiltingBridge` | 1 | 3 | placeholder | 4 |
-| `$4C` | `Obj_DEZHangCarrier` | 3 | 1 | placeholder | 4 |
-| `$4D` | `Obj_DEZTorpedoLauncher` | 36 | 38 | placeholder | 4 |
-| `$4E` | `Obj_DEZLiftPad` | 7 | 0 | placeholder | 4 |
-| `$4F` | `Obj_DEZStaircase` | 18 | 15 | placeholder | 4 |
-| `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | placeholder | 4 |
-| `$52` | `Obj_DEZLightning` | 48 | 94 | placeholder | 4 |
-| `$53` | `Obj_DEZConveyorPad` | 4 | 5 | placeholder | 4 (reads the flag, sonic3k.asm:93727) |
-| `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | placeholder | 4 |
-| `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder | 4 |
-| `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | placeholder | 5 |
-| `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | placeholder | 3 |
-| `$59` | `Obj_DEZTeleporter` | 0 | 21 | placeholder | 3 |
-| `$5A` | `Obj_DEZGravityTube` | 24 | 17 | placeholder | 3 |
-| `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | placeholder | 3 |
-| `$5C` | `Obj_DEZGravityHub` | 0 | 3 | placeholder | 3 |
-| `$5D` | `Obj_DEZRetractingSpring` | 0 | 13 | unregistered | 4 |
-| `$5E` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered | 4 |
-| `$5F` | `Obj_DEZGravityRoom` | 1 | 0 | unregistered | 3 |
-| `$60` | `Obj_DEZBumperWall` | 10 | 0 | unregistered | 4 |
-| `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | unregistered | 3 |
+| `$4A` | `Obj_DEZFloatingPlatform` | 0 | 10 | concrete: full-solid DEZ oscillation/sweep table | 4 |
+| `$4B` | `Obj_DEZTiltingBridge` | 1 | 3 | concrete: eight-piece force matrix and collapse | 4 |
+| `$4C` | `Obj_DEZHangCarrier` | 3 | 1 | concrete: dual-player capture, lift, ceiling turn and jump release | 4 |
+| `$4D` | `Obj_DEZTorpedoLauncher` | 36 | 38 | concrete: timed launcher, closing animation and touch projectile | 4 |
+| `$4E` | `Obj_DEZLiftPad` | 7 | 0 | concrete: triggered accelerating lift arm and top-solid pad | 4 |
+| `$4F` | `Obj_DEZStaircase` | 18 | 15 | concrete: four-piece contact-triggered ramp | 4 |
+| `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | concrete: invisible two-sided grounded-player conveyor | 4 |
+| `$52` | `Obj_DEZLightning` | 48 | 94 | concrete: ROM animation/wait/touch, art and local SFX | 4 |
+| `$53` | `Obj_DEZConveyorPad` | 4 | 5 | concrete: triggered finite/floor-following full-solid conveyor | 4 |
+| `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | `S3kDezEnergyBridgeObjectInstance` | 4 |
+| `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | concrete: timed curved collision-index field | 4 |
+| `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | concrete: dual-player ROM path transport | 5 |
+| `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** (`S3kDezGravitySwitchObjectInstance`; art not registered) | 3 |
+| `$59` | `Obj_DEZTeleporter` | 0 | 21 | `S3kDezTeleporterObjectInstance` | 3 |
+| `$5A` | `Obj_DEZGravityTube` | 24 | 17 | `S3kDezGravityTubeObjectInstance` | 3 |
+| `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** (`S3kDezGravitySwapObjectInstance`) | 3 |
+| `$5C` | `Obj_DEZGravityHub` | 0 | 3 | `S3kDezGravityHubObjectInstance` | 3 |
+| `$5D` | `Obj_DEZRetractingSpring` | 0 | 13 | `S3kDezRetractingSpringObjectInstance` | 4 |
+| `$5E` | `Obj_DEZHoverMachine` | 11 | 0 | concrete: flicker owner plus oscillating lift field child | 4 |
+| `$5F` | `Obj_DEZGravityRoom` | 1 | 0 | `S3kDezGravityRoomObjectInstance` | 3 |
+| `$60` | `Obj_DEZBumperWall` | 10 | 0 | `S3kDezBumperWallObjectInstance` | 4 |
+| `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | `S3kDezGravityPuzzleObjectInstance` | 3 |
 | `$6A` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete | verify only (8) |
 | `$6B` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete | verify only (8) |
-| `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | placeholder | 4 |
+| `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | concrete: shared hurt block plus lightning-shield reaction | 4 |
 | `$78` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete | 4 (verify; duplicate registration above) |
-| `$A4` | `Obj_Spikebonker` | 7 | 11 | placeholder | 4 |
-| `$A5` | `Obj_Chainspike` | 6 | 12 | placeholder | 4 |
-| `$A6` | `Obj_DEZMiniboss` | 1 | 0 | placeholder | 6 |
-| `$A7` | `Obj_DEZEndBoss` | 0 | 1 | placeholder | 8 |
+| `$A4` | `Obj_Spikebonker` | 7 | 11 | `SpikebonkerBadnikInstance` | 4 |
+| `$A5` | `Obj_Chainspike` | 6 | 12 | implemented | 4 |
+| `$A6` | `Obj_DEZMiniboss` | 1 | 0 | `S3kDezMinibossInstance` | 6 |
+| `$A7` | `Obj_DEZEndBoss` | 0 | 1 | `S3kDezEndBossInstance` | 8 |
 
 Both bosses are **placed** objects gated by `Check_CameraInRange`, not event spawns.
 
@@ -179,7 +179,7 @@ so subtypes `$80+` arrive inverted.
 | `$4A` | `$02` | `Obj_DEZFloatingPlatform` | 0 | 1 | placeholder |
 | `$4A` | `$03` | `Obj_DEZFloatingPlatform` | 0 | 1 | placeholder |
 | `$4A` | `$04` | `Obj_DEZFloatingPlatform` | 0 | 4 | placeholder |
-| `$4B` | `$00` | `Obj_DEZTiltingBridge` | 1 | 3 | placeholder |
+| `$4B` | `$00` | `Obj_DEZTiltingBridge` | 1 | 3 | concrete |
 | `$4C` | `$25` | `Obj_DEZHangCarrier` | 1 | 1 | placeholder |
 | `$4C` | `$34` | `Obj_DEZHangCarrier` | 1 | 0 | placeholder |
 | `$4C` | `$44` | `Obj_DEZHangCarrier` | 1 | 0 | placeholder |
@@ -196,8 +196,8 @@ so subtypes `$80+` arrive inverted.
 | `$4D` | `$20` | `Obj_DEZTorpedoLauncher` | 0 | 4 | placeholder |
 | `$4E` | `$07` | `Obj_DEZLiftPad` | 5 | 0 | placeholder |
 | `$4E` | `$27` | `Obj_DEZLiftPad` | 2 | 0 | placeholder |
-| `$4F` | `$00` | `Obj_DEZStaircase` | 4 | 4 | placeholder |
-| `$4F` | `$04` | `Obj_DEZStaircase` | 14 | 11 | placeholder |
+| `$4F` | `$00` | `Obj_DEZStaircase` | 4 | 4 | concrete |
+| `$4F` | `$04` | `Obj_DEZStaircase` | 14 | 11 | concrete |
 | `$50` | `$08` | `Obj_DEZConveyorBelt` | 1 | 0 | placeholder |
 | `$50` | `$10` | `Obj_DEZConveyorBelt` | 2 | 4 | placeholder |
 | `$50` | `$18` | `Obj_DEZConveyorBelt` | 2 | 1 | placeholder |
@@ -239,59 +239,59 @@ so subtypes `$80+` arrive inverted.
 | `$53` | `$38` | `Obj_DEZConveyorPad` | 0 | 2 | placeholder |
 | `$53` | `$48` | `Obj_DEZConveyorPad` | 0 | 1 | placeholder |
 | `$53` | `$B0` | `Obj_DEZConveyorPad` | 1 | 0 | placeholder |
-| `$55` | `$01` | `Obj_DEZEnergyBridge` | 4 | 9 | placeholder |
-| `$55` | `$05` | `Obj_DEZEnergyBridge` | 0 | 1 | placeholder |
-| `$55` | `$06` | `Obj_DEZEnergyBridge` | 2 | 0 | placeholder |
-| `$55` | `$45` | `Obj_DEZEnergyBridge` | 0 | 2 | placeholder |
-| `$55` | `$61` | `Obj_DEZEnergyBridge` | 2 | 0 | placeholder |
-| `$55` | `$66` | `Obj_DEZEnergyBridge` | 5 | 0 | placeholder |
+| `$55` | `$01` | `Obj_DEZEnergyBridge` | 4 | 9 | implemented |
+| `$55` | `$05` | `Obj_DEZEnergyBridge` | 0 | 1 | implemented |
+| `$55` | `$06` | `Obj_DEZEnergyBridge` | 2 | 0 | implemented |
+| `$55` | `$45` | `Obj_DEZEnergyBridge` | 0 | 2 | implemented |
+| `$55` | `$61` | `Obj_DEZEnergyBridge` | 2 | 0 | implemented |
+| `$55` | `$66` | `Obj_DEZEnergyBridge` | 5 | 0 | implemented |
 | `$56` | `$07` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder |
-| `$57` | `$00` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
-| `$57` | `$01` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
-| `$57` | `$03` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$57` | `$04` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$57` | `$05` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$57` | `$06` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
-| `$57` | `$07` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$58` | `$00` | `Obj_DEZGravitySwitch` | 0 | 5 | placeholder |
-| `$59` | `$0D` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$15` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$18` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$22` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$25` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$3A` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$45` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$4D` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$8D` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$95` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$A2` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$A5` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$BA` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$C5` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$CD` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$5A` | `$08` | `Obj_DEZGravityTube` | 7 | 2 | placeholder |
-| `$5A` | `$10` | `Obj_DEZGravityTube` | 6 | 6 | placeholder |
-| `$5A` | `$12` | `Obj_DEZGravityTube` | 0 | 3 | placeholder |
-| `$5A` | `$18` | `Obj_DEZGravityTube` | 2 | 1 | placeholder |
-| `$5A` | `$22` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5A` | `$48` | `Obj_DEZGravityTube` | 8 | 0 | placeholder |
-| `$5A` | `$50` | `Obj_DEZGravityTube` | 1 | 0 | placeholder |
-| `$5A` | `$92` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5A` | `$98` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5A` | `$9C` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5A` | `$A4` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5B` | `$00` | `Obj_DEZGravitySwap` | 0 | 11 | placeholder |
-| `$5C` | `$05` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
-| `$5C` | `$06` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
-| `$5C` | `$0F` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
-| `$5D` | `$02` | `Obj_DEZRetractingSpring` | 0 | 13 | unregistered |
+| `$57` | `$00` | `Obj_DEZTunnelLauncher` | 1 | 0 | concrete |
+| `$57` | `$01` | `Obj_DEZTunnelLauncher` | 1 | 0 | concrete |
+| `$57` | `$03` | `Obj_DEZTunnelLauncher` | 0 | 1 | concrete |
+| `$57` | `$04` | `Obj_DEZTunnelLauncher` | 0 | 1 | concrete |
+| `$57` | `$05` | `Obj_DEZTunnelLauncher` | 0 | 1 | concrete |
+| `$57` | `$06` | `Obj_DEZTunnelLauncher` | 1 | 0 | concrete |
+| `$57` | `$07` | `Obj_DEZTunnelLauncher` | 0 | 1 | concrete |
+| `$58` | `$00` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** |
+| `$59` | `$0D` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$15` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$18` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$22` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$25` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$3A` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$45` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$4D` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$8D` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$95` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$A2` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$A5` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$BA` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$C5` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$CD` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$5A` | `$08` | `Obj_DEZGravityTube` | 7 | 2 | implemented |
+| `$5A` | `$10` | `Obj_DEZGravityTube` | 6 | 6 | implemented |
+| `$5A` | `$12` | `Obj_DEZGravityTube` | 0 | 3 | implemented |
+| `$5A` | `$18` | `Obj_DEZGravityTube` | 2 | 1 | implemented |
+| `$5A` | `$22` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5A` | `$48` | `Obj_DEZGravityTube` | 8 | 0 | implemented |
+| `$5A` | `$50` | `Obj_DEZGravityTube` | 1 | 0 | implemented |
+| `$5A` | `$92` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5A` | `$98` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5A` | `$9C` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5A` | `$A4` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5B` | `$00` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** |
+| `$5C` | `$05` | `Obj_DEZGravityHub` | 0 | 1 | implemented |
+| `$5C` | `$06` | `Obj_DEZGravityHub` | 0 | 1 | implemented |
+| `$5C` | `$0F` | `Obj_DEZGravityHub` | 0 | 1 | implemented |
+| `$5D` | `$02` | `Obj_DEZRetractingSpring` | 0 | 13 | implemented |
 | `$5E` | `$00` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered |
-| `$5F` | `$00` | `Obj_DEZGravityRoom` | 1 | 0 | unregistered |
-| `$60` | `$00` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
-| `$60` | `$18` | `Obj_DEZBumperWall` | 4 | 0 | unregistered |
-| `$60` | `$38` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
-| `$60` | `$80` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
-| `$61` | `$00` | `Obj_DEZGravityPuzzle` | 1 | 0 | unregistered |
+| `$5F` | `$00` | `Obj_DEZGravityRoom` | 1 | 0 | implemented |
+| `$60` | `$00` | `Obj_DEZBumperWall` | 2 | 0 | implemented |
+| `$60` | `$18` | `Obj_DEZBumperWall` | 4 | 0 | implemented |
+| `$60` | `$38` | `Obj_DEZBumperWall` | 2 | 0 | implemented |
+| `$60` | `$80` | `Obj_DEZBumperWall` | 2 | 0 | implemented |
+| `$61` | `$00` | `Obj_DEZGravityPuzzle` | 1 | 0 | implemented |
 | `$6A` | `$F1` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete |
 | `$6B` | `$F1` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete |
 | `$6D` | `$61` | `Obj_InvisibleShockBlock` | 1 | 6 | placeholder |
@@ -300,11 +300,11 @@ so subtypes `$80+` arrive inverted.
 | `$6D` | `$E1` | `Obj_InvisibleShockBlock` | 13 | 29 | placeholder |
 | `$6D` | `$F1` | `Obj_InvisibleShockBlock` | 3 | 8 | placeholder |
 | `$78` | `$00` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete |
-| `$A4` | `$20` | `Obj_Spikebonker` | 4 | 10 | placeholder |
-| `$A4` | `$40` | `Obj_Spikebonker` | 3 | 1 | placeholder |
-| `$A5` | `$00` | `Obj_Chainspike` | 6 | 12 | placeholder |
-| `$A6` | `$00` | `Obj_DEZMiniboss` | 1 | 0 | placeholder |
-| `$A7` | `$00` | `Obj_DEZEndBoss` | 0 | 1 | placeholder |
+| `$A4` | `$20` | `Obj_Spikebonker` | 4 | 10 | implemented |
+| `$A4` | `$40` | `Obj_Spikebonker` | 3 | 1 | implemented |
+| `$A5` | `$00` | `Obj_Chainspike` | 6 | 12 | implemented |
+| `$A6` | `$00` | `Obj_DEZMiniboss` | 1 | 0 | implemented |
+| `$A7` | `$00` | `Obj_DEZEndBoss` | 0 | 1 | implemented |
 
 ## Dynamic objects not in the placement files
 

@@ -123,6 +123,8 @@ class TestSonic3kNonlinearHpzProfile {
 
         assertTrue(features.shouldSuppressInitialTitleCard(
                 Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1));
+        assertTrue(features.shouldSuppressInitialTitleCard(
+                Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 0));
         // TitleCard_LevelGfx selects the Hidden Palace card for $1601
         // (sonic3k.asm:62149-62151).
         assertFalse(features.shouldSuppressInitialTitleCard(

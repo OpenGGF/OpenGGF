@@ -94,7 +94,7 @@ public final class Sonic3kLevelSelectConstants {
             (Sonic3kZoneIds.ZONE_DEZ << 8) | 0,  // 22 - Death Egg Act 1 (was EMZ)
             (Sonic3kZoneIds.ZONE_DEZ << 8) | 1,  // 23 - Death Egg Act 2 (was 2P VS)
             (Sonic3kZoneIds.ZONE_DDZ << 8) | 0,  // 24 - Doomsday (was disabled Bonus)
-            DISABLED_ENTRY,                        // 25 - (disabled)
+            (Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA << 8) | 0, // 25 - ROM "DDZ act 2" ($1700)
             SPECIAL_STAGE_VALUE,                   // 26 - Special Stage
             DISABLED_ENTRY,                        // 27 - (disabled)
             SOUND_TEST_VALUE                       // 28 - Sound Test

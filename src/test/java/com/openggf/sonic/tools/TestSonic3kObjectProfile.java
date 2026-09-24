@@ -28,7 +28,6 @@ public class TestSonic3kObjectProfile {
                 .filter(level -> level.levelData() == LevelData.S3K_MUSHROOM_HILL_1)
                 .findFirst()
                 .orElseThrow();
-
         assertTrue(profile.getImplementedIds().contains(0x91));
         assertTrue(profile.getImplementedIds(aiz1).contains(0x91));
         // Slot $91 is Obj_MHZMinibossTree in SK Set 2: implemented for MHZ under that
@@ -93,6 +92,10 @@ public class TestSonic3kObjectProfile {
                 .filter(level -> level.levelData() == LevelData.S3K_MUSHROOM_HILL_1)
                 .findFirst()
                 .orElseThrow();
+        LevelConfig dez1 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_DEATH_EGG_1)
+                .findFirst()
+                .orElseThrow();
 
         int[] implementedCnzIds = {
                 0x41, 0x43, 0x47, 0x48,
@@ -101,8 +104,13 @@ public class TestSonic3kObjectProfile {
                 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
         };
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+        // Numeric slots whose SKL owner is implemented too, so the id is legitimately in both
+        // sets under two different names. $A4 joined them when Obj_Spikebonker landed for the
+        // Death Egg and $A5 when Obj_Chainspike did; CNZ's own $A4 and $A5 are Obj_Sparkle
+        // and Obj_Batbot.
         var sklOwners = java.util.Map.of(0x41, "SOZLightSwitch", 0x43, "SOZSwingingPlatform",
-                0x47, "SOZSandCork", 0x48, "SOZRapelWire");
+                0x47, "SOZSandCork", 0x48, "SOZRapelWire", 0xA4, "Spikebonker",
+                0xA5, "Chainspike");
         for (int objectId : implementedCnzIds) {
             assertTrue(profile.getImplementedIds(cnz2).contains(objectId),
                     "CNZ object $" + Integer.toHexString(objectId) + " should be reported as implemented");
@@ -115,8 +123,16 @@ public class TestSonic3kObjectProfile {
                         "object $" + Integer.toHexString(objectId) + " has one owner in both sets");
             } else if (sklOwners.containsKey(objectId)) {
                 assertEquals(sklOwners.get(objectId), registry.getPrimaryName(objectId, S3kZoneSet.SKL));
-                assertTrue(profile.getImplementedIds(mhz1).contains(objectId),
-                        "implemented SOZ owner shares the numeric slot with CNZ");
+                if (objectId == 0xA4 || objectId == 0xA5) {
+                    assertFalse(profile.getImplementedIds(mhz1).contains(objectId),
+                            "DEZ badnik owner stays zone-bound despite sharing the SKL table");
+                    assertTrue(profile.getImplementedIds(dez1).contains(objectId),
+                            "DEZ profile exposes its zone-bound badnik owner");
+                } else {
+                    assertTrue(profile.getImplementedIds(mhz1).contains(objectId),
+                            "implemented SOZ owner $" + Integer.toHexString(objectId)
+                                    + " shares the numeric slot with CNZ");
+                }
             } else {
                 assertFalse(profile.getImplementedIds(mhz1).contains(objectId),
                         "CNZ object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");

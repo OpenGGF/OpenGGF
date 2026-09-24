@@ -240,6 +240,31 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.MHZ_MUSHROOM_PARACHUTE,
                 Sonic3kObjectIds.MHZ_MUSHROOM_PLATFORM,
                 Sonic3kObjectIds.MHZ_SWING_BAR_HORIZONTAL,
+                Sonic3kObjectIds.SINKING_MUD,
+                Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM,
+                Sonic3kObjectIds.CNZ_MINIBOSS,
+                Sonic3kObjectIds.CNZ_END_BOSS,
+                Sonic3kObjectIds.CNZ_SPIRAL_TUBE,
+                Sonic3kObjectIds.CNZ_BARBER_POLE,
+                Sonic3kObjectIds.CNZ_WIRE_CAGE,
+                Sonic3kObjectIds.MGZ_TWISTING_LOOP,
+                Sonic3kObjectIds.MGZLBZ_SMASHING_PILLAR,
+                Sonic3kObjectIds.MGZ_SWINGING_PLATFORM,
+                Sonic3kObjectIds.MGZ_HEAD_TRIGGER,
+                Sonic3kObjectIds.MGZ_MOVING_SPIKE_PLATFORM,
+                Sonic3kObjectIds.MGZ_SWINGING_SPIKE_BALL,
+                Sonic3kObjectIds.MGZ_DASH_TRIGGER,
+                Sonic3kObjectIds.MGZ_PULLEY,
+                Sonic3kObjectIds.MGZ_TOP_PLATFORM,
+                Sonic3kObjectIds.MGZ_TOP_LAUNCHER,
+                Sonic3kObjectIds.DEZ_RETRACTING_SPRING,
+                Sonic3kObjectIds.DEZ_HOVER_MACHINE,
+                Sonic3kObjectIds.DEZ_GRAVITY_ROOM,
+                Sonic3kObjectIds.DEZ_BUMPER_WALL,
+                Sonic3kObjectIds.DEZ_GRAVITY_PUZZLE,
+                Sonic3kObjectIds.HCZ_WATER_SPLASH,
+                Sonic3kObjectIds.SPARKLE,
+                Sonic3kObjectIds.BATBOT,
                 Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 Sonic3kObjectIds.HPZ_SUPER_EMERALD,
                 Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
@@ -268,6 +293,28 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.DDZ_END_BOSS,
                 Sonic3kObjectIds.DDZ_ASTEROID,
                 Sonic3kObjectIds.DDZ_MISSILE);
+        pointerTableCollisionIds = new java.util.HashSet<>(pointerTableCollisionIds);
+        pointerTableCollisionIds.add(Sonic3kObjectIds.SINKING_MUD);
+        pointerTableCollisionIds.add(Sonic3kObjectIds.MGZ_TRIGGER_PLATFORM);
+        pointerTableCollisionIds.add(Sonic3kObjectIds.CNZ_MINIBOSS);
+        pointerTableCollisionIds.add(Sonic3kObjectIds.CNZ_END_BOSS);
+        pointerTableCollisionIds.addAll(Set.of(
+                Sonic3kObjectIds.CNZ_SPIRAL_TUBE,
+                Sonic3kObjectIds.CNZ_BARBER_POLE,
+                Sonic3kObjectIds.CNZ_WIRE_CAGE,
+                Sonic3kObjectIds.MGZ_TWISTING_LOOP,
+                Sonic3kObjectIds.MGZLBZ_SMASHING_PILLAR,
+                Sonic3kObjectIds.MGZ_SWINGING_PLATFORM,
+                Sonic3kObjectIds.MGZ_HEAD_TRIGGER,
+                Sonic3kObjectIds.MGZ_MOVING_SPIKE_PLATFORM,
+                Sonic3kObjectIds.MGZ_SWINGING_SPIKE_BALL,
+                Sonic3kObjectIds.MGZ_DASH_TRIGGER,
+                Sonic3kObjectIds.MGZ_PULLEY,
+                Sonic3kObjectIds.MGZ_TOP_PLATFORM,
+                Sonic3kObjectIds.MGZ_TOP_LAUNCHER,
+                Sonic3kObjectIds.HCZ_WATER_SPLASH,
+                Sonic3kObjectIds.SPARKLE,
+                Sonic3kObjectIds.BATBOT));
 
         for (int objectId : registry.stockZoneBoundFactoryIds()) {
             if (pointerTableCollisionIds.contains(objectId)) {

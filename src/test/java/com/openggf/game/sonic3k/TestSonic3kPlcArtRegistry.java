@@ -1503,9 +1503,21 @@ public class TestSonic3kPlcArtRegistry {
     public void dezPlanHasTwoBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0B, 0);
         assertNotNull(plan);
-        assertEquals(8, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKEBONKER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CHAINSPIKE)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_MINIBOSS)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_END_BOSS)));
+    }
+
+    @Test
+    public void dez3PlanOwnsOnlyItsDynamicArenaArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x17, 0);
+        assertEquals(9, plan.standaloneArt().size());
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MISC)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_MASTER_EMERALD)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ_FINAL_BOSS_DEBRIS)));
+        assertTrue(plan.levelArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DEZ3_BLOCKS)));
     }
 
     @Test

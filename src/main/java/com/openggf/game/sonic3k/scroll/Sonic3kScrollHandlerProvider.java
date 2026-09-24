@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.data.Rom;
+import com.openggf.game.GameServices;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -17,6 +18,9 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kScrollHandlerProvider.class.getName());
 
     private boolean loaded = false;
+    private static final int ACT_UNKNOWN = -1;
+    private int lastInitZone = -1;
+    private int lastInitAct = ACT_UNKNOWN;
 
     private SwScrlAiz aizHandler;
     private SwScrlCnz cnzHandler;
@@ -29,6 +33,8 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
     private SwScrlSoz sozHandler;
     private SwScrlHpz hpzHandler;
     private SwScrlDdz ddzHandler;
+    private SwScrlS3kDez dezHandler;
+    private SwScrlDez3 dez3Handler;
     private SwScrlGumball gumballHandler;
     private SwScrlPachinko pachinkoHandler;
     private SwScrlSlots slotsHandler;
@@ -75,6 +81,8 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
         sozHandler = new SwScrlSoz(rom);
         hpzHandler = new SwScrlHpz();
         ddzHandler = new SwScrlDdz();
+        dezHandler = new SwScrlS3kDez();
+        dez3Handler = new SwScrlDez3();
         gumballHandler = new SwScrlGumball();
         pachinkoHandler = new SwScrlPachinko();
         slotsHandler = new SwScrlSlots();
@@ -85,6 +93,18 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
 
     @Override
     public ZoneScrollHandler getHandler(int zoneIndex) {
+        return getHandler(zoneIndex, currentActFor(zoneIndex));
+    }
+
+    private int currentActFor(int zoneIndex) {
+        if (zoneIndex == lastInitZone) return lastInitAct;
+        var level = GameServices.hasRuntime() ? GameServices.levelOrNull() : null;
+        if (level != null && level.getFeatureZoneId() == zoneIndex) return level.getFeatureActId();
+        return ACT_UNKNOWN;
+    }
+
+    /** Act-aware because {@code $1700} is DEZ3 while {@code $1701} is the HPZ sanctuary. */
+    public ZoneScrollHandler getHandler(int zoneIndex, int actIndex) {
         if (!loaded) {
             return null;
         }
@@ -100,7 +120,12 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
             case Sonic3kZoneConstants.ZONE_FBZ -> fbzHandler;
             case Sonic3kZoneConstants.ZONE_SOZ -> sozHandler;
             case Sonic3kZoneConstants.ZONE_DDZ -> ddzHandler;
-            case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA -> hpzHandler;
+            // Death Egg acts 1 and 2 use PlainDeformation with a static background;
+            // the $1700 final-boss act is zone $17 and is not this handler.
+            case Sonic3kZoneConstants.ZONE_DEZ -> dezHandler;
+            case Sonic3kZoneIds.ZONE_HPZ -> hpzHandler;
+            case Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
+                    actIndex == 0 ? dez3Handler : hpzHandler;
             case Sonic3kZoneIds.ZONE_GUMBALL -> gumballHandler;
             case Sonic3kZoneIds.ZONE_GLOWING_SPHERE -> pachinkoHandler;
             case Sonic3kZoneIds.ZONE_SLOT_MACHINE -> slotsHandler;
@@ -115,7 +140,9 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
 
     @Override
     public void initForZone(int zoneId, int actId, int cameraX, int cameraY) {
-        ZoneScrollHandler handler = getHandler(zoneId);
+        lastInitZone = zoneId;
+        lastInitAct = actId;
+        ZoneScrollHandler handler = getHandler(zoneId, actId);
         if (handler != null) {
             handler.init(actId, cameraX, cameraY);
         }

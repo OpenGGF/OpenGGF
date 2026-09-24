@@ -23,6 +23,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -145,6 +146,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // level entry after a long run), read by objects that gate on its low bits.
             level.getObjectManager().initVblaCounter(settings.vIntRunCount());
         }
+        if (settings.reverseGravity()) {
+            // Declared capture setup: the S3K Reverse_gravity_flag ($FFFFF7C6). Nothing in the
+            // running game writes it yet -- Obj_DEZGravitySwitch ($58), Obj_DEZTeleporter ($59)
+            // and Obj_DEZGravitySwap ($5B) are the ROM's writers and arrive in the Death Egg
+            // object slice -- so a capture that wants inverted gravity seeds it here, exactly as
+            // the reverse-gravity tests do. Say so in the clip's label.
+            GameServices.gameState().setReverseGravityActive(true);
+        }
         if (settings.cameraXSub() != null) {
             // Declared capture setup: the inherited Camera_X_pos low word. Only zones that keep
             // a camera fraction honour it (S3K Doomsday autoscroll, sub_82920).
@@ -164,11 +173,66 @@ public final class GameplayCaptureSession implements AutoCloseable {
             if (settings.startY() != null) {
                 NativePositionOps.writeYPosPreserveSubpixel(player, settings.startY());
             }
+            // A positioned entry moves the whole team, not just the leader: a sidekick left at
+            // the act start is thousands of pixels away and never catches up inside a capture,
+            // which silently turns any "team" clip into a solo one. The ROM's own level start
+            // places the sidekick just behind the leader, so the seed does the same. Declared
+            // capture setup, like --x/--y itself.
+            // The sidekick is not registered yet at boot, so the seed is deferred to the
+            // first steps. See seedSidekickPosition.
+            sidekickSeedX = player.getCentreX();
+            sidekickSeedY = player.getCentreY();
+            sidekickSeedFramesLeft = SIDEKICK_SEED_FRAMES;
             Camera camera = GameServices.camera();
             camera.updatePosition(true);
             level.initCameraForLevel();
             level.initLevelEventsForLevel();
             level.updateObjectPositions();
+        }
+    }
+
+    /** How far behind the leader a teleported sidekick is placed, as the ROM's level start does. */
+    private static final int SIDEKICK_TRAIL_X = 0x20;
+    /**
+     * How many steps the sidekick seed keeps re-applying. A positioned entry moves the leader in
+     * {@link #boot}, but the CPU sidekick is not registered with the sprite manager until the
+     * level has stepped, so a seed applied at boot moves nobody — which is how the first
+     * version of this failed, silently turning a team clip into a solo one.
+     *
+     * <p>Re-applying matters as much as waiting. Measured on 2026-09-19 at a Death Egg act 2
+     * positioned entry: the seed lands on the first step and the sidekick's own registration
+     * puts him back at the level's start position ({@code $0120,$03B0}) on the very next one,
+     * from where he walks across the whole act at about a pixel a frame. The seed therefore
+     * keeps writing for the whole window instead of stopping at its first success.
+     */
+    private static final int SIDEKICK_SEED_FRAMES = 4;
+
+    private int sidekickSeedX;
+    private int sidekickSeedY;
+    private int sidekickSeedFramesLeft;
+
+    /**
+     * Places every registered sidekick just behind the teleported leader, the way the ROM's
+     * own level start does. {@code getRegisteredSidekicks()} rather than
+     * {@code getSidekicks()}: the latter returns an empty list while a zone suppresses its
+     * sidekick, which Death Egg does during its entry run.
+     */
+    private void seedSidekickPosition() {
+        if (sidekickSeedFramesLeft <= 0) {
+            return;
+        }
+        sidekickSeedFramesLeft--;
+        List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getRegisteredSidekicks();
+        if (sidekicks.isEmpty()) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : sidekicks) {
+            if (sidekick == player) {
+                continue;
+            }
+            NativePositionOps.writeXPosPreserveSubpixel(sidekick,
+                    (sidekickSeedX - SIDEKICK_TRAIL_X) & 0xFFFF);
+            NativePositionOps.writeYPosPreserveSubpixel(sidekick, sidekickSeedY);
         }
     }
 
@@ -196,6 +260,10 @@ public final class GameplayCaptureSession implements AutoCloseable {
             loop.debugCompleteSpecialStageWithEmerald();
         }
         loop.step();
+        // After the frame, not before it: the sidekick's own registration re-places him at the
+        // level's start position on the step after the first seed lands, so a seed applied at
+        // the top of step() is visible in that frame's state line and gone from the next one.
+        seedSidekickPosition();
     }
 
     /** Renders the current frame through the gameplay renderer and reads it back. */
@@ -274,6 +342,23 @@ public final class GameplayCaptureSession implements AutoCloseable {
     }
 
     /** One CSV-friendly line of leader/camera state for the frame just stepped. */
+    /**
+     * {@code sk_present,sk_x,sk_y}. {@code getRegisteredSidekicks()} rather than
+     * {@code getSidekicks()}, so a sidekick a zone is suppressing still reports its position
+     * instead of vanishing from the log: telling "there is no Player 2" apart from "Player 2 is
+     * parked somewhere" is the whole reason these columns exist.
+     */
+    private String sidekickState() {
+        List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getRegisteredSidekicks();
+        for (AbstractPlayableSprite sidekick : sidekicks) {
+            if (sidekick == player) {
+                continue;
+            }
+            return "1," + (sidekick.getCentreX() & 0xFFFF) + "," + (sidekick.getCentreY() & 0xFFFF);
+        }
+        return "0,,";
+    }
+
     public String stateLine(int frame, Bk2FrameInput input) {
         requireBooted();
         Camera camera = GameServices.camera();
@@ -292,12 +377,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 + "," + player.getMappingFrame()
                 + "," + (camera.getX() & 0xFFFF)
                 + "," + (camera.getY() & 0xFFFF)
+                + "," + sidekickState()
                 + "," + loop.getCurrentGameMode()
                 + "," + (input == null ? "" : input.rawLine());
     }
 
     public static String stateHeader() {
-        return "frame,x,y,xvel,yvel,gspeed,air,rolling,spindash,hurt,dead,rings,mapping_frame,cam_x,cam_y,mode,input";
+        return "frame,x,y,xvel,yvel,gspeed,air,rolling,spindash,hurt,dead,rings,mapping_frame,cam_x,cam_y,"
+                + "sk_present,sk_x,sk_y,mode,input";
     }
 
     private static Bk2FrameInput neutral(Bk2FrameInput previous) {
@@ -336,7 +423,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
-                           Integer cameraXSub) {
+                           Integer cameraXSub, boolean reverseGravity) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
@@ -347,7 +434,15 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         Path donorRom, Integer startX, Integer startY, String emeraldStates,
                         boolean showTitleCard, boolean completeSpecialStage) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
-                    showTitleCard, completeSpecialStage, null, null);
+                    showTitleCard, completeSpecialStage, null, null, false);
+        }
+
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, false);
         }
 
         public Settings {
