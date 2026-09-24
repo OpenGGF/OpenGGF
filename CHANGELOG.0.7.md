@@ -130,7 +130,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   machinery tiles. Its object-table registrations preserve the glowing-sphere bonus
   stage bumper at the shared slot. Widescreen keeps one central background in each act: Act 1 extends its
   side walls with ROM tiles, while Act 2 continues the planet's curve using its existing surface
-  pixels. The native centre stays unchanged. Death Egg Act 2's gravity now reverses: crossing one of the act's invisible
+  pixels. The native centre stays unchanged. Tails’ separate tail sprite mirrors under reversed gravity, preserving its directional rolling animation. Death Egg Act 2's gravity now reverses: crossing one of the act's invisible
   gravity triggers flips which way is down, and the player falls to the ceiling, stands and runs
   on it, rolls, jumps, lands, gets hurt and dies against a death plane that has moved to the top
   of the level. Shields, spilled rings, dust, springs, solid objects and a carried or respawning
@@ -170,6 +170,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   riders onto the floor. Conveyor pads start when ridden, follow the floor or travel a fixed
   vertical distance, and reverse their belts for newly arriving riders and inverted gravity.
   Lift pads swing Sonic upward, wait while he stands on them, then return after he leaves.
+  Vertical gravity tubes keep player movement active so riders travel through their span.
   Light-tunnel launchers count down, carry captured players through the winding paths
   with glowing ring trails, and release them at the exit. The Act 1 miniboss now fights
   through its orbiting-sphere and moving-platform phases, including its eye, beam,

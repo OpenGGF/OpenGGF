@@ -194,7 +194,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 30063 | `loc_1613C` | `Obj_Tails_Tail` (`loc_1613C`): vertical mirror except for the directional animation 3 | — | missing |
+| 30063 | `loc_1613C` | `Obj_Tails_Tail` (`loc_1613C`): vertical mirror except for the directional animation 3 | `TailsTailsController.draw`; standard/directional draw, flag release and non-mutating animation-state checks | covered |
 | 34038 | `loc_18C20` | `Obj_DashDust` (`loc_18C20`): status Y-flip and `-4` Y offset | — | missing |
 | 34113 | `loc_18D14` | `Obj_DashDust` (`loc_18D14`): negates the skid-dust Y offset | — | missing |
 | 34594 | `Obj_InstaShield_Main` | `Obj_InstaShield_Main`: Y-flip status bit | `InstaShieldObjectInstance.shieldRenderVFlip` → `ShieldAnimationArtLifecycle.reverseGravityMirror` | covered |
@@ -273,13 +273,16 @@ is the RAM wipe described above).
 | C. Tails routines | 21 | 19 | 1 | 0 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 5 | 0 | 0 | 0 |
 | E. Knuckles routines | 24 | 17 | 1 | 5 | 1 |
-| F. Dust, Tails' tails, shields, Super Tails birds | 9 | 6 | 0 | 3 | 0 |
+| F. Dust, Tails' tails, shields, Super Tails birds | 9 | 7 | 0 | 2 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 0 | 1 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **94** | **4** | **14** | **4** |
+| **Total** | **116** | **95** | **4** | **13** | **4** |
+
+Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
+animation retains its angle-derived flips. Dust remains open.
 
 Updated 2026-09-23: the conveyor pad closes the last group J row; all four
 render flag combinations, both native player slots and both gravity directions

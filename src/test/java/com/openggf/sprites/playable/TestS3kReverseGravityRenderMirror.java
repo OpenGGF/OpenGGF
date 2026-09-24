@@ -100,4 +100,42 @@ class TestS3kReverseGravityRenderMirror {
             SessionManager.clear();
         }
     }
+    @Test
+    void separateTailsMirrorStandardAnimationsButPreserveDirectionalFlips() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 1).build();
+        var sprite = fixture.sprite();
+        var renderer = org.mockito.Mockito.mock(com.openggf.sprites.render.PlayerSpriteRenderer.class);
+        var tails = new com.openggf.sprites.managers.TailsTailsController(sprite, renderer, true);
+        for (int animation : new int[] {5, 9, 0x20, 2}) {
+            sprite.setAnimationId(animation);
+            GameServices.gameState().setReverseGravityActive(false);
+            tails.update();
+            org.mockito.Mockito.clearInvocations(renderer);
+            tails.draw();
+            var upright = org.mockito.Mockito.mockingDetails(renderer).getInvocations()
+                    .stream().filter(i -> i.getMethod().getName().equals("drawFrame")).findFirst().orElseThrow();
+            boolean nativeFlip = (boolean) upright.getArgument(4);
+            var saved = tails.captureRewindState();
+            GameServices.gameState().setReverseGravityActive(true);
+            org.mockito.Mockito.clearInvocations(renderer);
+            tails.draw();
+            org.mockito.Mockito.verify(renderer).drawFrame(
+                    org.mockito.ArgumentMatchers.eq((int) upright.getArgument(0)),
+                    org.mockito.ArgumentMatchers.eq((int) sprite.getRenderCentreX()),
+                    org.mockito.ArgumentMatchers.eq((int) sprite.getRenderCentreY()),
+                    org.mockito.ArgumentMatchers.eq((boolean) upright.getArgument(3)),
+                    org.mockito.ArgumentMatchers.eq(animation == 2 ? nativeFlip : !nativeFlip));
+            org.junit.jupiter.api.Assertions.assertEquals(saved, tails.captureRewindState(),
+                    "drawing must not mutate the animation or accumulate the gravity XOR");
+            GameServices.gameState().setReverseGravityActive(false);
+            org.mockito.Mockito.clearInvocations(renderer);
+            tails.draw();
+            org.mockito.Mockito.verify(renderer).drawFrame(
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyBoolean(),
+                    org.mockito.ArgumentMatchers.eq(nativeFlip));
+        }
+    }
+
 }

@@ -278,7 +278,10 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
             groundVel = -groundVel;
         }
         player.setGSpeed((short) groundVel);
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // loc_49120 sets only object_control bits 6 and 1. Bit 0 remains clear,
+        // so Sonic_Control (loc_10BFC) still integrates the rider along angle $40/$C0.
+        // Suppressing the engine movement loop freezes Y forever inside the tube.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
         player.setObjectMappingFrameControl(true);
         player.setAnimationId(1);
         player.setFlipAngle(0);

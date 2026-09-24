@@ -78,6 +78,47 @@ class TestS3kDezGravityTubeRouteHeadless {
         assertContinuousRide(true);
     }
 
+    @Test
+    void placedVerticalTubeKeepsPlayerPhysicsMovingThroughItsSpan() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 1)
+                .startPosition((short) 3136, (short) 1040).startPositionIsCentre().build();
+        var player = fixture.sprite();
+        player.setAir(true);
+        player.setYSpeed((short) 0x600);
+        S3kDezGravityTubeObjectInstance tube = null;
+        for (int n = 0; n < 8; n++) {
+            fixture.stepIdleFrames(1);
+            tube = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(S3kDezGravityTubeObjectInstance.class).stream()
+                    .filter(t -> t.getX() == 3136 && t.getY() == 1248).findFirst().orElse(null);
+            if (tube != null && tube.isRidingForTest(true)) break;
+        }
+        assertNotNull(tube, "actual DEZ2 vertical tube placement");
+        assertTrue(tube.isRidingForTest(true), "ordinary falling entry must mount");
+        int mountedY = player.getCentreY();
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        fixture.stepIdleFrames(10);
+        var forward = registry.capture();
+        registry.restore(saved);
+        fixture.stepIdleFrames(10);
+        var replay = registry.capture();
+        assertEquals(forward.entries().keySet(), replay.entries().keySet());
+        for (String key : forward.entries().keySet()) {
+            var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                    key, forward.get(key), replay.get(key));
+            assertTrue(differences.isEmpty(), key + ": " + differences);
+        }
+        registry.restore(saved);
+        fixture.stepIdleFrames(20);
+        assertTrue(player.getCentreY() > mountedY + 60,
+                "loc_49120 leaves bit0 clear: Sonic_Control must advance through the vertical tube");
+        fixture.stepIdleFrames(100);
+        org.junit.jupiter.api.Assertions.assertFalse(tube.isRidingForTest(true),
+                "ordinary physics must carry the rider beyond the tube span");
+    }
+
     private void assertContinuousRide(boolean reverseGravity) {
         TestEnvironment.activeGameplayMode();
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()

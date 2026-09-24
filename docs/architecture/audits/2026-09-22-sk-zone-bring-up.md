@@ -3945,3 +3945,41 @@ The post-fix `campaign-20260924-cold-act2-arrival-320/capture.mp4` continues
 through the floor opening, launch and free control at(320,940), filming13840–15239.
 All15,240 state rows are death-free; stills14840/15030/15230 and full video decode
 were inspected. This additional clip uses the same cold input followed by neutral.
+
+### Cold incoming route: vertical tube and tail mirroring (2026-09-24)
+
+On `75e536735` plus this patch, ordinary Sonic+Tails input continues from the
+verified DEZ1 clear through the Act2 entrance and the first conveyors. At the
+placed vertical tube(3136,1248), the old implementation froze Sonic atY1057
+with Y velocity1384. ROM `loc_49120` sets object_control bits6 and1, leaving bit0
+clear; `Sonic_Control` at `loc_10BFC` therefore still runs movement. The tube now
+uses the existing movement-active control state. It swings X while ordinary
+player physics carries Y through the span. No shared physics algorithm changed.
+
+`TestS3kDezGravityTubeRouteHeadless#placedVerticalTubeKeepsPlayerPhysicsMovingThroughItsSpan`
+reproduced the stall before the fix using the actual placement. It now checks
+progress, release and full-registry capture/restore/forward replay during the ride.
+The cold input reaches the gravity hub at(3136,1472) with11rings and no death;
+that hub intentionally needs a fresh direction press rather than a continuously
+held direction, per its native input contract. Further traversal is still open.
+
+The reverse-gravity inventory also exposed missing `Obj_Tails_Tail` rendering.
+`loc_1613C` mirrors non-directional tail animations, except animation3, whose
+angle already supplies its flips. `TailsTailsController.draw` now composes the
+flag without mutating stored animation state. The regression covers standing,
+spindash, flying, directional rolling, flag release and unchanged rewind state.
+The group F row is covered; dust, Knuckles and other listed gaps remain open.
+
+Queued Java21 with the absolute S3K ROM, `-Dmse=off`:
+`-Dtest=TestS3kDezGravityTubeHeadless,TestS3kDezGravityTubeRouteHeadless,TestS3kReverseGravityRenderMirror,TestTailsTailsFlightSelection,TestTailsTailsDirectionalAnimation,TestSpriteManagerMainTailsTailsDispatch,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed87 tests, zero skips. The subsequent explicit in-tube replay addition was
+verified with `-Dtest=TestS3kDezGravityTubeRouteHeadless`:3 passed, zero skips.
+The change-based plan selects the full suite through shared tail code; these are
+focused iteration checks, with combined campaign delivery validation still owed.
+
+Preserved `dez2-sonic-tails-incoming-first-hub-320.{script,bk2}` contains the
+verified16,201-frame cold prefix through this hub. Its authored BK2 input rows
+were compared exactly with the explored movie. The inspected native320 clip
+`$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-vertical-tube-320/capture.mp4`
+films15780–16599; all16,600 state rows are death-free and full video decode passes.
+This is engine visual evidence; native pixel parity and other widths remain open.
