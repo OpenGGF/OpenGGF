@@ -27,7 +27,7 @@ its original unimplemented counts must not be read as current production status.
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
-| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,410frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
+| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,410frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in54786frames with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold final-stage-to-DDZ continuity and remaining Hyper/HUD/native presentation still need validation. |
 
 Combined campaign validation, main-workspace integration, push and cleanup remain
@@ -4359,3 +4359,18 @@ were checked; zero deaths. This is engine presentation rather than native pixel
 parity. A first ordinary-Sonic continuation clears the final hands and core but
 falls in the escape-ship chase at51716 with six ship hits remaining; that cold
 final-stage route and remaining viewport/roster/lifecycle/native breadth are open.
+
+## Ordinary cold DEZ ending and next route frontier (2026-09-24)
+
+After `d946b8eb0`, the final-stage controller strategy clears hands/core and all
+8 ship hits through the actual ordinary ending load:54786 frames from cold DEZ1,
+zero deaths or transformations. The new independent final-phase test passes31
+full-registry restore/replay spots (1 test,0 failures/errors/skips,43.40 seconds).
+See the [final matrix](../validation/levels/s3k-dez-final-boss.md) for command,
+media and rejected controller/test-oracle attempts. No production change was
+needed. Combined campaign verification remains pending.
+
+Next cold frontier: LRZ1. Replaying the preserved native input on the current
+campaign reaches the corkscrew but subsequently returns left and dies at4483;
+this is a controller-route observation, not an attributed engine regression.
+The existing positioned boss/Act2 checks remain distinct from cold completion.

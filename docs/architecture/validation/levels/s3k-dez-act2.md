@@ -9,7 +9,7 @@ whole-registry replay spots per width. Cold native320 Sonic+Tails now completes
 both main DEZ acts and loads the final stage in40410 controller frames, zero
 deaths. Eight Act2 routes carry204 full-registry replay spots; the actual final
 load starts an isolated frame-zero timeline. Width/roster/donor and remaining
-lifecycle breadth, cold final-stage completion and native whole-scene acceptance
+lifecycle breadth and native whole-scene acceptance
 remain open. Historical slice
 rows below are superseded by the dated follow-ups. Nothing below certifies the act.
 
@@ -666,3 +666,8 @@ were checked; zero deaths. This is engine presentation rather than native pixel
 parity. A first ordinary-Sonic continuation clears the final hands and core but
 falls in the escape-ship chase at51716 with six ship hits remaining; that cold
 final-stage route and remaining viewport/roster/lifecycle/native breadth are open.
+
+The subsequent ordinary-team continuation now clears the final hands/core/ship
+and loads the ordinary ending in54786 total frames, zero deaths, with31 additional
+final-phase rewind spots. See the [final arena matrix](s3k-dez-final-boss.md).
+This supersedes the failed first continuation above.

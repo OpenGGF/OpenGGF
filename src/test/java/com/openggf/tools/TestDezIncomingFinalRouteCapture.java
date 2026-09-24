@@ -93,6 +93,83 @@ class TestDezIncomingFinalRouteCapture {
         }
     }
 
+    @org.junit.jupiter.api.Test
+    void coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
+                null, null, null, false, false, null, null, false, null, false);
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/dez-sonic-tails-cold-ending-320.bk2"));
+        // Earlier independently runnable cold-route tests own DEZ1/2. These
+        // checkpoints cover final entry, finger retirement, core/button/beam,
+        // the ordinary player's chase rebounds, defeat and ending departure.
+        var spots = Set.of(40500, 40800, 41100, 41450, 41730, 42160,
+                43020, 43440, 43670, 43860, 44100, 44400, 45460, 46900,
+                48330, 49800, 50810, 50900, 51250, 51350, 51570, 51610,
+                51910, 52340, 52800, 53670, 53910, 54240, 54470, 54530, 54650);
+        var checked = new HashSet<Integer>();
+        var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
+        previousInput.setAccessible(true);
+        boolean handsSeen = false, handsDefeated = false;
+        boolean coreSeen = false, coreDefeated = false, shipSeen = false, shipDefeated = false;
+        int previousCore = 8, previousShip = 8, coreHits = 0, shipHits = 0;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                step(session, movie.getFrame(frame));
+                assertFalse(session.player().getDead(), "death at " + frame);
+                assertFalse(session.player().isSuperSonic(), "ordinary cold route at " + frame);
+                if (GameServices.level().getCurrentZone() == 23) {
+                    int fingers = health("DezFinalHand$Finger");
+                    handsSeen |= fingers == 18;
+                    handsDefeated |= handsSeen && fingers == 0;
+                    int core = health("DezFinalCore");
+                    // Newly allocated children have zero property until init.
+                    // Start counting at the production eight-hit initialization.
+                    coreSeen |= core == 8;
+                    if (coreSeen && core >= 0) {
+                        assertTrue(core <= previousCore, "core must not regain health");
+                        coreHits += previousCore - core;
+                        previousCore = core;
+                        coreDefeated |= core == 0;
+                    }
+                    int ship = health("DezFinalEscapeShip");
+                    shipSeen |= ship == 8;
+                    if (shipSeen && ship >= 0) {
+                        assertTrue(ship <= previousShip, "ship must not regain health");
+                        shipHits += previousShip - ship;
+                        previousShip = ship;
+                        shipDefeated |= ship == 0;
+                    }
+                }
+                if (!spots.contains(frame)) continue;
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
+                var expected = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), "cold restore at " + frame);
+                previousInput.set(session, movie.getFrame(frame));
+                for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
+                same(expected, registry.capture(), "cold replay at " + frame);
+                registry.restore(saved);
+                previousInput.set(session, movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertTrue(handsSeen && handsDefeated, "all six fingers must be cleared");
+            assertTrue(coreSeen && coreDefeated);
+            assertTrue(shipSeen && shipDefeated);
+            assertEquals(8, coreHits);
+            assertEquals(8, shipHits);
+            // With no emerald override this is the ordinary ending, not DDZ.
+            assertEquals(13, GameServices.level().getCurrentZone());
+            assertEquals(1, GameServices.level().getCurrentAct());
+            assertEquals(96, session.player().getCentreX());
+            assertEquals(300, session.player().getCentreY());
+            assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
+        }
+    }
+
     private static int health(String name) {
         var objects = GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(o -> o.getClass().getName().equals("com.openggf.game.sonic3k.objects." + name))

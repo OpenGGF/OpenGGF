@@ -7,8 +7,11 @@ ROM `Current_zone_and_act = $1700`. **Not Sonic 2's Death Egg**, and not the
 [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
 Status: hands, core, escape and DDZ handoff are implemented, with positioned
 DEZ2-incoming continuity through complete DDZ at320/800 and whole-registry replay
-evidence. Native scene matching, remaining roster/donor breadth and load-history
-isolation remain open. Nothing below certifies the act.
+evidence. Cold native320 ordinary Sonic+Tails now clears both main acts and all
+final phases, reaching the ordinary ending in54786 controller frames without death
+or transformation. The final sequence adds31 full-registry replay spots; DEZ2 entry
+has real full-load history isolation. Native scene matching, remaining roster/donor
+breadth and outgoing ending-history isolation remain open. Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art
 `levartptrs $4C,$4C,$40` (PLC `$4C`, palette `$40`, `ArtKosM_DEZ3`,
@@ -35,8 +38,8 @@ level and dies at frame 98. No title card is drawn. Capture:
 | Claim | State |
 | --- | --- |
 | Implemented | Production entry, background stages, captured retained planes, floor/laser/art owners, final root/children, chase and escape dispatch are connected. Widescreen support and planet composition are corrected; exposed boss-body margins use ROM layout outside the preserved native view. |
-| Cold-reachable | Direct final-arena load reaches hands; a controller-only solo 320px route destroys all six fingers, defeats core and ship, and loads DDZ. Positioned incoming DEZ2 continuity now passes at320; cold traversal and route breadth remain open. |
-| Rewind-verified | Component graphs, retained planes and production entry replay at 320/352/400/528/800 pass. Eight full-registry incoming-route spots pass at320; lifecycle/route breadth remains open. |
+| Cold-reachable | Direct final-arena load reaches hands; a controller-only solo 320px route destroys all six fingers, defeats core and ship, and loads DDZ. Positioned incoming DEZ2 continuity passes at320/800. Cold ordinary Sonic+Tails now clears DEZ1, DEZ2 and every final phase through the real ending load in54786 frames; route breadth remains open. |
+| Rewind-verified | Component graphs, retained planes and production entry replay at 320/352/400/528/800 pass. Positioned incoming-route spots pass at320/800. The cold ordinary team adds31 full-registry capture/restore and45-frame replay spots across final phases; lifecycle/route breadth remains open. |
 | Native behaviour matched | ROM routine-backed components; native movie screenshots/VRAM collected. Strict trace rows below are historical and remain red/unrerun. |
 | Visually matched | Native and 800px entry captures inspected; retained boss and moving floor present. Wide planet extension inspected; full phase matching remains open. |
 
@@ -407,3 +410,36 @@ passed;30369/31291/31530 inspected (last is white exit fade). It predates the
 recreation-only fix, which does not run during normal forward playback.
 Cold DEZ2 traversal, roster/donor breadth, history isolation and native whole-scene
 matching remain open. Ending/credits remain excluded.
+
+## Cold ordinary-team completion (2026-09-24)
+
+After `d946b8eb0`, `dez-sonic-tails-cold-ending-320.{script,bk2}` preserves54786
+ordinary controller frames from cold DEZ1 through both main acts, all six final
+fingers, eight core hits, eight escape-ship hits and the real zone13/act1 ending
+load. No position, ring, health, emerald or transformation override is used;
+Sonic+Tails remain the live roster and there are zero deaths. With no emerald
+setup the production dispatch selects the ordinary ending, not DDZ. Ending and
+credits implementation remains outside this campaign's original stop line.
+
+`TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding`
+passes with31 final-sequence full-registry checkpoints, exact immediate restore
+and45-frame replay, all phase/hit assertions and the destination load. Earlier
+independent route tests own the main-act replay spots. Command: queued Maven
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`
+`-Dtest=TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding test`;
+1 test, zero failures/errors/skips,43.40 seconds,63 seconds including compilation.
+This is focused validation; combined campaign checks remain pending.
+
+The first ordinary continuation cleared hands/core but fell behind the chase
+floor after two ship hits. Approaching each ship hit from its right and braking
+left before contact keeps the rebound forward; this is controller strategy,
+not an engine change. The first new test incorrectly counted freshly allocated
+children's pre-init zero property as defeat; the oracle now waits for production
+eight-hit initialization before counting damage.
+
+`$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-cold-final-ending-320/capture.mp4`
+shows53640–54829, including the final three hits, defeat and ending arrival.
+The54830-row state stream has zero deaths; stills53720/54300/54550/54810 were
+inspected and the whole video decoded without error. This is engine presentation
+evidence, not matched native pixel parity. Remaining width/roster/donor/native
+and lifecycle obligations are unchanged.
