@@ -3727,3 +3727,31 @@ Combined selection against updated develop `e6c6ac79a` is full ordinary2906class
 plus guards. Java21/Lua5.4/PowerShell preflight passes when launched with explicit
 JAVA_HOME and LUA_BIN. A first preflight without the known Lua override rejected
 system Lua before running tests. The campaign validation remains pending.
+
+
+### 2026-09-24 — combined validation and SSZ spring finding
+
+At `fed07f595`, `run_categories.py --base e6c6ac79a --run` completed all
+2,906 ordinary classes: 23,656 tests, zero failures/errors, 29 skips, 1,257 seconds.
+The skips include opt-in captures/performance/soak checks, native graphics checks,
+and an inherited CPZ spin-tube assumption; they do not establish those obligations.
+The interrupted invocation lost its parent before the guard lane completed.
+Its surviving JVM subsequently exited: guard completion is **not established**.
+One observed guard failure was a false positive in `TestTraceV5PositiveInputGuard`:
+its unquoted numeric-sequence regex treated animation arrays, a ValueSource and
+ROM table prose as retired CSV rows. The correction restricts that check to quoted
+CSV literals and standalone text-block rows, with array/prose and text-block
+regressions. Queued `-Pguards -Dtest=TestTraceV5PositiveInputGuard test` passes
+5 tests with no skips; the full guard lane still needs completion. Diagnostics
+from the interrupted run were inspected and acknowledged.
+
+Further cold SSZ traversal exposed a real spring defect. `Obj_SSZRetractingSpring`
+calls `sub_1DD0E`, whose `loc_1DECE` path enters the full solid classifier at
+`loc_1DFFE`; side contact returns bit 16 in d6. After `swap d6`, `sub_46536` tests
+bit 0, not the standing result in bit 20. The engine had selected top-only collision
+and accepted standing as a launch trigger. A temporary isolated correction carries
+the player through the three upper spring ramps using neutral input, where the
+unchanged implementation passes the spring without launching. This diagnostic is
+not a completed production cold route. The correction also changes the earlier
+springs, so the existing fixed controller route needs reauthoring rather than any
+fixture-specific exception in gameplay.
