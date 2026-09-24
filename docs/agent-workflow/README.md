@@ -102,7 +102,12 @@ The `post-checkout` hook may create convenience links in a linked worktree for
 local ROMs, `config.yaml`, and reference-disassembly directories. Those links
 are **filesystem-only scaffolding**: their targets are relative to the
 worktree, so they remain portable on the same machine, but they must never
-enter a Git tree.
+enter a Git tree. Moving a worktree to a different depth (`git worktree move`)
+breaks those relative targets; the hook repairs a broken relative link whose
+final path component names the same resource on the next branch checkout, or
+immediately via `.githooks/post-checkout 0 0 1` (the third argument marks a
+branch checkout). Working relative links and links to other names are left
+alone.
 
 Do not stage generated-resource entries. The policy rejects symlinks at
 `config.yaml`, any path ending in `.gen`, and `docs/s1disasm`,

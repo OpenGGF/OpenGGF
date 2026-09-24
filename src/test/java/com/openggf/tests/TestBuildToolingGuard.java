@@ -4498,6 +4498,49 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void postCheckoutRepairsRelativeLinkBrokenByWorktreeMove(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "moved-link-main");
+        createInitialCommit(mainRepository);
+        Path source = mainRepository.resolve("config.yaml");
+        Files.writeString(source, "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("moved-link-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/moved-link", linkedWorktree.toString());
+        // Written for a worktree nested two levels inside the main checkout.
+        Path link = linkedWorktree.resolve("config.yaml");
+        Files.createSymbolicLink(link, Path.of("../../config.yaml"));
+        assertFalse(Files.exists(link), "fixture link must be broken at the moved location");
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        Path target = Files.readSymbolicLink(link);
+        assertFalse(target.isAbsolute(), "repaired link must stay relative: " + target);
+        assertEquals(source.toRealPath(), link.toRealPath());
+    }
+
+    @Test
+    void postCheckoutPreservesBrokenRelativeLinkToDifferentResource(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "foreign-link-main");
+        createInitialCommit(mainRepository);
+        Files.writeString(mainRepository.resolve("config.yaml"), "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("foreign-link-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/foreign-link", linkedWorktree.toString());
+        Path link = linkedWorktree.resolve("config.yaml");
+        Path originalTarget = Path.of("../elsewhere/personal.yaml");
+        Files.createSymbolicLink(link, originalTarget);
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        assertEquals(originalTarget, Files.readSymbolicLink(link),
+                "broken user-authored link to another resource must remain untouched");
+    }
+
+    @Test
     void postCheckoutCreatesRelativeDisassemblyLinkWhenDestinationParentIsMissing(@TempDir Path temporaryDirectory) throws Exception {
         Path mainRepository = newRepository(temporaryDirectory, "missing-parent-main");
         createInitialCommit(mainRepository);
