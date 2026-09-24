@@ -1,6 +1,6 @@
 # Level test coverage backlog
 
-LRZ1 cloud-contact follow-up: the [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#cloud-special-contact-and-revised-late-ascent-2026-09-24) records the real-controller regression, deferred contact rewind and reauthored cold ascent. The [cold miniboss arrival](../architecture/validation/levels/s3k-lrz-act1.md#cold-miniboss-arrival-and-final-lower-route-door-2026-09-24) extends this to thirteen routes and159 replay spots, with the final door and native priority marker asserted. Ordinary cold boss defeat, full cold-act completion and breadth remain open.
+LRZ1 cloud-contact follow-up: the [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#cloud-special-contact-and-revised-late-ascent-2026-09-24) records the real-controller regression, deferred contact rewind and reauthored cold ascent. The [cold miniboss arrival](../architecture/validation/levels/s3k-lrz-act1.md#cold-miniboss-arrival-and-final-lower-route-door-2026-09-24) extends this to thirteen routes and159 replay spots, with the final door and native priority marker asserted. The [hand-shot response check](../architecture/validation/levels/s3k-lrz-act1.md#miniboss-hand-shot-shield-response-2026-09-24) covers shield deflection and harmless-flight recreation. Ordinary cold boss defeat, full cold-act completion and breadth remain open.
 
 FBZ2 laser-room graphics: the [Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md)
 tracks native child sprite priority and an independent rendered-tile comparison

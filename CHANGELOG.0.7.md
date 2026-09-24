@@ -705,7 +705,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   continues tracking Sonic, releasing X when the exit corridor opens; 320px keeps
   the original horizontal tracking. The Act 1 miniboss arrives as an object -- the hovering drill with its
   climb, swing, drop, slam and fall-back cycle, its player tracking, and both of its articulated
-  arms with their firing hands and shots. Every Act 1 placement in the zone now builds a real
+  arms with their firing hands and shots. Shields deflect those shots away and
+  permanently clear their damage, including across rewind. Every Act 1 placement in the zone now builds a real
   class. The two arms unroll link by link from the bottom of the screen rather than snapping out
   whole, each hand rides the end of its own arm so its shots leave the arm and not the drill, and
   the drill's slam is solid to stand on, carries the only hit box in the cycle, and takes damage:

@@ -109,6 +109,38 @@ class TestLrzMinibossHitPath {
         AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
+    @Test
+    void shieldContactDeflectsAHandShotAndRewindsItsHarmlessFlight() {
+        // loc_78A02 sets shield_reaction bit3, independently of Sprite_CheckDeleteTouchXY.
+        when(player.getCentreX()).thenReturn((short) SPAWN_X);
+        when(player.getCentreY()).thenReturn((short) 1900);
+        when(player.hasShield()).thenReturn(true);
+        when(player.getShieldType()).thenReturn(com.openggf.game.ShieldType.FIRE);
+        var shot = manager.createDynamicObject(
+                () -> new LrzMinibossProjectileChild(SPAWN_X, 1900, 1, false));
+        assertEquals(0x98, shot.getCollisionFlags());
+        manager.snapshotTouchResponseState();
+        assertTrue(shot.isOnScreenForTouch(), "publish the shot before the player touch pass");
+        manager.runTouchResponsesForPlayer(player, clock);
+        assertEquals(0, shot.getCollisionFlags(), "Touch_ChkHurt_Bounce_Projectile clears damage");
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.none();
+        var saved = shot.captureRewindState(context);
+        int originalX = shot.getCentreX();
+        shot.update(1, player);
+        assertEquals(originalX + 8, shot.getCentreX(), "the ROM's -$800 radial bounce points away from P1");
+        assertEquals(1900, shot.getCentreY());
+        for (int i = 2; i <= 5; i++) shot.update(i, player);
+        int forwardX = shot.getCentreX();
+        var restored = (LrzMinibossProjectileChild) shot.recreateForRewind(
+                new com.openggf.level.objects.RewindRecreateContext(shot.getSpawn(), saved, null));
+        restored.setServices(new TestObjectServices().withCamera(camera));
+        restored.restoreRewindState(saved, context);
+        assertEquals(0, restored.getCollisionFlags(), "recreation must not re-arm a deflected projectile");
+        for (int i = 1; i <= 5; i++) restored.update(i, player);
+        assertEquals(forwardX, restored.getCentreX(), "captured velocity must replay the deflected flight");
+        assertTrue(!restored.isDestroyed(), "the replay stays inside the ROM culling window");
+    }
+
     private void step() {
         manager.update(ARENA_CAMERA_X, player, List.of(), clock++, false);
     }

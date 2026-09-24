@@ -772,3 +772,35 @@ route class, no crusher route rewind, no boss graph restoration, missing handoff
 ramp and unimplemented Death Egg no longer describe current code. Their older
 execution records remain historical; donor/roster/lifecycle/native breadth,
 seamless timeline policy and whole-act completion are not silently credited.
+
+
+### Miniboss hand-shot shield response (2026-09-24)
+
+On a0bcd643c plus this correction, hand shots opt into the existing shield
+response profile. `loc_78A02` sets bit3 of `$2B` (`shield_reaction`), not a
+lifetime flag as the old comment claimed. `Touch_ChkHurt_Bounce_Projectile`
+computes the signed radial velocity through GetArcTan/GetSineCosine and clears
+collision_flags permanently. The child keeps its existing 8.8 movement and
+independent Sprite_CheckDeleteTouchXY retirement. Rewind captures both the new
+harmless state and reflected velocity. No shared touch algorithm changed.
+
+The new real-controller test explicitly snapshots the shot before touch, asserts
+admission, and checks outward eight-pixel motion and recreation/replay. Its first
+harness version omitted that snapshot and therefore could not establish a
+production regression. With the harness corrected, unchanged HEAD production
+still failed with damage `$98` instead of zero; fixed production passed the
+contact/recreation check (1 test, zero failures/errors/skips). The preceding
+combined focused invocation passed93 of94 tests; its sole failure was the
+unsnapshotted new test. Passing coverage included the complete21111-input cold
+arrival, both palette handoff routes, boss graph rewind and required S3K smoke
+classes. Commands used queued Java21, native GL, the absolute S3K ROM, and:
+
+- Combined: `-Dtest=TestLrzMinibossHitPath,TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestLrzPostBossPaletteRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestLrzColdRouteCapture#coldTeamOpensFinalDoorAndEntersMinibossArena test`.
+- Matched old/fixed: `-Dtest=TestLrzMinibossHitPath#shieldContactDeflectsAHandShotAndRewindsItsHarmlessFlight test`.
+- Final fixed class: `-Dtest=TestLrzMinibossHitPath test`:5passed, zero failures/errors/skips,7.011s test time.
+
+The local change-based plan selected2909 classes plus guards. Focused validation
+is used for this bounded child response: real dispatch, native radial arithmetic,
+recreation and existing route consumers are exercised. Combined campaign
+validation remains owed. Shield-contact moving footage and broader roster/native
+acceptance remain open; this check does not certify ordinary cold boss defeat.

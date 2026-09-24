@@ -4607,3 +4607,17 @@ and alternating follow-ups also die. No combat mechanics were changed to make th
 The direct Act2 background-art report was also sampled at its recorded
 `($2438,$629)` location for120frames; this current capture alone does not close
 its native-comparison obligation. External output: `lrz-bring-up/campaign-20260924-direct-act2-art-audit`.
+
+
+### LRZ miniboss hand-shot deflection (2026-09-24)
+
+The projectile's raw `$2B` bit3 had been misdocumented as a lifetime flag and its
+shield response omitted. The ROM field is shield_reaction. The child now opts
+into existing deflection dispatch, computes the native outward velocity and
+clears damage permanently, including after rewind recreation. Its culling and
+movement format are unchanged. A corrected real-controller harness fails against
+unchanged a0bcd643c and passes with the fix; an earlier harness failure was caused
+by omitting the required touch snapshot and is not counted as regression proof.
+The Act1 matrix records commands and remaining visual/breadth obligations. The
+next ordinary moving-patrol attempt reaches three drill hits remaining before
+death at26683; it still does not certify defeat or justify combat tuning.

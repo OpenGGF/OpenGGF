@@ -8,6 +8,9 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -24,8 +27,8 @@ import java.util.List;
  * {@code render_flags} bit 0 is set, which is how the mirrored ring shoots the other way.
  *
  * <p>{@code word_78D72} gives it a {@code $04 $04} size on mapping frame 9 with
- * {@code collision_flags $98}, and {@code bset #3,$2B(a0)} marks it as a projectile that
- * {@code Sprite_CheckDeleteTouchXY} retires once it leaves the screen.
+ * {@code collision_flags $98}. {@code bset #3,$2B(a0)} sets shield_reaction's deflection
+ * bit; it is independent of the offscreen retirement in {@code Sprite_CheckDeleteTouchXY}.
  */
 final class LrzMinibossProjectileChild extends AbstractObjectInstance
         implements RewindRecreatable, TouchResponseProvider {
@@ -51,6 +54,10 @@ final class LrzMinibossProjectileChild extends AbstractObjectInstance
     private int yFixed;
     private int xVelocity;
     private int yVelocity;
+    /** Touch_ChkHurt_Bounce_Projectile clears collision_flags permanently. */
+    private boolean collisionEnabled = true;
+    private static final TouchResponseProfile TOUCH_PROFILE = TouchResponseProfile.fromCanonical(
+            com.openggf.game.profiles.touchresponse.TouchResponseProfile.singleRegionShieldDeflect());
 
     LrzMinibossProjectileChild(int handX, int handY, int shotNumber, boolean mirrored) {
         this(new ObjectSpawn(handX + (mirrored ? -SPAWN_X_OFFSET : SPAWN_X_OFFSET),
@@ -120,7 +127,38 @@ final class LrzMinibossProjectileChild extends AbstractObjectInstance
 
     @Override public int getX() { return getCentreX() - 4; }
     @Override public int getY() { return getCentreY() - 4; }
-    @Override public int getCollisionFlags() { return COLLISION_FLAGS; }
+    @Override public int getCollisionFlags() { return collisionEnabled ? COLLISION_FLAGS : 0; }
+
+    @Override
+    public int getShieldReactionFlags() {
+        // loc_78A02: bset #3,$2B(a0). sonic3k.constants.asm names $2B shield_reaction.
+        return 1 << 3;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public boolean onShieldDeflect(PlayableEntity entity) {
+        if (!(entity instanceof AbstractPlayableSprite player)) return false;
+        // Touch_ChkHurt_Bounce_Projectile: signed word delta -> GetArcTan ->
+        // GetSineCosine -> muls #-$800/asr.l #8, then clr.b collision_flags.
+        // loc_78A1C continues MoveSprite2 with the new velocity and retained fractions.
+        int angle = TrigLookupTable.calcAngle((short) (player.getCentreX() - getCentreX()),
+                (short) (player.getCentreY() - getCentreY()));
+        xVelocity = (TrigLookupTable.cosHex(angle) * -0x800) >> 8;
+        yVelocity = (TrigLookupTable.sinHex(angle) * -0x800) >> 8;
+        collisionEnabled = false;
+        return true;
+    }
+
     /** A shot has no hit count of its own; it hurts and is never destroyed by an attack. */
     @Override public int getCollisionProperty() { return 0; }
     @Override public boolean isPersistent() { return true; }

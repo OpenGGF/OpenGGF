@@ -4821,3 +4821,20 @@ locked intentionally preserves the old latch. Clear the mask at arrival. Test
 finishes on both sides of the target: a centre-only check never executes the
 walk and can conceal a permanent stall. Origin: DEZ `loc_7E2C0/7E2DE`, September
 23; `TestDezMinibossEncounter` left/centre/right connected regressions.
+
+
+## Raw `$2B` writes belong to shield response, not projectile lifetime
+
+Resolve raw offsets through `sonic3k.constants.asm` before assigning semantics.
+`$2B` is `shield_reaction`; `bset #3,$2B(a0)` enables projectile deflection by
+`Touch_ChkHurt_HaveShield` / `Touch_ChkHurt_Bounce_Projectile`. It does not enable
+`Sprite_CheckDeleteTouchXY` or any other offscreen lifetime behavior. The latter
+routine operates independently. Preserve the native radial velocity calculation
+and permanent clearing of `collision_flags`, including through recreation.
+
+The LRZ miniboss shot at `loc_78A02` had the wrong comment and no deflection
+capability. A real-controller shield test left its damage byte at `$98` instead
+of clearing it; isolated movement/culling tests could not expose this. Similar
+raw bit3 writes exist on the LRZ shooting trigger and Iwamodoki fragments. Use
+actual contact dispatch as well as callback tests. Origin: September24 cold LRZ
+miniboss route; `TestLrzMinibossHitPath#shieldContactDeflectsAHandShotAndRewindsItsHarmlessFlight`.
