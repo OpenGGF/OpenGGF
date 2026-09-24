@@ -38,8 +38,8 @@ The user proposed matching the existing rewind shader's noise character.
   reaching zero alone is not enough: escapes, gated pads, results and subsequent
   phases may still own the restriction. No TV hiss or other new audio.
 
-The preview's lock/release animation runs on a five-second demonstration clock.
-It does **not** depict an actual defeat-triggered unlock. Its two supplied clips
+The preview's entry fade is illustrative, then holds through the rest of the
+five-second clip. Neither fight unlocks. Looping restarts the entry demonstration. Its two supplied clips
 are declared checkpoint setups with 40 rings and neutral input.
 
 ## Proposed engine ownership
@@ -87,11 +87,11 @@ Open `index.html` beside the generated movies. `provenance.json` records source
 hashes and validations. Each source must be a verified five-second, 60fps,
 800x224 viewport recording (integer-upscaled input is supported). The renderer
 asserts exact preservation of the centre before video encoding on all 600 frames,
-checks clear fade endpoints and opaque outer wings, and fully decodes both
+checks clear entry, sustained masking and opaque outer wings, and fully decodes both
 finished MP4s. Lossy MP4 encoding is not a pixel-parity oracle; the PNGs retain
 the exact composed pixels.
 
-Demo archive: `$HOME/Videos/OGGF/ssz-arena-static-random-20260924`.
+Demo archive: `$HOME/Videos/OGGF/ssz-arena-static-held-20260924`.
 Footage is from the separate bring-up campaign's corrected GHZ/MTZ Eggmobile
 captures. This branch does not include or duplicate those engine changes.
 
@@ -133,3 +133,15 @@ offsets; neither may retain significant correlation.
 
 Regenerated both demos: all 600 centre-preservation checks, fade endpoint checks,
 full movie decodes, temporal correlation checks and deterministic replay passed.
+
+## Revision: hold the mask through knockback
+
+The original five-second preview faded out at 3.9 seconds without event knowledge.
+That coincided with player damage and misleadingly suggested the arena unlocked.
+The compositor never changed the source camera or collision bounds. Remove the
+illustrative release from these ongoing fights: retain the mask through the final
+frame and explicitly label looping as a restart. Damage must never release the
+production mask; only the owning arena event reopening bounds does so.
+
+Both revised clips passed all 600 centre-preservation assertions, full decode,
+temporal decorrelation and final-frame sustained-mask checks.

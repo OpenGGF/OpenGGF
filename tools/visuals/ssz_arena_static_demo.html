@@ -8,8 +8,8 @@
 <p>A quiet TV-static boundary for widescreen boss fights. The centre stays at the original 320 pixels; noise occupies only the extra width. This is a mock-up over recorded gameplay, not a playable engine change.</p>
 <nav><label>Encounter <select id="boss"><option value="ghz">Green Hill replica</option><option value="mtz">Metropolis replica</option></select></label><button id="mode" aria-pressed="true">Static mask on</button><button id="restart">Replay transition</button></nav>
 <video id="film" src="ghz-static.mp4" controls autoplay muted loop playsinline></video>
-<footer><span><strong>Original arena</strong> · no zoom, crop or gameplay changes</span><span>Illustrative lock → hold → release · no audio</span></footer>
-<p>The demonstration fades in over 0.75 seconds, holds, then fades out. In-game, these transitions would follow the arena lock and actual reopening of player bounds, rather than this five-second preview clock.</p>
+<footer><span><strong>Original arena</strong> · no zoom, crop or gameplay changes</span><span>Illustrative entry → hold through hits · no audio</span></footer>
+<p>The demonstration fades in over 0.75 seconds and stays on through knockback. Neither fight unlocks in this clip. In-game, release would follow the actual reopening of player bounds; damage would not release it. The five-second clip loops back to its illustrative entry.</p>
 <script>
 const film=document.querySelector('#film'),boss=document.querySelector('#boss'),mode=document.querySelector('#mode');let masked=true;
 function change(reset=false){const time=reset?0:film.currentTime,paused=film.paused;film.src=`${boss.value}-${masked?'static':'original'}.mp4`;film.addEventListener('loadedmetadata',()=>{film.currentTime=Math.min(time,film.duration);if(!paused)film.play().catch(()=>{});},{once:true});}

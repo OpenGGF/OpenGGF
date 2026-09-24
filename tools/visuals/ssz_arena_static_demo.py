@@ -21,9 +21,9 @@ def smooth(a, b, value):
     return t*t*(3-2*t)
 
 
-def compose(rgb, frame, duration=5.0):
+def compose(rgb, frame):
     seconds = frame/FPS
-    envelope = smooth(.35, 1.1, seconds)*(1-smooth(duration-1.1, duration-.35, seconds))
+    envelope = smooth(.35, 1.1, seconds)  # hold through hits; no unlock occurs in these clips
     y, x = np.mgrid[:HEIGHT, :WIDTH]
     outside = np.maximum(LEFT-x, x-(RIGHT-1))
     opacity = smooth(0, 12, outside)*envelope
@@ -83,10 +83,10 @@ def main():
         shutil.copyfile(source,args.out/f'{name}-original.mp4')
         frames=render(source,args.out/f'{name}-static.mp4')
         manifest['sources'][name]={'path':str(source),'sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'frames':frames}
-    # Endpoints, full-mask opacity and native viewport invariants independent of video content.
+    # Entry, sustained mask and active viewport invariants independent of video content.
     sample=np.full((HEIGHT,WIDTH,3),173,dtype=np.uint8)
     assert np.array_equal(compose(sample,0),sample)
-    assert np.array_equal(compose(sample,299),sample)
+    assert not np.array_equal(compose(sample,299)[:,:LEFT-12],sample[:,:LEFT-12])
     active=compose(sample,150)
     assert np.array_equal(active[:,LEFT:RIGHT],sample[:,LEFT:RIGHT])
     assert not np.array_equal(active[:,:LEFT-12],sample[:,:LEFT-12])
@@ -98,7 +98,7 @@ def main():
         assert abs(np.corrcoef(old,new)[0,1]) < .03
     assert np.array_equal(active,compose(sample,150))
     manifest['checks']=['600 composited frames preserve the exact active rectangle before encoding',
-        'fade endpoints unchanged','both final movies fully decoded','opaque outer wings at full envelope',
+        'clear entry and mask held through final frame','both final movies fully decoded','opaque outer wings at full envelope',
         'successive noise fields decorrelated at zero and 13px vertical offset', 'deterministic noise replay']
     (args.out/'provenance.json').write_text(json.dumps(manifest,indent=2)+'\n')
     shutil.copyfile(Path(__file__).with_suffix('.html'),args.out/'index.html')
