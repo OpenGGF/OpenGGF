@@ -847,3 +847,16 @@ phases reaching `Sprite_OnScreen_Test` cannot be dismissed as drawing only.
 HCZ runtime behavior is unchanged by the LRZ correction; existing trace success
 is not evidence that every offscreen phase is faithful. The DEZ energy-bridge
 and LBZ cup providers checked during this audit already implement range tests.
+
+
+## LRZ boss lava-plane presentation
+
+The boss pool now uses its ROM high-priority background tiles over the
+low-priority foreground lava wall, including the per-column slope and matching
+sprite mask. The background source window follows the arena instead of retaining
+the initial Death Egg image. Native-width fight footage confirms the visible
+pool; synchronized native pixel comparison and widescreen route coverage remain
+open in the [boss-act matrix](architecture/validation/levels/s3k-lrz-boss.md).
+The ordinary cold Sonic+Tails route reaches HPZ with deterministic rewind at
+62 boss-act/exit spots; this does not certify the remaining width, donor and
+lifecycle combinations.

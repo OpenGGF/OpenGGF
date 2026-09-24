@@ -121,6 +121,50 @@ class TestLrzAutoscrollGraphHeadless {
         root.update(261, fixture.sprite());
         assertEquals(1, manager.activeObjectsOfType(LrzAutoscrollObjectInstance.class).size());
     }
+    @ParameterizedTest
+    @ValueSource(ints = {0x791FE, 0x792F0, 0x791B0})
+    void independentOrRetiringChildDoesNotKeepItsDeletedParent(int callback) throws Exception {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(22, 0).withFreshLevelStartLifecycle().build();
+        fixture.stepFrame(false, false, false, false, false);
+        var manager = GameServices.level().getObjectManager();
+        var parent = manager.createDynamicObject(() -> new LrzAutoscrollObjectInstance(
+                new com.openggf.level.objects.ObjectSpawn(1016, 1216, 0, 0, 0, false, 0)));
+        var child = manager.createDynamicObject(() -> new LrzAutoscrollObjectInstance(
+                new com.openggf.level.objects.ObjectSpawn(1016, 1200, 0, 2, 0, false, 0)));
+        // Owning callback boundaries: impact's last parent3 write, launch's last
+        // Refresh_ChildPosition, or a following child observing status bit7.
+        setField(child, "code", callback);
+        setField(child, "parent", parent);
+        if (callback == 0x792F0) {
+            S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow()
+                    .bossAct().publishMissilesReleased();
+        } else if (callback == 0x791B0) {
+            setField(child, "timer", 10);
+            setField(parent, "nativeStatus7", true);
+        }
+        child.update(200, fixture.sprite());
+        assertEquals(callback == 0x791FE ? 0x79266 : callback == 0x792F0 ? 0x79334 : 0x791B0,
+                field(child, "code"));
+        manager.removeDynamicObject(parent);
+        var reference = child.getClass().getDeclaredField("parent");
+        reference.setAccessible(true);
+        assertNull(reference.get(child), "the callback no longer reads parent3");
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var snapshot = assertDoesNotThrow(registry::capture);
+        registry.restore(snapshot);
+        var restored = registry.capture();
+        for (String key : snapshot.entries().keySet()) {
+            var differences = RewindSnapshotDiff.diffKey(key, snapshot.get(key), restored.get(key));
+            assertTrue(differences.isEmpty(), key + ": " + differences);
+        }
+    }
+
+    private void setField(Object object, String name, Object value) throws Exception {
+        var field = object.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(object, value);
+    }
+
     @Test
     void bonusReturnInitializesTheCheckpointArenaBeforeTheCameraSnap() throws Exception {
         HeadlessTestFixture.builder().withZoneAndAct(22, 0).withFreshLevelStartLifecycle().build();

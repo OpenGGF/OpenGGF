@@ -9,7 +9,7 @@ public final class ModApiVersion {
     /**
      * Current unpublished compiled-mod API candidate, including the 0.7
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
-     * and deferred SMPS header construction.
+     * deferred SMPS header construction, and explicit dynamic solid-contact rewind binding.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

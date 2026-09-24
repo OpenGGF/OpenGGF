@@ -192,6 +192,10 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
                 spawnChild(() -> new LrzEndBossExplosion(this, 0));
                 if (subtype != 0)
                     parent.impact = true;
+                // loc_7921A makes its final parent3 write above. loc_79266 only
+                // counts down and publishes collision; ROM leaves the unused word
+                // in RAM. Release the Java link so rewind can outlive the target.
+                parent = null;
             }
             case 0x79266 -> {
                 if (expired())
@@ -215,6 +219,9 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
                 if (state().missilesReleased() && expired()) {
                     code = 0x79334;
                     timer = 0x14;
+                    // loc_7931E ends Refresh_ChildPosition; subsequent movement is
+                    // independent. Unlike the unused ROM word, retain no dead Java owner.
+                    parent = null;
                 }
                 draw();
             }
@@ -388,6 +395,9 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
             }
     }
     private void goDelete() {
+        // Go_Delete_Sprite installs Delete_Current_Sprite: no later dispatch reads
+        // parent3. Drop that unused Java link during the native one-frame retirement.
+        parent = null;
         nativeStatus7 = true;
         pendingDelete = true;
         visible = false;

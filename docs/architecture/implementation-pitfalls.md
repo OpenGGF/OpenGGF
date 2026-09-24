@@ -193,6 +193,13 @@ of the bucket, assert the object's tile-occlusion mask through phase transitions
 and rewind, and inspect an actual sprite/high-plane overlap. Route completion
 and screenshots without overlap cannot establish priority correctness.
 
+LRZ3's missing pool (2026-09-25) had the complementary failure: high-priority
+Plane B floor tiles existed in the ROM but were hidden by low-priority Plane A
+lava-wall tiles. Verify the source window, retained-plane lifetime, and the
+high-background replay plus sprite mask independently. Rebuilding correct BG
+pixels alone cannot repair a background-first draw order. Preserve column
+VScroll in the replay, since the pool slope is part of its sampling contract.
+
 **The bucket encoding differs per game and the engine defaults are silent.** S1/S2
 store the bucket as a byte (`move.b #4,priority(a0)` is bucket 4); S3K stores the
 display-list byte offset as a word (`move.w #$280,priority(a0)` is bucket 5, `$80` is
@@ -803,3 +810,11 @@ history but retained the future live priority: subsequent replay rewrote the
 history with `$80` instead of zero. Test both priority directions and distinct
 sprite buckets; comparing only fields already present in the snapshot cannot find
 an omitted field.
+
+
+A solid's placed-object ID is not proof that a live contact exists. S3K event
+platforms can have ID zero, and clearing contact leaves the ROM `interact` slot
+sticky. Player rewind records binding presence separately from ID and released
+owner provenance, then relinks only the captured slot. Test zero-ID live contact,
+cleared contact with a still-occupied slot, and deleted-owner slot reuse. The
+September25 LRZ boss replay exposed this when a platform expired after restore.

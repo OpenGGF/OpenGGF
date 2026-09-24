@@ -4853,3 +4853,15 @@ boss tests never contained it. Model the lifecycle, not a transition exclusion.
 Detached pieces no longer need parent3; latch copied drawing priority and test
 recreation without retaining a dead parent. Origin: September24 LRZ cold clear,
 `TestLrzRockCrusher` and `TestLrzColdRouteCapture`.
+
+
+## Unused native parent words must not retain deleted Java owners
+
+LRZ3 missiles stop reading `parent3` after the final `loc_791FE` impact write,
+after `loc_7931E` detaches them from `Refresh_ChildPosition`, and after
+`Go_Delete_Sprite` installs the retirement callback. The cartridge can leave
+that unused RAM word behind; a rewind identity table cannot resolve a deleted
+Java object. Release the Java reference at the last native use, preserving the
+callback timer and one-frame deletion semantics. Test snapshot/replay after the
+former owner is removed, not just while the allocation graph is intact.
+Origin: September25 cold LRZ boss completion.

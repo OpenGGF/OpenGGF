@@ -275,6 +275,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
                 || isHcz2BackgroundPlaneWindowActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId)
                 || isSozEventBackgroundWindowActive(zoneId)
+                || isLrzBossBackgroundWindowActive(zoneId)
                 || isSszCloudBackgroundWindowActive(zoneId)
                 || extendedDezInterior();
     }
@@ -459,6 +460,17 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
                 && GameServices.camera().getWidth() > 320;
     }
 
+    /**
+     * LRZ3 sub_59DA2 selects layout X = camera X - $700; DrawBGAsYouMove
+     * and DrawTilesVDeform2 read that source directly. The boss pool is beyond
+     * the initial 512px Death Egg strip, separated by empty layout columns.
+     * Keep the 512px display window, but never wrap its source at that strip.
+     */
+    private boolean isLrzBossBackgroundWindowActive(int zoneId) {
+        return zoneId == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ
+                && GameServices.hasRuntime() && GameServices.level().getFeatureActId() == 0;
+    }
+
     /** SOZ event DrawBGAsYouMove reads arena/room columns beyond the normal repeating strip. */
     private boolean isSozEventBackgroundWindowActive(int zoneId) {
         return zoneId == Sonic3kZoneIds.ZONE_SOZ && GameServices.hasRuntime()
@@ -538,7 +550,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
         // overflow reproduces that instead of wrapping back into the normal strip.
         return isCnzBossBackgroundWindowActive()
                 || isHcz2BackgroundPlaneWindowActive(zoneIndex)
-                || isSozEventBackgroundWindowActive(zoneIndex);
+                || isSozEventBackgroundWindowActive(zoneIndex)
+                || isLrzBossBackgroundWindowActive(zoneIndex);
     }
 
     /**
@@ -957,6 +970,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
         if (zoneIndex == Sonic3kZoneIds.ZONE_SSZ && actIndex == 1) {
             registry.register(new com.openggf.game.sonic3k.render.SszAct2BackgroundPriorityEffect(false));
             registry.register(new com.openggf.game.sonic3k.render.SszAct2BackgroundPriorityEffect(true));
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && actIndex == 0) {
+            registry.register(new com.openggf.game.sonic3k.render.LrzBossBackgroundPriorityEffect(false));
+            registry.register(new com.openggf.game.sonic3k.render.LrzBossBackgroundPriorityEffect(true));
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
             registry.register(hczBgHighPriorityForegroundOverlayEffect);

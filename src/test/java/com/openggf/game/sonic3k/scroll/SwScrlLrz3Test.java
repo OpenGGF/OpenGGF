@@ -64,5 +64,28 @@ class SwScrlLrz3Test {
         state.setBackgroundRoutine(16);scroll.render(buffer,0xA00,0x560,12,state,320,false);
         assertNull(scroll.getPerColumnVScrollBG());
     }
+    @Test void bossBackgroundWindowReadsThePoolBeyondTheDistantStrip() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(22,0).build();
+        var level = GameServices.level();
+        var provider = level.getZoneFeatureProvider();
+        assertTrue(provider.bgWrapsHorizontally(), "DrawBGAsYouMove must move the Plane B window");
+        assertTrue(provider.useLinearBackgroundLayoutOverflow(22),
+                "sub_59DA2 selects source $300, beyond the distant strip's $200 extent");
+        assertEquals(512, com.openggf.level.LevelGeometry.forLevel(level.getCurrentLevel())
+                .bgContiguousWidthPx());
+        assertNotEquals(0, level.getBackgroundTileDescriptorAtWorld(0x300, 0x120) & 0x8000,
+                "ROM pool tiles cover the low-priority foreground lava wall");
+        var effects = new com.openggf.game.render.SpecialRenderEffectRegistry();
+        provider.registerSpecialRenderEffects(effects, 22, 0);
+        assertEquals(1, effects.size(com.openggf.game.render.SpecialRenderEffectStage.AFTER_FOREGROUND));
+        assertEquals(1, effects.size(com.openggf.game.render.SpecialRenderEffectStage.SPRITE_PRIORITY_MASK));
+        effects.clear();
+        provider.registerSpecialRenderEffects(effects, 22, 1);
+        assertTrue(effects.isEmpty(), "Hidden Palace does not inherit the boss pool replay");
+        assertNotEquals(level.getBackgroundTileDescriptorAtWorld(0x100, 0x100),
+                level.getBackgroundTileDescriptorAtWorld(0x300, 0x100),
+                "Wrapping the pool source at $200 reads different ROM art");
+    }
+
     private static short word(byte[] data,int index) {return (short)((data[2*index]&255)<<8|data[2*index+1]&255);}
 }

@@ -1706,7 +1706,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		for (Sprite sprite : sprites.values()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
 				int objectId = playable.getLatchedSolidObjectId() & 0xFF;
-				if (objectId == 0) {
+				// A placed-object ID is not an identity: event-created S3K solids
+				// legitimately use zero. The captured binding distinguishes them
+				// from a cleared contact whose ROM interact slot remains sticky.
+				if (objectId == 0 && !playable.hasLatchedSolidObjectBinding()) {
 					playable.setLatchedSolidObjectInstance(null);
 					continue;
 				}

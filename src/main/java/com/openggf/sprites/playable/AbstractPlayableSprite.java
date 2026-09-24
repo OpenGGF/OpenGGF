@@ -339,6 +339,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int latchedSolidObjectId = 0;
         /** Released-contact provenance survives rewind even after the SST slot is reused. */
         private boolean latchedSolidObjectReleased;
+        /** Contact identity exists independently of the spawn ID (dynamic S3K objects use zero). */
+        private boolean latchedSolidObjectBound;
 
         /**
          * ROM SST {@code interact(a0)} (s2.constants.asm:69 "last object stood
@@ -974,7 +976,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         onObject, controller.isOnObjectAtFrameStart(), controller.isOnObjectAtPreviousFrameStart(),
                         controller.isPushingAtFrameStart(), controller.isHurtAtFrameStart(),
                         controller.isHurtRecoveryCompletedThisFrame(),
-                        latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(),
+                        latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(), latchedSolidObjectBound,
                         slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer, fixedSkidDustActive,
@@ -1121,6 +1123,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 extra.hurtAtFrameStart(), extra.hurtRecoveryCompletedThisFrame());
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.latchedSolidObjectReleased = extra.latchedSolidObjectReleased();
+                this.latchedSolidObjectBound = extra.latchedSolidObjectBound();
                 // ObjectManager restores the live set later. Never reuse a contact
                 // pointer from the future timeline; SpriteManager relinks by slot.
                 this.latchedSolidObjectInstance = null;
@@ -2181,6 +2184,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /** Whether the last solid contact was released, including a restored deleted owner. */
         public boolean isLatchedSolidObjectReleased() {
                 return LatchedSolidContactSupport.isReleased(this, latchedSolidObjectReleased);
+        }
+
+        /** Whether rewind must relink an actual contact, including a zero-ID dynamic object. */
+        public boolean hasLatchedSolidObjectBinding() {
+                return latchedSolidObjectBound;
+        }
+
+        void setLatchedSolidObjectBinding(boolean bound) {
+                latchedSolidObjectBound = bound;
         }
 
         void clearLatchedSolidObjectRelease() {

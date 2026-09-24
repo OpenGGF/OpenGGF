@@ -569,7 +569,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   graphics instead of restoring obsolete miniboss pixels; the shared art journal
   also preserves later overlapping writes and replacement level data.
   A controller-only Sonic and Tails route now completes both acts from a cold
-  Act 1 start, reaching the boss act without a death; Act 2 has81 full-world
+  Act 1 start through the boss, capsule and playable Hidden Palace without a
+  death, collecting the fire shield from its placed monitor. Act 2 has81 full-world
   rewind/replay spots across traversal and its boulder handoff.
   Act 2 also draws its ROM-backed Death Egg background sprite, with continuous
   widescreen entry and preserved art-load/position state on rewind. Finite
@@ -670,7 +671,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
   opens with a `(0,0)` record that the ring manager always steps over, and the engine
-  was spawning it as a real ring.
+  was spawning it as a real ring. The boss fight's sloping lava pool now
+  draws above the lava wall with the ROM's background priority and column scroll.
 
 ## ROM images
 

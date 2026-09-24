@@ -402,6 +402,7 @@ public record PerObjectRewindSnapshot(
             boolean hurtAtFrameStart,
             boolean hurtRecoveryCompletedThisFrame,
             int latchedSolidObjectId, int interactSlotIndex, boolean latchedSolidObjectReleased,
+            boolean latchedSolidObjectBound,
             boolean slopeRepelJustSlipped,
             boolean stickToConvex, boolean sliding, boolean pushing,
             boolean skidding, int skidDustTimer, boolean fixedSkidDustActive,

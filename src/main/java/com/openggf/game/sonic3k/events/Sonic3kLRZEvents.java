@@ -305,6 +305,14 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         LevelManager manager = levelManager();
         if (manager != null) {
             manager.refreshFullTilemapPlanesFromCurrentLayout(0);
+            if (state() != null && state().zoneIndex() == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ
+                    && state().actIndex() == 0) {
+                // LRZ3 follows Refresh_PlaneFull with DrawBGAsYouMove (and later
+                // DrawTilesVDeform2). Our source-window renderer rebuilds those
+                // rows from the layout; it must not retain the initial 64x32
+                // image as if an event owned its cells for the entire fight.
+                manager.getTilemapManager().resetBgIncrementalShiftBaseline();
+            }
         }
     }
 
