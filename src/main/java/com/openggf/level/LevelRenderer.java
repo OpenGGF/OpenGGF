@@ -1556,6 +1556,11 @@ public final class LevelRenderer {
                         ? layeredGhostHook
                         : null;
         if (spriteManager != null) spriteManager.prepareRenderBucketsForPass();
+        // Render_Sprites lets a zone splice its own sprites into the end of a priority level
+        // (Lava Reef's rocks at Render_Sprites_NextLevel). Sprite-table order is behaviour.
+        com.openggf.level.render.PriorityBucketSpriteSource bucketSpriteSource =
+                zoneFeatureProvider instanceof com.openggf.level.render.PriorityBucketSpriteSource source
+                        ? source : null;
         if (useSpriteSatMasking) {
             graphicsManager.beginSpriteSatCollection();
             // SAT collection must follow sprite-table order, not painter order.
@@ -1573,11 +1578,21 @@ public final class LevelRenderer {
                     objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
                 drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
+                if (bucketSpriteSource != null) {
+                    // Appended after this level's own entries, exactly as the ROM does.
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    bucketSpriteSource.appendSpritesAfterPriorityBucket(bucket);
+                }
             }
             graphicsManager.endSpriteSatCollectionAndReplay();
         } else {
             for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-                // Painter order reverses the native SAT: objects before players.
+                // Painter order reverses the native SAT: objects before players, and the spliced
+                // sprites - last in their level's table region - are drawn first within it.
+                if (bucketSpriteSource != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    bucketSpriteSource.appendSpritesAfterPriorityBucket(bucket);
+                }
                 if (objectManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
                     objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);

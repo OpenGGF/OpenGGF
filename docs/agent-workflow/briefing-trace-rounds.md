@@ -71,6 +71,21 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+LRZ cold-route comparison against a fixture (2026-09-18): a `GameplayCaptureTool`
+capture compared frame for frame against a trace fixture manufactures divergences
+that read exactly like engine defects unless three alignments are right. The tool
+writes its state row after `loop.step()`, but `boot()` leaves one pre-gameplay
+frame for the first step to consume, so capture frame `n+1` is native row `n`;
+the input log has to start one capture frame late as well (`--settle 1`), or the
+engine receives each row's input one gameplay frame early; and the capture needs
+the fixture's own team (`--sidekick tails` for a Sonic + Tails run), because
+shared objects such as `$31 Obj_LRZCollapsingBridge` arm on either player's
+standing bit and the sidekick often reaches them first. Two "divergences" - a
+falling intro one frame late and a collapsing bridge eight frames late - were
+both these, and the strict replay of the same fixture had been matching Player 1
+`y` through those frames all along. Before believing a cold-route divergence,
+check what the fixture's own replay test reports as its first error frame.
+
 SOZ pyramid capture (2026-09-16): a positioned start at `$43B0,$9D4` skips
 `Obj_PathSwap` at `$4308,$918`, leaving Sonic at fresh-load low sprite priority.
 A follower can later cross a switch independently, producing a misleading

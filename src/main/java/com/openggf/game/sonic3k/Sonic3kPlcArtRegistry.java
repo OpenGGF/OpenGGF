@@ -2522,6 +2522,18 @@ public final class Sonic3kPlcArtRegistry {
         }
 
         // Standalone badniks (both acts)
+        // The Fireworm's head is the one part with dynamic art: SetUp_ObjAttributesSlotted
+        // reserves two VRAM slots and loc_8F7A4 runs Perform_DPLC from DPLCPtr_Fireworm every
+        // frame (sonic3k.asm:196238-196239). make_art_tile(ArtTile_Fireworm,1,1): palette 1.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.FIREWORM,
+                Sonic3kConstants.ART_UNC_FIREWORM_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_FIREWORM_SIZE,
+                Sonic3kConstants.MAP_FIREWORM_ADDR,
+                1,
+                Sonic3kConstants.DPLC_FIREWORM_ADDR
+        ));
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.FIREWORM_SEGMENTS,
                 Sonic3kConstants.ART_KOSM_FIREWORM_SEGMENTS_ADDR,
@@ -2559,6 +2571,280 @@ public final class Sonic3kPlcArtRegistry {
                 3,
                 null
         ));
+
+        // Dash elevator (SKL object $1E): make_art_tile(ArtTile_LRZMisc,0,0)
+        // (sonic3k.asm:88383). Act 1 only; act 2 places none.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_DASH_ELEVATOR,
+                Sonic3kConstants.MAP_LRZ_DASH_ELEVATOR_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                0,
+                null
+        ));
+
+        // Doors, the big door, the horizontal buttons and the shooting trigger (SKL objects $19,
+        // $1A, $1C, $1D). Act 2 re-skins the door and the horizontal button; the big door and the
+        // shooting trigger are act 1 only, but registering them in both acts costs nothing and
+        // keeps the act branch below to the cases the ROM actually branches on.
+        // Fireball launcher (SKL object $1B) and its shot: the same mappings on palette lines 3
+        // and 0 (sonic3k.asm:88153, :88179).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_FIREBALL_LAUNCHER,
+                Sonic3kConstants.MAP_LRZ_FIREBALL_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                3,
+                null
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_FIREBALL,
+                Sonic3kConstants.MAP_LRZ_FIREBALL_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                0,
+                null
+        ));
+        // Lava fall drops (SKL object $1F's children): make_art_tile($0D3,2,0)
+        // (sonic3k.asm:88797). $0D3 is ArtTile_LRZMisc.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_LAVA_FALL,
+                Sonic3kConstants.MAP_LRZ_LAVA_FALL_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                2,
+                null
+        ));
+        // Falling spike (SKL object $18): make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:87948).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_FALLING_SPIKE,
+                Sonic3kConstants.MAP_LRZ_FALLING_SPIKE_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                2,
+                null
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_BIG_DOOR,
+                Sonic3kConstants.MAP_LRZ_BIG_DOOR_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                2,
+                null
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_SHOOTING_TRIGGER,
+                Sonic3kConstants.MAP_LRZ_SHOOTING_TRIGGER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                3,
+                null
+        ));
+        // The shot shares Map_LRZShootingTrigger but is drawn on palette line 0
+        // (make_art_tile(ArtTile_LRZMisc,0,0), sonic3k.asm:88307).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_SHOOTING_TRIGGER_SHOT,
+                Sonic3kConstants.MAP_LRZ_SHOOTING_TRIGGER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                0,
+                null
+        ));
+        // Rock crusher (SKL object $9C): make_art_tile(ArtTile_LRZRockCrusher,1,0)
+        // (ObjDat_LRZRockCrusher, sonic3k.asm:197426-197427). Both placements are in act 1 and
+        // the object queues ArtKosM_LRZRockCrusher itself at init.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_ROCK_CRUSHER,
+                Sonic3kConstants.MAP_LRZ_ROCK_CRUSHER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_ROCK_CRUSHER,
+                1,
+                null
+        ));
+        // Miniboss (SKL object $9D): make_art_tile(ArtTile_LRZMiniboss,1,1)
+        // (ObjDat_LRZMiniboss, sonic3k.asm:160797-160799). loc_78592 queues
+        // ArtKosM_LRZMiniboss itself once the Nemesis queue drains. Every child copies the
+        // parent's mappings and art tile through CreateChild8_TreeListRepeated, so this one
+        // entry serves the arms, orbiters, hand, projectiles and defeat debris too.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_MINIBOSS,
+                Sonic3kConstants.MAP_LRZ_MINIBOSS_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MINIBOSS,
+                1,
+                null
+        ));
+        // Spike ball (SKL object $22) and the chips sub_439EC throws:
+        // make_art_tile(ArtTile_LRZBigSpike,1,0) and make_art_tile($0D3,2,1)
+        // (sonic3k.asm:88840, :89025). All six placements are in act 1.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_SPIKE_BALL,
+                Sonic3kConstants.MAP_LRZ_SPIKE_BALL_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_BIG_SPIKE,
+                1,
+                null
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_ROCK_DEBRIS,
+                Sonic3kConstants.MAP_LRZ_ROCK_DEBRIS_ADDR,
+                0x00D3,
+                2,
+                null
+        ));
+        // Smashing spike platform (SKL object $21): make_art_tile(ArtTile_LRZMisc,2,0)
+        // (sonic3k.asm:88540). All fifteen placements are in act 1.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_SMASHING_SPIKE_PLATFORM,
+                Sonic3kConstants.MAP_LRZ_SMASHING_SPIKE_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                2,
+                null
+        ));
+        // Swinging spike ball (SKL object $20) and its chain: the same map on palette lines 1 and
+        // 0, the latter being what andi.w #$9FFF leaves the child (sonic3k.asm:88654, :88669).
+        if (actIndex == 0) {
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_SWINGING_SPIKE_BALL,
+                    Sonic3kConstants.MAP_LRZ_SWINGING_SPIKE_BALL_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    1,
+                    null
+            ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_SWINGING_SPIKE_BALL_CHAIN,
+                    Sonic3kConstants.MAP_LRZ_SWINGING_SPIKE_BALL_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    0,
+                    null
+            ));
+        } else {
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SWINGING_SPIKE_BALL,
+                    Sonic3kConstants.MAP_LRZ_SWINGING_SPIKE_BALL2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SWINGING_SPIKE_BALL_CHAIN,
+                    Sonic3kConstants.MAP_LRZ_SWINGING_SPIKE_BALL2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    0,
+                    null
+            ));
+            // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89078-89079, :89150-89151).
+            // Both orbiting spike ball ids place only in act 2.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_ORBITING_SPIKE_BALL,
+                    Sonic3kConstants.MAP_LRZ_ORBITING_SPIKE_BALL_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
+            // make_art_tile($090,1,0) for the body (sonic3k.asm:89228-89229) and
+            // make_art_tile(ArtTile_LRZ2Misc,1,0) for the flames the parent allocates (:89299,
+            // :89408). Both read Map_LRZFlameThrower; only the tile base differs.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_FLAME_THROWER,
+                    Sonic3kConstants.MAP_LRZ_FLAME_THROWER_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_FLAME_THROWER,
+                    1,
+                    null
+            ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_FLAME,
+                    Sonic3kConstants.MAP_LRZ_FLAME_THROWER_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
+            // make_art_tile($090,2,0) (sonic3k.asm:51013-51014).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SOLID_MOVING_PLATFORM,
+                    Sonic3kConstants.MAP_LRZ_SOLID_MOVING_PLATFORM_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_FLAME_THROWER,
+                    2,
+                    null
+            ));
+            // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89850); the ball copies the
+            // launcher's art_tile and mappings verbatim (:89864-89865).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SPIKE_BALL_LAUNCHER,
+                    Sonic3kConstants.MAP_LRZ_SPIKE_BALL_LAUNCHER_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
+        }
+
+        if (actIndex == 0) {
+            // make_art_tile($0D3,2,0) (sonic3k.asm:87900). Act 1 holds all eleven placements.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_SINKING_ROCK,
+                    Sonic3kConstants.MAP_LRZ_SINKING_ROCK_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    2,
+                    null
+            ));
+        } else {
+            // make_art_tile($090,2,0) (sonic3k.asm:87910).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SINKING_ROCK,
+                    Sonic3kConstants.MAP_LRZ_SINKING_ROCK_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_SINKING_ROCK,
+                    2,
+                    null
+            ));
+        }
+
+        if (actIndex == 0) {
+            // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:88017).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_DOOR,
+                    Sonic3kConstants.MAP_LRZ_DOOR_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    2,
+                    null
+            ));
+            // make_art_tile(ArtTile_LRZMisc,3,0) (sonic3k.asm:88223).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_BUTTON_HORIZONTAL,
+                    Sonic3kConstants.MAP_LRZ_BUTTON_HORIZONTAL_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    3,
+                    null
+            ));
+        } else {
+            // Obj_LRZChainedPlatforms: make_art_tile(ArtTile_LRZ2Misc,1,0).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_CHAINED_PLATFORM,
+                    Sonic3kConstants.MAP_LRZ_CHAINED_PLATFORM_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
+            // Obj_LRZTurbineSprites uses the same drum tiles with two mapping tables.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES,
+                    Sonic3kConstants.MAP_LRZ_TURBINE_SPRITES_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_DRUM,
+                    1,
+                    null
+            ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_TURBINE_SPRITES_THIN,
+                    Sonic3kConstants.MAP_LRZ_TURBINE_SPRITES2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_DRUM,
+                    1,
+                    null
+            ));
+            // make_art_tile($090,2,0) (sonic3k.asm:88027).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_DOOR,
+                    Sonic3kConstants.MAP_LRZ_DOOR_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_DOOR,
+                    2,
+                    null
+            ));
+            // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:88231).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_BUTTON_HORIZONTAL,
+                    Sonic3kConstants.MAP_LRZ_BUTTON_HORIZONTAL2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
+        }
 
         // Button: act-specific art tile and palette
         if (actIndex == 0) {

@@ -59,7 +59,7 @@ class TestLbzPipePlugObjectInstance {
 
         assertInstanceOf(LbzPipePlugObjectInstance.class, lbzObject);
         assertEquals("LBZPipePlug", lbzObject.getName());
-        assertInstanceOf(PlaceholderObjectInstance.class, lrzObject,
+        assertInstanceOf(LrzFireballLauncherObjectInstance.class, lrzObject,
                 "SKL slot $1B is Obj_LRZFireballLauncher, not the LBZ pipe plug");
         assertEquals("LRZFireballLauncher", lrzObject.getName());
     }

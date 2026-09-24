@@ -133,6 +133,17 @@ sprite-priority-mask contribution, or correctly low sprites still cover it.
 Assert both submerged pixels and exposed art so a missing sheet cannot make a
 mask test pass. Registry builder names use `Sonic3kObjectArtProvider.invokeBuilder`
 (the explicit switch, not reflection); wire that case as well as the registry.
+**ROM palette-line names are one-based.** `sonic3k.constants.asm:767-770` declares
+`Normal_palette ds.b $80` and then `Normal_palette_line_2 = Normal_palette+$20`,
+`_line_3 = +$40`, `_line_4 = +$60` — so `line_2` is the **second** line, engine palette
+index **1**, and `line_1` is the base label that never appears in a write. Reading the digit
+as a zero-based index shifts every write one line, and the symptom is not "nothing happens":
+it is the wrong sprites changing colour, which looks like a mapping or art bug. `Target_palette`
+is named the same way. Four S3K classes already say this in comments (`AizEndBossInstance`,
+`LbzEndBossInstance`, `LbzFinalBoss1Instance`, `TunnelbotBadnikInstance`); the Lava Reef
+miniboss's hit flash had it wrong for a round because its author read the name rather than
+the constants file.
+
 The separate `art_tile` high bit controls sprite-versus-tile priority. Native
 child creation copies that bit; `SetUp_ObjAttributes3` can change the SAT bucket
 without clearing it. FBZ2's laser-room children need both properties preserved.

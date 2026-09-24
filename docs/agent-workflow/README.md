@@ -77,6 +77,15 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   Pair it with `tools/traces/assemble_bk2_from_input_log.py`, which packages an
   `InputLogAuthorTool` log as the BizHawk-keyed `.bk2` the TraceChaser headless harness
   accepts. Both come from the first Knuckles in Sonic 2 fixture (2026-09-14).
+- `PlaneOpacityProbe` (`com.openggf.tools`, library not CLI) answers "can the plane behind
+  this one show through here?" from the decoded layout / blocks / chunks / patterns alone --
+  no renderer, no camera, no frame. `coverage(level, map, layer, x, y, w, h)` counts the
+  see-through pixels of a rectangle and `pixelAt` resolves one, applying both flip levels.
+  Use it whenever a background change produces byte-identical captures: a capture cannot
+  separate "wrong pixels drawn" from "no pixels reachable", and this can. Always pair it with
+  a control viewport that must report see-through pixels. Origin: LRZ slice 5 follow-up,
+  2026-09-18, where it showed Lava Reef act 1's foreground is opaque across the whole dome
+  (`TestS3kLrzForegroundOpacity`).
 - `FbzRouteEvidenceProbe` (test scope, opt-in `-Dmse=off -Dopenggf.fbz.evidence=true`)
   prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
   matrix rows without asserting; diff the output before and after a route-controller

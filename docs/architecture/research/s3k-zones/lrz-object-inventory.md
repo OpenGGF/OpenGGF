@@ -151,6 +151,7 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$1C` | `$0C` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1C` | `$0D` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1C` | `$0F` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
+| `$1D` | `$A0` | `Obj_LRZShootingTrigger` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1D` | `$C2` | `Obj_LRZShootingTrigger` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1E` | `$1A` | `Obj_LRZDashElevator` | 1 | 0 | 0 | placeholder (SKL branch) | 3 |
 | `$1E` | `$1D` | `Obj_LRZDashElevator` | 1 | 0 | 0 | placeholder (SKL branch) | 3 |
@@ -186,9 +187,9 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$24` | `$D7` | `Obj_AutomaticTunnel` | 0 | 1 | 0 | shared concrete | 7 |
 | `$24` | `$D8` | `Obj_AutomaticTunnel` | 0 | 1 | 0 | shared concrete | 7 |
 | `$24` | `$D9` | `Obj_AutomaticTunnel` | 0 | 1 | 0 | shared concrete | 7 |
-| `$25` | `$80` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | unregistered (default placeholder) | 7 |
-| `$25` | `$81` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | unregistered (default placeholder) | 7 |
-| `$25` | `$82` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | unregistered (default placeholder) | 7 |
+| `$25` | `$80` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | concrete zone-specific | 7 |
+| `$25` | `$81` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | concrete zone-specific | 7 |
+| `$25` | `$82` | `Obj_LRZChainedPlatforms` | 0 | 1 | 0 | concrete zone-specific | 7 |
 | `$28` | `$00` | `Obj_InvisibleBlock` | 1 | 0 | 0 | shared concrete | V |
 | `$28` | `$11` | `Obj_InvisibleBlock` | 3 | 0 | 7 | shared concrete | V |
 | `$28` | `$12` | `Obj_InvisibleBlock` | 0 | 1 | 0 | shared concrete | V |
@@ -249,8 +250,8 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$31` | `$00` | `Obj_LRZCollapsingBridge` | 11 | 0 | 0 | concrete zone-specific | V |
 | `$31` | `$01` | `Obj_LRZCollapsingBridge` | 12 | 0 | 0 | concrete zone-specific | V |
 | `$31` | `$02` | `Obj_LRZCollapsingBridge` | 4 | 0 | 0 | concrete zone-specific | V |
-| `$32` | `$00` | `Obj_LRZTurbineSprites` | 0 | 7 | 0 | placeholder (SKL branch) | 7 |
-| `$32` | `$01` | `Obj_LRZTurbineSprites` | 0 | 11 | 0 | placeholder (SKL branch) | 7 |
+| `$32` | `$00` | `Obj_LRZTurbineSprites` | 0 | 7 | 0 | `LrzTurbineSpritesObjectInstance` | 7 |
+| `$32` | `$01` | `Obj_LRZTurbineSprites` | 0 | 11 | 0 | `LrzTurbineSpritesObjectInstance` | 7 |
 | `$33` | `$03` | `Obj_Button` | 1 | 0 | 0 | shared concrete | V |
 | `$33` | `$05` | `Obj_Button` | 0 | 1 | 0 | shared concrete | V |
 | `$33` | `$0A` | `Obj_Button` | 1 | 0 | 0 | shared concrete | V |
@@ -305,8 +306,8 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$AD` | `$01` | `Obj_LRZ3Platform` | 0 | 0 | 1 | placeholder (SKL branch) | 9 |
 | `$AD` | `$02` | `Obj_LRZ3Platform` | 0 | 0 | 2 | placeholder (SKL branch) | 9 |
 | `$AD` | `$04` | `Obj_LRZ3Platform` | 0 | 0 | 3 | placeholder (SKL branch) | 9 |
-| `$AE` | `$00` | `Obj_LRZ2CutsceneKnuckles` | 0 | 1 | 0 | placeholder (SKL branch) | 8 |
-| `$B3` | `$2D` | `Obj_StartNewLevel` | 0 | 1 | 0 | placeholder (SKL branch) | 8 |
+| `$AE` | `$00` | `Obj_LRZ2CutsceneKnuckles` | 0 | 1 | 0 | `Lrz2CutsceneControllerObjectInstance` | 8 |
+| `$B3` | `$2D` | `Obj_StartNewLevel` | 0 | 1 | 0 | concrete zone-specific | 8 |
 
 ## Per-ID totals and notes
 
@@ -329,7 +330,7 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$9E` | `Obj_LRZ3Autoscroll` | 0 | 0 | 1 | `($A0,$4AC)` |
 | `$AD` | `Obj_LRZ3Platform` | 0 | 0 | 7 | Subtypes 0, 1, 2 (×2), 4 (×3) |
 | `$AE` | `Obj_LRZ2CutsceneKnuckles` | 0 | 1 | 0 | `($38B0,$240)`; self-deletes when `character_id == 2`; range `word_63B94` = X `−$10…+0`, Y `−$240…+0` |
-| `$B3` | `Obj_StartNewLevel` | 0 | 1 | 0 | `($3FE0,$E0)`, subtype `$2D` → `$1601` (decode reads a word at `subtype`; SST `$2D` must be 0). No character gate in the object; `SaveGame` only when `Player_mode == 3` and zone 9 |
+| `$B3` | `Obj_StartNewLevel` | 0 | 1 | 0 | `S3kStartNewLevelObjectInstance`; `($3FE0,$E0)`, subtype `$2D` → `$1601` (decode reads a word at `subtype`; SST `$2D` must be 0). No character gate in the object; `SaveGame` only when `Player_mode == 3` and zone 9 |
 
 Not placed in any LRZ act although LRZ-named in the pointer table: `$2E Obj_LRZSolidRock`.
 

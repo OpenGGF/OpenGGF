@@ -236,6 +236,20 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 
+- **S3K Fireworm:** killing a Lava Reef fireworm now retires its whole body. Its segments stop
+  moving and its flames go out, instead of the flames staying behind as invisible fire that
+  burned the player seconds later.
+
+- **S3K Lava Reef domes:** the background now locks onto the dome as the player crosses each
+  of the three dome thresholds, rises and falls with the lava surface inside it, and stays on
+  the dome view for the eight frames the plane takes to redraw on the way out. Knuckles gets
+  his own background chunk in act 1.
+
+- **Rewinding dynamically created children:** restoring a saved moment now keeps the
+  children a live object created while it ran. The camera-limit easing objects a Lava
+  Reef rock crusher spawns, and the Fireworm's body segments, used to disappear on
+  restore, and a restored segment's flame stayed behind while the segment swam on.
+
 - **AIZ1 rewind:** capture the hollow-tree reveal counter and intro Super Sonic
   palette timer/frame, preserving tree reveal children and palette cadence after
   restoring gameplay. Add a native route matrix with independently reported intro,
@@ -359,6 +373,90 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Seamless act handoffs retain fixed object owners without duplicates, avoiding
   a rewind-capture crash after the MHZ signpost.
   Complete routes, finales, and continuous replay chains remain gates.
+- **S3K Lava Reef:** Lava Reef Acts 1 and 2 now scroll their own layered background
+  instead of the generic quarter-speed fallback, Act 2 animates its own lava tiles
+  rather than Act 1's, and the invisible lava blocks that carry every lava-floor hit
+  in the zone now hurt, with a fire shield making the player immune to them.
+  Both acts also run Lava Reef's own scroll-driven lava animation, two background
+  channels whose frames rotate with the parallax instead of a fixed cycle, and the
+  zone's scattered background rocks - hardware sprites the ROM draws itself, with no
+  object behind them - are drawn again, behind the players and in front of the
+  terrain layer, with a wider viewport simply showing more of them.
+  Act 1's dash elevators work: charge a spindash on one and it carries you along
+  its shaft, in whichever direction you are facing, and stops at the end.
+  The zone's doors and switches work too. Walking into the side of one of the small
+  horizontal buttons opens the sliding door that shares its number, and the door stays
+  open; the huge door in Act 1 grinds down out of the way, shaking the screen, when
+  you approach it from the right; and the shooting triggers fire their slow diagonal
+  shots until you roll into one, which bounces you back, blows the trigger up and
+  opens its door.
+  The small horizontal buttons are solid all the way round, so you can drop onto the top of
+  one and stand there rather than falling straight through it.
+  The act 1 corkscrew works: run into it with enough speed and it takes hold of you,
+  sweeps you around the turn and spits you back out the way you came. Being caught by one
+  now straightens you out of a roll the way the ROM does, so you leave the turn standing.
+  Act 1's sinking rocks are solid again: stand on one and it sinks smoothly under your
+  weight, rising back once you step off. Jumping off one while it is still sinking now leaves
+  exactly where the ROM leaves you: the pixel the block sinks on that frame is no longer added
+  to the jump.
+  Act 2's orbiting spike balls turn: fifty-two of them, a small one and a large one, each
+  sweeping back and forth past its anchor on its own axis and its own phase. Each is only
+  dangerous, and only drawn in front of the scenery, for the half of its turn that brings it
+  towards you; on the other half it passes behind and cannot hurt you.
+  The wall rides work in both acts: run into one with any speed at all and it takes hold,
+  sweeps you up over the curve and drops you back on the floor heading the other way.
+  The act 1 falling spikes drop: walk directly underneath one and it lets go, hurting anything
+  it lands on, and once it hits the floor it stops hurting and stays as a solid block.
+  The act 1 fireball launchers spit their fireballs again, each on its own period, and the
+  shooting triggers' shots now travel at the speed the ROM gives them instead of creeping.
+  The act 1 lava falls pour: each one runs for part of every four-second cycle, dropping a
+  blob every sixth frame, and every second blob carries the falling-lava sound.
+  The swinging spike balls sweep their circles in both acts, chain and all, with act 2 using
+  its own artwork.
+  Act 1's smashing spike platforms work: each one accelerates down its own shaft, slams with a
+  crash and a squash, holds for half a second and grinds back up a pixel at a time, hurting
+  anyone it lands on and shrinking its solid box as the art compresses.
+  The act 1 spike balls are in too: the big ones grind back and forth along the floor throwing
+  rock chips, and the one on the swinging arm is only dangerous on half its sweep until a player
+  approaches it from the left, when it breaks off the arm and rolls away downhill.
+  The zone's mist-breathing badniks are in as well: each one turns to face you and breathes a
+  cloud that drifts, settles on the ground and, if it catches you, clings on - dragging your speed
+  down an eighth a frame and taking a ring a second until you shake it off by rocking left and
+  right, or blow it apart with a spindash. The badnik itself can now be destroyed: rolling or
+  jumping into its body bursts it, scatters its cloud and rebounds you, where before a rolling
+  player fell straight through it.
+  The zone's fire worms are in, 29 of them across the two acts: swim within a few steps of one and
+  a head rises out of the lava, sets off toward you a pixel a frame and grows a four-segment tail
+  behind it, each segment falling in eleven frames after the one in front and carrying its own
+  flame. The chain swims up and down for eight strokes, then the head turns and the whole worm
+  works its way back the other way. Only the head can be hit; the body and the flames only hurt.
+  Lava Reef's bomb badniks are in, 66 of them across the two acts: each one is a solid block you
+  can stand on until a player comes within a few steps, when its fuse lights, flickers faster and
+  faster, and it blows itself apart into four fragments that arc away and fall.
+  Three places in act 1 now lock the background to the dome the way the ROM does: cross the line
+  inside one of the three regions and the background stops following the camera, a lava surface
+  rises and falls under you across the width of the room, and crossing back the other way releases
+  it again. Standing on that lava burns, and a fire shield saves the lead character only -- the
+  ROM checks the shield for Player 1 and not for Player 2, and the engine keeps that.
+  Act 1's two rock crushers work end to end: reach one and the camera locks to its own limits, the
+  crusher rumbles overhead with the screen shaking for three seconds, then the rock underneath is
+  cut away, collapsing slabs drop into the gap, the crusher falls through and explodes, and the
+  camera eases back out to the act's own bounds.
+  The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
+  scroll; Hidden Palace and the Super Emerald sanctuary keep theirs. Lava Reef's boss act now
+  has its own heat-shimmer deformation, the seven-stage forced-camera descent, and the native
+  star-post camera checkpoint instead of the generic fallback presentation. Its lava colors now
+  also cycle from the boss act's ROM tables; the Death Egg flash now pauses that cycle, fades to
+  white, enables the post-flash accent, creates the collapsing bridge and releases the route on
+  the ROM timers. Its placed entry
+  controller and all seven act-three platforms now use rewindable production objects; the
+  rising/falling and static-solid variants no longer disappear as placeholders.
+  Reaching the exact act-three arena gate now locks the camera and starts the ROM's fourteen-hit
+  alternating magma-jump boss over its sloped lava surface; defeat opens the route into Hidden
+  Palace instead of leaving the player in an empty arena.
+  Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
+  opens with a `(0,0)` record that the ring manager always steps over, and the engine
+  was spawning it as a real ring.
 
 ## ROM images
 
@@ -398,6 +496,64 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   `bk2-input-authoring` document the workflow. Native BizHawk reference capture
   uses a shared host with explicit zone plans, input hashes and failed-export
   detection; existing FBZ commands remain compatible.
+- **S3K Lava Reef:** the Act 1 miniboss arrives as an object -- the hovering drill with its
+  climb, swing, drop, slam and fall-back cycle, its player tracking, and both of its articulated
+  arms with their firing hands and shots. Every Act 1 placement in the zone now builds a real
+  class. The two arms unroll link by link from the bottom of the screen rather than snapping out
+  whole, each hand rides the end of its own arm so its shots leave the arm and not the drill, and
+  the drill's slam is solid to stand on, carries the only hit box in the cycle, and takes damage:
+  six hits, each followed by the palette flicker the shipped ROM actually produces, which is not
+  the white flash its own data was written for -- and that flicker now lands on the palette line
+  the ROM names rather than the one after it, so it tints the boss instead of whatever else shares
+  the screen.
+  The hands take damage too, four hits each, with their own hit ring, their own invulnerability
+  window and their own blink; killing one peels its whole arm away link by link from the hand end
+  first, each link bursting as it goes, instead of quietly shortening the drill's hover. Killing
+  the drill itself now ends the fight: it fades out, breaks into eleven pieces on their own arcs,
+  and hands over to the end-of-act sign and the results screen the way every other Sonic 3 &
+  Knuckles miniboss does. The end-of-act sign the defeat hands over to moves with the act
+  change as well; before, a real defeat stopped the change dead rather than carrying into
+  Act 2.
+  Beating the drill now changes the act. Once the tally is over, Lava Reef loads Act 2's art
+  behind the results screen and then, on a single frame, swaps the act underneath the player:
+  the level, its solids and its object list are Act 2's, and the player, the camera and the
+  camera's limits all shift with them, so play carries straight on into the second act instead of
+  leaving you standing in the first. The switches and animated-tile counters the first act left
+  behind are cleared with it.
+  The fight now also starts the way the ROM starts it: the drill does nothing at all until the
+  player has carried the camera into the arena, and then the music fades, the miniboss theme
+  comes in two seconds later, and the camera locks onto the single arena screen the ROM pins it
+  to for the whole fight. Before this the drill built its arms and began its cycle the moment it
+  loaded, with the camera still free to walk out of the arena. The two camera releases that follow
+  the act change are still to come.
+  Act 2 is now playable straight out of the change: the arena's right-hand camera limit, which the
+  act change carried across with everything else, is replaced by Act 2's own once the results are
+  over, so the player walks on instead of standing against an invisible wall where the arena used
+  to end.
+  The fight now recolours the zone the way the ROM does: the drill's arrival and its first
+  attack each load their own palette, those colours carry through the act change -- the ROM's act
+  change loads no palette at all -- and Act 2 only takes its own blue crystal colours once the
+  player has walked far enough into it, where the ROM swaps them. Before this, Act 2 turned blue
+  the instant the act changed.
+  Act 2's solid moving platforms are in too, another 52: blocks you ride that drift along one axis
+  and back, some keeping time with the zone's shared oscillation and some easing out of each end
+  under their own acceleration, and either kind can be mirrored to start from the other side.
+  Act 2's flame throwers are in, 52 of them: each one is a solid block that fires a jet of flame
+  for two seconds, pauses for a length its own placement chooses, and fires again, sweeping the jet
+  through a narrow fan as it goes. They come in the wall-mounted and floor-mounted kinds, either
+  can be mirrored, and the flames themselves hurt, drift without slowing, and burn out.
+
+- **Gameplay capture tool:** a capture can now declare the ring count its route carried in
+  (`--rings`). A boss filmed from a positioned start otherwise begins on no rings, where the
+  first touch is fatal and the fight cannot be filmed at all.
+
+- **Plane opacity probe:** a development tool answers, from the decoded ROM layout
+  alone, whether the plane behind another can show through at a coordinate. Where a
+  before/after frame capture cannot separate "wrong pixels drawn" from "no pixels
+  reachable" -- both look byte-identical -- this separates them. It settled why Lava
+  Reef Act 1's dome background change produced no visible difference: that act's
+  foreground is opaque across the whole dome. No gameplay or rendering behavior changes.
+
 - **Existing feature foundations:** retain editor, racing, prepared-loading,
   audio-core, and mod regression coverage while stock campaigns mature.
 

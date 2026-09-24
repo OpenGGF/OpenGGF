@@ -126,6 +126,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kMHZEvents mhzEvents;
     private com.openggf.game.sonic3k.events.Sonic3kSOZEvents sozEvents;
     private com.openggf.game.sonic3k.events.Sonic3kHPZEvents hpzEvents;
+    private com.openggf.game.sonic3k.events.Sonic3kLRZEvents lrzEvents;
     private final AizPreparedTransitionArtState aizPreparedTransitionArt =
             new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -311,6 +312,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             hpzEvents = null;
         }
 
+        // Lava Reef owns zone 9 acts 1-2 and the $1600 boss act, which shares zone $16 with
+        // Hidden Palace ($1601). Both branches read the same Events_* block in ROM RAM.
+        if (isLavaReef(zone, act)) {
+            lrzEvents = new com.openggf.game.sonic3k.events.Sonic3kLRZEvents();
+            lrzEvents.init(act);
+        } else {
+            lrzEvents = null;
+        }
+
         // Install typed zone runtime state into the registry.
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
         // getCurrent() which can destroy the runtime during level loading.
@@ -454,6 +464,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 || (iczEvents != null && iczEvents.shouldEnterIntroSidekickDormantMarker(sidekick));
     }
 
+    /**
+     * The three acts that run the Lava Reef event handlers: zone 9 acts 1-2 ({@code $900},
+     * {@code $901}) and the boss act {@code $1600}, which is act 0 of the zone {@code $16} slot it
+     * shares with Hidden Palace ({@code $1601}).
+     */
+    static boolean isLavaReef(int zone, int act) {
+        return zone == Sonic3kZoneIds.ZONE_LRZ
+                || (zone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && act == 0);
+    }
+
     private void installZoneRuntimeState(int zone, int act) {
         if (!GameServices.hasRuntime()) {
             LOG.fine("Skipping S3K zone runtime registration because no active runtime is installed");
@@ -493,6 +513,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)
                 || Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
             registry.install(new HpzZoneRuntimeState(zone, act, playerCharacter));
+        } else if (isLavaReef(zone, act)) {
+            registry.install(new com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState(
+                    zone, act, playerCharacter));
         } else {
             registry.clear();
         }
@@ -604,6 +627,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 applyHpzsScreenEvent(camera(), hpzState.appliedScreenShakeOffset());
             }
         }
+        if (lrzEvents != null && isLavaReef(currentZone, currentAct)) {
+            // LRZ1_ScreenEvent / LRZ2_ScreenEvent add Screen_shake_offset to Camera_Y_pos_copy
+            // and every LRZ background event tail-calls ShakeScreen_Setup for the next frame.
+            lrzEvents.advanceScreenShakeAndApplyToCameraCopy(frameCounter,
+                    mainPlayer != null && mainPlayer.getDead());
+        }
 
         // ROM: ScreenEvents dispatches to both FG and BG handlers each frame.
         // Boss_flag gates FG events during boss fights.
@@ -638,6 +667,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (hpzEvents != null && currentZone == Sonic3kZoneIds.ZONE_HPZ) {
             hpzEvents.update(currentAct, frameCounter);
         }
+        if (lrzEvents != null && isLavaReef(currentZone, currentAct)) {
+            lrzEvents.update(currentAct, frameCounter);
+        }
         releasePendingMgzPostTransition();
         syncSidekickBoundsToCamera();
     }
@@ -667,6 +699,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             // the camera words that loc_54CB0/loc_5560C just rewrote. The engine's
             // CPU controller mirrors those words, so publish the same-frame repeat
             // bounds before the sidekick slot executes (sonic3k.asm:28407-28452).
+            syncSidekickBoundsToCamera();
+        }
+        if (lrzEvents != null && isLavaReef(currentZone, currentAct)) {
+            lrzEvents.updateSpecialEvents(currentAct);
             syncSidekickBoundsToCamera();
         }
     }
@@ -1648,10 +1684,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             case Sonic3kZoneIds.ZONE_SOZ -> state instanceof SozZoneRuntimeState;
             // Reinstalling would zero the Doomsday words and allocate a second flight controller.
             case Sonic3kZoneIds.ZONE_DDZ -> state instanceof com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
+            case Sonic3kZoneIds.ZONE_LRZ ->
+                    state instanceof com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
+            // Zone $16 is shared: act 0 is the Lava Reef boss act and act 1 Hidden Palace.
             case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
-                    state instanceof HpzZoneRuntimeState hpzState
-                            && hpzState.zoneIndex() == currentZone
-                            && hpzState.actIndex() == currentAct;
+                    currentZone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && currentAct == 0
+                            ? state instanceof com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState
+                            : state instanceof HpzZoneRuntimeState hpzState
+                                    && hpzState.zoneIndex() == currentZone
+                                    && hpzState.actIndex() == currentAct;
             default -> false;
         };
     }
@@ -1787,6 +1828,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (lbzEvents != null) {
             lbzEvents.setEventsFg5(true);
+        }
+        if (lrzEvents != null) {
+            lrzEvents.setEventsFg5(true);
         }
         // Other zones' event handlers will be added here as implemented.
     }
@@ -2300,6 +2344,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for HCZ. */
     public Sonic3kHCZEvents getHczEventsForTest()  { return hczEvents; }
     public Sonic3kFBZEvents getFbzEventsForTest()  { return fbzEvents; }
+
+    public com.openggf.game.sonic3k.events.Sonic3kLRZEvents getLrzEventsForTest() { return lrzEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for CNZ. */
     public Sonic3kCNZEvents getCnzEventsForTest()  { return cnzEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for MGZ. */

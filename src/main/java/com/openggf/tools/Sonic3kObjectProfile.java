@@ -115,6 +115,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x6A, // InvisibleHurtBlockHorizontal
             0x6B, // InvisibleHurtBlockVertical
             0x6C, // TensionBridge
+            0x6E, // HCZWaterDrop (S3KL) / InvisibleLavaBlock (SKL)
             0x78, // FBZDEZPlayerLauncher
             0x80, // HiddenMonitor
             0x82, // CutsceneKnuckles
@@ -299,6 +300,38 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x93 // MHZEndBoss
     );
 
+    // LRZ-only implementations from SKL ids gated on ZONE_LRZ.
+    private static final Set<Integer> LRZ_ONLY_IDS = Set.of(
+            0x15, // LRZCorkscrew
+            0x16, // LRZWallRide
+            0x18, // LRZFallingSpike
+            0x1B, // LRZFireballLauncher
+            0x1F, // LRZLavaFall
+            0x20, // LRZSwingingSpikeBall
+            0x17, // LRZSinkingRock
+            0x19, // LRZDoor
+            0x1A, // LRZBigDoor
+            0x1C, // LRZButtonHorizontal
+            0x1D, // LRZShootingTrigger
+            0x1E, // LRZDashElevator
+            0x21, // LRZSmashingSpikePlatform
+            0x22, // LRZSpikeBall
+            0x25, // LRZChainedPlatforms
+            0x29, // LRZFlameThrower
+            0x2B, // LRZOrbitingSpikeBallHorizontal
+            0x2C, // LRZOrbitingSpikeBallVertical
+            0x2D, // LRZSolidMovingPlatforms
+            0x32, // LRZTurbineSprites
+            0x37, // LRZSpikeBallLauncher
+            0x99, // Fireworm
+            0x9A, // Iwamodoki
+            0x9B, // Toxomister
+            0x9C, // LRZRockCrusher
+            0x9D, // LRZMiniboss
+            0xAE, // LRZ2CutsceneKnuckles
+            0xB3 // StartNewLevel
+    );
+
     // DDZ-only implementations from SKL ids gated on ZONE_DDZ.
     private static final Set<Integer> DDZ_ONLY_IDS = Set.of(
             0xB6, // DDZEndBoss
@@ -316,8 +349,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             if (zoneId == Sonic3kZoneIds.ZONE_MHZ) {
                 return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS);
             }
-            return zoneId == Sonic3kZoneIds.ZONE_DDZ
-                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS)
+            if (zoneId == Sonic3kZoneIds.ZONE_DDZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS);
+            }
+            return zoneId == Sonic3kZoneIds.ZONE_LRZ
+                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, LRZ_ONLY_IDS)
                     : union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS);
         }
         if (zoneId == Sonic3kZoneIds.ZONE_CNZ) {

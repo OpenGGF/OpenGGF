@@ -14,6 +14,8 @@ import com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.FirewormBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.IwamodokiBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.JawzBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance;
@@ -26,6 +28,7 @@ import com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.PoindexterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.ToxomisterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -593,6 +596,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.HCZ_WATER_DROP,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SK Set 2 names $6E Obj_InvisibleLavaBlock.
+                        return new Sonic3kInvisibleLavaBlockObjectInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }
@@ -1302,6 +1309,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (subtype == 0x20) {
                         return new CutsceneKnucklesMhz2Instance(spawn);
                     }
+                    if (subtype == 0x24) {
+                        return new CutsceneKnucklesLrz2Instance(spawn);
+                    }
                     if (subtype == 0x28) {
                         return new CutsceneKnucklesHpzInstance(spawn);
                     }
@@ -1452,6 +1462,152 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
                 S3kZoneSet.S3KL, Sonic3kZoneIds.ZONE_FBZ,
                 (spawn, registry) -> new FbzMagneticPendulumObjectInstance(spawn));
+        // Lava Reef's SKL object set reuses ids the S3KL set spends on Launch Base.
+        // Id $1E is Obj_LRZDashElevator there (sonic3k.asm:88381).
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_SPIN_LAUNCHER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzDashElevatorObjectInstance(spawn));
+        // Id $19 is Obj_LRZDoor in the SKL set (sonic3k.asm:88015); $1A, $1C and $1D are
+        // Obj_LRZBigDoor, Obj_LRZButtonHorizontal and Obj_LRZShootingTrigger, which the S3KL set
+        // does not spend at all.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_CUP_ELEVATOR_POLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzDoorObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.LRZ_BIG_DOOR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzBigDoorObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.LRZ_BUTTON_HORIZONTAL,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzButtonHorizontalObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.LRZ_SHOOTING_TRIGGER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzShootingTriggerObjectInstance(spawn));
+        // Id $15 is Obj_LRZCorkscrew in the SKL set (sonic3k.asm:87494); the S3KL set spends it on
+        // Obj_LBZPlayerLauncher.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_PLAYER_LAUNCHER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzCorkscrewObjectInstance(spawn));
+        // Id $17 is Obj_LRZSinkingRock in the SKL set (sonic3k.asm:87898); the S3KL set spends it
+        // on Obj_LBZRideGrapple.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_RIDE_GRAPPLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzSinkingRockObjectInstance(spawn));
+        // Id $16 is Obj_LRZWallRide in the SKL set (sonic3k.asm:87693); the S3KL set spends it on
+        // Obj_LBZFlameThrower.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_FLAME_THROWER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzWallRideObjectInstance(spawn));
+        // Id $18 is Obj_LRZFallingSpike in the SKL set (sonic3k.asm:87946); the S3KL set spends it
+        // on Obj_LBZCupElevator.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_CUP_ELEVATOR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzFallingSpikeObjectInstance(spawn));
+        // Id $1B is Obj_LRZFireballLauncher in the SKL set (sonic3k.asm:88151); the S3KL set
+        // spends it on Obj_LBZPipePlug.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_PIPE_PLUG,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzFireballLauncherObjectInstance(spawn));
+        // Id $1F is Obj_LRZLavaFall in the SKL set (sonic3k.asm:88770); the S3KL set spends it on
+        // Obj_LBZLoweringGrapple.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_LOWERING_GRAPPLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzLavaFallObjectInstance(spawn));
+        // Id $20 is Obj_LRZSwingingSpikeBall in the SKL set (sonic3k.asm:88652); the S3KL set
+        // spends it on the MGZ/LBZ smashing pillar.
+        registerStockRomZoneBound(Sonic3kObjectIds.MGZLBZ_SMASHING_PILLAR_ALT,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzSwingingSpikeBallObjectInstance(spawn));
+        // Id $21 is Obj_LRZSmashingSpikePlatform in the SKL set (sonic3k.asm:88538); the S3KL
+        // set spends it on Obj_LBZGateLaser.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_GATE_LASER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzSmashingSpikePlatformObjectInstance(spawn));
+        // Id $99 is Obj_Fireworm in the SKL set (sonic3k.asm:196192); the S3KL set spends it on
+        // Obj_HCZMiniboss, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.HCZ_MINIBOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new FirewormBadnikInstance(spawn));
+        // Id $9A is Obj_Iwamodoki in the SKL set (sonic3k.asm:188040); the S3KL set spends it on
+        // Obj_HCZEndBoss, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.HCZ_END_BOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new IwamodokiBadnikInstance(spawn));
+        // Id $9B is Obj_Toxomister in the SKL set (sonic3k.asm, ROM $8FD48); the S3KL set spends
+        // it on Obj_Bubbles, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.BUBBLES_BADNIK,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new ToxomisterBadnikInstance(spawn));
+        // Id $9C is Obj_LRZRockCrusher in the SKL set (sonic3k.asm:196988); the S3KL set spends
+        // it on Obj_Spiker, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.SPIKER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzRockCrusherObjectInstance(spawn));
+        // Id $9D is Obj_LRZMiniboss in the SKL set (sonic3k.asm:160001); the S3KL set spends it
+        // on Obj_Mantis, which is the name the id constant carries. Its one placement is in
+        // act 1, far past the current cold-route frontier.
+        registerStockRomZoneBound(Sonic3kObjectIds.MANTIS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new com.openggf.game.sonic3k.objects.bosses
+                        .LrzMinibossInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.TUNNELBOT,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ,
+                (spawn, registry) -> new Lrz3AutoscrollControllerObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.PENGUINATOR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ,
+                (spawn, registry) -> new Lrz3PlatformObjectInstance(spawn));
+        // Ids $2B and $2C are Obj_LRZOrbitingSpikeBallHorizontal and
+        // Obj_LRZOrbitingSpikeBallVertical in the SKL set (sonic3k.asm:89077, :89149); the S3KL
+        // set spends them on Obj_AIZFlippingBridge and Obj_AIZCollapsingLogBridge, which are the
+        // names the id constants carry. Both place only in Lava Reef act 2.
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_FLIPPING_BRIDGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzOrbitingSpikeBallObjectInstance(
+                        spawn, LrzOrbitingSpikeBallObjectInstance.Axis.HORIZONTAL));
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_COLLAPSING_LOG_BRIDGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzOrbitingSpikeBallObjectInstance(
+                        spawn, LrzOrbitingSpikeBallObjectInstance.Axis.VERTICAL));
+        // Id $29 is Obj_LRZFlameThrower in the SKL set (sonic3k.asm:89227); the S3KL set spends
+        // it on Obj_AIZDisappearingFloor, which is the name the id constant carries. Its own
+        // subtype bit 7 picks the variant, exactly as bpl.s loc_43DC4 does (:89235).
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_DISAPPEARING_FLOOR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzFlameThrowerObjectInstance(spawn));
+        // Id $2D is Obj_LRZSolidMovingPlatforms in the SKL set (sonic3k.asm:51012); the S3KL set
+        // spends it on Obj_AIZFallingLog, which is the name the id constant carries.
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_FALLING_LOG,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzSolidMovingPlatformObjectInstance(spawn));
+        // Id $37 is Obj_LRZSpikeBallLauncher in the SKL set (sonic3k.asm:89848); the S3KL set
+        // spends it on Obj_HCZWaterRush, which is the name the id constant carries. Its nine
+        // placements are all in act 2.
+        registerStockRomZoneBound(Sonic3kObjectIds.HCZ_WATER_RUSH,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzSpikeBallLauncherObjectInstance(spawn));
+        // Id $25 is Obj_LRZChainedPlatforms in the SKL set. LRZ2's three high-bit parent
+        // records expand off_4A914 into independently solid path followers.
+        registerStockRomZoneBound(Sonic3kObjectIds.LRZ_CHAINED_PLATFORMS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzChainedPlatformObjectInstance(spawn));
+        // Id $32 is Obj_LRZTurbineSprites in the SKL set. Subtype zero is the capture turbine;
+        // non-zero subtypes are the thin $A0 touch-response animation (sonic3k.asm:89652).
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_DRAW_BRIDGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzTurbineSpritesObjectInstance(spawn));
+        // Id $AE is Obj_LRZ2CutsceneKnuckles in the SKL set (sonic3k.asm:131172).
+        registerStockRomZoneBound(Sonic3kObjectIds.STAR_POINTER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new Lrz2CutsceneControllerObjectInstance(spawn));
+        // Id $B3 is Obj_StartNewLevel in the SKL set. LRZ2 places subtype $2D at ($3FE0,$E0),
+        // whose two-byte subtype transform requests playable Hidden Palace ($1601).
+        registerStockRomZoneBound(Sonic3kObjectIds.ICZ_SEGMENT_COLUMN,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new S3kStartNewLevelObjectInstance(spawn));
+        // Id $22 is Obj_LRZSpikeBall in the SKL set (sonic3k.asm:88838); the S3KL set spends it
+        // on Obj_LBZAlarm.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_ALARM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzSpikeBallObjectInstance(spawn));
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZMasterEmeraldObjectInstance(spawn));
