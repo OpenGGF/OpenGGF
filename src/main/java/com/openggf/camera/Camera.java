@@ -1159,7 +1159,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * @return true when the sprite's Y coordinate changed.
 	 */
 	public boolean applyScreenYWrapValue(AbstractPlayableSprite sprite) {
-		if (!verticalWrapEnabled || sprite == null) {
+		// S2 Obj01_Control and S3K loc_10C26 gate the word mask on the
+		// current Camera_min_Y_pos == -$100, not merely the stage's wrap range.
+		// Arena bounds can suspend wrapping without discarding that range.
+		// Masking while suspended corrupts offscreen cutscene sentinels such
+		// as SSZ's $7FFF and changes when its launch column starts crumbling.
+		if (!verticalWrapEnabled || minY != (short) -0x100 || sprite == null) {
 			return false;
 		}
 		// This is separate from the render visibility wrap margin: S2 control

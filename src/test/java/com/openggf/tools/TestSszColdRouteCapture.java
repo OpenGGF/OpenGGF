@@ -62,6 +62,11 @@ class TestSszColdRouteCapture {
                         com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class);
                 sawMecha |= !mecha.isEmpty();
                 sawMechaDefeat |= mecha.stream().anyMatch(b -> b.getCollisionProperty() == 0);
+                if (frame == 18600) {
+                    assertFalse(session.player().getRenderHFlip(),
+                            "loc_58016 clears render_flags bits 0/1 before the fixed spiral mappings");
+                    assertFalse(session.player().getRenderVFlip());
+                }
                 if (frame == 11050) {
                     var state = (com.openggf.game.sonic3k.runtime.SszZoneRuntimeState) GameServices.zoneRuntimeState();
                     assertTrue((state.eventsBgByte(0) & 0x80) != 0, "native GHZ defeat flag releases the pad");

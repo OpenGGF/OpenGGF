@@ -107,6 +107,12 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
         if (sprite.getYSpeed() >= 0) {
             sprite.setForcedInputMask(0);
             NativePositionOps.writeYPosPreserveSubpixel(sprite, 0x7FFF);
+            // loc_58016: ANDI.B #$FC,render_flags; MOVE.B #3,object_control.
+            // The spiral table owns its orientation, independently of status.facing.
+            // Bit 1 also stops Animate_* from putting the old facing flip back while
+            // the player waits offscreen for the first spiral mapping.
+            sprite.setRenderFlips(false, false);
+            sprite.setObjectMappingFrameControl(true);
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
             sprite.setAnimationId(Sonic3kAnimationIds.WALK);
         } else {

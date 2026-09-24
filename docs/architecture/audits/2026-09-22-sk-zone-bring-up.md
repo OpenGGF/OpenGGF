@@ -26,7 +26,7 @@ its original unimplemented counts must not be read as current production status.
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; finish matrix reconciliation, checkpoint geometry and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
-| SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails reaches both replica defeats and the upper platform with16full-registry replay spots. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and lifecycle isolation remain open. |
+| SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
 | DEZ | Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold main-act traversal and remaining Hyper/HUD/native presentation still need validation. |
 
@@ -3813,3 +3813,39 @@ logic is unchanged. DEZ cold traversal is the next route frontier.
 The focused rewind-field/coverage/architecture guard selection also passed
 78 tests, zero failures/errors/skips (`-Pguards`,
 `TestRewindFieldDispositionGuard,TestRewindCoverageGuard,TestArchitecturalSourceGuard,TestRewindArchitectureGuard`).
+
+
+### SSZ exit presentation correction (2026-09-24)
+
+The user identified a mirrored Sonic spiral and incorrect-looking exit overlaps in
+`campaign-20260924-cold-complete-320`. Native BizHawk 2.11 observations from
+`s3k-sonic-tails-complete-emeralds.bk2` frames467450–468950, plus frame467920
+VRAM, distinguish two omissions rather than justify changing ramp priorities:
+
+- `loc_58016` clears render flag bits0/1 and sets object control3. The engine
+  retained Sonic's facing flip while Tails happened to be unflipped. The launch
+  controller now clears both flips and gives its mappings animation ownership.
+- S2 `Obj01_Control` and S3K `loc_10C26` apply the player Y mask only when the
+  current camera minimum is `-$100`. The shared engine path checked only the
+  level's configured wrap range. It changed SSZ's parked `$7FFF` to `$FFF`,
+  defeating the crumble controller's `y >= $4000` fallback and delaying its first
+  clear by about64frames. Those late writes erased already-visible column rows.
+  The current-bound guard preserves the configured range for later reactivation.
+
+The ramp sprite buckets and art priority bits agree with `loc_581F2`,
+`loc_58234`, `loc_582AC`, `loc_58360`; changing them was rejected. At the same
+player pose(6723,1080), old engine frame18581 had24 cleared plane rows versus
+native frame467920's10. Corrected footage restores the column and unmirrored
+Sonic. This is a pose-based visual comparison, not strict trace parity: camera Y
+is943 versus945, and the routes/timing/HUD differ.
+
+Both regression tests failed before their corresponding corrections. Queued
+Java21 verification on93ae8c010 plus this patch used `-Dmse=off`, native GL,
+absolute S3K ROM and `-Dtest=TestPlayableSpriteMovement,TestSszColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+239passed,0failures/errors/skips. This includes the complete cold route,37
+rewind/replay spots and actual DEZ load. Combined campaign delivery remains owed.
+
+Replacement footage is
+`$VIDEO_ROOT/ssz-bring-up/campaign-20260924-exit-corrected-320/capture.mp4`:
+19,732 state rows, zero deaths, frames18000–19731 filmed, complete MP4 decode.
+Native evidence is under `$VIDEO_ROOT/ssz-bring-up/native-exit-20260924`.

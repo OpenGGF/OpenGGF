@@ -1022,6 +1022,26 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void arenaBoundDisablesControlWrapWithoutLosingTheLevelWrapRange() throws Exception {
+                for (var rules : new GameRules[] {GameRules.SONIC_2, GameRules.SONIC_3K}) {
+                        setGameRulesForTest(rules);
+                        Camera camera = GameServices.camera();
+                        camera.setVerticalWrapEnabled(true, 0x1000);
+                        camera.setMinY((short) 0x5C0);
+                        mockSprite.setCentreY((short) 0x7FFF);
+                        mockSprite.setSubpixelRaw(0, 0xD000);
+                        assertFalse(camera.applyScreenYWrapValue(mockSprite),
+                                        "Obj01_Control / loc_10C26 require Camera_min_Y == -$100");
+                        assertEquals((short) 0x7FFF, mockSprite.getCentreY(),
+                                        "SSZ launch's offscreen sentinel remains visible to its crumble controller");
+                        assertEquals(0xD000, mockSprite.getYSubpixelRaw());
+                        camera.setMinY((short) -0x100);
+                        assertTrue(camera.applyScreenYWrapValue(mockSprite));
+                        assertEquals((short) 0x0FFF, mockSprite.getCentreY());
+                }
+        }
+
+        @Test
         public void s3kVerticalWrapPreservesYSubpixelLikeRomWordMask() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
                 setGameRulesForTest(GameRules.SONIC_3K);

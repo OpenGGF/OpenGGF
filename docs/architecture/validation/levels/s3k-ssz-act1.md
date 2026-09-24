@@ -567,3 +567,22 @@ pass and therefore takes the lower path. The cold route remains the authority.
 The focused rewind-field/coverage/architecture guard selection also passed
 78 tests, zero failures/errors/skips (`-Pguards`,
 `TestRewindFieldDispositionGuard,TestRewindCoverageGuard,TestArchitecturalSourceGuard,TestRewindArchitectureGuard`).
+
+
+### Exit presentation correction (2026-09-24)
+
+The cold completion's Sonic spiral retained his facing flip. `loc_58016` now
+clears both render flips and suppresses ordinary animation until the script
+releases its mappings. `TestSszColdRouteCapture` asserts the spiral's flips.
+The column overlap defect was a shared player-wrap omission: `loc_10C26` checks
+current camera minimum `-$100` before masking Y. Preserving the parked `$7FFF`
+allows the crumble owner's existing fallback to run at the intended time.
+`TestPlayableSpriteMovement` covers suspended and re-enabled wrapping for S2/S3K.
+
+The focused six-class selection passed239tests without skips, including the
+complete320 Sonic+Tails route,37 registered replay spots and DEZ timeline reset.
+Fresh native emulator frame467920 corroborates the unmirrored pose and intact
+column; this is visual comparison, not frame-perfect parity. Replacement clip:
+`ssz-bring-up/campaign-20260924-exit-corrected-320/capture.mp4`. See the campaign
+audit for references, rejected priority changes, exact command and limitations.
+Widescreen/other-character exit breadth remains an inherited matrix obligation.

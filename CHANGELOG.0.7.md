@@ -94,7 +94,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   points, and the results handover survives rewind after expired dash trails are removed.
   Results now release the collapsing arena, forced jump and spiral ascent past the rising
   Death Egg, including the crumbling column and falling ramps, before loading Death Egg
-  Act 1. The sequence and its retained background survive rewind; Mecha's arena stays over
+  Act 1. The spiral clears inherited facing flips, and arena bounds suspend vertical
+  wrapping so the column crumbles at the ROM’s intended point. The sequence and its retained background survive rewind; Mecha's arena stays over
   its floor at wider viewports.
 
   Act 2 now allocates its encounter camera oscillator after Knuckles’ arrival and preserves
