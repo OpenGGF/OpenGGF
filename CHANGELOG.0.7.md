@@ -10,7 +10,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **S3K Sky Sanctuary:** Both Act 1 replica bosses now draw their ROM-backed
   Eggmobile bodies alongside Mecha Sonic’s head, and keep the widescreen camera
-  centred on their native arenas through knockback.
+  centred on their native arenas through knockback. Spawn-derived constants and
+  restored carrier links declare their rewind policies without coverage exceptions.
   Sky Sanctuary act 1 now plays its teleporter arrival instead of
   dropping the player in at the level-start position. The screen init forces the arrival
   camera and bounds, the controller beams Player 1 up the sanctuary column and hands control

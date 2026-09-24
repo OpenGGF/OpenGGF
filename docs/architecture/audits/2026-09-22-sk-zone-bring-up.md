@@ -3522,3 +3522,26 @@ Earlier campaign-20260924-ghz-unlock-{400,528,800} attempts replayed the320cold
 route, diverged in earlier traversal and never reached the boss. They are failed
 route attempts, NOT release evidence; wide cold-route traversal remains open.
 Read-only independent review of shared mask/SSZ adapter found no actionable issues.
+
+### Restart recovery and rewind coverage closure — 2026-09-24
+
+User approved the defeat/release clips and authorized delivery after checks.
+Campaign `454184d52` and shared mask `55e8ad12d` were reconciled at `679f7cb87`
+with develop `40d55783c`. The PC restart stopped combined run
+`20260924T083621Z-e65ae7e2`: 6155 reported tests, one failure, no errors, two
+opt-in benchmark skips (SMPS repeated playback and checkpoint cost); guards
+had not run. This is incomplete validation. The failure is
+`TestRemainingRewindCoverageClosure#coverageBaselineHasNoRemainingRecreateGaps`:
+the campaign had introduced 32 exceptions into develop's empty baseline.
+Inspection finds constructor-derived spawn constants and typed ObjectRefId
+sidecar links. Declare those contracts explicitly and remove the exceptions;
+do not weaken the empty-baseline requirement. Focused and combined reruns are
+required before delivery.
+
+Focused closure verification: queued Java21/Maven with absolute S3K ROM,
+`-Dtest=TestRemainingRewindCoverageClosure,TestRewindCoverageGuard,TestRewindFieldDispositionGuard,TestS3kSszCarriersAndSprings,TestS3kSszEggRobo,TestSszColdRouteCapture,TestS3kSszAct2FinalFight`:
+33 tests, zero failures/errors/skips. The first focused run exposed two more
+undeclared final-fade fields; these now declare spawn reconstruction and managed
+reference capture. The final-fight test adds a live-fade checkpoint restored after
+retirement, at both 320 and 800 pixels. This covers the link that a pre-fade
+checkpoint cannot exercise. Java21/Lua5.4/PowerShell preflight passed.

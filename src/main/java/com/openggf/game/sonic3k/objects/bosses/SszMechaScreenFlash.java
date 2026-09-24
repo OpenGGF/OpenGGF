@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -17,6 +18,7 @@ import java.util.List;
  * The final-defeat variant runs loc_85E64 with eight whitening steps and $3A=7 instead.
  */
 public final class SszMechaScreenFlash extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    @RewindTransient(reason = "Immutable spawn subtype selects the flash variant on recreation.")
     private final boolean holdWhite;
     private boolean started, nativeStatus7;
     private int timer;

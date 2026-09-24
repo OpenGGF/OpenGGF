@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -57,6 +58,7 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
             TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
+    @RewindTransient(reason = "Shot spawn renderFlags stores direction; recreateForRewind reconstructs it.")
     private final boolean facingLeft;
     private int x;
     private int y;

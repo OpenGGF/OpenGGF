@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -84,7 +85,9 @@ public final class SszRetractingSpringObjectInstance extends AbstractObjectInsta
     /** {@code move.b #8,1(a2)}. */
     private static final int RECOIL_FRAMES = 8;
 
+    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int x;
+    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int y;
     private int mappingFrame;
     /** {@code $2E}/{@code $30}: each player's launch step and, in the high byte, its timer. */

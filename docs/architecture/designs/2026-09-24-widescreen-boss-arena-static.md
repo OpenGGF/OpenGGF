@@ -1,6 +1,6 @@
 # Widescreen boss arenas: signal-static side mask
 
-Status: activation/hold appearance approved; defeat/release review and delivery validation pending. Separate local
+Status: activation/hold and defeat/release appearance approved; delivery validation pending. Separate local
 branch `codex/ssz-arena-static-demo`, based on develop `40d55783c`. The level
 bring-up worktree remains independent. Do not merge or enable this prototype as
 a finished gameplay feature.
@@ -161,7 +161,7 @@ Noise now refreshes at60Hz, not the initially chosen12Hz. Both finished MP4s
 were decoded; all167 consecutive frame pairs tested during the fully opaque
 interval have changing noise. All600 centre-preservation checks still pass.
 
-## In-engine trial architecture — awaiting user confirmation
+## In-engine architecture — visually approved
 
 The user approved GHZ and MTZ replica arenas only. All other events remain off.
 Common `ArenaMaskState` exposes `activate(activeWidth)`, `release()` and
@@ -179,16 +179,17 @@ restores GL state, and is cleaned up with GraphicsManager. It neither samples
 framebuffer0 nor consumes gameplay RNG. This works with offscreen capture and
 preserves the active centre by discarding its fragments.
 
-Shared implementation remains in the separate prototype worktree. A context patch
-and exact copies of its new files are also applied to the dirty bring-up worktree
-for the two SSZ adapters, whose runtime/event classes are not yet in develop.
-These are trial working changes, not independently integrated copies. Reconcile
-this shared patch once when the campaign and feature are delivered. Do not merge
-or push until the user confirms the in-engine result.
+The shared implementation was committed on the separate prototype branch at
+`55e8ad12d` and reconciled with the campaign at `679f7cb87` (campaign implementation
+`454184d52`, destination develop `40d55783c`). The user approved activation/hold
+and the real defeat/pad-release clips, including the additional wide widths.
+Only GHZ and MTZ replicas are authorized. Integration into develop and push
+remain conditional on delivery checks, not another visual approval.
 
-The change-based plan at develop40d55783c selects2697ordinary classes plus guards
-for the shared render integration. That combined delivery run remains pending;
-focused trial checks and captures must not be called a full-suite pass.
+The combined campaign selection is 2904 ordinary classes plus guards. A PC
+restart interrupted the first run after 6155 reported tests, with one failure
+in the SSZ rewind coverage exception baseline and two opt-in benchmark skips.
+That partial run is not a suite pass; guards did not run.
 
 ### Trial results
 
@@ -210,7 +211,6 @@ All450 gameplay CSV rows per recording match pre-mask camera-fixed recordings
 exactly. All300 common filmed frames preserve the central320 pixels exactly
 before encoding; native320 entire frames are identical. Wide frame400 of both
 fights inspected: mask remains active through knockback, HUD readable.
-Shared implementation is also present as uncommitted trial code in separate
-codex/ssz-arena-static-demo. Reconcile the common patch once at integration.
-Full combined suite/guards, broader lifecycle/display-shader coverage and user
-confirmation remain pending. No runtime feature commit or push claimed.
+The implementation is committed and reconciled as described above. Full combined
+suite/guards and broader lifecycle/display-shader coverage remain pending; no
+develop integration or push is claimed.

@@ -239,6 +239,15 @@ final class DefaultObjectRewindPolicies {
             // both sides are captured and relinked through typed ObjectRefId sidecars.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance", "trail"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "parent"), RewindFieldPolicy.CAPTURED),
+            // SSZ traversal links are captured as ObjectRefId sidecars and resolved after
+            // recreation. Carrier graph and cold-route replay checks exercise their lifetime.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRotatingPlatformObjectInstance", "carrier"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierArcObjectInstance", "bar"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierArcObjectInstance", "hub"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierBarObjectInstance", "arc"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance", "arc"), RewindFieldPolicy.CAPTURED),
+            // loc_7BCB0 polls the final white fade; preserve its managed identity across rewind.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance", "finalFade"), RewindFieldPolicy.CAPTURED),
             // SSZ2 crane parent3 graph: generic managed identity capture; cold crane/fight replay
             // recreates the linked claw, decoration and debris instead of a parallel sidecar.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractSszCraneChild", "parent"), RewindFieldPolicy.CAPTURED),

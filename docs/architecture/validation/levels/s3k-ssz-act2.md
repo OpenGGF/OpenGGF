@@ -379,3 +379,9 @@ The isolated round-trip sweep cannot construct these parent-dependent children;
 its three classifications now point to this graph evidence. Reconciled campaign
 inventory:1313classes,1070isolated passes,243graph-covered,no-codec0 and no
 unclassified remainder. This does not certify every SSZ lifecycle/route obligation.
+
+Final-fade rewind follow-up (2026-09-24): `TestS3kSszAct2FinalFight`
+now captures the active final white fade and restores it after retirement at
+320/800, replaying to the same accepted pre-ending stop with matching palette,
+objects, camera and runtime state. The 33-test focused rewind closure run passed
+with no skips; full campaign delivery validation remains separate.

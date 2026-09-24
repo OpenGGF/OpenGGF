@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -72,8 +73,11 @@ public final class SszRotatingPlatformCarrierObjectInstance extends AbstractObje
     private static final int PRIORITY_NEAR = 0x100;
     private static final int PRIORITY_NEAR_FRONT = 0x80;
 
+    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int x;
+    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int y;
+    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int widthPixels;
     /** {@code routine(a0)}: set to {@code $FF} by the post when it culls. */
     private boolean killed;

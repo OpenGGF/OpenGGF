@@ -109,6 +109,8 @@ class TestS3kSszAct2FinalFight {
         }
         var lowHealth = registry.capture();
         var finalDefeat = registry.capture();
+        com.openggf.game.rewind.CompositeSnapshot activeFade = null;
+        int activeFadeFrame = -1;
         hitsSeen = 0; previousHealth = 8;
         for (int frame = SUPER_ENTRY + 1; frame <= COLD_STOP; frame++) {
             step(fixture, movie.getFrame(frame));
@@ -117,6 +119,14 @@ class TestS3kSszAct2FinalFight {
             if (health < previousHealth) {
                 assertEquals(previousHealth - 1, health, "each real Super collision deals one hit");
                 hitsSeen++; previousHealth = health;
+            }
+            // Capture while the final fade is alive, then restore after it has retired.
+            // Replaying only from the hit that starts defeat misses the boss-to-fade link.
+            if (frame > FINAL_DEFEAT && activeFade == null
+                    && !GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.bosses.SszMechaScreenFlash.class).isEmpty()) {
+                activeFade = registry.capture();
+                activeFadeFrame = frame;
             }
             if (frame == LOW_HEALTH) {
                 assertEquals(2, health);
@@ -132,9 +142,10 @@ class TestS3kSszAct2FinalFight {
         assertColdStop();
         assertSavedClear();
         String endState = observedState();
-        for (int checkpoint = 0; checkpoint < 2; checkpoint++) {
-            int start = checkpoint == 0 ? LOW_HEALTH : FINAL_DEFEAT;
-            registry.restore(checkpoint == 0 ? lowHealth : finalDefeat);
+        assertNotNull(activeFade, "route must capture the live final fade before it retires");
+        for (int checkpoint = 0; checkpoint < 3; checkpoint++) {
+            int start = checkpoint == 0 ? LOW_HEALTH : checkpoint == 1 ? FINAL_DEFEAT : activeFadeFrame;
+            registry.restore(checkpoint == 0 ? lowHealth : checkpoint == 1 ? finalDefeat : activeFade);
             fixture.runner().primeInputState(movie.getFrame(start));
             for (int frame = start + 1; frame <= COLD_STOP; frame++) {
                 step(fixture, movie.getFrame(frame));
