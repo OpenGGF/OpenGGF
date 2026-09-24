@@ -2086,7 +2086,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Adjust Y position for radii change (current→default)
 		int radiusDiff = sprite.getYRadius() - sprite.getStandYRadius();
-		sprite.setY((short) (sprite.getY() + radiusDiff));
+		// Knuckles_Sliding .getUp (loc_16B2A) negates this word under
+		// Reverse_gravity_flag before Knux_TouchFloor restores standing radii.
+		// Use a native centre-word addition so the stored fraction survives.
+		NativePositionOps.addYPosPreserveSubpixel(sprite,
+				ReverseGravity.mirrorYDelta(isReverseGravityActive(), radiusDiff));
 
 		sprite.restoreDefaultRadii();
 		sprite.setObjectMappingFrameControl(false);

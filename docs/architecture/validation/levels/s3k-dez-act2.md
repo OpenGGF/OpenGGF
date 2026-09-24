@@ -29,7 +29,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, dust-free solid objects, springs and the sidekick (97 of 116 ROM references — the 8 open group A-I rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, dust-free solid objects, springs and the sidekick (98 of 116 ROM references — the 7 open group A-I rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Seeded from the first frame of act 2 free play: **1256 frames** of exact player x, y, camera and ring parity (`TestS3kDezColdRoutes`, ratcheted). The cold `$B01` route remains recorded at 0 frames; the connected entrance now lands, but its strict trace has not been remeasured |
 | Rewind-verified | Event routine words (`TestS3kDezPresentationRewind`) and the `$5B` write plus its side latch, capture/restore/forward replay (`TestS3kDezGravityObjectsHeadless`) |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -318,3 +318,34 @@ wait120frames before the Spikebonker crossing. The explored cold route reaches
 (5899,1171) without changing the enemy. Later traversal and route breadth remain
 open; exploratory inputs stay in the external campaign route-author directory
 until the next stable route is preserved.
+
+### Knuckles ceiling slide get-up and lower-route research (2026-09-24)
+
+On `8ca9b0ea2` plus this patch, the remaining `Knuckles_Sliding .getUp` gravity
+row is implemented. ROM `loc_16B2A` computes liveYRadius−defaultYRadius,
+negates that word under Reverse_gravity_flag, then adds it to y_pos before
+Knux_TouchFloor restores standing radii. The engine previously always applied
+the upright adjustment: the new regression measured823 where841 was required
+for an inverted centre at832 with radii10→19. The correction uses a native
+centre-word addition and retains the fractional Y word. No physics constants,
+terrain probes or wall-climb behavior were changed.
+
+`TestPlayableSpriteMovement#knucklesSlideGetUpPreservesFeetAndFractionUnderReverseGravity`
+failed before the correction and passes afterward, covering both gravity signs,
+radius restoration, grounding and a nonzero Y fraction. Queued Java21,
+`-Dmse=off`, absolute S3K ROM:
+`-Dtest=TestPlayableSpriteMovement,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed238 tests, zero skips. The change-based plan selects the full ordinary
+suite through shared movement; this is focused iteration pending combined
+campaign validation. The inventory now records98 covered references and seven
+open group A-I rows; this does not certify Knuckles's remaining gravity paths.
+
+The earlier rightward route from the first DEZ2 hub reached a monitor alcove at
+Y1171. The native complete-emeralds recording reaches this region from below:
+trace rows25260–25680 travel from(5640,2604) through the rising teleporter to
+(6078,1363). It is not evidence that the alcove's wall collision is wrong.
+Rows21545–21610 show a Down launch/bounce before the Left exit from the first
+hub. Controller authoring also reaches the lower route directly with a fresh
+Left press. The descending conveyor between spiked walls requires staying near
+its middle until the lower exit; immediate Right drift or an early jump hits
+the wall. Native rows are comparison/route research only, never gameplay writes.

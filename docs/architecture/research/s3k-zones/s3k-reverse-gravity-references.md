@@ -170,7 +170,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 30840 | `Knuckles_Gliding_HitWall` | `Knuckles_Gliding_HitWall`: reverse-gravity ledge probe (`.reverseGravity`) | `GlideWallGrabTerrain.align` via `PlayableSpriteMovement:2557` | covered |
 | 30880 | `Knuckles_Gliding_HitWall` | `Knuckles_Gliding_HitWall` (left wall): same | `GlideWallGrabTerrain.align` | covered |
 | 30921 | `Knuckles_Fall_From_Glide` | `Knuckles_Fall_From_Glide`: negates the radius Y adjustment | — | missing |
-| 30977 | `Knuckles_Sliding` | `Knuckles_Sliding`: negates the radius Y adjustment | — | missing |
+| 30977 | `Knuckles_Sliding` | `Knuckles_Sliding`: negates the radius Y adjustment | `PlayableSpriteMovement.slideGetUp`: signed native centre-word addition; upright/inverted radius and fraction regression | covered |
 | 31004 | `Knuckles_Sliding` | `Knuckles_Sliding`: negates the floor snap | — | missing |
 | 31068 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` up: `.climbingUp_ReverseGravity` probes | — | missing |
 | 31205 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` down: `.climbingDown_ReverseGravity` probes | — | missing |
@@ -272,14 +272,14 @@ is the RAM wipe described above).
 | B. Sonic (and Sonic/Knuckles shared) routines | 20 | 18 | 1 | 0 | 1 |
 | C. Tails routines | 21 | 19 | 1 | 0 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 5 | 0 | 0 | 0 |
-| E. Knuckles routines | 24 | 17 | 1 | 5 | 1 |
+| E. Knuckles routines | 24 | 18 | 1 | 4 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 9 | 0 | 0 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 0 | 1 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **97** | **4** | **11** | **4** |
+| **Total** | **116** | **98** | **4** | **10** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:

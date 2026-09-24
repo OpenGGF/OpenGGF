@@ -4863,6 +4863,34 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void knucklesSlideGetUpPreservesFeetAndFractionUnderReverseGravity() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("slideGetUp");
+                method.setAccessible(true);
+                try {
+                        for (boolean reversed : new boolean[] {false, true}) {
+                                GameServices.gameState().setReverseGravityActive(reversed);
+                                var knuckles = new com.openggf.sprites.playable.Knuckles(
+                                                "knuckles", (short) 0x200, (short) 0x300);
+                                knuckles.applyCustomRadii(10, 10);
+                                knuckles.setDoubleJumpFlag(3);
+                                knuckles.setAir(true);
+                                knuckles.setCentreYPreserveSubpixel((short) 0x340);
+                                knuckles.setSubpixelRaw(0x5A00, 0xA500);
+                                int delta = knuckles.getYRadius() - knuckles.getStandYRadius();
+                                method.invoke(new PlayableSpriteMovement(knuckles));
+                                assertEquals(0x340 + (reversed ? -delta : delta), knuckles.getCentreY(),
+                                                "Knuckles_Sliding negates the radius adjustment before Knux_TouchFloor");
+                                assertEquals(0xA500, knuckles.getYSubpixelRaw(), "native add.w preserves Y fraction");
+                                assertEquals(knuckles.getStandYRadius(), knuckles.getYRadius());
+                                assertFalse(knuckles.getAir());
+                        }
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
         public void knucklesWallClimbNoInputUsesFloorDistanceAsRetailAnimationDelta() throws Exception {
                 prepareWallClimbProbe(0x0100, 0xB7);
 
