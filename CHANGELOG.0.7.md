@@ -399,7 +399,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **S3K Fireworm:** killing a Lava Reef fireworm now retires its whole body. Its segments stop
   moving and its flames go out, instead of the flames staying behind as invisible fire that
-  burned the player seconds later.
+  burned the player seconds later. Retired segments stay harmless after rewinding,
+  even when their deleted head no longer exists in the restored world.
 
 - **S3K Lava Reef domes:** the background now locks onto the dome as the player crosses each
   of the three dome thresholds, rises and falls with the lava surface inside it, and stays on
@@ -549,7 +550,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **S3K Lava Reef:** Act 2 turbines carry the player around their rotating drums
   and release on a fresh jump press, with separate state for Sonic and Tails and
   restored ride/cooldown state when rewinding. Both turbine variants draw their
-  ROM-loaded art. Chained platforms follow their ROM paths, carry players on top
+  ROM-loaded art. The Act 1 corkscrew clears the approach slope when taking
+  control, preserving its horizontal release into the lower route.
+  Chained platforms follow their ROM paths, carry players on top
   and hurt on contact with their spiked undersides. Rewinding the miniboss preserves its arms, hit flashes and defeat
   debris without resurrecting destroyed parts; launchers retain their in-flight balls.
   The Act 1 miniboss submits its ROM art to the runtime module queue before its

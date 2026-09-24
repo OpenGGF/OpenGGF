@@ -231,6 +231,13 @@ class TestFirewormBadnikInstance {
         assertEquals(0x98, segment.getCollisionFlags(), "while the head lives");
         head.setDestroyed(true);
         assertEquals(0, segment.getCollisionFlags(), "once status bit 7 is set on the parent");
+        segment.update(5, p1);
+        // A deleted head is absent when the surviving retired segment is
+        // recreated. Retirement belongs to the segment, not the old reference.
+        segment.attachHead(null);
+        assertEquals(0, segment.getCollisionFlags(), "loc_849D8 clears collision permanently");
+        segment.update(6, p1);
+        assertEquals(0, segment.getCollisionFlags());
     }
 
     /**

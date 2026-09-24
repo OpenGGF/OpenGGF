@@ -270,7 +270,10 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
     public int getCollisionFlags() {
         // Child_DrawTouch_Sprite_FlickerMove: no Add_SpriteToCollisionResponseList while the
         // parent's status bit 7 is set (sonic3k.asm:178136-178141).
-        if (head != null && head.isDestroyed()) {
+        // loc_849D8 clears the segment's own collision_flags permanently.
+        // Once the deleted head leaves the world, rewind cannot reattach it;
+        // the captured retirement state must still keep this debris harmless.
+        if (retired || (head != null && head.isDestroyed())) {
             return 0;
         }
         return COLLISION_FLAGS;

@@ -89,6 +89,7 @@ class TestLrzCorkscrewObjectInstance {
         rider.setXSpeed((short) 0x0700);
         rider.setYSpeed((short) -0x0300);
         rider.setDirection(Direction.LEFT);
+        rider.setAngle((byte) 0x12); // Native approach slope, before loc_422E6.
 
         corkscrew.update(1, rider);
 
@@ -96,6 +97,7 @@ class TestLrzCorkscrewObjectInstance {
         assertTrue(rider.isObjectControlled(), "object_control $43 has bit 0 set");
         assertEquals(0, rider.getXSpeed(), "x_vel is cleared");
         assertEquals(0, rider.getYSpeed(), "y_vel is cleared");
+        assertEquals(0, rider.getAngle(), "loc_422E6 clears the approach slope for the ride and exit");
         assertEquals(Direction.RIGHT, rider.getDirection(), "bclr #Status_Facing faces right");
         assertEquals(0, corkscrew.accumulatorFor(true), "move.l #0,(a2)");
     }

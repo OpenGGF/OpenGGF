@@ -111612,3 +111612,33 @@ is one behind for one frame and then stays one behind. That is the shared platfo
 carry, not anything this campaign has written, and it is where the next measurement should start.
 
 `SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 1256 and `ROUTE_FRAMES` to 4000.
+
+
+## 2026-09-24 — LRZ1 corkscrew capture-angle omission
+
+Worktree `.worktrees/ai-sk-zone-completion`, base `24813a647`, local candidate.
+Matched native-input `GameplayCaptureTool` cold320 Sonic+Tails runs before/after
+one production change (`--zone lrz --act 1 --frames12000`, absolute S3K ROM;
+input `$VIDEO_ROOT/lrz-bring-up/inputs/lrz1-native-input-route.txt`).
+This is a controller-route comparison, not a completed strict trace-suite run.
+
+`loc_422E6` explicitly clears `angle(a1)` at capture. The object omitted that
+write, leaving approach angle `$12` through the ride. At zero-based input3558
+(native row3558), baseline is `(4662,1404)`, velocity `(-3685,-1739)`, ground
+speed `-4083`; fixed is `(4661,1404)`, `(-4096,0)`, ground speed `-4096`, matching
+the native row. `TestLrzCorkscrewObjectInstance` with a real approach angle
+fails before the fix (expected0,actual18) and passes after it. This supersedes
+the historical suspicion of a faulty slope-probe handoff at that first frame.
+
+From capture row3394, player X/Y and camera X/Y match the comparison series
+through4568; first subsequent position disagreement is4569: engine `(2426,1229)`
+versus native `(2420,1237)`. Rings first differ at4060 (79 versus80), before
+that position divergence. Both baseline and candidate already differ in intro
+Y at row3 (32 versus33); do not restate the historical whole-prefix parity claim
+for this launch. The fixed route dies at6914, baseline4483. These are route
+observations, not proof that later disagreement has the same owner.
+
+Focused queued Maven corkscrew/unit-rewind plus the four mandatory S3K bootstrap
+classes:72 tests,zero failures/errors/skips,68 seconds including compilation.
+Combined campaign checks and strict trace rerun remain pending. Cold regression
+and capture evidence are recorded in the LRZ1 matrix once completed.

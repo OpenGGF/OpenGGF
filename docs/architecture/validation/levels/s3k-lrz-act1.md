@@ -10,6 +10,9 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
 full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
+A preserved4501-frame native320 ordinary Sonic+Tails cold route now crosses the
+corkscrew and continues west through the lower platforms; current verification
+is recorded in the dated follow-up below.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
 load at the end of the campaign, not the route entry). Outgoing: seamless `$901`.
@@ -183,3 +186,46 @@ shared progress. Latest production previews are
 Both600-row gameplay sequences remain identical, with zero deaths and complete
 video decodes. The same16 focused tests pass without skips. Earlier/current
 bounds remain authoritative until the final gameplay lock takes over.
+
+
+## Cold corkscrew continuation (2026-09-24)
+
+From campaign base `24813a647`, the cold ordinary Sonic+Tails route exposes a
+missing `move.b #0,angle(a1)` in `loc_422E6`. The stale approach angle `$12`
+survived the controlled ride and contaminated the first free step after
+`loc_42396`. Clearing it at capture reproduces the ROM operation, with no
+widescreen or fixture-specific behavior. A focused assertion fails before the
+fix (expected0,actual18). Corkscrew unit/rewind plus the four mandatory S3K
+bootstrap classes pass72 tests with zero failures/errors/skips.
+
+`lrz1-sonic-tails-cold-corkscrew-320.{script,bk2}` preserves4501 controller frames
+from the normal falling intro through rocks/door, the horizontal button,
+corkscrew capture/ride/release and lower westbound platforms. No setup overrides
+are used. `TestLrzColdRouteCapture` checks21 whole-registry45-frame replay spots
+and the ROM's release row: input3558 centre`$1235,$057C`, velocity`$F000,0`,
+ground speed`$F000`. The endpoint is `(2746,1186)`,93 rings, live Sonic+Tails.
+This is a partial act route, not a completion claim.
+
+Its first rewind run failed at input950: eight retired Fireworm body segments
+changed `preUpdateCollisionFlags` from0 to`$98` after recreation. Their deleted
+heads were absent, so consulting only the old head link lost the ROM's permanent
+`loc_849D8` collision clear. The segment's already-captured `retired` state now
+keeps it harmless independently of that link; a focused detached-head check and
+the real cold route exercise the boundary. Final verification: queued Maven `-Dmse=off -Dopenggf.test.gl.native=true`
+`-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestFirewormBadnikInstance,TestLrzColdRouteCapture test`
+passes11 tests,zero failures/errors/skips,75 seconds including compilation; the
+4501-frame route and all21 replay checkpoints pass in7.72 seconds.
+
+The change-based plan against `24813a647` falls back to full ordinary categories
+because of the new route-test owner. Focused iteration is appropriate for these
+two local object changes: capture state, actual release, segment retirement and
+real registry recreation are directly exercised. The full combined campaign
+selection remains required before integration, and is not replaced by these
+focused checks.
+
+Capture `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-corkscrew-corrected-320/capture.mp4`
+shows3350–4500; all4501 state rows have zero deaths. Stills3394/3565/4400 are
+inspected and the full MP4 decodes cleanly. The subsequent Fireworm change only
+corrects restored worlds and does not alter this uninterrupted forward capture.
+See the [frontier log](../../../status/trace-frontier-log.md) for the bounded
+native comparison and later unresolved position/ring disagreements.

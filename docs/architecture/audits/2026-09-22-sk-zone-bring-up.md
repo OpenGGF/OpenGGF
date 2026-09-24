@@ -4374,3 +4374,23 @@ Next cold frontier: LRZ1. Replaying the preserved native input on the current
 campaign reaches the corkscrew but subsequently returns left and dies at4483;
 this is a controller-route observation, not an attributed engine regression.
 The existing positioned boss/Act2 checks remain distinct from cold completion.
+
+
+## LRZ1 corkscrew and retired-body continuation (2026-09-24)
+
+After `24813a647`, the cold route identifies the omitted `loc_422E6` angle reset.
+The focused red assertion reports expected0/actual18; the correction makes the
+native exit row3558 exact and player/camera positions stay aligned from capture
+through4568. A ring difference at4060 and intro difference at3 are separate;
+this is not a strict whole-prefix trace pass. The fixed preserved input survives
+to6914 versus4483 before. A new4501-frame ordinary-team regression owns21 full
+registry replay spots and the native release assertion. It also exposes retired
+Fireworm segments regaining collision after restore when their deleted head
+cannot be rebound; `loc_849D8` requires the segment's own permanent clear.
+The [LRZ1 matrix](../validation/levels/s3k-lrz-act1.md) records checks and capture.
+Cold full-act completion and combined campaign delivery remain open.
+
+Final focused Fireworm+cold-route follow-up passes11 tests,zero failures/errors/
+skips (75 seconds including compilation). All21 route replay checkpoints pass.
+The earlier72-test corkscrew/required-bootstrap run remains valid for the unchanged
+angle fix. These are focused checks, not a combined campaign suite pass.

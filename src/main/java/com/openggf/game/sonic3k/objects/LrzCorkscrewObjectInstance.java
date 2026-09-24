@@ -204,6 +204,10 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         player.setPushing(false);
         player.setOnObject(true);
         player.setJumping(false);
+        // loc_422E6 clears angle before the scripted ride. Retaining the entry
+        // slope leaves the first free movement after loc_42396 projected along
+        // that stale slope, although the ROM exits with a horizontal velocity.
+        player.setAngle((byte) 0);
         player.setFlipAngle(0);
         player.setFlipType(0);
         player.setFlipsRemaining(0);
