@@ -1488,7 +1488,7 @@ public class TestSonic3kPlcArtRegistry {
     public void sszPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0A, 0);
         assertNotNull(plan);
-        assertEquals(7, plan.standaloneArt().size());
+        assertEquals(16, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SSZ_EGG_ROBO)));
 
         // EggRobo should use palette 0
@@ -1497,6 +1497,29 @@ public class TestSonic3kPlcArtRegistry {
                 .findFirst().orElse(null);
         assertNotNull(eggRobo);
         assertEquals(0, eggRobo.palette());
+        assertTrue(plan.levelArt().stream()
+                .anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SSZ_LAUNCH_STRUCTURE)));
+    }
+
+    @Test
+    public void sszMechaExtraSheetExcludesUnownedSpriteMaskFrame() throws IOException {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan =
+                Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_SSZ, 1);
+        Sonic3kPlcArtRegistry.StandaloneArtEntry entry =
+                requireStandaloneArt(plan, Sonic3kObjectArtKeys.MECHA_SONIC_EXTRA);
+        assertEquals(26, entry.mappingFrameCount(),
+                "Mecha child scripts use frames $00-$19; frame $1A is a separate sprite mask");
+
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            ObjectSpriteSheet sheet = new Sonic3kObjectArt(null, RomByteReader.fromRom(rom))
+                    .loadStandaloneSheet(rom, entry);
+            assertEquals(26, sheet.getFrameCount());
+            assertMappingTilesWithinSheet(sheet,
+                    "Mecha extra mappings must stay inside ArtKosM_MechaSonicExtra");
+        }
     }
 
     @Test

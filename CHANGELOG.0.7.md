@@ -6,6 +6,103 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K Sky Sanctuary:** Sky Sanctuary act 1 now plays its teleporter arrival instead of
+  dropping the player in at the level-start position. The screen init forces the arrival
+  camera and bounds, the controller beams Player 1 up the sanctuary column and hands control
+  back on the settle swing, Tails arrives on her own beam, and the act's dynamic camera bands
+  and vertical wrap follow the player. The cutscene Knuckles who opens the route — his beam,
+  the Death Egg he watches rise, the grey button and the bridge that extends over the gap,
+  with the checkpoint it leaves behind — is in place. The act's sky is its own now: the
+  background switches between the plain sanctuary framing and the banded cloud layer as the
+  camera crosses the cloud band, the clouds drift, the whole sky breathes on the act's
+  oscillator, five clouds roam across the screen and ten invisible cloud platforms can be
+  stood on, and the banded cloud layer is drawn from the part of the act's background the
+  cartridge draws it from, so the climb happens against real clouds instead of flat blue.
+  Sky Sanctuary's animated tiles run in act 1 and, as on the cartridge, not in act 2. The act's teleporter pads are real now: they draw, they can be stood on, they lift
+  the player and the camera the distance their placement asks for, and the two that wait on
+  a defeated boss sit sunk in the floor until it is beaten and then rise back into place.
+  The small floating platforms dip under a standing player, the tall columns break into eight
+  falling pieces when one is stood on, and the flat bridge sections crumble away from under the
+  player four pieces at a time — except the one section the cartridge marks permanent — and the
+  sloped walkways break into eight, sliding along their own slope as they go. The rest of
+  the act's traversal is in too: the little clouds squash under a standing player and throw
+  them up and back in a puff of four, the horizontal bars catch a player from above and swing
+  them before flinging them where they are steering, the short posts spin a player in place
+  and their invisible carriers walk them round in a circle, the swinging and rotating arms
+  carry a player at the tip of a jointed arc, and the retracting springs fold away until
+  somebody comes at them and then fire them along the deck. Sky Sanctuary's EggRobos patrol
+  the act now, in all three shapes the cartridge gives them: the distant one that crosses the
+  sky and, by crossing, lets its partner appear; the hovering one that tracks the player,
+  levels its arm and fires a laser once it has them lined up; and the one that lets four
+  animals go before it takes off and joins the others — and which, until it takes off, is the
+  harmless invisible marker the cartridge makes it rather than something that hurts a player
+  falling past, as the distant sky-crossing one is too. The first of the act's rebuilt boss
+  fights is in: walk into the lower arena and the camera closes behind you, the Green Hill ship
+  drops out of the sky with Mecha Sonic's head on it, runs the arena and pays out a six-piece
+  ball and chain whose ball hurts to touch, sweeps the floor and turns the ship around at each
+  end. The ship flashes three of its own colours while it is reeling from a hit, exactly as the
+  cartridge does — including the off-by-one that makes the flash duller than it was meant to be.
+  Eight hits send it away and open the way on. The second one follows it: climb to the upper
+  arena and the camera closes again, the Metropolis ship falls in with a ring of seven orbs
+  turning around it — passing in front of the ship and behind it as it turns — patrols the
+  arena and lifts its arms to swing the ring wide. Hitting it throws one orb off the ring at
+  you, and the ship will not come back down until every thrown orb has been dealt with; it has
+  seven of those in it. After the seventh it stops raising its arms, dives at the floor and
+  fires three pairs of lasers along it instead. The eighth hit sends it away and raises the
+  sunk pad in the arena floor. Mecha Sonic himself now turns up for the third: reach the far
+  end of the act and the pad there breaks apart as he comes tearing in from the right, runs
+  clean off the left of the screen, turns and comes back along the top with an after-image
+  trailing him. From there he works through his own repertoire — dropping on the floor, dashing
+  along it, turning to face the player, jumping, and following the jump with an air dash, a
+  ground pound or a landing that sets up two more dashes. Which parts of him can be hit and
+  which hurt to touch change frame by frame with his animation, as they do on the cartridge.
+  Once the results finish, the launch sequence now replaces the sanctuary terrain and tiles
+  with the ROM's Death Egg approach image, changes the sky palette, carries Sonic around the
+  spiral ramp and throws him toward Death Egg before loading its first act.
+  The eighth hit now ends him too: he is thrown back, holds still for a little over two seconds,
+  drops to the floor in his beaten pose, and the act hands over to its results — which waits for
+  the player to be standing rather than ending on a timer alone. Knuckles' Act 2 route now owns
+  its placed final-boss crane too: it closes the camera, enters when Knuckles jumps, carries the
+  native approach/return music handoff, lowers its hook to align with Knuckles, grabs and lifts
+  him, reaches the final-arena scroll lock and allocates the boss. Mecha Sonic now takes the Act
+  2 placement branch, and the first eight hits run the cartridge's fade, spin-up, arena opening,
+  charge, landing, transformation and forced Knuckles run before handing the fight to his
+  distinct 36-slot Super dispatcher with a replenished health bar; the second set follows the
+  cartridge's staged fade, progression save and ending-event stop-line waits. That terminal
+  handoff now also applies the cartridge's `$83` player-control lock, clears the forced mapping
+  frame and is covered through the stage-4 event consumption and 120-frame stop boundary. The Master Emerald
+  now watches the transformation using its own ROM art and flickers with the native cutscene bit,
+  while Mecha Sonic's transformation landing now installs and advances the ROM's 16-colour
+  flash script through the palette-ownership path with rewind-safe script timing,
+  and Super Mecha Sonic can throw the cartridge's eight-way harmful energy burst. Capturing and
+  replaying that fight now also discards expired after-images instead of retaining a dead object
+  reference in the rewind graph. The shared Mecha Sonic effects sheet now loads its 26 owned ROM
+  mapping frames, so the after-images and energy burst no longer disappear when the unrelated
+  trailing sprite-mask frame points beyond their art module. His Super dash also carries the
+  cartridge's mirrored, ROM-animated missile pod at its native offset and retires it with the
+  parent's attack flag. The final attack's four attached lasers now run their two native ROM
+  scripts too: the first three detach on `$F4` and aim a harmful beam at Knuckles with the
+  cartridge's `$400` dominant-axis velocity, while subtype 8 plays the finishing script and
+  retires. Act 2's sky now
+  has its own cold-load scroll fan and deformation too, including the cartridge's twenty-column
+  vertical wave rather than inheriting the flat default background. Its foreground now also
+  expands `word_58C80` across scanlines instead of scrolling as one flat camera word. Later ending-event
+  deformation modes remain to be finished. The final defeat now also changes the two arena
+  floor rows through the rewind-aware world-mutation path before handing control to the
+  ending-only stages. The screen-init camera controller now consumes a declared negative ending
+  signal across the cartridge's two gradual-swing zero crossings, takes over the camera and
+  oscillator, reaches the no-emerald `$600` trigger, and hands that trigger to stage 8. That
+  declared seeded continuation fills the cartridge's sixteen solid
+  mask tiles, allocates the eight-piece ending-island mask, consumes the 16-row delayed redraw
+  and resets the camera exactly at stage `$C`; the shared ending object that normally triggers
+  it remains outside this zone campaign. Act 1's results flag now also starts its persistent
+  spiral-ramp controller: the native 30-frame wait and rumble cadence lead to the `$910`
+  scripted jump (`$400/-$680`, ground speed `$800`), the gravity apex starts the 180-frame
+  exit wait, and Player 1 fades into the `$B00` Death Egg request. The coupled crumble now
+  builds ten delayed columns, performs the terrain/art hot-swap, raises the Death Egg plane,
+  constructs and breaks the launch structure, and emits the ROM-table-driven background
+  debris rows before the jump.
+
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
   instead of the Super Emerald sanctuary (`$1701`), which remains reachable from the

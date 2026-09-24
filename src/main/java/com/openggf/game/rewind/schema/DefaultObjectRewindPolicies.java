@@ -102,7 +102,8 @@ final class DefaultObjectRewindPolicies {
             "wreckingBall"
     );
 
-    private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+    private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES =
+            Map.<FieldKey, RewindFieldPolicy>ofEntries(
             // These SOZ SST links remain mutable during native graph teardown.
             // Capture their identities explicitly so both schema restore and the
             // coverage audit agree; constructors deliberately recreate null links.
@@ -173,6 +174,67 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance", "beam"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HpzTeleporterRouteHelperObjectInstance", "teleporter"), RewindFieldPolicy.CAPTURED),
+            // loc_44BF8 reads its collapsing column through $2E(a0) every frame, both to hang
+            // from it and to report back with subq.b #1,routine(a1); the debris captures it as a
+            // typed ObjectRefId sidecar. TestS3kSszTraversalPlatforms drives the whole collapse.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszCollapsingColumnDebrisObjectInstance", "column"), RewindFieldPolicy.CAPTURED),
+            // SSZ geometry and child roles are immutable construction inputs rebuilt by
+            // ObjectSpawn/custom rewind constructors. Live topology still uses identity codecs.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszBouncyCloudObjectInstance", "baseY"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszBouncyCloudObjectInstance", "x"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszElevatorBarObjectInstance", "baseY"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszElevatorBarObjectInstance", "x"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRetractingSpringObjectInstance", "x"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRetractingSpringObjectInstance", "y"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRotatingPlatformCarrierObjectInstance", "widthPixels"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRotatingPlatformCarrierObjectInstance", "x"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRotatingPlatformCarrierObjectInstance", "y"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRotatingPlatformObjectInstance", "x"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRotatingPlatformObjectInstance", "y"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszRotatingPlatformObjectInstance", "carrier"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierArcObjectInstance", "baseX"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierArcObjectInstance", "baseY"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierArcObjectInstance", "segmentCount"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierArcObjectInstance", "bar"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierArcObjectInstance", "hub"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierBarObjectInstance", "rotator"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierBarObjectInstance", "arc"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance", "mappingFrame"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance", "rotator"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance", "widthPixels"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance", "x"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance", "y"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance", "arc"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance", "group"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance", "mode"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.EggRoboShotInstance", "facingLeft"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "childDx"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "childDy"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "priorityWord"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "subtype"), RewindFieldPolicy.TRANSIENT),
+            // Obj_SSZGHZBoss's ball and chain is a CreateChild9_TreeList: each link's parent3 is
+            // the link before it, not the ship, and the ship keeps the emitter and the whole list.
+            // All three are captured as typed ObjectRefId sidecars and relinked on restore;
+            // TestS3kSszGhzArenaHeadless drives the drop, the swing and the defeat across it.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossChainLinkChild", "chainParent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance", "shield"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
+            // Obj_SSZMTZBoss allocates one slot that turns itself into the first of seven orbs
+            // and allocates the other six; the ship keeps the whole list, each orb keeps the ship
+            // through a typed ObjectRefId sidecar. TestS3kSszMtzArenaHeadless drives the orbit,
+            // the launch and the defeat across a restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMtzBossObjectInstance", "orbs"), RewindFieldPolicy.CAPTURED),
+            // Obj_SSZEndBoss keeps the ChildObjDat_7D47A/_7D486/_7D480 after-images in a list and
+            // each one keeps the boss. The raw collection is transient because captureRewindExtra
+            // filters loc_7C91C's already-destroyed children before encoding the live ObjectRefIds;
+            // each surviving child's reverse link is still captured and relinked below.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance", "trail"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszSuperMechaMissilePodChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszSuperMechaLaserChild", "parent"), RewindFieldPolicy.CAPTURED),
+            // $30(a0) on the Mecha Sonic spawner pad: loc_45AB0 reads the boss slot back every
+            // frame to decide when to explode, so the pad's reference survives a restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance", "mechaBoss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             // Boss childComponents is an identity-bearing live graph. The compact collection
             // codec retains its exact managed children and their roles for restore/relink.

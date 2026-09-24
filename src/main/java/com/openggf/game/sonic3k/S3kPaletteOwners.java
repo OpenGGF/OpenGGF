@@ -33,6 +33,27 @@ public final class S3kPaletteOwners {
     public static final String HCZ_END_BOSS = "s3k.hcz.endBoss";
     public static final String MHZ_MINIBOSS = "s3k.mhz.miniboss";
     public static final String MHZ_END_BOSS = "s3k.mhz.endBoss";
+    /** {@code Obj_SSZGHZBoss}: {@code PalLoad_Line1 Pal_SSZGHZMisc} for the fight. */
+    public static final String SSZ_GHZ_BOSS = "s3k.ssz.ghzBoss";
+    /**
+     * {@code sub_7A5A0}/{@code sub_7A614}: the three {@code Normal_palette} words the Green Hill
+     * recreation patches while its {@code $20(a0)} hit window runs. Line 0, not a whole line.
+     */
+    public static final String SSZ_GHZ_BOSS_HIT_FLASH = "s3k.ssz.ghzBossHitFlash";
+    /** {@code Obj_SSZMTZBoss}: {@code PalLoad_Line1 Pal_SSZMTZOrbs} for the fight. */
+    public static final String SSZ_MTZ_BOSS = "s3k.ssz.mtzBoss";
+    /**
+     * {@code sub_7ACF2}/{@code sub_7AD6A}: the same three {@code Normal_palette} words the Green
+     * Hill recreation patches, from {@code word_7AD7E}, which is byte for byte {@code word_7A628}.
+     */
+    public static final String SSZ_MTZ_BOSS_HIT_FLASH = "s3k.ssz.mtzBossHitFlash";
+    /**
+     * {@code Obj_SSZEndBoss} {@code loc_7B35A}: the same {@code PalLoad_Line1 Pal_SSZGHZMisc} the
+     * Green Hill recreation runs. Mecha Sonic's own sheet is drawn on line 1
+     * ({@code ObjSlot_MechaSonic}'s {@code make_art_tile(ArtTile_MechaSonic,1,1)}), so without
+     * this he is drawn in whatever the level left on that line.
+     */
+    public static final String SSZ_MECHA_SONIC = "s3k.ssz.mechaSonic";
     public static final String MHZ_END_BOSS_DEFEAT_FADE = "s3k.mhz.endBossDefeatFade";
     public static final String MGZ_MINIBOSS = "s3k.mgz.miniboss";
     public static final String MGZ_TUNNELBOT = "s3k.mgz.tunnelbot";

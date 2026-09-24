@@ -37,6 +37,26 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void ringsIsUnsetUntilAskedForAndThenCarriesTheDeclaredCount() {
+        GameplayCaptureTool.Arguments bare = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ssz", "--act", "1", "--out-dir", "out"});
+        assertNull(bare.rings());
+        GameplayCaptureTool.Arguments seeded = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ssz", "--act", "1", "--out-dir", "out", "--rings", "355"});
+        assertEquals(355, seeded.rings());
+    }
+
+    @Test
+    void endOfLevelIsAnExplicitCaptureSetup() {
+        GameplayCaptureTool.Arguments bare = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ssz", "--act", "1", "--out-dir", "out"});
+        assertFalse(bare.endOfLevel());
+        GameplayCaptureTool.Arguments seeded = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ssz", "--act", "1", "--out-dir", "out", "--end-of-level"});
+        assertTrue(seeded.endOfLevel());
+    }
+
+    @Test
     void requiresZoneActAndOutputDirectory() {
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(
                 new String[] {"--zone", "aiz", "--out-dir", "o"}));

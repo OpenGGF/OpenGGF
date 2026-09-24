@@ -132,7 +132,8 @@ class TestRemainingRewindTailInventory {
         // HPZ compatibility, fight and native-sequence graph tests.
         // Doomsday bring-up: 23 object classes, all passing the isolated sweep through their
         // private ObjectSpawn probe constructors.
-        return new TailInventory(1109, 874, 235, 0, buckets);
+        // Sky Sanctuary bring-up adds forty independently reconstructable object classes.
+        return new TailInventory(1149, 914, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

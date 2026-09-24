@@ -80,6 +80,11 @@ public abstract class Sonic3kZoneEvents {
         return GameServices.rom().getRom();
     }
 
+    /** {@code Random_Number}: the shared level RNG every ROM routine draws from. */
+    protected com.openggf.game.GameRng rngOrNull() {
+        return GameServices.rngOrNull();
+    }
+
     protected AudioManager audio() {
         return GameServices.audio();
     }
