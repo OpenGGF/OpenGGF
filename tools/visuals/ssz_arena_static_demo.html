@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SSZ · Arena signal</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#101318;color:#e7eaf1}body{max-width:1250px;margin:48px auto;padding:0 24px}small{color:#91a5b9;letter-spacing:.15em}h1{font-size:36px;font-weight:550;margin:12px 0}p{color:#aab5c5;max-width:780px;line-height:1.6}nav{display:flex;gap:12px;flex-wrap:wrap;margin:28px 0 20px}select,button{font:inherit;border:1px solid #46515f;border-radius:8px;padding:10px 16px;background:#202832;color:#eef3f9}video{width:100%;background:#000;image-rendering:pixelated;border-radius:4px}footer{display:flex;justify-content:space-between;gap:24px;margin-top:18px;color:#aab5c5;font-size:14px}strong{color:#e1e8f4}label{display:flex;gap:10px;align-items:center}button[aria-pressed=true]{border-color:#92c8dd;background:#29414e}
+</style>
+<small>OPENGGF / PRESENTATION STUDY</small><h1>Keep the arena. Lose the empty wings.</h1>
+<p>A quiet TV-static boundary for widescreen boss fights. The centre stays at the original 320 pixels; noise occupies only the extra width. This is a mock-up over recorded gameplay, not a playable engine change.</p>
+<nav><label>Encounter <select id="boss"><option value="ghz">Green Hill replica</option><option value="mtz">Metropolis replica</option></select></label><button id="mode" aria-pressed="true">Static mask on</button><button id="restart">Replay transition</button></nav>
+<video id="film" src="ghz-static.mp4" controls autoplay muted loop playsinline></video>
+<footer><span><strong>Original arena</strong> · no zoom, crop or gameplay changes</span><span>Illustrative lock → hold → release · no audio</span></footer>
+<p>The demonstration fades in over 0.75 seconds, holds, then fades out. In-game, these transitions would follow the arena lock and actual reopening of player bounds, rather than this five-second preview clock.</p>
+<script>
+const film=document.querySelector('#film'),boss=document.querySelector('#boss'),mode=document.querySelector('#mode');let masked=true;
+function change(reset=false){const time=reset?0:film.currentTime,paused=film.paused;film.src=`${boss.value}-${masked?'static':'original'}.mp4`;film.addEventListener('loadedmetadata',()=>{film.currentTime=Math.min(time,film.duration);if(!paused)film.play().catch(()=>{});},{once:true});}
+boss.onchange=()=>change(true);mode.onclick=()=>{masked=!masked;mode.textContent=masked?'Static mask on':'Original widescreen';mode.setAttribute('aria-pressed',String(masked));change();};document.querySelector('#restart').onclick=()=>{film.currentTime=0;film.play().catch(()=>{});};
+</script></html>
