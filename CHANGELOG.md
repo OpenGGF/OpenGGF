@@ -25,8 +25,9 @@ readable and historical versions can be referenced directly.
   active finishes retain a two-second transit grace without permitting new
   attempts, and repeated finish-evidence violations close the sender. Reused
   recordings remain available to fresh verification jobs, identity keys are
-  private from creation, and ordinary master replies and final joins stay bound
-  to their request order and room context.
+  private from creation and an interrupted identity creation retries cleanly,
+  ordinary master replies and final joins stay bound to their request order and
+  room context, and a rejected relay attach fails the join immediately.
 
 Work promoted from `next` is recorded in [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 

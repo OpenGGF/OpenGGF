@@ -26,6 +26,7 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -82,11 +83,18 @@ public final class PlayerIdentity {
         KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
         boolean keyExists = Files.exists(keyPath, LinkOption.NOFOLLOW_LINKS);
         boolean pubExists = Files.exists(pubPath, LinkOption.NOFOLLOW_LINKS);
+        if (!keyExists && pubExists && Files.isRegularFile(pubPath, LinkOption.NOFOLLOW_LINKS)) {
+            // Creation writes the public key first, so a lone public key is an
+            // interrupted creation with no secret to preserve.
+            Files.delete(pubPath);
+            pubExists = false;
+        }
         if (keyExists || pubExists) {
             if (!keyExists || !pubExists
                     || !Files.isRegularFile(keyPath, LinkOption.NOFOLLOW_LINKS)
                     || !Files.isRegularFile(pubPath, LinkOption.NOFOLLOW_LINKS)) {
-                throw new IOException("identity keypair is incomplete or not regular files");
+                throw new IOException("identity keypair is incomplete or not regular files: "
+                        + dir.toAbsolutePath());
             }
             restrictPrivateKeyPermissions(keyPath);
             byte[] encodedPrivate;
@@ -101,23 +109,57 @@ public final class PlayerIdentity {
             return new PlayerIdentity(dir, priv, pub);
         }
         KeyPair pair = KeyPairGenerator.getInstance(ALGORITHM).generateKeyPair();
-        byte[] encodedKey = pair.getPrivate().getEncoded();
+        createKeyPair(pair, keyPath, pubPath, ignored -> { });
+        return new PlayerIdentity(dir, pair.getPrivate(), pair.getPublic());
+    }
+
+    /** Test seam: runs after the empty private key file is restricted, before key bytes. */
+    @FunctionalInterface
+    interface KeyCreationStep {
+        void afterPrivateKeyRestricted(Path keyPath) throws IOException;
+    }
+
+    static void createKeyPair(KeyPair pair, Path keyPath, Path pubPath,
+                              KeyCreationStep step) throws IOException {
         Set<OpenOption> options = Set.of(StandardOpenOption.CREATE_NEW,
                 StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
-        boolean posix = Files.getFileStore(dir).supportsFileAttributeView("posix");
-        FileAttribute<?> initialPermissions = posix
-                ? PosixFilePermissions.asFileAttribute(PRIVATE_KEY_PERMISSIONS)
-                : ownerOnlyAclAttribute(dir);
-        try (SeekableByteChannel channel = Files.newByteChannel(keyPath, options,
-                initialPermissions)) {
-            verifyPrivateKeyPermissions(keyPath, posix);
-            ByteBuffer buffer = ByteBuffer.wrap(encodedKey);
-            while (buffer.hasRemaining()) {
-                channel.write(buffer);
+        Path dir = keyPath.getParent();
+        FileAttribute<?> initialPermissions =
+                Files.getFileStore(dir).supportsFileAttributeView("posix")
+                        ? PosixFilePermissions.asFileAttribute(PRIVATE_KEY_PERMISSIONS)
+                        : ownerOnlyAclAttribute(dir);
+        List<Path> created = new ArrayList<>(2);
+        try {
+            // The public key goes first: a lone private key is treated as an
+            // identity to preserve, while a lone public key is safely regenerated.
+            Files.write(pubPath, pair.getPublic().getEncoded(),
+                    StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE,
+                    LinkOption.NOFOLLOW_LINKS);
+            created.add(pubPath);
+            try (SeekableByteChannel channel = Files.newByteChannel(keyPath, options,
+                    initialPermissions)) {
+                created.add(keyPath);
+                // Windows merges the parent's inheritable ACEs into a DACL supplied at
+                // creation, so reapply the exact owner-only protection before writing.
+                restrictPrivateKeyPermissions(keyPath);
+                step.afterPrivateKeyRestricted(keyPath);
+                ByteBuffer buffer = ByteBuffer.wrap(pair.getPrivate().getEncoded());
+                while (buffer.hasRemaining()) {
+                    channel.write(buffer);
+                }
             }
+        } catch (IOException | RuntimeException failure) {
+            // Leave no partial keypair behind; the next launch must be able to retry.
+            // Only remove files this call created, never a concurrent creator's.
+            for (Path partial : created.reversed()) {
+                try {
+                    Files.deleteIfExists(partial);
+                } catch (IOException cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+            }
+            throw failure;
         }
-        Files.write(pubPath, pair.getPublic().getEncoded());
-        return new PlayerIdentity(dir, pair.getPrivate(), pair.getPublic());
     }
 
     public String fingerprint() { return fingerprint; }

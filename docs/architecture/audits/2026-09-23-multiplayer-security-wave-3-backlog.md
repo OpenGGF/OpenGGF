@@ -83,6 +83,38 @@ observed. Post-integration guards passed 670 tests, and the smoke profile
 passed 19,700 tests with 2,999 profile skips. The integrated `next` branch was
 pushed; these results do not claim the ordinary full suite is wholly green.
 
+## Post-integration review at `28d8c2771`
+
+A read-only review of merge `05503f232` confirmed the vote, ghost-strike,
+attempt-start, join-metadata, and broker-reply fixes. Four follow-ups landed
+directly on `next`:
+
+- **Windows identity creation.** Windows merges a parent's inheritable ACEs
+  (SYSTEM, Administrators) into a DACL supplied at file creation unless the
+  descriptor is protected, which Java cannot request. The strict owner-only check
+  would then reject every freshly created key, after the empty key file already
+  existed, and every later launch would fail on the incomplete keypair. Creation
+  now reapplies the exact owner-only protection through the same `setAcl` path as
+  legacy repair before verifying it, writes the public key first, deletes only
+  files that call created on failure, and regenerates a lone public key. This
+  premise comes from the documented Win32 inheritance rule, not a Windows run; no
+  Windows runtime test exists yet.
+- **Tombstone wording.** One missing master reply does not merely delay the next
+  request: it shifts every later reply of that type for the connection lifetime.
+  The subsystem reference and wave 4 backlog now say so.
+- **Relay attach rejection.** An initial worry that the broker's attach-failure
+  `RoomJoinRejected` could consume a join tombstone was wrong: `receiveText`
+  routes all frames to the attached relay first. The real defect was older: the
+  relay handshake ignored `RoomJoinRejected` and waited for its three-second
+  timeout. It now fails immediately with the broker's reason.
+- **Blob sweep race.** The upload handler and hourly sweep ran unsynchronized, so
+  a sweep could delete a blob a concurrent reuse had just refreshed, or make the
+  refresh fail. Store writes and the sweep are now serialized.
+
+The finish grace also acts as up to two seconds of extra completion time because
+the client sends finishes regardless of its local phase; that is recorded as a
+design question in the wave 4 backlog, not changed.
+
 Wave 2 remediation chose a broker-pinned certificate plus host identity for direct
 joins: a signature-only challenge still exposes the session token to a live relay,
 and pinning both TLS and `Welcome` identity makes the intended host explicit for

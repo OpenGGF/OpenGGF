@@ -219,6 +219,12 @@ public final class MasterClient implements AutoCloseable {
                                             joined.completeExceptionally(
                                                     new RaceClient.JoinRejectedException(
                                                             rejected.reason()));
+                                    // The broker answers a failed RelayAttach with
+                                    // RoomJoinRejected on the already-attached socket.
+                                    case ControlMessage.RoomJoinRejected rejected ->
+                                            joined.completeExceptionally(
+                                                    new RaceClient.JoinRejectedException(
+                                                            rejected.reason()));
                                     default -> { }
                                 }
                             }

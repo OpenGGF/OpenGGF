@@ -200,6 +200,40 @@ class TestMasterClient {
     }
 
     @Test
+    void relayAttachRejectionFailsHandshakeWithBrokerReason(@TempDir Path dir)
+            throws Exception {
+        ConcurrentLinkedQueue<RaceClient.InboundEvent> inbound = new ConcurrentLinkedQueue<>();
+        inbound.add(new RaceClient.Control(
+                new ControlMessage.RoomJoinRejected("room not found")));
+        RaceConnection attached = new RaceConnection() {
+            @Override public List<RaceClient.InboundEvent> drainInbound() {
+                List<RaceClient.InboundEvent> events = List.copyOf(inbound);
+                inbound.clear();
+                return events;
+            }
+            @Override public void sendControl(ControlMessage message) { }
+            @Override public void sendBinary(byte[] data) { }
+            @Override public int playerSlot() { return -1; }
+            @Override public String sessionToken() { return null; }
+            @Override public ControlMessage.JoinAccepted joinAccepted() { return null; }
+            @Override public boolean isOpen() { return true; }
+            @Override public void close() { }
+        };
+
+        long started = System.nanoTime();
+        java.util.concurrent.ExecutionException failure = assertThrows(
+                java.util.concurrent.ExecutionException.class,
+                () -> MasterClient.completeRoomHandshake(attached,
+                                PlayerIdentity.loadOrCreate(dir), "GUEST", FP)
+                        .get(10, TimeUnit.SECONDS));
+
+        assertEquals("room not found", failure.getCause().getMessage());
+        assertTrue(System.nanoTime() - started
+                        < TimeUnit.MILLISECONDS.toNanos(RaceClient.JOIN_TIMEOUT_MILLIS),
+                "attach rejection must not wait for the handshake timeout");
+    }
+
+    @Test
     void rateLimitedListFailsWithoutStealingLaterListReply(@TempDir Path dir)
             throws Exception {
         server = MasterServer.start(TestMasterServer.testConfig(), dir);

@@ -10,7 +10,12 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-/** Filesystem storage for bounded, content-addressed input recordings. */
+/**
+ * Filesystem storage for bounded, content-addressed input recordings. Writes and
+ * the retention sweep are serialized: the upload handler and the hourly sweep run
+ * on different threads, and an unserialized sweep could delete a blob whose
+ * retention a concurrent reuse had just refreshed.
+ */
 public final class RecordingBlobStore {
     private static final Pattern HASH = Pattern.compile("[0-9a-f]{64}");
     private final Path dir;
@@ -24,7 +29,7 @@ public final class RecordingBlobStore {
         }
     }
 
-    public void put(String hashHex, byte[] bytes) {
+    public synchronized void put(String hashHex, byte[] bytes) {
         try {
             Files.write(pathFor(hashHex), bytes);
         } catch (IOException failure) {
@@ -32,7 +37,7 @@ public final class RecordingBlobStore {
         }
     }
 
-    public boolean putIfWithinLimit(String hashHex, byte[] bytes, long maxTotalBytes) {
+    public synchronized boolean putIfWithinLimit(String hashHex, byte[] bytes, long maxTotalBytes) {
         Path target = pathFor(hashHex);
         if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
             if (!Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
@@ -78,7 +83,7 @@ public final class RecordingBlobStore {
         }
     }
 
-    public int deleteOlderThan(long cutoffMillis) {
+    public synchronized int deleteOlderThan(long cutoffMillis) {
         int deleted = 0;
         try (Stream<Path> files = Files.list(dir)) {
             for (Path path : files.filter(Files::isRegularFile).toList()) {

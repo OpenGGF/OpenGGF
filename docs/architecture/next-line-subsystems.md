@@ -44,7 +44,9 @@ attempt at a time per player, and allows ghost progress no more than 12 frames a
 server-observed elapsed time. New attempts close at the round deadline; an
 already-active attempt may deliver its finish during the two-second transit grace
 before the host finalizes the round. The protocol does not supply a trusted
-predeadline completion timestamp. Departed members' track votes are removed
+predeadline completion timestamp, and the client sends a finish whatever its local
+phase estimate, so in practice an attempt running at the deadline may complete up
+to two seconds after it and still be credited. Departed members' track votes are removed
 from the live tally, including when their slot is reused. Ghost-stream and
 finish-evidence strikes apply the same connection-close threshold. A finish is
 one-shot: its input hash must be a SHA-256 digest,
@@ -56,9 +58,16 @@ cannot complete them. Queue exhaustion produces the same void result for a new c
 Terminal queue entries are pruned on the next submission after 60 seconds, while
 recording blobs and durable verdicts have separate retention. Reusing an existing
 recording refreshes its retention age so a fresh verification job does not lose
-the blob to an hourly sweep. Private identity keys are created with owner-only
-filesystem permissions before key bytes are written; legacy keys are tightened
-before loading, and filesystems unable to enforce private creation fail closed.
+the blob to an hourly sweep; blob writes and the sweep are serialized so the sweep
+cannot delete a blob whose retention a concurrent reuse has just refreshed. Private
+identity keys are created with owner-only filesystem permissions, and that exact
+protection is reapplied and verified before key bytes are written, because Windows
+merges inheritable parent ACEs into a creation-time DACL. The public key is written
+first; a failed creation removes the files it created, and a lone public key left by
+an interrupted creation is regenerated, while a lone private key is preserved and
+reported. Legacy keys are tightened before loading, and filesystems unable to
+enforce private creation fail closed. The Windows ACL path is source-reviewed only;
+no Windows runtime test exists.
 
 Within a round, finishes retain the admitted participant session and identity even when a
 departed player's slot is reused. Clean-round credit, replay verdicts, and spot checks use
@@ -84,7 +93,13 @@ empty `RoomListResult` with negative `totalPages` when browsing is rate-limited;
 the client turns that sentinel into a failed request rather than mistaking a
 silent drop for a later reply. Invalid room-create routing similarly receives
 a rejection alongside its strike. Without wire request IDs, FIFO matching
-still favors safety over availability if an earlier answer never arrives. A
+still favors safety over availability if an earlier answer never arrives: each
+later reply of that type is then consumed by the previous request's tombstone, so
+every later request of that type times out until the master connection is
+replaced. Every broker path for list, create, and join therefore must reply. A
+failed `RelayAttach` is answered with `RoomJoinRejected` on the already-attached
+socket; that frame goes to the relay handshake, not the join queue, and fails the
+handshake immediately with the broker's reason. A
 pre-wave-3 version-2 browser treats the negative list sentinel as an empty
 successful page until its next refresh; it does not crash, but may show a
 misleading empty-room state. Protocol compatibility is tracked for the next

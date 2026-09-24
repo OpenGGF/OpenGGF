@@ -71,6 +71,62 @@ class TestPlayerIdentity {
     }
 
     @Test
+    void failedCreationLeavesNoPartialKeypairAndRetrySucceeds(@TempDir Path dir)
+            throws Exception {
+        Path key = dir.resolve("player-identity.key");
+        Path pub = dir.resolve("player-identity.pub");
+        java.security.KeyPair pair = java.security.KeyPairGenerator
+                .getInstance("Ed25519").generateKeyPair();
+
+        java.io.IOException failure = assertThrows(java.io.IOException.class,
+                () -> PlayerIdentity.createKeyPair(pair, key, pub, path -> {
+                    throw new java.io.IOException("injected");
+                }));
+
+        assertEquals("injected", failure.getMessage());
+        assertFalse(Files.exists(key));
+        assertFalse(Files.exists(pub));
+        assertEquals(64, PlayerIdentity.loadOrCreate(dir).fingerprint().length());
+    }
+
+    @Test
+    void failedCreationDoesNotDeleteAnotherCreatorsKeypair(@TempDir Path dir)
+            throws Exception {
+        PlayerIdentity existing = PlayerIdentity.loadOrCreate(dir);
+        Path key = dir.resolve("player-identity.key");
+        Path pub = dir.resolve("player-identity.pub");
+        java.security.KeyPair pair = java.security.KeyPairGenerator
+                .getInstance("Ed25519").generateKeyPair();
+
+        assertThrows(java.nio.file.FileAlreadyExistsException.class,
+                () -> PlayerIdentity.createKeyPair(pair, key, pub, path -> { }));
+
+        assertEquals(existing.fingerprint(), PlayerIdentity.loadOrCreate(dir).fingerprint());
+    }
+
+    @Test
+    void lonePublicKeyFromInterruptedCreationIsRegenerated(@TempDir Path dir)
+            throws Exception {
+        PlayerIdentity.loadOrCreate(dir);
+        Files.delete(dir.resolve("player-identity.key"));
+
+        PlayerIdentity regenerated = PlayerIdentity.loadOrCreate(dir);
+
+        assertEquals(regenerated.fingerprint(), PlayerIdentity.loadOrCreate(dir).fingerprint());
+    }
+
+    @Test
+    void lonePrivateKeyIsPreservedNotReplaced(@TempDir Path dir) throws Exception {
+        PlayerIdentity.loadOrCreate(dir);
+        Path key = dir.resolve("player-identity.key");
+        byte[] original = Files.readAllBytes(key);
+        Files.delete(dir.resolve("player-identity.pub"));
+
+        assertThrows(java.io.IOException.class, () -> PlayerIdentity.loadOrCreate(dir));
+        assertArrayEquals(original, Files.readAllBytes(key));
+    }
+
+    @Test
     void refusesSymlinkPrivateKey(@TempDir Path dir) throws Exception {
         assumeTrue(Files.getFileStore(dir).supportsFileAttributeView("posix"));
         Path identityDir = dir.resolve("identity");
