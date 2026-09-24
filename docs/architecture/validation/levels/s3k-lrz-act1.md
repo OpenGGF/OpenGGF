@@ -918,3 +918,20 @@ The final drill breakup is also refreshed in
 (29580–29939,360frames). Both videos fully decode, with zero deaths; inspected
 21594 and29700 stills. These clips exercise the corrected overlap/sequence but
 are not strict native whole-scene pixel matching.
+
+
+### Palette helper allocation order (2026-09-24)
+
+Source review after a67d44aa9 found both `AllocateObject` calls in `loc_787E0`
+and `loc_78AA8` incorrectly using after-current allocation. Both palette helpers
+now use the first free slot; debris retains `CreateChild1_Normal` ordering and
+the signpost controller retains the drill slot. A real object-manager regression
+places the drill at slot40 with earlier holes and fails before the fix. A second
+check covers the palette sibling's earlier-slot allocation.
+
+Queued Java21/native GL, `-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`,
+`-Dtest=TestLrzMinibossInstance,TestLrzPostDefeatCameraRelease,TestS3kLrzBossRewindHeadless,TestLrzColdRouteCapture#coldTeamDefeatsMinibossAndReachesPlayableActTwo,TestLrzPostBossPaletteRouteCapture test`
+passes38 tests, zero failures/errors/skips. This covers the full ordinary cold
+Act1 clear and its26 registry replay spots, detached boss-child recreation, and
+native/wide palette handoffs. These are focused checks; campaign delivery
+validation remains outstanding.

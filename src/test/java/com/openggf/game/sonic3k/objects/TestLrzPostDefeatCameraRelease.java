@@ -41,6 +41,18 @@ class TestLrzPostDefeatCameraRelease {
     }
 
     @Test
+    void paletteSiblingUsesTheFirstFreeSlotRatherThanTheWaitersSuccessor() {
+        var waiter = waiter();
+        services.objectManager().addDynamicObjectAtSlot(waiter, 40);
+        camera.setX((short) 0);
+        services.gameState().setEndOfLevelFlag(true);
+        waiter.update(0, null);
+        var sibling = live().stream().filter(object -> object != waiter).findFirst().orElseThrow();
+        assertTrue(sibling.getSlotIndex() >= 0 && sibling.getSlotIndex() < 40,
+                "loc_78AA8 calls AllocateObject even when an earlier SST is available");
+    }
+
+    @Test
     void centeredActTwoViewReleasesAtNativeThresholds() {
         var config = org.mockito.Mockito.mock(com.openggf.configuration.SonicConfigurationService.class);
         org.mockito.Mockito.when(config.getShort(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS))

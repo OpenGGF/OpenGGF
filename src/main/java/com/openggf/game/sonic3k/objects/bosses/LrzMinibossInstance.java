@@ -925,7 +925,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         defeatPhase = DEFEAT_HANDED_OFF;
         // jsr (AllocateObject).l / move.l #loc_78AA8,(a1) (sonic3k.asm:160247-160250), before the
         // debris and before this slot becomes Obj_EndSignControl.
-        spawnChild(() -> new LrzPostDefeatCameraReleaseInstance(
+        spawnFreeChild(() -> new LrzPostDefeatCameraReleaseInstance(
                 LrzPostDefeatCameraReleaseInstance.Gate.WAITER));
         for (int index = 0; index < LrzMinibossDebrisChild.DEBRIS_COUNT; index++) {
             final int piece = index;

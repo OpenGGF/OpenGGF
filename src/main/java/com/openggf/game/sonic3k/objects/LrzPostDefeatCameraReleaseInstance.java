@@ -123,7 +123,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
             if (!siblingAllocated) {
                 // jsr (AllocateObject) / move.l #loc_78B08,(a1) (:160517-160519).
                 siblingAllocated = true;
-                spawnAfterCurrentSibling(
+                spawnFreeChild(
                         () -> new LrzPostDefeatCameraReleaseInstance(Gate.SIBLING));
             }
             // loc_78AE0 runs the rotation script and falls through into loc_78AE6 on this frame.

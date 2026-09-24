@@ -82,6 +82,27 @@ class TestLrzMinibossInstance {
         assertTrue(piece.isDestroyed());
     }
 
+    @Test
+    void defeatReusesTheDrillSlotButAllocatesThePaletteWaiterFromTheFirstFreeSlot() {
+        services.objectManager().addDynamicObjectAtSlot(boss, 40);
+        hitDrillUntilDefeated(0x1200);
+        for (int i = 0; i < 0x400 && !boss.isDestroyed(); i++) {
+            boss.update(nextFrame(), null);
+        }
+        assertTrue(boss.isDestroyed());
+        var flow = services.objectManager().activeObjectsOfType(S3kBossDefeatSignpostFlow.class);
+        assertEquals(1, flow.size());
+        assertEquals(40, flow.get(0).getSlotIndex(), "jmp Obj_EndSignControl keeps the drill SST");
+        var waiters = services.objectManager().activeObjectsOfType(
+                com.openggf.game.sonic3k.objects.LrzPostDefeatCameraReleaseInstance.class);
+        assertEquals(1, waiters.size());
+        assertTrue(waiters.get(0).getSlotIndex() >= 0 && waiters.get(0).getSlotIndex() < 40,
+                "loc_787E0 uses AllocateObject, not AllocateObjectAfterCurrent");
+        assertEquals(11, debris().size());
+        assertTrue(debris().stream().allMatch(piece -> piece.getSlotIndex() > 40),
+                "ChildObjDat_78D9E separately uses CreateChild1_Normal");
+    }
+
     @BeforeEach
     void setUp() {
         TestEnvironment.resetAll();

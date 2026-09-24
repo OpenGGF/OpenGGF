@@ -4702,3 +4702,10 @@ retiring arms' shared phase. Its normalized conversion and phase assertion
 pass30 focused tests, including cold clear/replay. The corrected hand-peel
 clip is located by the first bit6 transition at21593, rather than the guessed
 later attack window. See the [phase evidence](../validation/levels/s3k-lrz-act1.md#retiring-arm-priority-follow-up-2026-09-24).
+
+
+The same source audit corrected the two palette helpers' allocation policy:
+`loc_787E0` and `loc_78AA8` use first-free `AllocateObject`, unlike the
+after-current debris chain. The slot40 regression fails on a67d44aa9;38 focused
+checks pass after correction, including cold clear/replay and native/wide palette
+handoffs. See the [allocation evidence](../validation/levels/s3k-lrz-act1.md#palette-helper-allocation-order-2026-09-24).
