@@ -30,7 +30,7 @@ def compose(rgb, frame):
     # The first prototype translated y by tick*13, so the same noise field
     # scrolled upward. Independent seeded fields retain reproducibility without
     # moving texture coordinates or consuming the engine's gameplay RNG.
-    tick = frame//5  # 12Hz refresh
+    tick = frame  # one independent field per 60Hz video frame
     grain = np.random.default_rng(np.random.SeedSequence([20260924, tick])).random((HEIGHT, WIDTH))
     luma = 13+grain*35
     noise = luma[..., None]*np.array([.94, .98, 1.06])
@@ -91,7 +91,7 @@ def main():
     assert np.array_equal(active[:,LEFT:RIGHT],sample[:,LEFT:RIGHT])
     assert not np.array_equal(active[:,:LEFT-12],sample[:,:LEFT-12])
     # Detect the original 13px upward translation as well as stationary grain.
-    next_tick=compose(sample,155)
+    next_tick=compose(sample,151)
     for shift in (0, 13):
         old=active[shift:HEIGHT, :LEFT-12, 0].astype(float).ravel()
         new=next_tick[:HEIGHT-shift, :LEFT-12, 0].astype(float).ravel()

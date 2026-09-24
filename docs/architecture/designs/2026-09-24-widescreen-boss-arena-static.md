@@ -27,7 +27,7 @@ The user proposed matching the existing rewind shader's noise character.
   pixels must never enter the original view. The active area's pixels, scale,
   colours, and camera sampling remain unchanged.
 - Use dark, slightly cool monochrome grain, refreshed with an independent field
-  at 12 Hz. Keep the subdued noise character of the rewind effect, but no spatial
+  at 60 Hz. Keep the subdued noise character of the rewind effect, but no spatial
   scrolling, moving tape band, wobble, chroma split or picture displacement.
   This is an original presentation adaptation, not Genesis behavior.
 - Keep HUD, lives, menus and accessibility overlays readable. The preview footage
@@ -91,7 +91,7 @@ checks clear entry, sustained masking and opaque outer wings, and fully decodes 
 finished MP4s. Lossy MP4 encoding is not a pixel-parity oracle; the PNGs retain
 the exact composed pixels.
 
-Demo archive: `$HOME/Videos/OGGF/ssz-arena-static-held-20260924`.
+Demo archive: `$HOME/Videos/OGGF/ssz-arena-static-camera-fixed-60fps-20260924`.
 Footage is from the separate bring-up campaign's corrected GHZ/MTZ Eggmobile
 captures. This branch does not include or duplicate those engine changes.
 
@@ -127,7 +127,8 @@ The initial prototype (`fce524948`) used `y + tick*13` in a spatial hash. This
 translated the same field upward by 13 pixels at each refresh; it was not fresh
 random static. A separate moving brightness band reinforced the apparent motion.
 User review identified the drift. Both are replaced with independent, seeded
-noise fields per refresh, preserving deterministic playback and the 12 Hz cadence.
+noise fields per refresh, preserving deterministic playback. The initial 12 Hz cadence was subsequently
+replaced with one fresh noise field per 60 fps video frame after user review.
 A regression check compares consecutive fields at zero and 13-pixel vertical
 offsets; neither may retain significant correlation.
 
@@ -145,3 +146,17 @@ production mask; only the owning arena event reopening bounds does so.
 
 Both revised clips passed all 600 centre-preservation assertions, full decode,
 temporal decorrelation and final-frame sustained-mask checks.
+
+## Camera and cadence review
+
+The first source captures had genuine widescreen camera clamp errors: GHZ
+followed knockback; MTZ jumped right by240px. The mask made the latter hide the
+fight. The bring-up worktree now projects SSZ1 replica bounds using captured
+event ownership, as already done for SSZ2. This prototype branch does not contain
+that engine change; regenerated inputs are the camera-fixed recordings. Their
+300 filmed state rows hold cameraX112 (GHZ) and5488 (MTZ), including44hurt rows
+each. Native320 recordings retain352 and5728 respectively.
+
+Noise now refreshes at60Hz, not the initially chosen12Hz. Both finished MP4s
+were decoded; all167 consecutive frame pairs tested during the fully opaque
+interval have changing noise. All600 centre-preservation checks still pass.
