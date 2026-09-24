@@ -150,7 +150,16 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
             }
             runPlayer(services().playerQuery().mainPlayerOrNull(), 0);
             runPlayer(services().playerQuery().nativeP2OrNull(), 1);
-            if (spawner != null && !spawner.isDestroyed()) run(spawner.body, 2);
+            if (spawner != null) {
+                if (!spawner.isDestroyed()) run(spawner.body, 2);
+                // ROM DEZTunnelControl_Done returns without reading a1 once the
+                // trail channel reaches zero. Its earlier setup means the trail
+                // can finish before either player; loc_4889E then deletes it in
+                // its own later slot pass. Drop the now-unused Java reference
+                // immediately so a between-frames rewind never retains a dead
+                // owner. The spawner still performs its native final update.
+                if (routine[2] == 0 || spawner.isDestroyed()) spawner = null;
+            }
         }
 
         private void runPlayer(PlayableEntity entity, int slot) {

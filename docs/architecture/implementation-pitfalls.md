@@ -145,6 +145,12 @@ publish the parent's ROM retirement flag before removing its identity:
 An exact-id sidecar may encode an already-retired parent as null so a child
 awaiting its next update remains an orphan; do not silently accept an unregistered
 live owner.
+DEZ's tunnel controller has the opposite lifetime: its ring-trail channel starts
+10 updates before the player channels and can delete its spawner while they still
+run. `DEZTunnelControl_Done` never dereferences that completed channel, so release
+the Java link when the channel reaches zero, before the later spawner slot deletes
+it. Do not suppress identity validation or keep the spawner alive for snapshots.
+Exercise capture in that retirement window, not only during the moving trail.
 Boss-child spawn metadata is a derived position/ordinal cache:
 refresh it before capture, including the first frame after subclass construction.
 `TestS3kLrzBossRewindHeadless` covers arms, hit flashes and defeat debris through

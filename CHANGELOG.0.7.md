@@ -174,7 +174,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Lift pads swing Sonic upward, wait while he stands on them, then return after he leaves.
   Vertical gravity tubes keep player movement active so riders travel through their span.
   Light-tunnel launchers count down, carry captured players through the winding paths
-  with glowing ring trails, and release them at the exit. The Act 1 miniboss now fights
+  with glowing ring trails, and release them at the exit; rewind remains valid when
+  the trail finishes before its riders. The Act 1 miniboss now fights
   through its orbiting-sphere and moving-platform phases, including its eye, beam,
   spikes and breakup; detached sphere fragments and their stationary explosions remain rewindable after their creator disappears. Defeating it runs the results and carries the player into Act 2,
   where the floor opens, the launch plays and normal control returns. Act 2's gravity boss

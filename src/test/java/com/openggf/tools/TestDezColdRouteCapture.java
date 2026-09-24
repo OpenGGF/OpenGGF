@@ -53,14 +53,19 @@ class TestDezColdRouteCapture {
         runColdRoute("tilt");
     }
 
+    @Test void coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind() throws Exception {
+        runColdRoute("chain");
+    }
+
     private void runColdRoute(String route) throws Exception {
         boolean complete = route.equals("complete");
+        boolean chain = route.equals("chain");
         boolean tilt = route.equals("tilt");
         boolean shaft = route.equals("shaft");
         boolean roof = route.equals("roof");
         boolean transporters = route.equals("transporters");
         boolean middle = route.equals("middle");
-        boolean lower = route.equals("lower") || middle || transporters || roof || shaft || tilt;
+        boolean lower = route.equals("lower") || middle || transporters || roof || shaft || tilt || chain;
         boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
@@ -129,6 +134,16 @@ class TestDezColdRouteCapture {
                     24130, 24160, 24230, 24280, 24330, 24390, 24420, 24470,
                     24530, 24565, 24610, 24645, 24685, 24710, 24745, 24780,
                     24860, 24930, 24990, 25050));
+        }
+        if (chain) {
+            // Spring avoidance, vertical tube, west-facing launcher/transport,
+            // eastbound corridor, second transport and hub direction/re-capture.
+            spots.clear();
+            spots.addAll(Set.of(25070, 25120, 25210, 25270, 25330, 25380,
+                    25430, 25620, 25670, 25730, 25860, 25915, 26030, 26130,
+                    26180, 26260, 26320, 26445, 26500, 26600, 26675, 26780,
+                    26940, 26980, 27050, 27150, 27250, 27350, 27420, 27470,
+                    28190, 28210));
         }
         var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
                 .getSuperclass().getDeclaredField("collisionProperty");
@@ -206,10 +221,11 @@ class TestDezColdRouteCapture {
             assertEquals(11, GameServices.level().getCurrentZone());
             assertEquals(complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
-                assertEquals(tilt ? 9525 : shaft ? 8211 : roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
-                assertEquals(tilt ? 2156 : shaft ? 1683 : roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
-                assertEquals(tilt ? 7 : shaft ? 3 : roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
-                assertFalse(session.player().isObjectControlled(), "lower tube releases movement");
+                assertEquals(chain ? 12992 : tilt ? 9525 : shaft ? 8211 : roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
+                assertEquals(chain ? 2112 : tilt ? 2156 : shaft ? 1683 : roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
+                assertEquals(chain ? 4 : tilt ? 7 : shaft ? 3 : roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
+                assertEquals(chain, session.player().isObjectControlled(),
+                        "chain ends captured in the hub; other routes finish with movement released");
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             }
             if (complete) {

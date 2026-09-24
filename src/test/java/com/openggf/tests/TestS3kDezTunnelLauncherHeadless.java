@@ -169,6 +169,28 @@ class TestS3kDezTunnelLauncherHeadless {
         registry.restore(released); assertEquals(exitRows, frames(f, 30));
     }
 
+    @Test void finishedTrailRetiresBeforePlayersWithoutLeavingARewindReference() {
+        var f = boot(320, 0, 0x100, 0x400);
+        f.sprite().setAir(false);
+        var launch = create(0x100, 0x400, 7);
+        for (int i = 0; i < 180; i++) launch.update(0, f.sprite());
+        var c = controller();
+        assertNotNull(c);
+        f.stepIdleFrames(1);
+        var trail = c.spawnerForTest();
+        assertNotNull(trail);
+        int passes = 0;
+        while (!trail.isDestroyed() && passes++ < 2000) f.stepIdleFrames(1);
+        assertTrue(trail.isDestroyed(), "trail completes its own ROM channel");
+        assertNotEquals(0, c.routineForTest(0), "player setup trails the ring channel by ten passes");
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        var forward = frames(f, 45);
+        registry.restore(saved);
+        assertEquals(forward, frames(f, 45));
+        assertNull(c.spawnerForTest(), "completed trail channel must not retain a retired Java owner");
+    }
+
     private List<String> frames(HeadlessTestFixture f, int count) {
         var rows = new ArrayList<String>();
         for (int i = 0; i < count; i++) {

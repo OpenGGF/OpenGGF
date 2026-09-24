@@ -583,3 +583,42 @@ full MP4 decode were checked. This is engine presentation, not native pixel
 parity. Further exploratory input clears the next spring and tube ascent to
 (10325,851); the native route then turns left. Full Act2 completion and remaining
 width/roster/lifecycle breadth remain open.
+
+### Upper transport chains, hub handoff and trail retirement (2026-09-24)
+
+On `893c9834c` plus this change, the preserved
+`dez2-sonic-tails-incoming-chain-320.{script,bk2}` reaches the east hub's lower
+chamber at (12992,2112), with 4 rings, in 28261 ordinary controller frames from
+cold DEZ1 Sonic+Tails. Sonic is captured by the destination hub; Tails is present at the same coordinates.
+The route includes the upper tube, westward launcher/sine transport, eastbound
+corridor, another winding transport and the hub's Down command. It has zero
+deaths and no gameplay overrides; the hub waits until a Left command continues.
+
+A new full-registry snapshot exposed an invalid controller-to-spawner reference
+after the trail completed. The independent short test
+`TestS3kDezTunnelLauncherHeadless#finishedTrailRetiresBeforePlayersWithoutLeavingARewindReference`
+reproduced the same identity-table error before the fix. ROM
+`Obj_DEZTunnelControl` initializes the player timers to10 but leaves the trail
+timer zero; the trail thus finishes first. `DEZTunnelControl_Done` never reads its
+completed channel's pointer, while `loc_4889E` deletes the spawner in its own slot.
+The engine now drops that unused Java link as the channel completes, preserving
+the final spawner update and deletion. Keeping the child alive or weakening
+identity validation would conceal the lifetime mismatch and was not used.
+
+Queued Java21 command `python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestS3kDezTunnelLauncherHeadless,TestDezColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed79 tests, zero failures/errors/skips. All10 preserved DEZ cold routes pass,
+including the new chain route's32 full-registry capture/restore and45-frame replay
+spots. The seven Act2 routes now total145 spots. Combined campaign validation
+remains pending.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-transport-chain-320/capture.mp4`
+shows25070–28260, including the deliberate wait before the Down input. All28261
+state rows, stills25380/25990/27030/27490/28260 and complete MP4 decoding were
+checked. Recorded on the pre-fix forward path; after the lifetime fix, a fresh
+continuation matched the first28260 state rows in every non-input-text field.
+At28260 the continuation deliberately presses Left while the recording holds
+Right, accounting for its only velocity difference. This is engine presentation,
+not native pixel parity. Further exploratory controls traverse the return loop
+and reach the upper corridor at (13781,812); boss completion and breadth remain open.
