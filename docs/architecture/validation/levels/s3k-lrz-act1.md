@@ -10,9 +10,9 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
 full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
-Eleven preserved native320 ordinary Sonic+Tails cold routes now extend through
-door7, the middle collapsing bridge and the upper-route spring to11950 inputs.
-The eleven routes cover105 full-registry replay spots; current checks are below. Later
+Twelve preserved native320 ordinary Sonic+Tails cold routes now extend through
+the late spike-platform ascent and western steps to16275 inputs.
+The twelve routes cover126 full-registry replay spots; current checks are below. Later
 ordinary traversal is being authored; current verification is recorded in the
 dated follow-ups below.
 
@@ -640,3 +640,35 @@ acceptance remains open. Exploratory continuation eventually reaches the
 X8600area but dies15391; neither that duration nor the lower loop is certified
 completion. Continue the successful upper route and audit its next hazard.
 Full Act1/Act2 cold completion and campaign integration remain owed.
+
+### Late spike-platform ascent and damage recovery (2026-09-24)
+
+On `c3d5a01f2` plus route/test additions, `lrz1-sonic-tails-cold-late-ascent-320`
+reaches(8039,624),7rings at16275inputs with no deaths and a live sidekick.
+The route loses its shield and rings during the approach and recovers loose
+rings; those ordinary damage states are retained rather than reset. This is
+not a no-hit route. The previous exploratory death15391 was in the
+`$21:11` spike-platform area(8576,926), not the `$9C` rock crusher.
+
+The successful ascent settles on the small rock before jumping to the platform
+during its low phase, rides upward and exits west. Earlier jumps either
+overshot that rock or met the platform while it was too high. A spin dash
+clears the upper rock wall and three jumps ascend the western steps. Native
+rows18900–19500 corroborate the route shape; controller timing, damage history
+and scene pixels are not claimed to match. No runtime correction was required.
+The exploratory top-left detour later became stuck beside an Iwamodoki and
+took damage; the committed endpoint precedes it. Continue east from(8039,624).
+
+Queued Java21/native GL/absolute S3K ROM:
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzColdRouteCapture#coldTeamRecoversFromDamageAndClimbsLateSpikePlatform test`
+passes1 test,zero failures/errors/skips. Twenty-one45-frame full-registry
+replay spots:11980,12300,13200,14100,14680,14860,14868,14930,15040,15410,
+15445,15580,15620,15655,15730,15780,15850,15900,16120,16190,16220.
+They include the damage transition, recovery, rock landing, platform ride and
+upper steps. InputLogAuthorTool compiles and round-trip verifies script/BK2.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cold-late-ascent-320/capture.mp4`
+films14680–16274 after the full cold prefix;16275state rows,zero deaths,
+15680/16274stills inspected and whole MP4 decode passes. This establishes
+ordinary reachability and replay, not complete act/native visual acceptance.
+Full Act1/Act2 completion and combined campaign integration remain owed.

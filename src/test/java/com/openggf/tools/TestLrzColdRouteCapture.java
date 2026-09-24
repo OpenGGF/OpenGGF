@@ -61,8 +61,13 @@ class TestLrzColdRouteCapture {
         runColdRoute("middle-spring");
     }
 
+    @Test void coldTeamRecoversFromDamageAndClimbsLateSpikePlatform() throws Exception {
+        runColdRoute("late-ascent");
+    }
+
     private void runColdRoute(String route) throws Exception {
-        boolean middleSpringRoute = route.equals("middle-spring");
+        boolean lateAscentRoute = route.equals("late-ascent");
+        boolean middleSpringRoute = route.equals("middle-spring") || lateAscentRoute;
         boolean highClimbRoute = route.equals("high-climb") || middleSpringRoute;
         boolean upperLedgeRoute = route.equals("upper-ledge") || highClimbRoute;
         boolean lowerEastRoute = route.equals("lower-east") || upperLedgeRoute;
@@ -79,7 +84,8 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = middleSpringRoute ? Set.of(10085, 10097, 10105, 10125, 10165, 10325, 10400, 10650, 10700, 10960, 11190, 11220, 11570, 11730, 11775, 11820, 11900)
+        var spots = lateAscentRoute ? Set.of(11980, 12300, 13200, 14100, 14680, 14860, 14868, 14930, 15040, 15410, 15445, 15580, 15620, 15655, 15730, 15780, 15850, 15900, 16120, 16190, 16220)
+                : middleSpringRoute ? Set.of(10085, 10097, 10105, 10125, 10165, 10325, 10400, 10650, 10700, 10960, 11190, 11220, 11570, 11730, 11775, 11820, 11900)
                 : highClimbRoute ? Set.of(8700, 8730, 8775, 8890, 8920, 9030, 9080, 9130, 9300, 9380, 9410, 9500, 9720, 9830)
                 : upperLedgeRoute ? Set.of(7800, 8030, 8210, 8300, 8364, 8390, 8550, 8620, 8700)
                 : lowerEastRoute ? Set.of(6230, 6320, 6450, 6540, 6700, 7180, 7260, 7420, 7500)
@@ -222,7 +228,10 @@ class TestLrzColdRouteCapture {
                 assertEquals(shieldRoute ? 2206 : 2746, session.player().getCentreX());
                 assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
             }
-            if (middleSpringRoute) {
+            if (lateAscentRoute) {
+                assertEquals(8039, session.player().getCentreX());
+                assertEquals(624, session.player().getCentreY());
+            } else if (middleSpringRoute) {
                 assertEquals(7652, session.player().getCentreX());
                 assertEquals(1201, session.player().getCentreY());
             } else if (highClimbRoute) {
@@ -235,7 +244,7 @@ class TestLrzColdRouteCapture {
                 assertEquals(4917, session.player().getCentreX());
                 assertEquals(1712, session.player().getCentreY());
             }
-            assertEquals(middleSpringRoute ? 119 : highClimbRoute ? 111 : upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
+            assertEquals(lateAscentRoute ? 7 : middleSpringRoute ? 119 : highClimbRoute ? 111 : upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
                     session.player().getRingCount());
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
         }
