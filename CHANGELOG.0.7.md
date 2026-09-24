@@ -512,7 +512,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   for art-queue capacity when wider visibility overlaps startup loading. MHZ end-boss debris
   retains the ROM trajectory when the boss faces left, and Madmole’s submerged
   body keeps its final collision position until the ROM’s deferred deletion.
-  Cutscene doors retain their lowered state when streamed out and back in, and
+  The MHZ2 Knuckles press sequence flips Sonic and Tails into the ROM floor-grab
+  pose when it switches to raw mappings. Cutscene doors retain their lowered state
+  when streamed out and back in, and
   boss debris follows the native initialization and flicker sequence. Act 1
   camera limits use the locked-on ROM’s height rule for all characters, and
   the Act 1 boss and its thrusters stay alive during offscreen attack phases.
