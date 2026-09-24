@@ -4731,3 +4731,34 @@ attribution, restored scene and combined-validation limits are in the
 Do not diagnose the old exploratory branch clips as fresh-load failures: their
 initial whole-registry restore triggered this bug. Route authoring now reaches
 the ledge after the orbiting-ball pipe; full Act2 completion remains open.
+
+
+### Preserve controller branch authoring (2026-09-24)
+
+The repeatedly used LRZ2 scratch probe is promoted to `GameplayInputBranchTool`
+and indexed in the agent workflow guide and mirrored input-authoring skill. It
+uses a cold replay, one whole-registry checkpoint and the external driver's
+held-input history; no native state is supplied to gameplay. Outputs retain both
+pads in compact full-prefix scripts/BK2, state rows, nearby object inventory and
+sampled images. Existing products and cross-load restores are rejected. The
+chosen movie still requires an independent uninterrupted capture and route tests.
+
+On b8596b0ae plus the tool, queued Java21/native GL and explicit S3K ROM path,
+`-Dtest=TestGameplayInputBranchTool,TestGameplayInputBranchToolHeadless,TestInputLogAuthorTool,TestGameplayCaptureToolArgs,TestGameplayCaptureSkippedTitles test`
+passes13 tests, zero skips. This includes identical branch images/state and
+comparison with a fresh uninterrupted replay, P2/held-Start round trips and the
+existing S1/S2 omitted-title capture checks. S1/S2 ROM identities were separately
+checked against the repository's CRC/SHA1 table. Mirrored skills and diff checks
+pass. The inspected plan selects2911 ordinary classes plus guards; proportional
+local verification is used for this development-only CLI and package-private
+driver-history helper, which does not alter existing gameplay or capture calls.
+The earlier shared DMA-journal fix remains subject to combined campaign validation.
+
+The first production CLI use restores at35838 and jumps before door8's low
+ceiling, pressing the placed horizontal button at6200/1389 (layout185, subtype8)
+and opening its door at6224/1440 (layout187). Three ordinary variants reach the
+next passage without death; one reaches6603/1723 with3 rings after36057 inputs.
+This is exploratory progress, not yet a certified Act2 fixture. Walking, jumping
+at the door face and spindashing there were rejected as input choices after the
+placement data and native422420–422480 jump showed the earlier approach. No
+door/button runtime adjustment was needed.

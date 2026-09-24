@@ -256,6 +256,12 @@ public final class GameplayCaptureSession implements AutoCloseable {
         }
     }
 
+    /** Restore the external driver's edge history after restoring engine-owned gameplay state. */
+    void restoreInputHistory(Bk2FrameInput input) {
+        requireBooted();
+        previousInput = input;
+    }
+
     /** Steps one gameplay frame with the given held input ({@code null} = neutral). */
     public void step(Bk2FrameInput input) {
         requireBooted();
