@@ -15,6 +15,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -941,8 +943,15 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         // loc_56CAA carries the arena's Camera_max_X_pos across the seamless change with $2C00
         // subtracted (:115368-115369), so without this the act 2 player stands against the act 1
         // arena's right wall. Measured 2026-09-19 on inputs/lrz1-act-change-walk-v14.txt.
-        spawnChild(() -> new S3kBossDefeatSignpostFlow(
+        // loc_787E0 rewrites this SST, not an allocated sibling. Its detached
+        // Obj_FlickerMove pieces no longer need a live drill parent. Keeping the
+        // hidden drill here leaked its persistent slot throughout Act 2.
+        int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        ObjectLifetimeOps.deleteNoRespawn(this);
+        var flow = ObjectConstructionContext.construct(services(), () -> new S3kBossDefeatSignpostFlow(
                 signpostX, apparentAct, S3kBossDefeatSignpostFlow.CleanupAction.NONE, true));
+        ObjectLifetimeOps.addReplacementAtTransferredSlot(services().objectManager(), flow, slot);
+        flow.beginNativeReplacement(slot);
     }
 
     /**

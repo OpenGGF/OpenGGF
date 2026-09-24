@@ -165,6 +165,18 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         return this;
     }
 
+    /**
+     * A boss jumps into Obj_EndSignControl in its existing SST dispatch. Install
+     * its flag/timer now; the replacement's next dispatch then decrements $77.
+     * This avoids retaining a second boss slot or delaying the native install.
+     * Call after ObjectManager registers the replacement and binds its services.
+     */
+    public S3kBossDefeatSignpostFlow beginNativeReplacement(int slot) {
+        nativeControlSlot = slot;
+        ensureInitialized();
+        return this;
+    }
+
     @Override
     public int getX() {
         return signpostX;

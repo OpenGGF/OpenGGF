@@ -270,6 +270,9 @@ class TestLrzColdRouteCapture {
             if (minibossClearRoute) {
                 assertEquals(0, GameServices.camera().getMinY(),
                         "Change_Act2Sizes must release the carried miniboss min-Y before the climb");
+                assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.bosses.LrzMinibossInstance.class).isEmpty(),
+                        "the drill slot has become the signpost controller and retired");
                 assertEquals(2357, session.player().getCentreX());
                 assertEquals(1980, session.player().getCentreY());
                 assertFalse(session.player().isObjectControlled(), "Act2 movement is released");

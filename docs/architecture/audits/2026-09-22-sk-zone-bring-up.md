@@ -4681,3 +4681,17 @@ See the [Act2 evidence](../validation/levels/s3k-lrz-act2.md#act-title-vertical-
 for commands, native observation, clip and remaining route work. A sparse-looking
 floor was rejected as a bug after native screenshots confirmed it; the locked
 vertical camera was independently demonstrated by camera/player coordinates.
+
+
+### LRZ drill slot and debris priority (2026-09-24)
+
+The Act2 cold continuation exposed the old drill remaining alive beside its
+signpost controller. `loc_787E0` replaces the original slot. The fix transfers
+that slot and makes its11 independent Obj_FlickerMove pieces recreate without a
+boss identity. It also fixes raw `$80` priority clamping to7 rather than1 and
+models the initial draw-only and deferred-delete dispatches. The old-code
+regressions fail;98 final focused checks pass, zero skips. See the
+[Act1 evidence](../validation/levels/s3k-lrz-act1.md#native-drill-replacement-and-detached-debris-2026-09-24)
+for exact commands, intermediate error attribution and refreshed video.
+Act2 input authoring now reaches the vertical lift and first upper turbine;
+that exploratory extension is not yet a certified fixture or full cold clear.

@@ -199,6 +199,10 @@ display-list byte offset as a word (`move.w #$280,priority(a0)` is bucket 5, `$8
 bucket 1, not a flag), and ObjDat/ObjDat3 tables carry the same word third. Transcribe
 through `RenderPriority.bucket(n)` / `RenderPriority.fromS3kWord(word)`; `clamp` folds
 a raw S3K word into bucket 7 without complaint (four CNZ/LRZ objects shipped that way).
+Boss-child constructor arguments need the same conversion: LRZ drill debris
+passed `$80` into `AbstractBossChild` and silently drew in bucket7 rather than1
+until the 2026-09-24 cold-route cleanup. Test the normalized result, not merely
+the presence of an override.
 `getPriorityBucket()` defaults to bucket 0, the front-most, so every class that draws
 must override it; `TestObjectPriorityBucketGuard` enforces this and a ROM priority of 0
 opts in by returning `bucket(0)` with the citation. `isHighPriority()` is the art
@@ -715,6 +719,16 @@ The cold SSZ route first diverged at input7076 because the restored bar now caug
 Sonic, requiring an ordinary jump to continue along the upper walkway.
 
 ### A dying child can outlive its parent's SST identity
+
+LRZ drill debris (`loc_78A70`, 2026-09-24) becomes independent `Obj_FlickerMove`:
+it never reads its parent again. Keeping an `AbstractBossChild` relationship
+retained the hidden drill solely for its clock/reconstruction link. Model these
+pieces as standalone slots, and transfer the drill's slot to EndSignControl.
+Preserve the initializer's Draw_Sprite-only dispatch before movement/flicker and
+Go_Delete_Sprite_3's next-dispatch deletion. Register a replacement before calling
+an initializer that reads services; construction context alone does not bind its
+post-construction methods. Test reconstruction after the source parent is gone.
+
 
 DEZ final fingers (`loc_80D64`, 2026-09-23) wait 32 updates while their hand
 (`loc_80B42`) deletes itself first. `Refresh_ChildPosition` dereferences the

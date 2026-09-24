@@ -857,3 +857,41 @@ also shows the apparently sparse floor after the palette change; see the audit's
 read-only416490–417600 observation. This is not a strict native pixel/trajectory
 match. Other rosters, widescreen cold traversal, donor/lifecycle breadth and
 combined campaign delivery remain open.
+
+
+### Native drill replacement and detached debris (2026-09-24)
+
+The continued Act2 cold route still listed a persistent, invisible drill after
+the title. `loc_787E0` instead jumps into `Obj_EndSignControl` in the existing
+SST slot; `Obj_EndSignControlDoStart` finally deletes that slot. On ac3464114 plus
+this fix the drill transfers its slot to the shared controller and installs its
+native flag/timer in the same dispatch, preserving the existing cold input timing.
+The eleven `loc_78A70` pieces are standalone objects: their arcs no longer depend
+on the deleted parent's update clock or rewind identity. Their `$80` priority
+word now selects bucket1, rather than silently clamping the raw value to7.
+Initialization draws without moving; the first movement pass is invisible, and
+Go_Delete_Sprite_3 delays slot deletion until the next dispatch.
+
+Both new regressions fail on ac3464114: the drill was not destroyed, and debris
+priority was7 instead of1. The first implementation attempt called the shared
+initializer before ObjectManager bound its services, causing6 errors; registering
+first fixes that ordering. The direct fixture now supplies GameStateManager
+because the native initialization happens immediately. The final queued Java21,
+native GL, `-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen` checks are:
+
+- `-Dtest=TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestLrzColdRouteCapture#coldTeamDefeatsMinibossAndReachesPlayableActTwo,TestLrzPostBossPaletteRouteCapture,TestS3kBossDefeatSignpostFlow test`:36passed, zero failures/errors/skips.
+- `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:59passed, zero failures/errors/skips.
+- Separate JVM, `-Pguards -Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestObjectPriorityBucketGuard test`:3passed, zero failures/errors/skips.
+
+The cold endpoint remains2357,1980 with zero deaths and now asserts no drill
+owner survives; its26 full-registry replay spots and both320/800 positioned
+handoffs pass. The debris graph test forces removal/recreation after the parent
+has retired. The inspected change-based plan selects2567 ordinary classes plus
+guards; combined campaign delivery validation remains open. These are focused
+checks, not a full-suite result.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-miniboss-slot-release-320/capture.mp4`
+films29580–31439, with31440 state rows and1860 rendered frames. Inspected29760 and
+29800 stills and decoded the entire video. This is a refreshed engine demo, not
+strict native whole-scene pixel acceptance. Other route products and lifecycle
+breadth remain open.

@@ -562,6 +562,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the normal lava/crystal palette clock until the camera reaches the native release.
   The title handoff also releases both vertical camera bounds gradually, so the
   Act 2 climb stays in view instead of retaining the miniboss height restriction.
+  The defeated drill transfers its slot to the signpost controller; its independent
+  debris keeps the native draw order, initial draw and delayed retirement.
   Act 2 also draws its ROM-backed Death Egg background sprite, with continuous
   widescreen entry and preserved art-load/position state on rewind. Finite
   widescreen foregrounds no longer repeat opposite-edge terrain outside the layout.

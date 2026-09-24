@@ -62,6 +62,26 @@ class TestLrzMinibossInstance {
         }
     }
 
+    @Test
+    void detachedDebrisUsesNativePriorityBucket() {
+        var piece = new LrzMinibossDebrisChild(boss, 0);
+        assertEquals(1, piece.getPriorityBucket(), "word_78D7E priority $80 selects bucket one");
+    }
+
+    @Test
+    void detachedDebrisCullingDeletesOnTheFollowingNativeDispatch() {
+        var piece = new LrzMinibossDebrisChild(boss, 0);
+        piece.setServices(services);
+        piece.update(1, null);
+        assertTrue(piece.wasDrawnThisFrame());
+        piece.offsetNativePositionWordsPreserveSubpixel(0x4000, 0);
+        piece.update(2, null);
+        assertFalse(piece.wasDrawnThisFrame());
+        assertFalse(piece.isDestroyed(), "Go_Delete_Sprite_3 only installs the delete routine");
+        piece.update(3, null);
+        assertTrue(piece.isDestroyed());
+    }
+
     @BeforeEach
     void setUp() {
         TestEnvironment.resetAll();
@@ -71,7 +91,8 @@ class TestLrzMinibossInstance {
         camera.setX((short) SPAWN_X);
         camera.setY((short) SPAWN_Y);
         boss = new LrzMinibossInstance(new ObjectSpawn(SPAWN_X, SPAWN_Y, 0x9D, 0, 0, false, 0));
-        services = new TestObjectServices().withIsolatedObjectManager().withCamera(camera);
+        services = new TestObjectServices().withIsolatedObjectManager().withCamera(camera)
+                .withGameState(new com.openggf.game.GameStateManager());
         boss.setServices(services);
         // Every test below this line is about the fight itself, which loc_78528 does not install
         // until Check_CameraInRange, sub_85D6A and loc_85CA4 have finished. Drive that gate here
@@ -855,6 +876,7 @@ class TestLrzMinibossInstance {
         assertTrue(fadeFrames > 0 && fadeFrames < 0x400,
                 "the fade wait ended after " + fadeFrames + " frames");
         assertEquals(2, boss.getDefeatPhase(), "loc_787E0 has run");
+        assertTrue(boss.isDestroyed(), "the drill becomes EndSignControl instead of retaining a second slot");
         assertTrue(boss.isDrawSuppressed(),
                 "loc_85674: bclr #7,render_flags(a0), and nothing sets it again");
 
@@ -890,6 +912,8 @@ class TestLrzMinibossInstance {
                         LrzMinibossDebrisChild.DEBRIS_VELOCITIES[10][1]),
                 "entry 33, the last of the eleven");
 
+        // loc_78A70 draws the initialized pieces without a movement step.
+        stepFrameWithDebris();
         Map<Integer, int[]> before = new LinkedHashMap<>();
         for (LrzMinibossDebrisChild piece : pieces) {
             before.put(piece.getIndex(), new int[] {piece.getX(), piece.getY()});
@@ -931,6 +955,12 @@ class TestLrzMinibossInstance {
         }
         assertFalse(debris().isEmpty(), "loc_787E0 never ran within $400 frames of the defeat");
         LrzMinibossDebrisChild piece = debris().get(0);
+        int originX = piece.getX();
+        int originY = piece.getY();
+        stepFrameWithDebris();
+        assertTrue(piece.wasDrawnThisFrame(), "loc_78A70 ends in Draw_Sprite");
+        assertEquals(originX, piece.getX());
+        assertEquals(originY, piece.getY());
         List<Boolean> drawn = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
             stepFrameWithDebris();

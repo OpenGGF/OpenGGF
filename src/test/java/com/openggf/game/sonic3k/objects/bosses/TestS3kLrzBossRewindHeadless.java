@@ -80,7 +80,8 @@ class TestS3kLrzBossRewindHeadless {
         fixture.stepFrame(false, false, false, false, false);
         CompositeSnapshot after = registry.capture();
         var oldChildren = GameServices.level().getObjectManager().getActiveObjects().stream()
-                .filter(AbstractBossChild.class::isInstance).map(AbstractBossChild.class::cast).toList();
+                .filter(object -> object instanceof AbstractBossChild || childType.isInstance(object))
+                .map(com.openggf.level.objects.AbstractObjectInstance.class::cast).toList();
         assertTrue(oldChildren.stream().anyMatch(childType::isInstance));
         // Force reconstruction of the entire live child graph, including both mirrored arms.
         oldChildren.forEach(child -> child.setDestroyed(true));

@@ -6,7 +6,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
-import com.openggf.level.objects.boss.AbstractBossChild;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomWorldPositionedObject;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -34,9 +37,9 @@ import java.util.List;
  * gravity, {@code addi.w #$38,y_vel}, unlike the shots' {@code MoveSprite2} -- then the same
  * coarse {@code $280}/{@code $200} cull the shots use, and then {@code bchg #6,$38(a0) / beq}:
  * the piece is drawn on every <b>other</b> frame, and because {@code bchg} sets the condition
- * from the bit's <i>old</i> value the first frame after creation is a skipped one.
+ * from the bit's <i>old</i> value the first movement frame after the initialization draw is a skipped one.
  */
-final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRecreatable {
+final class LrzMinibossDebrisChild extends AbstractObjectInstance implements RewindRecreatable, RomWorldPositionedObject {
 
     /** {@code word_78D7E}: priority {@code $80}, {@code $18 $14} size, frame {@code $C}, collision 0. */
     private static final int PRIORITY = 0x80;
@@ -63,6 +66,8 @@ final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRe
     static final int DEBRIS_COUNT = 11;
 
     private int index;
+    private int currentX;
+    private int currentY;
     private int xFixed;
     private int yFixed;
     private int xVelocity;
@@ -71,36 +76,56 @@ final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRe
     /** {@code $38(a0)} bit 6, the {@code bchg} flicker. */
     private boolean flickerBit;
     private boolean drawnThisFrame;
+    private boolean initialized;
+    private boolean pendingDelete;
 
-    /** Restore construction uses the live concrete boss; snapshot fields restore the phase. */
-    private LrzMinibossDebrisChild(LrzMinibossInstance parent) {
-        this(parent, 0);
+    /** Independent Obj_FlickerMove SST: it no longer reads the former drill slot. */
+    private LrzMinibossDebrisChild(ObjectSpawn spawn) {
+        super(spawn, "LRZMinibossDebris");
     }
 
     LrzMinibossDebrisChild(AbstractBossInstance parent, int index) {
-        super(parent, "LRZMinibossDebris", PRIORITY, 0x9D);
+        this(new ObjectSpawn(parent.getX() + CHILD_OFFSETS[index][0],
+                parent.getY() + CHILD_OFFSETS[index][1], 0x9D, index, 0, false, 0));
         this.index = index;
-        int[] offset = CHILD_OFFSETS[index];
-        int originX = parent == null ? 0 : parent.getX();
-        int originY = parent == null ? 0 : parent.getY();
-        this.currentX = originX + offset[0];
-        this.currentY = originY + offset[1];
+        this.currentX = spawn.x();
+        this.currentY = spawn.y();
         this.xFixed = currentX << 16;
         this.yFixed = currentY << 16;
         this.mappingFrame = RAW_ANI_78A9C[index];
         this.xVelocity = DEBRIS_VELOCITIES[index][0];
         this.yVelocity = DEBRIS_VELOCITIES[index][1];
-        updateDynamicSpawn();
     }
 
     @Override
     public LrzMinibossDebrisChild recreateForRewind(RewindRecreateContext ctx) {
-        return parent == null ? null : new LrzMinibossDebrisChild(parent, index);
+        return new LrzMinibossDebrisChild(ctx.spawn());
+    }
+
+    @Override public int getX() { return currentX; }
+    @Override public int getY() { return currentY; }
+    @Override public int getPriorityBucket() { return RenderPriority.fromS3kWord(PRIORITY); }
+
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        xFixed += offsetX << 16;
+        yFixed += offsetY << 16;
+        currentX = xFixed >> 16;
+        currentY = yFixed >> 16;
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (!shouldUpdate(vIntRunCount)) {
+        drawnThisFrame = false;
+        if (pendingDelete) {
+            ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
+        if (!initialized) {
+            // loc_78A70 installs Obj_FlickerMove and jumps to Draw_Sprite:
+            // its creation dispatch draws at the table offset without moving.
+            initialized = true;
+            drawnThisFrame = true;
             return;
         }
         // MoveSprite: the X step uses the current x_vel, the Y step uses the y_vel from BEFORE
@@ -113,7 +138,9 @@ final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRe
         currentX = xFixed >> 16;
         currentY = yFixed >> 16;
         if (!flickerMoveKeepsAlive()) {
-            ObjectLifetimeOps.destroyBossChildLatched(this);
+            // Go_Delete_Sprite_3 installs Delete_Current_Sprite for the next
+            // SST dispatch; it does not release this slot on the culling pass.
+            pendingDelete = true;
             return;
         }
         // bchg #6,$38(a0) / beq -> no draw: the test reads the bit BEFORE the change, so the
@@ -121,7 +148,6 @@ final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRe
         boolean previous = flickerBit;
         flickerBit = !flickerBit;
         drawnThisFrame = previous;
-        updateDynamicSpawn();
     }
 
     /** {@code Obj_FlickerMove}'s cull, the same coarse window {@code Sprite_CheckDeleteTouchXY} uses. */
@@ -153,11 +179,8 @@ final class LrzMinibossDebrisChild extends AbstractBossChild implements RewindRe
         return drawnThisFrame;
     }
 
-    @Override public void syncPositionWithParent() { /* it has left the parent for good */ }
     @Override public boolean isPersistent() { return true; }
     @Override public boolean isHighPriority() { return true; }
-    /** The drill is gone by the time these exist, so they must outlive it. */
-    @Override protected boolean destroyWhenParentDestroyed() { return false; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
