@@ -64,12 +64,12 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | HAZARD: SKL `$52` lightning | `Obj_DEZLightning`, `loc_478BE`–`loc_4791A`; ROM animation `$47926`, map `$4792E` | direct timer cases 0/1/$24/$FF; native Sonic 320 contact | `TestS3kDezLightningHeadless`, placement census and PLC registry | implemented after `de73bead8` | ROM animation/art, previous-list contact and rewind checks; engine clip `050` | Native comparison and donor/team/inverted-contact breadth remain open |
 | TRAVERSAL: SKL `$50` conveyor belt | `sub_47854`: unsigned X/subtype window, Y ±$30, grounded only; above/below chooses ±2 pixel carry | unit: both native player slots, all flips and edges; placed DEZ1 belt 320/800 | `TestS3kDezConveyorBeltObjectInstance`, `TestS3kDezConveyorBeltHeadless` | implemented after `bdfd129ff` | carry and restore/forward replay checked | Native comparison, act-2 route and donor breadth remain open |
 | HAZARD: SKL `$4D` torpedo launcher | `loc_471D6` visible countdown, `loc_4726C` recoil, `loc_4728A` independent projectile | subtype 0/1/$FF, both directions, full SST pool; production player-contact spot | `TestS3kDezTorpedoHeadless`, census and PLC registry | implemented after `222473083` | ROM art/timers, failure path, same-pass movement and damage restore/replay checked | Native comparison, donor/team breadth and cold route remain open |
-| TRAVERSAL: SKL `$4F` staircase | `loc_476EA`–`loc_47814`: four solid SST sections, standing/underside trigger delays, signed word step rounding | all flips, upward/downward and shake variants; actual DEZ1 landing at 320/800 and inverted DEZ2 `$950,$790` landing | `TestS3kDezStaircaseHeadless`, placement census | implemented after `35390ba3c` | timer/art checks, forced graph recreation and placed trigger/carry replay | Act-2 route entry, native comparison and team/donor breadth remain open |
-| TRAVERSAL: SKL `$4C` hang carrier | `loc_46FC2`–`sub_4703E`: P1 start, accelerated rise, native ceiling probe, finite horizontal travel, P1/P2 grabbing | unit contact/control/input boundaries; actual DEZ1 ride at 320/800 | `TestS3kDezHangCarrierObjectInstance`, `TestS3kDezHangCarrierHeadless` | implemented after `b1c767647` | real terrain, jump release and forced recreation/forward replay | native comparison, Act-2 entry and donor/character breadth remain open |
+| TRAVERSAL: SKL `$4F` staircase | `loc_476EA`–`loc_47814`: four solid SST sections, standing/underside trigger delays, signed word step rounding | all flips, upward/downward and shake variants; actual DEZ1 landing at 320/800 and inverted DEZ2 `$950,$790` landing | `TestS3kDezStaircaseHeadless`, placement census | implemented after `35390ba3c` | timer/art checks, forced graph recreation and placed trigger/carry replay | Cold native320 Sonic+Tails staircase entry/carry/replay covered by incoming routes; native comparison and further team/donor breadth remain open |
+| TRAVERSAL: SKL `$4C` hang carrier | `loc_46FC2`–`sub_4703E`: P1 start, accelerated rise, native ceiling probe, finite horizontal travel, P1/P2 grabbing | unit contact/control/input boundaries; actual DEZ1 ride at 320/800 | `TestS3kDezHangCarrierObjectInstance`, `TestS3kDezHangCarrierHeadless` | implemented after `b1c767647` | real terrain, jump release and forced recreation/forward replay | Cold native320 Sonic+Tails carrier entry/travel/release/replay covered by the incoming roof route; native comparison and donor/character breadth remain open |
 | TRAVERSAL: SKL `$4A` floating platforms (10) | `loc_25A7E`, `word_25AB8`, shared `sub_25974`; table offsets include native control word | all nine movers and four status flips; placed horizontal ride at 320/800 | `TestS3kDezFloatingPlatformObjectInstance`, `TestS3kDezFloatingPlatformHeadless`, census and PLC registry | implemented after `8a58aafbc` | ROM art, oscillator bytes, ramp thresholds, real carry and forced recreation/180-frame replay pass | Inverted entry, native comparison, donor/team/character breadth and cold route remain open |
-| TRAVERSAL: SKL `$4B` tilting bridge | `loc_46E1C`–`loc_46F54`, signed ROM `byte_46ED8`, prior-standing aggregate, long velocity and delayed free fall | all eight standing rows, P1/P2 sum/cancellation, exhausted forward allocation; DEZ1 320/800; inverted DEZ2 declared entry | `TestS3kDezTiltingBridgeHeadless`, census, PLC registry | implemented after `6b7055cea` | nine focused checks: real landing/carry/collapse/floor release, complete graph recreation and forward replay; inverted carry/replay | Cold route, native comparison and donor/roster breadth remain open |
+| TRAVERSAL: SKL `$4B` tilting bridge | `loc_46E1C`–`loc_46F54`, signed ROM `byte_46ED8`, prior-standing aggregate, long velocity and delayed free fall | all eight standing rows, P1/P2 sum/cancellation, exhausted forward allocation; DEZ1 320/800; inverted DEZ2 declared entry | `TestS3kDezTiltingBridgeHeadless`, census, PLC registry | implemented after `6b7055cea` | nine focused checks: real landing/carry/collapse/floor release, complete graph recreation and forward replay; inverted carry/replay | Cold native320 Sonic+Tails traversal and full-registry replay now covered by the incoming tilt route; native comparison and donor/roster breadth remain open |
 | BOSS: `$A7` end boss | `word_7F0BE` range, `word_7F0C6` arena, enemy-published eight hits, allocation prefixes, breakup and `$1700` request | 320/800; native P1/P2 component cases; solo Hyper movie | `TestDezEndBossEncounter`, child/resource suites, `TestS3kDezTeleporterHeadless` | implemented | focused checks pass, 2026-09-23 local campaign | Native parity, full route and remaining character/donor/team breadth open |
-| REWIND: event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` | implemented | pass, `4e7655bf9` | Mid-flip, act change and boss spots not started |
+| REWIND: event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` | implemented | pass, `4e7655bf9` | Incoming route gravity flips, DEZ1-to-Act2 timeline isolation and positioned boss graph replay now covered by campaign suites; full Act2 cold completion and remaining breadth open |
 | ORACLE: Tails act 2 | `runs/s3k-tails-full-chain-all-emeralds/ssz_2` (5,202 rows) | — | `TestS3kTailsFullChainSsz2SegmentTraceReplay` (expected red) | — | blocked: 229 errors, first error frame 0 `camera_y` expected `0x080E` actual `0x0810` (`035e48a58`) | Whole campaign |
 | ORACLE: Tails act 2 restart | `runs/s3k-tails-full-chain-all-emeralds/ssz_3` (3,877 rows; act 2 restart, i.e. lifecycle evidence) | — | `TestS3kTailsFullChainSsz3SegmentTraceReplay` (expected red) | — | blocked: 200 errors, first error frame 0 `camera_y` expected `0x044E` actual `0x0450` (`035e48a58`) | Whole campaign |
 
@@ -549,3 +549,37 @@ shows frames23240–23499. All23500 state rows, stills23340/23416/23480 and full
 MP4 decode were inspected; zero deaths. This is engine presentation evidence,
 not native pixel parity. Later exploratory input has reached the lower corridor
 near (8501,2292); full Act2 traversal and its remaining breadth are open.
+
+### Cold lower gravity switch and unshielded tilting bridge (2026-09-24)
+
+On `c07f4a177` plus this route-only change,
+`dez2-sonic-tails-incoming-tilt-320.{script,bk2}` reaches (9525,2156) with
+7 rings in 25111 ordinary controller frames from cold DEZ1 Sonic+Tails, zero
+deaths and no gameplay overrides. The second spring shaft leads to a leftward
+backtrack and jump onto the pressure pad at (8020,2120). Continuing straight
+right misses that gravity toggle and cannot use the lower staircase correctly.
+The route then deploys the staircase, weights the tilting bridge's left end,
+crosses its rising segments with staged jumps and rides the following lift.
+
+The native complete-emeralds DEZ segment stored in the SSZ trace container uses
+a lightning-shield double jump at row30075: airborne velocity changes from
+$0198 to $FAB8 on jump input. Our route has lost that shield, so copying that
+input is insufficient. Holding the bridge's left end too long caused collapse;
+crossing too early left its right end too low. The preserved ordinary input
+uses the existing ROM-backed bridge acceleration table to cross without a shield.
+No runtime change or native-state hydration was needed.
+
+Queued Java21 command `python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestDezColdRouteCapture#coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind test`
+passed 1 test, zero failures/errors/skips after adding the explicit no-shield
+assertion throughout the bridge crossing. Its 26 full-registry capture/restore
+and 45-frame replay spots bring the six preserved Act2 routes to 113 spots.
+This is focused route validation; combined campaign checks remain pending.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-tilting-bridge-320/capture.mp4`
+films23800–25110. All25111 state rows, stills24160/24340/24540/24740/25030 and
+full MP4 decode were checked. This is engine presentation, not native pixel
+parity. Further exploratory input clears the next spring and tube ascent to
+(10325,851); the native route then turns left. Full Act2 completion and remaining
+width/roster/lifecycle breadth remain open.

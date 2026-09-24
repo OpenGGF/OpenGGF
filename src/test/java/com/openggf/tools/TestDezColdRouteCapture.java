@@ -49,13 +49,18 @@ class TestDezColdRouteCapture {
         runColdRoute("shaft");
     }
 
+    @Test void coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind() throws Exception {
+        runColdRoute("tilt");
+    }
+
     private void runColdRoute(String route) throws Exception {
         boolean complete = route.equals("complete");
+        boolean tilt = route.equals("tilt");
         boolean shaft = route.equals("shaft");
         boolean roof = route.equals("roof");
         boolean transporters = route.equals("transporters");
         boolean middle = route.equals("middle");
-        boolean lower = route.equals("lower") || middle || transporters || roof || shaft;
+        boolean lower = route.equals("lower") || middle || transporters || roof || shaft || tilt;
         boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
@@ -116,6 +121,15 @@ class TestDezColdRouteCapture {
             spots.addAll(Set.of(23020, 23180, 23270, 23310, 23330, 23345,
                     23385, 23400, 23415, 23455, 23485, 23510, 23640, 23690));
         }
+        if (tilt) {
+            // Second spring shaft, pressure-pad toggle, staircase deployment,
+            // bridge balance/crossing, unshielded exit jumps and following lift.
+            spots.clear();
+            spots.addAll(Set.of(23800, 23870, 23920, 23980, 24030, 24090,
+                    24130, 24160, 24230, 24280, 24330, 24390, 24420, 24470,
+                    24530, 24565, 24610, 24645, 24685, 24710, 24745, 24780,
+                    24860, 24930, 24990, 25050));
+        }
         var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
                 .getSuperclass().getDeclaredField("collisionProperty");
         bossHits.setAccessible(true);
@@ -164,6 +178,9 @@ class TestDezColdRouteCapture {
                     assertTrue(session.player().isObjectControlled(), "carrier/launcher holds its rider");
                     if (frame == 21880) assertEquals(7424, session.player().getCentreX());
                 }
+                if (tilt && frame >= 24415 && frame <= 24780) {
+                    assertFalse(session.player().hasShield(), "bridge crossing must not rely on a shield jump");
+                }
                 if (!spots.contains(frame)) continue;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 var saved = registry.capture();
@@ -189,9 +206,9 @@ class TestDezColdRouteCapture {
             assertEquals(11, GameServices.level().getCurrentZone());
             assertEquals(complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
-                assertEquals(shaft ? 8211 : roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
-                assertEquals(shaft ? 1683 : roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
-                assertEquals(shaft ? 3 : roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
+                assertEquals(tilt ? 9525 : shaft ? 8211 : roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
+                assertEquals(tilt ? 2156 : shaft ? 1683 : roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
+                assertEquals(tilt ? 7 : shaft ? 3 : roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
                 assertFalse(session.player().isObjectControlled(), "lower tube releases movement");
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             }
