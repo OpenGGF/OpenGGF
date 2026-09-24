@@ -565,7 +565,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The defeated drill transfers its slot to the signpost controller; its independent
   debris and retiring arms keep the native draw order. Debris also preserves
   its initial draw and delayed retirement; the palette helpers use the ROM’s
-  first-free object allocation order.
+  first-free object allocation order. Rewinding in Act 2 keeps its current object
+  graphics instead of restoring obsolete miniboss pixels; the shared art journal
+  also preserves later overlapping writes and replacement level data.
   Act 2 also draws its ROM-backed Death Egg background sprite, with continuous
   widescreen entry and preserved art-load/position state on rewind. Finite
   widescreen foregrounds no longer repeat opposite-edge terrain outside the layout.

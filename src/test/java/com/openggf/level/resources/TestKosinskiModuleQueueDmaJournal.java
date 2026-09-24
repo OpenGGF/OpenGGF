@@ -164,6 +164,55 @@ class TestKosinskiModuleQueueDmaJournal {
         assertArrayEquals(new byte[] {1,1,1,1},Arrays.copyOfRange(memory,2,6));
     }
 
+    @Test void snapshotKeepsLaterWritesFromOtherPatternOwners() {
+        byte[] memory = sequence(16);
+        var target = new MutableTarget(memory);
+        var queue = new KosinskiModuleQueue();
+        queue.bindDmaTarget(target);
+        queue.applyImmediateDma(4, new byte[] {1, 2, 3, 4});
+        // A later Nemesis PLC or animation owner replaces part of the same VRAM range.
+        memory[5] = 9;
+        memory[6] = 10;
+        var expected = memory.clone();
+        var snapshot = queue.capture();
+        queue.applyImmediateDma(4, new byte[] {11, 12, 13, 14});
+        queue.restore(snapshot);
+        assertArrayEquals(expected, memory);
+    }
+
+    @Test void snapshotUsesReplacementLevelPatternMemoryWithoutReapplyingThePreviousActsArt() {
+        var target = new MutableTarget(sequence(16));
+        var queue = new KosinskiModuleQueue();
+        queue.bindDmaTarget(target);
+        queue.applyImmediateDma(4, new byte[] {1, 2, 3, 4});
+        // A seamless target reload installs a new pattern owner behind the same capability.
+        target.memory = new byte[16];
+        Arrays.fill(target.memory, (byte) 7);
+        var expected = target.memory.clone();
+        var snapshot = queue.capture();
+        queue.restore(snapshot);
+        assertArrayEquals(expected, target.memory);
+        assertEquals(snapshot, queue.capture());
+    }
+
+    @Test void captureDuringDeferredRestoreKeepsTheRequestedImageUntilItIsPublished() {
+        byte[] memory = sequence(16);
+        var target = new MutableTarget(memory);
+        var queue = new KosinskiModuleQueue();
+        queue.bindDmaTarget(target);
+        queue.applyImmediateDma(4, new byte[] {1, 2, 3, 4});
+        var requested = queue.capture();
+        queue.applyImmediateDma(4, new byte[] {5, 6, 7, 8});
+        target.memory = null;
+        queue.restore(requested);
+        assertEquals(requested, queue.capture());
+        target.memory = memory;
+        assertEquals(requested, queue.capture(), "physical memory still contains the later write");
+        queue.processNativeFrame();
+        assertArrayEquals(new byte[] {1, 2, 3, 4}, Arrays.copyOfRange(memory, 4, 8));
+        assertEquals(requested, queue.capture());
+    }
+
     private static byte[] sequence(int length) {
         byte[] result=new byte[length];for(int i=0;i<length;i++)result[i]=(byte)(0x40+i);return result;
     }

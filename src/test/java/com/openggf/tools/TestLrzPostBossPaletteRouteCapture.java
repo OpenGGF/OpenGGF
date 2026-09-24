@@ -68,6 +68,23 @@ class TestLrzPostBossPaletteRouteCapture {
                     writes.stream().map(frame -> frame - writes.getFirst()).toList());
             assertEquals(9, GameServices.level().getCurrentZone());
             assertEquals(1, GameServices.level().getCurrentAct());
+            // loc_56BD2 loads PLC $30 before the seamless reload. Its spike-ball/flame
+            // art must survive the target initialization, just as native VRAM does.
+            var rom = GameServices.rom().getRom();
+            var plc = com.openggf.game.sonic3k.Sonic3kPlcLoader.parsePlc(rom, 0x30);
+            for (var entry : com.openggf.game.sonic3k.Sonic3kPlcLoader.preDecompress(plc, rom)) {
+                for (int offset = 0; offset < entry.data().length; offset += 32) {
+                    var expected = new com.openggf.level.Pattern();
+                    expected.fromSegaFormat(java.util.Arrays.copyOfRange(entry.data(), offset, offset + 32));
+                    var actual = GameServices.level().getCurrentLevel().getPattern(entry.tileIndex() + offset / 32);
+                    byte[] expectedPixels = new byte[64];
+                    byte[] actualPixels = new byte[64];
+                    expected.copyInto(expectedPixels, 0);
+                    actual.copyInto(actualPixels, 0);
+                    assertArrayEquals(expectedPixels, actualPixels,
+                            "PLC $30 tile " + Integer.toHexString(entry.tileIndex() + offset / 32));
+                }
+            }
             assertEquals(1, GameServices.level().getObjectManager().activeObjectsOfType(
                     com.openggf.game.sonic3k.objects.LrzDeathEggBackgroundInstance.class).size(),
                     "loc_5700C allocates one Death Egg owner on the seamless path");

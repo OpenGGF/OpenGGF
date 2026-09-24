@@ -383,6 +383,15 @@ large-jump reseed when the wrap lands on a lag frame (2026-09-16 AIZ2 forest
 regression). The `$200` wrap equals the 64-tile plane width, so a retained
 scroll register still aliases onto the same ring cells.
 
+**Rewind DMA history is not current pattern memory.** LRZ Act2's first rewind
+restored old miniboss pixels over PLC `$30` even though the seamless load had
+installed the correct spike-ball/flame art. KosM's last-written payload was
+historical: a later Nemesis PLC or replacement level owner could overwrite the
+same addresses. Capture the live image of tracked ranges; retain the requested
+logical image while a physical restore is deferred. A snapshot graph comparison
+alone missed this because both graphs retained the same stale journal. Check
+actual pattern pixels and rendered consumers after restore as well (2026-09-24).
+
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
 later `Render_Sprites` builds the next table. An emulator-frame screenshot can

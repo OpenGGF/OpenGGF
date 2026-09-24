@@ -253,3 +253,48 @@ from the existing415400 state, with verified ROM/movie identity and zero host
 failures. Inspected419400/419800 and421000/421200/421800 establish route geometry
 and spring/drop choices. These are navigation/scene observations, not a
 substitute for ordinary-engine cold completion or whole-scene pixel acceptance.
+
+
+### Rewind preserves current Act2 art (2026-09-24)
+
+The cold-route branch-authoring probe showed spring-like red fragments instead
+of the orbiting spike balls. Direct Act2 entry rendered the correct ROM art.
+A positioned real boss/results handoff initially also had correct PLC `$30`
+pixels at tile `$40D`; its first registry restore replaced them with the old
+miniboss image. Temporary write tracing identified
+`KosinskiModuleQueue.restorePatternWrites`, not a late level PLC or animation
+write. The diagnostic instrumentation was removed. This corrects the initial
+suspicion of a corrupt seamless load: rewind, including the authoring tool's
+branch restore, caused the overwrite. Fresh uninterrupted footage is not
+evidence of the bug.
+
+The shared DMA journal now samples current target bytes for its tracked ranges
+when capturing. A Nemesis PLC or replacement level can have overwritten the
+queue's last payload. An unflushed restore still captures its requested logical
+image, avoiding sampling stale physical memory during owner gaps. Queue timing,
+archive identity and sprite priority are unchanged. Reapplying PLC `$30` after
+the corruption would hide the stale journal and was rejected.
+
+Two pure regressions fail on c913c8d65: later overlapping writes (expected9,
+actual2) and a replacement level image (expected7, actual1). Both native320 and
+wide800 handoff regressions independently fail on PLC `$30` tile `$40D`
+(expected0, actual12). The fixed handoff checks compare every pixel of both
+ROM-decompressed PLC entries after the middle-ramp restore/replay.
+
+Queued Java21 with native GL and `-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`:
+
+- `-Dtest=TestKosinskiModuleQueue*,TestLrzPostBossPaletteRouteCapture,TestLrzColdRouteCapture#coldTeamDefeatsMinibossAndReachesPlayableActTwo,TestS3kLrzBossRewindHeadless,TestPatternSpriteRendererCorruptionGuard,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits test`:25 passed, zero skips. Includes26 cold-clear registry replay spots and pending-target journal cases.
+- `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:59 passed, zero skips.
+- Fresh `-Pguards -Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestObjectPriorityBucketGuard test`:3 passed, zero skips.
+
+The inspected change-based plan selects all2909 ordinary classes plus guards.
+This shared algorithm remains in the combined campaign delivery scope; these87
+focused/stability/guard checks are not a full-suite result.
+
+After restoring the full engine registry at35660, inspected image
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-route-author/deep-spike-phase/variant-7-35900.png`
+shows the proper metallic balls passing behind the pipe. Earlier branch images
+under `deep-east-enemy` show the corruption. Native421800/422200 references
+show the same ball art family; this is not whole-scene pixel parity. Input
+authoring now crosses the hazardous pipe and reaches the next ledge at6197/1452.
+The longer cold Act2 fixture, replay spots and completion remain open.

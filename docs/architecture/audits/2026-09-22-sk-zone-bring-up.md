@@ -4717,3 +4717,17 @@ The [Act2 progress evidence](../validation/levels/s3k-lrz-act2.md#ordinary-cold-
 records the new video and native navigation references. Descending pipe-route
 authoring and full Act2 completion/replay remain open; no campaign delivery
 or integration is claimed.
+
+
+### LRZ2 art exposed a shared rewind journal defect (2026-09-24)
+
+The seamless load was initially correct; registry restore replayed historical
+miniboss art over Act2's later PLC. Capturing the live image of tracked DMA
+ranges fixes later-owner and replacement-level writes while preserving deferred
+restore semantics. Pure and ROM-backed regressions fail on c913c8d65;87 focused,
+S3K stability and structural checks pass after the fix. Source/diagnostic
+attribution, restored scene and combined-validation limits are in the
+[Act2 evidence](../validation/levels/s3k-lrz-act2.md#rewind-preserves-current-act2-art-2026-09-24).
+Do not diagnose the old exploratory branch clips as fresh-load failures: their
+initial whole-registry restore triggered this bug. Route authoring now reaches
+the ledge after the orbiting-ball pipe; full Act2 completion remains open.
