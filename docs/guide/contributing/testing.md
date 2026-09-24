@@ -28,11 +28,18 @@ each other.
 
 | Event | What runs |
 |---|---|
-| Push to `develop` or `next` | Basic CI: the `smoke` profile (about seven minutes). |
+| Push to `develop` or `next` | Basic CI: the `smoke` profile (about seven minutes), once the branch has had no push for 30 minutes. |
 | Non-draft pull request, any base | Full CI: branch policy, the complete ordinary suite and `-Pguards`. Draft PRs run nothing until marked ready; a newer push cancels the older run. |
 | Push to `master` | The Release workflow below: full validation, native packaging, publication. |
 | Push to a feature or bugfix branch | Nothing. Open a pull request, or run CI by hand. |
 | Manual dispatch | Full CI on the chosen ref. `trace_replay` adds the ROM-fixture develop trace replay on the self-hosted runner. |
+
+The 30-minute quiet period is the `ci-quiet-period` environment's wait timer
+(repository Settings -> Environments). The smoke job waits there without using a
+runner, and a newer push to the same branch cancels the wait and starts another,
+so a burst of pushes produces one smoke run for its last commit. Edit the timer
+there to change the delay. Deleting the environment removes the delay: GitHub
+recreates it on the next run without a timer.
 
 Guards are not part of push CI, so run `-Pguards` locally before pushing
 straight to `develop` or `next`. Pull requests do not build native packages;

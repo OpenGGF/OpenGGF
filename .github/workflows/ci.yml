@@ -2,8 +2,10 @@ name: CI
 
 # Which events run what (TestBuildToolingGuard pins this):
 #
-#   develop / next push   basic CI: the bounded smoke suite. Enough to show the
-#                         code is broken or a release build is likely to fail.
+#   develop / next push   basic CI: the bounded smoke suite, once the branch has
+#                         had no push for 30 minutes (see the smoke job). Enough
+#                         to show the code is broken or a release build is likely
+#                         to fail.
 #   non-draft PR          full CI: branch policy, the complete ordinary suite and
 #                         the structural guards. Draft PRs run nothing until they
 #                         are marked ready for review.
@@ -28,11 +30,13 @@ on:
         type: boolean
         default: false
 
-# A new push to a pull request supersedes its running check. Integration pushes
-# are never cancelled, so every develop/next commit keeps its own result.
+# A new push supersedes the pending or running check for the same pull request or
+# integration branch; for develop/next this is what restarts the quiet period.
+# The event name keeps manual runs and pushes on the same ref from cancelling
+# each other.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # Branch/trailer/changelog policy for the proposed range. The .githooks enforce
@@ -68,8 +72,17 @@ jobs:
   #
   # Structural guards are not part of basic CI; they run on pull requests and in
   # release.yml. Run `mvn -Dmse=off -Pguards test -B` locally before delivery.
+  #
+  # Quiet period: the ci-quiet-period environment (repository settings ->
+  # Environments) has a 30-minute wait timer and admits only develop and next. The
+  # job waits there without a runner, and the concurrency group above cancels the
+  # wait when another push lands, so a burst of pushes costs one smoke run, taken
+  # 30 minutes after the last of them. Change the delay in the environment, not
+  # here. If the environment is deleted, GitHub recreates it without a timer and
+  # smoke runs on every push again.
   smoke:
     if: github.event_name == 'push'
+    environment: ci-quiet-period
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

@@ -2958,7 +2958,9 @@ class TestBuildToolingGuard {
      *
      * <ul>
      *   <li>develop and next pushes run basic CI -- the bounded {@code smoke}
-     *       suite, and no other Maven job;</li>
+     *       suite, and no other Maven job -- after the {@code ci-quiet-period}
+     *       environment's wait timer, which a newer push to the branch
+     *       restarts;</li>
      *   <li>non-draft pull requests into any branch run full CI (policy, the
      *       complete suite and guards), re-run when a draft is marked ready, and
      *       are superseded by a newer push to the same pull request;</li>
@@ -2998,10 +3000,10 @@ class TestBuildToolingGuard {
         if (pullRequestTrigger.contains("branches")) {
             violations.add(".github/workflows/ci.yml pull_request trigger must cover every base branch");
         }
-        if (!workflow.contains("  group: ci-${{ github.event.pull_request.number || github.ref }}\n"
-                + "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n")) {
-            violations.add(".github/workflows/ci.yml must cancel superseded pull-request runs only,"
-                    + " never an integration push");
+        if (!workflow.contains("  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number"
+                + " || github.ref }}\n  cancel-in-progress: true\n")) {
+            violations.add(".github/workflows/ci.yml must let a newer push supersede the pending or running"
+                    + " check for its pull request or integration branch, per event");
         }
 
         String releaseTriggers = workflowTriggers(release);
@@ -3043,6 +3045,12 @@ class TestBuildToolingGuard {
             if (!"github.event_name == 'push'".equals(yamlJobCondition(smokeJob))) {
                 violations.add(".github/workflows/ci.yml smoke job must run on integration pushes only;"
                         + " pull requests run the full suite instead");
+            }
+            // The wait timer lives on the environment (a repository setting a test
+            // cannot read); the job must at least keep waiting on it.
+            if (!smokeJob.contains("\n    environment: ci-quiet-period\n")) {
+                violations.add(".github/workflows/ci.yml smoke job must wait on the ci-quiet-period"
+                        + " environment, or every integration push runs it immediately");
             }
             if (smokeJob.contains("continue-on-error: true")) {
                 violations.add(".github/workflows/ci.yml smoke job is non-blocking, so a red smoke"
