@@ -135,7 +135,17 @@ identity relinking for those children. Exercise remove/recreate/restore with the
 real manager, including any optional defeat controller that advances child cleanup.
 Test creation and retirement boundaries as well as a steady fight. LRZ's old
 restore hook rebuilt destroyed arms (12 survivors became 24); restore the captured
-graph instead. Boss-child spawn metadata is a derived position/ordinal cache:
+graph instead. Chainspike's DEZ2 route also exposed a retained child linked to a
+stale body: transient/final parent references and nearest-live-body recreation
+are not identity restoration. Capture the exact parent reference through the
+object-id fixup pass; proximity is not evidence of ownership. Full-registry
+forward replay caught an extra child where a component snapshot passed. Also
+publish the parent's ROM retirement flag before removing its identity:
+`Sprite_CheckDeleteTouch -> loc_85094` sets status bit7 for `Child_CheckParent`.
+An exact-id sidecar may encode an already-retired parent as null so a child
+awaiting its next update remains an orphan; do not silently accept an unregistered
+live owner.
+Boss-child spawn metadata is a derived position/ordinal cache:
 refresh it before capture, including the first frame after subclass construction.
 `TestS3kLrzBossRewindHeadless` covers arms, hit flashes and defeat debris through
 explicit removal/recreation and whole-world forward replay.

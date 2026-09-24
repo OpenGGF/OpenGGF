@@ -420,3 +420,50 @@ reaches the upper corridor nearX6400. Earlier jumps hit the nearby geometry or
 arrived between the opposed springs; the later jump crosses normally. That
 extension still needs preserved route/rewind and video evidence; no runtime
 change was made for these route-authoring failures.
+
+
+### DEZ2 transporters and Chainspike parent retirement (2026-09-24)
+
+On `812b78342` plus this patch, the preserved ordinary cold Sonic+Tails route
+`dez2-sonic-tails-incoming-transporters-320.{script,bk2}` reaches(6709,1395),
+15rings, zero deaths, in19810frames. It jumps out of the first spring pair,
+rides both transporters atX5456/5968 and the intervening lift, then clears the
+upper spring/Spikebonker approach. The route test asserts both transporter
+holds and final free movement, adds14 full-registry 45-frame replay spots, and
+keeps the earlier31 Act2 spots in shorter independent routes.
+
+The new replay spot19730 failed on the unmodified parent implementation: replay
+left an extra Chainspike child and used slot where forward simulation had none.
+The child excluded its final parent from capture and recreated against whichever
+live Chainspike was nearest. ROM `loc_91D8C` reads exact `parent3`; proximity is
+not its ownership rule. The child now captures/restores an exact ObjectRefId
+sidecar, and recreation preserves its saved spawn before relinking.
+
+A generic strict reference was tried first and rejected by the capture itself:
+a child can be waiting for its next update after the parent has left the manager.
+An explicit sidecar represents that retired parent as null; a missing identity
+for a still-live parent remains an error. This exposed the second omission:
+`Sprite_CheckDeleteTouch -> loc_85094` sets status bit7 before scheduling deletion,
+but manager-owned offscreen removal had left the Java body unmarked. Chainspike
+now publishes retirement in `onUnload`, so `Child_CheckParent`'s child deletion
+has its corresponding signal. The short regression covers exact replacement
+identity, manager removal and the one-update orphan tail. No nearest-body
+fallback or additional coverage gap was accepted. The architecture guard records
+why this tombstone-bearing reference requires an explicit sidecar.
+
+Queued Java21, native GL, absolute S3K ROM and `-Dmse=off`:
+`-Dtest=TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind,TestChainspikeBadnikInstance,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed70tests, zero failures/errors/skips. Separate fresh-JVM `-Pguards` selection
+`TestRewindArchitectureGuard,TestRewindFieldDispositionGuard,TestRewindCoverageGuard`
+passed6tests, zero failures/errors/skips. This is focused iteration; campaign-wide
+validation, integration, push and cleanup remain pending.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-transporters-320/capture.mp4`
+films18930–19809 from the cold start. The corrected build's19810 state rows
+are identical to the pre-fix forward capture (zero deaths); complete MP4 decode
+and the upper crossing still19770 pass inspection. This is engine evidence,
+not native pixel parity. Later external input exploration
+reaches the gravity switch at(7232,1720): staying over it during the jump toggles
+gravity and rises to(7216,659). Overshooting the switch hits the monitor corridor.
+`campaign-20260924-route-author/act2-east-switch-catch.{script,bk2,csv}` preserves
+that exploration; the upper-left continuation and full Act2 completion remain open.

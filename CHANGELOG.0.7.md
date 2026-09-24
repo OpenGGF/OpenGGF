@@ -158,7 +158,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   path while lit; both forms retain the final displayed phase when they switch off.
   The new mechanisms stay loaded across widescreen approaches.
   The Chainspike robots charge across both acts, slowing to a stop and turning around, and
-  stab their spikes into the floor when you get close. Lightning flashes from the floor
+  stab their spikes into the floor when you get close; their child spikes retain the correct
+  parent across rewind. Lightning flashes from the floor
   emitters with its short damage window and sound. Conveyor belts carry grounded players
   along either face in their placed direction. Wall launchers fire torpedoes while in view
   and recoil between shots. Four-section staircases react to landing or underside contact,

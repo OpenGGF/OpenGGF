@@ -37,10 +37,15 @@ class TestDezColdRouteCapture {
         runColdRoute("middle");
     }
 
+    @Test void coldIncomingActTwoTraversesBothTransportersWithRewind() throws Exception {
+        runColdRoute("transporters");
+    }
+
     private void runColdRoute(String route) throws Exception {
         boolean complete = route.equals("complete");
+        boolean transporters = route.equals("transporters");
         boolean middle = route.equals("middle");
-        boolean lower = route.equals("lower") || middle;
+        boolean lower = route.equals("lower") || middle || transporters;
         boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
@@ -77,6 +82,13 @@ class TestDezColdRouteCapture {
             spots.clear();
             spots.addAll(Set.of(17930, 17980, 18090, 18135, 18175, 18230,
                     18305, 18330, 18360, 18470, 18540, 18700, 18810, 18850));
+        }
+        if (transporters) {
+            // The preceding route owns the bridge and switch checks. Cover both
+            // transporter waits, travel, polarity release and the intervening lift.
+            spots.clear();
+            spots.addAll(Set.of(18950, 19020, 19040, 19100, 19140, 19165,
+                    19250, 19380, 19450, 19520, 19565, 19620, 19645, 19730));
         }
         var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
                 .getSuperclass().getDeclaredField("collisionProperty");
@@ -118,6 +130,10 @@ class TestDezColdRouteCapture {
                             .currentDez(GameServices.zoneRuntimeRegistry()).orElseThrow().panelBits(),
                             "ordinary steering must press every panel before the exit");
                 }
+                if (transporters && (frame == 19050 || frame == 19500)) {
+                    assertTrue(session.player().isObjectControlled(), "transporter holds its rider");
+                    assertEquals(frame == 19050 ? 5456 : 5968, session.player().getCentreX());
+                }
                 if (!spots.contains(frame)) continue;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 var saved = registry.capture();
@@ -143,9 +159,9 @@ class TestDezColdRouteCapture {
             assertEquals(11, GameServices.level().getCurrentZone());
             assertEquals(complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
-                assertEquals(middle ? 4853 : 3196, session.player().getCentreX());
-                assertEquals(middle ? 2371 : 2476, session.player().getCentreY());
-                assertEquals(middle ? 14 : 7, session.player().getRingCount());
+                assertEquals(transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
+                assertEquals(transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
+                assertEquals(transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
                 assertFalse(session.player().isObjectControlled(), "lower tube releases movement");
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             }

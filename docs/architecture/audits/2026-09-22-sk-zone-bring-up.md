@@ -27,7 +27,7 @@ its original unimplemented counts must not be read as current production status.
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
-| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now reaches the middle corridor in18,931frames, zero deaths, with31 Act2 full-registry replay spots across two preserved routes; complete Act2 traversal is still open. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
+| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now reaches the upper corridor beyond both transporters in19,810frames, zero deaths, with45 Act2 full-registry replay spots across three preserved routes; complete Act2 traversal is still open. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold main-act traversal and remaining Hyper/HUD/native presentation still need validation. |
 
 Combined campaign validation, main-workspace integration, push and cleanup remain
@@ -4117,3 +4117,50 @@ reaches the upper corridor nearX6400. Earlier jumps hit the nearby geometry or
 arrived between the opposed springs; the later jump crosses normally. That
 extension still needs preserved route/rewind and video evidence; no runtime
 change was made for these route-authoring failures.
+
+
+### DEZ2 transporters and Chainspike parent retirement (2026-09-24)
+
+On `812b78342` plus this patch, the preserved ordinary cold Sonic+Tails route
+`dez2-sonic-tails-incoming-transporters-320.{script,bk2}` reaches(6709,1395),
+15rings, zero deaths, in19810frames. It jumps out of the first spring pair,
+rides both transporters atX5456/5968 and the intervening lift, then clears the
+upper spring/Spikebonker approach. The route test asserts both transporter
+holds and final free movement, adds14 full-registry 45-frame replay spots, and
+keeps the earlier31 Act2 spots in shorter independent routes.
+
+The new replay spot19730 failed on the unmodified parent implementation: replay
+left an extra Chainspike child and used slot where forward simulation had none.
+The child excluded its final parent from capture and recreated against whichever
+live Chainspike was nearest. ROM `loc_91D8C` reads exact `parent3`; proximity is
+not its ownership rule. The child now captures/restores an exact ObjectRefId
+sidecar, and recreation preserves its saved spawn before relinking.
+
+A generic strict reference was tried first and rejected by the capture itself:
+a child can be waiting for its next update after the parent has left the manager.
+An explicit sidecar represents that retired parent as null; a missing identity
+for a still-live parent remains an error. This exposed the second omission:
+`Sprite_CheckDeleteTouch -> loc_85094` sets status bit7 before scheduling deletion,
+but manager-owned offscreen removal had left the Java body unmarked. Chainspike
+now publishes retirement in `onUnload`, so `Child_CheckParent`'s child deletion
+has its corresponding signal. The short regression covers exact replacement
+identity, manager removal and the one-update orphan tail. No nearest-body
+fallback or additional coverage gap was accepted. The architecture guard records
+why this tombstone-bearing reference requires an explicit sidecar.
+
+Queued Java21, native GL, absolute S3K ROM and `-Dmse=off`:
+`-Dtest=TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind,TestChainspikeBadnikInstance,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed70tests, zero failures/errors/skips. Separate fresh-JVM `-Pguards` selection
+`TestRewindArchitectureGuard,TestRewindFieldDispositionGuard,TestRewindCoverageGuard`
+passed6tests, zero failures/errors/skips. This is focused iteration; campaign-wide
+validation, integration, push and cleanup remain pending.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-transporters-320/capture.mp4`
+films18930–19809 from the cold start. The corrected build's19810 state rows
+are identical to the pre-fix forward capture (zero deaths); complete MP4 decode
+and the upper crossing still19770 pass inspection. This is engine evidence,
+not native pixel parity. Later external input exploration
+reaches the gravity switch at(7232,1720): staying over it during the jump toggles
+gravity and rises to(7216,659). Overshooting the switch hits the monitor corridor.
+`campaign-20260924-route-author/act2-east-switch-catch.{script,bk2,csv}` preserves
+that exploration; the upper-left continuation and full Act2 completion remain open.

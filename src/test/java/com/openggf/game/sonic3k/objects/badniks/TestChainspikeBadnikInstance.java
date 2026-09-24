@@ -253,6 +253,38 @@ class TestChainspikeBadnikInstance {
     // --- helpers ---
 
     /** Drives the body to the update on which {@code loc_91D12} sets the extend signal. */
+    @Test
+    void rewindRestoresExactParentAndKeepsRetiredParentOrphansRetired() {
+        var fixture = fixture();
+        var original = started(0, fixture.sprite());
+        var child = original.childrenForTest().getFirst();
+        var id = com.openggf.game.rewind.identity.ObjectRefId.layout(7, 1, 12);
+        var before = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        before.registerObject(original, id);
+        var saved = child.captureRewindState(
+                com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(before));
+        var replacement = new ChainspikeBadnikInstance(original.getSpawn());
+        var after = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        after.registerObject(replacement, id);
+        GameServices.level().getObjectManager().removeDynamicObject(original);
+        assertTrue(original.isDestroyed(), "offscreen retirement publishes the parent status bit");
+        var restored = (ChainspikeBadnikInstance.ChainspikeChild) child.recreateForRewind(
+                new com.openggf.level.objects.RewindRecreateContext(child.getSpawn(), saved, null));
+        restored.restoreRewindState(saved,
+                com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(after));
+        restored.update(1, fixture.sprite());
+        assertFalse(restored.isDestroyed(), "must follow the restored owner, not the retired instance");
+
+        com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(replacement);
+        var retiredContext = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(
+                new com.openggf.game.rewind.identity.RewindIdentityTable());
+        var orphan = restored.captureRewindState(retiredContext);
+        restored.restoreRewindState(orphan, retiredContext);
+        assertEquals(0, restored.getCollisionFlags());
+        restored.update(2, fixture.sprite());
+        assertTrue(restored.isDestroyed(), "Child_CheckParent retires an orphan on its next update");
+    }
+
     private void triggerExtend(ChainspikeBadnikInstance body, AbstractPlayableSprite sprite) {
         moveTo(sprite, OBJECT_X, OBJECT_Y);
         for (int update = 0; update < 400 && !body.extendSignalForTest(); update++) {

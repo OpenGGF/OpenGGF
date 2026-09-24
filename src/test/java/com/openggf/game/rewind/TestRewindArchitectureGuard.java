@@ -33,6 +33,10 @@ class TestRewindArchitectureGuard {
             "\\bpublic\\s+void\\s+restoreRewindState\\s*\\(");
 
     private static final Map<String, Integer> OBJECT_REWIND_OVERRIDE_BASELINE = Map.ofEntries(
+            // Exact parent id plus a null tombstone for the one-update retired-owner tail;
+            // generic strict object refs cannot capture the already-unregistered parent.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ChainspikeBadnikInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ChainspikeBadnikInstance.java#restoreRewindState", 1),
             // Sky Sanctuary arrival and cutscene graph. Each override exists for one of two
             // reasons the generic schema cannot cover: a cross-object SST link the ROM keeps as
             // a word ($3C the beam, $20 the cutscene Knuckles) which must survive as an
@@ -250,9 +254,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/SpikebonkerBadnikInstance.java#@RewindTransient", 2),
-            // Chainspike's body holds its four children and each child holds the body; both
-            // links are structural and both sides relink to the nearest live body in
-            // recreateForRewind, the same triage as the Spikebonker's mace above.
+            // Chainspike's initial-spawn list is diagnostic; child parent links
+            // are captured exact ObjectRefIds, never nearest-body guesses.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ChainspikeBadnikInstance.java#@RewindTransient", 2),
             // HPZ Knuckles-fight object links are restored by ObjectRefId sidecars.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#@RewindTransient", 1),

@@ -2,11 +2,13 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -118,14 +120,22 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
     private boolean waitingForOnscreen = true;
     private boolean placeholderRenderedOnscreen;
 
-    @RewindTransient(reason = "Structural child links; each child is recreated independently "
-            + "and relinks itself to the nearest live Chainspike body in recreateForRewind.")
+    @RewindTransient(reason = "Initial-spawn diagnostics only; gameplay uses each child's captured body reference.")
     private final List<ChainspikeChild> children = new ArrayList<>();
 
     public ChainspikeBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Chainspike", Sonic3kObjectArtKeys.CHAINSPIKE,
                 COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
         mappingFrame = 0;
+    }
+
+    @Override
+    public void onUnload() {
+        // Sprite_CheckDeleteTouch -> loc_85094 sets status bit 7 before
+        // scheduling Delete_Current_Sprite. The manager owns our offscreen
+        // removal; publish its equivalent here so later child slots cannot
+        // keep following an already-unregistered body.
+        if (!isDestroyed()) ObjectLifetimeOps.destroyRespawnableOffscreen(this);
     }
 
     @Override
@@ -304,31 +314,6 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         return (spawn.renderFlags() & 2) != 0;
     }
 
-    void attachChildForRewind(ChainspikeChild restored) {
-        children.add(restored);
-    }
-
-    static ChainspikeBadnikInstance findLiveBodyForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.spawn() == null || ctx.objectManager() == null) {
-            return null;
-        }
-        ChainspikeBadnikInstance best = null;
-        long bestDistance = Long.MAX_VALUE;
-        for (ObjectInstance instance : ctx.objectManager().getActiveObjects()) {
-            if (!(instance instanceof ChainspikeBadnikInstance body) || body.isDestroyed()) {
-                continue;
-            }
-            long dx = body.getX() - ctx.spawn().x();
-            long dy = body.getY() - ctx.spawn().y();
-            long distance = dx * dx + dy * dy;
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = body;
-            }
-        }
-        return best;
-    }
-
     @Override
     public void refreshPostCameraRenderState() {
         if (waitingForOnscreen) {
@@ -423,9 +408,14 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
 
         private enum Phase { IDLE, EXTENDING }
 
-        @RewindTransient(reason = "Structural parent link; restored by relinking to the nearest "
-                + "live Chainspike body in recreateForRewind.")
-        private final ChainspikeBadnikInstance body;
+        // ROM parent3 is an exact object-slot link (Child_CheckParent), not a
+        // nearest-body search. Capture its identity so rewind cannot attach an
+        // orphan to a different live Chainspike after the original body leaves.
+        @RewindTransient(reason = "Exact parent identity captured by BodyLink; retired parents restore as null.")
+        private ChainspikeBadnikInstance body;
+
+        private record BodyLink(ObjectRefId bodyId)
+                implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
         /**
          * Which of {@code ChildObjDat_91EEC}'s four entries this is. Not {@code final}: a final
          * scalar is a rewind-coverage gap by {@code TestRewindCoverageGuard}'s reckoning, and
@@ -587,15 +577,29 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            ChainspikeBadnikInstance parent = findLiveBodyForRewind(ctx);
-            if (parent == null) {
-                return null;
+        public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+            // Child_CheckParent deletes a child on its next update when the owner
+            // has retired. That one-frame orphan must stay an orphan on restore.
+            ObjectRefId id = context.identityTable().map(table -> table.encodeObject(body)).orElse(null);
+            if (context.identityTable().isPresent() && body != null && !body.isDestroyed() && id == null) {
+                throw new IllegalStateException("Live Chainspike parent has no rewind identity");
             }
-            ObjectSpawn capturedSpawn = ctx.spawn() != null ? ctx.spawn() : parent.spawn;
-            ChainspikeChild restored = new ChainspikeChild(capturedSpawn, parent, index);
-            parent.attachChildForRewind(restored);
-            return restored;
+            return super.captureRewindState(context).withObjectSubclassExtra(new BodyLink(id));
+        }
+
+        @Override
+        public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+            super.restoreRewindState(snapshot, context);
+            if (snapshot.objectSubclassExtra() instanceof BodyLink link) {
+                body = link.bodyId() == null ? null : (ChainspikeBadnikInstance)
+                        context.requireIdentityTable().resolveObject(link.bodyId(), true);
+            }
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            // The captured BodyLink restores body after all objects exist.
+            return new ChainspikeChild(ctx.spawn(), null, index);
         }
 
         @Override
