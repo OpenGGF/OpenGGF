@@ -349,3 +349,41 @@ A later hurt event5591 is absent natively (engine2787,1701 with recoil,
 native2787,1706 still descending), causing first X difference5592. That
 contact is the next route target. Unchanged long input dies9181; route duration
 alone is not a correctness measure. Cold full-act completion remains open.
+
+### Exploding-rock fragment shield response (2026-09-24)
+
+After `163781be9`, the consequential contact at5591 is an Iwamodoki fragment
+near2790,1717. The engine loses its fire shield and recoils toY1701, while
+native continues descending atY1706. `loc_8FB90` explicitly sets
+`shield_reaction` bit3 before installing `S3KBadnikProjectile_Main`. The class
+described this in its comment but implemented neither the reaction bit nor
+the deflection callback/profile. It now uses the existing canonical deflection
+profile, applies `Touch_ChkHurt_Bounce_Projectile`'s signed-word angle and
+`-$800` velocity, and permanently clears collision. Position fractions and
+the existing `loc_8FBB8` gravity/animation remain intact; no shared touch logic
+changes. The new four-direction unit oracle fails before the change (expected
+reaction8,actual0). A5701-frame ordinary cold route adds5 full-registry replay
+spots across detonation/deflection and checks actual fragment damage clearing,
+retained shield and native player position5591.
+
+Validation: queued native-GL absolute-ROM object/route/mandatory-S3K run
+(`-Dtest=TestIwamodokiBadnikInstance,TestLrzColdRouteCapture,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`)
+ran71 tests with one test-expectation failure: the longer route inherited95
+rings, but both native and engine collect99 by5700. Object/mandatory-S3K tests
+passed. Corrected only that endpoint expectation, then queued
+`-Dtest=TestLrzColdRouteCapture test`:5 tests,zero failures/errors/skips,46.258
+seconds. All43 replay spots across5 cold routes pass. The selection plan against
+`163781be9` is broad; focused iteration covers this object-only change directly,
+while the combined campaign still owes full delivery validation.
+
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-shrapnel-deflection-320/capture.mp4`
+shows5510–5700 (191 rendered frames),5701 state rows,zero deaths. Inspected
+5589/5591/5640 and decoded the full video successfully. Subsequent long ordinary
+input first disagrees after5500 atY5776 (1802vs1807), thenX5777 (3222vs3226).
+Nearby objects identify the lava-fall drops at3264,1824/1776 during the hit.
+Their documented bit4 is fire-shield immunity, not the bit3 deflection used
+above; the drop currently lacks that reaction declaration. This is the next
+implementation target, together with the same omission on launcher fireballs.
+The long run dies7040; survival duration is not proof of parity. Earlier
+transientY5248, intro/ring differences and full-act completion remain open.

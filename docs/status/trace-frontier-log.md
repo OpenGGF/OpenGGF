@@ -111699,3 +111699,17 @@ gameplay. First remaining Y5248 is transient1631vs1632; next consequential
 contact5591 hurts the engine player but not native, causing X5592 divergence.
 Strict trace suite was not run; earlier intro/ring gaps and whole-act acceptance
 remain open.
+
+### 2026-09-24 — LRZ exploding-rock shield response
+
+Tree `feature/ai-sk-zone-completion`, base`163781be9`: native continues at
+2787,1706 on input5591; engine recoils at2787,1701 from Iwamodoki shrapnel.
+Implemented `loc_8FB90` bit3 and `Touch_ChkHurt_Bounce_Projectile` response.
+Independent unit regression fails before fix. Focused71-test run passes
+object/mandatory-S3K checks but reports one route endpoint expectation failure
+(95vs99rings); native confirms99, corrected expectation,5 route tests then
+pass with zero failures/errors/skips. Commands and rendered evidence live
+in LRZ1 matrix. Post-fix player coordinates match locally through5775; next
+Y5776 is1802vs1807, X5777 is3222vs3226. Nearby lava-fall drops lack the ROM's
+fire-shield reaction bit4. Select that owner next; earlier differences and
+strict trace replay remain open.

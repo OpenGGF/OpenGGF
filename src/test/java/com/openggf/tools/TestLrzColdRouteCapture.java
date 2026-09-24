@@ -33,8 +33,13 @@ class TestLrzColdRouteCapture {
         runColdRoute("charge");
     }
 
+    @Test void coldTeamDeflectsExplodingRockFragmentsWithoutLosingShield() throws Exception {
+        runColdRoute("shrapnel");
+    }
+
     private void runColdRoute(String route) throws Exception {
-        boolean chargeRoute = route.equals("charge");
+        boolean shrapnelRoute = route.equals("shrapnel");
+        boolean chargeRoute = route.equals("charge") || shrapnelRoute;
         boolean elevatorRoute = route.equals("elevator") || chargeRoute;
         boolean shieldRoute = !route.equals("corkscrew");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
@@ -44,7 +49,8 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = chargeRoute ? Set.of(5140, 5175, 5200, 5300, 5400)
+        var spots = shrapnelRoute ? Set.of(5550, 5585, 5591, 5620, 5650)
+                : chargeRoute ? Set.of(5140, 5175, 5200, 5300, 5400)
                 : elevatorRoute ? Set.of(4900, 4930, 4945, 4951) : shieldRoute ? Set.of(4510, 4540, 4563, 4590, 4650, 4700, 4780, 4850)
                 : Set.of(200, 600, 950, 1300, 1800, 2200, 2600, 2900,
                 3100, 3140, 3250, 3370, 3410, 3470, 3530, 3555, 3600,
@@ -97,6 +103,16 @@ class TestLrzColdRouteCapture {
                     assertFalse(session.player().getAir());
                     assertTrue(session.player().isOnObject());
                 }
+                if (shrapnelRoute && frame == 5591) {
+                    assertTrue(session.player().hasShield());
+                    assertFalse(session.player().isHurt());
+                    assertEquals(2787, session.player().getCentreX());
+                    assertEquals(1706, session.player().getCentreY());
+                    assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.badniks.IwamodokiShrapnelInstance.class)
+                            .stream().anyMatch(fragment -> fragment.getCollisionFlags() == 0),
+                            "production shield touch must deflect an actual fragment");
+                }
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
@@ -126,7 +142,7 @@ class TestLrzColdRouteCapture {
                 assertEquals(shieldRoute ? 2206 : 2746, session.player().getCentreX());
                 assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
             }
-            assertEquals(shieldRoute ? 95 : 93, session.player().getRingCount());
+            assertEquals(shrapnelRoute ? 99 : shieldRoute ? 95 : 93, session.player().getRingCount());
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
         }
     }

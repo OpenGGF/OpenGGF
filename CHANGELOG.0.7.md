@@ -637,7 +637,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   works its way back the other way. Only the head can be hit; the body and the flames only hurt.
   Lava Reef's bomb badniks are in, 66 of them across the two acts: each one is a solid block you
   can stand on until a player comes within a few steps, when its fuse lights, flickers faster and
-  faster, and it blows itself apart into four fragments that arc away and fall.
+  faster, and it blows itself apart into four fragments that arc away and fall. Shields deflect
+  the fragments and leave them harmless as they fall away.
   Three places in act 1 now lock the background to the dome the way the ROM does: cross the line
   inside one of the three regions and the background stops following the camera, a lava surface
   rises and falls under you across the width of the room, and crossing back the other way releases

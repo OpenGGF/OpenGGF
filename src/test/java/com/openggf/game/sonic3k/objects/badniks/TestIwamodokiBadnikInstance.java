@@ -155,6 +155,28 @@ class TestIwamodokiBadnikInstance {
         }
     }
 
+    @Test
+    void shieldsDeflectFragmentsAndClearTheirDamage() {
+        // loc_8FB90 sets shield_reaction bit3; the native touch routine
+        // launches away at $800 without altering position or fractional motion.
+        for (int[] sample : new int[][] {{32, 0, -0x800, 0}, {-32, 0, 0x800, 0},
+                {0, 32, 0, -0x800}, {0, -32, 0, 0x800}}) {
+            var fragment = new IwamodokiShrapnelInstance(BASE_X, BASE_Y, 4, 0x200, -0x400);
+            var player = new com.openggf.tests.TestablePlayableSprite("sonic", (short) 0, (short) 0);
+            player.setCentreX((short) (BASE_X + sample[0]));
+            player.setCentreY((short) (BASE_Y + sample[1]));
+            assertEquals(8, fragment.getShieldReactionFlags());
+            assertEquals(com.openggf.level.objects.TouchShieldDeflectCapability.SHIELD_DEFLECT,
+                    fragment.getTouchResponseProfile().shieldDeflectCapability());
+            assertTrue(fragment.onShieldDeflect(player));
+            assertEquals(sample[2], fragment.xVel());
+            assertEquals(sample[3], fragment.yVel());
+            assertEquals(0, fragment.getCollisionFlags());
+            assertEquals(BASE_X, fragment.getCentreX());
+            assertEquals(BASE_Y, fragment.getCentreY());
+        }
+    }
+
     /** {@code loc_8FBB8} is {@code MoveSprite}, so the fragments fall under the {@code $38} gravity. */
     @Test
     void theFragmentsFallUnderGravity() {

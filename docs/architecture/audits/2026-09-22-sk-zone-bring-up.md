@@ -4434,3 +4434,19 @@ test is red on the original code. Final focused object/route run passes11
 tests with zero skips. The matrix records commands and inspected recharge
 video. Next: transient Y5248 and the harmful contact5591. Shared campaign
 validation/integration and full-act acceptance remain pending.
+
+## LRZ rock-fragment shield deflection (2026-09-24)
+
+At `163781be9`, ordinary input5591 consumes the fire shield on Iwamodoki
+shrapnel instead of deflecting it. `loc_8FB90` sets bit3; the class's comment
+claimed this but its provider/callback did not. Added canonical deflection and
+native angle/velocity response, preserving fractional position and gravity.
+Four-direction unit oracle is red before the fix. The5701-frame cold route
+verifies retained shield, real fragment damage clearing and5 additional
+full-registry replay spots (43total across5 routes).71-test focused run passed
+objects/mandatory S3K but failed an inherited endpoint ring expectation95vs99;
+native also has99. Corrected that assertion; all5 cold-route tests then pass
+with zero skips. Matrix records commands, inspected video and limits.
+Next actual hit5776 is a lava-fall drop lacking native fire-shield immunity;
+launcher fireballs have the same documented omission. Combined delivery remains
+pending; no complete-LRZ claim.

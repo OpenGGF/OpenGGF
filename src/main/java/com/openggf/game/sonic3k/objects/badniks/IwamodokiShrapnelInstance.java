@@ -12,6 +12,9 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -53,6 +56,9 @@ public final class IwamodokiShrapnelInstance extends AbstractObjectInstance
     private int mappingFrame;
     private int animTimer;
     private final SubpixelMotion.State motion;
+    private boolean collisionEnabled = true;
+    private static final TouchResponseProfile TOUCH_PROFILE = TouchResponseProfile.fromCanonical(
+            com.openggf.game.profiles.touchresponse.TouchResponseProfile.singleRegionShieldDeflect());
 
     /** Restore entry; SubpixelMotion restores both velocity and fractional position. */
     private IwamodokiShrapnelInstance(ObjectSpawn spawn) {
@@ -120,7 +126,37 @@ public final class IwamodokiShrapnelInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return COLLISION_FLAGS;
+        return collisionEnabled ? COLLISION_FLAGS : 0;
+    }
+
+    @Override
+    public int getShieldReactionFlags() {
+        // loc_8FB90: bset #3,shield_reaction(a0).
+        return 1 << 3;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public boolean onShieldDeflect(PlayableEntity entity) {
+        if (!(entity instanceof AbstractPlayableSprite player)) return false;
+        // Touch_ChkHurt_Bounce_Projectile writes signed-word deltas through
+        // GetArcTan/GetSineCosine, then muls #-$800 / asr.l #8. It clears
+        // collision_flags but leaves the fractions and loc_8FBB8 gravity intact.
+        int angle = TrigLookupTable.calcAngle((short) (player.getCentreX() - getCentreX()),
+                (short) (player.getCentreY() - getCentreY()));
+        motion.xVel = (TrigLookupTable.cosHex(angle) * -0x800) >> 8;
+        motion.yVel = (TrigLookupTable.sinHex(angle) * -0x800) >> 8;
+        collisionEnabled = false;
+        return true;
     }
 
     @Override
