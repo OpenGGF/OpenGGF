@@ -14,6 +14,17 @@ content errors corrected on 2026-09-17; labels stay authoritative) and the per-s
 [placement inventory](../research/s3k-zones/lrz-object-inventory.md) (1099 objects, 251 rows,
 byte-matched to the ROM; the `$1D`/`$A0` row was restored on 2026-09-17, see the evidence log). `loc_` labels are ROM addresses, never line numbers.
 
+## Current continuation checkpoint (2026-09-24)
+
+The [Act1 matrix](../validation/levels/s3k-lrz-act1.md#ordinary-cold-miniboss-clear-and-act2-handoff-2026-09-24)
+now records ordinary native320 Sonic+Tails cold completion through the miniboss,
+results and playable Act2:31440inputs,zero deaths,185 replay spots across14
+independent routes. The cold chain's next frontier is Act2 traversal; positioned
+Act2/boss-act evidence does not close it. Other roster/donor/width/lifecycle and
+native whole-scene obligations, combined verification and campaign integration
+remain open. Earlier execution checklists below are historical where superseded
+by the dated matrices.
+
 ## Goal and delivery rule
 
 Deliver three cold routes: Sonic + Tails `$900` → seamless `$901` → boulder cutscene → `$1600` →

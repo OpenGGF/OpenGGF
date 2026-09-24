@@ -253,6 +253,10 @@ and `AizIntroPaletteCycler` needed `RewindStateful` timer/frame capture. Constru
 stateful helpers before schema restore, then bind services when used: object
 recreation can run before service injection. Compare resource pixels by content;
 Java identity of re-decoded `Pattern` instances is not a rendering difference.
+When a helper gains `RewindStateful`, remove obsolete owner-field `DEFERRED`
+overrides and test while it is still pending. LRZ's boss camera gate otherwise
+restored empty and completed immediately, making an entry-wait replay submit
+boss art early; later fight-only rewind checks never exercised that gate.
 
 **Motion holders need stable identity in the default rewind path.** Declare
 `SubpixelMotion.State` holders `final`; the default schema captures supported

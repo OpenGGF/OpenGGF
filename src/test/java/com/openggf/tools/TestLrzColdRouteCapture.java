@@ -69,8 +69,13 @@ class TestLrzColdRouteCapture {
         runColdRoute("miniboss-arrival");
     }
 
+    @Test void coldTeamDefeatsMinibossAndReachesPlayableActTwo() throws Exception {
+        runColdRoute("miniboss-clear");
+    }
+
     private void runColdRoute(String route) throws Exception {
-        boolean minibossArrivalRoute = route.equals("miniboss-arrival");
+        boolean minibossClearRoute = route.equals("miniboss-clear");
+        boolean minibossArrivalRoute = route.equals("miniboss-arrival") || minibossClearRoute;
         boolean lateAscentRoute = route.equals("late-ascent") || minibossArrivalRoute;
         boolean middleSpringRoute = route.equals("middle-spring") || lateAscentRoute;
         boolean highClimbRoute = route.equals("high-climb") || middleSpringRoute;
@@ -89,7 +94,8 @@ class TestLrzColdRouteCapture {
                         + route + "-320.bk2"));
         // Short earlier route: intro, rocks/door, platforms, button, capture,
         // scripted ride, native release, lower platform and westbound descent.
-        var spots = minibossArrivalRoute ? Set.of(17080, 17103, 17270, 17425, 17890, 18108, 18270, 18450, 18530, 18625, 18655, 18835, 18925, 19100, 19310, 19600, 19735, 19865, 19902, 20025, 20160, 20340, 20415, 20555, 20720, 20745, 20880, 20910, 20995, 21030, 21050)
+        var spots = minibossClearRoute ? Set.of(21120, 21300, 21570, 21950, 21970, 22820, 23700, 24500, 25400, 25848, 26260, 26676, 27100, 27535, 27960, 28435, 28800, 29670, 29760, 30220, 30290, 30740, 30880, 30940, 31100, 31360)
+                : minibossArrivalRoute ? Set.of(17080, 17103, 17270, 17425, 17890, 18108, 18270, 18450, 18530, 18625, 18655, 18835, 18925, 19100, 19310, 19600, 19735, 19865, 19902, 20025, 20160, 20340, 20415, 20555, 20720, 20745, 20880, 20910, 20995, 21030, 21050)
                 : lateAscentRoute ? Set.of(11980, 12300, 13200, 14100, 14680, 14860, 14868, 14930, 14972, 14985, 15040, 15330, 15940, 16075, 16180, 16220, 16320, 16440, 16575, 16650, 16760, 16958, 17010)
                 : middleSpringRoute ? Set.of(10085, 10097, 10105, 10125, 10165, 10325, 10400, 10650, 10700, 10960, 11190, 11220, 11570, 11730, 11775, 11820, 11900)
                 : highClimbRoute ? Set.of(8700, 8730, 8775, 8890, 8920, 9030, 9080, 9130, 9300, 9380, 9410, 9500, 9720, 9830)
@@ -217,6 +223,21 @@ class TestLrzColdRouteCapture {
                     assertEquals(1, GameServices.level().getObjectManager().activeObjectsOfType(
                             com.openggf.game.sonic3k.objects.bosses.LrzMinibossInstance.class).size());
                 }
+                if (minibossClearRoute && frame == 21090) {
+                    assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.LrzRockCrusherPieceInstance.class).isEmpty(),
+                            "retired crusher fragments must not survive into the miniboss arena");
+                }
+                if (minibossClearRoute && frame == 29690) {
+                    var drill = GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.bosses.LrzMinibossInstance.class).getFirst();
+                    assertTrue(drill.getState().defeated);
+                    assertEquals(0, drill.getCollisionProperty());
+                }
+                if (minibossClearRoute && frame == 30290) {
+                    assertEquals(1, GameServices.level().getCurrentAct(), "seamless reload completed");
+                    assertTrue(session.player().getCentreX() < 400, "native -$2C00 world rebase");
+                }
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
@@ -241,12 +262,18 @@ class TestLrzColdRouteCapture {
             }
             assertEquals(spots, checked);
             assertEquals(9, GameServices.level().getCurrentZone());
-            assertEquals(0, GameServices.level().getCurrentAct());
+            assertEquals(minibossClearRoute ? 1 : 0, GameServices.level().getCurrentAct());
             if (!elevatorRoute) {
                 assertEquals(shieldRoute ? 2206 : 2746, session.player().getCentreX());
                 assertEquals(shieldRoute ? 1334 : 1186, session.player().getCentreY());
             }
-            if (minibossArrivalRoute) {
+            if (minibossClearRoute) {
+                assertEquals(2357, session.player().getCentreX());
+                assertEquals(1980, session.player().getCentreY());
+                assertFalse(session.player().isObjectControlled(), "Act2 movement is released");
+                assertEquals(1, GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.LrzDeathEggBackgroundInstance.class).size());
+            } else if (minibossArrivalRoute) {
                 assertEquals(11338, session.player().getCentreX());
                 assertEquals(1968, session.player().getCentreY());
             } else if (lateAscentRoute) {
@@ -265,7 +292,7 @@ class TestLrzColdRouteCapture {
                 assertEquals(4917, session.player().getCentreX());
                 assertEquals(1712, session.player().getCentreY());
             }
-            assertEquals(minibossArrivalRoute ? 6 : lateAscentRoute ? 8 : middleSpringRoute ? 119 : highClimbRoute ? 111 : upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
+            assertEquals(minibossClearRoute ? 0 : minibossArrivalRoute ? 6 : lateAscentRoute ? 8 : middleSpringRoute ? 119 : highClimbRoute ? 111 : upperLedgeRoute ? 107 : lowerEastRoute ? 103 : shrapnelRoute ? 99 : shieldRoute ? 95 : 93,
                     session.player().getRingCount());
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
         }

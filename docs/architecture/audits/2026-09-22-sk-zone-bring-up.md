@@ -4621,3 +4621,48 @@ by omitting the required touch snapshot and is not counted as regression proof.
 The Act1 matrix records commands and remaining visual/breadth obligations. The
 next ordinary moving-patrol attempt reaches three drill hits remaining before
 death at26683; it still does not certify defeat or justify combat tuning.
+
+
+### LRZ ordinary miniboss clear exposed stale crusher pieces (2026-09-24)
+
+On19d490a00, ordinary controller inputs reduced the drill to zero hits at the
+final slam, but the seamless reload failed: SST slot10 contained a
+LrzRockCrusherPieceInstance without a native position contract. The exception
+was a symptom. `loc_903BA` tails Child_DrawTouch_Sprite_FlickerMove, which sends
+pieces through loc_849D8 when Go_Delete_Sprite marks the parent retired. The
+engine omitted this tail and retained the attached pieces indefinitely.
+Adding a rebase contract alone was rejected because those pieces should already
+have fallen away and retired thousands of frames earlier.
+
+The correction clears damage, selects Obj_VelocityIndex by even subtype, draws
+the detach pass without moving, then runs MoveSprite/$38 gravity, native unsigned
+coarse-X/Y culling, alternate-frame drawing and next-pass deletion. Detached
+pieces latch their copied art priority and release the retired parent reference.
+The eight-subtype regression failed before the fix ($8B damage remained) and
+passed afterward. Initial focused verification passed72 tests with zero skips;
+final recreation and full cold-route verification is recorded in the Act1 matrix.
+The stale miniboss comment claiming its defeat chain was unimplemented is also
+corrected; its runtime behavior is unchanged.
+
+
+The new full-registry spot21120 also exposed an obsolete DEFERRED policy for
+LrzMinibossInstance.cameraGate. Its S3kSharedBossCameraGate already implements
+RewindStateful, but the owner exclusion discarded the pending bounds/music wait.
+The uninterrupted branch remained in routine0 through21165; the restored branch
+entered routine2 at21122 and queued boss art at21123. Hardware-timing job counts
+were the first reported difference (6 versus10), not the owning defect. Removing
+the exclusion and keeping the stateful holder final preserves the helper state;
+it does not change queue timing or ordinary encounter logic. Removing only the
+exclusion fell into the non-final helper's legacy snapshot path and failed on a
+Class-valued codec wrapper; stable holder identity uses the supported compact
+stateful path instead of broadening the shared serializer.
+
+Early Act2 footage looked like walking over empty background. Native BizHawk2.11
+read-only observation from the existing415400 movie state, frames416490–417600,
+shows the same sparse floor presentation (for example416600, player1474/1985,
+camera1314/1884). It is not corrected as an engine defect. Host execution completed
+with no failures;1111 state observations and frame416600 inspected. Evidence:
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-native-act2-floor/run1`, original
+`s3k-sonic-tails-complete-emeralds.bk2`, ROM SHA1
+CFBF98C36C776677290A872547AC47C53D2761D6. This is a scene observation, not strict
+trajectory or pixel parity with the ordinary engine route.

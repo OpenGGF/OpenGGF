@@ -4838,3 +4838,18 @@ of clearing it; isolated movement/culling tests could not expose this. Similar
 raw bit3 writes exist on the LRZ shooting trigger and Iwamodoki fragments. Use
 actual contact dispatch as well as callback tests. Origin: September24 cold LRZ
 miniboss route; `TestLrzMinibossHitPath#shieldContactDeflectsAHandShotAndRewindsItsHarmlessFlight`.
+
+
+## A transition position-contract error can expose missing child retirement
+
+Before adding a world-offset contract to an unexpectedly carried object, trace
+its native lifetime. LRZ crusher pieces tail-call
+`Child_DrawTouch_Sprite_FlickerMove` from `loc_903BA`: parent status bit7 sends
+`loc_849D8` through collision clear and Set_IndexedVelocity, then Obj_FlickerMove
+moves, applies gravity, flickers and schedules deletion outside native bounds.
+Ignoring that tail kept pieces alive for the whole act; the ordinary cold
+miniboss clear then failed the Act2 rebase on a stale crusher piece. Positioned
+boss tests never contained it. Model the lifecycle, not a transition exclusion.
+Detached pieces no longer need parent3; latch copied drawing priority and test
+recreation without retaining a dead parent. Origin: September24 LRZ cold clear,
+`TestLrzRockCrusher` and `TestLrzColdRouteCapture`.

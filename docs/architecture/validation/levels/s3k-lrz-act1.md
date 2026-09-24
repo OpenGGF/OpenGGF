@@ -8,12 +8,11 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md); starting inventory:
 [LRZ placement inventory](../../research/s3k-zones/lrz-object-inventory.md).
 Status: traversal families, miniboss, results and seamless handoff implemented.
-Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
-full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
-Thirteen preserved native320 ordinary Sonic+Tails cold routes now reach the
-miniboss approach at21111inputs, with159 full-registry replay spots. The latest
-route opens the final lower door and crosses the lava priority switch. Ordinary
-miniboss defeat and complete cold handoff remain open.
+Positioned320/800 boss-to-Act2 routes and palette-ramp replay pass. Fourteen preserved
+native320 ordinary Sonic+Tails cold routes now include miniboss defeat, results and
+playable Act2 at31440inputs, with185 full-registry replay spots. The complete route
+uses no gameplay seeds and has zero deaths. Other character/donor/width products,
+lifecycle coverage and native whole-scene acceptance remain open.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
 load at the end of the campaign, not the route entry). Outgoing: seamless `$901`.
@@ -57,9 +56,9 @@ the leading `(0,0)` sentinel). The baseline only ratchets down.
 | REWIND: route-position spots for `$18`, `$1A`, `$9C` and `$9A` | `loc_428D6`'s `MoveSprite` + `ObjCheckFloorDist` landing (needs real floor data), `Obj_LRZBigDoor`'s opening ramp, `Check_CameraInRange`'s rumble release, `Obj_Iwamodoki`'s lit fuse | native 320, act 1 entered at fixture route rows | `TestS3kLrzRouteRewindSpots` (4) | implemented | pass | `$18` (mid-fall and landed) and `$1A` compare the whole composite and require the diverging frame to change something first. `$9C` and `$9A` compare the parent's own ROM fields instead, so these legacy checks alone do not prove child recreation; later cold-route checks compare the full registry across live crusher and Iwamodoki interactions. **Coverage limit:** these enter the act at a route position, they are not walked to from the level start. Later cold shield-route checks cover `$1D` projectile interaction; the original attempted placement latch is not credited by that result |
 | BREADTH: rosters, viewports and the S1 donor for every slice 3/4 class | Configured roster, `SCREEN_WIDTH_PIXELS`, `CrossGameFeatureProvider`; the S1 donor's own `playerCapability().spindashEnabled() == false` | Sonic / Sonic + Tails / Tails / Knuckles, 320 and 400, donor off and `s1` | `TestS3kLrzCompatibilityMatrix` (10 rows) | implemented | pass | Asserts the live roster, the viewport reaching the camera, the donor's capability rules reaching the playable, and a ready ROM-backed renderer for every art key a slice 3/4 class draws from. Broken on purpose once with a nonexistent art key: all ten rows failed. It does NOT re-assert registry id resolution, which `TestS3kLrzPlacementCensus` pins exactly |
 | OBJECT: shared families already concrete (105 rows, 340 placements) | SK Set 2 pointer table | native | `TestS3kLrzPlacementCensus` (classification only) | implemented | classification pass | Per-subtype behaviour unverified |
-| BOSS: miniboss `$9D` at `($2CA0,$880)` | `Obj_LRZMiniboss`, `off_7854C` 11 slots, `collision_property` 6; `sub_78C14`'s `$20` invulnerability; `sub_78CF4`'s `collision_property 4` hands and `loc_78D2C`'s `$38` flags | native320 +800 positioned | `TestLrzMinibossInstance`, `TestLrzMinibossHitPath`, `TestS3kLrzBossRewindHeadless`, `TestLrzPostBossPaletteRouteCapture` | implemented | pass, clips `29`-`32` | The whole fight is filmed end to end from one capture (`raw-45-lrz1-miniboss-full-fight`): arrival and arms (`29`), a hit and its flash (`30`), the right hand's fourth hit and its arm peeling (`31`), and the sixth drill hit and the defeat (`32`). Three hits fit one 95-frame slam window; the hands take one hit per pass through jump height. **Coverage limits**: the capture is a positioned entry at `($2C00,$600)`, not a cold walk-in, and it is Super Sonic with all seven emeralds, which is what the recorded native run is from its row 24174 but is not the ordinary-Sonic fight. Later follow-ups add native/wide positioned controller fights and boss-graph restoration; cold walk-in and donor/roster breadth remain open |
-| LOAD: results and seamless `$901` handover | `loc_56CAA` rebases players/objects/camera; `loc_78AA8` post-results palette ramp and release | positioned320/800 Sonic with declared355rings/seven emeralds | `TestS3kLrzSeamlessActChangeHeadless`, `TestS3kBossDefeatSignpostFlow`, `TestLrzPostBossPaletteRouteCapture` | implemented | Positioned boss/results/Act2 routes and mid-ramp whole-registry replay pass; see 2026-09-23 handoff follow-up | The original stale lava plane and stuck results claims are superseded by the implemented ramp/release. Full cold handoff, broader roster/donor checks and seamless timeline policy evidence remain open. |
-| ROUTE: cold act 1 from the level start | Controller-driven from `($100,$20)`, no teleport or ring seeds | native320 Sonic+Tails | `TestLrzColdRouteCapture` (13 independent input routes) | partial cold reachability | Through(11338,1968) at21111inputs, six rings and zero deaths;159 full-registry replay spots, arrival follow-up below | Miniboss defeat and complete cold handoff still owed. Earlier corkscrew/door/shield/crusher frontiers are closed by the dated follow-ups below; strict native parity remains a separate claim. |
+| BOSS: miniboss `$9D` at `($2CA0,$880)` | `Obj_LRZMiniboss`, `off_7854C` 11 slots, `collision_property` 6; `sub_78C14`'s `$20` invulnerability; `sub_78CF4`'s `collision_property 4` hands and `loc_78D2C`'s `$38` flags | native320 +800 positioned | `TestLrzMinibossInstance`, `TestLrzMinibossHitPath`, `TestS3kLrzBossRewindHeadless`, `TestLrzPostBossPaletteRouteCapture` | implemented | pass, clips `29`-`32` | The whole fight is filmed end to end from one capture (`raw-45-lrz1-miniboss-full-fight`): arrival and arms (`29`), a hit and its flash (`30`), the right hand's fourth hit and its arm peeling (`31`), and the sixth drill hit and the defeat (`32`). Three hits fit one 95-frame slam window; the hands take one hit per pass through jump height. **Coverage limits**: the capture is a positioned entry at `($2C00,$600)`, not a cold walk-in, and it is Super Sonic with all seven emeralds, which is what the recorded native run is from its row 24174 but is not the ordinary-Sonic fight. Later follow-ups add native/wide positioned controller fights and boss-graph restoration; the ordinary native320 cold team fight is now verified below; donor/roster breadth remains open |
+| LOAD: results and seamless `$901` handover | `loc_56CAA` rebases players/objects/camera; `loc_78AA8` post-results palette ramp and release | positioned320/800 Sonic with declared355rings/seven emeralds | `TestS3kLrzSeamlessActChangeHeadless`, `TestS3kBossDefeatSignpostFlow`, `TestLrzPostBossPaletteRouteCapture` | implemented | Positioned boss/results/Act2 routes and mid-ramp whole-registry replay pass; see 2026-09-23 handoff follow-up | The original stale lava plane and stuck results claims are superseded by the implemented ramp/release. Ordinary native320 cold team handoff is verified below; broader roster/donor checks and seamless timeline policy evidence remain open. |
+| ROUTE: cold act 1 from the level start | Controller-driven from `($100,$20)`, no teleport or ring seeds | native320 Sonic+Tails | `TestLrzColdRouteCapture` (14 independent input routes) | native320 cold team complete | Through playable Act2(2357,1980) at31440inputs, zero rings/deaths;185 full-registry replay spots, clear follow-up below | Other route products remain open. Earlier corkscrew/door/shield/crusher frontiers are closed by the dated follow-ups below; strict native parity remains a separate claim. |
 | ORACLE: strict segment replay | `TestS3kSonicTailsLrzSegmentTraceReplay`, `TestS3kTailsFullChainLrzSegmentTraceReplay` | `-Ptrace-segments` | — | — | see [trace frontier log](../../../status/trace-frontier-log.md) | Slice 11 |
 
 ## Execution evidence
@@ -804,3 +803,57 @@ is used for this bounded child response: real dispatch, native radial arithmetic
 recreation and existing route consumers are exercised. Combined campaign
 validation remains owed. Shield-contact moving footage and broader roster/native
 acceptance remain open; this check does not certify ordinary cold boss defeat.
+
+
+### Ordinary cold miniboss clear and Act2 handoff (2026-09-24)
+
+The uninterrupted native320 Sonic+Tails route now reaches playable Act2 at
+(2357,1980),zero rings after31440inputs,zero deaths. It preserves the entire
+ordinary cold approach, destroys the left hand, lands six drill hits and uses
+timed Insta-Shield taps during later dangerous contacts. Damage and ring loss
+remain part of this route; it is not a no-hit run and uses no position, shield,
+ring, emerald, clock or camera seed. The last hit is visible by29681, the world
+rebases at30285, and ordinary rightward movement resumes after results.
+
+The first successful fight exposed a real handoff exception: a stale crusher
+piece survived to the world-offset scan. The missing loc_903BA tail now switches
+pieces to harmless Obj_FlickerMove debris when the parent retires. All eight
+subtypes retain the ROM velocity table, first-pass draw/no-move, gravity, flicker
+and delayed deletion. Detached art priority survives parent-free recreation.
+The new input fixture is `lrz1-sonic-tails-cold-miniboss-clear-320`; authoring
+round-trip verification passed. The cold-clear regression checks stale-piece
+absence, fatal hit, world rebase, control release, Death Egg owner and26 new
+whole-registry45-frame replay spots:
+21120,21300,21570,21950,21970,22820,23700,24500,25400,25848,26260,26676,
+27100,27535,27960,28435,28800,29670,29760,30220,30290,30740,30880,30940,
+31100,31360. Replay does not straddle the reload; seamless timeline policy remains
+an explicit separate obligation.
+
+The first combined run on19d490a00 plus this patch used queued Java21/native GL,
+`-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`, and
+`-Dtest=TestLrzRockCrusher,TestLrzColdRouteCapture,TestLrzPostBossPaletteRouteCapture test`:
+30tests,1failure,1error,0skips. The error was missing post-recreation service
+injection in the new isolated harness; its corrected rerun passed. All previous
+13 cold routes and both positioned handoffs passed. The new cold-clear replay
+exposed an obsolete cameraGate DEFERRED policy at21120: restoring its empty gate
+skipped the wait and submitted art early (6 versus10 timing jobs). The policy is
+removed and the helper now retains a final identity for supported state capture.
+Final focused verification used the same launch environment and
+`-Dtest=TestLrzColdRouteCapture#coldTeamDefeatsMinibossAndReachesPlayableActTwo,TestS3kLrzBossRewindHeadless,TestLrzMinibossInstance,TestLrzMinibossHitPath test`:
+33passed,0failures/errors/skips; the cold route and26 replay spots took29.15s.
+The final crusher class also passed14 tests,0failures/errors/skips. The earlier
+policy-only attempt failed capture on the replaceable helper's legacy codec
+wrapper; making the stateful holder final uses its supported compact path.
+The change-based plan selects all2909 ordinary classes plus guards because the
+policy catalogue changed. This checkpoint records focused evidence only; the
+combined campaign validation remains owed. The separate final guard JVM used
+`-Pguards -Dtest=TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard test`:
+2passed,0failures/errors/skips.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cold-miniboss-clear-320/capture.mp4`
+films29580–31439 after the full cold prefix;31440state rows,zero deaths. Inspected
+stills29690,30300,31020,31439 and decoded the complete MP4. The native emulator
+also shows the apparently sparse floor after the palette change; see the audit's
+read-only416490–417600 observation. This is not a strict native pixel/trajectory
+match. Other rosters, widescreen cold traversal, donor/lifecycle breadth and
+combined campaign delivery remain open.

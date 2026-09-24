@@ -28,6 +28,58 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestLrzRockCrusher {
 
     @Test
+    void detachedPieceRecreatesWithoutItsRetiredParentAndKeepsCopiedPriority() {
+        var h = harness(2, 0xE40, 0x680);
+        var piece = new LrzRockCrusherPieceInstance(8, 0, 0);
+        piece.setServices(h.services);
+        piece.attachTo(h.crusher);
+        piece.update(0, null);
+        com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(h.crusher);
+        piece.update(1, null);
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.none();
+        var saved = piece.captureRewindState(context);
+        for (int tick = 2; tick <= 8; tick++) piece.update(tick, null);
+        var expected = piece.captureRewindState(context);
+        var restored = piece.recreateForRewind(new com.openggf.level.objects.RewindRecreateContext(
+                piece.getSpawn(), saved, h.services));
+        restored.setServices(h.services); // ObjectManager binds services after recreation in production.
+        restored.restoreRewindState(saved, context);
+        assertTrue(restored.isHighPriority(), "copied art priority survives without the deleted parent");
+        assertEquals(0, restored.getCollisionFlags());
+        for (int tick = 2; tick <= 8; tick++) restored.update(tick, null);
+        var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                "piece", expected, restored.captureRewindState(context));
+        assertTrue(differences.isEmpty(), differences.toString());
+    }
+
+    @Test
+    void piecesBecomeHarmlessFlickeringDebrisWhenTheirParentRetires() {
+        // loc_903BA -> Child_DrawTouch_Sprite_FlickerMove -> loc_849D8.
+        int[][] velocities = {{-0x100, -0x100}, {0x100, -0x100},
+                {-0x200, -0x200}, {0x200, -0x200}, {-0x300, -0x200},
+                {0x300, -0x200}, {-0x200, -0x200}, {0, -0x200}};
+        for (int index = 0; index < velocities.length; index++) {
+            var h = harness(0, 0xE40, 0x680);
+            h.crusher.update(0, null);
+            var piece = new LrzRockCrusherPieceInstance(index * 2, 0, 0);
+            piece.setServices(h.services);
+            piece.attachTo(h.crusher);
+            piece.update(1, null);
+            int x = piece.getCentreX(), y = piece.getCentreY();
+            com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(h.crusher);
+            piece.update(2, null);
+            assertEquals(0, piece.getCollisionFlags(), "loc_849D8 clears damage");
+            assertEquals(x, piece.getCentreX(), "detach pass draws without moving");
+            assertEquals(y, piece.getCentreY());
+            piece.update(3, null);
+            assertEquals(x + (velocities[index][0] >> 8), piece.getCentreX());
+            assertEquals(y + (velocities[index][1] >> 8), piece.getCentreY());
+            for (int tick = 4; tick < 200 && !piece.isDestroyed(); tick++) piece.update(tick, null);
+            assertTrue(piece.isDestroyed(), "Obj_FlickerMove must retire the fragment below the camera");
+        }
+    }
+
+    @Test
     void bodyAndUpperPiecesSuppressFurtherHitsForThirtyTwoObjectTicks() {
         var harness = harness(0, 0xE40, 0x680);
         harness.crusher.update(0, null);

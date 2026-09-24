@@ -9,6 +9,9 @@ cutscene and `StartNewLevel $1600`) and Knuckles (`Obj_StartNewLevel` `$B3` at `
 Status: traversal families are implemented through slice 7 as of the 2026-09-22
 continuation. Both exits and the boulder cutscene are implemented. Route certification
 and the remaining breadth/lifecycle/native obligations are still separate gates.
+The ordinary native320 Sonic+Tails cold Act1 route now reaches playable Act2
+(2357,1980),zero deaths; see the [handoff evidence](s3k-lrz-act1.md#ordinary-cold-miniboss-clear-and-act2-handoff-2026-09-24).
+This closes cold arrival, not Act2 traversal or its other route products.
 
 Incoming: seamless `$900` handover, level select `$901`, star-post reload.
 Outgoing: `$1600` (Sonic/Tails, with the Act 3 carry) and `$1601` (Knuckles, with `SaveGame`).

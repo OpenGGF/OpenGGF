@@ -12,6 +12,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -61,6 +62,15 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
     private static final int[][] SHAKE_TABLE = {{1, 8}, {3, -4}, {3, -4}, {7, 2}};
     /** {@code move.b #2,$39(a0)} (:197517). */
     private static final int SHAKE_BURSTS = 2;
+
+    /** Set_IndexedVelocity(d0=0): Obj_VelocityIndex rows selected by even subtype. */
+    private static final int[][] DEBRIS_VELOCITIES = {
+            {-0x100, -0x100}, {0x100, -0x100}, {-0x200, -0x200}, {0x200, -0x200},
+            {-0x300, -0x200}, {0x300, -0x200}, {-0x200, -0x200}, {0, -0x200}
+    };
+    private boolean detached, pendingDelete, flicker, detachedHighPriority;
+    private boolean visible = true;
+    private int debrisXFixed, debrisYFixed, debrisXVelocity, debrisYVelocity;
 
     /** ROM {@code subtype(a0)} = the child index times two. */
     private int subtype;
@@ -114,6 +124,14 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (pendingDelete) {
+            ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
+        if (detached) {
+            updateDebris();
+            return;
+        }
         switch (routine) {
             // loc_903F4 (:197494-197499): wait for the parent's $38 bit 2.
             case 2 -> {
@@ -135,6 +153,42 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
             hitFlashTimer = LrzRockCrusherObjectInstance.advanceHitFlash(services(), hitFlashTimer);
             if (hitFlashTimer == 0) hitCollisionDisabled = false;
         }
+        // loc_903BA tails Child_DrawTouch_Sprite_FlickerMove after the routine
+        // and hit flash. Go_Delete_Sprite marks the parent's status bit7;
+        // loc_849D8 then clears this child's touch and installs Obj_FlickerMove.
+        // The old engine kept following the retired parent forever, eventually
+        // carrying stale pieces into the seamless Act2 world-offset scan.
+        if (parent != null && parent.isDestroyed()) {
+            detachedHighPriority = parent.isHighPriority();
+            detached = true;
+            parent = null; // Obj_FlickerMove no longer reads parent3; retain only copied art priority.
+            collisionFlags = 0;
+            debrisXFixed = getCentreX() << 16;
+            debrisYFixed = getCentreY() << 16;
+            int[] velocity = DEBRIS_VELOCITIES[subtype / 2];
+            debrisXVelocity = velocity[0];
+            debrisYVelocity = velocity[1];
+            // loc_849D8 draws this pass; movement/flicker starts next pass.
+        }
+    }
+
+    private void updateDebris() {
+        // Obj_FlickerMove: MoveSprite adds the old signed velocity, then $38 gravity.
+        debrisXFixed += debrisXVelocity << 8;
+        debrisYFixed += debrisYVelocity << 8;
+        debrisYVelocity = (short) (debrisYVelocity + 0x38);
+        updateDynamicSpawn(debrisXFixed >>> 16, debrisYFixed >>> 16);
+        var camera = services().camera();
+        int coarseBack = (camera.getX() - 0x80) & 0xFF80;
+        if ((((getCentreX() & 0xFF80) - coarseBack) & 0xFFFF) > 0x280
+                || ((getCentreY() - camera.getY() + 0x80) & 0xFFFF) > 0x200) {
+            // Go_Delete_Sprite_3 installs deletion for the next object pass.
+            pendingDelete = true;
+            visible = false;
+            return;
+        }
+        visible = flicker;
+        flicker = !flicker; // BCHG/BEQ: first movement pass skips drawing.
     }
 
     /** loc_90408, including its fallthrough to loc_90426/loc_90436. */
@@ -258,7 +312,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // The child copies art_tile from the parent (CreateChild1_Normal, :196933).
-        return parent != null && parent.isHighPriority();
+        return detached ? detachedHighPriority : parent != null && parent.isHighPriority();
     }
 
     @Override
@@ -283,6 +337,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!visible || isDestroyed()) return;
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LRZ_ROCK_CRUSHER);
         if (renderer == null) {
             return;

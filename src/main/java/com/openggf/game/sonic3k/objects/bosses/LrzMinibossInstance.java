@@ -227,10 +227,11 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     private static final int[] ANIM_RECOVER = {4, 3, 4, 3, 3, 3, 2, 3, 1, 0x7F, 1, 0x7F, 0xFC};
 
     /**
-     * {@code loc_78522}'s {@code jmp loc_85CA4} gate. Deferred by the rewind schema like every
-     * other boss's, and rebuilt by {@link #initializeBossState()} on a recreation.
+     * {@code loc_78522}'s {@code jmp loc_85CA4} gate. Its RewindStateful snapshot must
+     * preserve bounds, lock bits and the remaining music wait. Rebuilding only an empty
+     * gate on restore makes update() complete immediately and starts the fight too early.
      */
-    private S3kSharedBossCameraGate cameraGate;
+    private final S3kSharedBossCameraGate cameraGate = new S3kSharedBossCameraGate();
     /** True once {@code Check_CameraInRange} has passed and {@code sub_85D6A} has run. */
     private boolean arenaGateStarted;
     /** True once {@code loc_85D48} has jumped through {@code $34(a0)} to {@code loc_78528}. */
@@ -311,11 +312,9 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         arenaGateStarted = false;
         arenaGateComplete = false;
         bossMusicStarted = false;
-        if (cameraGate == null) {
-            cameraGate = new S3kSharedBossCameraGate();
-        } else {
-            cameraGate.reset();
-        }
+        // AbstractBossInstance invokes this before subclass field initializers.
+        // Later resets keep the stateful holder's identity stable for rewind.
+        if (cameraGate != null) cameraGate.reset();
     }
 
     @Override protected int getInitialHitCount() { return HIT_COUNT; }
@@ -856,10 +855,10 @@ public final class LrzMinibossInstance extends AbstractBossInstance
 
     /**
      * {@code loc_78C60} (sonic3k.asm:160694-160704). Entered from either flash routine the moment
-     * {@code collision_property} reads zero. The full chain -- {@code Wait_FadeToLevelMusic},
-     * {@code loc_787E0}'s eleven debris and {@code Obj_EndSignControl} -- is not built yet; what
-     * is modelled here is the state every later step reads: both hands flagged dead (so the arms
-     * retire through {@code sub_78B46}), the player released, and the level timer stopped.
+     * {@code collision_property} reads zero. This starts the implemented fade, debris and
+     * end-sign chain below. Both hands are flagged dead (so the arms retire through
+     * {@code sub_78B46}), the player is released, and the level timer stops before
+     * {@code Wait_FadeToLevelMusic} consumes the interrupted phase's remaining timer.
      */
     private void loc78C60() {
         if (state.defeated) {
@@ -1005,9 +1004,6 @@ public final class LrzMinibossInstance extends AbstractBossInstance
             // so treat its absence as "already in the arena" rather than stalling the fight.
             arenaGateComplete = true;
             return;
-        }
-        if (cameraGate == null) {
-            cameraGate = new S3kSharedBossCameraGate();
         }
         if (!arenaGateStarted) {
             if (!isCameraInRange(objectServices)) {
