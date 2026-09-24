@@ -174,3 +174,12 @@ under the same external LRZ archive. Both600-frame runs retain identical gamepla
 zero deaths and complete decodes. Sixteen focused transition/geometry/GPU/gate/
 presentation tests pass without skips; see the arena design for exact selection.
 This is positioned presentation evidence, not additional cold-route coverage.
+
+
+Source/target shape refinement replaces the carried fade deadline from911aad01b:
+each changed effective boundary crossfades from the displayed mask with fresh
+shared progress. Latest production previews are
+`campaign-20260924-lock-shape-crossfade/{original-input,turn-back}/capture.mp4`.
+Both600-row gameplay sequences remain identical, with zero deaths and complete
+video decodes. The same16 focused tests pass without skips. Earlier/current
+bounds remain authoritative until the final gameplay lock takes over.

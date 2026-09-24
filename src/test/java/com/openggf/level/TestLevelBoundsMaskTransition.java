@@ -37,7 +37,7 @@ class TestLevelBoundsMaskTransition {
         }
     }
 
-    @Test void movingCurrentBoundAndDestinationShareOneCompletionDeadline() {
+    @Test void nextEffectiveLockCrossfadesFromDisplayedShapeWithOneProgressValue() {
         var transition = new LevelBoundsMaskTransition();
         transition.advance(new ArenaMaskState(0,800,0),0,800);
         for (int tick=1; tick<=10; tick++) {
@@ -45,10 +45,13 @@ class TestLevelBoundsMaskTransition {
         }
         float existing = transition.sample().opacityAt(0);
         transition.advance(new ArenaMaskState(240,800,11),0,800);
-        assertTrue(transition.sample().opacityAt(0) >= existing);
-        assertEquals(1f/13, transition.sample().opacityAt(239), 0.000001);
-        for (int tick=12; tick<=23; tick++) {
+        assertEquals(existing + (1-existing)/23, transition.sample().opacityAt(0), 0.000001);
+        assertEquals(1f/23, transition.sample().opacityAt(239), 0.000001);
+        for (int tick=12; tick<=33; tick++) {
             transition.advance(new ArenaMaskState(240,800,tick),0,800);
+            float progress = (tick-10)/23f;
+            assertEquals(existing+(1-existing)*progress, transition.sample().opacityAt(0), 0.000001);
+            assertEquals(progress, transition.sample().opacityAt(239), 0.000001);
         }
         for (int x=0; x<240; x++) assertEquals(1,transition.sample().opacityAt(x));
         assertEquals(0,transition.sample().opacityAt(240));

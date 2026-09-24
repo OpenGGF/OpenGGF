@@ -9,8 +9,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - Automatically mask widescreen pixels beyond current native horizontal camera
   bounds, including asymmetric arena and level edges. During staged boss entry,
   the mask follows the earlier boundary until the final lock arrives. Each side
-  crossfades in world space with one shared completion time; reversals start from
-  the displayed opacity. Presentation history rewinds, and native-width output
+  crossfades between world-space mask shapes; a new effective boundary starts
+  from the displayed blend. Presentation history rewinds, and native-width output
   is unchanged.
 
 - **S3K Sky Sanctuary:** Both Act 1 replica bosses now draw their ROM-backed

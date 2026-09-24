@@ -505,3 +505,40 @@ preview transition/shader overrides. Reviewed approach frame65 and turn-back
 frame155: the temporary boundary leaves Sonic visible. Input/source hashes and
 exact capture commands are in each external provenance.json. User visual review
 and combined campaign integration remain outstanding.
+
+
+## Source-to-target mask shapes
+
+Follow-up to `911aad01b`: retain the user's current-bound correction, but replace
+its carried completion deadline with an explicit source/target shape blend.
+When effective geometry changes, capture that side's displayed world-space mask
+as the source, take the newly effective boundary as the target, and advance one
+23-tick linear crossfade. Both shapes stay anchored to world coordinates;
+unchanged opaque pixels remain opaque. With no visible prior mask, exposed
+pixels start from the clear camera-edge sample. Camera scrolling alone projects
+both shapes without restarting the blend.
+
+A subsequent effective boundary interrupts immediately, including one moving in
+the same direction. The old remaining deadline is not inherited: that accelerated
+a newly covered strip if the previous fade was nearly complete. Native ratcheting
+can retarget every frame, but after the boundary stops the entire side completes
+within23 ticks. No transition is queued, and no boundary position is interpolated.
+Left and right have separate source, target and progress snapshots for rewind.
+The pending final boss destination remains excluded until the gameplay gate
+actually installs it. This changes only widescreen presentation; ROM lock logic
+and gameplay coordinates are untouched.
+
+Validation: the same queued Java21/native-GL focused selection listed above
+passed16 tests with zero failures/errors/skips. The changed regression verifies
+that existing partially masked pixels and a newly covered strip interpolate
+from their respective source values using the same full transition progress.
+Other checks retain reversal, independent edges, pause, world projection, rewind,
+teleport, current/final-bound selection and GPU width/scale coverage.
+
+Production demos are now in external
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260924-lock-shape-crossfade/`,
+with `original-input/capture.mp4` and `turn-back/capture.mp4`. Both600-row gameplay
+CSVs exactly match their prior runs/probe, both have zero deaths, and both MP4s
+fully decode. Reviewed approach frame65 and turn-back frame155. Input/source
+hashes and exact commands accompany the videos. These focused checks do not
+complete the combined campaign validation or authorize a delivery claim.
