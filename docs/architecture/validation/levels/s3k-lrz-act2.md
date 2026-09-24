@@ -228,3 +228,28 @@ cold defeat/title handoff; a separate JVM with
 passes2, zero skips. The change-based plan was inspected against6df1ba780;
 its broad run remains part of the combined campaign delivery, not repeated at
 this local implementation checkpoint.
+
+
+### Ordinary cold upper-route progress (2026-09-24)
+
+On da563ad89, the authored Sonic-and-Tails/native320 continuation replays34674
+inputs from cold Act1 entry, ending at5055/1004 with9 rings and zero deaths.
+This passes the first Act2 platforms, vertical lift, both upper turbine launches,
+upper passage and middle drop. It is an exploratory continuation, not yet a
+committed Act2 route fixture or full-act/replay certification.
+
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-upper-route-320/capture.mp4`
+films32300–34673 (2374frames). `GameplayCaptureTool --game s3k --zone lrz
+--act 1 --main sonic --sidekick tails --frames 34674 --capture-from 32300`
+uses the external route-author `middle-turn-east/variant-0.bk2` and explicit
+`$PROJECT_ROOT/s3k.gen`. Fresh capture reproduces the authoring endpoint; the
+33152 turbine-launch still is inspected and the entire video decodes. Source
+rows confirm the camera follows the climb. No native trajectory equivalence
+is claimed: the reference movie uses Super Sonic here.
+
+Read-only BizHawk2.11 reference extensions `upper-route`, `top-route` and
+`east-route` under `campaign-20260924-native-act2-floor` cover418600–425000
+from the existing415400 state, with verified ROM/movie identity and zero host
+failures. Inspected419400/419800 and421000/421200/421800 establish route geometry
+and spring/drop choices. These are navigation/scene observations, not a
+substitute for ordinary-engine cold completion or whole-scene pixel acceptance.

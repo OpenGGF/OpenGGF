@@ -4709,3 +4709,11 @@ The same source audit corrected the two palette helpers' allocation policy:
 after-current debris chain. The slot40 regression fails on a67d44aa9;38 focused
 checks pass after correction, including cold clear/replay and native/wide palette
 handoffs. See the [allocation evidence](../validation/levels/s3k-lrz-act1.md#palette-helper-allocation-order-2026-09-24).
+
+
+On da563ad89, a fresh34674-input cold replay advances ordinary Sonic+Tails
+through LRZ2's upper lifts/turbines and middle drop to5055/1004, zero deaths.
+The [Act2 progress evidence](../validation/levels/s3k-lrz-act2.md#ordinary-cold-upper-route-progress-2026-09-24)
+records the new video and native navigation references. Descending pipe-route
+authoring and full Act2 completion/replay remain open; no campaign delivery
+or integration is claimed.
