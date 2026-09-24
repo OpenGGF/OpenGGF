@@ -25,7 +25,7 @@ its original unimplemented counts must not be read as current production status.
 | MHZ | Integrated Sonic/Tails route and miniboss fixes; accepted Knuckles/trace exclusions reconciled in the new per-act matrices; fresh320Sonic Act1 completion now includes six live replay spots and a corrected one-owner MHZ2 handoff; Act2 cold320 Sonic completion now reaches playable FBZ1 without seeds/deaths; eight full-registry rewind spots and ship-body presentation checks now pass; lifecycle/breadth remain open. |
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; finish matrix reconciliation, checkpoint geometry and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
-| LRZ | Twelve native-width cold Act1 routes now reach17067 inputs through the late spike-platform ascent and western steps, with128 full-registry replay spots after correcting cloud contact dispatch. Continue east from(8042,624); the lower spring loop is not boss-route progress. Piece-release fallthrough is corrected; the next raw native-row difference6234 is a lag boundary, not an attributed movement defect. Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
+| LRZ | Thirteen native-width cold Act1 routes now reach the miniboss approach at21111inputs, six rings and zero deaths, with159 full-registry replay spots. The final lower door and production lava priority switch are verified. Ordinary cold miniboss defeat and Act2 handoff are next; a successful single drill hit is not fight completion. Piece-release fallthrough is corrected; the next raw native-row difference6234 is a lag boundary, not an attributed movement defect. Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
 | DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,410frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in54786frames with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold final-stage-to-DDZ continuity and remaining Hyper/HUD/native presentation still need validation. |
@@ -4586,3 +4586,24 @@ reported85tests,1failure,0errors/skips: only the old late-ascent endpoint6975
 versus8039. The revised17067-input route reaches(8042,624),8rings with zero deaths; its23
 replay spots passed with the two cloud test classes (15tests,0failures/errors/skips).
 The Act1 matrix records commands, focused validation limits and replacement video. The longer exploratory preboss input sequence is not a certified route.
+
+
+### LRZ cold miniboss arrival (2026-09-24)
+
+On2e56d7141 plus the new arrival fixture, the ordinary Sonic+Tails route reaches
+(11338,1968),six rings,21111inputs,zero deaths. The final elevator needs the
+lower-right ledge then a leftward drop beneath it; the upper left detour returns
+to closed door10. The corrected cloud no longer falsely rebounds the rolling
+approach. The lower button opens door11, then the native priority marker puts
+Sonic in front of the lava. The new independent route test passes31 full-registry
+45-frame replay spots plus door/priority/boss-owner checks:1pass,0skips,20.35s.
+The Act1 matrix records the command and media; its obligation table now reflects
+later handoff, boss-rewind and background repairs while retaining inherited gaps.
+
+Ordinary fight inputs remain unfinished. A dodge of the `$B5` harmful drop and
+return during the `$06` slam lands one drill hit. Moving patrol inputs destroy
+the left hand and reduce the drill to four hits before death at25857; repeat-jump
+and alternating follow-ups also die. No combat mechanics were changed to make those inputs work.
+The direct Act2 background-art report was also sampled at its recorded
+`($2438,$629)` location for120frames; this current capture alone does not close
+its native-comparison obligation. External output: `lrz-bring-up/campaign-20260924-direct-act2-art-audit`.

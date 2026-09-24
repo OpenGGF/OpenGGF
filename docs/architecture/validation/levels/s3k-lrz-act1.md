@@ -10,10 +10,10 @@ Character routes: Sonic + Tails, Sonic, Tails (falling intro at `($100,$20)`) an
 Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay now pass; cold
 full-act completion, breadth/lifecycle and native whole-scene acceptance remain open.
-Twelve preserved native320 ordinary Sonic+Tails cold routes now extend through
-the late spike-platform ascent and western steps to17067 inputs.
-The twelve routes cover128 full-registry replay spots. The late route was reauthored
-after the cloud-contact correction below; later ordinary traversal remains open.
+Thirteen preserved native320 ordinary Sonic+Tails cold routes now reach the
+miniboss approach at21111inputs, with159 full-registry replay spots. The latest
+route opens the final lower door and crosses the lava priority switch. Ordinary
+miniboss defeat and complete cold handoff remain open.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
 load at the end of the campaign, not the route entry). Outgoing: seamless `$901`.
@@ -52,14 +52,14 @@ the leading `(0,0)` sentinel). The baseline only ratchets down.
 | OBJECT: doors and switches `$19` (15), `$1A` (1), `$1C` (10), `$1D` (2) | `Obj_LRZDoor` (`tst.b Level_trigger_array[subtype & $F]`, one-way latch, `GetSineCosine($2E) asr #2` negated over 64 frames), `Obj_LRZBigDoor` (unsigned Y band `[y+$40,y+$C0)` and signed X `>= $50`, `asr #1` added, `Screen_shake_flag` held at `-1`), `Obj_LRZButtonHorizontal` (`swap d6 / andi.w #3` side touch; subtype bit 6 -> bit 7, bit 4 -> latch), `Obj_LRZShootingTrigger` (`(subtype & $F0) >> 2` period, `Touch_Special` `collision_property`, `sub_42EC0` only for `anim == 2`) | native 320 | `TestLrzDoorsButtonsAndTriggers` | implemented | pass, `d2c58f148` | Cold-reachable for `$1C`/`$19` (route v5 opens the `$04` door from the level start); rewind-verified by `TestLrzDoorButtonRewindSpots` (before/active/after + forward replay). The `$1C` buttons are now solid to land on as well as to walk into: `loc_1E154` re-reads `width_pixels(a0)`, which this caller sets equal to its `d1`, and the shared `d1 - $B` reconstruction gave a ten-pixel landing strip (`TestS3kLrzButtonHorizontalLandingHeadless`, cold-route row 3154). Still owed: wide and donor rows, a cold-route spot for `$1A` and `$1D`, and `sub_42EC0` on a route. The big door's ROM respawn-table bit has no engine home (see [s3k-known-bugs](../../../status/s3k-known-bugs.md)) |
 | OBJECT: corkscrew `$15` at `($1240,$3D8)` | `Obj_LRZCorkscrew`: half-open horizontal and inclusive vertical capture box, `ground_vel` floored to `$600` then `+$10` a frame to `$1000`, accumulator high word as the ride parameter, `$700` end, both exits `neg.w ground_vel` | native 320 | `TestLrzCorkscrewObjectInstance`, `TestLrzCorkscrewRewindSpot` | implemented | pass, `9b0608d96` | Capture floor and acceleration confirmed against native rows 3393-3400; clip `14`; rewind-verified. No wide or donor row, and no cold-route spot |
 | OBJECT: traversal families `$16 $17 $18 $1B $1F $20 $21 $22` | Per-id `Obj_LRZ*` routines and tables: `$16` `sub_42636` capture/ride/eject with the leftward speed floor at `-$400`; `$17` the `$2E` sine angle; `$18` the subtype-in-pixels trigger distance; `$1B` `render_flags` bit 7 gating the shot; `$1F` the four-second cycle; `$20` `sub_43604`'s chain; `$21` `loc_43128`'s `y_vel` accumulator, `RawAni_43196` and the `loc_1E10E` crush branch; `$22` `loc_4397E`'s grind and `loc_4389E`'s roll | native 320 | `TestLrzWallRideObjectInstance`, `TestLrzSinkingRockObjectInstance`, `TestLrzFallingSpikeObjectInstance`, `TestLrzFireballLauncher`, `TestLrzLavaFall`, `TestLrzSwingingSpikeBall`, `TestLrzSmashingSpikePlatformObjectInstance`, `TestLrzSpikeBall` | implemented | pass, `f0b7a6eff` | Clips `16`-`23`. Rewind spots for `$16`, `$17`, `$18`, `$1B`, `$1F`, `$20`, `$21`. Owed: wide and donor rows, act 2 skins, a rewind spot on `$18`'s landing boundary (needs real terrain) and route spots |
-| OBJECT: rock crusher `$9C` subtypes 0 and 2 | `Obj_LRZRockCrusher`: `Check_CameraInRange` over `word_901B8`/`word_901C4`, the two `loc_901F4` camera latches, the `bchg #0,$38` rumble, `loc_90512`'s two request shapes, `word_902EC` drop targets, `byte_904AC` piece shake | native 320 | `TestLrzRockCrusher`, `TestS3kLrzCrusherChunkEditHeadless` | implemented | pass, `cfa443e13` / `98a8c7261` | Clip `24`. `loc_90368`'s badnik art requeue waits for slice 4's remaining consumers. No route or rewind spot yet |
-| OBJECT: badniks `$99 $9A $9B` (74 placements) | `Obj_Fireworm`, `Obj_Iwamodoki`, `Obj_Toxomister`; `PLCKosM_LRZ` | native 320 + 400, S1 donor, four rosters | `TestFirewormBadnikInstance`, `TestIwamodokiBadnikInstance`, `TestToxomisterBadnikInstance`, `TestS3kLrzCompatibilityMatrix` | implemented (all three) | pass, `cad4a2e07` | Clips `25`, `26`, `27` (the worm) and `28` (the mist catching a player and pinning him). `$9A` has no touch collision at all: it is a solid block with a fuse. `$9B`'s mist is a player hook -- an eighth off the speed a frame and a ring a second, escaped by a spindash or six left/right reversals. `$99` is four ROM objects: an invisible spawner, the head (the only attackable part, and the only one with DPLC art), four segments that each wait `word_8F940` frames before joining, and a flame on each segment. Owed: a route spot for `$99`/`$9A`/`$9C` |
-| REWIND: route-position spots for `$18`, `$1A`, `$9C` and `$9A` | `loc_428D6`'s `MoveSprite` + `ObjCheckFloorDist` landing (needs real floor data), `Obj_LRZBigDoor`'s opening ramp, `Check_CameraInRange`'s rumble release, `Obj_Iwamodoki`'s lit fuse | native 320, act 1 entered at fixture route rows | `TestS3kLrzRouteRewindSpots` (4) | implemented | pass | `$18` (mid-fall and landed) and `$1A` compare the whole composite and require the diverging frame to change something first. `$9C` and `$9A` compare the parent's own ROM fields instead, because restoring their snapshot drops their dynamically created children -- an engine-level gap recorded in [s3k-known-bugs](../../../status/s3k-known-bugs.md), found by this class. **Coverage limit:** these enter the act at a route position, they are not walked to from the level start. `$1D`/`sub_42EC0` on a route is still owed: a spindash into the `($94B,$4A7)` placement did not latch it |
+| OBJECT: rock crusher `$9C` subtypes 0 and 2 | `Obj_LRZRockCrusher`: `Check_CameraInRange` over `word_901B8`/`word_901C4`, the two `loc_901F4` camera latches, the `bchg #0,$38` rumble, `loc_90512`'s two request shapes, `word_902EC` drop targets, `byte_904AC` piece shake | native 320 | `TestLrzRockCrusher`, `TestS3kLrzCrusherChunkEditHeadless` | implemented | pass, `cfa443e13` / `98a8c7261` | Clip `24`. `loc_90368`'s badnik art requeue waits for slice 4's remaining consumers. Cold controller contact/release and full-registry replay are covered by the crusher/lower-east routes below; subtype and breadth gaps remain |
+| OBJECT: badniks `$99 $9A $9B` (74 placements) | `Obj_Fireworm`, `Obj_Iwamodoki`, `Obj_Toxomister`; `PLCKosM_LRZ` | native 320 + 400, S1 donor, four rosters | `TestFirewormBadnikInstance`, `TestIwamodokiBadnikInstance`, `TestToxomisterBadnikInstance`, `TestS3kLrzCompatibilityMatrix` | implemented (all three) | pass, `cad4a2e07` | Clips `25`, `26`, `27` (the worm) and `28` (the mist catching a player and pinning him). `$9A` has no touch collision at all: it is a solid block with a fuse. `$9B`'s mist is a player hook -- an eighth off the speed a frame and a ring a second, escaped by a spindash or six left/right reversals. `$99` is four ROM objects: an invisible spawner, the head (the only attackable part, and the only one with DPLC art), four segments that each wait `word_8F940` frames before joining, and a flame on each segment. Later cold routes cover retired Fireworm contact, Iwamodoki fragments and crusher encounters; the cloud special-response correction and pending-contact rewind are recorded under2e56d7141 below. Full placement/roster breadth remains open |
+| REWIND: route-position spots for `$18`, `$1A`, `$9C` and `$9A` | `loc_428D6`'s `MoveSprite` + `ObjCheckFloorDist` landing (needs real floor data), `Obj_LRZBigDoor`'s opening ramp, `Check_CameraInRange`'s rumble release, `Obj_Iwamodoki`'s lit fuse | native 320, act 1 entered at fixture route rows | `TestS3kLrzRouteRewindSpots` (4) | implemented | pass | `$18` (mid-fall and landed) and `$1A` compare the whole composite and require the diverging frame to change something first. `$9C` and `$9A` compare the parent's own ROM fields instead, so these legacy checks alone do not prove child recreation; later cold-route checks compare the full registry across live crusher and Iwamodoki interactions. **Coverage limit:** these enter the act at a route position, they are not walked to from the level start. Later cold shield-route checks cover `$1D` projectile interaction; the original attempted placement latch is not credited by that result |
 | BREADTH: rosters, viewports and the S1 donor for every slice 3/4 class | Configured roster, `SCREEN_WIDTH_PIXELS`, `CrossGameFeatureProvider`; the S1 donor's own `playerCapability().spindashEnabled() == false` | Sonic / Sonic + Tails / Tails / Knuckles, 320 and 400, donor off and `s1` | `TestS3kLrzCompatibilityMatrix` (10 rows) | implemented | pass | Asserts the live roster, the viewport reaching the camera, the donor's capability rules reaching the playable, and a ready ROM-backed renderer for every art key a slice 3/4 class draws from. Broken on purpose once with a nonexistent art key: all ten rows failed. It does NOT re-assert registry id resolution, which `TestS3kLrzPlacementCensus` pins exactly |
 | OBJECT: shared families already concrete (105 rows, 340 placements) | SK Set 2 pointer table | native | `TestS3kLrzPlacementCensus` (classification only) | implemented | classification pass | Per-subtype behaviour unverified |
-| BOSS: miniboss `$9D` at `($2CA0,$880)` | `Obj_LRZMiniboss`, `off_7854C` 11 slots, `collision_property` 6; `sub_78C14`'s `$20` invulnerability; `sub_78CF4`'s `collision_property 4` hands and `loc_78D2C`'s `$38` flags | native 320 | `TestLrzMinibossInstance`, `TestLrzMinibossHitPath` | implemented | pass, clips `29`-`32` | The whole fight is filmed end to end from one capture (`raw-45-lrz1-miniboss-full-fight`): arrival and arms (`29`), a hit and its flash (`30`), the right hand's fourth hit and its arm peeling (`31`), and the sixth drill hit and the defeat (`32`). Three hits fit one 95-frame slam window; the hands take one hit per pass through jump height. **Coverage limits**: the capture is a positioned entry at `($2C00,$600)`, not a cold walk-in, and it is Super Sonic with all seven emeralds, which is what the recorded native run is from its row 24174 but is not the ordinary-Sonic fight. No wide, donor or roster row; no rewind spot inside the fight |
-| LOAD: results and seamless `$901` handover | `Events_fg_5` -> `loc_56CAA`: `-$2C00` on players, objects, camera and bounds; `Clear_Switches`; `LRZ_rocks_routine` cleared; `Offset_ObjectsDuringTransition` over `Dynamic_object_RAM+object_size`..`Breathing_bubbles` | native 320 | `TestS3kLrzSeamlessActChangeHeadless`, `TestS3kBossDefeatSignpostFlow` | implemented, **incomplete** | partial, clip `33` | Driven end to end from a real miniboss defeat for the first time this round: the act word flips on capture frame 2305 with the player and camera both moving exactly `-$2C00` and act 2's foreground under the results panel. That run is also what found the last non-compliant carried object, `S3kBossDefeatSignpostFlow`. **Two gaps keep this row off "pass"**, both in [s3k-known-bugs](../../../status/s3k-known-bugs.md): the background plane still holds act 1's lava because `LRZ2_BackgroundEvent` stages 0 and 4 are not implemented, and the results panel never hands control back, so no capture yet shows the player walking in act 2. Timeline isolation across the change is still not started |
-| ROUTE: cold act 1 from the level start | Controller-driven from `($100,$20)`, no teleport; the `$05` push-break rock needs a spindash, the `$19`/`$04` door needs its `$1C` button, the `$08` spikes need a jump | native 320 | `~/Videos/OGGF/lrz-bring-up/inputs/lrz1-cold-route-v5.txt`, `lrz1-native-input-route.txt` | started | frontier: the native-input run matches native rows **0-3557 exactly** at the commit that carries this revision (was 0-3153), and the first divergence is engine frame 3559 = native row 3558, one pixel in x where the corkscrew ride meets its slope | Not a test yet; no route class. Row 3154 is closed -- `Obj_LRZButtonHorizontal` is a full solid whose landing x test the engine computed from the wrong width byte, `TestS3kLrzButtonHorizontalLandingHeadless` is the regression -- and the frontier is now row 3558. See the [trace frontier log](../../../status/trace-frontier-log.md) |
+| BOSS: miniboss `$9D` at `($2CA0,$880)` | `Obj_LRZMiniboss`, `off_7854C` 11 slots, `collision_property` 6; `sub_78C14`'s `$20` invulnerability; `sub_78CF4`'s `collision_property 4` hands and `loc_78D2C`'s `$38` flags | native320 +800 positioned | `TestLrzMinibossInstance`, `TestLrzMinibossHitPath`, `TestS3kLrzBossRewindHeadless`, `TestLrzPostBossPaletteRouteCapture` | implemented | pass, clips `29`-`32` | The whole fight is filmed end to end from one capture (`raw-45-lrz1-miniboss-full-fight`): arrival and arms (`29`), a hit and its flash (`30`), the right hand's fourth hit and its arm peeling (`31`), and the sixth drill hit and the defeat (`32`). Three hits fit one 95-frame slam window; the hands take one hit per pass through jump height. **Coverage limits**: the capture is a positioned entry at `($2C00,$600)`, not a cold walk-in, and it is Super Sonic with all seven emeralds, which is what the recorded native run is from its row 24174 but is not the ordinary-Sonic fight. Later follow-ups add native/wide positioned controller fights and boss-graph restoration; cold walk-in and donor/roster breadth remain open |
+| LOAD: results and seamless `$901` handover | `loc_56CAA` rebases players/objects/camera; `loc_78AA8` post-results palette ramp and release | positioned320/800 Sonic with declared355rings/seven emeralds | `TestS3kLrzSeamlessActChangeHeadless`, `TestS3kBossDefeatSignpostFlow`, `TestLrzPostBossPaletteRouteCapture` | implemented | Positioned boss/results/Act2 routes and mid-ramp whole-registry replay pass; see 2026-09-23 handoff follow-up | The original stale lava plane and stuck results claims are superseded by the implemented ramp/release. Full cold handoff, broader roster/donor checks and seamless timeline policy evidence remain open. |
+| ROUTE: cold act 1 from the level start | Controller-driven from `($100,$20)`, no teleport or ring seeds | native320 Sonic+Tails | `TestLrzColdRouteCapture` (13 independent input routes) | partial cold reachability | Through(11338,1968) at21111inputs, six rings and zero deaths;159 full-registry replay spots, arrival follow-up below | Miniboss defeat and complete cold handoff still owed. Earlier corkscrew/door/shield/crusher frontiers are closed by the dated follow-ups below; strict native parity remains a separate claim. |
 | ORACLE: strict segment replay | `TestS3kSonicTailsLrzSegmentTraceReplay`, `TestS3kTailsFullChainLrzSegmentTraceReplay` | `-Ptrace-segments` | — | — | see [trace frontier log](../../../status/trace-frontier-log.md) | Slice 11 |
 
 ## Execution evidence
@@ -101,8 +101,8 @@ priority switch at `$2BA0,$750`; their low-priority Sonic is invalid approach
 setup, not priority-parity evidence. Replacement setup `$2B70,$750` crosses
 that marker using production controller input. Capture CSV includes
 `high_priority`; the latch regression also exercises restore/forward crossing.
-Widescreen arena centering remains an open obligation: keep ROM gameplay bounds
-while centering the original 320-pixel window, including release/transition checks.
+The shared arena-centering follow-up below supersedes the then-open widescreen
+framing issue; native gameplay bounds remain authoritative.
 
 
 #### Shared arena centering (2026-09-23)
@@ -133,9 +133,10 @@ restore/45-input replay. Final corrected selection passes77cases;24S3K palette
 consumer classes pass128cases, no skips. Earlier LRZ/required-S3K selection
 passed558cases before the native timer-order correction. Full campaign checks
 remain owed. See the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
-This is not cold full-act or whole-scene native certification. The800px capture
-reveals left-of-start scenery while the centered Act2 camera is negative; that
-separate edge and the missing Act2 Death Egg sprite remain open.
+This is not cold full-act or whole-scene native certification. Subsequent
+[Act2 follow-ups](s3k-lrz-act2.md#death-egg-background-follow-up-2026-09-23) implement
+the Death Egg and clip repeated terrain outside the finite layout. The remaining
+Plane B seam is presentation polish, not the former missing-owner/repeated-terrain defect.
 
 ### Automatic bounds mask follow-up (2026-09-24)
 
@@ -721,3 +722,53 @@ Replacement video:
 frames14940–17066,17067state rows,zero deaths. Inspected platform and upper-ledge
 stills16240/17066 and decoded the complete MP4. This supersedes the earlier late
 ascent demonstration for current runtime behavior; it is not native trace parity.
+
+
+### Cold miniboss arrival and final lower-route door (2026-09-24)
+
+On2e56d7141 plus these inputs/tests, `lrz1-sonic-tails-cold-miniboss-arrival-320`
+reaches(11338,1968),six rings after21111inputs,zero deaths, from normal native320
+Sonic+Tails entry. It extends the corrected late ascent across the upper eastern
+route, beneath the timed spike platform at9600, down the elevators at9056 and10720,
+over the left-facing spring, through the Toxomister encounter, under the final
+elevator, through the breakable rock and lower button/door11, and across the
+placed `$02/$22` priority switch at(11168,1872). No position, ring, clock, emerald,
+player-state or camera override is used. Ordinary damage occurs on the approach;
+this is not a no-hit route. The gate has loaded the miniboss owner at the endpoint,
+but the initial arena wait has not yet completed: this is arrival, not fight proof.
+
+The failed leftward exit from the last elevator returns to closed door10. The
+successful path walks onto the lower right ledge, then back left beneath the
+platform. Jumping directly from the elevator's released spindash leaves Sonic
+without air steering (`Sonic_ChgJumpDir` tests `Status_RollJump`); waiting for the
+roll to finish is ordinary control, not an engine workaround. Both rejected
+inputs and the old short/full repeated-jump boss attempts are not implementation
+or parity defects. The first authored dodge/return lands one drill hit. A subsequent moving patrol
+destroys the left hand and reduces the drill from six to four hits before dying
+at25857; neither attempt certifies defeat. Full ordinary defeat remains open.
+
+`TestLrzColdRouteCapture#coldTeamOpensFinalDoorAndEntersMinibossArena` asserts
+door11 fully open at20995, high player priority and exactly one boss owner at21090,
+final position/rings/roster, and no deaths. Its31 whole-registry45-frame replay
+spots are17080,17103,17270,17425,17890,18108,18270,18450,18530,18625,18655,
+18835,18925,19100,19310,19600,19735,19865,19902,20025,20160,20340,20415,
+20555,20720,20745,20880,20910,20995,21030,21050. This brings the independent
+cold-route total to159 spots; previous128 remain. InputLogAuthorTool verified
+the authored BK2 round trip.
+
+Queued Java21 verification used `-Dmse=off -Dopenggf.test.gl.native=true`
+`-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`
+`-Dtest=TestLrzColdRouteCapture#coldTeamOpensFinalDoorAndEntersMinibossArena test`:
+1pass,0failures/errors/skips,20.35s test time. Production is unchanged from the
+cloud fix, so this is focused route validation, not a repeated broad campaign run.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cold-miniboss-arrival-320/capture.mp4`
+films19860–21110 after the full cold prefix;21111state rows,zero deaths. Stills20750
+and21110 were inspected and the entire MP4 decoded successfully. The arrival's
+high priority is reached through the native marker, not a capture seed.
+
+The obligation table was reconciled with its later evidence: old claims of no
+route class, no crusher route rewind, no boss graph restoration, missing handoff
+ramp and unimplemented Death Egg no longer describe current code. Their older
+execution records remain historical; donor/roster/lifecycle/native breadth,
+seamless timeline policy and whole-act completion are not silently credited.
