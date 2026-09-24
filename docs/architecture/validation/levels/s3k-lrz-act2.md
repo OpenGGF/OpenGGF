@@ -426,3 +426,24 @@ decode passes. Input is
 The following attempt reaches door6 at11600/1760; its elevated side button
 requires a different approach from the low ceiling at the door face. Full-act
 completion and rewind checks for the new section remain open.
+
+
+### Door six and the late fixed platforms (2026-09-24)
+
+Fresh cold native320 Sonic+Tails replay on97f47284e reaches12257/1516 after
+40626 inputs, five rings and zero deaths. Down alone at39830 starts a roll
+through the downhill curve, reaching the elevated side button at11576/1710
+and opening door6 at11600/1760. Earlier Down+Right attempts did not roll and
+missed the button before the low ceiling. Beyond the collapsing bridges, Sonic
+jumps onto the fixed platform at12352/1688, then the right ledge and back onto
+12288/1568. The next object at12192/1472 is a vertical oscillating platform;
+its phase-dependent approach is still being authored. These are input choices,
+not changes to collision, movement or native level geometry.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-door-six-climb-320/capture.mp4`
+films39830–40625 (796frames). All40626 state rows checked for death, stills39910
+and40625 inspected and full decode passes. Input is
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-route-author/late-return-platform/variant-2.bk2`.
+A subsequent brake variant stops safely on the upper platform at12276/1516.
+Full-act completion, the added section's rewind spots and wider route products
+remain open. The committed cold Act2 fixture still ends at36204.

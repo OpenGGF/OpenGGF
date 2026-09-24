@@ -4824,3 +4824,15 @@ records859 frames of verified moving evidence. The next controller frontier is
 door6's elevated side button. No engine changes or repeated engine tests in
 this evidence-only slice. The palette follow-up now attributes the earlier
 colour observation to documented cycling windows, not a missing palette load.
+
+
+### Door six and late LRZ2 platform climb (2026-09-24)
+
+On97f47284e, fresh40626-input cold replay reaches12257/1516 with five rings
+and zero deaths. Down-only roll entry opens door6; a right-ledge detour reaches
+the upper fixed platform. Jumping straight from the lower fixed platform to
+the upper one was not required by the native route. The
+[Act2 matrix](../validation/levels/s3k-lrz-act2.md#door-six-and-the-late-fixed-platforms-2026-09-24)
+records796 verified video frames. A brake variant now stops at12276/1516 for
+the oscillating lift approach. No runtime changes or repeated engine tests in
+this evidence-only slice; new-section rewind and complete-act obligations remain.
