@@ -48,6 +48,7 @@ final class LevelScrollPresentation {
     static ArenaMaskState captureArenaMask(LevelManager level) {
         var camera = level.camera;
         int maxX = com.openggf.camera.CameraBoundaryPresentation.maxX(camera);
+        int currentMaxX = camera.getMaxX();
         var rules = level.gameModule == null ? null : level.gameModule.getRules().playerMovement();
         if (rules != null && !rules.levelBoundaryRightStrict()) {
             var state = com.openggf.game.GameServices.gameState();
@@ -55,9 +56,14 @@ final class LevelScrollPresentation {
                     ? state.isScreenLocked() : state.isBossFightActive();
             // S1/S2 permit another $40 pixels in ordinary play. Do not conceal
             // playable space merely because the camera itself stops earlier.
-            if (!locked && !state.isEndOfLevelActive()) maxX += 64;
+            if (!locked && !state.isEndOfLevelActive()) {
+                maxX += 64;
+                currentMaxX += 64;
+            }
         }
-        return ArenaMaskState.fromBounds(com.openggf.camera.CameraBoundaryPresentation.minX(camera), maxX, camera.getXWithShake(),
+        var bounds = LevelBoundsMaskGeometry.select(level,
+                com.openggf.camera.CameraBoundaryPresentation.minX(camera), maxX, currentMaxX);
+        return ArenaMaskState.fromBounds(bounds.minX(), bounds.maxX(), camera.getXWithShake(),
                 camera.getWidth(), level.objectManager == null ? level.frameCounter : level.objectManager.getFrameCounter(),
                 level.zoneFeatureProvider != null && level.zoneFeatureProvider.foregroundWrapsHorizontally());
     }

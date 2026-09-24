@@ -417,3 +417,47 @@ column takes two ticks. A fresh complete activation takes 47 ticks instead of
 The timing refinement passed eight focused transition/GPU tests, zero skips,
 using queued Maven `-Dtest=TestLevelBoundsMaskTransition,TestArenaMaskRenderer
 -Dopenggf.test.gl.native=true test` under Java21.
+
+
+## Player-aware current/destination selection trial
+
+User review of the three style previews identified a separate geometry issue:
+target bounds can cover scenery Sonic can still occupy during the native ramp.
+Each horizontal edge now selects current bounds while an active participant's
+rendered-body envelope overlaps the current-to-destination strip, and destination
+bounds once all participants are inside that edge. The two sides are independent.
+Ordinary expanding bounds open immediately; inverted domains remain unnormalized.
+Suppressed CPU followers do not hold the view open. This is common presentation
+selection, not a change to native camera or movement constraints.
+
+Selection changes redirect the existing opacity transition. Returning to the
+strip starts fade-out on that frame, without an instant clear or waiting for
+fade-in to finish. Moving inside again resumes fade-in from current opacity.
+
+The requested two 800px LRZ demos use isolated simple-crossfade presentation
+(18 ticks) to assess geometry without the rejected border wipe. The production
+style is not selected by these previews. External archive:
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260924-player-aware-mask/`.
+`original-input/capture.mp4` repeats the previous 600-frame input exactly.
+`turn-back/capture.mp4` uses the archived script/BK2: 75R, 110L, 50 neutral,
+180R, 185 neutral. No position or speed writes occur after the declared initial
+positioned setup. The second movie's gameplay matches an independent input probe;
+both have 600 rows, zero deaths and complete MP4 decodes.
+
+Probe evidence for the turn-back: at frame65 Sonic's body enters the destination
+(minX11264), while current minX11127 still trails it; world pixel11250 begins
+fading in. It reaches full opacity at82. At129 Sonic returns (centre11286),
+selection returns to current minX11196 and that pixel's opacity immediately
+falls from1 to0.9444; it is clear at146. Sonic reaches the current wall at155
+(centre11212) and re-enters the destination near289. Probe CSV and input scripts
+are archived alongside the movies. These are presentation trials, not cold-route
+completion or full delivery evidence.
+
+Focused validation: queued Java21 Maven selected geometry, opacity transition,
+GPU, shared gate, presentation, and the four required S3K regression classes
+(with absolute s3k.gen and native GL), running 78 tests with no skips. One new
+fixture assertion failed because setFocusedSprite resets camera X; correcting
+its setup and rerunning all four geometry tests passed. The other 74 tests were
+unchanged and green. An earlier fixture compile error used a nonexistent width
+setter and was replaced by a width spy. These were test setup errors, not reasons
+to change gameplay. Combined campaign delivery validation remains outstanding.

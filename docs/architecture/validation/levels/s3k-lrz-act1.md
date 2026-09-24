@@ -154,3 +154,13 @@ reverse from current opacity. The refreshed positioned800 preview is
 rows match the prior capture and no deaths occur. Shared presentation/GPU/gate
 checks pass 46 tests; LRZ boss/rewind/camera and required S3K regressions pass 109
 with no skips. Full delivery and inherited breadth obligations remain open.
+
+Player-aware bounds trial: two positioned800 simple-crossfade demos in external
+`campaign-20260924-player-aware-mask/{original-input,turn-back}/capture.mp4`
+cover entering destination bounds and returning to the current-bound strip.
+Both have600 frames, unchanged probe/input gameplay and zero deaths. A return
+at129 reverses opacity on that frame and clears by146; re-entry near289 resumes
+fade-in. TestLevelBoundsMaskGeometry covers body extent, both edges, multiple
+participants, follower suppression and inverted bounds. The focused78-test
+selection plus corrected geometry-fixture rerun is described in the arena design;
+this adds no cold-route, donor or complete viewport-breadth claim.

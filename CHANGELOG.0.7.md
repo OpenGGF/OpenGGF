@@ -7,7 +7,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 ## Gameplay and presentation
 
 - Automatically mask widescreen pixels beyond the destination of native horizontal
-  camera bounds, including asymmetric arena and level edges. Static fades in world
+  camera bounds, including asymmetric arena and level edges. Occupied transition
+  space follows the current bounds until the player enters the destination. Static fades in world
   space, with a staggered fade across the 12px edge strip; changing bounds immediately redirect an
   in-progress fade. Presentation history rewinds, and native-width output is unchanged.
 
