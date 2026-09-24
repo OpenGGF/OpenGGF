@@ -467,3 +467,39 @@ reaches the gravity switch at(7232,1720): staying over it during the jump toggle
 gravity and rises to(7216,659). Overshooting the switch hits the monitor corridor.
 `campaign-20260924-route-author/act2-east-switch-catch.{script,bk2,csv}` preserves
 that exploration; the upper-left continuation and full Act2 completion remain open.
+
+
+### DEZ2 upper gravity route, hanging carrier and countdown launch (2026-09-24)
+
+On `6fc411db0` plus this route-only change, ordinary cold DEZ1 Sonic+Tails reaches
+(8759,1132) in22960frames, zero deaths. The preserved
+`dez2-sonic-tails-incoming-roof-320.{script,bk2}` includes the second pressure-pad
+switch, vertical tube ascent, inverted spindash around the upper bend, lower
+spring return, hanging carrier rise/travel/release, roof walkway, countdown
+launcher and far-side conveyor descent. The launcher captures both real team
+members and releases through its production controller; no positioned setup,
+health seed or gameplay-state write is involved. Damage leaves zero rings at the
+endpoint, so later route authoring must retain that vulnerability.
+
+The native complete-emeralds DEZ segment (stored in the SSZ trace container) rows
+26370–26410 explains the bend: the original input crouches/spindashes, then carries
+roughly-$800 ground velocity around the curve. Merely running left from a stand
+slides back, and an ordinary jump loses lateral momentum. An authored spindash
+reproduces the functional crossing; those failed inputs did not justify a physics
+change. Native rows are read-only comparison evidence, never state hydration.
+
+`TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind`
+passed1test, zero failures/errors/skips, with28 full-registry capture/restore and
+45-frame replay spots. The shorter Act2 routes retain45 earlier spots, for73
+across four preserved routes. Queued Java21 command uses `-Dmse=off`, native GL,
+absolute `-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`, the named method's `-Dtest`
+selection and `test`. It also asserts carrier/launcher control and final release.
+This focused route test does not replace the pending combined campaign checks.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-roof-route-320/capture.mp4`
+films20480–22959. All22960state rows, stills20780/21200/21880/22040 and complete
+MP4 decode were checked. This is engine moving presentation, not native pixel
+matching. Continuing left reaches the lower shaft near(7507,1250); holding Left
+rides its edge and returns upward. Steering toward its centre too early also
+returns to the entry ledge. The next task is the deeper conveyor descent and
+route onward to the boss; full Act2 completion and breadth remain open.

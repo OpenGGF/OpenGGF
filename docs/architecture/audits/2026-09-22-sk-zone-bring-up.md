@@ -27,7 +27,7 @@ its original unimplemented counts must not be read as current production status.
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
-| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now reaches the upper corridor beyond both transporters in19,810frames, zero deaths, with45 Act2 full-registry replay spots across three preserved routes; complete Act2 traversal is still open. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
+| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now reaches the far-side descent beyond the countdown launcher in22,960frames, zero deaths, with73 Act2 full-registry replay spots across four preserved routes; complete Act2 traversal is still open. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold main-act traversal and remaining Hyper/HUD/native presentation still need validation. |
 
 Combined campaign validation, main-workspace integration, push and cleanup remain
@@ -4164,3 +4164,39 @@ reaches the gravity switch at(7232,1720): staying over it during the jump toggle
 gravity and rises to(7216,659). Overshooting the switch hits the monitor corridor.
 `campaign-20260924-route-author/act2-east-switch-catch.{script,bk2,csv}` preserves
 that exploration; the upper-left continuation and full Act2 completion remain open.
+
+
+### DEZ2 upper gravity route, hanging carrier and countdown launch (2026-09-24)
+
+On `6fc411db0` plus this route-only change, ordinary cold DEZ1 Sonic+Tails reaches
+(8759,1132) in22960frames, zero deaths. The preserved
+`dez2-sonic-tails-incoming-roof-320.{script,bk2}` includes the second pressure-pad
+switch, vertical tube ascent, inverted spindash around the upper bend, lower
+spring return, hanging carrier rise/travel/release, roof walkway, countdown
+launcher and far-side conveyor descent. The launcher captures both real team
+members and releases through its production controller; no positioned setup,
+health seed or gameplay-state write is involved. Damage leaves zero rings at the
+endpoint, so later route authoring must retain that vulnerability.
+
+The native complete-emeralds DEZ segment (stored in the SSZ trace container) rows
+26370–26410 explains the bend: the original input crouches/spindashes, then carries
+roughly-$800 ground velocity around the curve. Merely running left from a stand
+slides back, and an ordinary jump loses lateral momentum. An authored spindash
+reproduces the functional crossing; those failed inputs did not justify a physics
+change. Native rows are read-only comparison evidence, never state hydration.
+
+`TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind`
+passed1test, zero failures/errors/skips, with28 full-registry capture/restore and
+45-frame replay spots. The shorter Act2 routes retain45 earlier spots, for73
+across four preserved routes. Queued Java21 command uses `-Dmse=off`, native GL,
+absolute `-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`, the named method's `-Dtest`
+selection and `test`. It also asserts carrier/launcher control and final release.
+This focused route test does not replace the pending combined campaign checks.
+
+Video `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-act2-roof-route-320/capture.mp4`
+films20480–22959. All22960state rows, stills20780/21200/21880/22040 and complete
+MP4 decode were checked. This is engine moving presentation, not native pixel
+matching. Continuing left reaches the lower shaft near(7507,1250); holding Left
+rides its edge and returns upward. Steering toward its centre too early also
+returns to the entry ledge. The next task is the deeper conveyor descent and
+route onward to the boss; full Act2 completion and breadth remain open.

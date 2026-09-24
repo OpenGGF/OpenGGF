@@ -41,11 +41,16 @@ class TestDezColdRouteCapture {
         runColdRoute("transporters");
     }
 
+    @Test void coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind() throws Exception {
+        runColdRoute("roof");
+    }
+
     private void runColdRoute(String route) throws Exception {
         boolean complete = route.equals("complete");
+        boolean roof = route.equals("roof");
         boolean transporters = route.equals("transporters");
         boolean middle = route.equals("middle");
-        boolean lower = route.equals("lower") || middle || transporters;
+        boolean lower = route.equals("lower") || middle || transporters || roof;
         boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
@@ -89,6 +94,15 @@ class TestDezColdRouteCapture {
             spots.clear();
             spots.addAll(Set.of(18950, 19020, 19040, 19100, 19140, 19165,
                     19250, 19380, 19450, 19520, 19565, 19620, 19645, 19730));
+        }
+        if (roof) {
+            // Switch/tube ascent, inverted spindash, gravity swap, carrier rise,
+            // carrier release, launcher capture/countdown/travel and conveyor descent.
+            spots.clear();
+            spots.addAll(Set.of(19800, 19930, 20100, 20300, 20520, 20560,
+                    20620, 20670, 20740, 20775, 20940, 21000, 21050, 21100,
+                    21180, 21320, 21340, 21570, 21790, 21840, 21960, 22000,
+                    22030, 22200, 22400, 22520, 22680, 22890));
         }
         var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
                 .getSuperclass().getDeclaredField("collisionProperty");
@@ -134,6 +148,10 @@ class TestDezColdRouteCapture {
                     assertTrue(session.player().isObjectControlled(), "transporter holds its rider");
                     assertEquals(frame == 19050 ? 5456 : 5968, session.player().getCentreX());
                 }
+                if (roof && (frame == 21300 || frame == 21880)) {
+                    assertTrue(session.player().isObjectControlled(), "carrier/launcher holds its rider");
+                    if (frame == 21880) assertEquals(7424, session.player().getCentreX());
+                }
                 if (!spots.contains(frame)) continue;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 var saved = registry.capture();
@@ -159,9 +177,9 @@ class TestDezColdRouteCapture {
             assertEquals(11, GameServices.level().getCurrentZone());
             assertEquals(complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
-                assertEquals(transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
-                assertEquals(transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
-                assertEquals(transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
+                assertEquals(roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
+                assertEquals(roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
+                assertEquals(roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
                 assertFalse(session.player().isObjectControlled(), "lower tube releases movement");
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             }
