@@ -37,8 +37,8 @@ class TestSszColdRouteCapture {
                 sawMtzBoss |= !mtzBosses.isEmpty();
                 sawMtzDefeat |= mtzBosses.stream().anyMatch(b -> b.hitsRemainingForTest() == 0);
                 if (frame == 7911) {
-                    assertEquals(5045, session.player().getCentreX());
-                    assertEquals(1196, session.player().getCentreY(), "previous middle-route frontier");
+                    assertEquals(5157, session.player().getCentreX());
+                    assertEquals(1004, session.player().getCentreY(), "upper middle walkway after carrier release");
                 }
                 if (frame == 4472) {
                     assertEquals(0x160, GameServices.camera().getMaxX() & 0xFFFF);
@@ -59,11 +59,13 @@ class TestSszColdRouteCapture {
                             .stream().anyMatch(bar -> bar.holdingForTest(0)), "ordinary elevator-bar grab");
                 }
                 // Traversal, encounter, transport ascent, elevator hold/release and swinging carrier.
-                if (frame != 3440 && frame != 3818 && frame != 4168 && frame != 4400
-                        && frame != 5100 && frame != 5600 && frame != 6300
-                        && frame != 6459 && frame != 7076 && frame != 7460
-                        && frame != 8063 && frame != 8750 && frame != 9250
-                        && frame != 9850 && frame != 10850 && frame != 11000) continue;
+                if (frame != 2888 && frame != 3440 && frame != 3540 && frame != 3818
+                        && frame != 4168 && frame != 4400 && frame != 4700
+                        && frame != 4930 && frame != 5320 && frame != 5400
+                        && frame != 6300 && frame != 6459 && frame != 7076
+                        && frame != 7460 && frame != 8260 && frame != 8640
+                        && frame != 8810 && frame != 9051 && frame != 9160
+                        && frame != 10150 && frame != 10270 && frame != 10360) continue;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }

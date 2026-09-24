@@ -504,3 +504,28 @@ Every row matches the earlier input-authoring probe; zero deaths, full MP4 decod
 Frame11050 visibly places Sonic on the upper pad while Tails remains below.
 This closes cold native-team reachability and the tested rewind spots for the
 second replica/transport, not the rest of the act, wide input or native parity.
+
+
+### 2026-09-24 — retracting spring side contact and route refresh
+
+The upper cold traversal exposed an incorrect top-only spring contract.
+`sub_1DD0E` uses the full sloped classifier, and `sub_46536` consumes the side
+contact flag (d6 bit 16), not standing (bit 20). Both approach directions now
+launch at ±$C00; top landing does not launch. `TestS3kSszCarriersAndSprings`
+exercises these contacts at 320/800 and compares registered snapshots across
+12 frames of launch/recoil. Its 23 tests pass with zero skips.
+
+The fixed controller input for `TestSszColdRouteCapture` has been refreshed for
+that behavior. It still reaches both replica defeats and the upper receiving
+platform in 11,051 frames, now with 22 rewind/replay spots covering both spring
+launches, traversal, fights, defeats and transport. The old 7,911-frame position
+assertion is superseded by the upper middle walkway at (5157,1004). A combined
+focused run of the route, traversal, camera framing, all-object round trips and
+DEZ final-boss tests passes 1,484 tests with zero skips. This remains an upper
+platform frontier, not cold completion of the final Mecha fight or act exit.
+
+`ssz-bring-up/campaign-20260924-cold-spring-route-320/capture.mp4` films input
+frames2750–3299 after cold boot. All3300 state rows match the authoring probe;
+the file decodes completely. A positioned upper-spring capture was rejected as
+route evidence: it does not carry the already-collapsed bridges from the earlier
+pass and therefore takes the lower path. The cold route remains the authority.

@@ -121,7 +121,7 @@ class TestS3kLrzBossPlatformsHeadless {
     static final class RangeTarget extends com.openggf.level.objects.AbstractObjectInstance
             implements com.openggf.level.objects.RewindRecreatable {
         RangeTarget(com.openggf.level.objects.ObjectSpawn spawn) { super(spawn,"LrzPlatformRangeTarget"); }
-        @Override public void update(int clock,com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
         @Override public RangeTarget recreateForRewind(com.openggf.level.objects.RewindRecreateContext context) {
             return new RangeTarget(context.spawn());

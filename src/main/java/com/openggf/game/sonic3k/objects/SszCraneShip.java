@@ -34,7 +34,7 @@ public final class SszCraneShip extends AbstractObjectInstance implements SpawnR
         yFixed = spawn.y() << 16;
     }
 
-    @Override public void update(int clock, PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         visible = false;
         var state = S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);
         var player = services().spriteManager().getMainPlayable();

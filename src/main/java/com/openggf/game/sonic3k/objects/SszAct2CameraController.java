@@ -29,7 +29,7 @@ public final class SszAct2CameraController extends AbstractObjectInstance implem
         swing.seedSpeed(1);
     }
 
-    @Override public void update(int clock, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         var state = S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);
         if (state == null) return;
         if (routine == 8) { moveIslandCamera(state); return; }

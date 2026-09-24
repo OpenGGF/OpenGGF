@@ -18,7 +18,7 @@ final class DezMinibossDebris extends DezMinibossSprite implements RewindRecreat
     @Override public DezMinibossDebris recreateForRewind(RewindRecreateContext context) {
         return new DezMinibossDebris(context.spawn());
     }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(!initialized) {

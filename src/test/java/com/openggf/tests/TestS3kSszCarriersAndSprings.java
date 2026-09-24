@@ -485,6 +485,55 @@ class TestS3kSszCarriersAndSprings {
         assertEquals(0x0A60, spring.getX() & 0xFFFF, "an extended spring reports its real X");
     }
 
+    /** sub_1DD0E reports side contact in d6 bit 16; sub_46536 launches from that bit. */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "320,5592,2736,1", "320,6304,2672,-1",
+            "800,5592,2736,1", "800,6304,2672,-1"})
+    void retractingSpringLaunchesFromTheApproachSide(int width, int springX, int springY, int launchDirection) {
+        HeadlessTestFixture fixture = bootAtCheckpoint(width,
+                springX + launchDirection * 72, springY - 4);
+        boolean launched = false;
+        for (int frame = 0; frame < 180; frame++) {
+            fixture.stepFrame(false, false, launchDirection > 0, launchDirection < 0, false);
+            var spring = allActive(SszRetractingSpringObjectInstance.class).stream()
+                    .filter(candidate -> candidate.getX() == springX).findFirst().orElse(null);
+            if (spring != null && spring.stepForTest(0) == 2) {
+                assertEquals(launchDirection * 0xC00, fixture.sprite().getXSpeed(),
+                        "loc_46586 writes the native horizontal launch speed");
+                var registry = fixture.gameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                fixture.stepIdleFrames(12);
+                var forward = registry.capture();
+                registry.restore(saved);
+                fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(
+                        frame, launchDirection > 0 ? 4 : 8, 0, false, ""));
+                fixture.stepIdleFrames(12);
+                sameSnapshot(forward, registry.capture(), "spring launch and recoil replay");
+                launched = true;
+                break;
+            }
+        }
+        assertTrue(launched, "walking into the extended spring must launch from side contact");
+    }
+
+    /** Standing returns d6 bit 20, which sub_46536 deliberately does not test. */
+    @Test
+    void landingOnTheSpringSlopeDoesNotArmTheSideLaunch() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 5592 + 15, 2736 - 80);
+        boolean stood = false;
+        for (int frame = 0; frame < 90; frame++) {
+            fixture.stepIdleFrames(1);
+            var spring = allActive(SszRetractingSpringObjectInstance.class).stream()
+                    .filter(candidate -> candidate.getX() == 5592).findFirst().orElse(null);
+            if (spring == null) continue;
+            stood |= fixture.sprite().isOnObject();
+            assertEquals(0, spring.stepForTest(0), "top contact is not the ROM side-contact bit");
+            assertEquals(0, fixture.sprite().getXSpeed());
+        }
+        assertTrue(stood, "the player must actually land on the sloped solid");
+    }
+
     /**
      * Why a retracted spring draws nothing, which the slice-3 capture read as a missing renderer.
      *

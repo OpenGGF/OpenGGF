@@ -47,7 +47,7 @@ public final class SszEndingIslandMask extends AbstractObjectInstance implements
                 services.levelManager()::applyMutationEffects));
     }
 
-    @Override public void update(int clock, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         var state = (SszZoneRuntimeState) services().zoneRuntimeState();
         if (state.backgroundRoutine() != 0) {
             int y = state.backgroundCameraY();

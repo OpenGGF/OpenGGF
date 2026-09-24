@@ -37,7 +37,7 @@ final class DezEndBossEnemy extends DezEndBossSprite
     @Override public DezEndBossEnemy recreateForRewind(RewindRecreateContext context) {
         return new DezEndBossEnemy(context.spawn());
     }
-    @Override public void update(int clock,PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount,PlayableEntity ignored) {
         visible=touchPublished=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(parent==null) return;
@@ -60,10 +60,10 @@ final class DezEndBossEnemy extends DezEndBossSprite
             if(--timer<0) { state=4; services().playSfx(Sonic3kSfx.MUSHROOM_BOUNCE.id); }
             // loc_7F40A falls through into loc_7F414, even during the seven-pass wait.
             writeX(parent.getX());
-            fall(clock); return;
+            fall(vIntRunCount); return;
         }
-        if(state==4) { fall(clock); return; }
-        if(state==5) { grounded(clock); return; }
+        if(state==4) { fall(vIntRunCount); return; }
+        if(state==5) { grounded(vIntRunCount); return; }
         if(state==6) {
             if(--timer<0) {
                 if(burst) for(int i=0;i<3;i++) {
@@ -92,7 +92,7 @@ final class DezEndBossEnemy extends DezEndBossSprite
                 :ObjectTerrainUtils.checkFloorDist(level,services().backgroundPlaneCollisionProvider(),
                         services().useSecondaryTerrainCollisionPath(),getX(),getY()+0xB).distance();
     }
-    private void fall(int clock) {
+    private void fall(int vIntRunCount) {
         gravityMove(); boolean ceiling=yVelocity<0; int distance=terrainDistance(ceiling);
         if(distance<0) {
             writeY(getY()+(ceiling?-distance:distance)); onCeiling=ceiling;
@@ -101,26 +101,26 @@ final class DezEndBossEnemy extends DezEndBossSprite
         }
         // FixBugs=0: loc_7F43E loads the parent but tests status(a0), NOT status(a1).
         if((status&0x80)!=0) retire(false);
-        else visible=(clock&1)==0;
+        else visible=(vIntRunCount&1)==0;
         updateDynamicSpawn(getX(),getY());
     }
-    private void grounded(int clock) {
+    private void grounded(int vIntRunCount) {
         boolean skipTail=false;
         switch(routine) {
             case 0 -> {
-                int outcome=ceilingContact(clock);
+                int outcome=ceilingContact(vIntRunCount);
                 if(outcome==2) return;
                 if(outcome==0) { releaseForGravity(); if(--timer<0) beginTimeout(); }
             }
             case 2 -> {
-                move(0); floorContact(clock); reverseAtWalls(); animateWalk();
+                move(0); floorContact(vIntRunCount); reverseAtWalls(); animateWalk();
                 releaseForGravity(); if(--timer<0) beginTimeout();
             }
-            case 4 -> { gravityMove(); skipTail=airborne(clock); }
+            case 4 -> { gravityMove(); skipTail=airborne(vIntRunCount); }
             case 6 -> {
                 if(--flipTimer==0) flipY=!flipY;
                 gravityMove(); reverseAtWalls(); savedXVelocity=xVelocity<0?-0x80:0x80;
-                skipTail=airborne(clock);
+                skipTail=airborne(vIntRunCount);
             }
             case 8 -> { if(--timer<0) { retire(true); return; } }
             default -> throw new IllegalStateException("Unknown DEZ enemy routine "+routine);
@@ -156,9 +156,9 @@ final class DezEndBossEnemy extends DezEndBossSprite
         collisionProperty=0; return player;
     }
     /** 0 normal continuation; 1 skip routine tail after kick; 2 complete owner return. */
-    private int ceilingContact(int clock) {
+    private int ceilingContact(int vIntRunCount) {
         var player=consumeContact(); if(player==null) return 0;
-        if(player.getAnimationId()!=2) { hurt(player,clock); return 0; }
+        if(player.getAnimationId()!=2) { hurt(player,vIntRunCount); return 0; }
         if(player.getAir()) {
             int x=player.getCentreX(),y=player.getCentreY(); player.setRolling(true);
             if(player instanceof AbstractPlayableSprite sprite) {
@@ -174,15 +174,15 @@ final class DezEndBossEnemy extends DezEndBossSprite
         yVelocity=(short)(flipY?-speed:speed);
         return 1;
     }
-    private void floorContact(int clock) {
+    private void floorContact(int vIntRunCount) {
         var player=consumeContact(); if(player==null) return;
-        if(player.getAnimationId()!=2 || player.getAir()) { hurt(player,clock); return; }
+        if(player.getAnimationId()!=2 || player.getAir()) { hurt(player,vIntRunCount); return; }
         boolean left=(short)(getX()-player.getCentreX())>=0;
         if(left==(player.getXSpeed()>=0)) {
             player.setXSpeed((short)-player.getXSpeed()); player.setGSpeed((short)-player.getGSpeed());
         }
     }
-    private boolean airborne(int clock) {
+    private boolean airborne(int vIntRunCount) {
         var player=consumeContact();
         if(player!=null) {
             if(contactGrace!=0) contactGrace=(contactGrace-1)&255;
@@ -193,7 +193,7 @@ final class DezEndBossEnemy extends DezEndBossSprite
                     player.setXSpeed((short)-player.getXSpeed()); player.setYSpeed((short)-player.getYSpeed());
                     player.setGSpeed((short)-player.getGSpeed()); retire(false); return true;
                 }
-                hurt(player,clock);
+                hurt(player,vIntRunCount);
             }
         }
         boolean ceiling=yVelocity<0; int distance=terrainDistance(ceiling);
@@ -204,12 +204,12 @@ final class DezEndBossEnemy extends DezEndBossSprite
         }
         return false;
     }
-    private void hurt(PlayableEntity player,int clock) {
+    private void hurt(PlayableEntity player,int vIntRunCount) {
         if(player.getInvulnerable() || player.getInvincibleFrames()>0 || player.isSuperSonic()) return;
         if(player.isCpuControlled()) player.applyHurt(getX(),DamageCause.NORMAL);
         else {
             boolean rings=player.getRingCount()>0;
-            if(rings&&!player.hasShield()) services().spawnLostRings(player,clock);
+            if(rings&&!player.hasShield()) services().spawnLostRings(player,vIntRunCount);
             player.applyHurtOrDeath(getX(),DamageCause.NORMAL,rings);
         }
     }
@@ -219,7 +219,7 @@ final class DezEndBossEnemy extends DezEndBossSprite
         visible=true; touchPublished=false; updateDynamicSpawn(getX(),getY());
     }
     private void goDelete() { status|=0x80; pendingDelete=true; }
-    @Override public void onTouchResponse(PlayableEntity player,TouchResponseResult result,int clock) {
+    @Override public void onTouchResponse(PlayableEntity player,TouchResponseResult result,int vIntRunCount) {
         if(!touchPublished || result.category()!=TouchCategory.SPECIAL) return;
         var query=services().playerQuery();
         if(player==query.mainPlayerOrNull()) collisionProperty|=1;
@@ -246,7 +246,7 @@ final class DezEndBossEnemy extends DezEndBossSprite
             this(new ObjectSpawn(parent.getX(),parent.getY(),0,subtype,0,false,0)); this.parent=parent;
         }
         @Override public Shot recreateForRewind(RewindRecreateContext context) { return new Shot(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity ignored) {
+        @Override public void update(int vIntRunCount,PlayableEntity ignored) {
             visible=false;
             if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if(parent==null) return;

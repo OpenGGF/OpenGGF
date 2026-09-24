@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -78,9 +77,7 @@ public final class SszElevatorBarObjectInstance extends AbstractObjectInstance
     public static final int RELEASE_COOLDOWN = 30;
     public static final int HURT_COOLDOWN = 60;
 
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int x;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int baseY;
     private int y;
     /** {@code $2E}/{@code $32}/{@code $36}: the {@code Gradual_SwingOffset} longwords and flag. */

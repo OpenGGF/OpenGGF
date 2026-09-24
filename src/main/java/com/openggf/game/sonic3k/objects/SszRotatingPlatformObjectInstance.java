@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -67,9 +66,7 @@ public final class SszRotatingPlatformObjectInstance extends AbstractObjectInsta
     /** {@code st (a3)}. */
     private static final int HELD = -1;
 
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int x;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int y;
     private int mappingFrame;
     private int animTimer;

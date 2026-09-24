@@ -3755,3 +3755,32 @@ unchanged implementation passes the spring without launching. This diagnostic is
 not a completed production cold route. The correction also changes the earlier
 springs, so the existing fixed controller route needs reauthoring rather than any
 fixture-specific exception in gameplay.
+
+
+The subsequent complete guard run (`-Pguards test -B`) reached672tests in3:09,
+with6failures,0errors,0skips. Besides the already corrected CSV guard, the real
+findings were28 new object-local transient annotations,57 V-int naming cases,
+one missing DEZ flame touch profile,15 excess ObjectManager facade lines,
+five graphics-to-gameplay scroll-split edges, and a camera-to-level edge.
+The repairs retain the same spawn-derived exclusions in the central rewind
+policy, name update clocks `vIntRunCount`, expose the flame's touch profile,
+move restored dynamic ordering into its ownership collaborator, and place
+scroll-split data in graphics while resolving camera policy in the game layer.
+No structural baseline was increased. The first combined repair selection
+(`TestSszColdRouteCapture,TestS3kSszCarriersAndSprings,TestEveryObjectRewindRoundTrip,
+TestNativeArenaCameraFraming,TestDezFinal*,TestS3kSsz*Rewind*,TestS3kSszCompatibilityMatrix`)
+passes1484tests,0failures/errors/skips, including the refreshed22-spot cold route.
+The remaining guard rerun and presentation/collaborator checks are pending.
+
+
+Follow-up validation: `TestObjectManager*Rewind*,TestS3kSszCraneRouteHeadless,
+TestForegroundWindowRendering` with `-Dopenggf.test.gl.native=true` and native
+display passes38tests,0skips. The corrected full guard invocation completes
+672tests with1failure,0errors/skips: ObjectManager remains3lines over its
+existing3086-line facade budget. Moving restored-identity validation into
+DynamicObjectOwnership alongside ordering resolves that final finding without
+raising the budget. The final ordinary `TestObjectManager*Rewind*` run passes
+35tests,0skips, and `-Pguards -Dtest=TestArchitecturalSourceGuard,TestArchUnitRules`
+passes101tests,0skips. This is a complete guard run followed by targeted repair
+verification, not a claim that the red invocation itself passed. Integration,
+combined final validation and push are still outstanding.

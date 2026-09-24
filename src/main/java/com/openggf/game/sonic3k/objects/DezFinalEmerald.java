@@ -23,7 +23,7 @@ final class DezFinalEmerald extends DezFinalBossSprite implements RewindRecreata
     }
     @Override public DezFinalEmerald recreateForRewind(RewindRecreateContext context) { return new DezFinalEmerald(context.spawn()); }
     private DezFinalBossZoneRuntimeState state() { return (DezFinalBossZoneRuntimeState)services().zoneRuntimeState(); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false;
         if(isDestroyed()) return;
         if(routine==0) {

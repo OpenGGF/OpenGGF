@@ -19,7 +19,7 @@ class TestDezFinalHand {
         public int handControl() { return control; }
         public void handControl(int value) { control = value; }
         public void handDestroyed(int subtype) { deaths |= subtype == 0 ? 0xFF00 : 0xFF; }
-        public void update(int clock, PlayableEntity player) { }
+        public void update(int vIntRunCount, PlayableEntity player) { }
         public Root recreateForRewind(RewindRecreateContext context) { return new Root(context.spawn()); }
     }
     private HeadlessTestFixture boot() {

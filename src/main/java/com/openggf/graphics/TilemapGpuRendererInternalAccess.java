@@ -1,13 +1,12 @@
 package com.openggf.graphics;
 
-import com.openggf.game.internal.ForegroundVerticalScrollSplit;
 
 /** Engine presentation bridge; not part of the compiled-mod API. */
 public final class TilemapGpuRendererInternalAccess {
     private TilemapGpuRendererInternalAccess() { }
 
     public static void setForegroundVerticalScrollSplit(TilemapGpuRenderer renderer,
-                                                        ForegroundVerticalScrollSplit.Split split) {
+                                                        ForegroundScrollSplit split) {
         renderer.setForegroundVerticalScrollSplit(split);
     }
 

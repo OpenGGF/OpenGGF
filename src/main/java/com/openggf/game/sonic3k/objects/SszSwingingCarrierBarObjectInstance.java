@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -73,7 +72,6 @@ public final class SszSwingingCarrierBarObjectInstance extends AbstractObjectIns
     static final int EJECT_FLOOR_DEPTH = -0x10;
 
     private SszSwingingCarrierArcObjectInstance arc;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final boolean rotator;
     private int x;
     private int y;

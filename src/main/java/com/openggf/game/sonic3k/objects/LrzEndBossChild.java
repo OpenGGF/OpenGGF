@@ -42,7 +42,7 @@ public final class LrzEndBossChild extends AbstractObjectInstance
         return S3kRuntimeStates.currentLrz(services().zoneRuntimeRegistry()).orElseThrow().bossAct();
     }
     private LrzEndBossObjectInstance boss() { return (LrzEndBossObjectInstance)parent; }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         if(pendingDelete) { ObjectLifetimeOps.expireDynamic(this); return; }
         if(!initialized) initialize();
         displayed=true;
@@ -63,7 +63,7 @@ public final class LrzEndBossChild extends AbstractObjectInstance
                 animation.script=0x7A1D8; raw().animateMultiDelay(animation,()->pendingDelete=true);
                 motion.yVel=(short)(motion.yVel-0x10); SubpixelMotion.moveSprite2(motion);
             }
-            case 0x79AC4 -> airborneMine(clock);
+            case 0x79AC4 -> airborneMine(vIntRunCount);
             case 0x79B22 -> fallingMine();
             case 0x79B54 -> floatingMine();
             default -> throw new IllegalStateException("LRZ child code " + Integer.toHexString(code));
@@ -100,14 +100,14 @@ public final class LrzEndBossChild extends AbstractObjectInstance
         if(!boss().defeated()) return false;
         explode(); return true;
     }
-    private void airborneMine(int clock) {
+    private void airborneMine(int vIntRunCount) {
         if(parentDefeated()) return;
         if(motion.yVel>=0) {
             code=0x79B22; priority=2;
             int offset=boss().flipped()?0x140:0x40;
             motion.x=0x9E0+offset; sampleIndex=offset>>>1;
         }
-        if((clock&3)==0) spawnChild(()->new LrzEndBossChild(this,0x79BAC,0,0x10));
+        if((vIntRunCount&3)==0) spawnChild(()->new LrzEndBossChild(this,0x79BAC,0,0x10));
         SubpixelMotion.moveSprite(motion,0x20);
         cull();
     }

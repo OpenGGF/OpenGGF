@@ -26,7 +26,7 @@ final class DezFinalHand extends DezFinalBossSprite implements RewindRecreatable
         this(new ObjectSpawn(parent.getX(), parent.getY(), 0, subtype, 0, false, 0)); this.parent = parent;
     }
     @Override public DezFinalHand recreateForRewind(RewindRecreateContext context) { return new DezFinalHand(context.spawn()); }
-    @Override public void update(int clock, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if (parent == null) return;
         switch (routine) {
@@ -109,7 +109,7 @@ final class DezFinalHand extends DezFinalBossSprite implements RewindRecreatable
             this(new ObjectSpawn(parent.getX(), parent.getY(), 0, subtype, 0, false, 0)); this.parent = parent; this.parentSlot = parent.getSlotIndex();
         }
         @Override public Finger recreateForRewind(RewindRecreateContext context) { return new Finger(context.spawn()); }
-        @Override public void update(int clock, PlayableEntity player) {
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
             visible = touchPublished = false;
             if (pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             // loc_80D64 outlives loc_80B42's Go_Delete_Sprite. Refresh_ChildPosition

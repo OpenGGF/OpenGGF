@@ -32,7 +32,7 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
     private int arenaMaxX=0x36C0;
 
     public DezMinibossInstance(ObjectSpawn spawn) { super(spawn,"DEZMiniboss"); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false;
         if(codePointer==0) { initialize(); return; }
         art.service(services());
@@ -48,7 +48,7 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
             }
             case 0x7DE6E -> {
                 phaseOne();
-                if((clock&0x1F)==0) services().playSfx(Sonic3kSfx.GRAVITY_TUNNEL.id);
+                if((vIntRunCount&0x1F)==0) services().playSfx(Sonic3kSfx.GRAVITY_TUNNEL.id);
                 if(collisionProperty!=seenHits) {
                     seenHits=collisionProperty; control|=2;
                     if(collisionProperty>=8) {
@@ -61,15 +61,15 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
             }
             case 0x7DF8C -> {
                 if(routine==0) {
-                    if((clock&7)==0) spawnChild(()->new DezMinibossDebris(this,DezMinibossDebris.SPARK,0,0,0));
+                    if((vIntRunCount&7)==0) spawnChild(()->new DezMinibossDebris(this,DezMinibossDebris.SPARK,0,0,0));
                     waitCallback();
                 } else { if(routine==4) move(0); waitCallback(); visible=true; }
             }
             case 0x7E0A6 -> {
-                if((clock&0x3F)==0) services().playSfx(Sonic3kSfx.WAVE_HOVER.id);
+                if((vIntRunCount&0x3F)==0) services().playSfx(Sonic3kSfx.WAVE_HOVER.id);
                 phaseTwoHit();
                 // Even the fatal hit changes only the next code pointer; this dispatch still runs.
-                phaseTwo(clock); visible=true;
+                phaseTwo(vIntRunCount); visible=true;
             }
             case 0x85668 -> {
                 if(--timer<0) {
@@ -180,12 +180,12 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
             services().levelGamestate().pauseTimer(); timer=0x3F; services().gameState().addScore(1000);
         }
     }
-    private void phaseTwo(int clock) {
+    private void phaseTwo(int vIntRunCount) {
         switch(routine) {
             case 0 -> {
                 swing(); move(0);
                 if(xVelocity>0 && getX()>arenaMaxX || xVelocity<0 && getX()<arenaMinX) xVelocity=-xVelocity;
-                target(clock); if((control&2)!=0) startAttack();
+                target(vIntRunCount); if((control&2)!=0) startAttack();
             }
             case 2 -> {
                 if(palette.tick(services())) { routine=4; xVelocity=0; control=(control&~2)|8; }
@@ -193,7 +193,7 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
                 var p=services().playerQuery().mainPlayerOrNull();
                 xVelocity=p!=null && (p.getCentreX()&0xFFFF)>getX()?0x80:-0x80;
                 if(xVelocity>0 && getX()>=arenaMaxX || xVelocity<0 && getX()<=arenaMinX) xVelocity=0;
-                target(clock);
+                target(vIntRunCount);
             }
             case 4 -> {
                 swing(); move(0);
@@ -238,10 +238,10 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
         var p=services().playerQuery().mainPlayerOrNull();
         return p!=null && (short)(getX()-p.getCentreX())<0;
     }
-    private void target(int clock) {
+    private void target(int vIntRunCount) {
         var p=services().playerQuery().mainPlayerOrNull();
         if(p!=null && p.isOnObject()) word3C=angularMagnitude;
-        else if((clock&0x1F)==0) word3C=(primaryToRight()?-angularMagnitude:angularMagnitude)&0xFFFF;
+        else if((vIntRunCount&0x1F)==0) word3C=(primaryToRight()?-angularMagnitude:angularMagnitude)&0xFFFF;
     }
     private void finishEncounter() {
         spawnFreeChild(DezMinibossTransport::new); control|=0x20;
@@ -267,7 +267,7 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
         private Mask(ObjectSpawn spawn) { super(spawn,"DEZMinibossMask"); }
         Mask(DezMinibossSprite parent) { this(new ObjectSpawn(0x3740,0x360,0,0x89,0,false,0)); this.parent=parent; }
         @Override public Mask recreateForRewind(RewindRecreateContext context) { return new Mask(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) {
+        @Override public void update(int vIntRunCount,PlayableEntity player) {
             visible=false;
             if(!initialized) { initialized=true; priority=1; halfWidth=0x20; halfHeight=0x20; frame=8; return; }
             if(parent!=null && (parent.control&0x20)!=0) { ObjectLifetimeOps.deleteNoRespawn(this); return; }

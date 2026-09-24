@@ -24,7 +24,7 @@ public final class DezFinalArenaBreakup extends AbstractObjectInstance implement
     public static DezFinalArenaBreakup chase(int x) {
         return new DezFinalArenaBreakup(new ObjectSpawn(x, 0, 0, 1, 0, false, 0));
     }
-    @Override public void update(int clock, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (mode != 0 && services().currentZone() != 0x17) {
             ObjectLifetimeOps.deleteNoRespawn(this); return;
         }

@@ -18,7 +18,7 @@ class TestDezEndBossShield {
         Parent() { this(new ObjectSpawn(0x3500,0x2A0,0xA7,0,0,false,0)); }
         private Parent(ObjectSpawn spawn) { super(spawn,"ShieldTestParent"); control=8; }
         @Override public Parent recreateForRewind(RewindRecreateContext context) { return new Parent(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,PlayableEntity player) { }
     }
     private record Fixture(HeadlessTestFixture game,ObjectManager manager,Parent parent,DezEndBossShield shield) { }
     private Fixture fixture() {

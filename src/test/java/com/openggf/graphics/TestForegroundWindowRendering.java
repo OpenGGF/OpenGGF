@@ -111,7 +111,7 @@ class TestForegroundWindowRendering {
             Arrays.fill(plane, 2 * 8, 3 * 8, 0x8002);
             renderer.setTilemapData(TilemapGpuRenderer.Layer.FOREGROUND,
                     TilemapGpuRenderer.packWindowDescriptors(plane), 8, 8);
-            var split = new com.openggf.game.internal.ForegroundVerticalScrollSplit.Split(16, 8);
+            var split = new com.openggf.graphics.ForegroundScrollSplit(16, 8);
             glClear(GL_COLOR_BUFFER_BIT);
             renderer.setForegroundVerticalScrollSplit(split);
             draw(renderer, atlas, palette, 24, -1, false);

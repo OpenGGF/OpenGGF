@@ -39,7 +39,7 @@ final class DezMinibossArm extends DezMinibossSprite implements RewindRecreatabl
     @Override public DezMinibossArm recreateForRewind(RewindRecreateContext context) {
         return new DezMinibossArm(context.spawn());
     }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false; carryX=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(debris) { flickerMove(); return; }
@@ -192,7 +192,7 @@ final class DezMinibossArm extends DezMinibossSprite implements RewindRecreatabl
             priority=5; halfWidth=0x18; halfHeight=4; frame=0xB;
         }
         @Override public Spike recreateForRewind(RewindRecreateContext context) { return new Spike(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) {
+        @Override public void update(int vIntRunCount,PlayableEntity player) {
             visible=false; touchPublished=false;
             if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if(parent==null) return;

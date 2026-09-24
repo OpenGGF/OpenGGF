@@ -151,7 +151,7 @@ final class DezMinibossTransport extends AbstractObjectInstance implements Spawn
         @Override public boolean isPersistent() { return true; }
         @Override public boolean participatesInRomWorldTransitionOffset() { return false; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
-        @Override public void update(int clock,PlayableEntity ignored) {
+        @Override public void update(int vIntRunCount,PlayableEntity ignored) {
             if(!(services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite p2)) {
                 ObjectLifetimeOps.deleteNoRespawn(this); return;
             }
@@ -174,7 +174,7 @@ final class DezMinibossTransport extends AbstractObjectInstance implements Spawn
         @Override public boolean isPersistent() { return true; }
         @Override public boolean participatesInRomWorldTransitionOffset() { return false; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
-        @Override public void update(int clock,PlayableEntity ignored) {
+        @Override public void update(int vIntRunCount,PlayableEntity ignored) {
             var state=(S3kDezZoneRuntimeState)services().zoneRuntimeState(); var camera=services().camera();
             acceleration+=minimum?0x4000:0x8000;
             int next=(short)((minimum?camera.getMinY():camera.getMaxY())+(minimum?-1:1)*(acceleration>>>16));

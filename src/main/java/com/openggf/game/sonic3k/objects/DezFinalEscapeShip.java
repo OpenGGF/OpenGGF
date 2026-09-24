@@ -35,12 +35,12 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
     @Override public DezFinalEscapeShip recreateForRewind(RewindRecreateContext context) { return new DezFinalEscapeShip(context.spawn()); }
     private DezFinalBossZoneRuntimeState state() { return (DezFinalBossZoneRuntimeState)services().zoneRuntimeState(); }
     private int cameraX() { return DezFinalCamera.nativeX(services().camera()); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=touchPublished=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         state().art().service(services());
         switch(codePointer) {
-            case 0x80160 -> { updateLive(clock); damage(); visible=touchPublished=true; }
+            case 0x80160 -> { updateLive(vIntRunCount); damage(); visible=touchPublished=true; }
             case 0x8565E -> { waitCallback(); visible=true; } // Wait_Draw, no movement/damage.
             case 0x802C0 -> {
                 swing(); move(0);
@@ -70,7 +70,7 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
         }
         updateDynamicSpawn(getX(),getY());
     }
-    private void updateLive(int clock) {
+    private void updateLive(int vIntRunCount) {
         switch(routine) {
             case 0 -> {
                 routine=2; frame=5; priority=4; halfWidth=halfHeight=0x20; highPriority=false; flipX=true;
@@ -94,9 +94,9 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
                 accelerateCamera(); swing(); move(0);
                 if(getX()>=((cameraX()+0x100)&0xFFFF)) { routine=6; xVelocity=0; timer=0x1F; callback=0x80250; }
             }
-            case 6 -> { debris(clock); swing(); move(0); waitCallback(); }
+            case 6 -> { debris(vIntRunCount); swing(); move(0); waitCallback(); }
             case 8 -> {
-                accelerateCamera(); debris(clock); swing();
+                accelerateCamera(); debris(vIntRunCount); swing();
                 if((xVelocity&0xFFFF)>0x280) xVelocity=(short)(xVelocity-0x10);
                 move(0);
                 if(getX()<((cameraX()+0x100)&0xFFFF)) writeX(cameraX()+0x100);
@@ -124,7 +124,7 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
         }
         yVelocity=velocity;
     }
-    private void debris(int clock) { if((clock&15)==0) spawnFreeChild(DezFinalEscapeScenery::debris); }
+    private void debris(int vIntRunCount) { if((vIntRunCount&15)==0) spawnFreeChild(DezFinalEscapeScenery::debris); }
     private void signal(int mask) { state().bossSignals(state().bossSignals()|mask); }
     // loc_8030E uses CreateChild6_Simple: parent3 is the moving ship, not
     // a copied position. $16/$18 workers track it until bit 5 or retirement.

@@ -25,11 +25,11 @@ final class DezFinalShipDecoration extends DezFinalBossSprite implements RewindR
         child.parent=parent; child.highPriority=parent.highPriority; return child;
     }
     @Override public DezFinalShipDecoration recreateForRewind(RewindRecreateContext context) { return new DezFinalShipDecoration(context.spawn()); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(parent==null) return;
-        if(spawn.subtype()==HEAD) updateHead(); else updateFlame(clock);
+        if(spawn.subtype()==HEAD) updateHead(); else updateFlame(vIntRunCount);
         updateDynamicSpawn(getX(),getY());
     }
     private void adjusted(int dx,int dy) {
@@ -65,14 +65,14 @@ final class DezFinalShipDecoration extends DezFinalBossSprite implements RewindR
         if(next==0xFC) { animationCursor=0; next=romByte(script+1); }
         frame=next; animationTimer=romByte(script);
     }
-    private void updateFlame(int clock) {
+    private void updateFlame(int vIntRunCount) {
         if(routine==0) {
             routine=1; priority=5; halfWidth=8; halfHeight=4; frame=6;
             return; // SetUp_ObjAttributes3 does not fall into the draw routine.
         }
         if((parent.control&0x10)!=0) { parent=null; ObjectLifetimeOps.deleteNoRespawn(this); return; }
         adjusted(0x1E,0);
-        visible=(clock&1)==0 && parent.xVelocity!=0;
+        visible=(vIntRunCount&1)==0 && parent.xVelocity!=0;
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if(!visible || isDestroyed()) return;

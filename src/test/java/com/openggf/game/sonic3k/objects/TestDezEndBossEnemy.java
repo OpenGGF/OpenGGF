@@ -22,7 +22,7 @@ class TestDezEndBossEnemy {
         Parent() { this(new ObjectSpawn(0x3500,0x260,0xA7,0,0,false,0)); }
         private Parent(ObjectSpawn spawn) { super(spawn,"EnemyTestParent"); control=8; }
         @Override public Parent recreateForRewind(RewindRecreateContext context) { return new Parent(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) { damage.update(services()); }
+        @Override public void update(int vIntRunCount,PlayableEntity player) { damage.update(services()); }
         @Override public DezEndBossDamageState.Contact enemyContact(int x,int y,boolean flipY,int velocity) {
             return contacts?damage.enemyContact(getX(),getY(),x,y,flipY,velocity):DezEndBossDamageState.Contact.NONE;
         }

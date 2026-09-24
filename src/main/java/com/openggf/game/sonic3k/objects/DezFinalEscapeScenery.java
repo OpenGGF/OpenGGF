@@ -22,7 +22,7 @@ final class DezFinalEscapeScenery extends DezFinalBossSprite implements RewindRe
         child.parent=parent; return child;
     }
     @Override public DezFinalEscapeScenery recreateForRewind(RewindRecreateContext context) { return new DezFinalEscapeScenery(context.spawn()); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(spawn.subtype()==DEBRIS) updateDebris(); else updateCrane();

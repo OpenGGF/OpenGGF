@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -92,10 +91,8 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     private enum State { FLY_BY_ARC, HOVER, HOVER_SHOOTING, RELEASING, RISING, FALLING, GONE }
 
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final Mode mode;
     /** {@code subtype >> 4}: the {@code _unkFA82} pairing group. */
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int group;
     private State state;
 

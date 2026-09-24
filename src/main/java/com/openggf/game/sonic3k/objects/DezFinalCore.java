@@ -26,7 +26,7 @@ final class DezFinalCore extends DezFinalBossSprite
         this(new ObjectSpawn(parent.getX(),parent.getY(),0,0,0,false,0)); this.parent=parent;
     }
     @Override public DezFinalCore recreateForRewind(RewindRecreateContext context) { return new DezFinalCore(context.spawn()); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=touchPublished=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(parent==null) return;

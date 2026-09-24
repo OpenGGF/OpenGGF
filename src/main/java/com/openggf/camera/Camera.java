@@ -568,17 +568,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * The owning zone captures its opt-in, avoiding a second rewind owner here.
 	 */
 	private int nativeArenaInset() {
-		var level = GameServices.levelOrNull();
-		return level != null
-				&& level.getZoneFeatureProvider() instanceof com.openggf.game.internal.NativeArenaCameraFraming framing
-				&& framing.centerNativeArenaCamera() ? NativeViewportFraming.inset(width) : 0;
+		var framing = com.openggf.game.internal.NativeArenaCameraFraming.current();
+		return framing != null && framing.centerNativeArenaCamera() ? NativeViewportFraming.inset(width) : 0;
 	}
 
 	private java.util.OptionalInt widescreenHorizontalArenaLock() {
 		if (width <= 320) return java.util.OptionalInt.empty();
-		var level = GameServices.levelOrNull();
-		if (level != null && level.getZoneFeatureProvider()
-				instanceof com.openggf.game.internal.NativeArenaCameraFraming framing) {
+		var framing = com.openggf.game.internal.NativeArenaCameraFraming.current();
+		if (framing != null) {
 			var nativeLeft = framing.lockedNativeHorizontalCamera();
 			if (nativeLeft.isPresent()) return java.util.OptionalInt.of(
 					NativeViewportFraming.visibleLeft(nativeLeft.getAsInt(), width));

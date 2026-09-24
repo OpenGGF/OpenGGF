@@ -13,7 +13,7 @@ public final class LrzEndBossPlatformStream extends AbstractObjectInstance imple
     private boolean initialized;
     private int x, lastSlot = -1;
     public LrzEndBossPlatformStream() { super(new ObjectSpawn(0,0,0,0,0,false,0),"LRZPlatformStream"); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         int direction=S3kRuntimeStates.currentLrz(services().zoneRuntimeRegistry()).orElseThrow().bossAct().streamDirection();
         if(!initialized) {
             initialized=true; x=(byte)direction<0?0x9E0:0xB60;

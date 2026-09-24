@@ -22,7 +22,7 @@ class TestDezEndBossBumper {
         Parent() { this(new ObjectSpawn(0x3500,0x2A0,0xA7,0,0,false,0)); }
         private Parent(ObjectSpawn spawn) { super(spawn,"EndBossTestParent"); }
         @Override public Parent recreateForRewind(RewindRecreateContext context) { return new Parent(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,PlayableEntity player) { }
     }
     private record Fixture(Parent parent,DezEndBossBumper bumper,TestPlayableSprite p1,TestPlayableSprite p2) { }
     private Fixture fixture(int subtype) throws Exception {
@@ -76,10 +76,10 @@ class TestDezEndBossBumper {
     @Test void launchUsesAllFourVintPhasesWithoutChangingPlayerAnimation() throws Exception {
         var f=fixture(0); f.p1.setAnimationId(2); f.p1.setJumping(true); f.p1.setRollingJump(true);
         f.bumper.update(0,null);
-        for(int clock=0;clock<4;clock++) {
-            f.bumper.orCollisionProperty(1); f.bumper.update(clock,null);
-            assertEquals((short)(TrigLookupTable.sinHex((clock-2)&255)<<3),f.p1.getXSpeed());
-            assertEquals((short)(TrigLookupTable.cosHex((clock-2)&255)<<3),f.p1.getYSpeed());
+        for(int vIntRunCount=0;vIntRunCount<4;vIntRunCount++) {
+            f.bumper.orCollisionProperty(1); f.bumper.update(vIntRunCount,null);
+            assertEquals((short)(TrigLookupTable.sinHex((vIntRunCount-2)&255)<<3),f.p1.getXSpeed());
+            assertEquals((short)(TrigLookupTable.cosHex((vIntRunCount-2)&255)<<3),f.p1.getYSpeed());
             assertEquals(2,f.p1.getAnimationId());
         }
         assertFalse(f.p1.isJumping()); assertFalse(f.p1.getRollingJump());

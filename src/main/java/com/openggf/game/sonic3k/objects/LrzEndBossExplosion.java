@@ -16,7 +16,7 @@ public final class LrzEndBossExplosion extends AbstractObjectInstance implements
     LrzEndBossExplosion(AbstractObjectInstance parent,int subtype) {
         this(new ObjectSpawn(parent.getX(),parent.getY(),0,subtype,0,false,0)); this.parent=subtype==4?parent:null;
     }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         if(pendingDelete) { ObjectLifetimeOps.expireDynamic(this); return; }
         if(!initialized) { initialized=true; remaining=switch(getSpawn().subtype()) { case 0 -> 0x20; case 4 -> 0x80; default -> 4; }; }
         if(getSpawn().subtype()==4) {

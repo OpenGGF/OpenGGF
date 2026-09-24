@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -85,9 +84,7 @@ public final class SszRetractingSpringObjectInstance extends AbstractObjectInsta
     /** {@code move.b #8,1(a2)}. */
     private static final int RECOIL_FRAMES = 8;
 
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int x;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int y;
     private int mappingFrame;
     /** {@code $2E}/{@code $30}: each player's launch step and, in the high byte, its timer. */
@@ -181,7 +178,10 @@ public final class SszRetractingSpringObjectInstance extends AbstractObjectInsta
                 return;
             }
             var contact = batch.perPlayer().get(entity);
-            if (contact == null || !(contact.pushingNow() || contact.standingNow())) {
+            // sub_46536 tests bit 0 after swap d6: sub_1DD0E returns side
+            // contact in bit 16, including airborne side hits. Standing is bit
+            // 20 and must not launch a player merely landing on the slope.
+            if (contact == null || contact.kind() != com.openggf.game.solid.ContactKind.SIDE) {
                 return;
             }
             // The player has to be on the side the spring is not facing, or nothing happens.
@@ -272,7 +272,10 @@ public final class SszRetractingSpringObjectInstance extends AbstractObjectInsta
         return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
     }
 
-    @Override public boolean isTopSolidOnly() { return true; }
+    // sub_1DD0E -> loc_1DECE -> loc_1DFFE classifies full sloped
+    // collision, including the side hit that arms the launch. Treating this
+    // as SolidObjectTopSloped2 lets the player walk through the spring face.
+    @Override public boolean isTopSolidOnly() { return false; }
     @Override public boolean isSlopeFlipped() { return isRenderFlipped(); }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     @Override public int getOnScreenHalfWidth() { return 0x18; }

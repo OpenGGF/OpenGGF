@@ -21,7 +21,7 @@ class TestDezMinibossBeam {
         Parent() { this(new ObjectSpawn(0x3740,0x2C0,0xA6,0,0,false,0)); }
         private Parent(ObjectSpawn spawn) { super(spawn,"BeamTestParent"); control=2; }
         @Override public Parent recreateForRewind(RewindRecreateContext context) { return new Parent(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,PlayableEntity player) { }
     }
     private HeadlessTestFixture boot() {
         var game=HeadlessTestFixture.builder().withZoneAndAct(11,0)
@@ -34,16 +34,16 @@ class TestDezMinibossBeam {
         var manager=mock(ObjectManager.class);
         var services=new TestObjectServices(){ @Override public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(()->p1,()->List.of(p2)); } }.withDirectObjectManager(manager);
         beam.setServices(services);
-        for(int clock=0;clock<=10;clock++) {
-            beam.update(clock,null);
-            assertEquals((clock&1)==0,beam.visible);
+        for(int vIntRunCount=0;vIntRunCount<=10;vIntRunCount++) {
+            beam.update(vIntRunCount,null);
+            assertEquals((vIntRunCount&1)==0,beam.visible);
             assertEquals(6,beam.frame);
         }
         assertEquals(2,beam.stateForTest()); assertEquals(0x24,beam.childDy);
-        for(int clock=11;clock<74;clock++) { beam.update(clock,null); assertEquals(6,beam.frame); }
+        for(int vIntRunCount=11;vIntRunCount<74;vIntRunCount++) { beam.update(vIntRunCount,null); assertEquals(6,beam.frame); }
         beam.update(74,null); assertEquals(0x1B,beam.frame); assertEquals(0x20,beam.childDy);
         assertEquals(parent.getY()+0x24,beam.getY(),"callback changes dy after Refresh_ChildPosition");
-        for(int clock=75;clock<=81;clock++) { beam.update(clock,null); assertEquals(0x1C+clock-75,beam.frame); }
+        for(int vIntRunCount=75;vIntRunCount<=81;vIntRunCount++) { beam.update(vIntRunCount,null); assertEquals(0x1C+vIntRunCount-75,beam.frame); }
         assertEquals(4,beam.stateForTest()); assertEquals(parent.getY()+0x58,beam.getY());
         verifyNoInteractions(p1,p2); verify(manager,times(2)).addDynamicObjectAfterCurrent(any());
     }
@@ -53,7 +53,7 @@ class TestDezMinibossBeam {
         var p1=mock(PlayableEntity.class); var p2=mock(PlayableEntity.class); var extra=mock(PlayableEntity.class);
         var services=spy(new TestObjectServices(){ @Override public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(()->p1,()->List.of(p2,extra)); } }.withDirectObjectManager(mock(ObjectManager.class)));
         beam.setServices(services);
-        for(int clock=0;clock<=81;clock++) beam.update(clock,null);
+        for(int vIntRunCount=0;vIntRunCount<=81;vIntRunCount++) beam.update(vIntRunCount,null);
         int x=beam.getX(),y=beam.getY();
         when(p1.getCentreX()).thenReturn((short)(x-0x18)); when(p1.getCentreY()).thenReturn((short)(y-0x48));
         when(p1.getRingCount()).thenReturn(7);

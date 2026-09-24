@@ -39,7 +39,7 @@ public final class DezFinalEntrySprite extends AbstractObjectInstance implements
     private DezFinalBossZoneRuntimeState state() {
         return (DezFinalBossZoneRuntimeState) services().zoneRuntimeState();
     }
-    @Override public void update(int clock, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (kind == ROBOTNIK) {
             if (routine == 0) { routine = 1; motion.x = 0x70; motion.y = 0xC0; }
             animateRunner();

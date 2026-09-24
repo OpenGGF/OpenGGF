@@ -17,7 +17,7 @@ final class DezFinalFireball extends DezFinalBossSprite implements RewindRecreat
         this(new ObjectSpawn(0,0,0,0,0,false,0)); parentSlot=parent.getSlotIndex();
     }
     @Override public DezFinalFireball recreateForRewind(RewindRecreateContext context) { return new DezFinalFireball(context.spawn()); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         if(isDestroyed()) return;
         var parent=slotOccupant(services(),parentSlot);
         int px=parent==null?0:parent.getX(),py=parent==null?0:parent.getY();
@@ -77,7 +77,7 @@ final class DezFinalFireball extends DezFinalBossSprite implements RewindRecreat
             this.parentSlot=parentSlot; offsetX=dx; offsetY=dy;
         }
         @Override public Fragment recreateForRewind(RewindRecreateContext context) { return new Fragment(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) {
+        @Override public void update(int vIntRunCount,PlayableEntity player) {
             visible=false;
             if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if(!initialized) {
@@ -107,6 +107,7 @@ final class DezFinalFireball extends DezFinalBossSprite implements RewindRecreat
         }
         @Override public int getCollisionFlags() { return visible?0x8B:0; }
         @Override public int getCollisionProperty() { return 0; }
+        @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) { return TouchResponseProfile.fromProvider(this, multiRegionSource); }
         @Override public int getShieldReactionFlags() { return 0x10; }
         @Override public boolean publishesTouchResponseListEntryThisFrame() { return visible; }
     }

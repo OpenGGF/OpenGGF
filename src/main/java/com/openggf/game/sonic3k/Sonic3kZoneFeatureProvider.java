@@ -120,7 +120,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
         }
     };
 
-    @Override public com.openggf.game.internal.ForegroundVerticalScrollSplit.Split foregroundVerticalScrollSplit() {
+    @Override public com.openggf.graphics.ForegroundScrollSplit foregroundVerticalScrollSplit() {
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState state && state.isShipSequenceActive()) {
             // loc_55486 starts Plane A at _unkEE9C. HInt6 restores Camera_Y_pos_copy
@@ -129,7 +129,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
             // ROM layout samples the two source bands directly, preserving tile
             // priority in the visible passes and sprite mask rather than drawing
             // the ship as a sprite overlay. Camera/player coordinates do not move.
-            return new com.openggf.game.internal.ForegroundVerticalScrollSplit.Split(
+            return new com.openggf.graphics.ForegroundScrollSplit(
                     state.shipHIntCounter(), (short) state.shipEffectiveBgY());
         }
         return null;

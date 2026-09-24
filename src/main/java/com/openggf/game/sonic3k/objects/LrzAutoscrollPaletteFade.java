@@ -27,7 +27,7 @@ public final class LrzAutoscrollPaletteFade extends AbstractObjectInstance imple
         return nativeStatus7;
     }
     @Override
-    public void update(int clock, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (nativeStatus7) {
             ObjectLifetimeOps.expireDynamic(this);
             return;

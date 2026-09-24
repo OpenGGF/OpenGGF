@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestSszCraneClaw {
     public static final class Ship extends AbstractObjectInstance implements SpawnRewindRecreatable, SszCranePose {
         public Ship(ObjectSpawn spawn) { super(spawn, "TestSszCraneShip"); }
-        @Override public void update(int clock, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
         @Override public boolean craneFlipped() { return false; }
         @Override public boolean isPersistent() { return true; }

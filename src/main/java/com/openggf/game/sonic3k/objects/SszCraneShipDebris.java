@@ -26,7 +26,7 @@ public final class SszCraneShipDebris extends AbstractObjectInstance implements 
         xFixed = spawn.x() << 16; yFixed = spawn.y() << 16;
     }
 
-    @Override public void update(int clock, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         visible = false;
         if (pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if (!initialized) {

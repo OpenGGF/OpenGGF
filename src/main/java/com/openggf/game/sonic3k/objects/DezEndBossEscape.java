@@ -25,7 +25,7 @@ final class DezEndBossEscape extends DezEndBossSprite implements RewindRecreatab
     @Override public DezEndBossEscape recreateForRewind(RewindRecreateContext context) {
         return new DezEndBossEscape(context.spawn());
     }
-    @Override public void update(int clock,PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount,PlayableEntity ignored) {
         visible=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(parent==null) return;
@@ -155,7 +155,7 @@ final class DezEndBossEscape extends DezEndBossSprite implements RewindRecreatab
     static final class GravityClearer extends DezEndBossSprite implements SpawnRewindRecreatable {
         GravityClearer() { this(new ObjectSpawn(0,0,0,0,0,false,0)); }
         GravityClearer(ObjectSpawn spawn) { super(spawn,"DEZBossGravityClearer"); }
-        @Override public void update(int clock,PlayableEntity player) { services().gameState().setReverseGravityActive(false); }
+        @Override public void update(int vIntRunCount,PlayableEntity player) { services().gameState().setReverseGravityActive(false); }
         @Override public boolean participatesInRomWorldTransitionOffset() { return false; }
     }
 }

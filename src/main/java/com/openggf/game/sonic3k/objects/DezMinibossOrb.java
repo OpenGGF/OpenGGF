@@ -22,7 +22,7 @@ final class DezMinibossOrb extends DezMinibossSprite implements RewindRecreatabl
     @Override public DezMinibossOrb recreateForRewind(RewindRecreateContext context) {
         return new DezMinibossOrb(context.spawn());
     }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false; touchPublished=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(!initialized) {

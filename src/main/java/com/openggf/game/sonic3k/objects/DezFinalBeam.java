@@ -23,7 +23,7 @@ final class DezFinalBeam extends DezFinalBossSprite implements RewindRecreatable
         this(new ObjectSpawn(0,0,0,0,0,false,0)); this.parent=parent; this.mouth=mouth;
     }
     @Override public DezFinalBeam recreateForRewind(RewindRecreateContext context) { return new DezFinalBeam(context.spawn()); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(parent==null) return;
@@ -32,21 +32,21 @@ final class DezFinalBeam extends DezFinalBossSprite implements RewindRecreatable
             frame=0x1A; offsetX=0x58; offsetY=4; services().playSfx(Sonic3kSfx.CHARGING.id);
         }
         switch(routine) {
-            case 1 -> { particles(clock); animate(0x8135A); track(); visible=true; }
+            case 1 -> { particles(vIntRunCount); animate(0x8135A); track(); visible=true; }
             case 2 -> {
                 timer=(short)(timer-1);
                 if(timer<0) {
                     routine=3; offsetX+=0x34; offsetY+=4; animationCursor=animationTimer=0;
-                    services().playSfx(Sonic3kSfx.MISSILE_EXPLODE.id); laser(clock);
+                    services().playSfx(Sonic3kSfx.MISSILE_EXPLODE.id); laser(vIntRunCount);
                 } else {
                     // Below $28, d0 still contains the even dispatch address $80810.
                     // Otherwise sub_80FFA returns VInt&3, 0 on successful allocation,
                     // or $FFFF on exhausted AllocateObjectAfterCurrent (FixBugs=0).
-                    int d0=timer>=0x28?particles(clock):0;
+                    int d0=timer>=0x28?particles(vIntRunCount):0;
                     frame=(d0&1)!=0?0x1A:0x1F; track(); visible=true;
                 }
             }
-            case 3 -> laser(clock);
+            case 3 -> laser(vIntRunCount);
             case 4 -> releaseWait();
             default -> throw new IllegalStateException("DEZ beam routine "+routine);
         }
@@ -56,18 +56,18 @@ final class DezFinalBeam extends DezFinalBossSprite implements RewindRecreatable
         updateDynamicSpawn(getX(),getY());
     }
     private void track() { writeX(parent.getX()+offsetX); writeY(parent.getY()+offsetY); }
-    private int particles(int clock) {
-        int phase=clock&3;
+    private int particles(int vIntRunCount) {
+        int phase=vIntRunCount&3;
         if(phase!=0) return phase;
         var child=spawnChild(()->new Particle(this));
         return child==null || child.isDestroyed()?0xFFFF:0;
     }
-    private void laser(int clock) {
+    private void laser(int vIntRunCount) {
         if(animate(0x81397)) ((DezFinalBossZoneRuntimeState)services().zoneRuntimeState()).laserOffset(frame);
         // sub_80FA6 precedes sub_81024, so damage uses the previous position words.
         if(frame==0x1E) {
-            hurt(services().playerQuery().mainPlayerOrNull(),clock);
-            hurt(services().playerQuery().nativeP2OrNull(),clock);
+            hurt(services().playerQuery().mainPlayerOrNull(),vIntRunCount);
+            hurt(services().playerQuery().nativeP2OrNull(),vIntRunCount);
         }
         track();
     }
@@ -90,7 +90,7 @@ final class DezFinalBeam extends DezFinalBossSprite implements RewindRecreatable
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
     }
-    private void hurt(PlayableEntity player,int clock) {
+    private void hurt(PlayableEntity player,int vIntRunCount) {
         if(player==null || player.getDead() || player.getInvulnerable()) return;
         int x=player.getCentreX()&0xFFFF,y=player.getCentreY()&0xFFFF;
         if(x<getX() || x>=((getX()+0x120)&0xFFFF)
@@ -98,7 +98,7 @@ final class DezFinalBeam extends DezFinalBossSprite implements RewindRecreatable
         if(player.isCpuControlled()) player.applyHurt(getX(),DamageCause.NORMAL);
         else {
             boolean rings=player.getRingCount()>0;
-            if(rings && !player.hasShield()) services().spawnLostRings(player,clock);
+            if(rings && !player.hasShield()) services().spawnLostRings(player,vIntRunCount);
             player.applyHurtOrDeath(getX(),DamageCause.NORMAL,rings);
         }
     }
@@ -114,7 +114,7 @@ final class DezFinalBeam extends DezFinalBossSprite implements RewindRecreatable
             this(new ObjectSpawn(parent.getX(),parent.getY(),0,0,0,false,0)); parentSlot=parent.getSlotIndex();
         }
         @Override public Particle recreateForRewind(RewindRecreateContext context) { return new Particle(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) {
+        @Override public void update(int vIntRunCount,PlayableEntity player) {
             visible=false;
             if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             ObjectInstance parent=null;

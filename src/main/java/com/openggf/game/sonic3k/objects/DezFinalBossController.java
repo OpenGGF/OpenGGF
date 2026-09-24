@@ -31,7 +31,7 @@ public final class DezFinalBossController extends DezFinalBossSprite
     @Override public DezFinalBossController recreateForRewind(RewindRecreateContext context) { return new DezFinalBossController(context.spawn()); }
     private DezFinalBossZoneRuntimeState state() { return (DezFinalBossZoneRuntimeState)services().zoneRuntimeState(); }
     private int cameraX() { return DezFinalCamera.nativeX(services().camera()); }
-    @Override public void update(int clock,PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount,PlayableEntity ignored) {
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         state().art().service(services());
         if(codePointer==0x80102) { sinkAndHandOff(); return; }

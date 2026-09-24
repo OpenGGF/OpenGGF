@@ -31,7 +31,7 @@ public final class SszDeathEggChild extends AbstractObjectInstance implements Sp
         this.parentSlot = parentSlot;
     }
 
-    @Override public void update(int clock, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         var state = (SszZoneRuntimeState) services().zoneRuntimeState();
         if (!initialized) {

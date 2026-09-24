@@ -49,7 +49,7 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
         return S3kRuntimeStates.currentLrz(services().zoneRuntimeRegistry()).orElseThrow().bossAct();
     }
     @Override
-    public void update(int clock, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         visible = false;
         if (pendingDelete) {
             ObjectLifetimeOps.expireDynamic(this);
@@ -87,7 +87,7 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
             }
             case 0x79002 -> {
                 if (routine == 0)
-                    siren(clock);
+                    siren(vIntRunCount);
                 swing();
                 SubpixelMotion.moveSprite2(motion);
                 if (expired()) {
@@ -111,7 +111,7 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
                     goDelete();
                     return;
                 }
-                siren(clock);
+                siren(vIntRunCount);
                 swing();
                 SubpixelMotion.moveSprite2(motion);
                 timer = (timer + 1) & 65535;
@@ -230,7 +230,7 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
             case 0x7935E -> {
                 motion.yVel = (short) (motion.yVel - 0x40);
                 SubpixelMotion.moveSprite2(motion);
-                if (motion.yVel < 0 && (clock & 3) == 0)
+                if (motion.yVel < 0 && (vIntRunCount & 3) == 0)
                     table(0x7967E, false);
                 cull(true);
             }
@@ -374,8 +374,8 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
         timer = (short) (timer - 1);
         return timer < 0;
     }
-    private void siren(int clock) {
-        if ((clock & 15) == 0)
+    private void siren(int vIntRunCount) {
+        if ((vIntRunCount & 15) == 0)
             services().playSfx(Sonic3kSfx.ROBOTNIK_SIREN.id);
     }
     private void lockPlayers(boolean locked) {

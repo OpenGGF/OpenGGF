@@ -27,7 +27,7 @@ public final class DezEndBossInstance extends DezEndBossSprite implements SpawnR
     private int animationTimer;
 
     public DezEndBossInstance(ObjectSpawn spawn) { super(spawn,"DEZEndBoss"); }
-    @Override public void update(int clock,PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount,PlayableEntity ignored) {
         visible=false;
         if(codePointer==0) { initialize(); return; }
         art.service(services());
@@ -43,7 +43,7 @@ public final class DezEndBossInstance extends DezEndBossSprite implements SpawnR
                 fight();
                 if(damage.update(services())) defeat();
                 if(damage.invulnerable()) status|=0x40; else status&=~0x40;
-                if((clock&0x3F)==0) services().playSfx(Sonic3kSfx.WAVE_HOVER.id);
+                if((vIntRunCount&0x3F)==0) services().playSfx(Sonic3kSfx.WAVE_HOVER.id);
                 visible=true;
             }
             case 0x85694 -> {

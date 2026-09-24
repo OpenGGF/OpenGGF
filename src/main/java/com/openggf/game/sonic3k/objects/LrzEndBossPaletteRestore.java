@@ -14,7 +14,7 @@ public final class LrzEndBossPaletteRestore extends AbstractObjectInstance imple
     private boolean initialized,finished;
     private int cursor,header,delay,iteration;
     public LrzEndBossPaletteRestore() { super(new ObjectSpawn(0,0,0,0,0,false,0),"LRZEndBossPaletteRestore"); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         var state=S3kRuntimeStates.currentLrz(services().zoneRuntimeRegistry()).orElseThrow().bossAct();
         if(!initialized && !state.capsuleOpened()) return;
         try {

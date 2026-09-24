@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -67,13 +66,9 @@ public final class SszMechaSonicTrailChild extends AbstractObjectInstance
     };
 
     private final SszMechaSonicObjectInstance parent;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int subtype;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int childDx;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int childDy;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int priorityWord;
 
     private final S3kRawAnimation.State anim = new S3kRawAnimation.State();

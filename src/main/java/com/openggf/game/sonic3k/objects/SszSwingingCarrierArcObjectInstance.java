@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -50,11 +49,8 @@ public final class SszSwingingCarrierArcObjectInstance extends AbstractObjectIns
     private static final int PRIORITY_BEHIND = 0x180;
     private static final int PRIORITY_IN_FRONT = 0x100;
 
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int baseX;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int baseY;
-    @RewindTransient(reason = "Constructor-derived from the immutable spawn record; rewind recreation rebuilds it.")
     private final int segmentCount;
     /** {@code sub2_x_pos}/{@code sub2_y_pos}: one pair per segment. */
     private final int[] segmentX;

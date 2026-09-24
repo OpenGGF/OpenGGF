@@ -53,7 +53,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   them before flinging them where they are steering, the short posts spin a player in place
   and their invisible carriers walk them round in a circle, the swinging and rotating arms
   carry a player at the tip of a jointed arc, and the retracting springs fold away until
-  somebody comes at them and then fire them along the deck. Swinging carrier arms and rider bars
+  somebody comes at them and then fire them along the deck from side contact,
+  using the cartridge's full sloped collision rather than a top-only platform. Swinging carrier arms and rider bars
   now remain alive until their hub releases them, preserving the platform at camera edges
   and avoiding dangling rewind references. Sky Sanctuary's EggRobos patrol
   the act now, in all three shapes the cartridge gives them: the distant one that crosses the

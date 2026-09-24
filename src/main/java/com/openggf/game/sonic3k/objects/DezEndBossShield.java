@@ -21,7 +21,7 @@ final class DezEndBossShield extends DezEndBossSprite implements RewindRecreatab
     @Override public DezEndBossShield recreateForRewind(RewindRecreateContext context) {
         return new DezEndBossShield(context.spawn());
     }
-    @Override public void update(int clock, PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         visible = touchPublished = false;
         if (pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if (parent == null) return;
@@ -79,7 +79,7 @@ final class DezEndBossShield extends DezEndBossSprite implements RewindRecreatab
             this(new ObjectSpawn(parent.getX(),parent.getY(),0,0,0,false,0)); this.parent=parent;
         }
         @Override public Visor recreateForRewind(RewindRecreateContext context) { return new Visor(context.spawn()); }
-        @Override public void update(int clock, PlayableEntity ignored) {
+        @Override public void update(int vIntRunCount, PlayableEntity ignored) {
             visible = false;
             if (pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if (parent == null) return;

@@ -36,7 +36,7 @@ public final class SszCraneShipDecoration extends AbstractSszCraneChild {
 
     private boolean flame() { return getSpawn().subtype() != 0; }
 
-    @Override public void update(int clock, PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         visible = false;
         if (!(parent instanceof SszCraneShip ship) || parentGone()) {
             ObjectLifetimeOps.expireDynamic(this); return;
@@ -62,7 +62,7 @@ public final class SszCraneShipDecoration extends AbstractSszCraneChild {
             }
             script.animateNoSst(animation, address, () -> { });
         }
-        visible = !flame() || ((clock & 1) == 0 && ship.xVelocity() != 0);
+        visible = !flame() || ((vIntRunCount & 1) == 0 && ship.xVelocity() != 0);
         updateDynamicSpawn(x, y);
     }
 

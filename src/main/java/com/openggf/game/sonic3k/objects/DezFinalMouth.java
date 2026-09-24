@@ -19,7 +19,7 @@ final class DezFinalMouth extends DezFinalBossSprite implements RewindRecreatabl
     }
     @Override public DezFinalMouth recreateForRewind(RewindRecreateContext context) { return new DezFinalMouth(context.spawn()); }
     private DezFinalBossZoneRuntimeState state() { return (DezFinalBossZoneRuntimeState)services().zoneRuntimeState(); }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         visible=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(parent==null) return;
@@ -71,7 +71,7 @@ final class DezFinalMouth extends DezFinalBossSprite implements RewindRecreatabl
             this(new ObjectSpawn(parent.getX(),parent.getY(),0,0,0,false,0)); this.parent=parent;
         }
         @Override public Button recreateForRewind(RewindRecreateContext context) { return new Button(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) {
+        @Override public void update(int vIntRunCount,PlayableEntity player) {
             touchPublished=false;
             if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if(parent==null) return;

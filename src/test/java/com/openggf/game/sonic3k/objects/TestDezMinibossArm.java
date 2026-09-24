@@ -18,7 +18,7 @@ class TestDezMinibossArm {
         Parent() { this(new ObjectSpawn(0x3740,0x2C0,0xA6,0,0,false,0)); }
         private Parent(ObjectSpawn spawn) { super(spawn,"ArmTestParent"); word3C=0x200; }
         @Override public Parent recreateForRewind(RewindRecreateContext context) { return new Parent(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,PlayableEntity player) { }
     }
     private record Fixture(HeadlessTestFixture game,ObjectManager manager,Parent parent) { }
     private Fixture boot(int free) {

@@ -23,7 +23,7 @@ class TestDezMinibossEye {
         Parent() { this(new ObjectSpawn(0x3740,0x2C0,0xA6,0,0,false,0)); }
         private Parent(ObjectSpawn spawn) { super(spawn,"EyeTestParent"); }
         @Override public Parent recreateForRewind(RewindRecreateContext context) { return new Parent(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,PlayableEntity player) { }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
     private record Fixture(Parent parent,DezMinibossEye eye,TestPlayableSprite player) { }

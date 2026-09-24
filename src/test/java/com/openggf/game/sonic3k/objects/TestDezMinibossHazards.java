@@ -20,7 +20,7 @@ class TestDezMinibossHazards {
         Parent() { this(new ObjectSpawn(0x3740,0x2C0,0xA6,0,0,false,0)); }
         private Parent(ObjectSpawn spawn) { super(spawn,"HazardTestParent"); word3A=0x4000; }
         @Override public Parent recreateForRewind(RewindRecreateContext context) { return new Parent(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,PlayableEntity player) { }
     }
     private ObjectServices services(ObjectManager manager,GameRng rng) throws Exception {
         var services=mock(ObjectServices.class);

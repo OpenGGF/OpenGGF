@@ -66,7 +66,7 @@ final class DezMinibossBeam extends DezMinibossSprite implements RewindRecreatab
     private void follow() { writeX(parent.getX()); writeY(parent.getY()+(byte)childDy); }
     private void goDelete() { status|=0x80; pendingDelete=true; }
     private boolean parentDead() { if((parent.status&0x80)==0) return false; goDelete(); return true; }
-    private void hurt(PlayableEntity player,int clock) {
+    private void hurt(PlayableEntity player,int vIntRunCount) {
         if(player==null || player.getDead() || player.getInvulnerable() || player.isOnObject()) return;
         int x=player.getCentreX()&0xFFFF,y=player.getCentreY()&0xFFFF;
         if(x<((getX()-0x18)&0xFFFF) || x>=((getX()+0x18)&0xFFFF)
@@ -74,7 +74,7 @@ final class DezMinibossBeam extends DezMinibossSprite implements RewindRecreatab
         if(player.isCpuControlled()) player.applyHurt(getX(),DamageCause.NORMAL);
         else {
             boolean rings=player.getRingCount()>0;
-            if(rings && !player.hasShield()) services().spawnLostRings(player,clock);
+            if(rings && !player.hasShield()) services().spawnLostRings(player,vIntRunCount);
             player.applyHurtOrDeath(getX(),DamageCause.NORMAL,rings);
         }
     }
@@ -90,7 +90,7 @@ final class DezMinibossBeam extends DezMinibossSprite implements RewindRecreatab
             this(new ObjectSpawn(parent.getX(),parent.getY(),0,subtype,0,false,0)); this.parent=parent;
         }
         @Override public Foot recreateForRewind(RewindRecreateContext context) { return new Foot(context.spawn()); }
-        @Override public void update(int clock,PlayableEntity player) {
+        @Override public void update(int vIntRunCount,PlayableEntity player) {
             visible=false;
             if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if(parent==null) return;

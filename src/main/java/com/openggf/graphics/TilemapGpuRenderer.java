@@ -42,10 +42,10 @@ public class TilemapGpuRenderer {
 
     private final TilemapTexture foregroundWindowTexture = new TilemapTexture();
     private ForegroundWindow foregroundWindow;
-    private com.openggf.game.internal.ForegroundVerticalScrollSplit.Split foregroundVerticalScrollSplit;
+    private com.openggf.graphics.ForegroundScrollSplit foregroundVerticalScrollSplit;
 
     void setForegroundVerticalScrollSplit(
-            com.openggf.game.internal.ForegroundVerticalScrollSplit.Split split) {
+            com.openggf.graphics.ForegroundScrollSplit split) {
         foregroundVerticalScrollSplit = split;
     }
     private int[] uploadedWindowDescriptors;

@@ -33,7 +33,7 @@ public final class DezFinalArenaFloor extends AbstractObjectInstance
     private DezFinalBossZoneRuntimeState state() {
         return (DezFinalBossZoneRuntimeState) services().zoneRuntimeState();
     }
-    @Override public void update(int clock, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) {
             initialized = true; motion.y = 0xF0;
             if (mode == MOVING) motion.x = 0x130;

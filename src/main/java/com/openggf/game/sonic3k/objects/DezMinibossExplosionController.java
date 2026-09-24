@@ -27,7 +27,7 @@ final class DezMinibossExplosionController extends DezMinibossSprite implements 
     @Override public DezMinibossExplosionController recreateForRewind(RewindRecreateContext context) {
         return new DezMinibossExplosionController(context.spawn());
     }
-    @Override public void update(int clock,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
         if(!initialized) {
             initialized=true;
@@ -78,7 +78,7 @@ final class DezMinibossExplosionController extends DezMinibossSprite implements 
         private boolean initialized;
         private int timer;
         NormalExplosion(ObjectSpawn spawn) { super(spawn,"DEZTransportExplosion"); }
-        @Override public void update(int clock,PlayableEntity player) {
+        @Override public void update(int vIntRunCount,PlayableEntity player) {
             if(!initialized) {
                 initialized=true; timer=3; frame=0; priority=1; halfWidth=halfHeight=0xC;
                 services().playSfx(Sonic3kSfx.BREAK.id);
