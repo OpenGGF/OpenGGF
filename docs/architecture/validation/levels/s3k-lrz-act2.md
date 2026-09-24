@@ -394,3 +394,15 @@ does install Pal_LRZ2 and Pal_LRZMiniboss3, with later differences in cycling
 entries. A complete native palette sample is being compared before attributing
 the apparent colour difference to a runtime defect. Native pixel acceptance
 remains open.
+
+
+Palette follow-up on00ca5c135: the temporary full64-colour native sample at
+425734 (`palette-check` under the same native root; zero host failures) has
+Pal_LRZ2 byte-for-byte in line1. Differences from Pal_LRZMiniboss3 lie in the
+`AnPal_LRZ2` cycle windows: line2 colours1–4, line3 colours1–2 and11–14. The
+cold probe at36203 likewise retains the ROM table outside those windows.
+Native still425734 shows the blue crystal phase, unlike the gold phase in
+426000. Thus the observation does not establish a missing palette load or
+justify changing the palette owner. This is table/phase corroboration, not
+synchronized whole-scene pixel matching; the direct-load background acceptance
+remains separate. Temporary probes are not promoted as runtime oracles.
