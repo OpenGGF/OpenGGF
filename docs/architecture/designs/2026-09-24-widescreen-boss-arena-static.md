@@ -214,3 +214,64 @@ fights inspected: mask remains active through knockback, HUD readable.
 The implementation is committed and reconciled as described above. Full combined
 suite/guards and broader lifecycle/display-shader coverage remain pending; no
 develop integration or push is claimed.
+
+## Candidate research — Luna, max reasoning, 2026-09-24
+
+Read-only review at campaign `679f7cb87`; no candidate footage was inspected.
+Only SSZ1 GHZ/MTZ remain approved. Camera locks identify research sites, not
+activation conditions. All possible excess-space problems below remain inference.
+
+| Priority | Site and ROM owner | Native camera bounds | Next evidence and lifecycle owner |
+|---|---|---|---|
+| 1 | LRZ1 drill miniboss; `Obj_LRZMiniboss`, `word_784E8`; `LrzMinibossInstance` | X `$2C00`, Y `$710`, single native view; already centred in widescreen | Capture approach, drill/arm extremes, defeat, sign, seamless Act 2 rebase and both releases at 320/800. Mask could signal unusable wings only if no action needs them. Miniboss/event coordinator owns activation; post-defeat camera-release chain owns release, not HP zero. |
+| 2 | FBZ1 miniboss; `Obj_FBZMiniboss`; `FbzMinibossInstance` | X `$2E20..$2EA0`, Y `$540`; 448px union of native views | Screen approach and full attack range before deciding on centring or a moving 320px window. Possible activation only after gate settles; `startAct2Sizes()` owns release after sign/results. |
+| 3 | DEZ1 miniboss; `Obj_DEZMiniboss`; `DezMinibossInstance` / `DezMinibossTransport` | X `$3680..$36C0`, Y `$28C`; 384px union | Capture both phases, pursuit, vertical swings, beam and transport through bounds reopening. No explicit centred-arena flag yet. Activation after gate; transfer release ownership to transport/sign flow. |
+| 4 | FBZ2 end boss; `FbzEndBossEventControlInstance` / `FbzEndBossInstance` | Max X `$32B8`, closes after approach; Y depends on player mode | Capture approach, settled fight and capsule exit. Centre/framing suitability unverified. Event controller activates after pan; capsule/exit bounds reopening releases. |
+
+Source lookup anchors in `docs/skdisasm/sonic3k.asm`: LRZ1 159996,
+FBZ1 146766, DEZ1 167659, FBZ2 109825 (line numbers at review revision).
+Engine lookup anchors: LRZ miniboss 1001, FBZ miniboss 147, DEZ miniboss 183,
+DEZ transport 167, FBZ end event 142, FBZ end boss 400. Confirm routine ownership
+against current source before implementation. Each future trial also needs
+knockback, death/respawn, rewind, participant bounds and transition checks.
+
+Do not infer applicability from these other locks: MHZ1 wraps/repeats; MHZ2 and
+LRZ3 scroll or pan through phases; SOZ1 has a broad mobile arena and SOZ2 keeps
+horizontal movement; SSZ2 has a later arena pan; DEZ3/DDZ wrap, scroll or change
+arenas. DEZ2's centred X/free Y lock and ROM-pixel planet extension are already
+handled. A bounded S1/S2 sweep supplied no stronger concrete candidate.
+
+## Proposed bounds-derived default — discussion, 2026-09-24
+
+The user proposed deriving masking from camera bounds instead of activating it
+per encounter. This is a proposed successor, not the behavior validated above.
+The reusable renderer/noise/rewind work still applies; the activation geometry
+would move to a common presentation owner. No additional site is enabled yet.
+
+For a finite horizontal camera-origin interval `[minX, maxX]`, the union of
+native views is `[minX, maxX + 320)`. Subtract the actual rendered camera origin
+from both ends, clip to the viewport, and mask only outside that interval.
+Do not collapse a 448px arena with 128px camera travel into a centred 320px
+strip. Left/right exposure can differ. The shader needs independent edges;
+`activeWidth` alone currently centres them and cannot express this geometry.
+Native-width output should remain unchanged. Bounds expansion and the actual
+camera movement should move mask edges without a separate boss-defeat trigger.
+
+`PlayableSpriteMovement.doLevelBoundary` confirms S3K horizontal player limits
+use native camera bounds: left centre `minX+16`, right centre `maxX+296`.
+Those collision offsets are not crop edges: retain the native view's margins
+for the player sprite and action. S1/S2 can additionally allow 64px on the right
+outside strict locks, and S2 may consume pre-eased maxX; a cross-game default
+must account for those semantic rules instead of assuming S3K's exact contract.
+Object-controlled players skip this boundary path, and camera freezes also
+serve death/cutscenes. Thus a stopped camera alone does not prove an arena.
+
+Before implementation, establish a common finite/scrolling/wrapping presentation
+contract and how scripted cameras declare exemption. Preserve native signed-word
+and modular behavior; do not sort transient inverted bounds into a fabricated
+arena. Do not use Y death bounds as top/bottom masking limits. The proposed
+rule would also mask exposed ordinary level edges, a broader product behavior
+than the two manually approved fights. Verify off-centre cameras, moving and
+easing bounds, wrap rebases, cinematic actors beyond player limits, death,
+respawn, pause, rewind and all supported widths before replacing the explicit
+implementation. No physics or player-bound changes are implied.
