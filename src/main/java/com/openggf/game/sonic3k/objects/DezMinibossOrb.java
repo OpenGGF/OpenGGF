@@ -17,7 +17,10 @@ final class DezMinibossOrb extends DezMinibossSprite implements RewindRecreatabl
     private DezMinibossOrb(ObjectSpawn spawn) { super(spawn,"DEZMinibossOrb"); }
     DezMinibossOrb(DezMinibossSprite parent,int subtype,boolean fragment) {
         this(new ObjectSpawn(parent.getX(),parent.getY(),0,subtype,0,false,0));
-        this.parent=parent; this.fragment=fragment;
+        // loc_7E916/loc_7E972 fragments copy position/velocity and never read a parent.
+        // Keep no Java reference to the orb that loc_7E908 deletes: it must not
+        // become a live rewind dependency after the native slot has disappeared.
+        this.parent=fragment?null:parent; this.fragment=fragment;
     }
     @Override public DezMinibossOrb recreateForRewind(RewindRecreateContext context) {
         return new DezMinibossOrb(context.spawn());
@@ -52,7 +55,9 @@ final class DezMinibossOrb extends DezMinibossSprite implements RewindRecreatabl
             move(0x38);
             if(yVelocity<0) { drawTouch(); return; }
             // Independent tables: fragments are attempted even when the controller fails.
-            spawnChild(()->new DezMinibossExplosionController(this,6));
+            // Subtype 6 selects the finite, stationary explosion routine; the ROM
+            // never follows its creator after setup (unlike the $08 follower).
+            spawnChild(()->new DezMinibossExplosionController(getX(),getY(),6));
             for(int i=0;i<8;i++) {
                 int subtype=i*2;
                 var child=spawnChild(()->new DezMinibossOrb(this,subtype,true));

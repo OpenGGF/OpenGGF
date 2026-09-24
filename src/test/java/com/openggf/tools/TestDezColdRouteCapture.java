@@ -14,23 +14,29 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Cold DEZ1 traversal through the turbine exit; not a complete act route. */
+/** Cold DEZ1 traversal, miniboss and production Act 2 handover. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestDezColdRouteCapture {
     @Test void coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind() throws Exception {
-        runColdRoute(false);
+        runColdRoute("upper");
     }
 
     @Test void coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled() throws Exception {
-        runColdRoute(true);
+        runColdRoute("turbine");
     }
 
-    private void runColdRoute(boolean turbine) throws Exception {
+    @Test void coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo() throws Exception {
+        runColdRoute("complete");
+    }
+
+    private void runColdRoute(String route) throws Exception {
+        boolean complete = route.equals("complete");
+        boolean turbine = !route.equals("upper");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez1-sonic-tails-cold-"
-                        + (turbine ? "turbine" : "upper") + "-320.bk2"));
+                        + route + "-320.bk2"));
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
         // Intro/bridge, lift catches/releases, tube, conveyor lift, timed bridge,
@@ -39,13 +45,42 @@ class TestDezColdRouteCapture {
                 3050, 3150, 3240, 3750, 4110, 4300, 4370, 4450, 4650, 4840, 4950, 5200));
         if (turbine) spots.addAll(Set.of(5540, 5620, 5800, 5960, 6100, 6330, 6410,
                 6520, 6760, 6890, 7290, 7460, 7750, 7840, 8100, 8260, 8400, 8470, 8540));
+        if (complete) {
+            // Earlier traversal spots have independent, shorter tests above.
+            spots.clear();
+            spots.addAll(Set.of(8800, 8900, 9350, 9490, 9650, 9930, 10070, 10500,
+                    11080, 11260, 11420, 11570, 12190, 12320, 12470, 12640,
+                    12740, 13100, 13270, 13860, 13950, 14100));
+        }
+        var bossHits = com.openggf.game.sonic3k.objects.DezMinibossInstance.class
+                .getSuperclass().getDeclaredField("collisionProperty");
+        bossHits.setAccessible(true);
+        int completedBossPhases = 0;
+        boolean eightHits = false;
+        long largestOutgoingRewindFrame = 0;
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                // Keep live history near the real load boundary, after snapshot spots.
+                if (complete && frame == 14150) GameServices.configuration().setSessionOverride(
+                        com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
                 session.render();
+                if (complete && frame >= 14150 && GameServices.level().getCurrentAct() == 0) {
+                    var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+                    if (rewind != null) largestOutgoingRewindFrame = Math.max(largestOutgoingRewindFrame,
+                            rewind.currentFrame());
+                }
                 assertFalse(session.player().getDead(), "death at input " + frame);
+                if (complete) {
+                    var boss = GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.DezMinibossInstance.class)
+                            .stream().findFirst().orElse(null);
+                    boolean nowEight = boss != null && bossHits.getInt(boss) == 8;
+                    if (nowEight && !eightHits) completedBossPhases++;
+                    eightHits = nowEight;
+                }
                 if (frame == 5300) {
                     assertEquals(9589, session.player().getCentreX());
                     assertEquals(640, session.player().getCentreY());
@@ -80,8 +115,20 @@ class TestDezColdRouteCapture {
                 previousInput.set(session, movie.getFrame(frame));
             }
             assertEquals(11, GameServices.level().getCurrentZone());
-            assertEquals(0, GameServices.level().getCurrentAct());
-            if (turbine) {
+            assertEquals(complete ? 1 : 0, GameServices.level().getCurrentAct());
+            if (complete) {
+                assertEquals(2, completedBossPhases, "both eight-hit phases must be cleared");
+                assertTrue(largestOutgoingRewindFrame > 10, "outgoing history must have been recorded");
+                var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
+                for (int n = 0; n < 30; n++) { session.step(neutral); session.render(); }
+                var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+                assertNotNull(rewind);
+                // Seamless loads retain the logical frame counter, but re-root
+                // the oldest seekable snapshot after the outgoing act's last frame.
+                assertTrue(rewind.earliestAvailableFrame() > largestOutgoingRewindFrame,
+                        "Act 2 must not retain the outgoing level's rewind history");
+            }
+            if (turbine && !complete) {
                 assertEquals(10763, session.player().getCentreX());
                 assertEquals(2096, session.player().getCentreY());
                 assertFalse(session.player().isObjectControlled(), "turbine releases movement past its corridor");

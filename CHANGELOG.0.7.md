@@ -173,7 +173,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Light-tunnel launchers count down, carry captured players through the winding paths
   with glowing ring trails, and release them at the exit. The Act 1 miniboss now fights
   through its orbiting-sphere and moving-platform phases, including its eye, beam,
-  spikes and breakup. Defeating it runs the results and carries the player into Act 2,
+  spikes and breakup; detached sphere fragments and their stationary explosions remain rewindable after their creator disappears. Defeating it runs the results and carries the player into Act 2,
   where the floor opens, the launch plays and normal control returns. Act 2's gravity boss
   now releases spiked enemies, takes damage from their return impacts, breaks apart,
   opens the door and releases the camera into the final-stage transition. Its transporter

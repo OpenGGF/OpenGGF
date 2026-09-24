@@ -164,6 +164,13 @@ class TestDezMinibossHazards {
         assertNotSame(orb,restored); assertNotSame(parent,restored.parentForTest());
         assertSame(restored.parentForTest(),restoredController.parentForTest());
         assertEquals(expected,rows(fixture,32));
+        // Capture after the launch orb has been deleted, while its fragments and
+        // finite explosion controller still live. Capturing before the burst alone
+        // missed dangling creator references in both kinds of independent child.
+        var detached = registry.capture();
+        var detachedForward = rows(fixture,8);
+        registry.restore(detached);
+        assertEquals(detachedForward,rows(fixture,8));
     }
     private List<String> rows(HeadlessTestFixture fixture,int count) {
         var rows=new ArrayList<String>(); var manager=GameServices.level().getObjectManager();

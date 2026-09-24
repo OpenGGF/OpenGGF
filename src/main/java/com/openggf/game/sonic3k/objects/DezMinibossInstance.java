@@ -176,7 +176,9 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
             if(!active) spawnChild(()->new DezMinibossBeam(this,arenaMinY));
         } else {
             status|=0x80; codePointer=0x85668;
-            spawnChild(()->new DezMinibossExplosionController(this,0));
+            // CreateBossExp00 runs Obj_BossExpControl1 at the copied position;
+            // unlike CreateBossExp0E it never follows the soon-deleted boss.
+            spawnChild(()->new DezMinibossExplosionController(getX(),getY(),0));
             services().levelGamestate().pauseTimer(); timer=0x3F; services().gameState().addScore(1000);
         }
     }

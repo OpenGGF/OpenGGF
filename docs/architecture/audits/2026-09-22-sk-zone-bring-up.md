@@ -27,7 +27,7 @@ its original unimplemented counts must not be read as current production status.
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
-| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine puzzle and exit door at(10763,2096) in8,593frames, with40 full-registry replay spots and zero deaths. Remaining cold traversal is open. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
+| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold traversal is next. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold main-act traversal and remaining Hyper/HUD/native presentation still need validation. |
 
 Combined campaign validation, main-workspace integration, push and cleanup remain
@@ -3899,3 +3899,49 @@ Video: `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-cold-turbine-exit-320/cap
 Cold input/state8593frames, zero deaths, filmed7840–8592, selected stills and full
 MP4 decode inspected. Continue beyond the door; later DEZ1 traversal/miniboss and
 cold Act2 remain open. Combined campaign verification/integration are still owed.
+
+### DEZ1 ordinary cold completion and detached-child rewind (2026-09-24)
+
+On `23bf09e25` plus this change, `dez1-sonic-tails-cold-complete-320.bk2`
+extends the turbine route through the launcher/conveyor ascent and the ordinary
+miniboss. Both phases receive eight real hits; the second phase is completed by
+retreating between arm sweeps, not by altering the boss. The actual Act 2 load
+occurs at input14230 (14,231 total frames), with Sonic+Tails and no deaths,
+position/health/emerald overrides or native-state hydration. The authored input
+script is compressed by held-button runs; the BK2 contains the same frames.
+
+Fresh snapshots after projectile retirement exposed dangling creator references:
+`loc_7E916`/`loc_7E972` fragments never read a parent, and
+`CreateBossExp00`/`CreateBossExp06` use stationary copied positions rather than
+`Obj_WaitForParent`. The engine now omits those unused live references. Actual
+follower bursts still retain their parent. The cold test first failed on an orb
+fragment reference and then on the final finite burst after boss deletion;
+neither failure was a sprite-priority defect. The shorter hazard regression now
+captures and replays after the creator has disappeared as well as before it.
+
+The complete route adds22 full-registry45-frame replay spots at8800,8900,9350,
+9490,9650,9930,10070,10500,11080,11260,11420,11570,12190,12320,12470,12640,
+12740,13100,13270,13860,13950,14100. The earlier upper/turbine tests retain40
+independent spots. Live history is armed after those probes to test the actual
+load boundary. Seamless transitions retain the logical frame counter and re-root
+the oldest seekable snapshot; a first test incorrectly expected a zero counter.
+
+Media: `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-cold-complete-320/capture.mp4`
+films11250–14349 after the full cold prefix. All14,350 state rows contain no death;
+selected combat/defeat/arrival stills and the complete MP4 decode were inspected.
+This establishes ordinary native-width reachability, not native pixel parity or
+other width/character/donor coverage. DEZ2 cold traversal and the campaign's
+remaining matrix obligations continue separately.
+
+Focused verification used queued Java21, native GL and the absolute S3K ROM:
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestDezMiniboss*,TestDezColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:
+108 tests,107 passed, one test-oracle failure at the seamless counter assertion,
+zero skips. After correcting only that assertion, the focused
+`-Dtest=TestDezColdRouteCapture#coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo`
+passed1 test, zero skips. No remaining failure in that selection; this is focused
+validation, not a combined campaign suite pass.
+
+The post-fix `campaign-20260924-cold-act2-arrival-320/capture.mp4` continues
+through the floor opening, launch and free control at(320,940), filming13840–15239.
+All15,240 state rows are death-free; stills14840/15030/15230 and full video decode
+were inspected. This additional clip uses the same cold input followed by neutral.

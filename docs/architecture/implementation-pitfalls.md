@@ -145,6 +145,14 @@ with `(0,0)`. Pass `ctx.spawn()` through construction; relink the captured paren
 later. Compare all registered snapshot keys, not only live coordinates: the incoming
 DEZ→DDZ route exposed this metadata loss despite the earlier summary replay passing.
 
+**Capture again after a creator disappears.** Replaying across deletion from an
+older snapshot does not prove that the surviving graph can itself be captured.
+DEZ1's orb fragments and finite explosion bursts retained unused Java parent
+references after the source SST was deleted. `loc_7E916`/`loc_7E972` fragments and
+`CreateBossExp00`/`CreateBossExp06` bursts use copied coordinates, not
+`Obj_WaitForParent`; omit their live parent dependency. Preserve actual follower
+references. Test both pre-deletion replay and a fresh post-deletion capture/replay.
+
 **ROM sprite priority buckets are SAT order.** Lower priority buckets and earlier object
 slots appear in front; painter rendering reverses both orders. Folded boss parts
 can have independent buckets even when attached to the same rocket. Compare native
