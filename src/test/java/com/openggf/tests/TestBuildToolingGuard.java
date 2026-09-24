@@ -1220,7 +1220,7 @@ class TestBuildToolingGuard {
     /**
      * Proves the two push-reachability predicates actually disagree, so a job
      * condition cannot satisfy both and slip past every branch of
-     * {@link #allBranchPushPolicyShouldRemainLightweight()}.
+     * {@link #masterPushCiShouldRemainLightweight()}.
      *
      * <p>They could: {@code conditionExcludesPush} read
      * {@code github.event_name != 'push'} as a substring, so the
@@ -1284,7 +1284,7 @@ class TestBuildToolingGuard {
      * once it does run -- it exists, it runs {@code -Pguards} directly rather
      * than through a wrapper, and it is blocking. The reachability half now
      * lives on the pull request path, and
-     * {@link #allBranchPushPolicyShouldRemainLightweight()} pins the other
+     * {@link #masterPushCiShouldRemainLightweight()} pins the other
      * side: {@code guards} must stay off the push path so it cannot creep back
      * onto every merge.
      *
@@ -1466,15 +1466,13 @@ class TestBuildToolingGuard {
         String release = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
         List<String> violations = new ArrayList<>();
 
-        if (!ci.contains("pull_request:\n    branches:\n      - next\n      - develop")) {
-            violations.add(".github/workflows/ci.yml must validate pull requests targeting next and develop");
-        }
-        if (!release.contains("pull_request:\n    branches: [master]")) {
-            violations.add(".github/workflows/release.yml must retain pull-request ownership for master only");
-        }
-        if (!release.contains("push:\n    branches: [master]")) {
-            violations.add(".github/workflows/release.yml must retain push ownership for master only");
-        }
+        // Automatic builds run on master pushes only (98f5fe5af). The pull-request and
+        // manual steps below are dormant until a trigger is restored, but stay
+        // destination-correct so restoring one cannot silently drop validation.
+        assertTriggersOnlyOnMasterPush(ci, ".github/workflows/ci.yml",
+                "on:\n  push:\n    branches:\n      - master\n", violations);
+        assertTriggersOnlyOnMasterPush(release, ".github/workflows/release.yml",
+                "on:\n  push:\n    branches: [master]\n", violations);
 
         assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run tests (pull request)",
                 "github.event_name == 'pull_request'", "github.base_ref", violations);
@@ -1570,9 +1568,10 @@ class TestBuildToolingGuard {
         for (String os : List.of("windows-latest", "macos-latest", "ubuntu-latest")) {
             assertTrue(jobs.get("build").contains("os: " + os), os);
         }
+        // Private-fixture validation stays opt-in: release.yml has no manual-dispatch
+        // trigger since 98f5fe5af, so this gate keeps it off every automatic run.
         assertTrue(jobs.get("rom-validation").contains(
                 "if: github.event_name == 'workflow_dispatch' && inputs.validate_roms"));
-        assertTrue(workflow.contains("default: false"));
     }
 
     @Test
@@ -2957,9 +2956,11 @@ class TestBuildToolingGuard {
     }
 
     /**
-     * Ordinary branch pushes must not start CI. Validation happens on pull
-     * requests and deliberate manual dispatches; release.yml retains the
-     * separate master push path.
+     * Automatic CI runs on master pushes only (98f5fe5af), and a master push
+     * reaches exactly one Maven job: the bounded {@code smoke} suite. The full
+     * suite and guards for a master push run in release.yml, so CI must not
+     * duplicate them. Feature, develop and next pushes, pull requests and manual
+     * dispatches start no CI at all.
      *
      * <p>Branch policy validation is no longer part of the push path: the
      * {@code .githooks} enforce it at commit time on every branch, and master
@@ -2967,12 +2968,16 @@ class TestBuildToolingGuard {
      * which {@link #releaseWorkflowShouldRunBranchPolicyOnMasterPullRequests()} pins.
      */
     @Test
-    void allBranchPushPolicyShouldRemainLightweight() throws Exception {
+    void masterPushCiShouldRemainLightweight() throws Exception {
         String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/ci.yml")));
         List<String> violations = new ArrayList<>();
 
-        if (yamlIndentedBlock(workflow, "  push:", 2).length() > 0) {
-            violations.add(".github/workflows/ci.yml must not trigger on ordinary pushes");
+        assertTriggersOnlyOnMasterPush(workflow, ".github/workflows/ci.yml",
+                "on:\n  push:\n    branches:\n      - master\n", violations);
+        String masterPushSmoke = workflowStep(workflow, "Run smoke suite (master push)");
+        if (masterPushSmoke == null || !masterPushSmoke.contains("if: github.event_name == 'push'")) {
+            violations.add(".github/workflows/ci.yml smoke job has no push-gated master step,"
+                    + " so a master push runs no tests at all");
         }
 
         String policyJob = yamlIndentedBlock(workflow, "  policy:", 2);
@@ -2993,13 +2998,16 @@ class TestBuildToolingGuard {
         Map<String, String> jobs = yamlJobBlocks(workflow);
         String smokeJob = jobs.get("smoke");
         if (smokeJob == null) {
-            violations.add(".github/workflows/ci.yml does not define the smoke job, so a branch push"
+            violations.add(".github/workflows/ci.yml does not define the smoke job, so a master push"
                     + " runs no tests at all");
         } else {
             if (!smokeJob.contains("run: mvn -Dmse=off -Psmoke test -B")) {
                 violations.add(".github/workflows/ci.yml smoke job does not run the smoke profile directly");
             }
             String smokeCondition = yamlJobCondition(smokeJob);
+            if (conditionExcludesPush(smokeCondition)) {
+                violations.add(".github/workflows/ci.yml smoke job is not reachable from a master push");
+            }
             if (smokeJob.contains("continue-on-error: true")) {
                 violations.add(".github/workflows/ci.yml smoke job is non-blocking, so a red smoke"
                         + " suite reports green");
@@ -3013,12 +3021,12 @@ class TestBuildToolingGuard {
             String jobCondition = yamlJobCondition(job.getValue());
             if (!conditionExcludesPush(jobCondition)) {
                 violations.add(".github/workflows/ci.yml Maven-bearing job " + job.getKey()
-                        + " must exclude push events");
+                        + " must exclude push events; release.yml owns the heavy master-push runs");
             }
         }
 
         if (!violations.isEmpty()) {
-            fail("ordinary pushes must not start CI:\n  "
+            fail("CI must run only the bounded smoke suite, and only on master pushes:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -4857,12 +4865,11 @@ class TestBuildToolingGuard {
     /**
      * True when a job runs on pushes, but only to the integration branches.
      *
-     * <p>No job is shaped this way at present: {@code smoke} runs on every
-     * push and everything heavier is off the push path entirely. It stays
-     * because {@link #allBranchPushPolicyShouldRemainLightweight()} accepts
-     * this shape as the one alternative to full push exclusion, so a future
-     * job that wants a develop-and-master-only gate has a spelling that is
-     * recognised rather than reported as reachable from a feature branch.
+     * <p>No job is shaped this way at present, and CI now fires only on master
+     * pushes, where {@link #masterPushCiShouldRemainLightweight()} admits no
+     * Maven job but {@code smoke}. It stays so
+     * {@link #pushReachabilityPredicatesMustDisagree()} can prove this shape is
+     * never mistaken for full push exclusion.
      */
     private static boolean conditionPinsPushToIntegrationBranches(String condition) {
         if (condition == null || condition.isBlank()) {
@@ -5297,23 +5304,32 @@ class TestBuildToolingGuard {
                     && !step.contains("-DmodApi.destinationBranch=\"${{ github.base_ref }}\"")) {
                 violations.add(file + " " + name + " is a PR Maven test path without github.base_ref");
             }
-            boolean canonicalCiPush = file.equals(".github/workflows/ci.yml")
-                    && name.equals("- name: Run smoke suite (push)")
-                    && hasCanonicalPushDestinationDispatch(step);
-            if (step.contains("github.event_name == 'push'") && !canonicalCiPush
+            // CI fires only on master pushes, so its push step may name the destination literally.
+            boolean masterOnlyCiPush = file.equals(".github/workflows/ci.yml")
+                    && name.equals("- name: Run smoke suite (master push)")
+                    && step.contains("run: mvn -Dmse=off -Psmoke test -B -DmodApi.destinationBranch=master\n");
+            if (step.contains("github.event_name == 'push'") && !masterOnlyCiPush
                     && !step.contains("-DmodApi.destinationBranch=\"${{ github.ref_name }}\"")) {
                 violations.add(file + " " + name + " is a push Maven test path without github.ref_name");
             }
         }
     }
 
-    /** Only the all-branch CI push path may omit a destination for feature refs. */
-    private static boolean hasCanonicalPushDestinationDispatch(String step) {
-        return step.contains("destination_args=()")
-                && step.contains("case \"$GITHUB_REF_NAME\" in")
-                && step.contains("master|develop|next)")
-                && step.contains("destination_args=(\"-DmodApi.destinationBranch=$GITHUB_REF_NAME\")")
-                && step.contains("mvn -Dmse=off -Psmoke test -B \"${destination_args[@]}\"");
+    /**
+     * Automatic builds run on master pushes only: no pull-request, manual-dispatch
+     * or schedule trigger, and no push trigger for any other branch.
+     */
+    private static void assertTriggersOnlyOnMasterPush(String workflow, String file, String expectedTriggers,
+                                                       List<String> violations) {
+        if (!workflow.contains(expectedTriggers)) {
+            violations.add(file + " must trigger on master pushes only");
+        }
+        String triggers = yamlIndentedBlock(workflow, "on:\n", 0);
+        for (String trigger : List.of("pull_request", "pull_request_target", "workflow_dispatch", "schedule")) {
+            if (triggers.contains("\n  " + trigger + ":")) {
+                violations.add(file + " must not trigger on " + trigger);
+            }
+        }
     }
 
     private static String sourceForInventory(Path file) throws IOException {
