@@ -447,3 +447,24 @@ and40625 inspected and full decode passes. Input is
 A subsequent brake variant stops safely on the upper platform at12276/1516.
 Full-act completion, the added section's rewind spots and wider route products
 remain open. The committed cold Act2 fixture still ends at36204.
+
+
+### Lift, flame pause and ceiling route (2026-09-24)
+
+Fresh cold native320 Sonic+Tails replay on eefb77ead reaches12237/1132 after
+41862 inputs, five rings and zero deaths. A16-input wait before the westward
+lift exit clears the upward flame at12048/1336 without losing rings. The next
+spring launches Sonic onto the ceiling. At41640 the observed X velocity is
++1726 but ground speed is-1726: keeping Left sustains that inverted run.
+Switching to Right at41611 decelerates it and drops Sonic. The initial suspicion
+of an early Jump release was rejected by the actual BK2: Jump was already off
+and both runs match through41610. Preserve the full ceiling traversal before
+turning right on the upper platform. No movement or flame logic was changed.
+
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-lift-ceiling-320/capture.mp4`
+films40626–41861 (1236frames). All41862 state rows checked for death, stills40942
+and41640 inspected and full decode passes. Input is
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-route-author/late-high-gap/variant-2.bk2`.
+The recording ends back on the safe platform after a jump encounters the second
+oscillating lift while it is too high; that next lift at12344/1120 is still being
+authored. Full-act completion and added-section rewind coverage remain open.

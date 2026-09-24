@@ -4836,3 +4836,15 @@ the upper one was not required by the native route. The
 records796 verified video frames. A brake variant now stops at12276/1516 for
 the oscillating lift approach. No runtime changes or repeated engine tests in
 this evidence-only slice; new-section rewind and complete-act obligations remain.
+
+
+### Late LRZ2 lift and inverted run (2026-09-24)
+
+On eefb77ead, fresh41862-input cold replay reaches12237/1132 with five rings
+and zero deaths. The first lift exit now avoids the upward flame, and Left
+sustains the ceiling run after the next spring. Right decelerated negative
+ground speed despite positive world X velocity; a suspected Jump-release issue
+was disproved by the input log and matched-prefix state comparison. The
+[Act2 matrix](../validation/levels/s3k-lrz-act2.md#lift-flame-pause-and-ceiling-route-2026-09-24)
+records1236 verified video frames and the second-lift frontier. No runtime
+changes or repeated engine tests in this evidence-only slice.
