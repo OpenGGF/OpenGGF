@@ -742,3 +742,11 @@ recreation loses the lift mid-ascent. Follow the actual RAM references and test
 restoration after the allocating actor has gone. Likewise, `Child_Draw_Sprite`
 contains a lifetime branch despite its name: execute that branch in gameplay
 updates so headless simulation does not retain deleted actors' children.
+
+Player rewind must preserve both the live hardware tile-priority bit and the
+sprite display bucket, independently of collision layer and follow-history arrays.
+The SSZ cold route (final pad ascent, input 14840) exposed a snapshot which restored
+history but retained the future live priority: subsequent replay rewrote the
+history with `$80` instead of zero. Test both priority directions and distinct
+sprite buckets; comparing only fields already present in the snapshot cannot find
+an omitted field.

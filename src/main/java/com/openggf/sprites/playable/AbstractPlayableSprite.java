@@ -957,7 +957,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         xPixel, yPixel,
                         xSubpixel, ySubpixel,
                         width, height,
-                        direction, layer,
+                        direction, layer, highPriority, priorityBucket,
                         runningMode, xRadius, yRadius,
                         // Movement / physics
                         gSpeed, xSpeed, ySpeed, jump,
@@ -1078,6 +1078,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.height = extra.height();
                 this.direction = extra.direction();
                 this.layer = extra.layer();
+                // Native art_tile priority and the DisplaySprite queue are separate state.
+                // Restoring only collision layer leaves future priority in the player and
+                // its follower history (observed across SSZ's final transport ascent).
+                this.highPriority = extra.highPriority();
+                this.priorityBucket = extra.priorityBucket();
                 this.runningMode = extra.runningMode();
                 setCollisionRadii(extra.xRadius(), extra.yRadius(), false);
                 // Movement / physics

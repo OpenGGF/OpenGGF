@@ -42,8 +42,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * checking, so a change to the constant fails here instead of agreeing with itself.
  *
  * <p><b>Declared setup.</b> The final arena's own lock wants {@code Camera_X >= $19A0} and the
- * leader below {@code $680}, which a checkpoint restart at the pad's own placement reaches; no
- * cold route gets here yet.
+ * leader below {@code $680}, which a checkpoint restart at the pad's own placement reaches.
+ * The independent {@code TestSszColdRouteCapture} also reaches and defeats this boss from
+ * the act start; these shorter component checks retain their declared setup.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kSszMechaSpawnHeadless {

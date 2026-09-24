@@ -6,9 +6,9 @@ Character routes: Sonic, Sonic + Tails, Tails (`LevelSelect_CheckKnuckles` denie
 with `Debug_cheat_flag != 0`, and no Knuckles art or route exists for act 1).
 Owning plan: [SSZ bring-up](../../plans/2026-09-17-ssz-bring-up.md).
 Status: all 213 placed records have concrete owners; arrival Death Egg, bosses,
-results and the DEZ launch are implemented. The native320 cold route reaches
-through both replica defeats and the second pad to the upper platform; complete cold traversal,
-wide cold routes and remaining matrix breadth/native acceptance remain open.
+results and the DEZ launch are implemented. The native320 Sonic + Tails cold route now defeats all three bosses and loads DEZ1
+without deaths or position/health/ring seeds. Wide cold routes and remaining
+character/donor/team breadth and native acceptance remain open.
 Nothing below certifies the act.
 
 Incoming: HPZ teleporter altar ending → `$A00` (`HpzTeleporterRouteHelperObjectInstance`), level
@@ -60,6 +60,40 @@ green label, and "implemented" alone never closes a row.
 | EVENT: crumble, hot-swap, Death Egg BG, debris, ramp script, `$B00` request | `SSZ1_ScreenEvent` stages 0/4/8, `Obj_57E96`, `sub_5750C`, `sub_574DC`, `loc_58192`, `loc_581D2` | 320, 400, 800 | `TestS3kSszMechaSpawnHeadless`, `TestSszLaunchState`, `TestSszLaunchBackground` | partial | declared checkpoint and positioned boss hits; production results, first forced jump and neutral-input launch reach actual DEZ1 load | graph recreation and forward replay at four launch boundaries, including retained Plane B | source-backed; native parity not yet measured | clip 24: controller Hyper checkpoint clear, full 4800-frame capture through DEZ1 | Native Sonic 320/400/800, Sonic + Tails 320, Tails 400 and S1 donor 320 pass component handover. Extra-followers, exhausted slots, transition timeline isolation and native comparison remain open. |
 | LOAD: `$B00` (DEZ) presentation after the request | DEZ campaign | — | — | blocked | blocked | blocked | blocked | blocked | Out of scope; record what the engine does after the request |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz{,2,3}SegmentTraceReplay`, `TestS3kTailsFullChainHpz{,2}SegmentTraceReplay` | `-Ptrace-segments` | — | — | — | — | not measured | — | Slice 10 records each frontier |
+
+## Current cold-route closure (2026-09-24)
+
+`TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents`
+drives `ssz1-sonic-tails-cold-complete-320.bk2` from the normal act start for
+19,492 controller frames. Its companion `.script` is the reproducible source.
+The route reaches the killing hit for GHZ, MTZ and Mecha Sonic, retires both
+replicas, rides all three transports, completes results and the spiral launch,
+and asserts the actual DEZ1 load at `(48,2476)`. It never writes player position,
+health, rings or event state. The shorter 11,051-frame replica test remains independent.
+
+The complete test captures the full registered rewind graph at 37 spots, advances
+45 frames, restores and compares all participants after replay. The 15 added
+spots cover upper wrap/climbing, carrier release, transport, retracting spring
+chain, final ascent, Mecha entry/fight/defeat, results, spiral and departure.
+Live rewind is enabled only after those spots, records outgoing history, then
+asserts that the actual DEZ load starts a fresh timeline. This closes the native320
+Sonic + Tails cold reachability and transition-isolation gaps in the historical
+rows above; it does not supply native-emulator parity or other configurations.
+
+This extension exposed a shared player snapshot omission: the live tile-priority
+bit and sprite-order bucket were absent. At input 14840 the replay inherited the
+future priority and rewrote follower history differently. Both fields now restore;
+a small regression checks both priority directions and independent sprite buckets.
+The pre-fix route and unit tests failed; the corrected focused command
+`-Dtest=TestAbstractPlayableSpriteRewindCapture,TestPlayableSpriteRewindState,TestSpriteManagerRewindCapture,TestSszColdRouteCapture`
+with native GL and the actual S3K ROM passed **24 tests, zero failures/errors/skips**.
+This is focused validation, not a new full-suite result.
+
+External video: `$VIDEO_ROOT/ssz-bring-up/campaign-20260924-cold-complete-320/capture.mp4`,
+frames16900–19731 of the cold run. State CSV confirms zero deaths over all19,732
+frames; the additional240 neutral frames show DEZ's entrance run and return to
+normal play. Stills17195/18600/19700 show defeat, spiral and DEZ respectively;
+all were visually inspected, and the MP4 fully decoded without errors.
 
 ## Execution evidence
 
@@ -529,3 +563,7 @@ frames2750–3299 after cold boot. All3300 state rows match the authoring probe;
 the file decodes completely. A positioned upper-spring capture was rejected as
 route evidence: it does not carry the already-collapsed bridges from the earlier
 pass and therefore takes the lower path. The cold route remains the authority.
+
+The focused rewind-field/coverage/architecture guard selection also passed
+78 tests, zero failures/errors/skips (`-Pguards`,
+`TestRewindFieldDispositionGuard,TestRewindCoverageGuard,TestArchitecturalSourceGuard,TestRewindArchitectureGuard`).

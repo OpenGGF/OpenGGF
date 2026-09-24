@@ -17,6 +17,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Eggmobile bodies alongside Mecha Sonic’s head, and keep the widescreen camera
   centred on their native arenas through knockback. Spawn-derived constants and
   restored carrier links declare their rewind policies without coverage exceptions.
+  Player snapshots preserve tile priority and the independent sprite display
+  bucket, including through the final transport ascent and follower history.
   Sky Sanctuary act 1 now plays its teleporter arrival instead of
   dropping the player in at the level-start position. The screen init forces the arrival
   camera and bounds, the controller beams Player 1 up the sanctuary column and hands control

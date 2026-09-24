@@ -3784,3 +3784,32 @@ raising the budget. The final ordinary `TestObjectManager*Rewind*` run passes
 passes101tests,0skips. This is a complete guard run followed by targeted repair
 verification, not a claim that the red invocation itself passed. Integration,
 combined final validation and push are still outstanding.
+
+
+### 2026-09-24 — complete cold SSZ route and player priority rewind
+
+The native320 Sonic + Tails route now defeats all three SSZ bosses and actually
+loads DEZ1 in19,492 ordinary controller frames, zero deaths. The complete movie
+and its RLE input source live under `src/test/resources/routes/s3k/`; the short
+replica-only test remains independent. `TestSszColdRouteCapture` adds15 late
+full-registry replay spots (37 total) and verifies outgoing/incoming timeline
+isolation across the real DEZ load. The SSZ act1 matrix records exact scope.
+
+The first complete-route replay failed at input14840: player follower history
+contained `$80` instead of zero after restore. `PlayerRewindExtra` omitted both
+live hardware priority and the independent sprite display bucket. Saving and
+restoring them repairs the state leak without changing normal forward gameplay.
+A small bidirectional regression reproduced the omitted tile bit before the fix.
+The final focused player/sprite/full-route selection passed24tests,0failures,
+0errors,0skips with native GL and the actual S3K ROM. Broad delivery checks remain
+owed for the accumulated campaign; this focused result does not replace them.
+
+The cold completion video under
+`$VIDEO_ROOT/ssz-bring-up/campaign-20260924-cold-complete-320/capture.mp4`
+shows frames16900–19731, including240 neutral incoming DEZ frames. State rows,
+three milestone stills and full MP4 decoding were checked. The accepted mask
+logic is unchanged. DEZ cold traversal is the next route frontier.
+
+The focused rewind-field/coverage/architecture guard selection also passed
+78 tests, zero failures/errors/skips (`-Pguards`,
+`TestRewindFieldDispositionGuard,TestRewindCoverageGuard,TestArchitecturalSourceGuard,TestRewindArchitectureGuard`).

@@ -377,6 +377,7 @@ public record PerObjectRewindSnapshot(
             int width, int height,
             com.openggf.physics.Direction direction,
             byte layer,
+            boolean highPriority, int priorityBucket,
             com.openggf.game.GroundMode runningMode,
             short xRadius,
             short yRadius,
