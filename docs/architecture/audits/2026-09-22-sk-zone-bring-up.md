@@ -27,7 +27,7 @@ its original unimplemented counts must not be read as current production status.
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
-| DEZ | Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
+| DEZ | DEZ1 cold native Sonic+Tails now reaches the upper moving pad at(9589,640) in5,301frames, with21 full-registry replay spots and zero deaths. Remaining cold traversal is open. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold main-act traversal and remaining Hyper/HUD/native presentation still need validation. |
 
 Combined campaign validation, main-workspace integration, push and cleanup remain
@@ -3849,3 +3849,23 @@ Replacement footage is
 `$VIDEO_ROOT/ssz-bring-up/campaign-20260924-exit-corrected-320/capture.mp4`:
 19,732 state rows, zero deaths, frames18000–19731 filmed, complete MP4 decode.
 Native evidence is under `$VIDEO_ROOT/ssz-bring-up/native-exit-20260924`.
+
+
+### DEZ1 cold upper-route frontier (2026-09-24)
+
+The preserved controller route now reaches(9589,640) in5301frames without deaths,
+from the normal DEZ1 intro with Sonic+Tails at320. It passes both early lift pads,
+the conveyor/elevator stack, stair platforms and the timed energy bridges. The
+bridge crossing initially fell into a monitor alcove: its three `$55:$66` bridges
+were off, and repeated jumps either hit the ceiling or ran out of floor. Waiting
+on the approach for the next bridge activation and jumping before expiry crosses
+normally. Neither those rejected inputs nor the native recording's own repeated
+attempts justify an engine change. The committed BK2 contains only inputs.
+
+`TestDezColdRouteCapture` passed its21 full-registry replay spots and final carried
+endpoint; focused result1pass,0skip. The first endpoint check used an input still
+being truncated; final5301-frame authoring and a fresh test invocation resolved it.
+The act matrix records command, scope and replay frames. Video:
+`$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-cold-upper-320/capture.mp4`,
+frames2910–5300, verified state rows and full decode. Continue from the upper moving
+pad atX9589; turbine/miniboss/cold Act2 remain open. Broad campaign delivery is pending.

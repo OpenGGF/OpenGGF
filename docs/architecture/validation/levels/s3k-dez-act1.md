@@ -5,7 +5,9 @@ ROM `Current_zone_and_act = $B00`, SKL object set. **Not Sonic 2's Death Egg**: 
 `TestDEZ*`/`TestS2Dez*` classes and the `*dez-boss-fixes*` documents are Sonic 2.
 Owning plan: [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
 Status: traversal families and the two-phase miniboss/results/Act 2 transport are
-implemented. Positioned solo Hyper completion at320/800 is recorded below; cold
+implemented. A 5,301-frame cold Sonic+Tails route now reaches the upper moving pad
+at (9589,640), with 21 full-registry rewind/replay spots. Positioned solo Hyper
+completion at320/800 is recorded below; cold
 full-act completion, ordinary-character/roster/donor breadth and native timing
 acceptance remain open. Historical slice rows below are superseded by the dated
 follow-ups where explicitly stated. Nothing below certifies the act.
@@ -162,3 +164,30 @@ then take eight additional passes to leave the wider viewport before transport.
 Landing is 2964 wide / 2956 native. The native queue-duration oracle remains open;
 no delay was fitted to align these captures. Native pixel/clock comparison and
 non-Hyper/player-roster/donor routes are still owed.
+
+
+### Cold upper traversal (2026-09-24)
+
+`routes/s3k/dez1-sonic-tails-cold-upper-320.{script,bk2}` preserves5,301 ordinary
+controller frames from the actual DEZ1 entry. It reaches(9589,640),32rings on the
+upper moving pad, with zero deaths. The route traverses energy bridges, the
+opening hover/lift sequence, two lift pads, tubes, conveyor elevators, the timed
+three-bridge gap and the high spring launch. It does not reach the turbine room,
+miniboss or Act2 and is not native parity evidence.
+
+`TestDezColdRouteCapture` checks the live Sonic+Tails roster, alive traversal,
+endpoint and21 full-registry45-frame restore/replay spots:
+650,1260,1700,2100,2182,2400,2500,2640,2700,3050,3150,3240,3750,4110,4300,4370,
+4450,4650,4840,4950,5200. Queued Java21/native GL with the absolute S3K ROM and
+`-Dmse=off -Dtest=TestDezColdRouteCapture` passed1test,0failures/errors/skips on
+c4e4f78aa plus the route/test additions. An initial invocation loaded the input
+before its final5301-frame truncation and failed its endpoint; the final authored
+movie was rerun successfully. No production change was made for this slice.
+
+The fixed input was compiled and round-tripped with `InputLogAuthorTool`.
+`campaign-20260924-cold-upper-320/capture.mp4` in the external DEZ archive shows
+frames2910–5300 from cold boot: conveyor lift, stair/platform traversal, timed
+bridge crossing, spring launch, elevator and upper moving pad. All5301 state rows
+show zero deaths; selected stills were inspected and the MP4 decoded completely.
+The next cold frontier is leaving the upper moving pad at X9589, then the remaining
+act traversal. Native-width team evidence does not close wide/donor/solo routes.
