@@ -270,11 +270,13 @@ class TestLrzRockCrusher {
             harness.camera.setX((short) harness.crusher.cameraTargetX());
             harness.crusher.update(2, null);
 
-            // routine 2 -> 4 on the parent's $38 bit 2, then $2E counts down from subtype & 4.
+            // loc_903F4 falls into loc_90408 on the release pass itself.
+            // A zero delay reaches loc_90436 immediately; four starts at three.
             piece.update(3, null);
-            assertEquals(4, piece.routine(), "piece " + index + " released");
             int wait = subtype & 4;
-            for (int frame = 0; frame <= wait; frame++) {
+            assertEquals(wait == 0 ? 6 : 4, piece.routine(), "piece " + index + " release pass");
+            if (wait != 0) assertEquals(3, piece.timer(), "release already consumed one tick");
+            for (int frame = 0; frame < wait; frame++) {
                 piece.update(4 + frame, null);
             }
             assertEquals(6, piece.routine(), "piece " + index + " shaking");

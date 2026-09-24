@@ -509,3 +509,27 @@ Source follow-up: `loc_903F4` falls directly into `loc_90408` when a piece is
 released; the existing Java switch advances its routine without that same-pass
 countdown. Audit this adjacent shake phase and its current unit expectations
 before certifying the entire crusher sequence.
+
+### Crusher piece release and native lag boundary (2026-09-24)
+
+At `8f01665a5`, the existing unit expectation delayed `loc_90408` one object
+pass after `loc_903F4` releases a piece. ROM falls through immediately: a zero
+delay enters shake routine6 in that same pass; a four-frame delay is already3.
+Correcting the oracle fails before production change (piece0 expected6,actual4).
+Both release and later countdown dispatch now use the same routine helper.
+
+The prior next difference6234 is now attributed to native lag, not a new
+movement defect: native gameplay counter remains`$185A` while VBlank advances
+`$517`→`$518` and lag counter becomes1. At6235 native resumes with the engine's
+6234 position. Ordinary authored route capture executes a gameplay step for
+each input; it is not the hardware-timed canonical replay. No frame-number
+gate, state synchronization or delay is introduced to make this comparison
+align. Continue ordinary route authoring from the verified prefix; strict
+hardware timing acceptance remains a separate obligation.
+
+Focused verification on `8f01665a5` plus this correction used queued Java21,
+native GL, absolute S3K ROM and
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzRockCrusher,TestLrzColdRouteCapture test`:
+19 tests passed, zero failures/errors/skips,102seconds. This includes seven
+cold routes and56 full-registry replay spots. Combined campaign validation
+remains owed.

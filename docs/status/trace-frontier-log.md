@@ -111750,3 +111750,14 @@ Commands and inspected media are in LRZ1 matrix. Positions now match locally
 6000–6233; next6234 engine3889,1820/native3887,1826,not yet attributed.
 Strict trace replay and earlier discrepancies remain open. Also inspect the
 piece release routine's missing same-pass countdown fallthrough.
+
+### 2026-09-24 — LRZ release fallthrough and lag attribution
+
+On `8f01665a5` plus the piece-release correction, `loc_903F4` now falls into
+`loc_90408` immediately; the corrected oracle failed before production change.
+Queued `TestLrzRockCrusher,TestLrzColdRouteCapture` passes19 with zero skips;
+exact command is in the LRZ1 matrix. The6234 difference above is native lag:
+gameplay counter stays$185A, VBlank advances$517→$518, lag becomes1; native6235
+resumes at engine6234's position. Ordinary capture is not hardware-timed replay.
+No frame-specific delay is added. Continue controller route authoring beyond
+the6201-frame cold prefix; strict replay and earlier discrepancies remain open.

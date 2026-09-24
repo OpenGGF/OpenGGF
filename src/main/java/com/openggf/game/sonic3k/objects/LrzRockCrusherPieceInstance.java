@@ -119,20 +119,12 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
             case 2 -> {
                 if (parent != null && parent.piecesReleased()) {
                     routine = 4;
+                    // loc_903F4 falls directly into loc_90408; it does not
+                    // wait for another object pass to decrement the delay.
+                    advanceReleaseCountdown();
                 }
             }
-            // loc_90408 (:197500-197507).
-            case 4 -> {
-                timer = (byte) (timer - 1);
-                if (timer < 0) {
-                    routine = 6;
-                    bursts = SHAKE_BURSTS;
-                    delta = 0;
-                    shake();
-                } else if (parent != null && parent.piecesFinished()) {
-                    routine = 8;
-                }
-            }
+            case 4 -> advanceReleaseCountdown();
             case 6 -> shake();
             default -> {
                 // loc_904B4 (:197310): position only.
@@ -142,6 +134,19 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
         if (hitCollisionDisabled) {
             hitFlashTimer = LrzRockCrusherObjectInstance.advanceHitFlash(services(), hitFlashTimer);
             if (hitFlashTimer == 0) hitCollisionDisabled = false;
+        }
+    }
+
+    /** loc_90408, including its fallthrough to loc_90426/loc_90436. */
+    private void advanceReleaseCountdown() {
+        timer = (byte) (timer - 1);
+        if (timer < 0) {
+            routine = 6;
+            bursts = SHAKE_BURSTS;
+            delta = 0;
+            shake();
+        } else if (parent != null && parent.piecesFinished()) {
+            routine = 8;
         }
     }
 

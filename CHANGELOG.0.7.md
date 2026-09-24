@@ -649,7 +649,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ROM checks the shield for Player 1 and not for Player 2, and the engine keeps that.
   Act 1's two rock crushers work end to end: reach one and the camera locks to its own limits, the
   crusher rumbles overhead with the screen shaking for three seconds. Hits flash its body and upper
-  pieces, suppressing repeat rebounds during their recovery. Then the rock underneath is
+  pieces, suppressing repeat rebounds during their recovery. Released slabs begin their shake
+  countdown on the release frame, matching the original sequence. Then the rock underneath is
   cut away, collapsing slabs drop into the gap, the crusher falls through and explodes, and the
   camera eases back out to the act's own bounds.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
