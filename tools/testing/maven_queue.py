@@ -4,6 +4,7 @@
 Usage: python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestExample test
 The OS owns execution and waiting leases. Short estimated runs are preferred;
 five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
+`maven_queue.py --stats` summarises recorded wait/hold/memory telemetry.
 """
 from contextlib import contextmanager, ExitStack
 import errno
@@ -57,6 +58,7 @@ def _acquire(stream, shared=False):
 def _execution_leases(stack, common, request, config):
     """Probe capacity under the admission lock; retain leases in stack on success."""
     from maven_resources import snapshot, admits
+    from maven_running import live_credit
 
     tree = _open_lock(stack, Path(request['tree']))
     if not _acquire(tree):
@@ -76,7 +78,8 @@ def _execution_leases(stack, common, request, config):
             if _acquire(slot):
                 free.append(slot)
         resources = snapshot()
-        if resources is not None and free and admits(resources, config, len(slots) - len(free)):
+        if resources is not None and free and admits(resources, config, len(slots) - len(free),
+                                                     live_credit(common, _acquire)):
             selected = free.pop(0)
             stack.callback(_unlock, selected)
             return tree, legacy, selected
@@ -87,14 +90,17 @@ def _execution_leases(stack, common, request, config):
 
 
 @contextmanager
-def maven_slot(root, *, exclusive=False, estimate=900):
+def maven_slot(root, *, exclusive=False, estimate=900, kind='maven'):
     """Automatically schedule waiters, then retain OS-owned execution leases.
 
     Short estimates win until five-minute aging promotes arrival order. Blocked
     unaged requests allow backfilling; an aged head stops new admissions so active
     jobs can drain. Older clients retain lock compatibility but not priority.
+    While running, a usage lease lets later admissions credit this job's realised
+    RSS/CPU; the finished job appends one telemetry line.
     """
-    from maven_resources import policy, snapshot
+    from maven_resources import GIB, policy, snapshot
+    from maven_running import RunningLease, UsageSampler, append_log, trim_log
     from maven_schedule import WaitingRequest, choose, aged
 
     if not isinstance(estimate, (int, float)) or not math.isfinite(estimate) or estimate <= 0:
@@ -117,6 +123,9 @@ def maven_slot(root, *, exclusive=False, estimate=900):
         request = None
         execution = None
         leases = None
+        running = sampler = None
+        admitted = None
+        outcome = 'cancelled-waiting'
         try:
             while leases is None:
                 if _acquire(gate):
@@ -141,7 +150,13 @@ def maven_slot(root, *, exclusive=False, estimate=900):
 
                         choose(request.pending(_acquire), time.monotonic(), fits)
                         if leases is not None:
+                            admitted = time.monotonic()
                             request.remove()
+                            try:
+                                running = RunningLease(common, (config['memoryGiB'] * GIB, config['cpuCores']),
+                                                       _acquire)
+                            except (OSError, RuntimeError):
+                                running = None  # No lease only forfeits credit; admission stays valid.
                     finally:
                         _unlock(gate)
                 if leases is None:
@@ -154,9 +169,17 @@ def maven_slot(root, *, exclusive=False, estimate=900):
                         next_notice = now + 30
                     time.sleep(.2)
             print(f'Maven slot acquired ({"resource-aware" if auto else "serial"}; '
-                  f'estimate {estimate:g}s): {root}', flush=True)
+                  f'estimate {estimate:g}s; waited {admitted - started:.0f}s): {root}', flush=True)
+            sampler = UsageSampler(running)
+            sampler.start()
+            outcome = 'interrupted'
             yield tuple(stream.fileno() for stream in leases)
+            outcome = 'completed'
         finally:
+            if sampler is not None:
+                sampler.stop()
+            if running is not None:
+                running.remove()
             if execution is not None:
                 execution.close()
             if request is not None:
@@ -166,8 +189,19 @@ def maven_slot(root, *, exclusive=False, estimate=900):
                 if _acquire(gate):
                     try:
                         request.remove()
+                        trim_log(common)
                     finally:
                         _unlock(gate)
+            ended = time.monotonic()
+            try:
+                append_log(common, dict(
+                    kind=kind, tree=root.name, mode='resource-aware' if auto else 'serial',
+                    estimate=estimate, outcome=outcome,
+                    waitSeconds=round((admitted or ended) - started, 1),
+                    holdSeconds=round(ended - admitted, 1) if admitted else 0,
+                    **(sampler.summary() if sampler is not None else dict(peakRssGiB=0, meanCores=0))))
+            except OSError:
+                pass  # Telemetry never changes the job's result.
 
 
 def inherited_slot(fd):
@@ -192,41 +226,48 @@ def handle_termination():
         signal.signal(signal.SIGTERM, previous)
 
 
+# Profiles that keep the default shape: one reused fork with the shared -Xmx3g
+# surefire.argLine and no external emulator. They run within the default
+# reservation; test_run_category_resources pins that shape against pom.xml.
+# Benchmarks (wall-clock), test-concurrent (two forks), audio-stress (unmeasured),
+# tracechaser-integration (external tools) and packaging stay exclusive.
+SHARED_PROFILES = frozenset({
+    'smoke', 'guards', 'ci', 'trace-replay', 'trace-segments', 'trace-replay-r7',
+    'trace-diagnostics', 'fbz-routes', 'audio-reference', 'audio-local-wave'})
+
+
 def needs_exclusive(args):
     """Unmeasured fork/heap/profile overrides retain the serial contract."""
-    profiles = []
-    following_profile = False
-    for arg in args:
-        if following_profile:
-            profiles.extend(arg.split(','))
-            following_profile = False
-        elif arg in ('-P', '--activate-profiles'):
-            following_profile = True
-        elif arg.startswith('-P'):
-            profiles.extend(arg[2:].split(','))
-        elif arg.startswith('--activate-profiles='):
-            profiles.extend(arg.split('=', 1)[1].split(','))
-        if (arg.startswith(('-T', '--threads'))
-                or any(key in arg for key in ('argLine', 'forkCount', '-Xmx', '-Xms'))):
-            return True
-    return (following_profile or bool(set(profiles) - {'smoke', 'guards'})
+    from maven_schedule import profiles_of
+    if any(arg.startswith(('-T', '--threads'))
+           or any(key in arg for key in ('argLine', 'forkCount', '-Xmx', '-Xms')) for arg in args):
+        return True
+    profiles, following_profile = profiles_of(args)
+    return (following_profile or bool(set(profiles) - SHARED_PROFILES)
             or any(os.environ.get(key) for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_OPTS')))
 
 
 def main(argv=None):
     from category_artifacts import stop_process_tree
-    from maven_schedule import maven_estimate
+    from maven_schedule import maven_estimate, maven_kind
 
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args == ['--help']:
         print(__doc__)
+        return 0
+    if args == ['--stats']:
+        from maven_running import summarise
+        print(summarise(Path(subprocess.check_output(
+            ['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'], text=True).strip())))
         return 0
     if args[0] == '--':
         args.pop(0)
     if not args:
         raise ValueError('Supply Maven arguments after --')
     # Use the caller's worktree, including when this script lives in another one.
-    with maven_slot(Path.cwd(), exclusive=needs_exclusive(args), estimate=maven_estimate(args)) as fd:
+    exclusive = needs_exclusive(args)
+    with maven_slot(Path.cwd(), exclusive=exclusive, estimate=maven_estimate(args),
+                    kind=maven_kind(args, exclusive)) as fd:
         with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'),
                               **inherited_slot(fd)) as process:
             try:

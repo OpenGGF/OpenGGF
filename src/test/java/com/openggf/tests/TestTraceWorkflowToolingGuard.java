@@ -18,7 +18,7 @@ class TestTraceWorkflowToolingGuard {
         JsonNode workflow = new ObjectMapper(new YAMLFactory()).readTree(
                 Path.of(".github/workflows/ci.yml").toFile());
         JsonNode job = workflow.path("jobs").path("develop-trace-replay");
-        assertEquals("github.event_name == 'workflow_dispatch'", job.path("if").asText());
+        assertEquals("github.event_name == 'workflow_dispatch' && inputs.trace_replay", job.path("if").asText());
         String toolPath = ".trace-validation-tools";
         String helper = "tools/testing/validate-trace-reports.py";
         boolean developCheckout = false;

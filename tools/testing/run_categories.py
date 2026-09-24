@@ -354,7 +354,8 @@ def main(argv=None):
             # Re-plan after waiting: edits or integration may have changed this tree.
             # The timeout starts inside run_plan, after the slot is acquired.
             with maven_slot(ROOT, exclusive=args.workers > 1 or needs_exclusive([]),
-                            estimate=plan_estimate(plan)) as fd:
+                            estimate=plan_estimate(plan),
+                            kind='category-full' if plan['full'] else 'category') as fd:
                 plan = make_plan(ROOT, data, args.base, args.category, args.guards, args.workers)
                 preflight(ROOT, plan)
                 return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics, queue_fd=fd)

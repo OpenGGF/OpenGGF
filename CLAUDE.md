@@ -32,7 +32,7 @@ python3 tools/testing/run_categories.py --list
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # combined delivery selection unless proportionate validation applies
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
 python3 tools/testing/maven_queue.py -Dmse=off package              # full ordinary suite plus packaging
-python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # what every branch push runs in CI
+python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # basic CI on develop/next pushes
 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
 ```
 
@@ -89,14 +89,16 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   Submit the command even if another agent is testing: it waits, reports status and
   starts automatically. Waiting requires no permission or manual lock cleanup.
   Linux admission allows different worktrees to overlap when conservative memory/CPU
-  reservations fit (two runs by default); one worktree remains exclusive. Other platforms
-  retain serialization. Waiting requests favour short estimates; after five minutes,
+  reservations fit (three runs by default, crediting each running job's measured usage);
+  one worktree remains exclusive. Single-fork trace/audio profiles share the queue; see
+  the guide for exclusive shapes. Other platforms retain serialization. Waiting requests favour short estimates; after five minutes,
   aged requests take priority in arrival order. An aged blocked request pauses new
   admissions so existing jobs can drain. Running jobs are never preempted. Temporary
   OS-leased waiting records are automatic and pruned after cancellation/death;
   older wrappers retain lock safety but cannot honour priority. See the testing guide.
   Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
-  Git policy settings and profiling are documented in `tools/testing/README.md`.
+  Git policy settings and profiling are documented in `tools/testing/README.md`;
+  `maven_queue.py --stats` summarises recorded queue waits, holds and peak memory.
   The queue holds a slot only during execution; cancellation releases a waiting
   request or stops its running Maven process tree. Keep the command session alive
   while waiting. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
@@ -128,8 +130,12 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   No validation receipts are written. Do not archive logs elsewhere to evade
   cleanup. Inspect summaries instead of streaming logs into context. The runner does not
   cache passes or enforce Git integration; queued Maven commands share its execution slot.
-- CI still runs `-Psmoke` on pushes and full tests plus `-Pguards` on pull requests and
-  manual dispatch. Releases retain full ordinary, guard and required ROM/trace validation.
+- CI runs `-Psmoke` on develop/next once a branch has had no push for 30 minutes (the
+  `ci-quiet-period` environment's wait timer; each push restarts it), and branch policy,
+  full tests plus `-Pguards` on non-draft pull requests and manual dispatch; feature/bugfix
+  pushes run nothing, so a direct develop push is not guard-checked by CI. Master pushes run the Release workflow's
+  full validation, native packaging and publication; PRs build no native packages.
+  Releases retain full ordinary, guard and required ROM/trace validation.
   Category runs are partial validation, never evidence that the full suite passed.
 - Before reporting suite results, read the measurement-hazard table in
   [briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).

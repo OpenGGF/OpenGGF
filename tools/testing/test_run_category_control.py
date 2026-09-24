@@ -77,8 +77,9 @@ class QueueCliTests(unittest.TestCase):
                  dict(full=False, tests=['new'], guards=False)]
 
         @contextmanager
-        def slot(root, *, exclusive=False, estimate=900):
+        def slot(root, *, exclusive=False, estimate=900, kind='maven'):
             self.assertEqual(30, estimate)
+            self.assertEqual('category', kind)
             events.append('acquired')
             yield 12
             events.append('released')

@@ -108,7 +108,11 @@ keeping `CLAUDE.md` and `AGENTS.md` byte-identical:
 - This guide, the README, and the current roadmap.
 - `mod-api-release-policy.properties` — engine branch lines and candidate
   ownership; retain the API version and publication state unless separately
-  releasing the API.
+  releasing the API. Each branch's `targetBranch` names that branch: the master
+  push's release tests and any pull request into `master` pass
+  `-DmodApi.destinationBranch=master`, so the promoted descriptor (and the
+  `TestModApiReleasePolicy` expectation for it) must read `master` or the
+  release is not published.
 
 ### 7. Sweep for stragglers
 

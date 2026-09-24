@@ -10,9 +10,9 @@ commit being investigated when diagnosing a run.
 | Action | Publish job |
 |---|---|
 | Push to `master` | Publishes after required builds succeed, provided the version tag is new. |
-| Pull request targeting `master` | Validates and builds; does not publish. |
+| Pull request (any base, non-draft) | Release workflow does not run. CI runs branch policy, the full suite and guards, without native packaging. |
 | Manual dispatch | Validation/build run only; does not publish, even on `master`. |
-| Push to another branch or delete `master` | Does not publish. |
+| Push to another branch or delete `master` | Release workflow does not run; `develop`/`next` pushes get CI smoke only. |
 | Re-run a master push run | Can publish if the previous attempt did not create its version tag; inspect partial results first. |
 
 The publish condition requires a non-deletion `push` event on
@@ -90,13 +90,13 @@ at [openggf.com](https://openggf.com) before reporting that the website updated.
 ## When `release` is skipped
 
 Inspect the run's event, branch, commit, and required `build` and
-`universal-jar` job results. Pull-request and manual-dispatch runs skip
-publication by design. A failed or cancelled dependency can skip publication
+`universal-jar` job results. Manual-dispatch runs skip publication by design,
+and pull requests do not start the Release workflow at all. A failed or cancelled dependency can skip publication
 on a push run. Older commits may still contain the former manual-only gate;
 re-running an old run uses that old workflow definition. Deliver the current
 workflow to `master` to trigger automatic publishing.
 
-On `master`, manual dispatch can opt into the additional `rom-validation`
+A manual dispatch can opt into the additional `rom-validation`
 job with `validate_roms=true` and a configured `release-fixtures` runner.
 That job is skipped on push and does not control publication. Packaging steps
 for other operating systems are also expected to be skipped.

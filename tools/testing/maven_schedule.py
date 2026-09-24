@@ -21,14 +21,8 @@ def class_estimate(count):
     return min(FULL_SECONDS, 30 + .3 * max(0, count - 1))
 
 
-def maven_estimate(args):
-    """Coarse ordering estimates, not timeouts or memory reservations."""
-    selectors = [arg.split('=', 1)[1] for arg in args if arg.startswith('-Dtest=')]
-    if selectors:
-        selected = selectors[-1].split(',')
-        if all(selected) and not any(c in selectors[-1] for c in '*?%!'):
-            return class_estimate(len(selected))
-        return FULL_SECONDS
+def profiles_of(args):
+    """Return explicitly activated Maven profiles and whether -P lacks a value."""
     profiles = []
     following = False
     for arg in args:
@@ -41,7 +35,29 @@ def maven_estimate(args):
             profiles.extend(arg[2:].split(','))
         elif arg.startswith('--activate-profiles='):
             profiles.extend(arg.split('=', 1)[1].split(','))
-    return 180 if not following and set(profiles) == {'guards'} else FULL_SECONDS
+    return profiles, following
+
+
+def maven_estimate(args):
+    """Coarse ordering estimates, not timeouts or memory reservations."""
+    selectors = [arg.split('=', 1)[1] for arg in args if arg.startswith('-Dtest=')]
+    if selectors:
+        selected = selectors[-1].split(',')
+        if all(selected) and not any(c in selectors[-1] for c in '*?%!'):
+            return class_estimate(len(selected))
+        return FULL_SECONDS
+    profiles, dangling = profiles_of(args)
+    return 180 if not dangling and set(profiles) == {'guards'} else FULL_SECONDS
+
+
+def maven_kind(args, exclusive):
+    """Telemetry label: exclusive, profile names, focused selector or full."""
+    if exclusive:
+        return 'exclusive'
+    profiles = sorted(set(profiles_of(args)[0]))
+    if profiles:
+        return 'profile:' + ','.join(profiles)
+    return 'focused' if maven_estimate(args) < FULL_SECONDS else 'full'
 
 
 def plan_estimate(plan):

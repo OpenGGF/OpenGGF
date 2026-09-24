@@ -806,14 +806,22 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   common tests and structural guards retained, broad fallback for shared changes,
   and bounded diagnostics and automatic temporary-file cleanup. Tool prerequisites
   are checked before testing; category runs and a focused Maven wrapper wait automatically
-  for shared execution slots across worktrees. Linux admission can overlap two runs when
-  conservative memory/CPU reservations fit, while keeping each worktree exclusive and
-  preserving a serial override. Waiting requests favour short checks, with aging and
+  for shared execution slots across worktrees. Linux admission can overlap up to three runs
+  when conservative memory/CPU reservations fit, crediting each running job's measured
+  usage instead of counting it twice, while keeping each worktree exclusive and
+  preserving a serial override. Single-fork trace and audio profiles no longer force
+  exclusive runs, and a bounded log (`maven_queue.py --stats`) records queue waits, holds
+  and peak memory. Waiting requests favour short checks, with aging and
   bounded backfilling to protect large runs from starvation. An optional profiler measures process-tree RSS and CPU
   for ordinary/guard runs. No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Full CI and release validation remain unchanged.
 
+- **CI trigger policy:** `develop` and `next` run the smoke suite once a branch has had
+  no push for 30 minutes, so bursts of pushes cost one run; non-draft
+  pull requests into any branch run branch policy, the full suite and structural guards;
+  master pushes keep full release validation, packaging and publication. Feature and
+  bugfix pushes no longer start CI, and the ROM-fixture jobs are manual opt-ins again.
 - **Release-line integration:** preserve hosted release builds, snapshot policy
   checks, current launcher artifact selection, Linux packaging, and automatic
   publication on master pushes from the 0.6 release branch.
