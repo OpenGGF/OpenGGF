@@ -9,7 +9,9 @@ Hidden Palace `$1601`. Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-br
 Status: carry/title suppression, screen stages, flash, autoscroll, platforms/lava,
 end boss and HPZ exit implemented. A12820-frame fresh boss-act route completes
 with declared initial fire shield/37rings. Native presentation/timing and the full
-route product remain incomplete; see the dated evidence below.
+route product remain incomplete; see the dated evidence below. The ordinary
+native320 Sonic+Tails cold Act1 chain now reaches this act with six rings and
+no shield (`7691f0eb3`); completing the fight with that carry remains open.
 
 Incoming: LRZ2 `loc_63C14` with the Act 3 carry (`Act3_flag`, `Act3_ring_count`, `Act3_timer`,
 `Saved2_status_secondary`), level select `$1600`, star-post respawn (`LRZ3_ScreenInit` P1 X >=
@@ -38,14 +40,14 @@ event-spawned and are not in the placement list.
 | ENTRY: `$1600` resources, title card, Act 3 carry | `Sonic3kLevelResourceProfile`; `Act3_flag` skips the title card and the `loc_62CC` Kos/Nem drain loop; `LRZ3_ScreenEvent` stage 0 (`loc_59B1C`) restores rings and timer | native | `TestS3kLevelContinuationHeadless`, `TestLevelContinuationCarry`, `TestS3kLrzBoulderCutsceneHeadless` | implemented | focused pass, 2026-09-22 | DEZ adoption, native entry-loop timing and remaining screen stages still open |
 | ENTRY: star-post respawn branch | `LRZ3_ScreenInit` P1 X >= `$480`: camera `($920,$2F0)`, `Special_events_routine = $14`, `Events_bg+$00 = $10`, `Events_bg+$02 = $2D`, `Events_routine_fg = $C`, `Pal_LRZBossFire` -> `Target_palette_line_2`; preserves saved player position (the `$9C0/$36C` writes address stack RAM) | native + wide/donor | `TestS3kLrzBossCameraHeadless` | implemented | 17 checkpoint cases pass, 2026-09-22 | Full respawn route still needs the platform/boss graph |
 | PRESENT: scroll handler registration | `$1600` must not use `SwScrlHpz`; `$1601` must keep it | native | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented (`$1600` selects `SwScrlLrz3`; `$1601` retains HPZ) | focused pass, 2026-09-22 | stage reachability remains open |
-| PRESENT: `SwScrlLrz3`, shimmer and per-column VScroll | `LRZ3_BackgroundEvent` five stages `0,4,8,$C,$10`; `word_5A106` = `$310` then 18 x `$10`; `sub_59D82/59DA2/59DBC`, `sub_59DDE` | native + wide | `SwScrlLrz3Test` | scroll/shimmer/column rendering implemented | 581 native frames matched, 2026-09-22 | background stage owner and boss allocation still open |
-| PRESENT: animated tiles and palette | `AnimateTiles_LRZ3` channel 0 only at tile `$170` (`loc_2833C` returns for `Current_zone $16`); `$1600` AniPLC entry is `AniPLC_NULL`; `AnPal_LRZ3` gate `Palette_cycle_counters+$00` in {0, `$80`, 1} | native | `TestS3kLrzPatternAnimation`, `TestS3kLrzBossPaletteCycling` | implemented | ROM pixel/color oracles pass, 2026-09-22 | flash graph must publish palette modes |
-| EVENT: Death Egg flash sequence | `LRZ3_BackgroundEvent` stages, `Obj_CollapsingBridge` spawn at `($60,$4D0)` | native | — | not implemented | open | Slice 9 |
-| EVENT: autoscroll | `Special_events_routine $14` (`loc_59E46`), seven stages; thresholds X `$410`, Y <= `$330`, X `$650`, Y <= `$2F0`, X `$910`, Y >= `$320`, X `$BBF` with P1 X >= `$C50`; `sub_59F82` push at `Camera_X + $10`, kill on `Status_Push`, right cap `Camera_X + $120` | native + wide/donor | `TestLrzBossAutoscroll`, `TestS3kLrzBossCameraHeadless` | implemented | focused pass, 2026-09-22; 1635 native moving dispatches match arithmetic | Preserve 32px right margin at wide widths; flash trigger graph and cold route still open |
-| OBJECT: `$9E` autoscroll controller, `$AD` platforms (7), `$6E` lava blocks (6), `$8B` sprite masks (2) | `Obj_LRZ3Autoscroll`, `Obj_LRZ3Platform`, `Obj_InvisibleLavaBlock`, `Obj_SpriteMask` | native | `TestS3kLrzPlacementCensus`, `TestSonic3kInvisibleHurtBlockHObjectInstance` | `$6E` and `$AD` implemented; `$8B` reads ROM mapping frame and enables SAT masking | platform graph/rewind and 900-frame checkpoint capture, 2026-09-22 | `$9E` and boss-driven platform stream remain open |
+| PRESENT: `SwScrlLrz3`, shimmer and per-column VScroll | `LRZ3_BackgroundEvent` five stages `0,4,8,$C,$10`; `word_5A106` = `$310` then 18 x `$10`; `sub_59D82/59DA2/59DBC`, `sub_59DDE` | native + wide | `SwScrlLrz3Test` | scroll/shimmer/column rendering implemented | 581 native frames matched, 2026-09-22 | stage owner and boss allocation implemented; complete native timing/pixel matching remains open |
+| PRESENT: animated tiles and palette | `AnimateTiles_LRZ3` channel 0 only at tile `$170` (`loc_2833C` returns for `Current_zone $16`); `$1600` AniPLC entry is `AniPLC_NULL`; `AnPal_LRZ3` gate `Palette_cycle_counters+$00` in {0, `$80`, 1} | native | `TestS3kLrzPatternAnimation`, `TestS3kLrzBossPaletteCycling` | implemented | ROM pixel/color oracles pass, 2026-09-22 | flash graph publishes palette modes; complete native frame alignment remains open |
+| EVENT: Death Egg flash sequence | `LRZ3_BackgroundEvent` stages, `Obj_CollapsingBridge` spawn at `($60,$4D0)` | five widths | `TestLrzAutoscrollGraphHeadless` | implemented | flash, release, missile graph and full-world replay passed in the September22 campaign | Native art-admission timing and matched pixels remain open |
+| EVENT: autoscroll | `Special_events_routine $14` (`loc_59E46`), seven stages; thresholds X `$410`, Y <= `$330`, X `$650`, Y <= `$2F0`, X `$910`, Y >= `$320`, X `$BBF` with P1 X >= `$C50`; `sub_59F82` push at `Camera_X + $10`, kill on `Status_Push`, right cap `Camera_X + $120` | native + wide/donor | `TestLrzBossAutoscroll`, `TestS3kLrzBossCameraHeadless` | implemented | focused pass, 2026-09-22; 1635 native moving dispatches match arithmetic | Preserve 32px right margin at wide widths; flash graph implemented; complete ordinary cold chain remains open |
+| OBJECT: `$9E` autoscroll controller, `$AD` platforms (7), `$6E` lava blocks (6), `$8B` sprite masks (2) | `Obj_LRZ3Autoscroll`, `Obj_LRZ3Platform`, `Obj_InvisibleLavaBlock`, `Obj_SpriteMask` | native | `TestS3kLrzPlacementCensus`, `TestSonic3kInvisibleHurtBlockHObjectInstance` | `$6E` and `$AD` implemented; `$8B` reads ROM mapping frame and enables SAT masking | platform graph/rewind and 900-frame checkpoint capture, 2026-09-22 | `$9E` and boss-driven stream implemented; allocation failure, reused-slot reads and graph replay covered by `TestLrzAutoscrollGraphHeadless` and `TestLrzEndBossEncounterHeadless`; full cold route remains open |
 | OBJECT: `$0F` collapsing bridges (8) use `Map_HPZCollapsingBridge` | `Obj_CollapsingBridge` picks the HPZ mappings for `Current_zone $16` by ROM design | native | — | implemented (shared switch already matches) | classification pass | Art under it unverified: open question, slice 9 |
-| BOSS: end boss and lava surface | `Obj_LRZEndBoss` `collision_property $E` (14 hits), `off_79812` six routines; `Obj_59FC4` `SolidObjectTopSloped2`, push `Events_bg+$14`; shared `HScroll_table+$110` table | native | `TestLrzBossLavaSurface`, `TestS3kLrzBossCameraHeadless` | lava surface implemented; boss still absent | slope/current, real landing and removed-object restore/replay pass, 2026-09-22 | boss graph and background arena entry still open |
-| LOAD: defeat -> capsule -> `$1601` handoff | `loc_79998`/`loc_79A30`, `mus_LRZ2` fade, `$EC0` gradual, `StartNewLevel $2D` | native | — | not implemented | open | Slice 10; closes the HPZ entry dependency |
+| BOSS: end boss and lava surface | `Obj_LRZEndBoss` `collision_property $E` (14 hits), `off_79812` six routines; `Obj_59FC4` `SolidObjectTopSloped2`, push `Events_bg+$14`; shared `HScroll_table+$110` table | native | `TestLrzBossLavaSurface`, `TestS3kLrzBossCameraHeadless` | lava surface and14-hit boss/mine graph implemented | `TestLrzEndBossEncounterHeadless`:25 positioned width/donor/roster completions with peak/defeat/capsule/results replay passed in September22 campaign | Ordinary cold carry completion and native capsule slot/pose/timing remain open |
+| LOAD: defeat -> capsule -> `$1601` handoff | `loc_79998`/`loc_79A30`, `mus_LRZ2` fade, `$EC0` gradual, `StartNewLevel $2D` | five widths and five supported donor/roster cases | `TestLrzEndBossEncounterHeadless#realMineFightCapsuleAndResultsPublishTheHiddenPalaceTransition` | implemented |25 positioned completions and declared-shield fresh route reach HPZ | Ordinary cold carry completion, lifecycle breadth and native capsule slot/pose remain open |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz22SegmentTraceReplay` (LRZ3 autoscroll), `TestS3kSonicTailsHpz222SegmentTraceReplay` (boss -> `$1601`), Tails equivalents | `-Ptrace-segments` | — | — | see [trace frontier log](../../../status/trace-frontier-log.md) | Slice 11 |
 
 ## Execution evidence
@@ -95,8 +97,8 @@ includes the four restore/forward checks. Stream allocation failure/retry and
 reused-slot reads also pass. Palette disable/pause/resume is covered at 18:49 BST.
 Capsule child-slot fidelity, native palette row timing, hardware admission and
 cold entry remain open. See the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md)
-for failures, rejected approaches and provenance. Existing obligation rows above
-retain their delivered status until the candidate passes its encounter gate.
+for failures, rejected approaches and provenance. The obligation rows above now reflect this implemented state; their open
+acceptance limits remain separate from the historical candidate narrative.
 
 
 The subsequent cold-entry candidate implements `$9E` and reduces the census to
@@ -119,3 +121,34 @@ input alignment at bonus return is authored, not a strict native replay claim.
 checks and 23 structural checks pass (19:17–19:19 BST). The earlier fixed shield
 rebind order was replaced with captured dynamic-list ordering. Remaining native
 capsule slot/pose, timing-admission and full route-product obligations remain.
+
+
+## September24 status reconciliation
+
+On7691f0eb3, reconciled the obligation rows with the production flash/controller,
+boss/mine/platform-stream and capsule/results owners and their existing tests.
+Earlier rows incorrectly retained “not implemented” after the September22
+encounter gate and fresh route evidence. This is a documentation correction,
+not a new test pass or native certification. The ordinary cold carry
+continuation now clears the initial lava gap, staircase and upper corridor,
+then lands on the first lava platform at2700/901 with18 rings. Controller
+authoring continues without seeded shield/rings.
+
+
+### Cold autoscroll traversal (2026-09-24)
+
+Fresh replay on7691f0eb3 uses45523 inputs from cold Act1, zero deaths, and
+ends on the first lava platform at2700/901 with18 rings and live Tails. Input:
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-route-author/cold-boss-checkpoint-wait/variant-1.bk2`.
+Video `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-cold-boss-autoscroll-320/capture.mp4`
+films43761–45522 (1762frames). All state rows checked for death, stills44806
+and45522 inspected, and the full video decodes. This is cold reachability and
+engine presentation evidence, not a new rewind or native-parity pass.
+
+Running continuously against the autoscroll's native right cap gives shorter
+world-space jumps than Sonic's nominal X velocity suggests. The successful
+route jumps again from the collapsing bridge before its edge, climbs the
+solid steps, and delays the final checkpoint-ledge jump to land on the lava
+platform. Continuous early hops miss later platforms; the remaining platform
+crossing and cold boss fight are still open. No camera, movement or geometry
+logic was changed to accommodate these controller attempts.
