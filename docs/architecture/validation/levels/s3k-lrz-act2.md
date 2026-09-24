@@ -298,3 +298,13 @@ under `deep-east-enemy` show the corruption. Native421800/422200 references
 show the same ball art family; this is not whole-scene pixel parity. Input
 authoring now crosses the hazardous pipe and reaches the next ledge at6197/1452.
 The longer cold Act2 fixture, replay spots and completion remain open.
+
+
+Fresh uninterrupted capture on9dca397d8 now replays36000 ordinary cold inputs
+to6197/1452 with zero deaths. Video
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-act2-pipe-crossing-320/capture.mp4`
+films35080–35999 (920frames), showing the descending platforms, pipe crossing
+while its balls pass behind it, and the exit jump. State35770 and35830 inspected,
+35830 still inspected and full video decode passes. This confirms the authored
+route independently of branch restoration; the separate restored image and
+regressions above establish the journal fix. Full-act completion remains open.
