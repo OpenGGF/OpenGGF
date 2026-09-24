@@ -118,10 +118,18 @@ class TestLrzDashElevatorObjectInstance {
         assertEquals(1 << 16, elevator.position(), "8 / 8 = one pixel down");
 
         // A charged spindash counter adds to the same byte before the shift.
-        player.setSpindashCounter((short) 8);
+        player.setSpindashCounter((short) 0x0800);
         elevator.onSolidContact(player, standingContact(), 0);
         elevator.update(1, player);
         assertEquals((1 << 16) + ((16 << 16) >> 3), elevator.position(), "(8 + 8) / 8 = two pixels");
+
+        // The 68000 byte at spin_dash_counter is the high byte of its
+        // big-endian 8.8 word. Fractional decay must not become whole push.
+        player.setSpindashCounter((short) 0x01E0);
+        elevator.onSolidContact(player, standingContact(), 0);
+        elevator.update(1, player);
+        assertEquals((3 << 16) + ((9 << 16) >> 3), elevator.position(),
+                "charge $01E0 contributes 1, not $E0");
 
         // Facing right negates the push and the platform climbs back, clamping at zero.
         player.setDirection(Direction.RIGHT);

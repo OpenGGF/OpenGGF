@@ -4423,3 +4423,14 @@ zero failures/errors/skips. There are33 cold replay spots across the three fixtu
 The unchanged input now survives to9527; Y first differs next at5176, X at5592.
 See the [LRZ1 matrix](../validation/levels/s3k-lrz-act1.md). Full completion and
 combined campaign delivery remain open.
+
+## LRZ dash-elevator charge byte (2026-09-24)
+
+After `1c9269fbf`, input5176's 30px error came from selecting the low byte of
+the 8.8 spindash counter. ROM `loc_43082` reads its big-endian high byte.
+Corrected the engine and the old unit-test seed; added fractional decay and
+a5501-frame cold route with5 full-registry replay spots. The corrected unit
+test is red on the original code. Final focused object/route run passes11
+tests with zero skips. The matrix records commands and inspected recharge
+video. Next: transient Y5248 and the harmful contact5591. Shared campaign
+validation/integration and full-act acceptance remain pending.

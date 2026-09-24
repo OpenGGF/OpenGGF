@@ -588,7 +588,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   terrain layer, with a wider viewport simply showing more of them.
   Act 1's dash elevators work: charge a spindash on one and it carries you along
   its shaft, in whichever direction you are facing, and stops at the end.
-  Jumping off releases the rider without a second overlap correction on the launch frame.
+  Jumping off releases the rider without a second overlap correction on the launch frame; recharging uses the whole charge rather than its fractional decay.
   The zone's doors and switches work too. Walking into the side of one of the small
   horizontal buttons opens the sliding door that shares its number, and the door stays
   open; the huge door in Act 1 grinds down out of the way, shaking the screen, when

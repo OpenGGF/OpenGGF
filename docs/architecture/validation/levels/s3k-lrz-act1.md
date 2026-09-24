@@ -315,3 +315,37 @@ Verified engine recording: `$VIDEO_ROOT/lrz-bring-up/campaign-20260924-elevator-
 shows inputs4800–5000 (201 rendered frames); the5001-row state log has zero
 deaths. Inspected descent4880, launch4951 and airborne5000; the full video
 decodes successfully. This is engine presentation evidence, not native pixel matching.
+
+### Dash-elevator charge-byte selection (2026-09-24)
+
+At `1c9269fbf`, ordinary input5176 first disagrees vertically: engine1474,
+native1444. Collision checkpoint observation shows the lift itself moving31
+pixels, then correctly carrying its rider; this is a separate arithmetic defect.
+`loc_43082` adds byte `spin_dash_counter(a1)`, the high byte of the big-endian
+8.8 counter used by the player's word-sized charge/decay operations. The engine
+used `counter & $FF`, converting fractional decay into whole push. It now reads
+`(counter >>> 8) & $FF`; signed direction, 16.16 integration and range clamps
+are unchanged. The existing unit test had seeded8 instead of`$0800`, reproducing
+the same interpretation error. Correcting the seed fails before the production
+fix (expected196608,actual131072); coverage now also checks fractional`$01E0`.
+
+The independent5501-frame `lrz1-sonic-tails-cold-charge-320` fixture preserves
+ordinary cold input and adds5 whole-registry replay spots around recharge and
+decay. Its native comparison assertion expects grounded rider2208,1444 at5176.
+This does not certify whole-prefix parity or the remaining act.
+
+Charge-byte verification at the working tree based on `1c9269fbf`: queued
+`-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestLrzDashElevatorObjectInstance,TestLrzColdRouteCapture test` passes11
+tests,zero failures/errors/skips (90 seconds). Four cold routes now cover38
+full-registry replay spots. Engine video
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260924-charge-corrected-320/capture.mp4`
+contains381 rendered frames (5120–5500),5501 state rows and zero deaths;
+5176/5250/5450 inspected and full decode succeeds.
+
+The corrected longer input has a transient one-pixel Y difference5248
+(engine1631,native1632), matching again5249; the cause is not yet attributed.
+A later hurt event5591 is absent natively (engine2787,1701 with recoil,
+native2787,1706 still descending), causing first X difference5592. That
+contact is the next route target. Unchanged long input dies9181; route duration
+alone is not a correctness measure. Cold full-act completion remains open.

@@ -250,8 +250,10 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         }
 
         // moveq #8,d0 / add.b spin_dash_counter(a1),d0: a byte add into a register whose upper
-        // bits moveq already cleared.
-        int push = (RIDER_BASE_PUSH + (player.getSpindashCounter() & 0xFF)) & 0xFF;
+        // bits moveq already cleared. On the big-endian 68000 this reads the
+        // HIGH byte of the 8.8 counter, not its fractional decay byte. The
+        // player's API exposes the complete word used by Sonic_SpinDash.
+        int push = (RIDER_BASE_PUSH + ((player.getSpindashCounter() >>> 8) & 0xFF)) & 0xFF;
         // btst #Status_Facing,status(a1) / bne skips the negate, so facing left drives the
         // platform down and facing right drives it up.
         if (player.getDirection() != Direction.LEFT) {

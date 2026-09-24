@@ -111686,3 +111686,16 @@ Post-fix Y first disagrees after the elevator at5176 (1474 versus1444), X at5592
 Earlier intro/ring differences remain. This is a bounded controller-route
 comparison, not a strict trace-suite pass. Next cold target is the5176 handoff;
 combined campaign verification is pending.
+
+### 2026-09-24 — LRZ elevator charge-byte selection
+
+Development tree `feature/ai-sk-zone-completion`, base`1c9269fbf`: native
+comparison at input5176 saysY1444; engineY1474. `loc_43082` reads the high byte
+of the 8.8 spin counter; engine had used the fractional low byte. Corrected
+byte selection and independent unit oracle (red before fix); focused queued
+object/cold-route tests pass11,zero errors/failures/skips. Command and rendered
+evidence are in the LRZ1 matrix. Comparison-only physics rows never hydrate
+gameplay. First remaining Y5248 is transient1631vs1632; next consequential
+contact5591 hurts the engine player but not native, causing X5592 divergence.
+Strict trace suite was not run; earlier intro/ring gaps and whole-act acceptance
+remain open.
