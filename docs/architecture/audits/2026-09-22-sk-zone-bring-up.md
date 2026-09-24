@@ -27,7 +27,7 @@ its original unimplemented counts must not be read as current production status.
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Turbines, chained platforms, cutscenes, boss act, end boss and HPZ handoff implemented in this campaign. A 12820-frame fresh boss-act route reaches HPZ. Act 1 miniboss runtime art and lava-arrival priority are corrected; retain distinct cold-route, strict-parity and breadth gaps. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
-| DEZ | DEZ1 cold native Sonic+Tails now reaches the upper moving pad at(9589,640) in5,301frames, with21 full-registry replay spots and zero deaths. Remaining cold traversal is open. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
+| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine puzzle and exit door at(10763,2096) in8,593frames, with40 full-registry replay spots and zero deaths. Remaining cold traversal is open. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold main-act traversal and remaining Hyper/HUD/native presentation still need validation. |
 
 Combined campaign validation, main-workspace integration, push and cleanup remain
@@ -3869,3 +3869,33 @@ The act matrix records command, scope and replay frames. Video:
 `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-cold-upper-320/capture.mp4`,
 frames2910–5300, verified state rows and full decode. Continue from the upper moving
 pad atX9589; turbine/miniboss/cold Act2 remain open. Broad campaign delivery is pending.
+
+
+### DEZ1 turbine exit reached; signed control gate repaired (2026-09-24)
+
+The cold route now carries Sonic+Tails through the middle lift, descending
+conveyor, lower electric corridor and all six turbine panels, then through the
+actual door to(10763,2096). The main route frontier is8593frames;40 full-registry
+restore/45-frame forward comparisons pass. The earlier upper route remains an
+independent shorter test. Fixed controller inputs preserve the useful authoring
+result; exploratory failed paths remain temporary.
+
+The native reference at complete-run DEZ row8160 names lift pad `$47440` in slot5
+at(8720,1557), corroborating the required ride before leaving the middle ledge.
+Running off early and jumping before the carrier descended were rejected input
+attempts, not engine defects. A temporary authoring controller also re-armed its
+jump on the next carrier; replacing that with fixed neutral input restored the
+intended conveyor descent. None of that probe logic is runtime code.
+
+A real route blocker remained after panel byte`$3F`: the exit door refused the
+positive turbine control state. `sub_30F58` rejects only negative control (`BMI`),
+not every nonzero value. The existing engine bit7 predicate repairs both door
+orientations without a zone exception. Unit regression failed before correction;
+88focused tests then passed, followed by both final cold routes with no skips.
+The act matrix gives exact selection and replay frames. Mirrored pitfall guidance
+was corrected because it explicitly recommended the overly broad predicate.
+
+Video: `$VIDEO_ROOT/s3k-dez-bring-up/campaign-20260924-cold-turbine-exit-320/capture.mp4`.
+Cold input/state8593frames, zero deaths, filmed7840–8592, selected stills and full
+MP4 decode inspected. Continue beyond the door; later DEZ1 traversal/miniboss and
+cold Act2 remain open. Combined campaign verification/integration are still owed.

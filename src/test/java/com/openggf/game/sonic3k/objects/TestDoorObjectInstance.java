@@ -18,6 +18,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDoorObjectInstance {
 
+    @Test
+    void turbineControlCanOpenDoorButBitSevenControlCannot() {
+        for (boolean horizontal : new boolean[] {false, true}) {
+            DoorObjectInstance door = new DoorObjectInstance(new ObjectSpawn(
+                    0x200, 0x180, 0x3C, horizontal ? 0x80 : 2, 0, false, 0));
+            TestPlayableSprite player = createPlayerAtCentre(
+                    horizontal ? 0x200 : 0x180, horizontal ? 0x100 : 0x180);
+            player.setObjectControlled(true);
+            player.setObjectControlAllowsCpu(false);
+            door.update(0, player);
+            assertEquals(0x200, door.getX(), "sub_30F58 rejects negative object_control");
+            assertEquals(0x180, door.getY());
+            player.setObjectControlAllowsCpu(true);
+            door.update(1, player);
+            assertEquals(horizontal ? 0x208 : 0x200, door.getX(),
+                    "positive turbine control must not block the trigger");
+            assertEquals(horizontal ? 0x180 : 0x178, door.getY());
+        }
+    }
+
     @AfterEach
     void resetCameraBounds() {
         AbstractObjectInstance.resetCameraBoundsForTests();

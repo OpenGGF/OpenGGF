@@ -279,7 +279,11 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isPlayerInTrigger(PlayableEntity player, int left, int right, int top, int bottom) {
-        if (!(player instanceof AbstractPlayableSprite sprite) || sprite.isObjectControlled()) {
+        // sub_30F58 uses TST.B object_control / BMI: only bit 7 rejects
+        // the trigger. Positive control (DEZ's turbine uses $01) must still
+        // open the exit door before the controller releases the player.
+        if (!(player instanceof AbstractPlayableSprite sprite)
+                || sprite.isTouchResponseSuppressedByObjectControl()) {
             return false;
         }
 

@@ -308,7 +308,11 @@ deferred-death-fall (S2-specific), but the rule is universal.
 
 **What to check.** `blocksSolidContacts(player, candidate)` (or whatever
 the engine's SolidObject pre-filter is named) needs BOTH gates:
-1. `player.isObjectControlled()` — mirrors `obj_control` bit 7.
+1. `player.isTouchResponseSuppressedByObjectControl()` — the engine’s bit-7
+   predicate. `isObjectControlled()` also includes positive native control
+   values and is too broad: DEZ turbine `$01` must still trigger `Obj_Door`
+   (`sub_30F58` uses `TST.B` / `BMI`). Apply the same signed-byte distinction
+   when porting a trigger independently of solid-contact filtering.
 2. CPU sidekick state `DEAD_FALLING` (engine equivalent of ROM Tails
    routine = 6) — must short-circuit even though `obj_control` is still
    0 during S2 deferred-despawn.

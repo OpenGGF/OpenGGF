@@ -5,8 +5,8 @@ ROM `Current_zone_and_act = $B00`, SKL object set. **Not Sonic 2's Death Egg**: 
 `TestDEZ*`/`TestS2Dez*` classes and the `*dez-boss-fixes*` documents are Sonic 2.
 Owning plan: [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
 Status: traversal families and the two-phase miniboss/results/Act 2 transport are
-implemented. A 5,301-frame cold Sonic+Tails route now reaches the upper moving pad
-at (9589,640), with 21 full-registry rewind/replay spots. Positioned solo Hyper
+implemented. An 8,593-frame cold Sonic+Tails route now clears all six turbine panels
+and passes the exit door at (10763,2096), with 40 full-registry rewind/replay spots. Positioned solo Hyper
 completion at320/800 is recorded below; cold
 full-act completion, ordinary-character/roster/donor breadth and native timing
 acceptance remain open. Historical slice rows below are superseded by the dated
@@ -191,3 +191,33 @@ bridge crossing, spring launch, elevator and upper moving pad. All5301 state row
 show zero deaths; selected stills were inspected and the MP4 decoded completely.
 The next cold frontier is leaving the upper moving pad at X9589, then the remaining
 act traversal. Native-width team evidence does not close wide/donor/solo routes.
+
+
+### Cold turbine completion and door correction (2026-09-24)
+
+`routes/s3k/dez1-sonic-tails-cold-turbine-320.{script,bk2}` extends the independently
+retained upper route to8593frames. Native Sonic+Tails320 reaches(10763,2096),17rings,
+zero deaths, all six panels pressed and movement released beyond the real exit
+door. No position, health, panel or object-state writes occur during the route.
+The input-authoring tool validates the script/BK2 round trip.
+
+The cold route exposed `DoorObjectInstance` rejecting any object control. ROM
+`sub_30F58` uses `TST.B object_control / BMI`, so positive turbine `$01` must open
+the door; only bit7 rejects it. The shared door trigger now uses the existing
+bit7 predicate. Its focused regression covers vertical and horizontal doors,
+negative rejection and positive acceptance, and failed before the correction.
+The mirrored object pitfall note no longer equates all control with bit7.
+
+`TestDezColdRouteCapture` retains the short upper test and adds the connected
+six-panel/door route. Nineteen new45-frame replay spots join the original21:
+5540,5620,5800,5960,6100,6330,6410,6520,6760,6890,7290,7460,7750,7840,8100,8260,
+8400,8470,8540. All40 compare the registered world after restore and forward play.
+Queued Java21/native GL/absolute S3K ROM verification on34a51c401 plus this patch:
+`-Dtest=TestDoorObjectInstance,TestS3kDezGravityRoomHeadless,TestDezColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passed88tests without skips before the extended route was added; the final
+`-Dtest=TestDezColdRouteCapture` passed both cold routes,0skips. Both used `-Dmse=off`.
+
+`campaign-20260924-cold-turbine-exit-320/capture.mp4` films7840–8592 after cold boot;
+all8593 state rows, zero deaths, selected stills and full MP4 decode checked.
+The next frontier starts beyond the door. Remaining act traversal, miniboss,
+cold Act2 transition and width/character/donor breadth are still open.
