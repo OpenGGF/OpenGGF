@@ -1063,3 +1063,28 @@ at10559 with13 rings and no deaths. The11-second clip is
 `$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-knuckles-cloud-spindash-320/capture.mp4`.
 This is partial route evidence: Knuckles cold completion, native whole-scene
 comparison and broader products remain open.
+
+
+### Knuckles cold miniboss arrival (2026-09-25)
+
+`lrz-knuckles-cold-miniboss-320.script/.bk2` preserves20410 controller-only
+inputs from ordinary cold LRZ1 to the live miniboss arena, native320 solo
+Knuckles with donor off. No position, shield, ring or emerald setup is applied.
+The route earns its monitor/rings, crosses the lower crushers and button doors,
+climbs both returns, takes the upper spring and presses the final lower switch.
+It arrives at `(11362,1969)` with10 rings and no deaths; the placed priority
+marker has made Knuckles high priority, and exactly one miniboss is live.
+
+`TestLrzKnucklesColdRouteCapture.coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape`
+passes70 full-registry immediate restore plus45-input replay spots. These include
+real cloud contact at9937 and spindash escape at9943, not seeded object states.
+The independently rendered cold replay matches all20410 authoring rows on12
+position/movement/ring/death/camera fields, zero differences or deaths. The
+last821frames (19589–20409) are a60fps13.683-second approach clip:
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-knuckles-miniboss-arrival-320/capture.mp4`.
+Full decode passes; the arrival still confirms the player and foreground are
+visible. This is engine route evidence, not native whole-scene matching.
+
+Fight authoring has not yet produced a surviving complete encounter. The best
+initial attempt landed three drill hits before dying. Miniboss defeat, Act2,
+direct HPZ completion, native comparison and breadth/lifecycle remain open.

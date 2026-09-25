@@ -25,7 +25,7 @@ its original unimplemented counts must not be read as current production status.
 | MHZ | Integrated Sonic/Tails route and miniboss fixes; accepted Knuckles/trace exclusions reconciled in the new per-act matrices; fresh320Sonic Act1 completion now includes six live replay spots and a corrected one-owner MHZ2 handoff; Act2 cold320 Sonic completion now reaches playable FBZ1 without seeds/deaths; eight full-registry rewind spots and ship-body presentation checks now pass; lifecycle/breadth remain open. |
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; finish matrix reconciliation, checkpoint geometry and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
-| LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Knuckles cold chain remains open. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. |
+| LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Knuckles now reaches the Act1 miniboss cold in20410 inputs with70 full-registry replay spots; its fight and remaining chain remain open. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
 | DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,316frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in54692frames with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; full cold native320 DEZ1-to-DDZ now completes both boss phases and the ending request in64648 inputs with boot-only emeralds. Native Hyper-star queue phase and HUD redraw timing are matched with rewind checks; death reload and declared post-white-fade ending-request/load boundaries now verify live-history isolation at320/800. Whole-scene presentation and remaining breadth still need validation. |
@@ -5358,3 +5358,27 @@ Focused verification on the working candidate after `6e54f338a`:
   is still owed; these focused passes are not a full-suite or delivery claim.
 
 The separate queued `-Dmse=off -Pguards -Dtest=TestObjectPhysicsStandardizationGuard test` run passes33 tests, zero failures/errors/skips.
+
+
+## Knuckles cold traversal verification (2026-09-25)
+
+After `f3b0bb291`, the [LRZ1 matrix](../validation/levels/s3k-lrz-act1.md#knuckles-cold-miniboss-arrival-2026-09-25)
+records controller-only cold miniboss arrival and its remaining completion gaps.
+Queued command, Java21 and `DISPLAY=:0`:
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzKnucklesColdRouteCapture test
+```
+
+One production route test passes, zero failures/errors/skips,70 restore/replay
+spots;17.57seconds test time,39.085seconds Maven. The independent20410-row
+capture matches12 fields exactly and has zero deaths. Movie821frames/60fps,
+13.683seconds; complete decode and arrival still checked. The source `.script`
+is emitted from the input-only movie and rebuilt through `InputLogAuthorTool`.
+
+Selection inspected with `run_categories.py --base f3b0bb291`:2918 classes
+because unclassified input resources fall back to all ordinary categories.
+For this test/input-only addition, the complete new production replay and
+independent rendering directly exercise its consumers; focused validation is
+proportionate. This is not a new full-suite pass. The campaign's shared movement
+change and final integration still require their combined broad validation.
