@@ -231,7 +231,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 47628 | `Spring_Up` | `Spring_Up` init: becomes `Spring_Down` | `Sonic3kSpringObjectInstance:425` | covered |
 | 47722 | `sub_22F98` | `sub_22F98` (up-spring launch): `+8` becomes `-8` | `Sonic3kSpringObjectInstance.applyUpSpring` / `applyDownSpring` | covered |
 | 48095 | `sub_233CA` | `sub_233CA` (down-spring launch): `-8` becomes `+8` | `Sonic3kSpringObjectInstance.applyUpSpring` / `applyDownSpring` | covered |
-| 48958 | `loc_23FE8` | `Obj_Spikes` init (`loc_23FE8`): toggles the Y-flip bit that selects upright vs upside-down behaviour | `Sonic3kSpikeObjectInstance` selects its behaviour from the subtype, not the status Y-flip bit the flag toggles — see the note below | missing |
+| 48958 | `loc_23FE8` | `Obj_Spikes` init (`loc_23FE8`): toggles the Y-flip bit that selects upright vs upside-down behaviour | `Sonic3kSpikeObjectInstance` captures the initial placement-Y-flip XOR gravity selection of the underside hurt routine; movement stays subtype-controlled | covered |
 
 ### J. DEZ objects
 
@@ -276,10 +276,10 @@ is the RAM wipe described above).
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 9 | 0 | 0 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 1 | 0 | 1 |
-| I. Monitors, springs, spikes | 6 | 5 | 0 | 1 | 0 |
+| I. Monitors, springs, spikes | 6 | 6 | 0 | 0 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 3 | 0 | 0 | 0 |
-| **Total** | **116** | **106** | **5** | **1** | **4** |
+| **Total** | **116** | **107** | **5** | **0** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:
@@ -377,9 +377,15 @@ way: a test written that way passes whether or not the launch rows exist.
 `TestS3kReverseGravitySpringLaunch` pairs them the way the ROM does, and disabling the launch
 mirror flips both inverted cases while both upright controls stay green.
 
-**The remaining object row requires its missing upright structure.**
-`Obj_Spikes` :48958 toggles the status Y-flip bit that selects `loc_2413E`, while
-`Sonic3kSpikeObjectInstance` selects movement from `subtype & $F`. It remains missing.
+**The monitor and spike object rows are implemented.**
+The earlier spike note conflated movement dispatch with damage dispatch.
+`Obj_Spikes` :48958 XORs initial status Y-flip with the gravity flag and selects
+`loc_2413E`, overriding both upright and sideways hurt routines. It does not
+change `sub_242B6` movement. The engine now captures that one-time hurt selection,
+including rewind and a later gravity change while the same object stays loaded.
+`SolidObjectFull` contact categories are gravity-relative, so the selection is
+not a direct physical-world top/bottom test. The Y-flip override also takes
+precedence over a sideways mapping, matching the shipped routine order.
 The former monitor blocker was ported on 2026-09-25: `Touch_Monitor` now mirrors
 its direction word before selecting the Y-flipped knock-loose branch, preserves
 the unsigned position gate and bounces/falls before checking player slot or

@@ -5029,3 +5029,16 @@ checks pass with zero skips. A declared240-frame FBZ-backdrop presentation
 probe shows the two arcs and broken shells; see the DEZ2 matrix and external
 capture README for setup and coverage limits. Whole-route native pixel parity
 and the combined campaign integration gate remain open.
+
+
+### 2026-09-25 — final missing gravity-reference row implemented
+
+The spike audit at `43badd5f1` corrected an earlier research assumption: gravity
+selects a damage routine at initialization, not movement behavior. S3K now
+retains that native selection, including its precedence over sideways mappings,
+through later gravity changes and rewind. Real solid-contact tests cover both
+physical faces under both gravity directions. One initial test approach was
+outside the native +4 relative-Y window; corrected setup passes all14 spike
+checks, with106 unchanged corridor/stability checks already passing. The
+inventory is107 covered/5 partial/0 missing/4 not applicable. This closes the
+missing implementation row, not the remaining partial rows or whole-level gates.

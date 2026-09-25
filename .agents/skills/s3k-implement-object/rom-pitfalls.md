@@ -4865,3 +4865,15 @@ Java object. Release the Java reference at the last native use, preserving the
 callback timer and one-frame deletion semantics. Test snapshot/replay after the
 former owner is removed, not just while the allocation graph is intact.
 Origin: September25 cold LRZ boss completion.
+
+
+## Gravity flags that select a native routine are initialization state
+
+`Obj_Spikes` at `loc_23FE8` (sonic3k.asm:48956–48968) XORs a copy of status
+Y-flip with Reverse_gravity_flag and installs `loc_2413E`. It does not toggle
+the art, change movement, or reevaluate the flag on every contact. The selection
+overrides the sideways routine installed earlier. Preserve that precedence and
+capture the selected routine semantics for rewind; test a gravity change while
+the same object remains loaded. `SolidObjectFull` reports gravity-relative
+standing/underside contacts, so applying a second world-face mirror to its result
+would undo the native choice. Origin: September25 DEZ gravity-reference audit.

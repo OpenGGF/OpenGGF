@@ -25,6 +25,106 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpikeObjectInstance {
 
+    private static final class ContactProbeSpikes extends Sonic3kSpikeObjectInstance {
+        SolidContact lastContact;
+        @Override public void onSolidContact(PlayableEntity player, SolidContact contact, int frame) {
+            lastContact = contact;
+            super.onSolidContact(player, contact, frame);
+        }
+        ContactProbeSpikes(ObjectSpawn spawn) { super(spawn); }
+        boolean hurts(SolidContact contact) { return shouldHurt(contact); }
+    }
+
+    @Test
+    void nativeHurtRoutineUsesInitialGravityAndOverridesSidewaysWithYFlip() {
+        SolidContact[] contacts = {
+                new SolidContact(true, false, false, true, false),
+                new SolidContact(false, true, false, false, true),
+                new SolidContact(false, false, true, false, false)};
+        for (boolean reverse : new boolean[] {false, true}) {
+            for (int flags = 0; flags < 4; flags++) {
+                for (int subtype : new int[] {0x00, 0x40}) {
+                    var state = new com.openggf.game.GameStateManager();
+                    state.setReverseGravityActive(reverse);
+                    var spawn = new ObjectSpawn(0x100, 0x100, 8, subtype, flags, false, 0);
+                    var spikes = new ContactProbeSpikes(spawn);
+                    spikes.setServices(new com.openggf.level.objects.TestObjectServices().withGameState(state));
+                    spikes.update(0, null); // Obj_Spikes selects the main routine, then returns.
+                    int selectedContact = (((flags & 2) != 0) != reverse) ? 2 : (subtype == 0x40 ? 1 : 0);
+                    for (int i = 0; i < contacts.length; i++) {
+                        assertEquals(i == selectedContact, spikes.hurts(contacts[i]),
+                                "reverse=" + reverse + " flags=" + flags + " subtype=" + subtype + " contact=" + i);
+                    }
+                    var snapshot = spikes.captureRewindState();
+                    state.setReverseGravityActive(!reverse);
+                    spikes.update(1, null);
+                    var restored = new ContactProbeSpikes(spawn);
+                    restored.setServices(new com.openggf.level.objects.TestObjectServices().withGameState(state));
+                    restored.restoreRewindState(snapshot);
+                    restored.update(1, null);
+                    for (int i = 0; i < contacts.length; i++) {
+                        assertEquals(i == selectedContact, spikes.hurts(contacts[i]), "live routine must remain selected");
+                        assertEquals(spikes.hurts(contacts[i]), restored.hurts(contacts[i]), "rewind retains selected routine");
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void physicalSpikeTipsHurtFromEitherGravityDirectionThroughSolidObjectFull() {
+        for (boolean reverse : new boolean[] {false, true}) {
+            for (boolean flipped : new boolean[] {false, true}) {
+                for (boolean above : new boolean[] {false, true}) {
+                    com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                            com.openggf.tests.rules.SonicGame.SONIC_3K);
+                    try {
+                        var state = com.openggf.game.GameServices.gameState();
+                        state.setReverseGravityActive(reverse);
+                        var player = new HurtTestTails();
+                        player.setCpuControlled(true);
+                        player.setRenderFlagOnScreen(true);
+                        player.setCentreX((short) 0x100);
+                        // SolidObjectFull adds four to relative Y before its bounds test.
+                        // Six pixels of overlap reaches both native contact branches.
+                        player.setCentreY((short) (0x100 + (above ? -25 : 25)));
+                        player.setAir(true);
+                        player.setYSpeed((short) ((above != reverse) ? 0x200 : -0x200));
+                        var spikes = new ContactProbeSpikes(new ObjectSpawn(
+                                0x100, 0x100, Sonic3kObjectIds.SPIKES, 0, flipped ? 2 : 0, false, 0));
+                        var camera = new Camera();
+                        camera.setX((short) 0x80);
+                        camera.setY((short) 0x80);
+                        var holder = new ObjectManager[1];
+                        var services = new StubObjectServices() {
+                            @Override public ObjectManager objectManager() { return holder[0]; }
+                            @Override public Camera camera() { return camera; }
+                            @Override public com.openggf.game.GameStateManager gameState() { return state; }
+                            @Override public ObjectPlayerQuery playerQuery() {
+                                return new ObjectPlayerQuery(() -> player, List::of);
+                            }
+                        };
+                        var manager = new ObjectManager(List.of(), registryFor(spikes), 0,
+                                null, null, null, camera, services);
+                        holder[0] = manager;
+                        manager.reset(0x80);
+                        manager.addDynamicObject(spikes);
+                        manager.update(0x80, player, List.of(), 0, false, true, false);
+                        manager.update(0x80, player, List.of(), 1, false, true, false);
+                        assertEquals(above != flipped, player.isHurt(),
+                                "reverse=" + reverse + " flipped=" + flipped + " above=" + above
+                                        + " y=" + player.getCentreY() + " radius=" + player.getYRadius()
+                                        + " vy=" + player.getYSpeed() + " contact=" + spikes.lastContact);
+                    } finally {
+                        com.openggf.game.session.SessionManager.clear();
+                        com.openggf.game.GameModuleRegistry.reset();
+                        AbstractObjectInstance.resetCameraBoundsForTests();
+                    }
+                }
+            }
+        }
+    }
+
     private static final class TestableSprite extends AbstractPlayableSprite {
         TestableSprite(String code) {
             super(code, (short) 0, (short) 0);
@@ -150,6 +250,7 @@ class TestSonic3kSpikeObjectInstance {
         Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
                 new ObjectSpawn(0x2000, 0x0145, Sonic3kObjectIds.SPIKES, 0x01, 0x02, false, 0));
 
+        spikes.setServices(new com.openggf.level.objects.TestObjectServices());
         spikes.update(11818, null);
 
         assertEquals(0x0145, spikes.getY(),
@@ -170,6 +271,7 @@ class TestSonic3kSpikeObjectInstance {
         Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
                 new ObjectSpawn(0x1280, 0x09D0, Sonic3kObjectIds.SPIKES, 0x01, 0, false, 0));
 
+        spikes.setServices(new com.openggf.level.objects.TestObjectServices());
         spikes.update(0, null);
         spikes.update(1, null);
 
@@ -221,6 +323,7 @@ class TestSonic3kSpikeObjectInstance {
         player.setSubpixelRaw(0xA300, 0x4B00);
 
         // Init returns before loc_24356/SolidObjectFull.
+        spikes.setServices(new com.openggf.level.objects.TestObjectServices());
         spikes.update(0, player);
 
         // f13765 equivalent: the pre-solid snapshot sees Push clear, then this

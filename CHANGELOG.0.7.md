@@ -200,6 +200,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Upside-down monitors retain their native knock-loose and ceiling-settling behavior,
   including the reversed-gravity direction check. Their shells and reward icons
   keep their placement flips, with the native inverted reward motion and timing.
+  Spikes select their damaging contact face from their orientation and gravity
+  at initialization, retaining that native choice through later gravity changes.
   Hyper's stars retain their native sprite-list priority independently of Sonic, and
   his afterimages mirror vertically when gravity reverses. Asteroids
   shatter into smaller rocks and debris, homing missiles ride and chase, and dashing

@@ -200,7 +200,7 @@ offset; skid dust spawns on the correct contact side. These close both dust rows
 Knuckles's slide get-up now negates its radius adjustment while preserving the
 native Y fraction. Glide falling, slide terrain probes and wall climbing remain open.
 
-**Open inverted-player obligations in act 2**, one missing object row and partially covered rows across groups A-I:
+**Open inverted-player obligations in act 2**, no missing rows, with partially covered rows across groups A-I:
 
 Knuckles's glide/slide, alternate climb bodies and fall-from-glide radius
 correction are now implemented. Actual DEZ floor/ceiling tests cover the latter
@@ -211,7 +211,9 @@ an independent validation obligation.
   cover the flat top-solid final snap in both gravity states, standing and rolling. The
   inverted override formerly snapped to the upright face (57 pixels wrong in the isolated
   standing contact). Sloped variants and exact comparison-window boundaries remain open.
-- **`Obj_Spikes` :48958** still requires the missing upright status/Y-flip movement branch.
+- **`Obj_Spikes` :48958** is now implemented: initial gravity XOR placement Y-flip
+  selects the underside hurt routine, overriding the sideways variant. The
+  choice survives later gravity changes and rewind; movement remains subtype-driven.
 - **Monitor correction:** `Touch_Monitor` and upside-down falling now follow the
   native direction/position gates, including reverse gravity and CPU contacts.
   Shell/icon placement flips and inverted icon motion are now implemented too,

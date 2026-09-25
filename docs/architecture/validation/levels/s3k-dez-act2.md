@@ -33,7 +33,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (106 of 116 ROM references covered, 5 partial and 1 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (107 of 116 ROM references covered, 5 partial and none missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -876,3 +876,53 @@ ordinary-route claim. Native Sonic solo/320,240 neutral frames, static camera,
 zero deaths,20 awarded rings; frames60/121 inspected and full MP4 decode passes.
 The first corridor composition hid the motion behind terrain and was rejected.
 The final clip shows complete opposing arcs and flipped broken shells.
+
+
+### Spike hurt-routine selection (2026-09-25)
+
+At `43badd5f1`, spikes used the shared base's mapping-first contact rule. Native
+`Obj_Spikes` first selects upright/sideways damage, then `loc_23FE8` XORs a copy
+of placement status Y-flip with the current reverse-gravity flag and can install
+`loc_2413E` instead. That last assignment overrides sideways too. This is a
+one-time native code-pointer selection, not movement dispatch and not a live
+world-gravity check. The old inventory note conflated those separate decisions.
+
+S3K now captures the selected underside-contact rule on its init-only execution.
+Its own `shouldHurt` preserves native precedence; the sideways push-latch clear
+runs only for the selected sideways routine. Subsequent gravity changes leave
+the choice intact. The selected boolean is captured by the existing rewind
+schema. The shared S2 spike behavior and subtype movement are unchanged.
+
+The branch regression failed before the fix on flipped sideways spikes. It now
+checks both gravity states, four placement flags, upright/sideways mappings,
+all three contact categories, a later gravity change and restored forward state.
+A second test uses the real `ObjectManager`/`SolidObjectFull` path for eight
+physical above/below approaches against upright/downward spikes under both
+gravity states. CPU Tails supplies a damage witness without ring/death setup.
+Its first lower probe was outside the native asymmetric contact window: the
+unchanged controller adds4 to relative Y, so centre+29 returned no contact.
+Moving the declared probe to centre±25 (six pixels of overlap) reaches both
+branches; no production tuning was used to repair that test setup.
+
+Queued Java21 verification:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestSonic3kSpikeObjectInstance,TestS3kReverseGravityDezCorridor,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kSpikeObjectInstance test
+```
+
+The first selection ran120 tests:119 passed and the declared lower-probe setup
+failed, zero errors/skips. After correcting only that setup, all14 spike tests
+pass with zero failures/errors/skips. The106 unchanged corridor/stability cases
+are not rerun. The change-based plan selects2442 classes plus guards; combined
+campaign validation remains pending. These isolated contact checks are not a
+cold DEZ route, native whole-scene comparison or roster/viewport certification.
+
+The gravity-reference table is now107 covered,5 partial,0 missing,4 not
+applicable. The five partial rows and remaining act-matrix obligations still
+prevent claiming full reverse-gravity or level completion.
+
+Separate queued `-Pguards -Dtest=TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard`
+passes2 tests, zero failures/errors/skips. Mirrored object-pitfall guidance is
+byte-identical and `git diff --check` is clean.

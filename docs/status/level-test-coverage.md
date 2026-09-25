@@ -342,3 +342,11 @@ missing Act1 Eggmobile registration; both replica captures now include the body.
 SSZ replica arena-mask trial (2026-09-24): shared mask state/GL checks and
 approved GHZ/MTZ event wiring are recorded in the [act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md).
 This is focused trial evidence; broader lifecycle/combined delivery checks remain open.
+
+
+DEZ2 gravity-reference follow-up (2026-09-25): the
+[spike hurt-routine checks](../architecture/validation/levels/s3k-dez-act2.md#spike-hurt-routine-selection-2026-09-25)
+cover initial gravity/placement selection, later gravity changes, rewind and
+actual solid contacts from both physical faces. Together with the preceding
+monitor corrections, no gravity-reference row remains wholly missing; five
+partial rows and the broader act/character/lifecycle obligations remain open.
