@@ -1088,3 +1088,29 @@ visible. This is engine route evidence, not native whole-scene matching.
 Fight authoring has not yet produced a surviving complete encounter. The best
 initial attempt landed three drill hits before dying. Miniboss defeat, Act2,
 direct HPZ completion, native comparison and breadth/lifecycle remain open.
+
+
+### Knuckles cold Act1 clear and Act2 handoff (2026-09-25)
+
+`lrz-knuckles-cold-act1-clear-320.script/.bk2` extends the arrival fixture to
+25763 controller inputs, from ordinary native320 solo Knuckles cold entry to
+playable Act2, zero deaths. All six drill hits occur at21301,21348,22185,23052,
+23907 and24777. The real seamless load occurs at25112, rebasing11560→296 and
+carrying1 ring; the Act2 title resets the ring count before movement resumes.
+The route ends at `(430,1969)`,0 rings, with controls released and no follower.
+
+`TestLrzKnucklesColdRouteCapture.coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff`
+passes37 full-registry immediate restore plus45-input replay spots covering
+hand volleys, damage/ring recovery, each drill phase, low health, final defeat,
+replacement/results and both sides of the load. The earlier arrival test retains
+its70 traversal spots,107 total across the two independent cold tests.
+
+Fresh controller playback matches all25113 authored rows through the load on12
+position/movement/ring/death/camera fields, zero differences or deaths; the
+650-frame continuation reaches playable Act2. Video captures20410–25762:
+5353frames at60fps,89.216667seconds, complete decode passes, defeat and playable
+Act2 stills inspected. Media:
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-knuckles-act1-clear-320/capture.mp4`.
+This is engine route/rewind evidence, not native whole-scene matching. Knuckles
+Act2 and direct HPZ completion, remaining breadth/lifecycle/native comparison
+remain open. No engine behavior was changed for this fight.

@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+[Knuckles LRZ1 cold completion](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-cold-act1-clear-and-act2-handoff-2026-09-25) now defeats the miniboss and reaches playable Act2 in25763 inputs,zero deaths, with37 fight/transition replay spots in addition to70 traversal spots. Knuckles Act2/directHPZ and broader products remain open.
+
 The [Knuckles LRZ1 cold arrival](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-cold-miniboss-arrival-2026-09-25) now has20410 preserved inputs,70 full-registry restore/replay spots, real cloud escape and a fresh matching capture. The boss fight and remaining Knuckles chain are still open.
 
 Knuckles LRZ1: the [cloud escape follow-up](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-cloud-escape-follow-up-2026-09-25) corrects glide-landing animation ownership, with production movement/rewind checks in both gravity directions and a fresh cold encounter capture. Full Knuckles completion remains open.

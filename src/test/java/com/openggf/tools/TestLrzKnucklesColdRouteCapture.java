@@ -19,7 +19,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Controller-only cold Knuckles LRZ1 traversal; completion remains a separate obligation. */
+/** Controller-only cold Knuckles LRZ1 traversal, miniboss and playable Act2 handoff. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzKnucklesColdRouteCapture {
     @Test
@@ -92,6 +92,75 @@ class TestLrzKnucklesColdRouteCapture {
             assertTrue(session.player().isHighPriority(), "crossed the arena's placed priority marker");
             assertEquals(1, GameServices.level().getObjectManager()
                     .activeObjectsOfType(LrzMinibossInstance.class).size());
+            assertInstanceOf(Knuckles.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+        }
+    }
+
+    @Test
+    void coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/lrz-knuckles-cold-act1-clear-320.bk2"));
+        assertEquals(25763, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        // Arena entry, hand volleys, damage and ring recovery, drill strikes,
+        // low health, defeat/replacement/results and both sides of the act load.
+        // The last source replay ends before the seamless load itself.
+        var spots = Set.of(20410, 20550, 20740, 20830, 21000, 21250, 21300,
+                21347, 21450, 21580, 21640, 21890, 22165, 22185, 22330,
+                22500, 22890, 23045, 23052, 23280, 23420, 23780, 23860,
+                23907, 24160, 24300, 24520, 24720, 24776, 24777, 24850,
+                24920, 25000, 25050, 25150, 25550, 25700);
+        var checked = new HashSet<Integer>();
+        var healthSeen = new HashSet<Integer>();
+        boolean defeated = false;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            assertInstanceOf(Knuckles.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                session.step(movie.getFrame(frame));
+                session.render();
+                assertFalse(session.player().getDead(), "death at input " + frame);
+                for (var boss : GameServices.level().getObjectManager()
+                        .activeObjectsOfType(LrzMinibossInstance.class)) {
+                    healthSeen.add(boss.getCollisionProperty());
+                    defeated |= boss.getState().defeated;
+                }
+                if (frame == 25112) {
+                    assertEquals(1, GameServices.level().getCurrentAct(), "real seamless act load");
+                    assertEquals(296, session.player().getCentreX(), "native -$2C00 rebase");
+                    assertEquals(1, session.player().getRingCount(), "ring carries until the Act2 title reset");
+                }
+                if (!spots.contains(frame)) continue;
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                var forward = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), "fight restore at " + frame);
+                session.restoreInputHistory(movie.getFrame(frame));
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                same(forward, registry.capture(), "fight replay at " + frame);
+                registry.restore(saved);
+                session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertEquals(Set.of(0, 1, 2, 3, 4, 5, 6), healthSeen);
+            assertTrue(defeated);
+            assertEquals(9, GameServices.level().getCurrentZone());
+            assertEquals(1, GameServices.level().getCurrentAct());
+            assertEquals(430, session.player().getCentreX());
+            assertEquals(1969, session.player().getCentreY());
+            assertEquals(0, session.player().getRingCount(), "Act2 title reset the act counters");
+            assertFalse(session.player().isObjectControlled(), "Act2 movement has been released");
             assertInstanceOf(Knuckles.class, session.player());
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
         }
