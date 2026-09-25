@@ -5247,3 +5247,14 @@ Full decode passes; final drill-hit, reload, title-reset and playable-Act2 still
 were inspected. This is engine presentation evidence, not native whole-scene
 parity. Authoring used controller buttons only, including recorded landing-aware
 boss decisions; playback has no adaptive controller or gameplay-state injection.
+
+## 2026-09-25 DDZ death-history follow-up
+
+`TestS3kDdzLifecycleProduction` now runs the live loop before ring-out with
+rewind enabled, verifies a populated outgoing history, then verifies its reset
+on the actual death reload at320/800. Both focused cases pass with no skips on
+`19ba6835a` plus the test change. The first attempts exposed missing test setup
+(fixture-only stepping, then disabled rewind), not a production defect. The
+1959-class gameplay selection is disproportionate for this test-only extension;
+the focused two-case run is the recorded validation. Ending-load history remains
+open, as do the campaign's other route/presentation obligations.

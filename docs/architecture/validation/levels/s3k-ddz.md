@@ -11,8 +11,8 @@ Status: fresh Super and positioned DEZ2-incoming Hyper routes reach both boss
 phases and the accepted ending request at320/800. A new native320 Sonic+Tails
 route starts at cold DEZ1 and reaches the same request after64648 controller
 frames, with emeralds declared only at boot; its replay verification is recorded
-in the dated follow-up below. Native scene matching, remaining roster/donor breadth and history
-isolation remain open. Nothing below certifies the zone.
+in the dated follow-up below. Native scene matching, remaining roster/donor breadth and ending-load history
+isolation remain open. Death-reload history isolation now passes at320/800. Nothing below certifies the zone.
 
 Incoming: DEZ final boss → `$C00` verified at320/800, including a positioned
 DEZ2-boss start with no reseeding across either load. Full cold DEZ1→DEZ2→final
@@ -39,7 +39,7 @@ branch; only Sonic is the native route.
 | REWIND: mid-transformation, mid-flight | Registry restore equals capture; forward replay equals original | 34 rows × 2 spots | `TestS3kDdzCompatibilityMatrix` | implemented | see execution evidence | — |
 | PRESENT: background bands, FG-plane boss body, explosions, wrap | `sub_596EA` six speeds from `Events_bg+6`, `DDZ_BGDeformArray`; `DDZ_ScreenEvent` stages 0/4/8/`$C`; `PLC_BossExplosion` | native 320 every frame at entry, boss arrival, first wrap, exit | side-by-side clips `30-33-ddz-native-vs-engine-*.mp4` (engine capture exact to native positions) | implemented | historical whole-scene inspection left Hyper sparkle/HUD entry and Master Emerald flicker phase / white-fade tint; Hyper queue phase and HUD entry now have matching native follow-ups below | Pixel comparison not automated |
 | OBJECT: asteroids, missiles, boss graph, slot/load order | `Obj_DDZAsteroid`, `Obj_DDZMissile`, `Obj_DDZEndBoss`; native slot histories `probe-slots0/1` | native route | seeded route test (slot order drives hit order) | implemented; native behaviour matched through the route | pass | Super branch now has `loc_8242A/82452` fixed-slot stars and six ROM frames; Hyper owner now waits for native art-queue completion;506 entry child rows match (dated follow-up below) |
-| LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | 320, 800 | `TestS3kDdzLifecycleProduction` | implemented | pass, 2 | Timeline isolation across the reload not asserted; donor/team rows only through the breadth matrix |
+| LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | 320, 800 | `TestS3kDdzLifecycleProduction` | implemented | pass, 2 | Live history isolation now asserted at both widths (follow-up below); donor/team rows only through the breadth matrix |
 | LOAD: `$D01` handover freeze | `StartNewLevel` leaves the level loop; native fade frozen | GameLoop and recording driver | `TestS3kDdzColdRoutes` | recording driver now honors the shared inactive-transition flag | focused route check passes | Exit fade freezes source gameplay while palette work continues |
 | ORACLE: strict segment replay | `TestS3kSonicTailsZone0cSegmentTraceReplay` | — | `-Ptrace-segments` | — | red: bootstrap camera Y and missing clock seeds (plan evidence) | Replay harness bootstrap |
 | LOAD: DEZ → `$C00` incoming | `loc_803D6` and source camera-policy retirement | solo320/800 direct final-DEZ routes | `TestDezFinalScreenEntry`, capture115 | connected | corrected load/initial flight;30-case destination selection passes without skips (2026-09-23) | Full cold native320 team incoming continuity is now recorded below; remaining roster/width breadth stays open |
@@ -456,3 +456,22 @@ Complete video decode passes; phase-change/final-hit/end frames are inspected.
 This closes this native320 incoming route, not donor/wider incoming products,
 load-history isolation, full-scene native pixels or strict trace bootstrap.
 Combined campaign validation and integration remain outstanding.
+
+### 2026-09-25 live death-reload history
+
+`TestS3kDdzLifecycleProduction` now enables live rewind and drives transformation,
+ring-out, falling death and reload through `GameLoop`. It asserts that flight
+built more than ten history frames before the ring-out stimulus, then checks
+that the actual object-manager replacement resets the outgoing timeline. Both
+320 and800 cases retain the existing fresh runtime/controller assertions.
+The initial test attempt used the old fixture stepping and did not enable live
+rewind; it correctly failed the history prerequisite. The corrected test passes
+two cases with zero failures, errors or skips on `19ba6835a` plus this test-only
+change. No production behavior changed.
+
+Command: `JAVA_HOME=<JDK21> LUA_BIN=lua5.4 DISPLAY=:0 python3
+tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true
+-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestS3kDdzLifecycleProduction test`.
+The change-based plan selects1959 classes through gameplay test ownership.
+Focused validation is proportionate for this assertion/driver-only change; no
+full-suite rerun is claimed. Ending `$D01` history isolation remains open.
