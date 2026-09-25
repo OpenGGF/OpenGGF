@@ -19,7 +19,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Controller-only cold Knuckles LRZ traversal, miniboss, handoff and Act2 middle route. */
+/** Controller-only cold Knuckles LRZ traversal, miniboss, handoff and direct Hidden Palace arrival. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzKnucklesColdRouteCapture {
     @Test
@@ -278,6 +278,85 @@ class TestLrzKnucklesColdRouteCapture {
             assertFalse(session.player().isObjectControlled());
             assertEquals(8501, session.player().getCentreX());
             assertEquals(236, session.player().getCentreY());
+            assertEquals(0, session.player().getRingCount());
+        }
+    }
+
+    @Test
+    void coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/lrz-knuckles-cold-hpz-320.bk2"));
+        assertEquals(52659, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        // Door9, flame ledges and tubes, lower westward return, eastern
+        // staircase/wall transfers, door10, nozzle drop, rocks/bridges and
+        // direct HPZ. Stop source replay windows before the load fade;
+        // destination windows exercise the replacement level independently.
+        var spots = Set.of(40046, 40090, 40130, 40220, 41090, 41150, 41175,
+                41205, 41260, 41365, 41380, 41500, 42067, 42100, 42200,
+                42906, 42980, 43020, 43300, 43711, 43760, 43884, 43950,
+                44050, 44200, 44400, 44934, 44975, 45030, 45150, 45500,
+                46160, 46200, 46300, 47100, 47160, 47200, 47240, 47320,
+                47761, 47800, 47840, 47950, 48637, 48670, 48720, 48850,
+                49283, 49310, 49360, 49450, 50124, 50180, 50240, 50320,
+                50562, 50590, 50630, 50720, 50847, 50880, 50930, 51100,
+                51462, 51500, 51570, 51630, 51813, 51868, 51923, 51961,
+                51990, 52040, 52120, 52180, 52210, 52260, 52300,
+                52440, 52540, 52600);
+        var checked = new HashSet<Integer>();
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            assertInstanceOf(Knuckles.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertEquals(320, GameServices.camera().getWidth());
+            var outgoingLevel = GameServices.level().getCurrentLevel();
+            boolean sawHiddenPalace = false;
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                session.step(movie.getFrame(frame));
+                session.render();
+                assertFalse(session.player().getDead(), "death at input " + frame);
+                if (frame >= 40046) {
+                    int zone = GameServices.level().getCurrentZone();
+                    assertTrue(zone == 9 || zone == 22, "only LRZ and HPZ on this route");
+                    assertEquals(1, GameServices.level().getCurrentAct(),
+                            "Knuckles goes directly to HPZ, never LRZ's boss act");
+                    if (frame == 40046) outgoingLevel = GameServices.level().getCurrentLevel();
+                    if (zone == 22) {
+                        sawHiddenPalace = true;
+                        assertNotSame(outgoingLevel, GameServices.level().getCurrentLevel());
+                    }
+                }
+                if (!spots.contains(frame)) continue;
+                assertEquals(frame < 52418 ? 9 : 22, GameServices.level().getCurrentZone());
+                assertEquals(1, GameServices.level().getCurrentAct());
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                var forward = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), "Act2 restore at " + frame);
+                session.restoreInputHistory(movie.getFrame(frame));
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                same(forward, registry.capture(), "Act2 replay at " + frame);
+                registry.restore(saved);
+                session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertTrue(sawHiddenPalace, "real direct HPZ load");
+            assertEquals(22, GameServices.level().getCurrentZone());
+            assertEquals(1, GameServices.level().getCurrentAct());
+            assertEquals(spots, checked);
+            assertInstanceOf(Knuckles.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertFalse(session.player().isObjectControlled());
+            assertEquals(1075, session.player().getCentreX());
+            assertEquals(748, session.player().getCentreY());
             assertEquals(0, session.player().getRingCount());
         }
     }

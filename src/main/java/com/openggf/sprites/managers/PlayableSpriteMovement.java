@@ -5572,6 +5572,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
+		// Sonic_Balance explicitly calls ChooseChkFloorEdge (S3K
+		// sonic3k.asm:22531-22535; S1/S2 equivalents below). The ROM has
+		// no sensor-enable cache: our flags belong to the separate collision
+		// quadrant dispatch and can still describe an upward jump, including
+		// one on the future side of a rewind. Balance must perform its own
+		// floor probes, not mistake an inactive cached probe for empty terrain.
+		boolean leftActive = groundSensors[0].isActive();
+		boolean rightActive = groundSensors[1].isActive();
+		groundSensors[0].setActive(true);
+		groundSensors[1].setActive(true);
+		try {
+			checkTerrainEdgeBalance(groundSensors);
+		} finally {
+			groundSensors[0].setActive(leftActive);
+			groundSensors[1].setActive(rightActive);
+		}
+	}
+
+	private void checkTerrainEdgeBalance(Sensor[] groundSensors) {
 		// Ground sensors are at center ± 9 pixels (for Sonic)
 		// Left sensor (index 0) is at center - 9
 		// Right sensor (index 1) is at center + 9

@@ -477,10 +477,55 @@ public class TestGroundSensor {
                         if (character.equals("sonic") && sample > 0) {
                             assertEquals(sample, player.getBalanceState(), context + " native six-pixel precarious probe");
                         }
+                        int expectedBalance = player.getBalanceState();
+                        Direction expectedFacing = player.getDirection();
+                        // A rewind from an upward jump can leave the collision
+                        // quadrant's cached floor probes disabled. Sonic_Balance
+                        // explicitly calls ChooseChkFloorEdge regardless of that cache.
+                        for (Sensor sensor : player.getGroundSensors()) sensor.setActive(false);
+                        balance.invoke(movement);
+                        assertEquals(expectedBalance, player.getBalanceState(), context + " inactive probe cache");
+                        assertEquals(expectedFacing, player.getDirection(), context + " inactive probe facing");
+                        for (Sensor sensor : player.getGroundSensors()) {
+                            assertFalse(sensor.isActive(), "balance preserves collision-dispatch flags");
+                            sensor.setActive(true);
+                        }
                         player.setAngle((byte) 0x20);
                         balance.invoke(movement);
                         assertFalse(player.isBalancing(), context + " next angle quadrant skips balance entirely");
                     }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void balanceFloorProbeIgnoresCollisionQuadrantCacheAcrossGames() throws Exception {
+        var balance = com.openggf.sprites.managers.PlayableSpriteMovement.class
+                .getDeclaredMethod("updateBalanceState");
+        balance.setAccessible(true);
+        var nextTilt = com.openggf.sprites.managers.PlayableSpriteMovement.class.getDeclaredField("latchedNextTilt");
+        nextTilt.setAccessible(true);
+        for (var module : new com.openggf.game.GameModule[] {
+                new com.openggf.game.sonic1.Sonic1GameModule(), new Sonic2GameModule(),
+                new com.openggf.game.sonic3k.Sonic3kGameModule()}) {
+            GameModuleRegistry.setCurrent(module);
+            var player = new com.openggf.sprites.playable.Sonic("sonic", (short) 0, (short) 0);
+            player.setCentreX((short) 100);
+            player.setCentreY((short) (80 - player.getYRadius()));
+            player.setAir(false);
+            player.setAngle((byte) 0);
+            player.setGSpeed((short) 0);
+            var movement = new com.openggf.sprites.managers.PlayableSpriteMovement(player);
+            nextTilt.setInt(movement, 3);
+            for (boolean floorPresent : new boolean[] {true, false}) {
+                fgChunkMap[6][5] = floorPresent ? new ChunkDesc(1 | 0x1000) : null;
+                for (boolean active : new boolean[] {true, false}) {
+                    for (Sensor sensor : player.getGroundSensors()) sensor.setActive(active);
+                    balance.invoke(movement);
+                    assertEquals(!floorPresent, player.isBalancing(),
+                            module.getClass().getSimpleName() + " floor=" + floorPresent + " active=" + active);
+                    for (Sensor sensor : player.getGroundSensors()) assertEquals(active, sensor.isActive());
                 }
             }
         }

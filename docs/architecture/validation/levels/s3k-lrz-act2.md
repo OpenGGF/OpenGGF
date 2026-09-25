@@ -16,6 +16,8 @@ from cold Act1 in43761 inputs without a death. See the
 [completion evidence](#ordinary-cold-act2-completion-2026-09-24). Solo Tails also completes
 the cold Act1→Act2 route in59712 inputs with85 Act2 restore/replay spots across
 the middle and completion tests; see [Tails completion](#tails-cold-act2-completion-2026-09-25).
+Ordinary solo Knuckles now also completes cold Act1→Act2→direct HPZ in52659
+inputs with zero deaths; see [Knuckles completion](#knuckles-cold-act2-completion-and-direct-hpz-2026-09-25).
 Broader products remain open.
 
 Incoming: seamless `$900` handover, level select `$901`, star-post reload.
@@ -63,7 +65,7 @@ behavior at every placement; the remaining obligations below retain that distinc
 | BREADTH: act 2's own skins | `Obj_LRZSinkingRock`'s act branch (`mapping_frame` 1 and the `$090` tile base, sonic3k.asm:87907-87910) plus the act 2 door, button and swinging-spike-ball art keys | native 320 and 400, in act 2 | `TestS3kLrzCompatibilityMatrix#actTwoExercisesItsOwnSkins`, `#actTwoSkinsAlsoLoadWide` | implemented | pass | Asserts the load really is act 2 and that each act 2 art key has a ready ROM-backed renderer. Behaviour of the act 2 placements themselves is still unverified |
 | OBJECT: `$0F` collapsing bridges (25) and `$24` tunnel (10) | `Obj_CollapsingBridge` zone-9 mappings; `Obj_AutomaticTunnel` subtypes `$55-$59`, `$D5-$D9` | native | `TestS3kLrzPlacementCensus` (classification only) | implemented | classification pass | Per-subtype behaviour unverified |
 | EXIT: boulder cutscene and `$1600` request | `Obj_LRZ2CutsceneKnuckles` `$AE` at `($38B0,$240)`, `CutsceneKnux_LRZ2`, `loc_63C14` (Y >= `$4C0`: `Act3_flag`, ring/timer/shield carry) | 17 width/donor/character/team rows, plus Knuckles exclusion | `TestS3kLrzBoulderCutsceneHeadless` | implemented | production approach, carry and full-world replay pass in campaign | Cold arrival, additional teams and matched native pixels remain open |
-| EXIT: Knuckles `Obj_StartNewLevel` `$B3` -> `$1601` | `Check_InMyRange word_86426`; word decode at `subtype` (SST `$2D` must be 0); `SaveGame` only for `Player_mode 3` | native Sonic/Tails/Knuckles | `TestS3kStartNewLevel`, `TestS3kLrzExitHeadless` | implemented | 20-case exit/census selection passes; real HPZ load verified | Positioned entry; cold reachability and wider roster/lifecycle breadth remain open |
+| EXIT: Knuckles `Obj_StartNewLevel` `$B3` -> `$1601` | `Check_InMyRange word_86426`; word decode at `subtype` (SST `$2D` must be 0); `SaveGame` only for `Player_mode 3` | native Sonic/Tails/Knuckles | `TestS3kStartNewLevel`, `TestS3kLrzExitHeadless` | implemented | 20-case exit/census selection passes; real HPZ load verified | Cold native320 solo Knuckles now reaches real HPZ from Act1 in52659 inputs; see completion evidence below. Wider roster/lifecycle breadth and matched native pixels remain open |
 | ROUTE: act 2 from the seamless change | The `lrz` fixture's own input column from row 25558 (`~/Videos/OGGF/lrz-bring-up/inputs/lrz2-native-route-v1.txt`), driven after the production act change | native | scratch probe, recorded in the [frontier log](../../../status/trace-frontier-log.md) | measured | 923 rows exact | Player x/y match rows 25558-26481; first player divergence row 26482 (spindash release `$900` against an implied `$A00`), first camera divergence row 26416 (3 px in y). Declared positioned probe: the engine is written to the fixture's row-25558 state first, because the filmed fight is not the recorded route |
 | ORACLE: strict segment replay | `TestS3kSonicTailsLrzSegmentTraceReplay` (act 2 from row 25557), `TestS3kTailsFullChainLrz3SegmentTraceReplay` | `-Ptrace-segments` | — | — | see [trace frontier log](../../../status/trace-frontier-log.md) | Slice 11 |
 
@@ -816,3 +818,72 @@ The next spindash initially became a roll because Knuckles was still moving;
 a brief brake before Down allows a real charge. The discarded long run then
 rebounds west; jumping before that obstacle keeps the route eastward. These
 are recorded controller choices, not changes to native gameplay semantics.
+
+
+## Knuckles cold Act2 completion and direct HPZ (2026-09-25)
+
+`lrz-knuckles-cold-hpz-320.{script,bk2}` preserves52659 controller inputs from
+cold Act1, ordinary solo Knuckles/native320/donor off, with zero deaths. It
+opens doors9/10, traverses the eastern tubes, lower return passage and flame
+stairs, breaks the two placed rocks and crosses the collapsing bridges, then
+uses `Obj_StartNewLevel` at($3FE0,$E0). The actual zone22/act1 load occurs at
+input52418; another240 Right inputs end at(1075,748), zero rings, no follower
+and normal player control. No position, shield, rings or emeralds are seeded.
+Knuckles never enters LRZ's boss act. This closes the three mandatory native320
+cold roster chains: Sonic+Tails, solo Tails and solo Knuckles. Wider products,
+lifecycle breadth and native presentation comparison remain separate obligations.
+
+`TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace`
+adds81 full-registry immediate-restore and45-input forward-replay windows.
+Source windows stop before the callback-bearing load fade; three destination
+windows exercise HPZ. The test asserts a replacement level object, actual
+zone/act identity, roster, final position, released control and no deaths.
+The earlier208 windows retain their separate scope (107 Act1,101 Act2); with
+this extension the complete Knuckles set contains289 windows.
+
+The first run exposed a real replay defect at input41205: position agreed but
+facing, look-delay and status history differed. A diagnostic confirmed that
+restore retained collision sensor activation from the future upward jump.
+`Sonic_Balance` explicitly calls `ChooseChkFloorEdge`; those engine cache flags
+are not a native gate. The movement routine now temporarily enables its floor
+probes and restores their flags afterward. A bounded real-terrain regression
+failed before the fix (expected no balance, actual balance2) and exercises both
+edges, all three S3K characters and both gravity directions with disabled flags.
+No input-specific condition, snapshot comparison exclusion or gameplay seed.
+
+Rejected controller approaches: jumping directly beneath button10 hits its
+underside; backing up allows side contact. The return spring before the lower
+passage sends an uninterrupted run west, so the route brakes before it and
+follows the lower curve. Repeated jumps clear the eastern staircase but land
+on the final nozzle; a timed retreat and drop pass beneath its leftward flame.
+The powered native recording served only as a navigation reference, never as
+state input or a normal-character physics oracle.
+
+On `dd3db3d61` plus this fix and route extension, queued Java21/native GL:
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestGroundSensor,TestPlayableSpriteMovement,TestEdgeBalance,TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kReverseGravityDezCorridor test
+```
+
+The first selection passes221 tests,0 failures/errors/skips,1:39 Maven;
+the route itself takes31.04 seconds and passes all81 windows. The second passes
+107 tests,0 failures/errors/skips,25.854 seconds Maven. The change-based plan
+selects2918 ordinary classes plus guards because shared movement changed;
+combined campaign validation remains owed before integration. Separately,
+`maven_queue.py -Dmse=off -Pguards -Dtest=TestObjectPhysicsStandardizationGuard,TestRewindTransientGuard test`
+passes35 tests,0 failures/errors/skips,23.999 seconds Maven. After adding
+an explicit S1/S2/S3K enabled/disabled floor-cache check,
+`maven_queue.py -Dmse=off -Dtest=TestGroundSensor test` passes31 tests,
+0 failures/errors/skips,20.731 seconds Maven. These focused
+passes are not a new full-suite claim.
+
+Final post-fix video:
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-knuckles-cold-hpz-fixed-320/capture.mp4`.
+It covers47762–52658,4897 frames at60fps,81.616667 seconds. All52419 authored
+source rows match fresh playback on x/y, x/y velocity, ground speed, air,
+rolling, hurt, dead, rings and camera x/y. All52659 fresh rows have no deaths
+or follower; final position/rings agree with the test. The video passes full
+decode; upper climb and playable HPZ stills are inspected. The earlier pre-fix
+capture is superseded. Exact command and provenance accompany the external
+capture. This is engine presentation evidence, not native pixel parity.

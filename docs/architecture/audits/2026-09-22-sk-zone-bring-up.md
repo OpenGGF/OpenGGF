@@ -5453,3 +5453,27 @@ approaches so the next pass need not repeat them. Scratch continuation opens
 door9 and reaches(8693,236), but has not yet received its own independent capture
 or replay certification. Continue from that input, then close direct HPZ and
 the remaining campaign scope before combined integration/push/cleanup.
+
+
+## Knuckles cold LRZ chain reaches direct HPZ (2026-09-25)
+
+After `dd3db3d61`, the native320 ordinary solo Knuckles route completes both
+acts and the real directHPZ load in52659 controller inputs, zero deaths, no
+state seeds. The [Act2 completion matrix](../validation/levels/s3k-lrz-act2.md#knuckles-cold-act2-completion-and-direct-hpz-2026-09-25)
+records81 additional full-world replay windows, exact commands and post-fix
+independent capture. Knuckles has289 windows across five scoped route tests.
+Sonic+Tails, solo Tails and solo Knuckles now all have the required native cold
+LRZ chains; this is not whole-zone breadth or native-pixel certification.
+
+The first route test found a balance replay mismatch at41205. A smaller
+real-terrain test reproduced it: an inactive floor probe was treated as empty
+terrain even though native `Sonic_Balance` explicitly requests that probe.
+Locally enabling the balance probes removes the dependency on the collision
+quadrant cache without adding gameplay state or changing the recorded path.
+The prior idea of snapshotting the flags was rejected: those flags belong to
+a separate engine dispatch and are not a native gate on this explicit query.
+Focused movement/route checks pass221 tests, required loading/reverse-gravity
+checks pass107, two targeted guard classes pass35, and the final sensor selection
+passes31 including explicit S1/S2/S3K coverage, all zero failures/errors/skips. The shared movement change
+requires the combined campaign broad selection before integration; it remains
+undelivered until that verification, merge, push and cleanup are complete.

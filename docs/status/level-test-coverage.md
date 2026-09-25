@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+[Knuckles LRZ2 completion](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-cold-act2-completion-and-direct-hpz-2026-09-25)
+now reaches playable Hidden Palace from cold Act1 in52659 inputs, zero deaths,
+with81 additional restore/replay windows (289 across the five Knuckles tests).
+The route exposed and repairs a stale collision-probe flag affecting balance
+after rewind. The three mandatory native320 LRZ cold chains are complete;
+broader products, native presentation and campaign integration remain open.
+Earlier milestone notes below retain their historical scope.
+
 [Knuckles LRZ2 upper climb](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-upper-climb-and-door-release-2026-09-25)
 now reaches the eastern door approach in40046 cold inputs, zero deaths, with53
 additional restore/replay spots (101 Act2,208 across the Knuckles route tests).

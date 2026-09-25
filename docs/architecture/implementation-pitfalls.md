@@ -852,3 +852,20 @@ write restores ROM semantics and the full incoming route. Do not solve this by
 weakening rewind comparisons or relinking to the nearest object. Explicit
 interaction clears in other routines (for example FBZ chain release) still apply.
 Evidence: 2026-09-25 S&K campaign broad-validation follow-up.
+
+
+### Explicit floor probes must not inherit collision-dispatch activation
+
+`Sonic_Balance` calls `ChooseChkFloorEdge` directly (S3K `sonic3k.asm:22531-22535`;
+S1/S2 equivalents are cited in `checkTerrainEdgeBalance`). The engine's sensor
+active flags emulate a different routine's quadrant dispatch. They are a cache,
+not a native precondition for Balance. The Knuckles cold LRZ2 route exposed a
+forward-replay mismatch at input41205 after restoring from an upward jump:
+disabled floor probes returned null, falsely selected an edge, flipped facing
+and reset look-up timing. Immediate snapshot comparison alone missed the cache.
+The balance routine now enables its explicit probes locally and restores the
+flags afterward, as the existing ground-wall probe already does. Do not add a
+ROM condition based on the cache or hide the differing player history.
+`TestGroundSensor` checks enabled/disabled probes on both edges, all three S3K
+characters and both gravity directions; the cold route exercises the actual
+restore and45-input replay. Origin: 2026-09-25 S&K campaign direct-HPZ follow-up.

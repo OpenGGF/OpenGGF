@@ -199,6 +199,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Fall-from-glide landings preserve surface contact when restoring standing radii.
   Glide landing poses now yield to ducking and spindashing during their movement
   lock, allowing Knuckles to shake off Toxomister clouds with a spindash.
+  Ledge-balance checks perform their own floor probes, so rewinding from a jump
+  no longer changes facing or look-up timing through stale collision flags.
   Upside-down monitors retain their native knock-loose and ceiling-settling behavior,
   including the reversed-gravity direction check. Their shells and reward icons
   keep their placement flips, with the native inverted reward motion and timing.
