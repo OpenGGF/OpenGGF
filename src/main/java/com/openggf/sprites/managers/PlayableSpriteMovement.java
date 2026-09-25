@@ -1035,7 +1035,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				int adjusted = (hexAngle + 0x20) & 0xC0;
 				if (adjusted == 0) {
 					sprite.setMoveLockTimer(0x0F);   // ROM: move.w #$F,move_lock(a0)
-					sprite.setForcedAnimationId(0x23); // ROM: move.b #$23,anim(a0)
+					sprite.setForcedAnimationId(-1);
+					sprite.setAnimationId(0x23); // ROM: one-shot move.b #$23,anim(a0)
 				}
 			}
 			return;
@@ -1191,7 +1192,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (adjusted == 0) {
 				// Flat surface: crouch with move_lock
 				sprite.setMoveLockTimer(0x0F);
-				sprite.setForcedAnimationId(0x23);  // GLIDE_SLIDE (crouching frame)
+				sprite.setForcedAnimationId(-1);
+				sprite.setAnimationId(0x23); // one-shot fall-from-glide landing pose
 			}
 		}
 	}
@@ -2128,8 +2130,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// ROM: move.w #$F,move_lock — 15-frame input lock
 		sprite.setMoveLockTimer(0x0F);
-		// ROM: move.b #$22,anim — GLIDE_LAND animation (brief get-up/crouch pose)
-		sprite.setForcedAnimationId(0x22);
+		// Knuckles_Sliding .getUp writes anim=$22 once, not for the duration
+		// of move_lock. Move preserves it while locked, but SonicKnux_Roll,
+		// SonicKnux_Spindash and Sonic_Jump can replace it. A forced pose hid
+		// those writes from loc_8FE50, preventing Toxomister spindash escape.
+		// Release the preceding glide override and publish the native byte.
+		sprite.setForcedAnimationId(-1);
+		sprite.setAnimationId(0x22);
 	}
 
 	/**

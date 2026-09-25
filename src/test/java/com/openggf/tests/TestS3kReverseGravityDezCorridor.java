@@ -484,6 +484,49 @@ class TestS3kReverseGravityDezCorridor {
     }
 
     @Test
+    void glideLandingPoseYieldsToSpindashDuringMoveLockAndReplays() {
+        for (int glideState : new int[] {2, 3}) {
+            for (boolean reversed : new boolean[] {false, true}) {
+                HeadlessTestFixture fixture = fixtureFor(Character.KNUCKLES);
+                AbstractPlayableSprite sprite = fixture.sprite();
+                GameServices.gameState().setReverseGravityActive(reversed);
+                // Declared setup: released glide or glide slide on real corridor terrain.
+                sprite.applyCustomRadii(10, 10);
+                NativePositionOps.writeXPosResetSubpixel(sprite, CORRIDOR_X);
+                NativePositionOps.writeYPosResetSubpixel(sprite,
+                        reversed ? CEILING_CLEAR_Y + 10 : FLOOR_SURFACE_Y - 10);
+                sprite.setAir(true);
+                sprite.setOnObject(false);
+                sprite.setRolling(false);
+                sprite.setDoubleJumpFlag(glideState);
+                sprite.setForcedAnimationId(0x20);
+                sprite.setXSpeed((short) 0);
+                sprite.setYSpeed((short) (glideState == 2 ? 0x400 : 0));
+                sprite.setGSpeed((short) 0);
+                for (int i = 0; i < 8 && sprite.getAir(); i++) fixture.stepIdleFrames(1);
+                assertFalse(sprite.getAir());
+                assertEquals(glideState == 2 ? 0x23 : 0x22, sprite.getAnimationId(), "native glide landing pose");
+                assertEquals(0x0F, sprite.getMoveLockTimer());
+                var registry = fixture.gameplayMode().getRewindRegistry();
+                var landing = registry.capture();
+                for (int replay = 0; replay < 2; replay++) {
+                    if (replay != 0) registry.restore(landing);
+                    fixture.stepIdleFrames(1);
+                    assertEquals(glideState == 2 ? 0x23 : 0x22, sprite.getAnimationId(), "idle lock preserves the one-shot pose");
+                    fixture.stepFrame(false, true, false, false, false);
+                    // SonicKnux_Roll writes Duck after the move-lock-gated Move.
+                    assertEquals(8, sprite.getAnimationId(), "Down replaces landing before lock expires");
+                    fixture.stepFrame(false, true, false, false, true);
+                    assertTrue(sprite.getSpindash());
+                    assertTrue(sprite.getMoveLockTimer() > 0);
+                    // loc_8FE50 reads this byte to release Toxomister's cloud.
+                    assertEquals(9, sprite.getAnimationId(), "cloud must see the real spindash animation");
+                }
+            }
+        }
+    }
+
+    @Test
     void reversedClimbProbesUseTheRealFloorAndCeilingAtTheirNativeOffsets() {
         HeadlessTestFixture fixture = fixtureFor(Character.KNUCKLES);
         AbstractPlayableSprite sprite = fixture.sprite();

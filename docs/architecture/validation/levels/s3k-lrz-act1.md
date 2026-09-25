@@ -1046,3 +1046,20 @@ Post-fix fresh playback of all34128 inputs matches the authoring CSV on12 fields
 with zero mismatches/deaths. The final clip has1728frames at60fps (28.8seconds),
 full decode passes, and inspected frames cover hits, reload, title reset and
 playable Act2. The campaign audit records the command identities and limitations.
+
+
+### Knuckles cloud escape follow-up (2026-09-25)
+
+Controller-only cold Knuckles authoring exposed a stale forced glide-landing
+animation: spindash state became active while the cloud still read landing `$22`
+instead of Spindash9. The player landing owner now publishes `$22`/`$23` once,
+matching `Knuckles_Sliding.getUp` / `Knuckles_Fall_From_Glide`; `loc_8FE50` remains
+unchanged. The production corridor regression
+`TestS3kReverseGravityDezCorridor.glideLandingPoseYieldsToSpindashDuringMoveLockAndReplays`
+covers both landing paths, upright/inverted terrain and immediate restore plus
+control replay. Focused movement/cloud/corridor checks pass248 tests, zero skips.
+Fresh native320 cold replay releases the cloud at9943 and reaches `(9847,2796)`
+at10559 with13 rings and no deaths. The11-second clip is
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-knuckles-cloud-spindash-320/capture.mp4`.
+This is partial route evidence: Knuckles cold completion, native whole-scene
+comparison and broader products remain open.

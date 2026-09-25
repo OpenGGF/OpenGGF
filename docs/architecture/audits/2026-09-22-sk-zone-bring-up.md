@@ -5311,3 +5311,50 @@ records command, boundaries and limitations. The test/input-only scope uses
 focused validation instead of the2917-class asset fallback. Next mandatory LRZ
 route is Knuckles' Act1→Act2→direct HPZ chain; broader campaign obligations and
 integration remain open.
+
+
+## Knuckles LRZ cold-route cloud escape (2026-09-25)
+
+After `6e54f338a`, controller-only Knuckles authoring reached the lower Act1
+Toxomister near `(8516,2772)`. Left/right shaking released its cloud; a real
+spindash did not. A fresh rendered cold replay of the same input confirmed
+`spindash=true` at frames9943–9950 while `anim` remained `$22`, with the cloud
+still attached in routine8. This was an animation ownership defect, not a missing
+cloud escape check or a need to change the route's controls.
+
+`loc_8FE50` compares `anim` with9. `Knuckles_Sliding.getUp` writes `$22` once,
+and `Knuckles_Fall_From_Glide` writes `$23` once; neither forces the pose for the
+15-frame `move_lock`. The engine forced both poses until the lock expired,
+overwriting Duck and Spindash after their real control routines had run. The
+correction releases the earlier glide override and publishes the native byte.
+The existing animation profile preserves it while Move is locked and permits
+later native writes. Changing the cloud to inspect the spindash flag was rejected:
+that would conceal the incorrect player byte and leave other animation consumers
+wrong.
+
+The new production corridor regression checks slide and released-glide landings,
+both gravity directions, idle pose retention, Duck→Spindash before lock expiry,
+and immediate restore plus input replay. The first correctly configured pre-fix
+case failed `expected Duck8, actual landing34`; an earlier setup selected the
+other native landing pose and was corrected before diagnosing the failure.
+Cold Knuckles completion, remaining native comparisons and breadth still remain
+open; this local fix does not certify the whole route.
+
+Focused verification on the working candidate after `6e54f338a`:
+
+- Queued Maven `-Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+  -Dtest=TestS3kReverseGravityDezCorridor,TestPlayableSpriteMovement,TestToxomisterBadnikInstance,TestS3kLrzToxomisterReboundHeadless test`:
+  248 passed, zero failures/errors/skips.
+- Queued Maven with the same ROM and `-Dopenggf.test.gl.native=true`,
+  `-Dtest=TestPlayableSpriteAnimation,TestScriptedVelocityAnimationProfile,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:
+  140 passed, zero failures/errors/skips; both LevelLoading classes ran.
+- Fresh rendered cold replay now publishes Duck8 at9942 and Spindash9 at9943;
+  the attached cloud disappears at9943. All10560 executed rows have no deaths,
+  ending `(9847,2796)` with13rings. The movie captures9900–10559:
+  660frames/60fps/11seconds, full decode passes, inspected spindash and endpoint
+  stills. This is engine behavior evidence, not native whole-scene parity.
+- Selection inspection against `6e54f338a` correctly chooses full ordinary scope
+  for the shared movement file. Combined campaign broad/integration validation
+  is still owed; these focused passes are not a full-suite or delivery claim.
+
+The separate queued `-Dmse=off -Pguards -Dtest=TestObjectPhysicsStandardizationGuard test` run passes33 tests, zero failures/errors/skips.

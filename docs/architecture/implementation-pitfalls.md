@@ -26,6 +26,16 @@ policy on current zone/act as well as its runtime owner. The short
 `TestDezFinalScreenEntry.outgoingDoomsdayLoadDoesNotInheritFinalArenaCameraProjection`
 regression exercises this boundary without replaying the full fight.
 
+**A one-shot animation write is not a forced pose.** Knuckles' slide get-up
+(`Knuckles_Sliding.getUp`) and fall-from-glide landing write `anim=$22/$23`
+once alongside `move_lock=$F`. The lock gates Move, not subsequent Duck,
+Spindash or Jump writes. Forcing the landing animation until the lock expires
+hid Spindash9 from Toxomister's `loc_8FE50` even while the real spindash flag
+was set. Publish the native byte and let its owners replace it; changing the
+consumer to inspect a convenient state flag conceals the upstream mismatch.
+The LRZ cold-route investigation and regression are recorded in the
+[bring-up audit](audits/2026-09-22-sk-zone-bring-up.md#knuckles-lrz-cold-route-cloud-escape-2026-09-25).
+
 **Reused position words.** A field named `x_sub` is not always a fraction.
 KiS2 `Knuckles_BeginClimb` and S3K `Knuckles_Gliding_HitWall` store the grab's
 native X word there, then the climbing routine compares it with `x_pos` and
