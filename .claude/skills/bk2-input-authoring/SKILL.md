@@ -52,3 +52,27 @@ The log key is `#P1 Up|P1 Down|P1 Left|P1 Right|P1 Start|P1 A|P1 B|P1 C|#P2 …|
 and each frame line is `|UDLRSABC|UDLRSABC|` with `.` for released, the same writer
 `UserRecordingWriter` uses for user recordings. `Bk2MovieLoader.loadInputLog` reads the
 bare text file; `loadMovieOrInputLog` accepts either container by zip magic.
+
+## Trying alternatives after a long cold prefix
+
+`GameplayInputBranchTool` replays a prefix once and restores the engine's own
+whole-registry snapshot before each candidate. It also restores the external
+input driver's held-button history. Example with the gameplay-capture Java
+classpath:
+
+```text
+GameplayInputBranchTool <ROM> s3k lrz 1 320 sonic tails <input.bk2> 35660 <new-output-dir> '20 L;300 R' '20 L;16 -;300 R'
+```
+
+Arguments are ROM, game, zone, one-based act, width, main, sidekick (`none` for
+solo), input file, prefix length, output directory, and candidate scripts. The
+probe uses a cold entry without donor or position seeding. Each candidate has a
+compact full-prefix script, round-tripped BK2, state CSV and PNGs every30 inputs
+and at termination. `prefix-objects.txt` lists nearby active objects. It stops
+at death or a level reload and refuses to restore another candidate across that
+load boundary. Use a new empty output directory; existing products are preserved.
+
+These are exploratory branches, not fresh-run or parity evidence. Read the CSV
+before inspecting images. Replay the chosen BK2 independently with
+`GameplayCaptureTool`, then add the appropriate route assertions and rewind
+checks. Never hydrate the engine from native traces to manufacture a checkpoint.

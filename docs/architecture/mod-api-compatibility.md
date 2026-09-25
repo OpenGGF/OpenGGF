@@ -221,3 +221,11 @@ and `bossHitEndsActiveGlide` interaction components to the unpublished 0.7
 candidate. Rule producers pass both values explicitly. No older constructor
 overload is retained; the current candidate signature pin is regenerated in
 place and the descriptor/runtime version remains 0.7.0.
+
+Player rewind snapshots now distinguish an actual solid-contact binding from a
+zero placed-object ID. Event-created S3K solids can use ID zero; clearing contact
+also leaves the ROM interact slot intact. `PlayerRewindExtra` carries the explicit
+binding bit (alongside the campaign’s captured tile priority and display bucket),
+and `AbstractPlayableSprite.hasLatchedSolidObjectBinding()` exposes
+it to restore reconciliation. This updates the unpublished 0.7 candidate pin in
+place; the descriptor and runtime version remain 0.7.0, with no published baseline.

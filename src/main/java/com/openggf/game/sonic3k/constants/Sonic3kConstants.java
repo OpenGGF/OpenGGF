@@ -485,6 +485,52 @@ public class Sonic3kConstants {
     public static final int ARTTILE_LBZ_MISC = 0x03C3;
     public static final int ARTTILE_FBZ_MISC = 0x0379;
     public static final int ARTTILE_DEZ_MISC = 0x034D;
+    /** {@code ArtTile_DEZMisc2 = $02FC} (sonic3k.constants.asm:1355). */
+    public static final int ARTTILE_DEZ_MISC2 = 0x02FC;
+
+    /** Obj_DEZMiniboss and its children share this runtime-uploaded sheet. */
+    public static final int ARTTILE_DEZ_MINIBOSS = 0x0400;
+    public static final int ART_KOSM_DEZ_MINIBOSS_ADDR = 0x1805A0;
+    public static final int MAP_DEZ_MINIBOSS_ADDR = 0x184FBA;
+    public static final int PAL_DEZ_MINIBOSS_1_ADDR = 0x7EFFC;
+    public static final int PAL_DEZ_MINIBOSS_2_ADDR = 0x7F01C;
+    /** word_7F03C: Run_PalRotationScript entry installed by sub_7EE88. */
+    public static final int PAL_DEZ_MINIBOSS_ATTACK_SCRIPT_ADDR = 0x7F03C;
+    public static final int PAL_DEZ_MINIBOSS_HIT_FLASH_ADDR = 0x7EE26;
+
+    /** Obj_DEZEndBoss $7F06C: independently queued from the Act 1 sheet. */
+    public static final int ARTTILE_DEZ_END_BOSS = 0x038A;
+    public static final int ART_KOSM_DEZ_END_BOSS_ADDR = 0x181002;
+    public static final int MAP_DEZ_END_BOSS_ADDR = 0x185B82;
+    public static final int PAL_DEZ_END_BOSS_ADDR = 0x7FD08;
+    public static final int PAL_DEZ_END_BOSS_HIT_FLASH_ADDR = 0x7FC26;
+
+
+    // ===== DEZ Gravity Switch (Obj_DEZGravitySwitch, SKL ID 0x58) =====
+    // Map_DEZGravitySwitch (sonic3k.asm:94909, sonic3k.lst:112040). Two frames:
+    // word_48BEE is the armed 32x16 pad, word_48C08 the two-piece pressed pose.
+    // The header takes make_art_tile(ArtTile_DEZMisc+$143,1,0) (sonic3k.asm:94802).
+    public static final int MAP_DEZ_GRAVITY_SWITCH_ADDR = 0x048BEA;
+    /** {@code Map_DEZGravityPuzzle} (sonic3k.lst: ROM $00049A6C). */
+    public static final int MAP_DEZ_GRAVITY_PUZZLE_ADDR = 0x049A6C;
+
+    /** {@code ArtTile_DEZ2Extra = $0332} (sonic3k.lst:1945). */
+    public static final int ARTTILE_DEZ2_EXTRA = 0x0332;
+    /** {@code Map_DEZRetractingSpring} (sonic3k.lst: ROM $000481B6). */
+    public static final int MAP_DEZ_RETRACTING_SPRING_ADDR = 0x0481B6;
+    /** {@code Map_DEZEnergyBridge} (sonic3k.lst: ROM $00047FF8). */
+    public static final int MAP_DEZ_ENERGY_BRIDGE_ADDR = 0x047FF8;
+    /** {@code Map_DEZBumperWall} (sonic3k.lst: ROM $000498C2). */
+    public static final int MAP_DEZ_BUMPER_WALL_ADDR = 0x0498C2;
+    /** Ani_DEZLightning / Map_DEZLightning, sonic3k.lst:110370-110380. */
+    public static final int MAP_DEZ_TILTING_BRIDGE_ADDR = 0x046F7A;
+    public static final int MAP_DEZ_HANG_CARRIER_ADDR = 0x04717E;
+    public static final int MAP_DEZ_CURVED_ENERGY_BRIDGE_ADDR = 0x048038;
+    public static final int MAP_DEZ_FLOATING_PLATFORM_ADDR = 0x025ACA;
+    public static final int MAP_DEZ_HOVER_MACHINE_ADDR = 0x0495D8;
+    public static final int MAP_DEZ_TORPEDO_LAUNCHER_ADDR = 0x0472A8;
+    public static final int ANI_DEZ_LIGHTNING_ADDR = 0x047926;
+    public static final int MAP_DEZ_LIGHTNING_ADDR = 0x04792E;
 
     // ===== Tension Bridge mappings (Obj_TensionBridge, ID 0x6C) =====
     public static final int MAP_TENSION_BRIDGE_ADDR = 0x038FF2;   // Map_TensionBridge
@@ -974,8 +1020,25 @@ public class Sonic3kConstants {
     // ROM bug: writes same 2 colors twice (uses (a0,d0.w) twice instead of 4(a0,d0.w)) — replicated faithfully.
     public static final int ANPAL_LRZ2_3_ADDR = 0x003344;
     public static final int ANPAL_LRZ2_3_SIZE = 256;
+    /** AnPal_PalLRZ3: fifteen pairs of fire colors (sonic3k.lst $36EC). */
+    public static final int ANPAL_LRZ3_ADDR = 0x0036EC;
+    public static final int ANPAL_LRZ3_SIZE = 0x3C;
     // BPZ balloons (palette 2, colors 13-15): 3 frames x 6 bytes = 18 bytes
     // Verified by ROM binary search for pattern 00EE 00AE 006C 00AE 006E 00EE 006E 00EE 00AE
+    // Death Egg. AnPal_DEZ1 (sonic3k.asm:3661) runs channel A and then falls through into
+    // AnPal_DEZ2 (:3676); act 2 enters at the AnPal_DEZ2 label, so it runs only B and C.
+    // Channel B (both acts): AnPal_PalDEZ12_1, palette line 3 colours 13-14 (1 longword),
+    // 12 frames x 4 bytes = 48 bytes; counter step +4, wraps at $30 (sonic3k.lst: $3444).
+    public static final int ANPAL_DEZ12_1_ADDR = 0x003444;
+    public static final int ANPAL_DEZ12_1_SIZE = 0x30;
+    // Channel C (both acts): AnPal_PalDEZ12_2, palette line 3 colours 8-12 (long, long, word),
+    // 4 frames x 10 bytes = 40 bytes; counter step +$A, wraps at $28 (sonic3k.lst: $3474).
+    public static final int ANPAL_DEZ12_2_ADDR = 0x003474;
+    public static final int ANPAL_DEZ12_2_SIZE = 0x28;
+    // Channel A (act 1 only): AnPal_PalDEZ1, palette line 4 colours 12-15 (2 longwords),
+    // 6 frames x 8 bytes = 48 bytes; counter step +8, wraps at $30 (sonic3k.lst: $349C).
+    public static final int ANPAL_DEZ1_ADDR = 0x00349C;
+    public static final int ANPAL_DEZ1_SIZE = 0x30;
     public static final int ANPAL_BPZ_1_ADDR = 0x0034CC;
     public static final int ANPAL_BPZ_1_SIZE = 18;
     // BPZ background (palette 3, colors 2-4): 21 frames x 6 bytes = 126 bytes
@@ -1045,8 +1108,20 @@ public class Sonic3kConstants {
     // AniPLC_MHZ: 4 scripts (mushroom caps and foreground foliage, both acts)
     // Verified by table position immediately before AniPLC_LRZ1 at 0x028A6A.
     public static final int ANIPLC_MHZ_ADDR = 0x0289E8;
+    /**
+     * {@code AniPLC_DEZ} (sonic3k.asm:56079, sonic3k.lst: $28AEE): eight always-running scripts
+     * shared by both Death Egg acts. {@code Offs_AniFunc} pairs both acts with the generic
+     * {@code AnimateTiles_DoAniPLC}, so nothing gates them.
+     */
+    public static final int ANIPLC_DEZ_ADDR = 0x028AEE;
     /** {@code AniPLC_HPZ} (sonic3k.lst:67357). */
     public static final int ANIPLC_HPZ_ADDR = 0x028C40;
+    /**
+     * {@code AniPLC_SSZ} (sonic3k.lst:66804): six scripts. {@code Offs_AniFunc} pairs it with
+     * {@code AnimateTiles_DoAniPLC} for {@code $A00} and with {@code AnimateTiles_NULL}
+     * (a bare {@code rts}) for {@code $A01}, so act 2 animates nothing.
+     */
+    public static final int ANIPLC_SSZ_ADDR = 0x028AA4;
 
     // ArtUnc_AniAIZ2_FirstTree: Static tree art for AIZ2 near-spawn area (camera X < 0x1C0)
     // 0x460 bytes = 35 tiles, loaded to VRAM tile $0CA
@@ -1697,6 +1772,95 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_FBZ_BUTTON_ADDR = 0x165E80;
     public static final int MAP_BUTTON_ADDR = 0x02C71E;
     public static final int MAP_LRZ_BUTTON_ADDR = 0x02C748;
+    /** {@code Map_LRZDashElevator} (sonic3k.lst: $43096). */
+    public static final int MAP_LRZ_DASH_ELEVATOR_ADDR = 0x043096;
+    /** {@code Map_LRZDoor} (sonic3k.lst: $429DA); both acts share it. */
+    public static final int MAP_LRZ_DOOR_ADDR = 0x0429DA;
+    /** {@code Map_LRZBigDoor} (sonic3k.lst: $42B24). */
+    public static final int MAP_LRZ_BIG_DOOR_ADDR = 0x042B24;
+    /** {@code Map_LRZButtonHorizontal} (sonic3k.lst: $42D7C). */
+    public static final int MAP_LRZ_BUTTON_HORIZONTAL_ADDR = 0x042D7C;
+    /** {@code Map_LRZButtonHorizontal2} (sonic3k.lst: $42D9E), the act 2 skin. */
+    public static final int MAP_LRZ_BUTTON_HORIZONTAL2_ADDR = 0x042D9E;
+    /** {@code Map_LRZShootingTrigger} (sonic3k.lst: $42F06); the shot reuses it at frame 1. */
+    public static final int MAP_LRZ_SHOOTING_TRIGGER_ADDR = 0x042F06;
+    /** {@code make_art_tile($090,2,0)}: the act 2 door's tile base (sonic3k.asm:88027). */
+    public static final int ARTTILE_LRZ2_DOOR = 0x0090;
+    /** {@code Map_LRZSinkingRock} (sonic3k.lst: $42834); both acts share it. */
+    public static final int MAP_LRZ_SINKING_ROCK_ADDR = 0x042834;
+    /** {@code Map_LRZFallingSpike} (sonic3k.lst: $42920). */
+    public static final int MAP_LRZ_FALLING_SPIKE_ADDR = 0x042920;
+    /** {@code Map_LRZFireballLauncher} (sonic3k.lst: $42CB2); the fireball shares it. */
+    public static final int MAP_LRZ_FIREBALL_LAUNCHER_ADDR = 0x042CB2;
+    /** {@code Map_LRZLavaFall} (sonic3k.lst: $43782), used only by the drops. */
+    public static final int MAP_LRZ_LAVA_FALL_ADDR = 0x043782;
+    /** {@code Map_LRZSmashingSpikePlatform} (sonic3k.lst: $4324A). */
+    public static final int MAP_LRZ_SMASHING_SPIKE_PLATFORM_ADDR = 0x04324A;
+    /** {@code Map_LRZRockCrusher} (sonic3k.lst: $186D6A). */
+    public static final int MAP_LRZ_ROCK_CRUSHER_ADDR = 0x186D6A;
+    /** {@code ArtKosM_LRZRockCrusher} (sonic3k.lst: $16F928). */
+    public static final int ART_KOSM_LRZ_ROCK_CRUSHER_ADDR = 0x16F928;
+    /** {@code ArtTile_LRZRockCrusher} (sonic3k.lst: $52E). */
+    public static final int ARTTILE_LRZ_ROCK_CRUSHER = 0x052E;
+    /** {@code Pal_LRZRockCrusher} (sonic3k.lst: $90680), one 32-byte line. */
+    public static final int PAL_LRZ_ROCK_CRUSHER_ADDR = 0x090680;
+    /** word_905FC: two three-word flash palettes used by sub_905A8/sub_905E8. */
+    public static final int PAL_LRZ_ROCK_CRUSHER_FLASH_ADDR = 0x0905FC;
+    /** {@code Map_LRZMiniboss} (sonic3k.lst: $186EC8). */
+    public static final int MAP_LRZ_MINIBOSS_ADDR = 0x186EC8;
+    /** {@code ArtKosM_LRZMiniboss} (sonic3k.lst: $16FCDA); {@code loc_78592} queues it. */
+    public static final int ART_KOSM_LRZ_MINIBOSS_ADDR = 0x16FCDA;
+    /** {@code ArtTile_LRZMiniboss} (sonic3k.constants.asm:1320). */
+    public static final int ARTTILE_LRZ_MINIBOSS = 0x03FB;
+    /** {@code Pal_LRZMiniboss1} (sonic3k.lst: $78E0A): {@code PalLoad_Line1} at object setup. */
+    public static final int PAL_LRZ_MINIBOSS_1_ADDR = 0x078E0A;
+    /** {@code Pal_LRZMiniboss2} (sonic3k.lst: $78E2A): {@code sub_78B38} copies $40 bytes to line 3. */
+    public static final int PAL_LRZ_MINIBOSS_2_ADDR = 0x078E2A;
+    /** {@code Pal_LRZMiniboss3} (sonic3k.lst: $78E6A): the post-defeat camera release, {@code loc_78B08}. */
+    public static final int PAL_LRZ_MINIBOSS_3_ADDR = 0x078E6A;
+    /** {@code word_78EAA}: finite five-color post-boss rotation, installed by loc_78AA8. */
+    public static final int PAL_LRZ_POST_BOSS_SCRIPT_ADDR = 0x078EAA;
+    /** {@code Pal_LRZ2} (sonic3k.lst: $A96DC): {@code loc_78B08} copies $20 bytes over line 2. */
+    public static final int PAL_LRZ2_ADDR = 0x0A96DC;
+    /** {@code Pal_LRZ1} (sonic3k.lst: $A967C), the line the crusher restores on exit. */
+    public static final int PAL_LRZ1_ADDR = 0x0A967C;
+    /** {@code Map_LRZSpikeBall} (sonic3k.lst: $43A8E). */
+    public static final int MAP_LRZ_SPIKE_BALL_ADDR = 0x043A8E;
+    /** {@code Map_LRZRockDebris} (sonic3k.lst: $43B12). */
+    public static final int MAP_LRZ_ROCK_DEBRIS_ADDR = 0x043B12;
+    /** {@code ArtTile_LRZBigSpike} (sonic3k.lst: $442). */
+    public static final int ARTTILE_LRZ_BIG_SPIKE = 0x0442;
+    /** {@code Map_LRZSwingingSpikeBall} (sonic3k.lst: $43666). */
+    public static final int MAP_LRZ_SWINGING_SPIKE_BALL_ADDR = 0x043666;
+    /** {@code Map_LRZSwingingSpikeBall2} (sonic3k.lst: $4367E), the act 2 skin. */
+    public static final int MAP_LRZ_SWINGING_SPIKE_BALL2_ADDR = 0x04367E;
+    /** {@code Map_LRZOrbitingSpikeBall} (sonic3k.lst, ROM {@code $43D24}). */
+    public static final int MAP_LRZ_ORBITING_SPIKE_BALL_ADDR = 0x043D24;
+    /** {@code Map_LRZFlameThrower} (sonic3k.lst, ROM {@code $4408A}). */
+    public static final int MAP_LRZ_FLAME_THROWER_ADDR = 0x04408A;
+    /** {@code Map_LRZSolidMovingPlatforms} (sonic3k.lst, ROM {@code $259C4}). */
+    public static final int MAP_LRZ_SOLID_MOVING_PLATFORM_ADDR = 0x0259C4;
+    /** {@code Map_LRZSpikeBallLauncher} (sonic3k.lst, ROM {@code $449BC}). */
+    public static final int MAP_LRZ_SPIKE_BALL_LAUNCHER_ADDR = 0x0449BC;
+    /** {@code Map_LRZTurbineSprites} (sonic3k.lst, ROM {@code $445A6}). */
+    public static final int MAP_LRZ_TURBINE_SPRITES_ADDR = 0x0445A6;
+    /** {@code Map_LRZTurbineSprites2} (sonic3k.lst, ROM {@code $445B0}). */
+    public static final int MAP_LRZ_TURBINE_SPRITES2_ADDR = 0x0445B0;
+    /** {@code ArtTile_LRZ2Drum} (sonic3k.lst: $3AD). */
+    public static final int ARTTILE_LRZ2_DRUM = 0x03AD;
+    /** {@code Map_LRZChainedPlatforms} (sonic3k.lst, ROM {@code $4A980}). */
+    public static final int MAP_LRZ_CHAINED_PLATFORM_ADDR = 0x04A980;
+    /**
+     * {@code make_art_tile($090,1,0)}: the flame thrower's tile base (sonic3k.asm:89228). It is
+     * act 2's secondary art, the same base the act 2 sinking rock and door use; named separately
+     * so no owner reads as another's.
+     */
+    public static final int ARTTILE_LRZ2_FLAME_THROWER = 0x0090;
+    /**
+     * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87910).
+     * The same base the act 2 door uses; named separately so neither owner reads as the other's.
+     */
+    public static final int ARTTILE_LRZ2_SINKING_ROCK = 0x0090;
     public static final int MAP_HCZ_BUTTON_ADDR = 0x22BD1A;
     public static final int MAP_CNZ_BUTTON_ADDR = 0x22BD4A;
     public static final int ARTTILE_MHZ1_CUTSCENE_BUTTON = 0x0341;
@@ -1854,6 +2018,12 @@ public class Sonic3kConstants {
     public static final int ARTTILE_DDZ_MISC = 0x02DB;
     /** {@code ArtKosM_BossMasterEmerald} / {@code Map_BossMasterEmerald}. */
     public static final int ART_KOSM_BOSS_MASTER_EMERALD_ADDR = 0x182BE6;
+    /** Two-entry infinite Run_PalRotationScript tables, DEZ line 2 / DDZ line 3. */
+    public static final int PAL_DEZ_MASTER_EMERALD_SCRIPT_ADDR = 0x813AA;
+    public static final int PAL_DDZ_MASTER_EMERALD_SCRIPT_ADDR = 0x8141E;
+    /** sub_82D72: twelve destinations and two rows of boss flash colors. */
+    public static final int PAL_DDZ_BOSS_FLASH_DESTINATIONS_ADDR = 0x82D86;
+    public static final int PAL_DDZ_BOSS_FLASH_COLORS_ADDR = 0x82D9E;
     public static final int MAP_BOSS_MASTER_EMERALD_ADDR = 0x187B34;
     /** {@code byte_832BF}: rocket body frames; {@code byte_832C3}: rocket flame; {@code byte_832D0}/{@code byte_832D9}: ship parts. */
     public static final int DDZ_ANIM_ROCKET_ADDR = 0x0832BF;
@@ -1870,6 +2040,19 @@ public class Sonic3kConstants {
     /** Raw animation bytes {@code byte_832A8} through {@code byte_832E1}. */
     public static final int DDZ_RAW_ANIM_BASE_ADDR = 0x0832A8;
     public static final int DDZ_RAW_ANIM_SIZE = 0x3A;
+
+    /**
+     * {@code byte_8FA40} through the end of {@code byte_8FA56}: the Fireworm's three raw
+     * animation scripts, which end where {@link #MAP_FIREWORM_SEGMENTS_ADDR} begins.
+     */
+    public static final int LRZ_FIREWORM_RAW_ANIM_BASE_ADDR = 0x08FA40;
+    public static final int LRZ_FIREWORM_RAW_ANIM_SIZE = 0x1C;
+    /** {@code byte_8FA40}: the swim loop the head and every segment run in routine 6. */
+    public static final int LRZ_FIREWORM_ANIM_SWIM_ADDR = 0x08FA40;
+    /** {@code byte_8FA4D}: the turn-around loop, whose third entry flips the sprite. */
+    public static final int LRZ_FIREWORM_ANIM_TURN_ADDR = 0x08FA4D;
+    /** {@code byte_8FA56}: the flame's four-frame flicker. */
+    public static final int LRZ_FIREWORM_ANIM_FLAME_ADDR = 0x08FA56;
 
     // ===== DEZ Badnik Art =====
     public static final int ART_KOSM_SPIKEBONKER_ADDR = 0x18008C;
@@ -2001,6 +2184,126 @@ public class Sonic3kConstants {
     // 11 dc.w entries before the first frame label word_46B52, so the table starts
     // 22 bytes earlier at 0x046B3C.
     public static final int MAP_SSZ_HPZ_TELEPORTER_ADDR = 0x046B3C;
+
+    /** {@code ArtTile_SSZMisc} (sonic3k.constants.asm:1341): PLC_32_33_34_35 loads ArtNem_SSZMisc here. */
+    public static final int ARTTILE_SSZ_MISC = 0x02D4;
+
+    /** {@code ArtKosM_SSZDeathEggSmall}, queued by CutsceneKnux_SSZ routine 2. */
+    public static final int ART_KOSM_SSZ_DEATH_EGG_SMALL_ADDR = 0x17DBC2;
+    /** {@code Map_SSZDeathEggSmall} (ObjDat3_664AA). */
+    public static final int MAP_SSZ_DEATH_EGG_SMALL_ADDR = 0x066C12;
+    /** {@code ArtTile_SSZCutsceneButton} (sonic3k.constants.asm:1347): ArtNem_GrayButton. */
+    public static final int ARTTILE_SSZ_CUTSCENE_BUTTON = 0x048E;
+    /** {@code Map_SSZCollapsingBridge}, shared by Obj_SSZCutsceneBridge and the collapsing families. */
+    public static final int MAP_SSZ_COLLAPSING_BRIDGE_ADDR = 0x046958;
+    /**
+     * {@code Map_SSZFloatingPlatform} (sonic3k.lst:109039), shared by
+     * {@code Obj_SSZFloatingPlatform} (frame 1), {@code Obj_SSZCollapsingColumn} (frame 2) and
+     * the column's debris.
+     */
+    public static final int MAP_SSZ_FLOATING_PLATFORM_ADDR = 0x046900;
+    /** {@code word_58C80}: SSZ2 encounter foreground deformation band heights. */
+    public static final int SSZ2_FG_DEFORM_TABLE_ADDR = 0x058C80;
+
+    /**
+     * {@code word_5853E} (sonic3k.lst:136479): the count word {@code $A-1} followed by ten
+     * twelve-byte solid-cloud rows that {@code SSZ1_BackgroundInit} builds {@code loc_57B8E} from.
+     */
+    public static final int SSZ_SOLID_CLOUD_TABLE_ADDR = 0x05853E;
+    /**
+     * {@code word_58758} (sonic3k.lst:136603): five four-word roaming-cloud rows
+     * ({@code $38} base Y, {@code $3A} base X, {@code $40} drift speed, {@code mapping_frame})
+     * that {@code SSZ1_ScreenInit} builds {@code loc_57BB2} from.
+     */
+    public static final int SSZ_ROAMING_CLOUD_TABLE_ADDR = 0x058758;
+    /** {@code Map_SSZRoamingClouds} (sonic3k.lst:136614). */
+    public static final int MAP_SSZ_ROAMING_CLOUDS_ADDR = 0x058780;
+    /** {@code Map_SSZBouncyCloud} (sonic3k.lst:109129), shared by the cloud and its four puffs. */
+    public static final int MAP_SSZ_BOUNCY_CLOUD_ADDR = 0x046A44;
+    /**
+     * {@code byte_46698} (sonic3k.lst): the seven-entry sag ramp the cloud reads while its bounce
+     * counter runs down; {@code byte_4669F} is the eighth byte, the {@code $A} written on landing.
+     */
+    public static final int SSZ_BOUNCY_CLOUD_SAG_TABLE_ADDR = 0x046698;
+    /** {@code byte_466A0}: forty signed bytes of post-bounce recoil, indexed down from {@code $26}. */
+    public static final int SSZ_BOUNCY_CLOUD_RECOIL_TABLE_ADDR = 0x0466A0;
+    /** {@code word_466C8}: four puff rows of X offset, Y offset, X velocity, Y velocity. */
+    public static final int SSZ_BOUNCY_CLOUD_PUFF_TABLE_ADDR = 0x0466C8;
+    /** {@code Map_SSZElevatorBar} (sonic3k.lst:107062), shared by the swinging carrier family. */
+    public static final int MAP_SSZ_ELEVATOR_BAR_ADDR = 0x046ADA;
+    /** {@code Map_SSZRotatingPlatform} (sonic3k.lst:108003). */
+    public static final int MAP_SSZ_ROTATING_PLATFORM_ADDR = 0x046CE8;
+    /** {@code Map_SSZRetractingSpring} (sonic3k.lst:108584). */
+    public static final int MAP_SSZ_RETRACTING_SPRING_ADDR = 0x046D20;
+    /** {@code byte_468C4}: twelve (render-flag, mapping-frame) pairs for a carried player. */
+    public static final int SSZ_CARRIED_PLAYER_FRAME_TABLE_ADDR = 0x0468C4;
+    /** {@code byte_468DC}: the retracting spring's 36-byte {@code sub_1DD0E} height map. */
+    public static final int SSZ_RETRACTING_SPRING_HEIGHT_TABLE_ADDR = 0x0468DC;
+
+    /** {@code ArtKosM_SSZGHZMisc} ($17EDB4): the Green Hill recreation's ball and chain. */
+    public static final int ART_KOSM_SSZ_GHZ_MISC_ADDR = 0x17EDB4;
+    /** {@code Map_SSZGHZMisc} ($186E7C). */
+    public static final int MAP_SSZ_GHZ_MISC_ADDR = 0x186E7C;
+    /** {@code Pal_SSZGHZMisc} ($07D850): loaded over palette line 1 by {@code PalLoad_Line1}. */
+    public static final int PAL_SSZ_GHZ_MISC_ADDR = 0x07D850;
+    /** {@code ArtKosM_SSZMTZOrbs} ($17EFA6): the Metropolis recreation's orbs and lasers. */
+    public static final int ART_KOSM_SSZ_MTZ_ORBS_ADDR = 0x17EFA6;
+    /** {@code Map_SSZMTZOrbs} ($186DAC). */
+    public static final int MAP_SSZ_MTZ_ORBS_ADDR = 0x186DAC;
+    /** {@code Pal_SSZMTZOrbs} ($07B268): loaded over palette line 1 by {@code PalLoad_Line1}. */
+    public static final int PAL_SSZ_MTZ_ORBS_ADDR = 0x07B268;
+    /** {@code ArtKosM_MechaSonicHead} ($17C6E0), queued into {@code ArtTile_RobotnikShip}. */
+    public static final int ART_KOSM_MECHA_SONIC_HEAD_ADDR = 0x17C6E0;
+    /** {@code Map_MechaSonicHead} ($0681FC). */
+    public static final int MAP_MECHA_SONIC_HEAD_ADDR = 0x0681FC;
+
+    /**
+     * {@code ArtUnc_MechaSonic} ($175A9E): Mecha Sonic's own sheet, uncompressed and DPLC'd
+     * frame by frame by {@code Perform_DPLC} over {@code DPLCPtr_MechaSonic}, exactly as the
+     * players' art is. The size is the gap to {@code ArtKosM_EggRoboBadnik} ($17B17E), and the
+     * committed {@code Mecha Sonic.bin} is 22240 bytes, which agrees.
+     */
+    public static final int ART_UNC_MECHA_SONIC_ADDR = 0x175A9E;
+    public static final int ART_UNC_MECHA_SONIC_SIZE = 0x56E0;
+    /** {@code Map_MechaSonic} ($1853AA). */
+    public static final int MAP_MECHA_SONIC_ADDR = 0x1853AA;
+    /** Map_MechaSonicPieces: sixteen final-defeat fragments using the last frame$E DPLC bank. */
+    public static final int MAP_MECHA_SONIC_PIECES_ADDR = 0x7D7A2;
+    /** {@code DPLC_MechaSonic} ($185852), the second longword of {@code DPLCPtr_MechaSonic}. */
+    public static final int DPLC_MECHA_SONIC_ADDR = 0x185852;
+    /** {@code ArtKosM_MechaSonicExtra} ($17F738), queued into {@code ArtTile_MechaSonicExtra}. */
+    public static final int ART_KOSM_MECHA_SONIC_EXTRA_ADDR = 0x17F738;
+    /** {@code Map_MechaSonicExtra} ($18561E). */
+    public static final int MAP_MECHA_SONIC_EXTRA_ADDR = 0x18561E;
+    /** byte_7C9AA: four (dx, dy, frame, padding) spark rows. */
+    public static final int SSZ_MECHA_SPARK_OFFSETS_ADDR = 0x07C9AA;
+    /** byte_7D280: (dx, dy, collision, frame) indexed by the parent's mapping frame. */
+    public static final int SSZ_MECHA_SECONDARY_COLLISION_ADDR = 0x07D280;
+
+    /**
+     * {@code Obj_SSZEndBoss}'s raw animation scripts, addressed by ROM address because
+     * {@code Animate_RawMultiDelay} keeps the script pointer in {@code $30(a0)} and the
+     * {@code $F8} command rewrites it.
+     */
+    public static final int SSZ_MECHA_ANIM_BLOCK_ADDR = 0x07D4D0;
+    /**
+     * The whole block is loaded in one window because the {@code $F8} jump command carries a
+     * signed byte: {@code byte_7D52A} ends {@code dc.b $F8,$F9}, which is seven bytes backwards,
+     * and a window that began at the script's own address could not address it.
+     */
+    public static final int SSZ_MECHA_ANIM_BLOCK_SIZE = 0x01C0;
+    public static final int SSZ_MECHA_ANIM_LAND_SHORT_ADDR = 0x07D4DE;
+    public static final int SSZ_MECHA_ANIM_LAND_LONG_ADDR = 0x07D4EF;
+    public static final int SSZ_MECHA_ANIM_ENTRY_ADDR = 0x07D523;
+    public static final int SSZ_MECHA_ANIM_RUN_ADDR = 0x07D541;
+    public static final int SSZ_MECHA_ANIM_JUMP_ADDR = 0x07D54A;
+    public static final int SSZ_MECHA_ANIM_STAND_ADDR = 0x07D596;
+    public static final int SSZ_MECHA_ANIM_SKID_ADDR = 0x07D59B;
+    public static final int SSZ_MECHA_ANIM_TURN_ADDR = 0x07D5A2;
+    /** {@code byte_7D65F}: the after-image child's own four-frame loop. */
+    public static final int SSZ_MECHA_TRAIL_ANIM_ADDR = 0x07D65F;
+    /** {@code byte_7D5E4}: the pose {@code loc_7B888} sets when the beaten Mecha Sonic lands. */
+    public static final int SSZ_MECHA_ANIM_DEFEATED_ADDR = 0x07D5E4;
 
     /**
      * CNZ Act 1 miniboss PLC id.

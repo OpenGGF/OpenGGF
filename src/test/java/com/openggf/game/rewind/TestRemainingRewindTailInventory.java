@@ -132,7 +132,49 @@ class TestRemainingRewindTailInventory {
         // HPZ compatibility, fight and native-sequence graph tests.
         // Doomsday bring-up: 23 object classes, all passing the isolated sweep through their
         // private ObjectSpawn probe constructors.
-        return new TailInventory(1109, 874, 235, 0, buckets);
+        // LRZ: 42 isolated passes and five miniboss child classes explicitly recreated
+        // across unfolded arms, hit flashes and defeat debris by TestS3kLrzBossRewindHeadless.
+        // The chained-platform class also passes the isolated probe; all three live
+        // group shapes recreate independently in TestS3kLrzChainedPlatformsHeadless.
+        // Shared StartNewLevel trigger has scalar-only request state and probes cleanly.
+        // Death Egg gravity slice: S3kDezGravitySwapObjectInstance ($5B) is one more class and
+        // one more isolated pass -- its spawn constructor is its probe constructor and its two
+        // booleans round-trip through the subclass extra. $58
+        // S3kDezGravitySwitchObjectInstance is the same shape again, and $59
+        // S3kDezTeleporterObjectInstance a third time -- its two rider blocks round-trip as one
+        // subclass extra record, $5A S3kDezGravityTubeObjectInstance a fourth and $5C
+        // S3kDezGravityHubObjectInstance a fifth, $5F S3kDezGravityRoomObjectInstance a
+        // sixth and $61 S3kDezGravityPuzzleObjectInstance a seventh. $A4
+        // SpikebonkerBadnikInstance and its SpikebonkerMace child add the eighth and ninth.
+        // $5D S3kDezRetractingSpringObjectInstance is the tenth: its extension byte and its
+        // ObjectAnimationState both round-trip through the generic subclass scalar capture, and
+        // $55 S3kDezEnergyBridgeObjectInstance the eleventh: its routine flag, countdown and
+        // mapping frame are scalars, and its two standing bits are booleans rather than player
+        // references so nothing about it needs a rewind annotation. $A5
+        // ChainspikeBadnikInstance and its ChainspikeChild are the twelfth and thirteenth:
+        // the body keeps its four children behind @RewindTransient; each child restores
+        // its exact parent identity. The isolated harness seeds that registered parent. $60
+        // S3kDezBumperWallObjectInstance is the fourteenth and carries no object state at all:
+        // its three shapes are read from the immutable subtype and the gate's open/shut is the
+        // zone runtime state's panel bitfield.
+        // No bucket grows.
+        // Combined LRZ/SSZ campaign plus DEZ merge, measured by the source-class probe:
+        // all 57 previously uncounted campaign classes pass in isolation; no bucket grows.
+        // The ROM shock-block subclass adds one spawn-recreatable scalar owner.
+        // DEZ lightning adds one spawn-recreatable scalar animation owner.
+        // DEZ conveyor belt is a stateless spawn-recreatable controller.
+        // DEZ launcher and independent torpedo each own scalar rewind state.
+        // DEZ staircase sections use an identity-linked parent snapshot.
+        // DEZ Act 2 bumper probes cleanly in isolation; its real linked graph also has focused coverage.
+        // DEZ Act 2 shield/visor and enemy/projectile also probe in isolation with linked graph tests.
+        // DEZ Act 2 root, escape roles and persistent gravity clearer add three scalar owners.
+        // Final DEZ hand/finger probes pass in isolation; dying-slot graph has focused coverage.
+        // Final DEZ core adds one isolated pass; pending-hit parent graph is covered separately.
+        // Mouth/button and beam/particle add four isolated passes with focused graph coverage.
+        // Final fire emitter and flame retain scalar SST addresses and probe independently.
+        // Final emerald probes independently; palette cursors are captured by each zone runtime.
+        // Final escape scenery adds one scalar/parent-captured recreate owner.
+        return new TailInventory(1315, 1072, 243, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

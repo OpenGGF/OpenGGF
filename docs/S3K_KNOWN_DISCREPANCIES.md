@@ -32,6 +32,7 @@ No S3K discrepancy was added or reclassified by the cutover.
 15. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have)
 16. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
 17. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
+18. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns)
 
 ---
 
@@ -242,6 +243,16 @@ rewind across the recorded completion boundary.
 
 
 
+
+Wider visibility can release a giant ring while the startup enemy-art batch is
+still pending. `SSEntryRing_Display` normally restores badnik-explosion art and
+immediately deletes the ring; native `Queue_Kos_Module` has no full-queue guard
+and would scan past its four slots. The engine retains one invisible,
+noncollidable, rewindable ring owner until the existing enemy admission finishes
+and a physical slot is available. It then queues the restoration once and
+retires. It does not enlarge the FIFO or force the title-owned enemy batch early.
+Native available-capacity retirement is unchanged. MHZ2 admission tests cover
+both positioned and checkpoint reloads at all five supported presets.
 
 ## Knuckles DPLC Pre-Loading
 
@@ -752,3 +763,100 @@ rewind and compatibility evidence lives in the
 [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act matrices.
 
 ---
+
+## Death Egg widescreen backgrounds
+
+Both cartridge acts use a fixed 320-pixel view (`PlainDeformation` and
+`DEZ1_BackgroundInit` / `DEZ2_BackgroundInit`). Wider views intentionally keep
+one centred native image. Act 1 reflects 32-pixel strips of its outer wall
+tiles. Act 2 has no complete planet sides in the ROM: the renderer reflects
+64-pixel surface strips outside the native crop, vertically remapped onto a
+circle inferred from the indexed-art horizon. No generated bitmap or terrain
+mutation is involved. The original 320 centre pixels and native viewport are
+unchanged; the additional scenery is an engine presentation choice, not native
+pixel parity. Surface repetition can be visible at the widest aspect.
+
+See the [bring-up audit](architecture/audits/2026-09-22-sk-zone-bring-up.md)
+and `TestS3kDezWidescreenBackground` for width, fade and load-boundary checks.
+
+
+## LRZ1 and DEZ2 widescreen arena framing
+
+The cartridge renders 320 pixels: LRZ1 `word_784E8` fixes camera X at `$2C00`,
+and DEZ2 `word_7F0C6` permits `$3400..$34E0`. On wider displays, the engine
+centers that original camera window by subtracting half the extra width from
+its visible limits (240 pixels at 800). This is an intentional presentation
+difference; surrounding level art that the cartridge never displayed at those
+locks becomes visible. Native min/max words still define player walls.
+`NativeViewportFraming` provides the calculation; the internal zone policy
+`NativeArenaCameraFraming` opts in through captured runtime state. It does not
+apply indiscriminately to other zones or rewrite their camera behavior.
+
+LRZ arm placement, projectile/debris lifetimes and release thresholds use the
+native-framed camera, preserving their world positions. The choice survives
+LRZ's seamless act rebase and DEZ's escape, then resets with fresh zone state.
+The native 320px LRZ arrival matches all 600 pre-change CSV rows; the 800px
+arrival matches the same gameplay rows with camera X exactly 240 pixels left.
+This is engine regression evidence, not a new native parity certification.
+
+## SSZ Act 2 Widescreen Background Columns
+
+The encounter's `loc_58F46` / `loc_5904A` supplies twenty VSRAM column words for
+320 pixels. `SszAct2Deformation.columns` preserves those words, including the
+native forward-copy overlap at the right edge. Wider viewports continue the last
+native column's offset through their additional columns. There are no native
+words for that extra view; repeating the boundary keeps the extended clouds
+coherent without treating adjacent work RAM as scroll data. The native window
+and its horizontal wave are unchanged. This extension is engine presentation,
+not a claim of a native widescreen reference.
+
+
+The seeded island presentation also extends its last native visible Plane B
+tile column into the extra width. The ROM draws a512px plane but shows320px;
+reading the wider authored layout exposed unrelated cloud strips. This separate
+projection preserves native columns, priority and vertical sampling. Its native
+viewport remains byte-identical in the inspected checkpoint, while the extra
+width is an engine-authored presentation extension.
+
+
+SSZ2's crane and transformation pans project the original320px camera window
+into the selected width. Native min/max words, pan completion and player limits
+remain separate. The crane holds the visible left edge at zero until enough
+world space is available; the transformation pans six native pixels per pass.
+At800px its displayed endpoint is336, so the view ends at1136 inside the nine
+foreground blocks, instead of extending to1376. The Master Emerald has a
+ROM-backed static visual precursor in wide views until `loc_7C818` starts drawing;
+this intentionally differs from the ROM's invisible-until-dash allocation, with
+no early object slot, collision, palette or PLC activity. Mecha's high hardware
+priority is original ROM behaviour, not a widescreen exception.
+
+
+## Sprite_OnScreen_Test lifetime audit
+
+The LRZ cold-route audit based on `bc4e3285d` disproved the old guide claim
+that `Sprite_OnScreen_Test` only draws. Its out-of-range branch clears the
+respawn entry and deletes through `loc_1B5A0` (sonic3k.asm:37262–37278).
+LRZ sinking rocks, landed spikes, smashing platforms and intact collapsing
+bridges incorrectly suppressed this unload, retaining slots that change later
+button/door execution order. The LRZ1 matrix records the correction and checks.
+
+A sibling source audit found the same incorrect rationale in
+`HCZWaterWallObjectInstance`. Its per-phase range contract still needs a
+separate ROM audit: the actual cleanup countdown must remain persistent, but
+phases reaching `Sprite_OnScreen_Test` cannot be dismissed as drawing only.
+HCZ runtime behavior is unchanged by the LRZ correction; existing trace success
+is not evidence that every offscreen phase is faithful. The DEZ energy-bridge
+and LBZ cup providers checked during this audit already implement range tests.
+
+
+## LRZ boss lava-plane presentation
+
+The boss pool now uses its ROM high-priority background tiles over the
+low-priority foreground lava wall, including the per-column slope and matching
+sprite mask. The background source window follows the arena instead of retaining
+the initial Death Egg image. Native-width fight footage confirms the visible
+pool; synchronized native pixel comparison and widescreen route coverage remain
+open in the [boss-act matrix](architecture/validation/levels/s3k-lrz-boss.md).
+The ordinary cold Sonic+Tails route reaches HPZ with deterministic rewind at
+62 boss-act/exit spots; this does not certify the remaining width, donor and
+lifecycle combinations.

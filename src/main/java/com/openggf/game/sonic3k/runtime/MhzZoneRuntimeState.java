@@ -110,6 +110,10 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
         return events != null && events.isShipScrollLockSet();
     }
 
+    public void setShipControllerSignalFlag(boolean active) {
+        if (events != null) events.setShipControllerSignalFlag(active);
+    }
+
     public boolean isShipControllerSignalFlagSet() {
         return events != null && events.isShipControllerSignalFlagSet();
     }

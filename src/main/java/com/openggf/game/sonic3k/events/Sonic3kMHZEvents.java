@@ -444,6 +444,15 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAct2ScreenEvent() {
+        if (eventRoutine == 0) {
+            // loc_5545A returns the foreground to loc_54DB0 after arena redraw.
+            // Wait for this capsule's results, then re-enter loc_54DBE so its
+            // Events_fg_4 ship request can be consumed on the next dispatch.
+            if (gameStateOrNull() != null && gameState().isEndOfLevelFlag()) {
+                eventRoutine = ACT2_INITIAL_ROUTINE;
+            }
+            return;
+        }
         if (eventRoutine == ACT2_INITIAL_ROUTINE) {
             if (shipTransitionFlag) {
                 startAct2ShipSequence();
@@ -860,6 +869,13 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         }
 
         if (nextCameraX >= ACT2_END_BOSS_REPEAT_THRESHOLD_X) {
+            // loc_55620 tests Events_fg_5, then ST writes its high byte. The
+            // nonzero $55 from loc_768D2 ends looping; its negative acknowledged
+            // form also releases loc_55424's background restoration gate.
+            if (endBossWalkoffPrepEventFlag != 0) {
+                endBossWalkoffPrepEventFlag |= 0xFF00;
+                endBossArenaRestoreRequested = true;
+            }
             if (endBossArenaRestoreRequested && nextCameraX >= ACT2_END_BOSS_ESCAPE_THRESHOLD_X) {
                 nextCameraX = ACT2_END_BOSS_ESCAPE_THRESHOLD_X;
                 camera.setMaxX((short) ACT2_END_BOSS_ESCAPE_MAX_X);
@@ -999,7 +1015,14 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
             return;
         }
 
-        setMinY(computeAct2Routine4MinY(cameraX));
+        // loc_54E00 selects the vertical corridor from the native 320px camera
+        // origin. A wider view's left edge trails that origin; using it leaves
+        // the lower-route Y minimum active while the leaf blower lifts Sonic.
+        // Project this display coordinate back for the ROM thresholds, without
+        // changing the raw X boundary/arena branches below or their native words.
+        int nativeCameraX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                camera.getX(), camera.getWidth()) & 0xFFFF;
+        setMinY(computeAct2Routine4MinY(nativeCameraX));
         updateAct2Routine4MinX(cameraX);
         updateAct2Routine4MaxY();
     }
@@ -1015,7 +1038,9 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAct2Routine4MinX(int cameraX) {
-        if (cameraX >= ACT2_LATE_CAMERA_X) {
+        // loc_54E3C leaves the cutscene-owned minimum alone while Events_bg+$16
+        // is set. Otherwise the level event overwrites loc_63182's lock each pass.
+        if (cameraX >= ACT2_LATE_CAMERA_X || leafBlowerCutsceneFlag) {
             return;
         }
         AbstractPlayableSprite player = focusedPlayer();
@@ -1348,6 +1373,10 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     public boolean isShipScrollLockSet() {
         return shipScrollLockSet;
+    }
+
+    public void setShipControllerSignalFlag(boolean active) {
+        shipControllerSignalFlag = active;
     }
 
     public boolean isShipControllerSignalFlagSet() {

@@ -25,8 +25,11 @@ class TestTraceV5PositiveInputGuard {
             "hardware_timing_schema", "run_schema");
     private static final Pattern TRACE_SCHEMA = Pattern.compile(
             "\\\"trace_schema\\\"\\s*:\\s*(\\d+)");
+    // Quoted CSV literals and standalone text-block rows are trace candidates;
+    // numeric arrays, annotation arguments and prose are not trace input.
     private static final Pattern CSV_SEQUENCE = Pattern.compile(
-            "(?<![0-9A-Za-z_,])([0-9A-Fa-f]{1,8}(?:,[0-9A-Fa-f]{1,8})+)(?![0-9A-Fa-f_,])");
+            "(?:\"|^\\h*)([0-9A-Fa-f]{1,8}(?:,[0-9A-Fa-f]{1,8})+)(?=\"|\\h*$)",
+            Pattern.MULTILINE);
 
     @Test
     void acceptsCanonicalTemporaryV5Input() {
@@ -41,6 +44,18 @@ class TestTraceV5PositiveInputGuard {
                 """;
 
         assertEquals(List.of(), scanSource("sample/Sample.java", source));
+    }
+
+    @Test
+    void acceptsNonTraceNumericArraysAndProse() {
+        assertEquals(List.of(), scanSource("sample/Objects.java", """
+                // Animation sequence: 0,1,2,3,4,5,6,7,8,9,10
+                class Objects {
+                    int[] frames = {0,1,2,3,4,5,6,7,8,9,10};
+                    @ValueSource(ints={0,1,2,3,4,5,6,7,8,9,10})
+                    void placedObjects(int index) {}
+                }
+                """));
     }
 
     @Test
@@ -70,6 +85,13 @@ class TestTraceV5PositiveInputGuard {
                                     "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0");
                         }
                         """));
+    }
+
+    @Test
+    void rejectsLegacyCsvInsideTextBlocks() {
+        String source = "var csv = \"\"\"\n    0,0,0,0,0,0,0,0,0,0,0\n    \"\"\";";
+        assertEquals(List.of("sample/Block.java: retired 11-column level row"),
+                scanSource("sample/Block.java", source));
     }
 
     @Test

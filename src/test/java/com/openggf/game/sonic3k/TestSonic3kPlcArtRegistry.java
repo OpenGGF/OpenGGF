@@ -1045,6 +1045,37 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void mechaDashTrailBindsItsFourFrameRomPrefix() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        var entry = requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(10, 0),
+                Sonic3kObjectArtKeys.MECHA_SONIC_EXTRA);
+        assertEquals(4, entry.mappingFrameCount());
+        assertEquals(0, entry.palette());
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romFile.getPath()));
+            var reader = RomByteReader.fromRom(rom);
+            var full = S3kSpriteDataLoader.loadMappingFrames(reader,
+                    Sonic3kConstants.MAP_MECHA_SONIC_EXTRA_ADDR);
+            assertEquals(27, full.size(), "full native table includes other effects");
+            assertEquals(12, full.get(26).pieces().size());
+            assertEquals(0x93, full.get(26).pieces().getFirst().tileIndex());
+            var sheet = new Sonic3kObjectArt(null, reader).loadStandaloneSheet(rom, entry);
+            assertEquals(139, sheet.getPatterns().length);
+            assertEquals(4, sheet.getFrameCount());
+            assertTrue(sheet.getFrame(0).pieces().isEmpty());
+            for (int frame = 1; frame <= 3; frame++) {
+                assertEquals(1, sheet.getFrame(frame).pieces().size());
+                var piece = sheet.getFrame(frame).pieces().getFirst();
+                assertEquals(3, piece.widthTiles());
+                assertEquals(1, piece.heightTiles());
+                assertEquals((frame - 1) * 3, piece.tileIndex());
+            }
+            assertMappingTilesWithinSheet(sheet, "native trail consumer");
+        }
+    }
+
+    @Test
     public void s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits() throws IOException {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
@@ -1473,7 +1504,8 @@ public class TestSonic3kPlcArtRegistry {
     public void lrzPlanHasRocksAndBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x09, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size());
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FIREWORM)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FIREWORM_SEGMENTS)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.IWAMODOKI)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.TOXOMISTER)));
@@ -1485,10 +1517,24 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lrzEndBossArtBelongsToTheBossActAndUsesItsOwnRomMappings() {
+        var boss = Sonic3kPlcArtRegistry.getPlan(0x16, 0).standaloneArt().stream()
+                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.LRZ_END_BOSS)).findFirst().orElseThrow();
+        assertEquals(0x1715F2, boss.artAddr());
+        assertEquals(0x187382, boss.mappingAddr());
+        assertEquals(18, boss.mappingFrameCount());
+        assertEquals(1, boss.palette());
+        for (int[] route : new int[][]{{9, 0}, {9, 1}, {0x16, 1}, {0x17, 1}}) {
+            assertTrue(Sonic3kPlcArtRegistry.getPlan(route[0], route[1]).standaloneArt().stream()
+                    .noneMatch(e -> e.key().equals(Sonic3kObjectArtKeys.LRZ_END_BOSS)));
+        }
+    }
+
+    @Test
     public void sszPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0A, 0);
         assertNotNull(plan);
-        assertEquals(7, plan.standaloneArt().size());
+        // Assert EggRobo itself; other traversal/boss art can grow independently.
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SSZ_EGG_ROBO)));
 
         // EggRobo should use palette 0
@@ -1497,6 +1543,74 @@ public class TestSonic3kPlcArtRegistry {
                 .findFirst().orElse(null);
         assertNotNull(eggRobo);
         assertEquals(0, eggRobo.palette());
+    }
+
+    @Test
+    public void sszAct1ReplicaBossesHaveTheRomEggmobileFrame() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        // ObjDat_SSZGHZBoss and loc_7A72C use Map_RobotnikShip frame $A;
+        // PLC_78_79_7A_7B loads ArtNem_RobotnikShip before either encounter.
+        var entry = requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(0x0A, 0),
+                Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
+        assertEquals(Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR, entry.artAddr());
+        assertEquals(Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, entry.mappingAddr());
+        assertEquals(0, entry.palette());
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romFile.getPath()));
+            var sheet = new Sonic3kObjectArt(null, RomByteReader.fromRom(rom)).loadStandaloneSheet(rom, entry);
+            assertTrue(sheet.getFrameCount() > 0xA);
+            assertFalse(sheet.getFrame(0xA).pieces().isEmpty(), "the replica ship body must contain pieces");
+            assertTrue(sheet.getPatterns().length > 0);
+            assertMappingTilesWithinSheet(sheet, "SSZ1 replica Eggmobile");
+        }
+    }
+
+    @Test
+    public void sszAct2CraneGraphHasRomBackedSheetsIncludingKnucklesHead() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        var plan = Sonic3kPlcArtRegistry.getPlan(0x0A, 1);
+        var keys = List.of(Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                Sonic3kObjectArtKeys.KNUX_FINAL_BOSS_CRANE, Sonic3kObjectArtKeys.EGG_ROBO_HEAD,
+                Sonic3kObjectArtKeys.SSZ_CRANE_SHIP_DEBRIS);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romFile.getPath()));
+            var art = new Sonic3kObjectArt(null, RomByteReader.fromRom(rom));
+            for (String key : keys) {
+                var entry = requireStandaloneArt(plan, key);
+                var sheet = art.loadStandaloneSheet(rom, entry);
+                assertTrue(sheet.getPatterns().length > 0, key);
+                assertTrue(sheet.getFrameCount() > 0, key);
+                assertMappingTilesWithinSheet(sheet, "SSZ2 crane graph: " + key);
+            }
+            var head = requireStandaloneArt(plan, Sonic3kObjectArtKeys.EGG_ROBO_HEAD);
+            assertEquals(Sonic3kConstants.MAP_EGG_ROBO_HEAD_ADDR, head.mappingAddr());
+            assertEquals(4, head.mappingFrameCount());
+            assertEquals(0, head.palette());
+        }
+    }
+
+    @Test
+    public void sszMechaPiecesUseTheLastDefeatedDplcBankForEveryFragment() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romFile.getPath()));
+            var entry = requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(0x0A, 1),
+                    Sonic3kObjectArtKeys.MECHA_SONIC_PIECES);
+            var sheet = new Sonic3kObjectArt(null, RomByteReader.fromRom(rom)).loadStandaloneSheet(rom, entry);
+            assertEquals(16, sheet.getFrameCount());
+            assertMappingTilesWithinSheet(sheet, "SSZ Mecha breakup");
+            var raw = S3kSpriteDataLoader.loadMappingFrames(RomByteReader.fromRom(rom),
+                    Sonic3kConstants.MAP_MECHA_SONIC_PIECES_ADDR, 16);
+            // Frame$E's five native requests form the contiguous30-tile bank $1B8..$1D5.
+            for (int frame = 0; frame < 16; frame++) {
+                assertEquals(1, sheet.getFrame(frame).pieces().size());
+                assertEquals(0x1B8 + raw.get(frame).pieces().getFirst().tileIndex(),
+                        sheet.getFrame(frame).pieces().getFirst().tileIndex(), "fragment " + frame);
+            }
+        }
     }
 
     @Test
@@ -1509,11 +1623,25 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void ddzSuperStarsUseTheDmaWordLengthAndSixFrameTable() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romFile.getPath()));
+            var entry = requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(12, 0), Sonic3kObjectArtKeys.DDZ_SUPER_STARS);
+            var sheet = new Sonic3kObjectArt(null, RomByteReader.fromRom(rom)).loadStandaloneSheet(rom, entry);
+            assertEquals(26, sheet.getPatterns().length, "$1A0 DMA words, not bytes");
+            assertEquals(6, sheet.getFrameCount());
+            assertMappingTilesWithinSheet(sheet, "DDZ Super stars");
+        }
+    }
+
+    @Test
     public void ddzPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0C, 0);
         assertNotNull(plan);
-        // + PLC_BossExplosion, ArtKosM_DDZMisc and the boss Master Emerald.
-        assertEquals(10, plan.standaloneArt().size());
+        // + PLC_BossExplosion, ArtKosM_DDZMisc, boss Master Emerald and Super stars.
+        assertEquals(11, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DDZ_EGG_ROBO)));
         Sonic3kPlcArtRegistry.StandaloneArtEntry ddzEggRobo = plan.standaloneArt().stream()
                 .filter(e -> e.key().equals(Sonic3kObjectArtKeys.DDZ_EGG_ROBO))

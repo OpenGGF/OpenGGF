@@ -133,6 +133,13 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance i
     }
 
     @Override
+    public boolean isPersistent() {
+        // loc_7662A/loc_76652 use Child_Draw_Sprite.
+        // Those routines have no range cull; update owns native retirement.
+        return true;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (parent.isDestroyed()) {
             setDestroyed(true);

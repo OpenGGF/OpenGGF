@@ -6,6 +6,103 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- Automatically mask widescreen pixels beyond current native horizontal camera
+  bounds, including asymmetric arena and level edges. During staged boss entry,
+  the mask follows the earlier boundary until the final lock arrives. Each side
+  crossfades between world-space mask shapes; a new effective boundary starts
+  from the displayed blend. Presentation history rewinds, and native-width output
+  is unchanged.
+
+- **S3K Sky Sanctuary:** Both Act 1 replica bosses now draw their ROM-backed
+  Eggmobile bodies alongside Mecha Sonic’s head, and keep the widescreen camera
+  centred on their native arenas through knockback. Spawn-derived constants and
+  restored carrier links declare their rewind policies without coverage exceptions.
+  Player snapshots preserve tile priority and the independent sprite display
+  bucket, including through the final transport ascent and follower history.
+  Sky Sanctuary act 1 now plays its teleporter arrival instead of
+  dropping the player in at the level-start position. The screen init forces the arrival
+  camera and bounds, the controller beams Player 1 up the sanctuary column and hands control
+  back on the settle swing, Tails arrives on her own beam, and the act's dynamic camera bands
+  and vertical wrap follow the player. The cutscene Knuckles who opens the route — his beam,
+  the Death Egg he watches rise, the grey button and the bridge that extends over the gap,
+  with the checkpoint it leaves behind — is in place. The rising Death Egg applies and restores
+  its ROM cutscene palette, cloud, mask and animated trails, and launches its
+  decorative missiles on the V-int cadence. The act's sky is its own now: the
+  background switches between the plain sanctuary framing and the banded cloud layer as the
+  camera crosses the cloud band, the clouds drift, the whole sky breathes on the act's
+  oscillator, five clouds roam across the screen and ten invisible cloud platforms can be
+  stood on, and the banded cloud layer is drawn from the part of the act's background the
+  cartridge draws it from, so the climb happens against real clouds instead of flat blue.
+  Knuckles' act-2 encounter now has its own camera oscillator and ROM-backed foreground
+  bands and background waves, including rewindable scroll state and the island
+  priority overlay. Its crane grabs Knuckles, pans into the arena and releases him
+  into Mecha Sonic's first phase. His first defeat now leads through the Master Emerald
+  transformation and forced run into Super Mecha, with both fights reaching the pre-ending
+  stop and recording Knuckles’ clear state. Widescreen pans keep the native arena
+  timing and player limits while centring the visible window; the Master Emerald
+  appears before the dash reaches it, and Mecha stays in front of the floating island.
+  Sky Sanctuary's animated tiles run in act 1 and, as on the cartridge, not in act 2. The act's teleporter pads are real now: they draw, they can be stood on, they lift
+  the player and the camera the distance their placement asks for, and the two that wait on
+  a defeated boss sit sunk in the floor until it is beaten and then rise back into place.
+  The small floating platforms dip under a standing player, the tall columns break into eight
+  falling pieces when one is stood on, and the flat bridge sections crumble away from under the
+  player four pieces at a time — except the one section the cartridge marks permanent — and the
+  sloped walkways follow their ROM collision surfaces and break into eight, sliding
+  along their own slope as they go. The permanent staircase now carries players
+  uphill instead of letting them fall beneath its tiles. The rest of
+  the act's traversal is in too: the little clouds squash under a standing player and throw
+  them up and back in a puff of four, the horizontal bars catch a player from above and swing
+  them before flinging them where they are steering, the short posts spin a player in place
+  and their invisible carriers walk them round in a circle, the swinging and rotating arms
+  carry a player at the tip of a jointed arc, and the retracting springs fold away until
+  somebody comes at them and then fire them along the deck from side contact,
+  using the cartridge's full sloped collision rather than a top-only platform. Swinging carrier arms and rider bars
+  now remain alive until their hub releases them, preserving the platform at camera edges
+  and avoiding dangling rewind references. Sky Sanctuary's EggRobos patrol
+  the act now, in all three shapes the cartridge gives them: the distant one that crosses the
+  sky and, by crossing, lets its partner appear; the hovering one that tracks the player,
+  levels its arm and fires a laser once it has them lined up; and the one that lets four
+  animals go before it takes off and joins the others — and which, until it takes off, is the
+  harmless invisible marker the cartridge makes it rather than something that hurts a player
+  falling past, as the distant sky-crossing one is too. The first of the act's rebuilt boss
+  fights is in: walk into the lower arena and the camera closes behind you, the Green Hill ship
+  drops out of the sky with Mecha Sonic's head on it, runs the arena and pays out a six-piece
+  ball and chain whose ball hurts to touch, sweeps the floor and turns the ship around at each
+  end. The ship flashes three of its own colours while it is reeling from a hit, exactly as the
+  cartridge does — including the off-by-one that makes the flash duller than it was meant to be.
+  Eight hits send it away and open the way on. Both recreated ships shed explosions
+  during defeat and escape, with the cartridge's three-frame cadence and allocation order.
+  Rewind preserves the EggRobo pairing signals and boss-active state. Mecha Sonic
+  flashes and sparks after defeat using the original palette sequence, and his
+  animated secondary hitbox remains dangerous during his hit-flash window. The second one follows it: climb to the upper
+  arena and the camera closes again, the Metropolis ship falls in with a ring of seven orbs
+  turning around it — passing in front of the ship and behind it as it turns — patrols the
+  arena and lifts its arms to swing the ring wide. Hitting it throws one orb off the ring at
+  you, and the ship will not come back down until every thrown orb has been dealt with; it has
+  seven of those in it. After the seventh it stops raising its arms, dives at the floor and
+  fires three pairs of lasers along it instead. The eighth hit sends it away and raises the
+  sunk pad in the arena floor. Mecha Sonic himself now turns up for the third: reach the far
+  end of the act and the pad there breaks apart as he comes tearing in from the right, runs
+  clean off the left of the screen, turns and comes back along the top with an after-image
+  trailing him, with its own palette and foreground priority. From there he works through his own repertoire — dropping on the floor, dashing
+  along it, turning to face the player, jumping, and following the jump with an air dash, a
+  ground pound or a landing that sets up two more dashes. Which parts of him can be hit and
+  which hurt to touch change frame by frame with his animation, as they do on the cartridge.
+  The eighth hit now ends him too: he is thrown back, holds still for a little over two seconds,
+  drops to the floor in his beaten pose, and the act hands over to its results — which waits for
+  the player to be standing rather than ending on a timer alone. All three bosses award 1,000
+  points, and the results handover survives rewind after expired dash trails are removed.
+  Results now release the collapsing arena, forced jump and spiral ascent past the rising
+  Death Egg, including the crumbling column and falling ramps, before loading Death Egg
+  Act 1. The spiral clears inherited facing flips, and arena bounds suspend vertical
+  wrapping so the column crumbles at the ROM’s intended point. The sequence and its retained background survive rewind; Mecha's arena stays over
+  its floor at wider viewports.
+
+  Act 2 now allocates its encounter camera oscillator after Knuckles’ arrival and preserves
+  its fractional cloud offset through rewind. Its post-defeat floor patch and
+  emerald-dependent presentation camera movement also survive rewind; the remaining
+  act-2 sequence and complete-route validation are still in progress.
+
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
   instead of the Super Emerald sanctuary (`$1701`), which remains reachable from the
@@ -28,10 +125,98 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   emerald and, once all seven are held, announces "NOW SONIC CAN BE HYPER SONIC"; the
   small Chaos Emerald indicators only show emeralds that have not been converted. Leaving any S3K special-stage results screen now fades to black without the stage
   transition sound, as in the ROM, instead of fading to white.
-- **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
-  all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
+- **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it
+  at a quarter of the camera speed, cycle their console and panel colours, and animate their
+  machinery tiles. Its object-table registrations preserve the glowing-sphere bonus
+  stage bumper at the shared slot. Widescreen keeps one central background in each act: Act 1 extends its
+  side walls with ROM tiles, while Act 2 continues the planet's curve using its existing surface
+  pixels. The native centre stays unchanged. Tails’ separate tail sprite mirrors under reversed gravity, preserving its directional rolling animation; spindash dust mirrors with it and skid dust appears on the ceiling side. Knuckles keeps his feet on the ceiling when getting up from a glide slide. Death Egg Act 2's gravity now reverses: crossing one of the act's invisible
+  gravity triggers flips which way is down, and the player falls to the ceiling, stands and runs
+  on it, rolls, jumps, lands, gets hurt and dies against a death plane that has moved to the top
+  of the level. Shields, spilled rings, dust, springs, solid objects and a carried or respawning
+  sidekick all follow the flip. Player sprites consume the animator’s final orientation
+  directly, avoiding a second gravity mirror that cancelled the visible flip. Which direction of crossing turns gravity on is the level's own
+  choice, so running back the way you came restores it. Act 2's pressure pads flip it too,
+  from either face, so a pad works whichever way up you reach it; the pads are now drawn,
+  sinking as they are pressed, and sound the transporter note.
+  Act 2's teleporter columns now work too: step into one and it takes hold, spins up, carries
+  you to its partner and flips gravity on the way, and a second player can ride without the
+  gravity changing under the first.
+  Gravity pads preserve pending contact through rewind, and attracted-ring slot
+  reservations survive rewind across act transitions,
+  and the released Robotnik runner and door stop retaining the retired Act 2 boss.
+  The act's gravity tunnels now take hold too: run into one and it carries you along, lifting
+  and swinging you as it goes, and leaving one while gravity is reversed turns you the right
+  way up, and the ride is continuous rather than dropping and catching you every other frame.
+  The junctions the tunnels feed into now catch you as well: they pull you to the middle, hold
+  you spinning there, and fire you out along whichever way you press of the ones that junction
+  opens onto. Act 1's turbine corridor blows you along it now as well, tumbling, with up and
+  down to steer by. Its controller stays alive as the camera follows you, and the bobbing
+  shaft and walls bounce airborne riders; hitting all six panels opens the exit,
+  and the following door admits the player while the turbine still owns movement. The Spikebonker mace robots patrol both acts, hover, and swing at
+  you when you come at them from the side they are walking toward. Act 2's retracting springs
+  work: they push out of the wall while you are below them, pull back in once you are well
+  above, latch as they start and finish each stroke, and launch from the correct contact face
+  in either gravity direction, including when arriving in a roll.
+  The energy bridges across both acts switch on and off on their own schedules, carry you while
+  they are lit, and drop you when they go out. The curved bridge enables its terrain
+  path while lit; both forms retain the final displayed phase when they switch off.
+  The new mechanisms stay loaded across widescreen approaches.
+  The Chainspike robots charge across both acts, slowing to a stop and turning around, and
+  stab their spikes into the floor when you get close; their child spikes retain the correct
+  parent across rewind. Lightning flashes from the floor
+  emitters with its short damage window and sound. Conveyor belts carry grounded players
+  along either face in their placed direction. Wall launchers fire torpedoes while in view
+  and recoil between shots. Four-section staircases react to landing or underside contact,
+  wait or shake, and lift or lower their steps. Hover machines suspend players
+  above their orbiting rotors. Hanging carriers grab players, rise to the ceiling,
+  travel along it and let players jump away. Act 2 floating platforms oscillate or
+  accelerate along their placed axis, carrying riders while their lights alternate. Tilting
+  bridges respond to where players stand, then break into falling sections and release
+  riders onto the floor. Conveyor pads start when ridden, follow the floor or travel a fixed
+  vertical distance, and reverse their belts for newly arriving riders and inverted gravity.
+  Lift pads swing Sonic upward, wait while he stands on them, then return after he leaves.
+  Vertical gravity tubes keep player movement active so riders travel through their span.
+  Light-tunnel launchers count down, carry captured players through the winding paths
+  with glowing ring trails, and release them at the exit; rewind remains valid when
+  the trail finishes before its riders. The Act 1 miniboss now fights
+  through its orbiting-sphere and moving-platform phases, including its eye, beam,
+  spikes and breakup; detached sphere fragments and their stationary explosions remain rewindable after their creator disappears. Defeating it runs the results and carries the player into Act 2,
+  where the floor opens, the launch plays and normal control returns. Act 2's gravity boss
+  now releases spiked enemies, takes damage from their return impacts, breaks apart,
+  opens the door and releases the camera into the final-stage transition. Its transporter
+  columns stop accepting new riders after defeat. The destination final boss now creates its entry floor, restores carried rings/time and progresses through the forced run-in to the hand phase, with retained boss/floor rendering and a single centred widescreen planet. Its invisible floor support waits for real landing contact, keeping Sonic on the visible floor with continuous animation, and repositions without dragging the player sideways, and its defeat explosions follow the moving boss and escape ship, including the finite regular-explosion burst. The widescreen arena framing is released before loading Doomsday. Complete encounter validation remains in progress.
+  Shock floors and ceilings now hurt on
+  their intended face; the lightning shield protects you while other shields do not.
+- **S3K The Doomsday Zone:** the Master Emerald palette cycle and boss flash colors now
+  read their script, destinations and color words from the ROM; rewind preserves the shared
+  emerald script cursors and child creation coordinates through boss-graph recreation. The emerald starts following Sonic on the boss exit
+  signal immediately and survives rewind after the ship disappears. Doomsday is now playable. Sonic falls in, transforms (Hyper with
+  all Super Emeralds, with the ROM-backed trailing stars on the Super branch) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.
-  Hyper's afterimages now mirror vertically with Sonic when gravity reverses. Asteroids
+  Background scroll words now retain integer-pixel wrapping, preventing thin black seams
+  where widescreen rendering repeats the native background plane.
+  Recorded/headless transitions now honor the same source-level freeze as the live
+  loop during zone-change fades, including Doomsday's exit.
+  Knuckles's inverted glide and slide use ceiling contacts and mirrored snaps;
+  wall climbing follows the native reversed probes, movement and camera bound.
+  Fall-from-glide landings preserve surface contact when restoring standing radii.
+  Glide landing poses now yield to ducking and spindashing during their movement
+  lock, allowing Knuckles to shake off Toxomister clouds with a spindash.
+  Ledge-balance checks perform their own floor probes, so rewinding from a jump
+  no longer changes facing or look-up timing through stale collision flags.
+  Upside-down monitors retain their native knock-loose and ceiling-settling behavior,
+  including the reversed-gravity direction check. Their shells and reward icons
+  keep their placement flips, with the native inverted reward motion and timing.
+  Spikes select their damaging contact face from their orientation and gravity
+  at initialization, retaining that native choice through later gravity changes.
+  Direct sloped-platform helpers retain the ROM’s upright landing calculation
+  under reversed gravity; flat platforms keep their separate inverted branch.
+  Doomsday's entry ring award preserves the displayed count until the native
+  HUD redraw request, independently of the live ring count.
+  Hyper's stars wait for their ROM art queue before starting their native animation,
+  retain their sprite-list priority independently of Sonic, and
+  his afterimages mirror vertically when gravity reverses. Asteroids
   shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
   or ramming costs speed. The end boss runs both phases: turrets, launchers, missiles that can
   be steered back into the ship, the chase with bombs, rockets and the Master Emerald, the
@@ -46,7 +231,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Knuckles-only walls (HCZ, MGZ, CNZ, LBZ, MHZ and SOZ variants) when he hits them
   in mid-air, keeping his speed as the ROM does, instead of stopping against them.
   Player-controlled Tails keeps normal air gravity on the frame flight starts, so the
-  climb out of a jump matches the ROM from the first flying frame. Sandopolis
+  climb out of a jump matches the ROM from the first flying frame. Flight ceilings
+  also use the ROM’s signed, word-sized comparison, allowing Tails to ascend in
+  wrapping levels such as Sky Sanctuary instead of stopping in mid-air. Sandopolis
   Sandworms wait one more frame after first appearing on screen before starting
   their emerge timer, so they surface on the ROM frame. Sandopolis now queues its
   Skorp, Sandworm and Rockn art at level start like the ROM, keeping later art
@@ -236,6 +423,21 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 
+- **S3K Fireworm:** killing a Lava Reef fireworm now retires its whole body. Its segments stop
+  moving and its flames go out, instead of the flames staying behind as invisible fire that
+  burned the player seconds later. Retired segments stay harmless after rewinding,
+  even when their deleted head no longer exists in the restored world.
+
+- **S3K Lava Reef domes:** the background now locks onto the dome as the player crosses each
+  of the three dome thresholds, rises and falls with the lava surface inside it, and stays on
+  the dome view for the eight frames the plane takes to redraw on the way out. Knuckles gets
+  his own background chunk in act 1.
+
+- **Rewinding dynamically created children:** restoring a saved moment now keeps the
+  children a live object created while it ran. The camera-limit easing objects a Lava
+  Reef rock crusher spawns, and the Fireworm's body segments, used to disappear on
+  restore, and a restored segment's flame stayed behind while the segment swam on.
+
 - **AIZ1 rewind:** capture the hollow-tree reveal counter and intro Super Sonic
   palette timer/frame, preserving tree reveal children and palette cadence after
   restoring gameplay. Add a native route matrix with independently reported intro,
@@ -332,7 +534,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   intact during art loading and redraw in order, including widescreen margins.
   The independent exit follower
   survives boss retirement and rewind. Mechanism state survives kept
-  stage returns, and object graphs—including promoted collapsing platforms—reconstruct
+  stage returns, retained-plane rewind preserves captured palette ownership,
+  and object graphs—including promoted collapsing platforms—reconstruct
   across rewind using stable object and player identities. Live rewind preserves
   the host audio clock across repeated death/reloads. Sonic 2 and S3K companions
   copy the leader's collision plane and art priority when flight recovery ends,
@@ -345,7 +548,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
-  loading, including the ROM’s `$1701` level identity. MHZ end-boss debris
+  loading, including the ROM’s `$1701` level identity. Offscreen giant rings wait
+  for art-queue capacity when wider visibility overlaps startup loading. MHZ end-boss debris
   retains the ROM trajectory when the boss faces left, and Madmole’s submerged
   body keeps its final collision position until the ROM’s deferred deletion.
   The MHZ2 Knuckles press sequence flips Sonic and Tails into the ROM floor-grab
@@ -355,10 +559,155 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   camera limits use the locked-on ROM’s height rule for all characters, and
   the Act 1 boss and its thrusters stay alive during offscreen attack phases.
   Its defeat loads the explosion art and finishes the full burst sequence
-  across the signpost handoff.
+  across the signpost handoff. MHZ Act 2 retains the waiting Knuckles controller
+  until its camera trigger opens, allowing the leaf blower to lift Sonic out of
+  the blocked lower entrance. The press actor retires offscreen while its
+  independent lift finishes, restores the level palette, and centers the native
+  leaf span in wider views. The Act 2 endboss survives forward-window admission,
+  and its encounter parts retain explicit lifetime during offscreen phases.
+  Its final-hit acknowledgement, capsule results and ship controllers now retain
+  the correct arena/control ownership through the actual FBZ load. The ship's
+  foreground scroll split draws its body and applies the same tile priority to
+  sprite occlusion. Rewind preserves the arena scroll accumulator, spike subtype and last capsule
+  contact through the ship handoff. Restoring player control preserves the ROM
+  interaction address in both boss and signpost flows.
   Seamless act handoffs retain fixed object owners without duplicates, avoiding
-  a rewind-capture crash after the MHZ signpost.
+  a rewind-capture crash after the MHZ signpost. The first player update also retains
+  one Insta-Shield owner after the handoff, so post-load rewind does not remove a duplicate.
   Complete routes, finales, and continuous replay chains remain gates.
+- **S3K Lava Reef:** Act 2 turbines carry the player around their rotating drums
+  and release on a fresh jump press, with separate state for Sonic and Tails and
+  restored ride/cooldown state when rewinding. Both turbine variants draw their
+  ROM-loaded art. The Act 1 corkscrew clears the approach slope when taking
+  control, preserving its horizontal release into the lower route. Shooting-trigger
+  projectiles rebound from shields and stop dealing damage after deflection.
+  Chained platforms follow their ROM paths, carry players on top
+  and hurt on contact with their spiked undersides. Rewinding the miniboss preserves its arms, hit flashes and defeat
+  debris without resurrecting destroyed parts; the waiting hands also retain their
+  creation coordinates before their first volley. Launchers retain their in-flight balls.
+  The Act 1 miniboss submits its ROM art to the runtime module queue before its
+  native arm-extension delay, including the explosion art needed by its children.
+  Its post-results handoff now runs the ROM’s thirteen-step palette ramp and holds
+  the normal lava/crystal palette clock until the camera reaches the native release.
+  The title handoff also releases both vertical camera bounds gradually, so the
+  Act 2 climb stays in view instead of retaining the miniboss height restriction.
+  The defeated drill transfers its slot to the signpost controller; its independent
+  debris and retiring arms keep the native draw order. Debris also preserves
+  its initial draw and delayed retirement; the palette helpers use the ROM’s
+  first-free object allocation order. Rewinding in Act 2 keeps its current object
+  graphics instead of restoring obsolete miniboss pixels; the shared art journal
+  also preserves later overlapping writes and replacement level data.
+  The large proximity door remembers opening through its own placement state
+  and reloads at its lowered render/collision position.
+  Invisible boss-approach platform generators retain their native activation
+  window on widescreen, keeping the platforms on their original schedule.
+  The final lava arena is centred within wide displays, with its drawn slope
+  following the same world coordinates as the solid floor.
+  A controller-only Sonic and Tails route now completes both acts from a cold
+  Act 1 start through the boss, capsule and playable Hidden Palace without a
+  death, collecting the fire shield from its placed monitor. Act 2 has81 full-world
+  rewind/replay spots across traversal and its boulder handoff.
+  Act 2 also draws its ROM-backed Death Egg background sprite, with continuous
+  widescreen entry and preserved art-load/position state on rewind. Finite
+  widescreen foregrounds no longer repeat opposite-edge terrain outside the layout.
+  Act 2’s boulder cutscene carries Sonic and Tails into the boss act, preserving
+  rings, time and elemental shields. Knuckles’ exit leads into Hidden Palace and
+  saves progression. The boss act restores its checkpoint entry and runs the
+  staged autoscroll, camera clamps, arena release and foreground destruction.
+  Its cold approach runs the Death Egg flash, palette fade, rocket launches and
+  descending missiles that break the path. Bonus-stage returns initialize the saved
+  checkpoint before selecting the arena camera.
+  Its background uses the boss act’s ROM shimmer, animated tiles and palette cycles.
+  Boss-act platforms emerge behind the lava horizon and descend in front of it,
+  carrying the player through the checkpoint approach. The end boss launches mines
+  across the tilting lava, takes their 14 scripted hits, then sinks and releases
+  the capsule, results and Hidden Palace exit. Rewinding preserves the encounter
+  through defeat and results, including the floating capsule’s explosion emitter
+  and the equipped shield’s update order.
+  Lava Reef Acts 1 and 2 now scroll their own layered background
+  instead of the generic quarter-speed fallback, Act 2 animates its own lava tiles
+  rather than Act 1's, and the invisible lava blocks that carry every lava-floor hit
+  in the zone now hurt, with a fire shield making the player immune to them.
+  Both acts also run Lava Reef's own scroll-driven lava animation, two background
+  channels whose frames rotate with the parallax instead of a fixed cycle, and the
+  zone's scattered background rocks - hardware sprites the ROM draws itself, with no
+  object behind them - are drawn again, behind the players and in front of the
+  terrain layer, with a wider viewport simply showing more of them.
+  Act 1's dash elevators work: charge a spindash on one and it carries you along
+  its shaft, in whichever direction you are facing, and stops at the end.
+  Jumping off releases the rider without a second overlap correction on the launch frame; recharging uses the whole charge rather than its fractional decay.
+  The zone's doors and switches work too. Walking into the side of one of the small
+  horizontal buttons opens the sliding door that shares its number, and the door stays
+  open; the huge door in Act 1 grinds down out of the way, shaking the screen, when
+  you approach it from the right; and the shooting triggers fire their slow diagonal
+  shots until you roll into one, which bounces you back, blows the trigger up and
+  opens its door.
+  The small horizontal buttons are solid all the way round, so you can drop onto the top of
+  one and stand there rather than falling straight through it.
+  The act 1 corkscrew works: run into it with enough speed and it takes hold of you,
+  sweeps you around the turn and spits you back out the way you came. Being caught by one
+  now straightens you out of a roll the way the ROM does, so you leave the turn standing.
+  Act 1's sinking rocks are solid again: stand on one and it sinks smoothly under your
+  weight, rising back once you step off. Jumping off one while it is still sinking now leaves
+  exactly where the ROM leaves you: the pixel the block sinks on that frame is no longer added
+  to the jump.
+  Act 2's orbiting spike balls turn: fifty-two of them, a small one and a large one, each
+  sweeping back and forth past its anchor on its own axis and its own phase. Each is only
+  dangerous, and only drawn in front of the scenery, for the half of its turn that brings it
+  towards you; on the other half it passes behind and cannot hurt you.
+  The wall rides work in both acts: run into one with any speed at all and it takes hold,
+  sweeps you up over the curve and drops you back on the floor heading the other way.
+  Rocks, landed spikes, smashing platforms and intact collapsing bridges now unload outside
+  the camera range, freeing object slots so later buttons and doors execute in their proper order.
+  The act 1 falling spikes drop: walk directly underneath one and it lets go, hurting anything
+  it lands on, and once it hits the floor it stops hurting and stays as a solid block.
+  The act 1 fireball launchers spit their fireballs again, each on its own period, and the
+  shooting triggers' shots now travel at the speed the ROM gives them instead of creeping.
+  The act 1 lava falls pour: each one runs for part of every four-second cycle, dropping a
+  blob every sixth frame, and every second blob carries the falling-lava sound. Fire shields
+  protect against both the falling lava and launcher fireballs.
+  The swinging spike balls sweep their circles in both acts, chain and all, with act 2 using
+  its own artwork.
+  Act 1's smashing spike platforms work: each one accelerates down its own shaft, slams with a
+  crash and a squash, holds for half a second and grinds back up a pixel at a time, hurting
+  anyone it lands on and shrinking its solid box as the art compresses.
+  The act 1 spike balls are in too: the big ones grind back and forth along the floor throwing
+  rock chips, and the one on the swinging arm is only dangerous on half its sweep until a player
+  approaches it from the left, when it breaks off the arm and rolls away downhill.
+  The zone's mist-breathing badniks are in as well: each one turns to face you and breathes a
+  cloud that drifts, settles on the ground and, if it catches you, clings on - dragging your speed
+  down an eighth a frame and taking a ring a second until you shake it off by rocking left and
+  right, or blow it apart with a spindash. Cloud contact uses its own attachment response
+  without ordinary hurt or boss rebound; rolling and bubble shields prevent attachment.
+  The badnik itself can now be destroyed: rolling or
+  jumping into its body bursts it, scatters its cloud and rebounds you, where before a rolling
+  player fell straight through it.
+  The zone's fire worms are in, 29 of them across the two acts: swim within a few steps of one and
+  a head rises out of the lava, sets off toward you a pixel a frame and grows a four-segment tail
+  behind it, each segment falling in eleven frames after the one in front and carrying its own
+  flame. The chain swims up and down for eight strokes, then the head turns and the whole worm
+  works its way back the other way. Only the head can be hit; the body and the flames only hurt.
+  Lava Reef's bomb badniks are in, 66 of them across the two acts: each one is a solid block you
+  can stand on until a player comes within a few steps, when its fuse lights, flickers faster and
+  faster, and it blows itself apart into four fragments that arc away and fall. Shields deflect
+  the fragments and leave them harmless as they fall away.
+  Three places in act 1 now lock the background to the dome the way the ROM does: cross the line
+  inside one of the three regions and the background stops following the camera, a lava surface
+  rises and falls under you across the width of the room, and crossing back the other way releases
+  it again. Standing on that lava burns, and a fire shield saves the lead character only -- the
+  ROM checks the shield for Player 1 and not for Player 2, and the engine keeps that.
+  Act 1's two rock crushers work end to end: reach one and the camera locks to its own limits, the
+  crusher rumbles overhead with the screen shaking for three seconds. Hits flash its body and upper
+  pieces, suppressing repeat rebounds during their recovery. Released slabs begin their shake
+  countdown on the release frame, matching the original sequence. Then the rock underneath is
+  cut away, collapsing slabs drop into the gap, the crusher falls through and explodes, and the
+  camera eases back out to the act's own bounds.
+  The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
+  scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
+  Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
+  opens with a `(0,0)` record that the ring manager always steps over, and the engine
+  was spawning it as a real ring. The boss fight's sloping lava pool now
+  draws above the lava wall with the ROM's background priority and column scroll.
 
 ## ROM images
 
@@ -392,12 +741,77 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **Gameplay capture tooling:** `GameplayCaptureTool` pictures or films any
   gameplay section on the production boot path (any game, zone, act, position,
   width, donor or team), driven by a BizHawk input log, and writes PNG frames, a
-  per-frame state CSV and an MP4. `InputLogAuthorTool` compiles a short controller
+  per-frame state CSV (including live player priority) and an MP4. `InputLogAuthorTool` compiles a short controller
   script into that input log and proves it loads through `Bk2MovieLoader`, which now
   also reads a bare `Input Log.txt`. Skills `gameplay-capture` and
   `bk2-input-authoring` document the workflow. Native BizHawk reference capture
   uses a shared host with explicit zone plans, input hashes and failed-export
   detection; existing FBZ commands remain compatible.
+- **S3K Lava Reef:** the Act 1 miniboss arena and Death Egg Act 2 boss arena
+  center their native camera windows in widescreen while retaining original player
+  bounds. Death Egg's widescreen boss view holds X at the arena centre while Y
+  continues tracking Sonic, releasing X when the exit corridor opens; 320px keeps
+  the original horizontal tracking. The Act 1 miniboss arrives as an object -- the hovering drill with its
+  climb, swing, drop, slam and fall-back cycle, its player tracking, and both of its articulated
+  arms with their firing hands and shots. Shields deflect those shots away and
+  permanently clear their damage, including across rewind. Retired crusher pieces become
+  harmless falling debris and leave the object pool before the seamless Act 2 handoff.
+  Every Act 1 placement in the zone now builds a real
+  class. The two arms unroll link by link from the bottom of the screen rather than snapping out
+  whole, each hand rides the end of its own arm so its shots leave the arm and not the drill, and
+  the drill's slam is solid to stand on, carries the only hit box in the cycle, and takes damage:
+  six hits, each followed by the palette flicker the shipped ROM actually produces, which is not
+  the white flash its own data was written for -- and that flicker now lands on the palette line
+  the ROM names rather than the one after it, so it tints the boss instead of whatever else shares
+  the screen.
+  The hands take damage too, four hits each, with their own hit ring, their own invulnerability
+  window and their own blink; killing one peels its whole arm away link by link from the hand end
+  first, each link bursting as it goes, instead of quietly shortening the drill's hover. Killing
+  the drill itself now ends the fight: it fades out, breaks into eleven pieces on their own arcs,
+  and hands over to the end-of-act sign and the results screen the way every other Sonic 3 &
+  Knuckles miniboss does. The end-of-act sign the defeat hands over to moves with the act
+  change as well; before, a real defeat stopped the change dead rather than carrying into
+  Act 2.
+  Beating the drill now changes the act. Once the tally is over, Lava Reef loads Act 2's art
+  behind the results screen and then, on a single frame, swaps the act underneath the player:
+  the level, its solids and its object list are Act 2's, and the player, the camera and the
+  camera's limits all shift with them, so play carries straight on into the second act instead of
+  leaving you standing in the first. The switches and animated-tile counters the first act left
+  behind are cleared with it.
+  The fight now also starts the way the ROM starts it: the drill does nothing at all until the
+  player has carried the camera into the arena, and then the music fades, the miniboss theme
+  comes in two seconds later, and the camera locks onto the single arena screen the ROM pins it
+  to for the whole fight. Before this the drill built its arms and began its cycle the moment it
+  loaded, with the camera still free to walk out of the arena. The two camera releases that follow
+  the act change are still to come.
+  Act 2 is now playable straight out of the change: the arena's right-hand camera limit, which the
+  act change carried across with everything else, is replaced by Act 2's own once the results are
+  over, so the player walks on instead of standing against an invisible wall where the arena used
+  to end.
+  The fight now recolours the zone the way the ROM does: the drill's arrival and its first
+  attack each load their own palette, those colours carry through the act change -- the ROM's act
+  change loads no palette at all -- and Act 2 only takes its own blue crystal colours once the
+  player has walked far enough into it, where the ROM swaps them. Before this, Act 2 turned blue
+  the instant the act changed.
+  Act 2's solid moving platforms are in too, another 52: blocks you ride that drift along one axis
+  and back, some reading position from the zone's shared oscillation and some easing out of each end
+  under their own acceleration, and either kind can be mirrored to start from the other side.
+  Act 2's flame throwers are in, 52 of them: each one is a solid block that fires a jet of flame
+  for two seconds, pauses for a length its own placement chooses, and fires again, sweeping the jet
+  through a narrow fan as it goes. They come in the wall-mounted and floor-mounted kinds, either
+  can be mirrored, and the flames themselves hurt, drift without slowing, and burn out.
+
+- **Gameplay capture tool:** a capture can now declare the ring count its route carried in
+  (`--rings`). A boss filmed from a positioned start otherwise begins on no rings, where the
+  first touch is fatal and the fight cannot be filmed at all.
+
+- **Plane opacity probe:** a development tool answers, from the decoded ROM layout
+  alone, whether the plane behind another can show through at a coordinate. Where a
+  before/after frame capture cannot separate "wrong pixels drawn" from "no pixels
+  reachable" -- both look byte-identical -- this separates them. It settled why Lava
+  Reef Act 1's dome background change produced no visible difference: that act's
+  foreground is opaque across the whole dome. No gameplay or rendering behavior changes.
+
 - **Existing feature foundations:** retain editor, racing, prepared-loading,
   audio-core, and mod regression coverage while stock campaigns mature.
 

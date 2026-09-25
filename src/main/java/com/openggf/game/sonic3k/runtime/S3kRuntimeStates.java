@@ -51,8 +51,20 @@ public final class S3kRuntimeStates {
         return registry.currentAs(HpzZoneRuntimeState.class);
     }
 
+    public static Optional<LrzZoneRuntimeState> currentLrz(ZoneRuntimeRegistry registry) {
+        return registry.currentAs(LrzZoneRuntimeState.class);
+    }
+
+    public static Optional<SszZoneRuntimeState> currentSsz(ZoneRuntimeRegistry registry) {
+        return registry == null ? Optional.empty() : registry.currentAs(SszZoneRuntimeState.class);
+    }
+
     public static Optional<DdzZoneRuntimeState> currentDdz(ZoneRuntimeRegistry registry) {
         return registry.currentAs(DdzZoneRuntimeState.class);
+    }
+
+    public static Optional<S3kDezZoneRuntimeState> currentDez(ZoneRuntimeRegistry registry) {
+        return registry.currentAs(S3kDezZoneRuntimeState.class);
     }
 
     public static PlayerCharacter resolvePlayerCharacter(ZoneRuntimeRegistry registry,

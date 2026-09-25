@@ -300,6 +300,47 @@ final class S3kAnimatedTileChannels {
         return channels;
     }
 
+    /**
+     * {@code AnimateTiles_LRZ1}/{@code AnimateTiles_LRZ2} (sonic3k.asm:55045-55054) set the two
+     * destination bases and fall into {@code loc_282D0}, which runs its own split DMA for both
+     * background channels and only then branches to {@code loc_286E8}, the shared AniPLC pass.
+     * The channel order here is that ROM order.
+     */
+    static List<AnimatedTileChannel> buildLrzChannels(Sonic3kPatternAnimator owner,
+                                                      List<AniPlcScriptState> scripts) {
+        List<AnimatedTileChannel> channels = new ArrayList<>(scripts.size() + 2);
+        channels.add(new AnimatedTileChannel(
+                "s3k.lrz.bg1",
+                owner::shouldRunLrzBackgroundLayer1Channel,
+                ctx -> owner.computeLrzBackgroundLayer1Phase(),
+                new DestinationPlan(owner.lrzBackgroundLayer1Destination(), owner.lrzBackgroundLayer1Destination() + 0x23),
+                AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                new SplitTransferApplyStrategy(owner::updateLrzBackgroundLayer1ForGraph)
+        ));
+        channels.add(new AnimatedTileChannel(
+                "s3k.lrz.bg2",
+                owner::shouldRunLrzBackgroundLayer2Channel,
+                ctx -> owner.computeLrzBackgroundLayer2Phase(),
+                new DestinationPlan(0x344, 0x34F),
+                AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                new SplitTransferApplyStrategy(owner::updateLrzBackgroundLayer2ForGraph)
+        ));
+
+        for (int i = 0; i < scripts.size(); i++) {
+            AniPlcScriptState script = scripts.get(i);
+            channels.add(new AnimatedTileChannel(
+                    "s3k.lrz.script." + i,
+                    owner::shouldRunScriptChannels,
+                    ctx -> ctx.frameCounter(),
+                    scriptDestination(script),
+                    AnimatedTileCachePolicy.ALWAYS,
+                    ctx -> owner.tickScript(script)
+            ));
+        }
+
+        return channels;
+    }
+
     private static DestinationPlan scriptDestination(AniPlcScriptState script) {
         int startTile = script.destinationTileIndex();
         if (script.tilesPerFrame() <= 1) {

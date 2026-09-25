@@ -294,6 +294,26 @@ class TestTailsCarryController {
     }
 
     @Test
+    void carryPublishesGravityAndFacingWithoutTheSkippedAnimator() {
+        var sonic = prepareManualContact();
+        var tails = GameServices.sprites().getSidekicks().get(0);
+        var carry = tails.getTailsCarryController();
+        for (boolean reversed : new boolean[] {true, false}) {
+            GameServices.gameState().setReverseGravityActive(reversed);
+            tails.setDirection(com.openggf.physics.Direction.LEFT);
+            carry.forceScriptedCarry(TailsCarryController.CarryContext.CNZ);
+            assertTrue(sonic.isObjectMappingFrameControl());
+            assertTrue(sonic.getRenderHFlip());
+            assertEquals(reversed, sonic.getRenderVFlip());
+            tails.setDirection(com.openggf.physics.Direction.RIGHT);
+            carry.updateAfterTailsCollision(0);
+            assertFalse(sonic.getRenderHFlip());
+            assertEquals(reversed, sonic.getRenderVFlip());
+            carry.clearAndReleaseMain();
+        }
+    }
+
+    @Test
     void scriptedContextsUseSharedAttachmentAndSnapshotWithoutParticipantReference() {
         AbstractPlayableSprite sonic = prepareManualContact();
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);

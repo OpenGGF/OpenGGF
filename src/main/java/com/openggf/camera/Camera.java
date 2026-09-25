@@ -29,6 +29,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short renderCopyX = 0;
 	private short renderCopyY = 0;
 
+	// Independently registered rewind sidecar for destination-only presentation.
+	final CameraBoundaryPresentation.Destination boundaryDestination = new CameraBoundaryPresentation.Destination();
 	private short minX;
 	private short minY;
 	private short maxX;
@@ -106,6 +108,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// ROM: Look down target bias: 8 - shifts camera down to show more below Sonic
 	private static final short LOOK_DOWN_BIAS = 8;
 
+	/** {@code loc_112E0}'s look-up target while {@code Reverse_gravity_flag} is set. */
+	private static final short LOOK_UP_BIAS_REVERSED = 0x18;
+
+	/** {@code loc_112A6}'s look-down target while the flag is set. */
+	private static final short LOOK_DOWN_BIAS_REVERSED = (short) 0xD8;
+
 	// ROM: Camera_Y_pos_bias - dynamic bias that can change during gameplay
 	// (looking up/down, spindash, etc). Starts at 96.
 	private short yPosBias = DEFAULT_Y_BIAS;
@@ -182,7 +190,10 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// If max < min, treat the upper bound as wrapped/unbounded for this signed domain.
 			// SCZ ObjB2 writes Camera_Max_X_pos = Camera_X_pos - $40, which can transiently
 			// produce max < min at low X in this engine representation.
-			x = clampAxisWithWrap(x, minX, maxX);
+			x = clampAxisWithWrap(x, (short) (minX - nativeArenaInset()),
+					(short) (maxX - nativeArenaInset()));
+			var horizontalLock = widescreenHorizontalArenaLock();
+			if (horizontalLock.isPresent()) x = (short) horizontalLock.getAsInt();
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
 			forcedScrollRequested = false;
@@ -469,6 +480,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	private short computeNextHorizontalCameraX(boolean consumeDelayState, boolean applyBoundaryClamp) {
+		// Widescreen-only presentation policy: hold X even inside the deadzone.
+		// Do not use the full camera freeze: the native vertical routine below
+		// must still follow the player (e.g. DEZ2's gravity-reversing arena).
+		var horizontalLock = widescreenHorizontalArenaLock();
+		if (horizontalLock.isPresent()) return (short) horizontalLock.getAsInt();
 		short nextX = x;
 		short focusedSpriteRealX;
 		if (horizScrollDelayFrames > 0) {
@@ -546,10 +562,31 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
-	 * ROM SH_MoveCameraLeft clamp: enforce only the left boundary (v_limitleft2).
+	 * A zone may project its native camera window into the viewport without
+	 * rewriting minX/maxX: those ROM words also define player movement walls.
+	 * Ordinary cameras and 320px views retain the original clamp unchanged.
+	 * The owning zone captures its opt-in, avoiding a second rewind owner here.
 	 */
+	private int nativeArenaInset() {
+		var framing = com.openggf.game.internal.NativeArenaCameraFraming.current();
+		return framing != null && framing.centerNativeArenaCamera() ? NativeViewportFraming.inset(width) : 0;
+	}
+
+	private java.util.OptionalInt widescreenHorizontalArenaLock() {
+		if (width <= 320) return java.util.OptionalInt.empty();
+		var framing = com.openggf.game.internal.NativeArenaCameraFraming.current();
+		if (framing != null) {
+			var nativeLeft = framing.lockedNativeHorizontalCamera();
+			if (nativeLeft.isPresent()) return java.util.OptionalInt.of(
+					NativeViewportFraming.visibleLeft(nativeLeft.getAsInt(), width));
+		}
+		return java.util.OptionalInt.empty();
+	}
+
+	/** ROM SH_MoveCameraLeft: enforce only the projected left boundary. */
 	private short clampLeftBoundary(short value) {
-		return value < minX ? minX : value;
+		short visibleMin = (short) (minX - nativeArenaInset());
+		return value < visibleMin ? visibleMin : value;
 	}
 
 	/**
@@ -559,7 +596,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * normalize the pair first.
 	 */
 	private short clampRightBoundary(short value) {
-		return value > maxX ? maxX : value;
+		short visibleMax = (short) (maxX - nativeArenaInset());
+		return value > visibleMax ? visibleMax : value;
 	}
 
 	/**
@@ -1042,6 +1080,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Use setMinXTarget() for smooth easing.
 	 */
 	public void setMinX(short minX) {
+		boundaryDestination.resetForMissingSnapshot();
 		this.minX = minX;
 		this.minXTarget = minX;
 	}
@@ -1056,6 +1095,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Current minX will ease toward this value at 2px/frame.
 	 */
 	public void setMinXTarget(short minXTarget) {
+		boundaryDestination.resetForMissingSnapshot();
 		this.minXTarget = minXTarget;
 	}
 
@@ -1119,7 +1159,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * @return true when the sprite's Y coordinate changed.
 	 */
 	public boolean applyScreenYWrapValue(AbstractPlayableSprite sprite) {
-		if (!verticalWrapEnabled || sprite == null) {
+		// S2 Obj01_Control and S3K loc_10C26 gate the word mask on the
+		// current Camera_min_Y_pos == -$100, not merely the stage's wrap range.
+		// Arena bounds can suspend wrapping without discarding that range.
+		// Masking while suspended corrupts offscreen cutscene sentinels such
+		// as SSZ's $7FFF and changes when its launch column starts crumbling.
+		if (!verticalWrapEnabled || minY != (short) -0x100 || sprite == null) {
 			return false;
 		}
 		// This is separate from the render visibility wrap margin: S2 control
@@ -1174,6 +1219,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Use setMaxXTarget() for smooth easing.
 	 */
 	public void setMaxX(short maxX) {
+		boundaryDestination.resetForMissingSnapshot();
 		this.maxX = maxX;
 		this.maxXTarget = maxX;
 		this.maxXBeforeBoundaryEasing = maxX;
@@ -1195,6 +1241,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Current maxX will ease toward this value at 2px/frame.
 	 */
 	public void setMaxXTarget(short maxXTarget) {
+		boundaryDestination.resetForMissingSnapshot();
 		this.maxXTarget = maxXTarget;
 	}
 
@@ -1278,6 +1325,22 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Call this each frame while looking up AND look delay counter has elapsed.
 	 */
 	public void incrementLookUpBias() {
+		// S3K loc_112B0 (docs/skdisasm/sonic3k.asm:22638-22660) tests
+		// Reverse_gravity_flag before the pan and branches to loc_112E0, whose
+		// target is $18 and whose step is subq.w #2: looking up moves the camera
+		// the other way, because "up" for an inverted player is down the screen.
+		// Tails loc_14ADA (:27891) and Knuckles loc_172E2 (:31919) are the same
+		// code, and the engine has one camera, so this owns all three rows.
+		var reverseGravityState = GameServices.gameStateOrNull();
+		if (reverseGravityState != null && reverseGravityState.isReverseGravityActive()) {
+			if (yPosBias > LOOK_UP_BIAS_REVERSED) {
+				yPosBias -= 2;
+				if (yPosBias < LOOK_UP_BIAS_REVERSED) {
+					yPosBias = LOOK_UP_BIAS_REVERSED;
+				}
+			}
+			return;
+		}
 		if (yPosBias < LOOK_UP_BIAS) {
 			yPosBias += 2;
 			if (yPosBias > LOOK_UP_BIAS) {
@@ -1292,6 +1355,19 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Call this each frame while looking down AND look delay counter has elapsed.
 	 */
 	public void decrementLookDownBias() {
+		// S3K loc_11276 (docs/skdisasm/sonic3k.asm:22615-22637) branches to
+		// loc_112A6 under the flag: target $D8, step addq.w #2. Tails loc_14AA0
+		// (:27868) and Knuckles loc_172A8 (:31896) repeat it.
+		var reverseGravityState = GameServices.gameStateOrNull();
+		if (reverseGravityState != null && reverseGravityState.isReverseGravityActive()) {
+			if (yPosBias < LOOK_DOWN_BIAS_REVERSED) {
+				yPosBias += 2;
+				if (yPosBias > LOOK_DOWN_BIAS_REVERSED) {
+					yPosBias = LOOK_DOWN_BIAS_REVERSED;
+				}
+			}
+			return;
+		}
 		if (yPosBias > LOOK_DOWN_BIAS) {
 			yPosBias -= 2;
 			if (yPosBias < LOOK_DOWN_BIAS) {
@@ -1391,6 +1467,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Preserves width/height (configuration), clears all runtime state.
 	 */
 	public void resetState() {
+		boundaryDestination.resetForMissingSnapshot();
 		x = 0;
 		y = 0;
 		renderCopyX = 0;

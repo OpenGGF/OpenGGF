@@ -71,6 +71,45 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+FBZ checkpoint width setup (2026-09-25): setting an aspect after a helper has
+already created the gameplay session leaves the existing camera at its original
+width. A post-death assertion then looks like a reload width regression. Apply
+the real display preset before opening the session and assert the initial camera
+width as well as the reloaded width. This changed 176 false width failures into
+220 passing two-death cases without any runtime modification.
+
+FBZ local checkpoint replay (2026-09-25): a freshly built fixture can still be
+before the first admitted gameplay frame. Capturing there and replaying90 inputs
+produced24 object-allocation/runtime differences across44 physical starpost
+approaches, although every contact saved successfully. Admit a neutral production
+frame before taking a live-history snapshot. All89 placement/contact/restart checks
+then passed with no runtime change. This does not waive checking actual live-frame
+restore mismatches or intentional load-boundary history resets.
+
+
+DEZ boss probe versus capture (2026-09-23): `GameplayCaptureTool` normalizes CLI
+`--sidekick none` to an empty character string; direct `GameplayCaptureSession.Settings`
+callers must supply that empty string themselves. Passing the literal `"none"`
+to the session API produced a fallback follower. The probe and solo capture
+then took different boss hits despite identical P1 input masks. Compare the
+recorded `sk_present`/team as well as positions before diagnosing nondeterminism.
+The corrected solo input replay completed both viewport runs.
+
+LRZ cold-route comparison against a fixture (2026-09-18): a `GameplayCaptureTool`
+capture compared frame for frame against a trace fixture manufactures divergences
+that read exactly like engine defects unless three alignments are right. The tool
+writes its state row after `loop.step()`, but `boot()` leaves one pre-gameplay
+frame for the first step to consume, so capture frame `n+1` is native row `n`;
+the input log has to start one capture frame late as well (`--settle 1`), or the
+engine receives each row's input one gameplay frame early; and the capture needs
+the fixture's own team (`--sidekick tails` for a Sonic + Tails run), because
+shared objects such as `$31 Obj_LRZCollapsingBridge` arm on either player's
+standing bit and the sidekick often reaches them first. Two "divergences" - a
+falling intro one frame late and a collapsing bridge eight frames late - were
+both these, and the strict replay of the same fixture had been matching Player 1
+`y` through those frames all along. Before believing a cold-route divergence,
+check what the fixture's own replay test reports as its first error frame.
+
 SOZ pyramid capture (2026-09-16): a positioned start at `$43B0,$9D4` skips
 `Obj_PathSwap` at `$4308,$918`, leaving Sonic at fresh-load low sprite priority.
 A follower can later cross a switch independently, producing a misleading
@@ -78,6 +117,15 @@ leader/follower rendering difference. Starting above that switch at `$43B0,$8E0`
 and falling through it sets both priorities via production logic. Record live
 priority flags; do not force high priority or weaken background priority to repair
 a capture that omitted the entry interaction.
+
+LRZ miniboss capture (2026-09-23): the arrival movie positioned at
+`$2C00,$600` skipped the placed `$02/$22` path switch at `$2BA0,$750`
+(`Levels/LRZ/Object Pos/1.bin + $E22`). `loc_1CE54` sets high priority from
+subtype bit 5 on a rightward crossing inside Y `[$6D0,$7D0)`; loading on
+the far side merely initializes the side latch. Start at `$2B70,$750` and
+walk across it. The resulting Sonic-in-front-of-lava image is a corrected
+capture setup, not an engine priority fix. Capture CSV now exposes
+`high_priority` so this missing state is inspectable without guessing from pixels.
 
 SOZ allocation profiling (2026-09-16): aggregate JFR allocation samples include
 recorder/control threads, which can dominate with `HashMap$KeySet` allocations.
@@ -130,6 +178,15 @@ pass to execute before comparison starts. Sample the release, subsequent gap
 rows and first compared row together; an extra pass can remain invisible until
 a later moving-platform ride. Retire source-loop admission inside the title
 loop's own admission path. See the [KiS2 frontier investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+SSZ seeded presentation comparison (2026-09-23): skipping an out-of-scope
+ending actor also skips its camera lock and fade-from-white worker. Setting only
+the negative camera signal produces a plausible but stationary engine/native
+comparison; restoring the lock alone produces a white reference. Declare the
+omitted owner's prerequisites from disassembly, including palette completion,
+and stop before its next excluded dispatch. Compare a documented non-HUD region
+in native 3-bit RGB without fitted offsets; a seeded checkpoint does not certify
+the cold route or widescreen margins.
 
 FBZ miniboss capture (2026-09-15): `GameplayCaptureTool --x/--y` reinitializes
 level events and executes a setup object update. That can select a different

@@ -209,3 +209,74 @@ player DPLC tails in BEFORE_ENTRY rewind state. The frame now retains only
 referenced art; all 114 ordinary-roll phase/donor/width/rewind cases pass in
 the final 158-case focused run, no skips. The parked early right-to-left
 challenge remains unchanged. Post-integration broad verification is pending.
+
+## Physical starpost activation and replay (2026-09-25)
+
+`TestFbzCheckpointRoutes#walkingIntoEveryPlacedPostActivatesAndReplaysItsSave`
+starts48px left of each decoded ROM post, at its authored Y, then uses90 ordinary
+Right inputs. No saved checkpoint is injected and no activation routine is called.
+The11 posts across both acts are exercised with Sonic, Sonic+Tails, Tails and
+Knuckles (44 cases). This is a declared local approach, not cold reachability to
+every post. The existing44 saved-post death reloads and placement inventory remain
+separate evidence. Width/donor products and integrated contact-to-death remain open.
+
+The first trial took its snapshot before any admitted frame and produced24 replay
+differences, despite all44 contacts activating successfully. That pre-gameplay
+setup is not a live history point. Taking the snapshot after the initial neutral
+gameplay frame makes all89 cases pass without runtime changes. The final test
+also verifies immediate restore and repeats the90-input replay twice, comparing
+every registered snapshot key (no field exclusions).
+
+Final focused command on `9bc91e469` plus this test, Java21/DISPLAY=:0:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzCheckpointRoutes
+-Ds3k.rom.path=/absolute/path/to/s3k.gen test`:89 passed,0 failures/errors/skips,
+36.042s Maven. All44 physical activations pass immediate restore and two forward
+replays. This test-only addition uses focused validation; campaign broad checks
+and other act obligations remain outstanding.
+
+## Physical checkpoint through repeated death (2026-09-25)
+
+`TestFbzCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads` composes
+ordinary contact with each of the eleven ROM-placed posts and two full production
+death/reload cycles. Cases cover Sonic, Tails, Sonic+Tails and Knuckles at all
+selectable presets: 320, 352, 400, 528 and 800 pixels (220 cases, 440 reloads).
+The local approach starts 48px left of the post at its authored Y. No saved
+checkpoint is injected. A declared `applyPitDeath()` stimulus initiates normal
+GameLoop death, fade, reload and title/control release; this is not a test of
+hazard contact or cold traversal to every post.
+
+Each reload verifies saved coordinates/index, main character, follower identity,
+viewport width, replacement object/runtime owners, event binding and player
+branch, plus outgoing live history and its reset at the full load. Repeating the
+cycle checks that the rebuilt world remains usable and retains the checkpoint.
+The independent activation/replay and saved-post intake tests remain intact.
+
+On `17c191094` plus this test, Java 21 and DISPLAY=:0:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestFbzCheckpointRoutes test`: 309 tests, 0 failures/errors/skips,
+49.002s Maven (28.30s class). Initial width failures were fixture setup: the
+team helper created its camera before the display configuration. Applying the
+real preset before opening the final gameplay session, and checking the width
+before contact as well as after reload, verifies the intended product. No runtime
+change was needed. Donor products, cold post reachability and other act-specific
+mechanism/presentation obligations remain open.
+
+## Supported donor checkpoint lifecycle (2026-09-25)
+
+The physical checkpoint/death test now also covers the production launch roster
+for S1 and S2 donors. `LaunchProfile.sanitizedFor(SONIC_3K)` selects supported
+standard teams: S1 Sonic alone; S2 Sonic alone, Tails alone and Sonic+Tails.
+Each visits all eleven posts at 320/352/400/528/800 and runs two real death loads
+(220 additional cases, 440 additional reloads). The donor is initialized through
+the fixture's production donation path using the verified root ROMs. Before
+contact, at each load and after control release, assertions check donor identity,
+spindash capability, participant renderer, animation set/profile and mappings.
+S1 Sonic remains unable to spindash. Native lifecycle assertions remain intact.
+
+Java 21, DISPLAY=:0, `30a3537d0` plus test changes:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzCheckpointRoutes
+-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dsonic1.rom.path=$PROJECT_ROOT/s1.gen
+-Dsonic2.rom.path=$PROJECT_ROOT/s2.gen test`: 529 tests, 0 failures/errors/skips,
+1:07 Maven (46.73s class). This totals 880 actual reloads across the native and
+supported donor standard-team products. It does not certify donor cold traversal,
+hazard-contact deaths, arbitrary duplicate follower chains or pixel presentation.

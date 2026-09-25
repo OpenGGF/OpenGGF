@@ -35,6 +35,8 @@ public class LevelTransitionCoordinator {
     private boolean sanctuaryReturnContextExplicit;
     private boolean sanctuaryOriginRestorePending;
 
+    LevelContinuationCarry.State continuationCarry;
+
     record SanctuaryRewindState(
             BigRingReturnState bigRingReturn,
             PersistentRespawnState bigRingReturnRespawnState,
@@ -47,7 +49,8 @@ public class LevelTransitionCoordinator {
             int requestedAct,
             int requestedMusicId,
             boolean levelInactiveForTransition,
-            boolean suppressNextMusicChange) {
+            boolean suppressNextMusicChange,
+            LevelContinuationCarry.State continuationCarry) {
     }
 
     // ── Bonus stage ───────────────────────────────────────────────────
@@ -385,7 +388,7 @@ public class LevelTransitionCoordinator {
                 sanctuaryReturnContext, sanctuaryReturnContextExplicit,
                 sanctuaryOriginRestorePending,
                 specificZoneActRequested, requestedZone, requestedAct, requestedMusicId,
-                levelInactiveForTransition, suppressNextMusicChange);
+                levelInactiveForTransition, suppressNextMusicChange, continuationCarry);
     }
 
     void restoreSanctuaryRewindState(SanctuaryRewindState state) {
@@ -402,6 +405,7 @@ public class LevelTransitionCoordinator {
         requestedMusicId = state.requestedMusicId();
         levelInactiveForTransition = state.levelInactiveForTransition();
         suppressNextMusicChange = state.suppressNextMusicChange();
+        continuationCarry = state.continuationCarry();
     }
 
     // ================================================================
@@ -437,8 +441,8 @@ public class LevelTransitionCoordinator {
     /**
      * Signals that the next level load is a bonus stage return.
      * Set before {@code loadZoneAndAct()} so that {@code onInitLevel()} can
-     * detect the return and skip intros. The checkpoint index is restored
-     * to {@code CheckpointState} after the load completes.
+     * detect the return and skip intros. The return coordinator prepares
+     * {@code CheckpointState} before loading so ScreenInit sees the saved position.
      *
      * @param checkpointIndex the Last_star_post_hit value saved before bonus entry
      */
@@ -745,6 +749,7 @@ public class LevelTransitionCoordinator {
      * source-side fade command from silencing it.
      */
     public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow, int musicId) {
+        continuationCarry = null;
         this.requestedZone = zone;
         this.requestedAct = act;
         this.requestedMusicId = musicId;
@@ -1002,6 +1007,7 @@ public class LevelTransitionCoordinator {
      * Called from {@code LevelManager.resetState()}.
      */
     public void resetState() {
+        continuationCarry = null;
         specialStageEntryRequest = null;
         specialStageEntryRoutineArmed = false;
         specialStageEntryAdvancesLevel = false;

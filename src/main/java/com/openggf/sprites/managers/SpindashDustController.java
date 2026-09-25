@@ -165,11 +165,15 @@ public class SpindashDustController {
         }
         int originX = sprite.getRenderCentreX();
         int originY = sprite.getRenderCentreY();
+        var gameState = sprite.currentGameStateOrNull();
+        boolean reverseGravity = gameState != null && gameState.isReverseGravityActive();
+        // S3K loc_18C20 mirrors the dust and negates d1 before Tails's
+        // centre adjustment. Compose at draw time, without accumulating flips.
         if (sprite instanceof Tails) {
-            originY += TAILS_Y_OFFSET;
+            originY += reverseGravity ? -TAILS_Y_OFFSET : TAILS_Y_OFFSET;
         }
         boolean hFlip = Direction.LEFT.equals(sprite.getDirection());
-        renderer.drawFrame(currentFrame, originX, originY, hFlip, false);
+        renderer.drawFrame(currentFrame, originX, originY, hFlip, reverseGravity);
     }
 
     /** Test/diagnostic: whether the water splash animation is currently playing. */

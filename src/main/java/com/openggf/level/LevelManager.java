@@ -1034,6 +1034,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void resetZoneScopedRegistriesForLevelLoad() {
         levelRenderer.spriteTables.reset();
+        levelRenderer.boundsMask.reset();
+        if (camera != null) com.openggf.camera.CameraBoundaryPresentation.reset(camera);
         LevelZoneScopedRegistryResetter.reset();
     }
 
@@ -2996,6 +2998,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             playable.setLrbSolidBit(ctx.getCheckpointLrbSolidBit());
         }
         audioManager.setSpeedShoes(false);
+        LevelContinuationCarry.restoreShield(transitions, playable);
     }
 
     /**
@@ -3017,8 +3020,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // (skdisasm/sonic3k.asm:61834-61837, 38172-38178). Publish that bound
         // before either camera update below; applying it only in the later
         // title-card handoff leaves the return one camera step behind.
+        var checkpoint = checkpointCoordinator.state();
+        Integer savedCameraMaxY = null;
         if (bigRingReturn != null) {
-            camera.setMaxY((short) bigRingReturn.cameraMaxY());
+            savedCameraMaxY = bigRingReturn.cameraMaxY();
+        } else if (checkpoint instanceof CheckpointState state && state.isActive() && state.hasS3kRuntimeState()) {
+            savedCameraMaxY = state.getSavedCameraMaxY();
+        }
+        if (savedCameraMaxY != null) {
+            camera.setMaxY(savedCameraMaxY.shortValue());
+            camera.setMaxYTarget(savedCameraMaxY.shortValue());
         }
         PersistentRespawnState persistentRespawnState =
                 checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3032,8 +3043,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             camera.setMinX((short) currentLevel.getMinX());
             camera.setMaxX((short) currentLevel.getMaxX());
             camera.setMinY((short) currentLevel.getMinY());
-            camera.setMaxY((short) (bigRingReturn != null
-                    ? bigRingReturn.cameraMaxY()
+            camera.setMaxY((short) (savedCameraMaxY != null
+                    ? savedCameraMaxY
                     : currentLevel.getMaxY()));
             // Vertical wrapping: enabled when minY < 0. The wrap range differs per game:
             // S1 (UNIFIED): 0x800 (DeformLayers.asm LZ3/SBZ2 loop sections)
@@ -3260,6 +3271,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void requestTitleCardIfNeeded(LevelLoadContext ctx) {
         initialPresentationPlcsCompleted = false;
         initialPresentationOmitted = false;
+        if (LevelContinuationCarry.bypassInitialPresentation(transitions)) {
+            // A continuation never creates a title owner or runs its locked PLC
+            // loop. Do not use the omitted-presentation path, which does both.
+            initialPresentationPlcsCompleted = true;
+            return;
+        }
         boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
                 && GameServices.playbackDebug().hasScheduledLevelLoadSession();
         if (!ctx.isShowTitleCard()) {
@@ -3757,19 +3774,26 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             int zone, int act, LevelLoadMode loadMode,
             boolean titleCardRequiredInHeadlessMode,
             boolean queueFreshLevelRuntimeArt) throws IOException {
+        LevelContinuationCarry.beginLoad(transitions, zone, act);
+        boolean succeeded = false;
         try {
             writeCurrentAct(act);
             writeApparentAct(act);
             writeCurrentZone(zone);
-            // Clear checkpoint when manually changing level
-            checkpointCoordinator.clear();
+            // Manual changes discard checkpoints. A bonus return has already
+            // prepared its saved position for the load profile, before ScreenInit.
+            if (!transitions.isBonusStageReturn()) {
+                checkpointCoordinator.clear();
+            }
             loadCurrentLevel(
                     loadMode != LevelLoadMode.PREVIEW_CAPTURE,
                     loadMode,
                     false,
                     titleCardRequiredInHeadlessMode,
                     queueFreshLevelRuntimeArt);
+            succeeded = true;
         } finally {
+            LevelContinuationCarry.finishLoad(transitions, succeeded);
             // A load that fails before initCameraBounds must not leak a stage-return
             // respawn table into a later, potentially different, level.
             checkpointCoordinator.clearPendingPersistentRespawn();
@@ -3910,11 +3934,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             if (playable.getSpriteRenderer() != null) {
                 playable.getSpriteRenderer().invalidateDplcCache();
             }
-            // Persistent insta-shield survives transitions but the ObjectManager was rebuilt
-            // (rebuildManagersForActTransition creates a new one). Re-register + invalidate DPLC.
+            // ROM Load_Level retains the fixed shield SST outside Dynamic_object_RAM.
+            // Both exact-SST policies have already restored and reconciled that owner
+            // in rebuildManagersForActTransition. Marking it unregistered here makes
+            // the next player update insert the same identity twice (MHZ/HCZ handoff).
+            // Only the legacy policy still needs lazy registration in the new manager;
+            // exact carry has also invalidated the shield DPLC during reconciliation.
             if (playable.getInstaShieldObject() != null
                     && request.objectSurvivalPolicy()
-                    != SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST) {
+                    == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.PERSISTENT_ONLY) {
                 playable.markInstaShieldForReregistration();
                 playable.getInstaShieldObject().invalidateDplcCache();
             }
@@ -4459,6 +4487,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {
             gameplayMode.getRewindRegistry().deregister("level");
+            com.openggf.game.LevelRingDisplay.unregister(gameplayMode.getRewindRegistry());
             LevelLostRingSpawnRewindAccess.unregister(gameplayMode.getRewindRegistry());
             gameplayMode.getRewindRegistry().deregister("level-transition");
             gameplayMode.getRewindRegistry().deregister("object-manager");

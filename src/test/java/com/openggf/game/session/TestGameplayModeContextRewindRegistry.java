@@ -170,6 +170,36 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void levelReregistrationRestoresObjectsBeforeAttractedRingReservations() {
+        GameplayModeContext ctx = buildAttachedContext();
+        RingManager rings = mock(RingManager.class);
+        RingSnapshot ringSnapshot = mock(RingSnapshot.class);
+        when(rings.key()).thenReturn("rings");
+        when(rings.capture()).thenReturn(ringSnapshot);
+        ctx.registerRingAdapter(rings);
+        LevelManager level = mock(LevelManager.class);
+        when(level.getTilemapManager()).thenReturn(mock(com.openggf.level.LevelTilemapManager.class));
+        when(level.levelRewindSnapshottable()).thenReturn(new LevelTestSnapshot());
+        when(level.levelTilemapRewindSnapshottable()).thenReturn(new LevelTilemapTestSnapshot());
+        when(level.getRingManager()).thenReturn(rings);
+        ObjectManager objects = mock(ObjectManager.class);
+        @SuppressWarnings("unchecked")
+        RewindSnapshottable<ObjectManagerSnapshot> objectAdapter = mock(RewindSnapshottable.class);
+        ObjectManagerSnapshot objectSnapshot = mock(ObjectManagerSnapshot.class);
+        when(objectAdapter.key()).thenReturn("object-manager");
+        when(objectAdapter.capture()).thenReturn(objectSnapshot);
+        when(objects.rewindSnapshottable()).thenReturn(objectAdapter);
+        when(level.getObjectManager()).thenReturn(objects);
+        ctx.registerLevelAdapters(level);
+        ctx.registerLevelAdapters(level);
+        var registry = ctx.getRewindRegistry();
+        registry.restore(registry.capture());
+        var order = org.mockito.Mockito.inOrder(objectAdapter, rings);
+        order.verify(objectAdapter).restore(objectSnapshot);
+        order.verify(rings).restore(ringSnapshot);
+    }
+
+    @Test
     void actTransitionRebindMovesOnlyObjectAndRingManagers() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();

@@ -367,6 +367,9 @@ public class PlayableSpriteAnimation {
             // S3K runs Animate_Sonic/Tails/Knuckles, then eori.b #2,render_flags
             // under Reverse_gravity_flag (sonic3k.asm:22010-22013, 26254-26258,
             // 30452-30456). object_control bit 1 skips both operations.
+            // This is the final orientation consumed by player drawing and trails.
+            // Do not XOR gravity again at draw time: two mirrors cancel, leaving
+            // the player upright while its movement correctly follows the ceiling.
             sprite.setRenderFlips(sprite.getRenderHFlip(), !sprite.getRenderVFlip());
         }
     }

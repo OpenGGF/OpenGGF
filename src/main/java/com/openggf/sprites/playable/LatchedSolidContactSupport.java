@@ -29,12 +29,14 @@ final class LatchedSolidContactSupport {
         player.latchedSolidObjectId = objectId & 0xFF;
         if (player.latchedSolidObjectId == 0) {
             player.latchedSolidObjectInstance = null;
+            player.setLatchedSolidObjectBinding(false);
             player.clearLatchedSolidObjectRelease();
         }
     }
 
     static void setInstance(AbstractPlayableSprite player, ObjectInstance instance) {
         player.latchedSolidObjectInstance = instance;
+        player.setLatchedSolidObjectBinding(instance != null);
         if (instance != null) {
             player.clearLatchedSolidObjectRelease();
         }
@@ -43,6 +45,7 @@ final class LatchedSolidContactSupport {
     static void bind(AbstractPlayableSprite player, int objectId, ObjectInstance instance) {
         player.latchedSolidObjectId = objectId & 0xFF;
         player.latchedSolidObjectInstance = instance;
+        player.setLatchedSolidObjectBinding(instance != null);
         player.clearLatchedSolidObjectRelease();
         // ROM RideObject_SetRide writes interact(a1) = slot index of the
         // ridden object (s2.asm:36005-36006). Null/unassigned owners do not

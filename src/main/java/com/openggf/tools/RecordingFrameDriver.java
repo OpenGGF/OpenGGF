@@ -224,6 +224,20 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             previousDriverSnapshot = snapshot;
             return lastFrameResult;
         }
+        if (levelManager.isLevelInactiveForTransition()) {
+            // Match GameLoop's pending-zone/act freeze. Native StartNewLevel
+            // leaves LevelLoop: Pal_FadeToBlack services VBlank/palette work,
+            // but does not run the source player, objects, camera or timers.
+            // The outer lifecycle has already serviced the fade for this row.
+            // Consult the semantic request flag, not fade visibility: other
+            // palette effects intentionally permit the level to keep running.
+            frameCounter++;
+            lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
         // A normal game-loop transition loads the destination from the fade
         // callback, then consumes its title-card request at the next level
         // iteration. Keep those boundaries separate in the recording driver:

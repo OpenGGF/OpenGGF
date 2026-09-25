@@ -21,6 +21,7 @@ public final class S3kPaletteOwners {
     public static final String AIZ1_ANPAL = "s3k.aiz1.anpal";
     public static final String AIZ2_WATER_CYCLE = "s3k.aiz2.waterCycle";
     public static final String AIZ2_TORCH_CYCLE = "s3k.aiz2.torchCycle";
+    public static final String SSZ_DEATH_EGG_CUTSCENE = "s3k.ssz.deathEggCutscene";
     public static final String ZONE_EVENT_PALETTE_LOAD = "s3k.zoneEvents.paletteLoad";
     public static final String HCZ_EVENT_PALETTE = "s3k.hcz.eventPalette";
     public static final String FBZ_EVENT_PALETTE = "s3k.fbz.eventPalette";
@@ -32,12 +33,39 @@ public final class S3kPaletteOwners {
     public static final String HCZ_MINIBOSS = "s3k.hcz.miniboss";
     public static final String HCZ_END_BOSS = "s3k.hcz.endBoss";
     public static final String MHZ_MINIBOSS = "s3k.mhz.miniboss";
+    /** {@code Obj_LRZRockCrusher}: {@code Pal_LRZRockCrusher} on line 1 (sonic3k.asm:197010). */
+    public static final String LRZ_BOSS_FIRE = "s3k.lrz.bossFire";
+    public static final String LRZ_CUTSCENE_KNUCKLES = "s3k.lrz.cutsceneKnuckles";
+    public static final String LRZ_ROCK_CRUSHER = "s3k.lrz.rockCrusher";
     public static final String MHZ_END_BOSS = "s3k.mhz.endBoss";
+    /** {@code Obj_SSZGHZBoss}: {@code PalLoad_Line1 Pal_SSZGHZMisc} for the fight. */
+    public static final String SSZ_GHZ_BOSS = "s3k.ssz.ghzBoss";
+    /**
+     * {@code sub_7A5A0}/{@code sub_7A614}: the three {@code Normal_palette} words the Green Hill
+     * recreation patches while its {@code $20(a0)} hit window runs. Line 0, not a whole line.
+     */
+    public static final String SSZ_GHZ_BOSS_HIT_FLASH = "s3k.ssz.ghzBossHitFlash";
+    /** {@code Obj_SSZMTZBoss}: {@code PalLoad_Line1 Pal_SSZMTZOrbs} for the fight. */
+    public static final String SSZ_MTZ_BOSS = "s3k.ssz.mtzBoss";
+    /**
+     * {@code sub_7ACF2}/{@code sub_7AD6A}: the same three {@code Normal_palette} words the Green
+     * Hill recreation patches, from {@code word_7AD7E}, which is byte for byte {@code word_7A628}.
+     */
+    public static final String SSZ_MTZ_BOSS_HIT_FLASH = "s3k.ssz.mtzBossHitFlash";
+    /**
+     * {@code Obj_SSZEndBoss} {@code loc_7B35A}: the same {@code PalLoad_Line1 Pal_SSZGHZMisc} the
+     * Green Hill recreation runs. Mecha Sonic's own sheet is drawn on line 1
+     * ({@code ObjSlot_MechaSonic}'s {@code make_art_tile(ArtTile_MechaSonic,1,1)}), so without
+     * this he is drawn in whatever the level left on that line.
+     */
+    public static final String SSZ_MECHA_SONIC = "s3k.ssz.mechaSonic";
     public static final String MHZ_END_BOSS_DEFEAT_FADE = "s3k.mhz.endBossDefeatFade";
     public static final String MGZ_MINIBOSS = "s3k.mgz.miniboss";
     public static final String MGZ_TUNNELBOT = "s3k.mgz.tunnelbot";
     public static final String MGZ_END_BOSS = "s3k.mgz.endBoss";
     public static final String MGZ_POST_BOSS_FADE = "s3k.mgz.postBossFade";
+    public static final String MHZ2_CUTSCENE_RESTORE = "s3k.mhz2.cutsceneRestore";
+
     public static final String MHZ1_CUTSCENE_RESTORE = "s3k.mhz1.cutsceneRestore";
     public static final String SOZ_ZONE_CYCLE = "s3k.soz.zoneCycle";
     public static final String LBZ_ZONE_CYCLE = "s3k.lbz.zoneCycle";
@@ -50,6 +78,11 @@ public final class S3kPaletteOwners {
     public static final String ICZ_STARTUP_PALETTE = "s3k.icz.startupPalette";
     public static final String ICZ_ZONE_CYCLE = "s3k.icz.zoneCycle";
     public static final String LRZ_ZONE_CYCLE = "s3k.lrz.zoneCycle";
+    /** {@code AnPal_DEZ1} / {@code AnPal_DEZ2}: Death Egg lines 3 and 4. */
+    public static final String DEZ_ZONE_CYCLE = "s3k.dez.zoneCycle";
+    public static final String DEZ_MINIBOSS = "s3k.dez.miniboss";
+    public static final String DEZ_FINAL_BOSS = "s3k.dez.final-boss";
+    public static final String DEZ_END_BOSS = "s3k.dez.end-boss";
     /**
      * CNZ AnPal palette ownership for the bumper, background, and tertiary
      * animation tables.

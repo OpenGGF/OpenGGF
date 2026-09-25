@@ -470,6 +470,18 @@ public final class ObjectTerrainUtils {
         LevelManager lm = com.openggf.game.GameServices.levelOrNull();
         if (lm == null) return TerrainCheckResult.noCollision();
 
+        return checkNativeUpwardCeilingDistAtPoint(lm, x, y, flipAwareAngle);
+    }
+
+    /** Native ObjCheckCeilingDist with an injected level owner and object radii. */
+    public static TerrainCheckResult checkNativeUpwardCeilingDist(LevelManager levelManager,
+                                                                 int x, int y, int yRadius) {
+        if (levelManager == null) return TerrainCheckResult.noCollision();
+        return checkNativeUpwardCeilingDistAtPoint(levelManager, x, y - yRadius, false);
+    }
+
+    private static TerrainCheckResult checkNativeUpwardCeilingDistAtPoint(
+            LevelManager lm, int x, int y, boolean flipAwareAngle) {
         TerrainCheckResult current = scanCeilingTile(lm, x, y, y, false, flipAwareAngle);
         if (current != null) {
             return current;

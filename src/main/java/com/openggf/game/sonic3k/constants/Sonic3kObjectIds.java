@@ -80,8 +80,14 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_CUP_ELEVATOR = 0x18;
     // S3KL object table: Obj_LBZCupElevatorPole.
     public static final int LBZ_CUP_ELEVATOR_POLE = 0x19;
+    // SKL object table: Obj_LRZBigDoor. Unused by the S3KL set.
+    public static final int LRZ_BIG_DOOR = 0x1A;
     // S3KL object table: Obj_LBZPipePlug. SKL reuses $1B for Obj_LRZFireballLauncher.
     public static final int LBZ_PIPE_PLUG = 0x1B;
+    // SKL object table: Obj_LRZButtonHorizontal. Unused by the S3KL set.
+    public static final int LRZ_BUTTON_HORIZONTAL = 0x1C;
+    // SKL object table: Obj_LRZShootingTrigger. Unused by the S3KL set.
+    public static final int LRZ_SHOOTING_TRIGGER = 0x1D;
     // S3KL object table: Obj_LBZSpinLauncher. SKL reuses $1E for Obj_LRZDashElevator.
     public static final int LBZ_SPIN_LAUNCHER = 0x1E;
     // S3KL object table: Obj_LBZLoweringGrapple. SKL reuses $1F for Obj_LRZLavaFall.
@@ -152,6 +158,8 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_ALARM = 0x22;
     public static final int MGZLBZ_SMASHING_PILLAR = 0x52;
     public static final int MGZ_SWINGING_PLATFORM = 0x53;
+    // SKL $55 is Obj_DEZEnergyBridge (sonic3k.asm:93909); S3KL $55 is Obj_MGZHeadTrigger.
+    // The two object tables share the number.
     public static final int MGZ_HEAD_TRIGGER = 0x55;
     public static final int MGZ_MOVING_SPIKE_PLATFORM = 0x56;
     public static final int MGZ_TRIGGER_PLATFORM = 0x57;
@@ -160,6 +168,21 @@ public final class Sonic3kObjectIds {
     public static final int MGZ_PULLEY = 0x5A;
     public static final int MGZ_TOP_PLATFORM = 0x5B;
     public static final int MGZ_TOP_LAUNCHER = 0x5C;
+    // SKL $5D is Obj_DEZRetractingSpring (sonic3k.asm:94098); S3KL $5D is
+    // Obj_CGZTriangleBumpers, a competition-zone object no zone 0-6 layout places. The two
+    // tables share the number.
+    public static final int DEZ_RETRACTING_SPRING = 0x5D;
+    // SKL $5E is Obj_DEZHoverMachine; S3KL $5E is competition-only CGZBladePlatform.
+    public static final int DEZ_HOVER_MACHINE = 0x5E;
+    // SKL object table only: Obj_DEZGravityRoom (sonic3k.asm:95814). The S3KL table has
+    // no object at $5F, so this number is named after its only owner.
+    public static final int DEZ_GRAVITY_ROOM = 0x5F;
+    // SKL object table only: Obj_DEZBumperWall (sonic3k.asm:95958). The S3KL table has no
+    // object at $60, so this number is named after its only owner.
+    public static final int DEZ_BUMPER_WALL = 0x60;
+    // SKL $61 is Obj_DEZGravityPuzzle (sonic3k.asm:96087); S3KL $61 is Obj_BPZBalloon, a
+    // competition-zone object no zone 0-6 layout places. The two tables share the number.
+    public static final int DEZ_GRAVITY_PUZZLE = 0x61;
     public static final int HCZ_SNAKE_BLOCKS = 0x67;
     public static final int TENSION_BRIDGE = 0x6C;
     public static final int INVISIBLE_HURT_BLOCK_H = 0x6A;
@@ -302,6 +325,18 @@ public final class Sonic3kObjectIds {
     public static final int STAR_POINTER = 0xAE;
     // S3KL object table: Obj_ICZCrushingColumn.
     public static final int ICZ_CRUSHING_COLUMN = 0xAF;
+    // Sky Sanctuary's SKL pointer-table identities (Object pointers - SK Set 2.asm). The same
+    // numeric IDs carry the S3KL FBZ_* names above; the factories are set- and zone-bound.
+    public static final int SSZ_RETRACTING_SPRING = 0x74;
+    public static final int SSZ_SWINGING_CARRIER = 0x75;
+    public static final int SSZ_ROTATING_PLATFORM = 0x76;
+    public static final int SSZ_ELEVATOR_BAR = 0x7A;
+    public static final int SSZ_COLLAPSING_BRIDGE_DIAGONAL = 0x7B;
+    public static final int SSZ_COLLAPSING_BRIDGE = 0x7C;
+    public static final int SSZ_BOUNCY_CLOUD = 0x7D;
+    public static final int SSZ_COLLAPSING_COLUMN = 0x7E;
+    public static final int SSZ_FLOATING_PLATFORM = 0x7F;
+    public static final int SSZ_EGG_ROBO = 0xA0;
     // HPZ uses the SKL pointer-table identities below.
     public static final int SSZ_HPZ_TELEPORTER = 0x79;
     public static final int HPZ_MASTER_EMERALD = 0xB0;

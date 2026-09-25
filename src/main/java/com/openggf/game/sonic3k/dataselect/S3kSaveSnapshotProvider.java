@@ -96,6 +96,18 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
         List<Integer> emeraldStates = !hasLiveState ? List.of(0, 0, 0, 0, 0, 0, 0)
                 : context.gameState().getS3kEmeraldStates();
         boolean clear = save.isClear();
+        if (hasLiveState && context.gameplayMode().getZoneRuntimeRegistry() != null) {
+            // loc_7BCB0 calls SaveGame after publishing the SSZ2 ending flag.
+            // SaveGame_NextLevel maps SSZ to $C; Player_mode3 takes the clear
+            // branch there. Derive this from captured gameplay state rather than
+            // mutating SaveSessionContext: rewinding before defeat must not leave
+            // an uncaptured, one-way clear flag attached to the live session.
+            var ssz = context.gameplayMode().getZoneRuntimeRegistry()
+                    .currentAs(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState.class);
+            clear |= ssz.filter(state -> state.actIndex() == 1
+                    && state.playerCharacter() == com.openggf.game.PlayerCharacter.KNUCKLES
+                    && state.act2EndingActive()).isPresent();
+        }
         payload.put("lives", lives);
         payload.put("continues", continues);
         payload.put("chaosEmeralds", chaosEmeralds);

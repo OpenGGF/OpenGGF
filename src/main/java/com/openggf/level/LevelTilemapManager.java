@@ -111,6 +111,7 @@ public class LevelTilemapManager {
     private int foregroundTilemapWidthTiles;
     private int foregroundTilemapHeightTiles;
     private boolean foregroundTilemapDirty = true;
+    private long foregroundDescriptorRevision;
     // AIZ2 ship-loop persistent FG ring ($200-wide Plane A nametable analog).
     // While active, the FG tilemap is a $200-wide ring whose cells RETAIN the
     // last forest column drawn into them at the camera's leading edge, giving a
@@ -368,6 +369,12 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
+        long descriptorRevision = zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
+                ? owner.foregroundDescriptorRevision() : 0;
+        if (descriptorRevision != foregroundDescriptorRevision) {
+            foregroundDescriptorRevision = descriptorRevision;
+            foregroundTilemapDirty = true;
+        }
         // Detect AIZ2 ship-loop FG ring state change (full-width <-> $200 ring)
         // and force a rebuild on the transition. While the ring is active, the
         // FG tilemap is NOT fully rebuilt each frame (that would snap the whole
@@ -810,6 +817,13 @@ public class LevelTilemapManager {
         foregroundTilemapData = data.data;
         foregroundTilemapWidthTiles = data.widthTiles;
         foregroundTilemapHeightTiles = data.heightTiles;
+        if (foregroundDescriptorRevision != 0
+                && zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner) {
+            for (int y = 0; y < data.heightTiles; y++) for (int x = 0; x < data.widthTiles; x++) {
+                writeTilemapDescriptor(foregroundTilemapData, (y * data.widthTiles + x) * 4,
+                        owner.foregroundDescriptorAt(x * 8, y * 8));
+            }
+        }
     }
 
     private static boolean zoneRuntimeRequiresFullWidthBgTilemap() {
@@ -1320,7 +1334,7 @@ public class LevelTilemapManager {
      * retained instead; forward event bytes without such reconciliation are rejected
      * as stale.
      * <p>
-     * The foreground tilemap needs NO rewind invalidation: a flat FG tilemap is a
+     * An ordinary foreground tilemap needs no rewind invalidation: a flat FG tilemap is a
      * pure function of the static layout (rewound layout mutations are covered by
      * the geometry-reference-swap check in {@code LevelRewindSnapshotAdapter}),
      * and the AIZ2 FG ring self-heals via {@link #foregroundRingReconcileWindow}
@@ -1328,6 +1342,9 @@ public class LevelTilemapManager {
      * jumps of at least the ring width degenerate to a full re-seed).
      */
     public void resetTilemapsForRewindRestore() {
+        // Retained event-owned FG cells are snapshot state, not a pure layout cache.
+        // A restored branch can reuse a revision number with different cell contents.
+        if (foregroundDescriptorRevision != 0) foregroundTilemapDirty = true;
         if (retainedBackgroundPlaneAuthoritative && retainedBackgroundPlaneRestoredForRewind) {
             // Zone-event reconciliation has just restored an exact native Plane-B
             // image. It is not a pure camera/layout cache and must survive the

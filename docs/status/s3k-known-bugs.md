@@ -24,6 +24,8 @@ Entries should include:
 
 ## Table of Contents
 
+0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
+0. [Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)](#reverse-gravity--position-integration-inverted-collision-probes-not-yet-open--blocks-the-death-egg-gravity-objects)
 1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
 2. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
 3. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
@@ -61,6 +63,14 @@ Entries should include:
 35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
 36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
 37. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
+38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
+39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
+40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
+41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
+42. [Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop](#sky-sanctuary-mecha-sonic-is-only-its-entry-and-its-attack-loop)
+43. [Sky Sanctuary Boss Defeats Draw No Explosion](#sky-sanctuary-boss-defeats-draw-no-explosion)
+44. [Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship](#sky-sanctuary-metropolis-orbs-still-on-the-ring-are-deleted-with-their-ship)
+45. [S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object](#s3k-special-property-touch-teleports-the-sidekick-for-every-c0-object)
 
 ---
 
@@ -108,6 +118,138 @@ FM5 SFX, rings, and special-stage speed-shoes entry.
 Remove this entry after a positive listen and integration of the exact verified
 handoff commit. Reopen source-timing investigation if the listen identifies a
 repeatable onset defect within the scenarios above.
+
+---
+
+## AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)
+
+**Location.** `com.openggf.physics.Sensor` / `GroundSensor` stride versus
+`ObjectTerrainUtils.checkFloorDist`.
+
+**Symptom.** At the Angel Island act 1 spawn with the zone intro skipped, an airborne player
+standing on the spawn ledge gets `null` from both ground sensors on every frame — no solid tile
+found — while `ObjectTerrainUtils.checkFloorDist(x, y, 19)` at the same x reports a hit at
+distance 0. Observed 2026-09-17 while looking for a reverse-gravity fixture (Death Egg slice 2);
+the two probes were sampled in the same frame from the same sprite.
+
+**Why it is only a question.** Nothing here is known to be wrong yet. The two probes have
+different strides and different extension-search rules, so the disagreement may be correct
+behaviour for a 16 px tile boundary rather than a defect, and no ROM comparison has been made.
+It is recorded because it cost a fixture and will mislead the next agent who uses a sensor probe
+as a terrain oracle.
+
+**Kill condition.** Sample both probes across a 16 px sweep of y at that x and compare against
+`FindFloor`'s own stride (`movea.w #$10,a3`, sonic3k.asm:19998-20002). If the sensor result
+matches `FindFloor` and `checkFloorDist` is the outlier, this is a `checkFloorDist` convenience-API
+note, not an engine bug, and the entry is deleted. Explicitly **not** in scope for Death Egg
+slice 2: the slice uses measured Death Egg act 2 terrain instead
+(`TestS3kReverseGravityDezCorridor`).
+
+---
+
+## Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)
+
+**Location.** `src/main/java/com/openggf/physics/ReverseGravity.java`,
+`PlayableSpriteMovement.moveSpriteTestGravity` / `doLevelBoundary`,
+`CollisionSystem.resolveGroundWallCollision`.
+
+**Symptom.** With `Reverse_gravity_flag` forced set, a player integrates position upward
+(`MoveSprite_TestGravity`, sonic3k.asm:36068), dies at the top of the level (`loc_11722`, :23202),
+and the airborne collision wrappers `sub_11FD6`/`sub_11FEE` (:24127-24149) now select the opposite
+sensor array and mirror the angle they return. What is still missing is the grounded path —
+`Call_Player_AnglePos` (:22329) and `ChooseChkFloorEdge` (:24156) — and every row of groups B, C,
+E, F, G, H and I: player actions, solid objects, springs, spikes, monitors, rings and companions.
+Nothing in the shipped game reaches this state today: no object writes the flag yet, so the whole
+branch is unreachable outside tests and the upright game is unaffected.
+
+**Verified as of 2026-09-17.** The airborne path is no longer a selector-only claim:
+`TestS3kReverseGravityDezCorridor` drives an inverted Sonic, Tails and Knuckles into the measured
+Death Egg act 2 corridor in all four movement quadrants and asserts each rest position against an
+upright control measured in the same corridor. All six push-out and snap sites of the three
+`DoLevelCollision` routines are covered, and so is the grounded path: `Call_Player_AnglePos`
+:22330 now wraps `CollisionSystem.resolveGroundAttachment`, and an inverted player stands and runs
+along the corridor ceiling in ground mode CEILING. The player action rows landed with them: roll, unroll, jump (headroom and
+radius), spindash release, bubble-shield bounce and touch-floor, for all three characters. The camera look pans and the sprite render mirror
+landed too.
+
+**Updated 2026-09-18.** Groups D and G are complete and most of F and H are done: the CPU
+sidekick respawns from the other side of the leader, the carried player is mirrored, the lost-ring
+spill arc throws rings away from the ceiling they stand on (the engine had the sign conjugate of
+`loc_1A7E8`, which mirrored every arc), all four shields are drawn upside down, and a solid object
+is caught from its other face — overlap, push-out, landing snap and the continued platform ride.
+What remains missing is Knuckles' glide, slide and wall-climb rows, `Obj_Tails_Tail` and
+`Obj_DashDust`, the dead-player off-screen respawn test `loc_123DE`, and `sub_1E410`'s
+`loc_1E4D6`, which rebuilds its comparison rather than mirroring it. The monitor and spike rows
+modify upright structure the engine does not model and are recorded in the reference table with
+that reason.
+
+**Updated 2026-09-18, and the reachability changed.** `loc_123DE` is done, and so is the one
+row the ROM gets wrong (`Tails_Test_For_Flight` :28655 negates `d0` where the adjustment is in
+`d1`, so Tails' flight-start unroll is *not* inverted; modelled as shipped under `FixBugs = 0`).
+More importantly, **slice 3's `$5B` `Obj_DEZGravitySwap` has landed**, so the state is now
+reachable in ordinary Death Egg act 2 play for the first time. The earlier removal condition
+asked for zero missing group A-I rows before any writer shipped; that was not met, and shipping
+the writer anyway is a deliberate choice recorded here rather than a resolution.
+
+**Updated 2026-09-24.** `Obj_Tails_Tail` now mirrors standard tail animations under
+the gravity flag while preserving directional animation 3, as `loc_1613C` requires.
+
+Spindash dust now mirrors with the flag and reverses Tails's four-pixel centre
+offset; skid dust spawns on the correct contact side. These close both dust rows.
+
+Knuckles's slide get-up now negates its radius adjustment while preserving the
+native Y fraction. Glide falling, slide terrain probes and wall climbing remain open.
+
+**Inverted-player reference coverage in act 2**, all applicable rows covered; whole-route obligations remain:
+
+Knuckles's glide/slide, alternate climb bodies and fall-from-glide radius
+correction are now implemented. Actual DEZ floor/ceiling tests cover the latter
+with standing and smaller radii. Complete inverted Knuckles traversal remains
+an independent validation obligation. The three hurt-boundary rows now have
+separate early-return coverage for Sonic, Tails and Knuckles: the terrain pass
+must not run on death, preventing the later boundary check from masking a missing
+hurt branch. Edge-balance probes now have shaped-column and angle-gate coverage
+through the real controller/sensors in both gravity states. The top-solid row
+now has exact X/Y window checks and a correction for direct sloped helpers,
+which bypass the ROM gravity test and retain upright landing arithmetic.
+
+- **`sub_1E410`'s `loc_1E4D6`** (:41999): covered by real retracting-spring
+  contacts and explicit inclusive-left/exclusive-right X limits and 1..16 Y
+  overlap. The separate direct sloped entry is checked under both gravity states.
+  Native whole-route/roster/lifecycle/presentation validation remains separate.
+- **`Obj_Spikes` :48958** is now implemented: initial gravity XOR placement Y-flip
+  selects the underside hurt routine, overriding the sideways variant. The
+  choice survives later gravity changes and rewind; movement remains subtype-driven.
+- **Monitor correction:** `Touch_Monitor` and upside-down falling now follow the
+  native direction/position gates, including reverse gravity and CPU contacts.
+  Shell/icon placement flips and inverted icon motion are now implemented too,
+  including the extra zero-velocity tick before the inverted reward. The focused
+  presentation setup is not a native whole-route pixel comparison.
+
+
+Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
+
+**The two gaps that arrived with `$58` are closed.** `Obj_DEZGravitySwitch` draws from
+`Map_DEZGravitySwitch` (ROM `$48BEA`) through `make_art_tile(ArtTile_DEZMisc+$143,1,0)`
+(sonic3k.asm:94801-94803), now a `Sonic3kPlcArtRegistry` level-art entry on the same
+`ArtTile_DEZMisc` block the Death Egg door already draws from, and its press plays
+`sfx_Transporter`, which the engine already carried as `Sonic3kSfx.TRANSPORTER` ($73) —
+the gap was a search for a `GameSound` constant, not a missing sound. `Obj_DEZGravitySwap`
+(`$5B`) has no art in the ROM and is correctly invisible.
+
+**Suspected cause.** A sliced port with individual defects tracked above. 2 of the 116
+`Reverse_gravity_flag` references in the disassembly are still unimplemented (all in
+groups A-I, above). The act 2 boss's three rows were stale inventory entries; their
+existing implementations and focused tests are now linked from the table. The conveyor pad's
+carry reversal now has native-player and inverted placed-ride/replay checks. No
+Death Egg gravity object owns a missing row any more; the row-by-row inventory is
+[s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
+
+**Removal condition.** The six missing group A-I rows and the partial top-solid row above land, each with a test that runs
+it with the flag set, and the reference table reaches zero missing rows for groups A-I. The
+`ChooseChkFloorEdge` partial and the three hurt death-plane partials stay recorded rather than
+credited: see the reference table for why each cannot be told apart from a sibling that already
+passes.
 
 ---
 
@@ -5786,12 +5928,11 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 
 ---
 
-## SOZ Act 2 Pushable Rock Puzzle Reachability Unverified
+## SOZ Act 2 Lower Rock Puzzle: Connected Passage Verified
 
-- **Location** — `SozPushableRockObjectInstance`, `SOZPushSwitch.sub_41AA8`; native `Obj_SOZPushableRock` (`$40546`)
-- **Symptom** — At the Act 2 rock (`$4770,$5B5`, subtype `$87`) pushing right from the current fresh positioned entry runs the authored `$5EC -> $47F0 -> $FFFF` track before the switch at (`$4830,$5B0`) is reached, so the positive door coupling has never been observed end to end in the engine. The independent recording uses the upper switch (`$4A30,$330`) and never samples this region. Native passage is recorded in `runs/s3k-knuckles-complete-superemeralds/soz_2` (Act 2 rows 28758-31456): Knuckles first stands on push switch `$9B` at `$4830` alone while door `$0B` at `$4A0D` stays closed and climbs the wall at `$49F5`; sand cork `$9C` at `$4940` falls from y `$3E8` to `$580` (rows ~29880-30000); on his return the rock is pushed from `$4770` to `$4834` (rows 30268-31240), carrying the switch to `$4850`, and the door is raised (y `$514`) when he walks through (row ~31420). The recording does not establish whether the cork drop is required.
-- **Suspected cause** — Either the required preceding world/route state is missing from the positioned entry or the track/switch coupling is wrong; unit contact tests and the channel-8 switch/door route do not settle it.
-- **Removal condition** — A BK2 route to the Act 2 rock (gameplay-capture) compared against native behaviour, and either the puzzle passing or the defect fixed.
+- **Resolved reproduction gap (2026-09-25)** — `TestSozLowerRockPuzzleCapture` completes the connected cork → rock → held switch → raised door sequence using2512 ordinary controller inputs, native320 Sonic solo, with15 full-world rewind/replay windows and zero deaths. The fresh rock-side attempt omitted `Events_fg_4`'s foreground replacement after breaking the subtype `$9C` cork. No rock-track or switch logic was changed.
+- **Native corroboration** — Knuckles recording rows31240/31300 place the rock at `$4834/$5B4` and switch at `$4850/$5B0`, matching the engine's held state. The engine route is ordinary Sonic; the native recording is Hyper Knuckles. This is mechanism/passage evidence, not synchronized trajectory or pixel certification.
+- **Evidence and remaining breadth** — Preserved input, moving capture, exact checks and still-open ordinary Knuckles/width/donor/cold-route obligations are in the [Act2 matrix](../architecture/validation/levels/s3k-soz-act2.md#connected-lower-rock-puzzle-passage-2026-09-25).
 
 ---
 
@@ -5833,7 +5974,233 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 
 ## Doomsday: Presentation Gaps and Unseeded Entry
 
+Fresh controller completion is now covered at320/800 by `TestS3kDdzAuthoredRoutes`
+with seven Chaos Emeralds and no inherited clock/fraction seed (2passed, no skips,
+2026-09-23). This does not repair the strict trace bootstrap described below.
+The separate widescreen background wrap seam is corrected and covered by a live
+render regression; see the DDZ plan and matrix.
+The Hyper-star display-list priority is also corrected to the fixed ROM `$80`;
+only its art-word high bit follows Sonic. This does not establish the cause of
+the separate sparkle-size/animation-phase difference below.
+
 - **Location** — `DdzFlightControllerObjectInstance` (`loc_8167C`), `Sonic3kSuperStateController` Hyper stars, S3K HUD ring refresh, `RecordingFrameDriver`, `TraceReplaySessionBootstrap`
-- **Symptom** — (1) With fewer than seven Super Emeralds `loc_8167C` installs the Doomsday Super stars `loc_8242A` (`ArtUnc_SuperSonic_Stars`, six frames trailing Player 1); the engine draws none. (2) On the native all-Super route the Hyper sparkles are smaller than the engine's at the same rows (native pass-1 `boss_arrival`/`phase_change` screenshots against `raw-10-seeded-route-320`), an animation phase or frame-selection difference in the shared Hyper stars. (3) Native HUD keeps showing 0 rings after `loc_8160A` adds 50 until the next HUD ring update; the engine shows 50 at once. (4) The recording frame driver keeps stepping gameplay for the 21 frames of the `StartNewLevel $D01` fade (rows 10059-10079) that native and `GameLoop` freeze. (5) Strict `TestS3kSonicTailsZone0cSegmentTraceReplay` is red from frame 0 (`camera_y`): the replay bootstrap derives the camera from the metadata start position and seeds neither the camera X fraction nor the full `V_int_run_count`.
-- **Suspected cause** — (1) not ported; (2) unmeasured; (3) HUD ring redraw flag not modelled for direct `Ring_count` writes; (4) and (5) harness bootstrap/driver limits, not runtime behaviour: `TestS3kDdzColdRoutes` declares the two inherited clocks and matches every gameplay row.
-- **Removal condition** — `loc_8242A` implemented with a capture; a native probe of `Obj_HyperSonic_Stars` frames matched; HUD ring display matches native at DDZ entry; the recording driver honours the zone-fade freeze; the zone0c replay bootstrap reproduces the native entry state and the strict replay reports its first real divergence.
+- **Symptom** — (1) Resolved in the current campaign: `loc_8242A/82452` now draws ROM-backed Super stars in their fixed slot, with native first-draw/cadence and a matched star-region capture; see the DDZ plan. (2) Corrected in the current campaign: Hyper stars were starting before native art-queue completion, making their animation appear larger at compared rows. Real module submission and init-only global readiness polling match 506 native child updates at entry; later whole-route pixel matching remains separate. (3) Corrected in the current campaign: shared retained ring-display state preserves `loc_8160A`'s silent write; native and engine hold zero through85 and publish49 at86, with capture/restore and forward replay coverage. (4) Corrected in the current campaign: the recording frame driver honors the existing inactive-transition flag during the `StartNewLevel $D01` fade, matching the live-loop freeze; the DDZ route regression checks source state remains frozen while the fade advances. (5) Strict `TestS3kSonicTailsZone0cSegmentTraceReplay` is red from frame 0 (`camera_y`): the replay bootstrap derives the camera from the metadata start position and seeds neither the camera X fraction nor the full `V_int_run_count`.
+- **Suspected cause** — (1) corrected missing owner; (2) decoded renderer availability incorrectly replaced native queue completion; (3) corrected missing distinction between live rings and requested HUD redraw; (4) corrected missing driver admission check; (5) a harness bootstrap limit, not runtime behaviour: `TestS3kDdzColdRoutes` declares the two inherited clocks and matches every gameplay row.
+- **Removal condition** — `loc_8242A` implemented with a capture; a native probe of `Obj_HyperSonic_Stars` frames matched; HUD ring display matches native at DDZ entry; the zone0c replay bootstrap reproduces the native entry state and the strict replay reports its first real divergence.
+
+---
+
+## Lava Reef: Post-Defeat Palette Ramp (RESOLVED)
+
+- **Owner** — `loc_78AA8` / `word_78EAA` / `loc_78AE6`, through `LrzPostDefeatCameraReleaseInstance` and the LRZ2 palette cycler.
+- **Implementation corrected (2026-09-23)** — The thirteen ROM-backed rows now run at the native 4/16/8-dispatch durations, freezing the shared lava/crystal timer at `$7FFF` and clearing it at camera `$940`. The callback stops palette rotation without prematurely releasing the camera. Pause and full-registry restore/replay pass; normal camera releases and palette copies remain intact.
+- **Evidence** — Fifteen focused palette/camera cases and the558-case LRZ/mandatory-S3K consumer selection pass without skips. The actual positioned miniboss/results/Act2 route starts the ramp at3276, reaches its last row3336 and passes a mid-ramp whole-registry45-input replay. Native `native-lrz2-bg/run1/f416433.cram` colors33..37 equal ROM row5 exactly, corroborating that the ramp is visible during this interval. Both320/800 moving captures show the handoff without hurt/death.
+- **Native follow-up** —111consecutive movie frames now cover the complete ramp. All13color rows, exact durations, callback at68 and94shared-timer observations match; CRAM publishes the colors one frame later. A discovered first-draft one-frame timer error was reproduced (32767expected/32766actual) and corrected by applying object timer writes after the palette tick, including fade-only passes. The corrected focused selection passes77cases and all24selected S3K palette-consumer classes pass128cases, no skips. Full-scene parity across different teams/routes is not claimed.
+- **Separate remaining issue** — The wide capture exposes scenery to the left of the Act2 start while the centered camera is negative. That framing edge needs investigation; it is not a palette defect.
+
+---
+
+## Lava Reef Act 2: Direct-Load Background Art Verified
+
+- **Historical report** — A positioned direct `$901` load at `($2438,$629)` appeared to show HUD lettering. The report suspected missing secondary art and ruled out the animated channels using an earlier capture.
+- **Current evidence (2026-09-25, `f9944ccd7`)** — The same direct load shows the native purple background forms. All79static tiles referenced by background blocks `$D5–$E4` match a fresh native seamless-entry VRAM dump byte for byte. The other48tiles are the two scroll-driven animation channels; both engine and native contain exact ROM frame/rotation combinations, with one channel at a different phase.
+- **Native view** — Movie frame425734 has camera `(9109,1486)`, close to the positioned engine's `(9112,1484)`, and visibly corroborates the same background forms. No missing-art patch is justified. The old symptom is no longer reproduced; the historical cause is not attributed to a particular commit.
+- **Scope** — This closes the missing background-art report at its reproduction site. It does not certify synchronized scroll/palette phase, whole-scene pixels, or all direct-load timings. The [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#direct-load-background-art-native-corroboration-2026-09-25) records inputs, tile ranges, hashes and capture evidence.
+
+---
+
+## Lava Reef Big Door: Per-Placement Persistence Corrected
+
+- **Location** — `LrzBigDoorObjectInstance` (`Obj_LRZBigDoor`, sonic3k.asm:88070–88145); shared two-axis placement state.
+- **Resolved (2026-09-25)** — The door now reads/writes bit0 of its original placement's state byte, matching `btst #0,(a2)` and `bset #0,(a2)`. The obsolete X-keyed `LrzZoneRuntimeState` workaround and snapshot field are removed. The shared owner already preserves lower bits through ordinary culling, rewind and persistent stage return, and clears them on fresh reset.
+- **Related reload correction** — The already-open constructor now applies the ROM's `$80` Y displacement to render/collision position as well as its centre accessor. Previously the reported centre moved while the rendered door remained at its original Y.
+- **Evidence** — Three new independent-placement/return/reset/rewind cases fail on the old implementation and pass after correction. The [Act1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#big-door-placement-persistence-2026-09-25) records the focused and route verification scope.
+
+---
+
+
+## Lava Reef Act 1 Dome: The Foreground Plane Hides The Background Everywhere The Camera Sits
+
+- **Location** — `SwScrlLrz`'s locked dome mode (`sub_56DAC`, sonic3k.asm:115442-115452) and the Lava Reef act 1 foreground layout
+- **Symptom** — The dome background lock is implemented and demonstrably runs (`LrzBackgroundStageMachine` reaches stage 4 as Player 1 crosses `$1B00`, and `SwScrlLrz` takes its locked branch and writes the right words: at `($1B05,$8AD)` `Camera_X_pos_BG_copy` is `$561` against the unlocked `$34C`, `Camera_Y_pos_BG_copy` `$C5` against `$109`), but the rendered frame does not change by a single pixel. Two 420-frame captures of the same input, one built with the lock and one with the two files reverted to `73f78efb2`, are byte-identical at every sampled frame, including deep inside the dome at `($1E00,$900)`.
+- **Cause, from ROM data (2026-09-18)** — Not a background-window defect. Lava Reef act 1's **foreground** plane has no transparent pixel anywhere the camera sits in or around the dome, so no plane B pixel can reach the screen there whatever the background scroll computes. Measured with `com.openggf.tools.PlaneOpacityProbe` over the decoded layout / blocks / chunks / patterns — ROM data, no renderer, no camera: at each of six 320x224 camera positions spanning the dome (`($1900,$800)`, `($1B00,$800)`, `($1D00,$880)`, `($1E00,$900)`, `($2200,$900)`, `($22C0,$780)`) **0 of 71 680 pixels** are see-through. Act-wide, of 48 234 496 layout pixels only 116 645 (0.24%) are transparent inside populated chunks; the 2 299 16x16 cells holding them lie in the band `($900,$30)`-`($2850,$950)` and are thin ceiling and floor seams. The long run nearest the dome is a single 16px row at `y=$630`, about 500px above the region 0 floor and well outside a 224px viewport there. What looks like the crystal wall inside the dome is foreground art.
+- **Why the earlier ablation could not say this** — Forcing the locked background camera to an absurd `($123,$45)` shifts the sample by 62px horizontally and 128px vertically, neither a multiple of the 512px background period, so a visible plane B would have changed. It did not, which proves plane B contributes nothing but not why. A frame capture cannot separate "wrong pixels drawn" from "no pixels reachable"; the layout probe can.
+- **Pinned by** — `TestS3kLrzForegroundOpacity`, which asserts the six dome viewports are fully opaque and carries an Angel Island act 1 control so a probe that could not disagree fails instead of passing.
+- **Not established** — Whether the ROM's own plane B is likewise hidden. The engine decodes the same ROM layout and art, and a Genesis plane A pixel of index 0 is the only way plane B shows, so the same arithmetic applies on hardware; but no native capture has been taken to confirm the engine's chunk/pattern decode for these chunks.
+- **Removal condition** — A native BizHawk capture at `($1E00,$900)` in Lava Reef act 1 with plane B disabled and enabled, showing the ROM likewise owns none of those pixels on plane B (which would close this entry as correct behaviour), or showing pixels the engine hides (which would reopen it as a decode defect). Until then the dome lock's evidence is `TestLrzBackgroundStageMachine`, `SwScrlLrzTest`, `TestS3kLrzDomeBackgroundHeadless` and `TestS3kLrzForegroundOpacity`, and no demo clip can show it.
+
+---
+
+## Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips
+
+- **Location** — `RingManager.RingPlacement#ringWindowStart` (`src/main/java/com/openggf/level/rings/RingManager.java`)
+- **Symptom** — SSZ1's ring list (`SSZ1_Rings $1F9616`) opens with a `(0,0)` record; SSZ2's list is that record alone. `TestS3kSszPlacementCensus#ringRecordsMatchTheRomIncludingTheLeadingZeroRecord` pins the decode. The engine's raw ring window starts at `max(cameraX - 8, 0)`, so at `Camera_X <= 8` the record enters the window and a collectible ring can exist at world `(0,0)`. SSZ1 reaches `Camera_min_X = 0` once the cutscene bridge retracts (`loc_44FBA`), so the camera can get there.
+- **Suspected cause** — `Load_Rings` `loc_E8BE` computes `d4 = Camera_X - 8` and, when that is not above zero, forces `d4 = 1` before advancing the cursor while `d4 > recordX`. With a floor of 1 the `(0,0)` record is always stepped over; with the engine's floor of 0 it is not. The margin constant is shared with S2's `RingsManager_Main`, so the fix is a shared-owner change, not an SSZ-local one.
+- **Fix in flight, owned elsewhere** — the LRZ campaign's `3418eba6e` drops the sentinel in shared `Sonic3kRingPlacement`; it reaches the SSZ branch at merge time and takes every SSZ act's live ring set down by one. SSZ makes no edit here. The census test decodes the ROM totals itself (179 act 1, 0 act 2) and accepts the loader either matching them or carrying exactly one leading `(0,0)` sentinel, so it is correct on both sides of that merge.
+- **Removal condition** — The raw ring-window floor matches `loc_E8BE` (and the S2 equivalent is checked against `RingsManager_Main`), with a regression test that a `(0,0)` record is never renderable or collectible at `Camera_X <= 8`, and no S1/S2/S3K ring test regresses.
+
+---
+
+## Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position
+
+- **Location** — `SszDeathEggSmallObjectInstance`, `CutsceneKnucklesSszInstance` (`src/main/java/com/openggf/game/sonic3k/objects/`)
+- **2026-09-24 follow-up** — Implemented the ROM palette/RNG sequence, missiles and seven initial cloud/mask/trail children with graph rewind coverage. Read-only native observation confirms the palette patch and restoration, cloud phases, and Knuckles landing at `$3A0,$C64`; the production bridge test matches that exact position. `$2A8` is the leap trigger, not the resting X, so that part of the earlier hypothesis was incorrect. Updated native/widescreen clips pass full decode with no hurt/death. Matched whole-scene pixel acceptance and broader campaign delivery remain pending.
+- **Symptom** — In `~/Videos/OGGF/ssz-bring-up/raw-03-knuckles-cutscene-bridge-walk` the rising Death Egg draws in the level's own palette line rather than `Pal_KnuxSSZEnd`, so it reads green and grey instead of the ROM's colours; it fires no missiles and has no cloud children; and at the bridge release (frame 1450) cutscene Knuckles is standing beside Player 1 well past the `$2A8` button rather than where the ROM leaves him.
+- **Suspected cause** — `loc_659CC` reseeds `RNG_seed` from `V_int_run_count`, saves `Normal_palette_line_4` to `Target_palette_line_4` and patches it from `Pal_KnuxSSZEnd` (restoring it at `loc_65A4A`), and creates `ChildObjDat_665C4`; `loc_65A4A` calls `sub_66054` for the `ChildObjDat_665F0` missiles on `V_int_run_count+3 & $1F`. Campaign follow-up implements the RNG reseed, palette backup/patch/restore and missile owner; the seven initial cloud/mask/trail children are now implemented as well. The earlier clip predates those changes; see the follow-up evidence above. The original unverified Knuckles-position hypothesis is superseded by the native probe above.
+- **Removal condition** — `Pal_KnuxSSZEnd` is applied and restored through `S3kPaletteWriteSupport`, the missile and cloud children exist, and a native probe or `hpz` fixture window confirms cutscene Knuckles' X at the frame `Events_bg+$08` is written and at his deletion.
+
+## Sky Sanctuary Background Mode Switch Completes a Frame Early
+
+- **Location** — `SwScrlSsz` (`src/main/java/com/openggf/game/sonic3k/scroll/`)
+- **Symptom** — Crossing the wrapped camera-Y `$800`/`$F00` boundary in Sky Sanctuary act 1 swaps between the plain sky and the banded cloud background two frames after the test fires, where the cartridge takes as long as `Draw_PlaneVertBottomUp` needs to refill the 512-pixel background nametable.
+- **Suspected cause** — `SSZ1_BackgroundEvent` routine 4 keeps rendering the framing frozen in `Events_bg+$0C`/`+$0E` until the staged redraw reports done, and routine `$C` does the same on the way back. The engine draws the background from the whole level layout instead of a nametable, so it has nothing to stage: each redraw routine completes in one frame. The framing values, the deform bands and the routine order all match; only the duration of the two transition states does not.
+- **Removal condition** — Either a native probe measures the ROM's redraw length at that crossing and the engine holds routines 4 and `$C` for the same number of frames, or a `hpz` fixture window shows the crossing and the engine matches it frame for frame.
+
+## Sky Sanctuary Act 1 Background Window — **fixed**, and the symptom that reported it was wrong
+
+Both halves of the old "flat sky in both BG modes" entry are now fixed, and the plain-mode half
+arrived with a correction to its own evidence.
+
+**Cloud mode** (fixed earlier): `SwScrlSsz` pins the plane to background layout X `$1C00`
+(columns 56-59) through `getBgCameraX()`. See `05-ssz-cloud-band-before-after.mp4`.
+
+**Plain mode** (fixed 2026-09-18). `LevelManager.applyBackgroundTilemapWindowSelection` has three
+branches; the one that moves the BG cache window to follow the background camera needs both
+`bgCameraX != Integer.MIN_VALUE` and `zoneFeatureProvider.bgWrapsHorizontally()`. Plain mode
+returned `MIN_VALUE` and the SSZ predicate was cloud-only, so control reached the third branch,
+which pins `bgTilemapBaseX` to 0 — the plane was built from background layout X 0 for the period
+width and the `Camera_X + $28` scroll word wrapped inside columns 0-3, whatever the camera was
+doing. `SwScrlSsz.getBgCameraX()` now publishes `state.backgroundCameraX()` in plain mode,
+`SwScrlSsz.backgroundWindowActive()` puts act 1 on the 512-pixel wrap model in both modes, and
+`getBgPeriodWidth()` returns the plane width for act 1 rather than the scroll fan's.
+
+**The reported symptom did not demonstrate the defect, and the earlier entry was wrong to say it
+did.** `raw-10-ssz-diagonal-walkway` frame 75 sits at camera `($6A0,$550)`. Plain mode's offset is
+1:1, so background column `($6A0 + $28) >> 7 = 13` and background row `($550 + $160) >> 7 = 13`.
+Decoding the layout the way `TestS3kSszBackgroundLayout` does — 60 columns by 22 rows — row 13 is
+`02` at columns 13 through 16. The cartridge shows flat sky at that camera too. The earlier reading
+took "row 13 carries thirteen distinct chunk ids across columns ~9-52" to mean structure should be
+on screen there; the row does carry structure, at columns 9, 12 and 17-22, but none of it is in
+front of that camera. The real defect was never about one frame: a base-0 window ignores the camera
+entirely, so the structures at columns 17 and beyond could never reach the screen at any camera.
+That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
+`getBgCameraX()` to `MIN_VALUE` fails it.
+
+- **Location** — `SwScrlSsz.getBgCameraX` / `backgroundWindowActive` / `getBgPeriodWidth`,
+  `Sonic3kZoneFeatureProvider.isSszCloudBackgroundWindowActive`
+- **Verification** — `TestS3kSszBackgroundLayout` 7, `TestS3kSszBackgroundClouds` 6,
+  `TestS3kSszScrollBands` 11, and the SSZ/HPZ/DDZ/scroll batch at 1682 tests, all 0 failures and 0
+  skips; `-Pguards` 669, 0 failures, 0 skips.
+- **The before/after capture was taken, and it shows nothing — which reopens the rendered half.**
+  `raw-24-ssz-bg41-before` and `raw-25-ssz-bg41-after` are 240-frame captures from the same
+  `--star-post --x 0x900 --y 0x580` setup, taken side by side around one recompile: the "before"
+  build restored `getBgCameraX()` to `MIN_VALUE` in plain mode and made `backgroundWindowActive()`
+  cloud-only, and was confirmed effective by `TestS3kSszBackgroundLayout#plainModeSourcesThePlaneFromTheCameraDerivedWindow`
+  going red on it (`expected: <1792> but was: <-2147483648>`). The player settles at
+  `($938,$5EC)` with the camera at `($898,$58C)` — background column `($898 + $28) >> 7 = 17`, row
+  `($58C + $160) >> 7 = 13`, exactly the place this entry asked for — and **every one of 48 sampled
+  frames is pixel-identical between the two builds** (`ImageChops.difference(...).getbbox()` is
+  `None` throughout). The engine's published window really does change (the layout test proves it),
+  but no pixel does.
+- **Open question, with a kill condition.** Either `LevelTilemapManager` does not consume
+  `bgTilemapBaseX` / the period width for SSZ act 1's plane — in which case the "fixed" claim above
+  is a claim about an API, not about the screen, and the rendered half of #41 is still open — or
+  there is a camera where the two builds differ and `($898,$58C)` is not it. Killed by either: a
+  before/after pair at any camera whose frames differ, or a read of the SSZ act-1 path through
+  `ensureBackgroundTilemapData` showing where the base is dropped. Until one of those lands, treat
+  the plain-mode half as **asserted, not demonstrated**; the wide-viewport capture is owed too.
+
+## Sky Sanctuary Mecha Sonic Hit-Window Phase and Slot-Reuse Fidelity
+
+**2026-09-22 scope update:** production defeat/results and the Death Egg launch
+through actual DEZ1 load are now implemented. The remaining gaps below concern
+palette/child/slot semantics and native hit-window phase; this historical heading
+no longer describes the implemented extent. The launch has component width/team/
+donor/rewind checks and a controller-driven Hyper checkpoint recording, but does
+not yet have native parity or a cold full-act route certificate.
+
+- **Location** — `SszMechaSonicObjectInstance` (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
+- **Symptom** — The `$79:$00` pad at `($1A40,$670)` now allocates `Obj_SSZEndBoss` and explodes
+  behind it, and the boss runs `SSZEndBoss_Index`'s act-1 entries 0 through `$28` — the entry run,
+  the return, the landing, the two openings and the three-way attack cycle — with `sub_7D2D8`'s
+  per-frame collision byte and `sub_7D312`'s window. The secondary collision child
+  `ChildObjDat_7D474` / `loc_7C9BA` now follows its ROM frame table and hurts the
+  player independently during the parent's hit-flash window.
+- **Implemented follow-up** — Act-1 results/launch, `word_7D842` palette rotation
+  and its colour-gated spark child are implemented. The earlier claim that
+  `loc_7B39C`'s bare `AllocateObject` consumes a slot was incorrect: that routine
+  only searches code pointers and this caller performs no SST write. No engine
+  reservation should be introduced for it. Spark behavior for arbitrary reused
+  parent-slot `$38`/render bytes remains unmodelled.
+- **Untested rather than unimplemented** — the `$20`-frame hit window's *phase* is unverified.
+  `sub_7D312` opens the window on the frame after the hit, because `Touch_Enemy` has already
+  zeroed `collision_flags`; the duration is `$20` on both sides, but which frame the engine's
+  shared boss touch pass counts as the first has not been checked against the routine, and no
+  test pins it. The window's duration, and the fact that `sub_7D2D8` leaves the byte alone while
+  it runs, are covered.
+- **Removal condition** — Pin the hit window's phase against `sub_7D312` and
+  verify relevant replacement-slot semantics. Palette rotation, sparks and the
+  secondary collision child are implemented; the bare allocation is accounted for. The attack graph is driven to a landing and to each of `byte_7B636`'s three
+  attacks against ROM literals, and the defeat through `loc_7D056` is driven and dated.
+
+## Sky Sanctuary Explosion Controller Replacement-Slot Stop Bit
+
+- **Location** — `SszBossExplosionController`.
+- **Remaining gap** — The GHZ and MTZ defeat explosions are implemented, including
+  forward allocation, three-frame cadence, failed-allocation RNG ordering, shared
+  ROM artwork, and rewind recreation. The controller reads its parent slot's live
+  position and retires after that slot becomes empty. MTZ supplies its native
+  `$38` bit 5; unrelated objects reusing that slot do not expose arbitrary SST
+  bytes, so their stop-bit behavior is not reproduced.
+- **Evidence** — Both encounter defeat tests and focused allocation tests;
+  refreshed `raw-41-mtz-defeat-explosions` checkpoint recording in the campaign
+  media directory. Cold-route and native pixel/timing certification remain open.
+- **Removal condition** — Model and exercise the relevant replacement occupant's
+  `$38` semantics from ROM evidence without inventing a generic false stop flag.
+
+## Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship
+
+- **Location** — `SszMtzBossOrbChild.update` (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
+- **Symptom** — When `loc_7ACA4` frees the ship's slot, every orb still orbiting disappears with
+  it. On the cartridge they keep orbiting.
+- **Suspected cause** — `sub_7B0C2`, which is what `_unkFA88` pops an orb through, is only reached
+  from `loc_7AFA4` (launched) and `loc_7B02A` (bouncing). An orb in `loc_7AE22` never tests that
+  flag, so after `Go_Delete_Sprite` it goes on reading `$34(a0)` — a slot the next allocation will
+  overwrite — and orbits whatever it finds there until the act ends. The engine cannot reproduce a
+  read of a freed slot and deleting is the sane substitute, but it is a divergence and the
+  Metropolis fight's last frames look different because of it.
+- **Removal condition** — Either a native capture shows the cartridge's orbs are culled some other
+  way, or the divergence is accepted in writing with a clip of both behaviours.
+
+## S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object
+
+- **Location** — `ObjectTouchResponseController` (`src/main/java/com/openggf/level/objects/`), the
+  `TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY` arm
+- **Symptom** — Any S3K object whose collision byte decodes as `SPECIAL` teleports the native
+  Player 2 onto it and forces animation 2 when the leader is Knuckles, and puts Player 2 in the air
+  on every leader. The Metropolis boss's launched orbs (`$C6`) are the newest objects to take that
+  path, so a Knuckles + Tails route through the fight moves Tails onto each orb the leader touches.
+- **Suspected cause** — `Touch_Special`'s `loc_103FA` (sonic3k.asm:21162-21194) does only
+  `addq.b #1,collision_property(a1)`, twice for the sidekick. The teleport belongs to a specific
+  object's routine, not to the shared category, and generalising it puts it on every
+  special-property object. The decode itself also returns `SPECIAL` for any `$C0` byte before
+  `Touch_Special`'s size list is consulted, so bytes the ROM ignores (the orbs' unreachable `$DA`)
+  would dispatch here too.
+- **Removal condition** — The teleport moves to the object that owns it in ROM, the size list gates
+  the `SPECIAL` decode, and a Knuckles + Tails Metropolis clip shows Tails staying where they were.
+
+## Object `$78` Is Registered Twice; the First Implementation Is Dead Code
+
+- **Location** — `Sonic3kObjectRegistry.registerDefaultFactories`, lines 217-218 and 1411-1412; `FbzDezPlayerLauncherInstance` (303 lines) and `FbzDezPlayerLauncherObjectInstance` (95 lines)
+- **Symptom** — `Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER` (`$78`, `Obj_FBZDEZPlayerLauncher`) is `factories.put(...)` twice in the same method. The later call wins, so every `$78` placement — 10 of them in Death Egg act 1, plus the Flying Battery ones — resolves to `FbzDezPlayerLauncherObjectInstance`, and `FbzDezPlayerLauncherInstance` never runs. Both are full implementations of the same ROM object and they differ in detail (only the dead one implements `SolidRoutineProfile` and plays a `Sonic3kSfx`), so the shadowing is silent behaviour selection, not a harmless duplicate.
+- **Suspected cause** — Two independent ports of the same ROM object landed without either noticing the other; no test asserts that a given id has exactly one factory.
+- **Removal condition** — One class owns `$78`, with the behavioural difference between the two resolved against `sonic3k.asm $3B942-$3BA8A`; the other is deleted; a registry test asserts no id is registered twice.
+
+---
+
+## Death Egg `$1700` Has No Resource Profile, Events or Arena
+
+- **Location** — `Sonic3kLevelResourceProfile` (only `$1701` has a custom profile), `Sonic3kScrollHandlerProvider` (`$1700` currently uses the default scroll handler), `Sonic3kLevelSelectConstants`
+- **Symptom** — A direct `$1700` load boots the real DEZ3 layout, art and palette but places the players from the Start Location file at centre `$60,$70` instead of `loc_7FD9E`'s `$30,$CD`/`$10,$CD`; there is no `Obj_5A7C8` arena floor, so the player falls out of the level and dies within about 100 frames. At that baseline the zone also inherited `SwScrlHpz` and lacked a level-select entry. The current campaign has separated `$1700` from the sanctuary and added its level-select identity; its bespoke events, scroll and arena remain missing. Measured 2026-09-17 at `035e48a58`; capture `~/Videos/OGGF/s3k-dez-bring-up/raw-00-baseline-before-work/1700-final-boss`.
+- **Suspected cause** — The zone was never implemented; only its level data is registered.
+- **Removal condition** — The S3K DEZ bring-up's slices 9 and 10 land: `$1700` resource profile, `SwScrlS3kDezFinalBoss`, the `DEZ3_*` events and arena objects, `Obj_DEZ3_Boss` and the `loc_803D6` exit, with the final-boss matrix's five claims recorded.

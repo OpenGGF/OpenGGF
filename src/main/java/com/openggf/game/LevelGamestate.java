@@ -12,6 +12,10 @@ public class LevelGamestate implements LevelState {
     private final LevelTimer timer;
     private int rings;
     private int ringExtraLifeFlags;
+    private int displayedRings;
+    private boolean ringDisplayDirty = true;
+    private boolean ringDisplayLatched;
+
 
     public LevelGamestate() {
         this.timer = new LevelTimer();
@@ -33,6 +37,7 @@ public class LevelGamestate implements LevelState {
 
     public void setRings(int rings) {
         this.rings = Math.max(0, rings);
+        ringDisplayDirty = true;
     }
 
     @Override
@@ -48,6 +53,7 @@ public class LevelGamestate implements LevelState {
     @Override
     public void resetRingsForLoss() {
         rings = 0;
+        ringDisplayDirty = true;
         ringExtraLifeFlags = 0;
     }
 
@@ -56,6 +62,7 @@ public class LevelGamestate implements LevelState {
             int previousRings = rings;
             int next = rings + amount;
             this.rings = Math.max(0, next);
+            ringDisplayDirty = true;
 
             // Ring Bonus Logic: 100 and 200 rings grant an extra life
             if (amount > 0) {
@@ -75,6 +82,30 @@ public class LevelGamestate implements LevelState {
                 }
             }
         }
+    }
+
+    // A native HUD redraw flag is distinct from Ring_count. Ordinary mutators
+    // request a redraw; script writes may deliberately leave the digits retained.
+    int ringsForDisplay() { return ringDisplayLatched ? displayedRings : rings; }
+
+    void writeRingsWithoutRefresh(int value) { rings = Math.max(0, value); }
+
+    void publishRingDisplay() {
+        ringDisplayLatched = true;
+        if (ringDisplayDirty) {
+            displayedRings = rings;
+            ringDisplayDirty = false;
+        }
+    }
+
+    LevelRingDisplay.State captureRingDisplay() {
+        return new LevelRingDisplay.State(displayedRings, ringDisplayDirty, ringDisplayLatched);
+    }
+
+    void restoreRingDisplay(LevelRingDisplay.State state) {
+        displayedRings = state.value();
+        ringDisplayDirty = state.dirty();
+        ringDisplayLatched = state.latched();
     }
 
     @Override

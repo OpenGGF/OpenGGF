@@ -5390,6 +5390,33 @@ public class SidekickCpuController {
         return true;
     }
 
+    /**
+     * ROM {@code Obj_57DCC} (sonic3k.asm:116913-116917): the Sky Sanctuary arrival helper clears
+     * {@code object_control} and {@code anim} on Player 2, zeroes
+     * {@code Tails_CPU_flight_timer} and writes {@code Tails_CPU_routine = 6} — the ground-follow
+     * routine — rather than the routine 2 that {@link #releaseDormantMarkerForLevelEvent()}
+     * models. The helper has already placed the sidekick at the arrival point, so no catch-up
+     * warp is wanted. Package private: {@link SidekickCpuController} is a Mod API type and
+     * {@link SidekickLevelEventRelease} is the engine-internal entry point.
+     */
+    void releaseDormantMarkerToNormalFollow() {
+        state = State.NORMAL;
+        despawnCounter = 0;
+        controlCounter = 0;
+        approachFrameCount = 0;
+        normalFrameCount = 0;
+        flightTimer = 0;
+        jumpingFlag = false;
+        suppressNextLevelEventNormalMovement = false;
+        catchUpUsesRomVisibleLevelFrameCounter = false;
+        levelEventDormantMarkerReleasePending = false;
+        catchUpFrameCounterOverride = -1;
+        sidekick.setControlLocked(false);
+        sidekick.setForcedAnimationId(-1);
+        ObjectControlState.none().applyTo(sidekick);
+        restoreInitialLevelEventPresentation();
+    }
+
     private void restoreInitialLevelEventPresentation() {
         if (!initialPresentationSuppressed) {
             return;

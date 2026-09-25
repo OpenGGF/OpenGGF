@@ -39,6 +39,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--zone <name\|n>` | required | Zone constant name (`aiz`, `fbz`, `ghz`, `ehz`) or number |
 | `--act <n>` | required | One-based act |
 | `--x`, `--y` | level start | Teleport the leader (ROM `x_pos`/`y_pos`, hex `0x`/`$` ok) |
+| `--star-post` | off | Save a checkpoint at `--x/--y` and restart from it, instead of teleporting. Required wherever the act's `ScreenInit` runs a scripted intro that overrides `--x/--y` outright (S3K SSZ act 1) |
 | `--width <px>` | `320` | 320, 352, 400, 528 or 800; height is always 224 |
 | `--main`, `--sidekick` | `sonic`, `none` | Characters; `--sidekick tails` for a team |
 | `--donor off\|s1\|s2` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
@@ -47,7 +48,9 @@ Use a task directory outside the repository for captures the user should keep.
 | `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
 | `--emeralds <7 digits>` | unchanged | S3K `Collected_emeralds_array` setup (0 none, 1 Chaos, 2 grey Super, 3 Super), applied after boot |
 | `--vint-run-count <n>` | fresh | Declared inherited `V_int_run_count` (objects gating on its low bits, e.g. DDZ turret aim) |
+| `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
+| `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--title-card` | off | Keep and draw title-card presentations instead of omitting them |
 | `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop |
 | `--frames <n>` | settle + log length | Total frames to step |
@@ -60,7 +63,8 @@ Use a task directory outside the repository for captures the user should keep.
 ## Read the result
 
 Read `state.csv` before opening any image. Columns: frame, x, y, xvel, yvel, gspeed,
-air, rolling, spindash, hurt, dead, rings, mapping_frame, cam_x, cam_y, mode, input.
+air, rolling, spindash, hurt, dead, rings, mapping_frame, cam_x, cam_y,
+sk_present, sk_x, sk_y, high_priority, mode, input.
 Find the frame of interest (first `dead=1`, a stall where `x` stops rising, the frame
 `rolling` flips) and view only `frames/<frame>.png` or the matching still. Send the
 user the MP4 plus one or two stills, with the frame numbers and what they show.
@@ -79,8 +83,20 @@ user the MP4 plus one or two stills, with the frame numbers and what they show.
   ROM's (0,$100). Do not use donor captures as start-position or route evidence.
 - Teleporting with `--x/--y` skips plane switchers and level events between the act
   start and that point; priority, water and camera bounds reflect a fresh load.
+- `--x/--y` is not always the leader's start. `SSZ1_ScreenInit` runs a scripted arrival that
+  overrides it and `Obj_57C1E` then pins Player 1 to `Camera_Y + $65`, so a Sky Sanctuary act 1
+  capture aimed at the arena floor drops through it and settles at `($100,$C4C)`. `--star-post`
+  is the flag for that: it saves a checkpoint at the requested position and restarts from it,
+  the way `TestS3kSszGhzArenaHeadless.bootAtCheckpoint` does. Read the tool's own arguments
+  before concluding a zone's collision is broken.
 - One capture per JVM is the supported shape. A second `GameplayCaptureSession` in
   the same process works only because `close()` releases the graphics singleton.
 - The input log is held state per frame; a jump is one frame of `A` then release.
   Scripted timing is fixed, so anything keyed to object phases (elevators, polarity
   cycles) needs the `--settle` count tuned from `state.csv`, not guessed.
+- A byte-identical before/after capture is not evidence that the change is inert: the
+  affected plane may not be visible at that position. A Lava Reef Act 2 background change
+  produced zero differing frames over 420 frames at two positions, then differed at two of
+  eight positions swept across the act, because the foreground is opaque almost everywhere.
+  Sweep several positions before concluding either way, and confirm the plane is on screen
+  at the one you film.

@@ -25,6 +25,9 @@ import java.util.List;
 public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
         implements PowerUpObject, RewindRecreatable {
     private AbstractPlayableSprite owner;
+    private boolean artSubmitted;
+    private long artOrdinal = -1;
+
 
     private record RewindExtra(PlayerRefId ownerId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
@@ -101,23 +104,53 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity ignored) {
-        if (owner.getSuperStateController() == null
-                || !owner.getSuperStateController().isHyperFormActive()) {
-            ObjectLifetimeOps.expireDynamic(this);
+        boolean hyper = owner.getSuperStateController() != null
+                && owner.getSuperStateController().isHyperFormActive();
+        // Retire an already-submitted job even if the form ends during loading.
+        // Its physical FIFO work continues in the ROM after the sprite dies.
+        boolean artReady = serviceArt(hyper);
+        if (!hyper) {
+            if (artOrdinal < 0) ObjectLifetimeOps.expireDynamic(this);
             return;
         }
-        // Obj_HyperSonic_Stars queues its Kosinski module before its child
-        // slots begin waiting on Kos_modules_left. Request the ROM art from the
-        // update owner rather than depending on a render pass to initiate it.
-        boolean artReady = renderer(true) != null;
         for (int child = 0; child < 4; child++) updateChild(child, artReady);
         updateSparks();
     }
 
+    private boolean serviceArt(boolean hyper) {
+        if (!artSubmitted && (!hyper || renderer(true) == null)) return false;
+        var queue = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator
+                .from(services()).moduleQueue();
+        if (!artSubmitted) {
+            // Obj_HyperSonic_Stars queues ArtKosM_HyperSonicStars to tile $79C.
+            // A decoded standalone renderer is not the ROM's Kos_modules_left
+            // completion signal. Submit real ROM work to the session scheduler.
+            try {
+                artOrdinal = queue.queue(services().rom(),
+                        com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_KOSM_HYPER_SONIC_STARS_ADDR,
+                        0x79C).ordinal();
+                artSubmitted = true;
+            } catch (java.io.IOException failure) {
+                throw new java.io.UncheckedIOException("Hyper star art", failure);
+            }
+        }
+        if (artOrdinal >= 0) {
+            var handle = services().hardwareTiming().pendingHandle(
+                    com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
+                    artOrdinal).orElseThrow();
+            if (!queue.isReady(handle)) return false;
+            queue.claim(handle);
+            artOrdinal = -1;
+        }
+        return !queue.hasPendingPhysicalModules();
+    }
+
     private void updateChild(int child, boolean artReady) {
         int delay = delay(child);
-        if (!artReady) return; // Kos_modules_left gate
         if (delay > 0) {
+            // Only Init polls Kos_modules_left. Once Main.child owns a slot,
+            // unrelated later uploads must not stop its orbit/animation.
+            if (!artReady) return;
             setDelay(child, delay - 1);
             if (delay > 1) return;
         }
@@ -167,6 +200,8 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (owner.getSuperStateController() == null
+                || !owner.getSuperStateController().isHyperFormActive()) return;
         PatternSpriteRenderer renderer = renderer(true);
         if (renderer == null) return;
         for (int child = 0; child < 4; child++) {
@@ -191,7 +226,10 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
     }
 
     @Override public boolean isHighPriority() { return owner.isHighPriority(); }
-    @Override public int getPriorityBucket() { return RenderPriority.clamp(owner.getPriorityBucket()); }
+    // Obj_HyperSonic_Stars_Init writes priority $80, independently of Sonic's
+    // display list. loc_19458 copies only art_tile bit 15 (above). Inheriting
+    // both priorities put the orbiters behind Sonic when their pixels overlap.
+    @Override public int getPriorityBucket() { return RenderPriority.fromS3kWord(0x80); }
     // Obj_HyperSonic_Stars occupies the fixed Invincibility_stars slots and has
     // no out_of_range tail. Its explicit Hyper-flag check above owns expiry.
     @Override public boolean isPersistent() { return true; }

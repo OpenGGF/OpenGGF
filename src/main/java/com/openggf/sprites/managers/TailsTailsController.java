@@ -360,7 +360,12 @@ public class TailsTailsController {
         } else {
             // Standard animations: flip matches parent's facing direction
             hFlip = Direction.LEFT.equals(sprite.getDirection());
-            vFlip = false;
+            // S3K loc_1613C XORs render bit 1 after animation, except for
+            // directional animation 3 (whose angle already supplies both flips).
+            // Compose at draw time because our animation flags persist between
+            // updates; writing the XOR back would toggle on repeated renders.
+            var gameState = sprite.currentGameStateOrNull();
+            vFlip = gameState != null && gameState.isReverseGravityActive();
         }
 
         int originX = sprite.getRenderCentreX();

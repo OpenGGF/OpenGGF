@@ -437,7 +437,7 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
-    void mhz2CutsceneDeletesWithoutInitializingWhenCameraOutsideRomRange() {
+    void mhz2CutsceneWaitsInItsSlotUntilCameraEntersRomRange() {
         ObjectManager objectManager = mock(ObjectManager.class);
         Camera camera = mhz2TriggerCamera();
         camera.setY((short) 0x0647);
@@ -455,10 +455,15 @@ class TestMhz1CutsceneObjects {
         try (MockedStatic<AizIntroArtLoader> artLoader = mockStatic(AizIntroArtLoader.class)) {
             knuckles.update(0, sonic);
 
-            assertTrue(knuckles.isDestroyed(),
-                    "Check_CameraInRange deletes/skips CutsceneKnux_MHZ2 when Camera_Y_pos is below $648");
+            assertFalse(knuckles.isDestroyed(),
+                    "Check_CameraInRange only deletes outside the coarse X window; a Y miss must wait");
             artLoader.verifyNoInteractions();
             verify(objectManager, never()).addDynamicObject(any(ObjectInstance.class));
+            camera.setY((short) 0x0648);
+            knuckles.update(1, sonic);
+            artLoader.verify(() -> AizIntroArtLoader.applyKnucklesPalette(services), times(1));
+            assertFalse(knuckles.isDestroyed());
+            verify(objectManager, never()).reallocateToFirstFreeDynamicSlot(knuckles);
         }
     }
 
@@ -740,6 +745,7 @@ class TestMhz1CutsceneObjects {
         childObject.setServices(services);
 
         controller.setDestroyed(true);
+        switchChild.update(1, null);
         switchChild.appendRenderCommands(new ArrayList<>());
 
         assertTrue(switchChild.isDestroyed(),
@@ -797,6 +803,7 @@ class TestMhz1CutsceneObjects {
         AbstractObjectInstance childObject = assertInstanceOf(AbstractObjectInstance.class, switchChild);
         childObject.setServices(services);
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        switchChild.update(1, null);
 
         switchChild.appendRenderCommands(new ArrayList<>());
 
@@ -805,8 +812,9 @@ class TestMhz1CutsceneObjects {
         verify(renderer, never()).drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyInt());
     }
 
-    @Test
-    void mhz2PressSpawnsRomLeafParticlesFromCameraAndParentStrength() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 800})
+    void mhz2PressSpawnsRomLeafParticlesFromCameraAndParentStrength(int width) {
         ObjectManager objectManager = mock(ObjectManager.class);
         List<ObjectInstance> spawned = new ArrayList<>();
         doAnswer(invocation -> {
@@ -820,7 +828,9 @@ class TestMhz1CutsceneObjects {
         when(renderManager.getRenderer("mhz2_cutscene_knuckles_leaves"))
                 .thenReturn(renderer);
         when(renderer.isReady()).thenReturn(true);
-        Camera camera = mhz2TriggerCamera();
+        Camera camera = spy(mhz2TriggerCamera());
+        when(camera.getWidth()).thenReturn((short) width);
+        camera.setX((short) com.openggf.camera.NativeViewportFraming.visibleLeft(0x03D0, width));
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 0x00010001);
         TestObjectServices services = new TestObjectServices() {
             @Override
@@ -850,8 +860,10 @@ class TestMhz1CutsceneObjects {
         ObjectInstance leaf = spawned.get(1);
         assertInstanceOf(AbstractObjectInstance.class, leaf).setServices(services);
 
-        assertTrue(leaf.getX() >= 0x03D0 && leaf.getX() <= 0x03D0 + 0x013F,
-                "loc_63324 derives leaf x_pos from Camera_X_pos_copy plus the folded $1FF random span");
+        int nativeRandom = new GameRng(GameRng.Flavour.S3K, 0x00010001).nextWord() & 0x1FF;
+        int folded = nativeRandom < 0x140 ? nativeRandom : (nativeRandom & 0x3F) << 2;
+        assertEquals(0x03D0 + folded, leaf.getX(),
+                "loc_63324 retains its first RNG word and native center span at either width");
         assertEquals(0x05E8, leaf.getY(),
                 "loc_63324 starts leaf y_pos at Camera_Y_pos_copy+$E8 before its first loc_63372 update");
 
@@ -1095,8 +1107,8 @@ class TestMhz1CutsceneObjects {
         assertTrue(sonic.isControlLocked());
         assertEquals(0x0F, sonic.getAnimationId(),
                 "loc_6338E writes anim=$0F when the player lift child starts");
-        assertTrue((sonic.getYSpeed() & 0xFFFF) > 0x8000,
-                "loc_6338E starts the lift with y_vel=-$1000");
+        assertEquals(0, sonic.getYSpeed(),
+                "loc_6338E writes -$1000 to the carrier's y_vel, not Player_1's");
 
         for (int frame = 0; frame < 180 && !liftChild.isDestroyed(); frame++) {
             cutscene.update(liftFrame + 2 + frame, sonic);
@@ -1312,12 +1324,15 @@ class TestMhz1CutsceneObjects {
         cutscene.update(liftFrame, sonic);
         AbstractObjectInstance liftChild = mhz2LiftChild(spawned);
         liftChild.setServices(services);
+        assertTrue(sonic.isHighPriority(), "loc_6339C sets the hardware priority bit");
+        assertFalse(sonic.getRenderVFlip());
         liftChild.update(liftFrame + 1, sonic);
         for (int frame = 0; frame < 180 && !liftChild.isDestroyed(); frame++) {
             cutscene.update(liftFrame + 2 + frame, sonic);
             liftChild.update(liftFrame + 2 + frame, sonic);
         }
 
+        assertFalse(sonic.isHighPriority(), "loc_633D6 clears the hardware priority bit");
         assertEquals(7, checkpointState.getLastCheckpointIndex(),
                 "loc_633D6 writes Last_star_post_hit=7 when the MHZ2 lift releases control");
         assertEquals(0x052A, checkpointState.getSavedX(),
@@ -1380,6 +1395,49 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void mhz2OffscreenRetirementRestoresPaletteAndLeavesCarrierIndependent() {
+        Camera camera = mhz2TriggerCamera();
+        ObjectManager manager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> { spawned.add(invocation.getArgument(0)); return null; })
+                .when(manager).addDynamicObject(any(ObjectInstance.class));
+        Palette palette = new Palette();
+        palette.getColor(3).r = 73;
+        Level level = mock(Level.class);
+        when(level.getPaletteCount()).thenReturn(4);
+        when(level.getPalette(1)).thenReturn(palette);
+        TestObjectServices services = new TestObjectServices() {
+            @Override public ObjectManager objectManager() { return manager; }
+            @Override public Level currentLevel() { return level; }
+        };
+        services.withCamera(camera).withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_ALONE));
+        var sonic = new TestablePlayableSprite("sonic", (short) 0x052A, (short) 0x0748);
+        sonic.setAir(false);
+        camera.setFocusedSprite(sonic);
+        setMhz2TriggerCameraPosition(camera);
+        var controller = new CutsceneKnucklesMhz2Instance(new ObjectSpawn(
+                0x03D0, 0x0748, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0));
+        controller.setServices(services);
+        controller.update(0, sonic);
+        palette.getColor(3).r = 0; // cutscene-owned normal palette differs from saved level line
+        controller.update(1, sonic);
+        controller.update(2, sonic);
+        int frame = advanceMhz2CutsceneThroughPressAnimation(controller, sonic);
+        var carrier = mhz2LiftChild(spawned);
+        carrier.setServices(services);
+        camera.setY((short) 0x0400);
+        controller.update(frame++, sonic);
+        assertFalse(controller.isDestroyed(), "loc_632AE reads the previous BuildSprites flag");
+        controller.update(frame++, sonic);
+        assertTrue(controller.isDestroyed());
+        assertEquals(73, palette.getColor(3).r);
+        assertEquals(1, spawned.stream().filter(SongFadeTransitionInstance.class::isInstance).count());
+        for (int n = 0; n < 140 && !carrier.isDestroyed(); n++) carrier.update(frame++, sonic);
+        assertTrue(carrier.isDestroyed());
+        assertFalse(sonic.isObjectControlled(), "retired Knuckles must not strand the independent carrier");
+    }
+
+    @Test
     void mhz2CutsceneLiftPlaysLeafBlowerContinuousSfx() {
         Camera camera = mhz2TriggerCamera();
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x052A, (short) 0x0748);
@@ -1387,9 +1445,15 @@ class TestMhz1CutsceneObjects {
         camera.setFocusedSprite(sonic);
         setMhz2TriggerCameraPosition(camera);
         List<Integer> sfxIds = new ArrayList<>();
+        ObjectManager manager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> { spawned.add(invocation.getArgument(0)); return null; })
+                .when(manager).addDynamicObject(any(ObjectInstance.class));
         CutsceneKnucklesMhz2Instance cutscene = new CutsceneKnucklesMhz2Instance(new ObjectSpawn(
                 0x03D0, 0x0748, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0));
         TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() { return manager; }
             @Override
             public void playSfx(int soundId) {
                 sfxIds.add(soundId);
@@ -1406,6 +1470,12 @@ class TestMhz1CutsceneObjects {
         sfxIds.clear();
         cutscene.update(frame, sonic);
 
+        assertFalse(sfxIds.contains(Sonic3kSfx.LEAF_BLOWER.id),
+                "loc_632AE spawns leaves, but only the carrier owns continuous lift sound");
+        var carrier = mhz2LiftChild(spawned);
+        carrier.setServices(services);
+        carrier.update(frame + 1, sonic); // loc_6338E initialization dispatch
+        carrier.update(frame + 2, sonic); // loc_633D6 movement dispatch
         assertTrue(sfxIds.contains(Sonic3kSfx.LEAF_BLOWER.id),
                 "loc_633D6 calls Play_SFX_Continuous(sfx_LeafBlower) on the MHZ2 lift frame");
     }

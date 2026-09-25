@@ -53,6 +53,9 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 | `TraceBenchmarkTool` | Replays a trace headlessly with no pacing and reports per-subsystem frame-time percentiles, for comparing JVMs or catching a performance regression. Writes a JSON report. Never quote its numbers without checking the trajectory digest matched. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceBenchmarkTool" "-Dexec.args=--trace aiz1 --json target/bench/temurin21-g1.json"` |
 | `BenchmarkCompareTool` | Renders a Markdown comparison from two or more benchmark reports; the first is the baseline. Pure post-processing, so it can run under any JVM. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.BenchmarkCompareTool" "-Dexec.args=--out target/bench/comparison.md target/bench/a.json target/bench/b.json"` |
 | `InputLogAuthorTool` | Compiles a short controller script (`60 R; 1 D+R; repeat 3 { 1 A ; 1 - }`) into a BizHawk `Input Log.txt` or minimal `.bk2`, then re-parses it with `Bk2MovieLoader` so the file is proven loadable. Skill: `bk2-input-authoring`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" "-Dexec.args=--inline '60 R; 1 A' --out target/capture/run.txt"` |
+| `DezFinalRouteAuthorTool` | Observes the final DEZ encounter and authors controller-only input through hands, core and escape. Declared solo Sonic boot: 200 rings, seven Super Emeralds. Optional DEZ2 input starts at ($34B0,$300), traverses its boss/real final-arena load and continues without reseeding. A fifth argument (`cold-solo`, `cold-team`, `cold-team-emeralds`) instead plays an input prefix from the real DEZ1 start without position/ring seeds. Writes input script/state CSV; no post-boot gameplay-state injection or parity claim. | `DezFinalRouteAuthorTool <ROM> <width> <output-prefix> [input [cold-solo\|cold-team\|cold-team-emeralds]]` (same Java classpath as gameplay capture) |
+| `DdzIncomingRouteAuthorTool` | Replays an actual DEZ incoming movie, then authors controller-only DDZ ring collection and both boss phases. The complete native movie supplies input buttons only; no state hydration. Declared positioned or cold-team boot; complete input script and observed state CSV. | `DdzIncomingRouteAuthorTool <ROM> <width> <incoming.bk2> <reference.bk2> <output-prefix> [cold-team]` |
+| `GameplayInputBranchTool` | Cold-replays one input prefix, then tries controller-only scripts from its engine-owned rewind state. Writes full-prefix BK2/scripts/state CSVs, nearby object inventory and sampled PNGs. Preserves both controllers and input-edge history; refuses existing outputs and cross-load restores. Chosen routes require fresh uninterrupted verification. Origin: LRZ2 bring-up, 2026-09-24. | `GameplayInputBranchTool <ROM> s3k lrz 1 320 sonic tails <input.bk2> <prefix> <output-dir> '30 R+A;60 R' '12 R;30 R+A;60 R'` (gameplay-capture Java classpath) |
 | `GameplayCaptureTool` | Pictures or films any gameplay section: boots a zone/act on the production path (`HeadlessGameBoot` + `GameLoop.step()`), teleports the leader, drives it from an input log or `.bk2`, and writes PNG frames, `state.csv`, and an MP4. Widths, donors and teams are flags. Skill: `gameplay-capture`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C --input target/capture/run.txt --out-dir target/capture/fbz2"` |
 | `LevelTileUsageLocatorTool` | Lists the 128px layout cells (foreground and background) that place given 8x8 tiles or palette-line colours, so a capture can be aimed at AniPLC destination tiles or an AnPal-cycled colour that is off screen from the level start. Origin: HPZ bring-up demo captures. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.LevelTileUsageLocatorTool" "-Dexec.args=--game s3k --zone hpz --act 2 --tiles 0x2D0-0x2DB --colors 3:1,2"` |
 | `tools/bizhawk/capture_hpz_route_reference.lua` | Native BizHawk exporter for Hidden Palace questions: records RAM (camera, players, event words, palette line 4, emerald state) and framebuffer images for plan-declared movie windows, and saves native states at planned frames so later probes load a state instead of replaying a complete-run movie. Origin: HPZ bring-up. | `python3 tools/bizhawk/capture_native_references.py ... --exporter tools/bizhawk/capture_hpz_route_reference.lua --plan plan.lua --fixture-state <state> --require-output observations.csv --require-output done.txt` |
@@ -77,6 +80,15 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   Pair it with `tools/traces/assemble_bk2_from_input_log.py`, which packages an
   `InputLogAuthorTool` log as the BizHawk-keyed `.bk2` the TraceChaser headless harness
   accepts. Both come from the first Knuckles in Sonic 2 fixture (2026-09-14).
+- `PlaneOpacityProbe` (`com.openggf.tools`, library not CLI) answers "can the plane behind
+  this one show through here?" from the decoded layout / blocks / chunks / patterns alone --
+  no renderer, no camera, no frame. `coverage(level, map, layer, x, y, w, h)` counts the
+  see-through pixels of a rectangle and `pixelAt` resolves one, applying both flip levels.
+  Use it whenever a background change produces byte-identical captures: a capture cannot
+  separate "wrong pixels drawn" from "no pixels reachable", and this can. Always pair it with
+  a control viewport that must report see-through pixels. Origin: LRZ slice 5 follow-up,
+  2026-09-18, where it showed Lava Reef act 1's foreground is opaque across the whole dome
+  (`TestS3kLrzForegroundOpacity`).
 - `FbzRouteEvidenceProbe` (test scope, opt-in `-Dmse=off -Dopenggf.fbz.evidence=true`)
   prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
   matrix rows without asserting; diff the output before and after a route-controller
@@ -163,3 +175,19 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
 - `FbzBoundaryFixtureCaptureTool` and [boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) reproduce declared native fixture setup through production frames and compare actual retained Plane-B descriptors, uploaded palettes and framebuffers; acceptance remains independently reviewed.
 
 - [Fresh native FBZ entry](../../tools/bizhawk/capture_fbz_fresh_entry.lua), launched by the visual host with `--fresh-entry-act 1|2`, uses the complete BK2 reset opening, AIZ vine cheat and ordinary title/level-select inputs; it never writes RAM. This removes retained cloud-history residue from complete-run FBZ states.
+
+- [`capture_lrz_boulder_reference.lua`](../../tools/bizhawk/capture_lrz_boulder_reference.lua)
+  records read-only native LRZ2 cutscene, rider and fresh-load carry observations from an original movie save.
+- [`capture_lrz_traversal_reference.lua`](../../tools/bizhawk/capture_lrz_traversal_reference.lua)
+  observes LRZ turbine and chained-platform slots during unchanged native BK2 playback;
+  use the common native capture host with explicit frame windows and its own movie save.
+
+- `tools/bizhawk/capture_lrz_boss_reference.lua`: read-only original-movie LRZ3
+  camera/event and object-graph observer, with optional lava/VScroll/HScroll export;
+  `palette=true` also observes the shared LRZ post-boss script cursor, timer and colors;
+  `background=true` observes the LRZ2 Death Egg slot, screen coordinates, priority and art-load flag;
+  native save and frame-window plan inputs
+  (September 22 S&K completion campaign).
+
+- `tools/bizhawk/capture_ssz_arrival_reference.lua`: read-only original-movie SSZ1 cutscene, Death Egg child timers/animation, palette and Knuckles landing observer; explicit native save and frame-window plan (September 24 S&K completion campaign).
+- [SSZ arena-static presentation demo](../../tools/visuals/ssz_arena_static_demo.py): composites deterministic side-only noise over verified widescreen boss footage and emits a local comparison page; originating [2026-09-24 design study](../architecture/designs/2026-09-24-widescreen-boss-arena-static.md), not an engine feature.

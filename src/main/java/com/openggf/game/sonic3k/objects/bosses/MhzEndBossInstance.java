@@ -112,7 +112,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private boolean cameraRangePassed;
     private boolean paletteLoaded;
     private boolean arenaSetupApplied;
-    private boolean finalHitHandoffFlag;
     private int finalHitExplosionTimer;
     private int finalHitExplosionIntervalCounter;
 
@@ -134,7 +133,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         cameraRangePassed = false;
         paletteLoaded = false;
         arenaSetupApplied = false;
-        finalHitHandoffFlag = false;
         finalHitExplosionTimer = -1;
         finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
     }
@@ -183,6 +181,29 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             updateAlternatingDashWait();
         }
         applyLevelRepeatOffset(mhzLevelRepeatOffset());
+    }
+
+    @Override
+    public int getX() {
+        // Obj_MHZEndBoss gates before adding $C0. The shared boss context
+        // precomputes its active coordinates on construction; expose the ROM
+        // placement position until admission, including for coarse range checks.
+        // Rendering and touch are likewise inactive until that gate passes.
+        return cameraRangePassed ? state.x : spawn.x();
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return cameraRangePassed ? super.getCollisionFlags() : 0;
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // After admission loc_75FD4 ends in Draw_And_Touch_Sprite, with no
+        // camera-range deletion. Its forward offset and attack dashes must not
+        // run through the manager's ordinary placement-unload rule. Before
+        // admission Check_CameraInRange still uses the ordinary coarse range.
+        return cameraRangePassed;
     }
 
     private boolean isCameraInRange() {
@@ -407,7 +428,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         setCustomFlag(STATE_FLAGS_OFFSET, getCustomFlag(STATE_FLAGS_OFFSET) & ~FLAG_DASH_PHASE);
         state.xVel = currentPlayerCharacter() == PlayerCharacter.KNUCKLES ? 0x500 : 0x400;
         finalDefeatPhase = FINAL_PHASE_DASH_TO_THRESHOLD;
-        finalHitHandoffFlag = true;
+        setFinalHitHandoff(true);
         finalHitExplosionTimer = FINAL_HIT_EXPLOSION_TIMER;
         finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
         spawnFreeChild(() -> new MhzEndBossWalkoffPrepChild(this));
@@ -548,6 +569,12 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
                 manager.setBossFlag(false);
             }
         }
+        if (services != null && services.gameState() != null) {
+            // loc_761E8 sets _unkFAA8 to wait for this capsule's results. The
+            // engine exposes the inverse completion semantic; discard the
+            // previous act's completed-results flag before creating this owner.
+            services.gameState().setEndOfLevelFlag(false);
+        }
         spawnFreeChild(() -> new MhzEndBossEggCapsuleInstance(POST_BOSS_CAPSULE_X, POST_BOSS_CAPSULE_Y));
     }
 
@@ -596,7 +623,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     private void startPostCapsuleEscapeSetup() {
         finalDefeatPhase = FINAL_PHASE_WAIT_ROBOTNIK_SHIP_TIMER;
-        finalHitHandoffFlag = false;
+        setFinalHitHandoff(false);
         var services = tryServices();
         if (services != null && services.camera() != null) {
             int cameraX = Short.toUnsignedInt(services.camera().getX());
@@ -641,6 +668,18 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     private void lockPostCapsulePlayerUp(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
+            // loc_76270 calls Restore_PlayerControl/2 before its separate
+            // controller lock: results' object_control=$81 must not survive.
+            ObjectControlState.none().applyTo(sprite);
+            // Restore_PlayerControl clears object_control ($2E), not interact
+            // ($42). Keep the last capsule contact, including its rewind binding.
+            // Clearing the slot here was an engine-only write that broke restore.
+            sprite.clearAirForNativeControlRestore();
+            sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
+            sprite.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.WAIT.id());
+            sprite.setAnimationFrameIndex(0);
+            sprite.setAnimationTick(0);
+            sprite.setHighPriority(true);
             sprite.setControlLocked(true);
             sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         }
@@ -717,6 +756,16 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         }
         if (player instanceof AbstractPlayableSprite sprite) {
             sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+        }
+    }
+
+    private void setFinalHitHandoff(boolean active) {
+        // loc_7683E writes the same _unkFAA9 byte that loc_55686 consumes on
+        // the next arena wrap. A boss-local copy never sees that acknowledgement
+        // and leaves loc_768B6 waiting forever after a real killing hit.
+        var services = tryServices();
+        if (services != null && services.zoneRuntimeState() instanceof MhzZoneRuntimeState state) {
+            state.setShipControllerSignalFlag(active);
         }
     }
 
@@ -910,6 +959,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!cameraRangePassed) return;
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS);
         if (renderer == null) {
             return;
@@ -1004,6 +1054,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
         private MhzEndBossInstance parent;
         private boolean forcingWalkoff;
+        private boolean handoffAcknowledged;
 
         private MhzEndBossWalkoffPrepChild(MhzEndBossInstance parent) {
             super(new ObjectSpawn(0, 0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0),
@@ -1034,15 +1085,23 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            if (parent.finalHitHandoffFlag || !(player instanceof AbstractPlayableSprite sprite)) {
+            if (parent.isShipControllerSignalFlagSet() || !(player instanceof AbstractPlayableSprite sprite)) {
                 return;
             }
+            if (!handoffAcknowledged) {
+                handoffAcknowledged = true;
+                parent.spawnFreeChild(MhzEndBossSidekickLockChild::new); // loc_768B6 -> loc_863C0
+            }
             if (!forcingWalkoff) {
-                forcingWalkoff = true;
                 sprite.setDirection(Direction.RIGHT);
                 sprite.setRolling(false);
+                // loc_768D2 clears facing/roll while airborne, but only banks
+                // Events_fg_5 and locks control after landing.
+                if (sprite.getAir()) return;
                 sprite.setControlLocked(true);
                 parent.signalEndBossWalkoffPrepEvent();
+                forcingWalkoff = true;
+                return; // loc_768D2 installs loc_768FE; forced RIGHT begins next dispatch.
             }
             if (Integer.compareUnsigned(Short.toUnsignedInt(sprite.getCentreX()), WALKOFF_PREP_X) < 0) {
                 sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);

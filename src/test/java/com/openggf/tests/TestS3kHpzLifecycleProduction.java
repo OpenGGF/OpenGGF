@@ -170,6 +170,46 @@ class TestS3kHpzLifecycleProduction {
             assertTrue(loaded, "loc_45B94 must start a new level");
             assertEquals(Sonic3kZoneIds.ZONE_SSZ, GameServices.level().getCurrentZone());
             assertEquals(1, GameServices.level().getCurrentAct(), "StartNewLevel #$A01");
+            assertNotSame(manager, GameServices.level().getObjectManager());
+            assertEquals(width, GameServices.camera().getWidth());
+            assertEquals("knuckles", GameServices.sprites().getMainPlayable().getCode());
+            assertEquals(-1, GameServices.level().getCheckpointState().getLastCheckpointIndex(),
+                    "HPZ checkpoint history must not suppress SSZ's fresh arrival");
+            boolean midRise = false;
+            for (int frame = 0; frame < 600 && !midRise; frame++) {
+                fixture.gameplayMode().getFadeManager().update(); loop.step();
+                var arrivals = GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.SszArrivalControllerObjectInstance.class);
+                midRise = !arrivals.isEmpty() && arrivals.getFirst().phaseForTest() == 1
+                        && arrivals.getFirst().riseRemainingForTest() < 50;
+            }
+            assertTrue(midRise, "the real HPZ load must continue into SSZ's teleporter rise");
+            var registry = fixture.gameplayMode().getRewindRegistry();
+            var saved = registry.capture();
+            int[] expected = null;
+            byte[] expectedState = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) registry.restore(saved);
+                int elapsed = 0;
+                for (; elapsed < 1600; elapsed++) {
+                    fixture.gameplayMode().getFadeManager().update(); loop.step();
+                    var liveState = (com.openggf.game.sonic3k.runtime.SszZoneRuntimeState) GameServices.zoneRuntimeState();
+                    if (liveState.cutsceneFlag(5) && !GameServices.sprites().getMainPlayable().isObjectControlled()) break;
+                }
+                assertTrue(elapsed < 1600, "incoming crane must hand control back");
+                var player = GameServices.sprites().getMainPlayable();
+                var camera = GameServices.camera();
+                assertFalse(player.getDead());
+                assertFalse(player.isObjectControlled(), "incoming route must finish the crane release");
+                assertEquals(1, GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class).size());
+                int[] actual = {elapsed, player.getCentreX(), player.getCentreY(), player.getXSpeed(), player.getYSpeed(),
+                        camera.getX(), camera.getY(), camera.getMinX(), camera.getMaxX()};
+                byte[] state = ((com.openggf.game.sonic3k.runtime.SszZoneRuntimeState)
+                        GameServices.zoneRuntimeState()).captureBytes();
+                if (replay == 0) { expected = actual; expectedState = state; }
+                else { assertArrayEquals(expected, actual); assertArrayEquals(expectedState, state); }
+            }
         } finally {
             loop.closePresence();
         }

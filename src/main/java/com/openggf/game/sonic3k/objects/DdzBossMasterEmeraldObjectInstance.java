@@ -1,8 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic3k.S3kPaletteOwners;
-import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -28,30 +26,18 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
     private static final int OFFSET_X = 0x1C;
     private static final int OFFSET_Y = -4;
     private static final String OWNER = "s3k.ddz.masterEmerald";
-    /** {@code word_8141E} script 1: line 4 colour 9 (colour, frames). */
-    private static final int[][] SCRIPT_9 = {
-            {0x660, 15}, {0x680, 18}, {0x880, 7}, {0x6A2, 7}, {0xAC0, 5},
-            {0xCE8, 5}, {0xAC0, 5}, {0x6A2, 7}, {0x880, 7}, {0x680, 18}};
-    /** {@code word_8141E} script 2: line 4 colour 11. */
-    private static final int[][] SCRIPT_11 = {
-            {0x6A0, 15}, {0x8C0, 9}, {0xAC0, 9}, {0xCE0, 7}, {0xCE6, 7}, {0xCE8, 5},
-            {0xEEC, 5}, {0xCE8, 5}, {0xCE6, 7}, {0xCE0, 7}, {0xAC0, 9}, {0x8C0, 9}};
-
     private int x;
     private int y;
     private boolean followingPlayer;
     private boolean rotating;
     private boolean initialized;
-    /** {@code Palette_rotation_data}: next entry index and delay per script. */
-    private int index9;
-    private int delay9;
-    private int index11;
-    private int delay11;
-
-
     DdzBossMasterEmeraldObjectInstance(DdzEndBossShipPartObjectInstance part) {
-        super(new ObjectSpawn(part == null ? 0 : part.getX() + OFFSET_X, part == null ? 0 : part.getY() + OFFSET_Y,
-                0, 0, 0, false, 0), "DDZBossMasterEmerald", part);
+        this(new ObjectSpawn(part == null ? 0 : part.getX() + OFFSET_X, part == null ? 0 : part.getY() + OFFSET_Y,
+                0, 0, 0, false, 0), part);
+    }
+
+    private DdzBossMasterEmeraldObjectInstance(ObjectSpawn spawn, DdzEndBossShipPartObjectInstance part) {
+        super(spawn, "DDZBossMasterEmerald", part);
         if (part != null) {
             x = (part.getX() + OFFSET_X) & 0xFFFF;
             y = (part.getY() + OFFSET_Y) & 0xFFFF;
@@ -60,12 +46,14 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzBossMasterEmeraldObjectInstance(ObjectSpawn spawn) {
-        this((DdzEndBossShipPartObjectInstance) null);
+        this(spawn, (DdzEndBossShipPartObjectInstance) null);
     }
 
     @Override
     public DdzBossMasterEmeraldObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzBossMasterEmeraldObjectInstance((DdzEndBossShipPartObjectInstance) null);
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzBossMasterEmeraldObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -84,15 +72,12 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
             initialized = true;
             var gameState = services().gameState();
             rotating = gameState != null && gameState.hasAllSuperEmeralds();
+            if (rotating) palette().install(services(),
+                    com.openggf.game.sonic3k.constants.Sonic3kConstants.PAL_DDZ_MASTER_EMERALD_SCRIPT_ADDR);
             return;
         }
         if (followingPlayer) {
-            x = (x - DdzObjectSupport.wrapOffset(services())) & 0xFFFF;
-            AbstractPlayableSprite player = DdzObjectSupport.player(services());
-            if (player != null && (player.getCentreX() & 0xFFFF) >= x) {
-                x = player.getCentreX() & 0xFFFF;
-            }
-            x = (x + DdzObjectSupport.cameraDelta(services())) & 0xFFFF;
+            followPlayer();
             return;
         }
         if (!(parent instanceof DdzEndBossShipPartObjectInstance part) || part.isDestroyed()) {
@@ -108,36 +93,28 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
         DdzEndBossObjectInstance boss = part.boss();
         if (boss != null && boss.flag(4)) {
             followingPlayer = true;
+            // loc_81D44 changes the code pointer and falls into loc_81D4A in
+            // this dispatch. The following code never reads parent3 again;
+            // releasing the Java link lets the ship retire without dangling rewind refs.
+            parent = null;
+            followPlayer();
         }
     }
 
-    /** {@code Run_PalRotationScript}: each entry writes its colour and waits its frames. */
-    private void runRotation() {
-        var registry = services().paletteOwnershipRegistryOrNull();
-        if (registry != null && registry.isPaletteRotationDisabled()) {
-            return;
+    private void followPlayer() {
+        x = (x - DdzObjectSupport.wrapOffset(services())) & 0xFFFF;
+        AbstractPlayableSprite player = DdzObjectSupport.player(services());
+        if (player != null && (player.getCentreX() & 0xFFFF) >= x) {
+            x = player.getCentreX() & 0xFFFF;
         }
-        delay9 = (delay9 - 1) & 0xFF;
-        if ((byte) delay9 < 0) {
-            int[] entry = SCRIPT_9[index9];
-            write(9, entry[0]);
-            delay9 = entry[1] - 1;
-            index9 = (index9 + 1) % SCRIPT_9.length;
-        }
-        delay11 = (delay11 - 1) & 0xFF;
-        if ((byte) delay11 < 0) {
-            int[] entry = SCRIPT_11[index11];
-            write(0xB, entry[0]);
-            delay11 = entry[1] - 1;
-            index11 = (index11 + 1) % SCRIPT_11.length;
-        }
+        x = (x + DdzObjectSupport.cameraDelta(services())) & 0xFFFF;
     }
 
-    private void write(int colour, int word) {
-        S3kPaletteWriteSupport.applyColors(services().paletteOwnershipRegistryOrNull(), services().currentLevel(),
-                services().graphicsManager(), OWNER, S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE, 3,
-                new int[] {colour}, new int[] {word});
+    private com.openggf.game.sonic3k.runtime.S3kEmeraldPaletteState palette() {
+        return ((com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState)services().zoneRuntimeState()).emeraldPalette();
     }
+
+    private void runRotation() { palette().tick(services(), OWNER); }
 
     @Override
     public int getPriorityBucket() {

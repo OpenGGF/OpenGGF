@@ -29,7 +29,10 @@ import java.util.Objects;
  * camera holds only the integer word.
  */
 public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 4 * Integer.BYTES + 22 * Short.BYTES + 2;
+    private static final int CAPTURE_BYTES = 4 * Integer.BYTES + 22 * Short.BYTES + 2 + S3kEmeraldPaletteState.SNAPSHOT_BYTES;
+
+    private final S3kEmeraldPaletteState emeraldPalette = new S3kEmeraldPaletteState();
+    public S3kEmeraldPaletteState emeraldPalette() { return emeraldPalette; }
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -234,6 +237,7 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(cameraStoredMaxY);
         buffer.put((byte) (controllerPresent ? 1 : 0));
         buffer.put((byte) 0);
+        emeraldPalette.captureTo(buffer);
         return buffer.array();
     }
 
@@ -271,5 +275,6 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         cameraStoredMaxY = buffer.getShort();
         controllerPresent = buffer.get() != 0;
         buffer.get();
+        emeraldPalette.restoreFrom(buffer);
     }
 }

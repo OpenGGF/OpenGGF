@@ -47,6 +47,7 @@ import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.physics.PlayerSensorActivation;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.managers.SpriteMovementManager;
@@ -338,6 +339,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int latchedSolidObjectId = 0;
         /** Released-contact provenance survives rewind even after the SST slot is reused. */
         private boolean latchedSolidObjectReleased;
+        /** Contact identity exists independently of the spawn ID (dynamic S3K objects use zero). */
+        private boolean latchedSolidObjectBound;
 
         /**
          * ROM SST {@code interact(a0)} (s2.constants.asm:69 "last object stood
@@ -956,7 +959,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         xPixel, yPixel,
                         xSubpixel, ySubpixel,
                         width, height,
-                        direction, layer,
+                        direction, layer, highPriority, priorityBucket,
                         runningMode, xRadius, yRadius,
                         // Movement / physics
                         gSpeed, xSpeed, ySpeed, jump,
@@ -973,7 +976,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         onObject, controller.isOnObjectAtFrameStart(), controller.isOnObjectAtPreviousFrameStart(),
                         controller.isPushingAtFrameStart(), controller.isHurtAtFrameStart(),
                         controller.isHurtRecoveryCompletedThisFrame(),
-                        latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(),
+                        latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(), latchedSolidObjectBound,
                         slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer, fixedSkidDustActive,
@@ -1077,6 +1080,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.height = extra.height();
                 this.direction = extra.direction();
                 this.layer = extra.layer();
+                // Native art_tile priority and the DisplaySprite queue are separate state.
+                // Restoring only collision layer leaves future priority in the player and
+                // its follower history (observed across SSZ's final transport ascent).
+                this.highPriority = extra.highPriority();
+                this.priorityBucket = extra.priorityBucket();
                 this.runningMode = extra.runningMode();
                 setCollisionRadii(extra.xRadius(), extra.yRadius(), false);
                 // Movement / physics
@@ -1115,6 +1123,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 extra.hurtAtFrameStart(), extra.hurtRecoveryCompletedThisFrame());
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.latchedSolidObjectReleased = extra.latchedSolidObjectReleased();
+                this.latchedSolidObjectBound = extra.latchedSolidObjectBound();
                 // ObjectManager restores the live set later. Never reuse a contact
                 // pointer from the future timeline; SpriteManager relinks by slot.
                 this.latchedSolidObjectInstance = null;
@@ -1344,8 +1353,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                 }
 
-                refreshInvincibilityStarsAfterRewindRestore();
                 refreshPersistentInstaShieldRegistration();
+                refreshInvincibilityStarsAfterRewindRestore();
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
@@ -2152,6 +2161,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /** Whether the last solid contact was released, including a restored deleted owner. */
         public boolean isLatchedSolidObjectReleased() {
                 return LatchedSolidContactSupport.isReleased(this, latchedSolidObjectReleased);
+        }
+
+        /** Whether rewind must relink an actual contact, including a zero-ID dynamic object. */
+        public boolean hasLatchedSolidObjectBinding() {
+                return latchedSolidObjectBound;
+        }
+
+        void setLatchedSolidObjectBinding(boolean bound) {
+                latchedSolidObjectBound = bound;
         }
 
         void clearLatchedSolidObjectRelease() {
@@ -4975,86 +4993,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Refactored to avoid per-frame array allocations by directly setting sensor states.
          */
         public void updateSensors(short originalX, short originalY) {
-                Sensor groundA = groundSensors[0];
-                Sensor groundB = groundSensors[1];
-                Sensor ceilingC = ceilingSensors[0];
-                Sensor ceilingD = ceilingSensors[1];
-                Sensor pushE = pushSensors[0];
-                Sensor pushF = pushSensors[1];
-
-                if (getAir()) {
-                        // Use ROM-accurate angle calculation via TrigLookupTable.calcAngle
-                        // ROM: Sonic_DoLevelCollision (s2.asm:37547-37557)
-                        int motionAngle = TrigLookupTable.calcAngle(xSpeed, ySpeed);
-
-                        // ROM quadrant calculation: subi.b #$20,d0 / andi.b #$C0,d0
-                        // This creates quadrants offset by 32 degrees:
-                        // - 0xC0: Angles 0-31 or 224-255 (mostly right)
-                        // - 0x00: Angles 32-95 (mostly down)
-                        // - 0x40: Angles 96-159 (mostly left)
-                        // - 0x80: Angles 160-223 (mostly up)
-                        int quadrant = ((motionAngle - 0x20) & 0xC0) & 0xFF;
-
-                        switch (quadrant) {
-                                case 0xC0 -> {
-                                        // Mostly Right (angles 0-31, 224-255): A, B, C, D, F active; E inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(false);
-                                        pushF.setActive(true);
-                                }
-                                case 0x40 -> {
-                                        // Mostly Left (angles 96-159): A, B, C, D, E active; F inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(true);
-                                        pushF.setActive(false);
-                                }
-                                case 0x80 -> {
-                                        // Mostly Up (angles 160-223): C, D, E, F active; A, B inactive
-                                        groundA.setActive(false);
-                                        groundB.setActive(false);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(true);
-                                        pushF.setActive(true);
-                                }
-                                default -> {
-                                        // 0x00: Mostly Down (angles 32-95): A, B, E, F active; C, D inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(false);
-                                        ceilingD.setActive(false);
-                                        pushE.setActive(true);
-                                        pushF.setActive(true);
-                                }
-                        }
-                } else {
-                        // Ground sensors always active when grounded
-                        groundA.setActive(true);
-                        groundB.setActive(true);
-                        // Ceiling sensors always inactive when grounded
-                        ceilingC.setActive(false);
-                        ceilingD.setActive(false);
-
-                        // Push sensors active on floor/ceiling, disabled on walls
-                        boolean pushActive = (runningMode == GroundMode.GROUND || runningMode == GroundMode.CEILING);
-                        // Use gSpeed (speed along surface) instead of xSpeed for direction
-                        if (gSpeed > 0) {
-                                pushE.setActive(false);
-                                pushF.setActive(pushActive);
-                        } else if (gSpeed < 0) {
-                                pushE.setActive(pushActive);
-                                pushF.setActive(false);
-                        } else {
-                                pushE.setActive(false);
-                                pushF.setActive(false);
-                        }
-                }
+                PlayerSensorActivation.update(this, groundSensors, ceilingSensors, pushSensors);
         }
 
         public Sensor[] getAllSensors() {

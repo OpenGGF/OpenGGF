@@ -1,0 +1,544 @@
+# Widescreen boss arenas: signal-static side mask
+
+Status: explicit activation prototype superseded by user-requested automatic bounds derivation; conversion under validation. Separate local
+branch `codex/ssz-arena-static-demo`, based on develop `40d55783c`. The level
+bring-up worktree remains independent. Do not merge or enable this prototype as
+a finished gameplay feature.
+
+## Problem and agreed direction
+
+SSZ's original boss arenas occupy a 320-pixel camera view. At 800 pixels, keeping
+original player bounds exposes large areas that Sonic cannot safely enter.
+Invisible collision boundaries feel arbitrary; adding masonry walls conflicts
+with SSZ's open-sky setting. Expanding the arena changes boss reach, attack timing,
+and traversal. Zooming either crops vertical action or distorts the pixel art.
+
+Keep the original fight geometry and signal the restricted view through quiet
+TV static in the extra side space. Centre the original view during the encounter.
+The user proposed matching the existing rewind shader's noise character.
+
+## Presentation
+
+- Show a centred, unchanged 320-pixel scene inside an 800-pixel viewport: demo
+  interval `[240,560)`. At native width there is no effect. Other widths derive
+  their margins from the active camera presentation, not these demo constants.
+- Fade static into the extra width over 0.75 seconds. Full opacity beyond a
+  12-pixel feather outside the active rectangle hides unusable scenery. Feather
+  pixels must never enter the original view. The active area's pixels, scale,
+  colours, and camera sampling remain unchanged.
+- Use dark, slightly cool monochrome grain, refreshed with an independent field
+  at 60 Hz. Keep the subdued noise character of the rewind effect, but no spatial
+  scrolling, moving tape band, wobble, chroma split or picture displacement.
+  This is an original presentation adaptation, not Genesis behavior.
+- Keep HUD, lives, menus and accessibility overlays readable. The preview footage
+  already places its HUD within the central rectangle. A production pass must
+  run before HUD composition; merely masking a finished frame is insufficient
+  when a user's HUD layout occupies the wings.
+- Dissolve the mask when the arena's player bounds actually reopen. Boss HP
+  reaching zero alone is not enough: escapes, gated pads, results and subsequent
+  phases may still own the restriction. No TV hiss or other new audio.
+
+The preview's entry fade is illustrative, then holds through the rest of the
+five-second clip. Neither fight unlocks. Looping restarts the entry demonstration. Its two supplied clips
+are declared checkpoint setups with 40 rings and neutral input.
+
+## Proposed engine ownership
+
+Expose a semantic arena-presentation state through the existing game/zone
+presentation provider: native camera rectangle, active/transition state and
+style. Shared rendering must not inspect SSZ identifiers or infer a boss arena
+from a coincidental equality of camera min/max. Zone events retain authority over
+camera locks, player bounds and transitions. Rendering never changes them.
+
+A render-manager-owned mask pass consumes this state after world composition and
+before HUD/fade/display processing. Inspect the actual draw pipeline when wiring
+it: today's rewind VHS effect runs after the screen fade and before the user's
+presentation shader, so its full-screen insertion point cannot simply be reused.
+Allow the user's CRT/display shader to process the resulting signal normally.
+
+Capture event state and the fade envelope for rewind. Advance the envelope on
+executed gameplay passes; pause freezes it. A deterministic presentation clock
+may drive noise, but drawing must not consume gameplay RNG. Rewind restores the
+boundary/envelope; fresh loads and respawns clear or restore their owning event
+state. Multiple active boss phases must not fight for ownership.
+
+The camera's centred framing must be settled before the mask becomes opaque.
+The mask is not a substitute for bounding scripted camera pans. In particular,
+Mecha's later pan must still respect the original native arena bounds.
+
+## Prototype and reproduction
+
+`tools/visuals/ssz_arena_static_demo.py` composites only the side rectangles over
+verified gameplay movies. `ssz_arena_static_demo.html` supplies local playback,
+encounter selection, an original/static toggle preserving playback time, and a
+replay button. Python requires NumPy and `ffmpeg` on PATH. No runtime assets are
+committed; outputs belong outside the repository.
+
+Example (substitute the external source/output paths):
+
+```sh
+python3 tools/visuals/ssz_arena_static_demo.py \
+  --ghz /absolute/path/ghz-800/capture.mp4 \
+  --mtz /absolute/path/mtz-800/capture.mp4 \
+  --out /absolute/path/arena-static-demo
+```
+
+Open `index.html` beside the generated movies. `provenance.json` records source
+hashes and validations. Each source must be a verified five-second, 60fps,
+800x224 viewport recording (integer-upscaled input is supported). The renderer
+asserts exact preservation of the centre before video encoding on all 600 frames,
+checks clear entry, sustained masking and opaque outer wings, and fully decodes both
+finished MP4s. Lossy MP4 encoding is not a pixel-parity oracle; the PNGs retain
+the exact composed pixels.
+
+Demo archive: `$HOME/Videos/OGGF/ssz-arena-static-camera-fixed-60fps-20260924`.
+Footage is from the separate bring-up campaign's corrected GHZ/MTZ Eggmobile
+captures. This branch does not include or duplicate those engine changes.
+
+## Acceptance before engine integration
+
+Review the moving prototype for boundary clarity, distraction, and apparent
+playable width. Then integrate one SSZ replica fight behind an explicit style
+setting before extending it to other encounters. A low-motion solid/dim variant
+should be available if animated noise is uncomfortable; it is not implemented by
+this prototype's original/static toggle.
+
+Verify all five viewport presets, actual entry/exit event ownership, boss phase
+changes, camera shake/pans, death/respawn, act loads, pause and rewind. Assert
+unchanged player bounds and physics, native-width no-op behavior, no noise inside
+the arena, and readable HUD for every supported layout. Test world/HUD/fade/CRT
+ordering in real GPU output. Run relevant graphics and rewind guards and the
+repository's combined change-based validation for the eventual engine change.
+
+No engine tests are claimed for this standalone visual study. Integration,
+configuration, event wiring and this acceptance matrix remain future work.
+
+## Prototype verification — 2026-09-24
+
+Generated both 300-frame movies; all 600 centre-preservation assertions and
+full MP4 decode checks passed. Inspected both composed PNGs. Browser playback
+loaded successfully; original/static switching, encounter selection and replay
+were exercised. Python compilation, JavaScript syntax and Git whitespace checks
+passed. These checks validate the demo only, not engine integration.
+
+## Revision: remove vertical drift
+
+The initial prototype (`fce524948`) used `y + tick*13` in a spatial hash. This
+translated the same field upward by 13 pixels at each refresh; it was not fresh
+random static. A separate moving brightness band reinforced the apparent motion.
+User review identified the drift. Both are replaced with independent, seeded
+noise fields per refresh, preserving deterministic playback. The initial 12 Hz cadence was subsequently
+replaced with one fresh noise field per 60 fps video frame after user review.
+A regression check compares consecutive fields at zero and 13-pixel vertical
+offsets; neither may retain significant correlation.
+
+Regenerated both demos: all 600 centre-preservation checks, fade endpoint checks,
+full movie decodes, temporal correlation checks and deterministic replay passed.
+
+## Revision: hold the mask through knockback
+
+The original five-second preview faded out at 3.9 seconds without event knowledge.
+That coincided with player damage and misleadingly suggested the arena unlocked.
+The compositor never changed the source camera or collision bounds. Remove the
+illustrative release from these ongoing fights: retain the mask through the final
+frame and explicitly label looping as a restart. Damage must never release the
+production mask; only the owning arena event reopening bounds does so.
+
+Both revised clips passed all 600 centre-preservation assertions, full decode,
+temporal decorrelation and final-frame sustained-mask checks.
+
+## Camera and cadence review
+
+The first source captures had genuine widescreen camera clamp errors: GHZ
+followed knockback; MTZ jumped right by240px. The mask made the latter hide the
+fight. The bring-up worktree now projects SSZ1 replica bounds using captured
+event ownership, as already done for SSZ2. This prototype branch does not contain
+that engine change; regenerated inputs are the camera-fixed recordings. Their
+300 filmed state rows hold cameraX112 (GHZ) and5488 (MTZ), including44hurt rows
+each. Native320 recordings retain352 and5728 respectively.
+
+Noise now refreshes at60Hz, not the initially chosen12Hz. Both finished MP4s
+were decoded; all167 consecutive frame pairs tested during the fully opaque
+interval have changing noise. All600 centre-preservation checks still pass.
+
+## In-engine architecture — visually approved
+
+The user approved GHZ and MTZ replica arenas only. All other events remain off.
+Common `ArenaMaskState` exposes `activate(activeWidth)`, `release()` and
+`advance()`. The level event coordinator is the single owner; a boss can request
+activation through that coordinator. No automatic boss/lock detection lives in
+common code. An opted-in runtime implements `ArenaMaskSource` and includes the
+state's16bytes in its own rewind snapshot. Advance once per executed gameplay
+pass, never per draw; pause therefore freezes it and rewind restores the noise
+clock and45-frame fade. Fresh runtime state is clear. Repeated activation is
+idempotent; releasing mid-fade reverses smoothly. Native-width output is a no-op.
+
+`ArenaMaskRenderer` uses an independent integer hash per pixel and gameplay frame.
+It draws directly into the currently bound framebuffer before HUD composition,
+restores GL state, and is cleaned up with GraphicsManager. It neither samples
+framebuffer0 nor consumes gameplay RNG. This works with offscreen capture and
+preserves the active centre by discarding its fragments.
+
+The shared implementation was committed on the separate prototype branch at
+`55e8ad12d` and reconciled with the campaign at `679f7cb87` (campaign implementation
+`454184d52`, destination develop `40d55783c`). The user approved activation/hold
+and the real defeat/pad-release clips, including the additional wide widths.
+Only GHZ and MTZ replicas are authorized. Integration into develop and push
+remain conditional on delivery checks, not another visual approval.
+
+The combined campaign selection is 2904 ordinary classes plus guards. A PC
+restart interrupted the first run after 6155 reported tests, with one failure
+in the SSZ rewind coverage exception baseline and two opt-in benchmark skips.
+That partial run is not a suite pass; guards did not run.
+
+### Trial results
+
+Focused queued Java21/Maven run (absolute S3K ROM, DISPLAY=:0, native GL enabled):
+TestArenaMaskState, TestArenaMaskRenderer, TestNativeArenaCameraFraming,
+TestS3kSszGhzArenaHeadless, TestS3kSszMtzArenaHeadless, TestSszColdRouteCapture,
+TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils:115tests, zero failures/errors/skips. After making the
+GraphicsManager entry package-private through an internal bridge and adding
+event activation assertions, reran mask state/realGPU/both replica events/cold
+route:31tests, zero failures/errors/skips, finished09:24:53BST. GPU checks cover
+all five widths at1x/2x, offset viewports, capture FBO, centre identity, per-frame
+noise and deterministic replay, and GL state restoration. Cold route retains
+its ten full-registry rewind/replay spots with the additional presentation state.
+
+Live shader recordings: campaign-20260924-{ghz,mtz}-live-static-{320,800},450
+frames each from explicit checkpoint/40rings/neutral input. Full MP4 decodes pass.
+All450 gameplay CSV rows per recording match pre-mask camera-fixed recordings
+exactly. All300 common filmed frames preserve the central320 pixels exactly
+before encoding; native320 entire frames are identical. Wide frame400 of both
+fights inspected: mask remains active through knockback, HUD readable.
+The implementation is committed and reconciled as described above. Full combined
+suite/guards and broader lifecycle/display-shader coverage remain pending; no
+develop integration or push is claimed.
+
+## Candidate research — Luna, max reasoning, 2026-09-24
+
+Read-only review at campaign `679f7cb87`; no candidate footage was inspected.
+Only SSZ1 GHZ/MTZ remain approved. Camera locks identify research sites, not
+activation conditions. All possible excess-space problems below remain inference.
+
+| Priority | Site and ROM owner | Native camera bounds | Next evidence and lifecycle owner |
+|---|---|---|---|
+| 1 | LRZ1 drill miniboss; `Obj_LRZMiniboss`, `word_784E8`; `LrzMinibossInstance` | X `$2C00`, Y `$710`, single native view; already centred in widescreen | Capture approach, drill/arm extremes, defeat, sign, seamless Act 2 rebase and both releases at 320/800. Mask could signal unusable wings only if no action needs them. Miniboss/event coordinator owns activation; post-defeat camera-release chain owns release, not HP zero. |
+| 2 | FBZ1 miniboss; `Obj_FBZMiniboss`; `FbzMinibossInstance` | X `$2E20..$2EA0`, Y `$540`; 448px union of native views | Screen approach and full attack range before deciding on centring or a moving 320px window. Possible activation only after gate settles; `startAct2Sizes()` owns release after sign/results. |
+| 3 | DEZ1 miniboss; `Obj_DEZMiniboss`; `DezMinibossInstance` / `DezMinibossTransport` | X `$3680..$36C0`, Y `$28C`; 384px union | Capture both phases, pursuit, vertical swings, beam and transport through bounds reopening. No explicit centred-arena flag yet. Activation after gate; transfer release ownership to transport/sign flow. |
+| 4 | FBZ2 end boss; `FbzEndBossEventControlInstance` / `FbzEndBossInstance` | Max X `$32B8`, closes after approach; Y depends on player mode | Capture approach, settled fight and capsule exit. Centre/framing suitability unverified. Event controller activates after pan; capsule/exit bounds reopening releases. |
+
+Source lookup anchors in `docs/skdisasm/sonic3k.asm`: LRZ1 159996,
+FBZ1 146766, DEZ1 167659, FBZ2 109825 (line numbers at review revision).
+Engine lookup anchors: LRZ miniboss 1001, FBZ miniboss 147, DEZ miniboss 183,
+DEZ transport 167, FBZ end event 142, FBZ end boss 400. Confirm routine ownership
+against current source before implementation. Each future trial also needs
+knockback, death/respawn, rewind, participant bounds and transition checks.
+
+Do not infer applicability from these other locks: MHZ1 wraps/repeats; MHZ2 and
+LRZ3 scroll or pan through phases; SOZ1 has a broad mobile arena and SOZ2 keeps
+horizontal movement; SSZ2 has a later arena pan; DEZ3/DDZ wrap, scroll or change
+arenas. DEZ2's centred X/free Y lock and ROM-pixel planet extension are already
+handled. A bounded S1/S2 sweep supplied no stronger concrete candidate.
+
+## Proposed bounds-derived default — discussion, 2026-09-24
+
+The user proposed deriving masking from camera bounds instead of activating it
+per encounter. This is a proposed successor, not the behavior validated above.
+The reusable renderer/noise/rewind work still applies; the activation geometry
+would move to a common presentation owner. No additional site is enabled yet.
+
+For a finite horizontal camera-origin interval `[minX, maxX]`, the union of
+native views is `[minX, maxX + 320)`. Subtract the actual rendered camera origin
+from both ends, clip to the viewport, and mask only outside that interval.
+Do not collapse a 448px arena with 128px camera travel into a centred 320px
+strip. Left/right exposure can differ. The shader needs independent edges;
+`activeWidth` alone currently centres them and cannot express this geometry.
+Native-width output should remain unchanged. Bounds expansion and the actual
+camera movement should move mask edges without a separate boss-defeat trigger.
+
+`PlayableSpriteMovement.doLevelBoundary` confirms S3K horizontal player limits
+use native camera bounds: left centre `minX+16`, right centre `maxX+296`.
+Those collision offsets are not crop edges: retain the native view's margins
+for the player sprite and action. S1/S2 can additionally allow 64px on the right
+outside strict locks, and S2 may consume pre-eased maxX; a cross-game default
+must account for those semantic rules instead of assuming S3K's exact contract.
+Object-controlled players skip this boundary path, and camera freezes also
+serve death/cutscenes. Thus a stopped camera alone does not prove an arena.
+
+Before implementation, establish a common finite/scrolling/wrapping presentation
+contract and how scripted cameras declare exemption. Preserve native signed-word
+and modular behavior; do not sort transient inverted bounds into a fabricated
+arena. Do not use Y death bounds as top/bottom masking limits. The proposed
+rule would also mask exposed ordinary level edges, a broader product behavior
+than the two manually approved fights. Verify off-centre cameras, moving and
+easing bounds, wrap rebases, cinematic actors beyond player limits, death,
+respawn, pause, rewind and all supported widths before replacing the explicit
+implementation. No physics or player-bound changes are implied.
+
+## Automatic conversion — authorized 2026-09-24
+
+The user chose to replace explicit per-arena activation with a default derived
+from bounds. The earlier manual-only policy and approvals describe the previous
+prototype, not the scope of this conversion. Keep the shader but remove
+`ArenaMaskSource`, SSZ event calls and SSZ-owned animation state. Derive immutable
+left/right edges and noise time alongside `LevelScrollPresentation`, which already
+retains and rewinds the camera generation paired with the displayed sprite table.
+Other publication modes derive from the current camera and captured level clock.
+A common `LevelBoundsMaskTransition` retains and snapshots fade history; this
+avoids duplicated event lifecycle and changes to published snapshot APIs.
+
+The mask covers only horizontal excess beyond the union of native views, including
+ordinary level edges. Wrapping foreground domains and transient inverted bounds
+produce no finite mask; native320 output is unchanged. S1/S2's ordinary-play
+right extension is preserved. No camera freeze, player hurt flag, HP or zone name
+activates the effect. Camera/player geometry remains unchanged. Existing centring
+policies remain independently owned by their camera events.
+
+Independently hashed per-gameplay-frame noise remains.
+The initial conversion removed the 45-frame event fade; the user correctly
+requested retaining activation fade when already-visible scenery becomes masked.
+The first conversion tracked per-column opacity in world coordinates. User review
+rejected its moving activation wipe; the correction below replaces that history
+mapping with viewport columns. Release fades out over 45 gameplay ticks. Noise
+uses the captured object-execution counter (which keeps advancing when a ROM
+event holds Level_frame_counter), never render count or gameplay RNG.
+The shader accepts an asymmetric interval instead of a centred width.
+
+Conversion validation includes geometry at all five widths, variable-width arena
+and one-sided edges, bounds expansion, native/inverted/wrapping no-ops, actual GPU
+clear-interval preservation and noise cadence, retained scroll/rewind state,
+SSZ replica lifecycle and the cold-route replay. Refresh the in-engine captures
+and combined delivery tests before claiming acceptance of the converted behavior.
+The previous combined run was deliberately interrupted for this changed scope;
+its partial results do not certify this implementation.
+
+
+## Correction: world-space fade without opaque incoming columns
+
+Review of the LRZ entry demo exposed a moving wipe in `4d89506dd`: columns
+entering the viewport inherited full target opacity immediately. A screen-space
+history trial removed that sweep but was also rejected: it pinned the fading
+scenery to the display instead of the level, and retained a spurious right wing
+after the initial camera moved. The corrected history remains in world space.
+Newly exposed columns inherit the adjacent column's fade progress; they do not
+arrive opaque. A camera jump to a non-overlapping view starts fresh presentation
+history. Rewind captures opacity and each column's fade rate; drawing cannot age it.
+
+The original 12px spatial feather made the apparent left edge sit approximately
+6–8px outside the computed edge. A diagnostic found the settled LRZ1 800px
+interval is exactly `[240,560)`; during entry its actual left edge is 234–237px
+while the native gate and camera ease. Do not add a fitted +8 coordinate offset.
+
+The user requested retaining that 12px feather as a temporal lag instead of a
+permanent transparency gradient. Outside the native window, use its smoothstep
+strength to interpolate fade duration from 90 ticks nearest the edge to 45 ticks
+in the outer wing. Both activation and release use that duration. Release retains
+the previous world column's rate when its bound disappears. Every covered pixel
+ultimately reaches full opacity, and every released pixel ultimately clears.
+The native clear interval is unchanged. This timing is a widescreen presentation
+choice, not behavior attributed to the ROM.
+
+A positioned LRZ capture diagnosed the initial flash: the setup pass prepared its
+mask at camera X11110, then the first ordinary view moved to X10720. Screen-space
+history dragged the right wing into different scenery. World-space remapping
+keeps that opacity on its original level columns. LRZ's left and right world
+bounds genuinely enter the viewport at different points during approach; the
+mask must not invent a simultaneous centred lock before the event creates one.
+
+Isolated validation compiles changed presentation classes separately from the
+ongoing delivery run, preserving that run's compiled candidate. JUnit Console
+checks geometry, world-space history, temporal feather activation/release,
+rewind, registration and real GPU output. These checks and the refreshed captures
+are focused evidence, not a claim that the ongoing broad run includes corrections.
+
+
+## Destination bounds and interrupted fades
+
+Further review identified the remaining left-edge motion as the ROM gate itself:
+`loc_85D06` walks Camera_min_X_pos behind Camera_X_pos until reaching _unkFAB4;
+`loc_85D28` does the corresponding right-side approach. `sub_85D6A` already
+knows the full intended rectangle (_unkFAB0..6). Camera's ordinary min/max target
+getters alone cannot reveal it because those native ramp writes synchronize the
+engine easing targets with current bounds.
+
+Common `CameraBoundaryPresentation` therefore exposes a pending horizontal
+transition destination, captured by a separately registered rewind sidecar.
+The shared S3K gate publishes that existing destination at begin and while
+approaching; the mask derives its geometry from it. Normal boundary assignments
+supersede the pending intent, and completed gates fall back to Camera's ordinary
+targets. No level name, boss identity or mask-on flag is involved. Gameplay retains
+all original ramp writes; the destination is presentation-only, and native320
+still has no mask. Fresh loads/reset clear the sidecar.
+
+Every fade tick approaches the latest desired opacity from its last value.
+An opening rectangle immediately reverses an incomplete fade-in; a renewed lock
+can reverse that fade-out again. There is no queued fade or wait for an endpoint.
+A focused regression exercises both reversals, including the slower edge strip.
+
+
+## Staggered border activation (supersedes proportional fade speeds)
+
+User review of `9721b4fa8` rejected simultaneously fading all twelve edge columns
+at different speeds. The requested half-fade/half-wipe requires transparent inner
+columns to wait until the outer columns have filled. The main wing still fades
+for 45 ticks. Each border column then waits for its outward neighbour to become
+opaque, and fades over four ticks before allowing the next column to begin.
+The innermost column therefore remains clear until all eleven preceding columns
+have filled; the final boundary remains exact. Both sides use mirrored order.
+
+History remains world-relative, derived from destination bounds. There is no
+independent queued wipe timer: release immediately reduces each column's current
+opacity at the normal fade rate, and renewed activation resumes partially faded
+columns from their current value. Columns still transparent do not appear after
+an interrupted activation. Existing opaque scenery stays opaque. Rewind needs
+only the opacity history, so the obsolete per-column fade-rate array is removed.
+
+This replaces the earlier simultaneous 45–90-tick rate interpolation, rather
+than adding another layer to it. Tests check every intermediate quarter-opacity
+step and every waiting inner column, camera movement, interruption and rewind.
+
+Staggered-border verification: queued Java21 Maven selection
+`TestLevelBoundsMaskTransition,TestArenaMaskState,TestArenaMaskRenderer,TestS3kSharedBossCameraGate,TestLevelSpritePresentation`
+with native GL passed 19 tests without skips. After adding early-cancellation
+and mid-border rewind assertions, rerunning TestLevelBoundsMaskTransition passed
+all seven tests. External SSZ450/LRZ600 previews in
+`campaign-20260924-bounds-staggered-border-800` fully decode, retain identical
+CSV gameplay to the destination-feather recordings, and contain zero deaths.
+The change-based selector still selects the full suite because this is shared
+presentation code; the combined campaign delivery run remains required. These
+focused results do not replace that outstanding gate.
+
+User accepted the staggered shape and requested approximately twice the speed.
+The main fade/release now takes 23 ticks (rounded from 22.5), and each border
+column takes two ticks. A fresh complete activation takes 47 ticks instead of
+93; the 12px width, world-space placement and interruption behavior are unchanged.
+
+The timing refinement passed eight focused transition/GPU tests, zero skips,
+using queued Maven `-Dtest=TestLevelBoundsMaskTransition,TestArenaMaskRenderer
+-Dopenggf.test.gl.native=true test` under Java21.
+
+
+## Player-aware current/destination selection trial
+
+User review of the three style previews identified a separate geometry issue:
+target bounds can cover scenery Sonic can still occupy during the native ramp.
+Each horizontal edge now selects current bounds while an active participant's
+rendered-body envelope overlaps the current-to-destination strip, and destination
+bounds once all participants are inside that edge. The two sides are independent.
+Ordinary expanding bounds open immediately; inverted domains remain unnormalized.
+Suppressed CPU followers do not hold the view open. This is common presentation
+selection, not a change to native camera or movement constraints.
+
+Selection changes redirect the existing opacity transition. Returning to the
+strip starts fade-out on that frame, without an instant clear or waiting for
+fade-in to finish. Moving inside again resumes fade-in from current opacity.
+
+The requested two 800px LRZ demos use isolated simple-crossfade presentation
+(18 ticks) to assess geometry without the rejected border wipe. The production
+style is not selected by these previews. External archive:
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260924-player-aware-mask/`.
+`original-input/capture.mp4` repeats the previous 600-frame input exactly.
+`turn-back/capture.mp4` uses the archived script/BK2: 75R, 110L, 50 neutral,
+180R, 185 neutral. No position or speed writes occur after the declared initial
+positioned setup. The second movie's gameplay matches an independent input probe;
+both have 600 rows, zero deaths and complete MP4 decodes.
+
+Probe evidence for the turn-back: at frame65 Sonic's body enters the destination
+(minX11264), while current minX11127 still trails it; world pixel11250 begins
+fading in. It reaches full opacity at82. At129 Sonic returns (centre11286),
+selection returns to current minX11196 and that pixel's opacity immediately
+falls from1 to0.9444; it is clear at146. Sonic reaches the current wall at155
+(centre11212) and re-enters the destination near289. Probe CSV and input scripts
+are archived alongside the movies. These are presentation trials, not cold-route
+completion or full delivery evidence.
+
+Focused validation: queued Java21 Maven selected geometry, opacity transition,
+GPU, shared gate, presentation, and the four required S3K regression classes
+(with absolute s3k.gen and native GL), running 78 tests with no skips. One new
+fixture assertion failed because setFocusedSprite resets camera X; correcting
+its setup and rerunning all four geometry tests passed. The other 74 tests were
+unchanged and green. An earlier fixture compile error used a nonexistent width
+setter and was replaced by a width spy. These were test setup errors, not reasons
+to change gameplay. Combined campaign delivery validation remains outstanding.
+
+
+## Shared edge transition and current-bound correction
+
+The player-aware trial at `3918c4da0` exposed separate fade ages in the
+current-bound strip and destination strip. Replace per-column fade clocks and
+staggered border activation with one 23-tick completion deadline per side.
+Retarget from displayed world-column opacity; same-direction motion keeps the
+remaining deadline rather than restarting on every native boundary step.
+Reversal interrupts immediately with a new fade from the displayed values.
+Already opaque outer columns stay opaque. Left and right retain independent
+transitions, and rewind captures both deadlines and immutable opacity samples.
+There is no spatial feather or delayed 12px wipe in this version.
+
+The turn-back movie also made the earlier gameplay boundary visible. This is
+ROM behavior: `loc_85D06` ratchets Camera_min_X_pos with Camera_X_pos on approach;
+`loc_85D28` is its right-entry counterpart. `loc_85D36` installs the final bounds
+from _unkFAB4/6 only when reached. In the recorded turn-back input, current minX
+stops at11196 while the final minX is11264; Sonic returns to centre11212 before
+resuming the approach. This is not an extra lock introduced by the mask.
+
+Following the user's correction, presentation now follows current bounds even
+when Sonic is inside the destination. This supersedes player-aware destination
+selection: space still admitted by the earlier lock stays visible. Native camera
+and movement logic are unchanged. The destination sidecar remains available as
+recorded transition geometry, but no longer selects the mask boundary.
+
+Validation of this revision: queued Java21 Maven with native GL ran
+`TestLevelBoundsMaskTransition,TestLevelBoundsMaskGeometry,TestArenaMaskRenderer,TestLevelSpritePresentation,TestS3kSharedBossCameraGate`:
+16 tests, zero failures/errors/skips. These are focused checks, not the pending
+combined campaign delivery run. Regressions cover shared completion under a
+moving boundary, reversal, independent sides, world projection, pause, rewind,
+teleport, current-bound selection and final-lock handoff. The GPU test exercises
+multiple viewport widths and scales.
+
+Both production-code demos are archived under
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260924-shared-edge-mask/`:
+`original-input/capture.mp4` and `turn-back/capture.mp4`. Each has 600 gameplay
+rows identical to the corresponding prior input/probe, zero deaths and a complete
+MP4 decode. The classpath contains production classes only, without the former
+preview transition/shader overrides. Reviewed approach frame65 and turn-back
+frame155: the temporary boundary leaves Sonic visible. Input/source hashes and
+exact capture commands are in each external provenance.json. User visual review
+and combined campaign integration remain outstanding.
+
+
+## Source-to-target mask shapes
+
+Follow-up to `911aad01b`: retain the user's current-bound correction, but replace
+its carried completion deadline with an explicit source/target shape blend.
+When effective geometry changes, capture that side's displayed world-space mask
+as the source, take the newly effective boundary as the target, and advance one
+23-tick linear crossfade. Both shapes stay anchored to world coordinates;
+unchanged opaque pixels remain opaque. With no visible prior mask, exposed
+pixels start from the clear camera-edge sample. Camera scrolling alone projects
+both shapes without restarting the blend.
+
+A subsequent effective boundary interrupts immediately, including one moving in
+the same direction. The old remaining deadline is not inherited: that accelerated
+a newly covered strip if the previous fade was nearly complete. Native ratcheting
+can retarget every frame, but after the boundary stops the entire side completes
+within23 ticks. No transition is queued, and no boundary position is interpolated.
+Left and right have separate source, target and progress snapshots for rewind.
+The pending final boss destination remains excluded until the gameplay gate
+actually installs it. This changes only widescreen presentation; ROM lock logic
+and gameplay coordinates are untouched.
+
+Validation: the same queued Java21/native-GL focused selection listed above
+passed16 tests with zero failures/errors/skips. The changed regression verifies
+that existing partially masked pixels and a newly covered strip interpolate
+from their respective source values using the same full transition progress.
+Other checks retain reversal, independent edges, pause, world projection, rewind,
+teleport, current/final-bound selection and GPU width/scale coverage.
+
+Production demos are now in external
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260924-lock-shape-crossfade/`,
+with `original-input/capture.mp4` and `turn-back/capture.mp4`. Both600-row gameplay
+CSVs exactly match their prior runs/probe, both have zero deaths, and both MP4s
+fully decode. Reviewed approach frame65 and turn-back frame155. Input/source
+hashes and exact commands accompany the videos. These focused checks do not
+complete the combined campaign validation or authorize a delivery claim.

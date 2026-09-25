@@ -42,6 +42,11 @@ S3KL set: `$4A` Bumper, `$4B` CNZ triangle bumper, `$4C-$4E` CNZ objects, `$4F` 
 `$A7` CNZEndBoss. Every new DEZ factory must be zone-set bound (`registerZoneSetBound(..., SKL, ...)`
 or the existing `zoneSet ==` branch) and, where SOZ/LRZ/SSZ reuse the ID under SKL, zone bound too.
 
+Current campaign additions after `de73bead8`: `$52` lightning (48/94 placements),
+then `$50` conveyor belts (8/5), bring the live census to 280/365 and 417/494.
+The original tables below remain the initial inventory; current validation is
+in the two act matrices and `TestS3kDezPlacementCensus`.
+
 ## Factory classification
 
 Read from `Sonic3kObjectRegistry` at `9cba6dbb6`. It is a registration fact, not route evidence.
@@ -59,14 +64,14 @@ Read from `Sonic3kObjectRegistry` at `9cba6dbb6`. It is a registration fact, not
 | Unregistered | 23 | 13 |
 | **Total** | **365** | **494** |
 
-`$6D` resolved: `Obj_InvisibleShockBlock` is **not implemented**. Under SKL the `$6D` factory
-(`HCZ_WATER_SPLASH`, registry line 585) returns a placeholder, and no class names or models a shock
-block. ROM (sonic3k.asm:43265): `bset #5,shield_reaction(a0)` then falls into
-`Obj_InvisibleHurtBlockHorizontal`, exactly as `Obj_InvisibleLavaBlock` sets bit 4. Placement
-`status` bit 0 selects `loc_1F4C4`, bit 1 selects `loc_1F528`, neither selects `loc_1F45E`; DEZ uses
-no-flip (56) and Y-flip (22) only. The engine's `Sonic3kInvisibleHurtBlockHObjectInstance` checks
-`hasShield()` generically; the shock block needs the lightning-shield reaction bit. The LRZ plan
-adds the lava variant (`$6E`): land the shield-reaction parameter once and share it.
+`$6D` resolved and implemented in the 2026-09-22 campaign: SKL now creates
+`Sonic3kInvisibleShockBlockObjectInstance`; S3KL keeps `HCZWaterSplash`.
+`Obj_InvisibleShockBlock` (sonic3k.asm:43265) sets shield-reaction bit 5 then uses
+the horizontal hurt block shared with LRZ's fire-bit `$6E`. Status bit 0 selects
+sides before bit 1 selects the underside; no flags select the top. DEZ uses
+no-flip (56) and Y-flip (22) placements. Shield/face combinations, init return,
+placed-floor damage and rewind/forward replay are checked; native visual and
+act-wide route coverage remain open.
 
 `$78`: `Sonic3kObjectRegistry` registers `FBZ_DEZ_PLAYER_LAUNCHER` twice (line 217
 `FbzDezPlayerLauncherInstance`, line 1411 `FbzDezPlayerLauncherObjectInstance`); the later `put`
@@ -93,26 +98,26 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$50` | `Obj_DEZConveyorBelt` | 8 | 5 | placeholder | 4 |
 | `$52` | `Obj_DEZLightning` | 48 | 94 | placeholder | 4 |
 | `$53` | `Obj_DEZConveyorPad` | 4 | 5 | placeholder | 4 (reads the flag, sonic3k.asm:93727) |
-| `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | placeholder | 4 |
+| `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | `S3kDezEnergyBridgeObjectInstance` | 4 |
 | `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder | 4 |
 | `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | placeholder | 5 |
-| `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | placeholder | 3 |
-| `$59` | `Obj_DEZTeleporter` | 0 | 21 | placeholder | 3 |
-| `$5A` | `Obj_DEZGravityTube` | 24 | 17 | placeholder | 3 |
-| `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | placeholder | 3 |
-| `$5C` | `Obj_DEZGravityHub` | 0 | 3 | placeholder | 3 |
-| `$5D` | `Obj_DEZRetractingSpring` | 0 | 13 | unregistered | 4 |
+| `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** (`S3kDezGravitySwitchObjectInstance`; art not registered) | 3 |
+| `$59` | `Obj_DEZTeleporter` | 0 | 21 | `S3kDezTeleporterObjectInstance` | 3 |
+| `$5A` | `Obj_DEZGravityTube` | 24 | 17 | `S3kDezGravityTubeObjectInstance` | 3 |
+| `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** (`S3kDezGravitySwapObjectInstance`) | 3 |
+| `$5C` | `Obj_DEZGravityHub` | 0 | 3 | `S3kDezGravityHubObjectInstance` | 3 |
+| `$5D` | `Obj_DEZRetractingSpring` | 0 | 13 | `S3kDezRetractingSpringObjectInstance` | 4 |
 | `$5E` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered | 4 |
-| `$5F` | `Obj_DEZGravityRoom` | 1 | 0 | unregistered | 3 |
-| `$60` | `Obj_DEZBumperWall` | 10 | 0 | unregistered | 4 |
-| `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | unregistered | 3 |
+| `$5F` | `Obj_DEZGravityRoom` | 1 | 0 | `S3kDezGravityRoomObjectInstance` | 3 |
+| `$60` | `Obj_DEZBumperWall` | 10 | 0 | `S3kDezBumperWallObjectInstance` | 4 |
+| `$61` | `Obj_DEZGravityPuzzle` | 1 | 0 | `S3kDezGravityPuzzleObjectInstance` | 3 |
 | `$6A` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete | verify only (8) |
 | `$6B` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete | verify only (8) |
-| `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | placeholder | 4 |
+| `$6D` | `Obj_InvisibleShockBlock` | 22 | 56 | implemented | 4 |
 | `$78` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete | 4 (verify; duplicate registration above) |
-| `$A4` | `Obj_Spikebonker` | 7 | 11 | placeholder | 4 |
-| `$A5` | `Obj_Chainspike` | 6 | 12 | placeholder | 4 |
-| `$A6` | `Obj_DEZMiniboss` | 1 | 0 | placeholder | 6 |
+| `$A4` | `Obj_Spikebonker` | 7 | 11 | `SpikebonkerBadnikInstance` | 4 |
+| `$A5` | `Obj_Chainspike` | 6 | 12 | implemented | 4 |
+| `$A6` | `Obj_DEZMiniboss` | 1 | 0 | `DezMinibossInstance` (connected route validation in progress) | 6 |
 | `$A7` | `Obj_DEZEndBoss` | 0 | 1 | placeholder | 8 |
 
 Both bosses are **placed** objects gated by `Check_CameraInRange`, not event spawns.
@@ -239,12 +244,12 @@ so subtypes `$80+` arrive inverted.
 | `$53` | `$38` | `Obj_DEZConveyorPad` | 0 | 2 | placeholder |
 | `$53` | `$48` | `Obj_DEZConveyorPad` | 0 | 1 | placeholder |
 | `$53` | `$B0` | `Obj_DEZConveyorPad` | 1 | 0 | placeholder |
-| `$55` | `$01` | `Obj_DEZEnergyBridge` | 4 | 9 | placeholder |
-| `$55` | `$05` | `Obj_DEZEnergyBridge` | 0 | 1 | placeholder |
-| `$55` | `$06` | `Obj_DEZEnergyBridge` | 2 | 0 | placeholder |
-| `$55` | `$45` | `Obj_DEZEnergyBridge` | 0 | 2 | placeholder |
-| `$55` | `$61` | `Obj_DEZEnergyBridge` | 2 | 0 | placeholder |
-| `$55` | `$66` | `Obj_DEZEnergyBridge` | 5 | 0 | placeholder |
+| `$55` | `$01` | `Obj_DEZEnergyBridge` | 4 | 9 | implemented |
+| `$55` | `$05` | `Obj_DEZEnergyBridge` | 0 | 1 | implemented |
+| `$55` | `$06` | `Obj_DEZEnergyBridge` | 2 | 0 | implemented |
+| `$55` | `$45` | `Obj_DEZEnergyBridge` | 0 | 2 | implemented |
+| `$55` | `$61` | `Obj_DEZEnergyBridge` | 2 | 0 | implemented |
+| `$55` | `$66` | `Obj_DEZEnergyBridge` | 5 | 0 | implemented |
 | `$56` | `$07` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder |
 | `$57` | `$00` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
 | `$57` | `$01` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
@@ -253,57 +258,57 @@ so subtypes `$80+` arrive inverted.
 | `$57` | `$05` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
 | `$57` | `$06` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
 | `$57` | `$07` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$58` | `$00` | `Obj_DEZGravitySwitch` | 0 | 5 | placeholder |
-| `$59` | `$0D` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$15` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$18` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$22` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$25` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$3A` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$45` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$4D` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$8D` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$95` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$A2` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$A5` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$BA` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$59` | `$C5` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
-| `$59` | `$CD` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
-| `$5A` | `$08` | `Obj_DEZGravityTube` | 7 | 2 | placeholder |
-| `$5A` | `$10` | `Obj_DEZGravityTube` | 6 | 6 | placeholder |
-| `$5A` | `$12` | `Obj_DEZGravityTube` | 0 | 3 | placeholder |
-| `$5A` | `$18` | `Obj_DEZGravityTube` | 2 | 1 | placeholder |
-| `$5A` | `$22` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5A` | `$48` | `Obj_DEZGravityTube` | 8 | 0 | placeholder |
-| `$5A` | `$50` | `Obj_DEZGravityTube` | 1 | 0 | placeholder |
-| `$5A` | `$92` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5A` | `$98` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5A` | `$9C` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5A` | `$A4` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5B` | `$00` | `Obj_DEZGravitySwap` | 0 | 11 | placeholder |
-| `$5C` | `$05` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
-| `$5C` | `$06` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
-| `$5C` | `$0F` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
-| `$5D` | `$02` | `Obj_DEZRetractingSpring` | 0 | 13 | unregistered |
+| `$58` | `$00` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** |
+| `$59` | `$0D` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$15` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$18` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$22` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$25` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$3A` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$45` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$4D` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$8D` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$95` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$A2` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$A5` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$BA` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$59` | `$C5` | `Obj_DEZTeleporter` | 0 | 2 | implemented |
+| `$59` | `$CD` | `Obj_DEZTeleporter` | 0 | 1 | implemented |
+| `$5A` | `$08` | `Obj_DEZGravityTube` | 7 | 2 | implemented |
+| `$5A` | `$10` | `Obj_DEZGravityTube` | 6 | 6 | implemented |
+| `$5A` | `$12` | `Obj_DEZGravityTube` | 0 | 3 | implemented |
+| `$5A` | `$18` | `Obj_DEZGravityTube` | 2 | 1 | implemented |
+| `$5A` | `$22` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5A` | `$48` | `Obj_DEZGravityTube` | 8 | 0 | implemented |
+| `$5A` | `$50` | `Obj_DEZGravityTube` | 1 | 0 | implemented |
+| `$5A` | `$92` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5A` | `$98` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5A` | `$9C` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5A` | `$A4` | `Obj_DEZGravityTube` | 0 | 1 | implemented |
+| `$5B` | `$00` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** |
+| `$5C` | `$05` | `Obj_DEZGravityHub` | 0 | 1 | implemented |
+| `$5C` | `$06` | `Obj_DEZGravityHub` | 0 | 1 | implemented |
+| `$5C` | `$0F` | `Obj_DEZGravityHub` | 0 | 1 | implemented |
+| `$5D` | `$02` | `Obj_DEZRetractingSpring` | 0 | 13 | implemented |
 | `$5E` | `$00` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered |
-| `$5F` | `$00` | `Obj_DEZGravityRoom` | 1 | 0 | unregistered |
-| `$60` | `$00` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
-| `$60` | `$18` | `Obj_DEZBumperWall` | 4 | 0 | unregistered |
-| `$60` | `$38` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
-| `$60` | `$80` | `Obj_DEZBumperWall` | 2 | 0 | unregistered |
-| `$61` | `$00` | `Obj_DEZGravityPuzzle` | 1 | 0 | unregistered |
+| `$5F` | `$00` | `Obj_DEZGravityRoom` | 1 | 0 | implemented |
+| `$60` | `$00` | `Obj_DEZBumperWall` | 2 | 0 | implemented |
+| `$60` | `$18` | `Obj_DEZBumperWall` | 4 | 0 | implemented |
+| `$60` | `$38` | `Obj_DEZBumperWall` | 2 | 0 | implemented |
+| `$60` | `$80` | `Obj_DEZBumperWall` | 2 | 0 | implemented |
+| `$61` | `$00` | `Obj_DEZGravityPuzzle` | 1 | 0 | implemented |
 | `$6A` | `$F1` | `Obj_InvisibleHurtBlockHorizontal` | 0 | 1 | shared concrete |
 | `$6B` | `$F1` | `Obj_InvisibleHurtBlockVertical` | 0 | 5 | shared concrete |
-| `$6D` | `$61` | `Obj_InvisibleShockBlock` | 1 | 6 | placeholder |
-| `$6D` | `$71` | `Obj_InvisibleShockBlock` | 4 | 13 | placeholder |
-| `$6D` | `$81` | `Obj_InvisibleShockBlock` | 1 | 0 | placeholder |
-| `$6D` | `$E1` | `Obj_InvisibleShockBlock` | 13 | 29 | placeholder |
-| `$6D` | `$F1` | `Obj_InvisibleShockBlock` | 3 | 8 | placeholder |
+| `$6D` | `$61` | `Obj_InvisibleShockBlock` | 1 | 6 | implemented |
+| `$6D` | `$71` | `Obj_InvisibleShockBlock` | 4 | 13 | implemented |
+| `$6D` | `$81` | `Obj_InvisibleShockBlock` | 1 | 0 | implemented |
+| `$6D` | `$E1` | `Obj_InvisibleShockBlock` | 13 | 29 | implemented |
+| `$6D` | `$F1` | `Obj_InvisibleShockBlock` | 3 | 8 | implemented |
 | `$78` | `$00` | `Obj_FBZDEZPlayerLauncher` | 10 | 0 | shared concrete |
-| `$A4` | `$20` | `Obj_Spikebonker` | 4 | 10 | placeholder |
-| `$A4` | `$40` | `Obj_Spikebonker` | 3 | 1 | placeholder |
-| `$A5` | `$00` | `Obj_Chainspike` | 6 | 12 | placeholder |
-| `$A6` | `$00` | `Obj_DEZMiniboss` | 1 | 0 | placeholder |
+| `$A4` | `$20` | `Obj_Spikebonker` | 4 | 10 | implemented |
+| `$A4` | `$40` | `Obj_Spikebonker` | 3 | 1 | implemented |
+| `$A5` | `$00` | `Obj_Chainspike` | 6 | 12 | implemented |
+| `$A6` | `$00` | `Obj_DEZMiniboss` | 1 | 0 | `DezMinibossInstance` |
 | `$A7` | `$00` | `Obj_DEZEndBoss` | 0 | 1 | placeholder |
 
 ## Dynamic objects not in the placement files

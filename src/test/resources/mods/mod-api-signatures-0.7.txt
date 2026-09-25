@@ -1581,7 +1581,7 @@ CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$BuzzerRewindExtra 
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$CoconutsRewindExtra public  <init>(int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$MasherRewindExtra public  <init>(int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$MonitorRewindExtra public  <init>(java.lang.String)
-CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  <init>(short,short,short,short,int,int,com.openggf.physics.Direction,byte,com.openggf.game.GroundMode,short,short,short,short,short,short,byte,byte,boolean,byte,byte,boolean,byte,short,short,short,short,short,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean,int,short,int,int,boolean,int,boolean,boolean,int,boolean,int,boolean,int,boolean,boolean,boolean,int,boolean,short,boolean,boolean,short,int,byte,boolean,com.openggf.game.ShieldType,boolean,boolean,int,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,short,boolean,boolean,byte,boolean,int,byte,byte,byte,byte,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,int,int,int,int,int,boolean,com.openggf.sprites.managers.PlayableSpriteMovement$RewindState,com.openggf.sprites.managers.SpindashDustController$RewindState,com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState,com.openggf.sprites.playable.DrowningController$RewindState,com.openggf.sprites.playable.TailsCarryController$Snapshot,com.openggf.sprites.playable.SuperStateController$RewindState,com.openggf.sprites.managers.TailsTailsController$RewindState,com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra,short[],short[],short[],byte[],byte[],byte[],com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra)
+CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  <init>(short,short,short,short,int,int,com.openggf.physics.Direction,byte,boolean,int,com.openggf.game.GroundMode,short,short,short,short,short,short,byte,byte,boolean,byte,byte,boolean,byte,short,short,short,short,short,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean,int,short,int,int,boolean,int,boolean,boolean,int,boolean,int,boolean,int,boolean,boolean,boolean,int,boolean,short,boolean,boolean,short,int,byte,boolean,com.openggf.game.ShieldType,boolean,boolean,int,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,short,boolean,boolean,byte,boolean,int,byte,byte,byte,byte,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,int,int,int,int,int,boolean,com.openggf.sprites.managers.PlayableSpriteMovement$RewindState,com.openggf.sprites.managers.SpindashDustController$RewindState,com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState,com.openggf.sprites.playable.DrowningController$RewindState,com.openggf.sprites.playable.TailsCarryController$Snapshot,com.openggf.sprites.playable.SuperStateController$RewindState,com.openggf.sprites.managers.TailsTailsController$RewindState,com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra,short[],short[],short[],byte[],byte[],byte[],com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra public  <init>(com.openggf.sprites.playable.SidekickCpuController$State,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,int,int,boolean,boolean,int,int,int,int,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,boolean,boolean,com.openggf.sprites.playable.SidekickCpuController$NormalStepDiagnostics,short,short,boolean,boolean,int,boolean,int,boolean,short,short,int,int,int,boolean,boolean)
 CONSTRUCTOR com.openggf.level.objects.PersistentRespawnState public  <init>(long[],long[])
 CONSTRUCTOR com.openggf.level.objects.PersistentRespawnState public  <init>(long[],long[],long[])
@@ -10320,6 +10320,7 @@ METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra publi
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean hasQueuedControlLockedState()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean hasQueuedForceInputRightState()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean hidden()
+METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean highPriority()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean hurt()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean hurtAtFrameStart()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean hurtRecoveryCompletedThisFrame()
@@ -10332,6 +10333,7 @@ METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra publi
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean jumpInputPressed()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean jumpInputPressedPreviousFrame()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean jumping()
+METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean latchedSolidObjectBound()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean latchedSolidObjectReleased()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean leftInputPressed()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  boolean logicalJumpPressState()
@@ -10436,6 +10438,7 @@ METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra publi
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int moveLockTimer()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int objectControlGeneration()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int objectControlReleasedFrame()
+METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int priorityBucket()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int rightWallPenetrationTimer()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int skidDustTimer()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  int speedShoesRemainingTicks()
@@ -12218,6 +12221,7 @@ METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  boolean getSk
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  boolean getSpindash()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  boolean getSpringing()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  boolean hasDeferredGroundWallVelocityResponse()
+METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  boolean hasLatchedSolidObjectBinding()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  boolean hasMgzTopPlatformSpringHandoffPending()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  boolean hasRenderFlagOnScreenState()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  boolean hasShield()
@@ -15754,6 +15758,7 @@ RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindE
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra hasQueuedForceInputRightState boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra height int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra hidden boolean
+RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra highPriority boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra historyPos byte
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra hurt boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra hurtAtFrameStart boolean
@@ -15774,6 +15779,7 @@ RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindE
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra jumpPressHistory byte[]
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra jumping boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra lastFixedSkidDustTickFrame int
+RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra latchedSolidObjectBound boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra latchedSolidObjectId int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra latchedSolidObjectReleased boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra layer byte
@@ -15817,6 +15823,7 @@ RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindE
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra preserveRollingOnNextLanding boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra preserveRollingOnNextRollStop boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra preventTailsRespawn boolean
+RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra priorityBucket int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra pushing boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra pushingAtFrameStart boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra queuedControlLocked boolean

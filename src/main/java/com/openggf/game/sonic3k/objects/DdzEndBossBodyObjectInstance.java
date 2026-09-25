@@ -43,19 +43,24 @@ public final class DdzEndBossBodyObjectInstance extends AbstractDdzObjectInstanc
 
 
     DdzEndBossBodyObjectInstance(DdzEndBossObjectInstance boss) {
-        super(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, 0, 0, false, 0),
-                "DDZEndBossBody", boss);
+        this(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, 0, 0, false, 0), boss);
+    }
+
+    private DdzEndBossBodyObjectInstance(ObjectSpawn spawn, DdzEndBossObjectInstance boss) {
+        super(spawn, "DDZEndBossBody", boss);
         follow();
     }
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzEndBossBodyObjectInstance(ObjectSpawn spawn) {
-        this((DdzEndBossObjectInstance) null);
+        this(spawn, (DdzEndBossObjectInstance) null);
     }
 
     @Override
     public DdzEndBossBodyObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzEndBossBodyObjectInstance((DdzEndBossObjectInstance) null);
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzEndBossBodyObjectInstance(ctx.spawn());
     }
 
     static DdzEndBossBodyObjectInstance find(ObjectServices services) {

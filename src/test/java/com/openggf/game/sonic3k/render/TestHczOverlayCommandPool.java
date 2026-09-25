@@ -51,6 +51,24 @@ class TestHczOverlayCommandPool {
     }
 
     @Test
+    void columnReplaySnapshotsAndClearsPooledVscroll() {
+        RecordingRenderer renderer = new RecordingRenderer();
+        RecordingBackgroundRenderer background = new RecordingBackgroundRenderer();
+        short[] source = {8, 7, -3, 264};
+        var command = new HczBgHighPriorityTileRenderer.OverlayCommand().configureCaptured(
+                renderer, background, 320, 224, new int[224], 0, 64, 224,
+                1, 1, 2, 3, 0, false, 0, new int[]{0, 0, 320, 224}).withColumns(source);
+        source[0] = 99;
+        command.execute(0, 0, 0, 0);
+        var reused = HczBgHighPriorityTileRenderer.acquireCaptured(renderer, new int[]{0, 0, 320, 224}, 0);
+        reused.configureCaptured(renderer, background, 320, 224, new int[224], 0, 64, 0,
+                1, 1, 2, 3, 0, false, 0, new int[]{0, 0, 320, 224});
+        reused.execute(0, 0, 0, 0);
+        assertEquals(List.of("[8, 7, -3, 264]", "null"), renderer.columnUploads,
+                "priority replay must retain the captured BG columns without leaking them to the next level");
+    }
+
+    @Test
     void overlayBiasesBgScrollWordsByWindowBaseAndPreservesFgWords() {
         RecordingRenderer renderer = new RecordingRenderer();
         RecordingBackgroundRenderer backgroundRenderer = new RecordingBackgroundRenderer();
@@ -112,6 +130,12 @@ class TestHczOverlayCommandPool {
         private final List<Float> vdpWrapWidths = new ArrayList<>();
         private final List<Boolean> verticalWraps = new ArrayList<>();
         private final List<Boolean> priorityMasks = new ArrayList<>();
+        private final List<String> columnUploads = new ArrayList<>();
+
+        @Override public void enablePerColumnVScroll(short[] columns) {
+            columnUploads.add(java.util.Arrays.toString(columns));
+        }
+
 
         @Override public void enablePerLineScroll(int hScrollTextureId, float screenHeight,
                 float vdpWrapWidth, float nametableBase, float sampleYOffsetPx) {

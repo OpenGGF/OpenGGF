@@ -155,6 +155,46 @@ class TestRespawnStrategies {
     }
 
     @Test
+    void reverseGravityRespawnsTheCpuSidekickFromTheOtherSideOfTheLeader() {
+        // ROM Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26493-26499):
+        //   move.w y_pos(a1),d0 / move.w d0,(Tails_CPU_target_Y).w
+        //   subi.w #$C0,d0
+        //   tst.b (Reverse_gravity_flag).w / beq.s loc_13B78
+        //   addi.w #2*$C0,d0            ; net +$C0 instead of -$C0
+        //   move.w d0,y_pos(a0)
+        // The sidekick flies in from the side the level's "sky" is on, which under the flag
+        // is below the leader. The target itself (Tails_CPU_target_Y) is NOT mirrored: it is
+        // written from the leader's raw y_pos before the branch.
+        installFlatFloorLevelManager();
+
+        TestableSprite sk = new TestableSprite("tails_p2");
+        TestableSprite main = new TestableSprite("sonic");
+        main.setCentreX((short) 0x0100);
+        main.setCentreY((short) 0x0400);
+        main.prefillPositionHistoryWithCentre((short) 0x0100, (short) 0x0400);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        TailsRespawnStrategy strategy = new TailsRespawnStrategy(ctrl);
+
+        com.openggf.game.GameServices.gameState().setReverseGravityActive(false);
+        assertTrue(strategy.beginApproach(sk, main));
+        assertEquals((short) (0x0400 - 0xC0), sk.getCentreY(),
+                "control: upright, loc_13B50 spawns the sidekick $C0 above the leader");
+
+        TestableSprite invertedSk = new TestableSprite("tails_p2");
+        SidekickCpuController invertedCtrl = new SidekickCpuController(invertedSk, main);
+        TailsRespawnStrategy invertedStrategy = new TailsRespawnStrategy(invertedCtrl);
+
+        com.openggf.game.GameServices.gameState().setReverseGravityActive(true);
+        try {
+            assertTrue(invertedStrategy.beginApproach(invertedSk, main));
+            assertEquals((short) (0x0400 + 0xC0), invertedSk.getCentreY(),
+                    "addi.w #2*$C0,d0 puts the inverted sidekick $C0 BELOW the leader");
+        } finally {
+            com.openggf.game.GameServices.gameState().setReverseGravityActive(false);
+        }
+    }
+
+    @Test
     void sonicStrategyReturnsFalseWithoutLevel() {
         TestableSprite sk = new TestableSprite("sonic_p2");
         TestableSprite main = new TestableSprite("sonic");

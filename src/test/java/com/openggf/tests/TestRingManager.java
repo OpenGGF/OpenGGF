@@ -705,6 +705,36 @@ public class TestRingManager {
     }
 
     @Test
+    public void testAttractedRingRestoreDoesNotFreeRestoredObjectSlot() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+        RingManager ringManager = buildRingManagerWithLevelManager(List.of(), levelManager);
+        RingSnapshot beforeAttraction = ringManager.capture();
+        int slot = objectManager.allocateDynamicSlot();
+        objectManager.releaseDynamicSlot(slot);
+        ringManager.restore(new RingSnapshot(
+                beforeAttraction.collected(), beforeAttraction.sparkleTimers(),
+                beforeAttraction.placementCursorIndex(), beforeAttraction.placementLastCameraX(),
+                beforeAttraction.lostRingActiveCount(), beforeAttraction.spillAnimCounter(),
+                beforeAttraction.spillAnimAccum(), beforeAttraction.spillAnimFrame(),
+                beforeAttraction.lostRingFrameCounter(), beforeAttraction.lostRings(),
+                new RingSnapshot.AttractedRingEntry[] {
+                        new RingSnapshot.AttractedRingEntry(
+                                true, 0, 0x200, 0x180, 0, 0, 0, 0, 0, slot, false, -1)
+                }));
+        // Model the preceding object-manager restore: its saved occupant now owns
+        // the same numeric SST that an attracted ring used in the future timeline.
+        objectManager.releaseDynamicSlot(slot);
+        assertEquals(slot, objectManager.allocateDynamicSlot());
+        ringManager.restore(beforeAttraction);
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "Discarding future ring state must not free the restored object's SST");
+        assertFalse(slot == objectManager.allocateDynamicSlot());
+        assertEquals(0, ringManager.capture().attractedRings().length);
+    }
+
+    @Test
     public void testS3kAttractedRingBecomesBouncingRingWhenLightningShieldIsLost() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);

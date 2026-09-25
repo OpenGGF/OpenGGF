@@ -158,6 +158,26 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         }
     }
 
+    /**
+     * The spawn {@code Obj_LRZRockCrusher}'s timer child allocates its slabs from
+     * (sonic3k.asm:197227-197231, :197250-197254). {@code AllocateObject} hands out a zeroed SST
+     * and the ROM writes only word 0, {@code $32}, {@code x_pos} and {@code y_pos}, so the subtype
+     * is 0 -- entry 0 of {@code byte_39CA4}.
+     */
+    public static ObjectSpawn crusherDebrisSpawn(int x, int y) {
+        return new ObjectSpawn(x & 0xFFFF, y & 0xFFFF,
+                com.openggf.game.sonic3k.constants.Sonic3kObjectIds.LBZ_ROLLING_DRUM,
+                0, 0, false, 0);
+    }
+
+    /**
+     * {@code move.b #1,$32(a1)} (:197229): the slab arrives already broken loose rather than
+     * waiting to be stood on.
+     */
+    public void markAlreadyBrokenLoose() {
+        this.armed = true;
+    }
+
     @Override
     public LrzCollapsingBridgeInstance recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
@@ -198,7 +218,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
         // loc_39CCC (sonic3k.asm:77429-77435) is the SolidObjectTop call, run by
         // the engine's solid checkpoint from getSolidParams(). The tail is
-        // Sprite_OnScreen_Test (:77436), a draw test -- not an unload.
+        // Sprite_OnScreen_Test (:77436), whose loc_1B5A0 deletes out of range.
     }
 
     /** ROM {@code loc_39CE8} (sonic3k.asm:77439-77453). */
@@ -362,12 +382,10 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
     @Override
     public boolean usesCustomOutOfRangeCheck() {
-        // Audited per P53: Obj_LRZCollapsingBridge contains NO out_of_range,
-        // MarkObjGone, Delete_Sprite_If_Not_In_Range or Go_Delete_SpriteSlotted
-        // in any routine. Its only delete is the post-collapse countdown expiry
-        // in loc_39CE8 (sonic3k.asm:77453). Sprite_OnScreen_Test (:77436) is a
-        // draw test, not an unload. The shared camera unload must not apply.
-        return true;
+        // loc_39CCC ends in Sprite_OnScreen_Test: release/delete out of range.
+        // After collapse, loc_39CE8 instead owns a short countdown and returns
+        // without that helper until it explicitly deletes. Keep only that phase.
+        return collapsed;
     }
 
     @Override

@@ -138,8 +138,8 @@ class TestMhzBossObjects {
                 "Obj_MHZEndBoss loc_76004 writes collision_property(a0)=9");
         assertEquals(0xCF, miniboss.getCollisionFlags(),
                 "ObjDat_MHZMiniboss uses collision size $0F; engine boss touch category is $C0");
-        assertEquals(0xCF, endBoss.getCollisionFlags(),
-                "Obj_MHZEndBoss active core restores collision size $0F; engine boss touch category is $C0");
+        assertEquals(0, endBoss.getCollisionFlags(),
+                "Obj_MHZEndBoss has no touch flags before camera admission");
     }
 
     @Test
@@ -147,8 +147,16 @@ class TestMhzBossObjects {
         MhzEndBossInstance endBoss = new MhzEndBossInstance(new ObjectSpawn(
                 0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
 
+        assertEquals(0x4200, endBoss.getX(),
+                "Obj_MHZEndBoss must retain placement X before Check_CameraInRange admits it");
+        var camera = new Camera();
+        camera.setX((short) 0x3C40);
+        endBoss.setServices(new StubObjectServices() {
+            @Override public Camera camera() { return camera; }
+        });
+        endBoss.update(0, null);
         assertEquals(0x42C0, endBoss.getState().x,
-                "Obj_MHZEndBoss init adds $C0 to x_pos(a0) before normal setup");
+                "Obj_MHZEndBoss adds $C0 only after camera admission");
         assertEquals(0x42C0 << 16, endBoss.getState().xFixed,
                 "The fixed-point shadow must match the ROM-adjusted x_pos");
     }
@@ -2007,11 +2015,20 @@ class TestMhzBossObjects {
         assertEquals(false, controller.isDestroyed(),
                 "loc_768B6 waits for the final-hit handoff flag to clear before deleting itself");
 
-        setPrivateInt(endBoss, "finalHitHandoffFlag", 0);
+        assertTrue(mhzEvents.isShipControllerSignalFlagSet(),
+                "fatal hit publishes the event-owned _unkFAA9 byte");
+        mhzEvents.setShipControllerSignalFlag(false); // loc_55686 acknowledges at wrap
+        player.setAir(true);
+        controller.update(1, player);
+        assertEquals(0, mhzEvents.getEndBossWalkoffPrepEventFlag(),
+                "loc_768D2 waits for landing before ending arena repetition");
+        player.setAir(false);
         controller.update(1, player);
 
         assertEquals(0x55, getPrivateInt(mhzEvents, "endBossWalkoffPrepEventFlag"),
                 "loc_768D2 writes Events_fg_5=$55 when Player_1 is grounded");
+        assertEquals(0, player.getForcedInputMask(), "loc_768D2 does not dispatch loc_768FE immediately");
+        controller.update(2, player);
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, player.getForcedInputMask(),
                 "loc_768FE writes Ctrl_1_logical=RIGHT until Player_1.x_pos reaches $4600");
         assertEquals(Direction.RIGHT, player.getDirection(),
@@ -2600,6 +2617,12 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0180);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4600, (short) 0x0200);
         TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x45C0, (short) 0x0200);
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        player.setInteractSlotIndex(23);
+        sidekick.setInteractSlotIndex(28);
+        player.setAir(true);
+        sidekick.setAir(true);
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -2637,6 +2660,14 @@ class TestMhzBossObjects {
             endBoss.update(frame, player);
         }
 
+        assertFalse(player.isObjectControlled(), "Restore_PlayerControl releases results object ownership");
+        assertFalse(sidekick.isObjectControlled());
+        assertEquals(23, player.getInteractSlotIndex(), "Restore_PlayerControl preserves interact");
+        assertEquals(28, sidekick.getInteractSlotIndex(), "Restore_PlayerControl2 preserves interact");
+        assertFalse(player.getAir());
+        assertFalse(sidekick.getAir());
+        assertTrue(player.isHighPriority());
+        assertTrue(sidekick.isHighPriority());
         assertEquals(true, player.isControlLocked(),
                 "loc_76270 sets Ctrl_1_locked immediately after Restore_PlayerControl");
         assertEquals(AbstractPlayableSprite.INPUT_UP, player.getForcedInputMask(),
@@ -3169,7 +3200,7 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0180);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, mhzEvents);
-        setPrivateInt(mhzEvents, "shipControllerSignalFlag", 1);
+        // The ship signal arrives after the post-capsule reset below.
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -3228,6 +3259,7 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0200);
         endBoss.update(7, player);
         endBoss.update(8, player);
+        mhzEvents.setShipControllerSignalFlag(true); // ship reaches its later launch signal
         endBoss.update(9, player);
 
         assertEquals(AbstractPlayableSprite.INPUT_JUMP, player.getForcedInputMask(),
@@ -3248,7 +3280,7 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0180);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, mhzEvents);
-        setPrivateInt(mhzEvents, "shipControllerSignalFlag", 1);
+        // The ship signal arrives after the post-capsule reset below.
         int[] lastSfx = {-1};
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
         ObjectServices services = new StubObjectServices() {
@@ -3314,6 +3346,7 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0200);
         endBoss.update(7, player);
         endBoss.update(8, player);
+        mhzEvents.setShipControllerSignalFlag(true); // ship reaches its later launch signal
         endBoss.update(9, player);
         player.setYSpeed((short) -1);
         lastSfx[0] = -1;
@@ -3348,7 +3381,7 @@ class TestMhzBossObjects {
                 "loc_76404 seeds $2E=$5F and immediately falls through to loc_76456's decrement");
         assertEquals(true, player.isObjectControlled(),
                 "loc_76404 writes object_control=$81, enabling full object control");
-        assertEquals(ObjectControlState.nativeBit7FullControl().objectControlSuppressesMovement(),
+        assertEquals(com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().objectControlSuppressesMovement(),
                 player.isObjectControlSuppressesMovement(),
                 "object_control=$81 suppresses normal player movement");
     }
@@ -3363,7 +3396,7 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0180);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, mhzEvents);
-        setPrivateInt(mhzEvents, "shipControllerSignalFlag", 1);
+        // The ship signal arrives after the post-capsule reset below.
         List<ObjectInstance> freeSpawned = new ArrayList<>();
         doAnswer(invocation -> {
             freeSpawned.add(invocation.getArgument(0));
@@ -3435,6 +3468,7 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0200);
         endBoss.update(7, player);
         endBoss.update(8, player);
+        mhzEvents.setShipControllerSignalFlag(true); // ship reaches its later launch signal
         endBoss.update(9, player);
         int spawnedBeforeGrab = freeSpawned.size();
         player.setYSpeed((short) 0);
@@ -3449,7 +3483,7 @@ class TestMhzBossObjects {
 
         assertEquals(true, sidekick.isObjectControlled(),
                 "loc_7646E writes object_control=$81 to Player_2");
-        assertEquals(ObjectControlState.nativeBit7FullControl().objectControlSuppressesMovement(),
+        assertEquals(com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().objectControlSuppressesMovement(),
                 sidekick.isObjectControlSuppressesMovement(),
                 "Player_2 object_control=$81 suppresses normal movement");
         assertEquals(Sonic3kAnimationIds.FLY.id(), sidekick.getAnimationId(),
@@ -3479,7 +3513,7 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0180);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, mhzEvents);
-        setPrivateInt(mhzEvents, "shipControllerSignalFlag", 1);
+        // The ship signal arrives after the post-capsule reset below.
         int[] requestedZone = {-1};
         int[] requestedAct = {-1};
         boolean[] deactivateLevelNow = {false};
@@ -3548,6 +3582,7 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0200);
         endBoss.update(7, player);
         endBoss.update(8, player);
+        mhzEvents.setShipControllerSignalFlag(true); // ship reaches its later launch signal
         endBoss.update(9, player);
         player.setYSpeed((short) 0);
         endBoss.update(10, player);
@@ -4870,6 +4905,7 @@ class TestMhzBossObjects {
         List<GLCommand> commands = new ArrayList<>();
         miniboss.appendRenderCommands(commands);
         tree.appendRenderCommands(commands);
+        endBoss.update(0, null);
         endBoss.appendRenderCommands(commands);
 
         verify(minibossRenderer).isReady();

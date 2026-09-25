@@ -151,6 +151,7 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$1C` | `$0C` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1C` | `$0D` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1C` | `$0F` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
+| `$1D` | `$A0` | `Obj_LRZShootingTrigger` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1D` | `$C2` | `Obj_LRZShootingTrigger` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1E` | `$1A` | `Obj_LRZDashElevator` | 1 | 0 | 0 | placeholder (SKL branch) | 3 |
 | `$1E` | `$1D` | `Obj_LRZDashElevator` | 1 | 0 | 0 | placeholder (SKL branch) | 3 |
@@ -301,10 +302,10 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$9C` | `$02` | `Obj_LRZRockCrusher` | 1 | 0 | 0 | placeholder (SKL branch) | 3 |
 | `$9D` | `$00` | `Obj_LRZMiniboss` | 1 | 0 | 0 | placeholder (SKL branch) | 6 |
 | `$9E` | `$00` | `Obj_LRZ3Autoscroll` | 0 | 0 | 1 | placeholder (SKL branch) | 9 |
-| `$AD` | `$00` | `Obj_LRZ3Platform` | 0 | 0 | 1 | placeholder (SKL branch) | 9 |
-| `$AD` | `$01` | `Obj_LRZ3Platform` | 0 | 0 | 1 | placeholder (SKL branch) | 9 |
-| `$AD` | `$02` | `Obj_LRZ3Platform` | 0 | 0 | 2 | placeholder (SKL branch) | 9 |
-| `$AD` | `$04` | `Obj_LRZ3Platform` | 0 | 0 | 3 | placeholder (SKL branch) | 9 |
+| `$AD` | `$00` | `Obj_LRZ3Platform` | 0 | 0 | 1 | implemented checkpoint platforms; boss stream validation pending | 9 |
+| `$AD` | `$01` | `Obj_LRZ3Platform` | 0 | 0 | 1 | implemented checkpoint platforms; boss stream validation pending | 9 |
+| `$AD` | `$02` | `Obj_LRZ3Platform` | 0 | 0 | 2 | implemented checkpoint platforms; boss stream validation pending | 9 |
+| `$AD` | `$04` | `Obj_LRZ3Platform` | 0 | 0 | 3 | implemented checkpoint platforms; boss stream validation pending | 9 |
 | `$AE` | `$00` | `Obj_LRZ2CutsceneKnuckles` | 0 | 1 | 0 | placeholder (SKL branch) | 8 |
 | `$B3` | `$2D` | `Obj_StartNewLevel` | 0 | 1 | 0 | placeholder (SKL branch) | 8 |
 

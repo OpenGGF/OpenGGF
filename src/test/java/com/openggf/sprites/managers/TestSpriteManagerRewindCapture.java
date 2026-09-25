@@ -152,8 +152,9 @@ class TestSpriteManagerRewindCapture {
                 "An active same-type future contact cannot override the restored interact slot");
     }
 
-    @Test
-    void liveDynamicContactRemainsLiveAcrossCaptureAndRestore() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 7})
+    void liveDynamicContactRemainsLiveAcrossCaptureAndRestore(int objectId) throws Exception {
         SpriteManager manager = new SpriteManager();
         Sonic runner = new Sonic("sonic", (short) 0x100, (short) 0x200);
         manager.addSprite(runner);
@@ -163,9 +164,9 @@ class TestSpriteManagerRewindCapture {
         var field = level.getClass().getDeclaredField("objectManager");
         field.setAccessible(true);
         field.set(level, objects);
-        LatchObject dynamic = new LatchObject();
+        LatchObject dynamic = new LatchObject(objectId);
         objects.addDynamicObject(dynamic);
-        runner.setLatchedSolidObject(7, dynamic);
+        runner.setLatchedSolidObject(objectId, dynamic);
         assertTrue(objects.getActiveObjects().contains(dynamic));
         assertFalse(objects.isActiveObjectInstance(dynamic),
                 "The placed-object map alone does not contain a dynamic contact");
@@ -179,9 +180,30 @@ class TestSpriteManagerRewindCapture {
         assertFalse(runner.isLatchedSolidObjectReleased());
     }
 
+    @Test
+    void clearedZeroIdContactDoesNotBindToItsStickySlotAfterRestore() {
+        SpriteManager manager = new SpriteManager();
+        Sonic runner = new Sonic("sonic", (short) 0x100, (short) 0x200);
+        manager.addSprite(runner);
+        ObjectManager objects = new ObjectManager(List.of(), null, 0, null, null);
+        objects.reset(0);
+        LatchObject dynamic = new LatchObject(0);
+        objects.addDynamicObject(dynamic);
+        runner.setLatchedSolidObject(0, dynamic);
+        runner.setLatchedSolidObjectId(0);
+        assertEquals(dynamic.getSlotIndex(), runner.getInteractSlotIndex());
+        var snapshot = runner.captureRewindState();
+        runner.setLatchedSolidObject(0, dynamic);
+        runner.restoreRewindState(snapshot);
+        manager.refreshLatchedSolidObjectsAfterRewindRestore(objects);
+        assertNull(runner.getLatchedSolidObjectInstance());
+        assertFalse(runner.hasLatchedSolidObjectBinding());
+    }
+
     private static final class LatchObject extends AbstractObjectInstance {
-        LatchObject() {
-            super(new ObjectSpawn(0x100, 0x200, 7, 0, 0, false, 0), "LatchObject");
+        LatchObject() { this(7); }
+        LatchObject(int objectId) {
+            super(new ObjectSpawn(0x100, 0x200, objectId, 0, 0, false, 0), "LatchObject");
         }
         @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }

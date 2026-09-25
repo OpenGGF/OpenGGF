@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * ordinary cold start through transformation, both boss phases, two level wraps, the defeat and
  * the {@code StartNewLevel} request for {@code $D01}.
  *
- * <p>The movie entered DDZ from the ending of Sky Sanctuary with two clocks that a level-select
+ * <p>The movie entered DDZ from the Death Egg escape with two clocks that a level-select
  * entry does not inherit; both are declared engine setup observed natively at movie frame 514214
  * (native pass 1 of the DDZ bring-up), not per-row trace data:
  * {@code V_int_run_count} 512489 (turret aim reads its low nibble) and the camera X fraction
@@ -84,8 +84,22 @@ class TestS3kDdzColdRoutes {
         runSeededRoute(Set.of(4000, 7420, 9990));
     }
 
+    @Test
+    void seededSuperRouteCompletesWithItsFixedStarsAndReplaysTheFight() throws Exception {
+        // Controller-only reuse of the movie with declared Chaos-only progression.
+        // This is a separate Super reachability claim, not Hyper-trace parity.
+        runSeededRoute(Set.of(4000, 7420, 9990), false, 320);
+    }
+
     private static void runSeededRoute(Set<Integer> rewindFrames) throws Exception {
+        runSeededRoute(rewindFrames, true, 320);
+    }
+
+    private static void runSeededRoute(Set<Integer> rewindFrames, boolean hyper, int width) throws Exception {
         var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, width == 800 ? "SUPER_32_9" : "NATIVE_4_3");
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        SessionManager.clear(); TestEnvironment.activeGameplayMode();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
         var fixture = HeadlessTestFixture.builder()
@@ -94,7 +108,8 @@ class TestS3kDdzColdRoutes {
                 .withRecording(BK2)
                 .withRecordingStartFrame(FIRST_LEVEL_FRAME)
                 .build();
-        GameServices.gameState().restoreS3kEmeraldProgress(List.of(3, 3, 3, 3, 3, 3, 3), true);
+        GameServices.gameState().restoreS3kEmeraldProgress(java.util.Collections.nCopies(7, hyper ? 3 : 1), hyper);
+        assertEquals(width, fixture.camera().getWidth());
         var player = fixture.sprite();
         var ddz = S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         GameServices.level().getObjectManager().initVblaCounter(NATIVE_V_INT_RUN_COUNT);
@@ -125,7 +140,7 @@ class TestS3kDdzColdRoutes {
             String expected = String.format("x=%04X y=%04X cam=%04X,%04X rings=%d",
                     Integer.parseInt(row[9], 16), Integer.parseInt(row[10], 16),
                     Integer.parseInt(row[2], 16), Integer.parseInt(row[3], 16), Integer.parseInt(row[4], 16));
-            if (firstMismatch == null && !actual.equals(expected)) {
+            if (hyper && firstMismatch == null && !actual.equals(expected)) {
                 firstMismatch = "frame " + frame + " expected " + expected + " actual " + actual;
             }
             if (cameraX + 0x1000 < lastCameraX) {
@@ -135,7 +150,7 @@ class TestS3kDdzColdRoutes {
             becameHyper |= player.getSuperStateController() != null
                     && player.getSuperStateController().isHyperFormActive();
             assertFalse(player.getDead(), "died at frame " + frame);
-            if (frame == IDLE_PLANE_FRAME) {
+            if (hyper && frame == IDLE_PLANE_FRAME) {
                 // Native row 480: Events_routine_fg 0, _unkEE98 $9B8. Plane A still holds only
                 // DDZ_ScreenInit's Refresh_PlaneFull draw at (0,0), wrapped at 512x256.
                 assertEquals(0, ddz.foregroundRoutine(), "DDZ_ScreenEvent routine before the boss window");
@@ -144,7 +159,7 @@ class TestS3kDdzColdRoutes {
                 assertEquals(0, ddz.displayedForegroundX(), "plane A shows the blank initial draw");
                 assertEquals(0, ddz.displayedForegroundY(), "plane A shows the blank initial draw");
             }
-            if (frame == PHASE_TWO_PALETTE_FRAME) {
+            if (hyper && frame == PHASE_TWO_PALETTE_FRAME) {
                 // Native palette dump: loc_819CE reloads Pal_DDZ+$20 into line 3 before the Target copy, so the
                 // phase-2 flash does not fade back to the three DecColor_Obj passes of the fall ($888).
                 Palette.Color restored = new Palette.Color();
@@ -153,14 +168,14 @@ class TestS3kDdzColdRoutes {
                 assertEquals(List.of(restored.r, restored.g, restored.b), List.of(line3.r, line3.g, line3.b),
                         "Normal_palette_line_3 colour 1 in phase 2");
             }
-            if (frame == ORPHAN_BURST_FRAME) {
+            if (hyper && frame == ORPHAN_BURST_FRAME) {
                 // Native slot history rows 5477-5500: once the defeat spawner is deleted its cleared slot reads
                 // (0,0), so the remaining loc_82F78 bursts appear near the level origin, off-screen.
                 assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
                         .filter(o -> o.getClass().getSimpleName().equals("DdzBossExplosionObjectInstance"))
                         .anyMatch(o -> (o.getX() & 0xFFFF) < 0x100), "orphaned defeat bursts spawn from (0,0)");
             }
-            if (frame == BOMBS_ACROSS_WRAP_FRAME) {
+            if (hyper && frame == BOMBS_ACROSS_WRAP_FRAME) {
                 // Native slot history (probe-slots1): the two bombs launched before the first wrap stay
                 // live through rows 7453-7492 because loc_81726 re-latches Camera_X_pos_coarse_back.
                 assertEquals(2, GameServices.level().getObjectManager().getActiveObjects().stream()
@@ -169,10 +184,30 @@ class TestS3kDdzColdRoutes {
             }
         }
         assertNull(firstMismatch);
-        assertTrue(becameHyper, "all Super Emeralds: the controller's transformation ends in Hyper form");
+        assertEquals(hyper, becameHyper, "emerald progression selects the form");
         assertEquals(2, wraps, "phase 2 wraps $7400 -> $5400 twice on this route");
         assertEquals(0x0D, GameServices.level().getRequestedZone(), "loc_81CA4 StartNewLevel zone");
         assertEquals(1, GameServices.level().getRequestedAct(), "loc_81CA4 StartNewLevel act");
+        if (hyper && rewindFrames.isEmpty()) {
+            // loc_81CA4 leaves LevelLoop through StartNewLevel. Pal_FadeToBlack
+            // continues VBlank/palette work, but must not move the old level.
+            assertTrue(GameServices.level().isLevelInactiveForTransition());
+            String frozenObjects = objectSummary();
+            int frozenLevelFrame = GameServices.level().getFrameCounter();
+            fixture.stepIdleFrames(1); // consume request and start the fade
+            assertTrue(fixture.gameplayMode().getFadeManager().isActive());
+            int initialFadeFrame = fixture.gameplayMode().getFadeManager().getFrameCount();
+            for (int fadeFrame = 1; fadeFrame <= 20; fadeFrame++) {
+                fixture.stepIdleFrames(1);
+                assertEquals(initialFadeFrame + fadeFrame, fixture.gameplayMode().getFadeManager().getFrameCount(),
+                        "the palette fade must keep advancing while gameplay is frozen");
+                assertEquals(frozenLevelFrame, GameServices.level().getFrameCounter(),
+                        "level timer must stop during exit fade " + fadeFrame);
+                assertEquals(frozenObjects, objectSummary(),
+                        "player, camera and objects must stop during exit fade " + fadeFrame);
+            }
+        }
+
     }
 
     /** Slot, class and position of every live object plus the player and camera. */

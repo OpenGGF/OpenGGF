@@ -72522,11 +72522,21 @@ Not one defect across the eight-row table -- **three**:
 1. **The seven act-2 `dez23*` classes (550 errors) are one cause**: the missing
    `Obj_HPZSSEntryControl` above. Same ten fields, same values, same routine.
 2. **`Dez238` (621) is a different segment and a different cause.** Its metadata
-   is zone 23 **act 1** = Hidden Palace Zone proper (level-size row
-   `sonic3k.asm:38142`), 5118 rows, and its frame 0 is a running act-entry:
-   `x` 0x0036/0x0030, `x_speed` 0x0600/0x000C, `camera_x` 0x0080/0x0000,
-   `rings` 163/0. The rings term is the known save/run-inventory boundary; the
-   running-entry term is separate. Neither is the arena controller.
+   is zone 23 act 1 (1-based) = **act index 0 = `$1700`, the Death Egg final-boss
+   arena** (level-size row `sonic3k.asm:38143` `dc.w 0, $6000, $20, $20 ; DEZ Boss`),
+   5118 rows, and its frame 0 is a running act-entry: `x` 0x0036/0x0030,
+   `x_speed` 0x0600/0x000C, `camera_x` 0x0080/0x0000, `rings` 163/0. Neither is the
+   arena controller.
+
+   **Corrected 2026-09-17 (S3K DEZ campaign, `035e48a58`).** The original text above
+   read "act 1 = Hidden Palace Zone proper (level-size row `sonic3k.asm:38142`)".
+   That was wrong. `dez23_8/metadata.json` is `zone_id 23`, `act 1` (the fixtures
+   number acts from 1), `bk2_frame_offset` 509032, `start_x 0x0030`, `start_y 0x00CD`
+   — exactly `loc_7FD9E`'s `$1700` Player 1 start. The `camera_x` `$80` is
+   `DEZ3_ScreenInit` and the 163 rings are `Act3_ring_count` carried across
+   `loc_7F310`'s `StartNewLevel $1700`, not a save/run-inventory boundary. Hidden
+   Palace proper is `$1601`, whose segments live in the `hpz*` directories. The
+   directory names in this run are shifted one zone throughout; select by `zone_id`.
 3. **`Aiz3` (1567) is a third cause.** `tails_x` 0x0220/**0x7F00** -- the actual is
    the `sub_13ECA` off-screen respawn sentinel (P64), with
    `tails_cpu_routine` 0x0006/0x000A and `rings` 75/0. A sidekick-lifetime plus
@@ -110800,3 +110810,954 @@ animation2. That production intro, not trace-state seeding, is the next target.
 - Fixes that moved it (plan evidence, `docs/architecture/plans/2026-09-17-ddz-bring-up.md`):
   `Seek_Object_Manager` cursor seek on the wrap (first error 8248 -> 8249), the
   `Camera_X_pos_coarse_back` latch for DDZ delete checks (slot history probe, row 173 -> exit).
+
+## 2026-09-17 — S3K complete-run segment identities and the LRZ frontier
+
+Recorded once for the parallel LRZ, SSZ and Death Egg campaigns (LRZ campaign, slice 0).
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, commit `3418eba6e`.
+
+**Segment directory names in `src/test/resources/traces/s3k/runs/` are one zone off; the
+`zone_id` in each `metadata.json` is correct, and each segment's real content is its
+`zone_act_state` aux rows.** Always select by `zone_act_state`, never by directory name.
+Measured by walking every `zone_act_state` row of each segment:
+
+| Run | Segment | `bk2_frame_offset` | Rows | Contents (row → `actual_zone` / `actual_act`) |
+| --- | --- | ---: | ---: | --- |
+| Sonic + Tails | `lrz` | 389982 | 38885 | 0 `$09`/0; 25557 `$09`/1 (apparent act at 26272); 38817 `$16`/0 |
+| Sonic + Tails | `hpz22` | 428868 | 2132 | 0 `$16`/0 (LRZ3 autoscroll); 1981 leaves for `$14` Glowing Spheres |
+| Sonic + Tails | `hpz22_2` | 434069 | 14850 | 0 `$16`/0 (LRZ3 boss); 7558 `$16`/1 Hidden Palace; 14685 leaves for `$0A` SSZ |
+| Sonic + Tails | `hpz`, `hpz_2`, `hpz_3` | 448920 / 460334 / 465044 | 7638 / 4352 / 3937 | `$0A` Sky Sanctuary; `hpz_3` leaves for `$0B` at 3773 |
+| Sonic + Tails | `ssz` | 468982 | 40049 | `$0B` Death Egg act 1; act 2 at 18670; leaves for `$17` at 39983 |
+| Tails | `lrz`, `lrz_2` | 370581 / 377638 | 4546 / 9552 | `$09`/0 with bonus-stage exits (`$13`, `$14`) |
+| Tails | `lrz_3` | 389691 | 15233 | 0 `$09`/0; 2661 `$09`/1 (apparent at 3312); 15165 `$16`/0 |
+| Tails | `hpz22` | 404925 | 12956 | 0 `$16`/0 (all of LRZ3); 8619 `$16`/1 Hidden Palace; 12847 leaves for `$13` |
+| Tails | `hpz22_2` | 419298 | 4604 | 0 `$16`/1 Hidden Palace; 4439 leaves for `$0A` SSZ |
+| Knuckles | `lrz`, `lrz_2` | 387121 / 393340 | 3337 / 8945 | `$09`; act 2 at 5985 in `lrz_2`; bonus exits |
+| Knuckles | `lrz_3` | 404495 | 7000 | 0 `$09`/1; 6870 `$16`/1 Hidden Palace directly (no LRZ3) |
+| Knuckles | `hpz22` | 411496 | 1004 | `$16`/1 Hidden Palace; 859 leaves for `$0A` SSZ |
+
+Corrections to the LRZ plan's first reading: Tails `hpz22` runs LRZ3 **and** the Hidden
+Palace arrival (8619 is the `$1601` entry row, not the segment length), and Tails `hpz22_2`
+starts already inside `$1601`. `zone0c` is the Doomsday segment and `ddz` the ending.
+
+Frontier re-measurement, `maven_queue.py -Dmse=off -Ptrace-segments
+-Ds3k.rom.path=<worktree>/s3k.gen -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay test` at
+`3418eba6e`: **red, unchanged**. Totals 11909 errors, 0 warnings; first error frame 208,
+`tails_y_speed` (expected `0x07BD`, actual `0x0000`) — the S3K `SolidObjectTop`
+zero-distance boundary recorded on 2026-08-15. No fixture was changed or consumed.
+
+## 2026-09-18 - LRZ1: two located divergences inside the first 165 frames
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at
+  `f75a47ae5`. Not a trace replay: the recorded controller input of
+  `traces/s3k/runs/s3k-sonic-tails-complete-emeralds/lrz/physics.csv.gz` was converted to a
+  `GameplayCaptureTool` input log (bits 0 Up, 1 Down, 2 Left, 3 Right, 4 A - no other bit occurs in
+  any of the segment's 38,885 rows) and replayed cold from the act's own start with no teleport,
+  then compared frame for frame against that same fixture's position rows. Command:
+  `maven_queue.py -Dmse=off exec:java -Dexec.mainClass=com.openggf.tools.GameplayCaptureTool` with
+  `--game s3k --zone lrz --act 1 --width 320 --every 4 --stop-on-death false --input
+  target/capture/lrz1-native-input-route.txt`; capture kept as
+  `~/Videos/OGGF/lrz-bring-up/raw-20-lrz1-native-input-route`, input preserved under
+  `~/Videos/OGGF/lrz-bring-up/inputs/`.
+- **Frame 7, `player_y`: the falling intro starts gravity one frame late.** Engine `y` 36 against
+  native 38, input `0000`, both airborne, both `ground_vel` 0. The first difference of any size is
+  frame 3. It is a phase error rather than drift: over frames 3-155 the engine's `(x,y)` equals
+  native row `n-1` exactly on every frame - 0 mismatches at shift 1 against 323 at shift 0 and 319
+  at shift 2 - and the air-to-ground transitions carry the same offset (native rows 62, 108, 181;
+  engine frames 63, 109, 190).
+- **Frame 156, `player_y`: `$31 Obj_LRZCollapsingBridge` gives way eight frames late.** The shift-1
+  match breaks here. Native row 152 has the player leave the ground at `($17D,$371)` with `y_speed`
+  climbing 56, 112, 168, 224 as the platform drops; the engine holds `air = 0` and `y = 881` until
+  frame 161. The only placement within 96 px is `$31` at `($13E,$3A0)`. `$31` is shared and already
+  implemented (`CollapsingBridgeObjectInstance`), so this is inherited, not introduced by the LRZ
+  campaign.
+- Downstream figures (44 px behind by frame 400, 1833 by frame 2200, death at frame 4659) are the
+  consequence of these two and are not separate frontiers.
+- Unchanged and not re-measured here: `TestS3kSonicTailsLrzSegmentTraceReplay`'s own first error at
+  frame 208 `tails_y_speed` (last measured `3418eba6e`). The two divergences above are about
+  Player 1 position under the strict-replay harness's own fixture, reached by a different route.
+
+## 2026-09-18 - LRZ1: both located divergences were the harness, not the engine
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`. The two divergences
+recorded in the entry above are **withdrawn**: neither is an engine defect. Both were artefacts of
+how the cold-route capture was aligned against the fixture, and the entry above should be read only
+as the record of how they were found and killed.
+
+**The measurement that killed both.** `TestS3kSonicTailsLrzSegmentTraceReplay` at `9744c58de`:
+`maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay
+-Ds3k.rom.path=<worktree>/s3k.gen test` - 7191 errors, **first error frame 208 `tails_y_speed`
+expected `0x07BD`, actual `0x0000`** (improved from the 11909 errors measured at `3418eba6e`; the
+first error frame and field are unchanged). `TraceBinder` compares Player 1 `y` and `y_speed` on
+every row (`TraceBinder.java:202`, `:217`), so frames 0-207 of that run are an exact Player 1
+position match - which covers frame 7 and frame 156. A one-frame-late falling intro, or a
+collapsing bridge eight frames late, would both have failed at their own frame.
+
+**Divergence 1 was the capture's frame numbering.** `GameplayCaptureTool` steps the loop and *then*
+writes the state row (`GameplayCaptureTool.java:89-91`), but its `boot()` leaves one pre-gameplay
+frame for the first `step()` to consume, so capture frame 0 is a level-load frame with no player
+pass and capture frame `n+1` is native row `n`. The recorded trace's row 0 already carries
+`y_speed = $38`, one gravity step, so the ROM's row 0 is its first gameplay frame. Comparing at
+that offset, a fresh capture matched **every** position row with zero mismatches.
+
+**Divergence 2 was a missing sidekick.** The capture was taken with the tool's default
+`--sidekick none` while the fixture is Sonic + Tails, and `$31 Obj_LRZCollapsingBridge` arms on
+*either* player's standing bit (`loc_39CBC`, sonic3k.asm:77423-77427). In the fixture Tails is
+already standing on it (`sidekick_stand_on_obj = 05`) from row 101, seven frames before Sonic
+lands at row 108. The placement at `($13E,$3A0)` is subtype `$00`, so `$30(a0)` starts at
+`(0 & $F) << 4 + 8 = 8`; the collapse fires `8 + 1` frames after arming and the rider is released
+`$2A` frames after that, giving `101 + 8 + 1 + 42 = 152` - exactly the native release row. Re-run
+with `--sidekick tails`, the engine's bridge releases on the same frame. `LrzCollapsingBridgeInstance`
+needed no change.
+
+**Corrected route comparison, and the third alignment fact.** The input log must start one capture
+frame late as well (`--settle 1`): with the log applied from frame 0 the engine received each row's
+input one gameplay frame early, which released a spindash at native row 364 instead of 365. With
+`--sidekick tails --settle 1` the cold act 1 route on the recorded input matched the fixture's
+Player 1 `(x, y)` **exactly for frames 0-628**, where the engine fell through the block the native
+player lands on at `($4F3,$51F)` - `$17 Obj_LRZSinkingRock`, then a placeholder.
+
+**New first divergence: frame 637, `player_y` 1322 against 1321.** Measured at `d38a4aa34` with
+`$17` implemented; the exact match now runs to frame 636. On frame 637 the player jumps off the
+sinking rock. The ROM runs Player_1 (object slot 0) before the block, so the jump's
+`addq.w #5,y_pos` applies to the seat the block gave it on frame 636 (`y` 1316 -> 1321) and the
+block's own `SolidObjectFull` that frame takes the `Status_InAir` branch (`loc_1DC98`,
+sonic3k.asm:41033-41038) and does not re-seat. The engine sinks the block and re-seats the rider
+first, so the jump starts from 1317 and lands on 1322: the sink's `+1` and the jump's `+5` are both
+applied. The arithmetic is exact - `$2E` is 5 on frame 636 and 6 on frame 637, and
+`sin(5) >> 3 = 3`, `sin(6) >> 3 = 4` - so this is a one-frame ordering difference in the shared
+solid/riding path, not an LRZ object defect and not a constant to tune.
+
+**Open question with a kill condition.** If the engine ordered the player's own update ahead of the
+object updates and their solid checkpoints, as the ROM's slot order does, the jump would read the
+previous frame's seat and frame 637 would match. Kill it by finding any moving-platform jump in an
+already-green S3K trace that the engine gets right today: if one exists, the ordering is not the
+cause and the difference is local to how this block publishes its position. Not attempted here; the
+shared path carries every S3K trace and is out of this campaign's scope to reorder.
+
+**Downstream.** The 1 px is what ends the route. By frame 800 the engine is 1 px low; at native row
+856 the fixture's `player_y_speed` is negated exactly (`208` to `-208`) while the engine keeps
+falling, and from there the two separate by 64 px vertically and then by hundreds. No placement
+lies at `($661,$4CD)`, so whatever performs that negation is terrain or a dynamically spawned
+owner, and it is reached or missed on a 1 px margin.
+
+## 2026-09-18 - LRZ1: after slice 3a's remainder and most of 3c
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `21fbec7e6`.
+
+- `maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay
+  -Ds3k.rom.path=<worktree>/s3k.gen test`: **7174 errors, first error frame 208 `tails_y_speed`
+  expected `0x07BD`, actual `0x0000`** (7191 errors at `9744c58de`; the first error frame and field
+  are unchanged, so the frontier has not moved and nothing regressed).
+- Cold act 1 route on the fixture's own recorded input, `GameplayCaptureTool --main sonic
+  --sidekick tails --settle 1 --frames 12000` compared against
+  `s3k-sonic-tails-complete-emeralds/lrz` at the capture's one-frame boot offset: Player 1
+  `(x, y)` matches **exactly for frames 0-636**, and the open-loop reach is **x 4301** (2779 with
+  only `$17` implemented, 2357 before the alignment was corrected).
+- The first divergence is unchanged: frame 637, `player_y` 1322 against 1321, the moving-platform
+  jump ordering recorded in the entry above. It is what ends the route.
+- Six classes landed between the two measurements: `$17` sinking rock, `$16` wall ride, `$18`
+  falling spike, `$1B` fireball launcher (with its shot), `$1F` lava fall (with its drops) and
+  `$20` swinging spike ball. `MoveSprite2`'s `lsl.l #8` was also missing from
+  `LrzShootingTriggerProjectileInstance`, whose shots crept at 1/256 of the right speed; its test
+  asserted the velocity fields and never the resulting motion.
+
+## 2026-09-18 - LRZ1: after slice 3 completed and slice 4's Iwamodoki
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `72920cabc`.
+
+- `maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay
+  -Ds3k.rom.path=<worktree>/s3k.gen test`: **7708 errors, first error frame 208 `tails_y_speed`
+  expected `0x07BD`, actual `0x0000`** (7174 errors at `21fbec7e6`).
+- **The frontier has not moved.** The first error frame and field are unchanged; what rose is the
+  total, by 534. That is expected and is not a regression: `$21`, `$22`, `$9C` and `$9A` now act on
+  frames that previously ran with placeholders that did nothing, so the replay diverges in more
+  fields after the frontier it already had. A total is not a frontier, and neither number says
+  anything about frame 208.
+- Cold act 1 route on the fixture's own recorded input, `GameplayCaptureTool --main sonic
+  --sidekick tails --settle 1 --frames 12000`: Player 1 `(x, y)` still matches **exactly for
+  frames 0-636**, and the frame-637 shared solid/riding ordering divergence recorded above is
+  still what ends the parity comparison.
+- **The open-loop reach fell from x 4301 to x 4029, and the reason is not a stale input.**
+  `lrz1-native-input-route.txt` is the fixture's OWN recorded input, which the native game plays
+  through these same hazards without dying. What the reach measures is how long the engine's
+  open-loop replay survives its accumulated phase error, and that error has been there since frame
+  637. Adding faithfully implemented hazards that native also has can only lower an open-loop reach
+  when the engine is already off-phase. First hurt is frame 1102 at `(1993,1157)`, beside
+  `$1B Obj_LRZFireballLauncher` subtype `$1C` at `(1982,1008)` and `(1789,1168)`; the run then
+  limps to x 4029 with no rings and dies at frame 3649 near `(3790,959)`.
+- **So stop quoting the reach as progress.** It is not a regression and the new classes are not
+  implicated, but it will keep falling as the zone fills in. Quote the exact-match frame (636) and
+  the first divergence instead. Raising it means closing the frame-637 shared solid/riding ordering
+  divergence, which is outside this campaign.
+- Classes landed between the two measurements: `$21` smashing spike platform, `$22` spike ball,
+  `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits,
+  and `$9A` Iwamodoki. Census 98 / 240 / 8 -> 43 / 206 / 8.
+- `$9B Obj_Toxomister` landed after these measurements (`c45f35e74`), taking the census to
+  **21 / 197 / 8**. The trace and route numbers above were NOT re-measured at that head, so they
+  belong to `72920cabc` and should be quoted with it. Expect the reach to fall again, for the same
+  reason.
+
+## 2026-09-18 - LRZ1: the frame-637 divergence was not an ordering defect, and it is closed
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at the commit
+that carries this entry (base develop `035e48a58`).
+
+**The open question from the entry above is killed by reading the engine, not by a measurement.**
+It asked whether the engine would have to order the player's own update ahead of the object
+updates "as the ROM's slot order does". It already does: S3K sets
+`ObjectInteractionRules.objectsExecuteAfterPlayerPhysics()`, so `LevelFrameStep` (:325, :339-:364)
+runs `physics` first and then `objects` with inline solid checkpoints, and
+`SpriteManager.tickPlayablePhysics` (:1836-:1842) skips the legacy pre-movement batched solid pass
+for exactly that reason. No reordering was needed and none was made.
+
+**What the pixel actually was.** Reproduced in a bounded headless case
+(`TestS3kLrzSinkingRockJumpOffHeadless`): ride the `($4F8,$543)` `$17 Obj_LRZSinkingRock` until
+`$2E` is climbing, then jump. Instrumented per-frame, the block's own `update` sees Player 1
+already at the ROM's value (`p1y = 1322`, `air = true`) - the player pass ran first, correctly -
+and the player leaves the block's solid checkpoint at 1323. The extra pixel is
+`ObjectSolidContactController.resolveContactInternal`'s `loc_1E154` upward-velocity lift
+(`newCenterY = playerCenterY - distY + 3`), and it runs because an **earlier slot's** checkpoint
+had already consumed the block's riding record: on the jump frame the trace shows
+`instance=LrzButtonHorizontalObjectInstance riding=LrzSinkingRockObjectInstance air=true`, and by
+the time the block's own checkpoint runs it reads `riding=null standingBit=false` and takes the
+fresh-contact path.
+
+That is not what the ROM does. `SolidObjectFull_1P` reads the **object's own** `a0.d6`
+(sonic3k.asm:41021-41034); `loc_1DC98`'s `bclr d6,status(a0)` names that object's status byte, so
+another solid's `SolidObjectFull` never clears this block's bit. With the bit still set and
+`Status_InAir` set, the block's own call returns `d4 = 0` without `MvSonicOnPtfm` and without
+falling through to `loc_1E154`.
+
+**Fix, entirely LRZ-local.** `LrzSinkingRockObjectInstance` now declares the two existing
+per-object contracts - `airborneRiderUnseatRequiresOwnCheckpoint` (the MGZ moving spike platform
+precedent) and `airborneStaleStandingBitReturnsNoContact`. No shared file was touched, so no other
+zone or game can be affected by it.
+
+**Measurements at this head** (all `maven_queue.py -Dmse=off …
+-Ds3k.rom.path=<worktree>/s3k.gen`):
+
+| What | Result |
+| --- | --- |
+| `TestS3kLrzSinkingRockJumpOffHeadless` | RED before the fix (`expected 1322, was 1323` - the route's own frame-637 signature), green after |
+| Mandatory S3K + `TestLrz*`/`TestS3kLrz*`/`TestS3kHpz*`/`TestS3kSoz*` + `TestEveryObjectRewindRoundTrip` + `TestRewindHarnessCoverageRatchet` | 1554 tests, 0 failures, 0 errors, **0 skips** |
+| `TestS3kSonicTailsLrzSegmentTraceReplay` (`-Ptrace-segments`) | 7703 errors, first error frame 208 `tails_y_speed` expected `0x07BD` actual `0x0000` - **unchanged frontier**, 5 fewer errors than the 7708 at `72920cabc` |
+| Cold act 1 route, `GameplayCaptureTool --main sonic --sidekick tails --settle 1 --frames 12000` on the fixture's own recorded input | Player 1 `(x, y)` matches **exactly for native rows 0-856** (was 0-636); open-loop reach **x 4029**, unchanged |
+
+**New first divergence: native row 857, `player_y` 1228 against the engine's 1230, `player_x`
+1635 in both.** This is the negation the previous entry predicted one row earlier: the fixture's
+`player_y_speed` flips sign exactly at row 856 near `($663,$4CC)` while the engine keeps falling.
+No `$17`-family placement lies there, so the owner is terrain or a dynamically spawned object and
+it has not been identified yet. The open-loop reach is unchanged and, as recorded before, is not a
+progress measure.
+
+## 2026-09-18 - LRZ1: row 857 was already closed, and the real frontier is row 863
+
+**Correction, and the reason it needed one.** The fourth handover recorded native row 857 as the
+first divergence and left it unattributed. That measurement predates `cad4a2e07`, the Fireworm
+commit: the handover itself says the route was not re-measured after `398c34991`. Re-measured at
+`13a7c8fe8` with `GameplayCaptureTool --main sonic --sidekick tails --settle 1` on the fixture's
+own recorded input, the engine matches Player 1 `(x, y)` **exactly for native rows 0-862**, row 856
+bounce included. Row 857 is closed and was closed by the Fireworm landing.
+
+**What row 856 is, for the record.** Player 1 rolls into `Obj_Fireworm`'s head and kills it.
+`player_y_speed` climbs `$38` a frame (rolling gravity), row 855 is `+$98`, and row 856 is `-$D0`:
+gravity first to `+$D0`, then the rolling-kill negation. The fixture's `aux_state` rows name the
+victim outright -- at row 856 slot 24 (`Obj_Fireworm`'s head, `$8F7A4`) becomes `loc_1E66E` inside
+`Obj_Explosion` (sonic3k.asm:42162), slot 25 a segment becomes `Obj_FlickerMove` (`$85102`) and
+slot 29 its flame becomes `Delete_Current_Sprite` (`$1ABB6`), all in one frame. The engine matches
+the whole bounce.
+
+**The new first divergence is native row 863, and the engine's player is hurt there while the
+fixture's is not.** Native continues its arc (`player_y_speed` 184, 240, 296 ...); the engine jumps
+to `y 1223` with `y_vel -$400` and `x_vel -$200`, the S3K hurt recoil, and travels backwards from
+there.
+
+| Row | Native `(x, y, y_speed)` | Engine `(x, y, y_speed, x_speed)` |
+| ---: | --- | --- |
+| 862 | 1644, 1228, 128 | 1644, 1228, 128, 465 |
+| 863 | 1646, 1228, 184 | 1646, 1223, **-1024**, **-512** |
+| 864 | 1647, 1229, 240 | 1644, 1227, 0, -512 |
+
+**Reading, with its ROM citation.** The killed head takes its whole chain with it in the ROM, and
+the engine only takes half. `Child_DrawTouch_Sprite_FlickerMove` (sonic3k.asm:178135-178140) is
+what each segment draws through: with the head's `status` bit 7 set it branches to `loc_849D8`
+(:178120-178125), which sets the segment's own `status` bit 7, turns it into `Obj_FlickerMove`,
+**clears `collision_flags`** and gives it an indexed velocity. Each flame then draws through
+`Child_DrawTouch_Sprite` (:178053-178058), which sees its segment's bit 7 and runs
+`Go_Delete_Sprite`. The engine's `FirewormSegmentInstance` answers the first half -- it reports no
+collision flags once its head is destroyed -- but it never marks itself destroyed, so
+`FirewormFlameInstance` keeps its `collision_flags $98` and is still a live hurt region seven
+frames after the worm died. That is what hits Player 1 on row 863.
+
+**Fixed, LRZ-local (`FirewormSegmentInstance`).** A segment now sets its own bit 7 at the end of
+its dispatch once the head is gone, deletes its flame, and -- because `loc_849D8` overwrites the
+object's routine pointer with `Obj_FlickerMove` -- stops running its own routine at all. That last
+part is the half a first attempt missed: deleting the flame alone moved the divergence only eight
+frames, because a segment still in its `word_8F940` wait when the head died went on to leave the
+wait and grow a **new** flame, which then hurt Player 1 at row 871. A probe on the live flames
+showed one undestroyed at `(1668,1236)` with the player hurt at `(1660,1240)`.
+
+**Re-measured at that fix.** The engine now matches Player 1 `(x, y)` **exactly for native rows
+0-2322**, up from 0-862. The new first divergence is native row 2323: `player_y` 390 against the
+engine's 399, `player_x` 4297 in both, engine `y_vel` 1160 and not hurt. Unattributed; the next
+round owns it.
+
+**Not modelled, recorded rather than guessed.** `loc_849D8`'s `Set_IndexedVelocity` gives the
+retired segment a velocity from `Obj_VelocityIndex` (sonic3k.asm:179163-179183) indexed by
+`d0 + 2*subtype`, and `d0` at that branch is whatever the segment's own routine last left in it,
+which the disassembly does not settle. The engine's retired segments therefore stay where they are
+instead of flying off as debris. A native capture of a killed worm would settle it.
+
+## 2026-09-18 - LRZ1: frontier re-measured at the miniboss review head, unchanged
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, commit `51474c172`
+(base develop `035e48a58`). Re-measured because the last quoted numbers were stamped to older
+commits and a measured fact expires at the next commit, not because a fix was expected to move
+this frontier -- the miniboss sits thousands of frames past it.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+  "-Dtest=TestS3kSonicTailsLrzSegmentTraceReplay" \
+  -Ds3k.rom.path=<worktree>/s3k.gen test
+```
+
+| | |
+| --- | --- |
+| First error | frame 208, `tails_y_speed`, expected `0x07BD`, actual `0x0000` -- **unchanged** since the 2026-08-15 entry |
+| Totals | 6835 errors, 0 warnings. 1 test run, 1 failure, **0 skips** |
+| Cross-check | `-Ptraces` gives byte-identical totals and the same first error, so the two profiles are comparable for this class |
+
+**The error count is down from 7703 and that is not attributable to this round.** 7703 was
+measured at the frame-637 fix; between it and `51474c172` the branch landed slice 4's badniks,
+slice 5's dome background and stage machine, and slice 6's miniboss object. The 868-error drop
+belongs to that span as a whole, and no attempt was made to split it. The frontier itself is the
+number that matters and it has not moved: the `tails_y_speed` mismatch at frame 208 is the S3K
+`SolidObjectTop` zero-distance boundary recorded on 2026-08-15, which is still not landed.
+
+No sweep target selected from this measurement; the LRZ campaign's next target is the slice 6
+defeat chain, which this trace does not reach.
+
+## 2026-09-18 - LRZ1 cold route: the horizontal button is solid, frontier at row 3558
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at the
+  commit that carries this entry (base develop `035e48a58`).
+- Command: `GameplayCaptureTool --game s3k --zone lrz --act 1 --main sonic --sidekick tails
+  --settle 1 --frames 12000 --no-video --input
+  ~/Videos/OGGF/lrz-bring-up/inputs/lrz1-native-input-route.txt`, run off the built classes
+  rather than through Maven (the shared queue was saturated); compared against
+  `s3k-sonic-tails-complete-emeralds/lrz` `physics.csv` Player 1 `(x, y)` with the capture's
+  one-frame boot offset (engine frame `f` against native row `f - 1`). The capture produced
+  12000 frames and **11999 of them compare**; 3558 match.
+- **The row-3154 divergence is closed and the frontier moved 404 rows.** Cause and fix:
+  `Obj_LRZButtonHorizontal` is a full solid whose landing x test the engine was computing from
+  the wrong width. `loc_1E154` (sonic3k.asm:41608-41616) re-reads `width_pixels(a0)`, and the
+  shared default reconstructs that byte as `d1 - $B` because most full-solid callers pass
+  `d1 = width_pixels + $B`. `loc_42D16` (sonic3k.asm:88236-88240) breaks the idiom: it passes
+  `d1 = $10` with `width_pixels` also `$10` (:88225). The reconstruction gave `5`, a ten-pixel
+  landing strip instead of thirty-two, and the route's own landing -- `x $10B2` against the
+  placement at `x $10C2`, which is `relX 0`, the first pixel of the span -- fell through it.
+  `TestS3kLrzButtonHorizontalLandingHeadless` is the regression, red on its own assertion when
+  the override is replaced by the `- $B` reconstruction.
+- **New first divergence: engine frame 3559 = native row 3558.** Engine `(4662,1404)` with
+  `y_speed -1739`; native `(4661,1404)` with `y_speed 0` and `angle $F8`. One pixel in x, at
+  the frame the player leaves `Obj_LRZCorkscrew`'s ride (native row 3394 is the capture: the
+  rider's `stand_on_obj` becomes `$0A`, `ground_vel` is floored to `$600` and then climbs `$10`
+  a frame) and meets the slope the ride ends on.
+- **A second defect was found and fixed on the way, and it was NOT the cause.** The engine left
+  the rider rolling through the whole corkscrew ride where native clears it:
+  `andi.b #$89,status(a1)` (sonic3k.asm:87563) keeps only bits 0, 3 and 7. The engine now
+  clears `Status_Roll` and `Status_Push` there, its `rolling` matches native from the capture
+  frame on, and **the frontier did not move**: 3558 before the fix and 3558 after. Recorded so
+  the next round does not re-derive it or mistake it for the remaining pixel.
+- **Kill condition for the next round:** replay from native row 3550 with the rider on the
+  corkscrew and assert `x` at row 3558. The engine is one pixel right of native with a non-zero
+  `y_speed` where native has zero, so look at the corkscrew's exit hand-off into
+  `ObjCheckFloorDist` on the `$F8` slope, not at the capture.
+
+## 2026-09-18 - LRZ1 cold route: the toxomister rebound closed, frontier at row 3154
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at
+  the commit that carries this entry (base develop `035e48a58`).
+- Command: `python3 tools/testing/maven_queue.py -Dmse=off compile exec:java
+  "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k
+  --zone lrz --act 1 --main sonic --sidekick tails --settle 1 --frames 12000 --no-video
+  --input ~/Videos/OGGF/lrz-bring-up/inputs/lrz1-native-input-route.txt ..."`, compared
+  against `s3k-sonic-tails-complete-emeralds/lrz` `physics.csv` Player 1 `(x, y)` with
+  the capture's one-frame boot offset (engine frame `f` against native row `f - 1`).
+  The capture produced 5200 frames and 3154 of them compare.
+- **The row-2323 divergence is closed.** Engine frame 2323 now reads `y_speed -1104` at
+  `(4293,394)`, native row 2322's own value, and frame 2324 lands on native's `y 390`.
+  Cause and fix: `Obj_Toxomister`'s body is a `Touch_Enemy`-type badnik
+  (`collision_flags $18`) that the engine could not destroy, so the shared owner applied
+  no `Touch_EnemyNormal` bounce. Evidence and the two measurement hazards are in the
+  [LRZ plan](../architecture/plans/2026-09-17-lrz-bring-up.md).
+- **New first divergence: engine frame 3155 = native row 3154.** Engine `(4274,775)`
+  still falling at `y_vel 1384`; native `(4274,770)` with `air 0`, `rolling 0`,
+  `y_vel 0` and `g_speed` taking the frame's `x_vel 89`. Native lands on a floor at
+  `y 770` that the engine has nothing on. The frames either side match exactly, so this
+  is a missing support at that coordinate and not accumulated phase.
+- **Kill condition for the next round:** put a player at `(4274,765)` falling at
+  `y_vel $530` and assert they come to rest at `y 770`. If nothing supports them, the
+  defect is a missing or mis-positioned solid there -- check the act's placements around
+  `x $10B0` before assuming terrain.
+
+## 2026-09-18 - LRZ1 cold route re-measured at HEAD: the toxomister rebound
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head
+  `37c45d1ae` (base develop `035e48a58`). Tree clean; nothing pushed.
+- Command: `python3 tools/testing/maven_queue.py -Dmse=off exec:java
+  "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k
+  --zone lrz --act 1 --main sonic --sidekick tails --settle 1 --frames 3000
+  --input ~/Videos/OGGF/lrz-bring-up/inputs/lrz1-native-input-route.txt ..."`,
+  compared against `s3k-sonic-tails-complete-emeralds/lrz` `physics.csv`
+  Player 1 `(x, y)`.
+- **The frontier has not moved.** With the capture's one-frame boot offset applied
+  (engine frame `f` against native row `f - 1`), the route is exact for 2323
+  compared frames and first diverges at engine frame **2324** = native row **2323**:
+  engine `(4297, 399)`, native `(4297, 390)`. The last stamped figure was taken at
+  `17ccb4e72` and four commits have landed since; it is now re-measured at
+  `37c45d1ae` and unchanged.
+- **Cause, newly identified this round.** At native row 2322 `player_y_speed`
+  goes `1048` to `-1104` with **no input** and with the player airborne and
+  rolling throughout: that is `Touch_Enemy_Part2`'s `neg.w y_vel` after gravity,
+  not a jump. The aux rows put a cluster at `(4268-4292, 408-420)` -- one
+  `loc_8FD76`, one `loc_8FDBA` and seven `loc_8FEDC`, all inside
+  `Obj_Toxomister` -- so the rolling player rebounds off the toxomister (or its
+  mist) and the engine's does not. From there the engine keeps falling
+  (`y 399, 403, 408, ...`) while native climbs away (`390, 387, 383, ...`).
+- **Kill condition for the next round:** put a rolling airborne player at
+  `(4293, 394)` with `y_speed 1048` against the engine's toxomister at that
+  placement and assert `y_speed` is negated. If it is, the divergence is the
+  badnik's presence or activation window, not its touch response.
+- Measurement hazard hit and worth repeating: an offset sweep that breaks out of
+  its loop on the first missing key reports "no divergence" for the offset that
+  compares nothing. Count the compared frames and print the count.
+
+## 2026-09-19 - Lava Reef: the four segments re-measured at HEAD, and an act-2 route frontier
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `8875bc7f2`,
+  base develop `035e48a58`. Tree clean.
+- Command: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments
+  -Ds3k.rom.path=<worktree>/s3k.gen -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay,
+  TestS3kTailsFullChainLrzSegmentTraceReplay,TestS3kTailsFullChainLrz2SegmentTraceReplay,
+  TestS3kTailsFullChainLrz3SegmentTraceReplay test -B`, run after `rm -rf target/surefire-reports`
+  so no stale report could be read as a result. **4 tests, 4 failures, 0 errors, 0 skips.**
+
+| fixture | errors | first error |
+| --- | --- | --- |
+| `s3k-sonic-tails-complete-emeralds/lrz` | 6729 | frame 208 `tails_y_speed` (expected `$07BD`, actual `$0000`) |
+| `s3k-tails-full-chain-all-emeralds/lrz` | 659 | frame 218 `y_speed` (expected `$07AA`, actual `$0000`) |
+| `s3k-tails-full-chain-all-emeralds/lrz_2` | 1031 | frame 0 `camera_y` (expected `$0409`, actual `$040D`) |
+| `s3k-tails-full-chain-all-emeralds/lrz_3` | 1073 | frame 0 `y_speed` (expected `$0000`, actual `$0038`) |
+
+  The 6729 is the same count the thirteenth handover recorded before this round's four commits, so
+  none of them moved it; the `6835` figure that appeared in a report file during this round was a
+  **stale** artefact from 2026-09-18 14:06 that `rm -rf` removed.
+
+- **Act 2 has a route frontier now, and it is 923 rows.** Driving the engine through the
+  production act change and then feeding it the native's own act-2 input -- the `lrz` fixture's
+  input column from row 25558, converted to an input log
+  (`~/Videos/OGGF/lrz-bring-up/inputs/lrz2-native-route-v1.txt`) -- Player 1's `x` and `y` match
+  the fixture **exactly for rows 25558-26481**. First player divergence is row **26482**: engine
+  `($A6,$7B5)` against native `($A8,$7B5)`, two pixels in `x` on the frame the native's spindash
+  releases. First camera divergence is earlier, row **26416**, three pixels in `y`
+  (`$710` against `$713`).
+- This is a **declared positioned probe, not a cold route**: the engine reaches act 2 through the
+  real chain (arena gate, drill defeat, results, `loc_56CAA`) and is then written to the fixture's
+  own row-25558 state, Player 1 `($009E,$07AE)` and the camera `(0,$0710)`, because the filmed
+  fight is not the recorded route and leaves the player 138 px away. The write is the only
+  non-production input; everything after it is the native's controller.
+- **Both divergences attributed, 2026-09-19.** Row 26482 is the probe's own start, not an engine
+  defect: `SonicKnux_Spindash`'s release indexes `word_11CF2` with the HIGH byte of the word
+  `spin_dash_counter` (`move.b`, sonic3k.asm:23700-23703), charges `+$200` a press capped at
+  `$800` and decays `counter -= counter >> 5`, and the engine matches all three -- it peaks at
+  1093 (`$445`, table entry `$A00`) and releases at 683 (`$2AB`, `$900`) sixteen frames later
+  because it is **one charge short**. The window holds five B presses and the engine logs four:
+  the first goes on starting the spindash, which the native had already started at row **24918**
+  (`0012`, Down plus B), 640 rows before the change. A probe that wants this row must begin before
+  24918 or carry `spin_dash_flag` and the counter in its declared write.
+- Row 26416's three pixels are the act 2 camera bounds. Measured at the divergence, the engine's
+  `minY`, `maxY` and both Y targets are all `$710`, the arena lock carried across the change, and
+  `maxX` is still `0` sixty frames later, so `Change_Act2Sizes` has not run on the engine's
+  timeline while the ROM's has. Two causes, both outside Lava Reef's own code:
+  `Make_LevelSizeObj`'s `Child1_Act2LevelSize` creates three gradual workers
+  (sonic3k.asm:180602-180612) and the engine spawns only `Obj_IncLevEndXGradual`; and
+  `Obj_EndSignControlDoStart` waits on `End_of_level_flag`, which the ROM's act 2 title card sets
+  and the engine's Lava Reef path reaches later because that title card is skipped.
+
+
+## 2026-09-22 — LRZ completion campaign: four inherited segment frontiers unchanged
+
+Worktree `.worktrees/ai-sk-zone-completion`, parent `5b86353e7` plus the LRZ2
+boulder/Act3 continuation changes. Queued command:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=Test*Lrz*,*LrzTest,TestS3kLevelContinuationHeadless,TestLevelContinuationCarry,TestLevelTransitionCoordinator*,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kDdzLifecycleProduction -Ds3k.rom.path=<absolute-s3k.gen> test`.
+The wildcard also selected the four trace classes. Completed at 16:12 BST:
+461 tests, 4 failures, zero errors/skips; 457 ordinary/focused checks passed.
+
+| Test / fixture | Errors | First error |
+| --- | --- | --- |
+| SonicTails Lrz | 6729 | 208, `tails_y_speed`, expected `$07BD`, actual `$0000` |
+| TailsFullChain Lrz | 659 | 218, `y_speed`, expected `$07AA`, actual `$0000` |
+| TailsFullChain Lrz2 | 1031 | 0, `camera_y`, expected `$0409`, actual `$040D` |
+| TailsFullChain Lrz3 | 1073 | 0, `y_speed`, expected `$0000`, actual `$0038` |
+
+Each count and first-error identity matches the recorded `8875bc7f2` measurement
+above. No frontier moved; no trace pass is claimed. Positioned boulder completion
+and rewind do not replace cold route/strict trace certification. Next implementation
+frontier is the still-incomplete LRZ3 events/autoscroll/end-boss path; inherited
+LRZ1 CPU and local route frontiers remain open.
+
+
+## 2026-09-17 — S3K Death Egg (`$B00`/`$B01`) and `$1700`: campaign baseline frontiers
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, base
+develop `035e48a58`. Slice 0 of the
+[S3K DEZ bring-up](../architecture/plans/2026-09-17-s3k-dez-bring-up.md). No production
+code existed for either zone when these were measured; every class is expected red.
+
+Command (one invocation, all six classes, 0 skips — the ROM path resolved):
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen -Ptrace-replay-r7 \
+  "-Dtest=TestS3kSonicTailsSszSegmentTraceReplay,TestS3kSonicTailsDez238SegmentTraceReplay,\
+TestS3kTailsFullChainSszSegmentTraceReplay,TestS3kTailsFullChainSsz2SegmentTraceReplay,\
+TestS3kTailsFullChainSsz3SegmentTraceReplay,TestS3kTailsFullChainDez238SegmentTraceReplay" \
+  -DfailIfNoSpecifiedTests=false test
+```
+
+Result: 6 tests, 6 failures, 0 errors, 0 skipped.
+
+| Class | Fixture (select by `zone_id`, not name) | Errors | First error |
+| --- | --- | --- | --- |
+| `TestS3kSonicTailsSszSegmentTraceReplay` | `s3k-sonic-tails-complete-emeralds/ssz` — `zone_id 11` = **DEZ**, both acts and the handover, offset 468982, start `$0030,$09AC` | 7005 | frame 0 `camera_x` expected `0x0040`, actual `0x0000` |
+| `TestS3kSonicTailsDez238SegmentTraceReplay` | `…/dez23_8` — `zone_id 23` act index 0 = **`$1700`**, offset 509032, start `$0030,$00CD` | 621 | frame 0 `x_sub` expected `0x0000`, actual `0x0C00` |
+| `TestS3kTailsFullChainSszSegmentTraceReplay` | `s3k-tails-full-chain-all-emeralds/ssz` — DEZ act 1, offset 444059 | 1661 | frame 0 `camera_x` expected `0x0040`, actual `0x0018` |
+| `TestS3kTailsFullChainSsz2SegmentTraceReplay` | `…/ssz_2` — DEZ act 2 | 229 | frame 0 `camera_y` expected `0x080E`, actual `0x0810` |
+| `TestS3kTailsFullChainSsz3SegmentTraceReplay` | `…/ssz_3` — DEZ act 2 restart (lifecycle evidence) | 200 | frame 0 `camera_y` expected `0x044E`, actual `0x0450` |
+| `TestS3kTailsFullChainDez238SegmentTraceReplay` | `…/dez23_8` — `$1700` | 339 | frame 0 `camera_y` expected `0x0010`, actual `0x0020` |
+
+Every class diverges on its first compared row, so these are bootstrap/initial-state
+numbers, not route depth. None of them is a frontier that moved; they are the
+campaign's starting measurement, stamped at `035e48a58`.
+
+The stale `Dez238` identification earlier in this log (2026-08-15, "act 1 = Hidden
+Palace Zone proper") is corrected in place above from `dez23_8/metadata.json`.
+
+## 2026-09-18 — Death Egg act 2 has a route frontier: 390 frames
+
+Commit `040022c3e`, worktree `.worktrees/ai-s3k-dez-bring-up`, branch
+`feature/ai-s3k-dez-bring-up`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+`TestS3kDezColdRoutes` drives Death Egg act 2 on the controller input of the committed
+Sonic + Tails complete run (`…/ssz`, `zone_id 11`) and compares player position, camera and
+rings row for row. Two routes, and the difference between them is the finding:
+
+| Route | Frontier | First divergence |
+| --- | --- | --- |
+| Cold `$B01` from the engine's own level start | 0 frames | frame 1 (native row 18670): expected `x=01E8 y=072C cam=00C0,068C rings=123`, actual `x=0140 y=03AC cam=00A0,034C rings=0` |
+| Seeded at the first frame of act 2 free play (native row 19772) | **390 frames** | frame 391 (native row 20163): `player_y` expected `$039E`, actual `$039F`; `x`, camera and rings all exact |
+
+**The cold route's divergence is not a defect.** The movie enters act 2 through the act 1
+handover: `zone_act_state` puts `actual_act` at 1 from row 18670, `apparent_act` follows 582
+frames later, and rows 19509-19548 then carry the player up the entrance at a flat `$10` px a
+frame with `x` pinned at `$0140` and `y_vel` zero — a scripted ride, not physics. It ends with
+the player standing at `$0140,$03AC`, which is **exactly where the engine's own cold act 2 boot
+puts them**. A cold `$B01` start begins at the end of a sequence the movie plays through, so the
+two can only be compared once the entrance is implemented, or from the frame it hands control
+back. That frame is native row 19772 (first non-zero `x_speed` at 19770, first grounded row at
+19772), and it is where the seeded route starts.
+
+**A camera lock nearly read as an engine defect.** The seeded route first stopped at 39 frames
+on `camera_x` `$0080` against `$007E` — the native camera stops dead at `$0080` while the player
+keeps walking left to `$00CA`. `LevelSizes`' DEZ2 row gives a minimum camera X of `0` and the
+engine loads that faithfully, so the pin is a camera lock the entrance sequence leaves behind,
+not a boundary the engine gets wrong. Seeding the lock as declared setup moved the frontier from
+39 to 390 frames. Recorded because the two-pixel version would have been reported as a defect.
+
+The frontier is pinned in the test as a ratchet (`SEEDED_ROUTE_FRONTIER = 390`), so it cannot
+move backwards silently. The next target is the first divergence itself: at native row 20163 the
+player is airborne and rolling, and `y_vel` flips from `$003F` to `$FF89` between rows 20161 and
+20162 — an upward impulse mid-air with no jump available, so an object is most likely giving it.
+Identify that object before treating the pixel as a physics rounding difference.
+
+
+## 2026-09-18 — Death Egg act 2's 390-frame divergence is an unimplemented badnik
+
+Commit `d79a6eb7c`, worktree `.worktrees/ai-s3k-dez-bring-up`, branch
+`feature/ai-s3k-dez-bring-up`. No engine run was needed: the cause is in the fixture's own rows
+and in the ROM.
+
+The seeded act 2 route diverges at native row 20163 with `player_y` `$039E` expected against
+`$039F` actual, and the previous entry left the question open — the player is airborne and
+rolling with no jump available, and `y_vel` flips from `$003F` to `$FF89` between rows 20161 and
+20162. **It is a destroyed badnik.**
+
+```
+row=20160 x=035B y=039E xs=02CC ys=0007 air=1 roll=1
+row=20161 x=035E y=039E xs=02CC ys=003F air=1 roll=1
+row=20162 x=0361 y=039F xs=02CC ys=FF89 air=1 roll=1
+row=20163 x=0363 y=039E xs=02B6 ys=FFC1 air=1 roll=1
+```
+
+`$003F + $38` (one frame of gravity) is `$0077`, and `$FF89` is exactly `-$0077`. That is
+`neg.w y_vel(a0)` at **sonic3k.asm:20979**, the enemy-destroyed branch of `Touch_ChkHurt`:
+`tst.w y_vel(a0)` is not negative, so it falls past `.bounceplayerdown`; `cmp.w y_pos(a1),d0`
+with the player at `$039F` and the enemy at `$03B0` is *below*, so it falls past
+`.bounceplayerup` as well, and the remaining branch negates the whole velocity. The three-way
+split is what makes the arithmetic identifying: the other two arms add or subtract `$100`
+and neither produces `$FF89` from `$003F`.
+
+The enemy is **`$A4` `Obj_Spikebonker`**, `DEZ2_Sprites` record 2 at `$0380,$03B0`, subtype
+`$20` — the only placement of any object within 64 px of the divergence, and its own
+`ObjDat_Spikebonker` hitbox (`$10` x `$14`, collision flags `$1A`, sonic3k.asm:199117-199120)
+plus its `-$80`/frame patrol walk (`loc_91A0C`, :198906-198911) close the 31 px between the
+placement and the player. It is **a placeholder in the engine**: `$A4` is absent from
+`TestS3kDezPlacementCensus`'s concrete set and the object inventory lists its 11 act 2 and 7
+act 1 placements as unimplemented slice 4 work.
+
+So the frontier does not move until `Obj_Spikebonker` is implemented; there is no physics fix to
+make here, and the one-pixel difference is not a rounding difference. The air drag either side of
+the divergence is already exact (`x_vel -= x_vel >> 5` on every row whose `y_vel` is negative and
+no drag on the two rows where it is not), which is the check that the surrounding physics is not
+the suspect.
+
+## 2026-09-18 — Death Egg act 2's route frontier moves 390 → 472 on one badnik
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$A4` `SpikebonkerBadnikInstance`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 390 frames | **472 frames** |
+
+The previous entry predicted this: the divergence at native row 20163 was the enemy-destroyed
+rebound `neg.w y_vel(a0)` (sonic3k.asm:20979), which a placeholder cannot give, and the enemy was
+`$A4` `Obj_Spikebonker`. Implementing it closed that frame and the 81 after it. The prediction and
+the result are separable — the arithmetic identified the routine before any code was written, and
+the frontier is the check.
+
+A second, independent confirmation fell out of the ROM reading. `Obj_Spikebonker`'s patrol is
+`x_vel` `±$80` with `Obj_Wait` turning it after `subtype` frames and `subtype * 2` thereafter
+(`loc_91A0C`/`loc_91AB0`, :198906-198964). At subtype `$20` that is a beat reaching about 32 px
+left of the placement: `$0380 - $1F` is `$0361`, **exactly the player's x at the divergent row**.
+The badnik was at the far end of its own patrol.
+
+**The new first divergence is a spring, at native row 20245.**
+
+```
+row=20244 x=04A8 y=049B xs=0568 ys=09A0 air=1 sto=06
+row=20245 x=04AD y=04AB xs=0568 ys=F600 air=1 sto=0E
+```
+
+`y_vel` goes to `$F600` = `-$A00` in one frame, `ground_vel` is overwritten with `x_speed`, and
+`stand_on_obj` changes from `$06` to `$0E`. The engine's `y` reads `$04A4` against the ROM's
+`$04AB`, so the snap to the spring's own Y is missing as well as the launch. The only placement in
+reach is `DEZ2_Sprites` record 8, **`$5D` `Obj_DEZRetractingSpring`** at `$04B0,$04C0` with
+`render_flags` bit 1 set (Y-flipped, which is why it fires a player upward from below) and subtype
+`$02`. It has 13 act 2 placements and is still a placeholder, so it is the next class the route
+wants.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 472.
+
+### 2026-09-18 — DEZ act 2: the retracting spring moves the seeded frontier to 527
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$5D` `S3kDezRetractingSpringObjectInstance`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 472 frames | **527 frames** |
+
+**One correction to the previous entry.** It called record 8 "Y-flipped, which is why it fires a
+player upward from below". Both halves are wrong and they cancelled. `Levels/DEZ/Object Pos/2.bin`
+record 8 has Y word `$24C0`, and `CommonPlacementParser` reads the flip pair as
+`(yWord >> 13) & 3`, so the flags are `1` — **X**-flipped, not Y. And the flip bits do not choose
+the launch direction at all: they choose which way the piston extends in X
+(`loc_48124`, sonic3k.asm:94146-94157, where `btst #0` skips a negate and `btst #1` adds one, so
+the sign is the exclusive or of the two). The launch is always `$30(a0)`, which
+`word_4808A(pc,subtype & 2)` fixed at `-$A00` for every one of the thirteen subtype-`$02`
+placements. A Y-flipped retracting spring still fires upward.
+
+The 55 frames the implementation bought are the whole ballistic arc: row 20245's `-$A00`, the
+`addq.w #8,y_pos(a1)` nudge that puts the player at `$04AB` rather than the engine's old `$04A4`,
+and the fall back down through row 20299.
+
+**The new first divergence is a landing, at native row 20300.**
+
+```
+row=20299 x=0497 y=03C8 xs=FDE8 ys=01D0 air=1 sto=0E
+row=20300 x=0495 y=03CB xs=FDD0 ys=0000 air=0 sto=0D
+```
+
+The ROM lands: `air` clears, `y_vel` zeroes, `ground_vel` takes `x_speed` and `stand_on_obj`
+changes from `$0E` to `$0D`. The engine is one pixel high at `y=$03CA` and its `camera_y` is
+`$0382` against `$037C`, because it has nothing to land on. The only placements under `x $0495` at
+that height are `DEZ2_Sprites` records 5 and 6, **`$55` `Obj_DEZEnergyBridge`** at `$0400,$03E8`
+and `$0480,$03E8`, both subtype `$01` and both still placeholders. `$55` has 13 act 1 and 12 act 2
+placements, so it is the next class the route wants.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 527.
+
+### 2026-09-19 — DEZ act 2: the energy bridge and the clock the route was not carrying
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$55` `S3kDezEnergyBridgeObjectInstance`.
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 527 frames | **616 frames** |
+
+**Two separate defects had to be fixed together, and the first one was in the route, not the
+engine.** `Obj_DEZEnergyBridge` is on for `((subtype & 3) + 2) << 5` frames out of a period of
+`$7F`, `$FF`, `$1FF` or `$3FF`, phased on `Level_frame_counter` (`sub_47DDE`,
+sonic3k.asm:93879-93902). The seeded act 2 route started a fresh engine level load, so its
+counter began at zero while the native one had been running since long before the act change:
+every frame-phased object in the act was wrong by an unknown offset. The route now seeds both
+`LevelManager` and `SpriteManager` from the fixture's `gameplay_frame_counter` at row 19772
+(`$4D39`), which is what `TraceReplaySessionBootstrap` already does for trace replay, and asserts
+that value and its successor so a re-recorded fixture fails loudly.
+
+**The second was a sign error in the engine's top-solid acceptance window, found from one native
+row.** With the clock seeded, the bridge landed the player at row 20299 where the ROM leaves them
+airborne until 20300. `loc_1E45A` (:42000-42007) ends with `cmpi.w #-$10,d0 / blo.w locret`, and
+`blo` is *unsigned*: it rejects every `d0` below `$FFF0`, zero included. Together with the
+preceding `sub.w d1,d0 / bhi`, the accepted window is `-$10 <= d0 <= -1` — the player's feet must
+already be inside the surface by at least one pixel, and the exact boundary is not a landing. At
+row 20299 the player's `y $03C8` sits exactly at `$03E8 - 9 - $13 - 4`, so `d0` is 0 and the ROM
+passes; a pixel later it is `-2` and they land at `$03CB`, which is the ROM's row 20300 to the
+pixel. Both `$55` and `$5D` now declare `rejectsZeroDistanceTopSolidLanding()`, since both call the
+same `SolidObjectTop_1P`. The engine-wide profile documentation claims S3K accepts the exact
+boundary; that claim is wrong for this routine and is contradicted here rather than edited, because
+changing the shared default is not in this campaign's scope.
+
+A third reading, recorded because it was nearly mistaken for a bug: at rows 20187-20199 the player
+runs along `y $03CC` with `stand_on_obj $06` directly under the first bridge and is *not* caught by
+it. `status_byte` is `$00` there — no `Status_OnObj` — so that is terrain, the `$06` is a stale
+`interact` latch, and the bridge is simply outside its window (phase `$62` against an on-duration
+of `$60`). The riding formula `objY - d3 - y_radius` gives `$03CC` and the new-landing formula
+`objY - d3 - y_radius - 1` gives `$03CB`, which is why rows 20300 and 20301 differ by one.
+
+**The new first divergence is a hit, at native row 20389.**
+
+```
+row=20388 x=0424 y=05A1 ys=0E70 rings=4 air=1
+row=20389 x=0426 y=05B0 ys=FC00 rings=0 air=1
+```
+
+`y_vel` goes to `-$400` and `x_vel` to `-$200` — the hurt rebound — and the four rings the player
+had collected since row 20300 are lost. The engine still has them. The only placement in reach is
+`DEZ2_Sprites` record 7, **`$A5` `Obj_Chainspike`** at `$0480,$05B0` subtype `$00`, whose chain
+hangs down from there and which is still a placeholder. Six act 1 and twelve act 2 placements.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 616.
+
+### 2026-09-19 — DEZ act 2: the Chainspike, and a frontier that outran its own window
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, measured on the
+tree that adds `$A5` `ChainspikeBadnikInstance`.
+
+| Route | Before | After |
+| --- | ---: | ---: |
+| Cold `$B01` | 0 frames | 0 frames (unchanged; blocked on the act 2 entrance) |
+| Seeded at the first frame of act 2 free play | 616 frames | **1256 frames** |
+
+The object closed the hit at native row 20389 and the 640 frames after it. `ROUTE_FRAMES` had to
+be widened from 1200 to 4000 to find the next divergence at all: the first run after the class
+landed reported "no divergence in 1200 frames", which is not a frontier, it is the end of the
+window.
+
+**Two readings of the ROM that the arithmetic settled before any code was written.**
+`$2E(a0)` is zero out of the RAM wipe and `SetUp_ObjAttributes` (sonic3k.asm:41043-41052) never
+writes it, so `Obj_Wait`'s first `subq.w #1` already goes negative and the badnik charges on its
+first update in routine 2 — there is no rest before the first charge. And `loc_91CC2`'s ramp runs
+*down*: `$40(a0)` steps `$C` towards zero every update (:199191-199195) and the new value is
+added to `x_vel`, so the corrections are `$174, $168, $15C, …`, largest first. The charge ends
+when the sum crosses the `-$1200` launch, which is `n*$180 - $C*n*(n+1)/2 > $1200` at
+**n = 17**.
+
+**The new first divergence is not a Death Egg object.** Native row 21029:
+
+```
+row=21026 x=0685 y=03CC xs=0600 status=08 sto=09    <- the ride starts
+row=21029 x=0697 y=03CE xs=0600 status=08 sto=09    engine x=0696, cam 05F6 vs 05F7
+```
+
+`status_byte $08` is `Status_OnObj`: the player has been riding an object since row 21026, and
+the only placement in reach is `DEZ2_Sprites` record 13, a shared **`$08`** at `$05C0,$038F`
+subtype `$20`. `y`, both speeds, the angle and the ring count all still match; the engine's `x`
+is one behind for one frame and then stays one behind. That is the shared platform's horizontal
+carry, not anything this campaign has written, and it is where the next measurement should start.
+
+`SEEDED_ROUTE_FRONTIER` in `TestS3kDezColdRoutes` is ratcheted to 1256 and `ROUTE_FRAMES` to 4000.
+
+
+## 2026-09-24 — LRZ1 corkscrew capture-angle omission
+
+Worktree `.worktrees/ai-sk-zone-completion`, base `24813a647`, local candidate.
+Matched native-input `GameplayCaptureTool` cold320 Sonic+Tails runs before/after
+one production change (`--zone lrz --act 1 --frames12000`, absolute S3K ROM;
+input `$VIDEO_ROOT/lrz-bring-up/inputs/lrz1-native-input-route.txt`).
+This is a controller-route comparison, not a completed strict trace-suite run.
+
+`loc_422E6` explicitly clears `angle(a1)` at capture. The object omitted that
+write, leaving approach angle `$12` through the ride. At zero-based input3558
+(native row3558), baseline is `(4662,1404)`, velocity `(-3685,-1739)`, ground
+speed `-4083`; fixed is `(4661,1404)`, `(-4096,0)`, ground speed `-4096`, matching
+the native row. `TestLrzCorkscrewObjectInstance` with a real approach angle
+fails before the fix (expected0,actual18) and passes after it. This supersedes
+the historical suspicion of a faulty slope-probe handoff at that first frame.
+
+From capture row3394, player X/Y and camera X/Y match the comparison series
+through4568; first subsequent position disagreement is4569: engine `(2426,1229)`
+versus native `(2420,1237)`. Rings first differ at4060 (79 versus80), before
+that position divergence. Both baseline and candidate already differ in intro
+Y at row3 (32 versus33); do not restate the historical whole-prefix parity claim
+for this launch. The fixed route dies at6914, baseline4483. These are route
+observations, not proof that later disagreement has the same owner.
+
+Focused queued Maven corkscrew/unit-rewind plus the four mandatory S3K bootstrap
+classes:72 tests,zero failures/errors/skips,68 seconds including compilation.
+Combined campaign checks and strict trace rerun remain pending. Cold regression
+and capture evidence are recorded in the LRZ1 matrix once completed.
+
+
+## 2026-09-24 — LRZ shooting-trigger projectile deflection
+
+Campaign worktree `.worktrees/ai-sk-zone-completion`, base `71e341556`, local
+candidate. Same12000-frame cold native-input capture command as the corkscrew
+entry above, absolute ROM, native320 Sonic+Tails. This remains controller-route
+comparison, not a full strict trace-suite result.
+
+Native aux slot23 (`loc_42EE8`) turns away at4565, after `(2409,1221)` at4564.
+The engine instead continues down/right and hurts Sonic at4568. Native shield
+state`$11` is fire. `loc_42E00` sets `shield_reaction` bit3 on the shot; its
+engine class had neither that flag nor `Touch_ChkHurt_Bounce_Projectile`'s
+callback. Adding the canonical deflect profile and ROM velocity/collision writes
+preserves Sonic's shield and position at the old disagreement. The new cold
+route test checks actual touch handling and8 full-registry replay windows.
+
+79 object/bootstrap tests and2 cold route tests pass,zero failures/errors/skips.
+After this fix the first player-Y disagreement following the old hit is4951:
+engine1417,native1421. First X disagreement5021:2188 versus2187. The unchanged
+input dies7040,previous6914. Earlier intro and ring differences remain unchanged;
+no whole-prefix parity or final act completion is claimed. Next investigation:
+dash-elevator movement/ride handoff around4951. Full campaign validation pending.
+
+
+## 2026-09-24 — LRZ dash-elevator jump-off checkpoint ownership
+
+Campaign base `3e7f4f80b`, `.worktrees/ai-sk-zone-completion`, local candidate.
+Matched cold320 Sonic+Tails capture with the preserved native input, same12000-
+frame command as preceding entries. The collision trace reads Y1421 before the
+lift checkpoint and Y1417 after on input4951, with correct launch velocity`-$680`.
+`SolidObjectFull`'s `loc_1DC98` instead clears the old ride and returns without
+new-contact correction. Both provider flags (own-checkpoint unseat and stale-bit
+no-contact return) are needed; the second alone fails the same assertion.
+
+Final focused elevator+three cold routes:10 tests,zero failures/errors/skips,
+including the native launch assertion and4 added full-registry replay spots.
+Earlier mandatory S3K classes passed in the intermediate69-test run whose new
+route still failed; that intermediate run is not a green delivery result.
+Post-fix Y first disagrees after the elevator at5176 (1474 versus1444), X at5592
+(2785 versus2790). The unchanged controller route dies9527, previously7040.
+Earlier intro/ring differences remain. This is a bounded controller-route
+comparison, not a strict trace-suite pass. Next cold target is the5176 handoff;
+combined campaign verification is pending.
+
+### 2026-09-24 — LRZ elevator charge-byte selection
+
+Development tree `feature/ai-sk-zone-completion`, base`1c9269fbf`: native
+comparison at input5176 saysY1444; engineY1474. `loc_43082` reads the high byte
+of the 8.8 spin counter; engine had used the fractional low byte. Corrected
+byte selection and independent unit oracle (red before fix); focused queued
+object/cold-route tests pass11,zero errors/failures/skips. Command and rendered
+evidence are in the LRZ1 matrix. Comparison-only physics rows never hydrate
+gameplay. First remaining Y5248 is transient1631vs1632; next consequential
+contact5591 hurts the engine player but not native, causing X5592 divergence.
+Strict trace suite was not run; earlier intro/ring gaps and whole-act acceptance
+remain open.
+
+### 2026-09-24 — LRZ exploding-rock shield response
+
+Tree `feature/ai-sk-zone-completion`, base`163781be9`: native continues at
+2787,1706 on input5591; engine recoils at2787,1701 from Iwamodoki shrapnel.
+Implemented `loc_8FB90` bit3 and `Touch_ChkHurt_Bounce_Projectile` response.
+Independent unit regression fails before fix. Focused71-test run passes
+object/mandatory-S3K checks but reports one route endpoint expectation failure
+(95vs99rings); native confirms99, corrected expectation,5 route tests then
+pass with zero failures/errors/skips. Commands and rendered evidence live
+in LRZ1 matrix. Post-fix player coordinates match locally through5775; next
+Y5776 is1802vs1807, X5777 is3222vs3226. Nearby lava-fall drops lack the ROM's
+fire-shield reaction bit4. Select that owner next; earlier differences and
+strict trace replay remain open.
+
+### 2026-09-24 — LRZ fire-shield immunity and door frontier
+
+Tree`feature/ai-sk-zone-completion`,base`51f6670eb`: added omitted bit4 from
+`loc_436EE`/`loc_42BF6` to lava-drop/fireball touch profiles. Both unit oracles
+fail before fix; queued providers/TouchResponseManager/six cold-route tests
+pass95,zero failures/errors/skips. Commands and video in LRZ1 matrix.
+Ordinary12000-frame diagnostic now survives the budget, but local comparison
+first differs after5700 atX5940: engine3573/native3574 andspeed0/native72.
+Checkpoint observation identifies `LrzDoorObjectInstance` SIDE while on the
+button. First laterY5968:1826vs1827. Door/button timing is the next target.
+No strict trace-suite run or whole-act parity claim; earlier gaps remain.
+
+### 2026-09-24 — LRZ stale object slots delayed the button-driven door
+
+Tree`feature/ai-sk-zone-completion`,base`bc4e3285d`: native opens door5908;
+engine5909 because button27 ran after door10, while native button5 ran before
+door10. Old LRZ solids wrongly suppressed `Sprite_OnScreen_Test` unload.
+Corrected four family lifetimes (preserving collapsed-bridge countdown) and
+the originating guide error. Before-fix cold test fails on stale bridgeX328;
+96 focused tests and the added button/door replay regression pass,zero skips.
+See LRZ1 matrix for commands/media. Corrected door starts5908 and local
+coordinates match5700–6066. NextX6067:3941vs3956,Y1758vs1759 in rock-crusher
+interaction; owner not yet attributed. Strict trace suite not run; earlier
+transient/intro/ring differences and whole-act certification remain open.
+
+### 2026-09-24 — LRZ crusher hit recovery
+
+Tree`feature/ai-sk-zone-completion`,base`ce6c2741a`:6066 fire-dash velocity
+is`-$800` instead of native`$800` because an already-hit upper piece still
+collides. Added `Touch_Enemy` collision clearing and `sub_905A8` recovery/ROM
+palette flash to body and upper pieces. Unit regression fails before fix;
+queued object/seven cold-route tests pass19,zero failures/errors/skips.
+Commands and inspected media are in LRZ1 matrix. Positions now match locally
+6000–6233; next6234 engine3889,1820/native3887,1826,not yet attributed.
+Strict trace replay and earlier discrepancies remain open. Also inspect the
+piece release routine's missing same-pass countdown fallthrough.
+
+### 2026-09-24 — LRZ release fallthrough and lag attribution
+
+On `8f01665a5` plus the piece-release correction, `loc_903F4` now falls into
+`loc_90408` immediately; the corrected oracle failed before production change.
+Queued `TestLrzRockCrusher,TestLrzColdRouteCapture` passes19 with zero skips;
+exact command is in the LRZ1 matrix. The6234 difference above is native lag:
+gameplay counter stays$185A, VBlank advances$517→$518, lag becomes1; native6235
+resumes at engine6234's position. Ordinary capture is not hardware-timed replay.
+No frame-specific delay is added. Continue controller route authoring beyond
+the6201-frame cold prefix; strict replay and earlier discrepancies remain open.

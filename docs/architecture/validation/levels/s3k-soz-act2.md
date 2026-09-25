@@ -52,7 +52,7 @@ for Sonic, Tails and Knuckles. All five posts have native-character activation/r
 | ENTRY / LOAD / RESET | ROM loading and event/scroll owners implemented; cold sand intro in Act1 and title-owned ghosts in Act2 | Fresh/seamless entry and title-owned ghosts tested; cold Act 1 Sonic + Tails route reaches playable Act 2; broader incoming routes open | Act1→Act2 destination replay, all checkpoints and selected repeated team reloads covered; repeated seamless-transition cycles open | Unmatched | Unmatched |
 | Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Local slide cooldown reconstruction; full registered-state before/contact/release spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
 | Sand-rock rolling landing / breakup / removal | `SozBreakableSandRockObjectInstance`; saved animation and owner standing latch | `TestSozSandRockProduction`: positioned first-rock spot; cold reachability open | All registered state restored and replayed twice at break, phase 6 and phase 24 removal | Source-derived; mixed-rider and offscreen retained-latch unit checks; native trajectory unmatched | ROM mapping/art checks pass; Act 1 shares the inspected mapping; Act 2 visual comparison open |
-| Pushable rock / edge fall / track ride / stop | `SozPushableRockObjectInstance`; ROM track and native push priority | `TestSozPushableRockProduction`: first-rock positioned push, board/brake and complete ride at 320; cold reachability open | All registered state restored/replayed twice at push, initial fall, horizontal start and terminal; boarding also covered | Source-reviewed and real rider carry tested; native trajectory open; subtype `$87` coupling has local contact checks, but full lower-puzzle passage remains unverified | ROM mapping/art checks pass; shared Act 1 display inspected; Act 2 pixel comparison open |
+| Pushable rock / edge fall / track ride / stop | `SozPushableRockObjectInstance`; ROM track and native push priority | `TestSozPushableRockProduction`: first-rock positioned push, board/brake and complete ride at 320; cold reachability open | All registered state restored/replayed twice at push, initial fall, horizontal start and terminal; boarding also covered | Source-reviewed and real rider carry tested; native trajectory open; subtype `$87` connected cork/rock/switch/door passage now passes a2512-input positioned ordinary Sonic route with15 full-world replay spots; other route products remain open | ROM mapping/art checks pass; shared Act 1 display inspected; Act 2 pixel comparison open |
 | Other traversal objects / badniks | All 599 Act1/490 Act2 placed records bind to concrete factories; family production tests listed below | Positioned family reachability plus the recorded cold Sonic + Tails route; per-family cold milestone coverage and other routes remain open | Short graph/contact/creation/deletion restore/replay, including forced recreation; complete per-placement/participant product open | Source-backed branches; matched native sequences remain open | Local ROM-art captures; full pixel comparison open |
 | CHECKPOINT / DEATH | `TestSozCheckpointReloadProduction`: all five authored posts × six supported character/donor combinations × five widths | Physical activation from positioned approaches; cold route between posts open | Activation recreated/replayed, production death/reload; selected repeated mixed/duplicate-team reset checks below | Source checkpoint placement/respawn assertions; matched native death movie open | Native pixel comparison open |
 | WORLD / CAMERA / EVENTS | Captured `SozEventState`/lighting/wall owners and mutation pipeline | Positioned cork/room/wall and boss stimuli exercised | `TestSozScreenEvents` covers cork layout, fractional sand collision and eight-solid wall graph; connected full-route sequence open | ROM tables and native event thresholds checked; matched sequence open | Local captures; whole-route comparison open |
@@ -388,3 +388,88 @@ early-room event state. The shortcut now uses the production checkpoint reload.
 `TestSozLastCheckpointShortcutProduction` covers native Sonic+Tails at 320/400/800px,
 unchanged lives, isolated rewind history, destination events, wall solids and art
 submission. Broader donor/leader products for the shortcut remain untested.
+
+
+## Lower rock puzzle prerequisite reproduced (2026-09-25)
+
+On campaign commit `f631b1832`, the old fresh rock-side reproduction still takes
+the falling-track path. The missing prerequisite is now identified in production:
+breaking the subtype `$9C` cork at `($4940,$450)` publishes `Events_fg_4` and
+`openAct2ForegroundPassage` copies layout columns `$AB..$B3`, rows10..13, into
+`$8C..$94`. This changes the floor throughout the lower rock/switch corridor,
+including the spot where the fresh rock previously fell. The same event also
+copies four chunks on row7. It is a terrain transition, not a different track
+pointer or a switch eligibility exception.
+
+A positioned Knuckles run at320, no donor/follower, starts at `$4940/$430` with
+37 declared rings. `100 -;30 A;70 -` falls to the ledge and jumps into the actual
+cork in rolling animation. By input120 the cork is broken and its real falling
+columns exist; by240 the lower column has reached `$580`. Subsequent ordinary
+movement reaches the lower corridor at player Y=`$5AC`, whereas the reproduction
+without breaking the cork falls to `$66C/$6AC`. No gameplay state was hydrated
+from the native trace, no terrain was injected, and no engine behavior changed.
+Native comparison-only observations remain the earlier Knuckles segment:
+rows29870 onward show the same falling-column routine `loc_41E6A`, and the later
+rock remains in `loc_405D6` while it crosses this corridor.
+
+External attempts live under `$VIDEO_ROOT/soz-bring-up/`:
+`campaign-20260925-cork-jump-return-320/` contains the1400-plus-frame positioned
+presentation attempt and state CSV; `cork-rock-door-v2.bk2` through
+`cork-rock-door-v6.bk2` preserve the subsequent input variations. They are
+exploration, not completed puzzle evidence. The latest route breaks the cork,
+returns over the switch, and reaches the rock's right side. The scorpion beside
+the rock hits the return jump (inspected inputs930/945); knockback prevents landing
+on its left. Pushing the switch alone reaches full charge, but it decays before
+Knuckles reaches the door. That negative control is expected and does not prove
+rock coupling. Full connected rock-held switch/door passage and its replay checks
+remain open. Next author the safe return to the rock's left, then hold the switch
+with the rock and cross the raised door; do not retune the ROM track to compensate
+for the missing cork event.
+
+
+## Connected lower rock puzzle passage (2026-09-25)
+
+On `fc68cbcb7`, an ordinary Sonic-solo positioned route completes the previously
+unverified lower puzzle. It starts at `$4940/$430`, native320, donation off,
+37 declared rings, no shield or emeralds. The preserved2512 controller inputs
+are `src/test/resources/routes/s3k/soz2-lower-rock-sonic-320.script` and `.bk2`.
+After breaking the real cork and returning west, Sonic uses a spindash to kill
+the scorpion rather than trying to push the rock while being shot from behind.
+He pushes the rock to `$4834/$5B4`, which holds the switch at `$4850/$5B0`, then
+jumps over and crosses the door at `$4A0D`. At input2400 the player is more than
+80px beyond the switch, the charge remains `$80` and the door is at Y=`$500`.
+The route uses ordinary inputs throughout and includes damage/ring recovery;
+it is not a no-hurt or cold-full-act claim.
+
+The committed native Knuckles segment corroborates the mechanism independently:
+auxiliary object rows31240/31300 show `loc_405D6` rock at `$4834/$5B4` and
+`loc_418E4` switch at `$4850/$5B0`; row31420 shows `loc_41BE0` door at `$4A0D/$514`
+as it starts closing after the rock leaves the camera's lifetime window. These
+are comparison-only observations. The native run is Hyper Knuckles (its trail
+owner is `Obj_HyperSonicKnux_Trail_Main`), whereas this engine route is ordinary
+Sonic, so this proves the shared puzzle mechanism and passage, not synchronized
+character movement, slot timing or pixel parity. Ordinary Knuckles and broader
+route products remain open.
+
+`TestSozLowerRockPuzzleCapture` checks the actual floor replacement, terminal
+rock/switch coordinates, held charge with the player away, raised door, no death
+and passage. Fifteen45-input full-registry replay windows surround the cork
+break/falling columns, return, scorpion encounter, first pushes, switch coupling,
+charge saturation, jump-off, held door and passage. Queued focused command
+`-Dmse=off -Dtest=TestSozLowerRockPuzzleCapture -Ds3k.rom.path=$REPO_ROOT/s3k.gen test`
+passes1 test, zero failures/errors/skips, on `fc68cbcb7` plus the new fixture.
+All15 replay windows pass. No production engine behavior was modified.
+
+The full2512-frame capture has zero death rows, ends at `$4A75/$5AC` with one
+ring and control, and fully decodes with ffmpeg. Inputs2400 (rock-held switch
+behind Sonic) and2490 (past the raised door) were inspected:
+`$VIDEO_ROOT/soz-bring-up/campaign-20260925-lower-puzzle-complete-320/capture.mp4`.
+This continuous native320 video is positioned-route evidence, not full-act or
+native framebuffer acceptance.
+
+The change-based plan selects all2914 ordinary classes plus guards because the
+new route/test resources fall under broad fallback rules. Focused validation is
+proportionate for this addition: no production, build, shared algorithm or test
+selection policy changes; the new test directly runs every input and all15
+registry replay windows. The combined campaign's required broad verification
+remains separate and pending.

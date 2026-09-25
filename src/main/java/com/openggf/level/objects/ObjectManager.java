@@ -2208,11 +2208,9 @@ public class ObjectManager {
      */
     void addRestoredDynamicObjectAtSlot(
             ObjectInstance object, int slotIndex, ObjectRefId capturedId) {
-        if (capturedId == null) {
-            throw new IllegalArgumentException("restored dynamic object identity is required");
-        }
-        rewindObjectIds.put(object, capturedId);
+        dynamicOwnership.restoreIdentity(object, capturedId, rewindObjectIds);
         addDynamicObjectAtSlot(object, slotIndex);
+        dynamicOwnership.restoreCapturedOrder(dynamicObjects, rewindObjectIds::get);
         collisionResponseList.bindRestoredObject(capturedId, object);
     }
 
@@ -4068,6 +4066,7 @@ public class ObjectManager {
                 dynamicOwnership.clear();
                 Arrays.fill(execOrder, null);
                 pendingPlayerBoundEntries.clear();
+                dynamicOwnership.rememberCapturedOrder(s.dynamicObjects());
                 // Capture construction-spawned children produced while active objects are
                 // reconstructed below, so the dynamic reconciliation loop can adopt them in
                 // place instead of recreating duplicates. (See registerRewindReconstructionChild.)
@@ -4381,6 +4380,7 @@ public class ObjectManager {
                 }
                 collisionResponseList.restoreRewindState(
                         s.collisionResponseState(), restoreTable::resolve);
+                dynamicOwnership.restoreCapturedOrder(dynamicObjects, rewindObjectIds::get);
 
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;

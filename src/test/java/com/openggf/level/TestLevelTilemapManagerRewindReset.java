@@ -76,6 +76,32 @@ public class TestLevelTilemapManagerRewindReset {
         GraphicsManager.destroyForReinit();
     }
 
+    @Test
+    public void retainedForegroundRefreshesOnRevisionRestoreAndOwnerRelease() {
+        var features = org.mockito.Mockito.mock(ZoneFeatureProvider.class,
+                org.mockito.Mockito.withSettings().extraInterfaces(
+                        com.openggf.game.internal.ForegroundDescriptorOverride.class));
+        var owner = (com.openggf.game.internal.ForegroundDescriptorOverride) features;
+        var manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.ensureForegroundTilemapData(blockLookup, features, 0, null, false);
+        byte[] ordinary = manager.getForegroundTilemapData().clone();
+        org.mockito.Mockito.when(owner.foregroundDescriptorRevision()).thenReturn(1L);
+        org.mockito.Mockito.when(owner.foregroundDescriptorAt(org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt())).thenReturn(0xE801);
+        manager.ensureForegroundTilemapData(blockLookup, features, 0, null, false);
+        byte[] first = manager.getForegroundTilemapData().clone();
+        assertFalse(java.util.Arrays.equals(ordinary, first));
+        org.mockito.Mockito.when(owner.foregroundDescriptorAt(org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt())).thenReturn(0x1002);
+        manager.resetTilemapsForRewindRestore();
+        manager.ensureForegroundTilemapData(blockLookup, features, 0, null, false);
+        assertFalse(java.util.Arrays.equals(first, manager.getForegroundTilemapData()),
+                "restore must republish cells even when a branch reuses the same revision");
+        org.mockito.Mockito.when(owner.foregroundDescriptorRevision()).thenReturn(0L);
+        manager.ensureForegroundTilemapData(blockLookup, features, 0, null, false);
+        assertArrayEquals(ordinary, manager.getForegroundTilemapData());
+    }
+
     // ── BG incremental-shift baseline ─────────────────────────────────────────
 
     @Test

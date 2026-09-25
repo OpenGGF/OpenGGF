@@ -22,6 +22,8 @@ class TestS3kSharedBossCameraGate {
         camera.setMaxX((short) 0x1300);
         S3kSharedBossCameraGate gate = new S3kSharedBossCameraGate();
         gate.begin(camera, LOCK, 0);
+        assertEquals(LOCK.minX(), com.openggf.camera.CameraBoundaryPresentation.minX(camera));
+        assertEquals(LOCK.maxX(), com.openggf.camera.CameraBoundaryPresentation.maxX(camera));
 
         assertFalse(gate.update(camera, null));
         assertEquals(0x1180, camera.getMinX() & 0xFFFF,
@@ -29,6 +31,17 @@ class TestS3kSharedBossCameraGate {
         assertEquals(0x1180, camera.getMinXTarget() & 0xFFFF,
                 "the shared Camera setter must not leave an independent easing target ahead of Camera_X_pos");
 
+        assertEquals(LOCK.minX(), com.openggf.camera.CameraBoundaryPresentation.minX(camera),
+                "destination stays fixed while native minimum follows the camera");
+        var rewind = new com.openggf.game.rewind.RewindRegistry();
+        rewind.register(camera);
+        rewind.register(com.openggf.camera.CameraBoundaryPresentation.rewindAdapter(camera));
+        var saved = rewind.capture();
+        camera.setMaxX((short) 0x1500);
+        assertEquals(0x1500, com.openggf.camera.CameraBoundaryPresentation.maxX(camera),
+                "an interrupting boundary owner supersedes the pending rectangle immediately");
+        rewind.restore(saved);
+        assertEquals(LOCK.maxX(), com.openggf.camera.CameraBoundaryPresentation.maxX(camera));
         camera.setX((short) 0x1200);
         assertTrue(gate.update(camera, null));
         assertEquals(0x1200, camera.getMinX() & 0xFFFF);

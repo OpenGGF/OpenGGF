@@ -189,6 +189,17 @@ public class GraphicsManager {
 	 * Headless mode flag. When true, GL operations are skipped.
 	 * This enables testing game logic without requiring an OpenGL context.
 	 */
+    private final ArenaMaskRenderer arenaMaskRenderer = new ArenaMaskRenderer();
+
+    /** Queue a frozen presentation sample so later simulation cannot alter this frame. */
+    void drawArenaMask(ArenaMaskState state) {
+        if (headlessMode || !state.visible(getProjectionWidth())) return;
+        flushPatternBatch();
+        registerCommand((cameraX, cameraY, width, height) -> {
+            arenaMaskRenderer.draw(width, height, state);
+        });
+    }
+
 	private boolean headlessMode = false;
 	SpritePresentation.Builder spritePresentationBuilder;
 
@@ -1805,6 +1816,7 @@ public class GraphicsManager {
 	 * Cleanup method to delete textures and release resources.
 	 */
 	public void cleanup() {
+        if (!headlessMode) arenaMaskRenderer.cleanup();
 		clearPendingRenderThreadTasks();
 		discardCommands(commands, 0);
 		commands.clear();

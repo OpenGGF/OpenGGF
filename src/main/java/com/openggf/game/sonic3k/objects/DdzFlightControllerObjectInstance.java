@@ -232,8 +232,13 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         if (gameState != null && gameState.hasAllSuperEmeralds()
                 && player.getSuperStateController() instanceof Sonic3kSuperStateController superState) {
             superState.upgradeDoomsdayFormToHyper();
+        } else if (player.isSuperSonic()) {
+            // loc_8167C writes Super_stars directly, outside AllocateObject's pool.
+            // Keep native slot order and leave formless donor characters without stars.
+            var stars = new DdzSuperStarsObjectInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+            com.openggf.level.objects.ObjectLifetimeOps.addDynamicAtReservedSlot(
+                    services().objectManager(), stars, player.getGameRules().powerUp().superStarsFixedSlotIndex());
         }
-        // loc_8242A Super stars and PLC_BossExplosion: presentation owned by later slices.
     }
 
     /** {@code loc_816FC}. */

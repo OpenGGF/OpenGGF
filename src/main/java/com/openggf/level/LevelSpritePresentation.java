@@ -65,6 +65,10 @@ public final class LevelSpritePresentation {
     }
 
     public static void prepare(LevelManager level, SpriteManager sprites) {
+        if (level != null && level.camera != null) {
+            level.spritePresentationRenderer().boundsMask.advance(LevelScrollPresentation.captureArenaMask(level),
+                    level.camera.getXWithShake(), level.camera.getWidth());
+        }
         if (enabled(level)) level.spritePresentationRenderer().prepareSpritePresentation(sprites);
     }
 
@@ -75,6 +79,9 @@ public final class LevelSpritePresentation {
             level.spritePresentationRenderer().spriteTables.publish();
             PaletteUploadPresentation.publishAndLatch(level.graphicsManager);
             if (profile.updatesHudCounters(phase)) {
+                if (!level.isHudSuppressed()) {
+                    com.openggf.game.LevelRingDisplay.publish(level.getLevelGamestate());
+                }
                 level.spritePresentationRenderer().publishHudCounters(profile.advancesHudTimer(phase));
             }
         } else if (level != null) {
@@ -96,7 +103,19 @@ public final class LevelSpritePresentation {
     }
 
     public static void register(LevelManager level, RewindRegistry registry) {
+        if (level != null) com.openggf.game.LevelRingDisplay.register(level, registry);
+        else com.openggf.game.LevelRingDisplay.unregister(registry);
         registry.deregister("level-sprite-presentation");
-        if (enabled(level)) registry.register(level.spritePresentationRenderer().spriteTables);
+        registry.deregister("level-bounds-mask");
+        registry.deregister("camera-boundary-presentation");
+        var renderer = level == null ? null : level.spritePresentationRenderer();
+        // Registration can precede renderer attachment (including headless sessions).
+        // Remove the previous scene's adapters even when this scene has none yet.
+        if (renderer == null) return;
+        registry.register(renderer.boundsMask);
+        if (level.camera != null) {
+            registry.register(com.openggf.camera.CameraBoundaryPresentation.rewindAdapter(level.camera));
+        }
+        if (enabled(level)) registry.register(renderer.spriteTables);
     }
 }

@@ -33,18 +33,24 @@ final class DdzMissileExhaustObjectInstance extends AbstractDdzObjectInstance {
 
 
     DdzMissileExhaustObjectInstance(DdzMissileObjectInstance missile) {
-        super(new ObjectSpawn(missile == null ? 0 : missile.getX(), missile == null ? 0 : missile.getY(),
-                0, 0, 0, false, 0), "DDZMissileExhaust", missile);
+        this(new ObjectSpawn(missile == null ? 0 : missile.getX(), missile == null ? 0 : missile.getY(),
+                0, 0, 0, false, 0), missile);
+    }
+
+    private DdzMissileExhaustObjectInstance(ObjectSpawn spawn, DdzMissileObjectInstance missile) {
+        super(spawn, "DDZMissileExhaust", missile);
     }
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzMissileExhaustObjectInstance(ObjectSpawn spawn) {
-        this((DdzMissileObjectInstance) null);
+        this(spawn, (DdzMissileObjectInstance) null);
     }
 
     @Override
     public DdzMissileExhaustObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzMissileExhaustObjectInstance((DdzMissileObjectInstance) null);
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzMissileExhaustObjectInstance(ctx.spawn());
     }
 
     @Override

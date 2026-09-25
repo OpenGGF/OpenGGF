@@ -49,8 +49,8 @@ import java.util.logging.Logger;
  * Sonic 3&K Monitor (item box) object.
  * <p>
  * Object ID 0x01. Contains power-ups awarded when broken by the player.
- * S&K monitors do NOT fall when hit from below — they break directly if
- * the player is rolling, spinning, or (for Knuckles) gliding/sliding.
+ * Upright S&K monitors break directly when hit by a rolling or gliding/sliding
+ * player. Upside-down monitors retain the native knock-loose branch.
  * <p>
  * Subtypes: 0=Eggman, 1=1-Up, 2=Eggman, 3=Rings, 4=SpeedShoes,
  * 5=FireShield, 6=LightningShield, 7=BubbleShield, 8=Invincibility, 9=Super.
@@ -82,8 +82,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     // (Mapping frames: 0=box, 1=eggman, 2=1up, 3=eggman2, 4=rings, ...)
     private static final int ICON_FRAME_OFFSET = 1;
 
-    // Y radius for floor collision (from solid params d2)
-    private static final int Y_RADIUS = 0x10;
+    // Obj_MonitorInit y_radius; distinct from SolidObject d2=$10.
+    private static final int Y_RADIUS = 0x0F;
 
     // Obj_Monitor = 0x0001D566 in the S&K-side ROM.
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0001;
@@ -107,6 +107,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
     // "Revealed from hidden monitor" mode: pop up with velocity, fall with gravity
     private boolean revealed;
+    private boolean fallingFromTouch;
     private final SubpixelMotion.State motion;
     private int solidStatusBits;
     private PlayableEntity p1SolidContact;
@@ -185,6 +186,13 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     @Override
+    protected boolean isIconRiseInverted() {
+        // Obj_MonitorSpawnIcon copies render_flags; loc_1D7CE/loc_1D83C
+        // invert contents velocity and acceleration from bit 1, not world gravity.
+        return (spawn.renderFlags() & 2) != 0;
+    }
+
+    @Override
     protected boolean delayFirstIconUpdateAfterBreak() {
         // ROM Obj_MonitorBreak allocates Obj_MonitorContents after the current
         // slot, then Obj_MonitorContents init falls through into sub_1D820 on
@@ -226,7 +234,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         ensureInitialized();
         expireRecentlyClearedP2Contact(vIntRunCount);
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (revealed && !broken) {
+        if ((revealed || fallingFromTouch) && !broken) {
             updateRevealed();
         }
         if (!broken) {
@@ -241,32 +249,27 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         updateIcon();
     }
 
-    /**
-     * Physics for a monitor popping out of a hidden monitor slot.
-     * ROM: Obj_MonitorNorm — SpeedToPos + gravity + ObjCheckFloorDist.
-     */
+    /** Obj_MonitorFall / Obj_MonitorFallUpsideDown: render Y-flip owns gravity. */
     private void updateRevealed() {
-        SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
-
-        // Only check floor when moving downward
-        if (motion.yVel > 0) {
-            TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(
-                    motion.x, motion.y, Y_RADIUS);
-            if (floor.distance() < 0) {
-                motion.y += floor.distance();
+        boolean upsideDown = (spawn.renderFlags() & 2) != 0;
+        SubpixelMotion.moveSprite(motion, upsideDown ? -0x38 : 0x38);
+        motion.yVel = (short) motion.yVel;
+        motion.y &= 0xFFFF;
+        // The upright path includes zero velocity; the inverted path excludes it.
+        if (upsideDown ? motion.yVel < 0 : motion.yVel >= 0) {
+            TerrainCheckResult surface = upsideDown
+                    ? ObjectTerrainUtils.checkCeilingDist(motion.x, motion.y, Y_RADIUS)
+                    : ObjectTerrainUtils.checkFloorDist(motion.x, motion.y, Y_RADIUS);
+            if (surface.distance() <= 0) {
+                motion.y = (motion.y + (upsideDown ? -surface.distance() : surface.distance())) & 0xFFFF;
                 motion.yVel = 0;
-                revealed = false; // Landed — become a normal static monitor
-                LOGGER.fine("Revealed monitor landed at Y=" + motion.y);
+                revealed = false;
+                fallingFromTouch = false;
             }
         }
     }
 
-    /**
-     * S&K touch response: monitors break directly when hit by a rolling/spinning player.
-     * No falling behavior — unlike S2, hitting from below while rolling breaks immediately.
-     * <p>
-     * ROM: Touch_Monitor (sonic3k.asm ~line 20800)
-     */
+    /** Touch_Monitor: the knock-loose branch precedes the break/player-slot gates. */
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
         ensureInitialized();
@@ -275,7 +278,25 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             return;
         }
 
-        // ROM: CPU sidekick cannot break monitors (s2.asm Touch_Monitor check)
+        // Touch_Monitor.normalgravity/.checkfall (sonic3k.asm:20800-20851).
+        // Layout Y-flip initializes both status and render_flags bit 1. Unlike
+        // upright S&K monitors, flipped monitors can still be knocked loose.
+        // Reverse gravity mirrors only the direction test, not the stored speed.
+        int worldYVelocity = player.getYSpeed();
+        if (services().gameState() != null && services().gameState().isReverseGravityActive()) {
+            worldYVelocity = (short) -worldYVelocity;
+        }
+        if ((spawn.renderFlags() & 2) != 0 && worldYVelocity > 0) {
+            // addi.w #$10 followed by unsigned cmp/bhs, including word wrap.
+            if (((player.getCentreY() + 0x10) & 0xFFFF) < (posY() & 0xFFFF)) {
+                player.setYSpeed((short) -player.getYSpeed());
+                motion.yVel = -0x180;
+                fallingFromTouch = true;
+            }
+            return;
+        }
+
+        // Touch_Monitor.checkdestroy rejects Player_2 outside competition mode.
         if (player.isCpuControlled()) {
             return;
         }
@@ -448,7 +469,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         if (hasRenderer) {
             // Draw monitor body (broken shell or animated frame)
             int frameIndex = broken ? BROKEN_FRAME : mappingFrame;
-            renderer.drawFrameIndex(frameIndex, posX(), posY(), false, false);
+            renderer.drawFrameIndex(frameIndex, posX(), posY(),
+                    (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
         } else {
             // Fallback: full box when intact, half-height shell when broken
             appendFallbackBox(commands, broken);
@@ -464,7 +486,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                     if (frame != null && !frame.pieces().isEmpty()) {
                         // Draw only the first piece (the icon overlay, not the box base)
                         SpriteMappingPiece iconPiece = frame.pieces().get(0);
-                        renderer.drawPieces(List.of(iconPiece), posX(), iconSubY >> 8, false, false);
+                        renderer.drawPieces(List.of(iconPiece), posX(), iconSubY >> 8,
+                                (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
                     }
                 }
             } else {
@@ -489,8 +512,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         int left = cx - half;
         int right = cx + half;
         // Broken shell: bottom half only (y to y+half)
-        int top = isBroken ? cy : cy - half;
-        int bottom = cy + half;
+        int top = isBroken && !isIconRiseInverted() ? cy : cy - half;
+        int bottom = isBroken && isIconRiseInverted() ? cy : cy + half;
         float r = isBroken ? 0.6f : 0.4f;
         float g = isBroken ? 0.6f : 0.9f;
         float b = isBroken ? 0.6f : 1.0f;

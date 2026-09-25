@@ -75,6 +75,13 @@ public final class MhzEndBossVisualChild extends AbstractObjectInstance implemen
     }
 
     @Override
+    public boolean isPersistent() {
+        // loc_764F8/loc_76516 use Child_Draw_Sprite2.
+        // Those routines have no range cull; update owns native retirement.
+        return true;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if ((parent.getCustomFlag(ARENA_ANCHORED_FLAG_OFFSET) & CHILD_DRAW_SPRITE2_DELETE_FLAG) != 0) {
             setDestroyed(true);

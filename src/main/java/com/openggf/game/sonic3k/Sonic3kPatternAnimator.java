@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
@@ -36,6 +37,9 @@ import java.util.logging.Logger;
 class Sonic3kPatternAnimator implements AnimatedPatternManager,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kPatternAnimator.class.getName());
+
+    /** Scalar rewind blob: 1 flag byte plus 15 ints. */
+    private static final int SCALAR_BLOB_BYTES = 61;
 
     private static final int HCZ1_WATERLINE_VISIBLE = 0x60;
     private static final int HCZ1_EQUILIBRIUM_Y = 0x610;
@@ -122,6 +126,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             0x050, 0x0F0
     };
     private static final int ANIPLC_LRZ1_ADDR = 0x028A6A;
+    /** {@code AniPLC_LRZ2} (sonic3k.asm:56022); {@code Offs_AniFunc} pairs it with {@code $901}. */
+    private static final int ANIPLC_LRZ2_ADDR = 0x028A84;
     private static final int ART_UNC_ANI_SOZ1_BG_ADDR = 0x0BD9C0;
     private static final int ART_UNC_ANI_SOZ1_BG_SIZE = 0x0C00;
     private static final int ART_UNC_ANI_SOZ1_BG2_ADDR = 0x0BE5C0;
@@ -132,6 +138,42 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             0x060, 0x060,
             0x030, 0x090
     };
+
+    /** {@code ArtUnc_AniLRZ__BG} (sonic3k.lst: $C0300): eight $480-byte background frames. */
+    private static final int ART_UNC_ANI_LRZ_BG_ADDR = 0x0C0300;
+    private static final int ART_UNC_ANI_LRZ_BG_SIZE = 0x2400;
+    /** {@code ArtUnc_AniLRZ__BG2} (sonic3k.lst: $C2700): eight $180-byte background frames. */
+    private static final int ART_UNC_ANI_LRZ_BG2_ADDR = 0x0C2700;
+    private static final int ART_UNC_ANI_LRZ_BG2_SIZE = 0x0C00;
+    /**
+     * {@code word_2834C} (sonic3k.asm:55107-55119): six (first, second) word-count pairs for
+     * {@code loc_282D0}'s channel 0. The pair rotates one $480-byte frame by {@code band * $C0}
+     * bytes, so the two counts always sum to $240 words.
+     */
+    private static final int[] LRZ_BG1_SPLIT_WORD_COUNTS = {
+            0x240, 0x000,
+            0x1E0, 0x060,
+            0x180, 0x0C0,
+            0x120, 0x120,
+            0x0C0, 0x180,
+            0x060, 0x1E0
+    };
+    /**
+     * {@code word_283D2} (sonic3k.asm:55177-55184): four pairs for {@code loc_28364}'s channel 1,
+     * rotating one $180-byte frame by {@code band * $60} bytes.
+     */
+    private static final int[] LRZ_BG2_SPLIT_WORD_COUNTS = {
+            0x0C0, 0x000,
+            0x090, 0x030,
+            0x060, 0x060,
+            0x030, 0x090
+    };
+    /** {@code AnimateTiles_LRZ1}/{@code AnimateTiles_LRZ2} {@code d4} = {@code tiles_to_bytes($320)}. */
+    private static final int LRZ_BG1_DEST_TILE = 0x320;
+    /** The same routines' {@code d6} = {@code tiles_to_bytes($344)}. */
+    private static final int LRZ_BG2_DEST_TILE = 0x344;
+    /** {@code $344} plus channel 1's $180 bytes, the last tile either channel writes. */
+    private static final int LRZ_ANIMATED_TILE_CAPACITY = 0x350;
 
     private final AnimatedTileChannelGraph graph;
     private final Level level;
@@ -175,6 +217,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private final byte[] iczArt4Data;
     private final byte[] iczArt5Data;
     private byte[] lbzSharedData;
+    private byte[] lrzBg1Data;
+    private byte[] lrzBg2Data;
     private byte[] lbz1ScrollData;
     private byte[] lbz1ScrollCapData;
     private byte[] lbz2ScrollData;
@@ -214,6 +258,14 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private int lastHcz2Art4Value = Integer.MIN_VALUE;
     private int lastMhzBg1Phase = Integer.MIN_VALUE;
     private int lastMhzBg2Phase = Integer.MIN_VALUE;
+    /**
+     * {@code Anim_Counters+1} / {@code Anim_Counters+3} for {@code loc_282D0}.
+     * {@code Animate_Init} (sonic3k.asm:56411-56414, 56458-56461) writes {@code -1} to both for
+     * {@code $900} and {@code $1600} and leaves them at their cleared 0 for {@code $901}, so a
+     * direct or star-post {@code $901} load whose first phase is 0 skips its first upload.
+     */
+    private int lastLrzBg1Phase;
+    private int lastLrzBg2Phase;
     private int pachinkoPhase;
     private int pachinkoSourceOffset;
     private int pachinkoStripeOffset;
@@ -242,6 +294,12 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         this.zoneIndex = zoneIndex;
         this.actIndex = actIndex;
         this.isSkipIntro = isSkipIntro;
+
+        // Animate_Init seeds Anim_Counters+1/+3 with -1 for $900 and $1600 only; every other
+        // load leaves the cleared 0 (sonic3k.asm:56411-56414, 56458-56461).
+        int seed = seedsLrzAnimationCounters(zoneIndex, actIndex) ? 0xFF : 0;
+        this.lastLrzBg1Phase = seed;
+        this.lastLrzBg2Phase = seed;
 
         int aniPlcAddr = resolveAniPlcAddr(zoneIndex, actIndex);
         if (aniPlcAddr < 0) {
@@ -290,6 +348,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             } else {
                 this.gumballAniData = null;
             }
+            // LRZ3 also uses direct DMA despite AniPLC_NULL.
+            loadLrzRawArt(reader);
             installGraphChannels();
             return;
         }
@@ -551,6 +611,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
 
         loadLbzRawArt(reader);
+        loadLrzRawArt(reader);
         bootstrapLbz2WaterlinePhase();
 
         if (zoneIndex == 0x08 && actIndex == 0) {
@@ -1599,6 +1660,43 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         return state == null ? 0 : state.backgroundLayer2Phase();
     }
 
+    /**
+     * ROM: {@code loc_282D0} channel 0 phase.
+     *
+     * <p>{@code moveq #0,d0 / move.w (Events_bg+$12),d0 / sub.w (Camera_X_pos_BG_copy),d0 /
+     * subq.w #1,d0 / divu.w #$30,d0 / swap d0} (sonic3k.asm:55056-55062). The subtraction is a
+     * word operation on a zero-extended long, so a negative difference wraps to a large unsigned
+     * value before the division: this is an unsigned remainder of the 16-bit difference, not a
+     * signed modulo, and {@code $10000 mod $30} is not 0.
+     */
+    int computeLrzBackgroundLayer1Phase() {
+        LrzZoneRuntimeState state = currentLrzState();
+        if (state == null) {
+            return 0;
+        }
+        int difference = (state.animationPhaseX1() - state.backgroundCameraX() - 1) & 0xFFFF;
+        return difference % 0x30;
+    }
+
+    /**
+     * ROM: {@code loc_28364} channel 1 phase, {@code (Events_bg+$10 - Camera_X_pos_BG_copy) & $1F}
+     * (sonic3k.asm:55121-55126). No {@code -1} and no division.
+     */
+    int computeLrzBackgroundLayer2Phase() {
+        LrzZoneRuntimeState state = currentLrzState();
+        if (state == null) {
+            return 0;
+        }
+        return (state.animationPhaseX0() - state.backgroundCameraX()) & 0x1F;
+    }
+
+    private LrzZoneRuntimeState currentLrzState() {
+        if (!GameServices.hasRuntime()) {
+            return null;
+        }
+        return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElse(null);
+    }
+
     private MhzZoneRuntimeState currentMhzState() {
         if (!GameServices.hasRuntime()) {
             return null;
@@ -1651,6 +1749,83 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int pairIndex = bandBits >> 2;
         applySplitRawPatternDma(mhzBg2Data, primarySourceOffset, baseSourceOffset,
                 MHZ_BG2_DMA_WORD_COUNTS[pairIndex], MHZ_BG2_DMA_WORD_COUNTS[pairIndex + 1], 0x1D5);
+    }
+
+    /**
+     * ROM: {@code loc_282D0} channel 0 (sonic3k.asm:55055-55095).
+     *
+     * <p>{@code phase & 7} picks one $480-byte frame; {@code phase & $38} rotates the read start
+     * within it by {@code band * $C0} bytes and selects the matching {@code word_2834C} pair, so
+     * the two transfers wrap the frame around the $24-tile destination.
+     */
+    private void updateLrzBackgroundLayer1() {
+        if (lrzBg1Data == null) {
+            return;
+        }
+        int phase = computeLrzBackgroundLayer1Phase();
+        if (phase == lastLrzBg1Phase) {
+            return;
+        }
+        lastLrzBg1Phase = phase;
+
+        int frameSourceOffset = (phase & 7) * 0x480;
+        int bandBits = phase & 0x38;
+        int primarySourceOffset = frameSourceOffset + bandBits * 24;
+        int pairIndex = bandBits >> 2;
+        applySplitRawPatternDma(lrzBg1Data, primarySourceOffset, frameSourceOffset,
+                LRZ_BG1_SPLIT_WORD_COUNTS[pairIndex], LRZ_BG1_SPLIT_WORD_COUNTS[pairIndex + 1],
+                lrzBackgroundLayer1Destination());
+    }
+
+    /**
+     * ROM: {@code loc_28364} channel 1 (sonic3k.asm:55121-55167), the same shape over
+     * $180-byte frames rotated by {@code band * $60} bytes.
+     */
+    private void updateLrzBackgroundLayer2() {
+        if (lrzBg2Data == null) {
+            return;
+        }
+        int phase = computeLrzBackgroundLayer2Phase();
+        if (phase == lastLrzBg2Phase) {
+            return;
+        }
+        lastLrzBg2Phase = phase;
+
+        int frameSourceOffset = (phase & 7) * 0x180;
+        int bandBits = phase & 0x18;
+        int primarySourceOffset = frameSourceOffset + bandBits * 12;
+        int pairIndex = bandBits >> 2;
+        applySplitRawPatternDma(lrzBg2Data, primarySourceOffset, frameSourceOffset,
+                LRZ_BG2_SPLIT_WORD_COUNTS[pairIndex], LRZ_BG2_SPLIT_WORD_COUNTS[pairIndex + 1],
+                LRZ_BG2_DEST_TILE);
+    }
+
+    void updateLrzBackgroundLayer1ForGraph() {
+        updateLrzBackgroundLayer1();
+    }
+
+    void updateLrzBackgroundLayer2ForGraph() {
+        updateLrzBackgroundLayer2();
+    }
+
+    int lrzBackgroundLayer1Destination() {
+        return isLrzBossAct() ? 0x170 : LRZ_BG1_DEST_TILE;
+    }
+
+    private boolean isLrzBossAct() {
+        return zoneIndex == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && actIndex == 0;
+    }
+
+    boolean shouldRunLrzBackgroundLayer1Channel() {
+        return lrzBg1Data != null;
+    }
+
+    /**
+     * {@code loc_2833C} returns before channel 1 when {@code Current_zone} is {@code $16}
+     * (sonic3k.asm:55096-55099), so the boss act runs channel 0 only.
+     */
+    boolean shouldRunLrzBackgroundLayer2Channel() {
+        return lrzBg2Data != null && zoneIndex != Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ;
     }
 
     private void applySplitRawPatternDma(byte[] sourceData, int primarySourceOffset,
@@ -1750,6 +1925,29 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         if (zoneIndex == 0x07) {
             level.ensurePatternCapacity(0x1F5);
         }
+    }
+
+    /**
+     * {@code Animate_Init}: {@code $900} (sonic3k.asm:56411-56414) and {@code $1600}
+     * (56458-56461) write {@code -1} to {@code Anim_Counters+1} and {@code +3}. {@code $901} is
+     * absent from that list, so it runs with the counters the level load cleared.
+     */
+    private static boolean seedsLrzAnimationCounters(int zoneIndex, int actIndex) {
+        return (zoneIndex == Sonic3kZoneIds.ZONE_LRZ && actIndex == 0)
+                || (zoneIndex == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && actIndex == 0);
+    }
+
+    /**
+     * {@code AnimateTiles_LRZ1}/{@code LRZ2} source art. Both playable acts read the same two
+     * uncompressed blocks; the boss act reuses them at different destination tiles.
+     */
+    private void loadLrzRawArt(RomByteReader reader) {
+        if (zoneIndex != Sonic3kZoneIds.ZONE_LRZ && !isLrzBossAct()) return;
+        lrzBg1Data = loadRawBytes(reader, ART_UNC_ANI_LRZ_BG_ADDR, ART_UNC_ANI_LRZ_BG_SIZE);
+        if (!isLrzBossAct()) {
+            lrzBg2Data = loadRawBytes(reader, ART_UNC_ANI_LRZ_BG2_ADDR, ART_UNC_ANI_LRZ_BG2_SIZE);
+        }
+        level.ensurePatternCapacity(isLrzBossAct() ? 0x194 : LRZ_ANIMATED_TILE_CAPACITY);
     }
 
     private void loadLbzRawArt(RomByteReader reader) {
@@ -2090,7 +2288,17 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                     ? Sonic3kConstants.ANIPLC_LBZ1_ADDR
                     : Sonic3kConstants.ANIPLC_LBZ2_ADDR;
             case 0x07 -> Sonic3kConstants.ANIPLC_MHZ_ADDR;
-            case 0x08, Sonic3kZoneIds.ZONE_LRZ -> ANIPLC_LRZ1_ADDR;
+            // Offs_AniFunc pairs (AnimateTiles, AniPLC) per act: both Sandopolis acts and LRZ1
+            // take AniPLC_LRZ1, LRZ2 takes AniPLC_LRZ2 (sonic3k.asm:53873-53880).
+            case 0x08 -> ANIPLC_LRZ1_ADDR;
+            case Sonic3kZoneIds.ZONE_LRZ -> actIndex == 0 ? ANIPLC_LRZ1_ADDR : ANIPLC_LRZ2_ADDR;
+            // Offs_AniFunc entries 40-43: $A00 is AnimateTiles_DoAniPLC / AniPLC_SSZ,
+            // $A01 is AnimateTiles_NULL, a bare rts, so act 2 runs no script at all.
+            case Sonic3kZoneIds.ZONE_SSZ -> actIndex == 0 ? Sonic3kConstants.ANIPLC_SSZ_ADDR : -1;
+            // Offs_AniFunc entries 22 and 23 pair both Death Egg acts with the generic
+            // AnimateTiles_DoAniPLC and AniPLC_DEZ; nothing gates the eight scripts
+            // (sonic3k.asm:53885-53888).
+            case Sonic3kZoneIds.ZONE_DEZ -> Sonic3kConstants.ANIPLC_DEZ_ADDR;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
             // Offs_AniFunc pairs for $1601 (Hidden Palace) and $1701 (sanctuary) are
             // AnimateTiles_DoAniPLC / AniPLC_HPZ; $1600 and $1700 have no AniPLC
@@ -2131,6 +2339,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
         if (zoneIndex == 0x05) {
             graph.install(S3kAnimatedTileChannels.buildIczChannels(this, scripts, actIndex));
+            return;
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_LRZ || isLrzBossAct()) {
+            graph.install(S3kAnimatedTileChannels.buildLrzChannels(this, scripts));
             return;
         }
         graph.install(List.of());
@@ -2232,7 +2444,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
         // Scalar state packed into extra blob (53 bytes: 1 bool + 13 ints)
         byte[] publicationState = aniPlcPublications.capture(this::presentedAniPlcPattern);
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(53 + publicationState.length);
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(SCALAR_BLOB_BYTES + publicationState.length);
         buf.put((byte) (firstTreeApplied ? 1 : 0));
         buf.putInt(lastHcz1WaterlineDelta);
         buf.putInt(lastHcz2SmallBgLineValue);
@@ -2247,6 +2459,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         buf.putInt(frameCounter);
         buf.putInt(lastGumballIndex);
         buf.putInt(gumballFrameCounter);
+        buf.putInt(lastLrzBg1Phase);
+        buf.putInt(lastLrzBg2Phase);
         buf.put(publicationState);
         return new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot(
                 sc,
@@ -2282,8 +2496,15 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             frameCounter             = buf.getInt();
             lastGumballIndex         = buf.getInt();
             gumballFrameCounter      = buf.getInt();
-            if (extra.length > 53) {
-                aniPlcPublications.restore(java.util.Arrays.copyOfRange(extra, 53, extra.length),
+            int scalarEnd = 53;
+            if (extra.length >= SCALAR_BLOB_BYTES) {
+                lastLrzBg1Phase   = buf.getInt();
+                lastLrzBg2Phase   = buf.getInt();
+                scalarEnd = SCALAR_BLOB_BYTES;
+            }
+            if (extra.length > scalarEnd) {
+                aniPlcPublications.restore(
+                        java.util.Arrays.copyOfRange(extra, scalarEnd, extra.length),
                         this::publishAniPlcPayload);
             } else {
                 aniPlcPublications.clear();

@@ -71,6 +71,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String HPZ_SMALL_EMERALDS = "hpz_small_emeralds";
     public static final String HPZ_ENTRY_TELEPORTER = "hpz_entry_teleporter";
     /** CutsceneKnux_HPZ {@code $44(a0)=0}: Map_Knuckles through PLC_Knuckles. */
+    public static final String LRZ_CUTSCENE_KNUCKLES = "lrz_cutscene_knuckles";
+    public static final String LRZ_CUTSCENE_BOULDER = "lrz_cutscene_boulder";
     public static final String HPZ_CUTSCENE_KNUCKLES = "hpz_cutscene_knuckles";
     /** CutsceneKnux_HPZ {@code $44(a0)=2}: Map_HPZKnucklesGrab. */
     public static final String HPZ_CUTSCENE_KNUCKLES_GRAB = "hpz_cutscene_knuckles_grab";
@@ -82,7 +84,15 @@ public final class Sonic3kObjectArtKeys {
     public static final String HPZ_KNUX_BOSS_DUST = "hpz_knux_boss_dust";
     /** ObjDat3_664FA / ObjDat3_6652A: Map_KnuxFinalBossCrane over ArtKosM_KnuxFinalBossCrane. */
     public static final String KNUX_FINAL_BOSS_CRANE = "knux_final_boss_crane";
+    /** ObjDat3_7D45C: Map_RoboshipPieces over the ship's ROM Nemesis art. */
+    public static final String SSZ_CRANE_SHIP_DEBRIS = "ssz_crane_ship_debris";
     /** ObjDat3_6653C: Map_LRZ3Platform over level tiles, palette 2. */
+    public static final String LRZ3_PLATFORM_DEBRIS = "lrz3_platform_debris";
+    public static final String LRZ_END_BOSS = "lrz_end_boss";
+    public static final String LRZ3_AUTOSCROLL = "lrz3_autoscroll";
+    public static final String LRZ2_DEATH_EGG_BACKGROUND = "lrz2_death_egg_background";
+    public static final String LRZ3_DEATH_EGG_FLASH = "lrz3_death_egg_flash";
+    public static final String LRZ3_PLATFORM = "lrz3_platform";
     public static final String HPZ_COLLAPSE_BLOCK = "hpz_collapse_block";
     public static final String END_SIGN = "EndSign";
     public static final String SIGNPOST_STUB = "SignpostStub";
@@ -278,7 +288,121 @@ public final class Sonic3kObjectArtKeys {
     public static final String HCZ_BUTTON = "hcz_button";
     public static final String CNZ_BUTTON = "cnz_button";
     public static final String LRZ_BUTTON = "lrz_button";
+    /** {@code Obj_LRZDashElevator}: {@code Map_LRZDashElevator} over {@code ArtTile_LRZMisc}. */
+    public static final String LRZ_DASH_ELEVATOR = "lrz_dash_elevator";
+    /** {@code Obj_LRZSinkingRock}: {@code Map_LRZSinkingRock} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_SINKING_ROCK = "lrz_sinking_rock";
+    /** The same mappings over the act 2 tile base {@code $090} (sonic3k.asm:87910). */
+    public static final String LRZ2_SINKING_ROCK = "lrz2_sinking_rock";
+    /** {@code Obj_LRZFallingSpike}: {@code Map_LRZFallingSpike} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_FALLING_SPIKE = "lrz_falling_spike";
+    /** {@code Obj_LRZFireballLauncher}: {@code Map_LRZFireballLauncher}, palette 3, frame 2. */
+    public static final String LRZ_FIREBALL_LAUNCHER = "lrz_fireball_launcher";
+    /**
+     * The fireball it allocates. It copies the launcher's mappings but is given
+     * {@code make_art_tile(ArtTile_LRZMisc,0,0)} (sonic3k.asm:88179), so frames 0 and 1 of the same
+     * map are drawn on palette line 0 rather than the launcher's 3.
+     */
+    public static final String LRZ_FIREBALL = "lrz_fireball";
+    /** The drops {@code Obj_LRZLavaFall} allocates: {@code Map_LRZLavaFall} on palette line 2. */
+    public static final String LRZ_LAVA_FALL = "lrz_lava_fall";
+    /**
+     * {@code Obj_LRZSmashingSpikePlatform}: {@code Map_LRZSmashingSpikePlatform} over
+     * {@code ArtTile_LRZMisc}, palette 2 (sonic3k.asm:88540).
+     */
+    public static final String LRZ_SMASHING_SPIKE_PLATFORM = "lrz_smashing_spike_platform";
+    /**
+     * {@code Obj_LRZSpikeBall}: {@code Map_LRZSpikeBall} over {@code ArtTile_LRZBigSpike},
+     * palette 1 (sonic3k.asm:88840).
+     */
+    public static final String LRZ_SPIKE_BALL = "lrz_spike_ball";
+    /**
+     * The chips {@code sub_439EC} throws: {@code Map_LRZRockDebris} on
+     * {@code make_art_tile($0D3,2,1)} (sonic3k.asm:89025).
+     */
+    public static final String LRZ_ROCK_DEBRIS = "lrz_rock_debris";
+    /**
+     * {@code Obj_LRZRockCrusher}: {@code Map_LRZRockCrusher} over
+     * {@code ArtTile_LRZRockCrusher}, palette 1 ({@code ObjDat_LRZRockCrusher},
+     * sonic3k.asm:197426-197428). Its eight hit pieces copy the same art_tile.
+     */
+    public static final String LRZ_ROCK_CRUSHER = "lrz_rock_crusher";
+    /**
+     * {@code Obj_LRZMiniboss} and every one of its children: {@code Map_LRZMiniboss} over
+     * {@code ArtTile_LRZMiniboss}, {@code make_art_tile(ArtTile_LRZMiniboss,1,1)} so palette
+     * line 1 and high priority ({@code ObjDat_LRZMiniboss}, sonic3k.asm:160797-160799).
+     * {@code CreateChild8_TreeListRepeated} copies the parent's mappings and art tile into
+     * every child, so the arms, orbiters, hand, projectiles and defeat debris all draw from
+     * this one sheet.
+     */
+    public static final String LRZ_MINIBOSS = "lrz_miniboss";
+    /** {@code Obj_LRZSwingingSpikeBall}: {@code Map_LRZSwingingSpikeBall}, palette 1. */
+    public static final String LRZ_SWINGING_SPIKE_BALL = "lrz_swinging_spike_ball";
+    /** The same map on palette line 0, which {@code andi.w #$9FFF} leaves the chain child. */
+    public static final String LRZ_SWINGING_SPIKE_BALL_CHAIN = "lrz_swinging_spike_ball_chain";
+    /** Act 2's {@code Map_LRZSwingingSpikeBall2} over {@code ArtTile_LRZ2Misc}, palette 1. */
+    public static final String LRZ2_SWINGING_SPIKE_BALL = "lrz2_swinging_spike_ball";
+    /** Act 2's chain: the same map on palette line 0. */
+    public static final String LRZ2_SWINGING_SPIKE_BALL_CHAIN = "lrz2_swinging_spike_ball_chain";
+    /**
+     * {@code Obj_LRZOrbitingSpikeBall*}: {@code Map_LRZOrbitingSpikeBall} (ROM {@code $43D24})
+     * over {@code ArtTile_LRZ2Misc}, palette 1 (sonic3k.asm:89078-89079, :89150-89151). Both
+     * orbiting ids are act 2 only.
+     */
+    public static final String LRZ2_ORBITING_SPIKE_BALL = "lrz2_orbiting_spike_ball";
+    /**
+     * {@code Obj_LRZFlameThrower}'s body: {@code Map_LRZFlameThrower} (ROM {@code $4408A}) over
+     * tile {@code $090}, palette 1 ({@code make_art_tile($090,1,0)}, sonic3k.asm:89228-89229).
+     * That base is act 2's secondary art, which is why the thrower is an act 2 object.
+     */
+    public static final String LRZ2_FLAME_THROWER = "lrz2_flame_thrower";
+    /**
+     * The flames it allocates: the same mappings on {@code ArtTile_LRZ2Misc}, palette 1
+     * ({@code make_art_tile(ArtTile_LRZ2Misc,1,0)}, sonic3k.asm:89299, :89408). The parent copies
+     * its own {@code mappings} pointer into the child (:89297) and only the tile base differs.
+     */
+    public static final String LRZ2_FLAME = "lrz2_flame";
+    /**
+     * {@code Obj_LRZSolidMovingPlatforms}: {@code Map_LRZSolidMovingPlatforms} (ROM {@code $259C4})
+     * over tile {@code $090}, palette 2 ({@code make_art_tile($090,2,0)}, sonic3k.asm:51013-51014).
+     */
+    public static final String LRZ2_SOLID_MOVING_PLATFORM = "lrz2_solid_moving_platform";
+    /**
+     * {@code Obj_LRZSpikeBallLauncher} and the ball it allocates: {@code Map_LRZSpikeBallLauncher}
+     * (ROM {@code $449BC}) over {@code make_art_tile(ArtTile_LRZ2Misc,1,0)}
+     * (sonic3k.asm:89849-89850). The ball copies the parent's {@code mappings} and
+     * {@code art_tile} verbatim (:89864-89865), so both read one key: frames 0-2 are the ball and
+     * 3-4 the launcher.
+     */
+    public static final String LRZ2_SPIKE_BALL_LAUNCHER = "lrz2_spike_ball_launcher";
+    /**
+     * {@code Obj_LRZTurbineSprites} subtype 0: {@code Map_LRZTurbineSprites} (ROM {@code $445A6})
+     * over {@code make_art_tile(ArtTile_LRZ2Drum,1,1)} (sonic3k.asm:89612, :89626).
+     */
+    public static final String LRZ2_TURBINE_SPRITES = "lrz2_turbine_sprites";
+    /** Its non-zero subtypes: {@code Map_LRZTurbineSprites2} (ROM {@code $445B0}), same tiles. */
+    public static final String LRZ2_TURBINE_SPRITES_THIN = "lrz2_turbine_sprites_thin";
+    /** {@code Obj_LRZChainedPlatforms}: {@code Map_LRZChainedPlatforms} (ROM {@code $4A980}). */
+    public static final String LRZ2_CHAINED_PLATFORM = "lrz2_chained_platform";
     public static final String LRZ2_BUTTON = "lrz2_button";
+    /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_DOOR = "lrz_door";
+    /** The same mappings over the act 2 tile base {@code $090} (sonic3k.asm:88027). */
+    public static final String LRZ2_DOOR = "lrz2_door";
+    /** {@code Obj_LRZBigDoor}: {@code Map_LRZBigDoor} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_BIG_DOOR = "lrz_big_door";
+    /** {@code Obj_LRZButtonHorizontal}: {@code Map_LRZButtonHorizontal}, palette 3. */
+    public static final String LRZ_BUTTON_HORIZONTAL = "lrz_button_horizontal";
+    /** Act 2's {@code Map_LRZButtonHorizontal2} over {@code ArtTile_LRZ2Misc}, palette 1. */
+    public static final String LRZ2_BUTTON_HORIZONTAL = "lrz2_button_horizontal";
+    /** {@code Obj_LRZShootingTrigger}: {@code Map_LRZShootingTrigger} frame 0, palette 3. */
+    public static final String LRZ_SHOOTING_TRIGGER = "lrz_shooting_trigger";
+    /**
+     * The shot the trigger allocates. It copies its parent's mappings but is given
+     * {@code make_art_tile(ArtTile_LRZMisc,0,0)} (sonic3k.asm:88307), so the same map frame is
+     * drawn on palette line 0 rather than the parent's 3.
+     */
+    public static final String LRZ_SHOOTING_TRIGGER_SHOT = "lrz_shooting_trigger_shot";
 
     // FBZ badniks
     public static final String FBZ_BLASTER = "fbz_blaster";
@@ -385,6 +509,55 @@ public final class Sonic3kObjectArtKeys {
 
     // SSZ badniks
     public static final String SSZ_EGG_ROBO = "ssz_egg_robo";
+    /** Obj_57C1E's arrival beam and the SSZ teleporter pads: make_art_tile(ArtTile_SSZMisc+$88,3,1). */
+    public static final String SSZ_TELEPORTER = "ssz_teleporter";
+    /** ObjDat3_664AA: Map_SSZDeathEggSmall over ArtKosM_SSZDeathEggSmall, palette 3. */
+    public static final String SSZ_LAUNCH_RAMP = "ssz_launch_ramp";
+    public static final String SSZ_DEATH_EGG_SMALL = "ssz_death_egg_small";
+    public static final String SSZ_DEATH_EGG_CLOUD = "ssz_death_egg_cloud";
+    /** ObjDat_SSZCutsceneButton: Map_Button over ArtTile_SSZCutsceneButton (ArtNem_GrayButton). */
+    public static final String SSZ_CUTSCENE_BUTTON = "ssz_cutscene_button";
+    /** Obj_SSZCutsceneBridge: Map_SSZCollapsingBridge over ArtTile_SSZMisc+$20, palette 2. */
+    public static final String SSZ_CUTSCENE_BRIDGE = "ssz_cutscene_bridge";
+    /** loc_57BB2: Map_SSZRoamingClouds over make_art_tile(ArtTile_SSZMisc+$3C,3,1). */
+    public static final String SSZ_ROAMING_CLOUD = "ssz_roaming_cloud";
+    /** Obj_SSZBouncyCloud and its loc_452DA puffs: make_art_tile(ArtTile_SSZMisc+$102,3,1). */
+    public static final String SSZ_BOUNCY_CLOUD = "ssz_bouncy_cloud";
+    /** Obj_SSZElevatorBar and Obj_SSZSwingingCarrier: make_art_tile(ArtTile_SSZMisc+$74,2,0). */
+    public static final String SSZ_ELEVATOR_BAR = "ssz_elevator_bar";
+    /** Obj_SSZRotatingPlatform: make_art_tile(ArtTile_SSZMisc+$AA,2,0). */
+    public static final String SSZ_ROTATING_PLATFORM = "ssz_rotating_platform";
+    /** Obj_SSZRetractingSpring: make_art_tile(ArtTile_SSZMisc+$CE,0,0). */
+    public static final String SSZ_RETRACTING_SPRING = "ssz_retracting_spring";
+    /** {@code ArtKosM_SSZGHZMisc} over {@code Map_SSZGHZMisc}: the GHZ boss ball and chain. */
+    public static final String SSZ_GHZ_BOSS_MISC = "ssz_ghz_boss_misc";
+    /**
+     * {@code ArtKosM_SSZMTZOrbs} over {@code Map_SSZMTZOrbs}: the Metropolis recreation's seven
+     * orbs and its two laser children. The orbs take {@code make_art_tile(ArtTile_SSZMTZOrbs,0,0)}
+     * and the lasers {@code make_art_tile(ArtTile_SSZMTZOrbs,1,1)}, so the sheet is registered on
+     * line 0 and the laser draws override the line.
+     */
+    public static final String SSZ_MTZ_ORBS = "ssz_mtz_orbs";
+    /** {@code ArtKosM_MechaSonicHead} over {@code Map_MechaSonicHead}. */
+    public static final String MECHA_SONIC_HEAD = "mecha_sonic_head";
+
+    /** {@code ArtUnc_MechaSonic} DPLC'd through {@code DPLCPtr_MechaSonic} over {@code Map_MechaSonic}. */
+    public static final String MECHA_SONIC = "mecha_sonic";
+    public static final String MECHA_SONIC_PIECES = "mecha_sonic_pieces";
+    /** {@code ArtKosM_MechaSonicExtra} over {@code Map_MechaSonicExtra}. */
+    public static final String MECHA_SONIC_EXTRA = "mecha_sonic_extra";
+    public static final String SSZ_ENDING_ISLAND_MASK = "ssz_ending_island_mask";
+    public static final String SSZ_MASTER_EMERALD = "ssz_master_emerald";
+    public static final String MECHA_SONIC_SUPER_EFFECTS = "mecha_sonic_super_effects";
+    public static final String MECHA_SONIC_CHARGE = "mecha_sonic_charge";
+    public static final String MECHA_SONIC_SPARKS = "mecha_sonic_sparks";
+    /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */
+    public static final String SSZ_FLOATING_PLATFORM = "ssz_floating_platform";
+    /**
+     * Obj_SSZCollapsingColumn and its loc_44BCC debris: the same Map_SSZFloatingPlatform over
+     * make_art_tile(ArtTile_SSZMisc+$10,3,1), a different tile base and palette line.
+     */
+    public static final String SSZ_COLLAPSING_COLUMN = "ssz_collapsing_column";
 
     // DEZ badniks
     public static final String SPIKEBONKER = "dez_spikebonker";
@@ -393,6 +566,7 @@ public final class Sonic3kObjectArtKeys {
     // DDZ badniks
     public static final String DDZ_EGG_ROBO = "ddz_egg_robo";
     /** {@code Map_DDZMissileAsteroid} over {@code ArtKosM_DDZMisc}. */
+    public static final String DDZ_SUPER_STARS = "ddz_super_stars";
     public static final String DDZ_MISC = "ddz_misc";
     /** {@code Map_BossMasterEmerald} over {@code ArtKosM_BossMasterEmerald}. */
     public static final String DDZ_MASTER_EMERALD = "ddz_master_emerald";
@@ -486,6 +660,51 @@ public final class Sonic3kObjectArtKeys {
     public static final String DOOR_VERTICAL_HCZ = "door_vertical_hcz";   // ArtTile_HCZMisc+$0A, Map_HCZCNZDEZDoor
     public static final String DOOR_VERTICAL_CNZ = "door_vertical_cnz";   // ArtTile_CNZMisc+$C5, Map_HCZCNZDEZDoor
     public static final String DOOR_VERTICAL_DEZ = "door_vertical_dez";   // ArtTile_DEZMisc+$1E, Map_HCZCNZDEZDoor
+
+    // DEZ Gravity Switch (SKL 0x58) - ArtTile_DEZMisc+$143, palette 1, Map_DEZGravitySwitch
+    public static final String DEZ_GRAVITY_SWITCH = "dez_gravity_switch";
+
+    // DEZ Gravity Puzzle (SKL 0x61) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZGravityPuzzle
+    public static final String DEZ_GRAVITY_PUZZLE = "dez_gravity_puzzle";
+
+    // DEZ Retracting Spring (SKL 0x5D) - ArtTile_DEZ2Extra, palette 1, Map_DEZRetractingSpring
+    // (sonic3k.asm:94099-94100).
+    public static final String DEZ_RETRACTING_SPRING = "dez_retracting_spring";
+
+    // DEZ Energy Bridge (SKL 0x55) - ArtTile_DEZMisc+$B2, palette 1, Map_DEZEnergyBridge
+    // (sonic3k.asm:93880, :93910).
+    public static final String DEZ_ENERGY_BRIDGE = "dez_energy_bridge";
+    public static final String DEZ_TORPEDO_LAUNCHER = "dez_torpedo_launcher";
+    public static final String DEZ_TORPEDO = "dez_torpedo";
+    public static final String DEZ_HANG_CARRIER = "dez_hang_carrier";
+    public static final String DEZ_CURVED_ENERGY_BRIDGE = "dez_curved_energy_bridge";
+    public static final String DEZ_TUNNEL_LAUNCHER = "dez_tunnel_launcher";
+    public static final String DEZ_TUNNEL_RING = "dez_tunnel_ring";
+    public static final String DEZ_LIFT_PAD = "dez_lift_pad";
+    public static final String DEZ_CONVEYOR_PAD = "dez_conveyor_pad";
+    public static final String DEZ_CONVEYOR_PAD_WIDE = "dez_conveyor_pad_wide";
+    public static final String DEZ_TILTING_BRIDGE = "dez_tilting_bridge";
+    public static final String DEZ_FLOATING_PLATFORM = "dez_floating_platform";
+    public static final String DEZ_HOVER_MACHINE = "dez_hover_machine";
+    public static final String DEZ_STAIRCASE = "dez_staircase";
+    public static final String DEZ_LIGHTNING = "dez_lightning";
+    public static final String DEZ_MINIBOSS = "dez_miniboss";
+    public static final String DEZ_FINAL_SHIP = "DEZ_FINAL_SHIP";
+    public static final String DEZ_FINAL_EGGROBO_HEAD = "DEZ_FINAL_EGGROBO_HEAD";
+    public static final String DEZ_FINAL_CRANE = "DEZ_FINAL_CRANE";
+    public static final String DEZ_FINAL_DEBRIS = "DEZ_FINAL_DEBRIS";
+    public static final String DEZ_FINAL_EMERALD = "DEZ_FINAL_EMERALD";
+    public static final String DEZ_FINAL_MOUTH = "DEZ_FINAL_MOUTH";
+    public static final String DEZ_FINAL_BOSS_MISC = "DEZ_FINAL_BOSS_MISC";
+    public static final String DEZ_FINAL_ARENA_BLOCK = "DEZ_FINAL_ARENA_BLOCK";
+    public static final String DEZ_END_BOSS = "dez_end_boss";
+    public static final String DEZ_ROBOTNIK_STAND = "dez_robotnik_stand";
+    public static final String DEZ_ROBOTNIK_RUN = "dez_robotnik_run";
+    public static final String DEZ_EGGROBO_RUN = "dez_eggrobo_run";
+
+    // DEZ Bumper Wall (SKL 0x60) - ArtTile_DEZMisc2+$31, palette 1, Map_DEZBumperWall
+    // (sonic3k.asm:95959-95960), the same art block the $61 gravity puzzle draws from.
+    public static final String DEZ_BUMPER_WALL = "dez_bumper_wall";
     public static final String DOOR_HORIZONTAL = "door_horizontal";        // ArtTile_CNZMisc+$C5, Map_CNZDoorHorizontal
 
     private Sonic3kObjectArtKeys() {

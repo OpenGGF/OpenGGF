@@ -204,6 +204,31 @@ class TestS3kSaveSnapshotProvider {
         assertEquals(List.of(1, 4), payload.get("superEmeralds"));
     }
 
+    @Test void sszClearTracksCapturedEndingStateWithoutLatchingAcrossRewind() {
+        var save = SaveSessionContext.forSlot("s3k", 1, new SelectedTeam("knuckles", List.of()), 10, 1);
+        var mode = mock(GameplayModeContext.class);
+        var level = mock(com.openggf.level.LevelManager.class);
+        var game = new com.openggf.game.GameStateManager();
+        var registry = mock(com.openggf.game.zone.ZoneRuntimeRegistry.class);
+        var state = new com.openggf.game.sonic3k.runtime.SszZoneRuntimeState(1, com.openggf.game.PlayerCharacter.KNUCKLES);
+        when(mode.getLevelManager()).thenReturn(level);
+        when(mode.getGameStateManager()).thenReturn(game);
+        when(mode.getZoneRuntimeRegistry()).thenReturn(registry);
+        when(registry.currentAs(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState.class))
+                .thenReturn(java.util.Optional.of(state));
+        when(level.getCurrentZone()).thenReturn(10); when(level.getCurrentAct()).thenReturn(1);
+        stubStockZones(level);
+        var provider = new S3kSaveSnapshotProvider();
+        var context = RuntimeSaveContext.forGameplayMode(mode, save);
+        var before = state.captureBytes();
+        assertEquals(false, provider.capture(SaveReason.PROGRESSION_SAVE, context).get("clear"));
+        state.setAct2EndingActive(true);
+        assertEquals(true, provider.capture(SaveReason.PROGRESSION_SAVE, context).get("clear"));
+        assertFalse(save.isClear(), "live clear must not latch outside captured state");
+        state.restoreBytes(before);
+        assertEquals(false, provider.capture(SaveReason.PROGRESSION_SAVE, context).get("clear"));
+    }
+
     private static void stubStockZones(com.openggf.level.LevelManager levelManager) {
         GameModule module = mock(GameModule.class);
         when(levelManager.getGameModule()).thenReturn(module);

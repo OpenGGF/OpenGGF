@@ -2310,8 +2310,16 @@ public final class ObjectSolidContactController {
                 surfaceOffset = params.groundHalfHeight();
             }
             int rideAdjustment = provider.getContinuedRideSnapAdjustment(player, getSolidTopYRadius(player));
-            int newCentreY = rideY + params.offsetY() - surfaceOffset - player.getYRadius()
-                    - rideAdjustment;
+            // ROM MvSonicOnPtfm (sonic3k.asm:41648-41653): upright it computes
+            // `d0 = y_pos(a0) - d3` and writes `y_pos(a1) = d0 - y_radius(a1)` (loc_1E1CA,
+            // :41667-41682); under Reverse_gravity_flag it branches to loc_1E1AA, computes
+            // `d0 = y_pos(a0) + d3` and writes `y_pos(a1) = d0 + y_radius(a1)` (loc_1E1F4,
+            // :41690-41702). The rider hangs under the platform, both terms mirrored. The
+            // unused S1 leftover at :41661 (the +/-9 branch) is unreachable and not ported.
+            int rideReach = surfaceOffset + player.getYRadius() + rideAdjustment;
+            int newCentreY = isReverseGravityActive(player)
+                    ? rideY + params.offsetY() + rideReach
+                    : rideY + params.offsetY() - rideReach;
             int newY = newCentreY - (player.getHeight() / 2);
             player.setY((short) newY);
             putRidingState(player, instance, carryX, rideY, ridingPieceIndex);
@@ -2973,7 +2981,16 @@ public final class ObjectSolidContactController {
                     } else {
                         surfaceOffset = params.groundHalfHeight();
                     }
-                    int newCentreY = currentY + params.offsetY() - surfaceOffset - player.getYRadius();
+                    // ROM MvSonicOnPtfm (sonic3k.asm:41648-41653, :41690-41702): upright it
+                    // computes `d0 = y_pos(a0) - d3` and writes `y_pos(a1) = d0 - y_radius(a1)`;
+                    // under Reverse_gravity_flag it branches to loc_1E1AA, computes
+                    // `d0 = y_pos(a0) + d3` and writes `y_pos(a1) = d0 + y_radius(a1)`
+                    // (loc_1E1F4). The rider hangs under the platform, both terms mirrored.
+                    // The unused S1 leftover at :41661 (the ±9 branch) is unreachable.
+                    int surfaceReach = surfaceOffset + player.getYRadius();
+                    int newCentreY = isReverseGravityActive(player)
+                            ? currentY + params.offsetY() + surfaceReach
+                            : currentY + params.offsetY() - surfaceReach;
                     int newY = newCentreY - (player.getHeight() / 2);
                     player.setY((short) newY);
                     ridingX = currentX;
@@ -3611,7 +3628,17 @@ public final class ObjectSolidContactController {
         // applied — it causes phantom collisions between objects separated by
         // ~2048px vertically in tall levels (e.g. HCZ2 FanPlatformChild at Y=608
         // falsely colliding with player at Y=2654).
-        int relY = playerCenterY - anchorY + verticalOffset + maxTop;
+        // ROM: SolidObject_cont's reverse-gravity branch (sonic3k.asm:41412-41424) is
+        // loc_1DFD6 (:41426-41440) with one extra instruction — `neg.w d3` on the
+        // player-minus-object delta, before the +4 and the d2 add. Everything else, the
+        // default_y_radius/y_radius pair included, is identical. anchorY is the object's
+        // centre and maxTop is the ROM's d2 (object half-height + player y_radius), so
+        // mirroring that one term is the whole row.
+        boolean reverseGravity = isReverseGravityActive(player);
+        int centreDeltaY = reverseGravity
+                ? anchorY - playerCenterY
+                : playerCenterY - anchorY;
+        int relY = centreDeltaY + verticalOffset + maxTop;
 
         boolean riding = useStickyBuffer && isRidingCurrentPlayerObject(instance);
         // For multi-piece objects, only apply sticky buffer (-16px) when checking
@@ -3882,7 +3909,14 @@ public final class ObjectSolidContactController {
         if (!solidProfile.usesPlatformLandingSnap()) {
             return;
         }
-        int targetCentreY = anchorY - params.groundHalfHeight() - player.getYRadius() - 1;
+        // S3K SolidObjectTop loc_1E45A snaps above the top with the -1 bias.
+        // Its reverse branch loc_1E4D6 instead ends exactly at object bottom
+        // plus the live radius (SUB.W d1,d2; SUBQ.W #4,d2). It is not the
+        // same +/-3 lift used by SolidObjectFull. This final height override
+        // must preserve that asymmetry after Player_TouchFloor restores radii.
+        int targetCentreY = isReverseGravityActive(player)
+                ? anchorY + params.groundHalfHeight() + player.getYRadius()
+                : anchorY - params.groundHalfHeight() - player.getYRadius() - 1;
         if (player instanceof AbstractPlayableSprite sprite) {
             NativePositionOps.writeYPosPreserveSubpixel(sprite, targetCentreY);
             return;
@@ -4278,8 +4312,22 @@ public final class ObjectSolidContactController {
                 return null;
             }
             if (apply) {
-                int newCenterY = playerCenterY - distY + 3
-                        - getTopLandingSnapAdjustment(instance, player);
+                // ROM loc_1E154 (sonic3k.asm:41606-41632). Upright: `subq.w #4,d3`,
+                // `subq.w #1,y_pos(a1)`, `sub.w d3,y_pos(a1)` — a net `y - d3 + 3`, which
+                // is the form here. Under the flag the ROM inserts `neg.w d3` and
+                // `addq.w #2,y_pos(a1)` between them (:41623-41628), giving `y + d3 - 3`:
+                // the same landing, taken against the object's other face. The asymmetry
+                // between +3 and -3 is the ROM's own — the upright path's extra
+                // `subq.w #1` is what makes the constant 3 rather than 4.
+                int landingSnap = distY - 3 + getTopLandingSnapAdjustment(instance, player);
+                // SolidObjCheckSloped/Sloped2 branch straight to loc_1E45A,
+                // bypassing loc_1E44C's reverse-gravity test (S3K :42076-42120).
+                // Their direct top-helper contract keeps the upright position
+                // arithmetic even when the world flag is set. Flat top-solid
+                // callers still select loc_1E4D6 through their normal path.
+                int newCenterY = directTopLimit == null && isReverseGravityActive(player)
+                        ? playerCenterY + landingSnap
+                        : playerCenterY - landingSnap;
                 int newY = newCenterY - (player.getHeight() / 2);
                 player.setY((short) newY);
                 // ROM: Solid_ResetFloor / PlatformObject loc_74DC unconditionally
@@ -4663,8 +4711,17 @@ public final class ObjectSolidContactController {
             }
 
             if (apply) {
-                int newCenterY = playerCenterY - distY + 3
-                        - getTopLandingSnapAdjustment(instance, player);
+                // ROM loc_1E154 (sonic3k.asm:41606-41632). Upright: `subq.w #4,d3`,
+                // `subq.w #1,y_pos(a1)`, `sub.w d3,y_pos(a1)` — a net `y - d3 + 3`, which
+                // is the form here. Under the flag the ROM inserts `neg.w d3` and
+                // `addq.w #2,y_pos(a1)` between them (:41623-41628), giving `y + d3 - 3`:
+                // the same landing, taken against the object's other face. The asymmetry
+                // between +3 and -3 is the ROM's own — the upright path's extra
+                // `subq.w #1` is what makes the constant 3 rather than 4.
+                int landingSnap = distY - 3 + getTopLandingSnapAdjustment(instance, player);
+                int newCenterY = isReverseGravityActive(player)
+                        ? playerCenterY + landingSnap
+                        : playerCenterY - landingSnap;
                 int newY = newCenterY - (player.getHeight() / 2);
                 player.setY((short) newY);
                 if (upwardVelocity) {
@@ -4775,7 +4832,13 @@ public final class ObjectSolidContactController {
         // owned by CollisionRules rather than an MGZ carrier exception.
         boolean alwaysSeparatesAirBottomHit = alwaysSeparatesAirBottomSolidHit(player);
         if (apply && (player.getYSpeed() < 0 || alwaysSeparatesAirBottomHit)) {
-            int newCenterY = playerCenterY - distY;
+            // ROM loc_1E0FC (sonic3k.asm:41569-41574): `neg.w d3` under the flag, then the
+            // same `sub.w d3,y_pos(a1)`. The separation is the same size; it points the
+            // other way, because the object's "underside" is its top when gravity is
+            // inverted.
+            int newCenterY = isReverseGravityActive(player)
+                    ? playerCenterY + distY
+                    : playerCenterY - distY;
             int newY = newCenterY - (player.getHeight() / 2);
             player.setY((short) newY);
             LOGGER.fine(() -> "Solid object ceiling hit, zeroing ySpeed from " + player.getYSpeed());
@@ -5062,6 +5125,24 @@ public final class ObjectSolidContactController {
             return false;
         }
         return shouldSkipOffscreenSidekickFullSolid(player, ridingObject, provider.getSolidRoutineProfile());
+    }
+
+    /**
+     * ROM {@code Reverse_gravity_flag} ($FFFFF7C6), read for the solid-object rows.
+     *
+     * <p>{@code SolidObject_cont} (sonic3k.asm:41403-41424), {@code sub_1E0C2}'s
+     * {@code loc_1E0FC} (:41569-41573) and {@code loc_1E154} (:41623-41628),
+     * {@code MvSonicOnPtfm} (:41648-41653) and {@code sub_1E410}'s {@code loc_1E44C} /
+     * {@code loc_1E4D6} (:41999, :42053-42071) each branch on it. The flag is the whole
+     * gate — the ROM never checks the zone — so this stays engine-internal state rather
+     * than a {@code GameRules} member, and S1 and S2 (which never set it) are unaffected.
+     */
+    private static boolean isReverseGravityActive(PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) {
+            return false;
+        }
+        GameStateManager gameState = sprite.currentGameStateOrNull();
+        return gameState != null && gameState.isReverseGravityActive();
     }
 
     private boolean isVisibleForRenderFlag(AbstractPlayableSprite sprite) {

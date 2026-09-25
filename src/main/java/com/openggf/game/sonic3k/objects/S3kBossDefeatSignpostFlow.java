@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.objects.SpawnCoordinateDefaultArgsRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -32,7 +33,7 @@ import java.util.logging.Logger;
  * </ol>
  */
 public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
-        implements SpawnCoordinateDefaultArgsRewindRecreatable {
+        implements SpawnCoordinateDefaultArgsRewindRecreatable, RomWorldPositionedObject {
     private static final Logger LOG = Logger.getLogger(S3kBossDefeatSignpostFlow.class.getName());
 
     private enum Phase { WAIT_FADE, SPAWN_SIGNPOST, AWAIT_RESULTS, AWAIT_ACT_TRANSITION }
@@ -86,7 +87,26 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
      * @param cleanupAction action to run after spawning the signpost (e.g. palette restore)
      */
     public S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction) {
-        this(signpostX, apparentAct, cleanupAction, 0, 0, 0, 0, false, false, false);
+        this(signpostX, apparentAct, cleanupAction, false);
+    }
+
+    /**
+     * The same flow, with {@code Obj_EndSignControlDoStart}'s {@code Change_Act2Sizes} call
+     * (sonic3k.asm:180420-180424).
+     *
+     * <p>{@code Change_Act2Sizes} (sonic3k.asm:180580-180596) returns early for two zones only --
+     * Sandopolis ({@code cmpi.b #8,d0}, whose own event leads to act 2) and Hydrocity
+     * ({@code cmpi.b #$10,d0}, the zone index shifted left by four) -- so every other act 1 boss
+     * reaches it and takes act 2's stored camera bounds plus {@code Make_LevelSizeObj}'s gradual
+     * workers. A zone that arrives at its results with an arena camera lock still installed
+     * <b>needs</b> it: nothing else replaces the arena's {@code Camera_max_X_pos}.
+     *
+     * @param changeAct2SizesOnTitleComplete whether this boss's zone runs {@code Change_Act2Sizes}
+     */
+    public S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
+            boolean changeAct2SizesOnTitleComplete) {
+        this(signpostX, apparentAct, cleanupAction, 0, 0, 0, 0, false, false,
+                changeAct2SizesOnTitleComplete);
     }
 
     S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
@@ -145,9 +165,42 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         return this;
     }
 
+    /**
+     * A boss jumps into Obj_EndSignControl in its existing SST dispatch. Install
+     * its flag/timer now; the replacement's next dispatch then decrements $77.
+     * This avoids retaining a second boss slot or delaying the native install.
+     * Call after ObjectManager registers the replacement and binds its services.
+     */
+    public S3kBossDefeatSignpostFlow beginNativeReplacement(int slot) {
+        nativeControlSlot = slot;
+        ensureInitialized();
+        return this;
+    }
+
     @Override
     public int getX() {
         return signpostX;
+    }
+
+    /**
+     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104166-104178) walks
+     * {@code Dynamic_object_RAM+object_size} to {@code Breathing_bubbles} and subtracts the
+     * handover's {@code d0}/{@code d1} from the {@code x_pos}/{@code y_pos} of every slot whose
+     * {@code render_flags} bit 2 is set. This flow IS such a slot: it is the boss's own SST entry
+     * rewritten by {@code loc_787E0} ({@code Obj_EndSignControl}, sonic3k.asm:180377-180383) and
+     * it keeps the boss's {@code render_flags}, so a seamless act change moves it with everything
+     * else. Its only position word the engine models is {@code signpostX}, the x the signpost
+     * child is spawned at; {@code getY()} is fixed at zero because no routine after
+     * {@code loc_787E0} reads this slot's {@code y_pos}, and the Lava Reef change's own
+     * {@code d1} is zero.
+     *
+     * <p>Without this contract {@code ROM_WORLD_OFFSET_RANGE} refuses the whole handover --
+     * "SST slot N reports render_flags bit 2 without a native ROM position contract" -- which is
+     * exactly what the first Lava Reef capture to actually defeat the miniboss hit.
+     */
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        signpostX = (signpostX + offsetX) & 0xFFFF;
     }
 
     @Override
@@ -401,7 +454,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
      * {@code Restore_PlayerControl} / {@code Restore_PlayerControl2} as soon
      * as {@code _unkFAA8} clears. The routine leaves the title-card controller
      * lock and velocities independently owned, while clearing object control,
-     * interaction and in-air state and publishing a fresh Wait animation
+     * in-air state and publishing a fresh Wait animation
      * (docs/skdisasm/sonic3k.asm:180361-180424).
      */
     static void restoreNativePlayerControl(AbstractPlayableSprite player) {
@@ -409,7 +462,9 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
             return;
         }
         ObjectControlState.none().applyTo(player);
-        player.setInteractSlotIndex(0);
+        // Restore_PlayerControl clears object_control ($2E), not the last
+        // standing-object address at interact ($42). Preserve that contact.
+        // The former explicit slot reset was not present in the shipped ROM.
         player.clearAirForNativeControlRestore();
         player.setAnimationId(Sonic3kAnimationIds.WAIT);
         player.getAnimationManager().publishPreviousAnimationId(
@@ -430,11 +485,16 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
                     services().camera().setMaxXTarget((short) level.getMaxX());
                     services().camera().setMaxYTarget((short) level.getMaxY());
                 }
-                // Change_Act2Sizes creates Child1_Act2LevelSize before deleting
-                // EndSignControl. MHZ needs the shared max-X worker to release
-                // the carried miniboss camera lock (sonic3k.asm:180415-180419,
-                // 180575-180609,178154-178169).
+                // Change_Act2Sizes creates all three Child1_Act2LevelSize
+                // siblings in this order before deleting EndSignControl
+                // (sonic3k.asm:180580-180615). Releasing only X leaves the
+                // miniboss min-Y carried into Act 2, hiding its upward route.
+                // Preserve the native accelerating release, not a reload snap.
                 spawnAfterCurrentSibling(() -> new S3kIncLevelEndXGradualInstance(0, 0));
+                spawnAfterCurrentSibling(() -> S3kCameraGradualObjectInstance.forActTwoLevelSizes(
+                        S3kCameraGradualObjectInstance.DEC_START_Y));
+                spawnAfterCurrentSibling(() -> S3kCameraGradualObjectInstance.forActTwoLevelSizes(
+                        S3kCameraGradualObjectInstance.INC_END_Y));
             }
             setDestroyed(true);
             LOG.fine("S3K defeat flow complete — destroyed");

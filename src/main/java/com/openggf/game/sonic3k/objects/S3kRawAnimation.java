@@ -199,6 +199,57 @@ public final class S3kRawAnimation {
     }
 
     /**
+     * {@code Animate_RawNoSSTMultiDelayFlipX} (sonic3k.asm:177628-177651). Same script layout as
+     * {@link #animateMultiDelay}, with the script passed in {@code a1} rather than taken from
+     * {@code $30(a0)}, and with bit 6 of a frame byte meaning "toggle {@code render_flags} bit 0"
+     * rather than being part of the frame index ({@code bclr #6,d1 / bne / bchg #0,render_flags}).
+     * The command paths are shared with {@code Animate_RawMultiDelay}, so a jump still stores its
+     * target in {@code $30(a0)}.
+     *
+     * @param toggleFlipX run when a frame byte carries bit 6
+     */
+    public int animateNoSstMultiDelayFlipX(State s, int script, Runnable callback,
+            Runnable toggleFlipX) {
+        s.animFrameTimer = (s.animFrameTimer - 1) & 0xFF;
+        if ((byte) s.animFrameTimer >= 0) {
+            return WAITING;
+        }
+        int d0 = (s.animFrame + 2) & 0xFF;
+        s.animFrame = d0;
+        int frame = u8(script + d0);
+        if ((byte) frame >= 0) {
+            if ((frame & 0x40) != 0) {
+                toggleFlipX.run();
+            }
+            s.mappingFrame = frame & ~0x40;
+            s.animFrameTimer = u8(script + 1 + d0);
+            return ADVANCED;
+        }
+        int result;
+        switch (frame) {
+            case CMD_JUMP -> {
+                int target = script + (byte) u8(script + 1 + d0);
+                s.script = target;
+                s.mappingFrame = u8(target);
+                s.animFrameTimer = u8(target + 1);
+                result = ADVANCED;
+            }
+            case CMD_CALLBACK -> {
+                s.animFrameTimer = 0;
+                callback.run();
+                result = COMMAND;
+            }
+            default -> {
+                s.mappingFrame = u8(script);
+                s.animFrameTimer = u8(script + 1);
+                result = ADVANCED;
+            }
+        }
+        s.animFrame = 0;
+        return result;
+    }
+
+    /**
      * {@code Animate_Raw2MultiDelay}. Every command path returns {@link #COMMAND} and ends
      * with {@code clr.b anim_frame(a0)}, so the condition codes a caller tests afterwards
      * are Z set and N clear.

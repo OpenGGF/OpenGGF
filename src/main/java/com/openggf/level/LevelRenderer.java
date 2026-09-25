@@ -112,6 +112,7 @@ public final class LevelRenderer {
     private short[] pendingBgVScrollColumnData;
     private int pendingBgShaderScrollMidpoint;
     private int pendingBgShaderExtraBuffer;
+    private com.openggf.game.internal.BackgroundColumnRemap.Columns pendingBgColumns;
     private int pendingBgVOffset;
     private boolean pendingBgPerLineScroll;
     private IntIndexedView pendingBgHScrollView;
@@ -292,6 +293,7 @@ public final class LevelRenderer {
         TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
         if (bgRenderer != null && tilemapRenderer != null
                 && isBackgroundCompositeCurrent(tilemapRenderer)) {
+            com.openggf.level.render.BackgroundRendererInternalAccess.setColumns(bgRenderer, pendingBgColumns);
             bgRenderer.renderWithScrollWide(pendingBgHScrollView, pendingBgVScrollView, pendingBgVScrollColumnView,
                     pendingBgShaderScrollMidpoint, pendingBgShaderExtraBuffer,
                     pendingBgVOffset, pendingBgPerLineScroll);
@@ -539,7 +541,7 @@ public final class LevelRenderer {
         private final int[] ints = new int[22];
         private final float[] floats = new float[18];
         private final boolean[] bools = new boolean[8];
-        private final Object[] refs = new Object[8];
+        private final Object[] refs = new Object[9];
         private int[] scroll0;
         private short[] short0;
         private short[] short1;
@@ -628,6 +630,7 @@ public final class LevelRenderer {
             refs[5] = r.pendingFgUnderwaterPaletteId_high;
             refs[6] = r.pendingFboAtlasId;
             refs[7] = r.pendingFboPaletteId;
+            refs[8] = r.pendingBgColumns;
             advancedState = r.currentAdvancedRenderFrameState;
             scroll0Length = 0;
             short0Length = 0;
@@ -709,6 +712,7 @@ public final class LevelRenderer {
             r.pendingFgUnderwaterPaletteId_high = (Integer) refs[5];
             r.pendingFboAtlasId = (Integer) refs[6];
             r.pendingFboPaletteId = (Integer) refs[7];
+            r.pendingBgColumns = (com.openggf.game.internal.BackgroundColumnRemap.Columns) refs[8];
             r.currentAdvancedRenderFrameState = advancedState;
             switch (kind) {
                 case BG_RENDER -> {
@@ -875,6 +879,7 @@ public final class LevelRenderer {
     }
 
     final LevelSpritePresentation.Tables spriteTables = new LevelSpritePresentation.Tables();
+    final LevelBoundsMaskTransition boundsMask = new LevelBoundsMaskTransition();
     private boolean preparingSpritePresentation;
     private LevelScrollPresentation currentScrollPresentation;
 
@@ -959,6 +964,7 @@ public final class LevelRenderer {
     /** Resets per-frame derived state (used when the level is unloaded). */
     void resetState() {
         spriteTables.reset();
+        boundsMask.reset();
         currentScrollPresentation = null;
         frameCommandPool.cancelOutstanding();
         currentShimmerStyle = 0;
@@ -1006,8 +1012,19 @@ public final class LevelRenderer {
     }
 
     private void applyForegroundScrollFeatures(TilemapGpuRenderer tilemapRenderer) {
+        // Native cameras hide finite layout edges behind their 320px bounds; the
+        // Genesis nametable itself wraps. Widescreen can expose those hidden edges
+        // (e.g. a centered arena carried into a seamless act's negative camera X).
+        // Do not sample unrelated far-end terrain there. This affects rendering only:
+        // native boundary words, player walls and intentional foreground rings remain.
+        com.openggf.graphics.TilemapGpuRendererInternalAccess.setClipHorizontal(tilemapRenderer, lm.camera.getWidth() > 320
+                && foregroundPlaneSource(currentAdvancedRenderFrameState) == TilemapGpuRenderer.Layer.FOREGROUND
+                && (lm.zoneFeatureProvider == null || !lm.zoneFeatureProvider.foregroundWrapsHorizontally()));
         tilemapRenderer.setForegroundWindow(lm.zoneFeatureProvider == null
                 ? null : lm.zoneFeatureProvider.foregroundWindow());
+        com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundVerticalScrollSplit(tilemapRenderer, lm.zoneFeatureProvider instanceof
+                com.openggf.game.internal.ForegroundVerticalScrollSplit owner
+                ? owner.foregroundVerticalScrollSplit() : null);
         if (currentAdvancedRenderFrameState.enableForegroundHeatHaze()
                 || currentAdvancedRenderFrameState.enablePerLineForegroundScroll()) {
             tilemapRenderer.enablePerLineForegroundScroll(pendingFgHScrollView);
@@ -1203,6 +1220,14 @@ public final class LevelRenderer {
             lm.graphicsManager.registerCommand(disableWaterShaderCommand);
         }
 
+        // Derive visible wings from the native bounds paired with this displayed frame.
+        // Camera freezes alone do not define an arena; ordinary finite level edges also apply.
+        if (options.hasGameplayPass()) {
+            var mask = currentScrollPresentation == null
+                    ? (boundsMask.sample() == null ? LevelScrollPresentation.captureArenaMask(lm) : boundsMask.sample())
+                    : currentScrollPresentation.registers().arenaMask();
+            com.openggf.graphics.ArenaMaskRenderer.enqueue(lm.graphicsManager, mask);
+        }
         profiler.beginSection("render.hud");
         if (options.includeHud() && lm.hudRenderManager != null
                 && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
@@ -1475,6 +1500,8 @@ public final class LevelRenderer {
             if (shaderVOffset < 0)
                 shaderVOffset += LevelConstants.CHUNK_HEIGHT; // Handle negative modulo
 
+            pendingBgColumns = lm.zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundColumnRemap owner
+                    ? owner.backgroundColumns() : null;
             pendingBgHScrollData = hScrollData;
             pendingBgVScrollData = vScrollData;
             pendingBgVScrollColumnData = vScrollColumnData;
@@ -1556,6 +1583,11 @@ public final class LevelRenderer {
                         ? layeredGhostHook
                         : null;
         if (spriteManager != null) spriteManager.prepareRenderBucketsForPass();
+        // Render_Sprites lets a zone splice its own sprites into the end of a priority level
+        // (Lava Reef's rocks at Render_Sprites_NextLevel). Sprite-table order is behaviour.
+        com.openggf.level.render.PriorityBucketSpriteSource bucketSpriteSource =
+                zoneFeatureProvider instanceof com.openggf.level.render.PriorityBucketSpriteSource source
+                        ? source : null;
         if (useSpriteSatMasking) {
             graphicsManager.beginSpriteSatCollection();
             // SAT collection must follow sprite-table order, not painter order.
@@ -1573,11 +1605,21 @@ public final class LevelRenderer {
                     objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
                 drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
+                if (bucketSpriteSource != null) {
+                    // Appended after this level's own entries, exactly as the ROM does.
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    bucketSpriteSource.appendSpritesAfterPriorityBucket(bucket);
+                }
             }
             graphicsManager.endSpriteSatCollectionAndReplay();
         } else {
             for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-                // Painter order reverses the native SAT: objects before players.
+                // Painter order reverses the native SAT: objects before players, and the spliced
+                // sprites - last in their level's table region - are drawn first within it.
+                if (bucketSpriteSource != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    bucketSpriteSource.appendSpritesAfterPriorityBucket(bucket);
+                }
                 if (objectManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
                     objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
