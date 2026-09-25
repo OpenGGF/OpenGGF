@@ -5797,3 +5797,20 @@ ordinary classes plus guards. Java 21/Lua 5.4/PowerShell preflight passes. Allow
 roughly 45 minutes ordinary plus guards, with a 65-minute invocation timeout
 and the runner's 10-minute no-output stop; failures require attribution before
 integration. No additional feature work is planned during the wrap-up.
+
+### User-directed stop and delivery handoff
+
+At the user's repeated request to wrap up immediately for usage limits, the
+final combined run on `6fe847064` was interrupted (exit 130). The last observed
+completed XML snapshot contained 2,731 class reports: 22,838 tests, zero failures
+or errors, 26 skips. This is a partial observation, not a completed suite pass.
+The runner stopped Maven and automatically deleted its temporary diagnostics.
+Guards had not started; no post-integration broad run is being attempted under
+the explicit stop instruction. The latest runtime has the 96 + 10 + 1 focused
+passes above; earlier broad/guard evidence belongs to the earlier candidates,
+not this final candidate. Remaining full validation is a resume obligation.
+
+Deliver the accumulated committed campaign into main-workspace `develop`, push
+that branch only, and pause the unfinished seven-zone goal. Preserve unrelated
+main-workspace changes. Resume from the per-act matrices and current table in
+this audit; do not treat this delivery as certification of every level.
