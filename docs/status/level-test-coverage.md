@@ -480,3 +480,10 @@ now activate by ordinary movement from a declared48px local approach and pass
 two full-registry90-input replays. Combined placement/contact/saved-reload test:
 89 pass,0 skips. See the FBZ act matrices; this does not establish cold reachability
 to every post or the remaining lifecycle/viewport/donor products.
+
+DEZ2 Tails cold completion (2026-09-25): the
+[Act2 matrix](../architecture/validation/levels/s3k-dez-act2.md#tails-solo-cold-act2-completion-2026-09-25)
+now records62588 inputs,56 full-registry replay windows,all eight boss hits and
+the actual final-stage load/history reset. Fresh capture matches the authored
+route with no deaths. Tails' final fight and broader lifecycle/native/breadth
+obligations remain open; the initial continuation runs out of time.

@@ -1206,3 +1206,48 @@ the complete ordinary solo Sonic final fight and actual ending load: see the
 [final matrix](s3k-dez-final-boss.md#ordinary-solo-sonic-cold-ending-route-2026-09-25).
 Its68 additional replay windows include the shortened waits and final encounter;
 the original103-window Act2 fixture remains independently runnable.
+
+## Tails solo cold Act2 completion (2026-09-25)
+
+On `bac660ab4` plus this test-only follow-up, ordinary native320 Tails alone now
+clears Act2 from the cold DEZ1 start. The preserved
+`dez2-tails-solo-incoming-clear-320.{script,bk2}` contains62588 inputs: the real
+final-arena load occurs at62467, followed by120 inputs. No position, ring, health,
+emerald or timer seeds; no donor, follower or death. The previously preserved
+47140-input lower-pad route remains independently runnable.
+
+`TestDezSoloActTwoColdRouteCapture#coldTailsAloneClearsActTwoAndLoadsFinalStage`
+checks56 whole-registry immediate restores and45-input forward replays, including
+lower gravity contact, return launcher, upper route, gravity-boss cycles and the
+incoming final stage. It asserts all eight production boss hits, actual zone23/0,
+and the full load's isolated frame-zero history, including seeking to its origin.
+
+Queued Java21/DISPLAY=:0 command, with the actual absolute ROM path substituted:
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=/absolute/path/to/s3k.gen \
+  '-Dtest=TestDezSoloActTwoColdRouteCapture#coldTailsAloneClearsActTwoAndLoadsFinalStage' test
+```
+One test passed,0 failures/errors/skips,1:26 Maven. Fresh production capture has
+62588 rows and matches all62468 authored rows on20 state fields; no deaths.
+`$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260925-tails-cold-act2-clear-320/`
+contains the59.8s boss/arrival video (3588 frames at60fps, inputs59000–62587),
+verified by full decode and inspected gravity-boss/arrival stills. This is engine
+route/presentation evidence, not matched native-input or pixel parity.
+
+The final fight is not yet complete for Tails: the first continuation runs out
+of Act2 time at65528 with one hand hit remaining. Shortening exploratory input
+waits is controller authoring, not a reason to alter runtime timer/physics.
+The first attempt to remove5603 stationary inputs across the entire act died
+at35930; stationary player coordinates do not imply idle world state. A narrower
+3488-input removal remained alive but missed the down-hub exit and stalled at
+($32C0,$640); no rejected input is certified. Future shortening must verify each
+interaction boundary rather than treating stationary coordinates as sufficient.
+
+Local scope is proportionate: only a new route, its test and documentation change;
+no runtime code changes. The change-based plan against`bac660ab4` falls back to
+all2920 ordinary classes plus guards for route resources. The directly exercised
+cold route, all-eight-hit assertion and complete registry replay cover this
+addition. Combined campaign broad validation against`e6c6ac79` remains required
+and pending; this focused pass is not a full-suite claim. Wider viewport/donor,
+lifecycle and native-scene matrix obligations remain open.
