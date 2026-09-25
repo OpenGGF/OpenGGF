@@ -166,6 +166,98 @@ class TestFbzCheckpointRoutes {
         }
     }
 
+    @ParameterizedTest(name = "{0} FBZ{1} physical post {2}, width {4}, repeated death")
+    @MethodSource("checkpointLifecycleCases")
+    void physicalCheckpointSurvivesTwoRealDeathReloads(Team team, int act, int index,
+            CheckpointPlacement checkpoint, int width) {
+        ConfigSnapshot savedConfig = configure(team);
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        var aspect = java.util.Arrays.stream(com.openggf.configuration.WidescreenAspect.values())
+                .filter(value -> value.pixelWidth() == width).findFirst().orElseThrow();
+        // Use a real preset and create the gameplay camera only after resolving it.
+        // configure(team) has already opened a native-width session for older tests.
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+        try {
+            // Local ROM-placed post approach, not a cold route. No saved-post state
+            // is injected. Death itself is a declared production pit-death stimulus.
+            var f = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, act)
+                    .startPosition((short) (checkpoint.x() - 48), (short) checkpoint.y())
+                    .startPositionIsCentre().withFreshLevelStartLifecycle().build();
+            assertEquals(width, GameServices.camera().getWidth() & 0xFFFF, "initial configured viewport");
+            for (int n = 0; n < 90 && !GameServices.level().getCheckpointState().isActive(); n++)
+                f.stepFrame(false, false, false, true, false);
+            var post = assertInstanceOf(CheckpointState.class, GameServices.level().getCheckpointState());
+            assertTrue(post.isActive()); assertEquals(index, post.getLastCheckpointIndex());
+            int savedX = post.getSavedX(), savedY = post.getSavedY();
+            var followers = List.copyOf(GameServices.sprites().getRegisteredSidekicks());
+            var input = new com.openggf.control.InputHandler();
+            var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
+            input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral, neutral));
+            var loop = new com.openggf.GameLoop(input);
+            loop.setGameplayMode(f.gameplayMode()); loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+            try {
+                for (int cycle = 0; cycle < 2; cycle++) {
+                    for (int n = 0; n < 30; n++) {f.gameplayMode().getFadeManager().update();loop.step();}
+                    var objects = GameServices.level().getObjectManager();
+                    var runtime = GameServices.zoneRuntimeRegistry().current();
+                    assertTrue(GameServices.sprites().getMainPlayable().applyPitDeath());
+                    long outgoing = 0; boolean loaded = false;
+                    for (int n = 0; n < 1200; n++) {
+                        f.gameplayMode().getFadeManager().update(); loop.step();
+                        var rewind = f.gameplayMode().getRewindController();
+                        if (GameServices.level().getObjectManager() != objects) {
+                            loaded = true;
+                            assertEquals(Sonic3kZoneIds.ZONE_FBZ, GameServices.level().getCurrentZone());
+                            assertEquals(act, GameServices.level().getCurrentAct());
+                            assertEquals(index, GameServices.level().getCheckpointState().getLastCheckpointIndex());
+                            var player = GameServices.sprites().getMainPlayable();
+                            assertEquals(savedX, player.getCentreX() & 0xFFFF);
+                            assertEquals(savedY, player.getCentreY() & 0xFFFF);
+                            assertEquals(team.main(), player.getCode());
+                            assertEquals(followers, GameServices.sprites().getRegisteredSidekicks());
+                            assertEquals(width, GameServices.camera().getWidth() & 0xFFFF);
+                            assertNotSame(runtime, GameServices.zoneRuntimeRegistry().current());
+                            var next = assertInstanceOf(FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
+                            var events = assertInstanceOf(Sonic3kLevelEventManager.class, GameServices.module().getLevelEventProvider());
+                            assertTrue(next.isBackedBy(events.getFbzEvents()));
+                            assertEquals(team.playerCharacter(), events.getPlayerCharacter());
+                            assertTrue(outgoing > 10, "the outgoing timeline must exist");
+                            assertTrue(rewind == null || rewind.currentFrame() < outgoing,
+                                    "death reload must isolate outgoing history");
+                            break;
+                        }
+                        if (rewind != null) outgoing = Math.max(outgoing, rewind.currentFrame());
+                    }
+                    assertTrue(loaded, "real GameLoop death reload cycle " + cycle);
+                    boolean released = false;
+                    for (int n = 0; n < 500; n++) {
+                        f.gameplayMode().getFadeManager().update(); loop.step();
+                        var title = GameServices.module().getTitleCardProvider();
+                        if (loop.getCurrentGameMode() == com.openggf.game.GameMode.LEVEL
+                                && (title == null || title.isComplete())
+                                && !f.gameplayMode().getFadeManager().isActive()
+                                && !GameServices.sprites().getMainPlayable().isControlLocked()) {
+                            released = true; break;
+                        }
+                    }
+                    assertTrue(released, "title/fade must release controls");
+                    assertFalse(GameServices.sprites().getMainPlayable().getDead());
+                }
+            } finally {loop.closePresence();}
+        } finally {config.clearSessionOverrides(); restore(savedConfig);}
+    }
+
+    private static Stream<Arguments> checkpointLifecycleCases() {
+        return AUTHORED_CHECKPOINTS.stream().flatMap(post -> Stream.of(Team.values())
+                .flatMap(team -> Stream.of(320, 352, 400, 528, 800)
+                        .map(width -> Arguments.of(team, post.act(), post.index(), post, width))));
+    }
+
     private static void sameCheckpointWorld(com.openggf.game.rewind.CompositeSnapshot expected,
             com.openggf.game.rewind.CompositeSnapshot actual, String where) {
         assertEquals(expected.entries().keySet(), actual.entries().keySet(), where);

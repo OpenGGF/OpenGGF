@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+FBZ checkpoint width setup (2026-09-25): setting an aspect after a helper has
+already created the gameplay session leaves the existing camera at its original
+width. A post-death assertion then looks like a reload width regression. Apply
+the real display preset before opening the session and assert the initial camera
+width as well as the reloaded width. This changed 176 false width failures into
+220 passing two-death cases without any runtime modification.
+
 FBZ local checkpoint replay (2026-09-25): a freshly built fixture can still be
 before the first admitted gameplay frame. Capturing there and replaying90 inputs
 produced24 object-allocation/runtime differences across44 physical starpost

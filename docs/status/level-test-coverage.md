@@ -506,3 +506,10 @@ SSZ solo Sonic full clear (2026-09-25):
 now loads DEZ1 after all three bosses in 19,845 cold inputs, no deaths. The final
 route adds 41 passing restore/replay windows and actual handoff history isolation;
 Tails and remaining viewport/donor/lifecycle/native breadth remain open.
+
+FBZ checkpoint lifecycle (2026-09-25): both act matrices now include physical
+contact followed by two full death/reloads at each of eleven posts, four native
+teams and five selectable widths (220 cases, 440 loads). The full checkpoint
+class passes 309 tests without skips, including team/runtime replacement and
+live-history isolation. Local approaches and induced pit death are declared;
+donor coverage and cold reachability to every post remain distinct obligations.

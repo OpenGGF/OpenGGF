@@ -23,7 +23,7 @@ its original unimplemented counts must not be read as current production status.
 | Zone | Current evidence and next obligation |
 | --- | --- |
 | MHZ | Integrated Sonic/Tails route and miniboss fixes; accepted Knuckles/trace exclusions reconciled in the new per-act matrices; fresh320Sonic Act1 completion now includes six live replay spots and a corrected one-owner MHZ2 handoff; Act2 cold320 Sonic completion now reaches playable FBZ1 without seeds/deaths; eight full-registry rewind spots and ship-body presentation checks now pass; lifecycle/breadth remain open. |
-| FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; all eleven placed posts now activate through ordinary local movement for four native teams (44 cases), with immediate restore and two forward replays; finish checkpoint death/restart breadth and presentation obligations without undoing the accepted S1 elevator challenge. |
+| FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; all eleven placed posts now activate through ordinary local movement for four native teams (44 cases), with immediate restore and two forward replays; physical contact now composes with two real death/reloads for every post, four native teams and all five selectable widths (220 cases/440 reloads); finish donor/lifecycle and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Solo Knuckles now completes both acts and the direct HPZ exit in52659 inputs with289 full-registry replay spots across five scoped tests. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. Solo Sonic now clears both replica bosses in 11,200 cold inputs without deaths, with 42 passing full-registry replay windows; his complete 19,845-input route now defeats Mecha and loads DEZ with 41 further passing replay windows and live-history isolation. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
@@ -5719,3 +5719,23 @@ reproduces the tested BK2 Input Log byte-for-byte. Integration validation remain
 separate and is not waived by these local focused results. The successful
 snapshot-trial author remains a temporary probe pending promotion with explicit
 load-boundary protection before reuse on another route.
+
+## FBZ physical checkpoint death/reload composition (2026-09-25)
+
+Both FBZ matrices now record 220 local-contact cases (eleven posts × four native
+teams × five actual display presets), each followed by two real GameLoop death
+loads. Saved position, configured team, camera width, replacement owners, event
+binding, outgoing history reset and title/control release pass across 440 loads.
+Together with the existing 89 cases: 309 tests, 0 failures/errors/skips, 49.002s
+Maven on `17c191094` plus test changes. Exact command is in the act matrices.
+
+The initial 220-case run had 176 width mismatches (44 for each non-native width),
+with 44 native cases passing. The second run added a pre-contact assertion and
+proved those cameras were already 320 before death. The fixture team helper had
+created the session before applying the aspect; reopening after the real preset
+resolves all cases. This was a probe setup correction, not an engine fix.
+The change-based plan selects 1,959 common/gameplay classes plus guards. Focused
+validation is proportionate for this test-only change: it executes every new
+case and the existing class, without changing production/shared contracts.
+Campaign integration checks and remaining donor/cold-route/presentation scope
+are not waived.

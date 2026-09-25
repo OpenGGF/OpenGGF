@@ -233,3 +233,30 @@ Final focused command on `9bc91e469` plus this test, Java21/DISPLAY=:0:
 36.042s Maven. All44 physical activations pass immediate restore and two forward
 replays. This test-only addition uses focused validation; campaign broad checks
 and other act obligations remain outstanding.
+
+## Physical checkpoint through repeated death (2026-09-25)
+
+`TestFbzCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads` composes
+ordinary contact with each of the eleven ROM-placed posts and two full production
+death/reload cycles. Cases cover Sonic, Tails, Sonic+Tails and Knuckles at all
+selectable presets: 320, 352, 400, 528 and 800 pixels (220 cases, 440 reloads).
+The local approach starts 48px left of the post at its authored Y. No saved
+checkpoint is injected. A declared `applyPitDeath()` stimulus initiates normal
+GameLoop death, fade, reload and title/control release; this is not a test of
+hazard contact or cold traversal to every post.
+
+Each reload verifies saved coordinates/index, main character, follower identity,
+viewport width, replacement object/runtime owners, event binding and player
+branch, plus outgoing live history and its reset at the full load. Repeating the
+cycle checks that the rebuilt world remains usable and retains the checkpoint.
+The independent activation/replay and saved-post intake tests remain intact.
+
+On `17c191094` plus this test, Java 21 and DISPLAY=:0:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestFbzCheckpointRoutes test`: 309 tests, 0 failures/errors/skips,
+49.002s Maven (28.30s class). Initial width failures were fixture setup: the
+team helper created its camera before the display configuration. Applying the
+real preset before opening the final gameplay session, and checking the width
+before contact as well as after reload, verifies the intended product. No runtime
+change was needed. Donor products, cold post reachability and other act-specific
+mechanism/presentation obligations remain open.
