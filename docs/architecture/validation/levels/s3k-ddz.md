@@ -11,8 +11,8 @@ Status: fresh Super and positioned DEZ2-incoming Hyper routes reach both boss
 phases and the accepted ending request at320/800. A new native320 Sonic+Tails
 route starts at cold DEZ1 and reaches the same request after64648 controller
 frames, with emeralds declared only at boot; its replay verification is recorded
-in the dated follow-up below. Native scene matching, remaining roster/donor breadth and ending-load history
-isolation remain open. Death-reload history isolation now passes at320/800. Nothing below certifies the zone.
+in the dated follow-up below. Native scene matching, remaining roster/donor breadth remain open. Death-reload and seeded ending-load
+history isolation now pass at320/800. Nothing below certifies the zone.
 
 Incoming: DEZ final boss → `$C00` verified at320/800, including a positioned
 DEZ2-boss start with no reseeding across either load. Full cold DEZ1→DEZ2→final
@@ -41,6 +41,7 @@ branch; only Sonic is the native route.
 | OBJECT: asteroids, missiles, boss graph, slot/load order | `Obj_DDZAsteroid`, `Obj_DDZMissile`, `Obj_DDZEndBoss`; native slot histories `probe-slots0/1` | native route | seeded route test (slot order drives hit order) | implemented; native behaviour matched through the route | pass | Super branch now has `loc_8242A/82452` fixed-slot stars and six ROM frames; Hyper owner now waits for native art-queue completion;506 entry child rows match (dated follow-up below) |
 | LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | 320, 800 | `TestS3kDdzLifecycleProduction` | implemented | pass, 2 | Live history isolation now asserted at both widths (follow-up below); donor/team rows only through the breadth matrix |
 | LOAD: `$D01` handover freeze | `StartNewLevel` leaves the level loop; native fade frozen | GameLoop and recording driver | `TestS3kDdzColdRoutes` | recording driver now honors the shared inactive-transition flag | focused route check passes | Exit fade freezes source gameplay while palette work continues |
+| LOAD / HISTORY: ending `$D01` | `loc_81CA4` progression-save request, real load and outgoing timeline reset | 320, 800; declared post-white-fade boss state | `TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline` | implemented | 2 passed, no skips (2026-09-25 follow-up) | Seeded boundary evidence; no on-disk save or ending-scene claim |
 | ORACLE: strict segment replay | `TestS3kSonicTailsZone0cSegmentTraceReplay` | — | `-Ptrace-segments` | — | red: bootstrap camera Y and missing clock seeds (plan evidence) | Replay harness bootstrap |
 | LOAD: DEZ → `$C00` incoming | `loc_803D6` and source camera-policy retirement | solo320/800 direct final-DEZ routes | `TestDezFinalScreenEntry`, capture115 | connected | corrected load/initial flight;30-case destination selection passes without skips (2026-09-23) | Full cold native320 team incoming continuity is now recorded below; remaining roster/width breadth stays open |
 
@@ -475,3 +476,23 @@ tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true
 The change-based plan selects1959 classes through gameplay test ownership.
 Focused validation is proportionate for this assertion/driver-only change; no
 full-suite rerun is claimed. Ending `$D01` history isolation remains open.
+
+### 2026-09-25 ending-load history boundary
+
+`TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline`
+now covers the production `loc_81CA4` handoff at 320 and800. It builds live DDZ
+flight history, then declares the already-finished-white-fade boss state
+(`exitMode`, routine6, timer0) to isolate the boundary. The actual object update
+requests `PROGRESSION_SAVE` and `$D01`; `GameLoop` consumes that request and
+loads zone13/act1 with an isolated timeline. The spy observes the real save
+request without replacing its implementation. This checks the request, not
+persistence to a selected on-disk save slot, and does not replay the preceding
+fight or certify the ending scene. Existing full routes own the fight.
+
+On `ae21cd421` plus this test-only addition,
+`JAVA_HOME=<JDK21> LUA_BIN=lua5.4 DISPLAY=:0 python3 tools/testing/maven_queue.py
+-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestS3kDdzLifecycleProduction test` passes all four death/ending cases,
+zero failures/errors/skips. The inspected plan selects1959 gameplay classes;
+focused validation is proportionate for this bounded test-only extension. No
+production change or broad-suite rerun is claimed.

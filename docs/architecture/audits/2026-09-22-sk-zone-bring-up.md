@@ -5271,3 +5271,15 @@ records command, rejected input approaches and remaining obligations. No
 production change or full-act/native-pixel claim. The 2917-class fallback is
 disproportionate for this test/input-only addition; focused production replay
 and capture are the validation. All-level completion and integration stay open.
+
+## 2026-09-25 DDZ ending-history follow-up
+
+The short lifecycle suite now verifies `loc_81CA4` at320/800 from a declared
+post-white-fade boss state, after real flight has built live rewind history.
+The production branch requests the progression save and `$D01`; the real load
+resets the outgoing timeline. All four lifecycle cases pass without skips on
+`ae21cd421` plus this test-only extension. The [DDZ matrix](../validation/levels/s3k-ddz.md#2026-09-25-ending-load-history-boundary)
+records exact command and limitations: request verification is not on-disk save
+persistence, full-fight replay or ending-scene certification. The1959-class
+selection is disproportionate to this assertion/setup-only change, so focused
+validation is recorded; no runtime behavior changed.
