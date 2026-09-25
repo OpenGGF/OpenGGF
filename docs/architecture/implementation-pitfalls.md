@@ -138,6 +138,16 @@ ordinary-suite check outside `-Pguards`. Run its real round-trip sweep and updat
 the test/resource totals only after verifying the new class passes or has honest
 graph coverage. A passing coverage guard alone does not check those totals.
 
+**Subsystem SST reservations must follow object restore.** Attracted rings own
+slots outside the object manager's captured occupant set. Re-register the ring
+adapter after the object adapter when level adapters move, including seamless
+act transitions. Restore clears future ring records without releasing their old
+numeric slots: those slots may now belong to restored objects. Then reserve the
+saved ring slots. Restoring rings first loses their reservations when objects
+rebuild occupancy; releasing future ring slots afterwards frees restored objects.
+The cold solo DEZ2 route exposed both at input28910. Test allocation after replay,
+not only snapshot fields: the object snapshot deliberately excludes ring slots.
+
 **Managed children need identity relinking.** `RewindStateful` represents captured
 helper values; applying it to a live managed child can make an owner's captured
 collection retain stale objects after recreation. Use object scalar capture and

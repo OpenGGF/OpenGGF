@@ -5505,3 +5505,22 @@ Sonic+Tails, Sonic solo and Tails solo now have the mandatory cold Act1 completi
 Sonic's Act2 scratch input has crossed energy bridges and the gravity pad and
 reached the opposing-spring corridor; it still needs completion and certification.
 Continue solo Act2/final and the rest of the seven-zone matrices.
+
+
+## Sonic solo cold DEZ2 completion and rewind repairs (2026-09-25)
+
+After `cc07626d9`, ordinary solo Sonic reaches the real final-stage load at53721
+with zero deaths and all8 Act2 boss hits. The53842-input route passes103 full-world
+restore/45-input replay windows and live-history load isolation. The
+[Act2 matrix](../validation/levels/s3k-dez-act2.md#ordinary-sonic-solo-cold-completion-2026-09-25)
+records commands, failures, rejected partial fix and inspected93.2s video.
+The route exposed attracted-ring slot restore ordering/stale release and released
+Robotnik/door parent retention. Both repairs preserve native gameplay and restore
+ownership; their ROM/rewind rationale is in code. Focused checks pass, but shared
+restore changes still require combined broad validation before integration.
+
+Solo final completion remains open: the controller trial clears fingers and hits
+the core once, then reaches9:59. Shorten excessive traversal waits before claiming
+an ending route. Tails solo Act2 has reached the lower bridge after correctly
+landing on the underside gravity pad; it is not yet certified. Continue the
+remaining seven-zone matrices; no integration or push in this slice.

@@ -869,6 +869,10 @@ public final class GameplayModeContext implements ModeContext {
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
         }
+        // Re-registration must preserve the allocator dependency even when rings
+        // survived a seamless act transition: objects rebuild their owned SSTs,
+        // then rings reserve their separately captured attracted-ring SSTs.
+        registerRingAdapter(levelManager.getRingManager());
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             rewindRegistry.register(dser);
         }

@@ -1079,3 +1079,49 @@ inspected. It is engine presentation evidence, not native parity. The ordinary
 full-route state is in `campaign-20260925-repaired-route-trial5`. The same route
 with seven Super Emeralds declared only at boot reaches DDZ at54691; incoming
 DDZ completion remains separate work.
+
+
+## Ordinary Sonic solo cold completion (2026-09-25)
+
+After `cc07626d9`, `dez2-sonic-solo-incoming-clear-320.{script,bk2}` preserves
+the complete cold DEZ1 prefix and clears ordinary solo Act2 in53842 inputs,
+including120 neutral final-stage arrival frames. Actual `$1700` load is input53721;
+all8 boss hits, no deaths, no follower, no state seeds, donor off/native320.
+`TestDezSoloActTwoColdRouteCapture` checks103 whole-registry immediate restores
+and45-input forward replays across traversal, gravity changes, transporters,
+bridge/hub interactions, boss phases, defeat and arrival. Live history resets
+at the actual load and seeking frame0 remains in zone23. Test/input presence
+alone is not the claim: the complete cold run passed.
+
+Two runtime faults surfaced. After an act transition, re-registering level adapters
+moved objects after rings; object restore then erased attracted-ring reservations.
+Ring restore also released future slot numbers that could belong to restored objects.
+Restore now rebuilds object-owned slots first, clears future ring records without
+freeing those numbers, and reserves saved ring slots. A short allocation regression
+failed before the repair. The first repair alone was rejected by an immediate
+restore failure at28910; fixing registration order was also necessary.
+
+At the boss load, `DezEndBossEscape.parent` retained the deleted root. ROM
+`loc_70068 -> loc_7F74C` stops reading parent3 once Robotnik runs; `loc_7F79C`
+switches the door to `Sprite_OnScreen_Test`. Release those Java references at
+those handoffs and continue their independent routines. The boss regression
+covers waiting before the signal, release, and continued motion/rendering.
+
+Focused Java21/DISPLAY=:0 commands, each with `-Dmse=off` and absolute
+`-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`, through `tools/testing/maven_queue.py`:
+- `-Dtest=TestRingManager,TestRingManagerRewindSnapshot,TestLostRingRewindGenericRestore,TestGameplayModeContextRewindRegistry,TestDezSoloActTwoColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:137 passing checks,0 skips; the route alone then errored on the retired boss reference.
+- `-Dtest=TestDezEndBossEncounter,TestDezSoloActTwoColdRouteCapture test`:15 boss checks pass,0 skips; the route's final history assertion was incorrectly comparing71 pre-load frames with120 arrival frames plus replay windows.
+- `-Dtest=TestDezSoloActTwoColdRouteCapture test`:1 pass,0 failures/errors/skips,
+  1:08 Maven, after asserting the frame-origin reset at the actual load instead.
+
+Fresh capture agrees with all53722 authored-prefix rows on12 fields.
+`$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260925-sonic-cold-act2-clear-320/`
+contains the5592-frame/60fps/93.2s active-fight, defeat and arrival video, full
+state CSV and inspected stills. Full decode passes. It predates the rewind-only
+repairs and does not exercise rewind. Native visual comparison, remaining
+width/donor/lifecycle breadth and solo final-fight completion remain open.
+The exploratory final continuation reaches the core but hits the9:59 timer
+limit; its waiting-heavy Act2 inputs need shortening for an ending route.
+Shared restore changes require the combined campaign broad selection (2920
+ordinary classes plus guards against `e6c6ac79`), still pending; these focused
+results are not a full-suite pass.

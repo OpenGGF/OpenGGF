@@ -444,3 +444,12 @@ rewind/replay windows, zero deaths. Both solo tests pass (136 spots total).
 See the [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#ordinary-tails-solo-cold-completion-2026-09-25).
 The mandatory native cold Act1 roster is covered; solo Act2/final and remaining
 breadth/native presentation are open.
+
+
+DEZ2 Sonic solo follow-up (2026-09-25): the ordinary native320 cold Act1/2
+route now clears all8 gravity-boss hits, loads the final stage and passes103
+full-registry replay windows plus actual-load history reset/seek. See the
+[Act2 matrix](../architecture/validation/levels/s3k-dez-act2.md#ordinary-sonic-solo-cold-completion-2026-09-25)
+for the slot-restoration and retired-parent repairs, focused results and video.
+Solo final completion, Tails Act2/final, remaining breadth and combined campaign
+verification/integration are still open.

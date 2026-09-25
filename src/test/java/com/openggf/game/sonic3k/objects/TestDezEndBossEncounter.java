@@ -130,6 +130,26 @@ class TestDezEndBossEncounter {
         assertTrue(transitions.consumeZoneActRequest()); assertEquals(0x17,transitions.getRequestedZone());
         assertEquals(0,transitions.getRequestedAct());
     }
+    @Test void releasedRobotnikAndDoorNoLongerRetainTheBoss() {
+        var f=boot();
+        var robotnik=new DezEndBossEscape(f.root,DezEndBossEscape.ROBOTNIK,0);
+        var door=new DezEndBossEscape(f.root,DezEndBossEscape.DOOR,2);
+        f.manager.addDynamicObject(robotnik); f.manager.addDynamicObject(door);
+        robotnik.update(0,null); door.update(0,null);
+        f.root.status|=0x80;
+        robotnik.update(1,null);
+        assertSame(f.root,robotnik.parentForTest(),"defeat alone still waits for the door signal");
+        f.root.control|=0x10;
+        robotnik.update(2,null); door.update(2,null);
+        assertNull(robotnik.parentForTest(),"loc_7F74C runs independently of parent3");
+        assertNull(door.parentForTest(),"Sprite_OnScreen_Test no longer reads parent3");
+        int x=robotnik.getX();
+        f.root.setDestroyed(true);
+        robotnik.update(3,null); door.update(3,null);
+        assertEquals(x+2,robotnik.getX());
+        assertTrue(robotnik.visible); assertTrue(door.visible);
+    }
+
     @Test void widescreenExitWaitsForBoundaryWorkerWithoutAdvancingTheCameraItself() {
         var f=boot(800);
         f.root.codePointer=0x7F2DC;

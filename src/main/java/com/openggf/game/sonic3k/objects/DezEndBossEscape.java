@@ -28,7 +28,8 @@ final class DezEndBossEscape extends DezEndBossSprite implements RewindRecreatab
     @Override public void update(int vIntRunCount,PlayableEntity ignored) {
         visible=false;
         if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
-        if(parent==null) return;
+        boolean released = (kind==ROBOTNIK && state>=3) || (kind==DOOR && state>=2);
+        if(parent==null && !released) return;
         switch(kind) {
             case ROBOTNIK -> robotnik();
             case DOOR -> door();
@@ -58,6 +59,10 @@ final class DezEndBossEscape extends DezEndBossSprite implements RewindRecreatab
                 state=3; writeY(getY()-4); xVelocity=0x200;
                 frame=animationCursor=animationTimer=0; flipX=true;
                 eggRoboRun=services().playerQuery().mainPlayerOrNull() instanceof Knuckles;
+                // loc_70068 hands off to loc_7F74C: the runner reads Player_1,
+                // not parent3. Release the Java identity before StartNewLevel
+                // deletes the boss; retained native address bytes are never read.
+                parent=null;
             }
         } else {
             var player=services().playerQuery().mainPlayerOrNull();
@@ -86,6 +91,9 @@ final class DezEndBossEscape extends DezEndBossSprite implements RewindRecreatab
         }
         if(state==1&&(parent.control&0x10)!=0) {
             state=2; frame=0x15;
+            // loc_7F79C switches to Sprite_OnScreen_Test after the signal.
+            // That routine no longer dereferences the boss's parent3 address.
+            parent=null;
             spawnChild(()->new DezMinibossExplosionController(getX(),getY(),6));
         } else if(state==2&&isCoarseXOutOfRange(getX(),cameraLeft(),coarseXCullRange())) {
             ObjectLifetimeOps.deleteNoRespawn(this); return;
