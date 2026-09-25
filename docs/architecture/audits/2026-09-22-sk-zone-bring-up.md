@@ -5042,3 +5042,14 @@ outside the native +4 relative-Y window; corrected setup passes all14 spike
 checks, with106 unchanged corridor/stability checks already passing. The
 inventory is107 covered/5 partial/0 missing/4 not applicable. This closes the
 missing implementation row, not the remaining partial rows or whole-level gates.
+
+
+### 2026-09-25 — hurt-boundary evidence distinguished from the later kill
+
+At `39832f596`, the native hurt death-plane implementation needed stronger
+coverage, not another patch. A real airborne-controller test observes terrain
+admission for Sonic/Tails/Knuckles across signed top-boundary edges, proving
+the hurt-specific early return independently of the later boundary kill.
+All186 movement tests pass, zero skips. The reference inventory advances to
+110 covered/2 partial/0 missing/4 not applicable; no production code changed.
+The DEZ2 matrix records commands and the held-bound/route limits.

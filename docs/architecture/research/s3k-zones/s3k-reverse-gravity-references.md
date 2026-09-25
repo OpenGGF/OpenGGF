@@ -121,7 +121,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 24308 | `loc_12148` | level collision (`loc_12148`): negates the push-out distance | `CollisionSystem.doTerrainCollisionAirDirect` (quadrant $C0) | covered |
 | 24350 | `Player_TouchFloor` | `Player_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 24426 | `loc_12246` | `BubbleShield_Bounce` (`loc_12246`): negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
-| 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | `PlayableSpriteMovement.applyHurtStopBottomKill` | partial |
+| 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | `PlayableSpriteMovement.applyHurtStopBottomKill` | covered |
 | 24552 | `loc_123DE` | `loc_123DE` (dead/respawn): off-screen test uses `Camera_Y - $10` going up | `PlayableSpriteMovement.hasFallenPastDeathRestartRow` | covered |
 | 24716 | `sub_125E0` | `sub_125E0` (hurt/dead animate): vertical mirror | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 
@@ -147,7 +147,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 29080 | `loc_155B4` | `Tails_DoLevelCollision` `loc_155B4`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29104 | `loc_155E2` | `Tails_DoLevelCollision` `loc_155E2`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29143 | `Tails_TouchFloor` | `Tails_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
-| 29220 | `sub_15716` | `sub_15716` (hurt): death-plane test flips to the top | same shared owner as :24475 | partial |
+| 29220 | `sub_15716` | `sub_15716` (hurt): death-plane test flips to the top | same shared owner as :24475 | covered |
 | 29336 | `sub_15842` | `sub_15842` (hurt/dead animate): vertical mirror | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 | 29594 | `loc_15A7A` | `loc_15A7A` (`Animate_Tails` rotation frames): vertical mirror applied inside the animator | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 
@@ -187,7 +187,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 32782 | `loc_17ACA` | `Knux_DoLevelCollision` `loc_17ACA`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32802 | `loc_17AEC` | `Knux_DoLevelCollision` `loc_17AEC`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32839 | `Knux_TouchFloor` | `Knux_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
-| 32911 | `sub_17C10` | `sub_17C10` (hurt): death-plane test flips to the top | same shared owner as :24475 | partial |
+| 32911 | `sub_17C10` | `sub_17C10` (hurt): death-plane test flips to the top | same shared owner as :24475 | covered |
 | 33017 | `sub_17D1E` | `sub_17D1E` (hurt/dead animate): vertical mirror | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 
 ### F. Dust, Tails' tails, shields, Super Tails birds
@@ -269,17 +269,17 @@ is the RAM wipe described above).
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
-| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 18 | 1 | 0 | 1 |
-| C. Tails routines | 21 | 19 | 1 | 0 | 1 |
+| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 19 | 0 | 0 | 1 |
+| C. Tails routines | 21 | 20 | 0 | 0 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 5 | 0 | 0 | 0 |
-| E. Knuckles routines | 24 | 22 | 1 | 0 | 1 |
+| E. Knuckles routines | 24 | 23 | 0 | 0 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 9 | 0 | 0 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 1 | 0 | 1 |
 | I. Monitors, springs, spikes | 6 | 6 | 0 | 0 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 3 | 0 | 0 | 0 |
-| **Total** | **116** | **107** | **5** | **0** | **4** |
+| **Total** | **116** | **110** | **2** | **0** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:
@@ -358,13 +358,17 @@ on. `Sonic_Jump` mirrors the angle it hands to that probe (sonic3k.asm:23290-233
 vector at `loc_1182E` re-reads `angle(a0)` raw — the correction recorded at `b38402c2a`, now
 confirmed line by line for `Tails_Jump` (:28524-28576) and `Knux_Jump` (:32438-32493) as well.
 
-The hurt routines' own death plane (`sub_12318` :24475, `sub_15716` :29220, `sub_17C10` :32911) is
-implemented but stays **partial**, because it cannot be told apart from the sibling row that is
-already covered. `Player_LevelBound`'s kill plane fires later in the same frame at the same
-boundary, so a hurt inverted player dies at the top of the level whether or not the hurt site's own
-branch exists — measured by disabling that branch and watching both new assertions still pass. The
-branch is kept because it is the cited ROM code and it returns before the terrain pass, but the
-reference table does not credit a row whose only test passes without it.
+The hurt routines' own death plane (`sub_12318` :24475, `sub_15716` :29220,
+`sub_17C10` :32911) now has a distinguishing terrain-admission test. The earlier
+world-boundary-only assertions survived removal of the hurt branch because
+`Player_LevelBound` killed later in the same frame. The 2026-09-25 test runs the
+real airborne hurt controller for Sonic, Tails and Knuckles with a collision
+observer: at or above the signed top boundary the player dies without entering
+terrain; one pixel below it remains alive and enters terrain. It covers minY
+`$100` and zero, including wrapped signed `$FFFF`. Thus the later sibling kill
+cannot satisfy the early-return assertion. The rows are now covered, without
+changing production code. Tests keep live/target bounds equal; the separately
+documented held-bound mask divergence in the shared boundary code is unchanged.
 
 **The spring launches (47722, 48095) needed the init swap read first.** `Spring_Up`'s init jumps
 to the `Obj_Spring_Down` body under the flag and `Spring_Down`'s to `Obj_Spring_Up`'s

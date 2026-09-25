@@ -5190,6 +5190,49 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void invertedHurtDeathStopsBeforeTerrainForEveryS3kCharacter() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                GameServices.gameState().setReverseGravityActive(true);
+                Method modeAirborne = PlayableSpriteMovement.class.getDeclaredMethod("modeAirborne");
+                modeAirborne.setAccessible(true);
+                // Native sub_12318/sub_15716/sub_17C10: signed minY >= y kills.
+                // Observing terrain admission distinguishes this early site from
+                // the later Player_LevelBound kill at the same world boundary.
+                for (String character : new String[] {"sonic", "tails", "knuckles"}) {
+                        for (int[] sample : new int[][] {{0x100, 0xFF}, {0x100, 0x100},
+                                        {0x100, 0x101}, {0, -1}, {0, 0}, {0, 1}}) {
+                                AbstractPlayableSprite player = switch (character) {
+                                        case "tails" -> new Tails(character, (short) 0, (short) 0);
+                                        case "knuckles" -> new com.openggf.sprites.playable.Knuckles(character, (short) 0, (short) 0);
+                                        default -> new Sonic(character, (short) 0, (short) 0);
+                                };
+                                assertEquals(GameRules.SONIC_3K, player.getGameRules());
+                                boolean[] terrainRan = {false};
+                                CollisionSystem collision = new LandingProbeCollisionSystem(
+                                                (sprite, landingHandler, forceFloorCheck) -> terrainRan[0] = true);
+                                var movement = new PlayableSpriteMovement(player, collision, GameServices.gameState());
+                                installRuntimeCollisionSystem(collision);
+                                Camera camera = GameServices.camera();
+                                camera.setMinY((short) sample[0]);
+                                camera.setMinYTarget((short) sample[0]);
+                                camera.setMaxY((short) 0x400);
+                                camera.setMaxYTarget((short) 0x400);
+                                camera.setLevelStarted(true);
+                                player.setCentreY((short) sample[1]);
+                                player.setAir(true);
+                                player.setHurt(true);
+                                player.setYSpeed((short) 0);
+                                player.setXSpeed((short) 0);
+                                modeAirborne.invoke(movement);
+                                boolean dies = sample[1] <= sample[0];
+                                String context = character + " min=" + sample[0] + " y=" + sample[1];
+                                assertEquals(dies, player.getDead(), context);
+                                assertEquals(!dies, terrainRan[0], context + " early hurt terrain gate");
+                        }
+                }
+        }
+
+        @Test
         public void hurtStopBottomKillUsesUnsignedS1AndSignedS2WordComparisons() throws Exception {
                 Camera camera = GameServices.camera();
                 camera.setMaxY((short) 0x0100);

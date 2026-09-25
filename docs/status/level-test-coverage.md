@@ -350,3 +350,9 @@ cover initial gravity/placement selection, later gravity changes, rewind and
 actual solid contacts from both physical faces. Together with the preceding
 monitor corrections, no gravity-reference row remains wholly missing; five
 partial rows and the broader act/character/lifecycle obligations remain open.
+
+
+The subsequent [hurt-boundary proof](../architecture/validation/levels/s3k-dez-act2.md#hurt-death-plane-early-return-proof-2026-09-25)
+distinguishes the early hurt return from the later kill for all three characters.
+Two gravity-reference rows remain partial; this evidence-only step does not
+close the broader DEZ act-matrix obligations.

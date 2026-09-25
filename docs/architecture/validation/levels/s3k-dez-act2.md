@@ -33,7 +33,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (107 of 116 ROM references covered, 5 partial and none missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (110 of 116 ROM references covered, 2 partial and none missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -926,3 +926,38 @@ prevent claiming full reverse-gravity or level completion.
 Separate queued `-Pguards -Dtest=TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard`
 passes2 tests, zero failures/errors/skips. Mirrored object-pitfall guidance is
 byte-identical and `git diff --check` is clean.
+
+
+### Hurt death-plane early-return proof (2026-09-25)
+
+Production at `39832f596` already implements the inverted early death test in
+`applyHurtStopBottomKill`. Previous assertions could not distinguish it from
+the later `Player_LevelBound` death. The new
+`TestPlayableSpriteMovement.invertedHurtDeathStopsBeforeTerrainForEveryS3kCharacter`
+invokes the actual airborne hurt controller with concrete Sonic, Tails and
+Knuckles sprites using S3K rules and a terrain-admission observer. Eighteen
+cases cover minY`$100` and zero, one pixel above/on/below each boundary, including
+signed wrapped Y`$FFFF`. Dying cases must skip terrain entirely; surviving cases
+must enter it. A later kill cannot satisfy that observed early-return contract.
+This closes the evidence gap without altering engine behavior.
+
+Queued Java21 commands:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dtest=TestPlayableSpriteMovement#invertedHurtDeathStopsBeforeTerrainForEveryS3kCharacter test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestPlayableSpriteMovement test
+```
+
+The isolated test passes, then the full movement class passes186 tests with zero
+failures/errors/skips, including an explicit S3K-rule assertion on each concrete
+sprite. An initial test compilation attempted a protected test-only setter;
+it was removed in favour of constructing the real sprites under the S3K module.
+No production file changed. Focused movement validation is proportionate to this
+test/evidence-only follow-up; it does not replace pending campaign delivery gates.
+The change-based plan was inspected. Live and target camera bounds are equal in
+these cases; the separately documented held-bound mask discrepancy remains.
+
+The reverse-gravity reference inventory is110 covered,2 partial,0 missing,4 not
+applicable. Remaining partial rows are edge balancing and top-solid landing
+windows/slopes. Whole-route/roster/viewport/lifecycle obligations remain open.

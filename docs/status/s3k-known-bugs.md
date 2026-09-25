@@ -205,7 +205,10 @@ native Y fraction. Glide falling, slide terrain probes and wall climbing remain 
 Knuckles's glide/slide, alternate climb bodies and fall-from-glide radius
 correction are now implemented. Actual DEZ floor/ceiling tests cover the latter
 with standing and smaller radii. Complete inverted Knuckles traversal remains
-an independent validation obligation.
+an independent validation obligation. The three hurt-boundary rows now have
+separate early-return coverage for Sonic, Tails and Knuckles: the terrain pass
+must not run on death, preventing the later boundary check from masking a missing
+hurt branch. The edge-balance and top-solid rows remain partial.
 
 - **`sub_1E410`'s `loc_1E4D6`** (:41999), now partial: real retracting-spring contacts
   cover the flat top-solid final snap in both gravity states, standing and rolling. The
