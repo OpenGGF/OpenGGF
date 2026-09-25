@@ -836,3 +836,43 @@ monitor presentation capture would be premature.
 
 `-Pguards -Dtest=TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard`
 also passes2 tests, zero failures/errors/skips, in a separate queued JVM.
+
+
+### Monitor shell and contents presentation (2026-09-25)
+
+Follow-up to `b1c00284f`: `Obj_MonitorSpawnIcon` copies placement render flags
+into the contents. Both the shell and icon now draw with those X/Y flips.
+`loc_1D7CE` reverses initial icon speed and `loc_1D83C` subtracts `$18` each
+update. The latter branches on BMI, admitting a zero-velocity tick: upright
+reward on update33, inverted reward on update34. The shared base now exposes
+a semantic inverted-rise hook (false by default); S3K selects it from placement
+Y-flip, never from current world gravity. Applied rewards enter the wait phase
+without re-entering motion at zero velocity. No extra mutable state is added.
+
+Two regressions failed before the change: the inverted arc went upward and the
+renderer discarded placement flips. The expanded tests cover all four flip
+combinations, fixed-point apex motion, zero-velocity/reward timing and replay
+through icon expiry. The isolated rewind test rebinds its detached test player
+explicitly; the existing S3K graph tests cover registry links separately.
+
+Queued Java21 verification at `b1c00284f` plus the change:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path="$REPO_ROOT/s3k.gen" -Dsonic1.rom.path="$REPO_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$REPO_ROOT/s2.gen" \
+  '-Dtest=*Monitor*,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+118 tests pass, zero failures/errors/skips, including S1/S2 monitor controls,
+S3K graph rewind and four S2 EHZ1 monitor-break regression cases. The inspected
+change-based selection remains all2915 ordinary classes plus guards; the
+combined campaign delivery gate is still pending.
+
+Presentation clip: `$VIDEO_ROOT/dez-bring-up/campaign-20260925-monitor-flips-320/capture.mp4`.
+This declared probe uses the FBZ2 start as a clear backdrop, with two inserted
+monitors and simultaneous production touch callbacks at frame90. It is not an
+ordinary-route claim. Native Sonic solo/320,240 neutral frames, static camera,
+zero deaths,20 awarded rings; frames60/121 inspected and full MP4 decode passes.
+The first corridor composition hid the motion behind terrain and was rejected.
+The final clip shows complete opposing arcs and flipped broken shells.

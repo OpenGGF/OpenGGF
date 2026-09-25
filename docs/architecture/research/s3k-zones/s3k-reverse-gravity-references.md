@@ -384,9 +384,9 @@ The former monitor blocker was ported on 2026-09-25: `Touch_Monitor` now mirrors
 its direction word before selecting the Y-flipped knock-loose branch, preserves
 the unsigned position gate and bounces/falls before checking player slot or
 attack animation. `Obj_MonitorFallUpsideDown` uses its own upward gravity and
-ceiling contact, independent of the player's current gravity. Monitor shell/icon
-presentation and inverted icon travel remain separate inherited gaps; covering
-this gravity-reference row is not complete monitor certification.
+ceiling contact, independent of the player's current gravity. The follow-up also implements shell/icon placement flips and inverted icon
+travel, preserving the extra zero-velocity tick in `loc_1D83C`. Covering this
+gravity-reference row and focused presentation is not whole-route certification.
 
 **The seven render-mirror rows are one net effect, not seven XORs.** `Animate_Sonic` clears
 `render_flags` bits 0-1 and rewrites bit 0 from the facing status (`andi.b #$FC` / `or.b d1`,

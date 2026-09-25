@@ -212,10 +212,11 @@ an independent validation obligation.
   inverted override formerly snapped to the upright face (57 pixels wrong in the isolated
   standing contact). Sloped variants and exact comparison-window boundaries remain open.
 - **`Obj_Spikes` :48958** still requires the missing upright status/Y-flip movement branch.
-- **Monitor follow-up:** `Touch_Monitor` and upside-down falling now follow the
+- **Monitor correction:** `Touch_Monitor` and upside-down falling now follow the
   native direction/position gates, including reverse gravity and CPU contacts.
-  Shell/icon Y-flip presentation and inverted icon motion remain inherited gaps
-  outside that gravity-reference row.
+  Shell/icon placement flips and inverted icon motion are now implemented too,
+  including the extra zero-velocity tick before the inverted reward. The focused
+  presentation setup is not a native whole-route pixel comparison.
 
 
 Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.

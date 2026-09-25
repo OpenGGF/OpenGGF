@@ -5018,3 +5018,14 @@ all with zero skips. See the DEZ2 matrix for commands and coverage limits.
 Monitor shell/icon presentation remains an explicit follow-up. The gravity
 inventory reaches106/116 covered with5 partial,1 missing and4 not applicable;
 this is not whole-level or delivery certification. No campaign push yet.
+
+
+### 2026-09-25 — inverted monitor presentation completed
+
+The follow-up to `b1c00284f` preserves shell/icon placement flips and native
+inverted contents motion, including `loc_1D83C`'s extra zero-speed tick before
+the reward. Two red regressions precede the correction;118 monitor/stability
+checks pass with zero skips. A declared240-frame FBZ-backdrop presentation
+probe shows the two arcs and broken shells; see the DEZ2 matrix and external
+capture README for setup and coverage limits. Whole-route native pixel parity
+and the combined campaign integration gate remain open.

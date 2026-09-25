@@ -186,6 +186,13 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     @Override
+    protected boolean isIconRiseInverted() {
+        // Obj_MonitorSpawnIcon copies render_flags; loc_1D7CE/loc_1D83C
+        // invert contents velocity and acceleration from bit 1, not world gravity.
+        return (spawn.renderFlags() & 2) != 0;
+    }
+
+    @Override
     protected boolean delayFirstIconUpdateAfterBreak() {
         // ROM Obj_MonitorBreak allocates Obj_MonitorContents after the current
         // slot, then Obj_MonitorContents init falls through into sub_1D820 on
@@ -462,7 +469,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         if (hasRenderer) {
             // Draw monitor body (broken shell or animated frame)
             int frameIndex = broken ? BROKEN_FRAME : mappingFrame;
-            renderer.drawFrameIndex(frameIndex, posX(), posY(), false, false);
+            renderer.drawFrameIndex(frameIndex, posX(), posY(),
+                    (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
         } else {
             // Fallback: full box when intact, half-height shell when broken
             appendFallbackBox(commands, broken);
@@ -478,7 +486,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                     if (frame != null && !frame.pieces().isEmpty()) {
                         // Draw only the first piece (the icon overlay, not the box base)
                         SpriteMappingPiece iconPiece = frame.pieces().get(0);
-                        renderer.drawPieces(List.of(iconPiece), posX(), iconSubY >> 8, false, false);
+                        renderer.drawPieces(List.of(iconPiece), posX(), iconSubY >> 8,
+                                (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
                     }
                 }
             } else {
@@ -503,8 +512,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         int left = cx - half;
         int right = cx + half;
         // Broken shell: bottom half only (y to y+half)
-        int top = isBroken ? cy : cy - half;
-        int bottom = cy + half;
+        int top = isBroken && !isIconRiseInverted() ? cy : cy - half;
+        int bottom = isBroken && isIconRiseInverted() ? cy : cy + half;
         float r = isBroken ? 0.6f : 0.4f;
         float g = isBroken ? 0.6f : 0.9f;
         float b = isBroken ? 0.6f : 1.0f;

@@ -198,7 +198,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   wall climbing follows the native reversed probes, movement and camera bound.
   Fall-from-glide landings preserve surface contact when restoring standing radii.
   Upside-down monitors retain their native knock-loose and ceiling-settling behavior,
-  including the reversed-gravity direction check.
+  including the reversed-gravity direction check. Their shells and reward icons
+  keep their placement flips, with the native inverted reward motion and timing.
   Hyper's stars retain their native sprite-list priority independently of Sonic, and
   his afterimages mirror vertically when gravity reverses. Asteroids
   shatter into smaller rocks and debris, homing missiles ride and chase, and dashing

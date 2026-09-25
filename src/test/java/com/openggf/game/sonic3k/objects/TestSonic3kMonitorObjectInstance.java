@@ -58,6 +58,68 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     @Test
+    void upsideDownIconUsesNativeZeroVelocityTickAndReplaysItsApex() throws Exception {
+        var monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0x100, 0x200, 1, 3, 2, false, 0));
+        monitor.setServices(new TestObjectServices());
+        DummyPlayer player = new DummyPlayer();
+        player.setAnimationId(Sonic3kAnimationIds.ROLL);
+        player.setYSpeed((short) 0);
+        monitor.onTouchResponse(player, TOUCH_RESULT, 0);
+        for (int i = 1; i <= 32; i++) monitor.update(i, player);
+        assertEquals((0x200 << 8) + 0x3180, readIntField(monitor, "iconSubY"));
+        assertEquals(0, readIntField(monitor, "iconVelY"));
+        assertFalse(readBooleanField(monitor, "effectApplied"));
+        var captured = monitor.captureRewindState();
+        monitor.update(33, player);
+        assertEquals(-0x18, readIntField(monitor, "iconVelY"));
+        assertFalse(readBooleanField(monitor, "effectApplied"), "inverted BMI admits the zero-speed tick");
+        monitor.update(34, player);
+        assertTrue(readBooleanField(monitor, "effectApplied"));
+        int apex = readIntField(monitor, "iconSubY");
+        for (int i = 35; i <= 64; i++) monitor.update(i, player);
+        assertEquals(apex, readIntField(monitor, "iconSubY"));
+        assertFalse(readBooleanField(monitor, "iconActive"));
+        monitor.restoreRewindState(captured);
+        // A detached test sprite is not a registry-resolvable effect target.
+        // Restore it explicitly; the captured motion/timer remain untouched.
+        var target = resolveField(monitor.getClass(), "effectTarget");
+        target.setAccessible(true);
+        target.set(monitor, player);
+        for (int i = 33; i <= 64; i++) monitor.update(i, player);
+        assertEquals(apex, readIntField(monitor, "iconSubY"));
+        assertFalse(readBooleanField(monitor, "iconActive"));
+    }
+
+    @Test
+    void monitorShellAndRewardIconKeepPlacementFlips() {
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var manager = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var sheet = mock(com.openggf.level.objects.ObjectSpriteSheet.class);
+        var piece = new com.openggf.level.render.SpriteMappingPiece(-8, -8, 2, 2, 4, false, false, 0);
+        org.mockito.Mockito.when(renderer.isReady()).thenReturn(true);
+        org.mockito.Mockito.when(manager.getMonitorRenderer()).thenReturn(renderer);
+        org.mockito.Mockito.when(manager.getMonitorSheet()).thenReturn(sheet);
+        org.mockito.Mockito.when(sheet.getFrameCount()).thenReturn(16);
+        org.mockito.Mockito.when(sheet.getFrame(4)).thenReturn(
+                new com.openggf.level.render.SpriteMappingFrame(List.of(piece)));
+        for (int flags = 0; flags < 4; flags++) {
+            var monitor = new Sonic3kMonitorObjectInstance(
+                    new ObjectSpawn(0x100, 0x200, 1, 3, flags, false, 0));
+            monitor.setServices(new TestObjectServices() {
+                @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return manager; }
+            });
+            DummyPlayer player = new DummyPlayer();
+            player.setAnimationId(Sonic3kAnimationIds.ROLL);
+            monitor.onTouchResponse(player, TOUCH_RESULT, 0);
+            monitor.appendRenderCommands(List.of());
+            org.mockito.Mockito.verify(renderer).drawFrameIndex(11, 0x100, 0x200, (flags & 1) != 0, (flags & 2) != 0);
+            org.mockito.Mockito.verify(renderer).drawPieces(List.of(piece), 0x100, 0x200, (flags & 1) != 0, (flags & 2) != 0);
+            org.mockito.Mockito.clearInvocations(renderer);
+        }
+    }
+
+    @Test
     void invertedMonitorTouchSelectsFallBeforeTheBreakAndPlayerSlotGates() {
         for (boolean reverse : new boolean[] {false, true}) {
             for (boolean cpu : new boolean[] {false, true}) {
