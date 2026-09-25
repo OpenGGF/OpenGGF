@@ -4921,3 +4921,15 @@ The key route addition is defeating the scorpion with an ordinary spindash
 before pushing the rock. No production adjustment was required. This closes
 the unknown positive coupling/passage reproduction; ordinary Knuckles, broader
 configuration products and synchronized native comparisons remain distinct gaps.
+
+
+### LRZ big-door persistence owner (2026-09-25)
+
+The remaining X-keyed big-door workaround is replaced by the already-existing
+shared per-placement lower state bit, with its redundant runtime snapshot word
+removed. The already-open constructor also publishes the native128px Y drop to
+rendering/collision. Three new regression cases fail before and pass after;
+32 focused door/lifecycle checks and80 cold-route/runtime/API/S3K stability
+checks pass. The [Act1 matrix](../validation/levels/s3k-lrz-act1.md#big-door-placement-persistence-2026-09-25)
+records scope and remaining campaign verification. No shared placement algorithm
+or public Mod API signature changed.

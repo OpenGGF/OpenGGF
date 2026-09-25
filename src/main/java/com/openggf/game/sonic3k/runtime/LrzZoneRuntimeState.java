@@ -42,10 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + 3 * Integer.BYTES + 23 * Short.BYTES + LrzBossActState.CAPTURE_BYTES;
-
-    /** No placement can sit at X 0, so it is free as "no big door has opened". */
-    private static final int NO_BIG_DOOR = 0;
+            S3kScreenShake.captureBytes() + 3 * Integer.BYTES + 22 * Short.BYTES + LrzBossActState.CAPTURE_BYTES;
 
     private final int zoneIndex;
     private final int actIndex;
@@ -86,7 +83,6 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short rocksRoutine;
     private short rocksFrontIndex;
     private short rocksBackIndex;
-    private short openedBigDoorX;
     /** ROM {@code Events_bg+$00}: non-zero while a dome region holds the background locked. */
     private short domeRegionLocked;
     private short savedBackgroundCameraX;
@@ -202,22 +198,6 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     }
 
     /**
-     * {@code Obj_LRZBigDoor}'s "already opened" memory. The ROM keeps it as bit 0 of this
-     * placement's own {@code Object_respawn_table} byte ({@code btst #0,(a2)} at sonic3k.asm:88079
-     * and {@code bset #0,(a2)} at :88107), so a door the player has opened and then walked away
-     * from comes back already open with its shake finished. The engine models only bit 7 of that
-     * table (the respawn-remember flag), so the opened placement is kept here by its X word
-     * instead; Lava Reef places exactly one {@code $1A}, and a second one would need a wider field.
-     */
-    public boolean isBigDoorOpened(int placementX) {
-        return openedBigDoorX != NO_BIG_DOOR && (openedBigDoorX & 0xFFFF) == (placementX & 0xFFFF);
-    }
-
-    public void markBigDoorOpened(int placementX) {
-        openedBigDoorX = (short) placementX;
-    }
-
-    /**
      * {@code Camera_stored_min_X_pos} and friends, saved and restored around the rock crusher's
      * camera resize and the boss arenas. They have no engine-wide owner.
      */
@@ -326,7 +306,6 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(rocksRoutine);
         buffer.putShort(rocksFrontIndex);
         buffer.putShort(rocksBackIndex);
-        buffer.putShort(openedBigDoorX);
         buffer.putShort(domeRegionLocked);
         buffer.putShort(savedBackgroundCameraX);
         buffer.putShort(savedBackgroundCameraY);
@@ -363,7 +342,6 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         rocksRoutine = buffer.getShort();
         rocksFrontIndex = buffer.getShort();
         rocksBackIndex = buffer.getShort();
-        openedBigDoorX = buffer.getShort();
         domeRegionLocked = buffer.getShort();
         savedBackgroundCameraX = buffer.getShort();
         savedBackgroundCameraY = buffer.getShort();

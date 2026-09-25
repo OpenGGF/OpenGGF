@@ -48,7 +48,7 @@ the leading `(0,0)` sentinel). The baseline only ratchets down.
 | EVENT: dome regions and locked background | `sub_56DCA`/`word_56F88` (three 5-word rows), `sub_56DAC`, `Obj_56EA0`, `LRZ1_BackgroundEvent_Index` stages 0/4/8, `Draw_delayed_rowcount $F` | native + wide | `TestLrzDomeRegions`, `TestLrzBackgroundStageMachine` (5), `SwScrlLrzTest` locked and pinned modes, `TestS3kLrzDomeBackgroundHeadless#lockingInsideARegionRewinds`, `TestLrzDomeLavaPlatform` | implemented | pass | State, stage machine, scroll and a whole-composite rewind spot inside a locked region. **Not visually verified and not verifiable today**: the engine's act 1 background plane draws no visible pixels at the dome, proved by an absurd-offset ablation, so no clip can show the lock ([s3k-known-bugs](../../../status/s3k-known-bugs.md)) |
 | OBJECT: lava blocks `$6E` (34 placements, 4 subtypes) | `Obj_InvisibleLavaBlock` -> `bset #4,shield_reaction` -> `Obj_InvisibleHurtBlockHorizontal`; `sub_1F58C` mask `$73` | native, all five shield states | `TestSonic3kInvisibleHurtBlockHObjectInstance` | implemented | pass, `bbd156d37` | Fire-shield clip deferred to slice 3 (no teleport-and-walk route from a `$05` monitor to a `$6E`); clip `05` shows the hurt |
 | OBJECT: dash elevator `$1E` (6 placements, 6 subtypes) | `Obj_LRZDashElevator` / `sub_4301C`: latch on `anim == 9`, ride on `anim` 2 or 9, push `8 + spin_dash_counter` negated when facing right, position clamped to `(subtype & $7F) * 8` | native 320, Sonic + Tails | `TestLrzDashElevatorObjectInstance` | implemented | pass, `1e01edaa0` | Clip `08` and a capture of the `($8A0,$50C)` placement travelling exactly 400 px; no wide or donor row yet, and no rewind spot mid-ride |
-| OBJECT: doors and switches `$19` (15), `$1A` (1), `$1C` (10), `$1D` (2) | `Obj_LRZDoor` (`tst.b Level_trigger_array[subtype & $F]`, one-way latch, `GetSineCosine($2E) asr #2` negated over 64 frames), `Obj_LRZBigDoor` (unsigned Y band `[y+$40,y+$C0)` and signed X `>= $50`, `asr #1` added, `Screen_shake_flag` held at `-1`), `Obj_LRZButtonHorizontal` (`swap d6 / andi.w #3` side touch; subtype bit 6 -> bit 7, bit 4 -> latch), `Obj_LRZShootingTrigger` (`(subtype & $F0) >> 2` period, `Touch_Special` `collision_property`, `sub_42EC0` only for `anim == 2`) | native 320 | `TestLrzDoorsButtonsAndTriggers` | implemented | pass, `d2c58f148` | Cold-reachable for `$1C`/`$19` (route v5 opens the `$04` door from the level start); rewind-verified by `TestLrzDoorButtonRewindSpots` (before/active/after + forward replay). The `$1C` buttons are now solid to land on as well as to walk into: `loc_1E154` re-reads `width_pixels(a0)`, which this caller sets equal to its `d1`, and the shared `d1 - $B` reconstruction gave a ten-pixel landing strip (`TestS3kLrzButtonHorizontalLandingHeadless`, cold-route row 3154). Still owed: wide and donor rows, a cold-route spot for `$1A` and `$1D`, and `sub_42EC0` on a route. The big door's ROM respawn-table bit has no engine home (see [s3k-known-bugs](../../../status/s3k-known-bugs.md)) |
+| OBJECT: doors and switches `$19` (15), `$1A` (1), `$1C` (10), `$1D` (2) | `Obj_LRZDoor` (`tst.b Level_trigger_array[subtype & $F]`, one-way latch, `GetSineCosine($2E) asr #2` negated over 64 frames), `Obj_LRZBigDoor` (unsigned Y band `[y+$40,y+$C0)` and signed X `>= $50`, `asr #1` added, `Screen_shake_flag` held at `-1`), `Obj_LRZButtonHorizontal` (`swap d6 / andi.w #3` side touch; subtype bit 6 -> bit 7, bit 4 -> latch), `Obj_LRZShootingTrigger` (`(subtype & $F0) >> 2` period, `Touch_Special` `collision_property`, `sub_42EC0` only for `anim == 2`) | native 320 | `TestLrzDoorsButtonsAndTriggers` | implemented | pass, `d2c58f148` | Cold-reachable for `$1C`/`$19` (route v5 opens the `$04` door from the level start); rewind-verified by `TestLrzDoorButtonRewindSpots` (before/active/after + forward replay). The `$1C` buttons are now solid to land on as well as to walk into: `loc_1E154` re-reads `width_pixels(a0)`, which this caller sets equal to its `d1`, and the shared `d1 - $B` reconstruction gave a ten-pixel landing strip (`TestS3kLrzButtonHorizontalLandingHeadless`, cold-route row 3154). Still owed: wide and donor rows, a cold-route spot for `$1A` and `$1D`, and `sub_42EC0` on a route. The big door now uses the shared per-placement respawn bit; same-X isolation, persistent return, fresh reset and rewind checks are recorded below |
 | OBJECT: corkscrew `$15` at `($1240,$3D8)` | `Obj_LRZCorkscrew`: half-open horizontal and inclusive vertical capture box, `ground_vel` floored to `$600` then `+$10` a frame to `$1000`, accumulator high word as the ride parameter, `$700` end, both exits `neg.w ground_vel` | native 320 | `TestLrzCorkscrewObjectInstance`, `TestLrzCorkscrewRewindSpot` | implemented | pass, `9b0608d96` | Capture floor and acceleration confirmed against native rows 3393-3400; clip `14`; rewind-verified. No wide or donor row, and no cold-route spot |
 | OBJECT: traversal families `$16 $17 $18 $1B $1F $20 $21 $22` | Per-id `Obj_LRZ*` routines and tables: `$16` `sub_42636` capture/ride/eject with the leftward speed floor at `-$400`; `$17` the `$2E` sine angle; `$18` the subtype-in-pixels trigger distance; `$1B` `render_flags` bit 7 gating the shot; `$1F` the four-second cycle; `$20` `sub_43604`'s chain; `$21` `loc_43128`'s `y_vel` accumulator, `RawAni_43196` and the `loc_1E10E` crush branch; `$22` `loc_4397E`'s grind and `loc_4389E`'s roll | native 320 | `TestLrzWallRideObjectInstance`, `TestLrzSinkingRockObjectInstance`, `TestLrzFallingSpikeObjectInstance`, `TestLrzFireballLauncher`, `TestLrzLavaFall`, `TestLrzSwingingSpikeBall`, `TestLrzSmashingSpikePlatformObjectInstance`, `TestLrzSpikeBall` | implemented | pass, `f0b7a6eff` | Clips `16`-`23`. Rewind spots for `$16`, `$17`, `$18`, `$1B`, `$1F`, `$20`, `$21`. Owed: wide and donor rows, act 2 skins, a rewind spot on `$18`'s landing boundary (needs real terrain) and route spots |
 | OBJECT: rock crusher `$9C` subtypes 0 and 2 | `Obj_LRZRockCrusher`: `Check_CameraInRange` over `word_901B8`/`word_901C4`, the two `loc_901F4` camera latches, the `bchg #0,$38` rumble, `loc_90512`'s two request shapes, `word_902EC` drop targets, `byte_904AC` piece shake | native 320 | `TestLrzRockCrusher`, `TestS3kLrzCrusherChunkEditHeadless` | implemented | pass, `cfa443e13` / `98a8c7261` | Clip `24`. `loc_90368`'s badnik art requeue waits for slice 4's remaining consumers. Cold controller contact/release and full-registry replay are covered by the crusher/lower-east routes below; subtype and breadth gaps remain |
@@ -935,3 +935,47 @@ passes38 tests, zero failures/errors/skips. This covers the full ordinary cold
 Act1 clear and its26 registry replay spots, detached boss-child recreation, and
 native/wide palette handoffs. These are focused checks; campaign delivery
 validation remains outstanding.
+
+
+## Big-door placement persistence (2026-09-25)
+
+On parent `f02e05749`, the shared two-axis placement owner already preserves
+lower respawn-table bits, but `$1A Obj_LRZBigDoor` still used an obsolete zone
+cache keyed only by X. The replacement follows `Obj_LRZBigDoor`'s `btst #0`
+and `loc_42A68`'s `bset #0` on the original placement identity. The zone-specific
+cache, its accessors and its snapshot word are removed. Shared placement state
+remains the owner through rewind and persistent stage returns; fresh level reset
+clears it using the existing lifecycle.
+
+The old already-open branch also changed only `currentY`, leaving the render
+and collision position at the original Y. The ROM adds `$80` to `y_pos` before
+entering `loc_42B08`, so the constructor now publishes the dropped position to
+both paths. No native animation or trigger condition was changed.
+
+`TestLrzBigDoorPersistence` first failed all three cases on the old code
+(3 failures,0 errors/skips). The new checks cover two placements sharing X but
+having independent state, removed/recreated doors already128px down, persistent
+return versus fresh reset, and restoring the moving door together with its
+placement byte. Existing placed-route opening/rewind and lower-bit carry checks
+are included in validation. On `f02e05749` plus the correction, queued
+`TestLrzBigDoorPersistence,TestLrzDoorsButtonsAndTriggers,TestS3kLrzRouteRewindSpots,
+TestPlacementLowerRespawnBits,TestPersistentRespawnDestroyLatchRoundTrip` passes32
+tests, zero failures/errors/skips, using the absolute existing S3K ROM path.
+A second selection (`TestLrzBossColdRouteCapture,TestS3kZoneRuntimeStateAdapters,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils,TestModApiSignatureSurface`) passes80 tests, zero
+failures/errors/skips. This includes the53047-input cold Act1→Act2→boss→HPZ
+route with all62 replay spots. Removing the internal runtime accessors does not
+change the candidate Mod API surface; its signature test passes unchanged.
+
+The plan selects all2915 ordinary classes plus guards. Focused validation is
+proportionate for this local consumer migration: the shared placement-byte
+algorithm is unchanged; its cull/carry/reset checks, actual door route, runtime
+snapshot adapters and full cold LRZ chain exercise the changed behavior and
+state layout. This is focused evidence, not a full-suite pass. Combined campaign
+validation against the main integration base remains pending.
+
+Fresh-JVM `-Pguards` selection
+`TestRewindFieldAudit,TestRewindFieldDispositionGuard,TestRewindTransientGuard`
+also passes8 tests, zero failures/errors/skips. This is a targeted guard selection,
+not the full guard suite.

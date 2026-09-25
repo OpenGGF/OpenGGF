@@ -5995,12 +5995,12 @@ render regression; see the DDZ plan and matrix.
 
 ---
 
-## Lava Reef Big Door: No Per-Placement Respawn-Table Byte
+## Lava Reef Big Door: Per-Placement Persistence Corrected
 
-- **Location** — `LrzBigDoorObjectInstance` (`Obj_LRZBigDoor`, sonic3k.asm:88070-88145); `ObjectPlacementController`
-- **Symptom** — The ROM remembers that the act 1 big door has been opened in bit 0 of that placement's own `Object_respawn_table` byte (`btst #0,(a2)` at :88079, `bset #0,(a2)` at :88107), so a door the player opens and then walks far enough away from to unload comes back already $80 pixels down, with no second rumble. The engine models only bit 7 of that table (the respawn-remember flag), so there is no general home for an object's own state bit.
-- **Workaround in place** — `LrzZoneRuntimeState` keeps the opened placement's X word (`isBigDoorOpened`/`markBigDoorOpened`), which rewind captures with the rest of the state. Lava Reef places exactly one `$1A`, so one word is enough; a second placement at the same X, or any other object that wants its own respawn bit, would not fit.
-- **Removal condition** — `ObjectPlacementController` exposes the placement's full respawn byte (or an equivalent per-placement state byte) to objects, the big door reads and writes bit 0 through it, and the runtime-state field is deleted.
+- **Location** — `LrzBigDoorObjectInstance` (`Obj_LRZBigDoor`, sonic3k.asm:88070–88145); shared two-axis placement state.
+- **Resolved (2026-09-25)** — The door now reads/writes bit0 of its original placement's state byte, matching `btst #0,(a2)` and `bset #0,(a2)`. The obsolete X-keyed `LrzZoneRuntimeState` workaround and snapshot field are removed. The shared owner already preserves lower bits through ordinary culling, rewind and persistent stage return, and clears them on fresh reset.
+- **Related reload correction** — The already-open constructor now applies the ROM's `$80` Y displacement to render/collision position as well as its centre accessor. Previously the reported centre moved while the rendered door remained at its original Y.
+- **Evidence** — Three new independent-placement/return/reset/rewind cases fail on the old implementation and pass after correction. The [Act1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#big-door-placement-persistence-2026-09-25) records the focused and route verification scope.
 
 ---
 

@@ -568,6 +568,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   first-free object allocation order. Rewinding in Act 2 keeps its current object
   graphics instead of restoring obsolete miniboss pixels; the shared art journal
   also preserves later overlapping writes and replacement level data.
+  The large proximity door remembers opening through its own placement state
+  and reloads at its lowered render/collision position.
   Invisible boss-approach platform generators retain their native activation
   window on widescreen, keeping the platforms on their original schedule.
   The final lava arena is centred within wide displays, with its drawn slope

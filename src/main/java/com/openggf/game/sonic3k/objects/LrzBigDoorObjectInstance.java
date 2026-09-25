@@ -89,11 +89,18 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
         this.currentY = baseY;
 
         // move.w respawn_addr(a0),d0 / btst #0,(a2) (sonic3k.asm:88077-88080).
-        LrzZoneRuntimeState state = lrzStateOrNull();
-        if (state != null && state.isBigDoorOpened(spawn.x() & 0xFFFF)) {
+        var objectServices = tryServices();
+        var manager = objectServices == null ? null : objectServices.objectManager();
+        // The shared placement owner now preserves the lower respawn-table bits.
+        // Use the original placement, not its moving render position or an X-only
+        // zone cache: distinct doors may share X, and stage returns carry this byte.
+        if (manager != null && manager.isSpawnStateBitSet(spawn, 0)) {
             this.currentY = (baseY + OPEN_DROP) & 0xFFFF;
             this.openTimer = OPEN_ANGLE;
             this.stage = STAGE_OPEN;
+            // Obj_LRZBigDoor adds $80 to y_pos before the already-open draw/solid
+            // tail. Publish that same position to rendering and collision too.
+            updateDynamicSpawn(spawn.x(), currentY);
         }
     }
 
@@ -121,9 +128,10 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
             stage = STAGE_OPENING;
             writeScreenShakeFlag(-1);
             playSfx(Sonic3kSfx.BIG_RUMBLE.id);
-            LrzZoneRuntimeState state = lrzStateOrNull();
-            if (state != null) {
-                state.markBigDoorOpened(getCentreX());
+            var objectServices = tryServices();
+            if (objectServices != null && objectServices.objectManager() != null) {
+                // loc_42A68: bset #0,(respawn_addr); no table entry means no write.
+                objectServices.objectManager().setSpawnStateBit(spawn, 0);
             }
             // loc_42A68 writes the new routine pointer and falls into loc_42AAE the same frame.
         }
