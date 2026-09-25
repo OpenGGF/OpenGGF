@@ -5477,3 +5477,16 @@ checks pass107, two targeted guard classes pass35, and the final sensor selectio
 passes31 including explicit S1/S2/S3K coverage, all zero failures/errors/skips. The shared movement change
 requires the combined campaign broad selection before integration; it remains
 undelivered until that verification, merge, push and cleanup are complete.
+
+
+## Sonic solo cold DEZ1 completion (2026-09-25)
+
+After `dfe7baae1`, the native320 ordinary Sonic-alone cold route clears both
+miniboss phases and reaches free Act2 control in23533 inputs, zero deaths or
+state seeds. The [Act1 matrix](../validation/levels/s3k-dez-act1.md#ordinary-sonic-solo-cold-completion-2026-09-25)
+records61 full-registry restore/replay spots, the exact passing focused command
+(1 test,0 failures/errors/skips), independent22333-row prefix match and verified
+53.883333-second arrival clip. The input-only milestone uses proportionate
+validation; campaign broad checks and integration remain pending. Tails cold
+input authoring has reached the lower passage beyond the upper moving platforms,
+but is not yet a certified route. Continue solo Act2/final and remaining matrices.

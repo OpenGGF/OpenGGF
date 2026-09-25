@@ -429,3 +429,10 @@ now completes in68,977 inputs,zero deaths. The new focused test passes62 boss-ac
 replay spots and observes14 mine hits, earned fire shield, capsule/results and
 playable HPZ; prior Act1/Act2 tests retain51/85 spots. Fresh playback matches
 all68,977 rows. Knuckles' cold chain and broader products remain open.
+
+
+DEZ1 solo route follow-up (2026-09-25): ordinary native320 Sonic alone now
+clears both eight-hit miniboss phases and reaches released Act2 control from
+cold entry in23533 inputs, zero deaths;61 full-registry restore/replay windows
+and seamless history isolation pass. See the [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#ordinary-sonic-solo-cold-completion-2026-09-25).
+Solo Act2/final, Tails, wider products and native presentation remain open.

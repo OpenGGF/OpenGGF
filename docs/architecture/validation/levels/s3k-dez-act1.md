@@ -268,3 +268,42 @@ The post-fix `campaign-20260924-cold-act2-arrival-320/capture.mp4` continues
 through the floor opening, launch and free control at(320,940), filming13840–15239.
 All15,240 state rows are death-free; stills14840/15030/15230 and full video decode
 were inspected. This additional clip uses the same cold input followed by neutral.
+
+
+## Ordinary Sonic solo cold completion (2026-09-25)
+
+After `dfe7baae1`, `dez1-sonic-solo-cold-complete-320.{script,bk2}` preserves
+23533 ordinary controller inputs from cold DEZ1 through both eight-hit miniboss
+phases, the real seamless Act2 load at22332 and incoming free control at(320,940).
+Native320, donoroff, Sonic alone, no transformations, gameplay seeds or deaths.
+`TestDezSoloColdRouteCapture` asserts the actual solo roster throughout, both
+phase completions, load, control release and outgoing-history isolation, plus61
+full-registry immediate restore and45-input replay windows spanning traversal,
+turbine, launchers, staircase, fight, defeat and incoming transport.
+
+Focused command from the task worktree, Java21 and `DISPLAY=:0`:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestDezSoloColdRouteCapture test`.
+Result:1 test passed,0 failures/errors/skips,18.89s test/40.572s Maven.
+The change-based plan against `dfe7baae1` selects2919 ordinary classes plus guards
+because recorded input files are unclassified. For this test/input-only milestone,
+the full cold production route and61 replay windows directly exercise the new
+contract; proportionate focused validation applies. Shared runtime changes in the
+larger campaign still require combined broad verification before integration.
+
+Fresh `GameplayCaptureTool` playback matches all22333 authored prefix rows on12
+player-state fields; all23533 capture rows are death-free and have no follower.
+Video `$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260925-sonic-cold-act1-clear-320/capture.mp4`
+shows inputs20300–23532,3233 frames at60fps,53.883333s. Full decode and selected
+combat/arrival stills20600/21800/23532 pass inspection. This is engine presentation
+evidence, not native pixel parity. Solo Act2/final, Tails and remaining breadth
+remain open.
+
+Method: the team route first diverged at the conveyor; ordinary input timing
+resolved the jump, turbine, launcher chain and rising stair. Direct boss policies
+died after two hits; a forecast policy with excessive damage cost avoided attacking.
+A short-horizon policy forced every zero-ring option toward one ring and died after
+four hits. The accepted controller searches only ordinary inputs using engine-owned
+rewind snapshots, a180-frame forecast and20-frame committed segments; keeping both
+ring-recovery and free movement alternatives clears the fight. No gameplay state
+was synthesized, and independent playback plus full replay checks establish that
+the saved input is sufficient without the search. No runtime change was justified.
