@@ -449,6 +449,41 @@ class TestS3kReverseGravityDezCorridor {
     }
 
     @Test
+    void fallingFromGlideRestoresStandingContactInBothGravityDirections() {
+        for (boolean reversed : new boolean[] {false, true}) {
+            for (int radius : new int[] {10, 19}) {
+                HeadlessTestFixture fixture = fixtureFor(Character.KNUCKLES);
+                AbstractPlayableSprite sprite = fixture.sprite();
+                GameServices.gameState().setReverseGravityActive(reversed);
+                // The normal released-glide entry already restores standing radii.
+                // Seed a nonzero native radius difference to exercise the fall routine's
+                // explicit radius-word correction rather than silently testing +0.
+                sprite.applyCustomRadii(10, radius);
+                NativePositionOps.writeXPosResetSubpixel(sprite, CORRIDOR_X);
+                NativePositionOps.writeYPosResetSubpixel(sprite,
+                        reversed ? CEILING_CLEAR_Y + radius + 2 : FLOOR_SURFACE_Y - radius - 2);
+                sprite.setSubpixelRaw(0, 0xA500);
+                sprite.setAir(true);
+                sprite.setOnObject(false);
+                sprite.setRolling(false);
+                sprite.setDoubleJumpFlag(2);
+                sprite.setXSpeed((short) 0);
+                sprite.setYSpeed((short) 0x400);
+                sprite.setGSpeed((short) 0);
+                for (int i = 0; i < 8 && sprite.getAir(); i++) fixture.stepIdleFrames(1);
+                assertFalse(sprite.getAir());
+                assertEquals(sprite.getStandYRadius(), sprite.getYRadius());
+                assertEquals(reversed ? CEILING_CLEAR_Y + sprite.getStandYRadius()
+                                : FLOOR_SURFACE_Y - sprite.getStandYRadius(), sprite.getCentreY());
+                assertEquals(0xA500, sprite.getYSubpixelRaw());
+                assertEquals(0, sprite.getXSpeed());
+                assertEquals(0, sprite.getYSpeed());
+                assertEquals(0x0F, sprite.getMoveLockTimer());
+            }
+        }
+    }
+
+    @Test
     void reversedClimbProbesUseTheRealFloorAndCeilingAtTheirNativeOffsets() {
         HeadlessTestFixture fixture = fixtureFor(Character.KNUCKLES);
         AbstractPlayableSprite sprite = fixture.sprite();

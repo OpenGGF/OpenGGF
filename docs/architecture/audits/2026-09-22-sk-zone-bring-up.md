@@ -4992,3 +4992,15 @@ and S3K stability checks pass105cases, without skips. The [Act2 matrix](../valid
 records source and commands. The inventory is104covered,5partial,3missing,
 4not-applicable; complete inverted Knuckles traversal and the shared movement
 broad/trace integration gates remain open.
+
+
+### DEZ Knuckles fall landing radius (2026-09-25)
+
+On `f2edd4271`, a nonzero fall-from-glide radius difference exposed the remaining
+row30921 omission: the real corridor landing was9pxoff. The normal fall owner
+now retains the pre-collision radius word and applies its gravity-signed native
+position addition after restoration. All291focused movement/corridor/stability
+checks pass, including both gravity directions, standing/smaller radii and Y
+fraction preservation. The [Act2 matrix](../validation/levels/s3k-dez-act2.md#knuckles-fall-from-glide-radius-2026-09-25)
+records the failing case and commands. The two missing monitor/spike branches
+and the combined shared-movement delivery gates remain open.

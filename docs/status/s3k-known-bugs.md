@@ -200,13 +200,13 @@ offset; skid dust spawns on the correct contact side. These close both dust rows
 Knuckles's slide get-up now negates its radius adjustment while preserving the
 native Y fraction. Glide falling, slide terrain probes and wall climbing remain open.
 
-**Open inverted-player obligations in act 2**, three missing rows and one partially covered row across groups A-I:
+**Open inverted-player obligations in act 2**, two missing rows and one partially covered row across groups A-I:
 
-- **Knuckles' fall-from-glide radius** (:30921) remains a separate obligation.
-  The glide/slide ceiling probe and mirrored slide snap (:31004), and the
-  explicit alternate wall-climb bodies (:31068,:31205), are now implemented.
-  Focused direction, threshold, probe-solidity and DEZ terrain tests cover the
-  climb branches; complete inverted Knuckles traversal is not yet certified.
+Knuckles's glide/slide, alternate climb bodies and fall-from-glide radius
+correction are now implemented. Actual DEZ floor/ceiling tests cover the latter
+with standing and smaller radii. Complete inverted Knuckles traversal remains
+an independent validation obligation.
+
 - **`sub_1E410`'s `loc_1E4D6`** (:41999), now partial: real retracting-spring contacts
   cover the flat top-solid final snap in both gravity states, standing and rolling. The
   inverted override formerly snapped to the upright face (57 pixels wrong in the isolated
@@ -225,7 +225,7 @@ Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
 the gap was a search for a `GameSound` constant, not a missing sound. `Obj_DEZGravitySwap`
 (`$5B`) has no art in the ROM and is correctly invisible.
 
-**Suspected cause.** A sliced port with individual defects tracked above. 3 of the 116
+**Suspected cause.** A sliced port with individual defects tracked above. 2 of the 116
 `Reverse_gravity_flag` references in the disassembly are still unimplemented (all in
 groups A-I, above). The act 2 boss's three rows were stale inventory entries; their
 existing implementations and focused tests are now linked from the table. The conveyor pad's

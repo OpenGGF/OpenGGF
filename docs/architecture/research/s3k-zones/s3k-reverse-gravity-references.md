@@ -169,7 +169,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 30453 | `loc_16614` | `loc_16614`: vertical mirror after `Animate_Knuckles` | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 | 30840 | `Knuckles_Gliding_HitWall` | `Knuckles_Gliding_HitWall`: reverse-gravity ledge probe (`.reverseGravity`) | `GlideWallGrabTerrain.align` via `PlayableSpriteMovement:2557` | covered |
 | 30880 | `Knuckles_Gliding_HitWall` | `Knuckles_Gliding_HitWall` (left wall): same | `GlideWallGrabTerrain.align` | covered |
-| 30921 | `Knuckles_Fall_From_Glide` | `Knuckles_Fall_From_Glide`: negates the radius Y adjustment | — | missing |
+| 30921 | `Knuckles_Fall_From_Glide` | `Knuckles_Fall_From_Glide`: negates the radius Y adjustment | Normal fall landing retains the pre-collision radius difference and applies its gravity-signed native Y-word addition after the collision callback restores standing radii; real DEZ floor/ceiling regression covers zero/nonzero differences and fraction | covered |
 | 30977 | `Knuckles_Sliding` | `Knuckles_Sliding`: negates the radius Y adjustment | `PlayableSpriteMovement.slideGetUp`: signed native centre-word addition; upright/inverted radius and fraction regression | covered |
 | 31004 | `Knuckles_Sliding` | `Knuckles_Sliding`: negates the floor snap | `checkGlideFloorDist` selects both ceiling feet and mirrors the winning angle; slide/glide contact negates the native Y-word snap and preserves its fraction. Focused regression and real DEZ corridor replay below | covered |
 | 31068 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` up: `.climbingUp_ReverseGravity` probes | `updateReversedWallClimb`: y+11 wall gate, y+8/lrb floor probe, mirrored movement/push-out and maxY+$D0 bound; focused branches and actual DEZ terrain probes | covered |
@@ -272,14 +272,14 @@ is the RAM wipe described above).
 | B. Sonic (and Sonic/Knuckles shared) routines | 20 | 18 | 1 | 0 | 1 |
 | C. Tails routines | 21 | 19 | 1 | 0 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 5 | 0 | 0 | 0 |
-| E. Knuckles routines | 24 | 21 | 1 | 1 | 1 |
+| E. Knuckles routines | 24 | 22 | 1 | 0 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 9 | 0 | 0 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 1 | 0 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 3 | 0 | 0 | 0 |
-| **Total** | **116** | **104** | **5** | **3** | **4** |
+| **Total** | **116** | **105** | **5** | **2** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:
@@ -444,3 +444,14 @@ The reversed Up bound is `Camera_max_Y_pos+$D0`, bypassed for wrapping minY
 See the [DEZ2 matrix](../../validation/levels/s3k-dez-act2.md#knuckles-inverted-wall-climbing-2026-09-25)
 for focused evidence and pending shared-movement integration gates. The
 fall-from-glide radius row30921 remains open, separate from these two bodies.
+
+
+### Fall-from-glide radius correction (2026-09-25)
+
+The row30921 branch is now implemented. Most ordinary fall entries already
+restore standing radii, making its delta zero; that does not remove the ROM's
+explicit correction. A seeded10pxradius fall landed9px too low upright (the
+real DEZ corridor expected1356, actual1365). Retain the old radius before the
+collision callback restores defaults, then add the gravity-signed difference
+on landing. The [DEZ2 matrix](../../validation/levels/s3k-dez-act2.md#knuckles-fall-from-glide-radius-2026-09-25)
+records four actual-terrain cases and the pending combined movement gates.

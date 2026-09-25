@@ -196,6 +196,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   loop during zone-change fades, including Doomsday's exit.
   Knuckles's inverted glide and slide use ceiling contacts and mirrored snaps;
   wall climbing follows the native reversed probes, movement and camera bound.
+  Fall-from-glide landings preserve surface contact when restoring standing radii.
   Hyper's stars retain their native sprite-list priority independently of Sonic, and
   his afterimages mirror vertically when gravity reverses. Asteroids
   shatter into smaller rocks and debris, homing missiles ride and chase, and dashing

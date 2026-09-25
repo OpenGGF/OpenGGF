@@ -1016,8 +1016,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			applyUnderwaterAirGravityReduction(); // btst Status_Underwater; subi #$28
 			sprite.updateSensors(originalX, originalY);
 			boolean wasAirBeforeFallCollision = sprite.getAir();
+			// Knuckles_Fall_From_Glide adds current_y_radius-default_y_radius
+			// before Knux_TouchFloor restores the radii. Our collision callback
+			// performs that restoration, so retain the pre-collision word here.
+			int fallRadiusDelta = sprite.getYRadius() - sprite.getStandYRadius();
 			doLevelCollision(sprite.isForceFloorCheck());
 			if (wasAirBeforeFallCollision && !sprite.getAir()) {
+				NativePositionOps.addYPosPreserveSubpixel(sprite,
+						ReverseGravity.mirrorYDelta(isReverseGravityActive(), fallRadiusDelta));
 				// Knuckles_Fall_From_Glide landing (sonic3k.asm:30913-30940):
 				// zero ground_vel/x_vel/y_vel, play GlideLand, and on a flat
 				// surface apply the 15-frame move_lock + crouch pose.

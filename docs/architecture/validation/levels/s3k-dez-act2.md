@@ -33,7 +33,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (104 of 116 ROM references covered, 5 partial and 3 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (105 of 116 ROM references covered, 5 partial and 2 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -759,3 +759,35 @@ do not replace the campaign's required broad and matched trace validation.
 
 The expanded movement/probe selection passes189tests,0failures/errors/skips.
 No production edits followed the105-case corridor/stability pass.
+
+
+### Knuckles fall-from-glide radius (2026-09-25)
+
+At `f2edd4271`, `Knuckles_Fall_From_Glide` restored standing radii through the
+shared collision callback but omitted its preceding native Y-word correction.
+Normal released-glide entry already restores the radius, so that path's delta
+is usually zero. The regression explicitly seeds10px and19pxfall radii against
+the measured DEZ2 corridor. Before the correction, the smaller upright case
+lands at1365 instead of1356 (9pxinside the standing contact).
+
+The normal fall path now captures `current_y_radius-default_y_radius` before
+collision, then applies its gravity-signed native word addition on landing.
+This preserves the existing collision/restoration ownership without applying
+the correction to unrelated hurt movement. `Knuckles_Fall_From_Glide`
+(sonic3k.asm:30918–30926; reverse test at ROM`$16ACE`) owns the arithmetic.
+The fractional Y word survives. The expected contacts are floor`$55F` minus
+standing radius, and ceiling clear`$520` plus standing radius.
+
+Queued Java21/absolute S3K ROM verification:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestPlayableSpriteMovement,TestS3kReverseGravityDezCorridor,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+```
+
+291tests pass,0failures/errors/skips. The new contact case exercises both
+gravity directions and both radii, requiring stopped velocities, native move
+lock and retained fraction. This is focused validation on `f2edd4271` plus the
+change, not the pending full campaign or cross-game trace gate. The inspected
+change-based plan remains the full ordinary suite plus guards. Inventory is
+105covered,5partial,2missing,4not-applicable; monitors/spikes remain unimplemented.
