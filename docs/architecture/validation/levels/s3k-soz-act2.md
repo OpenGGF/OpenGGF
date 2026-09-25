@@ -388,3 +388,40 @@ early-room event state. The shortcut now uses the production checkpoint reload.
 `TestSozLastCheckpointShortcutProduction` covers native Sonic+Tails at 320/400/800px,
 unchanged lives, isolated rewind history, destination events, wall solids and art
 submission. Broader donor/leader products for the shortcut remain untested.
+
+
+## Lower rock puzzle prerequisite reproduced (2026-09-25)
+
+On campaign commit `f631b1832`, the old fresh rock-side reproduction still takes
+the falling-track path. The missing prerequisite is now identified in production:
+breaking the subtype `$9C` cork at `($4940,$450)` publishes `Events_fg_4` and
+`openAct2ForegroundPassage` copies layout columns `$AB..$B3`, rows10..13, into
+`$8C..$94`. This changes the floor throughout the lower rock/switch corridor,
+including the spot where the fresh rock previously fell. The same event also
+copies four chunks on row7. It is a terrain transition, not a different track
+pointer or a switch eligibility exception.
+
+A positioned Knuckles run at320, no donor/follower, starts at `$4940/$430` with
+37 declared rings. `100 -;30 A;70 -` falls to the ledge and jumps into the actual
+cork in rolling animation. By input120 the cork is broken and its real falling
+columns exist; by240 the lower column has reached `$580`. Subsequent ordinary
+movement reaches the lower corridor at player Y=`$5AC`, whereas the reproduction
+without breaking the cork falls to `$66C/$6AC`. No gameplay state was hydrated
+from the native trace, no terrain was injected, and no engine behavior changed.
+Native comparison-only observations remain the earlier Knuckles segment:
+rows29870 onward show the same falling-column routine `loc_41E6A`, and the later
+rock remains in `loc_405D6` while it crosses this corridor.
+
+External attempts live under `$VIDEO_ROOT/soz-bring-up/`:
+`campaign-20260925-cork-jump-return-320/` contains the1400-plus-frame positioned
+presentation attempt and state CSV; `cork-rock-door-v2.bk2` through
+`cork-rock-door-v6.bk2` preserve the subsequent input variations. They are
+exploration, not completed puzzle evidence. The latest route breaks the cork,
+returns over the switch, and reaches the rock's right side. The scorpion beside
+the rock hits the return jump (inspected inputs930/945); knockback prevents landing
+on its left. Pushing the switch alone reaches full charge, but it decays before
+Knuckles reaches the door. That negative control is expected and does not prove
+rock coupling. Full connected rock-held switch/door passage and its replay checks
+remain open. Next author the safe return to the rock's left, then hold the switch
+with the rock and cross the raised door; do not retune the ROM track to compensate
+for the missing cork event.
