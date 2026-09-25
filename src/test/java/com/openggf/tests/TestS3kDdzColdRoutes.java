@@ -188,6 +188,26 @@ class TestS3kDdzColdRoutes {
         assertEquals(2, wraps, "phase 2 wraps $7400 -> $5400 twice on this route");
         assertEquals(0x0D, GameServices.level().getRequestedZone(), "loc_81CA4 StartNewLevel zone");
         assertEquals(1, GameServices.level().getRequestedAct(), "loc_81CA4 StartNewLevel act");
+        if (hyper && rewindFrames.isEmpty()) {
+            // loc_81CA4 leaves LevelLoop through StartNewLevel. Pal_FadeToBlack
+            // continues VBlank/palette work, but must not move the old level.
+            assertTrue(GameServices.level().isLevelInactiveForTransition());
+            String frozenObjects = objectSummary();
+            int frozenLevelFrame = GameServices.level().getFrameCounter();
+            fixture.stepIdleFrames(1); // consume request and start the fade
+            assertTrue(fixture.gameplayMode().getFadeManager().isActive());
+            int initialFadeFrame = fixture.gameplayMode().getFadeManager().getFrameCount();
+            for (int fadeFrame = 1; fadeFrame <= 20; fadeFrame++) {
+                fixture.stepIdleFrames(1);
+                assertEquals(initialFadeFrame + fadeFrame, fixture.gameplayMode().getFadeManager().getFrameCount(),
+                        "the palette fade must keep advancing while gameplay is frozen");
+                assertEquals(frozenLevelFrame, GameServices.level().getFrameCounter(),
+                        "level timer must stop during exit fade " + fadeFrame);
+                assertEquals(frozenObjects, objectSummary(),
+                        "player, camera and objects must stop during exit fade " + fadeFrame);
+            }
+        }
+
     }
 
     /** Slot, class and position of every live object plus the player and camera. */

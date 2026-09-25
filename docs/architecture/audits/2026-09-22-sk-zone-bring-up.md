@@ -4944,3 +4944,14 @@ the old implementation;78focused effect, DDZ route/rewind and S3K stability
 checks pass without skips. The [DDZ matrix](../validation/levels/s3k-ddz.md#hyper-star-sprite-list-correction-2026-09-25)
 records the source and commands. Animation-phase/size, HUD entry refresh and
 campaign integration remain open; no native pixel-parity claim is added.
+
+
+### DDZ recording exit freeze (2026-09-25)
+
+On `ce4c23f62`, extending the existing native Hyper completion into the exit
+fade reproduced the documented recording-driver gap: level time advanced from
+10057to10059 during the first checked fade row. The shared driver now honors
+the existing inactive-transition flag, matching GameLoop; it does not freeze
+unrelated active-level palette effects. The [DDZ matrix](../validation/levels/s3k-ddz.md#recording-driver-exit-freeze-2026-09-25)
+records the failing regression, corrected test-counter assumption and focused
+passes. The shared-driver change is included in the pending full campaign gate.

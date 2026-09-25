@@ -37,7 +37,7 @@ branch; only Sonic is the native route.
 | PRESENT: background bands, FG-plane boss body, explosions, wrap | `sub_596EA` six speeds from `Events_bg+6`, `DDZ_BGDeformArray`; `DDZ_ScreenEvent` stages 0/4/8/`$C`; `PLC_BossExplosion` | native 320 every frame at entry, boss arrival, first wrap, exit | side-by-side clips `30-33-ddz-native-vs-engine-*.mp4` (engine capture exact to native positions) | implemented | visual inspection: matched except the known-bugs Doomsday items (Hyper sparkle size and HUD entry rings) and Master Emerald flicker phase / white-fade tint | Pixel comparison not automated |
 | OBJECT: asteroids, missiles, boss graph, slot/load order | `Obj_DDZAsteroid`, `Obj_DDZMissile`, `Obj_DDZEndBoss`; native slot histories `probe-slots0/1` | native route | seeded route test (slot order drives hit order) | implemented; native behaviour matched through the route | pass | Super branch now has `loc_8242A/82452` fixed-slot stars and six ROM frames; Hyper owner pre-exists, native sparkle phase remains open |
 | LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | 320, 800 | `TestS3kDdzLifecycleProduction` | implemented | pass, 2 | Timeline isolation across the reload not asserted; donor/team rows only through the breadth matrix |
-| LOAD: `$D01` handover freeze | `StartNewLevel` leaves the level loop; native fade frozen | GameLoop only | — | GameLoop freezes (`isNonRewindableTransitionPending`); recording frame driver keeps stepping | open | Harness gap, frames 10059-10079 |
+| LOAD: `$D01` handover freeze | `StartNewLevel` leaves the level loop; native fade frozen | GameLoop and recording driver | `TestS3kDdzColdRoutes` | recording driver now honors the shared inactive-transition flag | focused route check passes | Exit fade freezes source gameplay while palette work continues |
 | ORACLE: strict segment replay | `TestS3kSonicTailsZone0cSegmentTraceReplay` | — | `-Ptrace-segments` | — | red: bootstrap camera Y and missing clock seeds (plan evidence) | Replay harness bootstrap |
 | LOAD: DEZ → `$C00` incoming | `loc_803D6` and source camera-policy retirement | solo320/800 direct final-DEZ routes | `TestDezFinalScreenEntry`, capture115 | connected | corrected load/initial flight;30-case destination selection passes without skips (2026-09-23) | Full incoming DEZ2 continuity and roster breadth remain open |
 
@@ -270,3 +270,42 @@ is confined to the single fixed priority return described above.
 The separate fresh-JVM check
 `python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestObjectPriorityBucketGuard test`
 also passes (1test,0failures/errors/skips).
+
+
+### Recording-driver exit freeze (2026-09-25)
+
+The existing native Hyper completion route now continues into the exit fade.
+On `ce4c23f62`, its new assertion fails at the first checked fade row: level
+frame10057 becomes10059. `DdzEndBossObjectInstance` already requests `$D01` with
+`deactivateLevelNow=true`, but `RecordingFrameDriver` ignored that semantic
+flag. The live `GameLoop` already freezes on it.
+
+The driver now skips source gameplay while `isLevelInactiveForTransition()` is
+true, leaving the outer lifecycle responsible for fade/VBlank updates. This is
+shared transition behavior, with no DDZ-specific gate and no new captured state.
+The ROM reference is `loc_81CA4` → `StartNewLevel` → `Pal_FadeToBlack`, which
+leaves the level loop. Active palette effects without the inactive-level flag
+continue normally. The route regression checks player/camera/object positions,
+rings and level frame remain fixed while the fade advances for20color steps.
+Ending-scene presentation is outside this check.
+
+The change-based plan selects the full2915-class ordinary suite and guards
+because the recording driver is shared. Focused iteration below is not final
+certification; the combined campaign run must include this change.
+
+Focused iteration on `ce4c23f62` plus this change, Java21/absolute locked-on ROM:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestS3kDdzColdRoutes,TestRecordingFrameDriverInputOnly,TestRecordingFrameDriverHardwareTiming,TestRecordingFrameDriverDynamicArt,TestPlcFrameLifecycleCoordinator,TestPlcObjectOwnedFadeLifecycle,TestGameLoop test
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestS3kDdzColdRoutes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+```
+
+The first selection ran136tests:135passed and the new route assertion failed
+because it assumed a zero starting fade counter (expected1/actual2). The test
+now checks increments relative to the fade's actual starting count; production
+code was unchanged by that correction. The second selection passes62tests with
+0failures/errors/skips, including all three DDZ routes. The other133tests from
+the first selection were not repeated on unchanged code. These are focused
+checks; full shared-driver/campaign validation remains pending.
