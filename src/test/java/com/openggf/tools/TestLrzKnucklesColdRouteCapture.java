@@ -19,7 +19,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Controller-only cold Knuckles LRZ1 traversal, miniboss and playable Act2 handoff. */
+/** Controller-only cold Knuckles LRZ traversal, miniboss, handoff and Act2 middle route. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzKnucklesColdRouteCapture {
     @Test
@@ -163,6 +163,64 @@ class TestLrzKnucklesColdRouteCapture {
             assertFalse(session.player().isObjectControlled(), "Act2 movement has been released");
             assertInstanceOf(Knuckles.class, session.player());
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+        }
+    }
+
+    @Test
+    void coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/lrz-knuckles-cold-act2-middle-320.bk2"));
+        assertEquals(33763, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        // First switch/door, spike chains, stepped walls, lower tube curve,
+        // spring bypass, moving solids, second switch/door, cloud spindash,
+        // chained-platform chamber and the long tube into the upper passage.
+        var spots = Set.of(25800, 26162, 26500, 26638, 26700, 26850,
+                27176, 27400, 27752, 28000, 28177, 28753, 28840, 28895,
+                28935, 28964, 29055, 29115, 29200, 29655, 29750, 29847,
+                29880, 30000, 30280, 30330, 30836, 30927, 31047, 31120,
+                31722, 31800, 32498, 32560, 32660, 32695, 32710, 32800,
+                32900, 33000, 33310, 33371, 33462, 33555, 33610, 33670,
+                33705, 33717);
+        var checked = new HashSet<Integer>();
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            assertInstanceOf(Knuckles.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertEquals(320, GameServices.camera().getWidth());
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                session.step(movie.getFrame(frame));
+                session.render();
+                assertFalse(session.player().getDead(), "death at input " + frame);
+                if (!spots.contains(frame)) continue;
+                assertEquals(9, GameServices.level().getCurrentZone());
+                assertEquals(1, GameServices.level().getCurrentAct());
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                var forward = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), "Act2 restore at " + frame);
+                session.restoreInputHistory(movie.getFrame(frame));
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                same(forward, registry.capture(), "Act2 replay at " + frame);
+                registry.restore(saved);
+                session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertInstanceOf(Knuckles.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertFalse(session.player().isObjectControlled());
+            assertEquals(6678, session.player().getCentreX());
+            assertEquals(1132, session.player().getCentreY());
+            assertEquals(0, session.player().getRingCount());
         }
     }
 

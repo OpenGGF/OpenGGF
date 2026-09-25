@@ -718,3 +718,50 @@ The subsequent [Tails boss-act completion](s3k-lrz-boss.md#tails-ordinary-cold-c
 now closes this native320 solo chain through playable HPZ in68,977 inputs,
 with62 additional boss-act replay spots. The Knuckles chain and wider products
 remain open.
+
+## Knuckles cold lower route and upper tube arrival (2026-09-25)
+
+`lrz-knuckles-cold-act2-middle-320.{script,bk2}` preserves 33,763 controller
+inputs from cold Act1, through its miniboss and seamless handoff, to ordinary
+solo Knuckles at (6678,1132), zero rings and zero deaths. Native320, donor off;
+no position, shield, ring or emerald setup. This establishes the lower Act2
+passages and long tube arrival, not Act2 completion or direct HPZ reachability.
+
+`TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor`
+passes 48 full-registry immediate restores and 45-input replays across the first
+switch/door, spike chains, stepped walls, lower tube curve, spring bypass,
+moving solids, second switch/door, cloud spindash, chained-platform chamber and
+long tube. The actual roster, native width, zero deaths, final coordinates and
+released object control are asserted. Prior Act1 tests retain their 107 spots.
+
+On `6bff013cc` plus this test/input extension, Java21/native GL:
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor test
+```
+
+One test passes, zero failures/errors/skips, 22.61 seconds test time and
+42.807 seconds Maven. Selection against `6bff013cc` was inspected: 2918 ordinary
+classes because route assets are unclassified. Focused validation is proportionate
+for this test/input-only addition: the whole production route and every new
+replay spot execute, with an independent fresh capture. No production behavior
+changed. Combined campaign validation and integration remain outstanding.
+
+Fresh capture:
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-knuckles-act2-middle-320/capture.mp4`.
+The video covers inputs30281–33762: 3482 frames at60fps, 58.033333 seconds.
+All33763 fresh state rows match the authoring source on x/y, velocities, ground
+speed, air/rolling/hurt/dead, rings and camera x/y; zero differences, deaths or
+followers. Full video decode passes; cloud-spindash and upper-arrival stills
+were inspected. The external README carries the exact capture command. This is
+engine presentation/replay evidence, not native pixel parity.
+
+Rejected controller choices explain several apparent stalls: holding Right
+brakes the leftward tube exit and returns through the same tube; neutral input
+preserves momentum through the lower curve. Turning east too early at the lower
+drop lands on the spring at(3760,2438), returning to the upper passage. Dropping
+beside it and jumping over it reaches the lower path. Jumping under a horizontal
+switch cannot press its side; backing up then approaching in a jump opens it.
+The cloud corridor needs a spindash escape. These observations changed authored
+inputs, not engine physics, object behavior or ROM expectations. The powered-up
+native recording was used only to locate the route, never to supply engine state.

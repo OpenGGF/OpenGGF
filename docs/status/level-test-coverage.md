@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+[Knuckles LRZ2 middle route](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-cold-lower-route-and-upper-tube-arrival-2026-09-25)
+now reaches the upper tube arrival from cold Act1 in33763 inputs, zero deaths,
+with48 Act2 restore/replay spots and a matching fresh capture. Act2 completion,
+direct HPZ, broader products and campaign integration remain open.
+
 [Knuckles LRZ1 cold completion](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-cold-act1-clear-and-act2-handoff-2026-09-25) now defeats the miniboss and reaches playable Act2 in25763 inputs,zero deaths, with37 fight/transition replay spots in addition to70 traversal spots. Knuckles Act2/directHPZ and broader products remain open.
 
 The [Knuckles LRZ1 cold arrival](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-cold-miniboss-arrival-2026-09-25) now has20410 preserved inputs,70 full-registry restore/replay spots, real cloud escape and a fresh matching capture. The boss fight and remaining Knuckles chain are still open.

@@ -5421,3 +5421,16 @@ resources. This test/input-only addition is covered directly by its complete
 production replay plus independent rendering; focused validation is proportionate.
 The campaign's shared movement changes and final integration still owe combined
 broad validation. Act2/directHPZ and other route products remain outstanding.
+
+## Knuckles cold Act2 middle route (2026-09-25)
+
+After `6bff013cc`, controller-only authoring extends the preserved route to33763
+inputs and(6678,1132), zero deaths, ordinary solo Knuckles/native320/donor off.
+The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#knuckles-cold-lower-route-and-upper-tube-arrival-2026-09-25)
+records the exact validation command, 48 full-registry restore/replay spots,
+1 passing test with0 failures/errors/skips, independent capture and rejected
+input approaches. No runtime changes were justified. Fresh playback matches all
+33763 authoring rows on12 fields; the58.033333-second video passes decode and
+selected still inspection. Test/input-only focused validation is proportionate;
+this is not a new full-suite claim. Next is the upper climb and Knuckles' direct
+HPZ exit, then remaining campaign breadth/native evidence and integration.
