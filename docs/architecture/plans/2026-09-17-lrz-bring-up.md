@@ -19,9 +19,10 @@ byte-matched to the ROM; the `$1D`/`$A0` row was restored on 2026-09-17, see the
 The native320 Sonic+Tails cold route now completes LRZ1→2→3→playable HPZ
 in53047 inputs without deaths; the act matrices record185 Act1,81 Act2 and62
 boss-route full-registry replay spots. The original mandatory Tails-solo and
-Knuckles cold routes below remain open. Tails input authoring has reached the
-upper Act1 traversal after the crusher, with no gameplay-state seeding; it is
-not yet a certified route. Other roster/donor/width/lifecycle and native
+Knuckles cold routes below remain open. Tails solo now clears Act1 and reaches
+playable Act2 in34128 ordinary inputs, with51 full-registry restore/replay spots
+and no gameplay-state seeding; its Act2→3→HPZ continuation remains open.
+Other roster/donor/width/lifecycle and native
 whole-scene obligations, final highlights and campaign integration remain open.
 Earlier execution checklists are historical where superseded by dated matrices.
 

@@ -11,7 +11,9 @@ Status: traversal families, miniboss, results and seamless handoff implemented.
 Positioned320/800 boss-to-Act2 routes and palette-ramp replay pass. Fourteen preserved
 native320 ordinary Sonic+Tails cold routes now include miniboss defeat, results and
 playable Act2 at31440inputs, with185 full-registry replay spots. The complete route
-uses no gameplay seeds and has zero deaths. Other character/donor/width products,
+uses no gameplay seeds and has zero deaths. A separate Tails-solo native320 cold
+route now clears the act and reaches playable Act2 in34128 inputs, with51
+full-registry restore/replay spots and no deaths. Other character/donor/width products,
 lifecycle coverage and native whole-scene acceptance remain open.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
@@ -979,3 +981,68 @@ Fresh-JVM `-Pguards` selection
 `TestRewindFieldAudit,TestRewindFieldDispositionGuard,TestRewindTransientGuard`
 also passes8 tests, zero failures/errors/skips. This is a targeted guard selection,
 not the full guard suite.
+
+
+## Tails solo cold clear and waiting-hand restore (2026-09-25)
+
+`lrz-tails-cold-act1-clear-320.{script,bk2}` preserves34128 ordinary controller
+inputs from the falling intro through six natural drill hits, results, the
+seamless Act2 load and released movement at(427,1973). Native320, Tails solo,
+donor off; no position/ring/health/clock/camera/emerald overrides. The live roster
+and viewport are asserted. One ring survives the act load at33477; the carried
+title resets the act counters at33903, so playable Act2 ends with zero rings.
+Zero deaths. The full Tails Act2/boss/HPZ chain and Knuckles route remain open.
+
+The first1500 controller inputs come from the committed full-chain Tails BK2
+at offset370581. Later traversal uses `GameplayInputBranchTool` and independent
+fresh replay. Boss inputs were authored from live landing/hand/drill observations
+and saved as a fixed movie: replay contains no adaptive controller or native-state
+hydration. Holding fixed jump intervals was rejected because a rebound can leave
+Tails airborne for the next press, activating flight instead of another attack.
+Native `lrz_2` position/input rows clarified the upper curled passage and route
+turns; those observations are route references, not parity certification.
+
+`TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff`
+checks51 whole-registry capture/immediate-restore/45-frame forward-replay spots:
+flight landings, pressure doors, corkscrew, elevators, crusher collapse, curled
+passages, boss graph creation, all six drill hits, results, and both sides of the
+act load. Short constructor and encounter tests remain independent of this route.
+
+The first run on `ecd7e56f0` failed immediate restoration at25660: a waiting
+hand's spawn metadata changed from(0,0) to(11424,2176). Its live coordinates were
+already correct. `CreateChild8_TreeListRepeated` copies parent x/y at allocation;
+`LrzMinibossHandChild` did that after its no-op position override had caused the
+base constructor to cache zero coordinates. Publish the same coordinates after
+those assignments, before `Wait_Draw`. This preserves native positioning and
+changes no timing, collision, art or movement rules. Both mirrored constructors
+have a short regression in `TestLrzMinibossInstance`.
+
+Validation in `ai-sk-zone-completion`, base `ecd7e56f0` plus this fix:
+
+- `maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true
+  -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+  -Dtest=TestLrzTailsColdRouteCapture,TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestLrzMinibossHitPath,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:
+  95 related checks pass; the route passes all51 rewind spots but initially fails
+  its final ring assertion (expected1 rather than the recorded post-title0).
+- Corrected only that expectation, adding the separate one-ring load assertion.
+  `-Dtest=TestLrzTailsColdRouteCapture test` then passes1 test, zero skips.
+- Change-based selection against `ecd7e56f0` was inspected:2917 classes via the
+  unclassified route-resource fallback. Proportionate focused validation applies
+  to this local constructor-cache correction and its production encounter paths;
+  it is not a new broad-suite pass. Combined campaign baseline evidence remains
+  in the campaign audit; final integration validation is still owed.
+
+Fresh pre-fix replay matched all33478 rows through the handoff on10 fields
+(position, velocity, ground speed, rings, death, mapping and camera), zero deaths.
+Final post-fix capture and guard results are recorded in the campaign audit.
+Media under `$HOME/Videos/OGGF/lrz-bring-up/` retain the full cold input
+prefix: `campaign-20260925-tails-upper-climb-320` shows the middle ascent;
+`campaign-20260925-tails-act2-playable-320` shows the final drill hits through
+Act2 movement. These are engine visual evidence, not native whole-scene matching.
+
+
+Final slice checks: the two targeted guard classes pass34 tests, zero skips.
+Post-fix fresh playback of all34128 inputs matches the authoring CSV on12 fields
+with zero mismatches/deaths. The final clip has1728frames at60fps (28.8seconds),
+full decode passes, and inspected frames cover hits, reload, title reset and
+playable Act2. The campaign audit records the command identities and limitations.

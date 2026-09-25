@@ -148,6 +148,11 @@ final class LrzMinibossHandChild extends LrzMinibossRingChildBase
             this.currentX = parent.getX();
             this.currentY = parent.getY();
         }
+        // Publish the same native creation position to the engine's spawn record.
+        // The base constructor called our no-op sync before these assignments;
+        // waiting for the first live volley left (0,0) in captures during Wait_Draw,
+        // whereas restore correctly rebuilt it from currentX/currentY.
+        updateDynamicSpawn();
     }
 
     @Override

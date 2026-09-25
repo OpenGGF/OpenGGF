@@ -380,3 +380,10 @@ DDZ HUD follow-up (2026-09-25): live ring awards and retained HUD digits now
 follow separate native redraw semantics. Exact entry/drain/publication timing
 and mid-hold replay agree with native observations. See the DDZ matrix for
 focused test results, coordinate-test correction and capture limitations.
+
+
+LRZ Tails follow-up (2026-09-25): the [solo Act1 cold clear](../architecture/validation/levels/s3k-lrz-act1.md#tails-solo-cold-clear-and-waiting-hand-restore-2026-09-25)
+adds34128 controller inputs through miniboss/results/playable Act2 and51 full-world
+restore/replay spots, without gameplay seeding or deaths. It exposed and corrected
+waiting-hand creation metadata during rewind. Tails Act2→boss→HPZ, the full Knuckles
+route, other breadth/lifecycle products and native scene matching remain open.

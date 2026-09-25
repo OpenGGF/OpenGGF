@@ -573,7 +573,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   projectiles rebound from shields and stop dealing damage after deflection.
   Chained platforms follow their ROM paths, carry players on top
   and hurt on contact with their spiked undersides. Rewinding the miniboss preserves its arms, hit flashes and defeat
-  debris without resurrecting destroyed parts; launchers retain their in-flight balls.
+  debris without resurrecting destroyed parts; the waiting hands also retain their
+  creation coordinates before their first volley. Launchers retain their in-flight balls.
   The Act 1 miniboss submits its ROM art to the runtime module queue before its
   native arm-extension delay, including the explosion art needed by its children.
   Its post-results handoff now runs the ROM’s thirteen-step palette ramp and holds

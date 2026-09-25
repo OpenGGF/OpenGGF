@@ -153,6 +153,11 @@ it. Do not suppress identity validation or keep the spawner alive for snapshots.
 Exercise capture in that retirement window, not only during the moving trail.
 Boss-child spawn metadata is a derived position/ordinal cache:
 refresh it before capture, including the first frame after subclass construction.
+LRZ's hand overrides `syncPositionWithParent()` with a no-op, so the base constructor
+initially builds a zero-position record. Its constructor then copies the native
+`CreateChild8_TreeListRepeated` coordinates; publish the cache there too. Waiting
+for the first volley made an immediate restore change the record during the hand's
+stagger delay, even though its live coordinates and ordinary replay looked right.
 `TestS3kLrzBossRewindHeadless` covers arms, hit flashes and defeat debris through
 explicit removal/recreation and whole-world forward replay.
 DDZ children instead retain their creation spawn: do not call a normal parent-derived

@@ -63,6 +63,20 @@ class TestLrzMinibossInstance {
     }
 
     @Test
+    void waitingHandsPublishNativeCreationCoordinatesBeforeTheirFirstVolley() {
+        // CreateChild8_TreeListRepeated copies x_pos/y_pos before loc_78922 and
+        // its staggered Wait_Draw. Both live position and recreation metadata
+        // must describe that position even before the first hand update.
+        for (boolean mirrored : new boolean[] {false, true}) {
+            var hand = new LrzMinibossHandChild(boss, 0x16, mirrored);
+            assertEquals(boss.getX(), hand.getX());
+            assertEquals(boss.getY(), hand.getY());
+            assertEquals(hand.getX(), hand.getSpawn().x());
+            assertEquals(hand.getY(), hand.getSpawn().y());
+        }
+    }
+
+    @Test
     void detachedDebrisUsesNativePriorityBucket() {
         var piece = new LrzMinibossDebrisChild(boss, 0);
         assertEquals(1, piece.getPriorityBucket(), "word_78D7E priority $80 selects bucket one");

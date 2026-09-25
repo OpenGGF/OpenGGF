@@ -5201,3 +5201,49 @@ deaths. The external `campaign-20260925-tails-crusher-progress-320/capture.mp4`
 shows inputs8050–8650 (601 frames/60fps), with the entire cold prefix replayed.
 Full decode and four stills inspected. This is the crusher/collapse/lower-door
 progress demo, not Tails act completion or native visual parity.
+
+
+### Tails LRZ1 cold completion and waiting-hand capture repair (2026-09-25)
+
+Base `ecd7e56f0`; local `ai-sk-zone-completion` continuation. Tails solo now
+completes ordinary cold LRZ1 through six miniboss hits, results, seamless reload
+and playable Act2 in34128 inputs without deaths. The committed script/BK2 pair
+round-trips exactly. `TestLrzTailsColdRouteCapture` checks the real Tails/no-follower
+roster, native320 viewport, inherited arena priority, every drill health value,
+act rebase, title counter reset, released movement and51 complete-world immediate
+restore/45-frame replay spots. This advances the mandatory Tails chain only
+through Act1; Act2/final boss/HPZ and the full Knuckles chain remain open.
+
+The first route check exposed a waiting-hand spawn record at(0,0), although the
+live hand had already received the native parent coordinates. Immediate restore
+rebuilt the correct record, making the inconsistency visible. Publish the cache
+at the end of `LrzMinibossHandChild` construction. Original ROM authority is
+`CreateChild8_TreeListRepeated`'s x_pos/y_pos copies; no encounter timing or
+position is changed. Short mirrored-hand regressions cover the pre-update state.
+The shared boss-child base remains unchanged.
+
+Validation: the combined focused route/boss/bootstrap command passed95 related
+checks; its remaining route assertion incorrectly expected one ring after the
+Act2 title had cleared the counters. All51 replay spots already passed. The
+corrected route-only rerun passes1 test with zero skips, retaining a separate
+one-ring assertion at the earlier act-load frame. The final checks therefore
+cover96 ordinary test identities, not a green claim for the initially red command.
+`maven_queue.py -Dmse=off -Pguards
+-Dtest=TestRewindCoverageGuard,TestObjectPhysicsStandardizationGuard test`
+passes34 tests, zero failures/errors/skips. Exact ordinary commands are in the
+[Act1 matrix](../validation/levels/s3k-lrz-act1.md#tails-solo-cold-clear-and-waiting-hand-restore-2026-09-25).
+The inspected selection plan falls back to2917 classes via route resources.
+Focused validation is proportionate for this constructor-cache fix: both mirrored
+initializations, the actual cold encounter, recreation/rewind and hit paths are
+exercised directly. No repeated broad-suite claim; combined final integration
+checks remain outstanding.
+
+Fresh post-fix playback matches all34128 authoring rows on12 fields (position,
+velocity, ground speed, rings, death, mapping, camera, roster presence and sprite
+priority), zero mismatches/deaths. The movie
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-tails-act2-playable-320/capture.mp4`
+records inputs32400–34127 after the full cold prefix:1728frames/60fps/28.8seconds.
+Full decode passes; final drill-hit, reload, title-reset and playable-Act2 stills
+were inspected. This is engine presentation evidence, not native whole-scene
+parity. Authoring used controller buttons only, including recorded landing-aware
+boss decisions; playback has no adaptive controller or gameplay-state injection.
