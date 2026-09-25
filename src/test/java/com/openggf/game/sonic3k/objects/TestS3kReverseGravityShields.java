@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>The {@code andi.b #1} has already cleared bit 1 when the {@code ori.b #2} runs, so
  * despite the ROM's own comment ("on if off beforehand and vice versa") this is a
  * <em>set</em>, not a toggle: the shield's Y-flip simply <strong>equals the flag</strong>
- * every frame. That is the same net effect {@code AbstractPlayableSprite.renderVFlipForDraw}
+ * every frame. That is the same net effect {@code PlayableSpriteAnimation}
  * writes for the player, and porting the comment instead of the code would alternate the
  * sprite every frame.
  *

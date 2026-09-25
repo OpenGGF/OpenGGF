@@ -50,7 +50,7 @@ public class Sonic extends AbstractPlayableSprite {
 					getRenderCentreX(),
 					getRenderCentreY(),
 					getRenderHFlip(),
-					renderVFlipForDraw());
+					getRenderVFlip());
 			return;
 		}
 		graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.RECTI,

@@ -5544,3 +5544,19 @@ inputs earlier; `trim004` removes another768-frame stationary delay and reaches
 the boss in45536 inputs,2728 earlier than the original prefix, no deaths. These
 are input authoring results, not replacement certified fixtures yet. Continue
 final completion and the rest of the campaign, with broad integration checks owed.
+
+## DEZ2 player mirror cancellation (2026-09-25)
+
+The user identified upright Sonic during gravity changes in the cold solo Act2
+clear video. Animation already applied the native XOR (`c122066f8`), while draw
+reapplied it (`8f5da1c8a`), cancelling the visible result. The old draw-only test
+changed the flag without updating animation and did not cover their composition.
+Retain native final render flags from animation and draw them directly for all
+three players; preserve object-owned orientation unchanged. Tails carry explicitly
+publishes orientation at attachment/follow, matching `loc_14492` / `sub_1459E`.
+Two new production-animation/draw assertions fail before the fix. Existing cold
+route movement/rewind passes were not evidence of correct sprite orientation.
+
+Focused validation:139 passing tests,0 skips, including both cold-route methods.
+Fresh5592-frame/60fps fight video decodes; all53842 recorded state rows match the
+old capture. See the Act2 matrix for command, interpretation and broad-run debt.

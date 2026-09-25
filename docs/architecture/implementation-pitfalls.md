@@ -888,3 +888,16 @@ ROM condition based on the cache or hide the differing player history.
 `TestGroundSensor` checks enabled/disabled probes on both edges, all three S3K
 characters and both gravity directions; the cold route exercises the actual
 restore and45-input replay. Origin: 2026-09-25 S&K campaign direct-HPZ follow-up.
+
+### Gravity orientation must have one owner
+
+S3K `loc_10C62` runs Animate_Sonic then XORs render_flags bit 1 under
+Reverse_gravity_flag; Tails/Knuckles do the same. Player draw and Hyper trail
+consume this completed orientation. A second draw-time XOR cancels it. The
+DEZ2 cold-clear video exposed precisely that composition of `c122066f8`'s
+animation flip and `8f5da1c8a`'s drawing flip. Tests of each in isolation passed: the
+old drawing test toggled gravity without advancing animation. Exercise animation
+and the actual renderer argument together, on consecutive frames and on return
+to normal gravity. Objects owning mapping frames also own render flags; generic
+drawing must not reinterpret them. Tails carry skips the player animator and
+therefore publishes facing and gravity itself (`loc_14492` / `sub_1459E`).

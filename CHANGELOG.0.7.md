@@ -134,7 +134,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   gravity triggers flips which way is down, and the player falls to the ceiling, stands and runs
   on it, rolls, jumps, lands, gets hurt and dies against a death plane that has moved to the top
   of the level. Shields, spilled rings, dust, springs, solid objects and a carried or respawning
-  sidekick all follow the flip. Which direction of crossing turns gravity on is the level's own
+  sidekick all follow the flip. Player sprites consume the animator’s final orientation
+  directly, avoiding a second gravity mirror that cancelled the visible flip. Which direction of crossing turns gravity on is the level's own
   choice, so running back the way you came restores it. Act 2's pressure pads flip it too,
   from either face, so a pad works whichever way up you reach it; the pads are now drawn,
   sinking as they are pressed, and sound the transporter note.

@@ -1170,3 +1170,33 @@ required loading checks and rewind guards are exercised. The diagnostic path
 selection against `b7d7ee91f` falls back to all2920 ordinary classes because the
 new route resources are unclassified. That does not replace the pinned combined
 campaign gate against `e6c6ac79`, which remains pending.
+
+## Player sprite mirror cancellation (2026-09-25)
+
+The original cold solo-clear clip exposed upright Sonic under reversed gravity.
+The animator's native final flag was XORed again by the player draw helper.
+Remove the drawing XOR for Sonic/Tails/Knuckles; object-controlled mappings retain
+their owner's flags, and Tails carry publishes its own native facing/gravity.
+The new animation-to-renderer and object-owned orientation tests both failed on
+`41d7cb05f` before the fix. Independent flag-only tests had missed the cancellation.
+
+Fresh capture: `$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260925-sonic-gravity-mirror-fixed-320/`.
+Same cold native320 solo input,53842 steps, video48250–53841,5592 frames at60fps
+(93.2s). All53842 CSV rows match the original across every recorded column;0 deaths.
+Full video decode passes. Frame49680 now draws Sonic upside down where the old
+clip drew him upright. This is verified engine presentation, not native pixel parity.
+
+The combined campaign selection against `e6c6ac79a8b411f32998ae13c8e5c94099c1818c`
+remains2920 ordinary classes plus guards. Shared rendering consumers and earlier
+campaign changes still require that broad run before integration; focused results
+here do not replace it or certify the remaining level matrix.
+
+Verification on `41d7cb05f` plus this correction, Java21/DISPLAY=:0:
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dtest=TestS3kReverseGravityRenderMirror,TestPlayableSpriteAnimation,TestTailsCarryController,TestS3kReverseGravityShields,TestHeadlessTestFixture,TestDezSoloActTwoColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils \
+  -Ds3k.rom.path=/absolute/path/to/s3k.gen test
+```
+139 tests passed,0 failures/errors/skips,3:25 Maven. Both cold route methods
+passed: Sonic's103 replay windows and Tails'12 lower-pad windows. The prior
+regression-only run had4 tests with2 expected failures and0 errors/skips.

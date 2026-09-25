@@ -461,3 +461,10 @@ codec preserves pending press/occupancy callbacks, fixing the snapshot-only
 extra toggle. See the [Act2 matrix](../architecture/validation/levels/s3k-dez-act2.md#tails-lower-gravity-pad-replay-repair-2026-09-25)
 for failing-before regressions, focused checks/guards and scope. Tails Act2/final
 completion and remaining campaign obligations are still open.
+
+DEZ2 gravity-render correction (2026-09-25): the
+[Act2 matrix](../architecture/validation/levels/s3k-dez-act2.md#player-sprite-mirror-cancellation-2026-09-25)
+records the animation/draw double-XOR regression and corrected cold solo-clear
+video. All53842 recorded movement rows remain identical; frame49680 now displays
+the native inverted orientation. This closes the reported player mirror defect,
+not the remaining route, presentation or combined delivery obligations.

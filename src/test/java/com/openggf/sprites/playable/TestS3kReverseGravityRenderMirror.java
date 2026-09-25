@@ -21,14 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code sub_17D1E} (:33017) and {@code loc_15A7A} (:29591-29597) repeat it in the hurt,
  * dead and rotation paths.
  *
- * <p>The mirror is composed at the draw rather than written into the stored flip, and this
- * test asserts <em>both</em> halves of that. The engine's {@code renderVFlip} is not the
- * ROM's {@code render_flags} bit 1: it also carries native mapping orientation — the flipped
- * fourth slope bank and the negative-flip-type tumble — which an earlier version of this
- * change erased, failing seven cases in {@code TestPlayableSpriteAnimation} and
- * {@code TestHeadlessTestFixture}. This class lives in {@code com.openggf.sprites.playable}
- * because {@code renderVFlipForDraw()} is package-private, which is what keeps it off the
- * {@code @ModApi} surface {@code AbstractPlayableSprite} pins.
+ * <p>Exercise animation followed by the real player draw: independently testing a
+ * gravity-aware animator and a gravity-aware renderer misses two XORs cancelling.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kReverseGravityRenderMirror {
@@ -39,67 +33,53 @@ class TestS3kReverseGravityRenderMirror {
     }
 
     @Test
-    void theFlagMirrorsTheDrawWithoutTouchingTheAnimatorsOwnFlip() {
-        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 1)
-                .build();
-        try {
-            AbstractPlayableSprite sprite = fixture.sprite();
-
-            fixture.stepIdleFrames(1);
-            assertFalse(sprite.renderVFlipForDraw(), "no flag, no mirror");
-            boolean storedWhileUpright = sprite.getRenderVFlip();
-
-            GameServices.gameState().setReverseGravityActive(true);
-            // Test draw composition without another physics step: reversed
-            // terrain contact can legitimately change the animator's own flip.
-            assertTrue(sprite.renderVFlipForDraw(), "loc_10C62 sets render_flags bit 1");
-            assertFalse(sprite.getRenderVFlip() != storedWhileUpright,
-                    "the animator's own flip must be untouched — it carries mapping orientation");
-
-            GameServices.gameState().setReverseGravityActive(false);
-            assertFalse(sprite.renderVFlipForDraw(), "and the mirror goes away with the flag");
-        } finally {
-            SessionManager.clear();
+    void animationAndDrawApplyGravityExactlyOnceForEveryPlayer() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 1).build();
+        for (var sprite : new AbstractPlayableSprite[] { fixture.sprite(),
+                new Tails("tails", (short) 320, (short) 940),
+                new Knuckles("knuckles", (short) 320, (short) 940) }) {
+            var renderer = org.mockito.Mockito.mock(com.openggf.sprites.render.PlayerSpriteRenderer.class);
+            sprite.setSpriteRenderer(renderer);
+            sprite.setAir(true);
+            sprite.setForcedAnimationId(5);
+            int frame = 0;
+            for (boolean reversed : new boolean[] {false, true, true, true, false, false}) {
+                GameServices.gameState().setReverseGravityActive(reversed);
+                sprite.getAnimationManager().update(frame++);
+                assertTrue(sprite.getRenderVFlip() == reversed,
+                        "the animator publishes the native final orientation");
+                org.mockito.Mockito.clearInvocations(renderer);
+                sprite.draw();
+                org.mockito.Mockito.verify(renderer).drawFrame(
+                        org.mockito.ArgumentMatchers.eq(sprite.getMappingFrame()),
+                        org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.eq(reversed));
+            }
         }
     }
 
-    /**
-     * A player under object mapping-frame control is still mirrored.
-     *
-     * <p>This is the case Tails' carry needs. {@code loc_14492} (sonic3k.asm:27290-27299) and
-     * {@code sub_1459E} (:27395-27411) set {@code object_control} on the carried player — so
-     * {@code Animate_Sonic} does not run for it — and then do the mirroring themselves, with
-     * the same {@code andi.b #$FC,render_flags} / {@code or.b d0} / {@code eori.b #2} shape
-     * the animators use. The net is unchanged: the carried player's Y-flip equals the flag.
-     * {@code renderVFlipForDraw} composes the flag for every draw rather than only the ones
-     * the animator reached, which is what makes those two rows fall out of the same owner.
-     */
     @Test
-    void theMirrorSurvivesObjectMappingFrameControl() {
-        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 1)
-                .build();
-        try {
-            AbstractPlayableSprite sprite = fixture.sprite();
-            sprite.setObjectMappingFrameControl(true);
-
-            GameServices.gameState().setReverseGravityActive(true);
-            fixture.stepIdleFrames(1);
-            assertTrue(sprite.isObjectMappingFrameControl(),
-                    "the fixture must still be in the carried/scripted mapping state");
-            assertTrue(sprite.renderVFlipForDraw(),
-                    "loc_14492 / sub_1459E mirror the carried player even though the animator "
-                            + "is skipped");
-
-            GameServices.gameState().setReverseGravityActive(false);
-            fixture.stepIdleFrames(1);
-            assertFalse(sprite.renderVFlipForDraw(),
-                    "and a carried player is upright again with the flag clear");
-        } finally {
-            SessionManager.clear();
+    void objectOwnedMappingAndFlipsAreDrawnUnchanged() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 1).build();
+        var sprite = fixture.sprite();
+        var renderer = org.mockito.Mockito.mock(com.openggf.sprites.render.PlayerSpriteRenderer.class);
+        sprite.setSpriteRenderer(renderer);
+        sprite.setObjectMappingFrameControl(true);
+        GameServices.gameState().setReverseGravityActive(true);
+        for (boolean objectFlip : new boolean[] {false, true}) {
+            sprite.setRenderFlips(false, objectFlip);
+            sprite.getAnimationManager().update(0);
+            org.mockito.Mockito.clearInvocations(renderer);
+            sprite.draw();
+            org.mockito.Mockito.verify(renderer).drawFrame(
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyBoolean(),
+                    org.mockito.ArgumentMatchers.eq(objectFlip));
         }
     }
+
     @Test
     void separateTailsMirrorStandardAnimationsButPreserveDirectionalFlips() {
         var fixture = HeadlessTestFixture.builder()
