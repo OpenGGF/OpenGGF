@@ -645,3 +645,27 @@ versus engine(8724,1270),camera(8580,1174). Host metadata records the stock ROM
 SHA1, exit0 and no failures. This is nearby-scene corroboration of that feature,
 not exact pixel parity, a matched Tails/clock oracle or closure of the broader
 native presentation obligations. No runtime change was justified.
+
+## Tails lower-door passage (2026-09-25)
+
+Fresh cold playback on `aa5ce2094` reaches(11965,1776),16 rings,zero deaths
+in56,062 inputs. The solo/native320 route descends to floor button(9816,1652),
+opens the lower door and passes into the late lava platforms. Holding the left
+jump for12 inputs entered the adjacent giant ring; a one-input jump followed
+by11 Left inputs,25 neutral and a separate right jump avoids it. No movement,
+object or collision behavior was changed.
+
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-tails-act2-lower-door-320/capture.mp4`
+records53245–56061:2817 frames,60fps,46.95seconds. All56,062 rows match the
+source `campaign-20260925-tails-branch171/variant-0.bk2` on the12 fields above,
+with zero differences/deaths. Full decode passes; stills55375,55500,56061 were
+inspected. The external README records the exact command. This extends fresh
+engine presentation evidence; the committed rewind fixture still ends41922,
+and Act2 completion/Act3 handoff remain open.
+
+The rejected giant-ring attempt exposed an authoring-tool limitation: its
+checkpoint restores gameplay state, but its boundary guard only checks level
+identity. A second candidate started in the previous candidate's special-stage
+results mode. That comparison is invalid and discarded; use separate processes
+for candidates that leave gameplay until the guard is strengthened. The selected
+route above independently replays from cold and never takes that detour.
