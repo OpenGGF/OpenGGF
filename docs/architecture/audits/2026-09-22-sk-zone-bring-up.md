@@ -5258,3 +5258,16 @@ on the actual death reload at320/800. Both focused cases pass with no skips on
 1959-class gameplay selection is disproportionate for this test-only extension;
 the focused two-case run is the recorded validation. Ending-load history remains
 open, as do the campaign's other route/presentation obligations.
+
+## 2026-09-25 Tails LRZ2 middle-corridor checkpoint
+
+On `c8f265822` plus the route/test extension, solo Tails reaches (5497,1008)
+from cold LRZ1 in 41,922 inputs without deaths. The preserved movie and new test
+pass 25 full-registry restore/replay spots across Act2's first platforms, turbine
+climb, path switches and lower return. One focused test passes, no skips; script
+regeneration matches the BK2 payload. The fresh 4622-frame video matches all
+41,922 authoring rows on 12 fields and fully decodes. The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#tails-middle-corridor-and-replay-checks-2026-09-25)
+records command, rejected input approaches and remaining obligations. No
+production change or full-act/native-pixel claim. The 2917-class fallback is
+disproportionate for this test/input-only addition; focused production replay
+and capture are the validation. All-level completion and integration stay open.

@@ -585,3 +585,40 @@ committed Act1 movie/test already covers51 replay spots; those do not certify
 this continuation. Route experiments that kept going right took a lower path;
 the native Tails `lrz_3` rows5360–5540 instead show the upper-left turn. That
 reference guided controller authoring only, without importing gameplay state.
+
+## Tails middle corridor and replay checks (2026-09-25)
+
+The preserved `lrz-tails-cold-act2-middle-320.{script,bk2}` now runs 41,922
+ordinary inputs from cold Act1 to Tails at (5497,1008), one ring and zero deaths.
+`TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor`
+asserts the actual solo Tails roster/native320 and passes 25 full-registry
+immediate restores plus 45-frame replays: platforms, both turbine captures and
+releases, flight, monitor alcove, path switches, spring return and lower passage.
+Act2 completion and its later mechanics remain open.
+
+The fresh video at
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-tails-act2-turbines-corridor-320/capture.mp4`
+records inputs37300–41921 after the entire cold prefix: 4622 frames, 60fps,
+77.033333 seconds. All 41,922 rows match the authoring candidate on the same
+12 state fields listed above, zero differences/deaths. Full decode passed;
+stills37590,39221,41921 were inspected. The external README carries the exact
+command. This is engine presentation and replay evidence, not native pixel parity.
+
+The upper turbine needs a phase-dependent release (`loc_443C4`,
+`byte_443B4`); jumping on its descending side was rejected because it launches
+downward. Flying over the path switches near (3904,512)/(4096,512) left the
+right-hand pipe impassable; returning below them and crossing normally succeeds.
+The middle spring return initially failed because walking left hit the rock
+badnik and bounced back into the spring. A leftward spindash clears that enemy.
+These were controller choices; no production behavior changed.
+
+On `c8f265822` plus this test/input change:
+`JAVA_HOME=<JDK21> LUA_BIN=lua5.4 DISPLAY=:0 python3 tools/testing/maven_queue.py
+-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor test`
+passes one test, zero failures/errors/skips. Script regeneration yields the
+identical BK2 input payload. The inspected change plan selects 2917 classes
+because route assets are unclassified. Focused validation is proportionate for
+this test/input-only extension: its complete production playback and all new
+replay spots are exercised, with an independent fresh capture. No new broad
+suite claim; combined campaign integration verification remains outstanding.

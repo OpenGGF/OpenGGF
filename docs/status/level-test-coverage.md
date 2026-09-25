@@ -387,3 +387,8 @@ adds34128 controller inputs through miniboss/results/playable Act2 and51 full-wo
 restore/replay spots, without gameplay seeding or deaths. It exposed and corrected
 waiting-hand creation metadata during rewind. Tails Act2→boss→HPZ, the full Knuckles
 route, other breadth/lifecycle products and native scene matching remain open.
+
+Tails LRZ2 follow-up (2026-09-25): the cold solo route now reaches the middle
+corridor in 41,922 inputs with no deaths and 25 Act2 full-registry replay spots.
+Fresh capture matches the candidate. Later Act2/Act3/HPZ completion and breadth
+remain open; see the LRZ Act2 matrix for commands and evidence limits.
