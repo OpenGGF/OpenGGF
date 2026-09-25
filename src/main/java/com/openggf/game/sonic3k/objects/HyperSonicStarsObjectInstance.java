@@ -191,7 +191,10 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
     }
 
     @Override public boolean isHighPriority() { return owner.isHighPriority(); }
-    @Override public int getPriorityBucket() { return RenderPriority.clamp(owner.getPriorityBucket()); }
+    // Obj_HyperSonic_Stars_Init writes priority $80, independently of Sonic's
+    // display list. loc_19458 copies only art_tile bit 15 (above). Inheriting
+    // both priorities put the orbiters behind Sonic when their pixels overlap.
+    @Override public int getPriorityBucket() { return RenderPriority.fromS3kWord(0x80); }
     // Obj_HyperSonic_Stars occupies the fixed Invincibility_stars slots and has
     // no out_of_range tail. Its explicit Hyper-flag check above owns expiry.
     @Override public boolean isPersistent() { return true; }

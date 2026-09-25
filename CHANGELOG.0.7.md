@@ -192,7 +192,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ship, whose body is drawn on the foreground plane over the six-band space background.
   Background scroll words now retain integer-pixel wrapping, preventing thin black seams
   where widescreen rendering repeats the native background plane.
-  Hyper's afterimages now mirror vertically with Sonic when gravity reverses. Asteroids
+  Hyper's stars retain their native sprite-list priority independently of Sonic, and
+  his afterimages mirror vertically when gravity reverses. Asteroids
   shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
   or ramming costs speed. The end boss runs both phases: turrets, launchers, missiles that can
   be steered back into the ship, the chase with bombs, rockets and the Master Emerald, the

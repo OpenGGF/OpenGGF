@@ -4933,3 +4933,14 @@ rendering/collision. Three new regression cases fail before and pass after;
 checks pass. The [Act1 matrix](../validation/levels/s3k-lrz-act1.md#big-door-placement-persistence-2026-09-25)
 records scope and remaining campaign verification. No shared placement algorithm
 or public Mod API signature changed.
+
+
+### DDZ Hyper-star priority audit (2026-09-25)
+
+Following `edc0ec81b`, the native Hyper-star routine exposed another instance of
+copying both player priorities when the ROM copies only the art-word high bit.
+The effect now retains its fixed `$80` display list. A new regression fails on
+the old implementation;78focused effect, DDZ route/rewind and S3K stability
+checks pass without skips. The [DDZ matrix](../validation/levels/s3k-ddz.md#hyper-star-sprite-list-correction-2026-09-25)
+records the source and commands. Animation-phase/size, HUD entry refresh and
+campaign integration remain open; no native pixel-parity claim is added.

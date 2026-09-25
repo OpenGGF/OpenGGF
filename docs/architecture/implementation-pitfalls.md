@@ -183,6 +183,12 @@ reverse. Merely creating a mask object is insufficient: the zone must enable
 the SAT collection/post-pass. The SOZ priority audit on 2026-09-16 exposed both
 failures with a door drawn through the sand and a same-bucket mask hiding the
 wrong object.
+**Follower priority inheritance must be field-specific.** Hyper stars illustrate
+this: `Obj_HyperSonic_Stars_Init` fixes the display-list word at `$80`, while
+`loc_19458` inherits only Sonic's art-word high bit. Copying both properties
+moves the orbiters behind the player. Check each field's writes independently;
+a follower's relationship to the player does not imply identical priorities.
+
 **Hardware tile priority needs its own evidence.** The SSZ2 Mecha body retained
 the correct `$280` display-list bucket but inherited `isHighPriority() == false`,
 despite `ObjSlot_MechaSonic` setting `art_tile` bit15. The floating island's

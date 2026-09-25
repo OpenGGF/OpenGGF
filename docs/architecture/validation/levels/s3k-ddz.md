@@ -232,3 +232,41 @@ passed;30369/31291/31530 inspected (last is white exit fade). It predates the
 recreation-only fix, which does not run during normal forward playback.
 Cold DEZ2 traversal, roster/donor breadth, history isolation and native whole-scene
 matching remain open. Ending/credits remain excluded.
+
+
+### Hyper-star sprite-list correction (2026-09-25)
+
+On `edc0ec81b`, the Hyper-star owner incorrectly inherited the player's display
+list. `Obj_HyperSonic_Stars_Init` instead assigns the fixed word `$80` (bucket1);
+`loc_19458` copies only the player's art-word high-priority bit. The correction
+keeps those independent, so overlapping star pixels sort ahead of ordinary
+player bucket2 while terrain occlusion continues to follow the player.
+
+`TestHyperSonicStarsObjectInstance#starsKeepNativeDisplayListWhileFollowingThePlayersPlanePriority`
+reproduces the old defect (8tests,1failure,0errors/skips) and checks four player
+buckets with both plane-priority states. Existing orbit/spark/recreation tests
+exercise the unchanged effect lifecycle. This does not close the separate
+native Hyper-star animation-phase/size or HUD ring-refresh discrepancies.
+
+The change-based plan was inspected. Focused validation is proportionate for
+this single object's constant display-list assignment: no renderer algorithm,
+state schema, physics, or art data changes. Combined campaign validation remains
+required before integration.
+
+Focused verification on `edc0ec81b` plus this correction, Java21 and the absolute
+locked-on ROM path:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestHyperSonicStarsObjectInstance,TestDdzSuperStars,TestS3kDdzColdRoutes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+```
+
+Result: 78tests,0failures/errors/skips, including the seeded DDZ route and its
+rewind cases. This is focused validation, not a whole-suite or visual-parity
+claim. The inspected category plan selected2442classes; the production change
+is confined to the single fixed priority return described above.
+
+The separate fresh-JVM check
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestObjectPriorityBucketGuard test`
+also passes (1test,0failures/errors/skips).

@@ -5967,6 +5967,9 @@ with seven Chaos Emeralds and no inherited clock/fraction seed (2passed, no skip
 2026-09-23). This does not repair the strict trace bootstrap described below.
 The separate widescreen background wrap seam is corrected and covered by a live
 render regression; see the DDZ plan and matrix.
+The Hyper-star display-list priority is also corrected to the fixed ROM `$80`;
+only its art-word high bit follows Sonic. This does not establish the cause of
+the separate sparkle-size/animation-phase difference below.
 
 - **Location** — `DdzFlightControllerObjectInstance` (`loc_8167C`), `Sonic3kSuperStateController` Hyper stars, S3K HUD ring refresh, `RecordingFrameDriver`, `TraceReplaySessionBootstrap`
 - **Symptom** — (1) Resolved in the current campaign: `loc_8242A/82452` now draws ROM-backed Super stars in their fixed slot, with native first-draw/cadence and a matched star-region capture; see the DDZ plan. (2) On the native all-Super route the Hyper sparkles are smaller than the engine's at the same rows (native pass-1 `boss_arrival`/`phase_change` screenshots against `raw-10-seeded-route-320`), an animation phase or frame-selection difference in the shared Hyper stars. (3) Native HUD keeps showing 0 rings after `loc_8160A` adds 50 until the next HUD ring update; the engine shows 50 at once. (4) The recording frame driver keeps stepping gameplay for the 21 frames of the `StartNewLevel $D01` fade (rows 10059-10079) that native and `GameLoop` freeze. (5) Strict `TestS3kSonicTailsZone0cSegmentTraceReplay` is red from frame 0 (`camera_y`): the replay bootstrap derives the camera from the metadata start position and seeds neither the camera X fraction nor the full `V_int_run_count`.

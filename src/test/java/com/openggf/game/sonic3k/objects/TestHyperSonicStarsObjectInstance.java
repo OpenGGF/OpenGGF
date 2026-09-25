@@ -49,6 +49,24 @@ class TestHyperSonicStarsObjectInstance {
     }
 
     @Test
+    void starsKeepNativeDisplayListWhileFollowingThePlayersPlanePriority() {
+        AbstractPlayableSprite owner = hyperOwner();
+        HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(owner);
+
+        // Obj_HyperSonic_Stars_Init assigns priority $80 once. loc_19458
+        // subsequently inherits only the art word's high-priority bit.
+        for (int playerBucket : new int[] {0, 2, 5, 7}) {
+            when(owner.getPriorityBucket()).thenReturn(playerBucket);
+            for (boolean high : new boolean[] {false, true}) {
+                when(owner.isHighPriority()).thenReturn(high);
+                assertEquals(1, stars.getPriorityBucket(),
+                        "Hyper stars must stay in ROM display list $80");
+                assertEquals(high, stars.isHighPriority());
+            }
+        }
+    }
+
+    @Test
     void lifecycleEndsAsSoonAsTheHyperTierEnds() {
         AbstractPlayableSprite owner = mock(AbstractPlayableSprite.class);
         SuperStateController form = mock(SuperStateController.class);
