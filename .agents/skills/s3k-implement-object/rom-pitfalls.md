@@ -4889,3 +4889,15 @@ direct-top-helper contract identifies them: keep their upright correction even
 under reverse gravity, while flat `SolidObjectTop` selects `loc_1E4D6` and its
 different snap constant. Test entry labels and exact unsigned 1..16 windows,
 not just geometrically mirrored-looking surfaces. Origin: September25 DEZ audit.
+
+
+## Hyper sparkle size can be an art-admission phase mismatch
+
+`Obj_HyperSonic_Stars_Init` (S3K :34473-34495) waits for global
+`Kos_modules_left` before decrementing each child's startup timer. A decoded
+standalone sheet does not prove this gate is clear. Submit the native archive
+through the runtime module scheduler and retain its ordinal across rewind.
+`Main.child` (:34511 onward) does not poll the queue again: later uploads hold
+only children still in Init. A DDZ native probe found the correct frames and
+orbital arithmetic running two gameplay ticks early before this distinction
+was restored; changing sprite scale would have hidden the actual defect.

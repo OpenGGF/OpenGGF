@@ -100,6 +100,23 @@ class TestHyperSonicStarsObjectInstance {
     }
 
     @Test
+    void unrelatedArtLoadsOnlyHoldChildrenStillInTheirInitRoutine() throws Exception {
+        HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(hyperOwner());
+        Method updateChild = HyperSonicStarsObjectInstance.class
+                .getDeclaredMethod("updateChild", int.class, boolean.class);
+        updateChild.setAccessible(true);
+        updateChild.invoke(stars, 0, false);
+        assertEquals(1, field(stars, "delay0"), "Kos_modules_left holds init countdown");
+        updateChild.invoke(stars, 0, true);
+        assertEquals(240, field(stars, "angle0"));
+        // Obj_HyperSonic_Stars_Main.child no longer polls Kos_modules_left.
+        updateChild.invoke(stars, 0, false);
+        updateChild.invoke(stars, 1, false);
+        assertEquals(224, field(stars, "angle0"), "running orbit must not freeze for unrelated art");
+        assertEquals(2, field(stars, "delay1"), "uninitialized child still waits");
+    }
+
+    @Test
     void nativeSparkAnimationRunsFramesThreeFourFiveWithGravity() throws Exception {
         HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(hyperOwner());
         stars.triggerDashSparks();

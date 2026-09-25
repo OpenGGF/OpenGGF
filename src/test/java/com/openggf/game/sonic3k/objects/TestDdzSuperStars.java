@@ -73,6 +73,31 @@ class TestDdzSuperStars {
         }
     }
 
+    @Test void hyperInitWaitsForNativeArtQueueBeforeStartingEachChild() throws Exception {
+        var fixture = boot(true);
+        fixture.stepIdleFrames(50);
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        // Native save514214, unchanged emeralds: queue submitted on pass50;
+        // first child starts on pass52, remaining children on53/54/55.
+        // Restore while loading must rebind the submitted job, not queue another.
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(saved);
+            var stars = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(HyperSonicStarsObjectInstance.class).stream().findFirst().orElseThrow();
+            for (int pass = 50; pass <= 65; pass++) {
+                for (int child = 0; child < 4; child++) {
+                    var angle = HyperSonicStarsObjectInstance.class.getDeclaredField("angle" + child);
+                    angle.setAccessible(true);
+                    int age = Math.max(0, pass - (52 + child) + 1);
+                    assertEquals((child * 64 - age * 16) & 255, angle.getInt(stars),
+                            "native orbit phase at pass " + pass + " child " + child);
+                }
+                fixture.stepIdleFrames(1);
+            }
+        }
+    }
+
     @Test void hyperEntryUsesItsOwnStars() {
         var fixture = boot(true); fixture.stepIdleFrames(60);
         assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(DdzSuperStarsObjectInstance.class).isEmpty());

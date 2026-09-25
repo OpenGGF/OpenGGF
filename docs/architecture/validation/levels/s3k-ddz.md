@@ -309,3 +309,49 @@ code was unchanged by that correction. The second selection passes62tests with
 0failures/errors/skips, including all three DDZ routes. The other133tests from
 the first selection were not repeated on unchanged code. These are focused
 checks; full shared-driver/campaign validation remains pending.
+
+
+### Hyper-star native queue phase (2026-09-25)
+
+At `60a28830f`, native entry save514214 reveals why the stars looked larger:
+the engine's frame/angle arithmetic was correct but started two gameplay ticks
+early. `Obj_HyperSonic_Stars` queues the ROM archive; Init then polls global
+`Kos_modules_left` before decrementing its 1/2/3/4 delays. A decoded standalone
+renderer was incorrectly treated as completion. The object now submits to the
+existing session module scheduler, retains the job ordinal across rewind,
+claims completion and waits on the global init gate. Main.child deliberately
+does not poll again. A new regression reproduces the old later-upload freeze
+(expected angle224, actual240) before that distinction is fixed. A pending
+submission retires before an inactive owner expires; rendering stops immediately.
+
+The native exporter changes no gameplay RAM. The engine probe uses ordinary
+DDZ boot, native Sonic solo,320px, seven Super Emeralds and neutral inputs.
+After accounting for the capture boot's initial non-gameplay step, all506
+initialized child rows agree in frame, timer, angle and both accumulators.
+Native child starts are52/53/54/55. No native row supplies engine gameplay state.
+The external `ddz-bring-up/campaign-20260925-hyper-phase/` directory contains
+source-hashed native results, before/after engine observations and a3-second,
+60fps side-by-side `comparison.mp4`. The native save retains score/camera fraction;
+fresh engine setup does not. Inspected frames and full decode support this
+sparkle comparison, not whole-scene pixel or trajectory certification.
+
+Queued Java21/S3K ROM validation:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  '-Dtest=TestHyperSonicStarsObjectInstance,TestDdzSuperStars,TestKosinskiModuleQueue,TestKosinskiModuleQueueGameplayIntegration,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard' test
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestS3kDdzColdRoutes,TestS3kDdzAuthoredRoutes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  -Dtest=TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard test
+```
+
+Results:28 focused tests,64 route/stability tests and2 guards pass with zero
+failures/errors/skips. The inspected category plan selects2442 ordinary classes
+plus guards; combined campaign validation is still owed. HUD redraw timing,
+strict trace bootstrap and remaining matrix obligations stay open.
+
+The explicit pending-load replay test was rerun after its final expansion:
+`-Dtest=TestDdzSuperStars#hyperInitWaitsForNativeArtQueueBeforeStartingEachChild`
+passes1 test, zero skips. Restoring the pass50 composite snapshot reproduces
+all four child phases through65 without resubmitting the art job.

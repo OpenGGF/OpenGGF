@@ -368,3 +368,9 @@ DEZ2 top-solid follow-up (2026-09-25): exact flat windows and direct sloped
 entry checks close the reference inventory at112 covered/four not applicable.
 A mirrored slope-snap error was reproduced and fixed;161 focused checks pass,
 zero skips. This is reference coverage, not full-act or combined delivery approval.
+
+
+DDZ presentation follow-up (2026-09-25): Hyper-star startup now follows native
+module completion, matching506 observed child updates. Focused, full DDZ route
+and rewind-guard checks pass; the DDZ matrix records commands and capture limits.
+HUD redraw timing and remaining whole-scene/incoming-route obligations remain.

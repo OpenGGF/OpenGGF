@@ -5075,3 +5075,14 @@ all161 focused solid/spring/stability checks pass with no skips. The DEZ2 matrix
 records the failing witness, command and synthetic geometry limits. Inventory:
 112 covered, zero partial/missing, four not applicable. This closes the reference
 audit only; shared-code delivery checks and broader act matrices remain open.
+
+
+### 2026-09-25 — Doomsday Hyper sparkle phase matched
+
+Native slot sampling identifies missing queue admission rather than wrong
+sprite scaling. Hyper stars now submit their native archive and hold only the
+Init countdown until global modules finish; running orbiters ignore later loads.
+506 native child rows match frame/timer/angle/accumulators. The DDZ matrix records
+the3-second comparison, declared boot alignment,28 focused/64 route/2 guard
+passes (zero skips), and remaining HUD/native-whole-scene limits. Combined
+delivery remains outstanding; this does not certify all levels.

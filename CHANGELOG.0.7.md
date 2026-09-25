@@ -204,7 +204,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   at initialization, retaining that native choice through later gravity changes.
   Direct sloped-platform helpers retain the ROM’s upright landing calculation
   under reversed gravity; flat platforms keep their separate inverted branch.
-  Hyper's stars retain their native sprite-list priority independently of Sonic, and
+  Hyper's stars wait for their ROM art queue before starting their native animation,
+  retain their sprite-list priority independently of Sonic, and
   his afterimages mirror vertically when gravity reverses. Asteroids
   shatter into smaller rocks and debris, homing missiles ride and chase, and dashing
   or ramming costs speed. The end boss runs both phases: turrets, launchers, missiles that can
