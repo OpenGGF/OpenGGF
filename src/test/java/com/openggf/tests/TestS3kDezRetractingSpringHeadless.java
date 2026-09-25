@@ -250,6 +250,44 @@ class TestS3kDezRetractingSpringHeadless {
     }
 
     @Test
+    void nativeTopLandingWindowKeepsItsExactEdgesInBothGravityDirections() {
+        for (boolean reverse : new boolean[] {false, true}) {
+            for (boolean rolling : new boolean[] {false, true}) {
+                for (int overlap : new int[] {-1, 0, 1, 15, 16, 17}) {
+                    for (int dx : new int[] {-17, -16, 0, 15, 16}) {
+                        HeadlessTestFixture fixture = fixture();
+                        try {
+                            int x = 672, y = 928;
+                            GameServices.gameState().setReverseGravityActive(reverse);
+                            var spring = new S3kDezRetractingSpringObjectInstance(
+                                    new ObjectSpawn(x, y, 0x5D, SUBTYPE, 2, false, y));
+                            var objects = GameServices.level().getObjectManager();
+                            objects.addDynamicObject(spring);
+                            var sprite = fixture.sprite();
+                            sprite.setRolling(rolling);
+                            int reach = 9 + sprite.getYRadius() + 4 - overlap;
+                            moveTo(sprite, x + dx, y + (reverse ? reach : -reach));
+                            sprite.setAir(true);
+                            sprite.setOnObject(false);
+                            sprite.setYSpeed((short) 0x100);
+                            sprite.setXSpeed((short) 0);
+                            fixture.camera().updatePosition(true);
+                            spring.snapshotPreUpdatePosition();
+                            objects.processImmediateInlineSolidCheckpoint(spring, sprite, List.of());
+                            boolean accepted = overlap > 0 && overlap <= 16 && dx >= -16 && dx < 16;
+                            assertEquals(accepted ? -0xA00 : 0x100, sprite.getYSpeed(),
+                                    "reverse=" + reverse + " rolling=" + rolling + " overlap=" + overlap + " dx=" + dx);
+                        } finally {
+                            GameServices.gameState().setReverseGravityActive(false);
+                            SessionManager.clear();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     void realSolidContactLaunchesFromTheCorrectFaceWithStandingAndRollingRadii() {
         for (boolean reverse : new boolean[] {false, true}) {
             for (boolean rolling : new boolean[] {false, true}) {

@@ -5064,3 +5064,14 @@ top-only solidity, the exact12px cutoff, six-pixel precarious probes and the
 angle gate. All263 sensor/movement/DEZ-corridor checks pass, zero skips. No
 production change; the gravity inventory now has111 covered/1 partial/0 missing/
 4 not applicable. The DEZ2 matrix records synthetic-vs-route limits and commands.
+
+
+### 2026-09-25 — gravity-reference inventory closed, level gates remain
+
+At `e7bb9d66d`, exact flat landing-window checks pass; a new direct-slope
+regression exposes an incorrectly mirrored snap. The ROM direct entry bypasses
+the flat helper's gravity branch. Preserving that distinction fixes the case;
+all161 focused solid/spring/stability checks pass with no skips. The DEZ2 matrix
+records the failing witness, command and synthetic geometry limits. Inventory:
+112 covered, zero partial/missing, four not applicable. This closes the reference
+audit only; shared-code delivery checks and broader act matrices remain open.

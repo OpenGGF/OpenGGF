@@ -33,7 +33,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (111 of 116 ROM references covered, 1 partial and none missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (112 of 116 ROM references covered, none partial or missing and 4 not applicable — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -998,3 +998,32 @@ this follow-up, with combined campaign delivery validation still outstanding.
 Inventory:111 covered,1 partial,0 missing,4 not applicable. Only the top-solid
 landing window/slope row remains partial in this reference table. Full act-route,
 character, viewport, lifecycle and presentation obligations remain separate.
+
+
+### Exact top-solid windows and direct sloped entry (2026-09-25)
+
+At `e7bb9d66d`, flat retracting-spring landing already accepts overlaps 1–16
+and horizontal offsets [-16,16), rejecting zero and 17. A real DEZ fixture
+exercises 120 combinations of gravity, standing/rolling radius, overlap and X.
+The direct sloped helpers instead expose a snap error: their ROM branches go
+straight to `loc_1E45A`, bypassing the gravity dispatch at `loc_1E44C`.
+The engine correctly kept their upright overlap calculation but then reversed
+the correction. The new regression failed at expected Y252 versus actual248.
+The existing direct-top semantic contract now keeps that correction upright;
+flat platforms retain their explicit inverted branch. No new state is added.
+
+The slope test covers both gravity directions, X flips, live radii and exact
+accepted/rejected overlap edges using native sampled-height arithmetic.
+Queued Java21 validation, with the real S3K ROM:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestSolidObjectManager,TestS3kDezRetractingSpringHeadless,TestS3kReverseGravitySolidObject,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+```
+
+All161 tests pass, zero failures/errors/skips. The inspected change-based plan
+selects all2915 ordinary classes plus guards because this is shared collision
+code; that combined campaign gate remains outstanding. The synthetic slope
+is a helper-contract proof, not a new DEZ placement or native-video comparison.
+All112 applicable gravity references now have evidence (four are not applicable).
+Whole-route, roster, lifecycle, viewport and presentation obligations remain open.

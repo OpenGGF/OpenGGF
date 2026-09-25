@@ -200,7 +200,7 @@ offset; skid dust spawns on the correct contact side. These close both dust rows
 Knuckles's slide get-up now negates its radius adjustment while preserving the
 native Y fraction. Glide falling, slide terrain probes and wall climbing remain open.
 
-**Open inverted-player obligations in act 2**, no missing rows, with partially covered rows across groups A-I:
+**Inverted-player reference coverage in act 2**, all applicable rows covered; whole-route obligations remain:
 
 Knuckles's glide/slide, alternate climb bodies and fall-from-glide radius
 correction are now implemented. Actual DEZ floor/ceiling tests cover the latter
@@ -210,12 +210,13 @@ separate early-return coverage for Sonic, Tails and Knuckles: the terrain pass
 must not run on death, preventing the later boundary check from masking a missing
 hurt branch. Edge-balance probes now have shaped-column and angle-gate coverage
 through the real controller/sensors in both gravity states. The top-solid row
-remains partial.
+now has exact X/Y window checks and a correction for direct sloped helpers,
+which bypass the ROM gravity test and retain upright landing arithmetic.
 
-- **`sub_1E410`'s `loc_1E4D6`** (:41999), now partial: real retracting-spring contacts
-  cover the flat top-solid final snap in both gravity states, standing and rolling. The
-  inverted override formerly snapped to the upright face (57 pixels wrong in the isolated
-  standing contact). Sloped variants and exact comparison-window boundaries remain open.
+- **`sub_1E410`'s `loc_1E4D6`** (:41999): covered by real retracting-spring
+  contacts and explicit inclusive-left/exclusive-right X limits and 1..16 Y
+  overlap. The separate direct sloped entry is checked under both gravity states.
+  Native whole-route/roster/lifecycle/presentation validation remains separate.
 - **`Obj_Spikes` :48958** is now implemented: initial gravity XOR placement Y-flip
   selects the underside hurt routine, overriding the sideways variant. The
   choice survives later gravity changes and rewind; movement remains subtype-driven.

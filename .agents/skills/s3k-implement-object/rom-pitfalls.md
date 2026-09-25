@@ -4877,3 +4877,15 @@ capture the selected routine semantics for rewind; test a gravity change while
 the same object remains loaded. `SolidObjectFull` reports gravity-relative
 standing/underside contacts, so applying a second world-face mirror to its result
 would undo the native choice. Origin: September25 DEZ gravity-reference audit.
+
+
+## Direct sloped entries bypass the flat platform gravity branch
+
+S3K `SolidObjCheckSloped2`/`SolidObjCheckSloped` (sonic3k.asm:42076–42120)
+compute an absolute sampled top and branch directly to `loc_1E45A`, bypassing
+`loc_1E44C`'s Reverse_gravity_flag test. Mirroring every top-solid position
+correction therefore invents behavior for these direct entries. The existing
+direct-top-helper contract identifies them: keep their upright correction even
+under reverse gravity, while flat `SolidObjectTop` selects `loc_1E4D6` and its
+different snap constant. Test entry labels and exact unsigned 1..16 windows,
+not just geometrically mirrored-looking surfaces. Origin: September25 DEZ audit.

@@ -4320,7 +4320,12 @@ public final class ObjectSolidContactController {
                 // between +3 and -3 is the ROM's own — the upright path's extra
                 // `subq.w #1` is what makes the constant 3 rather than 4.
                 int landingSnap = distY - 3 + getTopLandingSnapAdjustment(instance, player);
-                int newCenterY = isReverseGravityActive(player)
+                // SolidObjCheckSloped/Sloped2 branch straight to loc_1E45A,
+                // bypassing loc_1E44C's reverse-gravity test (S3K :42076-42120).
+                // Their direct top-helper contract keeps the upright position
+                // arithmetic even when the world flag is set. Flat top-solid
+                // callers still select loc_1E4D6 through their normal path.
+                int newCenterY = directTopLimit == null && isReverseGravityActive(player)
                         ? playerCenterY + landingSnap
                         : playerCenterY - landingSnap;
                 int newY = newCenterY - (player.getHeight() / 2);
