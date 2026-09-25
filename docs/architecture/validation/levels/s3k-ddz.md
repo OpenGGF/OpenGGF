@@ -1,5 +1,12 @@
 # S3K The Doomsday Zone coverage matrix
 
+**2026-09-25 incoming-route refresh:** correcting DEZ final-floor grounding changed
+incoming timing. Reauthored controller movies now pass full incoming/replay checks:
+cold emerald team59722 inputs and positioned320/80027122/27224. These supersede
+the incoming lengths below. DDZ runtime was unchanged; the first boss and chase
+inputs were reauthored against the naturally inherited state, with no reseeding.
+
+
 Game / canonical zone / act: S3K `S3K_DOOMSDAY`, engine zone `$0C` act index 0,
 ROM `Current_zone_and_act = $0C00`, SKL object set.
 Character route: Sonic (Player 2 cleared by `loc_81554`): fall-in → transformation (Super, Hyper

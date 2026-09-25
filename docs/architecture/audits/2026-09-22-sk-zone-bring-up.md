@@ -5581,3 +5581,86 @@ The89-case focused selection passes (44 contact,44 inherited saved-post reload,
 as invalid live-history setup; the measurement hazard is documented. No runtime
 change. Cold reachability to every post, contact-to-death composition and
 width/donor lifecycle products remain separate matrix obligations.
+
+## DEZ final standing-height investigation (2026-09-25)
+
+User video feedback exposed a physical support error despite the cold ending
+route passing at `c479eea6a`. Read-only BizHawk 2.11 playback from native movie
+frame509032 confirms normal grounded centerY205. The engine cold solo route at
+frame58700 instead has Y186, no riding owner and no render offset; adjacent frames
+alternate air/ground and mapping7/8. The arena floor's pre-movement proximity
+support override caused that loop. Removing it retains native `SolidObjectTop`
+landing and established standing-bit continuation. No sprite offset or animation
+patch is appropriate. The regression fails before removal (11 tests,1 failure)
+and the expanded entry/moving-support idle-animation checks pass afterward
+(24 tests,0 failures/errors/skips,21.875s).
+
+Native evidence: `$HOME/Videos/OGGF/s3k-dez-bring-up/`
+`campaign-20260925-final-floor-reference/`; host hashes/commands and comparison
+limits are in its README. Native video has2201 frames at60fps and decodes fully.
+Falling block spawn coordinates and gravity samples agree with the ROM; complete
+visual floor alignment remains under review. Native movie is Super Sonic+Tails,
+engine is ordinary solo Sonic, so this is phase-level corroboration, not trajectory
+or pixel parity. The original64477-input ending route now dies at57691: its
+jump timing depended on the faulty landing. Controller-only reauthoring and
+affected incoming-route revalidation are in progress; earlier full-route passes
+are historical for this changed runtime.
+
+Follow-up validation on the floor candidate: `-Dtest=TestDezFinal*,TestSwScrlS3kDezFinalBoss,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+with Java21, DISPLAY=:0 and the explicit root S3K ROM:164 tests,0 failures/errors/
+skips,27.637s. The four existing incoming routes all need input repair: native320
+and800 positioned movies die at12938/12943; ordinary and emerald cold team movies
+both die at44688. These are observed consequences of changed final-floor physics,
+not waived green route results.
+
+The corrected solo input now completes in60920 frames: final load50993, last core
+hit57758, last ship hit60632, ending load60919. Its68 full-registry restore/45-input
+replay spots pass (1 test,0 failures/errors/skips,1:53 Maven). Fresh capture
+`campaign-20260925-floor-fixed-solo-clear-320` matches every row on20 state fields,
+zero deaths/follower;6420 video frames at60fps fully decode. The original landing
+height was not retained to preserve a movie: only controller input was reauthored.
+
+Rejected controller trials (external `campaign-20260925-solo-input`): floor008
+reached one core hit but jumped into a fireball at55290; floor009 reached two hits
+but descended behind the consumed floor frontier at55588. Floor010 returns toward
+surviving floor while descending and clears. Team001 needed the return earlier
+and fell at44294; team002 clears with that controller-only adjustment. The existing
+`DezFinalRouteAuthorTool` now preserves cold solo/team/emerald boot modes and these
+input strategies. Its observations never set gameplay state after the declared boot.
+
+All affected final-route cases are now revalidated with the explicit root S3K ROM.
+Ordinary team49448 inputs/31 replay spots:1test,0failures/errors/skips,2:01 Maven.
+Positioned320/800 full DDZ27122/27224 inputs and cold emerald team59722 inputs:
+3tests,0failures/errors/skips,1:45 Maven;11 complete registry spots each. Alongside
+the solo pass, this restores all five cases in `TestDezIncomingFinalRouteCapture`.
+The short positioned handoff movies also use the repaired final prefix plus240
+inputs of the successful DDZ tail. Domain164 and route5 are focused validation,
+not the outstanding combined campaign broad/guard run.
+
+DDZ input repair was necessary because the final-floor fix changes inherited
+arrival timing. Reusing the old800 tail rang out at26516. Read-only author variant8
+(aim64px below the first body) left one hit at ring-out; variant9 (+120px) landed
+none. The existing above-body(+36,-120) missile steering and positive-offset chase
+rectangle targeting clears both widths and the cold team. Preserve the reusable
+controller as `DdzIncomingRouteAuthorTool`; its reference BK2 supplies only buttons,
+never physics/aux state. The DDZ runtime is unchanged.
+
+Falling-block placement audit: all135 native and776 engine newborn samples after
+cameraX1312 have `blockX+16 == breakFrontier`, so each32px sprite ends at the new
+floor edge. Counts cover different route durations and are not parity scores.
+`Obj_5A872` motion and mapping source agree; no independent spawn-position defect
+was found. Original float and animation symptoms are reproduced by the short
+regression and absent in the corrected full solo capture.
+
+The promoted DDZ author compiles (queued `-Dmse=off -DskipTests compile`,50.675s)
+and independently reproduces all27122 canonical320 controller rows exactly,
+including the ending request. The refreshed800 capture records17001 inputs;
+its first16761 match the final author on20 state fields and no row has death.
+Video13000–17000 has4001 frames at60fps and fully decodes; core-defeat and final
+ship-hit stills inspected. Captures are under `campaign-20260925-floor-fixed-incoming-800`
+and `campaign-20260925-floor-fixed-solo-clear-320`; setup and commands are in their
+READMEs. Reinspected combined plan against pinned `e6c6ac79a8b411f32998ae13c8e5c94099c1818c`
+selects2920 ordinary classes plus guards; that campaign-wide validation remains
+outstanding. This local fix changes one object's support opt-in; targeted real
+landing/animation, entire affected incoming routes and domain checks establish
+its bounded behavior, without claiming the broader campaign passed.

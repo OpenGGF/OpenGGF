@@ -88,7 +88,12 @@ public final class DezFinalArenaFloor extends AbstractObjectInstance
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean usesCollisionHalfWidthForTopLanding() { return true; }
     @Override public boolean isSkipSolidContactThisFrame() { return false; }
-    @Override public boolean providesPreMovementGroundAttachmentSupport() { return mode != FALLING; }
+    // loc_5A860 / loc_5A912 call SolidObjectTop after player movement.
+    // New riders must reach loc_1E45A's feet-to-top landing window; only an
+    // established standing bit takes the MvSonicOnPtfm continuation branch.
+    // Do not opt into the engine's pre-movement proximity support recovery:
+    // it grounds a descending player up to 20px early without a riding owner,
+    // alternating air/ground and restarting the walk animation above the floor.
     @Override public boolean isPersistent() { return true; }
     @Override public int getX() { return motion.x & 0xFFFF; }
     @Override public int getY() { return motion.y & 0xFFFF; }

@@ -901,3 +901,16 @@ and the actual renderer argument together, on consecutive frames and on return
 to normal gravity. Objects owning mapping frames also own render flags; generic
 drawing must not reinterpret them. Tails carry skips the player animator and
 therefore publishes facing and gravity itself (`loc_14492` / `sub_1459E`).
+
+### Proximity is not an established platform ride
+
+DEZ final floor (2026-09-25): `providesPreMovementGroundAttachmentSupport`
+feeds the pre-physics grounding recovery, not just terrain attachment. Opting a
+persistent top-solid into it accepted Sonic at Y186 above the real Y205 standing
+height. Recovery cleared air without establishing a rider; the inline checkpoint
+then rejected contact, producing alternating air/ground and mapping7/8 every frame.
+`loc_5A860`/`loc_5A912` instead call `SolidObjectTop`; new riders pass `loc_1E45A`
+and `RideObject_SetRide` before the standing-bit continuation can carry them.
+Use real contact ownership for ordinary platforms. An entry test starting one
+pixel above the floor missed this; descend from above the proximity window and
+assert stable support and animation on every subsequent frame.

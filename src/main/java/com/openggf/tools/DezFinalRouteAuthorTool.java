@@ -24,6 +24,11 @@ import java.util.Comparator;
  * supplies a DEZ2 boss input log: boot at declared ($34B0,$300), play that prefix
  * through the real zone23 load, then author the final fight without reseeding it.
  * This incoming mode is positioned encounter continuity, not a cold Act2 route.
+ * A fifth argument selects cold-solo, cold-team, or cold-team-emeralds: play the
+ * supplied input from the real DEZ1 start, with no position/ring seeds. The last
+ * mode declares seven Super Emeralds at boot. The September 25 floor-contact
+ * correction required earlier button jumps and a return toward surviving floor
+ * on descent; these are controller choices, never runtime collision rules.
  * Stops on death, outgoing
  * load or 22000 frames. Targets and braking distances are controller strategy,
  * not engine rules. Private encounter types are selected read-only by class name
@@ -31,18 +36,25 @@ import java.util.Comparator;
  */
 public final class DezFinalRouteAuthorTool {
     public static void main(String[] args) throws Exception {
-        if(args.length!=3 && args.length!=4) throw new IllegalArgumentException(
-                "Usage: DezFinalRouteAuthorTool ROM WIDTH OUTPUT_PREFIX [DEZ2_BOSS_INPUT]");
+        if(args.length<3 || args.length>5) throw new IllegalArgumentException(
+                "Usage: DezFinalRouteAuthorTool ROM WIDTH OUTPUT_PREFIX [INPUT [cold-solo|cold-team|cold-team-emeralds]]");
         Path rom=Path.of(args[0]); int width=Integer.parseInt(args[1]); Path output=Path.of(args[2]);
         Path scriptPath=Path.of(output+".script"), statePath=Path.of(output+".csv");
         if(Files.exists(scriptPath)||Files.exists(statePath)) throw new IllegalArgumentException("Output already exists: "+output);
         if(output.toAbsolutePath().getParent()!=null) Files.createDirectories(output.toAbsolutePath().getParent());
-        var prefix=args.length==4 ? new Bk2MovieLoader().loadMovieOrInputLog(Path.of(args[3])) : null;
-        var settings=new GameplayCaptureSession.Settings(width,"sonic","","off",null,
-                prefix==null?null:0x34B0,prefix==null?null:0x300,"3333333",false,false,null,null,false,200,false);
+        var prefix=args.length>=4 ? new Bk2MovieLoader().loadMovieOrInputLog(Path.of(args[3])) : null;
+        String routeMode=args.length==5?args[4]:"positioned";
+        boolean cold=routeMode.startsWith("cold-");
+        boolean team=routeMode.equals("cold-team")||routeMode.equals("cold-team-emeralds");
+        if (!routeMode.equals("positioned") && !routeMode.equals("cold-solo") && !team)
+            throw new IllegalArgumentException("Unknown route mode: "+routeMode);
+        var settings=new GameplayCaptureSession.Settings(width,"sonic",team?"tails":"","off",null,
+                cold||prefix==null?null:0x34B0,cold||prefix==null?null:0x300,
+                !cold||routeMode.equals("cold-team-emeralds")?"3333333":null,
+                false,false,null,null,false,cold?null:200,false);
         var script=new StringBuilder(); var states=new StringBuilder(GameplayCaptureSession.stateHeader()+"\n");
         try(var session=new GameplayCaptureSession(settings)) {
-            session.boot(rom,prefix==null?23:11,prefix==null?0:1,settings);
+            session.boot(rom,cold?11:prefix==null?23:11,cold?0:prefix==null?0:1,settings);
             int firstFinalFrame=0;
             boolean heldJump=false;
             if(prefix!=null) {
@@ -65,7 +77,7 @@ public final class DezFinalRouteAuthorTool {
             int previousCoreHealth=8,previousShipHealth=-1;
             boolean brakeFinal=false;
             ObjectInstance lastBeam=null;
-            int beamAge=0;
+            int beamAge=0; boolean struckThisBeam=false;
             for(int frame=firstFinalFrame;frame<firstFinalFrame+22000;frame++) {
                 var p=session.player();
                 var fingers=targets("DezFinalHand$Finger");
@@ -74,7 +86,7 @@ public final class DezFinalRouteAuthorTool {
                 var button=targets("DezFinalMouth$Button").stream().findFirst().orElse(null);
                 var core=targets("DezFinalCore").stream().findFirst().orElse(null);
                 var beam=objects("DezFinalBeam").stream().findFirst().orElse(null);
-                if(beam!=lastBeam) {lastBeam=beam;beamAge=0;if(beam!=null)System.out.println("BEAM "+frame);}
+                if(beam!=lastBeam) {lastBeam=beam;beamAge=0;struckThisBeam=false;if(beam!=null)System.out.println("BEAM "+frame);}
                 else if(beam!=null)beamAge++;
                 int targetX=target!=null?target.getX():p.getCentreX()+80;
                 boolean jump=target!=null&&!p.getAir()&&!heldJump&&Math.abs(targetX-p.getCentreX())<70;
@@ -83,11 +95,15 @@ public final class DezFinalRouteAuthorTool {
                     int launchX=com.openggf.game.sonic3k.runtime.DezFinalCamera.nativeX(GameServices.camera())+190;
                     if(core!=null&&core.getCollisionProperty()<previousCoreHealth) {
                         System.out.println("CORE "+frame+" health "+core.getCollisionProperty());
-                        attackRun=false; jumpTicks=0; previousCoreHealth=core.getCollisionProperty();
+                        attackRun=false; jumpTicks=0; struckThisBeam=true; previousCoreHealth=core.getCollisionProperty();
                     }
                     if(attackRun&&!p.getAir()&&jumpTicks< -10)attackRun=false;
-                    if(!attackRun&&!p.getAir()&&Math.abs(p.getCentreX()-launchX)<12&&button.getCollisionFlags()!=0) {
+                    if(!attackRun&&!p.getAir()&&Math.abs(p.getCentreX()-launchX)<48&&button.getCollisionFlags()!=0) {
                         attackRun=true;jumpTicks=24;
+                    }
+                    if(!attackRun && !struckThisBeam && beam!=null && beamAge<100
+                            && core!=null && core.getCollisionFlags()!=0 && !p.getAir()) {
+                        attackRun=true; jumpTicks=24;
                     }
                     targetX=attackRun?(core!=null&&core.getCollisionFlags()!=0?core.getX():button.getX()):(button.getCollisionFlags()!=0?launchX:safeX);
                     // The visible charge script lasts 50 passes, followed by the ROM's
@@ -97,9 +113,16 @@ public final class DezFinalRouteAuthorTool {
                     }
                     jump=jumpTicks-->0;
                 }
+                if(core!=null && core.getCollisionProperty()==0) {
+                    targetX=com.openggf.game.sonic3k.runtime.DezFinalCamera.nativeX(GameServices.camera())+280;
+                    if(!p.getAir()&&!heldJump)jumpTicks=24;
+                    jump=jumpTicks-->0;
+                }
                 var ship=targets("DezFinalEscapeShip").stream().findFirst().orElse(null);
                 if(ship!=null&&ship.getCollisionProperty()!=previousShipHealth) {
-                    System.out.println("SHIP "+frame+" health "+ship.getCollisionProperty());previousShipHealth=ship.getCollisionProperty();
+                    System.out.println("SHIP "+frame+" health "+ship.getCollisionProperty());
+                    if(previousShipHealth>ship.getCollisionProperty()){brakeFinal=false;jumpTicks=0;}
+                    previousShipHealth=ship.getCollisionProperty();
                 }
                 if(ship!=null&&ship.getCollisionProperty()>0&&ship.getX()>=com.openggf.game.sonic3k.runtime.DezFinalCamera.nativeX(GameServices.camera())+180
                             &&ship.getY()<GameServices.camera().getY()+0x90) {
@@ -107,15 +130,21 @@ public final class DezFinalRouteAuthorTool {
                     // reverses X velocity, so a leftward strike sends Sonic toward
                     // the surviving floor. A missed attempt returns to approach.
                     if(brakeFinal&&!p.getAir()&&jumpTicks< -10)brakeFinal=false;
-                    if(ship.getCollisionProperty()==1&&!p.getAir()&&p.getCentreX()>ship.getX()+32)brakeFinal=true;
-                    targetX=ship.getX()+(ship.getCollisionProperty()==1?(brakeFinal?-80:64):0);
-                    if(!p.getAir()&&!heldJump&&(ship.getCollisionProperty()==1?brakeFinal&&p.getXSpeed()<=0x80:Math.abs(targetX-p.getCentreX())<72))jumpTicks=24;
+                    if(ship.getCollisionProperty()>0&&!p.getAir()&&p.getCentreX()>ship.getX()+32)brakeFinal=true;
+                    targetX=ship.getX()+(ship.getCollisionProperty()>0?(brakeFinal?-80:64):0);
+                    if(!p.getAir()&&!heldJump&&(ship.getCollisionProperty()>0?brakeFinal&&p.getXSpeed()<=0x80:Math.abs(targetX-p.getCentreX())<72))jumpTicks=24;
                     jump=jumpTicks-->0;
                 }
                 if(ship!=null&&ship.getCollisionProperty()==0) {
                     targetX=com.openggf.game.sonic3k.runtime.DezFinalCamera.nativeX(GameServices.camera())+280;
                     if(!p.getAir()&&!heldJump)jumpTicks=24;
                     jump=jumpTicks-->0;
+                }
+                // Controller safety: on descent steer back over the surviving
+                // floor after a missed button or a core rebound.
+                if (button != null && p.getYSpeed() >= 0 && p.getCentreY() > (team?100:140)
+                        && GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState arena) {
+                    targetX=Math.max(targetX,arena.breakFrontier()+(team?96:64));
                 }
                 int dx=targetX-p.getCentreX();
                 // Brake against observed momentum rather than writing any player or boss state.

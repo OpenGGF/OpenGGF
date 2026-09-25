@@ -1,10 +1,15 @@
 # S3K Death Egg final boss arena coverage matrix
 
-**Current route revalidation (2026-09-25, based on `3881f549a`):** the
-preserved cold ordinary ending movie initially died at input21410 after the
-native spike correction. Its controller inputs are now repaired:40316 frames
-to the final stage and54692 through the ordinary ending, zero deaths. The dated
-follow-up below distinguishes current verification from historical route lengths.
+**Current floor and route revalidation (2026-09-25, `c479eea6a` plus the floor fix):**
+native comparison exposed pre-movement proximity grounding above the real floor.
+The override is removed;24 floor/entry checks and164 broader focused checks pass.
+Controller inputs were reauthored for the corrected landing: cold solo Sonic now
+loads the ending in60920 inputs (68 registry replay spots), ordinary Sonic+Tails
+in49448 (31 spots), and the cold emerald team reaches the DDZ ending request
+in59722 (11 spots). Positioned DEZ2→final→complete DDZ passes320/800 in27122/27224
+inputs with11 replay spots each. All five route cases pass without failures,
+errors or skips. Earlier route lengths below are historical.
+See the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#dez-final-standing-height-investigation-2026-09-25).
 
 Game / canonical zone / act: S3K `S3K_DEZ_BOSS`, engine zone `$17` act index 0,
 ROM `Current_zone_and_act = $1700`. **Not Sonic 2's Death Egg**, and not the

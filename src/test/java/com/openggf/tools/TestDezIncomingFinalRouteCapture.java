@@ -120,10 +120,7 @@ class TestDezIncomingFinalRouteCapture {
         // Earlier independently runnable cold-route tests own DEZ1/2. These
         // checkpoints cover final entry, finger retirement, core/button/beam,
         // the ordinary player's chase rebounds, defeat and ending departure.
-        var spots = Set.of(40406, 40706, 41006, 41356, 41636, 42066,
-                42926, 43346, 43576, 43766, 44006, 44306, 45366, 46806,
-                48236, 49706, 50716, 50806, 51156, 51256, 51476, 51516,
-                51816, 52246, 52706, 53576, 53816, 54146, 54376, 54436, 54556);
+        var spots = Set.of(40406, 40706, 41006, 41356, 41636, 42066, 42500, 43000, 43500, 43565, 43947, 44309, 44692, 45161, 45573, 45948, 46382, 46430, 46600, 46860, 47136, 47168, 47519, 47921, 48226, 48626, 48836, 49141, 49200, 49300, 49380);
         var checked = new HashSet<Integer>();
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
@@ -194,10 +191,10 @@ class TestDezIncomingFinalRouteCapture {
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez-sonic-solo-cold-ending-320.bk2"));
-        assertEquals(64477, movie.getFrameCount());
+        assertEquals(60920, movie.getFrameCount());
         // Cover the shortened Act2 waits, final entry, every core/ship hit,
         // collapse, chase and departure. Original full Act2 coverage remains separate.
-        var spots = Set.of(23532, 28849, 28910, 31810, 32000, 32200, 32500, 33000, 33700, 34000, 34500, 35000, 36000, 36250, 36500, 36800, 36930, 37100, 37500, 38000, 38500, 39000, 39500, 40000, 41000, 42000, 43000, 44000, 45000, 45535, 46000, 47000, 48000, 49000, 50000, 50920, 51020, 51364, 52069, 52500, 53000, 53500, 54000, 54500, 55000, 55400, 55605, 55900, 56220, 56605, 56920, 57340, 57645, 58040, 58075, 58200, 58530, 58800, 60445, 61400, 61730, 62260, 63550, 63780, 64170, 64220, 64300, 64400);
+        var spots = Set.of(23532, 28849, 28910, 31810, 32000, 32200, 32500, 33000, 33700, 34000, 34500, 35000, 36000, 36250, 36500, 36800, 36930, 37100, 37500, 38000, 38500, 39000, 39500, 40000, 41000, 42000, 43000, 44000, 45000, 45535, 46000, 47000, 48000, 49000, 50000, 50920, 51020, 51364, 52069, 52500, 53000, 53500, 54000, 54210, 54600, 54835, 55207, 55798, 56212, 56540, 56903, 57264, 57739, 57780, 57900, 58100, 58220, 58495, 58542, 59085, 59390, 59792, 60098, 60402, 60613, 60650, 60750, 60850);
         var checked = new HashSet<Integer>();
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);

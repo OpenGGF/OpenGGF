@@ -134,6 +134,32 @@ class TestDezFinalArenaFloor {
         assertTrue(sprite.isOnObject(), "the arena object, not layout terrain, owns support");
         assertEquals(0xCD, sprite.getCentreY());
     }
+    @Test void descendingPlayerReachesTheFloorBeforeBecomingGrounded() {
+        for (int mode : new int[]{DezFinalArenaFloor.ENTRY, DezFinalArenaFloor.MOVING}) {
+            var fixture = boot();
+            var sprite = fixture.sprite();
+            sprite.setDebugMode(false);
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(sprite,
+                    mode == DezFinalArenaFloor.ENTRY ? 0x40 : 0x130);
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(sprite, 0xBA);
+            sprite.setAir(true);
+            sprite.setYSpeed((short) 0x100);
+            GameServices.camera().setScrollLocked(true);
+            GameServices.level().getObjectManager().addDynamicObject(
+                    mode == DezFinalArenaFloor.ENTRY ? DezFinalArenaFloor.entry() : DezFinalArenaFloor.moving());
+            // Native SolidObjectTop waits for the feet to reach the support at $E0.
+            // The old pre-movement proximity recovery alternated air/ground at $BA,
+            // holding Sonic above the floor and restarting his walk animation.
+            fixture.stepIdleFrames(30);
+            for (int frame = 0; frame < 30; frame++) {
+                assertTrue(sprite.isOnObject(), "landing must establish a real floor owner");
+                assertFalse(sprite.getAir());
+                assertEquals(0xCD, sprite.getCentreY());
+                assertEquals(5, sprite.getAnimationId(), "stationary Sonic must keep his idle animation");
+                fixture.stepIdleFrames(1);
+            }
+        }
+    }
     @Test void openingCollapsePublishesNineteenColumnsEverySixteenPassesAndClearsShake() {
         boot(); state().screenShake().writeFlag(-1);
         var worker = DezFinalArenaBreakup.opening(); GameServices.level().getObjectManager().addDynamicObject(worker);
