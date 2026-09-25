@@ -392,3 +392,10 @@ Tails LRZ2 follow-up (2026-09-25): the cold solo route now reaches the middle
 corridor in 41,922 inputs with no deaths and 25 Act2 full-registry replay spots.
 Fresh capture matches the candidate. Later Act2/Act3/HPZ completion and breadth
 remain open; see the LRZ Act2 matrix for commands and evidence limits.
+
+Tails LRZ2 completion (2026-09-25): the [cold solo completion](../architecture/validation/levels/s3k-lrz-act2.md#tails-cold-act2-completion-2026-09-25)
+reaches the real boulder handoff and boss act in59,712 inputs,zero deaths.
+The new test passes60 later Act2 full-registry replay spots, supplementing25
+middle-route spots; doors, carry and destination roster are asserted. Fresh
+capture matches all59,712 rows. Tails' boss/HPZ continuation and the Knuckles
+cold chain remain open; this does not certify other viewport/donor products.

@@ -13,7 +13,10 @@ The ordinary native320 Sonic+Tails cold Act1 route now reaches playable Act2
 (2357,1980),zero deaths; see the [handoff evidence](s3k-lrz-act1.md#ordinary-cold-miniboss-clear-and-act2-handoff-2026-09-24).
 The native320 Sonic+Tails route now completes Act2 and reaches the boss act
 from cold Act1 in43761 inputs without a death. See the
-[completion evidence](#ordinary-cold-act2-completion-2026-09-24); broader products remain open.
+[completion evidence](#ordinary-cold-act2-completion-2026-09-24). Solo Tails also completes
+the cold Act1→Act2 route in59712 inputs with85 Act2 restore/replay spots across
+the middle and completion tests; see [Tails completion](#tails-cold-act2-completion-2026-09-25).
+Broader products remain open.
 
 Incoming: seamless `$900` handover, level select `$901`, star-post reload.
 Outgoing: `$1600` (Sonic/Tails, with the Act 3 carry) and `$1601` (Knuckles, with `SaveGame`).
@@ -669,3 +672,44 @@ identity. A second candidate started in the previous candidate's special-stage
 results mode. That comparison is invalid and discarded; use separate processes
 for candidates that leave gameplay until the guard is strengthened. The selected
 route above independently replays from cold and never takes that detour.
+
+## Tails cold Act2 completion (2026-09-25)
+
+On `4dd304319` plus this test/input extension, ordinary cold solo Tails reaches
+boss-act zone22/act0 in59,712 inputs with zero deaths. The real boulder carry
+loads at59511 with zero rings; the destination route earns one ring and ends
+at(296,1200),with no sidekick and player control released. The white arrival
+flash is still active. Input is `lrz-tails-cold-act2-clear-320.script`/`.bk2`.
+No initial position, shield, ring or emerald values were supplied.
+
+`TestLrzTailsColdRouteCapture.coldTailsCompletesActTwoAndRestoresTheBoulderHandoff`
+passes60 full-registry immediate-restore/45-input replay spots across the later
+return, doors8/5/6, Fireworm approach, eastern turbine pair, breakable walls,
+lower tunnel, platform flights, final stairs and boulder sequence. Door opening,
+real handoff, carry and destination roster are asserted. The existing middle
+route retains its25 earlier Act2 spots; this follow-up does not repeat them.
+
+The initial test crossed the callback-bearing act-transition fade at its
+59460 replay window and failed with an already-active native blocking fade.
+That window is intentionally excluded by production `GameLoop.isRewindBlocked`:
+the callback is transient and live rewind clears history there. The final
+source spot is59430, ending before that boundary; independent destination
+spots59550/59650 cover the new act. This was a test-scope error, not a runtime
+fix or a claim that host transition callbacks are rewindable.
+
+Focused command (Java21, absolute verified ROM):
+`JAVA_HOME=<JDK21> LUA_BIN=lua5.4 DISPLAY=:0 python3 tools/testing/maven_queue.py
+-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestLrzTailsColdRouteCapture#coldTailsCompletesActTwoAndRestoresTheBoulderHandoff test`
+passes one test, zero failures/errors/skips (37.02seconds test,57.405seconds
+Maven). Regenerating the BK2 from its script yields identical input bytes.
+The inspected plan selects2917 classes due to unclassified route assets;
+focused complete playback/replay and independent capture are proportionate to
+this test/input-only extension. No new broad-suite claim.
+
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-tails-act2-boulder-arrival-320/capture.mp4`
+records58259–59711:1453frames,60fps,24.216667seconds. All59,712 rows match
+authoring on the12 fields listed above, zero differences/deaths. Full decode
+passes; stills59100,59400,59711 inspected. The external README preserves the
+command. Tails' boss fight/HPZ route, Knuckles' cold chain, wider products and
+matched native presentation remain open.

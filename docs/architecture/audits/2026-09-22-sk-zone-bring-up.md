@@ -5283,3 +5283,16 @@ records exact command and limitations: request verification is not on-disk save
 persistence, full-fight replay or ending-scene certification. The1959-class
 selection is disproportionate to this assertion/setup-only change, so focused
 validation is recorded; no runtime behavior changed.
+
+## 2026-09-25 Tails LRZ2 completion
+
+Cold solo/native320 Tails now completes Act2 and the boulder handoff in59,712
+inputs,zero deaths. The new fixed-input test passes60 later-route full-world
+restore/replay spots with no skips; the previous middle test owns25 earlier
+spots. The first attempt crossed the non-rewindable host fade and was corrected
+to sample before it, with separate destination checks; no production change.
+Fresh capture matches every row on12 fields and fully decodes. The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#tails-cold-act2-completion-2026-09-25)
+records exact validation, rejected sampling and remaining scope. The2917-class
+asset fallback is disproportionate to this test/input-only extension, so focused
+validation applies. Tails' boss/HPZ, Knuckles' cold chain and campaign integration
+remain outstanding.
