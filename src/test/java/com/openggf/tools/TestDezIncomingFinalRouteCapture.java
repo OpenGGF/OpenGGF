@@ -29,8 +29,23 @@ class TestDezIncomingFinalRouteCapture {
     void incomingFinalFightRestoresAndReplaysEveryPhase(int width) throws Exception {
         var settings = new GameplayCaptureSession.Settings(width, "sonic", "", "off", null,
                 0x34B0, 0x300, "3333333", false, false, null, null, false, 200, false);
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/dez2-through-ddz-" + width + ".bk2"));
+        verifyIncomingRoute(settings, Path.of(
+                "src/test/resources/routes/s3k/dez2-through-ddz-" + width + ".bk2"), 1);
+    }
+
+    @org.junit.jupiter.api.Test
+    void coldEmeraldTeamClearsBothActsFinalFightAndDoomsday() throws Exception {
+        // Emerald inventory is declared once at the real DEZ1 boot. Position,
+        // rings, health, clocks and every continuation remain production-owned.
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
+                null, null, "3333333", false, false, null, null, false, null, false);
+        verifyIncomingRoute(settings, Path.of(
+                "src/test/resources/routes/s3k/dez-sonic-tails-cold-ddz-320.bk2"), 0);
+    }
+
+    private void verifyIncomingRoute(GameplayCaptureSession.Settings settings, Path input,
+                                     int startAct) throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(input);
         var checked = new HashSet<String>();
         boolean chaseSeen = false;
         int previousCamera = 0;
@@ -38,7 +53,8 @@ class TestDezIncomingFinalRouteCapture {
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 1, settings);
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, startAct, settings);
+            assertEquals(startAct == 0 ? 1 : 0, GameServices.sprites().getRegisteredSidekicks().size());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 step(session, movie.getFrame(frame));
                 assertFalse(session.player().getDead(), "death at " + frame);
@@ -66,8 +82,10 @@ class TestDezIncomingFinalRouteCapture {
                     chaseSeen |= routine == 14;
                     int camera = GameServices.camera().getX() & 0xFFFF;
                     if (body != null && DdzDiagnostics.bodyHitPoints(body) == 6) spot = "ddz-body";
-                    if (chaseSeen && camera + 0x1000 < previousCamera) spot = "ddz-wrap";
                     if (chaseSeen && routine == 0) spot = "ddz-defeat";
+                    // A fast chase can finish before its first wrap. Prefer the
+                    // one-frame wrap edge over the persistent exit routine.
+                    if (chaseSeen && camera + 0x1000 < previousCamera) spot = "ddz-wrap";
                     previousCamera = camera;
                 }
                 if (spot == null || !checked.add(spot)) continue;

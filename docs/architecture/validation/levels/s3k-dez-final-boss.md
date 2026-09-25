@@ -17,7 +17,11 @@ evidence. Cold native320 ordinary Sonic+Tails now clears both main acts and all
 final phases, reaching the ordinary ending in54692 controller frames without death
 or transformation. The final sequence adds31 full-registry replay spots; DEZ2 entry
 has real full-load history isolation. Native scene matching, remaining roster/donor
-breadth and outgoing ending-history isolation remain open. Nothing below certifies the act.
+breadth and outgoing ending-history isolation remain open. A second cold native320
+team movie, with emeralds declared only at DEZ1 boot, now continues through both
+DDZ boss phases and its ending request in64648 inputs; see the
+[DDZ follow-up](s3k-ddz.md#2026-09-25--full-cold-dez1-through-incoming-ddz-completion).
+Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art
 `levartptrs $4C,$4C,$40` (PLC `$4C`, palette `$40`, `ArtKosM_DEZ3`,

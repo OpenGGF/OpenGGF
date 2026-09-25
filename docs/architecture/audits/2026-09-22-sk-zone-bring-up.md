@@ -15,7 +15,7 @@ below are inherited evidence until explicitly re-executed. Implementation,
 cold reachability, rewind, native behaviour and visual matching remain separate.
 Existing ending/credits and route exclusions remain as documented in each plan.
 
-## Current campaign priorities (updated 2026-09-24)
+## Current campaign priorities (updated 2026-09-25)
 
 The target remains all seven zones. The initial inventory below is historical;
 its original unimplemented counts must not be read as current production status.
@@ -27,8 +27,8 @@ its original unimplemented counts must not be read as current production status.
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
-| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,410frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in54786frames with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
-| DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; cold final-stage-to-DDZ continuity and remaining Hyper/HUD/native presentation still need validation. |
+| DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,316frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in54692frames with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 with eight full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
+| DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; full cold native320 DEZ1-to-DDZ now completes both boss phases and the ending request in64648 inputs with boot-only emeralds. Native Hyper-star queue phase and HUD redraw timing are matched with rewind checks; whole-scene presentation and remaining breadth still need validation. |
 
 Combined campaign validation, main-workspace integration, push and cleanup remain
 pending. Local component commits are checkpoints, not completion or delivery.
@@ -5112,3 +5112,17 @@ attempts, exact commands and the inspected7-second pad/ascent clip. No runtime
 code changed. The same boot-only emerald route reaches DDZ, but its appended
 fresh-flight input exhausts rings; full incoming flight authoring remains active.
 All-level breadth and combined integration/push/cleanup are still outstanding.
+
+
+### 2026-09-25 — full cold DEZ through Doomsday completion
+
+After `c3e0f520f`, the native320 team route now continues from DEZ1 through both
+DEZ acts, final hands/core/ship and both DDZ bosses to the actual ending request
+in64648 inputs, zero deaths. Only the initial emerald inventory is declared;
+all continuation state remains production-owned. A fixed-input capture matches
+all64648 authoring rows, and three incoming-route tests pass with33 full-registry
+replay spots, zero skips. The initial test-inventory failure was a wrap edge
+shadowed by persistent defeat state, not a completion or rewind divergence.
+The DDZ matrix records commands, rejected steering approaches and the inspected
+42.47-second finale. Combined validation, integration and wider/lifecycle/native
+scene obligations remain open; this is a route milestone, not all-level delivery.
