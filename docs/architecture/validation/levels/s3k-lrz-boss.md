@@ -302,3 +302,46 @@ that death, and shows the restored floor pool:
 `$VIDEO_ROOT/lrz-bring-up/campaign-20260925-platform-window-fixed-800/capture.mp4`.
 Its full ffmpeg decode passes. Frame1900 was inspected. The arena remains
 left-aligned with a large right mask at800; presentation centering remains open.
+
+
+## September 25 centered boss presentation
+
+Parent `8455bcc70` fixes generator timing. The following presentation correction
+uses the existing native-arena projection for the separate `$1600` boss act.
+`loc_59C8C` admits the boss only at native camera X=`$A00` and the final Y;
+on that same transition the wide viewport moves left by half its excess width.
+The ROM min/max X words remain `$A00`, preserving player walls. This is a
+widescreen presentation extension, not cartridge behavior. The captured runtime
+flag resets with the destination runtime on the Hidden Palace load.
+
+The lava column sampler translates its two-pixels-per-byte native lookup by the
+same inset, so the drawn floor remains aligned with the world-space solid.
+Generator activation and the mines' native coarse deletion range convert the
+projected camera back to its native origin. Ordinary viewport rendering retains
+its actual visible bounds. There is no change to the accepted mask fade logic.
+
+The first focused selection passes78 tests with no failures/errors/skips;
+this includes existing encounter, camera and rewind checks plus centered lava
+sampling at all five widths. A subsequent selection adds the actual entry-gate
+capture/restore check at five widths and centered-state defeat/results/HPZ
+completion, then repeats the cold native route and S3K stability requirements.
+The subsequent selection ran128 tests:123 passed and five new entry tests failed
+because the fixture reused a cached camera width and captured its manually staged
+camera before a coherent world update. Clearing the session before boot and
+stepping the staged pre-entry state repairs that fixture; the five-case focused
+rerun passes with no failures/errors/skips. Production code did not change for
+these failures. The123 passing cases include25 centered positioned encounters
+through defeat/results/HPZ, all62 rewind spots of the53047-input cold native route,
+and the four required S3K loading/bootstrap/AIZ checks. These are focused checks,
+not the combined campaign suite.
+
+At widths528 and800 the bounded checkpoint replays each match
+all2634 original native player rows, including the inherited death at2633.
+Each recorded fight excerpt is1500–2099; neither is a complete route.
+Both MP4s fully decode, and input1900 was inspected at both widths:
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260925-platform-arena-centered-528/capture.mp4`
+and
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260925-platform-arena-centered-800/capture.mp4`.
+The earlier left-aligned footage above records the prior implementation, not
+current presentation acceptance. Native timing/pixel alignment and remaining
+cold-route products/lifecycle coverage are still open.

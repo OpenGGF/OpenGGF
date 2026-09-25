@@ -77,7 +77,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
                 && GameServices.level().getFeatureActId() == 0
                 && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState) return true;
-        if (zone == Sonic3kZoneIds.ZONE_LRZ) {
+        if (zone == Sonic3kZoneIds.ZONE_LRZ
+                || (zone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && GameServices.level().getFeatureActId() == 0)) {
             return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry())
                     .map(LrzZoneRuntimeState::centerNativeArenaCamera).orElse(false);
         }

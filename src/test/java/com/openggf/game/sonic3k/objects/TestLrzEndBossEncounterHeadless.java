@@ -247,7 +247,13 @@ class TestLrzEndBossEncounterHeadless {
         config.setSessionOverride(com.openggf.configuration.SonicConfiguration.DISPLAY_ASPECT,aspect.name());
         config.resolveDisplayAspect(); donor=donorCode.equals("off")?null:donorCode;
         SessionManager.clear(); TestEnvironment.activeGameplayMode();
-        beforeBodyInitialization(); step();
+        beforeBodyInitialization();
+        // This positioned encounter starts after loc_59C8C's arena entry gate.
+        // Carry its presentation state too, including through results and load.
+        S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow()
+                .setCenterNativeArenaCamera(true);
+        GameServices.camera().setX((short)com.openggf.camera.NativeViewportFraming.visibleLeft(0xA00,width));
+        step();
         assertEquals(width,GameServices.camera().getWidth());
         assertEquals(main,fixture.sprite().getCode());
         assertEquals(donor!=null,com.openggf.game.CrossGameFeatureProvider.isActive());

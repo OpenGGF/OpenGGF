@@ -146,6 +146,13 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             advanceBossScreen();
             LrzBossBackgroundStageMachine.advance(state(),camera().getX(),camera().getY(),camera().getMaxY(),()-> {
                 camera().setMaxX((short)0xA00); camera().setMinY(camera().getY());
+                // loc_59C8C fixes the native 320px arena at Camera_X=$A00.
+                // Widescreen presents that same arena in the viewport centre;
+                // bounds remain native because they also constrain the players.
+                // This projection starts only after the native entry gate passes.
+                state().setCenterNativeArenaCamera(true);
+                camera().setX((short) com.openggf.camera.NativeViewportFraming.visibleLeft(
+                        0xA00, camera().getWidth()));
                 levelManager().getObjectManager().createDynamicObject(
                         com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance::new);
             });

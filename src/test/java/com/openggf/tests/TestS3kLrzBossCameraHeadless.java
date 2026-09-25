@@ -83,6 +83,39 @@ class TestS3kLrzBossCameraHeadless {
         assertEquals(0x17,map.getValue(0,1,9)&255); assertEquals(0x17,map.getValue(0,2,9)&255);
         assertEquals(0,state.chunkEditX());
     }
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints={320,352,400,528,800})
+    void nativeBossEntryCentersPresentationAndReplaysTheLock(int width) {
+        var config=SonicConfigurationService.getInstance();
+        var aspect=java.util.Arrays.stream(WidescreenAspect.values()).filter(a->a.pixelWidth()==width).findFirst().orElseThrow();
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,aspect.name()); config.resolveDisplayAspect();
+        SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle().build();
+        fixture.stepFrame(false,false,false,false,false);
+        var state=S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        state.setBackgroundRoutine(4);
+        var camera=GameServices.camera();
+        camera.setX((short)0xA00); camera.setMinX((short)0xA00); camera.setMaxX((short)0xBC0);
+        camera.setY((short)0x55F); camera.setMaxY((short)0x560);
+        camera.setScrollLocked(true);
+        fixture.sprite().setCentreX((short)0xA80); fixture.sprite().setCentreY((short)0x5B0);
+        fixture.stepFrame(false,false,false,false,false);
+        assertEquals(4,state.backgroundRoutine(),"entry waits for the native final Y");
+        var registry=fixture.gameplayMode().getRewindRegistry(); var before=registry.capture();
+        camera.setY((short)0x560); fixture.stepFrame(false,false,false,false,false);
+        assertEquals(12,state.backgroundRoutine());
+        assertTrue(state.centerNativeArenaCamera());
+        assertTrue(new com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider().centerNativeArenaCamera());
+        assertEquals(0xA00-(width-320)/2,camera.getX());
+        assertEquals(0xA00,camera.getMinX()); assertEquals(0xA00,camera.getMaxX());
+        var after=registry.capture();
+        registry.restore(before); assertFalse(state.centerNativeArenaCamera());
+        camera.setY((short)0x560); fixture.stepFrame(false,false,false,false,false); var replay=registry.capture();
+        for(String key:after.entries().keySet()) assertTrue(
+                RewindSnapshotDiff.diffKey(key,after.get(key),replay.get(key)).isEmpty(),
+                ()->key+RewindSnapshotDiff.diffKey(key,after.get(key),replay.get(key)));
+    }
+
     @Test void lavaSupportsProtectedP1BurnsP2AndRestoresFractionalCurrent() throws Exception {
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle().build();
         var runtime=S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow();

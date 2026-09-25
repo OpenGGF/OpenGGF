@@ -138,7 +138,13 @@ public final class LrzEndBossChild extends AbstractObjectInstance
         services().playSfx(Sonic3kSfx.THUMP_BOSS.id);
     }
     private void cull() {
-        int back=(services().camera().getX()-0x80)&0xFF80;
+        var camera=services().camera();
+        var zone=S3kRuntimeStates.currentLrz(services().zoneRuntimeRegistry()).orElseThrow();
+        // Sprite_CheckDelete's native range must not move when presentation centres the arena.
+        int nativeX=zone.centerNativeArenaCamera()
+                ? com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(),camera.getWidth())
+                : camera.getX();
+        int back=(nativeX-0x80)&0xFF80;
         if((((getX()&0xFF80)-back)&65535)>0x280) { pendingDelete=true; hidden=true; }
     }
     @Override public void refreshPostCameraRenderState() {

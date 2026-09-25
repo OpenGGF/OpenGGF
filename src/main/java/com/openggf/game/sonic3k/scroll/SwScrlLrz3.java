@@ -79,7 +79,13 @@ public final class SwScrlLrz3 extends SwScrlS3kDefault {
             int count = (width + 15) / 16;
             if (lavaColumns == null || lavaColumns.length != count) lavaColumns = new short[count];
             // sub_59DBC samples $113 + 8*n; API takes deltas from the common BG Y.
-            for (int i = 0; i < count; i++) lavaColumns[i] = (short) (state.bossAct().lavaHeight(19 + 8*i) - 0x30);
+            // The ROM samples from its native left edge. Centre projection shifts
+            // the world under the viewport, so shift this two-pixels-per-byte
+            // slope lookup too; otherwise the drawn pool disagrees with its solid.
+            int inset = state.centerNativeArenaCamera()
+                    ? com.openggf.camera.NativeViewportFraming.inset(width) : 0;
+            for (int i = 0; i < count; i++) lavaColumns[i] = (short) (
+                    state.bossAct().lavaHeight(19 + 8*i - inset / 2) - 0x30);
         }
     }
 

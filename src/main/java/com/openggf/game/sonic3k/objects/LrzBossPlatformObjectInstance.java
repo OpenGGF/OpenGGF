@@ -150,7 +150,11 @@ public final class LrzBossPlatformObjectInstance extends AbstractObjectInstance
             // platform heights before Sonic reaches them. Rendering/culling
             // still uses the actual viewport; activation is not visibility.
             var camera=services().camera();
-            if(((getX()-camera.getX())&65535)>=0x140
+            var zone=S3kRuntimeStates.currentLrz(services().zoneRuntimeRegistry()).orElseThrow();
+            int nativeX=zone.centerNativeArenaCamera()
+                    ? com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(),camera.getWidth())
+                    : camera.getX();
+            if(((getX()-nativeX)&65535)>=0x140
                     || ((getY()-camera.getY())&65535)>=0xE0) return;
             if(subtype!=0) {
                 spawnPlatform(RISING,subtype,0,0x4FF,null); expire(); return;

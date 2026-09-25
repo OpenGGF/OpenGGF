@@ -87,5 +87,23 @@ class SwScrlLrz3Test {
                 "Wrapping the pool source at $200 reads different ROM art");
     }
 
+    @Test void centeredArenaSamplesThePoolAtWorldCoordinates() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(22,0).build();
+        var scroll=new SwScrlLrz3(GameServices.rom().getRom());
+        var state=new LrzZoneRuntimeState(22,0,PlayerCharacter.SONIC_AND_TAILS);
+        state.setBackgroundRoutine(12);state.setCenterNativeArenaCamera(true);
+        state.bossAct().rebuildLavaHeights(128,1);
+        for(int width:new int[]{320,352,400,528,800}) {
+            int inset=(width-320)/2;
+            int[] buffer=new int[224];
+            scroll.render(buffer,0xA00-inset,0x560,0,state,width,false);
+            assertEquals((short)(-0xA00+inset),(short)(buffer[0]>>16));
+            assertEquals((short)(-0x300+inset),(short)buffer[0]);
+            for(int i=0;i<(width+15)/16;i++) assertEquals(
+                    state.bossAct().lavaHeight(19+8*i-inset/2)-0x30,
+                    scroll.getPerColumnVScrollBG()[i],"width="+width+" column="+i);
+        }
+    }
+
     private static short word(byte[] data,int index) {return (short)((data[2*index]&255)<<8|data[2*index+1]&255);}
 }
