@@ -622,3 +622,26 @@ because route assets are unclassified. Focused validation is proportionate for
 this test/input-only extension: its complete production playback and all new
 replay spots are exercised, with an independent fresh capture. No new broad
 suite claim; combined campaign integration verification remains outstanding.
+
+## Tails eastern climb and lower tunnel (2026-09-25)
+
+Fresh playback on `42fa53430` extends the solo/native320 cold route to53,245
+inputs, ending at(8724,1270),ten rings,zero deaths. It passes door8, the Fireworm
+approach, the eastern turbine pair and breakable walls, then brakes before the
+upper spring to enter the lower tunnel. The external source is
+`campaign-20260925-tails-branch162/variant-0.bk2`; the committed replay fixture
+still ends41922 and later rewind/exit coverage remains open.
+
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-tails-act2-eastern-tunnel-320/capture.mp4`
+records49600–53244:3645 frames/60fps/60.75seconds. Full decode passes. All53,245
+rows match authoring on12 recorded fields with zero differences/deaths. Stills
+50153,51282,53244 were inspected; the final fresh image is pixel-identical to
+the corresponding branch-authoring image. The external README gives the command.
+
+The final tunnel's black background area was checked against existing BizHawk
+`campaign-20260924-native-act2-floor/far-east/f425500.png`, which shows that
+feature too. Its verified native CSV gives player(8751,1274),camera(8591,1146),
+versus engine(8724,1270),camera(8580,1174). Host metadata records the stock ROM
+SHA1, exit0 and no failures. This is nearby-scene corroboration of that feature,
+not exact pixel parity, a matched Tails/clock oracle or closure of the broader
+native presentation obligations. No runtime change was justified.
