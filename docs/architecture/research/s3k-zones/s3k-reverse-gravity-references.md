@@ -226,7 +226,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 20802 | `Touch_Monitor` | `Touch_Monitor`: negates `y_vel` before the break-from-below / bounce test (with the monitor Y-flip bit) | `Sonic3kMonitorObjectInstance.onTouchResponse` has no `render_flags` bit 1 direction test to mirror — see the note below | missing |
+| 20802 | `Touch_Monitor` | `Touch_Monitor`: negates `y_vel` before the break-from-below / bounce test (with the monitor Y-flip bit) | `Sonic3kMonitorObjectInstance.onTouchResponse` mirrors the signed direction word before the Y-flipped knock-loose branch, ahead of break/player-slot gates | covered |
 | 47577 | `Spring_Down` | `Spring_Down` init: becomes `Spring_Up` | `Sonic3kSpringObjectInstance:425` | covered |
 | 47628 | `Spring_Up` | `Spring_Up` init: becomes `Spring_Down` | `Sonic3kSpringObjectInstance:425` | covered |
 | 47722 | `sub_22F98` | `sub_22F98` (up-spring launch): `+8` becomes `-8` | `Sonic3kSpringObjectInstance.applyUpSpring` / `applyDownSpring` | covered |
@@ -276,10 +276,10 @@ is the RAM wipe described above).
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 9 | 0 | 0 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 1 | 0 | 1 |
-| I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
+| I. Monitors, springs, spikes | 6 | 5 | 0 | 1 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 3 | 0 | 0 | 0 |
-| **Total** | **116** | **105** | **5** | **2** | **4** |
+| **Total** | **116** | **106** | **5** | **1** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:
@@ -377,16 +377,16 @@ way: a test written that way passes whether or not the launch rows exist.
 `TestS3kReverseGravitySpringLaunch` pairs them the way the ROM does, and disabling the launch
 mirror flips both inverted cases while both upright controls stay green.
 
-**Two rows are blocked by upright behaviour the engine does not model, not by reverse gravity.**
-`Touch_Monitor` :20802 negates the `y_vel` copy that feeds the monitor's "is the player moving into
-me" test, and that test — the `render_flags` bit 1 upside-down branch and its `.checkfall` path
-(sonic3k.asm:20800-20830) — has no engine equivalent: `Sonic3kMonitorObjectInstance.onTouchResponse`
-breaks on the roll animation and negates `y_vel` unconditionally. `Obj_Spikes` :48958 toggles the
-status Y-flip bit that selects `loc_2413E`, while `Sonic3kSpikeObjectInstance` selects its movement
-from `subtype & $F`. Porting either row means first porting the upright branch it modifies, which
-would change shipped upright behaviour and belongs to those objects' own work, not to this slice.
-Both stay **missing** with that reason recorded rather than being implemented against a structure
-the ROM does not have here.
+**The remaining object row requires its missing upright structure.**
+`Obj_Spikes` :48958 toggles the status Y-flip bit that selects `loc_2413E`, while
+`Sonic3kSpikeObjectInstance` selects movement from `subtype & $F`. It remains missing.
+The former monitor blocker was ported on 2026-09-25: `Touch_Monitor` now mirrors
+its direction word before selecting the Y-flipped knock-loose branch, preserves
+the unsigned position gate and bounces/falls before checking player slot or
+attack animation. `Obj_MonitorFallUpsideDown` uses its own upward gravity and
+ceiling contact, independent of the player's current gravity. Monitor shell/icon
+presentation and inverted icon travel remain separate inherited gaps; covering
+this gravity-reference row is not complete monitor certification.
 
 **The seven render-mirror rows are one net effect, not seven XORs.** `Animate_Sonic` clears
 `render_flags` bits 0-1 and rewrites bit 0 from the facing status (`andi.b #$FC` / `or.b d1`,

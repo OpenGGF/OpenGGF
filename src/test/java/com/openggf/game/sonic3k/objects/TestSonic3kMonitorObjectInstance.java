@@ -58,6 +58,91 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     @Test
+    void invertedMonitorTouchSelectsFallBeforeTheBreakAndPlayerSlotGates() {
+        for (boolean reverse : new boolean[] {false, true}) {
+            for (boolean cpu : new boolean[] {false, true}) {
+                for (int velocity : new int[] {-0x200, 0, 0x200}) {
+                    var gameState = new com.openggf.game.GameStateManager();
+                    gameState.setReverseGravityActive(reverse);
+                    var monitor = new Sonic3kMonitorObjectInstance(
+                            new ObjectSpawn(0x100, 0x200, 1, 3, 2, false, 0));
+                    monitor.setServices(new TestObjectServices().withGameState(gameState));
+                    DummyPlayer player = new DummyPlayer();
+                    player.setCpuControlled(cpu);
+                    player.setCentreY((short) 0x1EF); // y + $10 is strictly below monitor y
+                    player.setAnimationId(Sonic3kAnimationIds.ROLL);
+                    player.setYSpeed((short) velocity);
+                    boolean falls = (reverse ? -velocity : velocity) > 0;
+                    monitor.onTouchResponse(player, TOUCH_RESULT, 0);
+                    assertEquals(falls || cpu ? 0x46 : 0, monitor.getCollisionFlags());
+                    assertEquals(falls || !cpu ? -velocity : velocity, player.getYSpeed());
+                    if (falls) {
+                        try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.ObjectTerrainUtils.class)) {
+                            terrain.when(() -> com.openggf.physics.ObjectTerrainUtils.checkCeilingDist(
+                                    0x100, 0x1FE, 0x0F)).thenReturn(
+                                    new com.openggf.physics.TerrainCheckResult(5, (byte) 0x80, 0));
+                            monitor.update(1, player);
+                            assertEquals(0x1FE, monitor.getY());
+                            var restored = new Sonic3kMonitorObjectInstance(monitor.getSpawn());
+                            restored.setServices(new TestObjectServices().withGameState(gameState));
+                            restored.restoreRewindState(monitor.captureRewindState());
+                            terrain.when(() -> com.openggf.physics.ObjectTerrainUtils.checkCeilingDist(
+                                    0x100, 0x1FC, 0x0F)).thenReturn(
+                                    new com.openggf.physics.TerrainCheckResult(-2, (byte) 0x80, 0));
+                            monitor.update(2, player);
+                            restored.update(2, player);
+                            assertEquals(0x1FE, monitor.getY());
+                            assertEquals(monitor.getY(), restored.getY());
+                            monitor.update(3, player);
+                            restored.update(3, player);
+                            assertEquals(0x1FE, restored.getY(), "ceiling landing must stop the falling routine");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void invertedMonitorCanBeKnockedLooseWithoutAttackAnimationAndStopsAtZeroClearance() {
+        var monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0x100, 0x200, 1, 3, 2, false, 0));
+        monitor.setServices(new TestObjectServices());
+        DummyPlayer player = new DummyPlayer();
+        player.setCentreY((short) 0x1EF);
+        player.setAnimationId(Sonic3kAnimationIds.SPRING);
+        player.setYSpeed((short) 0x200);
+        monitor.onTouchResponse(player, TOUCH_RESULT, 0);
+        assertEquals(-0x200, player.getYSpeed());
+        try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.ObjectTerrainUtils.class)) {
+            terrain.when(() -> com.openggf.physics.ObjectTerrainUtils.checkCeilingDist(
+                    0x100, 0x1FE, 0x0F)).thenReturn(
+                    new com.openggf.physics.TerrainCheckResult(0, (byte) 0x80, 0));
+            monitor.update(1, player);
+            monitor.update(2, player);
+            assertEquals(0x1FE, monitor.getY());
+            assertEquals(0x46, monitor.getCollisionFlags());
+        }
+    }
+
+    @Test
+    void invertedMonitorFallRejectsTheExactUnsignedPositionBoundary() {
+        for (int y : new int[] {0x1F0, 0x1F1, 0xFFF0}) {
+            var monitor = new Sonic3kMonitorObjectInstance(
+                    new ObjectSpawn(0x100, 0x200, 1, 3, 2, false, 0));
+            monitor.setServices(new TestObjectServices());
+            DummyPlayer player = new DummyPlayer();
+            player.setCentreY((short) y);
+            player.setAnimationId(Sonic3kAnimationIds.ROLL);
+            player.setYSpeed((short) 0x200);
+            monitor.onTouchResponse(player, TOUCH_RESULT, 0);
+            // The add.w wraps before the unsigned comparison; $FFF0 + $10 = 0.
+            assertEquals(y == 0xFFF0 ? -0x200 : 0x200, player.getYSpeed());
+            assertEquals(0x46, monitor.getCollisionFlags());
+        }
+    }
+
+    @Test
     void offscreenCpuTailsStillUsesMonitorSolidity() {
         // Obj_MonitorMain -> SolidObject_Monitor_Tails -> SolidObject_cont has no
         // Player_2 render_flags gate (sonic3k.asm:40486-40500, 40588-40596).

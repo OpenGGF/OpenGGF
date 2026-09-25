@@ -5004,3 +5004,17 @@ checks pass, including both gravity directions, standing/smaller radii and Y
 fraction preservation. The [Act2 matrix](../validation/levels/s3k-dez-act2.md#knuckles-fall-from-glide-radius-2026-09-25)
 records the failing case and commands. The two missing monitor/spike branches
 and the combined shared-movement delivery gates remain open.
+
+
+### 2026-09-25 — inverted monitor contact/falling
+
+After `faacc78e8` saved the fall-from-glide radius correction, the next missing
+DEZ gravity row exposed the omitted `Touch_Monitor` knock-loose branch. The port
+preserves direction mirroring, unsigned position rejection, CPU/non-attack
+contacts, native upward falling and ceiling settling. Mid-flight recreation and
+forward settling agree. Two new red regressions preceded the fix;128 focused
+checks pass, followed by27 monitor/rewind checks after expanding edge coverage,
+all with zero skips. See the DEZ2 matrix for commands and coverage limits.
+Monitor shell/icon presentation remains an explicit follow-up. The gravity
+inventory reaches106/116 covered with5 partial,1 missing and4 not applicable;
+this is not whole-level or delivery certification. No campaign push yet.

@@ -33,7 +33,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (105 of 116 ROM references covered, 5 partial and 2 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (106 of 116 ROM references covered, 5 partial and 1 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -791,3 +791,48 @@ lock and retained fraction. This is focused validation on `f2edd4271` plus the
 change, not the pending full campaign or cross-game trace gate. The inspected
 change-based plan remains the full ordinary suite plus guards. Inventory is
 105covered,5partial,2missing,4not-applicable; monitors/spikes remain unimplemented.
+
+
+### Upside-down monitor contact and falling (2026-09-25)
+
+At `faacc78e8`, `Touch_Monitor` skipped the direction/Y-flip/position branches
+and immediately entered the break rules. Two regressions failed: a knock-loose
+contact destroyed the monitor, and an exact rejected position boundary bounced
+the player anyway. The port now mirrors the signed Y-velocity copy under reverse
+gravity, checks the placement's Y-flip, and performs the unsigned `y+$10` word
+comparison before break eligibility. CPU players and non-attacking players can
+knock a monitor loose, as the earlier native branch permits. The player's actual
+velocity is negated only on an accepted contact.
+
+`Obj_MonitorFallUpsideDown` moves with the previous velocity, applies `-$38`,
+then settles against the ceiling at distance <=0. Upright falling retains the
+native floor branch, including zero velocity/clearance. Both use the initialized
+`y_radius=$F`, not the separate solid-object `d2=$10`. A new captured primitive
+tracks touch-initiated motion without making these placed objects persistent.
+The hidden-monitor persistence contract remains separate.
+
+Commands (queued, Java21; absolute existing ROM supplied):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestSonic3kMonitorObjectInstance,TestS3kHiddenMonitorInstance,TestS3kReverseGravityDezCorridor,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestSonic3kMonitorObjectInstance,TestS3kHiddenMonitorInstance,TestS3kMonitorGraphRewind,TestLiveRewindMonitorState,TestLiveRewindMonitorPresentation test
+```
+
+128 tests passed in the first selection. After adding the non-attacking/zero
+clearance case, the monitor/rewind selection passed27 tests. Both have zero
+failures/errors/skips; the live monitor tests are S2 controls, whereas the new
+S3K fall test restores mid-flight and compares subsequent ceiling settling.
+The new monitor branches use mocked terrain distances; actual DEZ terrain is
+covered by the unchanged corridor tests, not an ordinary monitor traversal.
+The change-based plan selects2442 classes plus guards; the combined campaign
+still requires its broader delivery selection and shared-movement trace checks.
+
+Inventory is now106 covered,5 partial,1 missing,4 not applicable. This closes
+the monitor gravity-reference row only. Existing shell/icon flip rendering and
+inverted reward-icon motion are explicitly still open; a full upside-down
+monitor presentation capture would be premature.
+
+`-Pguards -Dtest=TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard`
+also passes2 tests, zero failures/errors/skips, in a separate queued JVM.
