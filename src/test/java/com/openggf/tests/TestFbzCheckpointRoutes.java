@@ -170,9 +170,28 @@ class TestFbzCheckpointRoutes {
     @MethodSource("checkpointLifecycleCases")
     void physicalCheckpointSurvivesTwoRealDeathReloads(Team team, int act, int index,
             CheckpointPlacement checkpoint, int width) {
+        runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, "off");
+    }
+
+    @ParameterizedTest(name = "{5} {0} FBZ{1} physical post {2}, width {4}, repeated death")
+    @MethodSource("donorCheckpointLifecycleCases")
+    void supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths(Team team,
+            int act, int index, CheckpointPlacement checkpoint, int width, String donor) {
+        runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, donor);
+    }
+
+    private void runPhysicalCheckpointLifecycle(Team team, int act, int index,
+            CheckpointPlacement checkpoint, int width, String donor) {
         ConfigSnapshot savedConfig = configure(team);
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !donor.equals("off"));
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, donor);
+        if (!donor.equals("off")) {
+            var rom = donor.equals("s1") ? RomTestUtils.ensureSonic1RomAvailable() : RomTestUtils.ensureSonic2RomAvailable();
+            config.setSessionOverride(donor.equals("s1") ? SonicConfiguration.SONIC_1_ROM : SonicConfiguration.SONIC_2_ROM,
+                    rom.getAbsolutePath());
+        }
         var aspect = java.util.Arrays.stream(com.openggf.configuration.WidescreenAspect.values())
                 .filter(value -> value.pixelWidth() == width).findFirst().orElseThrow();
         // Use a real preset and create the gameplay camera only after resolving it.
@@ -185,9 +204,12 @@ class TestFbzCheckpointRoutes {
         try {
             // Local ROM-placed post approach, not a cold route. No saved-post state
             // is injected. Death itself is a declared production pit-death stimulus.
-            var f = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, act)
+            var builder = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, act)
                     .startPosition((short) (checkpoint.x() - 48), (short) checkpoint.y())
-                    .startPositionIsCentre().withFreshLevelStartLifecycle().build();
+                    .startPositionIsCentre().withFreshLevelStartLifecycle();
+            if (!donor.equals("off")) builder.withCrossGameDonation(donor);
+            var f = builder.build();
+            assertDonorState(donor);
             assertEquals(width, GameServices.camera().getWidth() & 0xFFFF, "initial configured viewport");
             for (int n = 0; n < 90 && !GameServices.level().getCheckpointState().isActive(); n++)
                 f.stepFrame(false, false, false, true, false);
@@ -221,6 +243,7 @@ class TestFbzCheckpointRoutes {
                             assertEquals(team.main(), player.getCode());
                             assertEquals(followers, GameServices.sprites().getRegisteredSidekicks());
                             assertEquals(width, GameServices.camera().getWidth() & 0xFFFF);
+                            assertDonorState(donor);
                             assertNotSame(runtime, GameServices.zoneRuntimeRegistry().current());
                             var next = assertInstanceOf(FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
                             var events = assertInstanceOf(Sonic3kLevelEventManager.class, GameServices.module().getLevelEventProvider());
@@ -247,6 +270,7 @@ class TestFbzCheckpointRoutes {
                     }
                     assertTrue(released, "title/fade must release controls");
                     assertFalse(GameServices.sprites().getMainPlayable().getDead());
+                    assertDonorState(donor);
                 }
             } finally {loop.closePresence();}
         } finally {config.clearSessionOverrides(); restore(savedConfig);}
@@ -256,6 +280,31 @@ class TestFbzCheckpointRoutes {
         return AUTHORED_CHECKPOINTS.stream().flatMap(post -> Stream.of(Team.values())
                 .flatMap(team -> Stream.of(320, 352, 400, 528, 800)
                         .map(width -> Arguments.of(team, post.act(), post.index(), post, width))));
+    }
+
+    private static Stream<Arguments> donorCheckpointLifecycleCases() {
+        return Stream.of("s1", "s2").flatMap(donor -> Stream.of(Team.values()).filter(team -> {
+            var profile = new com.openggf.game.launch.LaunchProfile(false, donor, false, "global",
+                    team.main(), team.sidekicks().isEmpty() ? "none" : team.sidekicks());
+            return profile.equals(profile.sanitizedFor(com.openggf.game.MasterTitleScreen.GameEntry.SONIC_3K));
+        }).flatMap(team -> AUTHORED_CHECKPOINTS.stream().flatMap(post -> Stream.of(320, 352, 400, 528, 800)
+                .map(width -> Arguments.of(team, post.act(), post.index(), post, width, donor)))));
+    }
+
+    private static void assertDonorState(String donor) {
+        boolean active = !donor.equals("off");
+        assertEquals(active, com.openggf.game.CrossGameFeatureProvider.isActive());
+        if (active) assertEquals(donor, com.openggf.game.CrossGameFeatureProvider.getInstance().getDonorGameId());
+        var leader = GameServices.sprites().getMainPlayable();
+        assertEquals(!donor.equals("s1"), leader.getGameRules().playerCapability().spindashEnabled());
+        var participants = new java.util.ArrayList<com.openggf.sprites.playable.AbstractPlayableSprite>();
+        participants.add(leader); participants.addAll(GameServices.sprites().getRegisteredSidekicks());
+        for (var player : participants) {
+            org.junit.jupiter.api.Assertions.assertNotNull(player.getSpriteRenderer(), "ROM-backed participant renderer");
+            org.junit.jupiter.api.Assertions.assertNotNull(player.getAnimationProfile());
+            org.junit.jupiter.api.Assertions.assertNotNull(player.getAnimationSet());
+            assertTrue(player.getAnimationFrameCount() > 0, "decoded participant mappings");
+        }
     }
 
     private static void sameCheckpointWorld(com.openggf.game.rewind.CompositeSnapshot expected,

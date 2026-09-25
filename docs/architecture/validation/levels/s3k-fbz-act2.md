@@ -260,3 +260,23 @@ real preset before opening the final gameplay session, and checking the width
 before contact as well as after reload, verifies the intended product. No runtime
 change was needed. Donor products, cold post reachability and other act-specific
 mechanism/presentation obligations remain open.
+
+## Supported donor checkpoint lifecycle (2026-09-25)
+
+The physical checkpoint/death test now also covers the production launch roster
+for S1 and S2 donors. `LaunchProfile.sanitizedFor(SONIC_3K)` selects supported
+standard teams: S1 Sonic alone; S2 Sonic alone, Tails alone and Sonic+Tails.
+Each visits all eleven posts at 320/352/400/528/800 and runs two real death loads
+(220 additional cases, 440 additional reloads). The donor is initialized through
+the fixture's production donation path using the verified root ROMs. Before
+contact, at each load and after control release, assertions check donor identity,
+spindash capability, participant renderer, animation set/profile and mappings.
+S1 Sonic remains unable to spindash. Native lifecycle assertions remain intact.
+
+Java 21, DISPLAY=:0, `30a3537d0` plus test changes:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzCheckpointRoutes
+-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dsonic1.rom.path=$PROJECT_ROOT/s1.gen
+-Dsonic2.rom.path=$PROJECT_ROOT/s2.gen test`: 529 tests, 0 failures/errors/skips,
+1:07 Maven (46.73s class). This totals 880 actual reloads across the native and
+supported donor standard-team products. It does not certify donor cold traversal,
+hazard-contact deaths, arbitrary duplicate follower chains or pixel presentation.

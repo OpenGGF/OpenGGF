@@ -513,3 +513,9 @@ teams and five selectable widths (220 cases, 440 loads). The full checkpoint
 class passes 309 tests without skips, including team/runtime replacement and
 live-history isolation. Local approaches and induced pit death are declared;
 donor coverage and cold reachability to every post remain distinct obligations.
+
+FBZ donor checkpoint lifecycle (2026-09-25): real S1 Sonic and supported S2
+standard teams add 220 post/width cases with two real reloads each. Native plus
+donor coverage now verifies 880 reloads; the whole class passes 529 tests with
+no skips. Donor activation, retained capabilities and decoded participant art
+are asserted after each load. Cold routes and other matrix obligations remain open.
