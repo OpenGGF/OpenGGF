@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+[Knuckles LRZ2 upper climb](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-upper-climb-and-door-release-2026-09-25)
+now reaches the eastern door approach in40046 cold inputs, zero deaths, with53
+additional restore/replay spots (101 Act2,208 across the Knuckles route tests).
+Direct HPZ completion and the remaining campaign acceptance remain open.
+
 [Knuckles LRZ2 middle route](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-cold-lower-route-and-upper-tube-arrival-2026-09-25)
 now reaches the upper tube arrival from cold Act1 in33763 inputs, zero deaths,
 with48 Act2 restore/replay spots and a matching fresh capture. Act2 completion,

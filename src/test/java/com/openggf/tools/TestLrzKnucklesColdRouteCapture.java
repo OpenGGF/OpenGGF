@@ -224,6 +224,64 @@ class TestLrzKnucklesColdRouteCapture {
         }
     }
 
+    @Test
+    void coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/lrz-knuckles-cold-act2-upper-320.bk2"));
+        assertEquals(40046, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        // Timed flame entry, short hop onto the safe emitter, wall transfers,
+        // moving-block clearance, upper checkpoint, short switch hop, door
+        // release and crossing, cloud spindash, rebound jump and next door.
+        var spots = Set.of(33762, 34020, 34060, 34093, 34110, 34150, 34218,
+                34245, 34279, 34339, 34400, 34425, 34575, 34605, 34640,
+                34690, 34750, 35229, 35754, 35790, 35875, 35930, 35960,
+                36030, 36090, 36141, 36170, 36352, 36877, 36980, 37030,
+                37080, 37130, 37546, 37620, 38402, 38440, 38520, 38583,
+                38614, 38640, 38645, 38675, 38855, 38916, 39036, 39064,
+                39082, 39120, 39160, 39250, 39500, 39990);
+        var checked = new HashSet<Integer>();
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            assertInstanceOf(Knuckles.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertEquals(320, GameServices.camera().getWidth());
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                session.step(movie.getFrame(frame));
+                session.render();
+                assertFalse(session.player().getDead(), "death at input " + frame);
+                if (!spots.contains(frame)) continue;
+                assertEquals(9, GameServices.level().getCurrentZone());
+                assertEquals(1, GameServices.level().getCurrentAct());
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                var forward = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), "Act2 restore at " + frame);
+                session.restoreInputHistory(movie.getFrame(frame));
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                same(forward, registry.capture(), "Act2 replay at " + frame);
+                registry.restore(saved);
+                session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertInstanceOf(Knuckles.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertFalse(session.player().isObjectControlled());
+            assertEquals(8501, session.player().getCentreX());
+            assertEquals(236, session.player().getCentreY());
+            assertEquals(0, session.player().getRingCount());
+        }
+    }
+
     private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String context) {
         assertEquals(expected.entries().keySet(), actual.entries().keySet(), context);
         for (String key : expected.entries().keySet()) {

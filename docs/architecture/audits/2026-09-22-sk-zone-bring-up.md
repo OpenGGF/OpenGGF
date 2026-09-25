@@ -5434,3 +5434,22 @@ input approaches. No runtime changes were justified. Fresh playback matches all
 selected still inspection. Test/input-only focused validation is proportionate;
 this is not a new full-suite claim. Next is the upper climb and Knuckles' direct
 HPZ exit, then remaining campaign breadth/native evidence and integration.
+
+## Knuckles upper flame shaft and eastward door (2026-09-25)
+
+After `d85754836`, the preserved cold native320/solo Knuckles input reaches
+(8501,236) in40046 frames without a death. The
+[Act2 matrix](../validation/levels/s3k-lrz-act2.md#knuckles-upper-climb-and-door-release-2026-09-25)
+records the exact queued validation command:1 test,0 failures/errors/skips,
+53 full-registry restore/replay spots,41.64 seconds test time/1:07 Maven.
+Independent playback matches all40046 rows on12 fields; the104.716667-second
+video passes decode and selected still inspection. The test/input-only change
+uses proportionate focused validation, not a new broad-suite claim.
+
+Short jumps and waits resolved the flame shaft, the moving-block opening and
+switch4's side contact. The actual moved-X grip release was preserved; no
+physics or object changes were justified. The matrix records rejected input
+approaches so the next pass need not repeat them. Scratch continuation opens
+door9 and reaches(8693,236), but has not yet received its own independent capture
+or replay certification. Continue from that input, then close direct HPZ and
+the remaining campaign scope before combined integration/push/cleanup.

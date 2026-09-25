@@ -765,3 +765,54 @@ switch cannot press its side; backing up then approaching in a jump opens it.
 The cloud corridor needs a spindash escape. These observations changed authored
 inputs, not engine physics, object behavior or ROM expectations. The powered-up
 native recording was used only to locate the route, never to supply engine state.
+
+## Knuckles upper climb and door release (2026-09-25)
+
+`lrz-knuckles-cold-act2-upper-320.{script,bk2}` extends the cold Act1 recording
+to40046 inputs, ordinary solo Knuckles/native320/donor off, ending at(8501,236)
+with zero rings and zero deaths. It traverses the timed flame shaft, wall
+transfers, moving-block clearance, upper checkpoint, switch4 and its door,
+then the eastern cloud corridor. The next door and the rest of the direct HPZ
+route remain outside this fixture. No position, shield, ring or emerald seed.
+
+`TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease`
+passes53 full-registry immediate restores and45-input replays, including both
+sides of the switch/door interaction, flame waiting points, short jumps onto
+emitter bodies, wall transfers, moving solids, spindash and subsequent jump.
+The actual solo roster, native width, final position, released object control
+and zero deaths are asserted. Earlier Act2 coverage retains48 spots, and Act1
+retains107. The complete current set is208 spots (107+48+53),
+with each owning test retaining its separate scope.
+
+On `d85754836` plus this test/input extension, Java21/native GL:
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease test
+```
+
+One test passes, zero failures/errors/skips,41.64 seconds test time and1:07
+Maven. The inspected selection against `d85754836` contains2918 ordinary
+classes from unclassified route assets. Focused validation is proportionate
+for this test/input-only extension: full production playback, every new replay
+spot and a separate fresh capture. No runtime code changed. Combined campaign
+verification and integration remain outstanding; this is not a full-suite pass.
+
+Fresh video:
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-knuckles-act2-upper-320/capture.mp4`.
+It covers inputs33763–40045,6283 frames at60fps,104.716667 seconds. All40046
+fresh rows match the authoring source on the12 state fields listed in the
+preceding milestone, zero differences/deaths/followers. Full video decode
+passes; flame climb, opened-door crossing and final approach stills were
+inspected. Exact command/provenance are in the external README. This is engine
+presentation and rewind evidence, not native pixel parity or Act2 completion.
+
+Rejected approaches and their evidence: a full-height jump from the lower
+flame ledge enters the upper jet; a short hop lands safely on the lower emitter
+and provides a waiting point. The next moving solid changes Knuckles' X while
+he climbs, so the native stored-X grip check releases him; waiting for its
+opening succeeds without changing collision. At switch4, a full jump enters
+the upper jet, while a short hop from the moving platform presses the side.
+The next spindash initially became a roll because Knuckles was still moving;
+a brief brake before Down allows a real charge. The discarded long run then
+rebounds west; jumping before that obstacle keeps the route eastward. These
+are recorded controller choices, not changes to native gameplay semantics.
