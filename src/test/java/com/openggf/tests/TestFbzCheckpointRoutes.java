@@ -125,6 +125,58 @@ class TestFbzCheckpointRoutes {
         }
     }
 
+    @ParameterizedTest(name = "{0} FBZ{1} starpost {2} physical activation")
+    @MethodSource("checkpointTeamCases")
+    void walkingIntoEveryPlacedPostActivatesAndReplaysItsSave(
+            Team team, int act, int checkpointIndex, CheckpointPlacement checkpoint) {
+        ConfigSnapshot config = configure(team);
+        try {
+            // Declared local approach, not evidence of a cold traversal to this post.
+            // Use the ROM placement and production player/object updates; never seed
+            // CheckpointState or call the post's activation/save routines.
+            var fixture = HeadlessTestFixture.builder()
+                    .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, act)
+                    .startPosition((short) (checkpoint.x() - 48), (short) checkpoint.y())
+                    .startPositionIsCentre().build();
+            // Admit the initial gameplay frame before taking a rewind sample:
+            // boot's setup-only state is not a live history point.
+            fixture.stepIdleFrames(1);
+            var state = assertInstanceOf(CheckpointState.class, GameServices.level().getCheckpointState());
+            assertFalse(state.isActive());
+            var registry = fixture.gameplayMode().getRewindRegistry();
+            var before = registry.capture();
+            for (int frame = 0; frame < 90; frame++) {
+                fixture.stepFrame(false, false, false, true, false);
+            }
+            assertEquals(checkpointIndex, state.getLastCheckpointIndex(),
+                    "ordinary movement must contact the ROM-placed post");
+            assertTrue(state.isActive());
+            var after = registry.capture();
+            for (int cycle = 0; cycle < 2; cycle++) {
+                registry.restore(before);
+                sameCheckpointWorld(before, registry.capture(), "restore cycle " + cycle);
+                fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+                for (int frame = 0; frame < 90; frame++) {
+                    fixture.stepFrame(false, false, false, true, false);
+                }
+                sameCheckpointWorld(after, registry.capture(), "replay cycle " + cycle);
+            }
+        } finally {
+            restore(config);
+        }
+    }
+
+    private static void sameCheckpointWorld(com.openggf.game.rewind.CompositeSnapshot expected,
+            com.openggf.game.rewind.CompositeSnapshot actual, String where) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet(), where);
+        for (var key : expected.entries().keySet()) {
+            var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                    key, expected.get(key), actual.get(key));
+            assertTrue(differences.isEmpty(), where + " " + key + ": "
+                    + differences.stream().limit(8).toList());
+        }
+    }
+
     private static Stream<Arguments> checkpointTeamCases() {
         return AUTHORED_CHECKPOINTS.stream().flatMap(checkpoint ->
                 Stream.of(Team.values()).map(team -> Arguments.of(

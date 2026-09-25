@@ -448,3 +448,27 @@ and retained-plane/native-row/event regressions pass in the24-case focused
 selection at22:20 BST on b6c1147a2 plus campaign edits; exact command and
 limitations are in the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
 This is native320 Sonic incoming/replay evidence, not broader act certification.
+
+## Physical starpost activation and replay (2026-09-25)
+
+`TestFbzCheckpointRoutes#walkingIntoEveryPlacedPostActivatesAndReplaysItsSave`
+starts48px left of each decoded ROM post, at its authored Y, then uses90 ordinary
+Right inputs. No saved checkpoint is injected and no activation routine is called.
+The11 posts across both acts are exercised with Sonic, Sonic+Tails, Tails and
+Knuckles (44 cases). This is a declared local approach, not cold reachability to
+every post. The existing44 saved-post death reloads and placement inventory remain
+separate evidence. Width/donor products and integrated contact-to-death remain open.
+
+The first trial took its snapshot before any admitted frame and produced24 replay
+differences, despite all44 contacts activating successfully. That pre-gameplay
+setup is not a live history point. Taking the snapshot after the initial neutral
+gameplay frame makes all89 cases pass without runtime changes. The final test
+also verifies immediate restore and repeats the90-input replay twice, comparing
+every registered snapshot key (no field exclusions).
+
+Final focused command on `9bc91e469` plus this test, Java21/DISPLAY=:0:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzCheckpointRoutes
+-Ds3k.rom.path=/absolute/path/to/s3k.gen test`:89 passed,0 failures/errors/skips,
+36.042s Maven. All44 physical activations pass immediate restore and two forward
+replays. This test-only addition uses focused validation; campaign broad checks
+and other act obligations remain outstanding.

@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+FBZ local checkpoint replay (2026-09-25): a freshly built fixture can still be
+before the first admitted gameplay frame. Capturing there and replaying90 inputs
+produced24 object-allocation/runtime differences across44 physical starpost
+approaches, although every contact saved successfully. Admit a neutral production
+frame before taking a live-history snapshot. All89 placement/contact/restart checks
+then passed with no runtime change. This does not waive checking actual live-frame
+restore mismatches or intentional load-boundary history resets.
+
+
 DEZ boss probe versus capture (2026-09-23): `GameplayCaptureTool` normalizes CLI
 `--sidekick none` to an empty character string; direct `GameplayCaptureSession.Settings`
 callers must supply that empty string themselves. Passing the literal `"none"`

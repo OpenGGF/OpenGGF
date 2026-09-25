@@ -5571,3 +5571,13 @@ author rows on20 state columns. The [final matrix](../validation/levels/s3k-dez-
 records rejected inputs, complete command/result and capture evidence. This is
 route verification, not broad-suite or native-pixel certification. Tails Act2/final
 and the other zones' outstanding breadth/presentation work remain in scope.
+
+## FBZ physical starpost save coverage (2026-09-25)
+
+All11 ROM posts across four native teams now have local ordinary-input contact
+checks, with immediate restoration and two90-input full-registry replays.
+The89-case focused selection passes (44 contact,44 inherited saved-post reload,
+1 placement inventory),0 skips. A pre-first-gameplay-frame snapshot was rejected
+as invalid live-history setup; the measurement hazard is documented. No runtime
+change. Cold reachability to every post, contact-to-death composition and
+width/donor lifecycle products remain separate matrix obligations.

@@ -474,3 +474,9 @@ DEZ solo Sonic cold-chain milestone (2026-09-25):
 now records64477 inputs from DEZ1 through both acts, final hands/core/ship and
 actual ending load,0 deaths,68 full-registry replay windows. Solo Tails final
 completion and remaining native/width/donor/lifecycle obligations stay open.
+
+FBZ checkpoint contact follow-up (2026-09-25): all11 posts × four native teams
+now activate by ordinary movement from a declared48px local approach and pass
+two full-registry90-input replays. Combined placement/contact/saved-reload test:
+89 pass,0 skips. See the FBZ act matrices; this does not establish cold reachability
+to every post or the remaining lifecycle/viewport/donor products.
