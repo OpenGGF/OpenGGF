@@ -610,3 +610,37 @@ all eight hits per boss and both escaped owners absent. Focused verification on
 `python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
 -Dtest=TestSszSoloColdRouteCapture test`. The final Mecha/DEZ handoff remains under authoring, as do
 other outstanding breadth/lifecycle/native obligations.
+
+## Solo Sonic complete cold route (2026-09-25)
+
+On `15d712413` plus test/input additions, solo Sonic now completes SSZ1 and
+loads DEZ1 in 19,845 controller inputs, without deaths, follower, donor or
+position/ring/health seeds. Canonical input: `ssz1-sonic-solo-cold-complete-320`.
+Its first 11,200 inputs retain the independently certified replica route.
+Upper carriers/cloud platforms and both remaining transport pads use ordinary
+contact. All eight final Mecha hits, collapse, results and the actual DEZ load
+are observed. Final input 19,844 loads zone 11/0 at (48,2476).
+
+`TestSszSoloColdRouteCapture#coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory`
+adds 41 whole-registry restore/45-input forward replay windows and verifies
+outgoing live history followed by a fresh DEZ timeline. Alongside the shorter
+42-window replica case, focused verification passes 2 tests, 0 failures/errors/
+skips, 42.345s Maven: Java 21, DISPLAY=:0,
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestSszSoloColdRouteCapture test`. These are test/input changes; focused
+verification exercises the complete affected route and all new assertions.
+
+Fresh capture `$VIDEO_ROOT/ssz-bring-up/campaign-20260925-sonic-solo-clear-320-v2/`
+replays 21,286 inputs including an extended neutral DEZ tail. All 18,286 author
+rows match 20 recorded state fields; no deaths/follower. Video 16,276–21,285
+has 5,010 frames at 60fps and fully decodes. Attack/defeat stills 17,506 and
+18,285 were inspected. This proves engine route/presentation, not native parity.
+
+Fixed pursuit controllers repeatedly died; their failure did not justify a
+runtime change. Snapshot-forked controller trials (12 policies, 180-input
+horizon, 30-input commitment) found a surviving attack sequence. Restoration
+includes external held-button history; the selected buttons are replayed from
+fresh boot for certification. An initial temporary serializer dropped B/C from
+the cold prefix (first mismatch 426, death 2556); preserving all recorded buttons
+repairs that authoring error. No physics or boss behavior changed. Tails solo,
+remaining width/donor/lifecycle products and native whole-scene checks remain open.

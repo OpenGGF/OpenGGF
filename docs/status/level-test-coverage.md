@@ -500,3 +500,9 @@ SSZ solo Sonic replica route (2026-09-25): the
 records both eight-hit fights and escapes in 11,200 cold inputs, no deaths,
 42 passing full-registry replay windows and a separately matched capture.
 Final Mecha/DEZ handoff and other inherited matrix obligations remain open.
+
+SSZ solo Sonic full clear (2026-09-25):
+[complete route](../architecture/validation/levels/s3k-ssz-act1.md#solo-sonic-complete-cold-route-2026-09-25)
+now loads DEZ1 after all three bosses in 19,845 cold inputs, no deaths. The final
+route adds 41 passing restore/replay windows and actual handoff history isolation;
+Tails and remaining viewport/donor/lifecycle/native breadth remain open.

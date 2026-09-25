@@ -93,6 +93,72 @@ class TestSszSoloColdRouteCapture {
         }
     }
 
+    @Test
+    void coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/ssz1-sonic-solo-cold-complete-320.bk2"));
+        assertEquals(19845, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
+        var spots = Set.of(11200, 11542, 12000, 12500, 12860, 12920,
+                13200, 13542, 13700, 13912, 14230, 14310, 14484, 14600,
+                14885, 15200, 15500, 15875, 16000, 16260, 16306, 16426,
+                16486, 16516, 16600, 16660, 16720, 16800, 16900, 17026,
+                17116, 17200, 17300, 17416, 17506, 17566, 17800, 18286,
+                18700, 19300, 19700);
+        var checked = new HashSet<Integer>();
+        boolean seen = false;
+        int health = 8, hits = 0;
+        long outgoingHistory = 0;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                // Enable live history after the independent registry replay windows.
+                if (frame == 19750) GameServices.configuration().setSessionOverride(
+                        com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
+                session.step(movie.getFrame(frame)); session.render();
+                assertFalse(session.player().getDead(), "death at " + frame);
+                assertInstanceOf(Sonic.class, session.player());
+                assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+                var bosses = GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class);
+                for (var boss : bosses) {
+                    seen = true;
+                    int next = boss.getCollisionProperty();
+                    assertTrue(next <= health, "Mecha cannot regain health");
+                    hits += health - next; health = next;
+                }
+                if (frame >= 19750 && GameServices.level().getCurrentZone() == 10) {
+                    var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+                    if (rewind != null) outgoingHistory = Math.max(outgoingHistory, rewind.currentFrame());
+                }
+                if (!spots.contains(frame)) continue;
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) {session.step(movie.getFrame(frame + n));session.render();}
+                var forward = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), "solo final restore at " + frame);
+                session.restoreInputHistory(movie.getFrame(frame));
+                for (int n = 1; n <= 45; n++) {session.step(movie.getFrame(frame + n));session.render();}
+                same(forward, registry.capture(), "solo final replay at " + frame);
+                registry.restore(saved); session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertTrue(seen); assertEquals(8, hits); assertEquals(0, health);
+            assertEquals(11, GameServices.level().getCurrentZone(), "actual DEZ load");
+            assertEquals(0, GameServices.level().getCurrentAct());
+            assertEquals(48, session.player().getCentreX());
+            assertEquals(2476, session.player().getCentreY());
+            assertTrue(outgoingHistory > 10, "outgoing SSZ history must actually exist");
+            var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
+            for (int n = 0; n < 30; n++) {session.step(neutral);session.render();}
+            var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+            assertNotNull(rewind);
+            assertTrue(rewind.currentFrame() < outgoingHistory, "DEZ must isolate the outgoing timeline");
+        }
+    }
+
     private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String where) {
         assertEquals(expected.entries().keySet(), actual.entries().keySet(), where);
         for (String key : expected.entries().keySet()) {
