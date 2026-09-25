@@ -563,3 +563,25 @@ pixel or animation-phase acceptance. The native reference is Super Sonic;
 the engine is a declared positioned ordinary Sonic load. The historical root
 cause is unassigned. No production code changed and no engine test rerun is
 needed for this evidence/status-only update.
+
+## Tails solo opening traversal (2026-09-25)
+
+A fresh uninterrupted native320 Tails-solo run now continues from cold Act1
+through its seamless handoff and the opening Act2 flame/pillar section into the
+upper-left climb. On `bc5e57709`, all36361 frames match the authored candidate
+on12 recorded fields (position, velocities, ground speed, rings, death, mapping
+frame, camera, follower presence and priority), with no deaths. Final state is
+Tails at(3786,1329),11 rings, no follower. No gameplay state was seeded.
+
+`$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-tails-act2-first-climb-320/capture.mp4`
+records inputs34128–36360 after replaying the full prefix:2233 frames,60fps,
+37.216667 seconds. Full video decode passed and the pillar/upper-turn stills were
+inspected. Its external README preserves the exact command and source movie
+(`campaign-20260925-tails-branch117/variant-0.bk2`).
+
+This is partial cold traversal and engine presentation evidence. Act2 completion,
+its full-registry replay spots and native visual matching remain open. The
+committed Act1 movie/test already covers51 replay spots; those do not certify
+this continuation. Route experiments that kept going right took a lower path;
+the native Tails `lrz_3` rows5360–5540 instead show the upper-left turn. That
+reference guided controller authoring only, without importing gameplay state.
