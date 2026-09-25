@@ -713,3 +713,8 @@ authoring on the12 fields listed above, zero differences/deaths. Full decode
 passes; stills59100,59400,59711 inspected. The external README preserves the
 command. Tails' boss fight/HPZ route, Knuckles' cold chain, wider products and
 matched native presentation remain open.
+
+The subsequent [Tails boss-act completion](s3k-lrz-boss.md#tails-ordinary-cold-completion-2026-09-25)
+now closes this native320 solo chain through playable HPZ in68,977 inputs,
+with62 additional boss-act replay spots. The Knuckles chain and wider products
+remain open.

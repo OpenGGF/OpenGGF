@@ -345,3 +345,49 @@ and
 The earlier left-aligned footage above records the prior implementation, not
 current presentation acceptance. Native timing/pixel alignment and remaining
 cold-route products/lifecycle coverage are still open.
+
+## Tails ordinary cold completion (2026-09-25)
+
+On `f7815a1de` plus this test/input extension, solo Tails completes cold LRZ1,
+LRZ2, the boss act and playable HPZ in68,977 inputs,zero deaths. Native320,
+donor off; no initial position, shield, ring or emerald writes. The placed
+fire-shield monitor is broken normally;12 rings remain without encounter/exit
+hurt from62400 onward. HPZ loads at68856 and ends(393,2800),three rings,
+no followers and player control released. Input:
+`lrz-tails-cold-hpz-320.script`/`.bk2` in `src/test/resources/routes/s3k/`.
+
+`TestLrzTailsColdRouteCapture.coldTailsCompletesBossActAndReachesPlayableHiddenPalace`
+passes62 immediate full-registry restore/45-input replay spots over the arrival
+flash, missiles, flight/landings, checkpoint, shield, left-bound arena entry,
+mine cycles, defeat/capsule/results and destination. It observes all health
+values14→0 and real capsule/results publication. Existing Tails Act1/Act2 tests
+retain51 and85 spots respectively; those were not repeated by this addition.
+No replay window crosses a callback-bearing host fade/load boundary.
+
+Command: `JAVA_HOME=<JDK21> LUA_BIN=lua5.4 DISPLAY=:0 python3
+tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true
+-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestLrzTailsColdRouteCapture#coldTailsCompletesBossActAndReachesPlayableHiddenPalace test`.
+One test passes,zero failures/errors/skips,41.15seconds test,61seconds Maven.
+Script regeneration gives an identical BK2 input payload. The inspected change
+plan selects2917 classes because route assets are unclassified; full playback,
+all new rewind spots and independent capture are proportionate validation for
+this test/input-only extension. No runtime change or new broad-suite claim.
+
+Fresh `$HOME/Videos/OGGF/lrz-bring-up/campaign-20260925-tails-cold-boss-hpz-320/capture.mp4`
+records62173–68976:6804frames,60fps,113.4seconds. All68,977 rows match authoring
+on x,y,xvel,yvel,gspeed,air,hurt,dead,rings,cam_x,cam_y,high_priority with zero
+differences/deaths. Full decode passes; stills62460,63300,67600,68400,68976
+were inspected. They show the earned shield, arena lava pool, defeat, results
+and playable HPZ. The external README records exact command/provenance.
+
+Rejected input attempts distinguish route tuning from defects: ordinary repeated
+jumps missed the rising platforms, and prolonged flight passed the final safe
+checkpoint landing before fatigue. Shorter flight lands at the checkpoint,
+then crosses to the far-right platform. A leftward flight lands above the fire
+monitor; a separate jump breaks it before the native left-bound arena descent.
+The final fight inputs were recorded from a controller-only live-observation
+probe, then independently replayed as fixed input. No production movement,
+collision, boss or camera logic was changed. Knuckles' cold main-act chain,
+broader viewport/donor/roster/lifecycle products and native presentation remain
+separate obligations.

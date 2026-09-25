@@ -2,11 +2,14 @@ package com.openggf.tools;
 
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
+import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.objects.bosses.LrzMinibossInstance;
 import com.openggf.game.sonic3k.objects.LrzDoorObjectInstance;
+import com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance;
+import com.openggf.game.sonic3k.objects.LrzEndBossEggCapsule;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
@@ -19,7 +22,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Cold solo Tails traversal, six real drill hits, results and playable LRZ2. */
+/** Cold solo Tails through both main acts, both bosses and playable Hidden Palace. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzTailsColdRouteCapture {
     @Test
@@ -228,6 +231,84 @@ class TestLrzTailsColdRouteCapture {
             assertEquals(296, session.player().getCentreX());
             assertEquals(1200, session.player().getCentreY());
             assertEquals(1, session.player().getRingCount());
+        }
+    }
+
+    @Test
+    void coldTailsCompletesBossActAndReachesPlayableHiddenPalace() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/lrz-tails-cold-hpz-320.bk2"));
+        assertEquals(68977, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
+        // Arrival flash, missiles, flight/landings, checkpoint, earned shield,
+        // native left-bound arena entry, mine cycles, capsule/results and HPZ.
+        // The outgoing callback-bearing load fade has separate destination spots.
+        var spots = Set.of(59720, 59800, 59900, 60050, 60163, 60250, 60350,
+                60500, 60618, 60750, 60900, 61063, 61244, 61365, 61500,
+                61700, 61850, 61902, 62000, 62173, 62250, 62367, 62400,
+                62500, 62700, 62900, 63050, 63150, 63250, 63350, 63500,
+                63650, 63750, 63850, 64100, 64400, 64600, 64750, 64850,
+                65100, 65400, 65550, 65700, 65800, 66100, 66400, 66550,
+                66650, 66750, 67000, 67300, 67450, 67550, 67650, 67800,
+                68000, 68200, 68400, 68600, 68750, 68880, 68920);
+        var checked = new HashSet<Integer>();
+        var healthSeen = new HashSet<Integer>();
+        boolean sawCapsule = false, sawResults = false;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            assertInstanceOf(Tails.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertEquals(320, GameServices.camera().getWidth());
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                session.step(movie.getFrame(frame));
+                session.render();
+                assertFalse(session.player().getDead(), "death at input " + frame);
+                if (frame < 59712) continue;
+                var manager = GameServices.level().getObjectManager();
+                for (var boss : manager.activeObjectsOfType(LrzEndBossObjectInstance.class)) {
+                    healthSeen.add(boss.getCollisionProperty());
+                }
+                sawCapsule |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.class).isEmpty();
+                sawResults |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.Results.class).isEmpty();
+                if (frame == 59712) assertFalse(session.player().hasShield(), "ordinary cold carry");
+                if (frame == 62400) {
+                    assertEquals(ShieldType.FIRE, session.player().getShieldType(), "placed monitor pickup");
+                    assertEquals(12, session.player().getRingCount());
+                }
+                if (frame >= 62400) assertFalse(session.player().isHurt(), "encounter/exit hurt at " + frame);
+                if (!spots.contains(frame)) continue;
+                assertEquals(22, GameServices.level().getCurrentZone());
+                assertEquals(frame < 68856 ? 0 : 1, GameServices.level().getCurrentAct());
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                var forward = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), "boss-act restore at " + frame);
+                session.restoreInputHistory(movie.getFrame(frame));
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    session.render();
+                }
+                same(forward, registry.capture(), "boss-act replay at " + frame);
+                registry.restore(saved);
+                session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertEquals(Set.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14), healthSeen);
+            assertTrue(sawCapsule && sawResults, "real defeat/capsule/results publication");
+            assertEquals(22, GameServices.level().getCurrentZone());
+            assertEquals(1, GameServices.level().getCurrentAct());
+            assertInstanceOf(Tails.class, session.player());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertFalse(session.player().isObjectControlled());
+            assertEquals(393, session.player().getCentreX());
+            assertEquals(2800, session.player().getCentreY());
+            assertEquals(3, session.player().getRingCount());
         }
     }
 

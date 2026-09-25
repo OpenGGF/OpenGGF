@@ -399,3 +399,9 @@ The new test passes60 later Act2 full-registry replay spots, supplementing25
 middle-route spots; doors, carry and destination roster are asserted. Fresh
 capture matches all59,712 rows. Tails' boss/HPZ continuation and the Knuckles
 cold chain remain open; this does not certify other viewport/donor products.
+
+Tails LRZ chain completion (2026-09-25): [cold LRZ1→LRZ2→boss→HPZ](../architecture/validation/levels/s3k-lrz-boss.md#tails-ordinary-cold-completion-2026-09-25)
+now completes in68,977 inputs,zero deaths. The new focused test passes62 boss-act
+replay spots and observes14 mine hits, earned fire shield, capsule/results and
+playable HPZ; prior Act1/Act2 tests retain51/85 spots. Fresh playback matches
+all68,977 rows. Knuckles' cold chain and broader products remain open.
