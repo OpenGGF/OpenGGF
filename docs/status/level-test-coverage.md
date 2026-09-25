@@ -468,3 +468,9 @@ records the animation/draw double-XOR regression and corrected cold solo-clear
 video. All53842 recorded movement rows remain identical; frame49680 now displays
 the native inverted orientation. This closes the reported player mirror defect,
 not the remaining route, presentation or combined delivery obligations.
+
+DEZ solo Sonic cold-chain milestone (2026-09-25):
+[final matrix](../architecture/validation/levels/s3k-dez-final-boss.md#ordinary-solo-sonic-cold-ending-route-2026-09-25)
+now records64477 inputs from DEZ1 through both acts, final hands/core/ship and
+actual ending load,0 deaths,68 full-registry replay windows. Solo Tails final
+completion and remaining native/width/donor/lifecycle obligations stay open.

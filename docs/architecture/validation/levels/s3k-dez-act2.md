@@ -1200,3 +1200,9 @@ python3 tools/testing/maven_queue.py -Dmse=off \
 139 tests passed,0 failures/errors/skips,3:25 Maven. Both cold route methods
 passed: Sonic's103 replay windows and Tails'12 lower-pad windows. The prior
 regression-only run had4 tests with2 expected failures and0 errors/skips.
+
+The shortened Act2 prefix now has an independently verified continuation through
+the complete ordinary solo Sonic final fight and actual ending load: see the
+[final matrix](s3k-dez-final-boss.md#ordinary-solo-sonic-cold-ending-route-2026-09-25).
+Its68 additional replay windows include the shortened waits and final encounter;
+the original103-window Act2 fixture remains independently runnable.

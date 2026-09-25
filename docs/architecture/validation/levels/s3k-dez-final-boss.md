@@ -480,3 +480,42 @@ route reaches DDZ instead at54691. Appending the fresh-DDZ input directly does
 not complete the incoming fight: it exhausts rings at64520. The actual inherited
 flight state requires its own controller route; fresh or positioned completion
 must not be presented as full cold incoming completion.
+
+## Ordinary solo Sonic cold ending route (2026-09-25)
+
+At `c03dc4170`, input-only authoring now reaches the ordinary ending from cold
+DEZ1. `dez-sonic-solo-cold-ending-320.{script,bk2}` has64477 inputs, native320,
+Sonic alone, donor off, no position/ring/emerald/boss seeds. Final-stage load is
+50993; core hits55625,55919,56238,56625,56937,57356,57660,58059; ship hits58813,
+60465,61420,61748,62276,63567,63795,64190. Actual ending load64476 reaches
+zone13/act1 at96/300 with no follower or deaths. Ending/credits simulation
+remains outside the original scope.
+
+Rejected inputs: later Act2 waits were shortened while preserving the original
+certified route separately. An early broad wait trim missed timed bridges; a
+second missed the spring shaft. Repaired trim004 saves2728 inputs to the final
+stage. Final002 still timed out with3 core hits left; attacking any exposed core
+in final003/004 died during the late beam phase. Prioritizing collidable fingers
+in005 did not help. Attack within the first100 beam frames in006 defeated the
+core, but its post-hit retreat fell off the collapsing floor. Final007 instead
+runs/jumps to the surviving floor after core defeat and completes the chase.
+These are controller choices, not engine timing or boss-state changes.
+
+`coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` adds68 full-registry
+restore/45-input replay spots over shortened Act2 waits, incoming final stage,
+fingers, every core/ship hit, collapse and exit. It asserts18 finger health
+cleared,8 core hits,8 ship hits, ordinary solo identity and the real ending load.
+Queued Java21/DISPLAY=:0 verification on `c03dc4170` plus the fixture:
+`python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding
+-Ds3k.rom.path=/absolute/path/to/s3k.gen test`:1 test passed,0 failures/errors/skips,
+1:55 Maven. All68 windows and actual ending load passed.
+
+Fresh `$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260925-sonic-solo-cold-ending-320/`
+replays all64477 inputs independently; every row matches the author on20 recorded
+state columns (input formatting excluded). No deaths/follower. Video55000–64476
+has9477 frames,60fps,157.95s; full decode passes. Core-defeat58060 and ship-hit58813
+stills inspected. This is engine presentation, not native pixel parity. No runtime
+code changed for this route; its focused behavior/replay test is the local check.
+The full campaign broad run and remaining roster/native/lifecycle obligations
+still precede integration and delivery.
