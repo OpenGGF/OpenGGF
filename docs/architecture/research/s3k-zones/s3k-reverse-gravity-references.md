@@ -172,8 +172,8 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 30921 | `Knuckles_Fall_From_Glide` | `Knuckles_Fall_From_Glide`: negates the radius Y adjustment | — | missing |
 | 30977 | `Knuckles_Sliding` | `Knuckles_Sliding`: negates the radius Y adjustment | `PlayableSpriteMovement.slideGetUp`: signed native centre-word addition; upright/inverted radius and fraction regression | covered |
 | 31004 | `Knuckles_Sliding` | `Knuckles_Sliding`: negates the floor snap | `checkGlideFloorDist` selects both ceiling feet and mirrors the winning angle; slide/glide contact negates the native Y-word snap and preserves its fraction. Focused regression and real DEZ corridor replay below | covered |
-| 31068 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` up: `.climbingUp_ReverseGravity` probes | — | missing |
-| 31205 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` down: `.climbingDown_ReverseGravity` probes | — | missing |
+| 31068 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` up: `.climbingUp_ReverseGravity` probes | `updateReversedWallClimb`: y+11 wall gate, y+8/lrb floor probe, mirrored movement/push-out and maxY+$D0 bound; focused branches and actual DEZ terrain probes | covered |
+| 31205 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` down: `.climbingDown_ReverseGravity` probes | `updateReversedWallClimb`: BD pose undo, y-11 wall gate, y-9/top-solid ceiling probe, negative-only grounding and mirrored angle; powered movement | covered |
 | 31485 | `Knuckles_DoLedgeClimbingAnimation` | `Knuckles_DoLedgeClimbingAnimation`: negates the table Y delta | `PlayableSpriteMovement:2387` | covered |
 | 31896 | `loc_172A8` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_172A8`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 31919 | `loc_172E2` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_172E2`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
@@ -272,14 +272,14 @@ is the RAM wipe described above).
 | B. Sonic (and Sonic/Knuckles shared) routines | 20 | 18 | 1 | 0 | 1 |
 | C. Tails routines | 21 | 19 | 1 | 0 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 5 | 0 | 0 | 0 |
-| E. Knuckles routines | 24 | 19 | 1 | 3 | 1 |
+| E. Knuckles routines | 24 | 21 | 1 | 1 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 9 | 0 | 0 | 0 |
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 1 | 0 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 3 | 0 | 0 | 0 |
-| **Total** | **116** | **102** | **5** | **5** | **4** |
+| **Total** | **116** | **104** | **5** | **3** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:
@@ -430,3 +430,17 @@ S2 and S3K trace profiles. It is a shared timing/physics change: never proportio
 ROM branches are implemented and covered by the existing enemy/encounter tests,
 with prior focused campaign results in the DEZ2 matrix and campaign audit. This
 is documentation reconciliation, not a new test run or native parity claim.
+
+
+### Inverted wall-climb bodies (2026-09-25)
+
+`loc_16DA8` and `loc_16C7C` are now explicit reverse-gravity branches in the
+movement owner. They use the player's native sensor path with the original
+8px/lrb and9px/top-solid probes, rather than object-radius approximations.
+Up moves down-screen toward a ledge; Down moves up-screen toward the ceiling
+floor. Zero clearance still moves (the ROM tests negative, not nonpositive).
+The reversed Up bound is `Camera_max_Y_pos+$D0`, bypassed for wrapping minY
+`-$100`. The idle `FixBugs=0` floor probe remains deliberately unmirrored.
+See the [DEZ2 matrix](../../validation/levels/s3k-dez-act2.md#knuckles-inverted-wall-climbing-2026-09-25)
+for focused evidence and pending shared-movement integration gates. The
+fall-from-glide radius row30921 remains open, separate from these two bodies.

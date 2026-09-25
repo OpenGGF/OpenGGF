@@ -33,7 +33,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (102 of 116 ROM references covered, 5 partial and 5 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (104 of 116 ROM references covered, 5 partial and 3 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -719,3 +719,43 @@ change. The two isolated regressions failed on the pre-fix implementation.
 The corrected contact-only rerun passes1test,0failures/errors/skips:
 `python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" '-Dtest=TestS3kReverseGravityDezCorridor#knucklesSlideUsesTheRealCeilingAndReplaysItsContact' test`.
 No changed production code needed a repeated cold-route run.
+
+
+### Knuckles inverted wall climbing (2026-09-25)
+
+At `8a6602ca2`, inverted Up still moved Y`$100→$FF`; the new regression expects
+native Y`$101` and fails. `loc_16DA8`/`loc_16C7C` now have explicit branches:
+
+- Up probes the wall at Y+11 and the world floor at Y+8 using lrb solidity.
+  Wall distance>=4 starts the existing mirrored ledge animation; a small dip
+  stops movement. Negative vertical distance pushes out; otherwise movement
+  is+1 (+2 powered), capped by maxY+$D0 unless minY=-$100 indicates wrapping.
+- Down undoes the first `$BD` ledge pose, probes the wall at Y-11 and the world
+  ceiling at Y-9 using top solidity. Any nonzero wall distance releases the
+  grab. Negative vertical distance grounds with a mirrored angle and native
+  animation5; zero clearance continues moving -1 (-2 powered).
+- The idle `FixBugs=0` floor-distance/animation clobber remains unmirrored,
+  as the ROM specifies. The shared upright branch is unchanged.
+
+The new `GlideWallGrabTerrain.climbVerticalDistance` uses `GroundSensor.scanWorld`
+with explicit offsets and the player's live solidity bit. Four-direction
+probe assertions cover its interface, and actual DEZ2 corridor probes confirm
+-3px overlap at each native reversed probe point. No trace row supplies
+runtime state. Complete cold inverted Knuckles traversal is still separate.
+
+Focused queued Java21 commands with an absolute locked-on ROM path:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestPlayableSpriteMovement,TestGlideWallGrabTerrain test
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestS3kReverseGravityDezCorridor,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+```
+
+Initial focused selection passes188tests, and the corridor/stability selection
+passes105tests, both0failures/errors/skips. The expanded movement selection
+adds powered movement and `$BD`-pose release checks. The inspected change-based
+plan still selects the full ordinary suite and guards. These focused results
+do not replace the campaign's required broad and matched trace validation.
+
+The expanded movement/probe selection passes189tests,0failures/errors/skips.
+No production edits followed the105-case corridor/stability pass.

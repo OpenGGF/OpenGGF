@@ -4940,6 +4940,127 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void invertedWallClimbMovesInGravityRelativeDirections() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                GameServices.gameState().setReverseGravityActive(true);
+                GameServices.camera().setMinY((short) -0x100); // wrapped: no boundary clamp
+                try (var walls = org.mockito.Mockito.mockStatic(com.openggf.physics.GlideWallGrabTerrain.class);
+                     var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        walls.when(() -> com.openggf.physics.GlideWallGrabTerrain.distanceFromWall(
+                                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt(),
+                                        org.mockito.ArgumentMatchers.anyBoolean()))
+                                        .thenReturn(new TerrainCheckResult(0, (byte) 0x40, 1));
+                        for (boolean up : new boolean[] {true, false}) {
+                                prepareWallClimbProbe(0x100, 0xB7);
+                                mockSprite.setDirection(Direction.RIGHT);
+                                mockSprite.setSubpixelRaw(0x100, 0xA500);
+                                setMovementField("inputUp", up);
+                                setMovementField("inputDown", !up);
+                                invokeWallClimbUpdate();
+                                assertEquals(0x100 + (up ? 1 : -1), mockSprite.getCentreY());
+                                assertEquals(0xA500, mockSprite.getYSubpixelRaw());
+                                assertEquals(4, mockSprite.getDoubleJumpFlag());
+                                walls.verify(() -> com.openggf.physics.GlideWallGrabTerrain.distanceFromWall(
+                                                mockSprite, 0x100 + (up ? 11 : -11), true));
+                        }
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
+        public void invertedWallClimbDistinguishesZeroClearanceFromPenetration() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                GameServices.gameState().setReverseGravityActive(true);
+                GameServices.camera().setMinY((short) -0x100);
+                try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                        terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.distanceFromWall(
+                                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt(),
+                                        org.mockito.ArgumentMatchers.anyBoolean()))
+                                        .thenReturn(new TerrainCheckResult(0, (byte) 0x40, 1));
+                        for (boolean up : new boolean[] {true, false}) {
+                                for (int distance : new int[] {-3, 0}) {
+                                        prepareWallClimbProbe(0x100, 0xB7);
+                                        setMovementField("inputUp", up);
+                                        setMovementField("inputDown", !up);
+                                        terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain
+                                                        .climbVerticalDistance(mockSprite, up, true))
+                                                        .thenReturn(new TerrainCheckResult(distance, (byte) 0x78, 1));
+                                        invokeWallClimbUpdate();
+                                        int delta = distance < 0 ? (up ? distance : -distance) : (up ? 1 : -1);
+                                        assertEquals(0x100 + delta, mockSprite.getCentreY());
+                                        assertEquals(!up && distance < 0 ? 0 : 4, mockSprite.getDoubleJumpFlag());
+                                        if (!up && distance < 0) {
+                                                assertEquals(8, mockSprite.getAngle());
+                                                assertEquals(5, mockSprite.getForcedAnimationId());
+                                        }
+                                }
+                        }
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
+        public void invertedWallClimbUsesTheNativeBottomBoundAndLedgeThreshold() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                GameServices.gameState().setReverseGravityActive(true);
+                GameServices.camera().setMinY((short) 0);
+                GameServices.camera().setMaxY((short) 0x30); // native max+$D0 = $100
+                try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                        for (int wall : new int[] {0, 2, 4}) {
+                                prepareWallClimbProbe(0x100, 0xB7);
+                                mockSprite.setDirection(Direction.RIGHT);
+                                setMovementField("inputUp", true);
+                                terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.distanceFromWall(
+                                                mockSprite, 0x10B, true))
+                                                .thenReturn(new TerrainCheckResult(wall, (byte) 0x40, 1));
+                                invokeWallClimbUpdate();
+                                assertEquals(wall == 4 ? 5 : 4, mockSprite.getDoubleJumpFlag());
+                                assertEquals(wall == 4 ? 0x103 : 0x100, mockSprite.getCentreY());
+                                assertEquals(wall == 4 ? 0x103 : 0x100, mockSprite.getCentreX());
+                        }
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
+        public void invertedPoweredClimbMovesTwoPixelsAndDownCanLeaveTheWall() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                GameServices.gameState().setReverseGravityActive(true);
+                GameServices.camera().setMinY((short) -0x100);
+                var powered = org.mockito.Mockito.mock(com.openggf.sprites.playable.SuperStateController.class);
+                org.mockito.Mockito.when(powered.isSuper()).thenReturn(true);
+                mockSprite.setSuperStateController(powered);
+                try (var terrain = org.mockito.Mockito.mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                        terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.distanceFromWall(
+                                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt(),
+                                        org.mockito.ArgumentMatchers.anyBoolean()))
+                                        .thenReturn(new TerrainCheckResult(0, (byte) 0x40, 1));
+                        for (boolean up : new boolean[] {true, false}) {
+                                prepareWallClimbProbe(0x100, 0xB7);
+                                setMovementField("inputUp", up);
+                                setMovementField("inputDown", !up);
+                                invokeWallClimbUpdate();
+                                assertEquals(0x100 + (up ? 2 : -2), mockSprite.getCentreY());
+                        }
+                        prepareWallClimbProbe(0x100, 0xBD);
+                        mockSprite.setDirection(Direction.RIGHT);
+                        setMovementField("inputDown", true);
+                        terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.distanceFromWall(
+                                        mockSprite, 0xF2, true)) // BD undo y-3, then probe y-11
+                                        .thenReturn(new TerrainCheckResult(1, (byte) 0x40, 1));
+                        invokeWallClimbUpdate();
+                        assertEquals(0xFD, mockSprite.getCentreX());
+                        assertEquals(0xFD, mockSprite.getCentreY());
+                        assertEquals(2, mockSprite.getDoubleJumpFlag(), "nonzero down-wall distance releases the grab");
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
         public void knucklesWallClimbNoInputUsesFloorDistanceAsRetailAnimationDelta() throws Exception {
                 prepareWallClimbProbe(0x0100, 0xB7);
 

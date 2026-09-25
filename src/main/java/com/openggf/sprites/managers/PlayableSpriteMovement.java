@@ -2169,7 +2169,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void updateWallClimbWithCollisionRadii() {
 		int climbAnimDelta = 0;  // +1 = forward (climbing up), -1 = backward (climbing down)
 
-		if (inputUp) {
+		if (isReverseGravityActive() && (inputUp || inputDown)) {
+			climbAnimDelta = updateReversedWallClimb(inputUp);
+			if (sprite.getDoubleJumpFlag() != 4) return;
+		} else if (inputUp) {
 			// Climbing up: check wall distance at the top to detect ledge
 			boolean facingRight = sprite.getDirection() == Direction.RIGHT;
 			int probeY = sprite.getCentreY() - 11;
@@ -2306,6 +2309,52 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			audioManager.playSfx(GameSound.JUMP);
 			return;
 		}
+	}
+
+	/**
+	 * Native .climbingUp_ReverseGravity / .climbingDown_ReverseGravity
+	 * (loc_16DA8 / loc_16C7C). Keep these distinct from the upright path:
+	 * their probe side, exact offsets, solidity and boundary owner differ.
+	 * The idle FixBugs=0 floor probe remains the unmirrored retail code below.
+	 */
+	private int updateReversedWallClimb(boolean towardsLedge) {
+		boolean facingRight = sprite.getDirection() == Direction.RIGHT;
+		if (!towardsLedge && sprite.getMappingFrame() == 0xBD) {
+			// Undo the first ledge-table pose before returning to the wall.
+			sprite.setMappingFrame(0xB7);
+			NativePositionOps.addYPosPreserveSubpixel(sprite, -3);
+			NativePositionOps.addXPosPreserveSubpixel(sprite, facingRight ? -3 : 3);
+		}
+		var wall = getWallDistance(sprite.getCentreY() + (towardsLedge ? 11 : -11), facingRight);
+		if (wall != null && wall.distance() != 0) {
+			if (!towardsLedge) letGoOfWall();
+			else if (wall.distance() >= 4) enterLedgeClimb();
+			return 0;
+		}
+		var vertical = com.openggf.physics.GlideWallGrabTerrain
+				.climbVerticalDistance(sprite, towardsLedge, true);
+		if (vertical != null && vertical.distance() < 0) {
+			NativePositionOps.addYPosPreserveSubpixel(sprite,
+					towardsLedge ? vertical.distance() : -vertical.distance());
+			if (!towardsLedge) {
+				sprite.setAngle((byte) ReverseGravity.mirrorAngle(vertical.angle()));
+				exitWallClimbToGround();
+				sprite.setForcedAnimationId(5); // native anim = pushing after Knux_TouchFloor
+				return 0;
+			}
+			return 1;
+		}
+		SuperStateController powered = sprite.getSuperStateController();
+		int speed = powered != null && powered.isSuper() ? 2 : 1;
+		NativePositionOps.addYPosPreserveSubpixel(sprite, towardsLedge ? speed : -speed);
+		if (towardsLedge && camera().getMinY() != (short) -0x100) {
+			// loc_16DE2 uses maxY+$D0; a wrapping minY=-$100 bypasses the clamp.
+			int limit = (short) (camera().getMaxY() + 0xD0);
+			if (sprite.getCentreY() > limit) {
+				NativePositionOps.writeYPosPreserveSubpixel(sprite, limit);
+			}
+		}
+		return towardsLedge ? 1 : -1;
 	}
 
 	/**

@@ -449,6 +449,22 @@ class TestS3kReverseGravityDezCorridor {
     }
 
     @Test
+    void reversedClimbProbesUseTheRealFloorAndCeilingAtTheirNativeOffsets() {
+        HeadlessTestFixture fixture = fixtureFor(Character.KNUCKLES);
+        AbstractPlayableSprite sprite = fixture.sprite();
+        GameServices.gameState().setReverseGravityActive(true);
+        NativePositionOps.writeXPosResetSubpixel(sprite, CORRIDOR_X);
+        NativePositionOps.writeYPosResetSubpixel(sprite, FLOOR_SURFACE_Y - 8 + 3);
+        TerrainCheckResult ledge = com.openggf.physics.GlideWallGrabTerrain
+                .climbVerticalDistance(sprite, true, true);
+        assertEquals(-3, ledge.distance(), "inverted Up checks the world floor at y+8");
+        NativePositionOps.writeYPosResetSubpixel(sprite, CEILING_CLEAR_Y + 9 - 3);
+        TerrainCheckResult floor = com.openggf.physics.GlideWallGrabTerrain
+                .climbVerticalDistance(sprite, false, true);
+        assertEquals(-3, floor.distance(), "inverted Down checks the world ceiling at y-9");
+    }
+
+    @Test
     void knucklesSlideUsesTheRealCeilingAndReplaysItsContact() {
         HeadlessTestFixture fixture = fixtureFor(Character.KNUCKLES);
         AbstractPlayableSprite sprite = fixture.sprite();

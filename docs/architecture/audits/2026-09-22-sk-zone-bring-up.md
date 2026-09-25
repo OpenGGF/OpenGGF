@@ -4979,3 +4979,16 @@ The [Act2 matrix](../validation/levels/s3k-dez-act2.md#knuckles-inverted-glidesl
 records commands, the fixture error and scope. Inventory is102covered,
 5partial,5missing,4not-applicable. Shared-code broad and matched trace gates
 remain owed for the combined campaign; focused checks do not replace them.
+
+
+### DEZ Knuckles inverted wall climbing (2026-09-25)
+
+Following `8a6602ca2`, the remaining up/down reverse-gravity climb bodies now
+use their ROM-specific wall/vertical probe offsets, live solidity bits,
+mirrored motion and push-out, powered speed, ledge-pose undo, floor release
+and bottom camera bound. The initial direction regression fails before the
+change. Expanded movement/probe checks pass189cases; actual DEZ corridor
+and S3K stability checks pass105cases, without skips. The [Act2 matrix](../validation/levels/s3k-dez-act2.md#knuckles-inverted-wall-climbing-2026-09-25)
+records source and commands. The inventory is104covered,5partial,3missing,
+4not-applicable; complete inverted Knuckles traversal and the shared movement
+broad/trace integration gates remain open.
