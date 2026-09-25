@@ -374,3 +374,9 @@ DDZ presentation follow-up (2026-09-25): Hyper-star startup now follows native
 module completion, matching506 observed child updates. Focused, full DDZ route
 and rewind-guard checks pass; the DDZ matrix records commands and capture limits.
 HUD redraw timing and remaining whole-scene/incoming-route obligations remain.
+
+
+DDZ HUD follow-up (2026-09-25): live ring awards and retained HUD digits now
+follow separate native redraw semantics. Exact entry/drain/publication timing
+and mid-hold replay agree with native observations. See the DDZ matrix for
+focused test results, coordinate-test correction and capture limitations.

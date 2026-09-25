@@ -355,3 +355,54 @@ The explicit pending-load replay test was rerun after its final expansion:
 `-Dtest=TestDdzSuperStars#hyperInitWaitsForNativeArtQueueBeforeStartingEachChild`
 passes1 test, zero skips. Restoring the pass50 composite snapshot reproduces
 all four child phases through65 without resubmitting the art job.
+
+
+### Native ring redraw admission (2026-09-25)
+
+At `30bfafb64`, gameplay Ring_count matches the native route but the HUD reads
+that live value every publication. `loc_8160A` adds50 without setting
+`Update_HUD_ring_count`; native digits remain zero until a later request.
+The shared `LevelGamestate` now retains display value and dirty state separately.
+Ordinary mutations request redraw, a semantic silent write preserves an existing
+request, and the existing counter-publication profile consumes it at VBlank.
+Unlatched HUD paths keep their prior live-counter behavior. Labels still inspect
+live gameplay rings as before. The internal display adapter restores after the
+level gameplay state; the Mod API LevelState and LevelSnapshot contracts are
+unchanged. The DDZ owner uses a ring-free scripted transformation entry and its
+native direct add, avoiding debug/GiveRing life-threshold effects.
+
+A native BizHawk2.11 observation resumes the unchanged514214 movie state,
+with no RAM writes. `Ring_count`/redraw changes are0/1 at0,0/0 at1,50/0 at24,
+49/1 at85 and49/0 at86. Actual screenshots retain zero through85 and show49
+at86. The ordinary engine capture agrees after its documented one-step boot
+offset. The external `ddz-bring-up/campaign-20260925-hud-refresh/` directory
+contains hashes, observations, images and a121-frame60fps `comparison.mp4`.
+Full decode and selected before/after frames were inspected. Score and inherited
+camera-fraction differences remain declared; this is HUD evidence, not whole-scene
+pixel certification.
+
+The real DDZ loop test pins those exact transitions and restores the pass25
+composite snapshot before replaying them. Shared tests cover retained values,
+pre-existing dirty requests, ring loss and immediate-display fallback. The HUD
+renderer test checks the actual zero/49 digit draws. An initial implementation
+edit targeted the debug wrapper instead of the scripted call; the integration
+test caught the remaining50 display and the edit was corrected before delivery.
+The new renderer assertion initially assumed a right-edge coordinate; observed
+commands showed the helper uses a start coordinate plus digit padding. Only
+the test coordinates were corrected.
+
+Queued Java21/S3K-ROM focused selection:
+`TestLevelRingDisplay,TestS3kDdzFlightControllerHeadless,TestHudRenderManager,TestHudRenderManagerWidescreen,TestLevelRewindSnapshotAdapter,TestDdzSuperStars`
+ran50 tests:49 passed and the new renderer coordinate assertion failed.
+The route expansion
+`TestHudRenderManager,TestLevelRingDisplay,TestS3kDdzFlightControllerHeadless,TestS3kDdzColdRoutes,TestS3kDdzAuthoredRoutes,TestSonic3kSuperStateRewind,TestSuperStateController,TestKis2SuperStateController,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+ran128:127 passed with only that same renderer assertion failing, zero skips.
+Separate `-Pguards -Dtest=TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard`
+passes2 tests, zero skips. Final renderer correction is checked separately below.
+The change-based plan selects all2916 ordinary classes plus guards; focused
+iteration does not replace the pending combined delivery gate.
+
+Final `maven_queue.py -Dmse=off -Dtest=TestHudRenderManager test` passes all28
+renderer tests, zero failures/errors/skips, after correcting the assertion
+coordinates. Production code is unchanged from the127 passing route/state cases
+and the two passing guards; those completed checks were not repeated.

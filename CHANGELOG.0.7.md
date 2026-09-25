@@ -204,6 +204,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   at initialization, retaining that native choice through later gravity changes.
   Direct sloped-platform helpers retain the ROM’s upright landing calculation
   under reversed gravity; flat platforms keep their separate inverted branch.
+  Doomsday's entry ring award preserves the displayed count until the native
+  HUD redraw request, independently of the live ring count.
   Hyper's stars wait for their ROM art queue before starting their native animation,
   retain their sprite-list priority independently of Sonic, and
   his afterimages mirror vertically when gravity reverses. Asteroids

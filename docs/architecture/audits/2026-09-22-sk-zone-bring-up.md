@@ -5086,3 +5086,14 @@ Init countdown until global modules finish; running orbiters ignore later loads.
 the3-second comparison, declared boot alignment,28 focused/64 route/2 guard
 passes (zero skips), and remaining HUD/native-whole-scene limits. Combined
 delivery remains outstanding; this does not certify all levels.
+
+
+### 2026-09-25 — Doomsday HUD redraw separated from gameplay rings
+
+The final named DDZ entry discrepancy was a missing redraw request distinction.
+Shared display state now latches at the existing semantic counter-publication
+boundary; DDZ performs its native silent ring write through an internal script
+entry. Native and engine hold0 through85 and publish49 at86, with mid-hold
+rewind/replay proof. The DDZ matrix records early test-setup corrections, exact
+commands/results and the matching121-frame clip. Full-scene/end-phase matching,
+remaining breadth and combined campaign delivery remain outstanding.

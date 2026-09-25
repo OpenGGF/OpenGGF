@@ -79,6 +79,9 @@ public final class LevelSpritePresentation {
             level.spritePresentationRenderer().spriteTables.publish();
             PaletteUploadPresentation.publishAndLatch(level.graphicsManager);
             if (profile.updatesHudCounters(phase)) {
+                if (!level.isHudSuppressed()) {
+                    com.openggf.game.LevelRingDisplay.publish(level.getLevelGamestate());
+                }
                 level.spritePresentationRenderer().publishHudCounters(profile.advancesHudTimer(phase));
             }
         } else if (level != null) {
@@ -100,6 +103,8 @@ public final class LevelSpritePresentation {
     }
 
     public static void register(LevelManager level, RewindRegistry registry) {
+        if (level != null) com.openggf.game.LevelRingDisplay.register(level, registry);
+        else com.openggf.game.LevelRingDisplay.unregister(registry);
         registry.deregister("level-sprite-presentation");
         registry.deregister("level-bounds-mask");
         registry.deregister("camera-boundary-presentation");

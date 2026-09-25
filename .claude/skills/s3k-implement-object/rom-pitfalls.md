@@ -4901,3 +4901,16 @@ through the runtime module scheduler and retain its ordinal across rewind.
 only children still in Init. A DDZ native probe found the correct frames and
 orbital arithmetic running two gameplay ticks early before this distinction
 was restored; changing sprite scale would have hidden the actual defect.
+
+
+## Direct Ring_count writes need not redraw the HUD
+
+`loc_8160A` (S3K :173296-173312) adds50 directly and leaves
+`Update_HUD_ring_count` unchanged; `UpdateHUD/loc_DD36` (:17687-17700)
+only rewrites digits when that flag is set. The DDZ entry retains zero until
+the first drain requests a redraw. Do not route this through GiveRing or a
+debug ring award (those also have life-threshold semantics), and do not make
+a zone-specific HUD exception. `LevelRingDisplay` separates retained digits
+and the dirty request from live rings at the existing counter-publication
+phase. A silent write preserves any already-pending redraw. Capture both
+states; rendering or rewind restore must not manufacture a redraw request.

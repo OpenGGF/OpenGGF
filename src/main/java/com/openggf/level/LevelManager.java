@@ -4487,6 +4487,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {
             gameplayMode.getRewindRegistry().deregister("level");
+            com.openggf.game.LevelRingDisplay.unregister(gameplayMode.getRewindRegistry());
             LevelLostRingSpawnRewindAccess.unregister(gameplayMode.getRewindRegistry());
             gameplayMode.getRewindRegistry().deregister("level-transition");
             gameplayMode.getRewindRegistry().deregister("object-manager");

@@ -107,6 +107,13 @@ public abstract class SuperStateController {
     public void renderPoweredTrail() {
     }
 
+    // Engine-only event entry: script owners perform their own Ring_count write.
+    boolean activateFromScript() {
+        if (state != SuperState.NORMAL || !transformationSupported()) return false;
+        startTransformation();
+        return true;
+    }
+
     public void debugActivate() {
         if (state != SuperState.NORMAL || !transformationSupported()) return;
         player.addRings(50);

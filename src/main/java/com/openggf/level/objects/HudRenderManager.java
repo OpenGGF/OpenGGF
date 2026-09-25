@@ -330,7 +330,7 @@ public class HudRenderManager {
                 case TIME -> drawTime(row.valueRightX(), row.valueY(),
                         vblankTimeDisplay != null ? vblankTimeDisplay : levelState.getDisplayTime(), hudOrigin);
                 case RINGS -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
-                        levelState.getRings(), row.maxDigits(), hudOrigin);
+                        com.openggf.game.LevelRingDisplay.value(levelState), row.maxDigits(), hudOrigin);
                 case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY(),
                         row.maxDigits(), hudOrigin);
             }
@@ -339,7 +339,7 @@ public class HudRenderManager {
 
     private void drawBonusStageHud(LevelState levelGamestate) {
         drawStaticFrame(selectRingsFrame(levelGamestate.getRings(), flashCycle(levelGamestate)), 16, 8, 0);
-        drawRings(levelGamestate.getRings(), 8, 0);
+        drawRings(com.openggf.game.LevelRingDisplay.value(levelGamestate), 8, 0);
     }
 
     private void drawRings(int rings, int y, int hudOrigin) {
