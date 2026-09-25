@@ -96,7 +96,7 @@ the broader inventory snapshot from `9cba6dbb6`.
 | 23191 | `Player_Boundary_CheckBottom` | `Player_Boundary_CheckBottom`: death plane becomes the **top** (`loc_11722`) | `PlayableSpriteMovement.doLevelBoundary` | covered |
 | 24128 | `sub_11FD6` | `sub_11FD6`: floor check becomes `Sonic_CheckCeiling` with mirrored angle (10 callers) | `CollisionSystem.floorProbeSensors` + `surfaceAngle`, with the matching activation swap in `AbstractPlayableSprite.updateSensors` | covered |
 | 24142 | `sub_11FEE` | `sub_11FEE`: ceiling check becomes `Sonic_CheckFloor` with mirrored angle (9 callers) | `CollisionSystem.ceilingProbeSensors` + `surfaceAngle`, with the matching activation swap in `AbstractPlayableSprite.updateSensors` | covered |
-| 24156 | `ChooseChkFloorEdge` | `ChooseChkFloorEdge`: selects `ChkFloorEdge_ReverseGravity` (7 callers, all of them the three `Balance` routines) | `GlideWallGrabTerrain.align`; `PlayableSpriteMovement.checkTerrainEdgeBalance` probes through the ground sensors, whose CEILING rotation coincides with the reverse-gravity variant on a flat ceiling | partial |
+| 24156 | `ChooseChkFloorEdge` | `ChooseChkFloorEdge`: selects `ChkFloorEdge_ReverseGravity` (7 callers, all of them the three `Balance` routines) | `PlayableSpriteMovement.checkTerrainEdgeBalance` uses ceiling-rotated ground sensors with top solidity, centre and +/-6 X probes; shaped-column tests cover both edges, exact distance cutoff, precarious poses and the angle gate | covered |
 | 36069 | `MoveSprite_TestGravity` | `MoveSprite_TestGravity`: `y_vel += $38` as usual, **position** integrates `-y_vel` (9 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
 | 36089 | `MoveSprite_TestGravity2` | `MoveSprite_TestGravity2`: position integrates `-y_vel` (16 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
 
@@ -268,7 +268,7 @@ is the RAM wipe described above).
 
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
+| A. Shared integration and sensor wrappers | 8 | 8 | 0 | 0 | 0 |
 | B. Sonic (and Sonic/Knuckles shared) routines | 20 | 19 | 0 | 0 | 1 |
 | C. Tails routines | 21 | 20 | 0 | 0 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 5 | 0 | 0 | 0 |
@@ -279,7 +279,7 @@ is the RAM wipe described above).
 | I. Monitors, springs, spikes | 6 | 6 | 0 | 0 | 0 |
 | J. DEZ objects | 12 | 12 | 0 | 0 | 0 |
 | K. DEZ act 2 boss | 3 | 3 | 0 | 0 | 0 |
-| **Total** | **116** | **110** | **2** | **0** | **4** |
+| **Total** | **116** | **111** | **1** | **0** | **4** |
 
 Updated 2026-09-24: the separate tail draw closes `loc_1613C`; the directional
 animation retains its angle-derived flips. The follow-up covers both dust rows:
@@ -465,3 +465,20 @@ real DEZ corridor expected1356, actual1365). Retain the old radius before the
 collision callback restores defaults, then add the gravity-signed difference
 on landing. The [DEZ2 matrix](../../validation/levels/s3k-dez-act2.md#knuckles-fall-from-glide-radius-2026-09-25)
 records four actual-terrain cases and the pending combined movement gates.
+
+
+### Edge-balance probe equivalence (2026-09-25)
+
+`ChooseChkFloorEdge` has seven callers, all in the three terrain Balance
+routines. `ChkFloorEdge_ReverseGravity` probes `(requestedX,y-y_radius)` upward
+using `top_solid_bit`; `GroundSensor` in CEILING mode preserves X, negates Y,
+uses that same top bit and mirrors the empty-extension low nibble. The balance
+controller's centre and six-pixel offsets therefore remain in world X.
+`TestGroundSensor.s3kBalanceUsesNativeCentreAndSixPixelProbesOnMirroredSlopedColumns`
+checks this through the real controller and sensors on paired floor/ceiling
+column ramps. Top-only solidity makes an accidental lrb-solid probe fail.
+The cases cover Sonic/Tails/Knuckles, both edges and gravity states, distances
+11/12/empty and the precarious six-pixel follow-up. Angle`$1F` admits balancing;
+`$20` skips it. This replaces the prior flat-only evidence with explicit geometry
+and native cutoff checks. No engine change was needed. It is a synthetic
+ROM-arithmetic fixture, not emulator whole-scene parity or a cold traversal.

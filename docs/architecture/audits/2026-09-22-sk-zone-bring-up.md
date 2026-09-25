@@ -5053,3 +5053,14 @@ the hurt-specific early return independently of the later boundary kill.
 All186 movement tests pass, zero skips. The reference inventory advances to
 110 covered/2 partial/0 missing/4 not applicable; no production code changed.
 The DEZ2 matrix records commands and the held-bound/route limits.
+
+
+### 2026-09-25 — edge-balance evidence extends beyond a flat ceiling
+
+The `ChooseChkFloorEdge` audit at `6dec2c546` finds the existing ceiling sensor
+geometry consistent with the native helper. A shaped-column test through real
+sensors/controller covers both edges and gravity states for all three characters,
+top-only solidity, the exact12px cutoff, six-pixel precarious probes and the
+angle gate. All263 sensor/movement/DEZ-corridor checks pass, zero skips. No
+production change; the gravity inventory now has111 covered/1 partial/0 missing/
+4 not applicable. The DEZ2 matrix records synthetic-vs-route limits and commands.

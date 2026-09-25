@@ -33,7 +33,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (110 of 116 ROM references covered, 2 partial and none missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (111 of 116 ROM references covered, 1 partial and none missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -961,3 +961,40 @@ these cases; the separately documented held-bound mask discrepancy remains.
 The reverse-gravity reference inventory is110 covered,2 partial,0 missing,4 not
 applicable. Remaining partial rows are edge balancing and top-solid landing
 windows/slopes. Whole-route/roster/viewport/lifecycle obligations remain open.
+
+
+### Inverted edge-balance probe proof (2026-09-25)
+
+At `6dec2c546`, the ceiling ground-sensor rotation already matches
+`ChkFloorEdge_ReverseGravity`: preserve requested X, subtract live Y radius,
+scan upward with top solidity and mirror the empty-extension Y nibble. The
+previous evidence only covered flat ceilings. A synthetic column-ramp test now
+uses the real sensors and balance controller for Sonic, Tails and Knuckles.
+Paired normal/inverted terrain uses top-only solidity, so an accidental ceiling
+hit/lrb mask cannot pass. Left/right edge cases require native distances 11,
+12 and empty; Sonic's second pose requires the separate six-pixel probe to
+reach distance12. All characters pass at angle`$1F` and reject balance at`$20`,
+matching the native angle gate rather than claiming balance on steep slopes.
+The previous AnglePos tilt sentinel is explicit fixture setup, not inferred
+from the fresh sensor result.
+
+Queued Java21 commands at `6dec2c546` plus the test:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dtest=TestGroundSensor#s3kBalanceUsesNativeCentreAndSixPixelProbesOnMirroredSlopedColumns test
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestGroundSensor,TestPlayableSpriteMovement,TestS3kReverseGravityDezCorridor test
+```
+
+The isolated test passes. After adding the rejected-angle controls, the combined
+selection passes263 tests with zero failures/errors/skips. It includes existing
+real-DEZ corridor tests; the new balance geometry is synthetic and derived from
+native FindFloor arithmetic, not a claimed ROM placement or synchronized native
+capture. No production code changed. The inspected category plan is broader
+than this test-only change; focused sensor/movement/corridor checks are used for
+this follow-up, with combined campaign delivery validation still outstanding.
+
+Inventory:111 covered,1 partial,0 missing,4 not applicable. Only the top-solid
+landing window/slope row remains partial in this reference table. Full act-route,
+character, viewport, lifecycle and presentation obligations remain separate.

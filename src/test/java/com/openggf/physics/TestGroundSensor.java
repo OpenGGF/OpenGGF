@@ -429,6 +429,64 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void s3kBalanceUsesNativeCentreAndSixPixelProbesOnMirroredSlopedColumns() throws Exception {
+        GameModuleRegistry.setCurrent(new com.openggf.game.sonic3k.Sonic3kGameModule());
+        var balance = com.openggf.sprites.managers.PlayableSpriteMovement.class
+                .getDeclaredMethod("updateBalanceState");
+        balance.setAccessible(true);
+        var tilt = com.openggf.sprites.managers.PlayableSpriteMovement.class.getDeclaredField("latchedTilt");
+        var nextTilt = com.openggf.sprites.managers.PlayableSpriteMovement.class.getDeclaredField("latchedNextTilt");
+        tilt.setAccessible(true);
+        nextTilt.setAccessible(true);
+        for (boolean reversed : new boolean[] {false, true}) {
+            GameServices.gameState().setReverseGravityActive(reversed);
+            for (boolean leftEdge : new boolean[] {false, true}) {
+                byte[] heights = new byte[16];
+                for (int x = 0; x < 16; x++) heights[x] = (byte) (leftEdge ? x + 1 : 16 - x);
+                tiles[8] = new SolidTile(8, heights, new byte[16], (byte) 0x10);
+                // Native FindFloor d6=$800 cancels the placement V-flip for
+                // upward probing. Both fixtures therefore use the same heights.
+                fgChunkMap[6][5] = new ChunkDesc(8 | 0x1000 | (reversed ? 0x0800 : 0));
+                for (String character : new String[] {"sonic", "tails", "knuckles"}) {
+                    AbstractPlayableSprite player = switch (character) {
+                        case "tails" -> new com.openggf.sprites.playable.Tails(character, (short) 0, (short) 0);
+                        case "knuckles" -> new com.openggf.sprites.playable.Knuckles(character, (short) 0, (short) 0);
+                        default -> new com.openggf.sprites.playable.Sonic(character, (short) 0, (short) 0);
+                    };
+                    player.setGroundSensors(new Sensor[] {
+                            new GroundSensor(player, Direction.DOWN, (byte) -player.getXRadius(), (byte) player.getYRadius(), true),
+                            new GroundSensor(player, Direction.DOWN, (byte) player.getXRadius(), (byte) player.getYRadius(), true)});
+                    var movement = new com.openggf.sprites.managers.PlayableSpriteMovement(player);
+                    tilt.setInt(movement, leftEdge ? 3 : 0);
+                    nextTilt.setInt(movement, leftEdge ? 0 : 3);
+                    // Distances 11 / 12 / >=16 from native FindFloor arithmetic.
+                    // The last case's +/-6 probe has distance12 (precarious).
+                    int[] positions = leftEdge ? new int[] {99, 98, 92} : new int[] {108, 109, 115};
+                    for (int sample = 0; sample < positions.length; sample++) {
+                        player.setCentreX((short) positions[sample]);
+                        player.setCentreY((short) (reversed ? 95 + player.getYRadius() : 80 - player.getYRadius()));
+                        player.setAngle((byte) 0x1F); // largest positive angle admitted by the flat-ground gate
+                        player.setGroundMode(reversed ? GroundMode.CEILING : GroundMode.GROUND);
+                        player.setAir(false);
+                        player.setOnObject(false);
+                        player.setGSpeed((short) 0);
+                        player.setDirection(leftEdge ? Direction.LEFT : Direction.RIGHT);
+                        balance.invoke(movement);
+                        String context = character + " reversed=" + reversed + " left=" + leftEdge + " sample=" + sample;
+                        assertEquals(sample > 0, player.isBalancing(), context);
+                        if (character.equals("sonic") && sample > 0) {
+                            assertEquals(sample, player.getBalanceState(), context + " native six-pixel precarious probe");
+                        }
+                        player.setAngle((byte) 0x20);
+                        balance.invoke(movement);
+                        assertFalse(player.isBalancing(), context + " next angle quadrant skips balance entirely");
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     public void ceilingEmptyExtensionDistanceUsesMirroredLowNibble() {
         // No ceiling tile is present. ROM WalkCeiling mirrors the probe low Y
         // nibble before FindFloor returns its empty extension default.

@@ -356,3 +356,9 @@ The subsequent [hurt-boundary proof](../architecture/validation/levels/s3k-dez-a
 distinguishes the early hurt return from the later kill for all three characters.
 Two gravity-reference rows remain partial; this evidence-only step does not
 close the broader DEZ act-matrix obligations.
+
+
+The [edge-balance probe proof](../architecture/validation/levels/s3k-dez-act2.md#inverted-edge-balance-probe-proof-2026-09-25)
+covers shaped top-only columns, exact cutoff/precarious probes and the angle gate
+for all three characters in both gravity states. The top-solid landing row is
+the sole remaining partial gravity-reference row; full-act obligations remain.
