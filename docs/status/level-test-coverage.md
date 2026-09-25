@@ -436,3 +436,11 @@ clears both eight-hit miniboss phases and reaches released Act2 control from
 cold entry in23533 inputs, zero deaths;61 full-registry restore/replay windows
 and seamless history isolation pass. See the [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#ordinary-sonic-solo-cold-completion-2026-09-25).
 Solo Act2/final, Tails, wider products and native presentation remain open.
+
+
+DEZ1 Tails follow-up (2026-09-25): ordinary native320 Tails alone now completes
+cold Act1 and its real Act2 arrival in29521 inputs with75 additional full-world
+rewind/replay windows, zero deaths. Both solo tests pass (136 spots total).
+See the [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#ordinary-tails-solo-cold-completion-2026-09-25).
+The mandatory native cold Act1 roster is covered; solo Act2/final and remaining
+breadth/native presentation are open.

@@ -307,3 +307,43 @@ rewind snapshots, a180-frame forecast and20-frame committed segments; keeping bo
 ring-recovery and free movement alternatives clears the fight. No gameplay state
 was synthesized, and independent playback plus full replay checks establish that
 the saved input is sufficient without the search. No runtime change was justified.
+
+
+## Ordinary Tails solo cold completion (2026-09-25)
+
+After `6dfdbc5a4`, `dez1-tails-solo-cold-complete-320.{script,bk2}` preserves
+29521 ordinary inputs from cold entry through both eight-hit miniboss phases,
+the actual seamless Act2 load at28320 and released Tails at(320,944). Native320,
+donoroff, no follower, transformations, gameplay seeds or deaths. The solo route
+class now shares its phase/load/roster/history assertions between Sonic and Tails;
+Tails adds75 full-registry immediate restore and45-input replay windows. These
+span lower opening/flight, conveyor, upper pads, lower corridor, turbine panels,
+launchers, rising stair, both fight phases and incoming transport. Sonic retains61.
+
+Queued Java21 with `DISPLAY=:0`:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestDezSoloColdRouteCapture test`
+passes2 tests,0 failures/errors/skips,77.77s test/1:43 Maven. The change-based
+plan against `6dfdbc5a4` selects2919 ordinary classes plus guards because route
+inputs are unclassified; focused validation is proportionate for this test/input
+change. Both consumers of the shared test helper were rerun. This is not a new
+broad-suite pass; combined campaign validation remains owed for runtime changes.
+
+Fresh production playback independently matches all28321 author rows on12 player
+fields. All29521 capture rows have no deaths or followers. Video
+`$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260925-tails-cold-act1-clear-320/capture.mp4`
+shows26400–29520 (3121 frames,60fps,52.016667s); full decode and
+stills26600/27962/29520 were inspected. The separate21.666667s approach clip
+(`campaign-20260925-tails-cold-miniboss-approach-320`) matches19740 cold rows.
+Neither clip is native pixel parity. Mandatory native cold Act1 roster is now
+covered for Sonic+Tails, solo Sonic and solo Tails; solo Act2/final and remaining
+width/donor/lifecycle/native presentation obligations remain open.
+
+Input lessons: Tails needs the lower opening return and repeated ordinary flight
+inputs, not the team movie verbatim. Leaving the upper pad at the wrong phase
+returns to the upper ledge; the lower passage needs a wait before heading east.
+A flight clears the lower spike corridor, then turbine steering with longer
+up/down holds reaches all six panels. Flying over the second launcher fails;
+braking beside it and walking into its capture window preserves the intended
+launch chain. The accepted boss search records inputs only, uses engine-owned
+rewind for forecasts, and is independently replayed without the controller.
+No runtime change was needed for this milestone.

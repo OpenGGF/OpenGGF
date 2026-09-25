@@ -7,6 +7,7 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.objects.DezMinibossInstance;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -23,10 +24,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestDezSoloColdRouteCapture {
     @Test
     void coldSonicAloneClearsMinibossAndReachesPlayableActTwo() throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/dez1-sonic-solo-cold-complete-320.bk2"));
-        assertEquals(23533, movie.getFrameCount());
-        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         // Lifts, bridges, conveyor departure, turbine panels/door, launcher chains,
         // rising staircase, both eight-hit phases, defeat and incoming transport.
         // Source replay windows end before the actual seamless load at 22332.
@@ -37,6 +34,32 @@ class TestDezSoloColdRouteCapture {
                 14395, 14802, 14952, 15013, 15295, 15430, 15478, 18000,
                 20493, 20541, 20650, 20850, 20899, 21436, 21472, 21510,
                 21546, 21931, 21974, 22100, 22200, 22360, 22700, 23200, 23450);
+        runColdRoute("sonic", Sonic.class, 23533, 22332, spots);
+    }
+
+    @Test
+    void coldTailsAloneClearsMinibossAndReachesPlayableActTwo() throws Exception {
+        // Lower opening return, flight, conveyor, upper pads, lower corridor,
+        // turbine panels, both launcher chains, rising stair and both boss phases.
+        var spots = Set.of(480, 700, 1000, 1156, 1400, 1757, 2100, 2357,
+                2508, 2700, 3040, 3250, 3455, 3720, 3900, 4085, 4400, 4710,
+                4936, 5250, 5500, 5856, 6100, 6500, 6740, 6900, 7100, 7220,
+                7460, 7800, 8040, 8400, 8750, 9061, 9500, 10100, 11000,
+                12361, 13200, 14500, 15600, 16861, 16962, 17362, 17482,
+                17720, 18100, 18445, 18900, 19365, 19772, 20057, 20120,
+                20348, 20603, 20748, 23000, 25705, 26543, 26591, 26700,
+                26899, 27331, 27761, 27807, 27849, 27886, 27923, 27962,
+                28100, 28200, 28360, 28600, 29100, 29450);
+        runColdRoute("tails", Tails.class, 29521, 28320, spots);
+    }
+
+    private void runColdRoute(String character, Class<?> playerType, int frames,
+                              int expectedLoadFrame, Set<Integer> spots) throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/dez1-" + character + "-solo-cold-complete-320.bk2"));
+        assertEquals(frames, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, character, "", "off", null, null, null);
+        int historyStart = expectedLoadFrame - 72;
         var checked = new HashSet<Integer>();
         var hitField = DezMinibossInstance.class.getSuperclass().getDeclaredField("collisionProperty");
         hitField.setAccessible(true);
@@ -45,10 +68,10 @@ class TestDezSoloColdRouteCapture {
         long outgoingFrame = 0;
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
-            assertInstanceOf(Sonic.class, session.player());
+            assertInstanceOf(playerType, session.player());
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                if (frame == 22260) GameServices.configuration().setSessionOverride(
+                if (frame == historyStart) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
                 session.render();
@@ -56,7 +79,7 @@ class TestDezSoloColdRouteCapture {
                 assertFalse(session.player().isSuperSonic());
                 assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
                 if (GameServices.level().getCurrentAct() == 0) {
-                    if (frame >= 22260) outgoingFrame = Math.max(outgoingFrame,
+                    if (frame >= historyStart) outgoingFrame = Math.max(outgoingFrame,
                             SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
                 } else if (loadFrame < 0) loadFrame = frame;
                 var boss = GameServices.level().getObjectManager().activeObjectsOfType(DezMinibossInstance.class)
@@ -80,7 +103,7 @@ class TestDezSoloColdRouteCapture {
             }
             assertEquals(spots, checked);
             assertEquals(2, phases, "both eight-hit phases must be defeated through player contact");
-            assertEquals(22332, loadFrame);
+            assertEquals(expectedLoadFrame, loadFrame);
             assertEquals(11, GameServices.level().getCurrentZone());
             assertEquals(1, GameServices.level().getCurrentAct());
             assertFalse(session.player().isObjectControlled(), "incoming transport must release control");
@@ -88,7 +111,7 @@ class TestDezSoloColdRouteCapture {
             // DEZ1's ROM handoff is seamless: retain numbering but discard outgoing snapshots.
             var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
             assertTrue(rewind.earliestAvailableFrame() > outgoingFrame);
-            assertInstanceOf(Sonic.class, session.player());
+            assertInstanceOf(playerType, session.player());
         }
     }
 
