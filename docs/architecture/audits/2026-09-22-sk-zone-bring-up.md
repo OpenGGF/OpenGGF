@@ -5756,3 +5756,44 @@ A separate cold SSZ Tails probe of Sonic's complete input dies at 1,940, before
 the first boss (player 1184/3152). This establishes an input frontier, not a
 runtime defect. External `campaign-20260925-tails-cold-input-probe` contains
 the state CSV and sparse screenshots; no video or completion claim.
+
+## Tails flight ceiling and requested wrap-up (2026-09-25)
+
+User requested that work stop expanding and all completed changes be committed
+and pushed before pausing for weekly limits. Current main develop remains
+`e6c6ac79a8b411f32998ae13c8e5c94099c1818c`, fetched/fast-forward checked again.
+Unrelated dirty reference submodules and untracked archives/notes remain untouched.
+
+The last runtime change corrects S3K `loc_14892`: signed word comparison after
+word-sized `$10` addition. The old unsigned test was wrong. Red: 21 tests, two
+failures (negative bound and wrapped sum). Green focused flight/movement, S3K
+loading/bootstrap and both solo Sonic SSZ routes: 96 tests, no failures/errors/
+skips, 1:37 Maven. The live Tails probe confirms minimum -256 at the stall;
+the fixed cold opening crosses the platform without death. LRZ/DEZ route
+revalidation and the short SSZ rewind case are running before final delivery.
+
+Resume after pause from this audit's current table and the per-act matrices.
+Tails SSZ has only the 2,556-input opening frontier; native whole-scene, roster/
+lifecycle products elsewhere and accepted original exclusions remain explicit.
+Do not turn completed checkpoint products into full-route certification. The
+full seven-zone goal remains unfinished even when this accumulated work is pushed.
+
+Final-flight route compatibility: Java 21, DISPLAY=:0, explicit S3K ROM,
+`python3 tools/testing/maven_queue.py -Dmse=off
+-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestLrzTailsColdRouteCapture,TestDezSoloColdRouteCapture,TestDezSoloActTwoColdRouteCapture,TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding test`
+passes 10 tests, 0 failures/errors/skips, 5:07 Maven. No existing route inputs
+needed repair. The 96-case focused command used
+`-Dtest=TestTailsFlightController,TestPlayableSpriteMovementTailsFlight,TestSszSoloColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+Older LRZ/SSZ/DEZ bring-up and arena-demo heads are ancestors of the delivery
+branch and their worktrees are clean; they can be removed only after push.
+
+The short SSZ flight regression also passes: 1 test, 0 failures/errors/skips,
+24.128s Maven, five complete registry restore/45-input replay windows. Command:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestSszSoloColdRouteCapture#coldTailsFliesPastTheOpeningSpikesWithNegativeCameraMinimum test`.
+Combined final selection against the pinned integration base contains 2,921
+ordinary classes plus guards. Java 21/Lua 5.4/PowerShell preflight passes. Allow
+roughly 45 minutes ordinary plus guards, with a 65-minute invocation timeout
+and the runner's 10-minute no-output stop; failures require attribution before
+integration. No additional feature work is planned during the wrap-up.

@@ -519,3 +519,8 @@ standard teams add 220 post/width cases with two real reloads each. Native plus
 donor coverage now verifies 880 reloads; the whole class passes 529 tests with
 no skips. Donor activation, retained capabilities and decoded participant art
 are asserted after each load. Cold routes and other matrix obligations remain open.
+
+SSZ Tails opening (2026-09-25): the signed flight-ceiling correction restores
+ascent with the native negative camera minimum. A preserved 2,556-input cold
+opening clears the raised platform without deaths; complete Tails SSZ remains
+open. Existing LRZ/DEZ cold routes still pass unchanged (10 tests, no skips).

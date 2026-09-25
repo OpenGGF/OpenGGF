@@ -159,6 +159,46 @@ class TestSszSoloColdRouteCapture {
         }
     }
 
+    @Test
+    void coldTailsFliesPastTheOpeningSpikesWithNegativeCameraMinimum() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/ssz1-tails-solo-cold-flight-320.bk2"));
+        assertEquals(2556, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
+        var spots = Set.of(2215, 2255, 2300, 2345, 2465);
+        var checked = new HashSet<Integer>();
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                session.step(movie.getFrame(frame)); session.render();
+                assertFalse(session.player().getDead(), "death at " + frame);
+                assertInstanceOf(com.openggf.sprites.playable.Tails.class, session.player());
+                assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+                if (frame == 2345) {
+                    assertEquals(-0x100, GameServices.camera().getMinY());
+                    assertTrue(session.player().getDoubleJumpFlag() != 0);
+                    assertTrue(session.player().getCentreX() > 1280, "flight clears the raised platform");
+                    assertTrue(session.player().getCentreY() < 3030, "signed minY permits ascent");
+                }
+                if (!spots.contains(frame)) continue;
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) {session.step(movie.getFrame(frame + n));session.render();}
+                var forward = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), "Tails flight restore " + frame);
+                session.restoreInputHistory(movie.getFrame(frame));
+                for (int n = 1; n <= 45; n++) {session.step(movie.getFrame(frame + n));session.render();}
+                same(forward, registry.capture(), "Tails flight replay " + frame);
+                registry.restore(saved); session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertEquals(2085, session.player().getCentreX());
+            assertEquals(2954, session.player().getCentreY());
+        }
+    }
+
     private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String where) {
         assertEquals(expected.entries().keySet(), actual.entries().keySet(), where);
         for (String key : expected.entries().keySet()) {

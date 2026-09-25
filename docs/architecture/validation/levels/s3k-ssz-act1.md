@@ -644,3 +644,22 @@ fresh boot for certification. An initial temporary serializer dropped B/C from
 the cold prefix (first mismatch 426, death 2556); preserving all recorded buttons
 repairs that authoring error. No physics or boss behavior changed. Tails solo,
 remaining width/donor/lifecycle products and native whole-scene checks remain open.
+
+## Tails opening flight and ceiling correction (2026-09-25)
+
+Cold `ssz1-tails-solo-cold-flight-320` contains 2,556 ordinary inputs with no
+position/ring/health seeds or follower. At 2,345 the old runtime stalled at
+(1205,3087), camera minimum -256, zero upward velocity; it died at 2,545.
+The same input after the signed `loc_14892` correction reaches (1317,3007) at
+2,345 and (2085,2954) at the end, without death. This is an opening-route
+frontier, not Tails' whole SSZ completion. Five registry replay windows cover
+flight activation, ascent and the raised-platform crossing.
+
+Fresh video `$VIDEO_ROOT/ssz-bring-up/campaign-20260925-tails-flight-ceiling-fixed/`
+has 331 frames at 60fps, fully decodes, and its 2,345 still was inspected.
+The ROM's signed branch is the authority; this capture is engine presentation,
+not a matched native trajectory. Existing Sonic solo routes still pass.
+
+The short flight regression passed all five windows: 1 test, no failures/errors/
+skips, 24.128s Maven with Java 21 and explicit S3K ROM. See the campaign audit
+for the exact command and broader final-flight compatibility checks.

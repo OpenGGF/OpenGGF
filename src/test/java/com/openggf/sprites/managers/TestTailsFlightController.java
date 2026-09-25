@@ -221,7 +221,7 @@ class TestTailsFlightController {
     }
 
     @Test
-    void cameraClampComparesWrappedCoordinatesAsUnsignedWords() {
+    void cameraMinimumAdditionWrapsBeforeSignedComparison() {
         GameServices.camera().setMinY((short) 0xFFF0);
         tails.setCentreY((short) 0x0001);
         tails.setDoubleJumpFlag(2);
@@ -230,8 +230,22 @@ class TestTailsFlightController {
 
         flight.updateVertical(false, false, 0);
 
-        assertEquals(0, tails.getYSpeed(),
-                "ROM compares unsigned 16-bit camera and player coordinates");
+        assertEquals(-0x20, tails.getYSpeed(),
+                "loc_14892 adds $10 as a word, then uses signed blt: $FFF0+$10 is zero");
+    }
+
+    @Test
+    void negativeWrappingLevelMinimumDoesNotCancelUpwardFlight() {
+        GameServices.camera().setMinY((short) -0x100);
+        tails.setCentreY((short) 0xC0F);
+        tails.setDoubleJumpFlag(2);
+        tails.setDoubleJumpProperty((byte) 10);
+        tails.setYSpeed((short) 0);
+
+        flight.updateVertical(false, false, 0);
+
+        assertEquals(-0x20, tails.getYSpeed(),
+                "SSZ's negative camera minimum is above the world, not an unsigned ceiling below Tails");
     }
 
     @Test

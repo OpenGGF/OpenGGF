@@ -231,7 +231,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Knuckles-only walls (HCZ, MGZ, CNZ, LBZ, MHZ and SOZ variants) when he hits them
   in mid-air, keeping his speed as the ROM does, instead of stopping against them.
   Player-controlled Tails keeps normal air gravity on the frame flight starts, so the
-  climb out of a jump matches the ROM from the first flying frame. Sandopolis
+  climb out of a jump matches the ROM from the first flying frame. Flight ceilings
+  also use the ROM’s signed, word-sized comparison, allowing Tails to ascend in
+  wrapping levels such as Sky Sanctuary instead of stopping in mid-air. Sandopolis
   Sandworms wait one more frame after first appearing on screen before starting
   their emerge timer, so they surface on the ROM frame. Sandopolis now queues its
   Skorp, Sandworm and Rockn art at level start like the ROM, keeping later art

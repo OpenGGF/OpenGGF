@@ -914,3 +914,12 @@ and `RideObject_SetRide` before the standing-bit continuation can carry them.
 Use real contact ownership for ordinary platforms. An entry test starting one
 pixel above the floor missed this; descend from above the proximity window and
 assert stable support and animation on every subsequent frame.
+
+### Tails flight ceiling uses signed words
+
+S3K `loc_14892` adds `$10` to `Camera_min_Y_pos` as a word, then uses
+`cmp.w y_pos(a0),d0` / `blt`. Preserve both addition wrap and signed comparison.
+Promoting the camera minimum with `& 0xFFFF` turns SSZ's `-$100` into a ceiling
+below the entire level and cancels upward flaps. `$FFF0 + $10` must wrap to zero.
+The former unsigned unit-test expectation was itself incorrect; positive-bound
+clamping, wrapped addition and negative SSZ bounds have independent regressions.

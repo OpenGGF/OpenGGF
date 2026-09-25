@@ -77,9 +77,13 @@ public final class TailsFlightController {
 
         Camera camera = sprite.currentCamera();
         if (camera != null && ySpeed < 0) {
-            int cameraMinY = camera.getMinY() & 0xFFFF;
-            int playerY = sprite.getCentreY() & 0xFFFF;
-            if (playerY <= cameraMinY + 0x10) {
+            // S3K loc_14892 adds $10 in a word, then cmp.w / blt compares
+            // signed coordinates. SSZ uses a negative upper bound (-$100).
+            // Unsigned promotion would put that ceiling below the entire level
+            // and cancel every upward flap; an unwrapped sum also mishandles $FFF0.
+            int ceilingY = (short) (camera.getMinY() + 0x10);
+            int playerY = (short) sprite.getCentreY();
+            if (playerY <= ceilingY) {
                 ySpeed = 0;
             }
         }
