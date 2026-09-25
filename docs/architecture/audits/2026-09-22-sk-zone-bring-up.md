@@ -4909,3 +4909,15 @@ mutation. The [Act2 matrix](../validation/levels/s3k-soz-act2.md#lower-rock-puzz
 records the route frontier and failed return jumps; full rock-held door passage
 is still pending. This slice changes evidence/status documentation only and
 requires no repeated engine suite. Combined campaign integration remains open.
+
+
+### SOZ lower puzzle connected passage (2026-09-25)
+
+On `fc68cbcb7` plus the new fixture, ordinary native320 Sonic completes the
+positioned cork/rock/switch/door sequence in2512 inputs with zero deaths and15
+passing full-world replay windows. The preserved movie, full decoded capture
+and native held-coordinate corroboration are in the [Act2 matrix](../validation/levels/s3k-soz-act2.md#connected-lower-rock-puzzle-passage-2026-09-25).
+The key route addition is defeating the scorpion with an ordinary spindash
+before pushing the rock. No production adjustment was required. This closes
+the unknown positive coupling/passage reproduction; ordinary Knuckles, broader
+configuration products and synchronized native comparisons remain distinct gaps.
