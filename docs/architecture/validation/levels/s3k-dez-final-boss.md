@@ -524,3 +524,40 @@ stills inspected. This is engine presentation, not native pixel parity. No runti
 code changed for this route; its focused behavior/replay test is the local check.
 The full campaign broad run and remaining roster/native/lifecycle obligations
 still precede integration and delivery.
+
+
+## Ordinary solo Tails cold ending route (2026-09-25)
+
+On`33a5b0e21` plus test/input additions, the ordinary native320 Tails route now
+clears cold DEZ1/DEZ2 and all final phases through the actual ending load.
+`dez-tails-solo-cold-ending-320.{script,bk2}` contains68266 controller inputs.
+No position, ring, health, emerald or timer setup; no donor, follower or death.
+Final entry58339; core's killing hit65104 (observed by the controller65105),
+ship's killing hit67978 (observed67979), actual ending zone13/1 at68265.
+The camera/floor/hands/core/ship behavior is unchanged from`bac660ab4`.
+
+The shorter controller route removes4127 exploratory wait inputs before the
+Act2 boss. It preserves authentic input through each production interaction.
+The boss load arrives4128 frames earlier because of the resulting encounter
+phase. Reject stationary-coordinate-only compression as a general shortcut:
+short001 died35930 and short002 missed the first down-hub press. Short003
+preserved that hub with200 settled inputs; short004 cleared the final hands
+and four core hits before timeout65528. Short005 plus the existing read-only
+final controller cleared every phase. No timer or gameplay changes were made.
+
+Fresh capture at
+`$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260925-tails-cold-ending-320/`
+matches all68266 authored rows on20 state fields. No deaths or follower.
+The final-phase video covers61500–68265,6766 frames at60fps (112.766667s),
+passes full decoding, and has inspected standing-floor and last-ship-hit stills.
+This is engine route/presentation evidence, not native input/pixel parity.
+
+The new`TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding`
+checks84 whole-registry restore/45-input replay windows, all six fingers,
+eight core hits, eight ship hits and actual ordinary ending load. Focused verification
+on `33a5b0e21` plus these test additions passed: 1 test, 0 failures/errors/skips,
+1:07 Maven, using Java 21, DISPLAY=:0 and the explicit root S3K ROM. Command:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding test`.
+The independent 56-window Act2 test already passed. Native full-scene, breadth/lifecycle and
+campaign integration/push obligations remain open.

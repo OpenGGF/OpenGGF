@@ -586,3 +586,27 @@ column; this is visual comparison, not frame-perfect parity. Replacement clip:
 `ssz-bring-up/campaign-20260924-exit-corrected-320/capture.mp4`. See the campaign
 audit for references, rejected priority changes, exact command and limitations.
 Widescreen/other-character exit breadth remains an inherited matrix obligation.
+
+
+## Solo Sonic replica route (2026-09-25)
+
+`ssz1-sonic-solo-cold-replicas-320.{script,bk2}` now preserves11200 native320
+controller inputs from cold SSZ1 through both eight-hit replica bosses and
+escapes, no follower/donor or position/ring/health seeds, no deaths. The MTZ
+attempt using a target16px left of the observed boss retains all28 incoming
+rings. This is controller strategy only; no runtime changes. The first
+team-movie reuse died13086; copying its carrier and cloud timing does not prove
+a solo completion. New releases traverse both carriers and the upper middle
+platforms through production contact.
+
+Fresh capture at`$HOME/Videos/OGGF/ssz-bring-up/campaign-20260925-sonic-solo-mtz-clear-320/`
+matches all11200 authored rows on20 state fields. The MTZ video spans8900–11199,
+2300 frames at60fps (38.333333s), with full decoding and killing-hit still inspection.
+This is engine route/presentation evidence, not native pixel parity.
+`TestSszSoloColdRouteCapture` has42 whole-registry restore/45-input replay windows,
+all eight hits per boss and both escaped owners absent. Focused verification on
+`33a5b0e21` plus these test additions passed: 1 test, 0 failures/errors/skips,
+30.902s Maven, using Java 21, DISPLAY=:0 and the explicit root S3K ROM. Command:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestSszSoloColdRouteCapture test`. The final Mecha/DEZ handoff remains under authoring, as do
+other outstanding breadth/lifecycle/native obligations.

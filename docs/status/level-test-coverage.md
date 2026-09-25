@@ -487,3 +487,16 @@ now records62588 inputs,56 full-registry replay windows,all eight boss hits and
 the actual final-stage load/history reset. Fresh capture matches the authored
 route with no deaths. Tails' final fight and broader lifecycle/native/breadth
 obligations remain open; the initial continuation runs out of time.
+
+DEZ Tails ordinary ending route (2026-09-25): the
+[final matrix](../architecture/validation/levels/s3k-dez-final-boss.md#ordinary-solo-tails-cold-ending-route-2026-09-25)
+records68266 cold controller inputs through all final phases and actual ending,
+with a separately captured20-field row match and no deaths. The84 new registry
+replay windows passed (1 test, no failures/errors/skips); campaign validation/integration and
+remaining breadth/lifecycle/native obligations are still open.
+
+SSZ solo Sonic replica route (2026-09-25): the
+[Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#solo-sonic-replica-route-2026-09-25)
+records both eight-hit fights and escapes in 11,200 cold inputs, no deaths,
+42 passing full-registry replay windows and a separately matched capture.
+Final Mecha/DEZ handoff and other inherited matrix obligations remain open.
