@@ -33,7 +33,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (101 of 116 ROM references covered, 5 partial and 6 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (102 of 116 ROM references covered, 5 partial and 5 missing — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
 | Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
@@ -671,3 +671,51 @@ The subsequent ordinary-team continuation now clears the final hands/core/ship
 and loads the ordinary ending in54786 total frames, zero deaths, with31 additional
 final-phase rewind spots. See the [final arena matrix](s3k-dez-final-boss.md).
 This supersedes the failed first continuation above.
+
+
+### Knuckles inverted glide/slide contact (2026-09-25)
+
+On `39c04c324`, the glide/slide helper still probed both feet downward regardless
+of gravity. Two new isolated regressions fail: the reversed ceiling probe
+returns null, and the slide remains at Y200 instead of the ROM-derived Y203.
+`sub_11FD6` selects `Sonic_CheckCeiling`, retains the nearer signed distance,
+then mirrors the angle with `+$40 / neg.b / -$40`. `Knuckles_Sliding` negates
+the final distance before its Y-word addition. The helper and both glide/slide
+snap consumers now follow those branches, preserving native Y fractions.
+The ceiling's odd-angle fallback is `$80` before the wrapper, not floor `$00`.
+
+`TestPlayableSpriteMovement` covers both ceiling feet, slope-angle reflection
+and the reversed slide snap, alongside its existing upright glide controls.
+`TestS3kReverseGravityDezCorridor#knucklesSlideUsesTheRealCeilingAndReplaysItsContact`
+seeds the documented gravity flag and slide state against actual DEZ2 terrain:
+at X`$1ACC`, ceiling clear Y`$520` plus the native10pxglide radius gives
+rest Y`$52A`. It checks the3px expulsion, retained Y fraction, continued slide,
+and matching position/speed after a full-world capture/restore and three-input
+forward replay. This is positioned contact evidence, not a cold Knuckles route.
+
+The row31004 inventory is implemented. Fall-from-glide radius restoration and
+both alternate wall-climb bodies remain open. This is shared movement code;
+the inspected plan selects all2915ordinary classes and guards, and matched
+cross-game trace checks remain required before campaign integration. Focused
+iteration does not replace those gates.
+
+Focused iteration (Java21, absolute S3K ROM):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  -Dtest=TestPlayableSpriteMovement,TestS3kReverseGravityDezCorridor,TestDezColdRouteCapture test
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" \
+  '-Dtest=TestS3kReverseGravityDezCorridor#knucklesSlideUsesTheRealCeilingAndReplaysItsContact,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The first selection passes236tests (181movement,44existing corridor,
+11cold DEZ routes),0failures/errors/skips. The new real-contact case was added
+after that compilation and therefore checked separately. The second selection
+passes59stability checks; its new contact test initially failed because its
+seeded slide retained the standing19pxradius (expected1322/actual1331).
+Correcting that setup to the native10pxglide radius requires no production
+change. The two isolated regressions failed on the pre-fix implementation.
+
+The corrected contact-only rerun passes1test,0failures/errors/skips:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO_ROOT/s3k.gen" '-Dtest=TestS3kReverseGravityDezCorridor#knucklesSlideUsesTheRealCeilingAndReplaysItsContact' test`.
+No changed production code needed a repeated cold-route run.

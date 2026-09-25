@@ -4824,6 +4824,55 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void invertedGlideProbesBothCeilingFeetAndMirrorsTheWinningAngle() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                GameServices.gameState().setReverseGravityActive(true);
+                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        terrain.when(() -> ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(110, 200, 10))
+                                        .thenReturn(new TerrainCheckResult(-3, (byte) 0x78, 1));
+                        terrain.when(() -> ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(90, 200, 10))
+                                        .thenReturn(new TerrainCheckResult(4, (byte) 0x80, 2));
+                        Method method = PlayableSpriteMovement.class.getDeclaredMethod(
+                                        "checkGlideFloorDist", int.class, int.class, int.class, int.class);
+                        method.setAccessible(true);
+                        TerrainCheckResult hit = (TerrainCheckResult) method.invoke(manager, 100, 200, 10, 10);
+                        assertNotNull(hit);
+                        assertEquals(-3, hit.distance());
+                        assertEquals(8, hit.angle(), "sub_11FD6 mirrors $78 to $08");
+                        terrain.verify(() -> ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(90, 200, 10));
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
+        public void invertedSlideSnapsAwayFromTheCeilingAndPreservesFraction() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                GameServices.gameState().setReverseGravityActive(true);
+                mockSprite.setCentreX((short) 100);
+                mockSprite.setCentreY((short) 200);
+                mockSprite.setXSpeed((short) 0x100);
+                mockSprite.setSubpixelRaw(0, 0xA500);
+                mockSprite.setDoubleJumpFlag(3);
+                setMovementField("inputJump", true);
+                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        terrain.when(() -> ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(
+                                        org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                                        org.mockito.ArgumentMatchers.anyInt()))
+                                        .thenReturn(new TerrainCheckResult(-3, (byte) 0x80, 1));
+                        Method method = PlayableSpriteMovement.class.getDeclaredMethod("updateSliding");
+                        method.setAccessible(true);
+                        method.invoke(manager);
+                        assertEquals(203, mockSprite.getCentreY(), "Knuckles_Sliding negates d1 under reverse gravity");
+                        assertEquals(0xA500, mockSprite.getYSubpixelRaw());
+                        assertEquals(0, mockSprite.getAngle());
+                        assertEquals(3, mockSprite.getDoubleJumpFlag());
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
         public void knucklesGlideSlideKeepsTheGlideAnimationId() throws Exception {
                 mockSprite.setAir(true);
                 mockSprite.setAngle((byte) 0);

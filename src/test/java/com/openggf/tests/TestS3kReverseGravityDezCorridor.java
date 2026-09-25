@@ -448,6 +448,43 @@ class TestS3kReverseGravityDezCorridor {
         return sprite.getCentreY() - before;
     }
 
+    @Test
+    void knucklesSlideUsesTheRealCeilingAndReplaysItsContact() {
+        HeadlessTestFixture fixture = fixtureFor(Character.KNUCKLES);
+        AbstractPlayableSprite sprite = fixture.sprite();
+        GameServices.gameState().setReverseGravityActive(true);
+        sprite.applyCustomRadii(10, 10); // Knuckles_BeginSlide retains the glide radii
+        NativePositionOps.writeXPosResetSubpixel(sprite, CORRIDOR_X);
+        // Native glide radius is10. The first pose overlaps the
+        // known ceiling by3px, so sub_11FD6 and the mirrored snap must expel it.
+        NativePositionOps.writeYPosResetSubpixel(sprite, CEILING_CLEAR_Y + 10 - 3);
+        sprite.setSubpixelRaw(0, 0xA500);
+        sprite.setAir(true);
+        sprite.setOnObject(false);
+        sprite.setDoubleJumpFlag(3);
+        sprite.setXSpeed((short) 0x100);
+        sprite.setYSpeed((short) 0);
+        sprite.setGSpeed((short) 0);
+        fixture.stepFrame(false, false, false, false, true);
+        assertEquals(CEILING_CLEAR_Y + 10, sprite.getCentreY());
+        assertEquals(0xA500, sprite.getYSubpixelRaw());
+        assertEquals(3, sprite.getDoubleJumpFlag(), "stay sliding along the ceiling");
+        assertEquals(0, sprite.getAngle(), "ceiling angle is normalized to the gravity frame");
+
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        for (int i = 0; i < 3; i++) fixture.stepFrame(false, false, false, false, true);
+        int expectedX = sprite.getCentreX();
+        int expectedY = sprite.getCentreY();
+        short expectedSpeed = sprite.getXSpeed();
+        registry.restore(before);
+        for (int i = 0; i < 3; i++) fixture.stepFrame(false, false, false, false, true);
+        assertEquals(expectedX, sprite.getCentreX());
+        assertEquals(expectedY, sprite.getCentreY());
+        assertEquals(expectedSpeed, sprite.getXSpeed());
+        assertEquals(3, sprite.getDoubleJumpFlag());
+    }
+
     /** Lands an inverted player on the corridor ceiling, then hands it to the body. */
     private void onCorridorCeiling(Character character,
                                    java.util.function.BiConsumer<HeadlessTestFixture,

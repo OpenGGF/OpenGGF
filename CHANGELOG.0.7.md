@@ -194,6 +194,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   where widescreen rendering repeats the native background plane.
   Recorded/headless transitions now honor the same source-level freeze as the live
   loop during zone-change fades, including Doomsday's exit.
+  Knuckles's inverted glide and slide use ceiling contacts and mirrored snaps.
   Hyper's stars retain their native sprite-list priority independently of Sonic, and
   his afterimages mirror vertically when gravity reverses. Asteroids
   shatter into smaller rocks and debris, homing missiles ride and chase, and dashing

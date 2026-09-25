@@ -4965,3 +4965,17 @@ current direct-load view; all79static background patterns match VRAM, and
 both animated channels contain exact ROM frame/rotation data. The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#direct-load-background-art-native-corroboration-2026-09-25)
 records the discarded early-frame comparison, successful evidence and bounded
 conclusion. No production change or speculative art-loading workaround was made.
+
+
+### DEZ Knuckles inverted glide/slide contacts (2026-09-25)
+
+On `39c04c324` plus the correction, the two-foot glide/slide probe now selects
+native upward ceiling geometry under reverse gravity and mirrors the selected
+angle and Y snap. Both isolated regressions failed before the change. Focused
+movement/corridor/cold-route selection passes236cases, including11cold DEZ
+routes;59S3K stability checks also pass. The real ceiling-contact/replay case
+passes after its declared slide setup was corrected to use10pxglide radii.
+The [Act2 matrix](../validation/levels/s3k-dez-act2.md#knuckles-inverted-glideslide-contact-2026-09-25)
+records commands, the fixture error and scope. Inventory is102covered,
+5partial,5missing,4not-applicable. Shared-code broad and matched trace gates
+remain owed for the combined campaign; focused checks do not replace them.

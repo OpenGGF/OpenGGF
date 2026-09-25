@@ -2069,7 +2069,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				return;
 			}
 			// Snap to floor and update angle
-			sprite.setY((short) (sprite.getY() + floorResult.distance()));
+			NativePositionOps.addYPosPreserveSubpixel(sprite,
+					ReverseGravity.mirrorYDelta(isReverseGravityActive(), floorResult.distance()));
 			sprite.setAngle(floorResult.angle());
 		}
 	}
@@ -2493,7 +2494,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getYSpeed() >= 0) {
 			var result = checkGlideFloorDist(cx, cy, xRad, yRad);
 			if (result != null && result.distance() < 0) {
-				sprite.setY((short) (sprite.getY() + result.distance()));
+				NativePositionOps.addYPosPreserveSubpixel(sprite,
+						ReverseGravity.mirrorYDelta(isReverseGravityActive(), result.distance()));
 				sprite.setAngle(result.angle());
 				sprite.setYSpeed((short) 0);
 				glideHitFloor();
@@ -2536,8 +2538,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * segment.
 	 */
 	private TerrainCheckResult checkGlideFloorDist(int cx, int cy, int xRad, int yRad) {
-		var right = ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx + xRad, cy + yRad);
-		var left = ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx - xRad, cy + yRad);
+		// sub_11FD6 selects Sonic_CheckCeiling under Reverse_gravity_flag.
+		// Both feet still compete by signed distance; only the world-facing
+		// probe and the final angle change, not the returned distance's sign.
+		boolean reversed = isReverseGravityActive();
+		var right = reversed
+				? ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(cx + xRad, cy, yRad)
+				: ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx + xRad, cy + yRad);
+		var left = reversed
+				? ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(cx - xRad, cy, yRad)
+				: ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx - xRad, cy + yRad);
 		TerrainCheckResult chosen;
 		if (left == null) {
 			chosen = right;
@@ -2556,7 +2566,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (odd), so the ROM reads floor angle 0x00 there; without this rule the
 		// glide land wrote angle 0xFF and the compared field diverged.
 		if ((chosen.angle() & 1) != 0) {
-			chosen = new TerrainCheckResult(chosen.distance(), (byte) 0, chosen.tileIndex());
+			chosen = new TerrainCheckResult(chosen.distance(), (byte) (reversed ? 0x80 : 0), chosen.tileIndex());
+		}
+		if (reversed) {
+			// Sonic_CheckCeiling's odd-angle fallback is $80 before the
+			// add.b $40 / neg.b / sub.b $40 wrapper maps it to floor angle 0.
+			chosen = new TerrainCheckResult(chosen.distance(),
+					(byte) ReverseGravity.mirrorAngle(chosen.angle()), chosen.tileIndex());
 		}
 		return chosen;
 	}

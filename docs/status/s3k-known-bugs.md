@@ -200,13 +200,12 @@ offset; skid dust spawns on the correct contact side. These close both dust rows
 Knuckles's slide get-up now negates its radius adjustment while preserving the
 native Y fraction. Glide falling, slide terrain probes and wall climbing remain open.
 
-**Open inverted-player obligations in act 2**, six missing rows and one partially covered row across groups A-I:
+**Open inverted-player obligations in act 2**, five missing rows and one partially covered row across groups A-I:
 
-- **Knuckles' glide, slide and wall climb** (:30921, :31004, :31068, :31205). His glide
-  floor probe goes through `ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle` directly, while
-  the ROM's `.continueSliding` calls `sub_11FD6` — the swapping wrapper — so the glide
-  landing and the slide's floor snap all measure against the wrong surface
-  while the flag is set. The two climb rows are whole alternate bodies, not sign flips.
+- **Knuckles' fall-from-glide radius and wall climb** (:30921, :31068, :31205).
+  The two climb rows are whole alternate bodies, not sign flips. The glide/slide
+  ceiling probe and mirrored slide snap (:31004) are now implemented; the
+  fall-from-glide radius transition remains a separate obligation.
 - **`sub_1E410`'s `loc_1E4D6`** (:41999), now partial: real retracting-spring contacts
   cover the flat top-solid final snap in both gravity states, standing and rolling. The
   inverted override formerly snapped to the upright face (57 pixels wrong in the isolated
@@ -225,7 +224,7 @@ Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
 the gap was a search for a `GameSound` constant, not a missing sound. `Obj_DEZGravitySwap`
 (`$5B`) has no art in the ROM and is correctly invisible.
 
-**Suspected cause.** A sliced port with individual defects tracked above. 6 of the 116
+**Suspected cause.** A sliced port with individual defects tracked above. 5 of the 116
 `Reverse_gravity_flag` references in the disassembly are still unimplemented (all in
 groups A-I, above). The act 2 boss's three rows were stale inventory entries; their
 existing implementations and focused tests are now linked from the table. The conveyor pad's
