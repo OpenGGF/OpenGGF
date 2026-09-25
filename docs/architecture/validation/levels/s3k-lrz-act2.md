@@ -43,8 +43,8 @@ behavior at every placement; the remaining obligations below retain that distinc
 | BASELINE: placed object and ring census | `LRZ2_Sprites` `$1F7C9C` (455), `LRZ2_Rings` `$1F8C7E` (282 records, 281 live) | native | `TestS3kLrzPlacementCensus` | implemented | pass, `3418eba6e` | Ratchet target 0 placeholders |
 | OBJECT: orbiting spike balls `$2B` (12), `$2C` (40) | `Obj_LRZOrbitingSpikeBallHorizontal` (sonic3k.asm:89077-89145) and `Obj_LRZOrbitingSpikeBallVertical` (:89149-89222): `bclr #0,subtype` picks the 32x32 ball AND clears the bit, the byte angle is `(Level_frame_counter+1)*2` negated for `status` bit 0 plus the subtype, the ball is harmful (`collision_flags` `$9A` small, `$8F` large) and drawn in front only while that byte has bit 7 set, and the displacement is a fixed fraction of `cos` on one axis -- `cos asr 3`, `(cos + cos asr 1) asr 3`, `(cos + cos asr 2) asr 3` and `(cos asr 2) - (cos asr 5)` | native | `TestLrzOrbitingSpikeBall` (5) | implemented | pass | Five cases against the ROM's own `SineTable` through the routine's arithmetic, broken on purpose once (`cos asr 2` for `asr 3`) and failing on the two positional assertions only. **Owed**: no clip, no rewind spot on a route, no act 2 route position, and no wide/donor/roster row. The despawn uses the anchor x, `loc_1B666`'s own reference |
 | ENTRY: `$901` resources, bounds, object set | Registry/sprite/screen-event tables | native | `TestSonic3kLevelLoading` | implemented (inherited) | pass | Not re-verified for this campaign |
-| PRESENT: parallax, bands and shake | `sub_57082`, `LRZ2_BGDeformArray` `$20,$20,$20,$10x4,$F0,$10x3,$20`, `ApplyDeformation` at `HScroll_table`; `Camera_Y_pos_BG_copy` = `3Y/32` | 320 and 640 | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented | pass, `bbd156d37` | **Not visually matched**: a direct `$901` load draws HUD font tiles in the upper background rows ([known bug](../../../status/s3k-known-bugs.md)); the clip waits for the seamless entry |
-| PRESENT: animated tiles and `AniPLC_LRZ2` | `AnimateTiles_LRZ2` / `loc_282D0` and `loc_28364`; `Offs_AniFunc` pairs `$901` with `AniPLC_LRZ2` `$28A84`; `Animate_Init` does **not** seed `Anim_Counters+1/+3` for `$901` | native | `TestS3kLrzPatternAnimation` | implemented | pass, `1ef1256ca` | A direct or star-post `$901` load whose first phase is 0 skips its first upload, as the ROM does; act 2's background art gap (known bug) still blocks a visual check |
+| PRESENT: parallax, bands and shake | `sub_57082`, `LRZ2_BGDeformArray` `$20,$20,$20,$10x4,$F0,$10x3,$20`, `ApplyDeformation` at `HScroll_table`; `Camera_Y_pos_BG_copy` = `3Y/32` | 320 and 640 | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented | pass, `bbd156d37` | Direct-load background art corroborated against native on2026-09-25 (below); synchronized scroll/palette phase remains open |
+| PRESENT: animated tiles and `AniPLC_LRZ2` | `AnimateTiles_LRZ2` / `loc_282D0` and `loc_28364`; `Offs_AniFunc` pairs `$901` with `AniPLC_LRZ2` `$28A84`; `Animate_Init` does **not** seed `Anim_Counters+1/+3` for `$901` | native | `TestS3kLrzPatternAnimation` | implemented | pass, `1ef1256ca` | A direct or star-post `$901` load whose first phase is 0 skips its first upload, as the ROM does; current direct-load art is corroborated against native (below); full animation timing remains separate |
 | PRESENT: rock sprites | `LRZ2_Rock_Placement` (10 placements, all at `y=$7C8`), same window and vertical test as act 1 | native + wide | `TestLrzRockSpriteRenderer` | implemented | pass, `fbbb793f7` | Act 2's rocks sit in the opening corridor; not yet seen on a cold route |
 | PRESENT: palette cycles | `AnPal_LRZ2` (channel D keeps the `FixBugs = 0` duplicated pair) | native | `TestS3kLrzPaletteCycling` | implemented (inherited) | pass | Not re-verified |
 | PRESENT: the post-defeat palette and camera releases | `loc_78AA8` and the `loc_78AE6`/`loc_78B08` pair (sonic3k.asm:160505-160545): `End_of_level_flag` gates both, then `Camera_min_X_pos` is written at `$2C0` (with `Pal_LRZ2` over palette line 1 and `Pal_LRZMiniboss3` over lines 2 and 3) and again at `$940`. The fight's own `Pal_LRZMiniboss1`/`Pal_LRZMiniboss2` reach act 2 because `Load_Level` copies no palette | native | `TestLrzPostDefeatCameraRelease` (3) | implemented | pass | Clip `35` shows the swap on capture frame 3539 and its gold half matches the native capture `native-lrz2-bg/run1/f416433.png`. `word_78EAA` now runs its thirteen ROM rows and freezes/releases the shared palette clock; focused and actual-route rewind checks pass. Native ramp colors/timers are corroborated; full-scene matching remains open ([acceptance gap](../../../status/s3k-known-bugs.md)) |
@@ -510,3 +510,56 @@ tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
 -Dtest=TestLrzActTwoColdRouteCapture test` on619eca534 plus this slice:
 2 tests pass,0 failures/errors/skips,81 total full-registry replay spots.
 The new script/BK2 passes the production author/loader round trip.
+
+
+### Direct-load background art native corroboration (2026-09-25)
+
+Current revision `f9944ccd7` does not reproduce the historical font-art symptom
+at `($2438,$629)`. A180-frame native320 Sonic-solo capture settles at player
+`(9272,1580)`, camera`(9112,1484)`, with no deaths. Still120 shows the purple
+background forms; the whole MP4 decodes successfully.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off exec:java \
+  -Dexec.mainClass=com.openggf.tools.GameplayCaptureTool \
+  "-Dexec.args=--game s3k --rom $REPO_ROOT/s3k.gen --zone lrz --act 2 --x 0x2438 --y 0x0629 --frames 180 --stills 30,120 --out-dir $VIDEO_ROOT/lrz-bring-up/campaign-20260925-direct-act2-current-320"
+```
+
+Fresh native corroboration uses the existing `capture_movie_checkpoints.lua`
+exporter and `capture_native_references.py` host, official Linux BizHawk2.11,
+locked-on ROM SHA1`CFBF98C36C776677290A872547AC47C53D2761D6`, movie SHA256
+`AD40FB0B0A74FA12B08AB71B2E48A7455B388D14F43F4CDED502AC4A15D1B3C0`,
+and the existing415400 state (SHA256
+`DE4CD8733D3B6F582A2BC592B54D7D8B8ABE7355586AA0766A507E2C2CBB09CF`).
+Plan: `return {state_frame=415400,frames={425734}}`. Output is
+`$VIDEO_ROOT/lrz-bring-up/campaign-20260925-native-act2-art/run1`.
+The host completed with zero failures. The observed camera is`(9109,1486)`;
+the inspected screenshot corroborates the same background near the engine view.
+Its VRAM SHA256 is
+`86e470aa157256dfa592712c63a070eb7a04c99d58b0195aded2c2a0e9da6467`.
+
+Art comparison method: enumerate every pattern referenced by128px background
+blocks`$D5–$E4`, pack each current engine8×8pattern into its32Genesis bytes,
+and compare at `tileIndex*32` in native VRAM. All79static referenced tiles
+(`$13C,$181,$2DD–$31F,$35E–$367`) match exactly. The remaining48tiles are
+`$320–$343` and`$344–$34F`, the native `loc_282D0`/`loc_28364` animation
+channels. Compare each whole channel with the eight ROM frames and legal
+cyclic split-DMA rotations:
+
+| Channel | ROM source / frame bytes | Engine frame, band | Native frame, band |
+| --- | --- | --- | --- |
+| `$320` | `$C0300 / $480`, rotation`band*$C0` | 5,2 | 6,2 |
+| `$344` | `$C2700 / $180`, rotation`band*$60` | 3,0 | 3,0 |
+
+Thus all127referenced patterns have native corroboration; none requires a
+missing-art fallback or secondary-load patch. The earlier416433dump was not
+sufficient: cameraXremained0 after the seamless change and its second channel
+had not acquired a current animated frame. That rejected comparison does not
+justify changing direct-load timing. The fresh later sample resolves the art
+question without hydrating engine state from native observations.
+
+This closes the specific missing-art report, not synchronized whole-scene
+pixel or animation-phase acceptance. The native reference is Super Sonic;
+the engine is a declared positioned ordinary Sonic load. The historical root
+cause is unassigned. No production code changed and no engine test rerun is
+needed for this evidence/status-only update.

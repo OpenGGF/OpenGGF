@@ -3731,3 +3731,13 @@ policy restoration. The existing DEZ exit test originally expected a shifted
 player wall; it now expects the native `$3620` wall and the separate `$3530`
 visible camera. The follow-up validation below replaces that intermediate result. Shared camera
 code still requires normal combined delivery validation.
+
+
+### 2026-09-25 — direct Act2 background-art report closed
+
+The historical direct-load font report above is superseded by the
+[Act2 native art comparison](../validation/levels/s3k-lrz-act2.md#direct-load-background-art-native-corroboration-2026-09-25).
+On `f9944ccd7`, all79static background patterns match native VRAM, and both
+animated channels contain exact ROM frames/rotations. A fresh native screenshot
+near the reported camera corroborates the current engine view. No additional
+art-loading fix is warranted; whole-scene phase matching remains separate.

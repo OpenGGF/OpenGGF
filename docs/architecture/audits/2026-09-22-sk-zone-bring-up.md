@@ -4955,3 +4955,13 @@ the existing inactive-transition flag, matching GameLoop; it does not freeze
 unrelated active-level palette effects. The [DDZ matrix](../validation/levels/s3k-ddz.md#recording-driver-exit-freeze-2026-09-25)
 records the failing regression, corrected test-counter assumption and focused
 passes. The shared-driver change is included in the pending full campaign gate.
+
+
+### LRZ direct Act2 background-art acceptance (2026-09-25)
+
+The historical missing-art report is no longer reproduced on `f9944ccd7`.
+A fresh native movie checkpoint near the reproduction camera corroborates the
+current direct-load view; all79static background patterns match VRAM, and
+both animated channels contain exact ROM frame/rotation data. The [Act2 matrix](../validation/levels/s3k-lrz-act2.md#direct-load-background-art-native-corroboration-2026-09-25)
+records the discarded early-frame comparison, successful evidence and bounded
+conclusion. No production change or speculative art-loading workaround was made.
