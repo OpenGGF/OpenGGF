@@ -102,10 +102,10 @@ class TestDezIncomingFinalRouteCapture {
         // Earlier independently runnable cold-route tests own DEZ1/2. These
         // checkpoints cover final entry, finger retirement, core/button/beam,
         // the ordinary player's chase rebounds, defeat and ending departure.
-        var spots = Set.of(40500, 40800, 41100, 41450, 41730, 42160,
-                43020, 43440, 43670, 43860, 44100, 44400, 45460, 46900,
-                48330, 49800, 50810, 50900, 51250, 51350, 51570, 51610,
-                51910, 52340, 52800, 53670, 53910, 54240, 54470, 54530, 54650);
+        var spots = Set.of(40406, 40706, 41006, 41356, 41636, 42066,
+                42926, 43346, 43576, 43766, 44006, 44306, 45366, 46806,
+                48236, 49706, 50716, 50806, 51156, 51256, 51476, 51516,
+                51816, 52246, 52706, 53576, 53816, 54146, 54376, 54436, 54556);
         var checked = new HashSet<Integer>();
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);

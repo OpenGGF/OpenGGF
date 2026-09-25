@@ -5097,3 +5097,18 @@ entry. Native and engine hold0 through85 and publish49 at86, with mid-hold
 rewind/replay proof. The DDZ matrix records early test-setup corrections, exact
 commands/results and the matching121-frame clip. Full-scene/end-phase matching,
 remaining breadth and combined campaign delivery remain outstanding.
+
+
+### 2026-09-25 — DEZ cold completion restored after the native spike correction
+
+Replaying the old complete movie at `3881f549a` exposes death21410. A matched
+old-spike-only diagnostic and `Obj_Spikes` initialization show that the movie
+relied on the removed top-damage rebound. Keep the ROM correction and repair
+controller inputs. Six changed movies now cover the pad, altered conveyor
+departure, later ring jump and actual final-load timing; six focused tests pass,
+zero skips, with190 full-registry replay spots. Cold ordinary completion is now
+54692 frames; final-stage entry is40316. The DEZ matrices preserve failed
+attempts, exact commands and the inspected7-second pad/ascent clip. No runtime
+code changed. The same boot-only emerald route reaches DDZ, but its appended
+fresh-flight input exhausts rings; full incoming flight authoring remains active.
+All-level breadth and combined integration/push/cleanup are still outstanding.

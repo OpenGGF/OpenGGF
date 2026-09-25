@@ -1,5 +1,5 @@
-# Cold DEZ1 Sonic+Tails through DEZ2 tube, transport sequences and east hub descent.
-# 2026-09-24 campaign; 28261 controller frames; no gameplay overrides.
+# Cold DEZ1 Sonic+Tails; controller-only route, no gameplay state seeds.
+# Updated after native init-time spike damage selection (39832f596).
 120 R
 3 -
 12 B
@@ -938,7 +938,12 @@
 8 L
 1 -
 4 R
-98 -
+78 -
+50 R
+1 R+A
+10 R
+28 L
+161 -
 5 L
 20 D
 1 D+A
@@ -950,7 +955,7 @@
 120 -
 30 R+A
 1350 R
-354 L
+276 L
 30 L+A
 12 -
 60 L

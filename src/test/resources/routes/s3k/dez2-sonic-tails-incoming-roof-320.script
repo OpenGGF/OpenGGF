@@ -1,5 +1,5 @@
-# Ordinary cold DEZ1 Sonic+Tails through DEZ2 upper gravity route, carrier and countdown launcher.
-# 2026-09-24 campaign; 22960 controller frames; no gameplay overrides.
+# Cold DEZ1 Sonic+Tails; controller-only route, no gameplay state seeds.
+# Updated after native init-time spike damage selection (39832f596).
 120 R
 3 -
 12 B
@@ -938,7 +938,12 @@
 8 L
 1 -
 4 R
-98 -
+78 -
+50 R
+1 R+A
+10 R
+28 L
+161 -
 5 L
 20 D
 1 D+A

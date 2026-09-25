@@ -1,12 +1,18 @@
 # S3K Death Egg Zone act 2 coverage matrix
 
+**Current route revalidation (2026-09-25, based on `3881f549a`):** the
+preserved cold ordinary ending movie initially died at input21410 after the
+native spike correction. Its controller inputs are now repaired:40316 frames
+to the final stage and54692 through the ordinary ending, zero deaths. The dated
+follow-up below distinguishes current verification from historical route lengths.
+
 Game / canonical zone / act: S3K `S3K_DEATH_EGG_2`, engine zone `$0B` act index 1,
 ROM `Current_zone_and_act = $B01`, SKL object set. **Not Sonic 2's Death Egg.**
 Owning plan: [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
 Status: traversal/gravity families and end boss are implemented. Positioned
 DEZ2-boss → final arena → complete DDZ controller routes at320/800 have eleven
 whole-registry replay spots per width. Cold native320 Sonic+Tails now completes
-both main DEZ acts and loads the final stage in40410 controller frames, zero
+both main DEZ acts and loads the final stage in40316 controller frames, zero
 deaths. Eight Act2 routes carry204 full-registry replay spots; the actual final
 load starts an isolated frame-zero timeline. Width/roster/donor and remaining
 lifecycle breadth and native whole-scene acceptance
@@ -34,7 +40,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | Claim | State |
 | --- | --- |
 | Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, solid objects and dust, springs and the sidekick (112 of 116 ROM references covered, none partial or missing and 4 not applicable — the open rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), the implemented gravity interaction families, and the traversal/badnik/shock-block families listed below (494/494 concrete placements) |
-| Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40410 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
+| Cold-reachable | Ordinary native320 Sonic+Tails from cold DEZ1 completes both main acts and loads final DEZ (`$1700`) in40316 frames, without death, health setup or transformation. Preserved `dez2-sonic-tails-incoming-clear-320` route; strict trace parity is a separate claim below |
 | Rewind-verified | Eight cold Act2 routes total204 full-registry capture/restore and45-frame replay spots, including the gravity boss and exit. The final full load resets to frame zero; seeking that earliest snapshot retains zone23. Component and positioned320/800 encounter checks remain linked below; broader lifecycle/breadth still open |
 | Native behaviour matched | The seeded route's first 1256 frames match native exactly in position, camera and rings; the first divergence, native row 21029, is a one-pixel `x` lag while riding a shared `$08` platform — not a Death Egg object. The six segment replay classes are unchanged from the `035e48a58` measurement below |
 | Visually matched | Cold-route moving captures cover traversal, gravity switches, springs, carrier/launchers, unshielded tilting bridge, winding transports, eight-hit gravity boss defeat and final-stage arrival. Latest native320 clips and inspected frames are linked in the dated follow-ups. This is engine presentation evidence; matched native pixel acceptance and full width/roster breadth remain open |
@@ -1027,3 +1033,49 @@ code; that combined campaign gate remains outstanding. The synthetic slope
 is a helper-contract proof, not a new DEZ placement or native-video comparison.
 All112 applicable gravity references now have evidence (four are not applicable).
 Whole-route, roster, lifecycle, viewport and presentation obligations remain open.
+
+
+### 2026-09-25 — cold routes repaired after native spike initialization correction
+
+At `3881f549a`, the unchanged ordinary full-ending test fails at input21410
+(one test, one failure, zero skips). The first changed player contact is20019:
+the upright spike at(6912,1750) was initialized while gravity was reversed and
+retains its underside damage routine after the next gravity change. ROM
+`Obj_Spikes` / `loc_23FE8` XORs placement flip with gravity once, then replaces
+the object's routine pointer; `loc_2413E` tests underside contacts. A matched
+class-only diagnostic using the pre-`39832f596` spike implementation restores
+the old top damage and rebound timing. This attributes the recording change;
+it is not a whole-commit baseline or a native full-route comparison.
+
+Keep the corrected engine behavior. The controller route now brakes onto the
+(7232,1720) pressure pad, adjusts departure from the conveyor for its changed
+contact history, and jumps for rings before the later upper hazard. Trying to
+reuse the entire old tail after only the pad repair dies at23989; repairing the
+shaft departure advances to31127, where the old path reaches a hazard without
+its previous ring pickup. The updated approach survives. Final-stage input is
+aligned to the actual load, not the earlier recording's boss-death frame.
+No positions, velocities, object state, health or rings are injected.
+
+Preserved independent route lengths are roof23190, shaft23893, tilt25263,
+chain28413 and clear40316. Replay checkpoints follow the same interactions;
+all28+14+26+32 traversal spots pass in four tests, zero failures/errors/skips.
+The roof endpoint is now(8718,1132); other independent endpoints retain their
+previous assertions, including the tilting-bridge route's own neutral tail.
+The full ordinary ending capture reaches zone13/act1 after54692 inputs,
+zero deaths. Final/boss test verification is recorded in the final-arena matrix.
+
+Commands use Java21, `DISPLAY=:0`, `python3 tools/testing/maven_queue.py
+-Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path=$S3K_ROM test` with
+`-Dtest=TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind+coldIncomingActTwoDescendsInvertedSpringShaftWithRewind+coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind+coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind`.
+All six changed script/BK2 pairs pass production author/loader round-trip checks.
+The local selection plan falls back to2916 classes because route resources are
+unclassified. These input/test-only changes use direct consumer route and full
+registry replay checks under proportionate validation; the combined campaign's
+shared-code broad run remains required and is not claimed here.
+
+Video: `$VIDEO_ROOT/dez-bring-up/campaign-20260925-cold-switch-repair-320/capture.mp4`,
+420 frames at60fps,7 seconds; complete decode and approach/ascent/exit frames
+inspected. It is engine presentation evidence, not native parity. The ordinary
+full-route state is in `campaign-20260925-repaired-route-trial5`. The same route
+with seven Super Emeralds declared only at boot reaches DDZ at54691; incoming
+DDZ completion remains separate work.

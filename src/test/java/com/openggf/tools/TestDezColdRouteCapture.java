@@ -65,7 +65,7 @@ class TestDezColdRouteCapture {
         boolean complete = route.equals("complete");
         boolean clear = route.equals("clear");
         boolean transition = complete || clear;
-        int historyStart = clear ? 40300 : 14150;
+        int historyStart = clear ? 40206 : 14150;
         boolean chain = route.equals("chain");
         boolean tilt = route.equals("tilt");
         boolean shaft = route.equals("shaft");
@@ -121,49 +121,49 @@ class TestDezColdRouteCapture {
             // Switch/tube ascent, inverted spindash, gravity swap, carrier rise,
             // carrier release, launcher capture/countdown/travel and conveyor descent.
             spots.clear();
-            spots.addAll(Set.of(19800, 19930, 20100, 20300, 20520, 20560,
-                    20620, 20670, 20740, 20775, 20940, 21000, 21050, 21100,
-                    21180, 21320, 21340, 21570, 21790, 21840, 21960, 22000,
-                    22030, 22200, 22400, 22520, 22680, 22890));
+            spots.addAll(Set.of(19800, 19930, 20100, 20300, 20760, 20785,
+                    20830, 20920, 20970, 21005, 21170, 21230, 21280, 21330,
+                    21410, 21550, 21570, 21800, 22020, 22070, 22190, 22230,
+                    22260, 22430, 22630, 22750, 22910, 23120));
         }
         if (shaft) {
             // Curved-wall departure, both inverted spring contacts, corridor
             // spring avoidance and the first ceiling step; earlier tests own the prefix.
             spots.clear();
-            spots.addAll(Set.of(23020, 23180, 23270, 23310, 23330, 23345,
-                    23385, 23400, 23415, 23455, 23485, 23510, 23640, 23690));
+            spots.addAll(Set.of(23172, 23332, 23422, 23462, 23482, 23497,
+                    23537, 23552, 23567, 23607, 23637, 23662, 23792, 23842));
         }
         if (tilt) {
             // Second spring shaft, pressure-pad toggle, staircase deployment,
             // bridge balance/crossing, unshielded exit jumps and following lift.
             spots.clear();
-            spots.addAll(Set.of(23800, 23870, 23920, 23980, 24030, 24090,
-                    24130, 24160, 24230, 24280, 24330, 24390, 24420, 24470,
-                    24530, 24565, 24610, 24645, 24685, 24710, 24745, 24780,
-                    24860, 24930, 24990, 25050));
+            spots.addAll(Set.of(23952, 24022, 24072, 24132, 24182, 24242,
+                    24282, 24312, 24382, 24432, 24482, 24542, 24572, 24622,
+                    24682, 24717, 24762, 24797, 24837, 24862, 24897, 24932,
+                    25012, 25082, 25142, 25202));
         }
         if (chain) {
             // Spring avoidance, vertical tube, west-facing launcher/transport,
             // eastbound corridor, second transport and hub direction/re-capture.
             spots.clear();
-            spots.addAll(Set.of(25070, 25120, 25210, 25270, 25330, 25380,
-                    25430, 25620, 25670, 25730, 25860, 25915, 26030, 26130,
-                    26180, 26260, 26320, 26445, 26500, 26600, 26675, 26780,
-                    26940, 26980, 27050, 27150, 27250, 27350, 27420, 27470,
-                    28190, 28210));
+            spots.addAll(Set.of(25222, 25272, 25362, 25422, 25482, 25532,
+                    25582, 25772, 25822, 25882, 26012, 26067, 26182, 26282,
+                    26332, 26412, 26472, 26597, 26652, 26752, 26827, 26932,
+                    27092, 27132, 27202, 27302, 27402, 27502, 27572, 27622,
+                    28342, 28362));
         }
         if (clear) {
             // Return transports, final traversal, column entries/releases,
             // all eight enemy-published boss hits, breakup and actual exit load.
             spots.clear();
-            spots.addAll(Set.of(28265, 28330, 28420, 28495, 28560, 28620,
-                    28670, 28820, 28860, 28960, 29080, 29210, 29350, 29440,
-                    29520, 29580, 29660, 29720, 29830, 29880, 29940, 29990,
-                    30070, 30110, 30220, 30270, 30360, 30410, 30460, 30530,
-                    30620, 30700, 30800, 30880, 30970, 31040, 31140, 31240,
-                    31320, 31430, 31500, 31680, 31800, 32000, 32500, 33000,
-                    34000, 35250, 35600, 35960, 36260, 37640, 38300, 39620,
-                    39970, 40020, 40100, 40200, 40260));
+            spots.addAll(Set.of(28417, 28482, 28572, 28647, 28712, 28772,
+                    28822, 28972, 29012, 29112, 29232, 29362, 29502, 29592,
+                    29672, 29732, 29812, 29872, 29982, 30032, 30092, 30142,
+                    30222, 30262, 30372, 30422, 30512, 30562, 30612, 30682,
+                    30772, 30852, 30952, 31032, 31122, 31192, 31292, 31392,
+                    31472, 31582, 31652, 31832, 31952, 32152, 32652, 33152,
+                    34152, 35402, 35752, 36112, 36412, 37792, 38452, 39526,
+                    39876, 39926, 40006, 40106, 40166));
         }
         var endBossHealth = com.openggf.game.sonic3k.objects.DezEndBossInstance.class
                 .getDeclaredMethod("healthForTest");
@@ -228,11 +228,11 @@ class TestDezColdRouteCapture {
                     assertTrue(session.player().isObjectControlled(), "transporter holds its rider");
                     assertEquals(frame == 19050 ? 5456 : 5968, session.player().getCentreX());
                 }
-                if (roof && (frame == 21300 || frame == 21880)) {
+                if (roof && (frame == 21530 || frame == 22110)) {
                     assertTrue(session.player().isObjectControlled(), "carrier/launcher holds its rider");
-                    if (frame == 21880) assertEquals(7424, session.player().getCentreX());
+                    if (frame == 22110) assertEquals(7424, session.player().getCentreX());
                 }
-                if (tilt && frame >= 24415 && frame <= 24780) {
+                if (tilt && frame >= 24567 && frame <= 24932) {
                     assertFalse(session.player().hasShield(), "bridge crossing must not rely on a shield jump");
                 }
                 if (!spots.contains(frame)) continue;
@@ -260,7 +260,7 @@ class TestDezColdRouteCapture {
             assertEquals(clear ? 23 : 11, GameServices.level().getCurrentZone());
             assertEquals(clear ? 0 : complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
-                assertEquals(clear ? 96 : chain ? 12992 : tilt ? 9525 : shaft ? 8211 : roof ? 8759 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
+                assertEquals(clear ? 96 : chain ? 12992 : tilt ? 9525 : shaft ? 8211 : roof ? 8718 : transporters ? 6709 : middle ? 4853 : 3196, session.player().getCentreX());
                 assertEquals(clear ? 112 : chain ? 2112 : tilt ? 2156 : shaft ? 1683 : roof ? 1132 : transporters ? 1395 : middle ? 2371 : 2476, session.player().getCentreY());
                 assertEquals(clear ? 0 : chain ? 4 : tilt ? 7 : shaft ? 3 : roof ? 0 : transporters ? 15 : middle ? 14 : 7, session.player().getRingCount());
                 assertEquals(chain, session.player().isObjectControlled(),

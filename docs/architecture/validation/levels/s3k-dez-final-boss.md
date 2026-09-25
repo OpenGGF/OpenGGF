@@ -1,5 +1,11 @@
 # S3K Death Egg final boss arena coverage matrix
 
+**Current route revalidation (2026-09-25, based on `3881f549a`):** the
+preserved cold ordinary ending movie initially died at input21410 after the
+native spike correction. Its controller inputs are now repaired:40316 frames
+to the final stage and54692 through the ordinary ending, zero deaths. The dated
+follow-up below distinguishes current verification from historical route lengths.
+
 Game / canonical zone / act: S3K `S3K_DEZ_BOSS`, engine zone `$17` act index 0,
 ROM `Current_zone_and_act = $1700`. **Not Sonic 2's Death Egg**, and not the
 `$1701` Super Emerald sanctuary, which has its own
@@ -8,7 +14,7 @@ ROM `Current_zone_and_act = $1700`. **Not Sonic 2's Death Egg**, and not the
 Status: hands, core, escape and DDZ handoff are implemented, with positioned
 DEZ2-incoming continuity through complete DDZ at320/800 and whole-registry replay
 evidence. Cold native320 ordinary Sonic+Tails now clears both main acts and all
-final phases, reaching the ordinary ending in54786 controller frames without death
+final phases, reaching the ordinary ending in54692 controller frames without death
 or transformation. The final sequence adds31 full-registry replay spots; DEZ2 entry
 has real full-load history isolation. Native scene matching, remaining roster/donor
 breadth and outgoing ending-history isolation remain open. Nothing below certifies the act.
@@ -38,7 +44,7 @@ level and dies at frame 98. No title card is drawn. Capture:
 | Claim | State |
 | --- | --- |
 | Implemented | Production entry, background stages, captured retained planes, floor/laser/art owners, final root/children, chase and escape dispatch are connected. Widescreen support and planet composition are corrected; exposed boss-body margins use ROM layout outside the preserved native view. |
-| Cold-reachable | Direct final-arena load reaches hands; a controller-only solo 320px route destroys all six fingers, defeats core and ship, and loads DDZ. Positioned incoming DEZ2 continuity passes at320/800. Cold ordinary Sonic+Tails now clears DEZ1, DEZ2 and every final phase through the real ending load in54786 frames; route breadth remains open. |
+| Cold-reachable | Direct final-arena load reaches hands; a controller-only solo 320px route destroys all six fingers, defeats core and ship, and loads DDZ. Positioned incoming DEZ2 continuity passes at320/800. Cold ordinary Sonic+Tails now clears DEZ1, DEZ2 and every final phase through the real ending load in54692 frames; route breadth remains open. |
 | Rewind-verified | Component graphs, retained planes and production entry replay at 320/352/400/528/800 pass. Positioned incoming-route spots pass at320/800. The cold ordinary team adds31 full-registry capture/restore and45-frame replay spots across final phases; lifecycle/route breadth remains open. |
 | Native behaviour matched | ROM routine-backed components; native movie screenshots/VRAM collected. Strict trace rows below are historical and remain red/unrerun. |
 | Visually matched | Native and 800px entry captures inspected; retained boss and moving floor present. Wide planet extension inspected; full phase matching remains open. |
@@ -443,3 +449,30 @@ The54830-row state stream has zero deaths; stills53720/54300/54550/54810 were
 inspected and the whole video decoded without error. This is engine presentation
 evidence, not matched native pixel parity. Remaining width/roster/donor/native
 and lifecycle obligations are unchanged.
+
+
+### 2026-09-25 — ordinary cold completion revalidated after spike correction
+
+The [Act2 follow-up](s3k-dez-act2.md#2026-09-25--cold-routes-repaired-after-native-spike-initialization-correction)
+records the failed old input, ROM attribution and controller-only repair, based
+on `3881f549a`. The actual final-stage load now occurs at40315 (40316 input
+frames), and the ordinary ending loads at54691 (54692 frames). Final input is
+spliced at that production load; no continuation state is supplied or replaced.
+
+Java21 / native GL / the absolute S3K ROM, with
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true
+-Ds3k.rom.path=$S3K_ROM '-Dtest=TestDezColdRouteCapture#coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation,TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding' test`
+passes both tests, zero failures/errors/skips. The first verifies eight enemy-
+published gravity-boss hits,59 full-registry replay spots and final-load history
+isolation. The second verifies all six fingers, eight core hits, eight ship hits,
+31 full-registry replay spots, no death/transformation and the real zone13/act1
+load. Together with the four shorter changed Act2 routes, this repair passes
+six tests and190 replay spots. This is focused route validation; combined
+campaign validation, native whole-scene acceptance and remaining breadth remain
+open.
+
+With seven Super Emeralds declared at the original DEZ1 boot, the same cold
+route reaches DDZ instead at54691. Appending the fresh-DDZ input directly does
+not complete the incoming fight: it exhausts rings at64520. The actual inherited
+flight state requires its own controller route; fresh or positioned completion
+must not be presented as full cold incoming completion.
