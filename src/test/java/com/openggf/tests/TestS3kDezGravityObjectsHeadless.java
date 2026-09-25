@@ -444,10 +444,43 @@ class TestS3kDezGravityObjectsHeadless {
     }
 
     /**
-     * The rewind spot for the pad: capture mid-count, run past the toggle, restore and
-     * replay. The counter and the routine must both come back, or the replay toggles on a
-     * different frame than the first run did.
+     * Contact callbacks can remain pending at the frame boundary. Both the initial
+     * press and the occupied rearm need to survive restore before the next update.
      */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void gravityPadContactAwaitingItsNextUpdateSurvivesRestore(boolean rearming) {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            var sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            var pad = placeSwitch(2);
+            if (rearming) {
+                pressPad(pad, sprite);
+                for (int i = 0; i < 4; i++) pad.update(0, sprite);
+                pad.onSolidContact(sprite, STANDING_ON_PAD, 0);
+                pad.update(0, sprite); // occupied rearm counter is now zero
+            }
+            // Solid callbacks can run after this object's update. These contact
+            // latches are then live across a frame-boundary snapshot.
+            pad.onSolidContact(sprite, STANDING_ON_PAD, 1);
+            var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+            var saved = registry.capture();
+            pad.update(0, sprite);
+            int expectedY = pad.getY();
+            assertTrue(pad.isPressed());
+            registry.restore(saved);
+            var restored = restoredSwitch(pad);
+            restored.update(0, sprite);
+            assertTrue(restored.isPressed(),
+                    "restore must retain the queued press/occupied contact, not rearm or miss a press");
+            assertEquals(expectedY, restored.getY());
+            assertEquals(rearming, GameServices.gameState().isReverseGravityActive());
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
     @Test
     void theGravitySwitchCounterSurvivesACaptureAndRestore() {
         HeadlessTestFixture fixture = fixture();

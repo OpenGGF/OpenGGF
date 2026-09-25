@@ -1125,3 +1125,48 @@ limit; its waiting-heavy Act2 inputs need shortening for an ending route.
 Shared restore changes require the combined campaign broad selection (2920
 ordinary classes plus guards against `e6c6ac79`), still pending; these focused
 results are not a full-suite pass.
+
+
+## Tails lower gravity-pad replay repair (2026-09-25)
+
+After `b7d7ee91f`, `dez2-tails-solo-lower-gravity-pad-320.{script,bk2}` preserves
+47140 ordinary solo/native320 controller inputs from cold DEZ1 through the lower
+Act2 bridge. This is a traversal frontier, not Act2 completion. No state seeds,
+donor, follower or death. The new Tails method in `TestDezSoloActTwoColdRouteCapture`
+checks12 full-registry immediate restores and45-input forward replays. It asserts
+the occupied inverted pad at46581, the production jump-off/return toggle and
+normal gravity at46681, and actual grounded bridge arrival.
+
+An exploratory snapshot branch crossed this pad while a fresh replay stayed
+inverted. First divergence was46582: restored Y2144 versus uninterrupted Y2136.
+`S3kDezGravitySwitchObjectInstance` manually reset pending contact flags on restore.
+`loc_48AD6` and `loc_48B9C` consume `SolidObjectFull` contact in-line; the engine's
+split phases can publish contact after this object's update. Those flags are
+therefore persistent across a frame boundary. Dropping occupied contact let the
+zero rearm counter expire, return the pad8px and accept an unintended new press.
+The codec now captures both flags. Two short armed/occupied-rearm regression
+cases failed before the fix. Do not certify the old snapshot-only branch061;
+its apparent successful toggle was a rewind artefact. Branch064 instead jumps
+off and returns to the rearmed pad through ordinary input.
+
+Queued Java21/DISPLAY=:0 validation with `-Dmse=off` and absolute
+`-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`:
+- `-Dtest=TestS3kDezGravityObjectsHeadless,TestS3kReverseGravityDezCorridor,TestS3kDezGravitySwitchArt,TestDezSoloActTwoColdRouteCapture test`:73 pass,0 failures/errors/skips,1:59 Maven. This includes Sonic's103-window complete Act2 route.
+- `-Dtest=TestDezSoloActTwoColdRouteCapture#coldTailsLowerGravityPadPreservesPendingContactAcrossRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:60 pass,0 failures/errors/skips,1:01 Maven.
+- `-Pguards -Dtest=TestRewindArchitectureGuard,TestRemainingRewindTailInventory test`:5 pass,0 failures/errors/skips,23.796s Maven (no ROM required).
+
+Fresh capture matches all47140 authored rows on12 fields, no deaths/follower.
+`$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260925-tails-lower-pad-fixed-320/`
+has590 frames at60fps (9.833333s), inputs46550–47139, plus inspected occupied-pad,
+released-gravity and bridge stills. Full video decode passes. Engine presentation
+only; native pixel comparison and broader lifecycle products remain open.
+Tails traversal beyond the lower bridge, both solo final fights, and combined
+campaign validation/integration remain pending.
+
+Local validation for this pad-only follow-up is proportionate: its only runtime
+change is the existing pad codec's two pending contact booleans; both consuming
+routines, real cold contact, adjacent gravity behavior, Sonic's complete route,
+required loading checks and rewind guards are exercised. The diagnostic path
+selection against `b7d7ee91f` falls back to all2920 ordinary classes because the
+new route resources are unclassified. That does not replace the pinned combined
+campaign gate against `e6c6ac79`, which remains pending.

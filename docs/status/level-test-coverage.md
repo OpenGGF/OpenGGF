@@ -453,3 +453,11 @@ full-registry replay windows plus actual-load history reset/seek. See the
 for the slot-restoration and retired-parent repairs, focused results and video.
 Solo final completion, Tails Act2/final, remaining breadth and combined campaign
 verification/integration are still open.
+
+
+DEZ2 Tails pad follow-up (2026-09-25): the lower-bridge cold frontier now has12
+full-registry replay windows and a fresh47140-row capture match. The gravity-pad
+codec preserves pending press/occupancy callbacks, fixing the snapshot-only
+extra toggle. See the [Act2 matrix](../architecture/validation/levels/s3k-dez-act2.md#tails-lower-gravity-pad-replay-repair-2026-09-25)
+for failing-before regressions, focused checks/guards and scope. Tails Act2/final
+completion and remaining campaign obligations are still open.

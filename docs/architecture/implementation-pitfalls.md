@@ -138,6 +138,15 @@ ordinary-suite check outside `-Pguards`. Run its real round-trip sweep and updat
 the test/resource totals only after verifying the new class passes or has honest
 graph coverage. A passing coverage guard alone does not check those totals.
 
+**A “this frame” contact flag may cross snapshots.** In split object/solid phases,
+callbacks can run after the object's update. A manual codec must capture those
+pending flags, even if update clears them each pass. DEZ gravity pads cleared
+`pressedThisFrame`/`occupiedThisFrame` on restore: this dropped a queued first
+press or let an occupied zero-counter pad rearm, sink back and toggle again.
+Capture before consumption and replay both the armed and occupied-rearm cases;
+a mid-count snapshot does not cover them. The cold Tails DEZ2 pad at input46581
+exposed an 8px change on the first replayed frame where ordinary play stayed put.
+
 **Subsystem SST reservations must follow object restore.** Attracted rings own
 slots outside the object manager's captured occupant set. Re-register the ring
 adapter after the object adapter when level adapters move, including seamless

@@ -212,7 +212,8 @@ public final class S3kDezGravitySwitchObjectInstance extends AbstractObjectInsta
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
         return super.captureRewindState(context)
-                .withObjectSubclassExtra(new RewindExtra(routine, timer, mappingFrame, sunk));
+                .withObjectSubclassExtra(new RewindExtra(routine, timer, mappingFrame, sunk,
+                        pressedThisFrame, occupiedThisFrame));
     }
 
     @Override
@@ -224,12 +225,17 @@ public final class S3kDezGravitySwitchObjectInstance extends AbstractObjectInsta
             timer = extra.timer();
             mappingFrame = extra.mappingFrame();
             sunk = extra.sunk();
+            // Solid callbacks may follow the object update, leaving these latches
+            // for the next pass. ROM loc_48AD6/loc_48B9C consumes SolidObjectFull
+            // contact in-line; our split phases must preserve pending contact across
+            // rewind or an occupied pad spuriously rearms (or loses its first press).
+            pressedThisFrame = extra.pressedThisFrame();
+            occupiedThisFrame = extra.occupiedThisFrame();
         }
-        pressedThisFrame = false;
-        occupiedThisFrame = false;
     }
 
-    private record RewindExtra(Routine routine, int timer, int mappingFrame, boolean sunk)
+    private record RewindExtra(Routine routine, int timer, int mappingFrame, boolean sunk,
+                               boolean pressedThisFrame, boolean occupiedThisFrame)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
     /**

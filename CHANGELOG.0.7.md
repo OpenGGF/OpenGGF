@@ -141,7 +141,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Act 2's teleporter columns now work too: step into one and it takes hold, spins up, carries
   you to its partner and flips gravity on the way, and a second player can ride without the
   gravity changing under the first.
-  Attracted-ring slot reservations now survive rewind across act transitions,
+  Gravity pads preserve pending contact through rewind, and attracted-ring slot
+  reservations survive rewind across act transitions,
   and the released Robotnik runner and door stop retaining the retired Act 2 boss.
   The act's gravity tunnels now take hold too: run into one and it carries you along, lifting
   and swinging you as it goes, and leaving one while gravity is reversed turns you the right
