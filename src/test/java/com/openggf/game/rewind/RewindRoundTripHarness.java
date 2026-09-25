@@ -1215,12 +1215,14 @@ public final class RewindRoundTripHarness {
             snap = rr.capture();
         } catch (Throwable t) {
             String description = describeThrowable(t);
-            if (isUnregisteredObjectReferenceCapture(description)) {
-                RoundTripSweepResult retried =
-                        tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
-                if (retried != null) {
-                    return retried;
-                }
+            // A constructed child can refer to an unregistered stub parent.
+            // Custom snapshots reject that just as generic reference codecs do;
+            // do not make the registered-parent retry depend on exception wording.
+            // The retry still captures/restores the complete declared parent graph.
+            RoundTripSweepResult retried =
+                    tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
+            if (retried != null) {
+                return retried;
             }
             return new RoundTripSweepResult.Unprobed("capture threw: " + description);
         }
@@ -2588,11 +2590,6 @@ public final class RewindRoundTripHarness {
         }
         String msg = root.getMessage();
         return root.getClass().getSimpleName() + (msg != null ? ": " + msg : "");
-    }
-
-    private static boolean isUnregisteredObjectReferenceCapture(String description) {
-        return description != null
-                && description.contains("RewindIdentityTable has no registered id for object reference");
     }
 
     /**

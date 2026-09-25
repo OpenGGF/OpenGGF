@@ -558,7 +558,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Its final-hit acknowledgement, capsule results and ship controllers now retain
   the correct arena/control ownership through the actual FBZ load. The ship's
   foreground scroll split draws its body and applies the same tile priority to
-  sprite occlusion. Rewind preserves the arena scroll accumulator and spike subtype.
+  sprite occlusion. Rewind preserves the arena scroll accumulator, spike subtype and last capsule
+  contact through the ship handoff. Restoring player control preserves the ROM
+  interaction address in both boss and signpost flows.
   Seamless act handoffs retain fixed object owners without duplicates, avoiding
   a rewind-capture crash after the MHZ signpost. The first player update also retains
   one Insta-Shield owner after the handoff, so post-load rewind does not remove a duplicate.

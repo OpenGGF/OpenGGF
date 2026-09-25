@@ -824,3 +824,16 @@ sticky. Player rewind records binding presence separately from ID and released
 owner provenance, then relinks only the captured slot. Test zero-ID live contact,
 cleared contact with a still-occupied slot, and deleted-owner slot reuse. The
 September25 LRZ boss replay exposed this when a platform expired after restore.
+
+### S3K control restoration preserves the last interaction address
+
+`Restore_PlayerControl` / `Restore_PlayerControl2` clear byte `object_control`
+($2E), clear `Status_InAir`, and publish Wait animation/frame/timer. They do not
+clear word `interact` ($42). The MHZ `loc_76270` post-capsule caller also preserves
+it. An extra engine slot reset left the live capsule reference bound to slot5
+but the captured interaction slot at0; the MHZ cold route first exposed it at
+input22758 when rewind could not relink the contact. Removing the unsupported
+write restores ROM semantics and the full incoming route. Do not solve this by
+weakening rewind comparisons or relinking to the nearest object. Explicit
+interaction clears in other routines (for example FBZ chain release) still apply.
+Evidence: 2026-09-25 S&K campaign broad-validation follow-up.

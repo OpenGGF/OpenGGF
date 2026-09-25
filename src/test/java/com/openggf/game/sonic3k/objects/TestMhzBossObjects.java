@@ -2619,6 +2619,8 @@ class TestMhzBossObjects {
         TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x45C0, (short) 0x0200);
         com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
         com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        player.setInteractSlotIndex(23);
+        sidekick.setInteractSlotIndex(28);
         player.setAir(true);
         sidekick.setAir(true);
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
@@ -2660,6 +2662,8 @@ class TestMhzBossObjects {
 
         assertFalse(player.isObjectControlled(), "Restore_PlayerControl releases results object ownership");
         assertFalse(sidekick.isObjectControlled());
+        assertEquals(23, player.getInteractSlotIndex(), "Restore_PlayerControl preserves interact");
+        assertEquals(28, sidekick.getInteractSlotIndex(), "Restore_PlayerControl2 preserves interact");
         assertFalse(player.getAir());
         assertFalse(sidekick.getAir());
         assertTrue(player.isHighPriority());

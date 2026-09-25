@@ -106,7 +106,8 @@ class TestS3kBossDefeatSignpostFlow {
         S3kBossDefeatSignpostFlow.restoreNativePlayerControl(player);
 
         assertFalse(player.isObjectControlled());
-        assertEquals(0, player.getInteractSlotIndex());
+        assertEquals(23, player.getInteractSlotIndex(),
+                "Restore_PlayerControl does not write interact ($42)");
         assertTrue(player.isControlLocked(),
                 "Restore_PlayerControl must not clear the title-card controller lock");
         assertFalse(player.getAir(),

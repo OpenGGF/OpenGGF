@@ -164,3 +164,17 @@ state. See the audit for the two fixed MHZ rewind defects and the FBZ retained-
 plane palette-ownership correction. The revised875-frame ship-to-FBZ movie
 shows the body, propellers and carry and fully decodes. Native ship footage
 corroborates the foreground split; no matched-frame pixel-parity claim is made.
+
+## Campaign broad-validation follow-up (2026-09-25)
+
+At `ec8854e40`, `TestS3kMhzAct2AuthoredRoute` regressed at the ship restore
+(input22758): `latchedSolidObjectBound` changed true→false. The live capsule was
+in slot5 while `lockPostCapsulePlayerUp` had zeroed the ROM interaction slot.
+`Restore_PlayerControl` only clears `object_control` ($2E); `interact` ($42) is
+untouched. Remove that unsupported write, including its shared signpost copy.
+A one-class diagnostic overlay confirmed the cause before production edits.
+The focused queued Maven run `campaign-broad-repairs-focused` then passed261
+tests, zero failures/errors/skips, including this entire incoming route and all
+eight full-registry restore/45-input replay checkpoints. The existing route
+video remains presentation evidence; the correction is retained contact state.
+All other matrix breadth/lifecycle/native-scene gaps remain open.

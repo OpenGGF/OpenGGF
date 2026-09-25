@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -133,6 +134,28 @@ public final class LrzLavaFallDropInstance extends AbstractObjectInstance
 
     public int getCentreY() {
         return (yPosition >> 16) & 0xFFFF;
+    }
+
+    // Declare the same ROM touch semantics for the shared profile dispatcher.
+    // The legacy accessors below remain compatible with direct object consumers.
+    private static final TouchResponseProfile TOUCH_PROFILE = TouchResponseProfile.fromCanonical(
+            new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
+                    com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode.NORMAL,
+                    false, true, false,
+                    com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability.NONE,
+                    0x10,
+                    com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                    com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                    com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS));
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_PROFILE;
     }
 
     @Override

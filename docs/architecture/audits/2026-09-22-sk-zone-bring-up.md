@@ -67,7 +67,7 @@ X `$2C0`. SSZ positioned captures require `--star-post` because cold screen init
 otherwise overrides the requested position. These are existing findings, not
 new diagnoses.
 
-## Current validation and next work
+## Historical validation and next work (2026-09-22)
 
 - Preflight initially rejected default Lua 5.5.1. Explicit
   `LUA_BIN=/usr/bin/lua5.4` passes Java/Lua/PowerShell prerequisites in the new
@@ -5126,3 +5126,78 @@ shadowed by persistent defeat state, not a completion or rewind divergence.
 The DDZ matrix records commands, rejected steering approaches and the inspected
 42.47-second finale. Combined validation, integration and wider/lifecycle/native
 scene obligations remain open; this is a route milestone, not all-level delivery.
+
+### 2026-09-25 — combined validation and bounded failure repairs
+
+Pinned develop baseline `e6c6ac79a8b411f32998ae13c8e5c94099c1818c` was fetched
+and already current. Candidate `ec8854e40` was clean throughout both lanes.
+With Java21, Lua5.4, DISPLAY=:0 and discovered absolute verified root ROM paths:
+
+- Baseline `python3 tools/testing/run_categories.py --category all --run`:2695
+  classes,21951 tests,0 failures/errors,27 skips,1117.25s ordinary. Its guard
+  process was interrupted (exit130, cause unestablished); only that lane was
+  repeated through `maven_queue.py -Dmse=off -Pguards test -B`:670 tests,0
+  failures/errors/skips. Do not describe the interrupted original invocation as green.
+- Candidate `python3 tools/testing/run_categories.py --base e6c6ac79a8b411f32998ae13c8e5c94099c1818c --run`:
+  all2916 ordinary classes,23774 tests,2 failures,0 errors,29 skips,2188.68s;
+  all86 guard classes,672 tests,1 failure,0 errors/skips,202.02s. Both lanes
+  completed; this is a red full ordinary/guard run, not a green category pass.
+- Ordinary failures: `TestRemainingRewindTailInventory.remainingRoundTripTailMatchesInventory`
+  (Chainspike child registered-parent fixture missing);
+  `TestS3kMhzAct2AuthoredRoute.incomingSonicCompletesActTwoWithLiveRewindBoundaries`
+  (ship contact restore at22758). Guard failure:
+  `TestObjectPhysicsStandardizationGuard.productionObjectPhysicsStandardizationHasNoUnapprovedViolations`
+  (Toxomister cloud, LRZ fireball and falling lava lacked declared touch profiles).
+
+Chainspike correctly rejects a live parent with no identity. The generic test
+constructed that unregistered parent but retried only one exception-message
+spelling. Its existing registered-parent retry passes the same child; allow the
+existing mapped-parent retry on capture failures just as on restore failures,
+without weakening runtime identity checks or reducing the inventory.
+
+The MHZ failure exposed an unsupported interaction-slot clear in
+`lockPostCapsulePlayerUp`, also present in the shared signpost control-restoration
+helper. ROM `Restore_PlayerControl` writes byte $2E, not interaction word $42.
+The independent single-class overlay and then the production correction retain
+slot5/capsule identity through capture/restore and complete the route. Correct
+the old unit-test expectation rather than preserving its inaccurate zero.
+
+The three hazards now declare their existing single-region touch semantics:
+Toxomister $D8 special-property/continuous callbacks, and lava fire-immunity
+bit4 without projectile-deflection bit3. Existing hazard behavior tests check
+these policies. No zone-specific shared-dispatch branch was added.
+
+The follow-up selection plan against `ec8854e40` falls back to2916 classes for
+the generic test harness. The repository's red-run repair policy applies:
+verify the diagnosed repairs and direct consumers narrowly after the completed
+broad run. The first focused command passed261 tests,0 failures/errors/skips:
+`maven_queue.py -Dmse=off -Ds3k.rom.path=<root>/s3k.gen
+-Dtest=TestRewindRoundTripHarnessConstruction,TestRemainingRewindTailInventory,TestChainspikeBadnikInstance,TestMhzBossObjects,TestS3kBossDefeatSignpostFlow,TestS3kMhzAct2AuthoredRoute,TestLrzFireballLauncher,TestLrzLavaFall,TestToxomisterBadnikInstance,TestS3kLrzToxomisterReboundHeadless,TestTouchResponseProfileMapping,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`.
+The focused guard command `-Pguards -Dtest=TestObjectPhysicsStandardizationGuard,TestRewindCoverageGuard`
+passed34 tests,0 failures/errors/skips. Additional consumer/native graphics
+command `-Dopenggf.test.gl.native=true
+-Dtest=TestArenaMaskRenderer,TestBackgroundScrollWrapPixels,TestAiz2BossEndSequenceObjects,TestFbzEndBossFormalCorrections test`
+passed60 tests,0 failures/errors/skips, closing the two new graphics skips.
+Together the repair checks are365 passing tests; this is focused follow-up
+validation, not a repeated full-suite pass.
+
+Skips were inspected: the baseline27 are opt-in diagnostics/captures/soak,
+unavailable EGL/GL checks, CPZ spin-tube fixture assumption, and absent local
+audio reference. No missing-ROM skip. Candidate adds native graphics skips for
+`TestArenaMaskRenderer` and `TestBackgroundScrollWrapPixels`; rerun with
+`-Dopenggf.test.gl.native=true`. Both consumed category diagnostic directories
+were acknowledged for deletion. Do not archive their raw reports.
+
+Requirement reconciliation: original LRZ demands separate Tails and Knuckles
+cold completions; team completion does not close them. Tails ordinary input
+authoring is preserved outside the repo under `lrz-bring-up/campaign-20260925-tails-*`
+(no native-state hydration), not yet certified. DEZ Knuckles remains level-select
+B00/B01 only by accepted scope. DDZ death/ending history-isolation and final
+scene/highlight obligations remain open. No integration, push or cleanup claimed.
+
+Fresh Tails native320 replay of the authored prefix independently matches all
+8651 rows on position/velocity/ground speed/rings/death/mapping/camera, zero
+deaths. The external `campaign-20260925-tails-crusher-progress-320/capture.mp4`
+shows inputs8050–8650 (601 frames/60fps), with the entire cold prefix replayed.
+Full decode and four stills inspected. This is the crusher/collapse/lower-door
+progress demo, not Tails act completion or native visual parity.

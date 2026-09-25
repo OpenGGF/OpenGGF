@@ -152,8 +152,8 @@ class TestRemainingRewindTailInventory {
         // mapping frame are scalars, and its two standing bits are booleans rather than player
         // references so nothing about it needs a rewind annotation. $A5
         // ChainspikeBadnikInstance and its ChainspikeChild are the twelfth and thirteenth:
-        // the body keeps its four children behind @RewindTransient and each child relinks to
-        // the nearest live body, the same shape as the Spikebonker's mace. $60
+        // the body keeps its four children behind @RewindTransient; each child restores
+        // its exact parent identity. The isolated harness seeds that registered parent. $60
         // S3kDezBumperWallObjectInstance is the fourteenth and carries no object state at all:
         // its three shapes are read from the immutable subtype and the gate's open/shut is the
         // zone runtime state's panel bitfield.

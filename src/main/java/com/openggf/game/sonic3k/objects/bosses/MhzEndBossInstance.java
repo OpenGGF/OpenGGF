@@ -671,7 +671,9 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             // loc_76270 calls Restore_PlayerControl/2 before its separate
             // controller lock: results' object_control=$81 must not survive.
             ObjectControlState.none().applyTo(sprite);
-            sprite.setInteractSlotIndex(0);
+            // Restore_PlayerControl clears object_control ($2E), not interact
+            // ($42). Keep the last capsule contact, including its rewind binding.
+            // Clearing the slot here was an engine-only write that broke restore.
             sprite.clearAirForNativeControlRestore();
             sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
             sprite.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.WAIT.id());

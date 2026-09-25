@@ -20,6 +20,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -431,6 +432,28 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
 
     public int getCentreY() {
         return motion.y & 0xFFFF;
+    }
+
+    // Declare the same ROM touch semantics for the shared profile dispatcher.
+    // The legacy accessors below remain compatible with direct object consumers.
+    private static final TouchResponseProfile TOUCH_PROFILE = TouchResponseProfile.fromCanonical(
+            new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
+                    com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                    true, true, false,
+                    com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability.NONE,
+                    0,
+                    com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                    com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                    com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS));
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_PROFILE;
     }
 
     @Override

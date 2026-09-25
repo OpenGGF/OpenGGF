@@ -454,7 +454,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
      * {@code Restore_PlayerControl} / {@code Restore_PlayerControl2} as soon
      * as {@code _unkFAA8} clears. The routine leaves the title-card controller
      * lock and velocities independently owned, while clearing object control,
-     * interaction and in-air state and publishing a fresh Wait animation
+     * in-air state and publishing a fresh Wait animation
      * (docs/skdisasm/sonic3k.asm:180361-180424).
      */
     static void restoreNativePlayerControl(AbstractPlayableSprite player) {
@@ -462,7 +462,9 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
             return;
         }
         ObjectControlState.none().applyTo(player);
-        player.setInteractSlotIndex(0);
+        // Restore_PlayerControl clears object_control ($2E), not the last
+        // standing-object address at interact ($42). Preserve that contact.
+        // The former explicit slot reset was not present in the shipped ROM.
         player.clearAirForNativeControlRestore();
         player.setAnimationId(Sonic3kAnimationIds.WAIT);
         player.getAnimationManager().publishPreviousAnimationId(
