@@ -599,3 +599,11 @@ restore/replay, repeated real death/reloads across five widths and supported
 character/donor teams, plus800px native trio. Act2 post5 reaches inverted gravity
 through its real nearby swap before each death. These positioned local checks do
 not replace cold routes or native presentation evidence.
+
+
+SSZ native presentation follow-up (2026-09-26): read-only original-movie
+observations corroborate replica ship/body ordering and Mecha's high tile priority
+through both Knuckles fights and airborne power-down. Fresh native320 engine team
+and Knuckles captures complete without deaths. Per-act matrices retain the
+unsupported claims explicitly: differing inputs preclude aligned pixel/timing
+parity, and the native Hyper victory skips MTZ's later normal orb/laser phases.

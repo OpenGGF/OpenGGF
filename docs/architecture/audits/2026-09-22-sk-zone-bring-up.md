@@ -6434,3 +6434,57 @@ base `1adf324c2` without conflicts. Queued explicit-ROM
 passes410 cases, zero failures/errors/skips, in49.494s on the main checkout.
 This includes all351 checkpoint cases and59 mandatory S3K checks. No production
 code changed, and this focused result does not claim full-suite coverage.
+
+
+## 2026-09-26 — SSZ native fight presentation survey
+
+At integrated base `3d0c32eec`, fresh BizHawk2.11/GPGX observations replay the
+original Sonic+Tails and Knuckles movies without gameplay RAM writes. The existing
+448920 and412502 native saves preserve each movie's control and render history.
+Both native-reference hosts completed with zero failures. External archive
+`ssz-bring-up/native-fights-20260926` preserves exporter, plans, source hashes,
+per-frame state/object rows and PNGs. Act1 has15,451 continuous rows
+(452000..467450),66,936 object rows and7,726 screenshots; Act2 has6,545 continuous
+rows(413300..419844),23,101 object rows and3,273 screenshots. The Act1 interval
+also includes the movie's bonus visit; it must not be labelled continuous SSZ-only
+play. The Knuckles capture stops before the accepted ending boundary.
+
+ROM SHA1 is`CFBF98C36C776677290A872547AC47C53D2761D6`. Movie SHA256 values are
+`AD40FB0B0A74FA12B08AB71B2E48A7455B388D14F43F4CDED502AC4A15D1B3C0` (Sonic+Tails)
+and`AA892856DF22B7BB1FE5ACCB48DB10B90DC26845D1DCCEE90352DA30349F53CC` (Knuckles).
+Native framebuffer-content probes pass at453000 and419272. State continuity and
+host completion do not alone prove scene parity.
+
+The fresh native observations corroborate specific existing implementation rules:
+
+- GHZ body uses art`$052E`, display bucket4; MTZ body uses the same art word and
+  bucket3. Engine owners retain`$200/$180` respectively. Native453000/453040 and
+  engine4700/4900 show the Eggmobile, Mecha head and original cloud overlap.
+- Act1 Mecha, both Act2 fights, defeat and every observed super/power-down phase
+  retain art`$A3F4` and bucket5. This directly distinguishes hardware high priority
+  (bit15) from sprite order`$280`; `isHighPriority()` already models it correctly.
+  Native419252/419272 and engine7650 show Mecha in front of the island during
+  power-down. No new sprite-priority override is justified.
+- Hyper Sonic defeats the native MTZ replica while it is still descending (last
+  live body Y901, before the normal`$420` hover target). That source does **not**
+  corroborate the later normal orb/laser cycle. Whole-fight pixel/timing parity
+  and unobserved phases remain open; these differently controlled routes are
+  phase-based visual corroboration, not aligned pixel comparisons.
+
+Current engine `GameplayCaptureTool` recordings preserve the cold Act1 team
+route (19,732 frames, every state row identical to the accepted corrected capture,
+zero deaths) and the authored Knuckles pre-ending route (8,704 frames, zero
+deaths). External dirs are`campaign-20260926-full-fights-320` and
+`campaign-20260926-knuckles-fights-declared-320`. The latter declares emeralds
+`3333333` and inherited V-int410766 as its source script requires. An initial
+capture omitted those settings and died at2940; it is a rejected setup, not a
+regression or an unseeded-route completion. No physics, health or comparison-row
+hydration was used in the successful capture.
+
+All four full movies and both short clips decode completely with FFmpeg. They
+are30fps samples (every second gameplay frame),640x448. Native Act2's348x240
+border is cropped at(14,8) before2x nearest-neighbour enlargement; source PNGs
+remain untouched. Short clips: native`native-power-down.mp4`6.5s and engine
+`power-down-and-return.mp4`12s. The videos and README files preserve their source
+frame offsets; they are not synchronized routes. This delivery changes only
+coverage documentation, so no additional engine test suite is needed.

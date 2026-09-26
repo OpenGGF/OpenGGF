@@ -385,3 +385,20 @@ now captures the active final white fade and restores it after retirement at
 320/800, replaying to the same accepted pre-ending stop with matching palette,
 objects, camera and runtime state. The 33-test focused rewind closure run passed
 with no skips; full campaign delivery validation remains separate.
+
+
+### Native fight presentation corroboration (2026-09-26)
+
+Fresh read-only BizHawk2.11 movie playback and current `3d0c32eec` engine
+captures are recorded in the campaign audit under "SSZ native fight presentation
+survey". Both source hashes, frame windows, actual rendered samples and limitations
+are preserved externally in`ssz-bring-up/native-fights-20260926`. This is
+phase-based corroboration with different inputs, not whole-scene pixel/timing parity.
+
+Both native Mecha fights and all observed power-down phases retain art`$A3F4`
+and sprite bucket5. Native419252/419272 and engine7650 visibly corroborate the
+body's high-priority overlap with the floating island. The complete current
+8,704-frame Knuckles movie has no deaths and ends at the accepted pre-ending stop;
+it uses the source script's emerald progress`3333333` and V-int410766. This is
+not an unseeded entry claim. `native-power-down.mp4` and the engine
+`power-down-and-return.mp4` provide30fps clips of the priority comparison.

@@ -712,3 +712,19 @@ spots; wide has49, alongside the existing53 replica spots each. The final
 four-case entry/full-route command passes with no skips (1m13s Maven).
 The fresh wide movie fully decodes at60fps and matches all14,587 author rows;
 remaining donor/roster/lifecycle products and native presentation parity stay open.
+
+
+### Native fight presentation corroboration (2026-09-26)
+
+Fresh read-only BizHawk2.11 movie playback and current `3d0c32eec` engine
+captures are recorded in the campaign audit under "SSZ native fight presentation
+survey". Both source hashes, frame windows, actual rendered samples and limitations
+are preserved externally in`ssz-bring-up/native-fights-20260926`. This is
+phase-based corroboration with different inputs, not whole-scene pixel/timing parity.
+
+GHZ/MTZ Eggmobile and Mecha-head rendering are visible; native body priority
+buckets4/3 and art`$052E` agree with production. Native cloud overlap is retained.
+The fresh19,732-frame engine team capture matches every state row of the accepted
+corrected route and has no deaths. Hyper Sonic kills the original MTZ boss before
+it completes descent, so later normal orb/laser phases still need another native
+observation. Act1 Mecha and defeat retain`$A3F4`/bucket5.
