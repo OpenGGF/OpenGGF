@@ -6198,3 +6198,10 @@ unclassified; focused validation is proportionate for these new fixtures/tests
 and prose, with unchanged production/build contracts. No new full-suite pass
 is claimed. Tails Act 2 completion, other route configurations and remaining
 per-act matrix obligations stay open; accepted scope exclusions remain intact.
+
+
+Integrated as `7296771a1` after fresh fetch/pull confirmed the base unchanged;
+fast-forward with no conflicts. On main `7296771a1`, the same three-route
+queued explicit-ROM selection passes all three cases with zero failures/errors/
+skips, 34.197s. No executable edits followed. The seven-zone goal remains
+active; the next route frontier is Tails MHZ2 after its incoming leaf blower.
