@@ -720,9 +720,10 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
         laserShotsLeft--;
         laserRecoil = LASER_RECOIL_FRAMES;
         laserTimer = LASER_INTERVAL;
-        // ChildObjDat_7AB80: two children at (-$C,-4) and (-$18,-4), the second subtype 1.
+        // ChildObjDat_7AB80: offsets (-$C,-4), (-$18,-4). CreateChild1_Normal
+        // increments d2 by 2, yielding native subtypes 0 and 2 (not array indexes).
         for (int index = 0; index < SszMtzBossLaserChild.LASER_PAIR; index++) {
-            final int subtype = index;
+            final int subtype = index * 2;
             final int dx = index == 0 ? SszMtzBossLaserChild.CHILD_DX_0
                     : SszMtzBossLaserChild.CHILD_DX_1;
             spawnChild(() -> new SszMtzBossLaserChild(new ObjectSpawn(

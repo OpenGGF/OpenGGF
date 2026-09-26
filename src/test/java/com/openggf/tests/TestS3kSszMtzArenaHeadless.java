@@ -584,17 +584,24 @@ class TestS3kSszMtzArenaHeadless {
                     "ChildObjDat_7AB80 is dc.w 2-1, so a shot is always a pair");
             assertEquals(List.of(false, true),
                     fresh.stream().map(SszMtzBossLaserChild::isTrailingForTest).sorted().toList(),
-                    "the two children are subtype 0 and subtype 1");
+                    "the two children are the lead and trailing pieces");
+            assertEquals(List.of(0, 2), fresh.stream().map(shot -> shot.getSpawn().subtype()).sorted().toList(),
+                    "CreateChild1_Normal uses addq.w #2,d2 between the two children");
             for (SszMtzBossLaserChild shot : fresh) {
+                assertTrue(shot.isHighPriority(),
+                        "ObjDat3_7ABFA sets art tile bit 15 for both laser pieces; "
+                                + "loc_7AB8E changes only the trailing piece's sprite bucket");
+                assertEquals(shot.isTrailingForTest() ? 2 : 5, shot.getPriorityBucket(),
+                        "tile priority must preserve the distinct $100/$280 sprite buckets");
                 assertEquals(shot.isTrailingForTest() ? SszMtzBossLaserChild.DELAY_TRAIL - 1
                                 : SszMtzBossLaserChild.DELAY_LEAD - 1,
                         shot.delayForTest(),
-                        "moveq #8,d0 for subtype 1 and moveq #0,d0 for subtype 0, both after "
+                        "moveq #8,d0 for the nonzero subtype and moveq #0,d0 for subtype 0, both after "
                                 + "loc_7ABC2's first subq.w #1");
                 assertEquals(shot.isTrailingForTest() ? SszMtzBossLaserChild.FRAME_TRAIL
                                 : SszMtzBossLaserChild.FRAME_LEAD,
                         shot.mappingFrameForTest(),
-                        "subtype 1 overrides ObjDat3_7ABFA's frame $D with move.b #$C");
+                        "nonzero subtype overrides ObjDat3_7ABFA's frame $D with move.b #$C");
             }
             if (firedOnFrame.size() == SszMtzBossObjectInstance.LASER_SHOTS) {
                 break;

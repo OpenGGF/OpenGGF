@@ -145,6 +145,15 @@ public final class SszMtzBossLaserChild extends AbstractObjectInstance
         return x < left || x > right;
     }
 
+    /**
+     * ObjDat3_7ABFA sets make_art_tile(ArtTile_SSZMTZOrbs,1,1) for both pieces.
+     * loc_7AB8E changes the trailing piece's display bucket to $100, but leaves
+     * art bit 15 set. The shared sheet also serves low-priority orbs, so the
+     * laser owner must publish high tile priority separately from its palette
+     * override and sprite bucket. Otherwise high-priority scenery can erase it.
+     */
+    @Override public boolean isHighPriority() { return true; }
+
     /** {@code ObjDat3_7ABFA}'s last byte: a {@code $80} category, i.e. plain harm. */
     @Override public int getCollisionFlags() { return firing ? COLLISION_FLAGS : 0; }
 
@@ -172,7 +181,7 @@ public final class SszMtzBossLaserChild extends AbstractObjectInstance
 
     public boolean isTrailingForTest() { return trailing; }
 
-    /** {@code ObjDat3_7ABFA}'s frame $D, or the {@code move.b #$C} subtype 1 overrides it with. */
+    /** {@code ObjDat3_7ABFA}'s frame $D, or the {@code move.b #$C} nonzero subtype overrides it with. */
     public int mappingFrameForTest() { return trailing ? FRAME_TRAIL : FRAME_LEAD; }
 
     @Override

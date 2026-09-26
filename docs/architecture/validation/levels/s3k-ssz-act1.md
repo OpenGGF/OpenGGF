@@ -728,3 +728,16 @@ The fresh19,732-frame engine team capture matches every state row of the accepte
 corrected route and has no deaths. Hyper Sonic kills the original MTZ boss before
 it completes descent, so later normal orb/laser phases still need another native
 observation. Act1 Mecha and defeat retain`$A3F4`/bucket5.
+
+
+### Normal MTZ phase follow-up (2026-09-26)
+
+The later-phase observation gap above is superseded by two declared native
+checkpoint experiments: Sonic covers0/A/C/E, including954 laser-phase frames;
+Tails covers0/2/4/6/8 with all eight HP and seven orbs intact. The campaign audit
+records their setup and limits. Native laser art`$A41F`, buckets5/2, subtypes0/2,
+eight-frame trailing delay and46-frame pair spacing corroborate the implementation,
+except for a now-corrected missing high tile priority and trailing subtype ordinal.
+The production three-pair regression reproduces the priority omission before the
+fix. Combined candidate encounter, cold-route and S3K gates pass92 cases with no
+skips. Strict aligned pixel/timing parity and remaining matrix breadth stay open.

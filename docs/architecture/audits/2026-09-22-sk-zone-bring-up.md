@@ -6488,3 +6488,56 @@ remain untouched. Short clips: native`native-power-down.mp4`6.5s and engine
 `power-down-and-return.mp4`12s. The videos and README files preserve their source
 frame offsets; they are not synchronized routes. This delivery changes only
 coverage documentation, so no additional engine test suite is needed.
+
+
+## 2026-09-26 — normal MTZ phases and laser art priority
+
+Base `3afe6c3c0`, isolated `bugfix/ai-ssz-laser-priority`. The earlier native
+Hyper Sonic movie ended the encounter during descent. Two new BizHawk 2.11
+experiments now cover all eight normal phases across independent ordinary-input
+runs: solo Sonic observes 0/A/C/E (954 laser-phase frames), and solo Tails' flight
+observes 0/2/4/6/8 without removing any of the eight HP or seven orbs. These are
+positioned native observations, not cold-route or aligned engine parity evidence.
+
+The checkpoint bank is explicitly declared in external `setup.csv`; the real ROM
+restart performs the load. Each experiment starts untransformed with 40 rings.
+No boss, health, phase or velocity writes occur. The external source movie, exporter,
+plans, savestate, setup ledger and host provenance are under
+`$VIDEO_ROOT/ssz-bring-up/native-mtz-normal-20260926`. Run4's 2,397 controller rows
+replay exactly from its saved entry, including all recorded observations; the
+60fps laser movie covers steps1440..2396. The first replay incorrectly asserted
+post-step frame449087 at a frame449086 save; it was rejected and corrected rather
+than altering gameplay. Earlier idle/grounded avoidance experiments died before
+useful late phases; jumping away at one HP and Tails' flight preserve the phases.
+
+Native laser children carry art `$A41F` (high tile priority), sprite words `$280`
+and `$100`, mappings `$D` and `$C`, subtypes0/2 and an eight-frame trailing delay.
+`ObjDat3_7ABFA` supplies the high bit; `loc_7AB8E` changes only the trailing sprite
+bucket. `CreateChild1_Normal` increments its subtype ordinal by two. Six observed
+pair launches also corroborate the existing46-frame interval within each burst
+(timer `$1E` plus recoil `$10`), so no timing adjustment is warranted.
+
+The engine had the correct palette override and sprite buckets but inherited
+low tile priority from AbstractObjectInstance. Its shared orb sheet cannot supply
+the laser's per-object art bit. An owner-local `isHighPriority` override fixes this;
+the spawn loop also uses native subtypes0/2 rather than array indices0/1. The
+nonzero branch is unchanged. Comments cite the original logic and explain why
+palette, display bucket and tile priority must remain separate. This is another
+specific omitted art bit, not evidence of a shared renderer sorting failure.
+
+The existing live three-pair regression failed before the production change
+(expected high priority, observed false). Candidate validation uses Java21,
+DISPLAY=:0, explicit root S3K ROM and queued Maven:
+`-Dtest=TestS3kSszMtzArenaHeadless,TestSszColdRouteCapture,TestSszSoloColdRouteCapture,TestSszTailsColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`.
+All92 cases pass, zero failures/errors/skips (3m33s), including the live pair
+properties, existing rewind checks and complete cold routes. The change-based
+plan selects2,447 ordinary classes plus guards. Proportionate focused validation
+applies to these local art/subtype constants: no shared renderer, timing, movement
+or snapshot layout changes. This is not a full ordinary-suite or guard pass.
+
+Fresh candidate `campaign-20260926-mtz-laser-fixed-320` repeats the declared
+checkpoint/input of the pre-fix capture: all2,100 state rows are identical.
+Its500-frame60fps640x448 movie and the957-frame native laser movie both fully
+decode. Engine laser and native arm-cycle stills were inspected. This arena view
+is not claimed to demonstrate a visible before/after priority difference; the
+native art word and failing live-child assertion establish the omitted property.

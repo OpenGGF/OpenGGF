@@ -607,3 +607,11 @@ through both Knuckles fights and airborne power-down. Fresh native320 engine tea
 and Knuckles captures complete without deaths. Per-act matrices retain the
 unsupported claims explicitly: differing inputs preclude aligned pixel/timing
 parity, and the native Hyper victory skips MTZ's later normal orb/laser phases.
+
+
+SSZ normal MTZ reference follow-up (2026-09-26): the
+[Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md) now records all
+eight normal phases across two declared native checkpoint experiments. A live
+laser-pair regression covers the corrected art priority and native0/2 subtypes;
+92 combined encounter, cold-route and mandatory S3K checks pass without skips.
+This does not certify aligned pixel/timing parity or the remaining route products.
