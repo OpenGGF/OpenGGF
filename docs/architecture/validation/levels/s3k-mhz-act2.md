@@ -233,3 +233,24 @@ with all other fields identical. The new 1,021-frame/60fps clip continues throug
 release, has no deaths and fully decodes; both raw-pose phase stills were inspected.
 Native table accuracy is established by the disassembly; native video parity is
 not claimed. The rest of the Tails Act 2 route remains in progress.
+
+
+## 2026-09-26 — incoming solo Tails completion
+
+`mhz2-tails-incoming-320.script/.bk2` preserves 35,814 ordinary controller
+inputs from cold MHZ1 through both acts, all nine endboss hits, capsule/results,
+ship carry and released FBZ1. No state seeds, donor or follower; native 320.
+`TestS3kMhzAct2AuthoredRoute` now covers both Sonic and Tails. Each checks nine
+live restore/forward-replay boundaries, including a 90-input weather-fade window
+that crosses controller deletion and reconstructs its four captured palette lines.
+Tails additionally checks the controlled late-pulley climb and airborne upper
+passage. The palette-controller reconstruction regression separately exercises
+both white and return phases; generic empty-constructor probes had missed its
+final-array shape mismatch. The fade algorithm and ROM timing are unchanged.
+
+The fresh `campaign-20260926-tails-act2-clear-320` video matches all 35,454
+shared exploratory rows, apart from input-text representation, has no death or
+follower rows, and reaches released FBZ movement. The 4014-frame 60fps 640×448
+movie fully decodes; defeat and ship stills were inspected. This is engine route
+and presentation evidence, not native-emulator parity. Other widths, native
+pair/donor route breadth and inherited presentation obligations remain open.

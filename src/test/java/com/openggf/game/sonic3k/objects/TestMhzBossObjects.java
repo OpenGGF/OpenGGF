@@ -45,6 +45,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -806,6 +807,56 @@ class TestMhzBossObjects {
                 services.registry.ownerAt(PaletteSurface.NORMAL, 0, 0),
                 "loc_85E64 owns the full Normal_palette while fading toward white");
         assertColorWord(services.level.getPalette(0), 0, 0x0222);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {5, 37})
+    void mhzEndBossPaletteFadeRecreationReplaysBothFadePhases(int restoreFrame) {
+        RecordingPaletteServices originalServices = new RecordingPaletteServices();
+        int[] targetWords = {0x0246, 0x0864, 0x0A20, 0x004E};
+        MhzEndBossPaletteFadeController original = new MhzEndBossPaletteFadeController(
+                new byte[][] {paletteLine(targetWords[0]), paletteLine(targetWords[1]),
+                        paletteLine(targetWords[2]), paletteLine(targetWords[3])});
+        original.setServices(originalServices);
+        for (int frame = 0; frame < restoreFrame; frame++) {
+            advancePaletteFade(original, originalServices, frame);
+        }
+        var saved = original.captureRewindState();
+        // A completed/despawned controller must be recreated, not restored in place.
+        RecordingPaletteServices replayServices = new RecordingPaletteServices();
+        MhzEndBossPaletteFadeController replay = (MhzEndBossPaletteFadeController)
+                original.recreateForRewind(new RewindRecreateContext(
+                        original.getSpawn(), saved, replayServices));
+        replay.setServices(replayServices);
+        replay.restoreRewindState(saved);
+        for (int frame = restoreFrame; frame < 64; frame++) {
+            advancePaletteFade(original, originalServices, frame);
+            advancePaletteFade(replay, replayServices, frame);
+            if ((frame & 3) == 0) {
+                for (int line = 0; line < 4; line++) {
+                    for (int color = 0; color < 16; color++) {
+                        var expected = originalServices.level.getPalette(line).getColor(color);
+                        var actual = replayServices.level.getPalette(line).getColor(color);
+                        String label = "palette replay at frame " + frame + ", line " + line;
+                        assertEquals(expected.r, actual.r, label + " red");
+                        assertEquals(expected.g, actual.g, label + " green");
+                        assertEquals(expected.b, actual.b, label + " blue");
+                    }
+                }
+            }
+            assertEquals(original.isDestroyed(), replay.isDestroyed());
+        }
+        assertTrue(replay.isDestroyed());
+        for (int line = 0; line < 4; line++) {
+            assertColorWord(replayServices.level.getPalette(line), 0, targetWords[line]);
+        }
+    }
+
+    private static void advancePaletteFade(MhzEndBossPaletteFadeController controller,
+                                           RecordingPaletteServices services, int frame) {
+        services.registry.beginFrame();
+        controller.update(frame, null);
+        services.registry.resolveInto(services.level.palettes(), null, null, null);
     }
 
     @Test

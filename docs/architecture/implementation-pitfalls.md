@@ -329,6 +329,14 @@ the next update moved riders from the constructor position. Comparing complete
 world state after one forward frame caught it. Arrays use their own capture policy;
 do not apply this rule to arrays indiscriminately. Origin: 2026-09-22 LRZ bring-up.
 
+**Recreated arrays must accept the captured shape.** A final array is restored by
+copying into its existing allocation. An empty placeholder constructor therefore
+cannot restore a populated array, even when the no-argument inventory probe
+passes. MHZ's weather-machine palette fade exposed this with four target lines
+versus an empty recreated array. Keep variable-shaped snapshot arrays replaceable,
+or recreate the exact required shape; exercise populated live state and forward
+replay through both animation phases. Origin: 2026-09-26 MHZ Tails route.
+
 **Released solid contacts need captured provenance.** A CPU follower can retain
 its last contact after that owner is destroyed and its slot reused. Rewind must
 clear the future Java pointer, preserve the captured released-contact state and

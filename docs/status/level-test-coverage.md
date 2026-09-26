@@ -574,3 +574,12 @@ phase-specific unit coverage and 15 production entry/pose/lift/release/replay
 cases across Sonic, Tails and their native pair at all five presets. Fresh Tails
 video changes only the 124 affected mapping-frame rows in its shared input range.
 Tails Act 2 route completion remains open.
+
+
+MHZ Tails Act 2 continuation (2026-09-26): preserved cold inputs now complete
+both acts, the nine-hit endboss, capsule/results, ship carry and released FBZ1.
+The shared Sonic/Tails Act 2 route test adds live palette-fade deletion/recreation
+and forward replay; Tails also covers the late pulley and upper flight. The live
+route exposed and fixed a populated-array reconstruction error missed by the
+empty-constructor inventory probe. Fresh native 320 video/state replay agrees
+through the handoff. Wider/team/donor route and native presentation gaps remain.

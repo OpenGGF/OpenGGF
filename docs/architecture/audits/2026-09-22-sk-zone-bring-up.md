@@ -6245,7 +6245,8 @@ poses, lift and release. Both raw-pose stills inspected; full ffmpeg decode pass
 no death/follower. It supersedes only the wrong-pose part of the earlier video.
 
 Route authoring remains open: the earlier exploratory upper flight branch
-reached MHZ2's upper passage near (4137,966) but entered a giant ring next.
+reached MHZ2's upper passage near (4137,966); the mode rows show it
+had already entered a giant-ring special stage by input26600.
 The branch tool stopped at the return load and correctly refused restoring an
 outgoing snapshot for another candidate. These trials are not certified new
 route inputs; resume from the committed cold prefix and avoid that entrance.
@@ -6257,3 +6258,61 @@ On main `e373c4d9f`, the combined queued explicit-S3K-ROM selection
 passes165 tests, zero failures/errors/skips,1m27s. No executable edits followed.
 The corrected media README now identifies source `e373c4d9f`. The full campaign
 remains active; Tails Act2 traversal is the next unfinished route.
+
+
+## 2026-09-26 — Tails MHZ2 chase and palette reconstruction
+
+The cold route now passes the vine loops, late pulley and final mushroom using
+ordinary P1 controller inputs, with no position/health/ring seeds. The selected
+prefix reaches the endboss from cold MHZ1 at input 31900. Exploratory branches
+are under external `mhz-bring-up/campaign-20260926-tails-act2-*`; giant-ring and
+lower-passage branches were rejected as route choices, not engine regressions.
+The pulley uses alternating Down/release on its native handle; its raw `$90..$92`
+poses are shared in `loc_3E60C/loc_3E66C`, unlike the character-indexed floor grab.
+
+The first endboss author failed after input 32110 when whole-registry restore
+recreated `MhzEndBossPaletteFadeController`: its final `targetLines` had an empty
+outer array, so generic restore could not copy the captured four palette lines.
+The existing no-argument inventory probe used the same empty shape and missed
+this. Two new populated regressions (white and return phases) reproduce the
+exact exception on base `2f298ba9e`; making the captured array replaceable lets
+restore recover its shape and bytes. `loc_76574` target capture and `loc_85E64`
+fade algorithm/timing are unchanged. The shared capturer is unchanged.
+
+Candidate focused command (queued Maven, explicit S3K ROM):
+`-Dtest=TestMhzBossObjects,TestS3kMhzEndBossGraphRewind,TestRewindFixS3KBatch5Codecs,TestScalarOnlyCodecDeletion#batch40* test`
+passes 131 cases, zero failures/errors/skips. A separate fresh guard JVM with
+`-Pguards -Dtest=TestRewindCoverageGuard,TestRewindFieldDispositionGuard,TestRewindArchitectureGuard,TestRewindRecreateLinkToleranceGuard test`
+passes 7 checks, zero skips. The change-based plan selects 2445 classes; localized
+array reconstruction, populated forward palette replay, graph recreation and
+actual route restore bound this fix, so proportionate validation replaces that
+broad selection. This is focused validation, not a new full-suite pass.
+
+
+The first corrected author reached five hits but repeated the chase: its 4px
+steering ceiling matched the arena scroll, preventing catch-up. A fresh capture
+confirmed Tails remained behind the boss. Raising only the input author's
+steering ceiling to 8px (controller intent, not an engine speed write) completed
+all nine hits at input 33145. The rejected slow-input loop and its34,001-row
+fresh replay matched exactly. The normal 30-Right+jump/30-Right tail then reached
+FBZ load at 35453; the committed 35,814-input route adds neutral destination
+settling and ordinary Right movement. The temporary author is a small adapter
+of the existing SSZ policy search; no new gameplay or author tool is introduced.
+
+Fresh `mhz-bring-up/campaign-20260926-tails-act2-clear-320` matches all 33,146
+boss-author and 35,454 exit-branch rows (excluding input-text representation),
+with zero deaths/followers. Video 4014 frames at 60fps,640×448,66.9seconds, capture
+from 31800; full FFmpeg decode passes and defeat/ship stills were inspected.
+Input/data provenance is in that directory's README. This is engine evidence,
+not a claim of native-emulator presentation parity.
+
+Candidate cold/mandatory selection
+`-Dtest=TestS3kMhzAct2AuthoredRoute,TestS3kMhzTailsAuthoredRoute,TestS3kMhzAuthoredRoute,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passes 63 cases, zero failures/errors/skips. The Act2 test covers Sonic/Tails
+separately: nine whole-world restore/replay spots each, plus Tails pulley/flight.
+The weather-fade window runs 90 inputs, crossing deletion; other windows run 45.
+The accepted trace/Knuckles/standalone exclusions and remaining width/team/donor
+and native-presentation obligations are unchanged.
+
+After adding explicit assertions for the live pulley ownership and airborne
+upper passage, the two Act2 route cases pass again with zero skips.

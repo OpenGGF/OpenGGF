@@ -11,10 +11,12 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossPaletteFadeController;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -30,10 +32,13 @@ class TestS3kMhzAct2AuthoredRoute {
         SessionManager.clear();
     }
 
-    @Test void incomingSonicCompletesActTwoWithLiveRewindBoundaries() throws Exception {
+    @ParameterizedTest
+    @CsvSource({"sonic,23775", "tails,35814"})
+    void incomingSoloCompletesActTwoWithLiveRewindBoundaries(String character, int inputCount)
+            throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
-        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, character);
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
@@ -44,8 +49,10 @@ class TestS3kMhzAct2AuthoredRoute {
         assertTrue(GameServices.sprites().getSidekicks().isEmpty());
         assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/mhz2-sonic-incoming-320.bk2"));
-        assertEquals(23775, movie.getFrameCount());
+                "src/test/resources/routes/s3k/mhz2-" + character + "-incoming-320.bk2"));
+        assertEquals(inputCount, movie.getFrameCount());
+        assertEquals(character, fixture.sprite().getCode());
+        assertEquals(320, fixture.camera().getWidth());
         fixture.runner().primeInputState(movie.getFrame(0));
         var checked = new HashSet<String>();
         // Captures omit title-card presentation; the recording driver retains
@@ -68,6 +75,19 @@ class TestS3kMhzAct2AuthoredRoute {
                 if (GameServices.sprites().getMainPlayable().isObjectControlled()
                         && spot != null && spot.equals("ship")) spot = "ship-carry";
             }
+            if (!manager.activeObjectsOfType(MhzEndBossPaletteFadeController.class).isEmpty()) {
+                spot = "weather-fade";
+            }
+            if (character.equals("tails") && level.getCurrentZone() == 7 && level.getCurrentAct() == 1) {
+                if (frame == 29300) {
+                    assertTrue(fixture.sprite().isObjectControlled(), "late pulley owns Tails");
+                    spot = "pulley-climb";
+                }
+                if (frame == 31750) {
+                    assertTrue(fixture.sprite().getAir(), "Tails is airborne over the final mushroom");
+                    spot = "upper-flight";
+                }
+            }
             // The fresh-load row still belongs to the non-rewindable title/fade
             // boundary (RecordingFrameDriver deliberately runs no gameplay there).
             // Observe the released destination, not a mid-load registry snapshot.
@@ -78,7 +98,10 @@ class TestS3kMhzAct2AuthoredRoute {
             if (spot != null && checked.add(spot)) {
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 var saved = registry.capture();
-                int horizon = Math.min(45, frameLimit - frame - 1);
+                // Cross the fade controller's deletion so restore must reconstruct
+                // its populated target palette, rather than copying into a live owner.
+                int horizon = Math.min(spot.equals("weather-fade") ? 90 : 45,
+                        frameLimit - frame - 1);
                 for (int n = 1; n <= horizon; n++) step(fixture, inputAt(movie, frame + n));
                 var expected = registry.capture();
                 registry.restore(saved);
@@ -91,8 +114,10 @@ class TestS3kMhzAct2AuthoredRoute {
                 if (spot.equals("fbz-loaded")) break;
             }
         }
-        assertEquals(Set.of("admission", "chase-hit", "last-hit", "defeat", "capsule-results",
-                "ship", "ship-carry", "fbz-loaded"), checked);
+        var required = new HashSet<>(Set.of("admission", "chase-hit", "last-hit", "defeat",
+                "capsule-results", "ship", "ship-carry", "fbz-loaded", "weather-fade"));
+        if (character.equals("tails")) required.addAll(Set.of("pulley-climb", "upper-flight"));
+        assertEquals(required, checked);
         assertEquals(4, GameServices.level().getCurrentZone());
         assertEquals(0, GameServices.level().getCurrentAct());
         assertFalse(GameServices.sprites().getMainPlayable().isObjectControlled());
