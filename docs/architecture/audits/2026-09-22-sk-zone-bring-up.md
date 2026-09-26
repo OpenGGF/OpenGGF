@@ -6643,3 +6643,68 @@ because the committed route and decision notes preserve their useful evidence.
 The all-zone goal remains active; MHZ width/donor/team and native-presentation
 breadth, and the other act matrices' remaining obligations, are not certified by
 this native-pair completion.
+
+
+## 2026-09-27 — SSZ implicit-checkpoint bridge reload
+
+Base `0adeded4a`, isolated `feature/ai-ssz-bridge-reload`. The SSZ1 matrix still
+owed an actual death after the opening bridge's implicit checkpoint. The older
+lifecycle case started at post3 and its positioned bridge test saved both
+checkpoint records together, so neither exercised the restored-index/empty-history
+combination of a real reload.
+
+The new `TestSszBridgeCheckpointCapture` follows cold arrival and ordinary Right
+input until the production bridge writes checkpoint1. It then uses `applyPitDeath`
+as an explicitly declared lethal stimulus and follows GameLoop through two real
+reloads. Checkpoint, coordinates, event state and terrain are never injected.
+It asserts saved `($140,$C6C)`, fresh SSZ state, skipped arrival, live-history
+isolation, playable movement, the extended bridge, character identities, donor
+rules and participant renderer/mapping availability after reload.
+
+All25 initial rows failed at the same bridge assertion on unchanged production.
+Twenty were supported native/S2 configurations; five raw S1+Tails overrides were
+later rejected by the participant-art checks and are not compatibility evidence.
+The final25-row matrix replaces those with supported S1 Sonic solo and asserts
+every requested launch profile survives production menu sanitization unchanged. `Obj_SSZCutsceneBridge` (`sonic3k.asm`, `loc_44F9E` dispatch)
+reads `Last_star_post_hit`. The engine instead read the separate activation
+high-water, empty after reload, and kept the bridge at its initial X+$C0 offset
+awaiting a cutscene that ScreenInit correctly suppresses. The fix reads the
+restored checkpoint index, like ScreenInit. Source comments preserve the ROM
+branch and explain the mismatched engine fields. No shared lifecycle or geometry
+change is needed.
+
+Two rejected test assumptions were corrected before the red bridge result:
+current selectable widths are320/352/400/528/800, derived from `WidescreenAspect`,
+not the older512/640 matrix values; and the history-reset check must reacquire
+the controller after reload rather than inspect the discarded controller.
+The checkpoint assertion likewise names `getLastCheckpointIndex`, the actual
+Last_star_post_hit field, rather than the independent activation high-water.
+The corrected red run had25 failures, zero errors/skips, all at bridge dispatch
+(33.83s). This is direct reproduction, not a test adjusted to the implementation.
+
+Queued Java21/native-display candidate command, with absolute root S1/S2/S3K ROM
+properties, `-Dmse=off -Dtest=TestSszBridgeCheckpointCapture,TestS3kSszKnucklesBridgeHeadless,TestS3kSszLifecycleProduction,TestS3kSszArrivalHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed111 cases, zero failures/errors/skips (1m42s). This includes50 reloads.
+Those initial111 checks did not yet assert participant art. Adding that assertion
+rejected the five unsupported S1+Tails configurations (20 passed, five renderer
+failures). The final supported matrix includes renderer/mapping assertions and
+a longer post-reload walk across the bridge, rather than merely admitting it.
+
+The inspected change-based plan selects2587 classes plus guards. Proportionate
+focused validation applies: one object-local checkpoint selector, unchanged
+state layout/update timing/renderer/shared contracts, directly reproduced across
+all current presets and supported donor lifecycles, plus the existing
+cold-arrival/bridge/lifecycle and required S3K loading regressions. No full-suite,
+full-zone certification or synchronized native framebuffer claim is made.
+
+Final supported candidate matrix passes25 cases, zero failures/errors/skips
+(44.09s test time,1m05s Maven), including participant art and50 real reloads.
+Native320 and800 independent rendered reruns both contain2483 frames at60fps,
+end alive at `(1019,3180)` beyond the bridge and pass all lifecycle assertions.
+Both movies fully decode with ffmpeg; frame1900 shows Sonic on the restored
+bridge with Tails visible behind him. The temporary recorder only adds PNG/CSV
+output around the committed test procedure; `applyPitDeath` is declared, so these
+are lifecycle demos rather than controller-authored death routes.
+External evidence: `$VIDEO_ROOT/ssz-bring-up/campaign-20260927-bridge-reload-320/`
+and `campaign-20260927-bridge-reload-800/` (`capture.mp4`, `state.csv`, `frames/`,
+`README.md`). Integration verification is recorded after the source commit.

@@ -623,3 +623,12 @@ MHZ native-pair completion (2026-09-27): the
 deaths. Sixteen paired Act2 full-registry replay spots and a separate production
 GameLoop live-history reset check pass. The short Act1/entry fixtures remain
 independent; remaining width/donor/team products and native visual parity stay open.
+
+
+### SSZ1 bridge checkpoint follow-up (2026-09-27)
+
+The [SSZ1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#cold-bridge-checkpoint-and-repeated-respawn-2026-09-27)
+adds cold arrival to the implicit checkpoint and two real GameLoop death/reloads
+for25 native/donor/preset configurations. It reproduces and corrects the bridge's
+activation-history/index mismatch. This closes the specific bridge-restart gap;
+remaining SSZ route, roster and native-presentation obligations remain open.

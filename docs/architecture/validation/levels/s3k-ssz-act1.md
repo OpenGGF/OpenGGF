@@ -177,8 +177,8 @@ reachability, not a trace replay, and no frontier is claimed past `$6EB`.
 - Rewind spots now exist for slice 3's six families, the `$7E` debris deletion (the first SSZ spot
   where an `ObjectRefId` sidecar is load-bearing, because the children really are gone at the
   restore) and the Green Hill fight. The new arrival checks below cover rise/swing/release at all five widths and native rosters. Mid-cutscene and complete act breadth remain open.
-- The pseudo-starpost's other half — die after the bridge and respawn at `($140,$C6C)` — is still
-  owed. Slice 4 drives a real death and reload, but at `$34:$03`, not at the bridge's write.
+- The bridge-written checkpoint now has a cold arrival/two-death lifecycle regression; see
+  the 2026-09-27 follow-up below. Slice 4's older `$34:$03` restart remains a separate case.
 - Historical cutscene issue (addressed in the 2026-09-24 follow-up): the Death Egg's palette/children and cutscene Knuckles'
   resting X are filed in [s3k-known-bugs](../../../status/s3k-known-bugs.md).
 
@@ -741,3 +741,33 @@ except for a now-corrected missing high tile priority and trailing subtype ordin
 The production three-pair regression reproduces the priority omission before the
 fix. Combined candidate encounter, cold-route and S3K gates pass92 cases with no
 skips. Strict aligned pixel/timing parity and remaining matrix breadth stay open.
+
+
+## Cold bridge checkpoint and repeated respawn (2026-09-27)
+
+`TestSszBridgeCheckpointCapture` starts SSZ1 normally, follows the arrival with
+ordinary Right input and waits for the bridge to publish checkpoint1. It never
+injects a checkpoint or saved position. It then invokes the production pit-death
+entry twice, allowing GameLoop to perform each actual reload. Each restart must
+retain `($140,$C6C)`, skip the arrival, rebuild the SSZ runtime, isolate populated
+live rewind history and admit the already-extended bridge during ordinary movement.
+
+The25 configurations use the actual five `WidescreenAspect` presets
+(320/352/400/528/800): native Sonic, Tails and Sonic+Tails at each width, plus
+S1 Sonic and S2 Sonic+Tails at each width. Older matrix widths512/640 are not selectable
+presets in the current capture/runtime configuration; this check derives its
+values from the production enum and asserts the resolved width after reload.
+It verifies donor identity and spindash capability after each reload. Knuckles'
+Act2 entry, mixed/max/duplicate teams and native framebuffer matching remain separate.
+
+The red test reproduced the bridge failure in all20 supported native/S2 rows
+and five initially unsupported S1+Tails rows. The latter were replaced by
+menu-supported S1 Sonic solo; all final rows assert launch-profile sanitization. The
+checkpoint index survives death, but its separate used-post activation record is
+empty. `Obj_SSZCutsceneBridge` tests `Last_star_post_hit` before dispatching to
+`loc_4501A`; our bridge incorrectly tested the activation record and waited at
+placement X+$C0 for a cutscene which correctly no longer runs. Its selector now
+reads the restored checkpoint index, matching the ROM and SSZ screen init.
+No shared respawn, physics, camera or rewind behavior changes.
+
+Execution and delivery evidence is recorded in the campaign audit.

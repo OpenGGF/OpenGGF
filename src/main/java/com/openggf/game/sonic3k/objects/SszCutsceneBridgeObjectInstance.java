@@ -142,7 +142,11 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
 
     private boolean starPostHit() {
         var checkpoint = services().checkpointState();
-        return checkpoint != null && checkpoint.getStarPostActivationMark() > 0;
+        // Obj_SSZCutsceneBridge tests Last_star_post_hit, restored by the death
+        // reload. The separate activation high-water models used-post history;
+        // it can be empty after reload even when Saved_X/Y and the index survive.
+        // Reading it here left the bridge at +$C0 with no cutscene to extend it.
+        return checkpoint != null && checkpoint.getLastCheckpointIndex() > 0;
     }
 
     private SszZoneRuntimeState state() {

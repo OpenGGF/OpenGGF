@@ -32,7 +32,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   back on the settle swing, Tails arrives on her own beam, and the act's dynamic camera bands
   and vertical wrap follow the player. The cutscene Knuckles who opens the route — his beam,
   the Death Egg he watches rise, the grey button and the bridge that extends over the gap,
-  with the checkpoint it leaves behind — is in place. The rising Death Egg applies and restores
+  with the checkpoint it leaves behind — is in place. Death at that checkpoint
+  restores the extended bridge and skips the arrival scene, including repeated reloads. The rising Death Egg applies and restores
   its ROM cutscene palette, cloud, mask and animated trails, and launches its
   decorative missiles on the V-int cadence. The act's sky is its own now: the
   background switches between the plain sanctuary framing and the banded cloud layer as the
