@@ -6149,3 +6149,11 @@ and coverage prose changed, with no runtime/build/selection contract change.
 This is not a new full-suite or native-emulator presentation claim. Existing
 accepted Knuckles/standalone/trace exclusions remain unchanged; other lifecycle,
 broader team, traversal and presentation obligations remain in both matrices.
+
+
+Integrated as `bc0c83f3c` after a fresh fetch/fast-forward pull confirmed the
+base unchanged; no conflicts or unrelated edits. On main `bc0c83f3c`, the same
+queued explicit-ROM `-Dtest=TestMhzCheckpointRoutes test` selection passes all
+343 cases, zero failures/errors/skips, 53.973s. No executable changes followed.
+The next campaign slice is MHZ's remaining accepted-route/breadth obligations;
+this checkpoint slice does not complete the seven-zone goal.
