@@ -531,7 +531,8 @@ SSZ Tails continuation (2026-09-26): the
 53-window replica and47-window upper/final rewind tests pass. An800px
 replay exposed an unreachable GHZ entry gate; a bounded preliminary camera
 projection fix now passes the five-width cold-approach regression (7 tests
-including both routes, no skips); broader integration checks remain pending.
+including both routes, no skips); integrated42-case route/arena verification
+now passes without skips, including all8 final Tails cases.
 Native presentation parity and other inherited breadth/lifecycle gaps stay open.
 
 The800 replica continuation additionally passes53 full-registry replay windows,

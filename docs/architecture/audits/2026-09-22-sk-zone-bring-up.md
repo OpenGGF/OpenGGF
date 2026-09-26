@@ -5955,3 +5955,18 @@ decode at60fps/1600x448. All6,109 GHZ and9,683 MTZ CSV rows match the independen
 wide probe exactly, with zero deaths/followers; defeat and released receiving-pad
 stills were inspected. These clips include activation, fight, defeat, mask release
 and transport; they do not certify full wide Act1 or native-emulator parity.
+
+
+Integration checkpoint: source/routes committed as `75c9caf16`, then
+fast-forwarded into main `develop` after fresh fetch/pull confirmed no upstream
+changes. No conflicts or unrelated-file edits. On integrated `75c9caf16`,
+`OPENGGF_MAVEN_QUEUE=serial JAVA_HOME=/usr/lib/jvm/java-21-openjdk DISPLAY=:0
+python3 tools/testing/maven_queue.py -Dmse=off
+-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestSszTailsColdRouteCapture,TestS3kSszGhzArenaHeadless,TestS3kSszMtzArenaHeadless test`
+passes42 tests,0 failures/errors/skips,3m18s; all8 Tails cases pass together.
+The complete candidate guard profile and wider304-case SSZ selection above
+remain the unchanged-code supporting evidence. This closes this bounded SSZ
+slice, not the remaining seven-zone campaign obligations. Next route work:
+complete wide Mecha with authored controller inputs; preserve/promote the
+reusable boss-input lookahead method, then continue the level matrices.
