@@ -539,3 +539,15 @@ The800 replica continuation additionally passes53 full-registry replay windows,
 both eight-hit defeats and both gated transport releases. Fresh wide movies
 include defeat/release and match the independent probe's state rows. Full800
 Mecha completion is still open; no additional mask behavior was changed.
+
+
+SSZ wide final continuation (2026-09-26): cold Tails exposed a35px Mecha attack-box
+shift missed by checkpoint starts. The final captured arena flag now uses the
+existing widescreen fixed-X policy; the shared camera and player bounds are
+unchanged. Cold320/800 pre-activation/allocation regressions and five checkpoint
+presets pass. Native17,670 and wide16,893-input full Tails routes now pass with
+actual DEZ load, all eight final hits, no deaths, history isolation and lock
+retirement;100 native/102 wide route rewind windows are verified. Fresh800 video
+includes the fight, results, ascent and DEZ arrival. The reusable controller
+lookahead author is promoted with independent fresh-replay verification.
+Other matrix gaps and native-emulator presentation parity remain open.

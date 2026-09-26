@@ -11,7 +11,6 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -65,6 +64,51 @@ class TestSszTailsColdRouteCapture {
             }
             assertTrue(spawned, "ordinary leftward approach must reach the GHZ allocation gate at width " + width);
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {320, 800})
+    void coldMechaEntryRetainsItsNativeWorldBox(int width) throws Exception {
+        String file = width == 320 ? "ssz1-tails-solo-cold-complete-320.bk2"
+                : "ssz1-tails-solo-cold-complete-800.bk2";
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of("src/test/resources/routes/s3k/" + file));
+        var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
+        boolean initialized = false;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
+            assertEquals(width, GameServices.camera().getWidth());
+            for (int frame = 0; frame < 13558; frame++) {
+                session.step(movie.getFrame(frame)); session.render();
+                assertFalse(session.player().getDead(), "approach death at " + frame);
+                if (frame == 13190 || frame == 13230) {
+                    var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                    var saved = registry.capture();
+                    for (int n = 1; n <= 45; n++) {session.step(movie.getFrame(frame+n));session.render();}
+                    var forward = registry.capture();
+                    registry.restore(saved);
+                    same(saved, registry.capture(), "Mecha entry restore width " + width);
+                    session.restoreInputHistory(movie.getFrame(frame));
+                    for (int n = 1; n <= 45; n++) {session.step(movie.getFrame(frame+n));session.render();}
+                    same(forward, registry.capture(), "Mecha entry replay width " + width);
+                    registry.restore(saved); session.restoreInputHistory(movie.getFrame(frame));
+                }
+                var boss = GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class)
+                        .stream().findFirst().orElse(null);
+                if (boss == null || !boss.initExecutedForTest()) continue;
+                var state = com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                        .currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+                // sub_575EA pins native Camera_X=$19A0; loc_7B308 adds $20/$120/$160.
+                assertEquals(0x19A0 - (width - 320) / 2, GameServices.camera().getX());
+                assertEquals(0x19C0, state.bossLeftX());
+                assertEquals(0x1AC0, state.bossRightX());
+                assertEquals(0x1B00, boss.getX());
+                assertEquals(0x660, boss.getY());
+                initialized = true;
+                break;
+            }
+        }
+        assertTrue(initialized, "cold route must actually initialize Mecha");
     }
 
     @ParameterizedTest
@@ -148,13 +192,20 @@ class TestSszTailsColdRouteCapture {
         }
     }
 
-    @Test
-    void coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory() throws Exception {
+    @ParameterizedTest
+    @ValueSource(ints = {320, 800})
+    void coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int width) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-320.bk2"));
-        assertEquals(17670, movie.getFrameCount());
-        var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
-        var spots = Set.of(9675, 9780, 9850, 10000, 10120, 10300, 10491, 10570,
+                "src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-" + width + ".bk2"));
+        assertEquals(width == 320 ? 17670 : 16893, movie.getFrameCount());
+        int historyStart = movie.getFrameCount() - 120;
+        var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
+        var spots = width == 800 ? Set.of(9683, 9788, 9858, 10008, 10128, 10308,
+                10499, 10578, 10648, 10698, 10828, 10988, 11108, 11238, 11308, 11408,
+                11708, 11808, 11908, 12008, 12128, 12308, 12488, 12608, 12908, 13008,
+                13138, 13208, 13358, 13558, 13600, 13690, 13760, 13830, 13980, 14080,
+                14200, 14300, 14400, 14500, 14580, 14640, 14750, 14900, 15200, 15600,
+                16000, 16400, 16650) : Set.of(9675, 9780, 9850, 10000, 10120, 10300, 10491, 10570,
                 10640, 10690, 10820, 10980, 11100, 11230, 11300, 11400, 11700,
                 11800, 11900, 12000, 12120, 12300, 12480, 12600, 12900, 13000,
                 13130, 13200, 13350, 13550, 13650, 13850, 14000, 14200, 14400,
@@ -168,7 +219,7 @@ class TestSszTailsColdRouteCapture {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 // Enable live history after the independent registry replay windows.
-                if (frame == 17550) GameServices.configuration().setSessionOverride(
+                if (frame == historyStart) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame)); session.render();
                 assertFalse(session.player().getDead(), "death at " + frame);
@@ -182,7 +233,7 @@ class TestSszTailsColdRouteCapture {
                     assertTrue(next <= health, "Mecha cannot regain health");
                     hits += health - next; health = next;
                 }
-                if (frame >= 17550 && GameServices.level().getCurrentZone() == 10) {
+                if (frame >= historyStart && GameServices.level().getCurrentZone() == 10) {
                     var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                     if (rewind != null) outgoingHistory = Math.max(outgoingHistory, rewind.currentFrame());
                 }
@@ -205,6 +256,8 @@ class TestSszTailsColdRouteCapture {
             assertEquals(0, GameServices.level().getCurrentAct());
             assertEquals(48, session.player().getCentreX());
             assertEquals(2476, session.player().getCentreY());
+            assertTrue(com.openggf.game.internal.NativeArenaCameraFraming.current()
+                    .lockedNativeHorizontalCamera().isEmpty(), "SSZ final X lock must retire at the DEZ load");
             assertTrue(outgoingHistory > 10, "outgoing SSZ history must actually exist");
             var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
             for (int n = 0; n < 30; n++) {session.step(neutral);session.render();}

@@ -28,6 +28,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -102,13 +104,19 @@ class TestS3kSszMechaSpawnHeadless {
      * instruction, and the two box words and the two positions are all derived from the camera
      * at the moment of the allocation, not from the pad.
      */
-    @Test
-    void theInitTakesItsBoxAndItsEntryFromTheCameraAtTheAllocation() {
-        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+    @ParameterizedTest
+    @ValueSource(ints = {320, 352, 400, 528, 800})
+    void theInitTakesItsBoxAndItsEntryFromTheCameraAtTheAllocation(int width) {
+        HeadlessTestFixture fixture = bootAtCheckpoint(width, PAD_X, PAD_Y);
         SszMechaSonicObjectInstance boss = runToSpawn(fixture);
         var camera = GameServices.camera();
-        int cameraX = camera.getX() & 0xFFFF;
-        int cameraY = camera.getY() & 0xFFFF;
+        assertEquals(width, camera.getWidth(), "actual requested viewport");
+        // sub_575EA's $19A0 bound is the same world anchor at every width.
+        // Comparing only against the current displayed camera would hide a shifted boss box.
+        int cameraX = FINAL_ARENA_MIN_X;
+        int cameraY = FINAL_ARENA_Y;
+        assertEquals(cameraX - Math.max(0, (width - 320) / 2), camera.getX(),
+                "final lock must project the same native arena as the boss initialization");
 
         // The init runs on the boss's first update, which a plain AllocateObject may defer to
         // the next frame; step until it has.
@@ -886,8 +894,8 @@ class TestS3kSszMechaSpawnHeadless {
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, partner);
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
-                width == 320 ? WidescreenAspect.NATIVE_4_3.name()
-                        : WidescreenAspect.WIDE_16_9.name());
+                java.util.Arrays.stream(WidescreenAspect.values())
+                        .filter(aspect -> aspect.pixelWidth() == width).findFirst().orElseThrow().name());
         config.resolveDisplayAspect();
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
         CrossGameFeatureProvider.getInstance().resetState();

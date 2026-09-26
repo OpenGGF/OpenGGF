@@ -26,7 +26,7 @@ its original unimplemented counts must not be read as current production status.
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; all eleven placed posts now activate through ordinary local movement for four native teams (44 cases), with immediate restore and two forward replays; physical contact now composes with two real death/reloads for every post, four native teams and all five selectable widths (220 cases/440 reloads); the supported S1/S2 standard-team product now adds 220 cases/440 reloads, with donor rules/art retained; finish cold-route and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Solo Knuckles now completes both acts and the direct HPZ exit in52659 inputs with289 full-registry replay spots across five scoped tests. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. |
-| SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. Solo Sonic now clears both replica bosses in 11,200 cold inputs without deaths, with 42 passing full-registry replay windows; his complete 19,845-input route now defeats Mecha and loads DEZ with 41 further passing replay windows and live-history isolation. Native 320px solo Tails now has a fresh 17,670-input completion through the actual DEZ load, without death; 100 additional native route replay windows and load isolation pass. The corrected preliminary camera bounds pass all five cold approach widths; an800px controller route clears both replicas with53 further replay windows. Wide final Mecha completion remains open. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
+| SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. Solo Sonic now clears both replica bosses in 11,200 cold inputs without deaths, with 42 passing full-registry replay windows; his complete 19,845-input route now defeats Mecha and loads DEZ with 41 further passing replay windows and live-history isolation. Native 320px solo Tails now has a fresh 17,670-input completion through the actual DEZ load, without death; 100 additional native route replay windows and load isolation pass. The corrected preliminary camera bounds pass all five cold approach widths; an800px controller route clears both replicas with53 further replay windows. Wide solo Tails now completes all three bosses and actual DEZ arrival in16,893 inputs, with102 route replay windows and final-lock retirement verified. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
 | DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. Ordinary solo Sonic now also completes Act1 and reaches released Act2 control in23533 inputs, zero deaths, with61 full-registry replay spots; Tails now completes the same cold Act1 handoff in29521 inputs with75 further replay windows. Solo Sonic Act2 now completes all8 boss hits and the final-stage load in53842 inputs with103 full-registry replay windows; Tails now completes Act2 and the actual final-stage load in62588 inputs with56 passing replay windows; the short47140-input lower-pad fixture remains independent. Sonic solo now completes the full cold DEZ1/DEZ2/final chain through the actual ending in60920 inputs after the native floor-contact correction, zero deaths, with68 additional replay windows. Tails now has an independently captured68266-input cold ordinary ending route with no deaths; all 84 final-route replay windows now pass. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,316frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in49448frames after that correction with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 through complete DDZ with eleven full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; full cold native320 DEZ1-to-DDZ now completes both boss phases and the ending request in59722 inputs after the final-floor correction with boot-only emeralds. Native Hyper-star queue phase and HUD redraw timing are matched with rewind checks; death reload and declared post-white-fade ending-request/load boundaries now verify live-history isolation at320/800. Whole-scene presentation and remaining breadth still need validation. |
 
@@ -5970,3 +5970,123 @@ remain the unchanged-code supporting evidence. This closes this bounded SSZ
 slice, not the remaining seven-zone campaign obligations. Next route work:
 complete wide Mecha with authored controller inputs; preserve/promote the
 reusable boss-input lookahead method, then continue the level matrices.
+
+
+## Wide SSZ final continuation and author promotion (2026-09-26)
+
+Previous goal turn made concrete progress: `75c9caf16` fixed the five-width
+preliminary replica gate and added native Tails completion plus wide replica
+rewind routes; `ead143d2d` recorded integration. Both are pushed, the old task
+worktree was removed, and fresh fetch/pull confirms main unchanged. New work
+uses `feature/ai-ssz-wide-author` / `.worktrees/ai-ssz-wide-author`, based on
+ead143d2d. Existing main disassembly edits and unrelated files are preserved.
+
+Promote the recurring SSZ boss-input lookahead prototype into
+`SszBossInputAuthorTool`, as required by the method-preservation policy. It takes
+explicit ROM, width, roster, actual cold input/prefix and encounter, searches
+ordinary controller inputs from engine snapshots, preserves held-input history,
+and rejects cross-load restoration or existing output directories. No gameplay
+or trace hydration. Output includes an explicit defeat/death/budget stop reason;
+selected candidates still require fresh cold replay, rendered inspection and
+route/rewind checks. The missing-target score and pre-allocation trigger trap
+are recorded in the pitfalls catalogue. A ROM-backed author/fresh-replay check
+exercises the existing GHZ final-hit prefix before applying it to wide Mecha.
+
+This slice changes a development tool and route evidence, not runtime rules.
+The change-based plan selects the full suite through its shared/unclassified
+fallback. Proportionate validation covers the complete author path, preserved
+prefix/input contract, independently replayed selected route and affected route
+rewind/lifecycle obligations. Previous ordinary/guard evidence remains attributed
+to the unchanged runtime delivered above. Reassess if authoring finds an engine
+defect; do not label tool-only checks a full-suite pass.
+
+
+The promoted author first passed3 focused checks (author score regression,
+independent fresh replay of its fatal-hit output, and full-prefix preservation),
+0 failures/errors/skips,1m35s Maven. Before authoring wide Mecha, matched cold
+probes found a second framing defect in the existing runtime: native320 at
+frame13,237 initializes Mecha at(6912,1632), attack box[6592,6848], camera6560;
+800 at13,245 initializes at(6947,1632), box[6627,6883], camera6355. Both have
+native min/maxX6560 and Events_bg+$06 set, but neither reports centered framing.
+The800 scene subsequently clamps to raw6560, so both initial geometry and later
+framing are wrong. This is not merely a controller timing failure.
+
+ROM sub_575EA pins final Camera_min_X=$19A0 and records Events_bg+$06;
+loc_7B308 adds$20/$120/$160 to Camera_X for the attack box and spawn. The engine
+already adds the wide inset in the boss initializer, but final arena ownership
+was absent from its camera projection provider. Add a short five-preset box
+regression and a true cold320/800 entry plus restore/replay around allocation.
+The latter preserves a13,558-input wide approach independent of the yet-open
+fight. Earlier tests compared only against the current displayed camera or
+started at an aligned checkpoint; those can validate the wrong world box.
+
+This finding supersedes the tool-only validation scope. Reassess the bounded
+SSZ runtime change with both acts' boss/event checks, cold native/wide route
+and release checks, the shared framing contract, mandatory S3K gates and guards.
+No change to player bounds, camera algorithm, mask policy or physics is intended.
+
+
+Red/alternative evidence: the five checkpoint box cases pass before the fix,
+but the true cold800 case fails `expected6320, actual6355` (cold320 passes).
+Adding byte6 to centered-projection ownership alone was tried and rejected:
+the same cold assertion still fails. The shipped ScrollHoriz applies limits
+only in its left/right scroll branches; the wider proportional deadzone leaves
+this approach inside its no-scroll branch. The bounded correction reuses the
+existing widescreen-only horizontal-lock policy: SSZ act1's captured final flag
+supplies native origin$19A0. The feature provider gates it by current zone/act
+so it cannot leak into DEZ or SSZ2. Native320 bypasses the policy; Y remains
+independent for the final launch. No new camera algorithm, state format or mask
+activation policy. Source comments document both original logic and adaptation.
+
+
+The fixed-origin correction passes39 focused cases,0 failures/errors/skips,
+1m39s Maven: five native-box presets, cold320/800 allocation with full-registry
+restore/45-frame replay, shared camera framing and S3K feature-provider checks.
+The final source uses the existing horizontal-lock interface with captured SSZ
+state; no shared camera implementation was changed. Wide controller authoring
+now runs against that corrected world geometry, not the earlier shifted box.
+
+
+The corrected800 author defeated Mecha at input14,586 after1,029 new controller
+inputs. Fresh uninterrupted17,387-input capture matches every gameplay-state
+field of all14,587 author rows (excluding raw input text), zero deaths/followers.
+The engine log confirms zone11/act0 load; its first row is input16,892 at(48,2476),
+camera(0,2380), and the later DEZ tail is playable. Canonical complete800 input
+therefore contains16,893 frames. The temporary13,558-frame approach is preserved
+as its exact prefix, avoiding a redundant third fixture. The new wide full-route
+case adds49 full-registry windows and asserts actual DEZ arrival, live-history
+isolation and retirement of the SSZ horizontal lock; execution is pending.
+
+Fresh final video: `ssz-bring-up/campaign-20260926-tails-cold-clear-fixed-800/capture.mp4`,
+4,087frames at60fps/1600x448, full FFmpeg decode passes. Fatal hit, results/settled
+post-results, ascent and DEZ arrival stills were inspected. The native-width
+center remains aligned, side masking stays in the final arena through the native
+launch bounds, and the mask is absent on the incoming DEZ view. Native-emulator
+whole-scene parity remains separate from this engine capture.
+
+The broader candidate selection passes328 tests,0 failures/errors/skips,3m21s
+Maven, before the final49-window extension: all `TestS3kSsz*`, existing team/Sonic
+and Tails cold routes, author/prefix checks, shared camera/provider checks and the
+four mandatory S3K gates. Explicit absolute S1/S2/S3K ROM paths are supplied;
+no donor setup omission. The final extension and full guards are running.
+
+
+Final route extension passes4 cases,0 failures/errors/skips,1m13s Maven:
+`-Dtest=TestSszTailsColdRouteCapture#coldMechaEntryRetainsItsNativeWorldBox+coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory`.
+Cold entry now checks both pre-lock activation (input13,190) and boss allocation
+(13,230) with capture/restore/45-frame replay at320/800. Both complete-route
+variants pass together: native17,670 inputs/47 upper-final windows and
+wide16,893 inputs/49 upper-final windows, eight actual hits each, no deaths,
+DEZ1 at(48,2476), cleared SSZ X lock and isolated live history. Together with the
+53 replica windows per width this gives100 native and102 wide route windows.
+The800 input is now canonical rather than a claimed completion from a probe.
+
+
+Final candidate guards: queued Java21/Lua5.4/native display,
+`OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`
+passes672 tests in86 classes,0 failures/errors/skips,3m42s. The full ordinary
+suite was not repeated for this bounded SSZ policy/tool change; candidate
+coverage is the328-case selection plus the4-case final extension above. The
+canonical wide script was compacted through the already-tested full-prefix
+serializer without changing controller inputs. Remaining campaign work moves
+next to MHZ lifecycle coverage; original accepted exclusions remain unchanged.

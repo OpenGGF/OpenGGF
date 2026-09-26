@@ -937,3 +937,29 @@ clear preliminary ownership at the original open-bounds branch. Verify an actual
 approach at every supported width, asserted after session creation, including
 pre-lock capture/restore and forward replay. The campaign audit records the cold
 red probe and subsequent validation status.
+
+
+### Controller lookahead can reward avoiding the encounter
+
+The SSZ Tails input-authoring prototype compared boss health before and after a
+trial. Before allocation, health was represented as zero: a policy that let the
+boss spawn appeared to lose eight hits of progress, so the author preferred
+avoiding its trigger. Until the target exists, use the approach policy rather
+than comparing fight policies. After allocation, an absent target is not defeat;
+require an observed zero-health state, and rank death below surviving trials.
+`SszBossInputAuthorTool` preserves this correction from the September2026
+campaign. Its scores/horizons are authoring heuristics, never ROM/gameplay rules.
+Whole-registry rewind also needs the external input driver's held-button history,
+and must not cross a level replacement. Only a fresh uninterrupted input replay
+can validate the selected route; speculative trial state is not route evidence.
+
+
+A projected min/max pair alone does not guarantee a centered widescreen arena.
+Shipped ScrollHoriz clamps directionally, and its deadzone branch does not
+clamp at all. SSZ's cold Tails Mecha approach retained camera6355 instead of
+6320 at800px even after projection was enabled; camera-relative boss geometry
+was35 world pixels right of the native arena. All five checkpoint-start tests
+passed, while the cold regression failed. When a native final lock must remain
+fixed on widescreen, use the existing `lockedNativeHorizontalCamera` policy,
+owned by captured event state, and test the ordinary approach plus release/load.
+Do not replace the shared ROM camera clamp with an unconditional symmetric one.

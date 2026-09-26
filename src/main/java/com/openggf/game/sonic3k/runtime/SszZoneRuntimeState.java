@@ -51,14 +51,33 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         // The explicit captured bit also covers the preliminary bounds, before
         // either lock flag exists. Keep framing through defeat until launch
         // releases the event-owned bounds; openBounds clears the preliminary bit.
+        // sub_575EA also pins the final native arena at $19A0 and sets byte6.
+        // The ROM's loc_7B308 derives Mecha's box from that same 320px camera.
+        // Our initializer already adds the widescreen inset, so the final clamp
+        // must subtract it too. Otherwise a cold800 entry starts the box35px
+        // right of the native terrain, then clamps the camera farther right.
+        // Retain this captured flag through the launch, until the next level load.
         if (actIndex == 0) {
-            return centerNativeArenaCamera || eventsBgByte(1) != 0 || eventsBgByte(3) != 0
+            return centerNativeArenaCamera || eventsBgByte(6) != 0
+                    || eventsBgByte(1) != 0 || eventsBgByte(3) != 0
                     || (eventsBgByte(5) != 0
                     && (eventsBgByte(0) != 0 || eventsBgByte(2) != 0));
         }
         return centerNativeArenaCamera;
     }
     public void setCenterNativeArenaCamera(boolean active) { centerNativeArenaCamera = active; }
+
+    public java.util.OptionalInt lockedNativeHorizontalCamera() {
+        // sub_575EA sets byte6 once the final arena closes at native Camera_X=$19A0.
+        // Native ScrollHoriz clamps directionally and does nothing inside its deadzone.
+        // A wider proportional deadzone can therefore retain a different X even with
+        // projected limits, shifting loc_7B308's camera-relative attack box. Use the
+        // existing widescreen-only X-lock policy to hold that original arena origin;
+        // leave native320 scrolling and the independent vertical/launch routine intact.
+        // The captured ROM flag owns this lock and is discarded at the next level load.
+        return actIndex == 0 && eventsBgByte(6) != 0
+                ? java.util.OptionalInt.of(0x19A0) : java.util.OptionalInt.empty();
+    }
 
     /** SSZ2's shared HScroll_table through the twenty VSRAM column words. */
     private final short[] act2ScrollTable = new short[0x198 / 2];

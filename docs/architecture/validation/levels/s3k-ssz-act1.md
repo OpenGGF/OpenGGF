@@ -688,3 +688,27 @@ pass together (2 cases, no skips) after adding the width parameter. The separate
 five-width entry and native complete-route cases are unchanged. Fresh800 GHZ
 and MTZ movies include defeat/release, exactly match the independent probe rows,
 and fully decode at60fps. The final wide Mecha encounter remains open.
+
+
+## Final Mecha widescreen geometry correction (2026-09-26)
+
+A cold800 route exposed a35px shift of Mecha's native attack box, missed by all
+five aligned checkpoint starts. `coldMechaEntryRetainsItsNativeWorldBox` fails
+before the fix and passes at320/800 after it, including rewind over allocation.
+The final Events_bg+$06 flag now supplies the existing widescreen-only fixed-X
+camera policy at native$19A0; the shared camera algorithm and player bounds
+are unchanged, and vertical launch behavior remains independent. Merely enabling
+projected bounds was tested and rejected because ScrollHoriz's deadzone branch
+performs no clamp. The short five-preset regression anchors the box against ROM
+world coordinates rather than only the current camera. Full wide fight/launch
+completion is still being authored and must be verified separately.
+
+
+The final lock regression additionally replays pre-activation and allocation
+windows at native320/800. Both full Tails variants now pass:17,670 inputs at320
+and16,893 at800, all eight Mecha hits, no deaths, actual DEZ1 at(48,2476), cleared
+SSZ X-lock policy and isolated live history. Native has47 upper/final replay
+spots; wide has49, alongside the existing53 replica spots each. The final
+four-case entry/full-route command passes with no skips (1m13s Maven).
+The fresh wide movie fully decodes at60fps and matches all14,587 author rows;
+remaining donor/roster/lifecycle products and native presentation parity stay open.

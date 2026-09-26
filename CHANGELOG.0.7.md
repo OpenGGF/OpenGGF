@@ -17,7 +17,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Eggmobile bodies alongside Mecha Sonic’s head, and keep the widescreen camera
   centred on their native arenas through knockback. Their preliminary camera
   bounds use the same projection, so ordinary widescreen approaches can reach
-  the boss-entry gates. Spawn-derived constants and
+  the boss-entry gates. The final Mecha Sonic arena also holds its native
+  horizontal origin on widescreen, keeping its attack box aligned with the terrain
+  even when a wider camera deadzone would otherwise retain an offset.
+  Spawn-derived constants and
   restored carrier links declare their rewind policies without coverage exceptions.
   Player snapshots preserve tile priority and the independent sprite display
   bucket, including through the final transport ascent and follower history.

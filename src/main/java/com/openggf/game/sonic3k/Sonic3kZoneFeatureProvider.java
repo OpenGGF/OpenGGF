@@ -59,8 +59,14 @@ import java.util.logging.Logger;
  */
 public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
     @Override public java.util.OptionalInt lockedNativeHorizontalCamera() {
-        if (!GameServices.hasRuntime() || getFeatureZoneId() != Sonic3kZoneIds.ZONE_DEZ)
-            return java.util.OptionalInt.empty();
+        if (!GameServices.hasRuntime()) return java.util.OptionalInt.empty();
+        int zone = getFeatureZoneId();
+        if (zone == Sonic3kZoneIds.ZONE_SSZ && GameServices.level().getFeatureActId() == 0) {
+            return S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry())
+                    .map(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState::lockedNativeHorizontalCamera)
+                    .orElse(java.util.OptionalInt.empty());
+        }
+        if (zone != Sonic3kZoneIds.ZONE_DEZ) return java.util.OptionalInt.empty();
         return S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry())
                 .map(com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState::lockedNativeHorizontalCamera)
                 .orElse(java.util.OptionalInt.empty());
