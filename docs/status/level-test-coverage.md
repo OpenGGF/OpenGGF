@@ -559,3 +559,10 @@ rewind for all nine posts and the three accepted native rosters; real two-death
 reload cases span all five presets and supported native/S1/S2 rosters. These are
 local approaches, not new cold-route certification. Scripted checkpoint, broader
 team and presentation obligations remain separately tracked in both act matrices.
+
+
+MHZ Tails route (2026-09-26): native 320 cold Act 1 completion now has preserved
+controller inputs, all six miniboss hits, actual MHZ2 rebase/released movement
+and seven whole-registry replay spots. Fresh moving evidence covers fight and
+handoff. The route reaches the Act 2 leaf blower; its Act 2 completion, wider
+route configurations and native-emulator presentation remain open.

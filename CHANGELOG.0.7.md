@@ -498,7 +498,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   a wider screen while preserving native-width collection boundaries.
 - **S3K campaign work:** the promoted development baseline includes further MHZ
   and FBZ work, with physical checkpoint activation, rewind and repeated death/reload
-  coverage across MHZ's accepted rosters, supported donors and five viewport presets, LBZ Big Arm, Super Emerald sanctuary/progression, and powered
+  coverage across MHZ's accepted rosters, supported donors and five viewport presets,
+  plus a cold Tails Act 1 completion with rewind-verified MHZ2 handoff; LBZ Big Arm, Super Emerald sanctuary/progression, and powered
   effects. Sandopolis now implements its four quicksand variants, including
   per-player capture, jump release, sand-slide movement and rewindable cooldowns,
   plus spring vines with shared tension, deforming surfaces, native landing boundaries and directional launches,

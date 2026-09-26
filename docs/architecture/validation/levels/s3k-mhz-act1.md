@@ -10,8 +10,8 @@ implementation reviewed historically; current campaign act certification pending
 | Claim | Evidence / state |
 | --- | --- |
 | Implemented | Original direct audit found no further missing Sonic/Tails feature; later miniboss lifetime, explosion and transition-identity fixes landed. |
-| Cold-reachable | Fresh320px Sonic-solo controller route reaches the miniboss and MHZ2 (2026-09-23); no position/clock/ring/health seed. |
-| Completable | Current controller route completes all six boss hits, sign/results, seamless MHZ2 load and released player movement. Other configurations remain open. |
+| Cold-reachable | Fresh 320px Sonic-solo (2026-09-23) and Tails-solo (2026-09-26) controller routes reach the miniboss and MHZ2; no position/clock/ring/health seed. |
+| Completable | Native Sonic and Tails controller routes complete all six boss hits, sign/results, seamless MHZ2 load and released player movement. Other configurations remain open. |
 | Native-accurate | Disassembly-backed review plus local regressions; frame-perfect/native visual certification not claimed. |
 | Rewind/standard | Several live interaction and graph checks exist; breadth and complete before/active/after obligations remain incomplete. |
 
@@ -170,3 +170,24 @@ flat setup farther left falls into the lower passage. No runtime workaround was
 added. This closes the tested local physical-post lifecycle cross-product, not
 all alternate-entry, mixed/duplicate/maximum-team, event-latch or presentation
 obligations. The campaign audit records execution and integration evidence.
+
+
+### 2026-09-26 — Tails cold Act 1 completion
+
+`mhz1-tails-cold-complete-320.script/.bk2` preserves 24,121 ordinary controller
+inputs from locked-on MHZ1 entry, Tails solo, donor off, native 320. Tails takes
+a different path from Sonic early in the act; the successful prefix approaches
+the late pulley corridor, then uses native flight to clear the upper obstruction.
+The route defeats the six-hit miniboss and rebases into MHZ2 at input 23051,
+then traverses to the leaf-blower sequence (1150,1228 at the end). No death,
+follower, position, health, ring or clock seed is present.
+
+`TestS3kMhzTailsAuthoredRoute` checks early traversal, lower approach, upper
+flight, first hit, last-hit approach, defeat and released MHZ2, with whole-registry
+restore and 45-input forward replay at all seven spots. An independent rendered
+replay agrees with all 22,621 authored state rows through defeat (every field
+except the input text representation). The 2,221-frame/60fps movie includes
+fight, sign/results and the Act 2 handoff; decoded video and named stills were
+inspected. This is engine presentation evidence, not native-emulator parity.
+Tails Act 2 completion and wider/donor/other-roster route breadth remain open.
+Execution and integration evidence belongs to the campaign audit.

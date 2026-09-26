@@ -203,3 +203,9 @@ flat setup farther left falls into the lower passage. No runtime workaround was
 added. This closes the tested local physical-post lifecycle cross-product, not
 all alternate-entry, mixed/duplicate/maximum-team, event-latch or presentation
 obligations. The campaign audit records execution and integration evidence.
+
+
+Tails incoming entry (2026-09-26): the new 24,121-input cold MHZ1 Tails route
+reaches this act via its actual seamless handoff, verifies released movement
+after rebase and reaches the leaf-blower sequence. This is incoming-entry
+evidence only; Tails Act 2 completion remains open. See the Act 1 matrix.

@@ -6157,3 +6157,44 @@ queued explicit-ROM `-Dtest=TestMhzCheckpointRoutes test` selection passes all
 343 cases, zero failures/errors/skips, 53.973s. No executable changes followed.
 The next campaign slice is MHZ's remaining accepted-route/breadth obligations;
 this checkpoint slice does not complete the seven-zone goal.
+
+
+## 2026-09-26 — cold MHZ1 Tails completion
+
+Base `0208e59f96ea3afc3f8199587e54738ec12fb910`, isolated
+`feature/ai-mhz-tails-route`; no runtime change. The existing Sonic movie takes
+Tails onto a different path early, stalls at the late pulley corridor and dies
+when later Sonic-specific actions run. This was input-route mismatch, not evidence
+of an engine defect. Branch authoring retained 18,800 successful cold inputs,
+then explored controller continuations. Holding Right or occasional jumps
+stalled at the late lift; Down alone did not obtain a successful grab/pull.
+Tails flight via ordinary repeated jump presses cleared the upper obstruction.
+A temporary adapter of the committed `SszBossInputAuthorTool` observed
+`MhzMinibossInstance` at the native arena and authored its six-hit fight from
+input 21,900 using the same whole-registry/input-history rewind and scoring.
+No gameplay values were seeded or altered. The reusable algorithm already lives
+in that tool; the temporary MHZ selector/probes are not new engine features.
+
+Canonical `mhz1-tails-cold-complete-320.script/.bk2` contains 24,121 inputs,
+Tails solo/native320/donor off. An independent uninterrupted rendered replay
+agrees with all 22,621 author state rows through defeat (all fields except
+input-text representation), has no deaths/follower, rebases into MHZ2 at 23051
+and ends at the leaf blower (1150,1228). Engine video at
+external `mhz-bring-up/campaign-20260926-tails-act1-clear-320/capture.mp4`
+contains 2,221 frames, 60fps, 640×448: approach/fight, fatal hit, sign/results,
+seamless rebase and incoming traversal. Full ffmpeg decode passes; fatal/sign/
+leaf-blower stills inspected. Its README records runtime source and flags.
+This is engine presentation, not matched native-emulator parity.
+
+`TestS3kMhzTailsAuthoredRoute` asserts no death, the live solo roster, native
+width, all boss progression and actual released Act 2 movement. Seven complete
+registry restore/45-input replay windows cover early traversal, lower approach,
+upper flight, first hit, last-hit approach, defeat and released MHZ2. Queued
+Java21/native display, explicit absolute S3K ROM, serial admission:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestS3kMhzTailsAuthoredRoute,TestS3kMhzAuthoredRoute,TestS3kMhzAct2AuthoredRoute test`
+passes all three cold route cases with zero failures/errors/skips, 1m18s.
+The category plan selects all 2,925 classes because route resources are
+unclassified; focused validation is proportionate for these new fixtures/tests
+and prose, with unchanged production/build contracts. No new full-suite pass
+is claimed. Tails Act 2 completion, other route configurations and remaining
+per-act matrix obligations stay open; accepted scope exclusions remain intact.
