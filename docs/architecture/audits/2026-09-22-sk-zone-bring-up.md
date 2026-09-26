@@ -6090,3 +6090,16 @@ coverage is the328-case selection plus the4-case final extension above. The
 canonical wide script was compacted through the already-tested full-prefix
 serializer without changing controller inputs. Remaining campaign work moves
 next to MHZ lifecycle coverage; original accepted exclusions remain unchanged.
+
+
+Integrated source/tool/routes as `7afd827fb` after fresh fetch/pull confirmed
+main remained at ead143d2d; fast-forward, no conflicts or unrelated changes.
+On main7afd827fb, queued exclusive Java21/native display with explicit S1/S3K
+ROMs, `-Dtest=TestSszTailsColdRouteCapture,TestS3kSszMechaSpawnHeadless,TestSszBossInputAuthorTool,TestGameplayInputBranchTool,TestNativeArenaCameraFraming,TestSonic3kZoneFeatureProvider test`
+passes75 tests,0 failures/errors/skips,3m55s, including all11 Tails cases together.
+No executable changes followed that run. A short240-frame/60fps entry clip at
+`ssz-bring-up/campaign-20260926-tails-mecha-entry-fixed-800/capture.mp4` additionally
+shows activation; all13,400 CSV rows match the complete fresh replay, full decode
+passes and pre/post-lock stills were inspected. Both media READMEs identify
+source7afd827fb and reproduction inputs. This delivers the bounded correction
+and wide Tails route; the seven-zone campaign remains active.
