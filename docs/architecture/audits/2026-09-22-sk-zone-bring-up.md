@@ -6249,3 +6249,11 @@ reached MHZ2's upper passage near (4137,966) but entered a giant ring next.
 The branch tool stopped at the return load and correctly refused restoring an
 outgoing snapshot for another candidate. These trials are not certified new
 route inputs; resume from the committed cold prefix and avoid that entrance.
+
+
+Integrated correction as `e373c4d9f` after fresh fetch/pull, with no conflicts.
+On main `e373c4d9f`, the combined queued explicit-S3K-ROM selection
+`TestMhz1CutsceneObjects,TestS3kMhzAct2EntryHeadless,TestS3kMhzTailsAuthoredRoute,TestS3kMhzAuthoredRoute,TestS3kMhzAct2AuthoredRoute,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passes165 tests, zero failures/errors/skips,1m27s. No executable edits followed.
+The corrected media README now identifies source `e373c4d9f`. The full campaign
+remains active; Tails Act2 traversal is the next unfinished route.
