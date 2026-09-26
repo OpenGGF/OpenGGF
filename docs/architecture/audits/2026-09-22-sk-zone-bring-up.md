@@ -6325,3 +6325,55 @@ zero failures/errors/skips** on the main checkout in 1m28s. The final explicit
 pulley/flight assertions are included. The seven focused guard checks belong
 to the same production/test code in the development checkout; no new full
 ordinary-suite or full-guard-suite pass is claimed.
+
+
+## 2026-09-26 — native-pair MHZ1 route and bar cooldown ownership
+
+Base `7efb20721`, development checkout `ai-mhz-team-act1`. Reusing the solo
+controller sequence with Sonic + Tails stalled at the paired horizontal bars;
+one neutral admission input did not resolve it. New ordinary inputs clear the
+nearby pulley (243 controlled updates), vine loops and upper ramp. Unbroken
+Right clears loops where repeated jump interrupted the native motion. A lower
+branch near x14900 was rejected; braking and charging at the upper ramp restored
+the momentum lost to a Madmole bounce. A fresh current-build solo sample confirmed
+the historical successful upper trajectory, avoiding reliance on an obsolete
+capture. Exploration used the existing branch tool and small temporary policy
+adapters; no physics, enemy, player position, health, ring or clock writes.
+
+The native pair enters the miniboss with 18 rings; all six hits complete at 25584.
+The 27,985-input final asset rebases at 26015, observes the paired floor-grab in
+26894..27017, and ends alive in released Act2 traversal at (2080,1436), 3 rings.
+External `mhz-bring-up/campaign-20260926-team-act1-clear-320` contains the fresh
+3,085-frame 60fps 640×448 movie, state CSV and inputs referenced by its README.
+All 25,585 shared author rows match except input-text representation; no Sonic
+death or missing-follower row. Full FFmpeg decode passes; defeat, introduction
+and paired floor-grab frames were inspected. The movie is from base forward
+behavior; the later restore-only repair does not run in that uninterrupted capture.
+
+The new whole-registry route test initially failed at swing-bar frame 10337:
+45-input replay changed an inactive holder's phase `$28 -> $20` and cooldown
+`8 -> 0`. `hangingPlayers` and `hangStates` are two engine indexes of one mutable
+holder; generic map restoration reconstructed their values independently. The
+ROM `sub_3ED6E` uses one `a2` record, with held flag at 0, cooldown at 2 and phase
+at 4; `loc_3EE2C/loc_3EE8C` write cooldown before `loc_3EECE` reads it. The local
+post-restore hook reunites active and historical holders without changing any
+native timing or shared snapshot code. A short forced-recreation jump-release
+regression independently failed with cooldown 30 vs 0 before the fix. It now also
+covers upward/downward automatic release; all three compare complete object state.
+
+Queued explicit-ROM candidate command:
+`-Dtest=TestS3kMhzSwingBarLiveRewind,TestMhzSwingBarHorizontalObjectInstance,TestS3kMhzTeamAuthoredRoute,TestS3kMhzAuthoredRoute,TestS3kMhzTailsAuthoredRoute,TestS3kMhzAct2AuthoredRoute,TestS3kMhzAct2EntryHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passes 100 cases, zero failures/errors/skips in 48.382s. The initial new route and
+short cooldown test reproduced their named failures on the base. The change-based
+plan selects 2926 classes because new input assets hit the unclassified fallback.
+Proportionate selection exercises the local ownership repair, both acts' cold
+routes and required S3K gates; it is not a new full-suite pass. Shared gameplay
+algorithms, art, native release rules and viewport behavior are unchanged.
+
+
+A separate fresh guard JVM with
+`-Pguards -Dtest=TestRewindCoverageGuard,TestRewindFieldDispositionGuard,TestRewindArchitectureGuard,TestRewindRecreateLinkToleranceGuard test`
+passes 7 checks, zero failures/errors/skips in 24.206s. The default restore path
+and forced recreation are both exercised by the route and short tests. This
+repair is shared by the eleven Act1 and ten Act2 placed horizontal bars; the
+native movement and art paths are unchanged.

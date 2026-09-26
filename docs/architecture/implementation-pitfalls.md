@@ -337,6 +337,16 @@ versus an empty recreated array. Keep variable-shaped snapshot arrays replaceabl
 or recreate the exact required shape; exercise populated live state and forward
 replay through both animation phases. Origin: 2026-09-26 MHZ Tails route.
 
+**Captured collections can lose shared value identity.** If two maps index the
+same mutable holder, independently restored map values may match immediately but
+then evolve separately. MHZ's horizontal bar stores active and cooldown-history
+indexes of one per-player hang state. Restore recreated two holders; release wrote
+30/8 to one while the re-grab path read zero from the other. Rejoin the indexes in
+`afterGenericRewindStateRestored`, and compare forward state through release, not
+just immediate snapshot equality or the player's control flag. The ROM's single
+`a2` record in `sub_3ED6E` owns both flags and cooldown. Origin: 2026-09-26 paired
+MHZ cold route; this is a local ownership repair, not a generic alias guarantee.
+
 **Released solid contacts need captured provenance.** A CPU follower can retain
 its last contact after that owner is destroyed and its slot reused. Rewind must
 clear the future Java pointer, preserve the captured released-contact state and

@@ -191,3 +191,31 @@ fight, sign/results and the Act 2 handoff; decoded video and named stills were
 inspected. This is engine presentation evidence, not native-emulator parity.
 Tails Act 2 completion and wider/donor/other-roster route breadth remain open.
 Execution and integration evidence belongs to the campaign audit.
+
+
+## 2026-09-26 — native-pair cold completion
+
+`mhz1-team-cold-complete-320.script/.bk2` preserves 27,985 ordinary P1 inputs
+(P2 neutral) from fresh native 320 Sonic + Tails through all six miniboss hits,
+the seamless Act2 rebase, the floor-grab/lift scene and released Act2 traversal.
+No gameplay seeds or debug completion. The full fresh capture has no Sonic death
+or missing-follower rows; its 25,585 shared boss-author rows agree on every state
+field except input-text representation. The 3,085-frame 60fps 640×448 movie fully
+decodes; defeat and paired floor-grab frames were inspected. This is engine
+presentation evidence, not native-emulator pixel parity.
+
+`TestS3kMhzTeamAuthoredRoute` asserts the actual Sonic/Tails roster on every frame
+and whole-registry capture, restore and 45-input replay at nine spots: early
+traversal, swing bars, pulley, sticky-vine spindash, upper launch, first hit,
+last-hit approach, defeat and released Act2. It exposed a horizontal-bar restore
+bug missed by the older control-flag-only test: active/history maps lost their
+shared `HangState` identity, so release cooldown diverged. The local restore hook
+rejoins those indexes, preserving the ROM single-record model; no forward motion,
+release timing or collision rules change. The short reconstruction regression
+now covers jump, upward-auto and downward-auto release, independently of the route.
+
+The combined 100-case candidate selection covers both bar test classes, all five
+MHZ cold-route cases, 15 entry configurations and the mandatory AIZ/loading/
+bootstrap/decoding checks, with zero failures/errors/skips. The campaign audit
+owns integration and guard evidence. Full paired Act2 completion, wider/donor
+routes and remaining native presentation/interaction obligations remain open.

@@ -254,3 +254,11 @@ follower rows, and reaches released FBZ movement. The 4014-frame 60fps 640×448
 movie fully decodes; defeat and ship stills were inspected. This is engine route
 and presentation evidence, not native-emulator parity. Other widths, native
 pair/donor route breadth and inherited presentation obligations remain open.
+
+
+Paired incoming follow-up (2026-09-26): the native320 Sonic + Tails cold MHZ1
+route now rebases into Act2 and continues through the floor-grab/lift to released
+traversal. This is not paired Act2 completion. The shared horizontal-bar restore
+fix also applies to this act's ten placed `$0B` bars; short jump/upward/downward
+release reconstruction checks supplement the existing solo Act2 routes. See the
+Act1 matrix and campaign audit for the ownership defect and verification scope.

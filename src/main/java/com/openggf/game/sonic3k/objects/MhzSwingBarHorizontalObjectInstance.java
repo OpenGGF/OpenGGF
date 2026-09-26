@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -49,6 +50,16 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
 
     public MhzSwingBarHorizontalObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MHZSwingBarHorizontal");
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        // ROM sub_3ED6E uses one a2 record per player: loc_3EE2C/loc_3EE8C
+        // clear its held flag and write the cooldown later read by loc_3EECE.
+        // These engine maps are two indexes of that same record. Generic map
+        // restoration creates independent values, so rejoin active holders before
+        // a release updates the persistent cooldown history.
+        hangStates.putAll(hangingPlayers);
     }
 
     @Override

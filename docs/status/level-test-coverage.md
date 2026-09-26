@@ -583,3 +583,11 @@ and forward replay; Tails also covers the late pulley and upper flight. The live
 route exposed and fixed a populated-array reconstruction error missed by the
 empty-constructor inventory probe. Fresh native 320 video/state replay agrees
 through the handoff. Wider/team/donor route and native presentation gaps remain.
+
+
+MHZ native pair (2026-09-26): a controller-only Sonic + Tails cold Act1 route
+now completes the miniboss and the Act2 introduction. Nine whole-world replay
+spots exposed and now cover shared horizontal-bar hang/cooldown ownership;
+three short reconstruction cases cover jump and both automatic releases.
+The fresh engine movie includes the fight and paired floor-grab/lift scene.
+Paired Act2 completion and wider/donor/native-reference gaps remain open.
