@@ -6384,3 +6384,45 @@ Integrated verification: `f06669105` fast-forwarded into `develop` from
 passes on the main checkout, zero failures/errors/skips, in 1m35s. The seven
 selected guard checks apply to the identical production/test code in the task
 checkout. This is focused verification, not a full ordinary or guard suite.
+
+
+## 2026-09-26 — DEZ physical checkpoint lifecycle matrix
+
+Base `1adf324c2`, development checkout `ai-dez-checkpoint-lifecycle`. Independent
+`Levels/DEZ/Object Pos/{1,2}.bin` inventory identifies three Act1 posts (1/2/3)
+and four Act2 posts (5/6/7/8). `TestDezCheckpointRoutes` contacts each real placed
+post through ordinary input, with two whole-registry restore/replays per native
+roster. The generic left approach fell below post6's short ledge for all three
+initial rosters; a declared `(postX-16,postY-32)` drop contacts it normally. No
+checkpoint state or runtime correction was introduced to make the fixture pass.
+
+The final matrix has351 cases: one independent placement census,28 physical
+activation/rewind cases, and322 two-death cases (644 real GameLoop reloads).
+Native Sonic/Tails/Sonic+Tails/level-select Knuckles cover320/352/400/528/800;
+S1 Sonic and S2 Sonic/Tails/Sonic+Tails cover the same widths. S1 Sonic+Sonic also
+covers all five widths, and the native Sonic+Tails+Knuckles trio covers800.
+The initial roster assertion incorrectly used instance IDs (`tails_p2`) as
+character identities; it now uses `characterKey().persisted()`. The failed
+assertion was a test defect, not evidence of incorrect participant loading.
+
+Act2 post5 then walks right through the existing gravity swap at`($1A40,$8C0)`
+before each death:92 inverted deaths across the matrix, without seeding gravity.
+The saved post restores normal gravity, exactly as `loc_60DE` clears the RAM
+block containing`$F7C6`. Reloads also verify checkpoint identity/position, actual
+roster, ROM art/animation availability, donor rules, viewport, fresh object and
+zone-runtime owners, outgoing history isolation, and eventual title/fade/control
+release. These are local positioned approaches, not additional cold routes.
+Other encounter/lifecycle and native-presentation obligations remain open.
+
+Candidate command through the queued Maven wrapper with explicit absolute S3K,
+S1 and S2 ROM properties: `-Dmse=off -Dtest=TestDezCheckpointRoutes test` passes
+351 cases,0 failures/errors/skips,46.504s. The preceding combined run passed all
+59 mandatory S3K cases (`TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`);
+its112 checkpoint failures were solely the corrected instance-ID assertion.
+The final source differs from that successful checkpoint run only by a comment.
+
+The inspected change-based plan selects1963 ordinary classes and guards under
+gameplay ownership. Proportionate validation uses the new complete matrix plus
+mandatory S3K checks: only test code and coverage documentation change, with no
+production, shared helper, guard contract, selection or build changes. No full
+ordinary/guard suite or new GPU/native visual verification is claimed.

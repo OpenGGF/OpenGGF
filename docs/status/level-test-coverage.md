@@ -591,3 +591,11 @@ spots exposed and now cover shared horizontal-bar hang/cooldown ownership;
 three short reconstruction cases cover jump and both automatic releases.
 The fresh engine movie includes the fight and paired floor-grab/lift scene.
 Paired Act2 completion and wider/donor/native-reference gaps remain open.
+
+
+DEZ physical checkpoint follow-up (2026-09-26): both act matrices bind
+`TestDezCheckpointRoutes` to every physical starpost, local activation with full-world
+restore/replay, repeated real death/reloads across five widths and supported
+character/donor teams, plus800px native trio. Act2 post5 reaches inverted gravity
+through its real nearby swap before each death. These positioned local checks do
+not replace cold routes or native presentation evidence.

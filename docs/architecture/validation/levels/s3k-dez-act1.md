@@ -30,6 +30,9 @@ teams solo, Sonic+Tails, S1 Sonic+Sonic, S2 Sonic+Tails, Sonic+Tails+Knuckles at
 Knuckles is **level-select only** for this act (user decision 2026-09-17): he must load,
 play and invert correctly, but owes no cold chain and no trace frontier.
 
+Physical starpost activation, rewind and repeated death/reload breadth is now
+covered by the 2026-09-26 follow-up below; other lifecycle obligations remain open.
+
 ## Five claims
 
 | Claim | State |
@@ -347,3 +350,29 @@ braking beside it and walking into its capture window preserves the intended
 launch chain. The accepted boss search records inputs only, uses engine-owned
 rewind for forecasts, and is independently replayed without the controller.
 No runtime change was needed for this milestone.
+
+
+### Physical checkpoint lifecycle coverage (2026-09-26)
+
+`TestDezCheckpointRoutes` independently inventories all seven ROM-authored DEZ
+starposts from `Levels/DEZ/Object Pos/{1,2}.bin`; this act owns posts 1/2/3.
+Declared local approaches activate the real placed objects with ordinary input,
+then capture/restore and replay complete registry state twice. These approaches
+are not evidence of cold-route reachability. Post 6 uses a short drop onto its
+ledge: the generic 48px-left setup fell below the post before contact.
+
+Each post receives two real GameLoop death/reloads for native Sonic, Tails,
+Sonic+Tails and level-select Knuckles at widths 320/352/400/528/800, the supported
+S1/S2 donor subset, S1 Sonic+Sonic at all five widths, and native Sonic+Tails+Knuckles
+at800. Checks bind the actual roster, checkpoint position/index, new object/runtime
+owners, participant ROM renderers/animations, donor rules, viewport, title/fade
+release and outgoing rewind-history isolation. The initial load is positioned;
+checkpoint state is never injected. Pit death is a declared production stimulus.
+
+At Act2 post5, ordinary Right input first crosses the placed `$5B` gravity swap at
+`($1A40,$8C0)` in both cycles. Gravity must be active before death and clear at
+reload. ROM `loc_60DE` clears `$F700..$F7FF`, including `Reverse_gravity_flag` at
+`$F7C6`; the starpost save bank does not restore it. Existing engine behavior passes
+this contract without a runtime change. Native visual comparison and other route,
+encounter and lifecycle obligations remain separate. See the campaign audit for
+combined validation and integration results.
