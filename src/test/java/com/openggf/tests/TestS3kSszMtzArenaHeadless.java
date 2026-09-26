@@ -96,7 +96,7 @@ class TestS3kSszMtzArenaHeadless {
      * running the same approach at 800.
      */
     @ParameterizedTest
-    @ValueSource(ints = {320, 800})
+    @ValueSource(ints = {320, 352, 400, 528, 800})
     void theUpperArenaLocksAndThenAllocatesTheBossWhenTheCameraSettles(int width) {
         HeadlessTestFixture fixture = bootAtCheckpoint(width, APPROACH_X, APPROACH_Y);
         SszZoneRuntimeState state =
@@ -930,6 +930,7 @@ class TestS3kSszMtzArenaHeadless {
         if (GameServices.level().getCheckpointState() instanceof CheckpointState checkpoint) {
             checkpoint.saveCheckpoint(2, x, y, false);
         }
+        assertEquals(width, GameServices.camera().getWidth(), "resolved viewport width");
         return fixture;
     }
 }

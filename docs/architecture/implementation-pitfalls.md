@@ -923,3 +923,17 @@ Promoting the camera minimum with `& 0xFFFF` turns SSZ's `-$100` into a ceiling
 below the entire level and cancels upward flaps. `$FFF0 + $10` must wrap to zero.
 The former unsigned unit-test expectation was itself incorrect; positive-bound
 clamping, wrapped addition and negative SSZ bounds have independent regressions.
+
+### Native camera equality gates need the preliminary clamp projection (SSZ, 2026-09-26)
+
+SSZ loc_57686/loc_5770C install preliminary limits before testing camera X at
+$160/$1660. Projecting only the final arena while always adding the widescreen
+inset to the gate creates a dependency cycle: an800px leftward GHZ approach
+clamps at raw$160, compares$250 with$160, and never sets the flag which enables
+projection. A checkpoint already aligned with the equality can pass while the
+ordinary route fails. Keep camera projection ownership through the preliminary
+bounds as well as the final lock, preserve native words for player walls, and
+clear preliminary ownership at the original open-bounds branch. Verify an actual
+approach at every supported width, asserted after session creation, including
+pre-lock capture/restore and forward replay. The campaign audit records the cold
+red probe and subsequent validation status.

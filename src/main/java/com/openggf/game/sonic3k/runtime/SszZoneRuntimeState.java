@@ -48,9 +48,11 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         // same inset used by the entry gates; otherwise knockback follows Sonic
         // (GHZ) or snaps to the unprojected left bound (MTZ). Derive ownership
         // from captured ROM flags, including the lock-to-allocation transition.
-        // Keep framing through defeat until the launch event releases bounds.
+        // The explicit captured bit also covers the preliminary bounds, before
+        // either lock flag exists. Keep framing through defeat until launch
+        // releases the event-owned bounds; openBounds clears the preliminary bit.
         if (actIndex == 0) {
-            return eventsBgByte(1) != 0 || eventsBgByte(3) != 0
+            return centerNativeArenaCamera || eventsBgByte(1) != 0 || eventsBgByte(3) != 0
                     || (eventsBgByte(5) != 0
                     && (eventsBgByte(0) != 0 || eventsBgByte(2) != 0));
         }

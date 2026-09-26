@@ -100,7 +100,7 @@ class TestS3kSszGhzArenaHeadless {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {320, 800})
+    @ValueSource(ints = {320, 352, 400, 528, 800})
     void theArenaLocksAndThenAllocatesTheBossWhenTheCameraSettles(int width) {
         HeadlessTestFixture fixture = bootAtCheckpoint(width, APPROACH_X, APPROACH_Y);
         SszZoneRuntimeState state =
@@ -916,7 +916,8 @@ class TestS3kSszGhzArenaHeadless {
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
-                width == 320 ? WidescreenAspect.NATIVE_4_3.name() : WidescreenAspect.WIDE_16_9.name());
+                java.util.Arrays.stream(WidescreenAspect.values())
+                        .filter(aspect -> aspect.pixelWidth() == width).findFirst().orElseThrow().name());
         config.resolveDisplayAspect();
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
         CrossGameFeatureProvider.getInstance().resetState();
@@ -931,6 +932,7 @@ class TestS3kSszGhzArenaHeadless {
         if (GameServices.level().getCheckpointState() instanceof CheckpointState checkpoint) {
             checkpoint.saveCheckpoint(2, x, y, false);
         }
+        assertEquals(width, GameServices.camera().getWidth(), "resolved viewport width");
         return fixture;
     }
 }

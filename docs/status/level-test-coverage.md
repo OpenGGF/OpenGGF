@@ -524,3 +524,17 @@ SSZ Tails opening (2026-09-25): the signed flight-ceiling correction restores
 ascent with the native negative camera minimum. A preserved 2,556-input cold
 opening clears the raised platform without deaths; complete Tails SSZ remains
 open. Existing LRZ/DEZ cold routes still pass unchanged (10 tests, no skips).
+
+SSZ Tails continuation (2026-09-26): the
+[act matrix](../architecture/validation/levels/s3k-ssz-act1.md) records a fresh
+17,670-input cold completion through DEZ1 and matched engine captures. New
+53-window replica and47-window upper/final rewind tests pass. An800px
+replay exposed an unreachable GHZ entry gate; a bounded preliminary camera
+projection fix now passes the five-width cold-approach regression (7 tests
+including both routes, no skips); broader integration checks remain pending.
+Native presentation parity and other inherited breadth/lifecycle gaps stay open.
+
+The800 replica continuation additionally passes53 full-registry replay windows,
+both eight-hit defeats and both gated transport releases. Fresh wide movies
+include defeat/release and match the independent probe's state rows. Full800
+Mecha completion is still open; no additional mask behavior was changed.

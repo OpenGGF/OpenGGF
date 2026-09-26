@@ -663,3 +663,28 @@ not a matched native trajectory. Existing Sonic solo routes still pass.
 The short flight regression passed all five windows: 1 test, no failures/errors/
 skips, 24.128s Maven with Java 21 and explicit S3K ROM. See the campaign audit
 for the exact command and broader final-flight compatibility checks.
+
+## Tails route continuation and widescreen approach (2026-09-26)
+
+Native320 solo Tails completes the cold route in17,670 inputs, actual DEZ load
+at17,669, without death, follower or gameplay seeds. The shorter9,675-input
+replica route includes both eight-hit fights and both gated transports. New
+`TestSszTailsColdRouteCapture` covers53 replica and47 upper/final registry replay
+windows and live-history isolation at the actual DEZ load; all7 cases pass
+without failures/errors/skips, including the five-width cold approach regression.
+Independent captures match all19 gameplay-state fields (6,100 GHZ,9,675 MTZ,
+15,380 final author rows), and all three MP4s fully decode. Engine presentation
+stills were inspected; native whole-scene parity remains open.
+
+The800 replay exposed an actual missing GHZ entry, not a route-input certification:
+preliminary bounds lacked the camera projection used by the equality gate.
+The candidate fix and passing five-width cold approach regression are recorded in the
+[campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md). Wide cold completion and broader integration validation remain separate.
+
+
+The800 variant now preserves9,683 cold inputs through both replicas and their
+receiving pads. Its53 registry windows also pass; native320 and800 variants
+pass together (2 cases, no skips) after adding the width parameter. The separate
+five-width entry and native complete-route cases are unchanged. Fresh800 GHZ
+and MTZ movies include defeat/release, exactly match the independent probe rows,
+and fully decode at60fps. The final wide Mecha encounter remains open.

@@ -410,7 +410,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
         }
         if (playerY >= GHZ_BAND_MIN_Y) {
             if (playerY >= GHZ_BAND_MAX_Y) {
-                openBounds(camera);
+                openBounds(state, camera);
                 return;
             }
             ghzBand(state, camera, player, playerY);
@@ -473,13 +473,14 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                          AbstractPlayableSprite player, int playerY) {
         int flag = state.eventsBgByte(EV_GHZ_BOSS);
         if (flag < 0) {
-            openBounds(camera);
+            openBounds(state, camera);
             return;
         }
         if (flag != 0) {
             return;
         }
         if (state.eventsBgByte(EV_GHZ_LOCK) == 0) {
+            projectPreliminaryArenaBounds(state);
             camera.setMinX((short) GHZ_PRE_LOCK_MIN_X);
             camera.setMaxX((short) GHZ_PRE_LOCK_MAX_X);
             if (playerY < GHZ_LOCK_PLAYER_Y
@@ -529,13 +530,14 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                          AbstractPlayableSprite player, int playerY) {
         int flag = state.eventsBgByte(EV_MTZ_BOSS);
         if (flag < 0) {
-            openBounds(camera);
+            openBounds(state, camera);
             return;
         }
         if (flag != 0) {
             return;
         }
         if (state.eventsBgByte(EV_MTZ_LOCK) == 0) {
+            projectPreliminaryArenaBounds(state);
             camera.setMaxX((short) MTZ_PRE_LOCK_MAX_X);
             // tst.w (Events_bg+$00).w: once the GHZ word is non-zero the left limit opens to 0.
             int minX = state.eventsBgWord(EV_GHZ_BOSS) != 0 ? 0 : GHZ_PRE_LOCK_MIN_X;
@@ -578,8 +580,24 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
         state.setEventsBgWord(EV_MTZ_BOSS, MTZ_BOSS_FIGHTING_WORD);
     }
 
-    /** {@code loc_5777E}. */
-    private void openBounds(Camera camera) {
+    /**
+     * loc_57686 / loc_5770C write preliminary native camera limits BEFORE
+     * comparing Camera_X_pos with $160 / $1660. The ROM has one 320px frame.
+     * Our wider camera and these equality gates already use a centred native
+     * projection, so its boundary clamps must use that projection during the
+     * approach too, not only after the lock flag is set. Otherwise a leftward
+     * 800px approach clamps at raw $160, the gate reads $250 after its $F0
+     * inset, and the GHZ boss can never spawn. Keep the ROM limit words intact
+     * for player collision; only the camera's existing presentation clamp is
+     * projected. The captured ownership bit is released by loc_5777E below.
+     */
+    private void projectPreliminaryArenaBounds(SszZoneRuntimeState state) {
+        state.setCenterNativeArenaCamera(true);
+    }
+
+    /** {@code loc_5777E}: original open limits, ending preliminary camera projection. */
+    private void openBounds(SszZoneRuntimeState state, Camera camera) {
+        state.setCenterNativeArenaCamera(false);
         camera.setMinX((short) BEATEN_MIN_X);
         camera.setMaxX((short) BEATEN_MAX_X);
     }
