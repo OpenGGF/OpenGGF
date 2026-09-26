@@ -6541,3 +6541,9 @@ Its500-frame60fps640x448 movie and the957-frame native laser movie both fully
 decode. Engine laser and native arm-cycle stills were inspected. This arena view
 is not claimed to demonstrate a visible before/after priority difference; the
 native art word and failing live-child assertion establish the omitted property.
+
+Integrated as `24f6e0999` after fresh fetch/fast-forward check, without conflicts.
+The same combined command on the integrated main tree passes92 tests, zero
+failures/errors/skips (3m29s). Release-tree policy checks pass. All500 captured
+engine PNGs are byte-identical before/after at this viewpoint; no visible-overlap
+claim is made. Source logic was unchanged after this integrated verification.
