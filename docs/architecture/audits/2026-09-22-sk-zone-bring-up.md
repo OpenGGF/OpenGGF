@@ -6316,3 +6316,12 @@ and native-presentation obligations are unchanged.
 
 After adding explicit assertions for the live pulley ownership and airborne
 upper passage, the two Act2 route cases pass again with zero skips.
+
+
+Integrated verification: `efd892fc9` fast-forwarded into the unchanged
+`develop` base `2f298ba9e` without conflicts. The combined focused boss,
+recreation, cold-route and mandatory S3K selection above passes **194 cases,
+zero failures/errors/skips** on the main checkout in 1m28s. The final explicit
+pulley/flight assertions are included. The seven focused guard checks belong
+to the same production/test code in the development checkout; no new full
+ordinary-suite or full-guard-suite pass is claimed.
