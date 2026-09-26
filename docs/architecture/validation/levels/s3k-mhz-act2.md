@@ -280,7 +280,8 @@ Both players must be controlled at the shared-pulley pull and climb spots.
 is isolated at the actual FBZ load, preserves roster identity and checks ordinary
 movement after entry. Recording-driver snapshots cannot stand in for that check.
 The candidate four-route/history follow-up passes without failures/errors/skips;
-combined integration results are in the campaign audit.
+the integrated b3428e8d7 combined selection passes79 cases, zero skips, as recorded
+in the campaign audit.
 
 The fresh40,630-row rendering has zero deaths and matches all37,972 boss-author
 and40,270 exit-author rows on every shared state field except input-text format.

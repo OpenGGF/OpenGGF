@@ -6630,3 +6630,16 @@ passes all4 cases, zero failures/errors/skips: all three Act2 roster routes,
 The earlier combined run's75 unchanged entry/paired-Act1/S3K cases passed; only
 the three-route class and new history consumer needed rerunning after the test edit.
 The production source tree remains unchanged throughout this slice.
+
+Integrated route/tests as `b3428e8d7` after a fresh fetch/fast-forward check;
+no conflicts or production edits. On the integrated main tree, queued Java21,
+DISPLAY=:0 and explicit `-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen`:
+`-Dtest=TestS3kMhzAct2AuthoredRoute,TestMhzPairColdRouteCapture,TestS3kMhzTeamAuthoredRoute,TestS3kMhzAct2EntryHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passes79 tests, zero failures/errors/skips (1m11s). The three Act2 roster cases
+and separate production timeline case pass together with the unchanged short
+entry/Act1/S3K gates. No executable edits follow this verification. The accepted
+video and inputs remain external; rejected exploratory media are disposable
+because the committed route and decision notes preserve their useful evidence.
+The all-zone goal remains active; MHZ width/donor/team and native-presentation
+breadth, and the other act matrices' remaining obligations, are not certified by
+this native-pair completion.
