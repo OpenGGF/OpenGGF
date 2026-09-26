@@ -328,15 +328,18 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
 
         boolean alternate = (frameCounter & 0x02) != 0;
-        for (int i = 0; i < participants.size(); i++) {
-            AbstractPlayableSprite player = participants.get(i);
+        for (AbstractPlayableSprite player : participants) {
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             // sub_65E72 bsets render_flags bit 1 alongside the raw $B4/$A7
             // mapping selection, turning these into the floor-grab poses.
             player.setRenderFlips(player.getRenderHFlip(), true);
             player.setObjectMappingFrameControl(true);
             player.setAnimationId(0);
-            int baseMapping = i == 0 ? 0xB4 : 0xA7;
+            // loc_65E9E adds character_id, not the Player_1/Player_2 slot,
+            // to RawAni_65EB0 ($B4,$A7,$B5,$A8). Slot-based selection happened
+            // to suit Sonic + Tails, but gave solo Tails Sonic's floor-grab pose.
+            int baseMapping = com.openggf.game.CharacterKey.TAILS.equals(player.characterKey())
+                    ? 0xA7 : 0xB4;
             player.setMappingFrame(baseMapping + (alternate ? 1 : 0));
         }
     }

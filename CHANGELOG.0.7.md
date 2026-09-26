@@ -560,7 +560,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   retains the ROM trajectory when the boss faces left, and Madmole’s submerged
   body keeps its final collision position until the ROM’s deferred deletion.
   The MHZ2 Knuckles press sequence flips Sonic and Tails into the ROM floor-grab
-  pose when it switches to raw mappings. Cutscene doors retain their lowered state
+  pose when it switches to raw mappings, selecting by character identity so solo
+  Tails uses his own frames as well. Cutscene doors retain their lowered state
   when streamed out and back in, and
   boss debris follows the native initialization and flicker sequence. Act 1
   camera limits use the locked-on ROM’s height rule for all characters, and

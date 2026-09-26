@@ -209,3 +209,27 @@ Tails incoming entry (2026-09-26): the new 24,121-input cold MHZ1 Tails route
 reaches this act via its actual seamless handoff, verifies released movement
 after rebase and reaches the leaf-blower sequence. This is incoming-entry
 evidence only; Tails Act 2 completion remains open. See the Act 1 matrix.
+
+
+### 2026-09-26 — character-specific floor-grab correction
+
+The user identified solo Tails's wrong pose in the Knuckles press scene. ROM
+`sub_65E72/loc_65E9E` selects `RawAni_65EB0 = $B4,$A7,$B5,$A8` using
+`character_id` plus V-int bit 1. The old engine selection used participant
+index, so solo Tails inherited Sonic's $B4/$B5. It now uses character identity;
+vertical flip, control ownership, clock phase and the lift animation are unchanged.
+
+The short unit test checks both V-int phases for Sonic and real Tails. The
+production entry test now spans all five presets × Sonic/Tails/Sonic+Tails,
+observes the leader/follower raw pose by character key, restores/replays during
+the floor grab, and continues through lift, carrier retirement and release.
+All 103 cutscene/entry checks pass without skips; the three cold MHZ routes and
+mandatory S3K entry/loading/decoding gates also pass on this runtime change.
+
+Fresh native320 Tails video `campaign-20260926-tails-floor-grab-fixed-320`
+supersedes the floor-grab segment of the prior Tails Act 1 movie. Of the shared
+24,121 input rows, exactly 124 mapping-frame values change ($B4/$B5 to $A7/$A8),
+with all other fields identical. The new 1,021-frame/60fps clip continues through
+release, has no deaths and fully decodes; both raw-pose phase stills were inspected.
+Native table accuracy is established by the disassembly; native video parity is
+not claimed. The rest of the Tails Act 2 route remains in progress.

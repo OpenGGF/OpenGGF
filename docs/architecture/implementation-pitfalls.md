@@ -26,6 +26,16 @@ policy on current zone/act as well as its runtime owner. The short
 `TestDezFinalScreenEntry.outgoingDoomsdayLoadDoesNotInheritFinalArenaCameraProjection`
 regression exercises this boundary without replaying the full fight.
 
+**Character identity is not player-slot order.** MHZ2's `sub_65E72` indexes
+`RawAni_65EB0` by `character_id` plus V-int bit 1. Treating the leader as Sonic
+and every follower as Tails gave solo Tails Sonic's floor-grab frames, while the
+usual Sonic+Tails pairing looked correct. Use the playable character identity
+for character-indexed ROM data and retain slot checks only where the ROM uses
+slots. Unit doubles must expose the intended identity: a generic
+`TestablePlayableSprite("tails", ...)` still identifies as Sonic; use real Tails
+for identity-sensitive checks. Follower instance names likewise are not character
+keys. Cover both solo and paired placement of the same character.
+
 **A one-shot animation write is not a forced pose.** Knuckles' slide get-up
 (`Knuckles_Sliding.getUp`) and fall-from-glide landing write `anim=$22/$23`
 once alongside `move_lock=$F`. The lock gates Move, not subsequent Duck,

@@ -498,11 +498,13 @@ class TestMhz1CutsceneObjects {
         verify(renderer).drawFrameIndex(0, 0x03D0, 0x0748, false, false);
     }
 
-    @Test
-    void mhz2CutsceneAppliesRomVerticalFlipWhenSonicGrabsTheFloor() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"sonic", "tails"})
+    void mhz2CutsceneUsesCharacterSpecificFloorGrabFrames(String character) {
         Camera camera = mhz2TriggerCamera();
-        TestablePlayableSprite sonic = new TestablePlayableSprite(
-                "sonic", (short) 0x052A, (short) 0x0748);
+        AbstractPlayableSprite sonic = character.equals("tails")
+                ? new com.openggf.sprites.playable.Tails("tails", (short) 0x052A, (short) 0x0748)
+                : new TestablePlayableSprite("sonic", (short) 0x052A, (short) 0x0748);
         sonic.setAir(false);
         CutsceneKnucklesMhz2Instance cutscene = new CutsceneKnucklesMhz2Instance(new ObjectSpawn(
                 0x03D0, 0x0748, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0));
@@ -514,18 +516,26 @@ class TestMhz1CutsceneObjects {
         };
         cutscene.setServices(services
                 .withCamera(camera)
-                .withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_ALONE)));
+                .withZoneRuntimeRegistry(runtime(character.equals("tails") ? PlayerCharacter.TAILS_ALONE : PlayerCharacter.SONIC_ALONE)));
 
-        for (int frame = 0; frame < 400 && !sonic.isObjectMappingFrameControl(); frame++) {
-            cutscene.update(frame, sonic);
+        int frame = 0;
+        while (frame < 400 && !sonic.isObjectMappingFrameControl()) {
+            cutscene.update(frame++, sonic);
         }
 
         assertTrue(sonic.isObjectMappingFrameControl(),
                 "sub_65E72 switches to raw floor-grab mappings at animation frame $0C");
         assertTrue(sonic.getRenderVFlip(),
-                "ROM bsets render_flags bit 1 while Sonic uses the raw floor-grab mappings");
-        assertTrue(sonic.getMappingFrame() == 0xB4 || sonic.getMappingFrame() == 0xB5,
-                "Sonic alternates raw mapping frames $B4/$B5 in this phase");
+                "ROM bsets render_flags bit 1 while the character uses the raw floor-grab mappings");
+        int base = character.equals("tails") ? 0xA7 : 0xB4;
+        // sub_65E72 indexes RawAni_65EB0 by character_id plus V-int bit 1,
+        // independent of whether this character occupies Player_1 or Player_2.
+        for (int n = 0; n < 4; n++) {
+            int vIntRunCount = frame++;
+            cutscene.update(vIntRunCount, sonic);
+            assertEquals(base + ((vIntRunCount & 2) == 0 ? 0 : 1), sonic.getMappingFrame());
+            assertTrue(sonic.getRenderVFlip());
+        }
     }
 
     @Test

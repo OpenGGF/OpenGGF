@@ -10,7 +10,9 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,12 +25,19 @@ class TestS3kMhzAct2EntryHeadless {
         SessionManager.clear();
     }
 
-    @ParameterizedTest @EnumSource(WidescreenAspect.class)
-    void coldEntryPressesLiftsAndReleasesSonicWithReplay(WidescreenAspect aspect) {
+    static Stream<Arguments> nativeEntryCases() {
+        return Stream.of(WidescreenAspect.values()).flatMap(width -> Stream.of(
+                Arguments.of(width, "sonic", ""), Arguments.of(width, "tails", ""),
+                Arguments.of(width, "sonic", "tails")));
+    }
+
+    @ParameterizedTest @MethodSource("nativeEntryCases")
+    void coldEntryPressesLiftsAndReleasesNativeTeamWithReplay(
+            WidescreenAspect aspect, String main, String sidekick) {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
-        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, main);
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, sidekick);
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
         config.resolveDisplayAspect();
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, aspect.pixelWidth());
@@ -38,12 +47,31 @@ class TestS3kMhzAct2EntryHeadless {
                 .withFreshLevelStartLifecycle().build();
         assertEquals(aspect.pixelWidth(), fixture.camera().getWidth());
         boolean press = false, lift = false, release = false, retired = false;
+        boolean floorGrabReplayed = false;
+        var floorGrabCharacters = new java.util.HashSet<com.openggf.game.CharacterKey>();
         var registry = fixture.gameplayMode().getRewindRegistry();
         for (int frame = 0; frame < 1400; frame++) {
             right(fixture);
             var player = fixture.sprite();
             assertFalse(player.getDead(), "entry death at " + frame);
+            var participants = new java.util.ArrayList<com.openggf.sprites.playable.AbstractPlayableSprite>();
+            participants.add(player);
+            participants.addAll(GameServices.sprites().getRegisteredSidekicks());
+            for (var participant : participants) {
+                if (participant.isObjectMappingFrameControl() && participant.getRenderVFlip()) {
+                    int base = participant.characterKey().equals(com.openggf.game.CharacterKey.TAILS)
+                            ? 0xA7 : 0xB4;
+                    assertTrue(participant.getMappingFrame() == base
+                                    || participant.getMappingFrame() == base + 1,
+                            "RawAni_65EB0 must use character identity: " + participant.getCode());
+                    floorGrabCharacters.add(participant.characterKey());
+                }
+            }
             boolean replay = false;
+            if (!floorGrabReplayed && player.isObjectMappingFrameControl() && player.getRenderVFlip()) {
+                floorGrabReplayed = true;
+                replay = true;
+            }
             if (!press && player.isObjectControlled()) { press = true; replay = true; }
             if (!lift && press && player.getCentreY() < 1700 && player.isObjectControlled()) {
                 assertTrue(player.isHighPriority(), "loc_6339C puts the lifted player in front of terrain");
@@ -76,6 +104,10 @@ class TestS3kMhzAct2EntryHeadless {
             }
             if (lift && !player.isObjectControlled()) { release = true; break; }
         }
+        assertTrue(floorGrabReplayed, "floor-grab phase must restore and replay");
+        assertTrue(floorGrabCharacters.contains(com.openggf.game.CharacterKey.parsePersisted(main)), "leader floor-grab phase must be observed");
+        if (!sidekick.isEmpty()) assertTrue(floorGrabCharacters.contains(com.openggf.game.CharacterKey.parsePersisted(sidekick)),
+                "follower floor-grab phase must be observed");
         assertTrue(press, "placed controller must survive pre-activation loading");
         assertTrue(lift, "leaf blower must carry Sonic above the blocked lower passage");
         assertTrue(retired, "offscreen Knuckles must retire while the independent lift continues");

@@ -6205,3 +6205,47 @@ fast-forward with no conflicts. On main `7296771a1`, the same three-route
 queued explicit-ROM selection passes all three cases with zero failures/errors/
 skips, 34.197s. No executable edits followed. The seven-zone goal remains
 active; the next route frontier is Tails MHZ2 after its incoming leaf blower.
+
+
+## 2026-09-26 — solo Tails MHZ2 floor-grab correction
+
+During continued Tails Act 2 authoring, the user identified the wrong floor-grab
+pose in the Knuckles leaf-blower scene. Base `c28823fdf`, isolated
+`feature/ai-mhz-tails-act2`. ROM `sub_65E72/loc_65E9E` adds `character_id`
+to the V-int phase index into `RawAni_65EB0` ($B4,$A7,$B5,$A8). Our loop
+selected $B4 for participant zero and $A7 otherwise: the ordinary pair masked
+the solo Tails defect. The production change uses `CharacterKey.TAILS` for
+$A7/$A8, preserving the existing vertical flip and bit-1 clock phase. Comments
+record the original branch/table and the cause of the prior mismatch.
+
+The focused red regression expected $A7 and observed $B4 (1 failure of 2,
+zero skips). The expanded tests initially exposed two oracle errors: a generic
+`TestablePlayableSprite` remains Sonic despite its display code; follower names
+are not stable character keys. Real Tails and identity-based observations fix
+those checks without another runtime change. Final queued Java21/native-display
+explicit-root-S3K-ROM `-Dtest=TestMhz1CutsceneObjects,TestS3kMhzAct2EntryHeadless test`
+passes103 cases, zero failures/errors/skips,26.628s. This includes both raw phases
+and15 entry configurations (five presets × Sonic/Tails/native pair), raw-pose
+observation, floor-grab restore/replay, carrier/lift/release and checkpoint7.
+The preceding combined command also passed62 unchanged-path checks: all three
+cold MHZ routes plus `TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+
+The change-based plan selects2,445 common/content/gameplay/physics/rendering/
+rewind classes and guards. Proportionate focused validation applies: this is
+a local raw-frame selector, with no changed movement, clock, save layout,
+renderer or shared contract; directly exercise its phase, roster and viewport
+consumers. No new full ordinary/guard pass is claimed.
+
+Fresh cold replay from the canonical24,121-input Tails Act1 movie, extended with
+600 neutral inputs, is external `mhz-bring-up/campaign-20260926-tails-floor-grab-fixed-320`.
+Across the shared24,121 rows, exactly124 `mapping_frame` values differ
+(inputs23929..24052), exclusively180→167 or181→168; all other fields match.
+The1,021-frame/60fps960×672 movie begins at23700 and includes press, both raw
+poses, lift and release. Both raw-pose stills inspected; full ffmpeg decode passes;
+no death/follower. It supersedes only the wrong-pose part of the earlier video.
+
+Route authoring remains open: the earlier exploratory upper flight branch
+reached MHZ2's upper passage near (4137,966) but entered a giant ring next.
+The branch tool stopped at the return load and correctly refused restoring an
+outgoing snapshot for another candidate. These trials are not certified new
+route inputs; resume from the committed cold prefix and avoid that entrance.

@@ -566,3 +566,11 @@ controller inputs, all six miniboss hits, actual MHZ2 rebase/released movement
 and seven whole-registry replay spots. Fresh moving evidence covers fight and
 handoff. The route reaches the Act 2 leaf blower; its Act 2 completion, wider
 route configurations and native-emulator presentation remain open.
+
+
+MHZ2 floor grab (2026-09-26): solo Tails exposed a player-slot/character-identity
+confusion in raw pose selection. The ROM table is now selected by character, with
+phase-specific unit coverage and 15 production entry/pose/lift/release/replay
+cases across Sonic, Tails and their native pair at all five presets. Fresh Tails
+video changes only the 124 affected mapping-frame rows in its shared input range.
+Tails Act 2 route completion remains open.
