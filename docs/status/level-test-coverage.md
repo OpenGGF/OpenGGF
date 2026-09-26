@@ -551,3 +551,11 @@ retirement;100 native/102 wide route rewind windows are verified. Fresh800 video
 includes the fight, results, ascent and DEZ arrival. The reusable controller
 lookahead author is promoted with independent fresh-replay verification.
 Other matrix gaps and native-emulator presentation parity remain open.
+
+
+MHZ physical-post lifecycle follow-up (2026-09-26):
+`TestMhzCheckpointRoutes` adds ROM-inventoried local activation and whole-world
+rewind for all nine posts and the three accepted native rosters; real two-death
+reload cases span all five presets and supported native/S1/S2 rosters. These are
+local approaches, not new cold-route certification. Scripted checkpoint, broader
+team and presentation obligations remain separately tracked in both act matrices.

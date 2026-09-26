@@ -62,7 +62,7 @@ baseline. They cannot be relabelled a green campaign baseline.
 
 | Dimension | Accepted scope / remaining evidence |
 | --- | --- |
-| Width | Standard requires 320, 400, 512, 640, 800 through the supported configuration. Current per-act entry/lifecycle cross-product, meaningful traversal and rewind coverage are unassessed; historical local camera checks do not fill this row. |
+| Width | Supported presets are 320, 352, 400, 528, 800 through the supported configuration. Current per-act entry/lifecycle cross-product, meaningful traversal and rewind coverage are unassessed; historical local camera checks do not fill this row. |
 | Donor | Native plus every currently supported S3K movement donor; resolve support from production before selecting cases. No per-act donor certification from the reviewed records. |
 | Main | Sonic and Tails, plus Sonic/Tails native pairing; Knuckles implementation expansion is excluded as above. Existing locked-on Knuckles camera test remains a regression, not route coverage. |
 | Team | Solo/native pair are reviewed implementation paths. Mixed, duplicate and maximum participant shapes need current contract-derived authority/lifecycle checks; absence of evidence is not an unsupported classification. |
@@ -145,3 +145,28 @@ finish inside Knuckles's press sequence. The earlier released-title spot still
 proves incoming control release; the final pass is no longer required to remain
 uncontrolled. The campaign's new leaf-blower capture extends to9901 passes,
 showing the lift and upper-route movement. The Act2 matrix owns that coverage.
+
+
+### 2026-09-26 — physical checkpoint lifecycle coverage
+
+`TestMhzCheckpointRoutes` inventories all nine ROM-authored physical posts
+(five in Act 1, four in Act 2) against the independent disassembly placement
+tables. Each post has a declared local controller approach for Sonic, Tails and
+Sonic with Tails, with whole-registry capture/restore and two deterministic
+forward replays. These approaches do not establish cold reachability.
+
+The lifecycle matrix uses physical contact, then two production pit-death
+stimuli through `GameLoop` and its normal fade/title/reload flow. It covers
+320/352/400/528/800 for the three accepted native rosters and the current
+launch-profile-supported S1/S2 donor rosters. Assertions cover saved position
+and index, object/runtime replacement and event binding, roster identity,
+viewport, donor rules and decoded participant art, control release and outgoing
+history isolation. Scripted checkpoints remain separate; the MHZ2 entrance
+index 7 retains its existing cutscene/admission tests.
+
+The final Act 2 post needs the existing upper-passage jumping approach from
+(15008,704); a flat post-height setup misses its loading band, and moving that
+flat setup farther left falls into the lower passage. No runtime workaround was
+added. This closes the tested local physical-post lifecycle cross-product, not
+all alternate-entry, mixed/duplicate/maximum-team, event-latch or presentation
+obligations. The campaign audit records execution and integration evidence.

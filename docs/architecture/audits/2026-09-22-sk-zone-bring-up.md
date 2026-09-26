@@ -6103,3 +6103,49 @@ shows activation; all13,400 CSV rows match the complete fresh replay, full decod
 passes and pre/post-lock stills were inspected. Both media READMEs identify
 source7afd827fb and reproduction inputs. This delivers the bounded correction
 and wide Tails route; the seven-zone campaign remains active.
+
+
+## 2026-09-26 — MHZ physical checkpoint lifecycle matrix
+
+Base `c9e933e9eec88508ba17172a8b14b442e9a28230`, isolated
+`feature/ai-mhz-checkpoint-lifecycle`. No runtime code changed.
+`TestMhzCheckpointRoutes` uses an independent placement oracle from
+`skdisasm/Levels/MHZ/Object Pos/{1,2}.bin`: Act 1 indices 2/3/4/5/6,
+Act 2 indices 9/11/12/13. Scripted checkpoints are distinct; the existing
+Act 2 entrance index-7 and boss admission regressions were also exercised.
+
+All 343 new cases pass, zero failures/errors/skips (54.315s queued Maven,
+29.71s test class): one inventory, 27 physical approaches with two complete
+registry restore/forward-replay cycles, and 315 two-death lifecycle cases
+(630 actual reloads). The latter are nine posts × five actual presets
+(320/352/400/528/800) × seven supported configurations: three native rosters,
+S1 Sonic, and S2 Sonic/Tails/Sonic+Tails. Donor support comes from current
+`LaunchProfile.sanitizedFor(SONIC_3K)`, not forced unsupported products.
+Physical post contact saves state; production pit-death stimuli then drive
+`GameLoop` through fades/title/reload. Assertions cover position/index,
+replacement object/runtime ownership, event binding, participant identity,
+viewport, donor rules and decoded art, control release and history isolation.
+
+Rejected setup: a flat post-height approach to Act 2 post 13 leaves the
+camera at entry Y=1568 initially and the post absent from the live loading
+band. Moving that flat approach 128px left falls into the lower passage.
+The existing boss-admission upper-passage start (15008,704), using ordinary
+Right/jump input, activates the post and replays exactly. Admit one neutral
+production frame first, consistently in both helpers: an immediate boot-time
+jump produced 35 false activation failures in the lifecycle helper while the
+live rewind helper passed. No object spawn, checkpoint save, camera, health
+or input clock is forced during the approach. Initial positioning and the
+pit-death stimulus are declared component setup; these are not cold routes.
+
+Validation: queued Java 21, DISPLAY=:0, exclusive serial admission and explicit
+absolute S1/S2/S3K root ROM properties; command
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestMhzCheckpointRoutes test`.
+The preceding combined run additionally passed 74 cases (zero skips) selected
+by `TestS3kMhzEndBossAdmission,TestS3kMhzAct2EntryHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+Its new checkpoint helper failures were repaired as described, then all 343
+new cases rerun. The change-based plan selects 1,960 common/gameplay classes
+and guards; proportionate focused validation applies because only local tests
+and coverage prose changed, with no runtime/build/selection contract change.
+This is not a new full-suite or native-emulator presentation claim. Existing
+accepted Knuckles/standalone/trace exclusions remain unchanged; other lifecycle,
+broader team, traversal and presentation obligations remain in both matrices.

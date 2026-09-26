@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+MHZ final physical checkpoint (2026-09-26): a local post-height teleport can
+leave the camera in MHZ2's entry Y band and skip admission of the upper-route
+post. A farther-left flat setup instead falls into the lower passage. Use the
+declared (15008,704) upper-passage Right/jump approach, admitting one neutral
+production frame before the first jump edge; boot-time and live-frame inputs
+are not interchangeable. All 343 physical-post/reload cases then passed without
+a runtime change. This local approach is not cold-route reachability evidence.
+
 FBZ checkpoint width setup (2026-09-25): setting an aspect after a helper has
 already created the gameplay session leaves the existing camera at its original
 width. A post-death assertion then looks like a reload width regression. Apply

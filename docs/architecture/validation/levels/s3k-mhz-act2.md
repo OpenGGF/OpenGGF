@@ -178,3 +178,28 @@ tests, zero failures/errors/skips, including this entire incoming route and all
 eight full-registry restore/45-input replay checkpoints. The existing route
 video remains presentation evidence; the correction is retained contact state.
 All other matrix breadth/lifecycle/native-scene gaps remain open.
+
+
+### 2026-09-26 — physical checkpoint lifecycle coverage
+
+`TestMhzCheckpointRoutes` inventories all nine ROM-authored physical posts
+(five in Act 1, four in Act 2) against the independent disassembly placement
+tables. Each post has a declared local controller approach for Sonic, Tails and
+Sonic with Tails, with whole-registry capture/restore and two deterministic
+forward replays. These approaches do not establish cold reachability.
+
+The lifecycle matrix uses physical contact, then two production pit-death
+stimuli through `GameLoop` and its normal fade/title/reload flow. It covers
+320/352/400/528/800 for the three accepted native rosters and the current
+launch-profile-supported S1/S2 donor rosters. Assertions cover saved position
+and index, object/runtime replacement and event binding, roster identity,
+viewport, donor rules and decoded participant art, control release and outgoing
+history isolation. Scripted checkpoints remain separate; the MHZ2 entrance
+index 7 retains its existing cutscene/admission tests.
+
+The final Act 2 post needs the existing upper-passage jumping approach from
+(15008,704); a flat post-height setup misses its loading band, and moving that
+flat setup farther left falls into the lower passage. No runtime workaround was
+added. This closes the tested local physical-post lifecycle cross-product, not
+all alternate-entry, mixed/duplicate/maximum-team, event-latch or presentation
+obligations. The campaign audit records execution and integration evidence.
