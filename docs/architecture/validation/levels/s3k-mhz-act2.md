@@ -262,3 +262,29 @@ traversal. This is not paired Act2 completion. The shared horizontal-bar restore
 fix also applies to this act's ten placed `$0B` bars; short jump/upward/downward
 release reconstruction checks supplement the existing solo Act2 routes. See the
 Act1 matrix and campaign audit for the ownership defect and verification scope.
+
+
+## Native-pair cold completion (2026-09-27)
+
+`mhz2-team-incoming-320.script/.bk2` now continues the existing native Sonic+Tails
+Act1 route through Act2, all nine endboss hits, capsule, ship pickup and playable
+FBZ in40,630 ordinary inputs. No position, health, ring, clock or debug seeds;
+P2 remains CPU controlled. This supersedes the paired-Act2 completion gap above.
+The separate Act1 fixture and short entry checks remain independent.
+
+`TestS3kMhzAct2AuthoredRoute` adds16 full-registry restore/replay windows for the
+pair, covering both catapults, lower loop, swing vine, first and shared late
+pulley, boss phases, capsule/results, weather restoration, ship carry and FBZ.
+Both players must be controlled at the shared-pulley pull and climb spots.
+`TestMhzPairColdRouteCapture` separately proves populated production live history
+is isolated at the actual FBZ load, preserves roster identity and checks ordinary
+movement after entry. Recording-driver snapshots cannot stand in for that check.
+The candidate four-route/history follow-up passes without failures/errors/skips;
+combined integration results are in the campaign audit.
+
+The fresh40,630-row rendering has zero deaths and matches all37,972 boss-author
+and40,270 exit-author rows on every shared state field except input-text format.
+The7130-frame60fps640x448 video and2710-frame defeat-to-FBZ excerpt fully decode.
+This is engine presentation with retained registered Tails, not continuously
+on-screen follower presence or native pixel/timing parity. Other widths, donor,
+team/lifecycle products and inherited presentation obligations remain open.

@@ -33,23 +33,25 @@ class TestS3kMhzAct2AuthoredRoute {
     }
 
     @ParameterizedTest
-    @CsvSource({"sonic,23775", "tails,35814"})
-    void incomingSoloCompletesActTwoWithLiveRewindBoundaries(String character, int inputCount)
+    @CsvSource({"sonic,23775", "tails,35814", "team,40630"})
+    void incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String route, int inputCount)
             throws Exception {
+        boolean pair = route.equals("team");
+        String character = pair ? "sonic" : route;
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, character);
-        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, pair ? "tails" : "");
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(7, 0)
                 .withFreshLevelStartLifecycle().build();
-        assertTrue(GameServices.sprites().getSidekicks().isEmpty());
+        assertRoster(character, pair);
         assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/mhz2-" + character + "-incoming-320.bk2"));
+                "src/test/resources/routes/s3k/mhz2-" + route + "-incoming-320.bk2"));
         assertEquals(inputCount, movie.getFrameCount());
         assertEquals(character, fixture.sprite().getCode());
         assertEquals(320, fixture.camera().getWidth());
@@ -61,6 +63,7 @@ class TestS3kMhzAct2AuthoredRoute {
         for (int frame = 1; frame < frameLimit; frame++) {
             step(fixture, inputAt(movie, frame));
             assertFalse(GameServices.sprites().getMainPlayable().getDead(), "cold route death at " + frame);
+            assertRoster(character, pair);
             var level = GameServices.level();
             var manager = level.getObjectManager();
             var boss = manager.activeObjectsOfType(MhzEndBossInstance.class).stream().findFirst().orElse(null);
@@ -88,6 +91,23 @@ class TestS3kMhzAct2AuthoredRoute {
                     spot = "upper-flight";
                 }
             }
+            if (pair && level.getCurrentZone() == 7 && level.getCurrentAct() == 1) {
+                spot = switch (frame) {
+                    case 28030 -> "opening-catapult";
+                    case 29370 -> "first-pulley";
+                    case 32140 -> "lower-loop";
+                    case 33554 -> "swing-vine";
+                    case 34650 -> "shared-pulley-pull";
+                    case 35000 -> "shared-pulley-climb";
+                    case 36600 -> "final-catapult";
+                    default -> spot;
+                };
+                if (frame == 34650 || frame == 35000) {
+                    assertTrue(fixture.sprite().isObjectControlled(), "late pulley owns Sonic");
+                    assertTrue(GameServices.sprites().getSidekicks().getFirst().isObjectControlled(),
+                            "late pulley owns the native follower on the shared handle");
+                }
+            }
             // The fresh-load row still belongs to the non-rewindable title/fade
             // boundary (RecordingFrameDriver deliberately runs no gameplay there).
             // Observe the released destination, not a mid-load registry snapshot.
@@ -111,16 +131,28 @@ class TestS3kMhzAct2AuthoredRoute {
                 same(expected, registry.capture(), spot + " replay at " + frame);
                 registry.restore(saved);
                 fixture.runner().primeInputState(inputAt(movie, frame));
-                if (spot.equals("fbz-loaded")) break;
+                if (spot.equals("fbz-loaded") && !pair) break;
             }
+            if (pair && checked.contains("fbz-loaded") && frame >= movie.getFrameCount() - 1) break;
         }
         var required = new HashSet<>(Set.of("admission", "chase-hit", "last-hit", "defeat",
                 "capsule-results", "ship", "ship-carry", "fbz-loaded", "weather-fade"));
         if (character.equals("tails")) required.addAll(Set.of("pulley-climb", "upper-flight"));
+        if (pair) required.addAll(Set.of("opening-catapult", "first-pulley", "lower-loop",
+                "swing-vine", "shared-pulley-pull", "shared-pulley-climb", "final-catapult"));
         assertEquals(required, checked);
         assertEquals(4, GameServices.level().getCurrentZone());
         assertEquals(0, GameServices.level().getCurrentAct());
         assertFalse(GameServices.sprites().getMainPlayable().isObjectControlled());
+        if (pair) assertTrue(fixture.sprite().getCentreX() > 128, "ordinary movement in playable FBZ");
+    }
+
+    private static void assertRoster(String character, boolean pair) {
+        assertEquals(com.openggf.game.CharacterKey.parsePersisted(character),
+                GameServices.sprites().getMainPlayable().characterKey());
+        var followers = GameServices.sprites().getSidekicks();
+        assertEquals(pair ? 1 : 0, followers.size());
+        if (pair) assertEquals(com.openggf.game.CharacterKey.TAILS, followers.getFirst().characterKey());
     }
 
     private static Bk2FrameInput inputAt(Bk2Movie movie, int frame) {

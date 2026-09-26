@@ -22,7 +22,7 @@ its original unimplemented counts must not be read as current production status.
 
 | Zone | Current evidence and next obligation |
 | --- | --- |
-| MHZ | Native320 Sonic and Tails each complete both acts through playable FBZ1; the native Sonic+Tails pair now completes Act1 and the released Act2 introduction in27,985 inputs with nine full-world replay spots. Tails floor-grab mappings, palette-fade reconstruction and horizontal-bar holder aliasing are corrected and integrated. All nine physical posts have343 contact/reload cases and630 real reloads across supported rosters, donors and five widths. Paired Act2 completion, remaining route/presentation breadth and native comparisons remain open; accepted Knuckles/trace/standalone exclusions remain in force. |
+| MHZ | Native320 Sonic, Tails and the native Sonic+Tails pair each complete both acts through playable FBZ1. The pair retains its27,985-input Act1 fixture and now has a40,630-input complete route with16 Act2 full-world replay spots and production live-history isolation at FBZ. Tails floor-grab mappings, palette-fade reconstruction and horizontal-bar holder aliasing are corrected and integrated. All nine physical posts have343 contact/reload cases and630 real reloads across supported rosters, donors and five widths. Remaining route/presentation breadth and native comparisons remain open; accepted Knuckles/trace/standalone exclusions remain in force. |
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; all eleven placed posts now activate through ordinary local movement for four native teams (44 cases), with immediate restore and two forward replays; physical contact now composes with two real death/reloads for every post, four native teams and all five selectable widths (220 cases/440 reloads); the supported S1/S2 standard-team product now adds 220 cases/440 reloads, with donor rules/art retained; finish cold-route and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; cold and positioned route evidence exists. Reconcile later production/rewind checks with the remaining roster/lifecycle rows and explicit trace deferrals. |
 | LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Solo Knuckles now completes both acts and the direct HPZ exit in52659 inputs with289 full-registry replay spots across five scoped tests. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. |
@@ -6547,3 +6547,86 @@ The same combined command on the integrated main tree passes92 tests, zero
 failures/errors/skips (3m29s). Release-tree policy checks pass. All500 captured
 engine PNGs are byte-identical before/after at this viewpoint; no visible-overlap
 claim is made. Source logic was unchanged after this integrated verification.
+
+
+## 2026-09-27 — native-pair MHZ2 route continuation
+
+Base `83cf9a0a8`, isolated `feature/ai-mhz-team-act2`. Continue the committed
+27,985-input native320 Sonic+Tails cold MHZ1 route rather than seeding MHZ2.
+The new `mhz2-team-incoming-320.script/.bk2` has40,630 ordinary controller
+inputs, P2 neutral/CPU controlled. Authoring reaches all nine endboss hits at
+input37971 with four rings, then the actual FBZ1 load at40269 and adds240
+neutral/120 Right inputs. Independent capture and integrated test results are
+recorded below when complete; authoring alone is not route certification.
+
+Important route decisions and rejected attempts:
+
+- The opening/final catapults require landing and waiting on the cap; repeatedly
+  jumping off misses their launch. Flat-ground takeoff clears the higher final cap.
+- Continuous Right clears curved runs where a generic jump loop loses momentum.
+  A spindash clears the lower loop near x8000; subsequent spike groups need jumps.
+- The x9397 wall stop was initially mistaken for the terrain opening. The actual
+  cold-route and positioned Act2 collision tiles agree: three placed
+  `BreakableWallObjectInstance`s at x9424/9456/9488 fill that opening. Standard
+  `Obj_BreakableWall` requires a grounded pushing/roll-animation/speed gate;
+  airborne mushroom launches do not establish a collision regression. The useful
+  route releases the preceding swing vine eight inputs after33550, reaching the
+  upper path instead. Earlier five-input release entered the lower pocket.
+- Both native players catch the late pulley's same handle. Sixteen Down/sixteen
+  neutral intervals leave its shared pull asserted by delayed follower input.
+  Eight/eight intervals retract it and climb; sixteen/forty-eight also works.
+  No CPU delay, pulley or movement rule was changed to accommodate the inputs.
+- The existing SSZ policy search was temporarily adapted to observe the MHZ boss
+  with an eight-pixel steering intent, as in the prior solo Tails work. It authors
+  buttons from engine-owned rewind snapshots; no gameplay state is injected.
+- The first capsule approach drifted left after pressing its button and blocked
+  the forced walk against the body. `Obj_EggCapsule` still calls SolidObjectFull
+  after every routine dispatch; `loc_76270` restores controls then locks Up before
+  the later forced Right walk. Turning right while landing on the button lets
+  the shipped sequence proceed. No capsule or cutscene logic was altered.
+
+A temporary tile-only planning probe needed refreshed parallax after changing
+camera coordinates; camera writes alone did not publish the foreground scroll.
+Those positioned views are not route or native-parity evidence. Prefix object
+inventories, not only visible terrain, identify the blocker in a tight passage.
+
+The expanded `TestS3kMhzAct2AuthoredRoute` retains the solo routes and adds the
+native pair, asserting the live roster, the actual FBZ destination and movement.
+Its existing boss/capsule/ship/weather-fade replay windows are joined by seven
+paired traversal windows: opening catapult, first pulley, lower loop, swing vine,
+shared late-pulley pull/climb and final catapult. The late spots assert both
+players are controlled, and the real outgoing load must reset populated live
+history. The independent Act1 and short entry tests remain separate.
+
+The combined change-based plan selects2,927 ordinary classes plus guards because
+route resources are unclassified. Proportionate focused validation applies to
+fixture/test/prose changes with unchanged production/build contracts. Run the
+combined MHZ Act2, paired Act1, short entry and mandatory S3K selection, and fresh
+rendered cold replay; do not describe that as a full-suite or native-parity pass.
+
+Independent fresh `GameplayCaptureTool` replay at base production83cf9a0a8 has
+40,630 state rows, zero deaths and no missing registered-follower row. Every
+state field except input-text representation matches all37,972 boss-author rows
+and all40,270 exit-author rows. The tail reaches playable FBZ and moves Sonic to
+(201,1219); Tails remains registered, with the CPU respawn sentinel during that
+last loop section, so this is not a claim that he is visible in every frame.
+The movie in `mhz-bring-up/campaign-20260927-team-act2-clear-320` records
+inputs33500..40629 (7,130 frames,60fps,640x448); full ffmpeg decode passes.
+Shared pulley, final hit, capsule, overhead ship and destination stills were
+inspected. A2,710-frame excerpt starts at37920 for defeat through FBZ handoff.
+This is engine presentation, not aligned native-emulator visual parity.
+
+The first candidate combined command completed78 tests:77 passed, one new
+history assertion failed, zero skips. The recording-driver route test does not
+record the GameLoop's live timeline, so setting LIVE_REWIND_ENABLED there is not
+an adequate history oracle. Keep full-registry replay in that driver, and test
+actual live-history isolation separately with `TestMhzPairColdRouteCapture` using
+production `GameplayCaptureSession`/GameLoop steps and rendering. No runtime
+change was made for this test-harness correction.
+
+Candidate follow-up `-Dtest=TestS3kMhzAct2AuthoredRoute,TestMhzPairColdRouteCapture test`
+passes all4 cases, zero failures/errors/skips: all three Act2 roster routes,
+16 paired full-registry replay windows and actual production live-history reset.
+The earlier combined run's75 unchanged entry/paired-Act1/S3K cases passed; only
+the three-route class and new history consumer needed rerunning after the test edit.
+The production source tree remains unchanged throughout this slice.

@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Live rewind recording versus route-driver snapshots (2026-09-27): enabling
+LIVE_REWIND_ENABLED in a RecordingFrameDriver/HeadlessTestFixture route does not
+exercise GameLoop's history recorder. A new MHZ paired load-boundary test had
+zero outgoing history despite valid full-registry restore/replay. Use production
+GameLoop steps (e.g. GameplayCaptureSession), prove outgoing history exists, then
+observe its reset at the actual destination load; do not weaken the nonempty
+history assertion or infer it from successful registry snapshots.
+
 MHZ final physical checkpoint (2026-09-26): a local post-height teleport can
 leave the camera in MHZ2's entry Y band and skip admission of the upper-route
 post. A farther-left flat setup instead falls into the lower passage. Use the

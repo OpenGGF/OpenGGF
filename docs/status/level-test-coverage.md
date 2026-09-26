@@ -615,3 +615,11 @@ eight normal phases across two declared native checkpoint experiments. A live
 laser-pair regression covers the corrected art priority and native0/2 subtypes;
 92 combined encounter, cold-route and mandatory S3K checks pass without skips.
 This does not certify aligned pixel/timing parity or the remaining route products.
+
+
+MHZ native-pair completion (2026-09-27): the
+[Act2 matrix](../architecture/validation/levels/s3k-mhz-act2.md) now records a
+40,630-input cold MHZ1→MHZ2→playable FBZ route, all nine final-boss hits and zero
+deaths. Sixteen paired Act2 full-registry replay spots and a separate production
+GameLoop live-history reset check pass. The short Act1/entry fixtures remain
+independent; remaining width/donor/team products and native visual parity stay open.
