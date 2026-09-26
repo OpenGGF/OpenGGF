@@ -6377,3 +6377,10 @@ passes 7 checks, zero failures/errors/skips in 24.206s. The default restore path
 and forced recreation are both exercised by the route and short tests. This
 repair is shared by the eleven Act1 and ten Act2 placed horizontal bars; the
 native movement and art paths are unchanged.
+
+
+Integrated verification: `f06669105` fast-forwarded into `develop` from
+`7efb20721` without conflicts. The same explicit-ROM 100-case selection above
+passes on the main checkout, zero failures/errors/skips, in 1m35s. The seven
+selected guard checks apply to the identical production/test code in the task
+checkout. This is focused verification, not a full ordinary or guard suite.
