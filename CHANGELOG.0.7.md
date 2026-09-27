@@ -252,14 +252,17 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The Sandopolis Act 1 signpost now drops on the ROM frame after the golem sinks,
   and Sandopolis and Death Egg keep their ring count after Act 1 results until the
   Act 2 title card, as in the ROM. Knuckles caught by Sandopolis falling sand while
-  gliding now drops his glide pose instead of keeping it. After the Sandopolis Act 1
+  gliding now drops his glide pose instead of keeping it. Grabbing objects also clear
+  Knuckles’ glide state, preserving their hanging poses and release jumps. After the Sandopolis Act 1
   results the camera opens gradually and the walk to the pyramid starts on the ROM
   frame instead of briefly obeying held input. CPU Tails can jump off Sandopolis
   light switches again after the Act 1 golem, and the Act 2 title card holds for its
   full ROM time. Solo Sonic now also has cold routes through both Sandopolis acts,
   including the golem, eight-hit end boss, capsule and playable Lava Reef,
   with whole-world rewind checks. Tails also has cold routes through both acts, including eight end-boss hits,
-  the capsule and playable Lava Reef, with whole-world rewind coverage. Knuckles now has a cold Act 1 route through a bonus visit, the golem and playable Act 2, including rewind and bonus-return timeline checks. In Sandopolis Act 2, rising players are lifted onto push switches,
+  the capsule and playable Lava Reef, with whole-world rewind coverage. Knuckles now has cold routes through both acts: a bonus visit and the golem,
+  followed by the cork/rock puzzles, eight-hit end boss, capsule and playable Lava Reef,
+  with whole-world rewind and load-boundary checks. In Sandopolis Act 2, rising players are lifted onto push switches,
   objects below the looping level's seam (such as breakable sand rocks) load when
   the camera wraps, Hyudoro ghosts appear, attack and vanish on the ROM frames and
   scatter rings when they hit, and Skorps wake a frame later so they patrol in step.
@@ -630,7 +633,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   rewind/replay spots across traversal and its boulder handoff.
   Act 2 also draws its ROM-backed Death Egg background sprite, with continuous
   widescreen entry and preserved art-load/position state on rewind. Finite
-  widescreen foregrounds no longer repeat opposite-edge terrain outside the layout.
+  widescreen foregrounds no longer repeat opposite-edge terrain outside the layout,
+  while independently scrolling scenery such as SSZ2’s clouds retains its native wrap.
   Act 2’s boulder cutscene carries Sonic and Tails into the boss act, preserving
   rings, time and elemental shields. Knuckles’ exit leads into Hidden Palace and
   saves progression. The boss act restores its checkpoint entry and runs the
@@ -768,6 +772,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   `bk2-input-authoring` document the workflow. Native BizHawk reference capture
   uses a shared host with explicit zone plans, input hashes and failed-export
   detection; existing FBZ commands remain compatible.
+  Controller-branch probes now stop on game-mode changes as well as level replacement,
+  preventing restoration of an outgoing gameplay snapshot after special-stage entry.
 - **S3K Lava Reef:** the Act 1 miniboss arena and Death Egg Act 2 boss arena
   center their native camera windows in widescreen while retaining original player
   bounds. Death Egg's widescreen boss view holds X at the arena centre while Y

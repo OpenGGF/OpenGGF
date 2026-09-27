@@ -2119,6 +2119,14 @@ claims no new runtime result, route coverage or native parity.
 
 ### Remaining acceptance, in recommended order
 
+Current route update (2026-09-27): the act matrices now record fixed-input cold
+completions at native 320px for Sonic, Tails and Knuckles through both acts, plus
+Sonic + Tails. Knuckles Act 2 includes the lower cork/rock puzzle and actual LRZ
+handoff with whole-world replay. This closes those character routes, not the
+remaining viewport/donor, per-mechanic and native-presentation obligations. The
+800px Knuckles input frontier and the accepted strict-trace deferral remain
+explicit in [the Act 2 matrix](../validation/levels/s3k-soz-act2.md#knuckles-cold-act-2-completion-2026-09-27).
+
 Historical ordering below. Item1's connected engine passage is now recorded in
 [the Act2 matrix](../validation/levels/s3k-soz-act2.md#ordinary-knuckles-lower-puzzle-and-current-viewport-breadth-2026-09-27),
 with independent native Knuckles rock/switch/door observations. Synchronized native

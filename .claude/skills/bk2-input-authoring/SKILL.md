@@ -69,8 +69,10 @@ solo), input file, prefix length, output directory, and candidate scripts. The
 probe uses a cold entry without donor or position seeding. Each candidate has a
 compact full-prefix script, round-tripped BK2, state CSV and PNGs every30 inputs
 and at termination. `prefix-objects.txt` lists nearby active objects. It stops
-at death or a level reload and refuses to restore another candidate across that
-load boundary. Use a new empty output directory; existing products are preserved.
+at death, a level reload or a game-mode transition, and refuses to restore another
+candidate across either world boundary. The branch checkpoint itself must be in
+LEVEL mode; a special-stage transition can retain the outgoing level object while
+changing active mode, so level identity alone is not a safe restore guard. Use a new empty output directory; existing products are preserved.
 
 These are exploratory branches, not fresh-run or parity evidence. Read the CSV
 before inspecting images. Replay the chosen BK2 independently with

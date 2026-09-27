@@ -7911,3 +7911,555 @@ case is not repeated. No executable edits followed. Native Knuckles Act2 input
 research can start at source soz_2 row12361 (first Act2 destination320,940),
 movie offset352986+12361=365347; these are controller/route-location references,
 not permission to import native state. The campaign remains active.
+
+
+## 2026-09-27 — Knuckles SOZ Act2 cold-route continuation
+
+Previous turn delivered Act1 as da2b2106f/58001b58e, pushed and cleaned; it was
+progress. Main fetch/ff-only pull remains58001b58e. New feature/ai-soz-knuckles-act2
+uses the cowtree helper (FICLONE, no fallback) with installed hooks. Native
+controller inputs beginning365347 (soz_2 row12361, first Act2 destination) are
+the initial cold probe: actual Knuckles,320,no donor/follower/seed,intro enabled.
+No native physics/state is imported. Baseline execution is recorded below. Existing
+accepted trace deferral and seven-zone goal remain unchanged.
+
+
+The native-input cold baseline dies at input3542,(1653,1188),11 rings, after
+stalling at the first floating pillar. First horizontal motion is input115
+versus native113, so a large intro offset is not established. Ordinary authored
+hops from prefix601 pass the first sand/crusher approach and reach(1821,940)
+with4 rings, but stop at the closed door(1844,896),subtype1. Climb/glide inputs
+cannot substitute for its trigger charge. A grounded approach from prefix1142
+stops at the rising-sand wall(1396,1018),player(1373,940), rather than charging
+a push switch. A read-only placed-object survey is checking the actual switch/
+door relationship; no runtime defect or route completion is established.
+
+
+The first door uses push switch(1744,944), subtype1; hops had skipped its
+charging side. Holding Right on its left reaches player1753,940 at full charge,
+then a jump clears the opened door. The next ramp reaches a falling-sand column
+near(1738,633); native inputs1350 onward use repeated jump presses to climb it.
+The matched controller-only excerpt climbs, charges the upper switch(1208,176),
+passes the next door and reaches(3252,940),19 rings,zero deaths. Latest full
+prefix is target/knuckles2-launchfollow/variant-0.bk2 through input4338; it is
+still exploratory, not certified. Native continuation3150 onward is next.
+
+
+A later ordinary hop trial enters the giant ring(5440,1456), reaching
+SPECIAL_STAGE_RESULTS while retaining the outgoing Level object. The original
+branch tool checked only Level identity, so its next snapshot restore mixed
+worlds; that second candidate is invalid. GameplayInputBranchTool and the
+temporary author now capture GameMode with the Level, require a LEVEL-mode
+checkpoint and stop/refuse reuse on either boundary. A ROM-backed regression
+calls the real special-stage entry, proves the Level object is retained, and
+asserts the checkpoint is no longer eligible. Existing fresh-versus-restored
+branch and both-pad authoring checks also pass (three tests,zero skips).
+No engine gameplay logic is changed. The mirrored authoring skill explains
+this guard. An earlier turn away from the optional ring safely reaches the
+vertical wrap near(4433,580),19 rings,zero deaths at input5820; next trial
+reuses only the matching native controller section around row4000.
+
+
+The ring-free wrap exit reaches the next upper platform at(5397,556),27 rings,
+input8320. Repeated rightward hops then latch Knuckles onto the terrain wall
+at(5941,801); Up climbs correctly onto its ledge. The next obstruction is
+the subtype2 door at(6000,640), not failed wall climbing. These controller
+trials remain exploratory; the native approach charges an earlier switch
+before crossing this ledge. No new runtime movement defect is established.
+
+
+The decoded subtype2 switch is(5424,912), below the upper platform, and the
+existing prefix had fully charged it by input6225. Its charge decays once
+released; the long spring/platform detour exhausted that window. Returning to
+that controller prefix, crossing right and climbing immediately at the first
+terrain grip (input6918) passes the door with grounded Right. Jumping at the
+door hits its descending upper body and stalls. The chosen exploratory file
+is target/knuckles2-door2climb/variant-1.bk2,7889 inputs, ending(6832,1503),
+26 rings,zero deaths. This is a route-authoring correction, not engine tuning.
+
+
+A later spring-staircase trial reaches(6794,1080),31 rings, but repeatedly
+hits an overhead solid. Active-object observations identify horizontal door
+(6848,1048),subtype$13, and its subtype3 switch(6600,1456). The exploratory
+hops had skipped charging that switch at input7600. This explains the failed
+launch without a collision change. Repair resumes from input7580,(6537,1394),
+before crossing the switch; rejected staircase trials are not route evidence.
+
+
+Charging switch3 to full at(6609,1452), then climbing the east terrain wall
+and returning west across the swinging-platform passage opens the spring
+launch as expected. The next controller prefix is target/knuckles2-upperexit/
+variant-0.bk2,9941 inputs, ending(8230,1072),7 rings,zero deaths in the next
+loop approach. Grounded door clearance and switch charge/decay explain both
+previous stalls. No movement/collision tuning was needed or performed.
+
+
+The second loop needs a spindash from its low slope; this reaches the upper
+passage near(8437,464). Long repeated-jump trials then die at the moving
+bottom-spiked pillar(8768,336),subtype$25. Grounded Right passes beneath it
+while raised; starting repeated rightward jumps at(8821,428) immediately
+after the crossing climbs the next ascent before another crusher/ghost hit.
+Latest surviving prefix: target/knuckles2-sandrise2/variant-0.bk2,11862 inputs,
+ending(8922,82),2 rings,zero deaths. The following trial targets the upper
+light switch(8832,64) and westward door. All candidate results remain
+exploratory pending fresh replay, route assertions, rewind and final media.
+
+
+The upper light-switch grab is observed at(8832,144), with2 rings retained.
+The west exit first stalls because the earlier ghost interruption left
+switch5 insufficiently charged. With lighting restored, the controller
+returns to switch(8624,432), fully charges it, passes beneath the moving
+crusher and climbs back to(8949,131),2 rings,zero deaths. Latest safe full
+prefix is target/knuckles2-switch5recharge/variant-0.bk2 through input13172.
+The next probe, target/knuckles2-westupperexit, tries westward ordinary inputs
+while the charge remains active. No gameplay implementation change was made
+during these controller repairs. Worktree remains feature/ai-soz-knuckles-act2
+on58001b58e; the previously tested mode-boundary tool guard awaits combined
+delivery with this unfinished route.
+
+
+Westward attempts from the recharged upper approach still fall back to the
+lower corridor: the door at8692 remains too low by the time the player
+reaches it. Explicit jump-release edges from the light-switch grip do not
+resolve this; the jump/glide trials are rejected, not evidence of completion.
+Current next test shortens the fully charged departure from prefix12674
+of target/knuckles2-switch5recharge/variant-0.bk2 and uses faster repeated
+jump presses for the ascent (target/knuckles2-fast-switch5). The last safe
+upper prefix still has2 rings,zero deaths; route completion remains open.
+
+
+Current unresolved observation: native Act2local9430..9470 jumps from the
+light grip(8832,144) westward and reaches(8679,172),grounded. Engine jump
+trials instead stop near8714 and fall to the lower floor. Snapshot object
+list at engine input13324 reports trigger5 doorY64 (spawnY132), so a fully
+closed-door explanation is not established. A temporary read-only per-input
+mechanism CSV now records trigger5 and actual doorY alongside the existing
+player/solid observations. Probe target/knuckles2-door5observe replays the
+13324 prefix and explicit release/jump/glide edges; inspect this before
+claiming a runtime collision defect or making more route timing guesses.
+Maven exec session83484 was launched for this probe; poll that exact handle
+before restarting anything. This turn made route/evidence progress; no
+full campaign completion, integration, or new suite pass is claimed.
+
+
+The door-position probe completed (session83484,exit0). It rules out the
+fully closed-door explanation: at13324 trigger5=68,doorY64; through13454
+these decay normally to55,Y77. The decisive mismatch is player launch:
+input13325 writes xvel=-512,yvel=-896, but13326 becomes xvel=-8,yvel=-864
+and mapping192 (glide), then xvel decrements by8 each frame. Native light
+release keeps its normal jump trajectory (local9430..9470 reaches8679,172).
+The engine also retains mapping192 during the hanging grip instead of the
+native145. ROM Knuckles_Control loc_165AE (sonic3k.asm30389ff) explicitly
+clears double_jump_flag whenever object_control bit0 suppresses movement.
+PlayableSpriteMovement's corresponding early-return gate around535 skips
+movement but does not perform that character-semantic clear. This is a
+concrete stale-glide-state defect, not a reason for another controller timing
+workaround. Next: regression using a real Knuckles object-controlled grip,
+implement the ROM reset in the shared semantic movement gate (not a SOZ
+carve-out), verify rendering ownership as well as launch velocity, then
+reauthor/replay the affected cold prefix. Check direct mapping-frame ownership
+in PlayableSpriteAnimation as part of the reset. No runtime fix has yet been
+applied; mode-boundary CLI guard is still the only production edit in this
+worktree. All probe Maven handles are terminal, no live sessions remain.
+
+
+## 2026-09-27 — Knuckles object-controlled glide reset
+
+The previous goal turn made route/evidence progress. The candidate shared
+movement gate now implements loc_165AE's double_jump_flag clear for the GLIDE
+ability and releases its engine-only glide animation overrides, preserving
+native direction/radii and separate object-forced poses. A first test draft
+needed the initial Process_Sprites pass consumed and a release away from level
+bounds with the already-held jump edge preserved. The corrected focused run
+(target/knuckles-control-green4.log) passes8 tests,zero failures/errors/skips.
+Do not count the earlier setup failures as a valid matched baseline.
+
+A full cold replay of all13173 preceding inputs matches the old route on every
+state CSV field. (The first attempt incorrectly treated the multiline script
+as separate candidates and is rejected; target/knuckles2-glidereset-full is
+the actual uninterrupted replay.) The real grab/release probe now reports
+mapping145 while held, then xvel=-512/-519/-526 and yvel=-896/-840/-784,
+reaching(8642,177) through the doorway. It previously replaced the release
+speed with xvel=-8 and retained mapping192. No native state is injected.
+Native controller continuation reaches a new usable terrain grip at input13830,
+(8331,148),2 rings, file target/knuckles2-after-grab/variant-0.bk2. The next
+route probe is prepared in target/knuckles2-upperwrap.txt, prefix13831.
+
+Four adjacent character/explicit-pose regression cases have been added.
+The movement patch is TEMPORARILY REMOVED for a matched unfixed-code check
+of these12 tests (Maven exec session58912). Exact patch is stored at
+ target/knuckles-control-fix.patch. After that handle is terminal, restore it
+with git apply before any candidate run. Then rebuild and rerun the focused
+selection. Java21/Lua5.4 preflight passed; combined base58001b58e plan selects
+2931 ordinary classes plus guards because shared movement changed. That broad
+validation is still required after focused fixes/route work settle; no broad
+run has started. Work remains uncommitted in the existing task worktree.
+
+
+Matched baseline session58912 is terminal (exit1); the movement patch has been
+RESTORED with git apply. Its five glide-state cases and the explicit-pose
+Knuckles state1 case fail at the expected uncleared flag. One additional test
+expectation incorrectly assumed Tails retained flight state: ROM loc_1384A
+also clears that flag under object control, and existing Tails carry/control
+code already implements it. Correct that oracle to0 (Sonic retains1), rather
+than changing working Tails behavior. Expanded candidate run session93795 is
+currently compiling/running; inspect it, apply the oracle correction and rerun
+only the affected test if that is its sole failure. Upper-wrap route probe is
+prepared but not yet launched. No other Maven handles are live.
+
+
+The corrected focused oracle rerun passes12 tests,zero failures/errors/skips;
+together with the unchanged other98 checks from the expanded run, the focused
+selection has110 passing checks. Explicit10x10 radius-preservation assertions
+were then added and passed in the route-regression run. Fresh cold capture:
+$HOME/Videos/OGGF/soz-bring-up/campaign-20260927-knuckles-grab-glide-reset-320/capture.mp4
+(682 frames,60fps,960x672,11.366667s; full decode and grip/release stills checked).
+The external README states candidate base/branch and exact capture/restore scope;
+source input and full state CSV accompany it. No full Act2 completion is claimed.
+
+Route progression now completes the upper wrap and westward transfer: chosen
+prefix target/knuckles2-upperwest-transfer/variant-0.bk2 through input14411
+is(7907,1900),8 rings,zero deaths. Native continuation9890 onward later dies,
+so its last safe repair point is input14712,(7925,1774),8 rings, gripping the
+right wall. target/knuckles2-bottomwest-ledge tries further climb then a
+westward jump/glide (exec53889; inspect its status/results).
+
+Combined queued route-regression exec82678 finished with79 tests,1 failure,
+zero errors/skips: all59 required S3K loading/bootstrap/AIZ checks,12 focused
+control cases and all7 existing SOZ cold cases pass. The LRZ Knuckles complete
+cold route dies at input47823. Attribution is pending matched isolated checks:
+main58001b58e exec27466, target/knuckles-control-lrz-baseline.log; candidate
+exec59740, target/knuckles-control-lrz-isolated.log. Both commands select only
+TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace,
+with the same explicit root ROM, Java21, DISPLAY=:0 and queued serial Maven.
+Do not attribute this to the fix until those complete; test-order sensitivity
+is also possible. Integration is blocked by the unresolved route failure, but
+independent campaign work continues. No full ordinary/guards run has started.
+
+
+The isolated LRZ checks are terminal: main58001b58e passes its1 case with no
+skips (58.097s Maven); candidate fails the same case at input47823. Production
+GameplayInputBranchTool replay (no temporary SOZ bootstrap overrides) locates
+first changed mapping at41285 (204→154), then first movement difference at
+41331 on tube release: old Y501/yvel112 versus candidateY497/yvel168. The
+transport capture retains the stale glide state on base; the candidate clears
+it at the native object-control gate. Repair the ordinary inputs; do not undo
+the ROM reset to preserve the old recording. The branch tool run at prefix47800
+is target/lrz-glidereset-frontier; its full CSV compares with the original
+external campaign-20260925-knuckles-cold-hpz-fixed-320/state.csv.
+
+LRZ repair currently uses target/lrz-glidereset-tube-exit/variant-1.bk2 through
+42261,(10293,422),9 rings,terrain grip. Next probe
+ target/lrz-glidereset-upperclimb (exec98904) climbs then runs toward the old
+route's next switch. SOZ independently reaches(8693,1311),11 rings,zero deaths,
+prefix16971 of target/knuckles2-door7-ledge/variant-1.bk2, after recharging
+switch7 and passing its door. Next probe target/knuckles2-eastclimb (exec95665).
+These two handles are the only remaining Maven work at this note; poll rather
+than restarting on an observation timeout. No commits or integration yet.
+
+
+## 2026-09-27 — resumed cold-controller repairs
+
+The Tails MHZ2 floor-grab report was checked against the already integrated
+`e373c4d9f` character-identity fix and `sub_65E72/loc_65E9E`. Fresh queued
+Java21/DISPLAY=:0/explicit-root-S3K-ROM selection
+`TestMhz1CutsceneObjects,TestS3kMhzAct2EntryHeadless` on the current candidate
+passes103 cases, zero failures/errors/skips. Existing corrected external video
+remains valid; no additional MHZ runtime change was needed.
+
+SOZ Knuckles Act2 controller authoring now reaches the rock at(10141,428),
+zero rings and no deaths, prefix19643 of
+`target/knuckles2-door8-exit/variant-0.bk2`. The successful chain after prefix17401
+is `upper-grip-timing/variant-0` through18265 (23-frame initial jump reaches the
+upper wall), `switch12-native/variant-0` through18440,
+`corridor-step/variant-0` through18641, `corridor-end/variant-0` through18732,
+`west-wall-grip/variant-0` through19033, `switch8-ground/variant-0` through19192,
+`switch8-short-recover/variant-0` through19374, then `door8-exit/variant-0`.
+All names have the `target/knuckles2-` prefix. The short14-input left correction
+after ghost knockback lands beside switch8 instead of running off the platform;
+ordinary Right completes its128-unit charge, then an8-input jump clears it and
+passes the raised door. Longer jumps hit that door. Attempts to reach light9024
+from the adjacent shaft hit solid terrain and are rejected; do not claim that
+light reset occurred. Current exploration is the rock/upper-wall transfer.
+
+LRZ's native glide reset changes the tube-exit trajectory. The original suffix
+is not reusable wholesale after changing earlier timing: flame jets, the moving
+platform and later ceiling contacts require actual controller revalidation.
+Current safe chain: canonical prefix41331; `lrz-glidereset-jump-timing/variant-2`
+through41465; `lrz-glidereset-timed-spin/variant-0` through41877;
+`lrz-glidereset-moving-barrier/variant-1` through42153;
+`lrz-glidereset-barrier-exit/variant-0` through42358;
+`lrz-glidereset-lower-rejoin/variant-0` through43660;
+`lrz-glidereset-lower-timed/variant-0` through44183;
+`lrz-glidereset-final-rejoin/variant-0` through45721.
+All paths are under target/. This reaches(12213,401),alive,zero rings, on the
+high wall. Earlier lower-timed candidate0 preserves all7 rings across its jet.
+The remaining original25-input wall jump strikes the ceiling and reaches the
+left wall too low; shorter glide-entry timings are being tried. None of these
+exploratory probes certifies restored LRZ completion. Canonical assets and their
+rewind milestones remain unchanged pending fresh complete replay. Shared runtime
+fix is still active, uncommitted; broad ordinary/guards and integration remain open.
+
+
+LRZ repair now completes the real HPZ load. The8-input ceiling jump/glide in
+`lrz-glidereset-upper-transfer/variant-0` reaches(11914,492); canonical suffix49284
+continues from its prefix46151 through HPZ. The promoted49,526-input BK2/script
+and revised89 rewind spots pass the fresh isolated completion test:1 case,zero
+failures/errors/skips,32.64s test time. Initial fresh replay only failed the old
+final-X1075 oracle; independent capture confirms revised endpoint1069 after one
+fewer destination movement input. Runtime physics were not changed for this.
+The fresh external capture `campaign-20260927-knuckles-glide-reset-hpz-320`
+has49,526 alive rows; its3,826-frame video decodes cleanly and wall-transfer/HPZ
+stills were inspected. Canonical/matrix/backlog changes are pending integration.
+
+SOZ also reaches and pulls light10432 with10 rings and no deaths, prefix20285
+of `target/knuckles2-light10432/variant-0.bk2`. Extend the prior chosen chain:
+`rock-upperwall/variant-1` through19793, `left-upperclimb/variant-0` through20020,
+then `light10432/variant-0`. The earlier9024 detour remains rejected, but this
+later actual light grab resets the ghosts and uses mapping145 correctly.
+Current next probe is `knuckles2-switch9-landing`. No full SOZ2 Knuckles clear
+or shared-code broad validation is claimed yet.
+
+
+All queued checks/captures/probes from this continuation are terminal.
+LRZ fresh complete-route test passes89 windows; the canonical assets are updated,
+but no commits, broad run or integration have occurred. SOZ's latest safe prefix
+is now20873 of `target/knuckles2-door9-fast-drop/variant-0.bk2`,(10933,364),
+13 rings,zero deaths. From fully charged switch9,8 R+A;1 R;28 R+A;30 L;160 R
+crosses the short-lived horizontal gap and falls through it.34 glide inputs
+instead of28 land on the closing door and are rejected. The next exploratory
+scripts are prepared but not launched in `target/knuckles2-next-upperwrap.txt`;
+use that prefix/input with TestSozKnucklesAuthor. Native controller navigation
+is around local13080 (reference movie offset365347), then jump across the pillar,
+return left to the11019 wall and climb through the next vertical wrap. The
+reference is a powered complete-Super-Emeralds run: its input is a navigation
+hint only, never an ordinary-Knuckles physics oracle.
+
+
+## 2026-09-27 — SOZ next wrap and shared-change broad run
+
+The next chosen SOZ prefix is22134 of
+`target/knuckles2-east-wrap-high/variant-0.bk2`: (11639,1725),16 rings,no deaths.
+Chain from prefix20873: `pillar-underpass/variant-0` through21092 (220 Right
+inputs wait for the vertical pillar to open its underpass), `skorp-glide/variant-1`
+through21191 (glide clears the Skorp without losing rings), `wrap11019-edge/variant-0`
+through21779 (55 Left then jump near the platform edge avoids the low ceiling;
+climb crosses the vertical wrap), then `east-wrap-high/variant-0`.
+All these names begin `target/knuckles2-`. The initial transfer from Y1886
+struck the ceiling and lost rings; starting at Y1840 clears it. Current next
+navigation is the upper ledge near11637 and the eastward passage (native local
+13680 onward). This remains an exploratory cold prefix, not an accepted clear.
+
+Main develop was fetched/fast-forward checked again: still58001b58e, no changes.
+The temporary `TestSozKnucklesAuthor.java` has been MOVED OUT of source to
+`target/authoring-backup/TestSozKnucklesAuthor.java`, and its compiled class was
+removed, so the broad suite tests only delivery sources. Preserve that backup;
+restore it only after the active broad run is terminal if more authoring is needed.
+Do not edit Java, route assets or build inputs while this run is active.
+
+Java21/Lua5.4/display preflight passes. The actual base58001b58e plan selects
+2,930/2,930 ordinary classes and separate structural guards. Queued serial command:
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 DISPLAY=:0 python3 tools/testing/run_categories.py --base 58001b58e --run`.
+Exec session40391 is active; run ID `20260927T093825Z-7bf3b28b`. It acquired the
+Maven slot and began ordinary. Default40-minute invocation/10-minute no-output
+timeouts apply; historical cost is24 minutes ordinary plus10 guards, not an ETA.
+Poll that exact handle; do not restart on observation timeout. After completion,
+inspect results.json including skips/failure identities, attribute any failures
+with matched focused checks, then acknowledge the run before delivery. No broad
+pass, commit, integration or push is claimed at this point.
+
+
+Broad run40391 remains live (ordinary log advanced through10:44:34); no restart.
+Read-only review identifies a focused animation-ownership check before integration:
+`Obj_SOZRapelWire/loc_4B13E` writes object_control=3, preserving the capture mapping,
+then `loc_4B04A` supplies raw held mappings. Engine capture sets
+objectMappingFrameControl=true once, while held positionPlayer writes mappings
+without reasserting that flag. The proposed shared glide reset can clear the
+same engine flag when an incoming glide still owns forced animation$20/$21.
+Existing object-only capture tests use TestablePlayableSprite and never run the
+Knuckles movement/animation pass; explicit-pose regression uses forced$14, so
+neither directly covers this transition. Reproduce with actual Knuckles movement
+and raw-frame capture after the broad run is terminal. This is a concrete review
+concern, not yet a reproduced visual failure; no source was changed mid-run.
+The continuation script `target/knuckles2-after-east-wrap-native.txt` is prepared
+from native controller navigation local13680–17000, for the safe prefix22134.
+
+
+## 2026-09-27 — raw animation ownership review and broad-run result
+
+The initial shared glide reset conflated ability-owned raw mappings with the
+object-control bit1 gate. A short placed-object probe disproved the suspected
+SOZ wire failure: its existing setAir(false) capture already clears glide.
+The same real-Knuckles test on FBZ1's placed pole at$A08,$1E8 reproduces the
+regression: capture retains double_jump_flag=1, then the next player pass clears
+the pole's mapping ownership. ROM loc_3C0DC/sub_3C010 owns the raw pole pose;
+Knuckles_Control loc_165AE clears glide but loc_16614 still honours bit1.
+The replacement separates ability/object raw-frame ownership and captures both
+for rewind. Temporary isolated Java/JUnit overlays passed the pole/wire checks
+at320/800 (including capture, forced recreation and forward replay) and12
+adjacent control/gravity checks. The replacement is now applied to delivery
+sources; normal queued Maven validation is pending. The unpublished0.7 API
+snapshot must include the added method/rewind component before delivery.
+
+Run20260927T093825Z-7bf3b28b on base58001b58e plus the prior candidate stopped at
+the declared40-minute limit:2746 reports,23605 tests,2failures,0errors,26skips;
+ordinary incomplete, guards not started. Both failures are
+TestS3kSszAct2FinalFight.bothFightsReachTheColdStopAndLowHealthAndDefeatReplay,
+width320/800: Super route died at input5711. Main58001b58e focused baseline
+`maven_queue.py -Dmse=off -Ds3k.rom.path="$S3K_ROM" -Dtest=TestS3kSszAct2FinalFight test`
+passes both cases with0skips (31.763s Maven,4.923s test body). Candidate isolation
+and repair remain open. The broad skips are opt-in probes/soaks/native captures,
+four graphics-context assumptions, and the inherited CPZ spin-tube assumption;
+no missing-ROM skip. Results and skip/failure identities were inspected and the
+run acknowledged/deleted. Its working-tree fingerprint also changed from an
+in-run prose-only audit append; no Java/routes changed during that run, but it
+could not have advanced to guards under the runner's all-files fingerprint.
+Do not repeat that bookkeeping mistake. A later broad invocation needs a larger
+explicit timeout after focused repairs;40minutes no longer covers these long
+cold-route classes plus guards. No current full-suite pass or delivery claimed.
+
+
+## 2026-09-27 — focused ownership closure and SSZ input repair
+
+The separate raw-frame owners are now in production source and the unpublished
+0.7 API pin. Normal queued Maven verification on the candidate based on58001b58e:
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk DISPLAY=:0 python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$S3K_ROM" '-Dtest=TestKnucklesObjectControlAnimation,TestObjectControlledGravity,TestS3kSszAct2FinalFight,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestModApiSdkPackager,TestModApiJavadocTool,TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace' test`
+passes100 tests, zero failures/errors/skips (1:51 Maven). LRZ includes89
+full-world replay windows; SSZ includes both widths and the final-fade replay.
+
+Matched SSZ diagnostics first differ at input577: the native object-control
+pass clears incoming glide after the crane captures at576. First physical
+difference occurs at1336, where the old route resumes stale glide-fall physics.
+ROM loc_7CC68 writes y_radius=$13 to helper a0, not player a1; Stop_Object leaves
+player radii/status intact. No crane radius correction is warranted. The later
+landing shifts one frame. Releasing B at4658 instead of4659 repairs the movie:
+all other8,703 controller rows and all semantic milestones remain unchanged.
+Whole-tail delays1–12 frames failed and were rejected. No runtime tuning.
+
+Fresh GameplayCaptureTool videos at320/800, every1, cold Knuckles solo, donor off,
+emeralds3333333 and V-int410766 consume all8,704 inputs without death. Both are
+60fps,145.066667 seconds and pass full ffmpeg decode. Captures, copied source
+inputs and provenance are under `$HOME/Videos/OGGF/ssz-bring-up/` in
+`campaign-20260927-knuckles-glide-reset-{320,800}`. Native320 sampled crane,
+release, jump and defeat animation is inspected. The800 capture has an inherited
+black gap beneath the island at4658 and missing clouds. A separate unchanged
+main58001b58e capture (every frame rendered from cold boot through4704) reproduces
+it. This is tracked in the existing SSZ discrepancy section; no wide visual
+acceptance is claimed. Investigation is separate from the animation correction.
+
+The next combined delivery plan selects2,931 ordinary classes plus all guards.
+Java21/Lua5.4/display preflight passed. Run with an explicit75-minute limit,
+retaining the10-minute no-output stop. Do not edit tracked files while running.
+Integration and broad completion remain pending at this record.
+
+
+## 2026-09-27 — SSZ clouds and the finite-world clip
+
+The800px gap is caused by shader_tilemap's widescreen finite-layout guard:
+it tested the deformed texture X against layout width. SSZ2 ApplyFGDeformation
+puts clouds on Plane A; their autonomous drift eventually leaves that range,
+even though the camera is inside the level. A temporary classpath-only shader
+probe clips physical camera/world X instead and restores the clouds. The
+production correction preserves this distinction in both visible and priority
+masks, with the ROM behavior/engine extension documented inline.
+
+Broad run20260927T104802Z-50dde96e was intentionally interrupted before completion
+to include this newly reproduced shared-rendering correction. Maven stopped,
+temporary output was cleaned and diagnostics acknowledged. No pass claimed.
+The new TestForegroundWindowRendering assertion fails on the old shader at
+pixel(32,12): expected green255, actual0;1 test,0 skips. It passes after the fix.
+The selected command
+`OPENGGF_MAVEN_QUEUE=serial JAVA_HOME=/usr/lib/jvm/java-21-openjdk DISPLAY=:0 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Ds3k.rom.path="$S3K_ROM" -Dtest=TestForegroundWindowRendering,TestTilemapGpuRendererPerLineSampling,TestSszAct2BackgroundPriority,TestSszAct2Deformation test`
+passes20 tests,0 failures/errors/skips (32.500s Maven). Native-display execution
+ensures the GPU assertions ran, rather than passing through an EGL assumption.
+
+Fresh `campaign-20260927-knuckles-world-clip-800` video under the SSZ capture root
+completes8,704 inputs without death at60fps; full ffmpeg decode passes. Inspected
+frames4658/8156 retain cloud bands with no black gap. Its state CSV is compared
+with the prior same-input800 capture. Old footage is retained as before-evidence;
+the new capture supersedes its presentation result. Broader native visual parity
+and the campaign breadth remain open.
+
+The combined delivery source is now ready for the2,931-class ordinary plus guard
+run, explicit75-minute timeout and10-minute silence stop. Preflight with explicit
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk and LUA_BIN=/usr/bin/lua5.4 passes. An
+accidental preflight without LUA_BIN rejected the default Lua before running any
+tests; the corrected launch environment is the one used for delivery.
+
+## 2026-09-27 — frozen delivery sweep and Knuckles SOZ2 completion
+
+At base `58001b58e`, `feature/ai-soz-knuckles-act2`, run
+`20260927T105951Z-af9d63f5` completed both lanes under the unchanged candidate:
+
+```text
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 DISPLAY=:0 python3 tools/testing/run_categories.py --base 58001b58e --run --max-minutes 75
+```
+
+Ordinary: 2,931 reports, 25,085 tests, two failures, no errors, 29 skips,
+4,192.35 seconds. Guards: 86 reports, 672 tests, no failures/errors/skips,
+212.99 seconds. The ordinary failures are exactly
+`TestKis2MovementRules.glidePublishesPreviousAnimationSoWallJumpRestartsRollScript`
+(expected mapping 154, actual 183) and
+`wallReleasePublishesTheNativeFallCursorWithoutRestarting` (raw-control expected
+false, actual true). Their wall-climb fixture still claimed object-owned raw
+frames. After the run, both it and `TestPlayableSpriteMovement`'s equivalent
+fixture use `setAbilityMappingFrameControl(true)`. Production ownership remains
+unchanged; an ability release must not erase a capturing object's pose.
+
+The skips are 24 opt-in/local-reference checks, four GL-context assumptions and
+the inherited CPZ spin-tube capture assumption. None is a missing-ROM skip. The
+changed foreground shader has the separately recorded native-display 20-test
+check with zero skips. This red ordinary run is not a green full-suite claim;
+the focused fixture correction and integrated verification are recorded below.
+The earlier 40-minute timeout and deliberately interrupted sweep remain incomplete.
+Actual cold-route cost exceeded the initial estimate; the completed ordinary
+lane took about 70 minutes. Future combined runs need sufficient explicit time.
+
+While sources were frozen, controller authoring completed ordinary Knuckles
+SOZ2. The missing cork explained the rock falling off its intended corridor;
+existing positioned validation already documented this prerequisite. Pulling
+the light on the return preserved rings during the rock push. The upper spike
+passage required pushing its separate switch before a stationary edge jump and
+glide. The last switch opens the floor/drop to the boss. Powered native input
+was navigation evidence only; no puzzle, player or boss physics was tuned.
+
+The existing positioned 32/4/-48 boss input controller failed from the cold
+approach. Recorded 16/4/-48 input from 31,185 landed seven hits, then died; changing
+the final controller target to -32 after 34,036 landed hit 8 at 34,086. These are
+authoring choices frozen into the input asset, not runtime parameters or frame
+gates. Capsule 34,603; results finish 35,179; LRZ load 35,314. The authoring probe
+stopped remaining branches after that load, as designed; its exit 1 was not
+claimed as a passing test.
+
+A fresh fixed-input candidate of the existing cold-route test passed with
+48 selected traversal/destination 45-input whole-world replay windows plus 18
+semantic events and real outgoing-history isolation; playable LRZ at 35,392.
+The permanent dedicated method and assets were added only after the frozen
+sweep ended. `InputLogAuthorTool` round-tripped the canonical script and its
+Input Log is byte-identical to the selected BK2.
+
+Fresh `TestSozColdAct2Capture` also passed: one test, no failures/errors/skips,
+35,494 observed frames without death; final LRZ(331,1969), 3 rings. The external
+`campaign-20260927-knuckles-cold-act2-clear-320` folder under the SOZ capture root
+has a 9,394-frame, 60fps, 156.566667-second tail movie from input 26,100, complete
+cold-state CSV, inputs, milestones and provenance. Full decode and sampled
+frame sequences for the spike crossing, final hit and destination passed visual
+inspection. The same input at 800px first takes damage while hanging from the
+light at input 1,645, then dies at 3,441. The damaging owner is not corroborated; this
+is recorded as an uncompleted wide route, not an engine defect.
+
+The SSZ finite-world clipping regression originated in `454184d52b`: deformed
+Plane-A texture coordinates were used as a physical world limit. The source
+comment and shader regression preserve the reason for the camera/world-space
+replacement and its distinction from native VDP wrapping.
+
+Focused promotion on the final candidate passed 224 tests, with no failures,
+errors or skips (73 seconds):
+
+```text
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME=/usr/lib/jvm/java-21-openjdk DISPLAY=:0 python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$S3K_ROM" "-Dtest=TestKis2MovementRules,TestPlayableSpriteMovement,TestObjectControlledGravity,TestKnucklesObjectControlAnimation,TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef" test
+```
+
+This includes both repaired fixture failures, real object-owned poses and the
+permanent SOZ route with all 48 replay windows. Integration, post-integration
+verification, push and cleanup remain pending.

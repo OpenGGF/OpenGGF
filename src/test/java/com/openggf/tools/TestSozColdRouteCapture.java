@@ -18,6 +18,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import java.nio.file.Path;
 import java.util.HashSet;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -37,6 +38,11 @@ class TestSozColdRouteCapture {
         coldActCompletesWithTraversalReplayAndPlayableDestination(act, false, main);
     }
 
+    @Test
+    void knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef() throws Exception {
+        coldActCompletesWithTraversalReplayAndPlayableDestination(1, false, "knuckles");
+    }
+
     private void coldActCompletesWithTraversalReplayAndPlayableDestination(int act, boolean paired, String main) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(
                 Path.of("src/test/resources/routes/s3k/soz" + (act + 1)
@@ -48,11 +54,21 @@ class TestSozColdRouteCapture {
                 resultsFinished = false, isolatedHistory = false;
         int health = 8, hits = 0, readyFrame = -1, bonusLoads = 0;
         boolean bonusRoute = act == 0 && main.equals("knuckles");
+        boolean knucklesActTwo = act == 1 && main.equals("knuckles");
+        // Cork release, light pull, rock coupling/door, upper switch, spike-edge
+        // glide/wall break, final switch and arena drop on the fixed cold route.
+        var knucklesPuzzleSpots = java.util.Set.of(27290, 28090, 28150, 29200, 29400,
+                29575, 29720, 29855, 29900, 30850, 31020);
         long outgoingHistory = 0;
         try (var session = new GameplayCaptureSession(settings)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, act, settings);
             assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+            if (knucklesActTwo) {
+                assertInstanceOf(com.openggf.sprites.playable.Knuckles.class, session.player());
+                assertFalse(com.openggf.game.CrossGameFeatureProvider.isActive());
+                assertNotNull(session.player().getSpriteRenderer());
+            }
             for (int frame = 0; frame < movie.getFrameCount() + 300; frame++) {
                 if (act == 1 && capsule)
                     GameServices.configuration().setSessionOverride(
@@ -149,10 +165,11 @@ class TestSozColdRouteCapture {
                 // Fixed input observations cover the cold traversal and boss/results approach;
                 // a window must never restore the outgoing registry across a level load.
                 // Tails reaches Act2 before 17000 and LRZ before 29000; keep replay windows before each load.
-                int lastSourceSpot = bonusRoute ? 23000 : main.equals("tails") ? (act == 0 ? 16000 : 28000)
+                int lastSourceSpot = knucklesActTwo ? 35000 : bonusRoute ? 23000 : main.equals("tails") ? (act == 0 ? 16000 : 28000)
                         : act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
                         || (bonusRoute && (frame == 3100 || frame == 3400 || frame == 3500 || frame == 3700))
+                        || (knucklesActTwo && knucklesPuzzleSpots.contains(frame))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
                     replay(session, movie, frame);
                     checked.add(frame);
@@ -180,7 +197,7 @@ class TestSozColdRouteCapture {
             assertEquals(act == 0 ? 1 : 0, GameServices.level().getCurrentAct());
             assertTrue(readyFrame >= 0, "destination releases both control owners");
             assertEquals(
-                    bonusRoute ? 29 : main.equals("tails") ? (act == 0 ? 18 : 30) : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
+                    knucklesActTwo ? 37 + knucklesPuzzleSpots.size() : bonusRoute ? 29 : main.equals("tails") ? (act == 0 ? 18 : 30) : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
             if (act == 1) {
                 assertTrue(semanticChecked.contains("boss-entry"));
                 for (int hp = 0; hp < 8; hp++) assertTrue(semanticChecked.contains("boss-hp-" + hp));

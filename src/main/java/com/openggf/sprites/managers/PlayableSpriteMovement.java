@@ -535,6 +535,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.isObjectControlSuppressesMovement()
 				&& !sprite.isHurt()
 				&& !sprite.getDead()) {
+			// S3K Knuckles_Control loc_165AE clears double_jump_flag when
+			// object_control bit 0 skips movement. Previously we only returned,
+			// leaving glide physics active after a grabbing object's release.
+			// Keep double_jump_property and radii: this ROM branch does not write them.
+			if (sprite.getSecondaryAbility() == SecondaryAbility.GLIDE
+					&& sprite.getDoubleJumpFlag() != 0) {
+				sprite.setDoubleJumpFlag(0);
+				// loc_16614 still honours object_control bit 1. Release only the
+				// old ability's raw frames; a pole/cage may now own the mapping.
+				sprite.setAbilityMappingFrameControl(false);
+				int forced = sprite.getForcedAnimationId();
+				if (forced == 0x20 || forced == 0x21) {
+					sprite.setForcedAnimationId(-1);
+				}
+			}
 			// Ctrl_1_Press is generated from the controller's global held-state
 			// transition even while object_control bit 0 skips Sonic_Control. Keep
 			// the local edge detector synchronized so a press consumed by the
@@ -1957,7 +1972,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Restore default radii and release direct frame control
 		sprite.restoreDefaultRadii();
-		sprite.setObjectMappingFrameControl(false);
+		sprite.setAbilityMappingFrameControl(false);
 
 		// Set fall-from-glide animation (GLIDE_DROP = 0x21)
 		sprite.setForcedAnimationId(0x21);
@@ -1983,7 +1998,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setXSpeed((short) sprite.getGSpeed());
 			sprite.setYSpeed((short) 0);
 			sprite.restoreDefaultRadii();
-			sprite.setObjectMappingFrameControl(false);
+			sprite.setAbilityMappingFrameControl(false);
 			sprite.setDoubleJumpFlag(0);
 			sprite.setDoubleJumpProperty((byte) 0);
 			sprite.setForcedAnimationId(-1);
@@ -2003,7 +2018,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// then fall-from-glide velocity path to match the ROM.
 		sprite.setDoubleJumpFlag(3);
 		sprite.applyCustomRadii(10, 10);  // no-op: already the 0x0A glide radii
-		sprite.setObjectMappingFrameControl(true);
+		sprite.setAbilityMappingFrameControl(true);
 		sprite.setMappingFrame(0xCC);  // ROM: move.b #$CC,mapping_frame(a0)
 		// Knuckles_BeginSlide changes mapping_frame, not anim: retain glide ID.
 	}
@@ -2071,7 +2086,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// Slid off a ledge — enter fall state
 				sprite.setDoubleJumpFlag(2);
 				sprite.restoreDefaultRadii();
-				sprite.setObjectMappingFrameControl(false);
+				sprite.setAbilityMappingFrameControl(false);
 				sprite.setForcedAnimationId(0x21);  // GLIDE_DROP
 				sprite.setAir(true);
 				return;
@@ -2102,7 +2117,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				ReverseGravity.mirrorYDelta(isReverseGravityActive(), radiusDiff));
 
 		sprite.restoreDefaultRadii();
-		sprite.setObjectMappingFrameControl(false);
+		sprite.setAbilityMappingFrameControl(false);
 		sprite.setDoubleJumpFlag(0);
 		sprite.setDoubleJumpProperty((byte) 0);
 
@@ -2144,7 +2159,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Called when transitioning out of all glide states to normal gameplay.
 	 */
 	private void clearGlideAnimationState() {
-		sprite.setObjectMappingFrameControl(false);
+		sprite.setAbilityMappingFrameControl(false);
 		sprite.setForcedAnimationId(-1);
 		sprite.setDoubleJumpFlag(0);
 		sprite.setDoubleJumpProperty((byte) 0);
@@ -2296,7 +2311,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: Check for jump button to jump away (sonic3k.asm:31410-31434)
 		if (inputJumpPress) {
 			sprite.restoreDefaultRadii();
-			sprite.setObjectMappingFrameControl(false);
+			sprite.setAbilityMappingFrameControl(false);
 			sprite.setDoubleJumpFlag(0);
 			sprite.setDoubleJumpProperty((byte) 0);
 			sprite.setForcedAnimationId(-1);
@@ -2401,7 +2416,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void letGoOfWall() {
 		sprite.setDoubleJumpFlag(2);
 		sprite.restoreDefaultRadii();
-		sprite.setObjectMappingFrameControl(false);
+		sprite.setAbilityMappingFrameControl(false);
 		sprite.setForcedAnimationId(0x21);  // GLIDE_DROP
 		// KiS2/S3K Knuckles_LetGoOfWall writes anim and prev_anim together,
 		// then resumes at the second falling frame instead of restarting at CA.
@@ -2418,7 +2433,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setXSpeed((short) 0);
 		sprite.setYSpeed((short) 0);
 		sprite.restoreDefaultRadii();
-		sprite.setObjectMappingFrameControl(false);
+		sprite.setAbilityMappingFrameControl(false);
 		sprite.setDoubleJumpFlag(0);
 		sprite.setDoubleJumpProperty((byte) 0);
 		sprite.setForcedAnimationId(-1);
@@ -2658,7 +2673,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// it does not execute Knuckles_LetGoOfWall's explicit cursor writes.
 			sprite.setDoubleJumpFlag(2);
 			sprite.restoreDefaultRadii();
-			sprite.setObjectMappingFrameControl(false);
+			sprite.setAbilityMappingFrameControl(false);
 			sprite.setForcedAnimationId(0x21);
 			sprite.setAir(true);
 			return;
@@ -2691,7 +2706,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Wall climb animation — mapping frame 0xB7
 		// The native grab changes mapping_frame, leaving anim(a0) intact.
-		sprite.setObjectMappingFrameControl(true);
+		sprite.setAbilityMappingFrameControl(true);
 		sprite.setMappingFrame(0xB7);
 	}
 
@@ -2722,7 +2737,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAnimationTick(0x20);
 		sprite.setAnimationFrameIndex(0);
 		// Enable direct mapping frame control (bypasses animation manager)
-		sprite.setObjectMappingFrameControl(true);
+		sprite.setAbilityMappingFrameControl(true);
 		sprite.setPushing(false);
 
 		// ROM: bclr #Status_Facing — always face RIGHT during glide

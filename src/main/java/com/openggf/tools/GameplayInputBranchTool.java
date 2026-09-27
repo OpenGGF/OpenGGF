@@ -21,6 +21,7 @@ import java.util.List;
  * the complete prefix in its script/BK2/CSV; PNGs sample the candidate every30 frames.
  * The SOZ cold-route repair (2026-09-27) added read-only riding/standing owners
  * to distinguish actual contact from apparent overlap in sampled screenshots.
+ * Candidates stop on death, level replacement or a game-mode transition.
  * A chosen candidate still needs a fresh uninterrupted replay and route certification.
  */
 public final class GameplayInputBranchTool {
@@ -68,6 +69,10 @@ public final class GameplayInputBranchTool {
             var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
             var checkpoint = registry.capture();
             var checkpointLevel = GameServices.level().getCurrentLevel();
+            var checkpointMode = session.loop().getCurrentGameMode();
+            if (checkpointMode != com.openggf.game.GameMode.LEVEL) {
+                throw new IllegalStateException("Branch checkpoint must be in LEVEL mode: " + checkpointMode);
+            }
             var previousInput = prefix == 0 ? null : baseMovie.getFrame(prefix - 1);
             var objects = new StringBuilder();
             for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
@@ -80,8 +85,8 @@ public final class GameplayInputBranchTool {
             }
             Files.writeString(output.resolve("prefix-objects.txt"), objects, StandardOpenOption.CREATE_NEW);
             for (int i = 0; i < candidates.size(); i++) {
-                if (GameServices.level().getCurrentLevel() != checkpointLevel) {
-                    throw new IllegalStateException("Previous candidate reloaded the level; "
+                if (!checkpointWorldIsActive(session, checkpointLevel, checkpointMode)) {
+                    throw new IllegalStateException("Previous candidate left the checkpoint world or mode; "
                             + "start a fresh probe rather than restoring across a load boundary");
                 }
                 registry.restore(checkpoint);
@@ -100,7 +105,7 @@ public final class GameplayInputBranchTool {
                     rows.append(session.stateLine(frame, pad)).append('\n');
                     appendContacts(contacts, frame, session);
                     boolean terminal = session.player().getDead()
-                            || GameServices.level().getCurrentLevel() != checkpointLevel;
+                            || !checkpointWorldIsActive(session, checkpointLevel, checkpointMode);
                     if ((frame - prefix) % 30 == 0 || frame == movie.getFrameCount() - 1 || terminal) {
                         ScreenshotCapture.savePNG(picture, Path.of(stem + "-" + frame + ".png"));
                         System.out.printf("variant=%d input=%d x=%d y=%d dead=%s%n", i, frame,
@@ -135,6 +140,17 @@ public final class GameplayInputBranchTool {
             }
         }
         rows.append('\n');
+    }
+
+    /**
+     * A giant-ring special stage changes GameLoop mode while retaining the outgoing
+     * Level object. Its active mode is outside this gameplay registry checkpoint;
+     * restoring that registry alone would mix worlds. Stop at either boundary.
+     */
+    static boolean checkpointWorldIsActive(GameplayCaptureSession session,
+            com.openggf.level.Level level, com.openggf.game.GameMode mode) {
+        return GameServices.level().getCurrentLevel() == level
+                && session.loop().getCurrentGameMode() == mode;
     }
 
     static String prefixScript(Bk2Movie movie, int prefix) {

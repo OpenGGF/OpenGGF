@@ -546,6 +546,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * overwrite mapping_frame.
          */
         private boolean objectMappingFrameControl = false;
+        /** Movement-owned raw frames; separate from an object's native bit-1 gate. */
+        private boolean abilityMappingFrameControl = false;
         private int animationFrameIndex = 0;
         private int animationTick = 0;
         private boolean renderHFlip = false;
@@ -830,6 +832,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.doubleJumpFlag = 0;
                 this.doubleJumpProperty = 0;
                 this.objectMappingFrameControl = false;
+                this.abilityMappingFrameControl = false;
                 // Level clears Object_RAM before Obj01_Main creates Sonic. In
                 // particular obAnim, obFrame, obAniFrame and obTimeFrame all
                 // begin at zero before the pre-fade BuildSprites pass
@@ -1025,6 +1028,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         bubbleAnimId,
                         initPhysicsActive,
                         objectMappingFrameControl,
+                        abilityMappingFrameControl,
                         mappingFrame,
                         animationId,
                         forcedAnimationId,
@@ -1224,6 +1228,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.bubbleAnimId = extra.bubbleAnimId();
                 this.initPhysicsActive = extra.initPhysicsActive();
                 this.objectMappingFrameControl = extra.objectMappingFrameControl();
+                this.abilityMappingFrameControl = extra.abilityMappingFrameControl();
                 this.mappingFrame = extra.mappingFrame();
                 this.animationId = extra.animationId();
                 this.forcedAnimationId = extra.forcedAnimationId();
@@ -1848,12 +1853,27 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.forcedAnimationId = animationId.id();
         }
 
+        /** Legacy raw-frame query: either owner suppresses ordinary scripted mappings. */
         public boolean isObjectMappingFrameControl() {
-                return objectMappingFrameControl;
+                return objectMappingFrameControl || abilityMappingFrameControl;
         }
 
         public void setObjectMappingFrameControl(boolean objectMappingFrameControl) {
                 this.objectMappingFrameControl = objectMappingFrameControl;
+                // An object claiming (or releasing) the native bit-1 mapping gate
+                // supersedes the movement routine's previous raw mapping owner.
+                this.abilityMappingFrameControl = false;
+        }
+
+        /**
+         * Raw frames written by a player ability, rather than object_control bit 1.
+         * Knuckles_Control loc_165AE cancels glide under bit 0, but loc_16614
+         * still honours bit 1. Keeping these owners distinct lets a grabbing
+         * object retain its pose when the old glide state is cleared.
+         */
+        public void setAbilityMappingFrameControl(boolean controlled) {
+                this.abilityMappingFrameControl = controlled;
+                if (controlled) this.objectMappingFrameControl = false;
         }
 
         public int getAnimationFrameIndex() {
@@ -1956,6 +1976,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         if (doubleJumpFlag > 0 && !rolling) {
                                 applyStandingRadii(false);
                                 objectMappingFrameControl = false;
+                                abilityMappingFrameControl = false;
                                 forcedAnimationId = -1;
                         }
                         doubleJumpFlag = 0;
@@ -2006,6 +2027,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         if (doubleJumpFlag > 0 && !rolling) {
                                 applyStandingRadii(false);
                                 objectMappingFrameControl = false;
+                                abilityMappingFrameControl = false;
                                 forcedAnimationId = -1;
                         }
                         doubleJumpFlag = 0;
@@ -2879,6 +2901,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 doubleJumpFlag = 0;
                 doubleJumpProperty = 0;
                 objectMappingFrameControl = false;
+                abilityMappingFrameControl = false;
                 forcedAnimationId = -1;
                 setInvulnerableFrames(0x78); // Set invulnerability immediately (ROM: s2.asm line 84954)
                 setSpringing(0);

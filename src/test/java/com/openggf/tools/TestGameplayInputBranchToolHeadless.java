@@ -15,6 +15,22 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestGameplayInputBranchToolHeadless {
+    @Test void specialStageEntryInvalidatesCheckpointEvenWhenLevelIsRetained() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, 1, settings);
+            var level = com.openggf.game.GameServices.level().getCurrentLevel();
+            var mode = session.loop().getCurrentGameMode();
+            assertTrue(GameplayInputBranchTool.checkpointWorldIsActive(session, level, mode));
+            // Exercise the real mode transition, not a fabricated enum or a replaced level.
+            session.loop().enterSpecialStage();
+            assertEquals(com.openggf.game.GameMode.SPECIAL_STAGE, session.loop().getCurrentGameMode());
+            assertSame(level, com.openggf.game.GameServices.level().getCurrentLevel());
+            assertFalse(GameplayInputBranchTool.checkpointWorldIsActive(session, level, mode),
+                    "the branching tool must stop before restoring this outgoing gameplay snapshot");
+        }
+    }
+
     @Test void branchesMatchEachOtherAndAFreshUninterruptedReplay(@TempDir Path dir) throws Exception {
         var rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
         var input = dir.resolve("held-input.bk2");

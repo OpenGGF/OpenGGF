@@ -153,6 +153,25 @@ class TestForegroundWindowRendering {
                     assertPixel(outsideX, 12, mask ? 255 : 0, mask ? 0 : 255, 0);
                 }
             }
+            // Plane A can carry independently scrolling scenery (SSZ2 clouds).
+            // Texture samples wrap while physical level edges remain finite.
+            // Exercise both drift directions, both edges and sprite occlusion.
+            int[] driftingBands = new int[224];
+            for (int drift : new int[]{-128, 128}) {
+                Arrays.fill(driftingBands, drift << 16);
+                for (int cameraX : new int[]{-16, 16}) {
+                    int outsideX = cameraX < 0 ? 4 : 60;
+                    for (boolean mask : new boolean[]{false, true}) {
+                        glClear(GL_COLOR_BUFFER_BIT);
+                        renderer.setClipHorizontal(true);
+                        renderer.enablePerLineForegroundScroll(driftingBands);
+                        renderer.render(TilemapGpuRenderer.Layer.FOREGROUND, 64, 64, 0, 0, 64, 64,
+                                cameraX, 0, 32, 8, atlas, palette, palette, 1, true, mask, false, 64);
+                        assertPixel(outsideX, 12, 0, 0, 0);
+                        assertPixel(32, 12, mask ? 255 : 0, mask ? 0 : 255, 0);
+                    }
+                }
+            }
             assertEquals(GL_NO_ERROR, glGetError());
         } finally {
             if (renderer != null) renderer.cleanup();

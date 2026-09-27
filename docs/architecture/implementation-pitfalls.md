@@ -75,6 +75,22 @@ consumer to inspect a convenient state flag conceals the upstream mismatch.
 The LRZ cold-route investigation and regression are recorded in the
 [bring-up audit](audits/2026-09-22-sk-zone-bring-up.md#knuckles-lrz-cold-route-cloud-escape-2026-09-25).
 
+**Object-control early returns can still write character state.** S3K
+`Knuckles_Control/loc_165AE` clears `double_jump_flag` when object-control bit0
+suppresses movement, before reaching `Animate_Knuckles`. Skipping movement
+alone leaves glide physics active through a hanging-object capture and replaces
+the object's release velocity on the next player pass. Release the engine's
+glide animation override too, so the object's native `anim` write remains
+visible, but distinguish ability-owned raw frames from object-control bit1.
+`loc_16614` still honours that bit after the glide clear: FBZ's spinning pole
+claims raw mappings at capture and does not reassert the gate every held pass.
+Clearing a shared raw-frame flag therefore cancels the new object's ownership.
+Capture both engine ownership fields for rewind; test the incoming ability,
+capture handoff and subsequent held pass, not only an explicit forced pose.
+Preserve `double_jump_property` and radii unless the owning ROM routine
+writes them. The SOZ2 cold route exposed this at `sub_40F52`: its correct
+`x_vel=-$200` was replaced by glide acceleration on the next frame.
+
 **Reused position words.** A field named `x_sub` is not always a fraction.
 KiS2 `Knuckles_BeginClimb` and S3K `Knuckles_Gliding_HitWall` store the grab's
 native X word there, then the climbing routine compares it with `x_pos` and
@@ -1020,3 +1036,16 @@ passed, while the cold regression failed. When a native final lock must remain
 fixed on widescreen, use the existing `lockedNativeHorizontalCamera` policy,
 owned by captured event state, and test the ordinary approach plus release/load.
 Do not replace the shared ROM camera clamp with an unconditional symmetric one.
+
+
+### Finite world clipping and autonomous foreground scroll
+
+A foreground plane is not necessarily terrain: SSZ2 ApplyFGDeformation puts
+clouds on Plane A and advances their texture coordinates indefinitely. The
+widescreen finite-layout guard originally clipped those deformed coordinates,
+erasing clouds as their samples left the layout and exposing black behind the
+island. Clip camera/world coordinates instead; wrap the sampled texture within
+the visible world. Test both scroll signs, both physical boundaries and visible/
+priority-mask output, then inspect a long production capture. A static edge test
+alone passed the broken implementation. Native320 did not enable the guard, so
+a native-only rendering check missed this defect.

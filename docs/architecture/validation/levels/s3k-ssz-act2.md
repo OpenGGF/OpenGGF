@@ -402,3 +402,50 @@ body's high-priority overlap with the floating island. The complete current
 it uses the source script's emerald progress`3333333` and V-int410766. This is
 not an unseeded entry claim. `native-power-down.mp4` and the engine
 `power-down-and-return.mp4` provide30fps clips of the priority comparison.
+
+## Glide-state correction and input repair (2026-09-27)
+
+Candidate based on58001b58e: the crane captures an active glide at input576.
+The next native Knuckles_Control pass clears double_jump_flag under
+object_control=$83. Previously the engine retained it until after release,
+entering glide-fall physics instead of normal air movement. loc_7CC68 writes
+$13 to the release helper's y_radius, not the player's; loc_7CCB0/Stop_Object
+leave player radii/status unchanged, as the engine helper already does.
+The resulting fractional-position difference changes a later landing by one
+frame. The original controller route then dies at5711 in both widths;
+base58001b58e passes both original cases in isolation.
+
+The authored route now releases B at input4658 rather than4659; all other8703
+controller rows are unchanged. This input-only repair completes both eight-hit
+fights in the diagnostic. The original cold-stop/low-health/final-fade replay
+test at320/800 passes with the repaired BK2, including low-health, defeat and
+final-fade replay. The combined focused command in the campaign audit passes
+100 tests with zero skips. No runtime physics is tuned to the route.
+
+Fresh `campaign-20260927-knuckles-glide-reset-{320,800}` captures under
+`$HOME/Videos/OGGF/ssz-bring-up/` each consume all8,704 inputs with no
+deaths. Both videos contain8,704 frames at60fps and pass full decode. Native320
+animation/release/defeat samples were inspected. At800, frame4658 exposes a
+black gap beneath the island and missing cloud bands; an unchanged58001b58e
+capture with complete render history reproduces it. This inherited presentation
+gap is corrected below; successful gameplay alone did not establish visual correctness.
+
+
+### Finite-world clipping correction (2026-09-27)
+
+The clouds use autonomous Plane A HScroll. The widescreen-only finite-layout
+guard clipped texture coordinates once their drift exceeded the layout width;
+native320 never enabled that guard. The shader now clips camera/world X and
+allows the original texture wrapping inside those physical boundaries. The GPU
+regression first fails on the original shader (interior green pixel becomes
+black), then passes the correction; both physical edges, both drift signs and
+visible/sprite-mask passes are covered. The selected20 GPU/deformation/priority
+tests pass without skips (command in campaign audit).
+
+A fresh800px cold recording at
+`$HOME/Videos/OGGF/ssz-bring-up/campaign-20260927-knuckles-world-clip-800/`
+consumes8,704 inputs without death, includes all frames at60fps and passes full
+decode. Inspected4658/8156 now retain the clouds and remove the black island gap.
+Its entire state CSV matches the prior800 recording, confirming unchanged
+recorded gameplay. This is engine visual/regression evidence, not native whole-
+scene pixel parity. Full delivery verification remains separate.

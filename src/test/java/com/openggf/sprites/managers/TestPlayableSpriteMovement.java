@@ -5269,7 +5269,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setSubpixelRaw(mockSprite.getCentreX() & 0xFFFF, mockSprite.getYSubpixelRaw());
                 mockSprite.setDoubleJumpFlag(4);
                 mockSprite.setDoubleJumpProperty((byte) 0);
-                mockSprite.setObjectMappingFrameControl(true);
+                mockSprite.setAbilityMappingFrameControl(true);
                 mockSprite.setMappingFrame(mappingFrame);
                 setInputState(false, false, false, false, false);
         }

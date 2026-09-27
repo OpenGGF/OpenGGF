@@ -519,3 +519,14 @@ Java 21, DISPLAY=:0, `30a3537d0` plus test changes:
 1:07 Maven (46.73s class). This totals 880 actual reloads across the native and
 supported donor standard-team products. It does not certify donor cold traversal,
 hazard-contact deaths, arbitrary duplicate follower chains or pixel presentation.
+
+## Knuckles pole animation ownership follow-up (2026-09-27)
+
+Candidate based on58001b58e: `TestKnucklesObjectControlAnimation` enters the
+placed$7B pole at$A08,$1E8 while gliding, at320/800. Native loc_3C0DC/sub_3C010
+owns the raw pole pose while Knuckles_Control clears double_jump_flag. The
+shared ownership split preserves that pose instead of clearing the object's
+bit1 gate together with the old ability. Incoming ability state, capture,
+held state and forced object recreation/forward replay are covered. These two
+cases pass in the queued focused run; broader verification and integration
+remain pending. Existing full-act/native/presentation gaps are unchanged.

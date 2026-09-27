@@ -610,7 +610,7 @@ class TestKis2MovementRules {
         player.setDirection(facing);
         player.setMappingFrame(0xB7);
         player.setDoubleJumpFlag(4);
-        player.setObjectMappingFrameControl(true);
+        player.setAbilityMappingFrameControl(true);
         player.setForcedAnimationId(0x20);
         player.setAir(true);
     }

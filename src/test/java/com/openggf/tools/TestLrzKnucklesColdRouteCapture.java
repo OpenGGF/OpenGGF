@@ -286,23 +286,25 @@ class TestLrzKnucklesColdRouteCapture {
     void coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-knuckles-cold-hpz-320.bk2"));
-        assertEquals(52659, movie.getFrameCount());
+        assertEquals(49526, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        // Reauthored after loc_165AE clears stale glide on transport capture.
         // Door9, flame ledges and tubes, lower westward return, eastern
         // staircase/wall transfers, door10, nozzle drop, rocks/bridges and
         // direct HPZ. Stop source replay windows before the load fade;
         // destination windows exercise the replacement level independently.
-        var spots = Set.of(40046, 40090, 40130, 40220, 41090, 41150, 41175,
-                41205, 41260, 41365, 41380, 41500, 42067, 42100, 42200,
-                42906, 42980, 43020, 43300, 43711, 43760, 43884, 43950,
-                44050, 44200, 44400, 44934, 44975, 45030, 45150, 45500,
-                46160, 46200, 46300, 47100, 47160, 47200, 47240, 47320,
-                47761, 47800, 47840, 47950, 48637, 48670, 48720, 48850,
-                49283, 49310, 49360, 49450, 50124, 50180, 50240, 50320,
-                50562, 50590, 50630, 50720, 50847, 50880, 50930, 51100,
-                51462, 51500, 51570, 51630, 51813, 51868, 51923, 51961,
-                51990, 52040, 52120, 52180, 52210, 52260, 52300,
-                52440, 52540, 52600);
+        var spots = Set.of(40046, 40090, 40130, 40220, 41090, 41150, 41175, 41205,
+                41260, 41280, 41320, 41330, 41350, 41361, 41380, 41420,
+                41465, 41490, 41528, 41560, 41620, 41877, 41920, 42020,
+                42153, 42180, 42240, 42358, 42420, 42559, 42660, 42759,
+                43408, 43449, 43509, 43620, 43660, 43721, 43760, 43800,
+                43850, 44183, 44244, 44304, 44350, 44444, 44845, 44880,
+                44922, 45000, 45721, 45740, 45790, 45860, 46000, 46150,
+                46177, 46227, 46317, 46991, 47047, 47107, 47187, 47429,
+                47457, 47497, 47587, 47714, 47747, 47797, 47967, 48329,
+                48367, 48437, 48497, 48680, 48735, 48790, 48828, 48857,
+                48907, 48987, 49047, 49077, 49127, 49167, 49307, 49407,
+                49467);
         var checked = new HashSet<Integer>();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
@@ -327,7 +329,7 @@ class TestLrzKnucklesColdRouteCapture {
                     }
                 }
                 if (!spots.contains(frame)) continue;
-                assertEquals(frame < 52418 ? 9 : 22, GameServices.level().getCurrentZone());
+                assertEquals(frame < 49286 ? 9 : 22, GameServices.level().getCurrentZone());
                 assertEquals(1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
@@ -355,7 +357,7 @@ class TestLrzKnucklesColdRouteCapture {
             assertInstanceOf(Knuckles.class, session.player());
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
             assertFalse(session.player().isObjectControlled());
-            assertEquals(1075, session.player().getCentreX());
+            assertEquals(1069, session.player().getCentreX());
             assertEquals(748, session.player().getCentreY());
             assertEquals(0, session.player().getRingCount());
         }

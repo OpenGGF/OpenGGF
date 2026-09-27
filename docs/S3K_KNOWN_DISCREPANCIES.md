@@ -831,6 +831,18 @@ no early object slot, collision, palette or PLC activity. Mecha's high hardware
 priority is original ROM behaviour, not a widescreen exception.
 
 
+Presentation correction (2026-09-27): the cold Knuckles final-fight movie
+at800px shows black pixels beneath the floating island and missing cloud bands
+(e.g. input4658). The unchanged develop58001b58e reproduces the gap with every
+frame rendered; the concurrent glide-reset candidate is not its origin. The
+native320 capture shows clouds in that region. Existing ending-plane extension
+checks did not certify this earlier encounter mode. The shared finite-world
+clip now tests camera/world coordinates rather than deformed texture samples,
+preserving native cloud wrapping inside the visible level. The focused GPU
+regression reproduces the old missing interior pixels and covers both physical
+edges, drift directions and sprite-priority masks. See the SSZ2 matrix and
+campaign audit for execution and delivery status.
+
 ## Sprite_OnScreen_Test lifetime audit
 
 The LRZ cold-route audit based on `bc4e3285d` disproved the old guide claim

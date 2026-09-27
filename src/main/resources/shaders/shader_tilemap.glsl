@@ -144,10 +144,15 @@ void main()
         if (localBandY < 0.0) localBandY += wrapHeightPx;
     }
 
-    // Native VDP planes wrap, but a finite level's native camera bounds hide its
-    // layout edges. A wider view can expose them. Clip only the extra finite-world
-    // foreground sampling; backgrounds and explicitly looping planes retain wrap.
-    if (ClipHorizontal == 1 && (tileXf < 0.0 || tileXf >= TilemapWidth)) discard;
+    // Native VDP planes wrap; the 320px camera hides finite layout edges.
+    // Widescreen clipping is our presentation extension, measured in camera/world
+    // space. HScroll is a texture coordinate, not a physical level boundary:
+    // SSZ2's Plane A clouds drift indefinitely through ApplyFGDeformation. Testing
+    // tileXf here erased those clouds when their samples passed the layout width.
+    // Keep that native texture wrap inside the finite visible world, including
+    // the identical sampling used by the sprite-priority mask.
+    float finiteWorldX = WorldOffsetX + pixelX;
+    if (ClipHorizontal == 1 && (finiteWorldX < 0.0 || finiteWorldX >= TilemapWidth * 8.0)) discard;
 
     if (UpperBandWrapWidthTiles > 0.0 && UpperBandWrapHeightPx > 0.0 && localBandY < UpperBandWrapHeightPx) {
         tileXf = mod(tileXf, UpperBandWrapWidthTiles);

@@ -887,3 +887,38 @@ or follower; final position/rings agree with the test. The video passes full
 decode; upper climb and playable HPZ stills are inspected. The earlier pre-fix
 capture is superseded. Exact command and provenance accompany the external
 capture. This is engine presentation evidence, not native pixel parity.
+
+
+## Knuckles transport glide reset and route repair (2026-09-27)
+
+Candidate `feature/ai-soz-knuckles-act2`, based on `58001b58e`: the shared
+Knuckles movement gate now clears `double_jump_flag` when native object-control
+bit0 suppresses movement, matching `Knuckles_Control/loc_165AE`. The old route
+had depended on stale glide physics after a transport capture. Its first changed
+mapping is input41285 and first changed motion41331. Matched isolated tests
+passed the old asset on base and failed it on the candidate; the native reset
+was retained and the ordinary controller inputs were repaired.
+
+The canonical `lrz-knuckles-cold-hpz-320.{script,bk2}` now contains49,526 inputs.
+Its cold LRZ1 replay reaches real HPZ at49286, then ends at(1069,748),zero rings,
+normal control and no deaths. It preserves the earlier route through41330;
+new inputs time the flame approaches, clear moving solids and change into glide
+earlier during the ceiling-limited wall transfer. No state seeds or runtime
+exceptions are used. The old52,659-input record above is historical evidence.
+
+Queued Java21/DISPLAY=:0/explicit root ROM command:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$S3K_ROM" -Dtest=TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace test`
+passes1 case,zero failures/errors/skips,32.64s test time (53.679s Maven).
+All89 immediate-restore/45-input replay windows pass, including the repaired
+transport approaches and three destination windows. The initial fresh run
+passed those windows but caught the old final-X oracle1075; the revised movie
+has one fewer destination movement input, verified as1069 by independent capture.
+This replaces this method's old81 windows; the earlier208 are unchanged and
+were not rerun here. Broad validation/integration of the shared reset is pending.
+
+Independent uninterrupted GameplayCaptureTool capture has49,526 alive rows.
+External `lrz-bring-up/campaign-20260927-knuckles-glide-reset-hpz-320` contains
+input provenance, full state CSV, selected stills and the video for45700–49525:
+3,826 frames,60fps,960x672,63.766667 seconds. Wall-transfer and playable HPZ
+stills were inspected; full ffmpeg decoding passes. This is engine route evidence,
+not new native pixel parity or broader viewport/donor certification.

@@ -1,6 +1,7 @@
 # SSZ2 controller-only cold route through the pre-ending stop.
 # Knuckles solo; emeralds3333333; initial VInt410766. No gameplay state hydration.
 # Native movie input plus authored laser dodges/recharge approaches and low-health pursuit.
+# 2026-09-27: release this Super-phase jump one input earlier after the native glide reset repair.
 342 -
 40 R
 19 -
@@ -131,8 +132,8 @@
 31 -
 23 R
 3 B
-6 L+B
-42 L
+5 L+B
+43 L
 13 -
 13 L
 19 -

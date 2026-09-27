@@ -229,3 +229,10 @@ binding bit (alongside the campaign’s captured tile priority and display bucke
 and `AbstractPlayableSprite.hasLatchedSolidObjectBinding()` exposes
 it to restore reconciliation. This updates the unpublished 0.7 candidate pin in
 place; the descriptor and runtime version remain 0.7.0, with no published baseline.
+
+Player raw-frame ownership now separates object scripts from player abilities.
+`AbstractPlayableSprite.setAbilityMappingFrameControl(boolean)` and
+`PlayerRewindExtra.abilityMappingFrameControl` preserve that distinction through
+rewind, while the existing raw-frame query continues to cover both owners.
+The unpublished 0.7 candidate pin is regenerated in place; the release descriptor
+and runtime API version remain 0.7.0, with no published baseline changed.

@@ -20,6 +20,12 @@ checks, zero skips, including480 real death/reloads. Earlier512/640 cases are
 historical custom-width evidence; full cold-route and native-presentation gaps
 remain open.
 
+The [Knuckles transport-reset follow-up](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-transport-glide-reset-and-route-repair-2026-09-27)
+reauthors the affected late Act2 inputs after the ROM-backed glide reset. The
+candidate49,526-input cold route reaches playable HPZ with89 restore/replay windows;
+fresh independent capture has no deaths. Shared-change broad validation and
+integration remain pending; prior completion details below are historical.
+
 [Knuckles LRZ2 completion](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-cold-act2-completion-and-direct-hpz-2026-09-25)
 now reaches playable Hidden Palace from cold Act1 in52659 inputs, zero deaths,
 with81 additional restore/replay windows (289 across the five Knuckles tests).
@@ -707,3 +713,27 @@ results and playable LRZ, with30 traversal/destination full-world replay
 windows and semantic encounter/load-boundary checks. Execution and delivery
 evidence is in the campaign audit. This does not close Knuckles cold routes,
 other viewport/donor products or matched native presentation.
+
+
+Knuckles raw-animation ownership (2026-09-27): the FBZ1 matrix now covers
+placed-pole capture, glide-state clearing and whole-world restore/replay at320/800;
+the SOZ2 wire receives the same short independent coverage. SSZ2's existing cold
+fight/rewind route passes both widths after a one-frame controller release repair.
+The refreshed800px capture exposed an inherited island/cloud rendering gap;
+the SSZ2 matrix now records its shared shader correction, reproducing GPU test
+and fresh full-route video. This is focused evidence,
+not full campaign or widescreen visual acceptance.
+
+### SOZ Knuckles cold Act 2 completion (2026-09-27)
+
+The [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md#knuckles-cold-act-2-completion-2026-09-27) now records ordinary Knuckles solo from cold native-320 entry through
+the cork/rock and upper-switch puzzles, eight boss hits, capsule/results and
+playable Lava Reef. The permanent fixed input has 35,315 frames; the dedicated
+`TestSozColdRouteCapture` method checks 48 traversal/destination replay windows,
+including eleven puzzle points, plus boss/background/capsule/results semantics
+and real load-history isolation. Fresh fixed-input video and the candidate
+replay checks are in the matrix; combined delivery evidence is in the campaign
+audit. This completes native-320 cold routes for Sonic, Tails and Knuckles in
+both SOZ acts, alongside the paired route. It does not close every act obligation.
+The same input fails the 800px probe at input 3,441 after an earlier light-switch
+hit; wider/donor routes and native presentation certification remain open.

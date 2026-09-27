@@ -101,9 +101,9 @@ S2 replaces Knuckles with Sonic. The native/off rosters are unchanged.
 
 | Route/dimension | Obligation | Current evidence / gap |
 | --- | --- | --- |
-| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Sonic + Tails at native 320 completes cold entry through eight natural boss hits and the Lava Reef transition using fixed controller input. Sonic solo full completion remains open; checkpoint and positioned boundaries supplement the route |
-| Tails solo | Same, including native character branches and flight interactions | Every authored post activates/reloads; positioned solo victory covers off/S2 donors at all five widths. Full flight-sensitive cold route remains open; S1-donor Tails is outside the production roster |
-| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Every authored post activates/reloads; positioned solo victory covers all five widths with donation off. Full distinct cold route/progression remains open |
+| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Sonic solo and Sonic + Tails at native 320 complete cold entry through eight natural boss hits, capsule/results and playable Lava Reef using fixed controller input with whole-world replay; broader products remain open |
+| Tails solo | Same, including native character branches and flight interactions | Native 320 solo cold completion reaches playable Lava Reef with eight hits and whole-world replay. Every authored post activates/reloads; positioned solo victory covers off/S2 donors at all five widths. Wider/donor cold routes remain open; S1-donor Tails is outside the production roster |
+| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Native 320 fixed-input cold completion covers cork/rock and upper-switch puzzles, all eight boss hits, capsule/results and playable LRZ, with 48 traversal/destination replay windows plus semantic events. Every authored post activates/reloads; positioned solo victory covers all five widths. The same cold inputs fail at 800px; see the completion section below |
 | Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Selected mechanisms and three-player terrain restore/replay covered; repeated checkpoint team reset evidence below. No finite follower maximum is declared by the production team contract; full multi-owner interaction breadth remains open |
 | Production presets 320/352/400/528/800 | Actual selected preset and camera width; entry/reset × every supported donor; sensitive interactions and rewind | Checkpoint and team lifecycle matrices now select `WidescreenAspect.values()` through the production resolver, including previously omitted352/528. See current execution below; historical512/640 checks remain historical custom-width evidence, not menu coverage |
 | Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Every authored checkpoint covers the six supported character/donor combinations × five widths, asserting movement capability and reload state. Thirty positioned boss-to-LRZ cases cover all six supported character/donor combinations at each width; full traversal/interaction breadth remains open |
@@ -643,3 +643,83 @@ products), zero failures/errors/skips;30 periodic/destination and20 semantic
 observations run for this route. The53.033333-second60fps video covers input
 25600 onward; final-hit/capsule/destination stills and full decode are checked.
 This is focused validation, not a full ordinary-suite or guard pass.
+
+
+## Knuckles cold-route investigation and grab-state repair (2026-09-27)
+
+At base58001b58e in feature/ai-soz-knuckles-act2, controller-only cold traversal
+reaches the upper light-switch/door passage with2 rings. Native
+`Knuckles_Control/loc_165AE` clears `double_jump_flag` when object-control bit0
+suppresses movement. The engine previously skipped that write, retaining the
+glide pose while hanging and replacing `sub_40F52`'s release speed on the next
+player pass. The candidate shared movement-gate correction restores the hanging
+mapping145 and normal release acceleration/gravity; the live cold probe now
+passes the doorway. The preceding13173 input rows remain identical.
+
+The focused regression covers all five glide/climb states, preserved native
+property/radii semantics, hanging animation and release velocity. The shared
+raw-frame flag also needed an ownership split: an ability relinquishes its
+mapping when object-control cancels glide, while a capturing object's bit1 gate
+continues to suppress scripted animation. `TestKnucklesObjectControlAnimation`
+covers the placed SOZ wire and FBZ pole with real Knuckles at320/800, including
+whole-world restore and forward replay. The first queued owner-focused run
+passes34 checks with0skips; its two SSZ-route failures are tracked separately
+in the campaign audit. Broader checks and integration remain pending.
+
+The cold authoring prefix now passes switches7/8/9/12, the subsequent vertical
+wrap/spike corridor and checkpoint ledge, then reaches the eastern pyramid.
+After actually grabbing the light at(17904,1232), the selected input reaches
+(18293,1140),36rings,no deaths: prefix25752 of
+`target/knuckles2-lit-pyramid-entry/variant-0.bk2`. The later pillar room still
+blocks continuation; attempts that drop to its lower floor are rejected after
+crushing deaths. This supersedes earlier authoring frontiers, not the act's
+acceptance rows. This was the authoring frontier before the cold completion recorded below;
+retain it as investigation history. Other viewport/donor and native-presentation
+breadth remain open.
+
+## Knuckles cold Act 2 completion (2026-09-27)
+
+This supersedes the preceding pyramid authoring frontier. The fixed ordinary
+Knuckles solo route now completes cold SOZ Act 2 at native 320px, with donation
+off, no position/ring/emerald seed, intro enabled and the initial production
+Process_Sprites pass consumed. Its 35,315 inputs release the cork, pull the
+lights, hold the lower door with the rock, cross the upper switch/spike passage,
+open the last door, defeat the boss, open the capsule, finish results and load
+LRZ1. Lava Reef becomes playable at input 35,392 under neutral continuation.
+
+The failed lower-rock attempts had skipped the cork's floor replacement; its
+fall was correct. The later spike passage requires moving the upper push switch
+before jumping from its edge. Native powered Knuckles footage helped navigate,
+but was not an ordinary-character movement oracle. Neither puzzle geometry nor
+boss/player physics was changed to make these inputs succeed. The shared grab
+state correction described above remains the runtime repair.
+
+`TestSozColdRouteCapture` now includes this character/act row. Its 48 selected
+45-input whole-world restore/forward-replay windows include eleven explicit
+points around the cork, light pull, rock/door, upper switch, spike/wall crossing,
+last switch and arena drop. Separate semantic checks cover boss entry, all eight
+hits, capsule/results and seven background modes. The actual LRZ load resets
+outgoing rewind history; destination control and rendered continuation are
+verified. Short object/puzzle tests remain independent of this long route.
+
+The fresh fixed-input capture had no deaths in 35,494 observed frames. Hits were
+at 31,955 / 32,307 / 32,659 / 33,011 / 33,363 / 33,683 / 34,035 / 34,086;
+capsule at 34,603; results finished at 35,179; LRZ loaded at 35,314. Its final
+state is playable LRZ1 at (331,1969), with three naturally collected rings.
+The 60fps video is the final 9,394 frames, starting at input 26,100, not a
+video of the entire cold prefix. All prefix inputs were nevertheless rendered
+and recorded in the complete CSV. The MP4 decoded completely; representative
+cork/light, spike clearance, boss-hit, capsule and LRZ frames were inspected.
+
+Media: `$HOME/Videos/OGGF/soz-bring-up/campaign-20260927-knuckles-cold-act2-clear-320/`
+contains the MP4, fixed script/BK2, complete state CSV, milestones, stills and
+provenance. Candidate base is `58001b58e`; final integration evidence belongs in
+the campaign audit.
+
+**Width limit:** the same fixed inputs fail the fresh 800px probe at input 3,441.
+The first player-state difference is damage while hanging at the early light
+switch on input 1,645, at (1616,912), losing four rings. The exact damaging owner
+has not been independently corroborated. This establishes a wide-route input
+frontier, not a physics defect or widescreen completion. Other viewport/donor
+products, native presentation comparison and the remaining act obligations stay
+open. The accepted strict-trace deferral is unchanged.

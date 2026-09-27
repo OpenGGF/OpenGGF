@@ -465,6 +465,7 @@ public record PerObjectRewindSnapshot(
             int bubbleAnimId,
             boolean initPhysicsActive,
             boolean objectMappingFrameControl,
+            boolean abilityMappingFrameControl,
             int mappingFrame,
             int animationId,
             int forcedAnimationId,
