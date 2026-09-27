@@ -6708,3 +6708,9 @@ are lifecycle demos rather than controller-authored death routes.
 External evidence: `$VIDEO_ROOT/ssz-bring-up/campaign-20260927-bridge-reload-320/`
 and `campaign-20260927-bridge-reload-800/` (`capture.mp4`, `state.csv`, `frames/`,
 `README.md`). Integration verification is recorded after the source commit.
+
+Integrated source `485e23cfc` on `develop` passes the same combined queued command:
+111 tests, zero failures/errors/skips,1m56s (2026-09-27). The final25 supported
+rows pass with50 actual reloads and all participant-art assertions. No executable
+edits followed this run. The bridge checkpoint gap is closed; broader campaign
+route/configuration/native-presentation obligations remain open.

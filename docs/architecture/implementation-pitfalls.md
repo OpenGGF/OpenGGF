@@ -26,6 +26,18 @@ policy on current zone/act as well as its runtime owner. The short
 `TestDezFinalScreenEntry.outgoingDoomsdayLoadDoesNotInheritFinalArenaCameraProjection`
 regression exercises this boundary without replaying the full fight.
 
+**Checkpoint index is not used-post history.** `getLastCheckpointIndex()` models
+S3K `Last_star_post_hit`; `getStarPostActivationMark()` tracks the separate
+used-post high-water. A real death reload can restore the former while leaving
+the latter empty. Read the ROM's field, not whichever flag happens to be set
+by a positioned test's `saveCheckpoint`. SSZ's opening bridge incorrectly waited
+at X+$C0 after death because it consulted used-post history, while ScreenInit
+correctly skipped the arrival using the restored index. The cold bridge/reload
+regression (`TestSszBridgeCheckpointCapture`, source fix `485e23cfc`) exercises
+this distinction through actual GameLoop reloads. Reacquire the rewind controller
+after a load too; inspecting the discarded controller does not measure the new
+timeline's isolation.
+
 **Character identity is not player-slot order.** MHZ2's `sub_65E72` indexes
 `RawAni_65EB0` by `character_id` plus V-int bit 1. Treating the leader as Sonic
 and every follower as Tails gave solo Tails Sonic's floor-grab frames, while the
