@@ -135,7 +135,10 @@ public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance
         }
         int x = getX();
         int y = getY();
-        int cameraX = Short.toUnsignedInt(services.camera().getX());
+        // Obj_FlickerMove's coarse deletion window is relative to the ROM
+        // camera, even when the displayed viewport extends beyond that window.
+        int cameraX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                services.camera().getX(), services.camera().getWidth()) & 0xFFFF;
         int cameraY = Short.toUnsignedInt(services.camera().getY());
         int coarseDeltaX = (x & 0xFF80) - (cameraX & 0xFF80);
         int deltaY = y - cameraY + 0x80;

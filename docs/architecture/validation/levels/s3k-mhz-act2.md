@@ -328,3 +328,23 @@ DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
 still clear them. Shared validation and exact route limitations are recorded in
 [the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
 This adds transition coverage, not another whole-act or native-pixel certification.
+
+## 2026-09-27 endboss viewport and pillar follow-up (candidate)
+
+The new cold 800px input reaches the final catapult and chase, exposing delayed
+native camera admission and an incorrect player clamp. `TestS3kMhzEndBossViewport`
+adds five-preset native gate/wrap, whole-registry replay, and pillar scroll/helper
+contracts. Base fails eight wide gate/wrap cases; the two native cases pass.
+A separate native probe proves `loc_55586`'s division remainder was dropped,
+shifting pillar collision helpers even at 320px. Both fixes are unintegrated and
+candidate validation is pending; see the campaign audit. Native completion must
+be reverified after the arithmetic correction, and 800px completion remains open.
+
+
+Candidate native Sonic, Tails and pair Act2 routes all pass after the arithmetic
+correction. Fifteen five-preset viewport/gate/wrap/replay cases pass. Two old
+event oracles copied the port's discarded DIVU remainder; after replacing the
+oracle with independent unsigned division, the86-case event/scroll/viewport
+selection passes with zero skips. Original-game observations independently
+match3,035 scroll words and3,710 helper coordinates. Integration and800px cold
+completion remain pending; no native full-frame parity claim is made.

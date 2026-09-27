@@ -6247,3 +6247,14 @@ both reach Act2 at31392 without deaths, with all31492 state rows identical.
 The native cold-route evidence therefore remains valid under its stated entry
 configuration. See the campaign audit and capture recipe; do not change gameplay
 to rescue playback made with a different entry mode.
+
+## MHZ2 Endboss Camera and Pillars (RESOLVED IN CANDIDATE)
+
+2026-09-27: using widescreen's visible-left edge delayed the native chase gate
+and moved player clamps. The candidate retains ROM camera/bound words and
+projects the displayed origin. Independently, `loc_55586`'s first DIVU remainder
+was discarded, changing both pillar scroll and collision-helper positions even
+at320px. Native emulator observations corroborate the corrected arithmetic.
+Five-preset gate/wrap/replay checks and native Sonic/Tails/team routes pass;
+800px full-route completion and integration remain pending. See the
+[campaign audit](../architecture/audits/2026-09-22-sk-zone-bring-up.md).

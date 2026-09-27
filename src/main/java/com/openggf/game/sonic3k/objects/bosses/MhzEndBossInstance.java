@@ -206,12 +206,17 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         return cameraRangePassed;
     }
 
+    /** All ROM camera-relative gameplay reads share the native 320px origin. */
+    private static int nativeCameraX(com.openggf.camera.Camera camera) {
+        return com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
+    }
+
     private boolean isCameraInRange() {
         var services = tryServices();
         if (services == null || services.camera() == null) {
             return true;
         }
-        int cameraX = Short.toUnsignedInt(services.camera().getX());
+        int cameraX = nativeCameraX(services.camera());
         int cameraY = Short.toUnsignedInt(services.camera().getY());
         return cameraY >= CAMERA_RANGE_MIN_Y && cameraY <= CAMERA_RANGE_MAX_Y
                 && cameraX >= CAMERA_RANGE_MIN_X && cameraX <= CAMERA_RANGE_MAX_X;
@@ -227,7 +232,12 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             return;
         }
         if (services.camera() != null) {
-            services.camera().setMinX(services.camera().getX());
+            // Obj_MHZEndBoss's Check_CameraInRange and initial minimum use
+            // the ROM origin, not the leftmost extra pixels of a wide display.
+            if (services.zoneRuntimeState() instanceof MhzZoneRuntimeState state) {
+                state.activateEndBossNativeCamera();
+            }
+            services.camera().setMinX((short) nativeCameraX(services.camera()));
         }
         if (services.levelEventProvider() instanceof Sonic3kLevelEventManager manager) {
             manager.setBossFlag(true);
@@ -338,7 +348,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (services == null || services.camera() == null) {
             return;
         }
-        if (Short.toUnsignedInt(services.camera().getX()) < SPIKE_ART_CAMERA_THRESHOLD_X) {
+        if (nativeCameraX(services.camera()) < SPIKE_ART_CAMERA_THRESHOLD_X) {
             return;
         }
         setCustomFlag(SPIKE_ART_QUEUE_PENDING_OFFSET, 0);
@@ -368,7 +378,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private void updateCameraApproachSwing() {
         var services = tryServices();
         if (services != null && services.camera() != null
-                && Short.toUnsignedInt(services.camera().getX()) + 0xE0 >= state.x) {
+                && nativeCameraX(services.camera()) + 0xE0 >= state.x) {
             state.routine = ROUTINE_ALTERNATING_DASH_WAIT;
             setCustomFlag(TIMER_OFFSET, 0);
             updateAlternatingDashWait();
@@ -583,7 +593,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (services == null || services.camera() == null) {
             return;
         }
-        int nextCameraX = Short.toUnsignedInt(services.camera().getX()) + POST_BOSS_CAMERA_SCROLL_STEP;
+        int nextCameraX = nativeCameraX(services.camera()) + POST_BOSS_CAMERA_SCROLL_STEP;
         if (nextCameraX >= POST_BOSS_CAMERA_SCROLL_TARGET_X) {
             nextCameraX = POST_BOSS_CAMERA_SCROLL_TARGET_X;
             services.camera().setMinX((short) POST_BOSS_CAMERA_SCROLL_TARGET_X);
@@ -592,7 +602,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             clearPostBossCameraEndpointControls(player);
             finalDefeatPhase = FINAL_PHASE_WAIT_CAPSULE_RESULTS_FLAG;
         }
-        services.camera().setX((short) nextCameraX);
+        services.camera().setX((short) com.openggf.camera.NativeViewportFraming.visibleLeft(
+                nextCameraX, services.camera().getWidth()));
     }
 
     private void clearPostBossCameraEndpointControls(PlayableEntity player) {
@@ -626,7 +637,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         setFinalHitHandoff(false);
         var services = tryServices();
         if (services != null && services.camera() != null) {
-            int cameraX = Short.toUnsignedInt(services.camera().getX());
+            int cameraX = nativeCameraX(services.camera());
             int cameraY = Short.toUnsignedInt(services.camera().getY());
             state.x = (cameraX - 0x40) & 0xFFFF;
             state.y = (cameraY + 0x40) & 0xFFFF;
@@ -826,7 +837,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (services == null || services.camera() == null) {
             return 0;
         }
-        int cameraThresholdX = (Short.toUnsignedInt(services.camera().getX()) + 0x80) & 0xFFFF;
+        int cameraThresholdX = (nativeCameraX(services.camera()) + 0x80) & 0xFFFF;
         if (Integer.compareUnsigned(cameraThresholdX, state.x & 0xFFFF) >= 0) {
             return 0;
         }

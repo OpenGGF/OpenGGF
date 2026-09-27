@@ -8874,3 +8874,95 @@ the completed25,105-test ordinary lane. All consumed runner diagnostics were
 acknowledged and deleted. These two completed lanes cover the full ordinary
 and structural selections; the interrupted combined wrapper is not described
 as a passing invocation. Integration/post-integration checks remain pending.
+
+## 2026-09-27 MHZ2 native arena coordinates (candidate)
+
+Separate candidate `bugfix/ai-mhz2-wide-arena`, base `6088735c8`, keeps the
+seamless-presentation delivery frozen during its shared validation. No integration
+or pass is implied by this entry.
+
+Cold 800px route authoring now reaches the final catapult and live chase. The
+previous upper-passage stall was solved by jumping earlier with retained approach
+speed; no movement adjustment was needed. Durable controller prefixes and notes:
+`$HOME/Videos/OGGF/mhz-bring-up/authoring-20260927-wide-route/`. The fresh
+14,400-step cold replay matches the selected authoring branch on every CSV row,
+with zero deaths. Its upper-passage clip is
+`$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-wide-upper-passage-800/capture.mp4`.
+It does not establish Act 2 completion.
+
+The chase exposed a real viewport error: `loc_55312` was testing visible-left
+against native $3F00. At 800px this admits the chase 240 pixels late, then
+`sub_556B8` clamps Sonic to the wrong native $C0 limit. The candidate keeps ROM
+boundary/player words and projects only display X. The same distinction applies
+to endboss admission, approach/spike gates, repeats, defeat fragments and ship
+handoff. A captured event flag retains framing after the boss background restore,
+until a fresh initialization. Original behavior and widescreen adaptation are
+commented at their owners.
+
+Two independent viewport regressions run against unchanged base via a temporary
+source-only JUnit overlay: 10 cases, two native passes and eight wide failures,
+zero skips. Every wide case fails at the native admission threshold. New candidate
+checks additionally capture/restore and replay the whole registry twice.
+
+The pillar investigation also found native arithmetic loss. `loc_55586` leaves
+the first DIVU remainder in D2's high word; the following MOVE.W preserves it for
+the second DIVU. The port discarded that remainder. At native camera $4180 the
+correct ramp step is -$8000, so line 47 is -$4118; base produces -$4100. An
+independent native probe fails with exactly those expected/actual words, one case,
+zero skips. The candidate preserves the remainder and `loc_55552`'s signed early
+clear, which must retain helper positions. Wide scroll words receive the display
+inset only after ROM arithmetic; collision helpers use the unprojected words.
+The permanent five-preset checks expect tall support $4220 and spike pairs
+$4224/$4229/$422F, then test both sides of the $4040 ramp threshold.
+
+Focused execution, corrected-route replay, rendered inspection, selected delivery
+validation and integration remain pending. In particular the old native cold
+inputs must be rechecked after correcting the pillar collision positions; their
+historical pass is not evidence for this candidate.
+
+
+Independent native corroboration: BizHawk 2.11/GPGX continued the unchanged
+Sonic/Tails complete-run movie from its MHZ2 save at299000 through300700,
+without RAM writes. Verified ROM SHA-1 matches the repository identity. The
+exporter is promoted as `tools/bizhawk/capture_mhz_pillar_reference.lua`; plan,
+hashes, native observations and screenshots are under
+`$HOME/Videos/OGGF/mhz-bring-up/native-pillars-20260927/final-reference/`.
+Host completed with no failures (3.67 seconds). Of639 sampled chase-window rows,
+607 have the pillar flag active: all3,035 sampled scroll words match the corrected
+arithmetic, including77 early-clear frames. All3,710 sampled active helper
+positions match `loc_555D2`. Current/copied camera words agree on all639 rows.
+Selected native encounter images were inspected. This confirms the native
+calculation, not candidate execution or whole-frame parity.
+
+The initial entry-to299000 window ended before the chase, yielded no observations
+and was rejected. Reusing the existing native299000 save resolved the observation
+window. A sparse-render prototype and final render-all exporter produce identical
+CSV rows; only final capture is retained as the reference. Lua5.4 loadfile syntax
+validation passes. Integration and engine-side focused execution remain pending.
+
+
+The first candidate MHZ focused run completed 176 cases with two failures and
+no errors/skips. All 15 viewport checks, three native Act 2 authored routes,
+rewind/admission cases and mandatory S3K checks passed. Both failures were old
+pillar oracles that duplicated the same discarded DIVU remainder as the port;
+the independently observed original-game ramp/helper values support the new
+calculation. The test oracle now uses a single unsigned division rather than
+copying the two-register implementation. Rerun the affected event/scroll tests.
+
+
+Corrected-oracle focused execution:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestSonic3kMHZEvents,SwScrlMhzTest,TestS3kMhzEndBossViewport test`
+passes86 tests, zero failures/errors/skips,23.323 seconds Maven. Together with
+the prior176-case run's unchanged passing native routes and other consumers,
+this closes the two attribution failures. It is focused validation, not a
+full-suite pass. The change-based planner's full fallback is disproportionate
+for these local MHZ camera/pillar owners: five real display presets, native
+route consumers, event/scroll arithmetic, whole-world replay and independent
+native observations cover the changed contracts. The concurrent shared
+seamless-lifecycle delivery still requires its broad combined-destination run.
+
+New 800px chase authoring with the corrected camera now admits at the native
+gate; the first fixed jump pattern falls at input22209 (x16309,y861), whereas
+a longer initial run stalls before the step atx15669. These are incomplete
+input routes, not additional correctness claims. Do not undo the independently
+verified pillar math to reproduce the older camera's later admission.
