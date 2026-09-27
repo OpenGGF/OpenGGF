@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ cold-route reauthoring (2026-09-27): a source-backed solid landing correction
+can invalidate a long fixed-input movie after several later contacts, even when
+its first movement difference reconverges. Match the unchanged recording against
+its original commit, identify the actual riding/standing owner, and preserve ROM
+behavior while repairing controller inputs. Positioned99-ring boss victories do
+not establish that the same controller survives a13-ring cold arrival. Compare
+recorded button streams before treating small aim-offset edits as new strategies:
+three offsets here produced byte-identical failed inputs. See the campaign audit
+and `GameplayInputBranchTool`'s contact CSV.
+
 Live rewind recording versus route-driver snapshots (2026-09-27): enabling
 LIVE_REWIND_ENABLED in a RecordingFrameDriver/HeadlessTestFixture route does not
 exercise GameLoop's history recorder. A new MHZ paired load-boundary test had

@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Cold ordinary-input SOZ2 traversal through eight natural boss hits, capsule and LRZ.
  * The first 1500 inputs come from complete-emeralds BK2 offset 365809; subsequent
  * inputs were authored against live gameplay, including the existing boss controller.
- * Frozen on 819d99cc1 during SOZ completion (2026-09-16). No gameplay hydration.
+ * Originally frozen on 819d99cc1 (2026-09-16); reauthored on 7a00b2915
+ * after source-backed push-switch landing corrections (2026-09-27). No gameplay hydration.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 @EnabledIfSystemProperty(named = "soz.cold.act2.capture", matches = ".+")
@@ -37,6 +38,8 @@ class TestSozColdAct2Capture {
                 Path.of("src/test/resources/routes/s3k/soz2-cold-sonic-tails.bk2"));
         int stride = Integer.getInteger("soz.cold.act2.stride", 4);
         assertTrue(stride > 0);
+        int captureFrom = Integer.getInteger("soz.cold.act2.capture-from", 0);
+        assertTrue(captureFrom >= 0);
         var settings = new GameplayCaptureSession.Settings(Integer.getInteger("soz.cold.width", 320), "sonic",
                 System.getProperty("soz.cold.followers", "tails"), "off", null, null, null);
         var inputs = new ArrayList<RecordedFrameInput>();
@@ -101,8 +104,9 @@ class TestSozColdAct2Capture {
                         + "," + GameServices.level().getCurrentAct() + "," + (boss == null ? -1 : boss.getCollisionProperty())
                         + "," + capsuleOpen + "," + results + "," + input.p1InputMask() + "," + input.p2InputMask());
                 csv.newLine();
-                if (frame % stride == 0) {
-                    ScreenshotCapture.savePNG(session.render(), output.resolve("frames/%05d.png".formatted(frame)));
+                var rendered = session.render();
+                if (frame >= captureFrom && frame % stride == 0) {
+                    ScreenshotCapture.savePNG(rendered, output.resolve("frames/%05d.png".formatted(frame)));
                 }
                 assertFalse(session.player().getDead(), "player died at frame " + frame);
                 if (GameServices.level().getCurrentZone() == 9 && readyFrame < 0) {

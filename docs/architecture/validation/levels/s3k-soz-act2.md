@@ -1,14 +1,46 @@
 # S3K Sandopolis Act 2 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_2`; ROM zone `$08`, act index 1, SKL pointer set.
-Status: native-movement Sonic + Tails cold completion at width 320 verified;
-full methodology acceptance, broader routes and native/visual parity remain open.
+Status: current-base native-movement Sonic + Tails cold completion at width320,
+with rendered whole-world rewind checks and actual LRZ timeline isolation.
+Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
 [Cold controller completion](#cold-controller-completion) closes only that route.
 Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
+
+## Cold-route revalidation (2026-09-27)
+
+At base `7a00b2915`, the original paired Act2 recording dies at input11512.
+Fresh captures rendered every input and every fourth input agree on all11,513
+rows of position, velocity, grounded/airborne state and rings. The new full-world
+replay test reaches the same failure; rewind and capture cadence are not its cause.
+The unchanged recording still completes on its original `de765d83d` base.
+
+The first motion difference is input1230 at a push switch: current Y is three
+pixels lower, with matching velocities. The later `2d9a6cfb5` correction models
+`Obj_SOZPushSwitch`'s `$30` landing width and `loc_1E154`'s native landing path.
+This source-backed behavior must not be reverted to fit an older recording.
+The paths reconverge before later contacts accumulate enough drift to miss the
+swing-to-rappel-wire transfer. Reauthored ordinary controller inputs now complete
+the upper/lower rising-sand rooms, later wrap and pillar/vine traversal, upper
+cork foreground mutation, recharged final doors, eight-hit boss, capsule, results
+and playable LRZ. No runtime movement, collision, event or object logic changed.
+The31417-input canonical BK2 was round-tripped by `InputLogAuthorTool`.
+
+`TestSozColdRouteCapture` runs the frozen route from cold native320 Sonic + Tails,
+donor off, with the intro enabled and no gameplay seeds. LRZ loads at input31236;
+33 periodic/destination45-input whole-registry restore/replay windows pass.
+Additional semantic checks cover20 named observations: all nine observed
+background modes, boss entry, each of eight hits, capsule opening and results
+start. Live history is enabled on capsule opening rather than at an old recorded
+frame; nonempty outgoing history is observed before the actual LRZ load resets it.
+Both destination control owners release, and the configured roster is retained.
+This adds current cold reachability/replay evidence; native/emulator trajectory
+and pixel parity, other widths/donors/characters and full per-placement breadth
+remain open. Positioned mechanism, boss and lifecycle results retain their scope.
 
 ## Production display lifecycle refresh (2026-09-27)
 

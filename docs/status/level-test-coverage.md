@@ -657,3 +657,16 @@ seven nonfatal launches. The paired input fixture is reauthored through the figh
 and still preserves all 22/37 replica/complete replay spots and live DEZ-history
 isolation. The complete route now reaches DEZ after 19,457 inputs. Solo Sonic/Tails
 routes pass unchanged; freed-slot edge cases and broader native parity remain open.
+
+
+### SOZ paired cold-route revalidation (2026-09-27)
+
+The [Act1](../architecture/validation/levels/s3k-soz-act1.md#frozen-cold-route-replay-revalidation-2026-09-27)
+and [Act2](../architecture/validation/levels/s3k-soz-act2.md#cold-route-revalidation-2026-09-27)
+matrices now bind ordinary native320 Sonic + Tails cold completion to
+`TestSozColdRouteCapture`. Act1 retains its input; Act2 has reauthored inputs after
+source-backed push-switch landing corrections invalidated its old recording.
+The routes cover61 periodic/destination full-world replay windows, with additional
+semantic mode/boss/capsule/results checks and actual LRZ history isolation.
+No runtime physics was changed to preserve the old recording. Other cold
+character/donor/width products and matched native presentation remain open.

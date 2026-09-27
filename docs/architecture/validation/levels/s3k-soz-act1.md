@@ -347,3 +347,14 @@ and full-state rewind/replay at all six widths. The capture starts above the
 `$4308,$918` switch rather than spawning below it with fresh-load low priority.
 Native pixel certification and the wider cold-route product remain open.
 See the execution plan for verification details.
+
+
+## Frozen cold-route replay revalidation (2026-09-27)
+
+At runtime base`7a00b2915`, `TestSozColdRouteCapture` replays the unchanged native320
+Sonic + Tails recording from cold intro-enabled entry with donor off. It reaches
+playable Act2 at input26538, observes the golem's native positional sand defeat
+and actual results completion, and verifies the live two-player roster throughout.
+All28 periodic/destination45-input whole-registry restore/replay windows pass,
+with a further semantic results-start replay. This supplements the short local
+checks; it does not certify solo routes, other widths/donors or emulator parity.

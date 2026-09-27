@@ -27,6 +27,13 @@ class TestGameplayInputBranchToolHeadless {
                 Files.readString(output.resolve("variant-1.csv")));
         assertArrayEquals(Files.readAllBytes(output.resolve("variant-0-230.png")),
                 Files.readAllBytes(output.resolve("variant-1-230.png")));
+        var contacts = Files.readAllLines(output.resolve("variant-0-contacts.csv"));
+        assertEquals(41, contacts.size(), "one contact observation per candidate input, plus header");
+        assertEquals("frame,riding,standing", contacts.getFirst());
+        assertTrue(contacts.get(1).startsWith("200,"));
+        assertTrue(contacts.getLast().startsWith("239,"));
+        assertEquals(contacts, Files.readAllLines(output.resolve("variant-1-contacts.csv")),
+                "restored candidates retain the same solid ownership");
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(output.resolve("variant-0.bk2"));
         var rows = new StringBuilder(GameplayCaptureSession.stateHeader()).append('\n');
         try (var session = new GameplayCaptureSession(settings)) {

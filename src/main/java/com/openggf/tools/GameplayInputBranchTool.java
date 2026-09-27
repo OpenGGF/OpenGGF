@@ -19,6 +19,8 @@ import java.util.List;
  * Inputs: ROM, game, zone, one-based act, width, main, sidekick, BK2, prefix length,
  * output directory, then one or more InputLogAuthorTool scripts. Each result includes
  * the complete prefix in its script/BK2/CSV; PNGs sample the candidate every30 frames.
+ * The SOZ cold-route repair (2026-09-27) added read-only riding/standing owners
+ * to distinguish actual contact from apparent overlap in sampled screenshots.
  * A chosen candidate still needs a fresh uninterrupted replay and route certification.
  */
 public final class GameplayInputBranchTool {
@@ -90,11 +92,13 @@ public final class GameplayInputBranchTool {
                 InputLogAuthorTool.author(script, Path.of(stem + ".bk2"), game);
                 var movie = loader.loadMovieOrInputLog(Path.of(stem + ".bk2"));
                 var rows = new StringBuilder(prefixRows);
+                var contacts = new StringBuilder("frame,riding,standing\n");
                 for (int frame = prefix; frame < movie.getFrameCount(); frame++) {
                     var pad = movie.getFrame(frame);
                     session.step(pad);
                     var picture = session.render();
                     rows.append(session.stateLine(frame, pad)).append('\n');
+                    appendContacts(contacts, frame, session);
                     boolean terminal = session.player().getDead()
                             || GameServices.level().getCurrentLevel() != checkpointLevel;
                     if ((frame - prefix) % 30 == 0 || frame == movie.getFrameCount() - 1 || terminal) {
@@ -106,8 +110,28 @@ public final class GameplayInputBranchTool {
                     if (terminal) break;
                 }
                 Files.writeString(Path.of(stem + ".csv"), rows, StandardOpenOption.CREATE_NEW);
+                Files.writeString(Path.of(stem + "-contacts.csv"), contacts, StandardOpenOption.CREATE_NEW);
             }
         }
+    }
+
+    private static void appendContacts(StringBuilder rows, int frame, GameplayCaptureSession session) {
+        var objects = GameServices.level().getObjectManager();
+        var player = session.player();
+        var riding = objects.getRidingObject(player);
+        rows.append(frame).append(',');
+        if (riding != null) {
+            rows.append(riding.getClass().getSimpleName()).append('@')
+                    .append(riding.getX()).append(':').append(riding.getY());
+        }
+        rows.append(',');
+        for (var object : objects.getActiveObjects()) {
+            if (objects.hasObjectStandingBit(player, object)) {
+                rows.append(object.getClass().getSimpleName()).append('@')
+                        .append(object.getX()).append(':').append(object.getY()).append(';');
+            }
+        }
+        rows.append('\n');
     }
 
     static String prefixScript(Bk2Movie movie, int prefix) {

@@ -6923,3 +6923,173 @@ identities inspected. No executable edits followed. Relative documentation
 links and `git diff --check` pass. All eight movies have verified source-frame
 counts, dimensions and60fps metadata, and their READMEs identify source commit,
 ROM identity, positioned setup, controller owner and reproduction properties.
+
+
+## 2026-09-27 — cold SOZ replay acceptance under revalidation
+
+Base `7a00b2915`, local `feature/ai-soz-cold-route-replay`. A proposed regular
+rendered cold-route test (not yet delivered) replays whole-registry snapshots
+for45 inputs at periodic traversal spots and after destination release. Act1's
+native320 Sonic/Tails pair passes28 windows and reaches playable Act2 at26538.
+The original Act2 input fails at11512 both with this test and fresh captures
+without rewind. Render strides1 and4 have identical11,513 movement/ring rows.
+A detached matched run at original route commit `de765d83d` completes; this is
+recording drift on the current implementation, not established new rewind failure.
+
+The first3px Y difference at1230 is the source-backed push-switch landing-width
+correction `2d9a6cfb5`, and the paths subsequently reconverge. Do not undo it to
+fit the earlier controller recording. Later contact differences make the original
+swing/wire transfer fail. Controller-only repairs now pass that transfer, the
+first sand cork/wrap, and the breakable rock at(7872,1904). Which participant
+cleared that rock in the historical run remains unattributed.
+
+Reusing the positioned lower-room controller from cold input14500 fails before
+the second cork; that scenario's starting assumptions differ. Retaining recorded
+inputs through15800 and beginning at its timed-switch phase gets further, but
+waiting for trigger12=128 loses the push as rising sand lifts Sonic away at118.
+The later jump hits the ledge and Sonic is crushed. Jumping at charge100 instead
+clears the ledge and reaches the final swing area; the controller then stalls in
+its earlier switch8 phase. These are authoring observations, not production
+physics changes or a completed Act2 route. Test-only controller state selects
+inputs; no player/object/event values are hydrated. Final cold replay, semantic
+rewind spots, fresh moving media, integration and cleanup remain outstanding.
+
+
+The lower-room author now advances its input-controller phase when Sonic has
+physically passed the switch8 approach, instead of waiting forever for a charge
+that no longer blocks that passage. A fresh cold run completes the room at18262
+(background routine `$20`), with nine rings and no death. The optional author
+check passes1 test, zero skips,43.124s Maven including compile/capture. External
+`soz-bring-up/campaign-20260927-cold-lower-room-repair-320/capture.mp4` contains
+inputs15800..18262,2463 frames,960x672 at60fps; full decode and count verified,
+switch jump/swing approach/exit stills inspected. Its recorded input and full
+cold CSV accompany it. No runtime code changed.
+
+Rejoining the historical remainder at old18559/current18263 later drops below
+the rock/door crossing near(11488,1792), then dies24437. The first relevant
+contact difference there is current21233: Sonic briefly grounds atY1644; the
+historical aligned row continues falling, later grounding nearY1682. Earlier
+speculation about a moving-pillar cycle was not established: waits of64/128/192/
+296 additional inputs and short jump shifts did not repair it. Four short
+second-jump trials near that brief contact also fail to reach the upper path.
+Next action is to inspect the actual solid owner and route geometry at that
+contact before further timing trials or any runtime edits. Candidate inputs
+remain exploratory and must not replace the canonical route until fresh full
+completion and replay verification pass.
+
+
+Contact-owner probe at current21233 identifies `SozPushSwitchObjectInstance`
+at(11343,1680), not the door or moving pillar: `getRidingObject` and the native
+standing-bit owner agree. The source-backed `$30` landing width accepts this
+right-edge contact; the next standing check releases it. Preserve that runtime
+behavior. An additional ordinary jump at21234 reaches groundY1744 on the next
+rock at21272, but the exploratory all-Right tail runs off its far side. The next
+candidate reconnects the original braking input after that second jump. This
+replaces the unproven platform-cycle explanation above with an observed owner.
+
+
+Further controller-only authoring passes the switch/rock crossing with a second
+jump and reconnects braking before the rock's far edge. A hit in the following
+corridor invalidates the old wire approach; a fresh left jump/recovery and rightward
+jump sequence pass the next wrap and reach the final pillar/vine section.
+The lower alternative stalls at(17973,1258); it is not the selected route.
+
+For the final climb, a landing on the first pillar plus two controlled vertical
+jumps avoids the ghost interruption while the pillar rises. Building horizontal
+speed on its upper phase reaches the second platform and spring vine. Holding
+Left while riding the flipped vine crosses its native leverage boundary and
+produces the strong launch (`SozSpringVineObjectInstance.updateRider`, ROM
+`loc_40996` crossing branch). Candidate input25679 matches historical27367 at
+(17561,850), X speed3824 and Y speed-3824, with15 rings. Releasing into the
+historical tail is the next full-route candidate. All these edits remain inputs
+and read-only test observations; no runtime collision or object logic was changed.
+
+
+The final approach exposed two distinct controller obligations. A ghost interrupts
+switchA's charge at(18992,816): the earlier candidate has trigger10=57 on the
+last swing, then28 at door(19596,768), whose observed Y is740. Sonic remains
+blocked atX19573 through a full jump. Extending the actual push gives104 at the
+later observation, but changes arrival at the swing and the old jump misses it.
+
+Read-only contact records show the earlier successful swing catch retains a
+-28px player offset. Holding Right from input26200 moves him across the platform
+and onto the upper ledge atY492; holding neutral or starting movement at26230
+loses the ride before the old jump. A direct cork strike at26290 then produces
+two observed `SozSandCorkObjectInstance` sand columns at(19328,800)/(19328,544),
+so that candidate genuinely opens the foreground passage. It reaches the door
+at(19573,876) with five rings, but its earlier undercharge still blocks passage.
+The selected next step combines longer switch pressure with a new swing catch
+and that verified cork strike. Do not conflate a closed/partly raised door,
+foreground passage mutation, and a missed platform with a collision regression.
+The earlier lower-passage jump trials remain rejected routes, not fixes.
+
+
+The selected cold route strikes the upper cork first, then backtracks to recharge
+switchA to128 before crossing its door. This separates the already verified
+foreground mutation from the decaying door charge. It reaches the final switch
+(subtype`$1F`, channel15) at(20400,1200); rejoining the original leftward
+backtrack/charge inputs there opens the last entrance. The actual boss first
+exists at input28376, with13 rings carried from the ordinary traversal. Starting
+a boss controller earlier at(20597,1202) only stalls against that entrance; it
+is not evidence of boss failure.
+
+The default44/14/+4 boss controller and small target-offset variations die after
+five hits. Those small offsets produced identical controller recordings, so they
+were not independent movement strategies. Immediate ground-triggered jumps and
+a rise/retreat strategy also fail. The existing short-hop32/4/-48 controller
+completes all eight hits, capsule and LRZ with one ring before transition. These
+are controller choices, not changed runtime constants: positioned99-ring boss
+tests had hidden how little margin the original long-hop controller has after
+a real cold traversal.
+
+Successful fresh author run at runtime base`7a00b2915`:
+`TestSozColdBossAuthor` with prefix28380, period32, hold4, offset-48: one test,
+zero failures/errors/skips. Hits occur at28700,28892,28940,29316,29372,29820,
+30012,30062; capsule30363; LRZ load31236;31417 total recorded inputs.
+The selected full input log was compiled and round-tripped through
+`InputLogAuthorTool` into`soz2-cold-sonic-tails.bk2`. Fresh frozen-input
+acceptance, rewind and rendered evidence are being verified next. No runtime
+object, collision, physics or event behavior was changed for this repair.
+
+
+### SOZ cold-route candidate verification and media (2026-09-27)
+
+Runtime base`7a00b2915`, task`feature/ai-soz-cold-route-replay`: the frozen
+canonical Act2 input independently passes the existing cold capture. All31417
+rows match the author run on position, velocity, ground speed, air/dead/ring
+state, mapping frame, camera, zone/act and boss health. The new ordinary
+`TestSozColdRouteCapture` passes both acts: Act1 ready26538,28 periodic/destination
+replay windows plus results-start; Act2 ready31236,33 periodic/destination
+windows plus20 named semantic observations. Each window restores the registered
+world and replays45 inputs while rendering. Capsule-triggered live history is
+nonempty before LRZ and resets at the actual load; destination controls release.
+
+Combined candidate command (Java21, DISPLAY=:0, serial Maven queue):
+
+```text
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$REPO/s3k.gen -Dtest=TestSozColdRouteCapture,TestSozColdAct2Capture,TestGameplayInputBranchTool,TestGameplayInputBranchToolHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils -Dsoz.cold.act2.capture=$VIDEO_ROOT/soz-bring-up/campaign-20260927-cold-act2-clear-320 -Dsoz.cold.act2.stride=1 -Dsoz.cold.act2.capture-from=27000 test
+```
+
+Result:64 tests in nine classes, zero failures/errors/skips,2m38s. Per-class
+Surefire XML identities/skips were inspected, including both LevelLoading
+classes. This includes59 required S3K tests, two cold routes, one uninterrupted
+ending capture and two input-branch tool tests. The tool now emits read-only
+riding/standing-owner CSVs; temporary SOZ authoring probes were removed.
+No runtime gameplay code changed. The first prerequisite probe used the system
+Lua and failed its version check; rerunning with`LUA_BIN=/usr/bin/lua5.4` passes.
+
+`run_categories.py --base 7a00b2915` selects2930 ordinary classes plus guards
+because the route asset/test bridge/read-only tool are unclassified. Proportionate
+focused validation applies: controller assets, test assertions, optional video
+output and contact diagnostics do not change shared gameplay algorithms, timing,
+physics, build policy or public contracts. The above production-route, restore,
+load, tool round-trip/fresh-branch and required S3K checks exercise their consumers.
+This is focused validation, not a new full-suite or native-parity pass. The matched
+historical/current original-input comparison above records the baseline failure.
+
+Media:`$VIDEO_ROOT/soz-bring-up/campaign-20260927-cold-act2-clear-320/capture.mp4`,
+4417 frames at60fps,960×672,73.616667s. Full ffmpeg decode and ffprobe pass. It
+shows inputs27000..31416 from a fresh cold run; state/input files retain the whole
+route. Final hit, capsule and playable LRZ frames were inspected. Other widths,
+characters, donors, native comparison and complete per-placement breadth remain
+open. The preceding lower-room movie remains explicitly partial historical media.
