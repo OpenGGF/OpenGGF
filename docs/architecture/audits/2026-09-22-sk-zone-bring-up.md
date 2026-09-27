@@ -7427,3 +7427,11 @@ windows plus20 distinct semantic observations (background/boss/capsule/results),
 and production live-history reset at LRZ. All four cold routes pass; XML identities
 and zero skips inspected. Main fetch/ff-only pull remains653082073; no upstream
 conflicts. Remaining work is integration verification, push and owned-worktree cleanup.
+
+
+Integrated as`f83c3b659` by fast-forward into develop without conflicts. The
+same combined queued explicit-ROM command passes65 tests in the same8 XML
+classes on main`f83c3b659`, zero failures/errors/skips,1m58s. Test identities
+and skips match the candidate run. No executable edits followed. This is
+focused validation, not a full ordinary/guard suite pass. Durable video source
+is`f83c3b659`; the complete seven-zone campaign remains active.
