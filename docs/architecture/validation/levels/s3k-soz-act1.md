@@ -1,7 +1,7 @@
 # S3K Sandopolis Act 1 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_1`; ROM zone `$08`, act index 0, SKL pointer set.
-Status: native-movement solo Sonic, solo Tails and Sonic + Tails cold completion at width320 verified;
+Status: native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320 verified;
 full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
@@ -10,6 +10,36 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
 
+
+## Solo Knuckles cold completion (2026-09-27)
+
+Base `84b819ab3`, `feature/ai-soz-knuckles-cold`. The24,059-input
+`src/test/resources/routes/s3k/soz1-cold-knuckles.bk2` cold-boots native320
+solo Knuckles with no donor, follower or gameplay seed and intro enabled.
+It enters a real bonus stage at3204, resumes ordinary SOZ play at3698,
+reaches the boss, sinks it at22521, loads Act2 at23758 and releases playable
+Act2 at23857. The frozen asset retains201 subsequent destination inputs.
+Native movie excerpts supply controller inputs only; authored traversal and
+the existing controller-only golem route supply the rest. No runtime fix or
+native timing/physics/position hydration is part of this delivery.
+
+`TestSozColdRouteCapture` observes29 full-world45-input restore/replay windows:
+24 periodic source observations, four before/during/after the bonus visit,
+and one destination observation. Both actual bonus entry and return loads
+have nonempty production live history before them and a cleared outgoing
+timeline afterward. All windows avoid loading another world while restoring.
+The actual Knuckles identity, roster, viewport, golem defeat, finished results,
+playable destination and no deaths are asserted.
+
+Fresh `TestSozColdAct1Capture` passes and matches all24,059 author rows on16
+movement/animation/camera/mode fields. The capture verifier now queries SOZ
+runtime only in the actual SOZ2 destination, rather than during bonus play.
+`$VIDEO_ROOT/soz-bring-up/campaign-20260927-knuckles-cold-act1-clear-320/capture.mp4`
+shows inputs19000..24058 at60fps960x672 (84.316667s). Full decode/ffprobe pass;
+sinking and destination stills inspected. This is engine presentation evidence,
+not a native pixel match. Combined checks and integration are recorded in the
+[campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
+Knuckles Act2, broader width/donor routes and native presentation remain open.
 
 ## Solo Sonic cold completion (2026-09-27)
 

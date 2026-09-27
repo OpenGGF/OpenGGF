@@ -32,7 +32,7 @@ class TestSozColdRouteCapture {
     }
 
     @ParameterizedTest
-    @CsvSource({"0,sonic", "1,sonic", "0,tails", "1,tails"})
+    @CsvSource({"0,sonic", "1,sonic", "0,tails", "1,tails", "0,knuckles"})
     void soloColdActCompletesWithTraversalReplayAndPlayableDestination(int act, String main) throws Exception {
         coldActCompletesWithTraversalReplayAndPlayableDestination(act, false, main);
     }
@@ -46,7 +46,8 @@ class TestSozColdRouteCapture {
         var semanticChecked = new HashSet<String>();
         boolean bossSeen = false, sinking = false, capsule = false, resultsSeen = false,
                 resultsFinished = false, isolatedHistory = false;
-        int health = 8, hits = 0, readyFrame = -1;
+        int health = 8, hits = 0, readyFrame = -1, bonusLoads = 0;
+        boolean bonusRoute = act == 0 && main.equals("knuckles");
         long outgoingHistory = 0;
         try (var session = new GameplayCaptureSession(settings)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
@@ -56,10 +57,28 @@ class TestSozColdRouteCapture {
                 if (act == 1 && capsule)
                     GameServices.configuration().setSessionOverride(
                             SonicConfiguration.LIVE_REWIND_ENABLED, true);
+                // This fixed cold route enters and returns from a real bonus stage.
+                // Enable the production recorder around those loads to verify that
+                // neither outgoing timeline can be restored into the replacement world.
+                if (bonusRoute && frame == 3100)
+                    GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+                if (bonusRoute && frame == 3800)
+                    GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+                var beforeLevel = GameServices.level().getCurrentLevel();
+                var beforeHistory = SessionManager.getCurrentGameplayMode().getRewindController();
+                long beforeHistoryFrame = beforeHistory == null ? 0 : beforeHistory.currentFrame();
                 var pendingSpots = new HashSet<String>();
                 var input = input(movie, frame);
                 session.step(input);
                 session.render();
+                if (bonusRoute && frame >= 3100 && frame < 3800
+                        && beforeLevel != GameServices.level().getCurrentLevel()) {
+                    assertTrue(beforeHistoryFrame > 10, "outgoing bonus boundary history at " + frame);
+                    var afterHistory = SessionManager.getCurrentGameplayMode().getRewindController();
+                    assertTrue(afterHistory == null || afterHistory.currentFrame() < beforeHistoryFrame,
+                            "bonus boundary clears outgoing timeline at " + frame);
+                    bonusLoads++;
+                }
                 assertFalse(session.player().getDead(), "cold death at " + frame);
                 assertEquals(main, session.player().characterKey().persisted());
                 var followers = GameServices.sprites().getRegisteredSidekicks();
@@ -130,9 +149,10 @@ class TestSozColdRouteCapture {
                 // Fixed input observations cover the cold traversal and boss/results approach;
                 // a window must never restore the outgoing registry across a level load.
                 // Tails reaches Act2 before 17000 and LRZ before 29000; keep replay windows before each load.
-                int lastSourceSpot = main.equals("tails") ? (act == 0 ? 16000 : 28000)
+                int lastSourceSpot = bonusRoute ? 23000 : main.equals("tails") ? (act == 0 ? 16000 : 28000)
                         : act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
+                        || (bonusRoute && (frame == 3100 || frame == 3400 || frame == 3500 || frame == 3700))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
                     replay(session, movie, frame);
                     checked.add(frame);
@@ -146,6 +166,7 @@ class TestSozColdRouteCapture {
                 if (readyFrame >= 0 && frame >= readyFrame + 180)
                     break;
             }
+            if (bonusRoute) assertEquals(2, bonusLoads, "real bonus entry and return loads");
             assertTrue(bossSeen, "cold route reaches its real boss");
             assertTrue(resultsSeen && resultsFinished, "actual results sequence finishes");
             if (act == 0)
@@ -159,7 +180,7 @@ class TestSozColdRouteCapture {
             assertEquals(act == 0 ? 1 : 0, GameServices.level().getCurrentAct());
             assertTrue(readyFrame >= 0, "destination releases both control owners");
             assertEquals(
-                    main.equals("tails") ? (act == 0 ? 18 : 30) : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
+                    bonusRoute ? 29 : main.equals("tails") ? (act == 0 ? 18 : 30) : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
             if (act == 1) {
                 assertTrue(semanticChecked.contains("boss-entry"));
                 for (int hp = 0; hp < 8; hp++) assertTrue(semanticChecked.contains("boss-hp-" + hp));

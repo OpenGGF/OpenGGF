@@ -82,7 +82,6 @@ class TestSozColdAct1Capture {
                 var boss = SozAct1VictoryRoute.boss();
                 bossSeen |= boss != null;
                 sinkingSeen |= boss != null && boss.phase() == 3;
-                var events = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow().events();
                 csv.write(session.stateLine(frame, input) + "," + GameServices.level().getCurrentZone()
                         + "," + GameServices.level().getCurrentAct() + "," + (boss == null ? -1 : boss.routine())
                         + "," + (boss == null ? -1 : boss.phase()) + "," + input.p1InputMask() + "," + input.p2InputMask());
@@ -92,7 +91,11 @@ class TestSozColdAct1Capture {
                     ScreenshotCapture.savePNG(rendered, output.resolve("frames/%05d.png".formatted(frame)));
                 }
                 assertFalse(session.player().getDead(), "player died at frame " + frame);
-                if (GameServices.level().getCurrentAct() == 1 && !events.seamlessEntry()
+                // A real bonus visit replaces the zone runtime. Query SOZ events
+                // only after the route has actually reached its Act2 destination.
+                if (GameServices.level().getCurrentZone() == 8 && GameServices.level().getCurrentAct() == 1
+                        && !S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
+                                .orElseThrow().events().seamlessEntry()
                         && !session.player().isControlLocked() && readyFrame < 0) {
                     readyFrame = frame;
                 }

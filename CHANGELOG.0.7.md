@@ -259,7 +259,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   full ROM time. Solo Sonic now also has cold routes through both Sandopolis acts,
   including the golem, eight-hit end boss, capsule and playable Lava Reef,
   with whole-world rewind checks. Tails also has cold routes through both acts, including eight end-boss hits,
-  the capsule and playable Lava Reef, with whole-world rewind coverage. In Sandopolis Act 2, rising players are lifted onto push switches,
+  the capsule and playable Lava Reef, with whole-world rewind coverage. Knuckles now has a cold Act 1 route through a bonus visit, the golem and playable Act 2, including rewind and bonus-return timeline checks. In Sandopolis Act 2, rising players are lifted onto push switches,
   objects below the looping level's seam (such as breakable sand rocks) load when
   the camera wraps, Hyudoro ghosts appear, attack and vanish on the ROM frames and
   scatter rings when they hit, and Skorps wake a frame later so they patrol in step.

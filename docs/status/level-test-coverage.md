@@ -1,9 +1,16 @@
 # Level test coverage backlog
 
+[SOZ Knuckles Act1](../architecture/validation/levels/s3k-soz-act1.md#solo-knuckles-cold-completion-2026-09-27)
+now has a24,059-input cold route through a real bonus visit/return, golem,
+results and playable Act2, with29 full-world replay windows and both bonus
+load history resets. Fresh native320 capture passes; wider/native-parity
+acceptance and Knuckles Act2 remain open.
+
 [SOZ solo Sonic Act1](../architecture/validation/levels/s3k-soz-act1.md#solo-sonic-cold-completion-2026-09-27)
 now has a31,671-input cold route through the golem, results and playable Act2,
 with a fresh native320 movie and a dedicated full-world replay acceptance row.
-Solo Act2, Tails/Knuckles cold routes and native-presentation breadth remain open.
+Solo Sonic and Tails now complete both acts; Knuckles Act1 is covered below.
+Knuckles Act2 and native-presentation breadth remain open.
 
 SOZ [Act1](../architecture/validation/levels/s3k-soz-act1.md#production-display-lifecycle-refresh-2026-09-27)
 and [Act2](../architecture/validation/levels/s3k-soz-act2.md#production-display-lifecycle-refresh-2026-09-27)
