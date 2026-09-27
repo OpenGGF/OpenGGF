@@ -18,6 +18,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import java.nio.file.Path;
 import java.util.HashSet;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -27,9 +28,19 @@ class TestSozColdRouteCapture {
     @ParameterizedTest
     @ValueSource(ints = {0, 1})
     void pairedColdActCompletesWithTraversalReplayAndPlayableDestination(int act) throws Exception {
+        coldActCompletesWithTraversalReplayAndPlayableDestination(act, true);
+    }
+
+    @Test
+    void soloColdAct1CompletesWithTraversalReplayAndPlayableDestination() throws Exception {
+        coldActCompletesWithTraversalReplayAndPlayableDestination(0, false);
+    }
+
+    private void coldActCompletesWithTraversalReplayAndPlayableDestination(int act, boolean paired) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(
-                Path.of("src/test/resources/routes/s3k/soz" + (act + 1) + "-cold-sonic-tails.bk2"));
-        var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
+                Path.of("src/test/resources/routes/s3k/soz" + (act + 1)
+                        + (paired ? "-cold-sonic-tails.bk2" : "-cold-sonic.bk2")));
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", paired ? "tails" : "", "off", null, null, null);
         var checked = new HashSet<Integer>();
         var semanticChecked = new HashSet<String>();
         boolean bossSeen = false, sinking = false, capsule = false, resultsSeen = false,
@@ -51,8 +62,9 @@ class TestSozColdRouteCapture {
                 assertFalse(session.player().getDead(), "cold death at " + frame);
                 assertEquals("sonic", session.player().characterKey().persisted());
                 var followers = GameServices.sprites().getRegisteredSidekicks();
-                assertEquals(1, followers.size());
-                assertEquals("tails", followers.getFirst().characterKey().persisted());
+                assertEquals(paired ? 1 : 0, followers.size());
+                if (paired)
+                    assertEquals("tails", followers.getFirst().characterKey().persisted());
                 assertEquals(320, GameServices.camera().getWidth());
                 var level = GameServices.level();
                 if (level.getCurrentZone() == 8 && level.getCurrentAct() == act) {
@@ -116,7 +128,7 @@ class TestSozColdRouteCapture {
                     readyFrame = frame;
                 // Fixed input observations cover the cold traversal and boss/results approach;
                 // a window must never restore the outgoing registry across a level load.
-                int lastSourceSpot = act == 0 ? 26000 : 31000;
+                int lastSourceSpot = act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
                     replay(session, movie, frame);
@@ -144,7 +156,7 @@ class TestSozColdRouteCapture {
             assertEquals(act == 0 ? 1 : 0, GameServices.level().getCurrentAct());
             assertTrue(readyFrame >= 0, "destination releases both control owners");
             assertEquals(
-                    act == 0 ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
+                    act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
             if (act == 1) {
                 assertTrue(semanticChecked.contains("boss-entry"));
                 for (int hp = 0; hp < 8; hp++) assertTrue(semanticChecked.contains("boss-hp-" + hp));
@@ -153,7 +165,7 @@ class TestSozColdRouteCapture {
                 assertTrue(isolatedHistory, "observed the actual LRZ load and outgoing-history reset");
                 assertNotNull(SessionManager.getCurrentGameplayMode().getRewindController());
             }
-            System.out.println("SOZ" + (act + 1) + " cold pair: ready=" + readyFrame
+            System.out.println("SOZ" + (act + 1) + (paired ? " cold pair: ready=" : " cold solo: ready=") + readyFrame
                     + ", replay windows=" + checked.size() + ", semantic=" + semanticChecked);
         }
     }

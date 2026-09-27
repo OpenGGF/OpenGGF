@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+[SOZ solo Sonic Act1](../architecture/validation/levels/s3k-soz-act1.md#solo-sonic-cold-completion-2026-09-27)
+now has a31,671-input cold route through the golem, results and playable Act2,
+with a fresh native320 movie and a dedicated full-world replay acceptance row.
+Solo Act2, Tails/Knuckles cold routes and native-presentation breadth remain open.
+
 SOZ [Act1](../architecture/validation/levels/s3k-soz-act1.md#production-display-lifecycle-refresh-2026-09-27)
 and [Act2](../architecture/validation/levels/s3k-soz-act2.md#production-display-lifecycle-refresh-2026-09-27)
 now exercise the actual320/352/400/528/800 menu presets for all physical posts,

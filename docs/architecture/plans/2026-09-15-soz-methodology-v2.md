@@ -2,14 +2,19 @@
 
 Date: 2026-09-15; current summary reconciled 2026-09-27. Implementation and two cold
 native-movement Sonic + Tails routes at width 320 are delivered on `develop`
-(`358679affa`, delivery record `1e3626aca`). Both bosses and outgoing transitions
-are verified in those routes. The lower Act2 subtype-$87 puzzle now has connected
+(initial delivery`358679affa`, record`1e3626aca`; current cold-route repair and
+revalidation`d08120593`, integrated record`057fb498e`). Both bosses and outgoing
+transitions are verified in those routes. The ordinary paired acceptance now
+checks61 periodic/destination full-world replay windows, additional semantic
+background/boss/capsule/results spots and live-history isolation at the LRZ load. The lower Act2 subtype-$87 puzzle now has connected
 positioned Sonic and ordinary Knuckles passage evidence; see the current Act2
 matrix for viewport/rewind verification and the independent native mechanism
 corroboration. The checkpoint, repeated-team-reload and connected-room matrices
 now use all five production display presets through the actual configuration
 resolver (509 focused checks; see the per-act lifecycle refresh). Historical
 512/640-width evidence is distinguished from the current352/528 menu modes.
+Solo Sonic Act1 now also has a31,671-input cold completion and fresh rendered
+Act2 handoff; see its matrix for replay and verification evidence.
 Full methodology acceptance remains incomplete: strict native
 behavior/pixel parity, broader complete character/donor/viewport routes and
 remaining lifecycle/rewind products are open.
@@ -133,9 +138,11 @@ Boss, sand-rise and transition presentation stays attached to its owning slice.
 
 ## Execution record and next action
 
-Implementation and the two bounded cold routes are delivered. Next establish
-independent passage evidence for the lower Act 2 rock/switch puzzle, then resolve
-the strict trace failure and expand the remaining matrix obligations.
+Implementation, the two bounded paired cold routes, and independent passage
+through the lower Act2 rock/switch puzzle are delivered. Next expand complete
+solo Sonic, Tails and Knuckles routes and remaining native-presentation/lifecycle
+obligations. Strict trace work remains explicitly deferred by the campaign scope;
+its unresolved parity evidence is not silently certified or made the next task.
 The [retrospective](#2026-09-16-retrospective-and-remaining-acceptance) is the current
 action list; subsequent dated sections preserve the execution history. Reuse the
 SOZ analysis for ROM findings and act matrices for acceptance evidence.

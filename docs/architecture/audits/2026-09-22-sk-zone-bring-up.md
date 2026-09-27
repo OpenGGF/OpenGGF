@@ -7106,3 +7106,110 @@ and current campaign summary are updated afterward. The independent64th capture
 check and externally retained60fps movie remain candidate evidence from identical
 source. Broader campaign obligations remain open; this is not whole-zone parity
 or a new full-suite certification.
+
+
+## 2026-09-27 — SOZ solo cold routes in progress
+
+New task base`057fb498e`, worktree`feature/ai-soz-solo-cold-routes`. The preceding
+goal turn delivered paired-route repair/replay and was progress. Main was fetched
+and ff-only pulled with no upstream changes; unrelated dirty references remain
+untouched. No solo completion is claimed yet.
+
+Fresh native320 Sonic solo, donor off, cold intro enabled reproduces the old
+paired-input failure at5727,(5056,3072). A fresh paired replay first differs at
+5536: same X/velocities, paired Y2581 versus solo2580. Read-only contacts identify
+the pushable rock at(4704,2612) as the support. Adding an ordinary jump at5556
+clears the initial deep-sand gap. The paired late inputs then need different
+pyramid/swing departures for the solo traversal.
+
+A leftward running departure from the upper swing reaches the floating pillar;
+a further running jump reaches the upper ledge at(5351,2098). The paired route
+uses invincibility from the subtype8 monitor in the lower pocket: its rendered
+stars and undamaged spike crossing are visible in the matched reference. The
+solo ledge shortcut bypasses that monitor, and the old crossing hurts at6966.
+Braking before the spikes, jumping into the narrow sand column and repeated
+jump edges climbs to(5167,1838), with12 rings and no death. `SozQuicksand`'s
+normal held branch writes Y speed`-$800` on each logical jump press; a long held
+jump does not repeat that impulse. Matching only X/Y without the required
+run-up velocity is insufficient for the following ledge gap. Controller-only
+authoring is continuing there; no runtime physics/collision change is justified.
+
+The contact CSV also exposed a diagnostic alias: non-solid swing-chain displays
+share their parent's spawn key, so their queried standing latch appears set.
+The tool now limits standing candidates to `SolidObjectProvider`; actual carrier
+identity remains the separate riding column. The latch-key implementation was
+read to confirm this before changing the diagnostic. This refinement is pending
+focused verification and delivery with the solo-route work.
+
+
+Continued solo controller authoring clears both pyramids. A running jump from
+(5167,1838) crosses the ledge gap; early departure avoids the first rising-pillar
+ceiling crush. The selected second-pillar crossing takes ordinary spike damage,
+then passes both loops. A72-input neutral wait before the free swing aligns its
+256-input oscillation period with the paired reference. Earlier left braking
+keeps Sonic on the second pyramid's falling sand block for his next jump. A104-
+input hold at the upper ledge aligns the horizontal pillar's360-input cycle.
+These are controller choices, not oscillator or collision changes.
+
+The selected cold prefix now reconverges with the paired engine route through
+the scripted sand descent (solo11354..12104, paired minus360). It continues alive
+through15300 with31 rings. The old tail subsequently misses a spring: slightly
+lower leftward speed reverses Sonic before contact. Starting Left two inputs
+earlier reaches that spring, but solo Sonic takes a higher trajectory than the
+paired reference and lands on the upper ledge near(9832,1388). Authoring resumes
+there. The uncorrected tail's death at19627 is not a complete-route result; neither
+this comparison nor the screenshots claim native-emulator parity. All trials
+remain temporary until a fresh uninterrupted completion can freeze the inputs.
+
+
+A7-neutral/23-jump leftward cadence crosses the upper ledge and reaches the
+left-facing approach to the diagonal spring at(9176,1434). Rejoining the paired
+inputs after its actual launch reaches the long descent, but the free swing
+below is on the far side at arrival. A220-input Right hold on the earlier safe
+slope shifts the arrival to a matching256-input swing phase. Waiting at the
+later sand ledge was rejected: its timed collapse proceeds during the wait.
+The corrected descent survives, reaches the high flowing-sand ledge, and a
+position-matched input rejoin continues to(13173,1324),67 rings, beyond20000 cold
+inputs. A later pillar blocks the reused jump cadence; investigation continues
+there. The earlier unmodified tail ending alive at26459 in a sand column is
+also explicitly incomplete, not evidence of an act clear.
+
+
+The later pillar passes with a23-Right/7-Right+jump cadence, retaining67 rings.
+At the following low ceiling, the apparent block is the walking Rockn enemy;
+a30-input held running jump from20540 passes its obstruction and keeps the
+remaining traversal alive. The selected branch reaches the golem arena at
+(17464,2540) with84 rings. Reusing the paired boss inputs does not clear it:
+the exploratory tail ends alive with no rings and an active arena. A temporary
+controller-only adapter of the existing `SozAct1VictoryRoute` now authors the
+lure from the actual solo boss state; it supplies no gameplay state values.
+
+
+### Solo Act1 completion and candidate verification
+
+The adaptive controller lure succeeds: golem sinking at30063, playable Act2
+at31490, zero deaths. The final31,671-input `soz1-cold-sonic.bk2` is authored and
+round-trip checked by `InputLogAuthorTool`. Both temporary author tests were
+removed. A fresh cold `TestSozColdAct1Capture` passes independently; all31,671
+rows match movement, rings, animation, camera, act and boss state. External
+`soz-bring-up/campaign-20260927-solo-cold-act1-clear-320` contains the input log,
+CSV, provenance, inspected defeat/destination frames and4371-frame60fps movie
+(960×672,72.85s). Full FFmpeg decode passes.
+
+Queued Java21/native-display explicit-S3K-ROM command:
+`-Dtest=TestSozColdRouteCapture,TestGameplayInputBranchTool,TestGameplayInputBranchToolHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passes64 cases across8 XML classes, zero failures/errors/skips,1m35s. Both
+level-loading classes are included. The three cold rows pass: paired Act1/2
+plus solo Act1. Solo adds33 periodic/destination45-input whole-world replays
+and results-start; the actual live roster is checked throughout. Candidate
+preflight passes with Java21 and `LUA_BIN=/usr/bin/lua5.4`.
+
+The change-based plan against057fb498e selects2930 ordinary classes plus guards
+because the new route asset is unclassified. Proportionate validation applies:
+controller data, route acceptance/capture and a read-only contact diagnostic are
+the only executable changes; no gameplay, rendering algorithm, state layout,
+clock, physics or build-selection contract changes. Fresh uninterrupted capture,
+complete affected routes, rewind replay, tool tests and mandatory S3K gates cover
+the plausible failure modes. This is focused verification, not a full-suite pass.
+Solo Act2 and other character/viewport/native-presentation obligations remain
+open. The broader seven-zone goal is unchanged.

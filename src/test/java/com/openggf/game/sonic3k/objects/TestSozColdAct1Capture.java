@@ -36,9 +36,12 @@ class TestSozColdAct1Capture {
         Path output = Path.of(System.getProperty("soz.cold.act1.capture"));
         Files.createDirectories(output.resolve("frames"));
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(
-                Path.of("src/test/resources/routes/s3k/soz1-cold-sonic-tails.bk2"));
+                Path.of(System.getProperty("soz.cold.act1.input",
+                        "src/test/resources/routes/s3k/soz1-cold-sonic-tails.bk2")));
         int stride = Integer.getInteger("soz.cold.act1.stride", 4);
         assertTrue(stride > 0);
+        int captureFrom = Integer.getInteger("soz.cold.act1.capture-from", 0);
+        assertTrue(captureFrom >= 0);
         var settings = new GameplayCaptureSession.Settings(Integer.getInteger("soz.cold.width", 320), "sonic",
                 System.getProperty("soz.cold.followers", "tails"), "off", null, null, null);
         var inputs = new ArrayList<RecordedFrameInput>();
@@ -83,8 +86,9 @@ class TestSozColdAct1Capture {
                         + "," + GameServices.level().getCurrentAct() + "," + (boss == null ? -1 : boss.routine())
                         + "," + (boss == null ? -1 : boss.phase()) + "," + input.p1InputMask() + "," + input.p2InputMask());
                 csv.newLine();
-                if (frame % stride == 0) {
-                    ScreenshotCapture.savePNG(session.render(), output.resolve("frames/%05d.png".formatted(frame)));
+                var rendered = session.render();
+                if (frame >= captureFrom && frame % stride == 0) {
+                    ScreenshotCapture.savePNG(rendered, output.resolve("frames/%05d.png".formatted(frame)));
                 }
                 assertFalse(session.player().getDead(), "player died at frame " + frame);
                 if (GameServices.level().getCurrentAct() == 1 && !events.seamlessEntry()

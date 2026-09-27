@@ -1,7 +1,7 @@
 # S3K Sandopolis Act 1 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_1`; ROM zone `$08`, act index 0, SKL pointer set.
-Status: native-movement Sonic + Tails cold completion at width 320 verified;
+Status: native-movement solo Sonic and Sonic + Tails cold completion at width 320 verified;
 full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
@@ -9,6 +9,34 @@ parity. Dated evidence retains its original scope; the final
 Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
+
+
+## Solo Sonic cold completion (2026-09-27)
+
+Task base `057fb498e`, checkout `feature/ai-soz-solo-cold-routes`. The new
+`src/test/resources/routes/s3k/soz1-cold-sonic.bk2` contains31,671 ordinary controller
+inputs, compiled and round-trip checked by `InputLogAuthorTool`. It starts cold
+with the intro enabled, native320, donor off and no followers, position, ring,
+health, boss-state or clock seeds. Solo routes need different rock, swing, sand
+column and pillar departures from the paired movie. No gameplay implementation
+was changed to fit these inputs.
+
+A fresh uninterrupted rendered replay has zero deaths, observes the golem's
+sinking phase at30063, and reaches playable Act2 at31490, retaining180 destination
+inputs. All31,671 state rows agree with the selected author on movement, rings,
+animation, camera, act and boss state. The external movie is
+`$VIDEO_ROOT/soz-bring-up/campaign-20260927-solo-cold-act1-clear-320/capture.mp4`:
+inputs27300..31670,4371 frames,60fps,960×672,72.85s. Full FFmpeg decode passes;
+both defeat and destination frames were inspected. This is engine presentation
+evidence, not native-emulator pixel parity.
+
+`TestSozColdRouteCapture.soloColdAct1CompletesWithTraversalReplayAndPlayableDestination`
+adds an ordinary acceptance row, asserting the live solo roster throughout,
+actual golem defeat/results/destination release and33 whole-registry45-input
+restore/forward-replay windows, plus the results-start observation. Focused
+verification results are recorded in the campaign audit. Native Tails/Knuckles
+cold completion, solo Act2, broader width/donor routes and native presentation
+remain open; existing positioned and lifecycle evidence retains its own scope.
 
 ## Production display lifecycle refresh (2026-09-27)
 

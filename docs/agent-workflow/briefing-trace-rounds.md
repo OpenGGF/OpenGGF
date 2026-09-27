@@ -79,7 +79,11 @@ behavior while repairing controller inputs. Positioned99-ring boss victories do
 not establish that the same controller survives a13-ring cold arrival. Compare
 recorded button streams before treating small aim-offset edits as new strategies:
 three offsets here produced byte-identical failed inputs. See the campaign audit
-and `GameplayInputBranchTool`'s contact CSV.
+and `GameplayInputBranchTool`'s contact CSV. Filter standing-latch candidates to
+`SolidObjectProvider`: a non-solid display sibling can share its parent's
+spawn-derived latch key, so querying every active object falsely labels the
+chain display as a second physical support. The separate riding owner is the
+actual carrier; shared latch-key observations alone do not establish contact.
 
 Live rewind recording versus route-driver snapshots (2026-09-27): enabling
 LIVE_REWIND_ENABLED in a RecordingFrameDriver/HeadlessTestFixture route does not

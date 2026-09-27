@@ -126,7 +126,10 @@ public final class GameplayInputBranchTool {
         }
         rows.append(',');
         for (var object : objects.getActiveObjects()) {
-            if (objects.hasObjectStandingBit(player, object)) {
+            // Non-solid display siblings can share a spawn-derived latch key with
+            // their parent. Report only physical solid candidates, not that alias.
+            if (object instanceof com.openggf.level.objects.SolidObjectProvider
+                    && objects.hasObjectStandingBit(player, object)) {
                 rows.append(object.getClass().getSimpleName()).append('@')
                         .append(object.getX()).append(':').append(object.getY()).append(';');
             }
