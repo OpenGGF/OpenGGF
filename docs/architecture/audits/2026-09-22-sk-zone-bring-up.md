@@ -8741,3 +8741,20 @@ The separate structural run passed **672 checks, zero failures/errors/skips**
 in204seconds:
 `JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 DISPLAY=:0 OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`.
 The tracked diff and documentation links were reviewed; whitespace checks pass.
+
+Delivered runtime commit: `04440cc2e`, fast-forwarded into main `develop` without
+conflicts. The identical focused command above passed147 tests again on that
+integrated commit, with zero failures/errors/skips. Unrelated dirty disassemblies,
+archives and the user's note were preserved. Candidate guards apply to the
+identical integrated production/test tree; they were not repeated.
+
+Next sprite investigation: a temporary reflection probe restores the outgoing
+prepared/published/counter tables after reload and makes Sonic, HUD and signpost
+visible again (`experimental-retained-sprites-08469.png` alongside the native
+corrected-background video). This samples the previous frame's tables, so it
+establishes that clearing publication causes the disappearance, **not** that its
+publication timing is correct. A production repair must retain the table at the
+actual destructive boundary after the appropriate VBlank publication, and verify
+static pattern-ID ownership through art-registry replacement. Other transitions
+and native sprite-table timing remain unverified. No experimental sprite-table
+change is included in `04440cc2e`.
