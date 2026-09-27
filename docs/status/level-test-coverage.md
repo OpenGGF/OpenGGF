@@ -796,3 +796,11 @@ ordinary neutral setup step before input0 reproduces the cold Sonic route. Base
 and candidate both reach Act2 at31392 with zero deaths; all31492 state rows match.
 The earlier default-tool death is caused by its skip-intro entry mode, not a
 regression in this native-start route. A fresh corrected SOZ handoff clip exists.
+
+
+FBZ Knuckles follow-up (2026-09-27, candidate): input-only corrections retry
+the prior hub after knockback and time the upper-carousel jump. Frozen22,055
+inputs reach released Act2; an independent fresh capture matches all gameplay
+rows with zero deaths. Whole-world frozen-input replay and five existing route
+products await normal Maven verification; native320 only, not donor/width
+completion. The Act1 matrix records rejected inputs and provenance.

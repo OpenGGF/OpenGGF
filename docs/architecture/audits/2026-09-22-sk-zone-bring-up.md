@@ -9056,3 +9056,63 @@ assertion text was compared and matches the original baseline exactly.
 A separate input-only retry of the prior hub passes that inherited frontier
 and reaches the later carousel at17024; it is unfinished authoring, not part
 of this candidate or evidence of Knuckles completion.
+
+
+## 2026-09-27 — Knuckles cold Act1 route recovery (candidate)
+
+Base `760a22892`, isolated `feature/ai-fbz-knuckles-route`. The inherited
+13,839-input Knuckles failure was an input-controller frontier. Knockback could
+return him to the prior upper hub while the controller retained the next hub's
+stage; explicitly retrying that transfer reaches the later carousel. Early
+jumps/glides there hit the moving member's side, and accepting any rotor as a
+successful landing could leave the controller waiting on the lower rotor.
+
+The accepted input waits on the floating platform for the upper outer member
+to approach the bottom of its arc from the left, uses an ordinary jump, and
+requires an upper-family landing before advancing. No production physics,
+collision, object phase, health or position changes. The controller's temporary
+frame logging is not part of the candidate.
+
+`fbz1-knuckles-cold-320.script/.bk2` freezes22,055 ordinary inputs, Knuckles
+solo/native320/donor off, with one neutral production setup step before the
+recording. Actual Act2 reload is authored input21,436; the final released
+position is(343,1516). The fresh production capture matches all22,055 authored
+rows on twelve gameplay fields with zero deaths or sidekick rows.
+`$HOME/Videos/OGGF/fbz-bring-up/campaign-20260927-knuckles-cold-act1-320/capture.mp4`
+contains6,056 frames,60fps,640x448,100.933 seconds from input16,000. Full decode
+passes; upper-carousel, boss and incoming Act2 stills inspected. Runtime is
+integrated760a22892. This is engine route/presentation evidence, not emulator
+pixel parity.
+
+`TestFbzKnucklesColdRouteCapture` independently replays the frozen buttons with
+whole-registry restore and two forward cycles at traversal, rotating members,
+upper carousel, checkpoints, boss impacts, sign/results and incoming Act2.
+Intervals stay on one side of the measured reload; live-history isolation is
+not claimed. That test and all five existing native/400px controller products
+are queued for candidate Maven verification. Wider/donor/native-presentation
+obligations remain open; this candidate is not integrated or pushed yet.
+
+
+The change-based plan selects the full inventory through route-asset fallback.
+This candidate changes only authored controller logic, frozen test inputs and
+the corresponding production-loop test; runtime contracts are unchanged.
+Proportionate focused validation is all five existing native/400px route
+products plus the independent frozen Knuckles whole-world replay. Capture
+provides a separate uninterrupted production-loop check. This is focused
+validation, not a full-suite result; normal Maven results remain pending.
+
+
+The frozen-input diagnostic now passes50 independent whole-world windows, each
+with two replay cycles(1 test,0 skips,62.074s JUnit). This uses a source-only test
+overlay against integrated760a22892, not the candidate's normal Maven build;
+the queued verification and integration remain required.
+
+
+Candidate normal Maven verification now passes all6 cases with0 failures/errors/
+skips in2m55, Java21/DISPLAY=:0/absolute S3K ROM/serial queue:
+`-Pfbz-routes -Dtest=TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults+fourHundredPixelColdRouteReachesReleasedAct2+nativeSoloColdRouteReachesReleasedAct2,TestFbzKnucklesColdRouteCapture test`.
+The existing five controller products complete at20,909(Sonic),22,448(Tails),
+22,055(Knuckles),27,563(native pair) and26,188(400px pair). The independent
+frozen Knuckles route passes50 whole-world windows, each replayed twice,
+77.55s test body. These are focused route checks, not a new full-suite pass.
+Integration and destination verification follow.
