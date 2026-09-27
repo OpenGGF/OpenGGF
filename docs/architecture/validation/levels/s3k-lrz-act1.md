@@ -1114,3 +1114,12 @@ Act2 stills inspected. Media:
 This is engine route/rewind evidence, not native whole-scene matching. Knuckles
 Act2 and direct HPZ completion, remaining breadth/lifecycle/native comparison
 remain open. No engine behavior was changed for this fight.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.

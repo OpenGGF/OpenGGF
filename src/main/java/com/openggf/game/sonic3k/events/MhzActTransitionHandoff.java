@@ -4,6 +4,7 @@ import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.level.Level;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessTransitionResourceHandoff;
 import com.openggf.level.resources.DeferredLevelResourceManifest;
@@ -11,7 +12,7 @@ import com.openggf.level.resources.DeferredLevelResourceManifest;
 import java.util.BitSet;
 
 /** Retained background VRAM from MHZ1_BackgroundEvent's Load_Level call. */
-record MhzActTransitionHandoff(Level previous, Sonic3kMHZEvents access)
+record MhzActTransitionHandoff(Level previous, Sonic3kMHZEvents access, Object inheritedScroll)
         implements SeamlessTransitionResourceHandoff {
     @Override
     public DeferredLevelResourceManifest deferredResources() {
@@ -22,6 +23,13 @@ record MhzActTransitionHandoff(Level previous, Sonic3kMHZEvents access)
     public void transferAfterTargetInit() {
         var manager = access.levelManager();
         var target = manager.getCurrentLevel();
+        // Establish the destination handler before restoring the native
+        // Events_fg_1 carry; otherwise its first lazy init erases the carry.
+        // Recompute deformation only: no Animate_Tiles or gameplay tick.
+        manager.recomputeParallaxOnlyForCurrentFrame();
+        access.module().getScrollHandlerProvider().getHandler(Sonic3kZoneIds.ZONE_MHZ)
+                .restoreRewindState(inheritedScroll);
+        manager.recomputeParallaxOnlyForCurrentFrame();
         // AnimateTiles_MHZ writes $80 words at tile $1B8 and $200 at $1D5.
         // MHZ1_BackgroundEvent calls Load_Level/LoadSolids without replacing
         // these VRAM ranges. Our reload reconstructs base art, whose slots

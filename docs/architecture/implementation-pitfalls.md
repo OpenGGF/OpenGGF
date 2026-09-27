@@ -1071,3 +1071,21 @@ ranges through the resource handoff and publish mutation effects immediately:
 frame-top reloads return before the ordinary mutation flush. An extra animation
 pass hides the symptom but also advances unrelated clocks. The independent
 sprite-publication reset must be investigated separately.
+
+### Sprite publication survives in-place layout reloads
+
+`LevelSpritePresentation` models the pending CPU SAT, published VDP SAT and HUD
+counter publication separately. A seamless `Load_Level` call in LevelLoop is not
+a fresh Level initialization: clearing all three produces two missing-sprite
+frames. Retain these screen-relative tables through zone registry reset, while
+invalidating the source act's full-layout scroll addresses. Before assuming
+retained sprite art is invalid, compare the referenced pattern pixels across the
+actual resource handoff: the MHZ probe found only the17 player DPLC slots changed,
+already covered by immutable frame versions. Previous-frame table restoration is
+a useful diagnostic, but production retention belongs at the actual boundary.
+
+MHZ's `Events_fg_0` tracks physical camera X while `Events_fg_1` accumulates
+background travel across arena repeats. `MHZ1_BackgroundEvent` rebases the former
+and retains the latter. Resetting both on act initialization makes the forest
+jump. Restore the accumulator only after the destination scroll handler's lazy
+initialization, then recompute deformation without another animation tick.

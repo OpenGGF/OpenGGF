@@ -530,3 +530,12 @@ bit1 gate together with the old ability. Incoming ability state, capture,
 held state and forced object recreation/forward replay are covered. These two
 cases pass in the queued focused run; broader verification and integration
 remain pending. Existing full-act/native/presentation gaps are unchanged.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.

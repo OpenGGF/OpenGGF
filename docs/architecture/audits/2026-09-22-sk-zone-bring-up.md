@@ -8758,3 +8758,119 @@ actual destructive boundary after the appropriate VBlank publication, and verify
 static pattern-ID ownership through art-registry replacement. Other transitions
 and native sprite-table timing remain unverified. No experimental sprite-table
 change is included in `04440cc2e`.
+
+### Seamless sprite publication and MHZ scroll carry — 2026-09-27
+
+Base `6088735c85243c3d4eaaeb2bdfaf8981af666a97`, worktree
+`bugfix/ai-seamless-presentation`. The previous turn is delivered progress;
+this follow-up addresses the remaining publication gap rather than hiding it.
+A temporary handoff wrapper samples tables and atlas pixels at the actual
+`deferredResources`/`transferAfterTargetInit` boundary. MHZ references 232 distinct
+sprite tiles; only 17 player DPLC slots change during resource reconstruction,
+already covered by frame versions. Static sprite art does not change here.
+Restoring the sampled pending/published/counter frames restores visible sprites.
+No production timing is inferred from a previous-frame snapshot.
+
+A five-zone production reload test fails on base for every FBZ/MHZ/SOZ/LRZ/DEZ
+case: the pending frame is replaced by empty. The common reset now distinguishes
+fresh loads from in-place act reloads. The latter retain sprite tables and HUD
+counter publication; source full-layout scroll coordinates are invalidated because
+the engine installs a destination layout. The next ordinary publication uses the
+retained CPU frame. Native LevelLoop/Load_Level does not clear SAT. Fresh load and
+rewind checks remain in the same lifecycle test class.
+
+The MHZ forest also jumped because act initialization erased `Events_fg_1`,
+although `MHZ1_BackgroundEvent` only rebases the camera/`Events_fg_0` by $4200.
+The handoff carries its loop-adjusted scroll state, initializes the target handler,
+restores the rebased physical sample plus retained accumulator, and recomputes
+parallax without advancing animation or gameplay. The real reload regression
+fails before the carry (BG X expected 6393, actual 0). An independent handler case
+covers a prior $200 arena repeat, act rebase and subsequent 3/8-rate movement.
+
+Focused command (Java 21, DISPLAY=:0, OPENGGF_MAVEN_QUEUE=serial, absolute S3K ROM):
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PWD/s3k.gen -Dtest=TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestSonic3kActTransitionZoneFeatures,TestActTransitionHeadless,TestActTransitionIntentionalSkips,TestFbzActTransitionHeadless,TestS3kMhzAuthoredRoute,TestS3kMhzWideAuthoredRoute,TestS3kMhzAct2AuthoredRoute,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kMHZEvents,SwScrlMhzTest test`:
+**187 tests, zero failures/errors/skips**, 88 seconds. Earlier lifecycle-only
+candidate selection passed 115; it is not a second final coverage claim.
+
+Four actual cold handoff captures use unchanged committed controller inputs,
+no player/health/position seeds, 160 frames at 60 fps around the boundary:
+MHZ 320 at 8469, MHZ 800 at 9260, DEZ 320 Sonic at 22332, LRZ 320 team at 30285.
+Files: `$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-{mhz,dez,lrz}-handoff-{320,800}/`
+(800 exists only for MHZ). Boundary stills retain sprites; MHZ's background origin
+is stable. This is engine visual evidence, not native full-frame pixel identity.
+
+The SOZ ordinary capture died at 1796 before the requested handoff. A bounded
+unchanged-base replay produces exactly the same 1857 state rows. Its route test
+explicitly consumes pending initial Process_Sprites; ordinary capture does not.
+This initial attempt did not produce a successful SOZ video; the corrected
+configuration and successful capture are recorded below. Failed capture
+output is disposable; the command uses `soz1-cold-sonic.bk2`, cold SOZ1 Sonic/native
+320, with the ordinary GameplayCaptureTool defaults.
+
+The separate `-Pfbz-routes` selection
+`-Dtest=TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults+fourHundredPixelColdRouteReachesReleasedAct2+nativeSoloColdRouteReachesReleasedAct2`
+passes Sonic solo (20909 ordinary frames), 320 team (27563), 400 team (26188), but fails
+Tails at 2835 and Knuckles at 13839. A matched five-case run on unchanged base has
+identical failing test identities and full failure messages. Both runs have
+5 cases, 2 failures, 0 errors/skips. These are inherited route frontiers to repair as
+part of the campaign, not presentation regressions or evidence of full success.
+
+The change-based plan selects all 2933 ordinary classes plus structural guards.
+This common lifecycle change requires that normal broad selection; the prior
+MHZ-only proportionate waiver does not apply. Preflight passes with Java 21,
+Lua 5.4, PowerShell and DISPLAY=:0. Broad results and integration remain pending.
+
+
+SOZ startup diagnosis was subsequently resolved without any runtime change:
+`consumePendingInitialProcessSpritesPass()` invokes `executeInitialProcessSprites`;
+it never discards the prelude. The decisive configuration is `S3K_SKIP_INTROS`:
+GameplayCaptureSession defaults it to true, while the cold-route test sets false
+before boot. `SpawnLevelMainSprites/loc_695A`'s falling intro changes SOZ1's entry
+state. A one-frame `--settle` with intros still skipped merely shifts the death
+to 1797 and was rejected. With intros enabled and one ordinary neutral GameLoop
+setup frame, the unchanged recording reaches actual Act 2 at 31392. Both base and
+candidate complete 31492 steps without deaths and produce identical state CSVs.
+This corrects the earlier apparent route gap; native cold-route evidence stands
+under its declared configuration. No physics adjustment or seeded gameplay was
+needed. The new SOZ 320 clip has 160 frames (31332–31491),60 fps, 640×448 and a clean
+full decode under `$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-soz-handoff-320/`.
+
+The exact API recipe is GameplayCaptureSession.Settings(320,sonic,no sidekick,
+donor off), set S3K_SKIP_INTROS=false **after constructing the session and before
+boot**, boot SOZ act 0, then step neutral once and begin the unchanged BK2 input.
+It uses the ordinary production setup dispatch; it does not consume/reset an
+engine clock externally. Native full-frame pixel comparison remains open.
+
+The first shared sweep, `20260927T152950Z-cb27767a`, ended at its configured
+40-minute invocation timeout (2,400.98 seconds), not a test failure. It produced
+2,749 ordinary reports covering 23,627 tests, zero reported failures/errors and
+26 skips; ordinary coverage is incomplete and guards did not start. The skips
+are 21 opt-in/local-reference checks, four GL-context assumptions and the inherited
+CPZ spin-tube assumption; none is a missing-ROM skip. Results and the retained
+tail were inspected before acknowledgment. This is not a full-suite pass.
+The launch reused an obsolete cost estimate: the earlier completed integrated
+sweep in this same audit took 3,682.66 seconds ordinary plus 208.76 seconds guards.
+The necessary replacement keeps the complete 2,933-class selection and uses the
+previously established 100-minute invocation limit. No runtime or test source
+changed between these invocations; the rerun is required because the first
+invocation did not finish its requested selection.
+
+
+Replacement `20260927T161041Z-e5fcd56a` completed all 2,933 ordinary
+reports: **25,105 tests, zero failures/errors, 29 skips**, 3,750.60 seconds.
+The skips are 24 explicit opt-in/local-reference cases, four GL-context
+assumptions and the inherited CPZ spin-tube assumption; none is a missing-ROM
+skip. Runtime/test inputs remained unchanged throughout. Documentation edits
+to this audit and the coverage summary changed the working-tree fingerprint,
+so the runner correctly stopped before the guard lane (exit 2). The ordinary
+Maven lane completed successfully, but the combined invocation did not.
+The missing guards are run separately with queued `-Dmse=off -Pguards test -B`
+in a fresh JVM; no unchanged ordinary repetition is justified by prose edits.
+
+
+The separate queued guard lane completed successfully:672 tests, zero failures,
+errors or skips,3:23 Maven, on the identical production/test sources used for
+the completed25,105-test ordinary lane. All consumed runner diagnostics were
+acknowledged and deleted. These two completed lanes cover the full ordinary
+and structural selections; the interrupted combined wrapper is not described
+as a passing invocation. Integration/post-integration checks remain pending.

@@ -5,6 +5,7 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.scroll.SwScrlMhz;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -394,8 +395,10 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
                 camera.getMinX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
         int postTransitionMaxX = offsetCameraBoundWord(
                 camera.getMaxX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
+        var scroll = (SwScrlMhz) module().getScrollHandlerProvider().getHandler(Sonic3kZoneIds.ZONE_MHZ);
         var handoff = seamlessTransitionResourceHandoffs().register(
-                new MhzActTransitionHandoff(levelManager().getCurrentLevel(), this));
+                new MhzActTransitionHandoff(levelManager().getCurrentLevel(), this,
+                        scroll.captureForActTransition(ACT1_TO_ACT2_TRANSITION_OFFSET_X)));
         levelManager().requestSeamlessTransition(
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)

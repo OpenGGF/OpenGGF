@@ -280,3 +280,12 @@ Java 21, DISPLAY=:0, `30a3537d0` plus test changes:
 1:07 Maven (46.73s class). This totals 880 actual reloads across the native and
 supported donor standard-team products. It does not certify donor cold traversal,
 hazard-contact deaths, arbitrary duplicate follower chains or pixel presentation.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.

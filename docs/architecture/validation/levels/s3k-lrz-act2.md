@@ -922,3 +922,12 @@ input provenance, full state CSV, selected stills and the video for45700–49525
 3,826 frames,60fps,960x672,63.766667 seconds. Wall-transfer and playable HPZ
 stills were inspected; full ffmpeg decoding passes. This is engine route evidence,
 not new native pixel parity or broader viewport/donor certification.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.

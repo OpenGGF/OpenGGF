@@ -18,6 +18,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class SwScrlMhzTest {
 
     @Test
+    void actChangeRetainsLogicalBackgroundAfterRebasingThePhysicalCamera() {
+        var handler = new SwScrlMhz();
+        int[] output = new int[M68KMath.VISIBLE_LINES];
+        handler.init(0, 0x43FC, 0x710);
+        handler.update(output, 0x4200, 0x710, 0, 0); // native $200 arena repeat
+        int bg = handler.getBgCameraX();
+        Object carry = handler.captureForActTransition(-0x4200);
+        handler.init(1, 0, 0x710);
+        handler.restoreRewindState(carry);
+        handler.update(output, 0, 0x710, 1, 1);
+        assertEquals(bg, handler.getBgCameraX(), "Load_Level retains Events_fg_1");
+        assertEquals(packScrollWords(negWord(0), negWord(bg)), output[0]);
+        handler.update(output, 16, 0x710, 2, 1);
+        assertEquals((bg + 6) & 0xFFFF, handler.getBgCameraX() & 0xFFFF,
+                "ordinary movement resumes at 3/8 speed from the retained background origin");
+    }
+
+    @Test
     void providerUsesMhzDeformForMushroomHill() throws Exception {
         Sonic3kScrollHandlerProvider provider = new Sonic3kScrollHandlerProvider();
         provider.load(new Rom());

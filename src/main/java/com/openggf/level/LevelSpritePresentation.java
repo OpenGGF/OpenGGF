@@ -35,6 +35,13 @@ public final class LevelSpritePresentation {
         void publishCounters(SpritePresentation.Frame frame) { counters = frame; }
         SpritePresentation.Frame counters() { return counters; }
         SpritePresentation.Frame published() { return published; }
+        void invalidateScrollForActReload() {
+            // SAT coordinates are already screen-relative. Scroll presentation
+            // addresses the engine's full level layout, which Load_Level replaces;
+            // rebuild those addresses from the rebased destination camera.
+            preparedScroll = null;
+            publishedScroll = null;
+        }
         void reset() {
             prepared = SpritePresentation.Frame.empty();
             published = prepared;

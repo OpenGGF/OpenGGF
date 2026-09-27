@@ -41,4 +41,31 @@ class TestLevelSpritePresentationLifecycle {
         assertTrue(tables.counters().tiles().isEmpty());
         assertNull(tables.publishedScroll());
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {4, 7, 8, 9, 11})
+    void seamlessActReloadRetainsSatUntilTheNextPublication(int zone) throws Exception {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(zone, 0).build();
+        LevelManager level = GameServices.level();
+        var tables = level.spritePresentationRenderer().spriteTables;
+        for (int i = 0; i < 120 && tables.published().tiles().isEmpty(); i++)
+            fixture.stepFrame(false, false, false, false, false);
+        var before = tables.capture();
+        assertFalse(before.prepared().tiles().isEmpty());
+        assertFalse(before.published().tiles().isEmpty());
+        // Native Load_Level changes the layout inside LevelLoop. It neither
+        // clears the SAT in VRAM nor the CPU table waiting for the next VInt.
+        level.executeActTransition(SeamlessLevelTransitionRequest.builder(
+                SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(zone, 1).build());
+        assertSame(before.prepared(), tables.capture().prepared(), "retain pending Render_Sprites output");
+        assertSame(before.published(), tables.published(), "retain the currently displayed SAT");
+        assertSame(before.counters(), tables.counters(), "retain the displayed HUD counters");
+        // Engine full-layout coordinates change on reload; the next scroll
+        // producer must use the new layout, rather than stale source offsets.
+        assertNull(tables.publishedScroll());
+        tables.publish();
+        assertSame(before.prepared(), tables.published(), "ordinary publication resumes from retained CPU output");
+    }
+
 }

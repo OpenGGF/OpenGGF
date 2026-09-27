@@ -319,3 +319,12 @@ remain open. `TestSonic3kMHZEvents.seamlessReloadRetainsTheDirectBackgroundDmaUn
 checks the art immediately after the actual event-requested reload, before another
 frame or mutation flush.
 800px Act 2 completion and wider character/donor breadth remain open.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.

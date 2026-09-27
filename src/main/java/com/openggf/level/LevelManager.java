@@ -1025,7 +1025,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (zoneFeatureProvider == null && activeModZoneRuntimeProfile == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
-        resetZoneScopedRegistriesForLevelLoad();
+        // In-place Load_Level calls inside S3K LevelLoop retain both the SAT
+        // in VRAM and Render_Sprites' pending CPU output (MHZ1_BackgroundEvent,
+        // for example). Fresh Level initialization below still clears them.
+        // Our full-layout renderer must discard source-act scroll addresses,
+        // but clearing SAT here erased sprites until two later publications.
+        levelRenderer.spriteTables.invalidateScrollForActReload();
+        resetZoneScopedRenderRegistries();
         applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
@@ -1034,6 +1040,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void resetZoneScopedRegistriesForLevelLoad() {
         levelRenderer.spriteTables.reset();
+        resetZoneScopedRenderRegistries();
+    }
+
+    private void resetZoneScopedRenderRegistries() {
         levelRenderer.boundsMask.reset();
         if (camera != null) com.openggf.camera.CameraBoundaryPresentation.reset(camera);
         LevelZoneScopedRegistryResetter.reset();

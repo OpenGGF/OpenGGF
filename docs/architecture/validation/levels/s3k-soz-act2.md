@@ -764,3 +764,19 @@ stills and provenance are under
 `$HOME/Videos/OGGF/soz-bring-up/campaign-20260927-knuckles-cold-act2-clear-800/`.
 This closes the 800px Knuckles cold traversal/replay product; other widths,
 supported donors and native-emulator presentation certification remain open.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.
+
+The fresh native320 Sonic handoff uses `S3K_SKIP_INTROS=false` and one ordinary
+neutral setup frame before the unchanged `soz1-cold-sonic.bk2`. It reaches Act2
+at31392 with zero deaths; all31492 baseline/candidate state rows match. The
+initial default-tool failure was an intro-configuration mismatch, not a failure
+of this native-start route. Video:
+`$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-soz-handoff-320/capture.mp4`.

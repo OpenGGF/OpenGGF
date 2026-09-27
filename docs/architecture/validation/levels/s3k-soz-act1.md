@@ -443,3 +443,19 @@ results belong to the campaign audit. This adds native320 Tails Act1 only;
 Knuckles cold routes, other products and native visual parity remain open.
 Tails Act2 is covered by the [Act2 matrix](s3k-soz-act2.md#solo-tails-cold-route-2026-09-27). Video: `$VIDEO_ROOT/soz-bring-up/`
 `campaign-20260927-tails-cold-act1-clear-320/capture.mp4`.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.
+
+The fresh native320 Sonic handoff uses `S3K_SKIP_INTROS=false` and one ordinary
+neutral setup frame before the unchanged `soz1-cold-sonic.bk2`. It reaches Act2
+at31392 with zero deaths; all31492 baseline/candidate state rows match. The
+initial default-tool failure was an intro-configuration mismatch, not a failure
+of this native-start route. Video:
+`$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-soz-handoff-320/capture.mp4`.

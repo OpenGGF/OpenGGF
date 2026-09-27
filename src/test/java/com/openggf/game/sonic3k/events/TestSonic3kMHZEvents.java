@@ -317,6 +317,10 @@ class TestSonic3kMHZEvents {
         fixture.stepFrame(false, false, false, false, false);
         var levelManager = GameServices.level();
         var previous = levelManager.getCurrentLevel();
+        var oldState = com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        int retainedBgX = oldState.publishedBgCameraX();
+        int retainedMiddleX = oldState.middleBgCameraX();
+        int retainedNearX = oldState.nearBgCameraX();
         // AnimateTiles_MHZ transfers $80 words at tile $1B8 and $200 words at
         // tile $1D5. MHZ1_BackgroundEvent calls Load_Level, never a VRAM clear.
         int[] starts = {0x1B8, 0x1D5};
@@ -333,6 +337,10 @@ class TestSonic3kMHZEvents {
         assertNotNull(request);
         levelManager.applySeamlessTransition(request);
         assertEquals(1, levelManager.getCurrentAct());
+        var newState = com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        assertEquals(retainedBgX, newState.publishedBgCameraX(), "MHZ1_BackgroundEvent retains Events_fg_1 across camera rebase");
+        assertEquals(retainedMiddleX, newState.middleBgCameraX());
+        assertEquals(retainedNearX, newState.nearBgCameraX());
         for (int range = 0; range < starts.length; range++) {
             byte[] actual = new byte[expected[range].length];
             for (int tile = 0; tile < counts[range]; tile++)

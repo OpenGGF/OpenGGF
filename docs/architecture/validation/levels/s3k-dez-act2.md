@@ -1280,3 +1280,12 @@ reload. ROM `loc_60DE` clears `$F700..$F7FF`, including `Reverse_gravity_flag` a
 this contract without a runtime change. Native visual comparison and other route,
 encounter and lifecycle obligations remain separate. See the campaign audit for
 combined validation and integration results.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.

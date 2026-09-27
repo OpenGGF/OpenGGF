@@ -73,6 +73,17 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         return new LoopScrollState(loopScrollInitialized, loopActualCameraX, loopAdjustedCameraX);
     }
 
+    /**
+     * MHZ1_BackgroundEvent rebases Camera_X_pos_copy and Events_fg_0 by $4200,
+     * but retains Events_fg_1, the loop-adjusted background accumulator. The
+     * engine replaces the act's scroll initialization, so carry the accumulator
+     * and rebase only its last physical-camera sample.
+     */
+    public Object captureForActTransition(int cameraOffsetX) {
+        return new LoopScrollState(loopScrollInitialized,
+                (loopActualCameraX + cameraOffsetX) & 0xFFFF, loopAdjustedCameraX);
+    }
+
     @Override
     public void restoreRewindState(Object snapshot) {
         if (snapshot instanceof LoopScrollState saved) {

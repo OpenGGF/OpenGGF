@@ -585,7 +585,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The Act 1 miniboss gate, spawn and arena repeat use native camera coordinates
   at every viewport width, retaining centered framing through the inherited
   Act 2 results lock until its boundary releases. The seamless handoff retains
-  animated background art rather than briefly exposing the underlying base tiles.
+  animated background art and its accumulated scroll position. Seamless act
+  reloads retain sprite publication through the resource handoff.
   Its defeat loads the explosion art and finishes the full burst sequence
   across the signpost handoff. MHZ Act 2 retains the waiting Knuckles controller
   until its camera trigger opens, allowing the leaf blower to lift Sonic out of

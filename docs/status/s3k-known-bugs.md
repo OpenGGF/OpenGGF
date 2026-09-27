@@ -6206,32 +6206,44 @@ and a missing Hyper mutation hook; those are covered by the encounter regression
 - **Removal condition** — The S3K DEZ bring-up's slices 9 and 10 land: `$1700` resource profile, `SwScrlS3kDezFinalBoss`, the `DEZ3_*` events and arena objects, `Obj_DEZ3_Boss` and the `loc_803D6` exit, with the final-boss matrix's five claims recorded.
 
 
-## MHZ1 → MHZ2 Reload — Missing Sprite Publication (OPEN)
+## MHZ1 → MHZ2 Reload — Missing Sprite Publication (CANDIDATE FIX)
 
-**Observed 2026-09-27:** the controller-only native Sonic route
-`mhz1-sonic-fresh-320.bk2` loses sprite presentation at actual MHZ2 reload
-frame 8469 and the following frame before recovery. The same gap occurs at
-800px frame 9260. Unchanged develop `5ff400010` reproduces both the sprite gap
-and a separate background corruption; neither was caused by the widescreen fix.
+The background-DMA fix landed in `04440cc2e`. A follow-up on base `6088735c8`
+separates fresh-load reset from seamless reload: the latter retains prepared,
+published and HUD-counter sprite tables while invalidating full-layout scroll
+addresses. Five zone reload regressions (FBZ/MHZ/SOZ/LRZ/DEZ) fail on the base
+and pass with this change. The native MHZ boundary probe found232 referenced
+sprite tiles; only17 changed across art reconstruction, all saved player-DPLC
+versions. Static sprite addresses remained valid in this observed transition.
 
-**Resolved background cause:** tiles-only and full renders on frame 8469 were
-byte-identical. CPU atlas addresses and pixels matched the freshly loaded level:
-the glyphs were base tiles, exposed because `Load_Level` reconstruction discarded
-`AnimateTiles_MHZ`'s direct background DMA at tiles `$1B8..$1BF` and
-`$1D5..$1F4`. `MhzActTransitionHandoff` retains those 40 ROM-backed patterns through
-the existing resource handoff, immediately publishing their GPU updates without
-advancing animation. Fresh 320/800 cold captures show coherent backgrounds.
+MHZ also retains `Events_fg_1` (its loop-adjusted background accumulator) while
+rebasing `Events_fg_0` by$4200. The engine's act initialization previously reset
+both. The handoff now restores that state and recomputes deformation without
+another animation/gameplay tick. A production reload regression failed with
+BG X expected6393, actual0 before this carry; the combined187-case focused
+selection passes. Fresh320/800 clips retain Sonic/HUD/signpost and continuous
+background positioning at the reload. Shared full-suite verification and
+integration are pending; this is not yet a delivered resolution.
 
-**Remaining investigation:** `resetZoneScopedRegistriesForLevelLoad` clears the
-prepared/published sprite tables during seamless reinitialization. The first
-subsequent frame prepares sprites but still publishes an empty table. The ROM's
-`MHZ1_BackgroundEvent` retains SAT/art through its `Load_Level` layout copy.
-Any repair must reconcile retained static art IDs and sprite publication, rather
-than hide the frame or alter gameplay timing. Native baseline and corrected
-background captures are under `$HOME/Videos/OGGF/mhz-bring-up/`, respectively
-`campaign-20260927-native-handoff-baseline-320` and
-`campaign-20260927-retained-background-handoff-{320,800}`.
+Evidence: `$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-mhz-handoff-{320,800}/`.
 
-**Removal condition:** a publication-lifecycle regression reproduces the missing
-sprites, the owning fix preserves ROM sequencing and rewind, and fresh native
-and wide cold captures show continuous sprite presentation through the reload.
+## Cold Route Evidence — FBZ Tails/Knuckles (OPEN)
+
+Observed against unchanged `6088735c8` on2026-09-27 during seamless-presentation
+validation. FBZ `TestFbzAct1ColdRoute.nativeSoloColdRouteReachesReleasedAct2`
+fails for Tails at ordinary frame2835 and Knuckles at13839, before the act
+handoff. A matched five-case base/candidate check has identical failing test
+identities and full failure messages; Sonic solo,320team and400team pass.
+These cases supersede older green-route claims for the current base.
+
+**SOZ diagnostic correction:** the initial apparent SOZ route failure was a
+capture-configuration mismatch, not a demonstrated native-start route defect.
+`GameplayCaptureSession` defaults to `S3K_SKIP_INTROS=true`, whereas the route
+uses the native SOZ1 falling intro. Its `consumePendingInitialProcessSpritesPass`
+call executes that pass; it does not discard it. Adding a settling frame alone
+still dies because the intro remains disabled. With intros enabled and one
+ordinary neutral setup step before recorded input0, unchanged base and candidate
+both reach Act2 at31392 without deaths, with all31492 state rows identical.
+The native cold-route evidence therefore remains valid under its stated entry
+configuration. See the campaign audit and capture recipe; do not change gameplay
+to rescue playback made with a different entry mode.

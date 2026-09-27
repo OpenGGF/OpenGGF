@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ cold capture entry mode (2026-09-27): GameplayCaptureSession defaults to
+S3K_SKIP_INTROS=true, but the committed SOZ1 cold route starts with the native
+falling intro. Default capture died at1796; adding a neutral setup frame alone
+shifted that to1797. Setting the existing intro configuration false after session
+construction and before boot, then stepping one ordinary neutral setup frame,
+reproduced the route and Act2 handoff at31392. All31492 base/candidate state rows
+matched. `consumePendingInitialProcessSpritesPass()` executes the pending pass;
+it is not a discard API. Check entry configuration and input origin before
+blaming physics, rendering cadence, or the controller recording.
+
+
 SOZ cold-route reauthoring (2026-09-27): a source-backed solid landing correction
 can invalidate a long fixed-input movie after several later contacts, even when
 its first movement difference reconverges. Match the unchanged recording against
