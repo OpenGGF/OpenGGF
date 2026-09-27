@@ -749,3 +749,10 @@ inherited reload-art glitch. 800px Act 2 completion remains pending. The integra
 selection and all 672 structural guards pass under the documented proportionate
 validation scope; no full ordinary-suite pass or additional act certification
 is claimed.
+
+MHZ handoff art follow-up (2026-09-27): the inherited glyph corruption was a
+background-tile retention fault, not stale sprite art. The existing resource
+handoff now preserves the two direct-DMA ranges through reload; the per-act
+matrices link the independent immediate-reload regression. Fresh native/800
+captures show intact backgrounds. Empty sprite publication at the boundary and
+800px Act 2 traversal remain open; this does not certify another route.

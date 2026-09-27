@@ -8684,3 +8684,60 @@ The verified 800px Act1 video and incomplete Act2 controller alternatives are
 external to the checkout. The remaining priorities are the 800px Act2 route
 and the inherited two-frame sprite-resource presentation gap; the multi-zone
 campaign remains active and no complete MHZ certification is claimed.
+
+### MHZ retained background DMA — 2026-09-27
+
+Base: `043d8621247d6326eebdf2f1dd5a99b258d906db`, isolated
+`bugfix/ai-mhz-handoff-art`. The transient glyphs at native reload frame8469
+(and800 frame9260) are **background art**, correcting the earlier sprite-art
+hypothesis. Full and tiles-only captures are byte-identical; atlas lookup and
+CPU pixels match the reconstructed base level. An extra initial animation pass
+removes the glyphs experimentally, but was rejected as a production fix because
+it also advances animation state. `MHZ1_BackgroundEvent` calls `Load_Level` /
+`LoadSolids` without clearing the direct-DMA VRAM. `AnimateTiles_MHZ` supplies
+$80 words at tile$1B8 and$200 at$1D5.
+
+`MhzActTransitionHandoff` retains those40 patterns through the existing resource
+handoff. It reads the outgoing level at transfer so any final animation update
+after the event request is included, copies patterns independently, and publishes
+mutation effects immediately: a frame-top reload returns before the ordinary
+mutation flush. No extra animation pass, shared renderer/camera change, readiness
+change or timing adjustment was made. The new independent event-triggered reload
+regression failed on the unmodified base (first pixel expected9, actual7), then
+passed with the handoff. Cold native/800 captures show correct background art;
+the empty published sprite table on reload and the following frame remains open.
+
+The unchanged controller recordings are
+`mhz1-sonic-fresh-320.bk2` (8530steps, capture8400 onward) and
+`mhz1-sonic-cold-complete-800.bk2` (9340steps, capture9190 onward), Sonic solo,
+native donor, no position/ring/health seeds. Videos and frame/state evidence:
+`$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-retained-background-handoff-{320,800}/`.
+
+Validation scope: the combined change-based plan selects2933 ordinary classes
+through its unclassified-event fallback. Proportionate verification applies:
+only MHZ's existing handoff is extended, with a direct failing regression,
+cold native/800routes, native Act2 roster routes, whole-world replay spots,
+all-five-width arena checks, the four mandatory S3K regressions, art corruption
+checks and the shared resource-handoff registry. This is focused ordinary
+verification, not a full ordinary-suite pass. Java21/Lua5.4/PowerShell tool
+preflight passed. The final focused and structural results are recorded below.
+
+Candidate command (92seconds):
+
+```text
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk DISPLAY=:0 OPENGGF_MAVEN_QUEUE=serial
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PWD/s3k.gen
+-Dtest=TestSonic3kMHZEvents,TestS3kMhzAuthoredRoute,TestS3kMhzWideAuthoredRoute,TestS3kMhzAct2AuthoredRoute,TestS3kMhzMinibossViewport,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSeamlessTransitionResourceHandoffRegistry,TestPatternSpriteRendererCorruptionGuard,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits test
+```
+
+**147 passed, zero failures/errors/skips**, including the stricter immediate
+post-reload assertion (no extra mutation flush) and independent outgoing/target
+pattern copies. Final-code native/800videos contain130/150frames at60fps,
+640×448/1600×448, decode without errors, and reach their actual reloads with
+zero deaths. Boundary frames8468–8471 were inspected explicitly; sprites disappear
+on8469/8470 and recover8471, while the repaired background contains no glyphs.
+
+The separate structural run passed **672 checks, zero failures/errors/skips**
+in204seconds:
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 DISPLAY=:0 OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`.
+The tracked diff and documentation links were reviewed; whitespace checks pass.

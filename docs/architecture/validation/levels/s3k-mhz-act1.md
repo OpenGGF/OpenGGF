@@ -242,6 +242,10 @@ proportionate scope. The integrated checkout passed the combined 299-case
 focused selection with zero failures/errors/skips.
 
 Video: `$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-wide-act1-centered-handoff-800/capture.mp4`.
-A one-frame garbled sprite reload and following missing-sprite frame remain
-inherited presentation gaps: unchanged native 320px reproduces them too.
+The inherited glyph corruption was isolated to discarded background DMA and
+corrected by `MhzActTransitionHandoff`; native/800 cold captures now retain those
+40 patterns through the reload. The separate empty sprite-publication frames
+remain open. `TestSonic3kMHZEvents.seamlessReloadRetainsTheDirectBackgroundDmaUntilTheNextAnimationPass`
+checks the art immediately after the actual event-requested reload, before another
+frame or mutation flush.
 800px Act 2 completion and wider character/donor breadth remain open.

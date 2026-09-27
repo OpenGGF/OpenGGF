@@ -1059,3 +1059,15 @@ the retained boundary until its actual expansion, not the act identity or the
 earlier results-active clear. At800px its visible left edge is negative; convert
 that display origin before unsigned ROM event comparisons. The campaign's
 `TestS3kMhzMinibossViewport` and cold wide route cover both halves of this handoff.
+
+### Seamless reload can expose base art beneath direct DMA
+
+MHZ investigation, 2026-09-27: glyphs visible on the reload frame were initially
+misidentified as stale sprite art. A tiles-only render was byte-identical to the
+full render, while atlas lookup and CPU pixels agreed with the loaded level.
+`Load_Level` in the ROM retains VRAM; rebuilding the engine level exposed base
+patterns normally replaced by `AnimateTiles_MHZ`'s direct DMA. Preserve those
+ranges through the resource handoff and publish mutation effects immediately:
+frame-top reloads return before the ordinary mutation flush. An extra animation
+pass hides the symptom but also advances unrelated clocks. The independent
+sprite-publication reset must be investigated separately.

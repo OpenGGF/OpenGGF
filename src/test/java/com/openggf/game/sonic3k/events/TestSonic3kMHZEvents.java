@@ -309,6 +309,41 @@ class TestSonic3kMHZEvents {
     }
 
     @Test
+    void seamlessReloadRetainsTheDirectBackgroundDmaUntilTheNextAnimationPass() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .startPosition((short) 0x43C0, (short) 0x07AC)
+                .startPositionIsCentre().build();
+        fixture.stepFrame(false, false, false, false, false);
+        var levelManager = GameServices.level();
+        var previous = levelManager.getCurrentLevel();
+        // AnimateTiles_MHZ transfers $80 words at tile $1B8 and $200 words at
+        // tile $1D5. MHZ1_BackgroundEvent calls Load_Level, never a VRAM clear.
+        int[] starts = {0x1B8, 0x1D5};
+        int[] counts = {8, 32};
+        byte[][] expected = new byte[2][];
+        for (int range = 0; range < starts.length; range++) {
+            expected[range] = new byte[counts[range] * Pattern.PATTERN_SIZE_IN_MEM];
+            for (int tile = 0; tile < counts[range]; tile++)
+                previous.getPattern(starts[range] + tile).copyInto(expected[range], tile * Pattern.PATTERN_SIZE_IN_MEM);
+        }
+        ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).signalActTransition();
+        getMhzEvents().update(0, 1);
+        var request = levelManager.consumeSeamlessTransitionRequest();
+        assertNotNull(request);
+        levelManager.applySeamlessTransition(request);
+        assertEquals(1, levelManager.getCurrentAct());
+        for (int range = 0; range < starts.length; range++) {
+            byte[] actual = new byte[expected[range].length];
+            for (int tile = 0; tile < counts[range]; tile++)
+                levelManager.getCurrentLevel().getPattern(starts[range] + tile)
+                        .copyInto(actual, tile * Pattern.PATTERN_SIZE_IN_MEM);
+            assertArrayEquals(expected[range], actual,
+                    "Load_Level retains the displayed background DMA, without advancing its animation clock");
+        }
+    }
+
+    @Test
     void act2ScreenInitLoadsGreenSeasonForLowerEarlyStart() throws IOException {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 1)

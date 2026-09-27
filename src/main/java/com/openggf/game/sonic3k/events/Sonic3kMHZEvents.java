@@ -394,10 +394,13 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
                 camera.getMinX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
         int postTransitionMaxX = offsetCameraBoundWord(
                 camera.getMaxX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
+        var handoff = seamlessTransitionResourceHandoffs().register(
+                new MhzActTransitionHandoff(levelManager().getCurrentLevel(), this));
         levelManager().requestSeamlessTransition(
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MHZ, 1)
+                        .resourceHandoff(handoff)
                         .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
                         .preserveMusic(true)
