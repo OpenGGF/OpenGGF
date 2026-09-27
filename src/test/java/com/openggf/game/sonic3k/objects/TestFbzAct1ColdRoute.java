@@ -190,7 +190,10 @@ class TestFbzAct1ColdRoute {
                 if (earlyChains.active && !earlyChains.finished) {
                     mask = earlyChains.next(player);
                 }
-                if (!outdoor.finished && ((px >= 0x850 && py >= 0x9D0) || outdoor.active)) {
+                // The borrowed Sonic movie jumps too early for solo Tails' approach
+                // velocity. Take over at the ledge and use his own flight below.
+                int outdoorEntryX = mainCharacter.equals("tails") ? 0x810 : 0x850;
+                if (!outdoor.finished && ((px >= outdoorEntryX && py >= 0x9D0) || outdoor.active)) {
                     outdoor.active = true;
                     mask = outdoor.next(player, GameServices.level().getObjectManager());
                     if (px >= 0xED0 && py < 0x850) {
@@ -292,6 +295,19 @@ class TestFbzAct1ColdRoute {
                                 mask = 4 | (px <= chain.getX() - chain.rangePixels() + 0x20 ? 16 : 0);
                             } else if (!upperLiftWaiting && (!player.getAir() && (previousMask & 16) == 0
                                     || player.getAir() && player.getYSpeed() < 0)) mask |= 16;
+                        }
+                    }
+                    // Fly beside the moving lift until the feet clear its top,
+                    // then steer onto it so the real standing callback owns ascent.
+                    if (mainCharacter.equals("tails") && soloUpperLedgeReached && !liftActive) {
+                        var lift = GameServices.level().getObjectManager()
+                                .activeObjectsOfType(FbzFloatingPlatformObjectInstance.class).stream()
+                                .filter(o -> o.getOutOfRangeReferenceX() == 0xD04).findFirst().orElse(null);
+                        if (lift != null) {
+                            int feet = py + player.getYRadius();
+                            int aim = feet >= lift.getY() - 0x21 ? lift.getX() - 0x40 : lift.getX();
+                            mask = RouteSteering.steerMask(player, aim, 2);
+                            if (feet >= lift.getY() - 0x31 && (previousMask & 16) == 0) mask |= 16;
                         }
                     }
                     if (liftActive) {
@@ -1475,6 +1491,13 @@ class TestFbzAct1ColdRoute {
                 mask = (routeWidth > 400 && departedAnchor == 0x900
                         ? trapLandingMask(player, aimX) : RouteSteering.steerMask(player, aimX, 3))
                         | (jumping && player.getYSpeed() < 0 ? 16 : 0);
+                // Ordinary jump edges sustain flight until over the target.
+                // Release them there to land and advance the platform sequence.
+                if (player instanceof com.openggf.sprites.playable.Tails && target != null
+                        && Math.abs(aimX - x) > target.getSolidParams().halfWidth() - 8
+                        && player.getYSpeed() >= 0) {
+                    mask = (mask & ~16) | ((lastMask & 16) == 0 ? 16 : 0);
+                }
                 if (player instanceof com.openggf.sprites.playable.Knuckles
                         && target != null && aimX - x > 0x20
                         && (player.getDoubleJumpFlag() == 1
@@ -1487,6 +1510,7 @@ class TestFbzAct1ColdRoute {
                     && (departedAnchor >= 0xB10 || routeWidth > 400 && departedAnchor == 0x900
                         && x >= support.getX() + 0x10)
                     && !(player instanceof com.openggf.sprites.playable.Knuckles)
+                    && !(player instanceof com.openggf.sprites.playable.Tails)
                     && !canReachLanding(player, target)) {
                 // Wait on actual support for a reachable phase. A circle that
                 // is close now can be beyond the jump's reach on descent.
@@ -1495,7 +1519,7 @@ class TestFbzAct1ColdRoute {
             } else if (support != null && x < support.getX() + 0x10) {
                 mask = 8;
             } else if (support == null && x < (player instanceof com.openggf.sprites.playable.Knuckles
-                    ? 0x860 : 0x880)) {
+                    ? 0x860 : player instanceof com.openggf.sprites.playable.Tails ? 0x830 : 0x880)) {
                 mask = 8;
             } else if ((lastMask & 16) == 0) {
                 jumping = true;

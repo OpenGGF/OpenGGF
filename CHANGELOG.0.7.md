@@ -381,7 +381,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   on a lag frame no longer blanks the foreground. Numeric HUD tiles follow their own
   VBlank updates, and mutable player art stays paired with the prepared mapping. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
-  preserves the native wait and score bonus before the end sign, and the ending
+  preserves the native wait and score bonus before the end sign. Converted arm
+  and chain debris continues independently after parent retirement and rewind,
+  uses the ROM's vertical cull, and capsule fragments apply MoveSprite gravity.
+  The ending
   pose retains existing plunger support across the seamless manager replacement. Zone-owned tumble
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
   route clears the elevator squeeze with an ordinary run-up and timed roll.

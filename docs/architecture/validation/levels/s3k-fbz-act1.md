@@ -539,3 +539,41 @@ DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
 still clear them. Shared validation and exact route limitations are recorded in
 [the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
 This adds transition coverage, not another whole-act or native-pixel certification.
+
+## Solo Tails cold completion repair (2026-09-27 candidate)
+
+The inherited2835 death is repaired through controller input only on runtime
+`6088735c8`: earlier outdoor takeover and ordinary flight reach the moving
+platforms and upper lift. The22,448-button frozen route reaches actual Act2 at
+21836 and released Tails at(343,1520), no deaths or gameplay seeds. Independent
+fresh capture matches every author row on all12 common state fields; boss/results
+and incoming stills were inspected. The new `TestFbzTailsColdRouteCapture` owns
+whole-world replay checks; final execution/integration are pending in the
+[campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md). The seven-step
+pre-reload results window and independent post-reload checks are not live-history
+isolation evidence. Native320 solo Tails completion does not close wider/donor
+products, Knuckles' inherited Act1 failure or native pixel acceptance.
+
+
+The new results replay exposed an additional inherited runtime gap: converted
+chain links stopped after rewind when their old arm no longer existed, and the
+missing vertical cull kept fallen links alive. The candidate also corrects
+capsule-fragment MoveSprite gravity against the ROM. Three independent short
+baseline regressions fail as expected. These boss-family changes and the full
+frozen-route replay await candidate execution; the earlier base-runtime video
+is not final corrected-debris evidence.
+
+
+Candidate execution now passes the frozen route with44 whole-world restore/two-
+cycle replay windows, including the bounded results window and two incoming
+Act2 spots. Ordinary movement after release is asserted. The separate166-case
+children/rewind/S3K focused selection passes with zero skips. Sonic and320/400
+team controls still complete at their original frame counts; Knuckles retains
+the identical13839 failure. These are focused results, with integration and
+final candidate video verification still pending.
+
+Final candidate footage is verified at
+`$HOME/Videos/OGGF/fbz-bring-up/campaign-20260927-tails-cold-act1-320-fixed/capture.mp4`.
+All22,448 input-driven state rows match the author, zero deaths;78 corrected
+defeat-debris frames distinguish it from the base-runtime movie. Integration
+remains pending.

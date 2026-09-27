@@ -202,8 +202,64 @@ class TestFbzMinibossDefeatChildren {
             assertFalse(booleanField(fragment, "visibleThisUpdate"));
             fragment.update(1, null);
             assertTrue(booleanField(fragment, "visibleThisUpdate"));
-            assertEquals(velocities[role][1], intField(fragment, "yVelocity"),
-                    "Obj_FlickerMove has no gravity");
+            assertEquals(velocities[role][1] + 2 * 0x38, intField(fragment, "yVelocity"),
+                    "Obj_FlickerMove calls MoveSprite, which adds $38 after moving with the old velocity");
+            assertEquals(startY + Math.floorDiv(2 * velocities[role][1] + 0x38, 0x100), fragment.getY());
+        }
+    }
+
+    @Test
+    void convertedArmAndChainKeepMovingWithoutRetiredParents() throws Exception {
+        var boss = boss(0x1000, 0x0800);
+        Field defeated = FbzMinibossInstance.class.getDeclaredField("defeated");
+        defeated.setAccessible(true);
+        defeated.setBoolean(boss, true);
+        boss.setRootBit(FbzMinibossInstance.ROOT_DEFEAT_RELEASE);
+        var arm = FbzMinibossArmChild.forTest(boss, 0);
+        var link = arm.createLinksForTest()[4];
+        arm.setServices(new StubObjectServices());
+        link.setServices(new StubObjectServices());
+        arm.update(0, null);
+        link.update(0, null);
+        int armX = intField(arm, "xFixed"), armY = intField(arm, "yFixed");
+        int linkX = intField(link, "xFixed"), linkY = intField(link, "yFixed");
+        int armVy = intField(arm, "yVelocity"), linkVy = intField(link, "yVelocity");
+        arm.setBoss(null);
+        link.setBoss(null);
+        link.setArm(null);
+        arm.update(1, null);
+        link.update(1, null);
+        assertEquals(armX - 0x100, intField(arm, "xFixed"));
+        assertEquals(armY + armVy, intField(arm, "yFixed"));
+        assertEquals(linkX + 0x300, intField(link, "xFixed"));
+        assertEquals(linkY + linkVy, intField(link, "yFixed"));
+        assertEquals(armVy + 0x38, intField(arm, "yVelocity"));
+        assertEquals(linkVy + 0x38, intField(link, "yVelocity"));
+        assertEquals(0, link.getCollisionFlags(), "converted terminal no longer reads a root for collision");
+    }
+
+    @Test
+    void convertedArmAndChainUseTheNativeVerticalCull() throws Exception {
+        for (int relativeY : new int[] {-0x90, 0x200}) {
+            var camera = new Camera(); camera.setY((short) 0x700);
+            var services = new StubObjectServices() {
+                @Override public Camera camera() { return camera; }
+            };
+            var boss = boss(0x1000, 0x0800);
+            Field defeated = FbzMinibossInstance.class.getDeclaredField("defeated");
+            defeated.setAccessible(true);
+            defeated.setBoolean(boss, true);
+            boss.setRootBit(FbzMinibossInstance.ROOT_DEFEAT_RELEASE);
+            var arm = FbzMinibossArmChild.forTest(boss, 0);
+            var link = arm.createLinksForTest()[4];
+            arm.setServices(services); link.setServices(services);
+            arm.update(0, null); link.update(0, null);
+            assertFalse(arm.isDestroyed()); assertFalse(link.isDestroyed());
+            arm.offsetNativePositionWordsPreserveSubpixel(0, camera.getY() + relativeY - arm.getY());
+            link.offsetNativePositionWordsPreserveSubpixel(0, camera.getY() + relativeY - link.getY());
+            arm.update(1, null); link.update(1, null);
+            assertTrue(arm.isDestroyed(), "arm outside Obj_FlickerMove's unsigned Y window");
+            assertTrue(link.isDestroyed(), "link outside Obj_FlickerMove's unsigned Y window");
         }
     }
 

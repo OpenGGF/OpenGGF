@@ -6258,3 +6258,14 @@ at320px. Native emulator observations corroborate the corrected arithmetic.
 Five-preset gate/wrap/replay checks and native Sonic/Tails/team routes pass;
 800px full-route completion and integration remain pending. See the
 [campaign audit](../architecture/audits/2026-09-22-sk-zone-bring-up.md).
+
+## FBZ Miniboss Converted Debris — Rewind and Gravity (RESOLVED IN CANDIDATE)
+
+2026-09-27: cold Tails results replay exposed links that remained alive far below
+the arena and froze after their old arm was absent on restore. `loc_6F3C4`
+converts them to independent `Obj_FlickerMove`; the candidate dispatches that
+phase before parent checks and restores its unsigned vertical removal window.
+Capsule fragments also regain `MoveSprite`'s `$38` gravity. Three baseline
+regressions fail before the repair;166 focused checks and the44-window cold
+Tails replay pass after it. Integration is pending; see the
+[campaign audit](../architecture/audits/2026-09-22-sk-zone-bring-up.md).
