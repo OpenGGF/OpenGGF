@@ -43,11 +43,22 @@ class TestSozColdRouteCapture {
         coldActCompletesWithTraversalReplayAndPlayableDestination(1, false, "knuckles");
     }
 
+    @Test
+    void knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef() throws Exception {
+        coldActCompletesWithTraversalReplayAndPlayableDestination(1, false, "knuckles", 800);
+    }
+
     private void coldActCompletesWithTraversalReplayAndPlayableDestination(int act, boolean paired, String main) throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(
-                Path.of("src/test/resources/routes/s3k/soz" + (act + 1)
-                        + (paired ? "-cold-sonic-tails.bk2" : "-cold-" + main + ".bk2")));
-        var settings = new GameplayCaptureSession.Settings(320, main, paired ? "tails" : "", "off", null, null, null);
+        coldActCompletesWithTraversalReplayAndPlayableDestination(act, paired, main, 320);
+    }
+
+    private void coldActCompletesWithTraversalReplayAndPlayableDestination(int act, boolean paired, String main,
+            int width) throws Exception {
+        String route = "src/test/resources/routes/s3k/soz" + (act + 1)
+                + (paired ? "-cold-sonic-tails" : "-cold-" + main)
+                + (width == 320 ? "" : "-" + width) + ".bk2";
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(route));
+        var settings = new GameplayCaptureSession.Settings(width, main, paired ? "tails" : "", "off", null, null, null);
         var checked = new HashSet<Integer>();
         var semanticChecked = new HashSet<String>();
         boolean bossSeen = false, sinking = false, capsule = false, resultsSeen = false,
@@ -57,8 +68,11 @@ class TestSozColdRouteCapture {
         boolean knucklesActTwo = act == 1 && main.equals("knuckles");
         // Cork release, light pull, rock coupling/door, upper switch, spike-edge
         // glide/wall break, final switch and arena drop on the fixed cold route.
-        var knucklesPuzzleSpots = java.util.Set.of(27290, 28090, 28150, 29200, 29400,
-                29575, 29720, 29855, 29900, 30850, 31020);
+        var knucklesPuzzleSpots = width == 800
+                ? java.util.Set.of(26570, 27370, 27430, 28480, 28680,
+                        28920, 29060, 29240, 29300, 30180, 30360)
+                : java.util.Set.of(27290, 28090, 28150, 29200, 29400,
+                        29575, 29720, 29855, 29900, 30850, 31020);
         long outgoingHistory = 0;
         try (var session = new GameplayCaptureSession(settings)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
@@ -101,7 +115,7 @@ class TestSozColdRouteCapture {
                 assertEquals(paired ? 1 : 0, followers.size());
                 if (paired)
                     assertEquals("tails", followers.getFirst().characterKey().persisted());
-                assertEquals(320, GameServices.camera().getWidth());
+                assertEquals(width, GameServices.camera().getWidth());
                 var level = GameServices.level();
                 if (level.getCurrentZone() == 8 && level.getCurrentAct() == act) {
                     var objects = level.getObjectManager();
@@ -207,7 +221,7 @@ class TestSozColdRouteCapture {
                 assertNotNull(SessionManager.getCurrentGameplayMode().getRewindController());
             }
             System.out.println("SOZ" + (act + 1) + (paired ? " cold pair: ready=" : " cold " + main + " solo: ready=") + readyFrame
-                    + ", replay windows=" + checked.size() + ", semantic=" + semanticChecked);
+                    + ", width=" + width + ", replay windows=" + checked.size() + ", semantic=" + semanticChecked);
         }
     }
     private static Bk2FrameInput input(com.openggf.debug.playback.Bk2Movie movie, int frame) {

@@ -1,8 +1,9 @@
 # S3K Sandopolis Act 2 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_2`; ROM zone `$08`, act index 1, SKL pointer set.
-Status: current-base native-movement solo Sonic, solo Tails and Sonic + Tails cold completion at width320,
+Status: current-base native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320,
 with rendered whole-world rewind checks and actual LRZ timeline isolation.
+Knuckles also has a separate 800px cold completion with the same replay obligations.
 Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
@@ -103,7 +104,7 @@ S2 replaces Knuckles with Sonic. The native/off rosters are unchanged.
 | --- | --- | --- |
 | Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Sonic solo and Sonic + Tails at native 320 complete cold entry through eight natural boss hits, capsule/results and playable Lava Reef using fixed controller input with whole-world replay; broader products remain open |
 | Tails solo | Same, including native character branches and flight interactions | Native 320 solo cold completion reaches playable Lava Reef with eight hits and whole-world replay. Every authored post activates/reloads; positioned solo victory covers off/S2 donors at all five widths. Wider/donor cold routes remain open; S1-donor Tails is outside the production roster |
-| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Native 320 fixed-input cold completion covers cork/rock and upper-switch puzzles, all eight boss hits, capsule/results and playable LRZ, with 48 traversal/destination replay windows plus semantic events. Every authored post activates/reloads; positioned solo victory covers all five widths. The same cold inputs fail at 800px; see the completion section below |
+| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Separate native-profile 320/800 fixed-input cold completions cover cork/rock and upper-switch puzzles, all eight boss hits, capsule/results and playable LRZ, each with 48 traversal/destination replay windows plus semantic events. Every authored post activates/reloads; positioned solo victory covers all five widths. The original 320 input fails at 800; the separately authored wide route closes that traversal gap below |
 | Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Selected mechanisms and three-player terrain restore/replay covered; repeated checkpoint team reset evidence below. No finite follower maximum is declared by the production team contract; full multi-owner interaction breadth remains open |
 | Production presets 320/352/400/528/800 | Actual selected preset and camera width; entry/reset × every supported donor; sensitive interactions and rewind | Checkpoint and team lifecycle matrices now select `WidescreenAspect.values()` through the production resolver, including previously omitted352/528. See current execution below; historical512/640 checks remain historical custom-width evidence, not menu coverage |
 | Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Every authored checkpoint covers the six supported character/donor combinations × five widths, asserting movement capability and reload state. Thirty positioned boss-to-LRZ cases cover all six supported character/donor combinations at each width; full traversal/interaction breadth remains open |
@@ -723,3 +724,43 @@ has not been independently corroborated. This establishes a wide-route input
 frontier, not a physics defect or widescreen completion. Other viewport/donor
 products, native presentation comparison and the remaining act obligations stay
 open. The accepted strict-trace deferral is unchanged.
+
+
+## Knuckles 800px cold completion (2026-09-27)
+
+A separate 35,440-input ordinary controller recording now completes cold SOZ2 at
+800px. Runtime is unchanged from `49586cd86`: no physics, enemy, puzzle or boss
+parameters were adjusted for the recording. The original 320 recording's failure
+above remains reproducible; it is superseded as a wide-route frontier, not repaired
+by weakening gameplay. Knuckles solo, donor off, intro enabled, no position,
+ring or emerald seed; actual roster, renderer and camera width are asserted.
+
+The revised input leaves the early light before the Sandworm contact, adjusts
+ledge/wall grabs and vertical wraps, passes below the unwanted wire grab, waits
+for grounded spindash admission, and crosses the upper spikes after dodging the
+Skorp shot and stopping without leftward drift. The cork, light, lower rock/door,
+upper switch, breakable walls and final switch are reached through their real
+entry paths. Six collected rings reach the boss. A controller-only 16/4/-48 rhythm
+is frozen into the final asset; the engine does not consume those authoring
+parameters. Hits occur at 30988/31323/31675/32379/32731/33435/33771/34123;
+capsule 34720, results finish 35304, LRZ load 35439, playable LRZ 35517.
+
+An independent fixed-input candidate of `TestSozColdRouteCapture` passes one test
+with no failures/errors/skips (37.431 seconds): 48 selected 45-input whole-world
+restore/replay windows, including eleven puzzle spots, plus 18 semantic events.
+The real LRZ load clears nonempty outgoing history and retains the 800px solo
+roster through 180 playable destination frames. The permanent method is
+`knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`. The
+permanent native/wide selection subsequently passed both tests with no failures,
+errors or skips (61.87 seconds), retaining 48 replay windows and 18 semantic
+events per width. Command and integrated runtime evidence are in the audit.
+
+Fresh `TestSozColdAct2Capture` also passes: 35,619 observed frames, no death,
+final LRZ (331,1969), 3 rings. The 60fps 1600x448 movie covers inputs 26000–35618
+(9,619 frames, 160.316667 seconds). The prefix omitted from the movie was also rendered
+and recorded. Full decode and sampled moving sequences at the spike crossing,
+final hit and destination passed inspection. Media, full CSV, inputs, milestones,
+stills and provenance are under
+`$HOME/Videos/OGGF/soz-bring-up/campaign-20260927-knuckles-cold-act2-clear-800/`.
+This closes the 800px Knuckles cold traversal/replay product; other widths,
+supported donors and native-emulator presentation certification remain open.

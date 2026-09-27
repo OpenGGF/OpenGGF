@@ -13,8 +13,12 @@ corroboration. The checkpoint, repeated-team-reload and connected-room matrices
 now use all five production display presets through the actual configuration
 resolver (509 focused checks; see the per-act lifecycle refresh). Historical
 512/640-width evidence is distinguished from the current352/528 menu modes.
-Solo Sonic Act1 now also has a31,671-input cold completion and fresh rendered
-Act2 handoff; see its matrix for replay and verification evidence.
+Solo Sonic, Tails and Knuckles now also complete both acts at native width320;
+Knuckles Act2 is integrated in `49586cd86`, with 48 selected whole-world replay
+windows plus 18 semantic events and playable LRZ after the real load. See the
+act matrices for each route's exact inputs, configuration and validation scope.
+A separate Knuckles Act2 recording now also completes 800px with 48 replay windows;
+see the dated matrix and audit for promotion/integration evidence.
 Full methodology acceptance remains incomplete: strict native
 behavior/pixel parity, broader complete character/donor/viewport routes and
 remaining lifecycle/rewind products are open.
@@ -138,11 +142,11 @@ Boss, sand-rise and transition presentation stays attached to its owning slice.
 
 ## Execution record and next action
 
-Implementation, the two bounded paired cold routes, and independent passage
-through the lower Act2 rock/switch puzzle are delivered. Solo Sonic Act1 is now
-also complete (`bd1625cdb`). Next expand solo Sonic Act2, complete Tails and
-Knuckles routes, and remaining native-presentation/lifecycle
-obligations. Strict trace work remains explicitly deferred by the campaign scope;
+Implementation, paired and solo Sonic/Tails/Knuckles cold routes through both
+acts at width320, and independent passage through the lower Act2 rock/switch
+puzzle are integrated. Next expand the wider complete routes, supported donors
+and remaining native-presentation/lifecycle obligations. The Knuckles 800px route now has separate completed input and full-world replay
+evidence; the original 320 input still fails at 800 and is retained unchanged. Strict trace work remains explicitly deferred by the campaign scope;
 its unresolved parity evidence is not silently certified or made the next task.
 The [retrospective](#2026-09-16-retrospective-and-remaining-acceptance) is the current
 action list; subsequent dated sections preserve the execution history. Reuse the
@@ -2488,7 +2492,7 @@ Focused verification before broad validation:
 
 - Queued Maven `-Dmse=off -Dtest=TestLevelRendererBucketInvalidation,TestGraphicsManagerSpriteSatReplay,TestSatReplayBatching,TestSpriteSatMaskPostProcessor,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestSozSpriteMaskPresentation,TestSozMiniboss,TestGumball* test -B`, with the explicit S3K ROM property: 69 passed, no failures/errors/skips.
 - Expanded ordering/mapping-piece regression, arena-mask widths320/400/512/640/800,
-  positioned Act1 victory at800 and four Act2 mechanism captures: 25 passed,
+  positioned Act1 victory at 800 and four Act2 mechanism captures: 25 passed,
   no failures/errors/skips. The five capture scenarios use the real GameLoop.
 - Act1's5325 state rows exactly match the previous wide victory capture. Inspected
   opening-door and golem-sinking frames show the sand-surface clipping; Act2

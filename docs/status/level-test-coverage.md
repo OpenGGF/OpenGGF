@@ -41,7 +41,7 @@ Direct HPZ completion and the remaining campaign acceptance remain open.
 
 [Knuckles LRZ2 middle route](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-cold-lower-route-and-upper-tube-arrival-2026-09-25)
 now reaches the upper tube arrival from cold Act1 in33763 inputs, zero deaths,
-with48 Act2 restore/replay spots and a matching fresh capture. Act2 completion,
+with 48 Act2 restore/replay spots and a matching fresh capture. Act2 completion,
 direct HPZ, broader products and campaign integration remain open.
 
 [Knuckles LRZ1 cold completion](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-cold-act1-clear-and-act2-handoff-2026-09-25) now defeats the miniboss and reaches playable Act2 in25763 inputs,zero deaths, with37 fight/transition replay spots in addition to70 traversal spots. Knuckles Act2/directHPZ and broader products remain open.
@@ -50,7 +50,7 @@ The [Knuckles LRZ1 cold arrival](../architecture/validation/levels/s3k-lrz-act1.
 
 Knuckles LRZ1: the [cloud escape follow-up](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-cloud-escape-follow-up-2026-09-25) corrects glide-landing animation ownership, with production movement/rewind checks in both gravity directions and a fresh cold encounter capture. Full Knuckles completion remains open.
 
-LRZ1 cloud-contact follow-up: the [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#cloud-special-contact-and-revised-late-ascent-2026-09-24) records the real-controller regression, deferred contact rewind and reauthored cold ascent. The [cold miniboss arrival](../architecture/validation/levels/s3k-lrz-act1.md#cold-miniboss-arrival-and-final-lower-route-door-2026-09-24) extends this to thirteen routes and159 replay spots, with the final door and native priority marker asserted. The [hand-shot response check](../architecture/validation/levels/s3k-lrz-act1.md#miniboss-hand-shot-shield-response-2026-09-24) covers shield deflection and harmless-flight recreation. The [ordinary cold clear](../architecture/validation/levels/s3k-lrz-act1.md#ordinary-cold-miniboss-clear-and-act2-handoff-2026-09-24) now extends this to fourteen routes and185 replay spots, including defeat/results/playable Act2 with zero deaths. It also fixes retired crusher-piece lifetime and pending arena-gate restoration. The [Act2 title camera release](../architecture/validation/levels/s3k-lrz-act2.md#act-title-vertical-camera-release-2026-09-24) now covers the missing vertical boundary workers and keeps the cold climb visible. The [drill replacement check](../architecture/validation/levels/s3k-lrz-act1.md#native-drill-replacement-and-detached-debris-2026-09-24) additionally verifies slot retirement and independent debris priority/recreation. The [cold Act2 climb and pipe passage](../architecture/validation/levels/s3k-lrz-act2.md#cold-climb-door-eight-and-pipe-passage-2026-09-24) now has36204 preserved inputs and31 Act2 replay spots. Full Act2 completion and other route products/breadth remain open.
+LRZ1 cloud-contact follow-up: the [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#cloud-special-contact-and-revised-late-ascent-2026-09-24) records the real-controller regression, deferred contact rewind and reauthored cold ascent. The [cold miniboss arrival](../architecture/validation/levels/s3k-lrz-act1.md#cold-miniboss-arrival-and-final-lower-route-door-2026-09-24) extends this to thirteen routes and159 replay spots, with the final door and native priority marker asserted. The [hand-shot response check](../architecture/validation/levels/s3k-lrz-act1.md#miniboss-hand-shot-shield-response-2026-09-24) covers shield deflection and harmless-flight recreation. The [ordinary cold clear](../architecture/validation/levels/s3k-lrz-act1.md#ordinary-cold-miniboss-clear-and-act2-handoff-2026-09-24) now extends this to fourteen routes and 185 replay spots, including defeat/results/playable Act2 with zero deaths. It also fixes retired crusher-piece lifetime and pending arena-gate restoration. The [Act2 title camera release](../architecture/validation/levels/s3k-lrz-act2.md#act-title-vertical-camera-release-2026-09-24) now covers the missing vertical boundary workers and keeps the cold climb visible. The [drill replacement check](../architecture/validation/levels/s3k-lrz-act1.md#native-drill-replacement-and-detached-debris-2026-09-24) additionally verifies slot retirement and independent debris priority/recreation. The [cold Act2 climb and pipe passage](../architecture/validation/levels/s3k-lrz-act2.md#cold-climb-door-eight-and-pipe-passage-2026-09-24) now has36204 preserved inputs and31 Act2 replay spots. Full Act2 completion and other route products/breadth remain open.
 
 FBZ2 laser-room graphics: the [Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md)
 tracks native child sprite priority and an independent rendered-tile comparison
@@ -700,7 +700,7 @@ remain open; see the campaign audit for verification and integration state.
 
 SOZ Tails Act1 cold route (2026-09-27): the
 [Act1 matrix](../architecture/validation/levels/s3k-soz-act1.md#solo-tails-cold-route-2026-09-27)
-adds ordinary native320 Tails golem/Act2 completion and18 full-world traversal/
+adds ordinary native320 Tails golem/Act2 completion and 18 full-world traversal/
 destination replay windows plus the results-start observation. Tails Act2 is
 covered below; other cold products remain open. Execution/integration evidence
 is in the audit.
@@ -735,5 +735,7 @@ and real load-history isolation. Fresh fixed-input video and the candidate
 replay checks are in the matrix; combined delivery evidence is in the campaign
 audit. This completes native-320 cold routes for Sonic, Tails and Knuckles in
 both SOZ acts, alongside the paired route. It does not close every act obligation.
-The same input fails the 800px probe at input 3,441 after an earlier light-switch
-hit; wider/donor routes and native presentation certification remain open.
+The original input fails at 800px after an earlier light-switch hit. A separate
+35,440-input [800px cold route](../architecture/validation/levels/s3k-soz-act2.md#knuckles-800px-cold-completion-2026-09-27)
+now also reaches playable LRZ, with 48 replay windows and 18 semantic events.
+Other viewport/donor products and native presentation certification remain open.
