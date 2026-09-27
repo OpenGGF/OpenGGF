@@ -688,8 +688,9 @@ remain open; see the campaign audit for verification and integration state.
 SOZ Tails Act1 cold route (2026-09-27): the
 [Act1 matrix](../architecture/validation/levels/s3k-soz-act1.md#solo-tails-cold-route-2026-09-27)
 adds ordinary native320 Tails golem/Act2 completion and18 full-world traversal/
-destination replay windows plus the results-start observation. Tails Act2 and
-other cold products remain open; execution/integration evidence is in the audit.
+destination replay windows plus the results-start observation. Tails Act2 is
+covered below; other cold products remain open. Execution/integration evidence
+is in the audit.
 
 
 SOZ Tails Act2 cold route (2026-09-27): the

@@ -7783,3 +7783,14 @@ Capsule27750, results27781, results-finished28350, LRZ28601. External
 28690 stills inspected; full ffmpeg decode and ffprobe passed. No executable
 edits followed validation. Main fetch/ff-only pull is unchanged9f30253f3;
 integration verification, push and worktree cleanup remain pending.
+
+Integrated as`f46275fd7` by fast-forward into develop, withno conflicts. The
+queued Java21 DISPLAY=:0 explicit-root-ROM integrated command selecting
+`TestSozColdRouteCapture,TestGameplayInputBranchTool,TestGameplayInputBranchToolHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passes67 tests across8 XML classes, zero failures/errors/skips,2m29s. Test
+identities and outcomes exactly match the candidate's corresponding checks;
+the candidate's additional fresh-capture case is not unnecessarily repeated.
+No executable changes followed validation. Matrix summaries now name all
+three completed native320 rosters; older dated evidence retains its scope.
+External movie README identifies sourcef46275fd7. Knuckles cold routes and
+the broader seven-zone/native-presentation obligations remain active.

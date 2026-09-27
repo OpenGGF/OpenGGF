@@ -1,7 +1,7 @@
 # S3K Sandopolis Act 1 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_1`; ROM zone `$08`, act index 0, SKL pointer set.
-Status: native-movement solo Sonic and Sonic + Tails cold completion at width 320 verified;
+Status: native-movement solo Sonic, solo Tails and Sonic + Tails cold completion at width320 verified;
 full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
@@ -410,6 +410,6 @@ pass; sinking, late-defeat and destination images inspected.
 window. Its source windows end at16000 before the actual seamless Act2 load;
 no outgoing registry is restored across that load. Candidate/integration test
 results belong to the campaign audit. This adds native320 Tails Act1 only;
-Tails Act2, Knuckles cold routes, other products and native visual parity remain
-open. Video: `$VIDEO_ROOT/soz-bring-up/`
+Knuckles cold routes, other products and native visual parity remain open.
+Tails Act2 is covered by the [Act2 matrix](s3k-soz-act2.md#solo-tails-cold-route-2026-09-27). Video: `$VIDEO_ROOT/soz-bring-up/`
 `campaign-20260927-tails-cold-act1-clear-320/capture.mp4`.

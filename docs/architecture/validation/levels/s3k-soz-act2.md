@@ -1,7 +1,7 @@
 # S3K Sandopolis Act 2 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_2`; ROM zone `$08`, act index 1, SKL pointer set.
-Status: current-base native-movement Sonic + Tails cold completion at width320,
+Status: current-base native-movement solo Sonic, solo Tails and Sonic + Tails cold completion at width320,
 with rendered whole-world rewind checks and actual LRZ timeline isolation.
 Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
