@@ -6235,3 +6235,15 @@ background captures are under `$HOME/Videos/OGGF/mhz-bring-up/`, respectively
 **Removal condition:** a publication-lifecycle regression reproduces the missing
 sprites, the owning fix preserves ROM sequencing and rewind, and fresh native
 and wide cold captures show continuous sprite presentation through the reload.
+
+
+## FBZ Miniboss Converted Debris — Rewind and Gravity (RESOLVED IN CANDIDATE)
+
+2026-09-27: cold Tails results replay exposed links that remained alive far below
+the arena and froze after their old arm was absent on restore. `loc_6F3C4`
+converts them to independent `Obj_FlickerMove`; the candidate dispatches that
+phase before parent checks and restores its unsigned vertical removal window.
+Capsule fragments also regain `MoveSprite`'s `$38` gravity. Three baseline
+regressions fail before the repair;166 focused checks and the44-window cold
+Tails replay pass after it. Integration is pending; see the
+[campaign audit](../architecture/audits/2026-09-22-sk-zone-bring-up.md).

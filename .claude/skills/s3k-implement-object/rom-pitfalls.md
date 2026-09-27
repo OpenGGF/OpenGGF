@@ -4929,3 +4929,16 @@ projection to that retained boundary through `Change_Act2Sizes`; neither a new
 act runtime nor the earlier results-active clear proves the lock has ended.
 The 800px visible origin is negative during this handoff, so an unsigned raw
 visible-X comparison can incorrectly select a late-level event branch.
+
+
+### Converted FBZ defeat debris has no live parent dependency
+
+`loc_6F3C4` replaces an arm/link's routine with `Obj_FlickerMove` (`$85102`).
+Dispatch the captured converted phase before looking up its old root/arm: those
+parents can already be deleted when a rewind snapshot is restored. The generic
+routine calls `MoveSprite` (`$1AB32`), which moves using the old velocity and then
+adds `$38` gravity; `MoveSprite2` is the no-gravity alternative. It also deletes
+when unsigned `(y - Camera_Y_pos + $80) > $200`. Missing this vertical test kept
+fallen links alive far below the arena and exposed a parentless replay freeze.
+Check short conversion/cull cases and whole-world replay during results; merely
+replaying the boss while all parents are alive misses this lifetime boundary.

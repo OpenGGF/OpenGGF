@@ -8758,3 +8758,94 @@ actual destructive boundary after the appropriate VBlank publication, and verify
 static pattern-ID ownership through art-registry replacement. Other transitions
 and native sprite-table timing remain unverified. No experimental sprite-table
 change is included in `04440cc2e`.
+
+
+## 2026-09-27 FBZ solo Tails controller repair (candidate)
+
+Candidate `bugfix/ai-fbz-tails-cold-route`, base `6088735c8`, changes test
+controller input only. The matched inherited failure at2835 occurs after the
+borrowed Sonic movie jumps atx$816 with Tails' low approach velocity, before the
+outdoor controller takes over at$850. Late flight gets underneath the platform
+and takes damage. Earlier takeover/takeoff crosses the first platform but the
+next ballistic jump still misses, including a trial whose forecast said reachable.
+Those approaches were rejected as complete repairs.
+
+Tails now enters the controller at$810, takes off from$830, and uses ordinary
+jump edges to sustain flight until over each target. He is exempt from a
+ballistic-only reachability wait. The upper lift likewise needs flight beside
+its solid body, then steering above it to admit the real standing callback.
+No gameplay, physics, boss or fixture state is changed or seeded. The controller
+still requires the real launcher, six-impact fight, sign/results and released
+Act2 control. A source-only diagnostic overlay against unchanged main classes
+passes one native Tails case, zero skips, reaching release after22,448 frames.
+Permanent queued Maven checks include the unchanged Sonic/team routes and the
+separately inherited Knuckles failure; they have not completed yet.
+
+The emitted buttons are frozen into `fbz1-tails-cold-320.{script,bk2}`. An
+independent ordinary GameplayCaptureTool replay (one neutral production setup
+step, then those buttons) matches all22,448 author rows on all12 common gameplay
+fields. All22,449 captured rows are alive. Actual reload is authored21836 and
+release ends at(343,1520), Tails solo. The 4,449-frame,60fps,640x448 boss/results
+movie passes full decoding; fight and incoming-state stills were inspected:
+`$HOME/Videos/OGGF/fbz-bring-up/campaign-20260927-tails-cold-act1-320/capture/capture.mp4`.
+This is current engine route/presentation evidence, not emulator pixel parity.
+
+`TestFbzTailsColdRouteCapture` adds independent frozen-input whole-registry
+restore and two forward-replay cycles for traversal, flight, carriers, checkpoints,
+all boss impacts, sign/results and incoming Act2. The first diagnostic replay
+reaches results but rejects its initial45-frame window: results first appears at
+21828, only8 inputs before the actual reload. The corrected test bounds that
+pre-load window to7 steps and checks Act2 separately; it does not claim outgoing
+history isolation. Final replay validation, candidate Maven execution,
+integration and push remain pending. Wider solo Tails and the Knuckles Act1
+frontier are not closed by this native320 product.
+
+
+The bounded seven-input results replay then exposes a genuine runtime mismatch:
+a `FbzMinibossChainLink` freezes after restoring a state whose arm has already
+retired. Original forward preUpdateY reaches9973 while replay remains9611. The
+captured converted phase was behind a live-parent guard. Source review also finds
+`Obj_FlickerMove`'s vertical cull missing on arms/links (hence those extreme Y
+coordinates), and capsule-fragment gravity incorrectly omitted. `MoveSprite`
+applies $38 after moving with the old velocity; `MoveSprite2` is the no-gravity
+routine. The old unit oracle asserted the same wrong no-gravity behavior.
+
+Scope therefore expands from controller-only to those three local boss-family
+owners. Converted state now dispatches before parent checks, with no collision
+query through an absent root; arms/links apply the unsigned native Y window;
+fragments preserve word-sized MoveSprite gravity. Three short independent
+baseline cases reproduce all three faults on unchanged `6088735c8` (3 failures,
+0 errors/skips,266ms JUnit). The cold route's whole-world results replay remains
+the integrated regression. Final candidate checks are queued, not yet passing.
+The earlier video is traversal evidence on unchanged base and must be refreshed
+for final debris presentation after candidate verification.
+
+
+Candidate verification on `6088735c8` plus this branch's changes (Java21,
+DISPLAY=:0, absolute S3K ROM, serial Maven queue):
+
+- `-Pfbz-routes -Dtest=TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults+fourHundredPixelColdRouteReachesReleasedAct2+nativeSoloColdRouteReachesReleasedAct2`: five cases, four pass, the inherited Knuckles13839 failure remains; zero errors/skips. Sonic20909, Tails22448, native pair27563 and400px pair26188 reach released Act2.
+- `-Pfbz-routes -Dtest=TestFbzMinibossDefeatChildren,TestFbzMinibossChildren,TestFbzMinibossRewind,TestFbzTailsColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`: only the tagged frozen-route case runs under this profile; it passes with44 whole-world windows, each replayed twice, zero skips,59.84 seconds. Do not infer coverage of the filtered short classes.
+- Rerunning the same selection **without** `-Pfbz-routes` and without the frozen-route class executes166 short/ROM cases: zero failures/errors/skips,24.386 seconds Maven. This includes all three new defect regressions, children/rewind and the four mandatory S3K checks.
+
+The planner selects the full inventory because of its fallback paths. The local
+production impact is confined to three converted FBZ boss-child routines;
+short lifetime/gravity/cull checks, their graph replay, the full frozen cold
+route and unchanged passing route consumers directly exercise that impact.
+This is focused validation, not a full-suite pass. The shared seamless change
+being integrated alongside it still requires ordinary and structural broad
+validation; the combined destination tree will be checked against the pinned
+pre-task base. No local waiver applies to that shared lifecycle change.
+
+
+The candidate-engine refresh is complete at
+`$HOME/Videos/OGGF/fbz-bring-up/campaign-20260927-tails-cold-act1-320-fixed/capture.mp4`:
+4,449 frames,60fps,640×448,74.15 seconds; full decode passes. All22,448
+input-driven state rows still match the author on12 fields, with zero deaths.
+Fight, defeat and released Act2 stills were inspected. Exactly78 images differ
+from the base-runtime capture (21557–21711), showing the repaired fragment
+gravity; gameplay rows remain unchanged. The queued Knuckles failure's full
+assertion text was compared and matches the original baseline exactly.
+A separate input-only retry of the prior hub passes that inherited frontier
+and reaches the later carousel at17024; it is unfinished authoring, not part
+of this candidate or evidence of Knuckles completion.

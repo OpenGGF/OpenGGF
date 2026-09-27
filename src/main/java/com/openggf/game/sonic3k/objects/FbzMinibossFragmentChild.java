@@ -65,9 +65,11 @@ final class FbzMinibossFragmentChild extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        // Obj_FlickerMove calls MoveSprite, not a gravity helper.
+        // Obj_FlickerMove calls MoveSprite: use the old velocity for position,
+        // then add $38 gravity. MoveSprite2 is the no-gravity routine.
         xFixed += xVelocity << 8;
         yFixed += yVelocity << 8;
+        yVelocity = (short) (yVelocity + 0x38);
         x = xFixed >> 16;
         y = yFixed >> 16;
 

@@ -851,6 +851,16 @@ Sonic, requiring an ordinary jump to continue along the upper walkway.
 
 ### A dying child can outlive its parent's SST identity
 
+FBZ's cold Tails results replay (2026-09-27) found the same ownership error in
+converted arm chains. `loc_6F3C4` installs `Obj_FlickerMove`, so the captured
+converted phase must run before any parent/arm availability guard. A retired
+arm cannot freeze its surviving links after reconstruction. Include the native
+unsigned `(y - cameraY + $80) > $200` cull: horizontal-only lifetime left links
+thousands of pixels below the arena. Also inspect the called movement routine:
+S3K `MoveSprite` adds `$38` gravity after using the old Y velocity;
+`MoveSprite2` is the no-gravity variant. An existing fragment test incorrectly
+asserted no gravity and had to be corrected against the disassembly.
+
 LRZ drill debris (`loc_78A70`, 2026-09-24) becomes independent `Obj_FlickerMove`:
 it never reads its parent again. Keeping an `AbstractBossChild` relationship
 retained the hidden drill solely for its clock/reconstruction link. Model these
