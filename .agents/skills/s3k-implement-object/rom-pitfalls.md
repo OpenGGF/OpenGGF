@@ -4929,3 +4929,15 @@ projection to that retained boundary through `Change_Act2Sizes`; neither a new
 act runtime nor the earlier results-active clear proves the lock has ended.
 The 800px visible origin is negative during this handoff, so an unsigned raw
 visible-X comparison can incorrectly select a late-level event branch.
+
+
+### MHZ pillar ramp division carries the first DIVU remainder
+
+`loc_55586` divides the high word by `$30`, then replaces only the low word of
+the DIVU result before dividing again. The first remainder remains in the high
+word and is part of the second dividend. Dividing the original words separately
+loses the fractional ramp: at native camera `$4180`, line 47 must be `-$4118`,
+not `-$4100`. `loc_555D2` derives solid/spike helper positions from these scroll
+words, so this is collision math as well as presentation. Widescreen projects
+only displayed scroll words; helpers consume unprojected native words. The
+read-only MHZ pillar exporter corroborates both against the original emulator.

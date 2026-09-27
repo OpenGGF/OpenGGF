@@ -2145,9 +2145,10 @@ class TestSonic3kMHZEvents {
         if (negative) {
             magnitude = -magnitude;
         }
-        int highQuotient = ((magnitude >>> 16) & 0xFFFF) / 0x30;
-        int lowQuotient = (magnitude & 0xFFFF) / 0x30;
-        int step = (highQuotient << 16) | lowQuotient;
+        // The two DIVU operations in loc_55586 carry the first remainder.
+        // Use a single unsigned division as an independent arithmetic oracle;
+        // the old test duplicated the port's lost-remainder defect.
+        int step = (int) (Integer.toUnsignedLong(magnitude) / 0x30);
         return negative ? -step : step;
     }
 

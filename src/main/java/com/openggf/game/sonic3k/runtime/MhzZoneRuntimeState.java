@@ -53,8 +53,12 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
     /** Captured event/boundary state owns the native-window projection across the reload. */
     public boolean centerNativeArenaCamera() {
         return events != null && (actIndex == 0 ? events.isBossFlag()
-                : actIndex == 1 && events.hasInheritedActOneCameraLock());
+                : actIndex == 1 && (events.hasInheritedActOneCameraLock() || events.isEndBossNativeCameraActive()));
     }
+    public void activateEndBossNativeCamera() {
+        if (events != null) events.activateEndBossNativeCamera();
+    }
+
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return events == null ? 0 : events.getDynamicResizeRoutine(); }
     @Override public boolean isActTransitionFlagActive() {

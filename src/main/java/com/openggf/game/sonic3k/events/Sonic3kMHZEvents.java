@@ -195,6 +195,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     private int endBossArenaScrollDataByte;
     private int endBossArenaScrollDataIndex;
     private boolean endBossPillarArtQueued;
+    private boolean endBossNativeCameraActive;
     private boolean endBossArenaForegroundRefreshActive;
     private boolean endBossArenaHScrollCleared;
     private int endBossArenaPillarControllerCount;
@@ -244,6 +245,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         endBossArenaScrollDataByte = 0;
         endBossArenaScrollDataIndex = 0;
         endBossPillarArtQueued = false;
+        endBossNativeCameraActive = false;
         endBossArenaForegroundRefreshActive = false;
         endBossArenaHScrollCleared = false;
         endBossArenaPillarControllerCount = 0;
@@ -761,7 +763,10 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
             advanceAct2EndBossArenaBottomUpDraw();
             return;
         }
-        if ((camera().getX() & 0xFFFF) < ACT2_BG_END_BOSS_CAMERA_X) {
+        // loc_55312 compares the ROM camera origin. The visible left edge
+        // trails it by half the added width; waiting for that edge delayed
+        // the chase and then sub_556B8 pulled the player back into its $C0 limit.
+        if (nativeAct2CameraX() < ACT2_BG_END_BOSS_CAMERA_X) {
             return;
         }
 
@@ -769,6 +774,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         endBossArenaDrawPosition = ACT2_BG_END_BOSS_DRAW_POSITION;
         endBossArenaDrawRowCount = ACT2_BG_END_BOSS_DRAW_ROWCOUNT;
         endBossArenaBackgroundActive = true;
+        activateEndBossNativeCamera();
         endBossArenaScrollDataIndex = 0;
         endBossArenaScrollDataByte = currentEndBossScrollData()[endBossArenaScrollDataIndex];
         camera().setFrozen(true);
@@ -877,7 +883,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2EndBossRepeatSpecialEvent() {
         Camera camera = camera();
-        int nextCameraX = ((camera.getX() & 0xFFFF) + 4) & 0xFFFF;
+        int nextCameraX = (nativeAct2CameraX() + 4) & 0xFFFF;
         if (playerCharacter() == com.openggf.game.PlayerCharacter.KNUCKLES) {
             nextCameraX = (nextCameraX + 1) & 0xFFFF;
         }
@@ -970,7 +976,9 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         if (mirrorMaxX) {
             camera.setMaxX((short) cameraX);
         }
-        camera.setX((short) cameraX);
+        // loc_5569E writes one native word to Camera_X/min/max. Keep those
+        // boundary words intact and project only the engine display coordinate.
+        camera.setX((short) com.openggf.camera.NativeViewportFraming.visibleLeft(cameraX, camera.getWidth()));
         camera.setMinX((short) cameraX);
     }
 
@@ -1020,7 +1028,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         // The retained native $98 lock has a negative visible left edge at
         // 800px. Interpret its native origin before the unsigned ROM compare;
         // otherwise -$58 is mistaken for the far end of Act 2.
-        int cameraX = hasInheritedActOneCameraLock()
+        int cameraX = hasInheritedActOneCameraLock() || endBossNativeCameraActive
                 ? com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF
                 : camera.getX() & 0xFFFF;
         int cameraY = camera.getY() & 0xFFFF;
@@ -1327,6 +1335,25 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         // on resource reload or on the earlier End_of_level_active clear.
         return (camera().getMaxX() & 0xFFFF)
                 == ACT1_MINIBOSS_CAMERA_X + ACT1_TO_ACT2_TRANSITION_OFFSET_X;
+    }
+
+    /**
+     * The ROM keeps one camera coordinate through weather machine, chase,
+     * capsule and ship departure. Our display origin is inset in widescreen;
+     * retain this semantic projection after the fight's background is restored.
+     * ZoneEventSchemaSidecar captures the flag, and init clears it on fresh load.
+     */
+    public void activateEndBossNativeCamera() {
+        endBossNativeCameraActive = true;
+    }
+
+    public boolean isEndBossNativeCameraActive() {
+        return endBossNativeCameraActive;
+    }
+
+    private int nativeAct2CameraX() {
+        var camera = camera();
+        return com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
     }
 
     public boolean isBossFlag() {

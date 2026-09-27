@@ -572,6 +572,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   for art-queue capacity when wider visibility overlaps startup loading. MHZ end-boss debris
   retains the ROM trajectory when the boss faces left, and Madmole’s submerged
   body keeps its final collision position until the ROM’s deferred deletion.
+  The MHZ endboss chase and ship departure use native arena coordinates at every
+  viewport width; pillar scrolling retains the ROM division remainder and keeps
+  its collision helpers aligned independently of the displayed camera inset.
   The weather-machine palette fade retains its captured target colours when
   recreated by rewind during either half of the transition.
   Horizontal swing bars retain their shared per-player release/cooldown state

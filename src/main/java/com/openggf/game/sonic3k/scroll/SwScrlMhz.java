@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.scroll;
 
+import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -190,31 +191,47 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         if (!state.isEndBossArenaForegroundRefreshActive()) {
             return;
         }
-        int rampAccumulator = (negWord(cameraXCopy - 0x80) & 0xFFFF) << 16;
-        int rampStep = computeEndBossPillarRampStep(cameraXCopy);
+        // loc_55552/loc_555A4 use the native 320px camera for both the
+        // pillar ramp and its collision helpers. Widescreen moves only the
+        // displayed origin; feeding that origin into the ROM math changes
+        // the pillars' world positions and their collision surfaces.
+        int inset = state.centerNativeArenaCamera()
+                ? NativeViewportFraming.inset(GameServices.camera().getWidth()) : 0;
+        int nativeCameraX = (cameraXCopy + inset) & 0xFFFF;
         int lineCount = Math.min(VISIBLE_LINES, 0x30);
+        if ((short) (nativeCameraX - 0x4180) < -0x140) {
+            // loc_555FC clears the BG words and leaves helper positions alone.
+            for (int line = 0; line < lineCount; line++) {
+                short fgScroll = (short) (composer.packedScrollWordAt(line) >> 16);
+                composer.writePackedScrollWord(line, fgScroll, (short) inset);
+            }
+            return;
+        }
+        int rampAccumulator = (negWord(nativeCameraX - 0x80) & 0xFFFF) << 16;
+        int rampStep = computeEndBossPillarRampStep(nativeCameraX);
         for (int line = 0; line < lineCount; line++) {
             short fgScroll = (short) (composer.packedScrollWordAt(line) >> 16);
-            short rampScroll = (short) (rampAccumulator >> 16);
+            short rampScroll = (short) ((rampAccumulator >> 16) + inset);
             composer.writePackedScrollWord(line, fgScroll, rampScroll);
             rampAccumulator += rampStep;
         }
-        publishEndBossArenaHelperXPositions(state, cameraXCopy);
+        publishEndBossArenaHelperXPositions(state, nativeCameraX, inset);
     }
 
-    private void publishEndBossArenaHelperXPositions(MhzZoneRuntimeState state, int cameraX) {
+    private void publishEndBossArenaHelperXPositions(MhzZoneRuntimeState state, int cameraX, int inset) {
         int[] spikeX = new int[6];
-        spikeX[0] = computeEndBossArenaHelperX(cameraX, 40);
+        spikeX[0] = computeEndBossArenaHelperX(cameraX, 40, inset);
         spikeX[1] = spikeX[0];
-        spikeX[2] = computeEndBossArenaHelperX(cameraX, 30);
+        spikeX[2] = computeEndBossArenaHelperX(cameraX, 30, inset);
         spikeX[3] = spikeX[2];
-        spikeX[4] = computeEndBossArenaHelperX(cameraX, 17);
+        spikeX[4] = computeEndBossArenaHelperX(cameraX, 17, inset);
         spikeX[5] = spikeX[4];
-        state.publishEndBossArenaHelperXPositions(computeEndBossArenaHelperX(cameraX, 47), spikeX);
+        state.publishEndBossArenaHelperXPositions(computeEndBossArenaHelperX(cameraX, 47, inset), spikeX);
     }
 
-    private int computeEndBossArenaHelperX(int cameraX, int hScrollLine) {
-        short bgScroll = (short) composer.packedScrollWordAt(hScrollLine);
+    private int computeEndBossArenaHelperX(int cameraX, int hScrollLine, int inset) {
+        // loc_555D2 reads native scroll words, before display projection.
+        short bgScroll = (short) (composer.packedScrollWordAt(hScrollLine) - inset);
         return (((bgScroll - 0x48) & 0x1FF) + cameraX) & 0xFFFF;
     }
 
@@ -230,8 +247,13 @@ public class SwScrlMhz extends AbstractZoneScrollHandler {
         if (negative) {
             magnitude = -magnitude;
         }
-        int highQuotient = ((magnitude >>> 16) & 0xFFFF) / 0x30;
-        int lowQuotient = (magnitude & 0xFFFF) / 0x30;
+        // loc_55586: DIVU leaves the remainder in D2's high word.
+        // MOVE.W replaces only its low word before the second DIVU;
+        // discarding that remainder loses the fractional ramp entirely.
+        int highDividend = (magnitude >>> 16) & 0xFFFF;
+        int highQuotient = highDividend / 0x30;
+        int lowDividend = ((highDividend % 0x30) << 16) | (magnitude & 0xFFFF);
+        int lowQuotient = lowDividend / 0x30;
         int step = (highQuotient << 16) | lowQuotient;
         return negative ? -step : step;
     }

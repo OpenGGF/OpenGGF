@@ -1071,3 +1071,15 @@ ranges through the resource handoff and publish mutation effects immediately:
 frame-top reloads return before the ordinary mutation flush. An extra animation
 pass hides the symptom but also advances unrelated clocks. The independent
 sprite-publication reset must be investigated separately.
+
+
+MHZ2 pillar arithmetic (2026-09-27): successive `DIVU.W` operations at
+`loc_55586` are a 32-bit division assembled from two words, not independent
+word quotients. The first remainder stays in the upper half of D2 while MOVE.W
+replaces the lower half. Dropping it makes the native $4180 ramp flat instead of
+-$8000 per line. `loc_555D2` then derives solid/spike world positions from those
+scroll words, so this rendering arithmetic also changes collision. For a centered
+wide view, add the display inset to the published scroll words only; remove it
+before recovering the original helper positions. The earlier `loc_555FC` clear
+must not publish new helpers. See the September 22 campaign audit for baseline
+probe evidence and candidate validation status.
