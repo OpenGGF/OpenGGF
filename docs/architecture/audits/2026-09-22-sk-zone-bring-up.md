@@ -7900,3 +7900,14 @@ zero skips. Both temporary author files are removed. Explicit Java21/Lua5.4
 preflight passes; no engine-wide suite was run for this controller/test-only
 change. Fresh main fetch/ff-only pull remains84b819ab3. Integration verification,
 push and cleanup remain pending; Knuckles Act2 is the next cold-route gap.
+
+
+Integrated by clean fast-forward as da2b2106f. On main develop at that commit,
+the queued Java21 DISPLAY=:0 explicit-root-ROM command selecting
+TestSozColdRouteCapture plus the same eight required/input/bonus classes above
+passes72 tests across10 XML classes, zero failures/errors/skips,2m45s. All
+72 identities/outcomes match the candidate exactly; its additional fresh-capture
+case is not repeated. No executable edits followed. Native Knuckles Act2 input
+research can start at source soz_2 row12361 (first Act2 destination320,940),
+movie offset352986+12361=365347; these are controller/route-location references,
+not permission to import native state. The campaign remains active.
