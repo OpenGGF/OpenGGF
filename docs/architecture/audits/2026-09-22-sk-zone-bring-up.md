@@ -7586,3 +7586,11 @@ Both LevelLoading classes included; identities and skips inspected. All five
 cold routes pass, including Tails ready16626,18 periodic/destination windows
 and results-start replay. Main fetch/ff-only pull remainsb29451541. No runtime
 changes or upstream conflicts; integration verification and push still pending.
+
+
+Integrated as`a7eaf8fa5` by fast-forward into develop. The same queued focused
+command passes66 tests in the same8 XML classes on main`a7eaf8fa5`, zero
+failures/errors/skips,2m08s. Identities and skips match the candidate. No
+executable edits followed; full ordinary/guard validation is not claimed.
+The external Tails Act1 movie now identifies source`a7eaf8fa5`. Tails Act2 and
+the remaining seven-zone acceptance obligations stay active.
