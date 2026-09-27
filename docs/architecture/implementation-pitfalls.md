@@ -1049,3 +1049,13 @@ the visible world. Test both scroll signs, both physical boundaries and visible/
 priority-mask output, then inspect a long production capture. A static edge test
 alone passed the broken implementation. Native320 did not enable the guard, so
 a native-only rendering check missed this defect.
+
+
+Native arena projection also has a lifetime across seamless reloads. MHZ replaces
+its Act 1 runtime while results retain the rebased native camera maximum `$98`.
+Dropping the projection with the old boss flag slides the wide camera and clips
+results behind the automatic bounds mask. Derive the incoming projection from
+the retained boundary until its actual expansion, not the act identity or the
+earlier results-active clear. At800px its visible left edge is negative; convert
+that display origin before unsigned ROM event comparisons. The campaign's
+`TestS3kMhzMinibossViewport` and cold wide route cover both halves of this handoff.

@@ -10,8 +10,8 @@ implementation reviewed historically; current campaign act certification pending
 | Claim | Evidence / state |
 | --- | --- |
 | Implemented | Original direct audit found no further missing Sonic/Tails feature; later miniboss lifetime, explosion and transition-identity fixes landed. |
-| Cold-reachable | Fresh 320px Sonic-solo (2026-09-23) and Tails-solo (2026-09-26) controller routes reach the miniboss and MHZ2; no position/clock/ring/health seed. |
-| Completable | Native Sonic and Tails controller routes complete all six boss hits, sign/results, seamless MHZ2 load and released player movement. Other configurations remain open. |
+| Cold-reachable | Fresh 320px Sonic, Tails and paired routes, plus the 2026-09-27 800px Sonic candidate, reach the miniboss and MHZ2; no position/clock/ring/health seed. |
+| Completable | Native Sonic, Tails and paired routes, plus the 800px Sonic candidate, complete all six boss hits, sign/results, seamless MHZ2 load and released player movement. Other configurations remain open. |
 | Native-accurate | Disassembly-backed review plus local regressions; frame-perfect/native visual certification not claimed. |
 | Rewind/standard | Several live interaction and graph checks exist; breadth and complete before/active/after obligations remain incomplete. |
 
@@ -219,3 +219,28 @@ MHZ cold-route cases, 15 entry configurations and the mandatory AIZ/loading/
 bootstrap/decoding checks, with zero failures/errors/skips. The campaign audit
 owns integration and guard evidence. Full paired Act2 completion, wider/donor
 routes and remaining native presentation/interaction obligations remain open.
+
+
+## 2026-09-27 widescreen admission and inherited results lock
+
+Candidate `feature/ai-mhz-wide-route`, base `5ff400010`: the cold 800px Sonic
+Act 1 route reaches all six miniboss hits, actual MHZ2 reload and released
+movement without seeds or death (`mhz1-sonic-cold-complete-800.bk2`, 10,330 inputs).
+`TestS3kMhzWideAuthoredRoute` covers 17 whole-world restore/forward-replay spots.
+`TestS3kMhzMinibossViewport` independently exercises the native gate, object spawn,
+repeat offset, inherited results lock and release at 320/352/400/528/800px.
+The incoming results boundary remains centered until its native maximum expands;
+Act 2 initialization and the earlier results-active clear do not retire it.
+
+Focused checks: 194 passed with zero failures/errors/skips, followed by the
+extended ten-case viewport class (10 passed, zero skips). Native Sonic, Tails and
+team Act 2 routes plus the four required S3K loading/bootstrap regressions also
+passed (62 tests, zero failures/errors/skips). These are focused checks, not a
+full-suite result. The full structural guard suite also passes (672 tests, zero
+skips), as do 38 camera/mask/results-policy cases. The audit records the justified
+proportionate scope; integration remains pending.
+
+Video: `$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-wide-act1-centered-handoff-800/capture.mp4`.
+A one-frame garbled sprite reload and following missing-sprite frame remain
+inherited presentation gaps: unchanged native 320px reproduces them too.
+800px Act 2 completion and wider character/donor breadth remain open.

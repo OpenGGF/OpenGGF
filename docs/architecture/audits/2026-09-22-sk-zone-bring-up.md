@@ -8544,3 +8544,117 @@ This delivers the Knuckles ownership/SOZ completion and SSZ clipping slice; it
 does not certify all seven zones. Continue the current matrices' representative
 width/donor/team route gaps and native presentation obligations. Strict trace
 and ending exclusions remain unchanged.
+
+
+## 2026-09-27 — MHZ1 widescreen admission and cold completion
+
+Previous goal turn delivered `49586cd86`, `38f799053`, and the verification
+record `5ff400010`; that was progress. A fresh fetch/fast-forward pull found
+develop unchanged. New isolated `feature/ai-mhz-wide-route` is based on
+`5ff400010`. The native Sonic input again dies at 3523 at 800px, proving the
+historical frontier remains reproducible. Controller repair clears the upper
+spikes, both speed-sensitive loops, sticky vine and late pulley. The pulley
+requires actual handle alignment and Down/release pulls; Up does not operate it.
+No gameplay values were seeded or changed to navigate these passages.
+
+The repaired cold route exposed a real blocker: Sonic stops at x=17344, while
+the visible camera x=16944 cannot reach `loc_54B4E`'s native `$4298` gate. The
+original gate uses the 320px Camera_X_pos. The candidate translates the visible
+left edge back with NativeViewportFraming, retaining the original world-space
+threshold. The same translation covers `loc_54CB0`'s wrap/min boundary and
+`loc_75220`/`loc_753DE`/`loc_7574A` boss spawn, approach and escape. MHZ1 arena
+framing derives from the existing captured boss flag; it introduces no new
+snapshot field and leaves 320px arithmetic unchanged. Comments document ROM
+behavior and the reason for the widescreen replacement.
+
+The new five-preset threshold test initially had an incorrect act argument in
+its special-event call; after correcting that fixture, native320 passed and
+all four wider cases failed the admission assertion. The runtime correction
+passes 193 focused event/boss/native-route cases without skips. Its five-preset
+whole-world wrap test initially captured an uninitialized parallax handler;
+admitting a production frame before capture resolves that fixture issue. All
+five cases now pass two restore/wrap replay cycles with every registry key
+compared; no state fields are excluded.
+
+A temporary MHZ adapter of the existing SszBossInputAuthorTool records six
+natural hits, defeating the miniboss after 8830 inputs. Frozen ordinary inputs
+then load Act2 at 9260. `mhz1-sonic-cold-complete-800.script/.bk2` preserves
+10,330 inputs. TestS3kMhzWideAuthoredRoute passes one test with no failures, errors
+or skips and 16 complete-registry restore/45-input replay spots: traversal,
+sticky vine, late pulley capture/release, arena approach, all hits, defeat and
+released Act2 movement. The accepted Knuckles/standalone/strict-trace exclusions
+remain unchanged.
+
+Fresh GameplayCaptureTool replay has 10,330 observed frames and no deaths,
+ending in the Act2 Knuckles scene. All 8830 author rows match all 20 state fields
+except the separately excluded input-text representation. The external
+`mhz-bring-up/campaign-20260927-wide-act1-clear-800` movie contains 2230 frames,
+60fps, 1600×448, 37.166667 seconds; full decode passes. The earlier gate-only
+clip is a declared partial scene, not defeat evidence. This is candidate engine
+route evidence, not native pixel certification. Integration and combined
+validation remain pending; continue the same wide route through Act2.
+
+Focused commands used the explicit existing absolute S3K ROM path, Java21,
+DISPLAY=:0 and the shared Maven queue:
+
+```text
+-Dmse=off -Ds3k.rom.path="$S3K_ROM" -Dtest=TestS3kMhzMinibossViewport,TestSonic3kMHZEvents,TestMhzBossObjects,TestS3kMhzAuthoredRoute test
+-Dmse=off -Ds3k.rom.path="$S3K_ROM" -Dtest=TestS3kMhzMinibossViewport test
+-Dmse=off -Ds3k.rom.path="$S3K_ROM" -Dtest=TestS3kMhzWideAuthoredRoute test
+```
+
+
+The follow-up visual review found an incoming-results projection lifetime bug:
+Act 2 replaced the Act 1 boss flag while the native maximum still equalled
+`$4298-$4200=$98`. The candidate now derives centering from that retained
+boundary until `Change_Act2Sizes` expands it, including the period after
+`End_of_level_active` clears. The cold regression failed at reload frame 9260
+before the fix; afterwards 194 focused tests passed with no failures/errors/skips
+(`TestS3kMhzWideAuthoredRoute,TestS3kMhzMinibossViewport,TestSonic3kMHZEvents,TestMhzBossObjects,TestS3kMhzAuthoredRoute`).
+The independent five-width handoff cases bring the viewport class to 10 passing
+tests, including early-corridor selection from a negative wide visible origin.
+The cold route now includes 17 whole-world restore/replay spots, adding incoming
+results. Corrected movie: `$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-wide-act1-centered-handoff-800/capture.mp4`
+(2230 frames, 60fps, full decode checked).
+
+A separate inherited rendering issue remains open: the actual reload frame
+draws garbled sprite art, then the following frame omits sprites before recovery.
+It reproduces in unchanged develop's 320px cold route at frame 8469, using its own
+compiled runtime from `49586cd86` (no production-source changes through `5ff400010`).
+Baseline evidence: `$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-native-handoff-baseline-320/`.
+The ROM `MHZ1_BackgroundEvent` calls `Load_Level` (layout RAM only), retaining
+the SAT/art owners; the engine reload replaces resource owners. No renderer fix
+or ROM parity claim has been made from this observation alone.
+
+
+Validation scope decision: the combined plan at base `5ff400010` selects all
+2933 ordinary classes because the MHZ event/runtime/provider files are classified
+as shared or unknown. The actual production delta is MHZ-local camera-coordinate
+interpretation and its scoped provider predicate; no shared camera, collision,
+physics, timing, rendering or mask algorithm changes. The repository's proportionate
+validation exception applies. Focused cold native/wide routes, five-width threshold
+and lifecycle checks, full-registry replay and real rendered captures exercise
+the affected paths directly. A separate queued `-Pguards test -B` completed all
+672 checks in 86 classes with zero failures/errors/skips (205 seconds);
+`TestNativeArenaCameraFraming,TestLevelBoundsMaskTransition,TestLevelBoundsMaskGeometry,TestS3kResultsCameraBoundsPolicy`
+then passed 38 tests with zero failures/errors/skips. The native Act 2/required
+S3K bootstrap selection passed 62 tests with zero failures/errors/skips.
+Tool preflight passed with Java 21, `LUA_BIN=/usr/bin/lua5.4`, PowerShell and
+`DISPLAY=:0`; the first preflight correctly rejected the default non-5.4 Lua
+before any tests. This candidate has focused ordinary verification plus the
+full structural guard suite, not a new full ordinary-suite pass. The updated
+base's prior full run is recorded above and is not relabelled candidate evidence.
+
+
+Before integrating the bounded Act 1 fix, the incomplete Act 2 controller
+work was preserved outside the checkout at
+`$HOME/Videos/OGGF/mhz-bring-up/authoring-20260927-wide-route/`.
+`ACT2-CONTINUATION.md` identifies two upper-path prefixes (14010/13980 inputs)
+and the lower-valley alternative (15884 inputs), all button-identical to their
+source branches. The apparent upper-path "wind" was a second sticky vine
+capturing after the first spindash release, not a time-dependent airflow.
+The lower vine must observe a new charge before its 16-update release timer
+can run. No sticky-vine runtime change was needed. Unsuccessful controller
+variants and regenerable CSV/PNG probes remain temporary and may be discarded.
+The complete 800px Act 1 input and its permanent rewind test are staged; these
+Act 2 prefixes are explicitly not completion evidence.

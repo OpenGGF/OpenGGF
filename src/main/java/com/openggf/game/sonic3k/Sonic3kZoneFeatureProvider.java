@@ -75,6 +75,11 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
     @Override public boolean centerNativeArenaCamera() {
         if (!GameServices.hasRuntime()) return false;
         int zone = getFeatureZoneId();
+        if (zone == Sonic3kZoneIds.ZONE_MHZ) {
+            return S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry())
+                    .map(com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState::centerNativeArenaCamera)
+                    .orElse(false);
+        }
         // Get_LevelSizeStart initializes the destination camera before InitLevelEvents
         // replaces the old runtime state. The native ROM has no viewport projection;
         // our widescreen inset belongs only to the current final arena, not a stale

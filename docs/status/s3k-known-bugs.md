@@ -6204,3 +6204,24 @@ and a missing Hyper mutation hook; those are covered by the encounter regression
 - **Symptom** — A direct `$1700` load boots the real DEZ3 layout, art and palette but places the players from the Start Location file at centre `$60,$70` instead of `loc_7FD9E`'s `$30,$CD`/`$10,$CD`; there is no `Obj_5A7C8` arena floor, so the player falls out of the level and dies within about 100 frames. At that baseline the zone also inherited `SwScrlHpz` and lacked a level-select entry. The current campaign has separated `$1700` from the sanctuary and added its level-select identity; its bespoke events, scroll and arena remain missing. Measured 2026-09-17 at `035e48a58`; capture `~/Videos/OGGF/s3k-dez-bring-up/raw-00-baseline-before-work/1700-final-boss`.
 - **Suspected cause** — The zone was never implemented; only its level data is registered.
 - **Removal condition** — The S3K DEZ bring-up's slices 9 and 10 land: `$1700` resource profile, `SwScrlS3kDezFinalBoss`, the `DEZ3_*` events and arena objects, `Obj_DEZ3_Boss` and the `loc_803D6` exit, with the final-boss matrix's five claims recorded.
+
+
+## MHZ1 → MHZ2 Reload — Transient Sprite Art Corruption (OPEN)
+
+**Observed 2026-09-27:** the controller-only native Sonic route
+`mhz1-sonic-fresh-320.bk2` displays garbled sprite art on actual MHZ2 reload
+frame 8469, then omits sprites for one frame before recovery. This reproduces on
+unchanged develop `5ff400010` (production runtime identical to `49586cd86`).
+The 800px candidate reproduces the same issue at its later reload frame 9260.
+It is separate from the widescreen inherited-camera-lock correction.
+
+**Investigation boundary:** `MHZ1_BackgroundEvent` retains live sprite/art owners
+while `Load_Level` copies layout RAM; the engine replaces resource owners behind
+a published sprite table. Stale pattern addresses are a hypothesis, not yet a
+proven cause. Do not hide the frame or alter gameplay timing to make the capture
+appear correct. Native-width baseline images and state are under
+`$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-native-handoff-baseline-320/`.
+
+**Removal condition:** a resource/publication-lifecycle regression reproduces
+the fault, the owning fix preserves ROM sequencing and rewind, and fresh native
+and wide cold captures show coherent sprite art across the real reload.

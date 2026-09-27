@@ -365,7 +365,10 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
             return false;
         }
 
-        state.x = (svc.camera().getX() & 0xFFFF) + INIT_X_CAMERA_OFFSET;
+        // loc_75220's $110 is relative to the native 320px camera origin.
+        // Use that same world-space origin for approach and escape below;
+        // using the widened view's left edge moves the encounter left by its inset.
+        state.x = nativeCameraX(svc) + INIT_X_CAMERA_OFFSET;
         state.y = (svc.camera().getY() & 0xFFFF) + INIT_Y_CAMERA_OFFSET;
         state.xFixed = state.x << 16;
         state.yFixed = state.y << 16;
@@ -574,7 +577,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
 
         ObjectServices svc = tryServices();
         if (svc != null && svc.camera() != null
-                && state.x - (svc.camera().getX() & 0xFFFF) <= INIT_X_CAMERA_OFFSET) {
+                && state.x - nativeCameraX(svc) <= INIT_X_CAMERA_OFFSET) {
             setupChoppingAnimation();
         }
     }
@@ -904,7 +907,8 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         if (targetY >= state.y) {
             state.routine = ROUTINE_FINAL_ESCAPE_RETURN_WAIT;
             mappingFrame = 5;
-            state.x = (svc.camera().getX() & 0xFFFF) + 0x30;
+            // loc_7574A uses Camera_X_pos_copy + $30, also a native origin.
+            state.x = nativeCameraX(svc) + 0x30;
             state.y = (svc.camera().getY() & 0xFFFF) - 0x5C;
             state.xFixed = state.x << 16;
             state.yFixed = state.y << 16;
@@ -962,6 +966,11 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         }
         defeatHandoffQueued = true;
         setDestroyed(true);
+    }
+
+    private static int nativeCameraX(ObjectServices services) {
+        return com.openggf.camera.NativeViewportFraming.nativeLeft(
+                services.camera().getX(), services.camera().getWidth()) & 0xFFFF;
     }
 
     private void applyVelocityWithGravity() {

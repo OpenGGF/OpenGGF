@@ -289,3 +289,28 @@ The7130-frame60fps640x448 video and2710-frame defeat-to-FBZ excerpt fully decode
 This is engine presentation with retained registered Tails, not continuously
 on-screen follower presence or native pixel/timing parity. Other widths, donor,
 team/lifecycle products and inherited presentation obligations remain open.
+
+
+## 2026-09-27 widescreen admission and inherited results lock
+
+Candidate `feature/ai-mhz-wide-route`, base `5ff400010`: the cold 800px Sonic
+Act 1 route reaches all six miniboss hits, actual MHZ2 reload and released
+movement without seeds or death (`mhz1-sonic-cold-complete-800.bk2`, 10,330 inputs).
+`TestS3kMhzWideAuthoredRoute` covers 17 whole-world restore/forward-replay spots.
+`TestS3kMhzMinibossViewport` independently exercises the native gate, object spawn,
+repeat offset, inherited results lock and release at 320/352/400/528/800px.
+The incoming results boundary remains centered until its native maximum expands;
+Act 2 initialization and the earlier results-active clear do not retire it.
+
+Focused checks: 194 passed with zero failures/errors/skips, followed by the
+extended ten-case viewport class (10 passed, zero skips). Native Sonic, Tails and
+team Act 2 routes plus the four required S3K loading/bootstrap regressions also
+passed (62 tests, zero failures/errors/skips). These are focused checks, not a
+full-suite result. The full structural guard suite also passes (672 tests, zero
+skips), as do 38 camera/mask/results-policy cases. The audit records the justified
+proportionate scope; integration remains pending.
+
+Video: `$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-wide-act1-centered-handoff-800/capture.mp4`.
+A one-frame garbled sprite reload and following missing-sprite frame remain
+inherited presentation gaps: unchanged native 320px reproduces them too.
+800px Act 2 completion and wider character/donor breadth remain open.

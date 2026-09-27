@@ -4914,3 +4914,18 @@ a zone-specific HUD exception. `LevelRingDisplay` separates retained digits
 and the dirty request from live rings at the existing counter-publication
 phase. A silent write preserves any already-pending redraw. Capture both
 states; rendering or rewind restore must not manufacture a redraw request.
+
+
+### Native camera words versus widescreen boss coordinates (MHZ)
+
+`loc_54B4E` gates MHZ1 at native Camera_X_pos `$4298`; `loc_75220`
+spawns the miniboss at that origin + `$110`, and `loc_54CB0` wraps the
+native origin/player/object world by `$200`. Using a wide visible-left edge
+for any one of these can block admission or move the encounter. Preserve native
+bound words and convert through `NativeViewportFraming` at the display boundary.
+`MHZ1_BackgroundEvent` then subtracts `$4200` while retaining the results owner:
+Act 2 replaces the boss flag before the `$98` maximum releases. Scope the
+projection to that retained boundary through `Change_Act2Sizes`; neither a new
+act runtime nor the earlier results-active clear proves the lock has ended.
+The 800px visible origin is negative during this handoff, so an unsigned raw
+visible-X comparison can incorrectly select a late-level event branch.

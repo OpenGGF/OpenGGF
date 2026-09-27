@@ -582,6 +582,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   boss debris follows the native initialization and flicker sequence. Act 1
   camera limits use the locked-on ROM’s height rule for all characters, and
   the Act 1 boss and its thrusters stay alive during offscreen attack phases.
+  The Act 1 miniboss gate, spawn and arena repeat use native camera coordinates
+  at every viewport width, retaining centered framing through the inherited
+  Act 2 results lock until its boundary releases.
   Its defeat loads the explosion art and finishes the full burst sequence
   across the signpost handoff. MHZ Act 2 retains the waiting Knuckles controller
   until its camera trigger opens, allowing the leaf blower to lift Sonic out of

@@ -323,8 +323,14 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private void armAct1MinibossArenaIfReached() {
         Camera camera = camera();
+        // loc_54B4E compares the 320px Camera_X_pos with $4298. In a wider
+        // viewport the visible left edge trails that native origin; at 800px
+        // Sonic reaches his native right boundary before the old test can fire.
+        // Keep the ROM threshold in world space and translate only the view.
+        int nativeCameraX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                camera.getX(), camera.getWidth()) & 0xFFFF;
         if ((camera.getY() & 0xFFFF) < ACT1_MINIBOSS_CAMERA_Y
-                || (camera.getX() & 0xFFFF) < ACT1_MINIBOSS_CAMERA_X) {
+                || nativeCameraX < ACT1_MINIBOSS_CAMERA_X) {
             return;
         }
 
@@ -352,7 +358,11 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private void updateAct1MinibossRepeatSpecialEvent() {
         Camera camera = camera();
-        int cameraX = camera.getX() & 0xFFFF;
+        // loc_54CB0 wraps the native camera/players/objects by $200 and copies
+        // that origin to Camera_min_X_pos. Bound words remain native; only the
+        // rendered camera is inset for widescreen, just like arena admission.
+        int cameraX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                camera.getX(), camera.getWidth()) & 0xFFFF;
         if (cameraX >= ACT1_MINIBOSS_REPEAT_THRESHOLD_X) {
             cameraX = (cameraX - ACT1_MINIBOSS_REPEAT_OFFSET_X) & 0xFFFF;
             levelRepeatOffset = ACT1_MINIBOSS_REPEAT_OFFSET_X;
@@ -362,7 +372,8 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
                 levelManager.getObjectManager().applyLevelRepeatOffsetToActiveObjects(
                         -ACT1_MINIBOSS_REPEAT_OFFSET_X, 0);
             }
-            camera.setX((short) cameraX);
+            camera.setX((short) com.openggf.camera.NativeViewportFraming.visibleLeft(
+                    cameraX, camera.getWidth()));
             camera.setMaxX((short) ACT1_MINIBOSS_CAMERA_X);
         }
         camera.setMinX((short) cameraX);
@@ -1003,7 +1014,12 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2Routine4CameraBounds() {
         Camera camera = camera();
-        int cameraX = camera.getX() & 0xFFFF;
+        // The retained native $98 lock has a negative visible left edge at
+        // 800px. Interpret its native origin before the unsigned ROM compare;
+        // otherwise -$58 is mistaken for the far end of Act 2.
+        int cameraX = hasInheritedActOneCameraLock()
+                ? com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF
+                : camera.getX() & 0xFFFF;
         int cameraY = camera.getY() & 0xFFFF;
         if (cameraX >= ACT2_FINAL_GATE_CAMERA_X) {
             if (cameraX == ACT2_FINAL_GATE_CAMERA_X) {
@@ -1297,6 +1313,17 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private AbstractPlayableSprite focusedPlayer() {
         return camera().getFocusedSprite();
+    }
+
+    /** Native bounds retained by MHZ1_BackgroundEvent until Change_Act2Sizes. */
+    public boolean hasInheritedActOneCameraLock() {
+        // The ROM subtracts $4200 from the Act 1 maximum $4298 at Load_Level.
+        // Results and the in-level title still own that $98 maximum after the
+        // Act 2 runtime replaces the Act 1 boss flag. Retain our widescreen
+        // projection until the real boundary expands, rather than dropping it
+        // on resource reload or on the earlier End_of_level_active clear.
+        return (camera().getMaxX() & 0xFFFF)
+                == ACT1_MINIBOSS_CAMERA_X + ACT1_TO_ACT2_TRANSITION_OFFSET_X;
     }
 
     public boolean isBossFlag() {
