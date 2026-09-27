@@ -6849,4 +6849,19 @@ Final durable evidence under `$VIDEO_ROOT/ssz-bring-up/`:
 Both final engine movies fully decode; frames 9378, 18600 and 19550 were inspected.
 The initial load at 19456 is black during the normal fade; the incoming scene is
 visible at 19550. Initial failed/superseded input experiments are not certification.
-Integration and push follow below; the overall seven-zone campaign remains open.
+The overall seven-zone campaign remains open.
+
+Integrated as `95b478717` after a fresh fetch/fast-forward check, with no upstream
+changes or conflicts. On that integrated commit, the combined focused command
+below passes **178 tests, zero failures/errors/skips**, in 5m06s. All 11 report
+files were checked. `$REPO` is the main checkout; the ROM argument names its
+existing root `s3k.gen` (no copied or substituted ROM).
+
+```bash
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME=/usr/lib/jvm/java-21-openjdk DISPLAY=:0 \
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO/s3k.gen" \
+'-Dtest=TestS3kSszMtzArenaHeadless,TestPoweredScreenAttack,TestTouchResponseManager,TestSszColdRouteCapture,TestSszSoloColdRouteCapture,TestSszTailsColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The source and documentation are ready for the normal `develop` push and merged
+worktree cleanup. This is focused integration verification, not a new full suite.

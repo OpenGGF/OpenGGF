@@ -16,6 +16,14 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Touch listeners are not the ROM's special-touch branch.** The shared controller
+notifies listeners for harmful contacts too. An object whose collision byte changes
+category must gate its own property writes: SSZ MTZ orbs use harmful `$87`, armed
+`$C6`, and an unlisted `$DA` branch. Ordinary `Touch_Special/loc_103FA` writes only
+for listed sizes; `HyperTouch_Special` independently ORs 3 through the powered
+attack port. Do not bank harmful touches or move the ROM's shared Hyper sidekick
+effects into an individual object. See the regression and correction in `95b478717`.
+
 **A route splice needs more than equal visible coordinates.** Native word writes
 preserve position fractions. After the SSZ MTZ touch correction, two cold input
 sequences reached the same upper transport pixel but inherited different fractions;
