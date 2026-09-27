@@ -35,7 +35,8 @@ class TestSozColdAct2Capture {
         Path output = Path.of(System.getProperty("soz.cold.act2.capture"));
         Files.createDirectories(output.resolve("frames"));
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(
-                Path.of("src/test/resources/routes/s3k/soz2-cold-sonic-tails.bk2"));
+                Path.of(System.getProperty("soz.cold.act2.input",
+                        "src/test/resources/routes/s3k/soz2-cold-sonic-tails.bk2")));
         int stride = Integer.getInteger("soz.cold.act2.stride", 4);
         assertTrue(stride > 0);
         int captureFrom = Integer.getInteger("soz.cold.act2.capture-from", 0);

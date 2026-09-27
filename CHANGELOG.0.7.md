@@ -256,8 +256,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   results the camera opens gradually and the walk to the pyramid starts on the ROM
   frame instead of briefly obeying held input. CPU Tails can jump off Sandopolis
   light switches again after the Act 1 golem, and the Act 2 title card holds for its
-  full ROM time. Solo Sonic now also has a verified cold Sandopolis Act 1 route
-  through the golem and playable Act 2, with whole-world rewind checks. In Sandopolis Act 2, rising players are lifted onto push switches,
+  full ROM time. Solo Sonic now also has cold routes through both Sandopolis acts,
+  including the golem, eight-hit end boss, capsule and playable Lava Reef,
+  with whole-world rewind checks. In Sandopolis Act 2, rising players are lifted onto push switches,
   objects below the looping level's seam (such as breakable sand rocks) load when
   the camera wraps, Hyudoro ghosts appear, attack and vanish on the ROM frames and
   scatter rings when they hit, and Skorps wake a frame later so they patrol in step.

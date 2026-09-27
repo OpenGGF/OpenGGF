@@ -675,3 +675,11 @@ The routes cover61 periodic/destination full-world replay windows, with addition
 semantic mode/boss/capsule/results checks and actual LRZ history isolation.
 No runtime physics was changed to preserve the old recording. Other cold
 character/donor/width products and matched native presentation remain open.
+
+
+SOZ solo Sonic cold completion (2026-09-27): the
+[Act2 matrix](../architecture/validation/levels/s3k-soz-act2.md#solo-sonic-cold-route-2026-09-27)
+now records the native320 controller-only route through eight hits, capsule,
+results and playable LRZ. `TestSozColdRouteCapture` covers both solo acts as
+well as the pair. Other roster/width/donor products and native presentation
+remain open; see the campaign audit for verification and integration state.

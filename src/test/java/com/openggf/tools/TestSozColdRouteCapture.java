@@ -18,7 +18,6 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import java.nio.file.Path;
 import java.util.HashSet;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -31,9 +30,10 @@ class TestSozColdRouteCapture {
         coldActCompletesWithTraversalReplayAndPlayableDestination(act, true);
     }
 
-    @Test
-    void soloColdAct1CompletesWithTraversalReplayAndPlayableDestination() throws Exception {
-        coldActCompletesWithTraversalReplayAndPlayableDestination(0, false);
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void soloColdActCompletesWithTraversalReplayAndPlayableDestination(int act) throws Exception {
+        coldActCompletesWithTraversalReplayAndPlayableDestination(act, false);
     }
 
     private void coldActCompletesWithTraversalReplayAndPlayableDestination(int act, boolean paired) throws Exception {

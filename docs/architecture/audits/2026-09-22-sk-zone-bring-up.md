@@ -24,7 +24,7 @@ its original unimplemented counts must not be read as current production status.
 | --- | --- |
 | MHZ | Native320 Sonic, Tails and the native Sonic+Tails pair each complete both acts through playable FBZ1. The pair retains its27,985-input Act1 fixture and now has a40,630-input complete route with16 Act2 full-world replay spots and production live-history isolation at FBZ. Tails floor-grab mappings, palette-fade reconstruction and horizontal-bar holder aliasing are corrected and integrated. All nine physical posts have343 contact/reload cases and630 real reloads across supported rosters, donors and five widths. Remaining route/presentation breadth and native comparisons remain open; accepted Knuckles/trace/standalone exclusions remain in force. |
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; all eleven placed posts now activate through ordinary local movement for four native teams (44 cases), with immediate restore and two forward replays; physical contact now composes with two real death/reloads for every post, four native teams and all five selectable widths (220 cases/440 reloads); the supported S1/S2 standard-team product now adds 220 cases/440 reloads, with donor rules/art retained; finish cold-route and presentation obligations without undoing the accepted S1 elevator challenge. |
-| SOZ | Both acts, golem, end boss and playable exits implemented; native320 Sonic+Tails cold completions are revalidated on the current base, with reauthored Act2 inputs,61 periodic/destination full-world replay windows, semantic boss/capsule/background checks and actual LRZ history isolation. Solo Sonic Act1 now clears cold through playable Act2 in31,671 inputs, with33 additional full-world replay windows and a fresh movie (`bd1625cdb`). The lower Act2 cork/rock/switch/door puzzle now has ordinary Sonic and Knuckles passage at all five current presets, with157 whole-registry replay windows and native mechanism corroboration. All ten physical posts, repeated supported-team reloads and connected rooms now use all five production display presets (509 focused checks,480 death/reloads). Broader cold character/donor/team routes, remaining lifecycle products and synchronized native presentation remain open; retain explicit trace deferrals. |
+| SOZ | Both acts, golem, end boss and playable exits implemented; native320 Sonic+Tails cold completions are revalidated on the current base, with reauthored Act2 inputs,61 periodic/destination full-world replay windows, semantic boss/capsule/background checks and actual LRZ history isolation. Solo Sonic Act1 now clears cold through playable Act2 in31,671 inputs, with33 additional full-world replay windows and a fresh movie (`bd1625cdb`). Solo Act2 now clears through eight hits, capsule and playable LRZ in31,797 inputs, with33 additional periodic/destination replay windows, semantic checks and actual history isolation. The lower Act2 cork/rock/switch/door puzzle now has ordinary Sonic and Knuckles passage at all five current presets, with157 whole-registry replay windows and native mechanism corroboration. All ten physical posts, repeated supported-team reloads and connected rooms now use all five production display presets (509 focused checks,480 death/reloads). Broader cold character/donor/team routes, remaining lifecycle products and synchronized native presentation remain open; retain explicit trace deferrals. |
 | LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Solo Knuckles now completes both acts and the direct HPZ exit in52659 inputs with289 full-registry replay spots across five scoped tests. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,457controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. MTZ orbs now distinguish harmful/armed ordinary touch from the separate Hyper property write; paired inputs are reauthored after the correction. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. Solo Sonic now clears both replica bosses in 11,200 cold inputs without deaths, with 42 passing full-registry replay windows; his complete 19,845-input route now defeats Mecha and loads DEZ with 41 further passing replay windows and live-history isolation. Native 320px solo Tails now has a fresh 17,670-input completion through the actual DEZ load, without death; 100 additional native route replay windows and load isolation pass. The corrected preliminary camera bounds pass all five cold approach widths; an800px controller route clears both replicas with53 further replay windows. Wide solo Tails now completes all three bosses and actual DEZ arrival in16,893 inputs, with102 route replay windows and final-lock retirement verified. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
 | DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. Ordinary solo Sonic now also completes Act1 and reaches released Act2 control in23533 inputs, zero deaths, with61 full-registry replay spots; Tails now completes the same cold Act1 handoff in29521 inputs with75 further replay windows. Solo Sonic Act2 now completes all8 boss hits and the final-stage load in53842 inputs with103 full-registry replay windows; Tails now completes Act2 and the actual final-stage load in62588 inputs with56 passing replay windows; the short47140-input lower-pad fixture remains independent. Sonic solo now completes the full cold DEZ1/DEZ2/final chain through the actual ending in60920 inputs after the native floor-contact correction, zero deaths, with68 additional replay windows. Tails now has an independently captured68266-input cold ordinary ending route with no deaths; all 84 final-route replay windows now pass. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,316frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in49448frames after that correction with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 through complete DDZ with eleven full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. All seven physical posts now have351 inventory/contact/reload cases,644 real reloads across native/donor/team/width breadth, and92 inverted-gravity deaths through the placed swap. Other encounter/lifecycle and native-presentation obligations remain open. |
@@ -7221,3 +7221,209 @@ zero failures/errors/skips across the same8 XML classes,2m23s. No executable
 edits followed. Relative file links in the updated matrix/backlog/plan and
 `git diff --check` pass. This closes native320 solo Sonic Act1 cold/replay
 acceptance, not the whole SOZ or seven-zone campaign. Next route: solo Sonic Act2.
+
+
+## 2026-09-27 — solo Sonic SOZ Act2 continuation
+
+Previous goal turn delivered solo Act1 (`bd1625cdb`, integrated record653082073)
+and was progress. New task base653082073, checkout`feature/ai-soz-solo-act2`;
+main fetched/ff-only pulled with no upstream changes. Existing unrelated files
+and dirty reference submodules are preserved.
+
+A fresh solo native320 replay of the paired Act2 inputs, cold intro enabled,
+donor off, dies at6557,(3071,1866), after hurts6109 and6396. Its first motion
+difference from the fresh paired capture is1284 (solo X1867 versus1859; equal
+Y/velocities/rings); the routes later reconverge. The material departure near
+4608 has lower rightward speed after the push-switch area. The reused jump
+misses the intended passage, eventually leaving Sonic in the lower dark room.
+Controller-only departure trials begin there; no gameplay change is justified.
+This is a route-authoring failure, not an attributed engine regression.
+
+
+The initial jump variants did not recover the route. Rejoining the paired
+5000-input departure from solo5256 reaches the intended descent and first
+carrier; the extra256 inputs keep the free-swing clock phase. Three Right
+inputs replacing Left at7270 catch the real pushable-rock carrier near5496/592;
+one or two still miss its edge. Four Left inputs at7770 brake the next airborne
+departure so Sonic remains supported for the following ledge jump. The route
+then reconverges through the sand lift to about9850. The next rising pillar
+blocks the inherited leftward departure, so fixed input reuse eventually crushes
+Sonic at10167 with8 rings. Trials resume from9860; no collision/clock changes.
+
+
+The apparent spring failure is the closing horizontal door, not spring physics.
+Placed door(6848,1048),subtype$13 reads trigger3; switch(6600,1456),subtype3
+charges it to128 and decays once per10 inputs after pushing stops. The104-input
+wait beside the rising pillar aligns its360-input cycle but spends door charge.
+At10100 the door centre is6875, leaving too little opening for the spring ascent;
+late steering or small jump changes cannot recover the closed passage.
+
+Moving that104-input wait to the charging switch alone still leaves the door too
+narrow. The paired input sequence also hangs on a stationary rappel wire for
+about100 unnecessary inputs. Moving100 of those inputs to the switch preserves
+the later timeline/oscillator phase while leaving ten more door pixels open.
+The chosen branch now passes the spring/door, upper passage, cork and vertical
+wrap: at13103 it is alive at(7934,1900),35 rings. Comparisons against the paired
+engine route minus360 inputs reconverge through the wrap; no native parity claim.
+The next controller trial reuses the remaining paired tail after that verified
+prefix. No runtime implementation has been changed.
+
+
+The following rising-sand room failed because cork(8496,1360),subtype$0A was
+still intact in solo play. A direct ordinary running jump from14895 breaks it
+and starts the real room rise. Reusing the later jump clock unchanged exits the
+right ledge too late, so the chosen branch leaves it80 inputs earlier. At the
+upper low ceiling a40-input wait lets the real sand surface lift Sonic before
+his jump; this reaches(9341,620),42 rings, without death. A further running jump
+clears the next obstruction. The current frontier is the trigger8 push-switch
+and door near(9776,432): the inherited jumps skip charging it, and the rising
+sand eventually crushes Sonic at the closed exit. Explicit charging input is
+being authored next; no gameplay modification has been made.
+
+
+Further controller-only trials charge trigger8 for180 inputs, then use a short
+jump to reach the swinging platform above the rising sand. Riding that platform
+with neutral input supplies the upper-ledge height; repeated jumps alone depart
+too low. Braking before the next landing and jumping into the real light switch
+refreshes room lighting. An ordinary run-up clears the later Skorp, and the
+second ledge jump catches the late rappel wire. The chosen full-prefix branch
+reaches the lower carrier near(11049,1744) at20860 alive. Two Left inputs then
+neutral keep Sonic aboard through20990, rather than walking off with residual
+speed. The following switch passage reconverges at(11321,1676),21200; the next
+carrier transfer still misses its leading edge. Authoring continues there. These
+are exploratory whole-registry branches, not a certified solo Act2 clear, fresh
+final capture, or native parity result. No runtime source has changed.
+
+
+The next carrier transfer succeeds after delaying the switch departure three
+inputs. Its following loop traversal matches the paired engine route to within
+one velocity unit, but arrives68 inputs earlier at the landing platform. A
+60-input neutral wait on the safe floor after the vertical wrap restores a
+usable landing phase. The following leftward switch departure needs a short
+initial jump,90 Left inputs, then another jump; this avoids the ghost knockback
+that otherwise leaves Sonic trapped behind the charged switch. The chosen
+branch reaches the upper passage at24300,(12878,397), with3 rings. The inherited
+tail is still unsuitable near the later vertical launch. Current exploratory
+source is target/solo-act2-left-door/variant-2.bk2; prefix24300 is the next
+branch point. All changes remain controller authoring and audit notes.
+
+
+At24300, rejoining paired input24280 clears the next hazard and reaches the
+vertical launch with5 rings. Rejoining24278/24279 instead dies near24636.
+The selected trial survives to27519, but this is not route progress to the boss:
+it misses the upper passage after24780 and follows a lower route, so the
+remaining paired tail dies at28159. The correct frontier is that vertical-launch
+transfer, not the last surviving frame. Current source is
+target/solo-act2-upper-rejoin/variant-2.bk2, prefix24780. A three-candidate
+ordinary steering trial is running in target/solo-act2-launch-transfer. The
+Act2 capture test now accepts soz.cold.act2.input with the paired asset retained
+as default; this will support fresh solo verification once the route is complete.
+No completed cold solo Act2 route, final video or new suite pass is claimed.
+
+
+The launch transfer succeeds with10 Left then10 Right from24780, replacing the
+last20 Left inputs before the inherited release. Variant0 reaches(15111,689)
+at24900 and(18993,812),24 rings, at26000, close to the intended paired route.
+Variants1/2 steer earlier and miss the subsequent route. The selected variant0
+then loses rings and dies at26246; resume before that hazard from
+target/solo-act2-launch-transfer/variant-0.bk2. The queued author test completed
+successfully with zero skipped tests; that only verifies probe execution, not
+route completion. git diff --check is clean.
+
+
+The late trigger10 switch(19017,816) is surrounded by active ghosts. The inherited
+jump occurs after knockback and misses the upper support. Jumping early for35
+inputs avoids damage but passes below the swinging platform. From26010,5 Right+A,
+12 neutral and24 Right followed by the inherited second jump instead climbs the
+switch and catches the real swing. Variant1 of target/solo-act2-switch-short
+reaches(19166,507),24 rings, at26200. Three/7-input first jumps fail this handoff.
+The next trial rejoins upper-passage inputs from that position; no runtime fix
+is indicated. Prior goal turn was progress (carrier/loop/launch repairs); current
+turn advances the selected route through this upper swing.
+
+
+The26200 position was still below the upper floor, not a successful landing.
+Contact observations show the inherited Right input walks off the rising swing
+at26179. An explicit35-input Right+A departure from26165 instead lands on the
+upper floor at26210,(19192,498), retaining24 rings. Variant0 of
+target/solo-act2-swing-jump reaches(19304,492) at26240; the next inherited-tail
+trial branches there. This corrects the earlier upper-passage interpretation.
+
+
+Rejoining paired input26287 from solo26240 (upper-floor variant1) reaches the
+real boss arena alive. At28300 it is(20536,1390),30 rings; its reused fight
+inputs survive to30000 but the boss still has3 HP. Continuing the paired exit
+input therefore cannot clear the act. The existing input-only
+SozEndBossVictoryRoute controller from30000 dies at30256 without another hit.
+A fresh branch from28300 now authors the entire solo encounter with three
+44-input jump phases. This temporary author records generated controller pads
+to a round-tripped BK2; it neither writes gameplay state nor uses native traces.
+The selected approach prefix is target/solo-act2-upper-floor/variant-1.bk2.
+Full cold Act2 completion, rewind acceptance and final capture remain open.
+
+
+The controller trials from28300 all die before reducing the boss below8 HP.
+From the preserved five-hit prefix30000,48-period/24-hold trials also die with
+3 HP remaining (variant0 survives to30690). These rejected attempts do not
+justify changing boss logic. The next bounded probe uses44-period/14-hold with
+approach offsets-16/-32/-48 from that same30000 prefix, recording pads in
+target/solo-act2-boss-spacing. The original default was44/14/+4. The temporary
+author uses the existing package-private controller constructor reflectively;
+it will be removed before delivery. No route, boss or capture certification
+has been claimed from these probe test successes.
+
+
+All three spacing trials die at30256..30258 with3 HP. The next probe moves
+the branch point earlier to29800, retaining the original44/14/+4 controller
+and phases0/11/22, rather than trying to recover after the30000 position.
+Output target/solo-act2-boss-earlier; source remains final-tail/variant-0.bk2.
+The approach and five-hit prefix are preserved, no runtime edits exist, and
+worktree changes remain uncommitted pending an actual solo clear.
+
+
+The29800 branch succeeds: phases0/11 defeat the boss at30446/30331 respectively.
+Phase11 retains1 ring and is selected (boss-earlier/variant-1-authored.bk2).
+Correction to the prior shorthand:29800 has4 HP, then selected hits occur at
+30064,30108,30286,30331. The30000 inherited prefix separately had3 HP.
+Reusing paired post-defeat input30063 from30332 keeps Sonic alive but misses
+the capsule button because its approach differs. The next probe branches at
+30600 and uses the existing targetCapsule input policy; the resulting inputs
+will be frozen and replayed cold before certification.
+
+
+The targetCapsule controller opens the capsule at30743,(21356,1763), retaining
+1 ring. Its generated capsule/variant-0-authored.bk2 is the selected prefix.
+The paired reference opens via Tails at30363 while Sonic is still on the floor;
+this explains why copied paired button inputs were insufficient solo. The
+results-tail trial appends paired30364 onward from solo30744. Full independent
+cold replay and rewind verification are still required.
+
+
+The results tail loads LRZ at31576. Frozen solo Act2 asset has31,797 inputs;
+temporary author removed. Fresh explicit-ROM TestSozColdAct2Capture passes
+1 test, zero failures/errors/skips (52.100s Maven including compile), eight
+actual hits, capsule, completed results and released destination control.
+All31,577 shared rows through load match the exploratory branch on movement,
+animation, rings, camera and mode; all31,797 fresh rows have zero deaths.
+External campaign-20260927-solo-cold-act2-clear-320 contains3797 frames,60fps,
+960x672,63.283333s; full ffmpeg decode and ffprobe pass, final-hit/capsule/LRZ
+stills inspected. No emulator parity claim.
+
+Combined plan against653082073 selects2930 ordinary classes plus guards via
+route-asset fallback. Proportionate focused validation applies: only a frozen
+controller asset, test parameterization and optional capture-input selection
+change; production gameplay/rendering/rewind are unchanged. The four actual
+SOZ routes exercise the changed consumers and full-world restore/forward replay,
+with mandatory S3K loading/bootstrap gates and branch-author tooling checks.
+Java21/Lua5.4 preflight passes. No full ordinary/guard suite claim. Combined
+queued focused execution is in progress; integration/push are not complete.
+
+
+Combined candidate verification passes65 tests in8 XML classes, zero failures,
+errors or skips,1m58s. Command: queued Java21/DISPLAY=:0/explicit root S3K ROM,
+`-Dtest=TestSozColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestGameplayInputBranchTool,TestGameplayInputBranchToolHeadless test`.
+Both LevelLoading classes are included. Solo Act2 confirms33 periodic/destination
+windows plus20 distinct semantic observations (background/boss/capsule/results),
+and production live-history reset at LRZ. All four cold routes pass; XML identities
+and zero skips inspected. Main fetch/ff-only pull remains653082073; no upstream
+conflicts. Remaining work is integration verification, push and owned-worktree cleanup.

@@ -584,3 +584,31 @@ seeded collision, invulnerability or a retuned rock track.
 
 Execution and delivery evidence is in the campaign audit. Donor, team, Tails and
 cold-route breadth remain separate obligations; this does not certify all SOZ.
+
+
+## Solo Sonic cold route (2026-09-27)
+
+`src/test/resources/routes/s3k/soz2-cold-sonic.bk2` contains31,797 ordinary
+controller inputs from a native320 solo Sonic cold start, donor off and intro
+enabled. No position, rings, collision, boss or event state is seeded. The route
+charges the actual switches, breaks the rising-sand cork, uses the moving
+carriers/swing and lights, then lands eight natural boss hits and opens the
+capsule itself. Solo-specific controller timing replaces paired inputs that
+depend on different contact/ghost phases or Tails opening the capsule. No
+runtime behavior was retuned to preserve a recording.
+
+A fresh `TestSozColdAct2Capture` replay records hits at28653/28845/29325/29773/
+30064/30108/30286/30331, capsule30743, results finished31331 and LRZ load31576.
+All31,797 inputs complete without death;221 destination inputs are retained.
+The capture and authored branch match all31,577 shared state rows through load
+on position, velocity, inertia, air/roll/hurt/death/rings, mapping, camera and mode.
+The3797-frame60fps movie covers input28000 onward; final-hit, capsule and
+destination stills were inspected and full video decode passed.
+
+`TestSozColdRouteCapture` now includes both solo acts, with the existing periodic
+45-input whole-registry restore/replay checks and Act2 semantic boss/background/
+capsule/results windows plus real outgoing-history isolation at LRZ. Execution
+and integration results are recorded in the campaign audit. This native320 solo
+route does not close Tails/Knuckles, other widths/donors, or matched native
+presentation obligations. Video: `$VIDEO_ROOT/soz-bring-up/`
+`campaign-20260927-solo-cold-act2-clear-320/capture.mp4`.
