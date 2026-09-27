@@ -32,7 +32,7 @@ class TestSozColdRouteCapture {
     }
 
     @ParameterizedTest
-    @CsvSource({"0,sonic", "1,sonic", "0,tails"})
+    @CsvSource({"0,sonic", "1,sonic", "0,tails", "1,tails"})
     void soloColdActCompletesWithTraversalReplayAndPlayableDestination(int act, String main) throws Exception {
         coldActCompletesWithTraversalReplayAndPlayableDestination(act, false, main);
     }
@@ -129,8 +129,8 @@ class TestSozColdRouteCapture {
                     readyFrame = frame;
                 // Fixed input observations cover the cold traversal and boss/results approach;
                 // a window must never restore the outgoing registry across a level load.
-                // The shorter Tails fixture reaches Act2 before the next 17000-input spot.
-                int lastSourceSpot = act == 0 && main.equals("tails") ? 16000
+                // Tails reaches Act2 before 17000 and LRZ before 29000; keep replay windows before each load.
+                int lastSourceSpot = main.equals("tails") ? (act == 0 ? 16000 : 28000)
                         : act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
@@ -159,7 +159,7 @@ class TestSozColdRouteCapture {
             assertEquals(act == 0 ? 1 : 0, GameServices.level().getCurrentAct());
             assertTrue(readyFrame >= 0, "destination releases both control owners");
             assertEquals(
-                    act == 0 && main.equals("tails") ? 18 : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
+                    main.equals("tails") ? (act == 0 ? 18 : 30) : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
             if (act == 1) {
                 assertTrue(semanticChecked.contains("boss-entry"));
                 for (int hp = 0; hp < 8; hp++) assertTrue(semanticChecked.contains("boss-hp-" + hp));

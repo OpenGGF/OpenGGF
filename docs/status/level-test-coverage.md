@@ -690,3 +690,12 @@ SOZ Tails Act1 cold route (2026-09-27): the
 adds ordinary native320 Tails golem/Act2 completion and18 full-world traversal/
 destination replay windows plus the results-start observation. Tails Act2 and
 other cold products remain open; execution/integration evidence is in the audit.
+
+
+SOZ Tails Act2 cold route (2026-09-27): the
+[Act2 matrix](../architecture/validation/levels/s3k-soz-act2.md#solo-tails-cold-route-2026-09-27)
+now defines the native320 solo Tails product through eight boss hits, capsule,
+results and playable LRZ, with30 traversal/destination full-world replay
+windows and semantic encounter/load-boundary checks. Execution and delivery
+evidence is in the campaign audit. This does not close Knuckles cold routes,
+other viewport/donor products or matched native presentation.

@@ -41,7 +41,8 @@ class TestSozColdAct2Capture {
         assertTrue(stride > 0);
         int captureFrom = Integer.getInteger("soz.cold.act2.capture-from", 0);
         assertTrue(captureFrom >= 0);
-        var settings = new GameplayCaptureSession.Settings(Integer.getInteger("soz.cold.width", 320), "sonic",
+        var settings = new GameplayCaptureSession.Settings(Integer.getInteger("soz.cold.width", 320),
+                System.getProperty("soz.cold.main", "sonic"),
                 System.getProperty("soz.cold.followers", "tails"), "off", null, null, null);
         var inputs = new ArrayList<RecordedFrameInput>();
         boolean bossSeen = false;
@@ -57,7 +58,7 @@ class TestSozColdAct2Capture {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, 1, settings);
             assertEquals(8, GameServices.level().getCurrentZone());
             assertEquals(1, GameServices.level().getCurrentAct());
-            assertEquals("sonic", session.player().getCode());
+            assertEquals(settings.mainCharacter(), session.player().getCode());
             var followers = GameServices.level().getObjectManager().getObjectServices().playerQuery().sidekicks();
             assertEquals(settings.width(), GameServices.camera().getWidth());
             String[] expectedFollowers = settings.sidekickCharacter().isBlank() ? new String[0]
@@ -143,7 +144,7 @@ class TestSozColdAct2Capture {
             assertTrue(visible > 1000, "destination world must be visible outside the HUD");
             ScreenshotCapture.savePNG(image, output.resolve("destination.png"));
             Files.writeString(output.resolve("milestones.txt"), milestones + "LRZ load frame: " + readyFrame
-                    + "\nController frames: " + movie.getFrameCount() + "\nCold Sonic; followers=" + settings.sidekickCharacter()
+                    + "\nController frames: " + movie.getFrameCount() + "\nCold " + settings.mainCharacter() + "; followers=" + settings.sidekickCharacter()
                     + "; width=" + settings.width() + "; donor=off; intro enabled.\n");
         }
     }

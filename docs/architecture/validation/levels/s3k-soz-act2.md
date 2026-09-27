@@ -612,3 +612,34 @@ and integration results are recorded in the campaign audit. This native320 solo
 route does not close Tails/Knuckles, other widths/donors, or matched native
 presentation obligations. Video: `$VIDEO_ROOT/soz-bring-up/`
 `campaign-20260927-solo-cold-act2-clear-320/capture.mp4`.
+
+
+## Solo Tails cold route (2026-09-27)
+
+`src/test/resources/routes/s3k/soz2-cold-tails.bk2` contains28,782 ordinary
+controller inputs from native320 solo Tails, donor off and intro enabled.
+No position, rings, boss, collision or event state is seeded. Authored jumps,
+flight, light-switch pauses, side pushes and carrier/rope transfers replace
+Sonic timings that did not suit Tails. The fight reaches eight natural hits
+at26025/26212/26251/26401/26458/27030/27457/27519, followed by capsule/results
+and playable LRZ at28601 in the authoring run. The existing positioned99-ring
+boss controller alone did not survive this route's21-ring arrival; the frozen
+inputs combine immediate ground jumps, a flight interval and ground jumps
+for the final two hits. No runtime behavior was retuned.
+
+The permanent cold test covers30 periodic/destination45-input full-registry
+restore/replay windows, semantic background/boss-hit/capsule/results windows,
+and actual outgoing-history isolation on LRZ load. Fresh frozen-input replay,
+media verification and integration outcomes are recorded in the campaign
+audit; test definitions alone are not proof of execution. Knuckles, additional
+width/donor products and matched native presentation remain separate gaps.
+Video destination: `$VIDEO_ROOT/soz-bring-up/`
+`campaign-20260927-tails-cold-act2-clear-320/capture.mp4`.
+
+Fresh capture confirms the same28,782-frame route without death, capsule27750,
+results27781..28350 and LRZ28601. All19 selected state fields match the authored
+run. Candidate execution passes68 focused checks (including all six cold
+products), zero failures/errors/skips;30 periodic/destination and20 semantic
+observations run for this route. The53.033333-second60fps video covers input
+25600 onward; final-hit/capsule/destination stills and full decode are checked.
+This is focused validation, not a full ordinary-suite or guard pass.
