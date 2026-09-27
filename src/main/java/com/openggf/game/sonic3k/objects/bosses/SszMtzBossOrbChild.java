@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PoweredScreenAttackSpecial;
+import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -64,7 +66,8 @@ import java.util.List;
  * {@code sfx_Balloon}, decrements the ship's {@code $30(a0)} and deletes.
  */
 public final class SszMtzBossOrbChild extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener,
+        PoweredScreenAttackSpecial {
 
     /** {@code moveq #7-1,d3}. */
     public static final int ORB_COUNT = 7;
@@ -259,9 +262,11 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
         if (parent == null || parent.isDestroyed()) {
             // Divergence, recorded in docs/status/s3k-known-bugs.md: an orb still in loc_7AE22 is
             // never popped by _unkFA88, because sub_7B0C2 is only reached from loc_7AFA4 and
-            // loc_7B02A. On the cartridge those orbs keep orbiting a slot loc_7ACA4 has freed,
-            // reading whatever the next object writes into it. Deleting with the ship is the
-            // engine's choice, not the ROM's.
+            // loc_7B02A. A surviving orbiter would read a slot loc_7ACA4 has freed,
+            // including a replacement occupant's bytes; the engine does not model that.
+            // The normal seven nonfatal hits launch all seven orbs before the eighth kills
+            // the ship (also observed in the native recording). This is an unverified
+            // lifetime edge case, not an observed normal-defeat presentation mismatch.
             if (parent != null) {
                 parent.releaseOrb(this);
             }
@@ -502,11 +507,24 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
     /** {@code loc_103FA}: the touch pass is what writes {@code collision_property}. */
     @Override
     public void onTouchResponse(PlayableEntity hit, TouchResponseResult result, int vIntRunCount) {
+        // Touch_Special reaches loc_103FA only for its listed sizes. Of this
+        // orb's bytes, only $C6 qualifies: $87 is Touch_ChkHurt and $DA's size
+        // $1A returns without writing. Engine listeners also receive harmful
+        // contacts, so dispatch alone must not bank a later pop here.
+        if (result.category() != TouchCategory.SPECIAL || result.sizeIndex() != 6) {
+            return;
+        }
         if (hit == services().playerQuery().mainPlayerOrNull()) {
             collisionProperty = (collisionProperty + 1) & 0xFF;
         } else if (hit == services().playerQuery().nativeP2OrNull()) {
             collisionProperty = (collisionProperty + 2) & 0xFF;
         }
+    }
+
+    /** HyperTouch_Special ORs #3 independently of ordinary Touch_Special's size list. */
+    @Override
+    public void orCollisionProperty(int mask) {
+        collisionProperty = (collisionProperty | mask) & 0xFF;
     }
 
     @Override public int getCollisionProperty() { return collisionProperty; }
@@ -529,7 +547,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
         return com.openggf.level.objects.TouchResponseProfile.fromProvider(this, multiRegionSource);
     }
 
-    /** {@code $C6} and {@code $DA} are {@code $C0} category bytes: property, not damage. */
+    /** Both $C6 and $DA dispatch as SPECIAL; ordinary $DA touch then returns unwritten. */
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return true; }
 
     /** {@code Draw_And_Touch_Sprite} polls the property on every overlapping frame. */

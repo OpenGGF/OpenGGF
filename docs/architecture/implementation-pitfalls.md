@@ -16,6 +16,15 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**A route splice needs more than equal visible coordinates.** Native word writes
+preserve position fractions. After the SSZ MTZ touch correction, two cold input
+sequences reached the same upper transport pixel but inherited different fractions;
+one later missed a ground-jump edge and cloud bounce. Reauthor controller inputs
+and replay the complete suffix. Do not clear fractions or copy a reference snapshot
+to make the old input movie work. Even matching player fractions is not proof of
+matching followers, object phases or the complete route. Keep declared local test
+stimuli separate from controller-only reachability evidence.
+
 **Destination camera policies must check the destination.** S3K's `InitCamera`
 runs before `InitLevelEvents` replaces the previous zone runtime. A provider
 that selects a camera policy solely from `GameServices.zoneRuntimeState()` can

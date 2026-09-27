@@ -545,6 +545,10 @@ class TestS3kSszMtzArenaHeadless {
         while (boss.armCyclesForTest() > 0 && boss.hitsRemainingForTest() > 1) {
             landOneHit(fixture, boss);
             waitOutHitWindow(fixture, boss);
+            assertEquals(boss.hitsRemainingForTest() - 1,
+                    boss.orbsForTest().stream().filter(o -> !o.isDestroyed()
+                            && o.routineForTest() == SszMtzBossOrbChild.ROUTINE_ORBITING).count(),
+                    "each nonfatal hit launches one of seven orbs before the eighth kills");
             clearTheRing(fixture, boss);
         }
         assertEquals(0, boss.armCyclesForTest(),
@@ -648,6 +652,10 @@ class TestS3kSszMtzArenaHeadless {
             landOneHit(fixture, boss);
             if (boss.hitsRemainingForTest() > 0) {
                 waitOutHitWindow(fixture, boss);
+                assertEquals(boss.hitsRemainingForTest() - 1,
+                        boss.orbsForTest().stream().filter(o -> !o.isDestroyed()
+                                && o.routineForTest() == SszMtzBossOrbChild.ROUTINE_ORBITING).count(),
+                        "seven nonfatal hits empty the ring before defeat");
                 clearTheRing(fixture, boss);
             }
         }
@@ -748,6 +756,53 @@ class TestS3kSszMtzArenaHeadless {
                 new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
         fixture.stepIdleFrames(1);
         sameSnapshot(after, registry.capture(), "forward replay mid-fight");
+    }
+
+    /** Ordinary Touch_Special and HyperTouch_Special are separate ROM writers. */
+    @Test
+    void orbPropertyIgnoresHarmfulAndUnlistedOrdinaryTouches() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y);
+        var boss = runToPhase(fixture, SszMtzBossObjectInstance.STATE_PATROL, 0x200);
+        var orb = boss.orbsForTest().get(0);
+        orb.onTouchResponse(fixture.sprite(), new com.openggf.level.objects.TouchResponseResult(
+                7, 8, 8, com.openggf.level.objects.TouchCategory.HURT), 0);
+        assertEquals(0, orb.getCollisionProperty(), "$87 uses Touch_ChkHurt, not loc_103FA");
+        orb.onTouchResponse(fixture.sprite(), new com.openggf.level.objects.TouchResponseResult(
+                0x1A, 8, 8, com.openggf.level.objects.TouchCategory.SPECIAL), 0);
+        assertEquals(0, orb.getCollisionProperty(), "$DA is absent from Touch_Special's list");
+        orb.onTouchResponse(fixture.sprite(), new com.openggf.level.objects.TouchResponseResult(
+                6, 8, 8, com.openggf.level.objects.TouchCategory.SPECIAL), 0);
+        assertEquals(1, orb.getCollisionProperty(), "$C6 reaches loc_103FA for Player 1");
+    }
+
+    @Test
+    void armedOrbReceivesHyperTouchPropertyAndReplaysItsPop() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y);
+        var boss = runToPhase(fixture, SszMtzBossObjectInstance.STATE_PATROL, 0x200);
+        landOneHit(fixture, boss);
+        SszMtzBossOrbChild armed = null;
+        for (int i = 0; i < 200 && armed == null; i++) {
+            pinNonAttackingAt(fixture, APPROACH_X, APPROACH_Y);
+            fixture.stepIdleFrames(1);
+            armed = boss.orbsForTest().stream()
+                    .filter(o -> !o.isDestroyed() && o.getCollisionFlags() == 0xC6
+                            && o.isOnScreenForTouch()).findFirst().orElse(null);
+        }
+        assertNotNull(armed, "production launch must reach an onscreen armed orb");
+        // Stimulate the production Hyper-attack port using its actual frozen response list.
+        GameServices.level().getObjectManager().poweredAttacks().apply(fixture.sprite());
+        assertEquals(3, armed.getCollisionProperty(), "HyperTouch_Special ORs #3");
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        fixture.stepIdleFrames(1);
+        assertEquals(SszMtzBossOrbChild.ROUTINE_POPPING, armed.routineForTest());
+        var after = registry.capture();
+        registry.restore(before);
+        sameSnapshot(before, registry.capture(), "restore pending Hyper touch");
+        fixture.runner().primeInputState(
+                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+        fixture.stepIdleFrames(1);
+        sameSnapshot(after, registry.capture(), "replay Hyper touch pop");
     }
 
     // --- helpers ----------------------------------------------------------------------------

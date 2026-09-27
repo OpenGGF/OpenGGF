@@ -69,8 +69,8 @@ Entries should include:
 41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
 42. [Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop](#sky-sanctuary-mecha-sonic-is-only-its-entry-and-its-attack-loop)
 43. [Sky Sanctuary Boss Defeats Draw No Explosion](#sky-sanctuary-boss-defeats-draw-no-explosion)
-44. [Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship](#sky-sanctuary-metropolis-orbs-still-on-the-ring-are-deleted-with-their-ship)
-45. [S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object](#s3k-special-property-touch-teleports-the-sidekick-for-every-c0-object)
+44. [Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled](#sky-sanctuary-metropolis-orb-reads-after-a-freed-parent-slot-remain-unmodelled)
+45. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
 
 ---
 
@@ -6158,36 +6158,36 @@ not yet have native parity or a cold full-act route certificate.
 - **Removal condition** — Model and exercise the relevant replacement occupant's
   `$38` semantics from ROM evidence without inventing a generic false stop flag.
 
-## Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship
+## Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled
 
-- **Location** — `SszMtzBossOrbChild.update` (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
-- **Symptom** — When `loc_7ACA4` frees the ship's slot, every orb still orbiting disappears with
-  it. On the cartridge they keep orbiting.
-- **Suspected cause** — `sub_7B0C2`, which is what `_unkFA88` pops an orb through, is only reached
-  from `loc_7AFA4` (launched) and `loc_7B02A` (bouncing). An orb in `loc_7AE22` never tests that
-  flag, so after `Go_Delete_Sprite` it goes on reading `$34(a0)` — a slot the next allocation will
-  overwrite — and orbits whatever it finds there until the act ends. The engine cannot reproduce a
-  read of a freed slot and deleting is the sane substitute, but it is a divergence and the
-  Metropolis fight's last frames look different because of it.
-- **Removal condition** — Either a native capture shows the cartridge's orbs are culled some other
-  way, or the divergence is accepted in writing with a clip of both behaviours.
+- **Location** — `SszMtzBossOrbChild.update`.
+- **Scope** — The engine deletes an orb whose parent is gone. Native `loc_7AE22`
+  keeps reading its `$34` parent pointer; only launched/bouncing orbs reach
+  `sub_7B0C2` and the defeat flag. Arbitrary freed/reused SST bytes are not modelled.
+  Reachability of a surviving orbiter at parent deletion is unverified.
+- **Corrected evidence (2026-09-27)** — The previous claim that this visibly changes
+  the normal fight's last frames was unsupported. Read-only BizHawk recording
+  `ssz-bring-up/native-fights-20260926/run1/objects.csv` shows seven orbiters at
+  frame455111, one launched per nonfatal hit, and none from455524. The last two
+  launched orbs enter pop routine8 at455572 and are absent at455573; the escaping
+  ship remains until455755. Its intermediate wait routine is outside the exporter's
+  code filter, so missing parent rows during that wait do not mean deletion.
+  `TestS3kSszMtzArenaHeadless` checks the per-hit orbit count in the engine.
+- **Removal condition** — Establish the reachable allocation/lifecycle cases and
+  model any required native replacement-slot reads. This recording excludes the
+  alleged normal-route symptom, not every possible allocation edge case.
 
-## S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object
+## S3K Special-Property Sidekick Behaviour: Corrected Diagnosis
 
-- **Location** — `ObjectTouchResponseController` (`src/main/java/com/openggf/level/objects/`), the
-  `TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY` arm
-- **Symptom** — Any S3K object whose collision byte decodes as `SPECIAL` teleports the native
-  Player 2 onto it and forces animation 2 when the leader is Knuckles, and puts Player 2 in the air
-  on every leader. The Metropolis boss's launched orbs (`$C6`) are the newest objects to take that
-  path, so a Knuckles + Tails route through the fight moves Tails onto each orb the leader touches.
-- **Suspected cause** — `Touch_Special`'s `loc_103FA` (sonic3k.asm:21162-21194) does only
-  `addq.b #1,collision_property(a1)`, twice for the sidekick. The teleport belongs to a specific
-  object's routine, not to the shared category, and generalising it puts it on every
-  special-property object. The decode itself also returns `SPECIAL` for any `$C0` byte before
-  `Touch_Special`'s size list is consulted, so bytes the ROM ignores (the orbs' unreachable `$DA`)
-  would dispatch here too.
-- **Removal condition** — The teleport moves to the object that owns it in ROM, the size list gates
-  the `SPECIAL` decode, and a Knuckles + Tails Metropolis clip shows Tails staying where they were.
+The former **“S3K Special-Property Touch Teleports the Sidekick”** entry was a
+misdiagnosis, corrected2026-09-27. Ordinary `Touch_Special/loc_103FA` increments a
+property only for listed sizes. The distinct shared `HyperTouch_Special` explicitly
+ORs3, copies target coordinates into Player2 in Player_mode3, and sets Player2
+animation2/air in all modes. The existing shared implementation and
+`TestPoweredScreenAttack` preserve those shipped-ROM semantics. Moving the teleport
+into an orb or narrowing the shared SPECIAL decoder would be inaccurate. The actual
+orb-local omissions were harmful/unlisted ordinary contacts writing the property
+and a missing Hyper mutation hook; those are covered by the encounter regressions.
 
 ## Object `$78` Is Registered Twice; the First Implementation Is Dead Code
 

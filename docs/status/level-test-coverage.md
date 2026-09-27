@@ -641,3 +641,11 @@ adds a positioned ordinary-Knuckles completion and checks both Sonic/Knuckles
 routes at all five current display presets, including connected cork/rock/switch/
 door behavior and whole-registry replay. Full cold routes and other roster/donor
 products remain separate.
+
+SSZ MTZ orb ownership (2026-09-27): the [Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md)
+adds harmful/unlisted ordinary touch rejection, production Hyper dispatch and
+whole-registry pending-touch replay. Per-hit orbit counts match the native fight's
+seven nonfatal launches. The paired input fixture is reauthored through the fight
+and still preserves all 22/37 replica/complete replay spots and live DEZ-history
+isolation. The complete route now reaches DEZ after 19,457 inputs. Solo Sonic/Tails
+routes pass unchanged; freed-slot edge cases and broader native parity remain open.

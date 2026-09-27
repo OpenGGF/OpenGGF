@@ -16,6 +16,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **S3K Sky Sanctuary:** Both Act 1 replica bosses now draw their ROM-backed
   Eggmobile bodies alongside Mecha Sonic’s head. The MTZ laser pair preserves
   its ROM tile priority independently of each piece’s sprite display bucket.
+  MTZ orbs distinguish harmful contact from armed touch and respond to Hyper
+  attacks through the ROM’s separate collision-property path.
   Both replica fights keep the widescreen camera
   centred on their native arenas through knockback. Their preliminary camera
   bounds use the same projection, so ordinary widescreen approaches can reach

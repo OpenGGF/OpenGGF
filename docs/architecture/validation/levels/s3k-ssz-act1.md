@@ -771,3 +771,39 @@ reads the restored checkpoint index, matching the ROM and SSZ screen init.
 No shared respawn, physics, camera or rewind behavior changes.
 
 Execution and delivery evidence is recorded in the campaign audit.
+
+## 2026-09-27 MTZ orb touch ownership
+
+The local orb callback now ignores ordinary harmful `$87` and unlisted special
+`$DA` contacts, while `$C6` records the native player touch. A separate
+`PoweredScreenAttackSpecial` hook implements `HyperTouch_Special`'s OR3. No shared
+touch algorithm or native Player2 Hyper effect changes. The encounter test drives
+an actual launched orb to onscreen `$C6`, invokes the production powered-attack
+port with its real frozen response list, and captures/restores/replays the pending
+property through the pop. Ordinary callback cases are explicit boundary stimuli;
+this is not a new controller-only Hyper route. The seven nonfatal-hit orbit counts
+are checked through the existing laser and defeat encounters.
+
+Native read-only capture `native-fights-20260926/run1` shows orbit counts7→0 at
+frames455111→455524, with the last launched orbs popping455572 and gone455573,
+before ship deletion after455755. The previous visible late-orb discrepancy claim
+is withdrawn; arbitrary freed/reused SST behavior remains an inherited gap. The
+excerpt is `$VIDEO_ROOT/ssz-bring-up/campaign-20260927-mtz-native-orb-audit/capture.mp4`.
+This is phase/ownership corroboration, not matched engine/native trajectory parity.
+
+The correction invalidated the paired cold fight's old inputs (death 9435;
+matched base passed). The final controller-only repair changes 309 overlapping
+input rows before the upper transport endpoint at 11050. Its 11,051-input replica
+route and 19,457-input full clear both pass. The latter reaches actual DEZ at
+`(48,2476)`, 35 inputs earlier than before. All later traversal inputs up to that
+load remain unchanged. The original 22/37 whole-registry replay spots, spiral
+orientation and live-history isolation checks remain intact. Solo Sonic and Tails
+routes also pass unchanged. No position/ring/health/emerald seeds are added.
+
+Final engine clips (60fps, 640x448, zero deaths, full decode checked):
+- `$VIDEO_ROOT/ssz-bring-up/campaign-20260927-mtz-orb-touch-final-320/capture.mp4`
+- `$VIDEO_ROOT/ssz-bring-up/campaign-20260927-orb-fixed-paired-clear-final-320/capture.mp4`
+
+The latter continues with 143 neutral inputs after the fixture to show DEZ's
+entrance. Encounter + paired-route validation passes 21 cases; unchanged solo
+route validation passes 14. These are focused checks, not full-suite certification.

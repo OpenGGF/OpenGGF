@@ -26,7 +26,7 @@ its original unimplemented counts must not be read as current production status.
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; all eleven placed posts now activate through ordinary local movement for four native teams (44 cases), with immediate restore and two forward replays; physical contact now composes with two real death/reloads for every post, four native teams and all five selectable widths (220 cases/440 reloads); the supported S1/S2 standard-team product now adds 220 cases/440 reloads, with donor rules/art retained; finish cold-route and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; native320 Sonic+Tails cold completions remain the complete-route baseline. The lower Act2 cork/rock/switch/door puzzle now has ordinary Sonic and Knuckles passage at all five current presets, with157 whole-registry replay windows and native mechanism corroboration. Broader cold character/donor/team routes, lifecycle products and synchronized native presentation remain open; retain explicit trace deferrals. |
 | LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Solo Knuckles now completes both acts and the direct HPZ exit in52659 inputs with289 full-registry replay spots across five scoped tests. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. |
-| SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,492controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. Solo Sonic now clears both replica bosses in 11,200 cold inputs without deaths, with 42 passing full-registry replay windows; his complete 19,845-input route now defeats Mecha and loads DEZ with 41 further passing replay windows and live-history isolation. Native 320px solo Tails now has a fresh 17,670-input completion through the actual DEZ load, without death; 100 additional native route replay windows and load isolation pass. The corrected preliminary camera bounds pass all five cold approach widths; an800px controller route clears both replicas with53 further replay windows. Wide solo Tails now completes all three bosses and actual DEZ arrival in16,893 inputs, with102 route replay windows and final-lock retirement verified. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
+| SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,457controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. MTZ orbs now distinguish harmful/armed ordinary touch from the separate Hyper property write; paired inputs are reauthored after the correction. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. Solo Sonic now clears both replica bosses in 11,200 cold inputs without deaths, with 42 passing full-registry replay windows; his complete 19,845-input route now defeats Mecha and loads DEZ with 41 further passing replay windows and live-history isolation. Native 320px solo Tails now has a fresh 17,670-input completion through the actual DEZ load, without death; 100 additional native route replay windows and load isolation pass. The corrected preliminary camera bounds pass all five cold approach widths; an800px controller route clears both replicas with53 further replay windows. Wide solo Tails now completes all three bosses and actual DEZ arrival in16,893 inputs, with102 route replay windows and final-lock retirement verified. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
 | DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. Ordinary solo Sonic now also completes Act1 and reaches released Act2 control in23533 inputs, zero deaths, with61 full-registry replay spots; Tails now completes the same cold Act1 handoff in29521 inputs with75 further replay windows. Solo Sonic Act2 now completes all8 boss hits and the final-stage load in53842 inputs with103 full-registry replay windows; Tails now completes Act2 and the actual final-stage load in62588 inputs with56 passing replay windows; the short47140-input lower-pad fixture remains independent. Sonic solo now completes the full cold DEZ1/DEZ2/final chain through the actual ending in60920 inputs after the native floor-contact correction, zero deaths, with68 additional replay windows. Tails now has an independently captured68266-input cold ordinary ending route with no deaths; all 84 final-route replay windows now pass. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,316frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in49448frames after that correction with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 through complete DDZ with eleven full-registry replay spots each. Full-phase native parity and roster/lifecycle breadth remain open. All seven physical posts now have351 inventory/contact/reload cases,644 real reloads across native/donor/team/width breadth, and92 inverted-gravity deaths through the placed swap. Other encounter/lifecycle and native-presentation obligations remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; full cold native320 DEZ1-to-DDZ now completes both boss phases and the ending request in59722 inputs after the final-floor correction with boot-only emeralds. Native Hyper-star queue phase and HUD redraw timing are matched with rewind checks; death reload and declared post-white-fade ending-request/load boundaries now verify live-history isolation at320/800. Whole-scene presentation and remaining breadth still need validation. |
 
@@ -6775,3 +6775,78 @@ Integrated source`89600ccf6` on develop passes the combined queued command
 all157 replay windows pass; no executable edits follow. This closes the named
 ordinary-Knuckles puzzle gap and its Sonic/Knuckles current-preset breadth,
 without certifying the remaining full-act/roster/donor/native-presentation scope.
+
+## 2026-09-27 — SSZ Metropolis orb touch and native discrepancy audit
+
+Base `39b04d1b5`, isolated `feature/ai-ssz-native-discrepancies`. Revisited the
+remaining ordinary-touch, Hyper-touch and late-orbit claims against
+`Touch_Special/loc_103FA`, `HyperTouch_Special`, `loc_7AE22`, `sub_7AC06` and
+`sub_7B0C2`. Two orb-local omissions reproduced: an ordinary `$87` harmful
+callback banked property 1 instead of 0, and a production Hyper attack against
+an onscreen armed `$C6` orb left property 0 instead of 3. The two regressions
+failed with those exact values before the fix (no errors/skips).
+
+The orb now gates its ordinary callback on SPECIAL size 6, rejecting `$87` and
+unlisted `$DA`, and implements the existing powered-attack mutation hook.
+Its existing property snapshot needs no schema change. The Hyper regression uses
+the real frozen response list and verifies pending-property restore and forward
+replay into routine 8. Seven nonfatal-hit orbit counts are checked in both laser
+and defeat encounters. Positioning and attack-port stimulation are declared
+component-test inputs, not a new controller-only Hyper route.
+
+Rejected correction: moving the native Player2 teleport/air/animation behavior
+out of the shared Hyper handler. The ROM explicitly owns it in HyperTouch_Special;
+the old discrepancy confused it with ordinary Touch_Special. Also withdrew the
+unsupported claim that normal defeat visibly deletes surviving orbiters. The
+read-only native archive's decimal code pointers show zero orbiters 48 frames
+before defeat dispatch. The final two launched orbs pop at 455572 and are gone
+at 455573, while the escaping ship survives to 455755. Parent wait code is outside
+the exporter's filter: absence then is not deletion. Arbitrary freed/reused SST
+behavior remains a separate unverified lifetime limitation, documented in code.
+
+The first combined candidate command passed 162 checks but failed both paired
+cold-route tests at death 9435. A matched unchanged-base run passed those two
+cases (zero skips, 52.099s). `SszBossInputAuthorTool` reauthored from the unchanged
+9051-input cold prefix and reached the killing hit at 9378. The first input
+candidate passed the replica route but missed a later platform. Equal visible
+transport endpoints were insufficient: inherited subpixels differed, causing a
+missed landing/jump at 12224. Delaying that jump alone missed the next cloud;
+coarse steering and pre-transport jump variants also failed. No physics,
+transport or shared touch code was altered to fit the fixture.
+
+The final ordinary-input sequence includes two small jumps and a brief direction
+adjustment before the transport. It reconnects the existing traversal without
+position, velocity, health or ring writes. Of the overlapping BK2 rows, 309 change,
+all before 11051; the prefix through 9050 and later traversal inputs are unchanged.
+The upper fixture stays 11,051 inputs. The complete fixture now ends at the actual
+DEZ load at input 19456, trimming 35 outgoing-control rows from its old tail.
+All 37 complete-route and 22 replica-route whole-registry replay spots remain;
+no route assertion, spiral orientation check or live-history isolation check was
+relaxed. The final encounter + paired-route command passes 21 cases, no failures,
+errors or skips (53.951s). Solo Sonic/Tails routes pass unchanged (14 cases,
+2m07s); shared touch/powered and required S3K checks pass 143 cases with zero skips.
+
+The initial source-only plan selected 2,447 classes plus guards; the final
+base-pinned plan selects all 2,929 classes because BK2/script resources use the
+unclassified fallback. These are local controller sequences, not changed shared
+code. Proportionate focused validation applies to the orb writers and their real
+route consumers: shared dispatch,
+physics, renderer, snapshot schema and timing are unchanged. The focused scope
+covers those writers, the production Hyper port, complete encounter/release,
+all three native character routes, full-world replay and actual DEZ handover.
+This is not a full ordinary-suite or guard certification.
+
+Final durable evidence under `$VIDEO_ROOT/ssz-bring-up/`:
+- `campaign-20260927-mtz-native-orb-audit/capture.mp4`: original native frames
+  455110–455800, sampled every 2 frames, 30fps/640x448. The original archive retains
+  ROM/movie/emulator/exporter hashes. Phase evidence, not matched trajectory parity.
+- `campaign-20260927-mtz-orb-touch-final-320/capture.mp4`: fresh cold paired replay,
+  inputs 8600–11050, 2,451 frames at 60fps/640x448, fight through transport release.
+- `campaign-20260927-orb-fixed-paired-clear-final-320/capture.mp4`: fresh complete
+  paired replay plus 143 neutral inputs, inputs 16900–19599, 2,700 frames at
+  60fps/640x448. Mecha defeat, spiral and actual DEZ entrance, zero deaths.
+
+Both final engine movies fully decode; frames 9378, 18600 and 19550 were inspected.
+The initial load at 19456 is black during the normal fade; the incoming scene is
+visible at 19550. Initial failed/superseded input experiments are not certification.
+Integration and push follow below; the overall seven-zone campaign remains open.
