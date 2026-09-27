@@ -6865,3 +6865,52 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path="$REPO/s3k.gen" \
 
 The source and documentation are ready for the normal `develop` push and merged
 worktree cleanup. This is focused integration verification, not a new full suite.
+
+
+## 2026-09-27 — SOZ production display lifecycle breadth
+
+Base `9c0360625`, isolated `feature/ai-soz-display-lifecycle`. Reconciliation
+found that SOZ's older five-width matrices bypassed `DISPLAY_ASPECT` with raw
+320/400/512/640/800 widths. Current menu presets are320/352/400/528/800.
+The checkpoint, repeated-team-reload and connected-mechanism matrices now
+select the production enum/resolver and assert configuration plus live camera
+width, including after actual deaths. Activation replay also verifies registry
+key-set equality, not only entries present in the original snapshot. No runtime
+change was needed: all new rows passed on the existing engine.
+
+Candidate command, Java21, `DISPLAY=:0`, serial Maven queue, absolute root ROM
+paths passed as `-Ds3k.rom.path`, `-Dsonic1.rom.path`, `-Dsonic2.rom.path`:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path="$REPO/s3k.gen" \
+  -Dsonic1.rom.path="$REPO/s1.gen" -Dsonic2.rom.path="$REPO/s2.gen" \
+  '-Dtest=TestSozCheckpointReloadProduction,TestSozTeamCheckpointResetProduction,TestSozConnectedMechanismsProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+Result509 tests, zero failures/errors/skips,2m04s; inspected all eight XML class
+identities. This includes300 physical post cases,90 team cases with two deaths
+each,60 connected mechanism cases and59 S3K gates. The actual presets survive
+480 reloads with supported donor/roster/art assertions; team cases also verify
+fresh runtime owners, history isolation and released controls.
+`run_categories.py --base 9c0360625` selects2,929 classes due to the unclassified
+SOZ-only test helper. Proportionate focused validation applies: no runtime,
+shared algorithm, save schema or build/selection policy changed. This is not a
+full ordinary/guard pass. Existing cold-route and native-presentation gaps remain
+open; unchanged boss matrices retain their historically tested widths.
+
+The optional connected-mechanism capture companion now accepts
+`soz.connected.width` and `soz.connected.stride`, preserving400px/stride4 defaults.
+This enables full60fps evidence for the newly exercised presets without changing
+the controller route or engine setup.
+
+
+Both opt-in capture commands (`-Dtest=TestSozConnectedMechanismCapture`, explicit
+S3K ROM, `-Dsoz.connected.width=352` or `528`, `-Dsoz.connected.stride=1`, output
+`$VIDEO_ROOT/soz-bring-up/campaign-20260927-production-preset-WIDTH`) pass four
+cases each, zero skips. Each width records680 upper-room,3057 lower-room,240
+rock and180 switch frames, with no deaths. The upper room wraps at input596
+and ends in background routine `$14`; the lower room reaches `$20` with sand
+collision released at input3056. Inspected both widths at wrap596, lower1500
+and released3056. All eight60fps MP4s encode/decode successfully; these are
+positioned engine captures, not native pixel matches or checkpoint-death movies.

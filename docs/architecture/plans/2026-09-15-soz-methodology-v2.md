@@ -6,7 +6,11 @@ native-movement Sonic + Tails routes at width 320 are delivered on `develop`
 are verified in those routes. The lower Act2 subtype-$87 puzzle now has connected
 positioned Sonic and ordinary Knuckles passage evidence; see the current Act2
 matrix for viewport/rewind verification and the independent native mechanism
-corroboration. Full methodology acceptance remains incomplete: strict native
+corroboration. The checkpoint, repeated-team-reload and connected-room matrices
+now use all five production display presets through the actual configuration
+resolver (509 focused checks; see the per-act lifecycle refresh). Historical
+512/640-width evidence is distinguished from the current352/528 menu modes.
+Full methodology acceptance remains incomplete: strict native
 behavior/pixel parity, broader complete character/donor/viewport routes and
 remaining lifecycle/rewind products are open.
 See [remaining acceptance](#2026-09-16-retrospective-and-remaining-acceptance).

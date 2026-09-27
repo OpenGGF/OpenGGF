@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+SOZ [Act1](../architecture/validation/levels/s3k-soz-act1.md#production-display-lifecycle-refresh-2026-09-27)
+and [Act2](../architecture/validation/levels/s3k-soz-act2.md#production-display-lifecycle-refresh-2026-09-27)
+now exercise the actual320/352/400/528/800 menu presets for all physical posts,
+repeated supported-team reloads and connected Act2 mechanisms:509 focused
+checks, zero skips, including480 real death/reloads. Earlier512/640 cases are
+historical custom-width evidence; full cold-route and native-presentation gaps
+remain open.
+
 [Knuckles LRZ2 completion](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-cold-act2-completion-and-direct-hpz-2026-09-25)
 now reaches playable Hidden Palace from cold Act1 in52659 inputs, zero deaths,
 with81 additional restore/replay windows (289 across the five Knuckles tests).

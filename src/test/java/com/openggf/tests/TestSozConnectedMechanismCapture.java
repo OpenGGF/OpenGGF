@@ -20,7 +20,10 @@ class TestSozConnectedMechanismCapture {
     void capture(SozConnectedMechanismRoute.Scene scene) throws Exception {
         var out = Path.of(System.getProperty("soz.connected.capture"), scene.name().toLowerCase());
         Files.createDirectories(out.resolve("frames"));
-        var settings = new GameplayCaptureSession.Settings(400, "sonic",
+        int width = Integer.getInteger("soz.connected.width", 400);
+        int stride = Integer.getInteger("soz.connected.stride", 4);
+        if (stride < 1) throw new IllegalArgumentException("soz.connected.stride must be positive");
+        var settings = new GameplayCaptureSession.Settings(width, "sonic",
                 scene == SozConnectedMechanismRoute.Scene.LOWER ? "" : "tails", "off", null, scene.x, scene.y);
         try (var session = new GameplayCaptureSession(settings);
              var csv = Files.newBufferedWriter(out.resolve("state.csv"))) {
@@ -39,7 +42,7 @@ class TestSozConnectedMechanismCapture {
                 csv.write(session.stateLine(frame, input) + "," + events.backgroundRoutine() + ","
                         + events.sandHeight() + "," + events.backgroundCollision());
                 csv.newLine();
-                if (frame % 4 == 0) ScreenshotCapture.savePNG(session.render(),
+                if (frame % stride == 0) ScreenshotCapture.savePNG(session.render(),
                         out.resolve("frames").resolve(String.format("%05d.png", frame)));
                 assertFalse(session.player().getDead(), scene + " at frame " + frame);
                 if (scene == SozConnectedMechanismRoute.Scene.LOWER && frame > 1000

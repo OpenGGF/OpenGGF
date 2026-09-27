@@ -9,6 +9,38 @@ parity. Dated evidence retains its original scope; the final
 Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
+
+## Production display lifecycle refresh (2026-09-27)
+
+The earlier five-width matrices used 320/400/512/640/800, including two custom
+widths rather than the current menu's 352/528 presets. The checkpoint, repeated
+team reload and connected-mechanism tests now enumerate `WidescreenAspect.values()`
+and select `DISPLAY_ASPECT` through `resolveDisplayAspect()`, without overriding
+the derived pixel width. They assert the selected preset, resolved width and live
+camera width after boot and each tested reload. Historical 512/640 results below
+retain their original scope; other unchanged suites' “five widths” still refer
+to those historical rows, not newly executed 352/528 coverage.
+
+At base `9c0360625`, worktree `feature/ai-soz-display-lifecycle`, the queued Java21
+explicit-S3K/S1/S2-ROM command selecting `TestSozCheckpointReloadProduction`,
+`TestSozTeamCheckpointResetProduction`, `TestSozConnectedMechanismsProduction`
+and the four required S3K gates passes 509 tests, zero failures/errors/skips,
+2m 04s. The eight completed XML classes include both level-loading classes.
+Both acts together contribute 300 physical post contact/recreation/replay/death
+cases (all ten posts × six supported character/donor combinations × five
+presets), 90 one-/two-/six-follower cases with two consecutive real deaths each,
+and 60 connected Act2 mechanism cases. That is 480 real death/reloads, with
+ROM-backed roster/art checks; team reloads additionally check control release,
+owner replacement and outgoing rewind-history isolation.
+
+This is focused validation of test configuration and its direct production
+consumers, not a full-suite pass or new cold-route/native-parity certification.
+The change-based planner's 2,929-class fallback is caused by the SOZ test helper;
+no runtime code, shared timing/physics, save contract or build policy changed.
+Complete solo/Tails/Knuckles routes, broader incoming transitions and matched
+native presentation remain open. The positioned controller starts and existing
+ring setup are unchanged; they do not establish cold reachability.
+
 ## Supported donor roster (corrected 2026-09-16)
 
 The production [launch policy](../../../../src/main/java/com/openggf/game/launch/LaunchProfile.java)
@@ -35,7 +67,7 @@ S2 replaces Knuckles with Sonic. The native/off rosters are unchanged.
 | Tails solo | Same, including native character branches and flight interactions | Every authored post activates/reloads; positioned golem victory and playable Act 2 entry cover all five widths with off/S2 donors. Full flight-sensitive cold route remains open |
 | Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Every authored post activates/reloads; positioned golem victory and playable Act 2 entry cover all five widths with donation off. Full distinct cold route/progression remains open |
 | Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Selected mechanisms and three-player terrain restore/replay covered; repeated checkpoint team reset evidence below. No finite follower maximum is declared by the production team contract; full multi-owner interaction breadth remains open |
-| Widths 320/400/512/640/800 | Actual camera/render widths; entry/reset × every supported donor; sensitive interactions and rewind | Every authored checkpoint covers all five actual widths × the six supported character/donor combinations in this act. Selected sensitive interactions also cover widths; this is not full traversal/render coverage at every width |
+| Production presets 320/352/400/528/800 | Actual selected preset and camera width; entry/reset × every supported donor; sensitive interactions and rewind | Checkpoint and team lifecycle matrices now select `WidescreenAspect.values()` through the production resolver, including previously omitted352/528. See current execution below; historical512/640 checks remain historical custom-width evidence, not menu coverage |
 | Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Every authored checkpoint covers the six supported character/donor combinations × five widths, asserting movement capability and reload state. Positioned boss-to-Act2 victory covers all six supported character/donor combinations at each width; full donor traversal and interaction breadth remain open |
 
 Decoded checkpoint placements: `$02` at `($1780,$0708)`, `$01` at `($1A30,$0428)`, `$03` at `($2760,$0228)`, `$04` at `($2C60,$0628)`, `$05` at `($3F00,$06E8)`.
