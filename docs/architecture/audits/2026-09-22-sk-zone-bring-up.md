@@ -9056,3 +9056,99 @@ assertion text was compared and matches the original baseline exactly.
 A separate input-only retry of the prior hub passes that inherited frontier
 and reaches the later carousel at17024; it is unfinished authoring, not part
 of this candidate or evidence of Knuckles completion.
+
+
+## 2026-09-27 cold 800px completion and twisted-vine rider restoration (candidate)
+
+From integrated base `760a22892`, `mhz2-sonic-incoming-800.script/.bk2`
+contains 25,548 ordinary controller inputs from fresh MHZ1, Sonic solo, 800px,
+no donor or gameplay seeds. It includes the production setup input: do not add
+an extra settling frame. Actual FBZ load occurs at input 25,397; the final
+ordinary rightward movement reaches centre (117,1900), with control released
+and no deaths. This closes the earlier *candidate* 800px traversal frontier;
+it does not certify wider character/donor products.
+
+`TestMhzWideColdRouteCapture` uses the production game loop and frozen inputs.
+It checks 25 named whole-registry restore/forward-replay spots, with two replay
+cycles each: traversal, chase admission and damage, defeat, capsule/results,
+ship carry, weather fade and playable FBZ. Intervals stop before the fresh
+load; this is not a claim of live-history isolation across that load.
+
+The first replay failed at input 13,000 while Sonic rode the twisted vine.
+The recreated object lost `activePlayers`, leaving Sonic attached but no longer
+following the curve. The ROM owner is `Obj_MHZTwistedVine`, `sub_3DCD0` /
+`sub_3DE80`: status standing bits persist between updates; entry-window contact
+cannot reconstruct a rider already halfway around the curve. The exact field
+now uses the existing captured player-reference collection codec. No shared
+codec or forward physics changes. Short independent tests cover both curve
+halves, both riders, replacement player identities and independent release at
+320/800px. Matched source-only diagnostics fail all four cases on base and
+pass all four with the candidate; the complete route also passes. Normal Maven
+verification is queued and must be recorded before delivery.
+
+Fresh engine video on `760a22892`:
+`$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-wide-act2-clear-800/capture.mp4`.
+The 3,548-frame, 60fps, 1600x448 clip lasts 59.133 seconds and fully decodes.
+All 25,548 captured rows are alive; all 25,398 shared prefix rows match the
+winning input author on twelve gameplay fields. Fight/exit/arrival stills were
+inspected. The black load-boundary image at 25,397 is the real fade; 25,547 shows
+playable FBZ. Forward presentation is unaffected by the rider snapshot fix.
+This is engine evidence, not native pixel parity.
+
+Measurement limit: adding this input to the existing RecordingFrameDriver
+fixture diverged after the MHZ handoff (first one-pixel difference at 9,770,
+reconvergence at 9,974, persistent movement difference at 10,300). Its cause is
+unresolved. The existing native route fixtures remain unchanged. The new test
+uses the same production GameLoop as the independently reproduced capture;
+no physics was fitted to the headless driver and no driver parity is claimed.
+
+
+Validation plan for the rider follow-up: `run_categories.py --base 760a22892`
+selects all2,937 classes because the exact registration, debt-baseline entry
+and input resources fall through shared/unclassified paths. Production changes
+only one object's captured field disposition; the existing collection codec and
+all other registrations are unchanged. Proportionate validation is the four
+independent rider cases, object/controller rewind and policy tests, the complete
+800px production route, the four mandatory S3K loading/bootstrap regressions,
+and the compact-reachability/field-disposition structural guards. These cover
+replacement identities, both participants, independent release, recreation and the
+reported whole-world divergence. This is focused validation, not a full-suite
+pass. The separate shared seamless-publication integration retains its required
+full ordinary/guards run on760a22892.
+
+
+The combined760a22892 ordinary run exposed an additional stale FBZ route
+assertion in
+`TestFbzAct1RouteHeadless#placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5`:
+it required converted arms/links to survive until results, which depended on
+the old missing `Obj_FlickerMove` vertical cull. The corrected oracle explicitly
+requires those families to be absent and retains the exact surviving-family
+set and all subsequent handoff/ring-publication assertions. A source-only
+diagnostic of that complete method passes(1 test,0 skips,1.884s); the full
+class and defeat-child checks are queued for normal Maven verification. This
+is an oracle update accompanying the already integrated lifetime correction,
+not another runtime change.
+
+
+Normal candidate Maven verification (Java21, DISPLAY=:0, absolute root S3K ROM,
+serial queue) now passes the frozen800px route:1 test,0 failures/errors/skips,
+25 named whole-world replay spots,33.96s test body(1m46 Maven including the
+fresh build). The short/object/controller/policy and four mandatory S3K
+loading/bootstrap selection passes94 tests,0 failures/errors/skips,28.334s
+Maven. Separate `-Pguards` compact-reachability and field-disposition checks
+pass5 tests,0 skips. Native Sonic/Tails/pair cold consumer routes pass3 tests,
+0 skips (42.921s Maven). The complete FBZ route class and defeat-child checks
+pass24 tests,0 skips (49.714s Maven), including the corrected boundary oracle.
+Integration follows these completed candidate checks.
+
+
+Combined integration validation on unchanged760a22892, pinned base6088735c8:
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 DISPLAY=:0 OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/run_categories.py --base 6088735c85243c3d4eaaeb2bdfaf8981af666a97 --run --max-minutes 100`.
+Run20260927T172502Z-0a74fd67 selects2,935 classes. Ordinary completes25,122
+tests with1 failure(the exact FBZ surviving-family assertion above),0 errors,
+29 skips in3,693.91s. Full structural guards complete672 tests,0 failures/errors/
+skips in214.73s. The wrapper exits red; this is not a green full-suite result.
+Skips match the inherited categories:24 opt-in/local-reference cases,4 graphics
+capability assumptions and1 CPZ spin-tube assumption; none is a missing ROM.
+The completed run's exact failure and skip reasons were inspected; cleanup
+completed through `--acknowledge`; the consumed diagnostic directory is deleted.

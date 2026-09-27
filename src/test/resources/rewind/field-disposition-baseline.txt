@@ -56,7 +56,6 @@ com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance#standingPlayers
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#childRiders
 com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance#parentRiders
 com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance#standingPlayers
-com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance#activePlayers
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#killedThisFrame
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#rawSurfaceByPlayer
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#standingNextUpdate

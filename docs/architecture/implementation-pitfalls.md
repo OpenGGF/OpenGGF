@@ -1110,3 +1110,14 @@ wide view, add the display inset to the published scroll words only; remove it
 before recovering the original helper positions. The earlier `loc_555FC` clear
 must not publish new helpers. See the September 22 campaign audit for baseline
 probe evidence and candidate validation status.
+
+
+### Twisted-vine standing bits are persistent rider state
+
+`Obj_MHZTwistedVine` (`sub_3DCD0`, `sub_3DE80`) retains per-player standing
+bits while moving a rider around the curve. An identity set representing those
+bits is not a derived contact cache: a restored player halfway along the arc
+cannot re-enter through the narrow admission window. Capture the collection
+with stable player references and test object recreation with replacement player
+instances, both participants and independent release. The2026-09-27 MHZ800
+cold route exposed this at input13000; short tests cover both curve halves.

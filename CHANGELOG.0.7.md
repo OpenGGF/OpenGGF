@@ -581,7 +581,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The weather-machine palette fade retains its captured target colours when
   recreated by rewind during either half of the transition.
   Horizontal swing bars retain their shared per-player release/cooldown state
-  after rewind. The MHZ2 Knuckles press sequence flips Sonic and Tails into the ROM floor-grab
+  after rewind; twisted vines retain both riders through object recreation. The MHZ2 Knuckles press sequence flips Sonic and Tails into the ROM floor-grab
   pose when it switches to raw mappings, selecting by character identity so solo
   Tails uses his own frames as well. Cutscene doors retain their lowered state
   when streamed out and back in, and
