@@ -8524,7 +8524,14 @@ skips (61.87 seconds in the test class, Maven 82 seconds). Each row checks 48
 whole-world replay windows and 18 semantic events, reaching playable LRZ at
 35392/35517 respectively. Runtime remains identical to the fully verified
 `49586cd86`; the follow-up contains only test/input and documentation changes.
-Final integration, push and cleanup follow this recorded check.
+Runtime `49586cd86` and test/input follow-up `38f799053` were fast-forward
+integrated and pushed to develop; remote SHA was verified. No upstream conflicts
+occurred. Production source at the final commit is byte-identical to the full
+integrated run. The task worktree had no uncommitted or unmerged changes; chosen
+inputs, authoring notes and final media were preserved outside the repository.
+Its remaining ignored files were workflow links, identical configuration examples,
+generated reports/caches and temporary outputs. The merged worktree and local
+branch were removed, and stale worktree metadata pruned.
 
 The integrated ordinary lane's 29 skips were inspected by test identity: the
 same 24 opt-in/local-reference cases, four graphics-context assumptions and
@@ -8532,3 +8539,8 @@ inherited CPZ spin-tube capture assumption as the candidate run. No missing-ROM
 skips occurred. The changed shader has its separate native-display 20-test pass
 without skips. Both previously failing Kis2 fixture cases pass in this integrated
 run; this comparison is by test identity and failure, not just aggregate totals.
+
+This delivers the Knuckles ownership/SOZ completion and SSZ clipping slice; it
+does not certify all seven zones. Continue the current matrices' representative
+width/donor/team route gaps and native presentation obligations. Strict trace
+and ending exclusions remain unchanged.
