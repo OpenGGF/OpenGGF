@@ -139,8 +139,9 @@ Boss, sand-rise and transition presentation stays attached to its owning slice.
 ## Execution record and next action
 
 Implementation, the two bounded paired cold routes, and independent passage
-through the lower Act2 rock/switch puzzle are delivered. Next expand complete
-solo Sonic, Tails and Knuckles routes and remaining native-presentation/lifecycle
+through the lower Act2 rock/switch puzzle are delivered. Solo Sonic Act1 is now
+also complete (`bd1625cdb`). Next expand solo Sonic Act2, complete Tails and
+Knuckles routes, and remaining native-presentation/lifecycle
 obligations. Strict trace work remains explicitly deferred by the campaign scope;
 its unresolved parity evidence is not silently certified or made the next task.
 The [retrospective](#2026-09-16-retrospective-and-remaining-acceptance) is the current
