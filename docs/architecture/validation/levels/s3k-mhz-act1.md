@@ -223,7 +223,7 @@ routes and remaining native presentation/interaction obligations remain open.
 
 ## 2026-09-27 widescreen admission and inherited results lock
 
-Candidate `feature/ai-mhz-wide-route`, base `5ff400010`: the cold 800px Sonic
+Integrated `a2fad9a79`, from base `5ff400010`: the cold 800px Sonic
 Act 1 route reaches all six miniboss hits, actual MHZ2 reload and released
 movement without seeds or death (`mhz1-sonic-cold-complete-800.bk2`, 10,330 inputs).
 `TestS3kMhzWideAuthoredRoute` covers 17 whole-world restore/forward-replay spots.
@@ -238,7 +238,8 @@ team Act 2 routes plus the four required S3K loading/bootstrap regressions also
 passed (62 tests, zero failures/errors/skips). These are focused checks, not a
 full-suite result. The full structural guard suite also passes (672 tests, zero
 skips), as do 38 camera/mask/results-policy cases. The audit records the justified
-proportionate scope; integration remains pending.
+proportionate scope. The integrated checkout passed the combined 299-case
+focused selection with zero failures/errors/skips.
 
 Video: `$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-wide-act1-centered-handoff-800/capture.mp4`.
 A one-frame garbled sprite reload and following missing-sprite frame remain

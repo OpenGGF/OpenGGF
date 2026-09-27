@@ -8658,3 +8658,29 @@ can run. No sticky-vine runtime change was needed. Unsuccessful controller
 variants and regenerable CSV/PNG probes remain temporary and may be discarded.
 The complete 800px Act 1 input and its permanent rewind test are staged; these
 Act 2 prefixes are explicitly not completion evidence.
+
+
+### MHZ widescreen delivery — 2026-09-27
+
+`a2fad9a79` was fast-forwarded into the unchanged main `develop` base
+`5ff400010`, without conflicts or changes to the unrelated dirty disassemblies.
+The integrated checkout then passed **299 focused ordinary tests, zero failures,
+errors or skips** (98 seconds), using:
+
+```text
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk DISPLAY=:0 OPENGGF_MAVEN_QUEUE=serial
+python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PWD/s3k.gen
+-Dtest=TestS3kMhzWideAuthoredRoute,TestS3kMhzMinibossViewport,TestSonic3kMHZEvents,TestMhzBossObjects,TestS3kMhzAuthoredRoute,TestS3kMhzAct2AuthoredRoute,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestNativeArenaCameraFraming,TestLevelBoundsMaskTransition,TestLevelBoundsMaskGeometry,TestS3kResultsCameraBoundsPolicy test
+```
+
+The identical production/test tree's separate structural run passed **672 tests
+in86 classes, zero failures/errors/skips**, with `LUA_BIN=/usr/bin/lua5.4` and
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`.
+The proportionate-validation rationale above applies; no new full ordinary
+suite is claimed. Mirrored skill pitfalls compare identical, staged whitespace
+checks pass, and the commit hook accepts the documentation obligations.
+
+The verified 800px Act1 video and incomplete Act2 controller alternatives are
+external to the checkout. The remaining priorities are the 800px Act2 route
+and the inherited two-frame sprite-resource presentation gap; the multi-zone
+campaign remains active and no complete MHZ certification is claimed.

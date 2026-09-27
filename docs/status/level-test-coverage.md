@@ -741,12 +741,11 @@ now also reaches playable LRZ, with 48 replay windows and 18 semantic events.
 Other viewport/donor products and native presentation certification remain open.
 
 
-MHZ widescreen candidate (2026-09-27, `feature/ai-mhz-wide-route` at base
-`5ff400010`): controller-only 800px Sonic Act 1 completion adds 17 whole-world
+MHZ widescreen delivery (2026-09-27, `a2fad9a79` from base `5ff400010`): controller-only 800px Sonic Act 1 completion adds 17 whole-world
 rewind/replay spots; independent five-width checks cover the miniboss gate, arena
 repeat and inherited Act 2 results-window lifecycle. Native Act 2 Sonic/Tails/team
 routes remain passing. The per-act matrices record exact focused counts and the
-inherited reload-art glitch. 800px Act 2 completion and integration are still pending. Focused ordinary
-checks plus all 672 structural guards pass under the documented proportionate
+inherited reload-art glitch. 800px Act 2 completion remains pending. The integrated 299-case focused
+selection and all 672 structural guards pass under the documented proportionate
 validation scope; no full ordinary-suite pass or additional act certification
 is claimed.
