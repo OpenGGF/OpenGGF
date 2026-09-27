@@ -796,3 +796,13 @@ ordinary neutral setup step before input0 reproduces the cold Sonic route. Base
 and candidate both reach Act2 at31392 with zero deaths; all31492 state rows match.
 The earlier default-tool death is caused by its skip-intro entry mode, not a
 regression in this native-start route. A fresh corrected SOZ handoff clip exists.
+
+
+MHZ 800px continuation (2026-09-27, candidate from760a22892): frozen cold
+Sonic-only inputs now reach playable FBZ through both acts with zero deaths.
+The production-loop route adds25 named whole-world replay spots, each with
+two replay cycles. It exposed the twisted vine's omitted persistent rider set;
+four independent lower/upper-curve and320/800px cases cover both player IDs
+and release after recreation. Source-only diagnostic replay passes; normal
+Maven verification and integration remain pending. See the Act2 matrix for
+capture provenance and the unresolved RecordingFrameDriver discrepancy.

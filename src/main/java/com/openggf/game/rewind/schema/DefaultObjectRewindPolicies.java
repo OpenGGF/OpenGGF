@@ -783,6 +783,10 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance", "knuxPeerArtQueue"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper", "owner"), RewindFieldPolicy.CAPTURED),
+            // Obj_MHZTwistedVine/sub_3DCD0 and sub_3DE80 keep native P1/P2
+            // standing bits until exit. Entry windows cannot reconstruct a
+            // rider halfway through the curve; capture stable player identities.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance", "activePlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance", "parent"), RewindFieldPolicy.CAPTURED),

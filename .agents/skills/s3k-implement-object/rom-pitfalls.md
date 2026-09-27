@@ -4953,3 +4953,14 @@ when unsigned `(y - Camera_Y_pos + $80) > $200`. Missing this vertical test kept
 fallen links alive far below the arena and exposed a parentless replay freeze.
 Check short conversion/cull cases and whole-world replay during results; merely
 replaying the boss while all parents are alive misses this lifetime boundary.
+
+
+## Twisted-vine standing bits cannot be reconstructed from contact
+
+`Obj_MHZTwistedVine` (`sub_3DCD0`, `sub_3DE80`) stores independent P1/P2
+standing bits until release. An engine identity set carrying those bits is
+persistent state, even though it resembles a contact cache. After recreation,
+a player in the middle of the curve is outside the entry window and cannot
+reacquire the object. Capture stable player references; test both curve halves,
+replacement participant instances and one rider releasing while the other stays.
+The2026-09-27 cold800px MHZ route exposed the missing rider collection.

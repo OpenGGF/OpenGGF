@@ -46,6 +46,9 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance i
     private static final int RELEASE_FLIP_SPEED = 4;
 
     private boolean upperVariant;
+    // Native status(a0) P1/P2 standing bits (sub_3DCD0/sub_3DE80).
+    // Durable across rewind: the exact-field policy stores stable player IDs,
+    // because neither a recreated object nor a mid-curve rider can re-enter.
     private final Set<AbstractPlayableSprite> activePlayers =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private String lastDecision = "init";

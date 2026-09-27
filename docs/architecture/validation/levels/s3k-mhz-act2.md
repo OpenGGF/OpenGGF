@@ -348,3 +348,60 @@ oracle with independent unsigned division, the86-case event/scroll/viewport
 selection passes with zero skips. Original-game observations independently
 match3,035 scroll words and3,710 helper coordinates. Integration and800px cold
 completion remain pending; no native full-frame parity claim is made.
+
+
+## 2026-09-27 cold 800px completion and twisted-vine rider restoration (candidate)
+
+From integrated base `760a22892`, `mhz2-sonic-incoming-800.script/.bk2`
+contains 25,548 ordinary controller inputs from fresh MHZ1, Sonic solo, 800px,
+no donor or gameplay seeds. It includes the production setup input: do not add
+an extra settling frame. Actual FBZ load occurs at input 25,397; the final
+ordinary rightward movement reaches centre (117,1900), with control released
+and no deaths. This closes the earlier *candidate* 800px traversal frontier;
+it does not certify wider character/donor products.
+
+`TestMhzWideColdRouteCapture` uses the production game loop and frozen inputs.
+It checks 25 named whole-registry restore/forward-replay spots, with two replay
+cycles each: traversal, chase admission and damage, defeat, capsule/results,
+ship carry, weather fade and playable FBZ. Intervals stop before the fresh
+load; this is not a claim of live-history isolation across that load.
+
+The first replay failed at input 13,000 while Sonic rode the twisted vine.
+The recreated object lost `activePlayers`, leaving Sonic attached but no longer
+following the curve. The ROM owner is `Obj_MHZTwistedVine`, `sub_3DCD0` /
+`sub_3DE80`: status standing bits persist between updates; entry-window contact
+cannot reconstruct a rider already halfway around the curve. The exact field
+now uses the existing captured player-reference collection codec. No shared
+codec or forward physics changes. Short independent tests cover both curve
+halves, both riders, replacement player identities and independent release at
+320/800px. Matched source-only diagnostics fail all four cases on base and
+pass all four with the candidate; the complete route also passes. Normal Maven
+verification is queued and must be recorded before delivery.
+
+Fresh engine video on `760a22892`:
+`$HOME/Videos/OGGF/mhz-bring-up/campaign-20260927-wide-act2-clear-800/capture.mp4`.
+The 3,548-frame, 60fps, 1600x448 clip lasts 59.133 seconds and fully decodes.
+All 25,548 captured rows are alive; all 25,398 shared prefix rows match the
+winning input author on twelve gameplay fields. Fight/exit/arrival stills were
+inspected. The black load-boundary image at 25,397 is the real fade; 25,547 shows
+playable FBZ. Forward presentation is unaffected by the rider snapshot fix.
+This is engine evidence, not native pixel parity.
+
+Measurement limit: adding this input to the existing RecordingFrameDriver
+fixture diverged after the MHZ handoff (first one-pixel difference at 9,770,
+reconvergence at 9,974, persistent movement difference at 10,300). Its cause is
+unresolved. The existing native route fixtures remain unchanged. The new test
+uses the same production GameLoop as the independently reproduced capture;
+no physics was fitted to the headless driver and no driver parity is claimed.
+
+
+Normal candidate Maven verification (Java21, DISPLAY=:0, absolute root S3K ROM,
+serial queue) now passes the frozen800px route:1 test,0 failures/errors/skips,
+25 named whole-world replay spots,33.96s test body(1m46 Maven including the
+fresh build). The short/object/controller/policy and four mandatory S3K
+loading/bootstrap selection passes94 tests,0 failures/errors/skips,28.334s
+Maven. Separate `-Pguards` compact-reachability and field-disposition checks
+pass5 tests,0 skips. Native Sonic/Tails/pair cold consumer routes pass3 tests,
+0 skips (42.921s Maven). The complete FBZ route class and defeat-child checks
+pass24 tests,0 skips (49.714s Maven), including the corrected boundary oracle.
+Integration follows these completed candidate checks.
