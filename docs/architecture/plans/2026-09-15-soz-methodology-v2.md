@@ -1,11 +1,14 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15; status reconciled 2026-09-16. Implementation and two cold
+Date: 2026-09-15; current summary reconciled 2026-09-27. Implementation and two cold
 native-movement Sonic + Tails routes at width 320 are delivered on `develop`
 (`358679affa`, delivery record `1e3626aca`). Both bosses and outgoing transitions
-are verified in those routes. Full methodology acceptance remains incomplete:
-the lower Act 2 subtype-$87 puzzle, strict native behavior/pixel parity, broader
-character/donor/viewport routes and remaining lifecycle/rewind products are open.
+are verified in those routes. The lower Act2 subtype-$87 puzzle now has connected
+positioned Sonic and ordinary Knuckles passage evidence; see the current Act2
+matrix for viewport/rewind verification and the independent native mechanism
+corroboration. Full methodology acceptance remains incomplete: strict native
+behavior/pixel parity, broader complete character/donor/viewport routes and
+remaining lifecycle/rewind products are open.
 See [remaining acceptance](#2026-09-16-retrospective-and-remaining-acceptance).
 Dated execution sections retain the evidence and status at the time of each run.
 
@@ -2103,6 +2106,12 @@ claims no new runtime result, route coverage or native parity.
   22-scene reel is editorial selection; the archive preserves the complete record.
 
 ### Remaining acceptance, in recommended order
+
+Historical ordering below. Item1's connected engine passage is now recorded in
+[the Act2 matrix](../validation/levels/s3k-soz-act2.md#ordinary-knuckles-lower-puzzle-and-current-viewport-breadth-2026-09-27),
+with independent native Knuckles rock/switch/door observations. Synchronized native
+ordinary-character timing/pixels remain separate. The initial failure came from
+skipping the cork's floor replacement, not an incorrect rock track.
 
 1. Establish native and engine passage evidence for the lower Act 2 subtype-$87
    rock/switch puzzle. The successful upper route and failed lower attempts prove

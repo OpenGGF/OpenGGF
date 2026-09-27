@@ -473,3 +473,44 @@ proportionate for this addition: no production, build, shared algorithm or test
 selection policy changes; the new test directly runs every input and all15
 registry replay windows. The combined campaign's required broad verification
 remains separate and pending.
+
+
+## Ordinary Knuckles lower puzzle and current viewport breadth (2026-09-27)
+
+The positioned native Knuckles route starts at`($4940,$430)`, no follower/donor,
+37 declared rings and no emeralds. Its2839 ordinary inputs are committed as
+`soz2-lower-rock-knuckles-320.script`/`.bk2`. It breaks the real cork, returns west
+rolling, jumps over the rock/scorpion, gets behind the rock, pushes it onto the
+switch and crosses the raised door. The fresh320/800 movies retain37 rings and
+finish at`($4A75,$5AC)`. This is ordinary Knuckles, unlike the comparison-only
+Hyper Knuckles native segment discussed above; it remains a positioned route,
+not a cold full-act completion or synchronized native parity claim.
+
+The existing Sonic inputs reach the corridor with Knuckles but leave him on the
+rock's right; pressing the switch with the player alone does not hold the door.
+The accepted route replaces that approach with a roll and a later left jump from
+the rock's right edge. A longer delay also passes but loses rings; a spindash
+before that jump dies to the scorpion. No puzzle, collision or character physics
+were changed to make a controller sequence succeed.
+
+`TestSozLowerRockPuzzleCapture` now covers Sonic and Knuckles at all five current
+`WidescreenAspect` presets (320/352/400/528/800), with actual character identity,
+solo roster, viewport and ROM-backed player renderer assertions. Both routes
+assert the real floor replacement; terminal rock`($4834,$5B4)`; switch`($4850,$5B0)`
+at full`$80`charge while the player is away; doorY`$500`; and live passage beyond
+`$4A40`. The320/352/400 Sonic rows retain15 whole-registry45-input replay spots; the two
+wider Sonic variants and every Knuckles row have16, totaling157 windows. These
+surround cork, westward return/scorpion, first push, coupling/charge, jump-off and
+door passage.528px uses independently authored variants for each character, and
+800px Sonic has its own route. All other widths reuse the corresponding320 input.
+
+The width variants address observable controller outcomes rather than changing
+engine rules: at528 the scorpion phase changes the jump approach; at800 Sonic
+avoids an earlier hit, so the old spindash sequence instead jumps over the rock
+while still moving. Walking into it from the left works without damage. The528
+Knuckles route takes damage and recovers three rings; the320/800 movies remain
+unharmed with37. These distinctions are asserted/recorded rather than hidden by
+seeded collision, invulnerability or a retuned rock track.
+
+Execution and delivery evidence is in the campaign audit. Donor, team, Tails and
+cold-route breadth remain separate obligations; this does not certify all SOZ.

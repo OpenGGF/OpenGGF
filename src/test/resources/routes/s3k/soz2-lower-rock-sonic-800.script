@@ -1,0 +1,11 @@
+# Positioned sonic, 800px, no donor/followers; X=$4940 Y=$430, 37 rings, no emeralds.
+# Ordinary inputs through the real cork, rock-held switch and door.
+100 - / -
+30 A / -
+70 - / -
+150 L / -
+150 R / -
+180 L / -
+60 L+A / -
+10 L / -
+1 -;50 L+A;100 L;1800 R;45 R+A;180 R

@@ -632,3 +632,12 @@ adds cold arrival to the implicit checkpoint and two real GameLoop death/reloads
 for25 native/donor/preset configurations. It reproduces and corrects the bridge's
 activation-history/index mismatch. This closes the specific bridge-restart gap;
 remaining SSZ route, roster and native-presentation obligations remain open.
+
+
+### SOZ2 lower puzzle: ordinary Knuckles and viewport breadth (2026-09-27)
+
+The [Act2 matrix](../architecture/validation/levels/s3k-soz-act2.md#ordinary-knuckles-lower-puzzle-and-current-viewport-breadth-2026-09-27)
+adds a positioned ordinary-Knuckles completion and checks both Sonic/Knuckles
+routes at all five current display presets, including connected cork/rock/switch/
+door behavior and whole-registry replay. Full cold routes and other roster/donor
+products remain separate.

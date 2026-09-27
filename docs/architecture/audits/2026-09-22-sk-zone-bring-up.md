@@ -6714,3 +6714,57 @@ Integrated source `485e23cfc` on `develop` passes the same combined queued comma
 rows pass with50 actual reloads and all participant-art assertions. No executable
 edits followed this run. The bridge checkpoint gap is closed; broader campaign
 route/configuration/native-presentation obligations remain open.
+
+
+## 2026-09-27 — ordinary Knuckles SOZ2 lower puzzle and viewport routes
+
+Base`dc0f466bc`, isolated`feature/ai-soz-knuckles-puzzle`. The original SOZ v2
+plan still listed the lower rock puzzle as wholly open, despite the Sep25 Sonic
+passage and native Hyper Knuckles mechanism observations. Its current summary
+now points to the Act2 matrix; historical acceptance ordering is retained.
+Ordinary Knuckles and native-width/wide input breadth were still unverified.
+
+The Sonic2512-input sequence with Knuckles breaks the cork and reaches the
+correct floor, but stays to the rock's right; it charges the switch itself and
+then meets a closed door. Branching the ordinary inputs at610 with a westward
+roll, then jumping left from the rock's right edge at816, puts Knuckles behind
+it. The2839-input accepted route holds the switch with the rock and ends alive
+at`($4A75,$5AC)`,37rings, no hurt rows. A later jump also passes with damage; a
+spindash before the left jump dies to the scorpion. No production code changed.
+
+The initial ten-row Sonic/Knuckles × five-current-preset test passed seven rows;
+Sonic528/800 and Knuckles528 did not hold the rock on the switch. These were
+route failures, not rewind mismatches. At528 the enemy encounter changes the
+leftward jump outcome. At800 Sonic's unharmed approach reaches the requested
+spindash while moving and jumps over the rock instead; an ordinary walking
+approach solves it. Preserved width variants: Sonic5282773inputs, Sonic8002926,
+Knuckles5282919 (three recovered rings). Other rows retain their320 inputs.
+
+`TestSozLowerRockPuzzleCapture` asserts resolved identity, solo roster, actual
+preset width, decoded renderer, real cork terrain replacement, exact terminal
+rock/switch/door state, charge held with the player away, and passage.157 full
+registry capture/45-input-forward/restore/replay windows cover the connected
+mechanisms at all five presets. The Knuckles routes declare no emeralds; existing
+native Hyper Knuckles rows remain comparison-only corroboration for the shared
+mechanism, not matching character physics or synchronized pixels.
+
+The change-based plan against`dc0f466bc` selects all2929 ordinary classes plus
+guards due new route resources. Proportionate focused validation applies: only
+inputs, tests and prose change; production, build and shared contracts are
+unchanged. Directly run all ten routes and every replay window, plus the required
+S3K loading regression group after integration. This is not a new full-suite pass.
+
+Candidate queued Java21/native-display command with explicit root S3K ROM:
+`-Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestSozLowerRockPuzzleCapture test`
+passes10 cases, zero failures/errors/skips,59.248s Maven (38.91s test time).
+All157 replay windows pass. Fresh independent captures from unchanged production
+complete Knuckles320/528/800 and Sonic528/800; each ends at`($4A75,$5AC)` without
+death. Knuckles528 and Sonic528 retain3/6rings with44 hurt rows each; the other
+three retain37rings and have no hurt rows. All five60fps movies fully decode;
+held-switch/passage stills were inspected, including Knuckles800 input2727,
+Sonic800 input2814 and Knuckles528 input2880.
+
+Durable media: `$VIDEO_ROOT/soz-bring-up/campaign-20260927-<character>-lower-puzzle-complete-<width>/`,
+each containing`capture.mp4`, per-frame`state.csv`, PNGs, canonical input copies
+and a reproducible README. Temporary branch attempts are superseded by committed
+inputs and the decisions above; they are not retained as alternate acceptance.
