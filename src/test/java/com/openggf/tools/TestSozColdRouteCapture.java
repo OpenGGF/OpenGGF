@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /** Cold controller-only routes with rendered full-world replay, independent of optional video output. */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -27,20 +28,20 @@ class TestSozColdRouteCapture {
     @ParameterizedTest
     @ValueSource(ints = {0, 1})
     void pairedColdActCompletesWithTraversalReplayAndPlayableDestination(int act) throws Exception {
-        coldActCompletesWithTraversalReplayAndPlayableDestination(act, true);
+        coldActCompletesWithTraversalReplayAndPlayableDestination(act, true, "sonic");
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 1})
-    void soloColdActCompletesWithTraversalReplayAndPlayableDestination(int act) throws Exception {
-        coldActCompletesWithTraversalReplayAndPlayableDestination(act, false);
+    @CsvSource({"0,sonic", "1,sonic", "0,tails"})
+    void soloColdActCompletesWithTraversalReplayAndPlayableDestination(int act, String main) throws Exception {
+        coldActCompletesWithTraversalReplayAndPlayableDestination(act, false, main);
     }
 
-    private void coldActCompletesWithTraversalReplayAndPlayableDestination(int act, boolean paired) throws Exception {
+    private void coldActCompletesWithTraversalReplayAndPlayableDestination(int act, boolean paired, String main) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(
                 Path.of("src/test/resources/routes/s3k/soz" + (act + 1)
-                        + (paired ? "-cold-sonic-tails.bk2" : "-cold-sonic.bk2")));
-        var settings = new GameplayCaptureSession.Settings(320, "sonic", paired ? "tails" : "", "off", null, null, null);
+                        + (paired ? "-cold-sonic-tails.bk2" : "-cold-" + main + ".bk2")));
+        var settings = new GameplayCaptureSession.Settings(320, main, paired ? "tails" : "", "off", null, null, null);
         var checked = new HashSet<Integer>();
         var semanticChecked = new HashSet<String>();
         boolean bossSeen = false, sinking = false, capsule = false, resultsSeen = false,
@@ -60,7 +61,7 @@ class TestSozColdRouteCapture {
                 session.step(input);
                 session.render();
                 assertFalse(session.player().getDead(), "cold death at " + frame);
-                assertEquals("sonic", session.player().characterKey().persisted());
+                assertEquals(main, session.player().characterKey().persisted());
                 var followers = GameServices.sprites().getRegisteredSidekicks();
                 assertEquals(paired ? 1 : 0, followers.size());
                 if (paired)
@@ -128,7 +129,9 @@ class TestSozColdRouteCapture {
                     readyFrame = frame;
                 // Fixed input observations cover the cold traversal and boss/results approach;
                 // a window must never restore the outgoing registry across a level load.
-                int lastSourceSpot = act == 0 && paired ? 26000 : 31000;
+                // The shorter Tails fixture reaches Act2 before the next 17000-input spot.
+                int lastSourceSpot = act == 0 && main.equals("tails") ? 16000
+                        : act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
                     replay(session, movie, frame);
@@ -156,7 +159,7 @@ class TestSozColdRouteCapture {
             assertEquals(act == 0 ? 1 : 0, GameServices.level().getCurrentAct());
             assertTrue(readyFrame >= 0, "destination releases both control owners");
             assertEquals(
-                    act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
+                    act == 0 && main.equals("tails") ? 18 : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
             if (act == 1) {
                 assertTrue(semanticChecked.contains("boss-entry"));
                 for (int hp = 0; hp < 8; hp++) assertTrue(semanticChecked.contains("boss-hp-" + hp));
@@ -165,7 +168,7 @@ class TestSozColdRouteCapture {
                 assertTrue(isolatedHistory, "observed the actual LRZ load and outgoing-history reset");
                 assertNotNull(SessionManager.getCurrentGameplayMode().getRewindController());
             }
-            System.out.println("SOZ" + (act + 1) + (paired ? " cold pair: ready=" : " cold solo: ready=") + readyFrame
+            System.out.println("SOZ" + (act + 1) + (paired ? " cold pair: ready=" : " cold " + main + " solo: ready=") + readyFrame
                     + ", replay windows=" + checked.size() + ", semantic=" + semanticChecked);
         }
     }

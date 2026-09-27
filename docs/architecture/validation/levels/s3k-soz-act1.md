@@ -386,3 +386,30 @@ and actual results completion, and verifies the live two-player roster throughou
 All28 periodic/destination45-input whole-registry restore/replay windows pass,
 with a further semantic results-start replay. This supplements the short local
 checks; it does not certify solo routes, other widths/donors or emulator parity.
+
+
+## Solo Tails cold route (2026-09-27)
+
+`soz1-cold-tails.bk2` has16,901 ordinary controller inputs from a native320
+Tails cold start, no follower/donor, intro enabled and no gameplay-state seeds.
+The first3900 inputs derive from the existing Tails movie's SOZ segment; later
+inputs are authored against production gameplay. Flight routes respect the
+Knuckles-only walls and solid terrain; the selected lower passage uses normal
+rolling contact to defeat Rockn and break the rising sand wall. The route wakes
+the golem, draws it into sand and reaches released Act2 control.
+
+Fresh `TestSozColdAct1Capture` execution records golem sinking at15293, playable
+Act2 at16626 and zero deaths across all16,901 inputs. All16,528 shared branch/
+fresh rows through the level replacement match on position, velocity, inertia,
+air/roll/hurt/death/rings, mapping, camera and mode. The movie shows every input
+12530..16900:4371 frames,60fps,960x672,72.85s. Full ffmpeg decode and ffprobe
+pass; sinking, late-defeat and destination images inspected.
+
+`TestSozColdRouteCapture` includes this route with18 periodic/destination
+45-input whole-registry restore/replay windows and the semantic results-start
+window. Its source windows end at16000 before the actual seamless Act2 load;
+no outgoing registry is restored across that load. Candidate/integration test
+results belong to the campaign audit. This adds native320 Tails Act1 only;
+Tails Act2, Knuckles cold routes, other products and native visual parity remain
+open. Video: `$VIDEO_ROOT/soz-bring-up/`
+`campaign-20260927-tails-cold-act1-clear-320/capture.mp4`.
