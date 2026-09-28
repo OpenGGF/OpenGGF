@@ -873,3 +873,10 @@ whose parked parent has left the rewind world. Hanging/released links, the final
 parent-Y sample and repeated restore/forward replay are covered independently
 of the unfinished wide pair route. This does not close the act's breadth or
 native visual acceptance.
+
+
+SSZ cold800 Sonic+Tails first replica (2026-09-28): the [Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#cold-800px-pair-through-the-first-replica-2026-09-28)
+adds a permanent9,914-input cold prefix through GHZ defeat and its transport,
+with40 two-cycle whole-registry replay windows. Independent rendered replay
+matches all recorded state fields. The complete wide pair route and native
+visual parity remain open.

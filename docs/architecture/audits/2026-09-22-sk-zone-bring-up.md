@@ -9832,7 +9832,7 @@ under main target/ssz-wide-pair-spring-brake-20260928. No SSZ runtime change.
 ## 2026-09-28 — cold 800px SSZ Sonic+Tails continuation
 
 Base `c901b9a0f`, isolated `bugfix/ai-ssz-wide-cold-route`; clean reflink
-worktree and hooks installed. The unchanged native pair route dies at6128
+worktree and hooks installed. The unchanged 320px engine pair route dies at6128
 after its spring ascent. From6040,20 left then100 neutral gives a safe
 6160 landing at4564/2668. A50-left+jump,20-right,70-neutral branch then
 reaches6300 at4490/2668. These are temporary ordinary-controller prefixes,
@@ -9878,7 +9878,7 @@ before detachment, so releasing the reference too early cannot pass.
 
 Second-pillar variant0 from6213 (15 left+jump,25 right,45 neutral) reaches
 6298 at4349/2540 on the upper ledge. Its250-left ramp continuation reaches
-6548 at3189/2540,37 rings,zero deaths. Native input3322 is nearby3187/2540
+6548 at3189/2540,37 rings,zero deaths. 320px engine input3322 is nearby3187/2540
 at the same integer ground speed; its3323 suffix is being tried as controller
 input only, with no assumption that phases/fractions match. The new exact
 final-parent-Y assertion is included in the running SSZ traversal/compatibility/
@@ -9911,4 +9911,47 @@ present. The durable directory is
 exact BK2/script and setup provenance accompany the3914-frame60fps movie
 (source6000–9913). Full ffmpeg decode succeeds. This is engine presentation,
 not native-emulator visual parity. Upper-route continuation missed the moving
-carrier with transferred native inputs; controller-only release work is open.
+carrier with transferred 320px engine inputs; controller-only release work is open.
+
+
+Debris fix source `b5a9990d1` integrated without conflicts as `bdb318227`
+and pushed to develop. The destination selection repeated the traversal,
+compatibility, paired cold routes and four mandatory S3K checks:90 tests,
+zero failures/errors/skips (queued Maven, Java21,DISPLAY=:0, explicit root ROM
+paths;2m21). No full-suite claim. The task worktree remains in use for the
+uncommitted coldwide route fixture and continued controller authoring.
+
+The rotating-platform transfer required an earlier jump: landing near the
+post gives a small retained initial radius, whereas the 320px engine input route
+landed near its outer edge (`SszRotatingPlatformCarrierObjectInstance`,
+`loc_45FB8`). A controller-only jump from11580 captures the outside;
+release from11697 reaches the5157/1004 upper walkway. The MTZ approach then
+arrives with82 rings. Existing input author gives MTZ defeat at13205 with
+all82 rings retained; independent replay and transport verification are
+pending. No rotating-platform or boss implementation change.
+
+
+The permanent first-replica route test passed:1 test, no failures/errors/skips,
+40 whole-registry windows with two restore/forward cycles each (49.9s test,
+1m12 Maven). The fresh MTZ prefix replay matches all13,206 recorded state rows
+(input text excluded because the author records masks separately). Its neutral
+escape, jump and transport reach14,306 at5888/140 with82 rings and Tails present.
+The 320px engine upper-route suffix from11051 is now being tried from that receiving
+platform using inputs only; the final Mecha approach remains under authoring.
+
+
+The second independent GameplayCaptureTool movie covers11550–14306 and matches
+all14,307 branch CSV rows across every recorded field, with zero deaths and82
+rings retained. Exact inputs/provenance are beside the45.95s60fps MP4 under
+`~/Videos/OGGF/ssz-bring-up/campaign-20260928-paired-cold-second-replica-800`;
+full ffmpeg decode and selected defeat/arrival frames checked. The final upper
+traversal needed a fresh pillar landing and cloud jump; a candidate reaches the
+vertical wrap, but no complete final-route claim is made yet.
+
+
+Final-traversal authoring note: a white swirl was initially mistaken for a
+lightning shield. A temporary cold-prefix state probe at12000,15000 and15578–
+15582 shows `shieldType=null`; the new air press sets the ordinary Insta-Shield
+flag. The attempted double jump therefore establishes no ability bug. No
+runtime change was made. The ordinary rotating-platform outer-edge release
+instead reaches the3600-area pillar at3591/3919, alive with93 rings.
