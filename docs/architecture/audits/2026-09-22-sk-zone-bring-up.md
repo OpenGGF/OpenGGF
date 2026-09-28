@@ -9392,3 +9392,41 @@ focused destination validation, not a full ordinary/guard run. Native Sonic,
 Tails and the new800px product pass, including58 two-cycle replay windows and
 real incoming control/history release. The isolated task branch is fully merged;
 cleanup follows the push. Unrelated main-workspace files/submodules are preserved.
+
+
+## DEZ Act2 cold800 completion — 2026-09-28, candidate
+
+Base`8540cdab0844c8e3fd68cc1cf01b2a68d1821902`, isolated
+`feature/ai-dez-wide-act2-route` / `.worktrees/ai-dez-wide-act2-route`.
+Fetch/pull left main unchanged. The new53,564-input solo Sonic movie completes
+cold DEZ1 and DEZ2 through the actual final-stage handoff at53443. The Act2 matrix records inputs, rejected bridge approaches, fresh video
+and110 whole-world rewind windows. Candidate checks are in progress.
+
+The unchanged-base change plan selects all2939 ordinary classes and guards
+because of route resources. Proportionate validation applies: a new movie,
+its isolated test method and a local reference-retirement correction; no shared
+algorithm, codec or timing contract changes. Run the complete affected route test class and
+the four mandatory S3K bootstrap/loading checks, with the absolute locked-on ROM,
+then destination verification. This is focused validation, not a full-suite pass.
+
+The first normal Maven route test completed with0 failures/1 error/0 skips:
+whole-registry capture rejected a surviving falling bridge section's reference
+to its already retired parent (dynamic2549, slot59, centre8880/4005). ROM
+`loc_46EAC` installs`loc_46F18`; falling routines no longer read `$3E`.
+The ROM leaves an unused address in RAM, whereas the engine must retire its
+Java identity reference at the routine boundary to permit capture after parent
+delete. The fix does that without altering position, velocity, standing or clocks.
+A short collapse test removes the parent and captures surviving sections; existing
+fall trajectories continue to observe all original sections after detachment.
+Corrected verification includes that whole class, all four solo Act2 route cases and
+the four mandatory bootstrap/loading classes.
+
+Corrected candidate command (Java21, DISPLAY=:0, queue serial):
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off   -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen   '-Dtest=TestS3kDezTiltingBridgeHeadless,TestDezSoloActTwoColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+Completed72 tests,0 failures/errors/skips,3m35s. This includes four cold route
+cases and all110 new two-cycle checkpoints. A separate fresh53564-frame replay
+on corrected candidate classes matches every exported state field of every
+pre-fix capture row. The video remains valid forward evidence. Final change-plan
+inspection still selects2939 classes; focused scope and its limits above stand.

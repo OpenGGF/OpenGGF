@@ -24,6 +24,15 @@ for listed sizes; `HyperTouch_Special` independently ORs 3 through the powered
 attack port. Do not bank harmful touches or move the ROM's shared Hyper sidekick
 effects into an individual object. See the regression and correction in `95b478717`.
 
+**Unused ROM pointers need an explicit lifetime in snapshots.** DEZ tilting
+bridge `loc_46EAC` switches sections to `loc_46F18/loc_46F28`, which never read
+the old parent word at `$3E` again. The low section may retire while higher
+sections still fall. Keeping that unused address as a Java object reference
+makes whole-world capture fail after parent deletion. Clear it at the routine
+boundary; do not hide a still-used reference from the codec. Observe surviving
+sections through retirement in tests, rather than finding them only through
+the now-retired parent link.
+
 **A route splice needs more than equal visible coordinates.** Native word writes
 preserve position fractions. After the SSZ MTZ touch correction, two cold input
 sequences reached the same upper transport pixel but inherited different fractions;
