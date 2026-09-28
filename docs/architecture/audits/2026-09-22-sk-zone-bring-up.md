@@ -9381,3 +9381,14 @@ The promoted author also cold-replays the frozen prefix and independently report
 `DEFEATED` at19,532. Final author-only tests pass5 cases,zero skips,1m12 Maven,
 including invalid-prefix rejection before boot. The original33-case route/domain
 pass remains valid; the later edit only validates this diagnostic CLI argument.
+
+
+Integrated on `develop` as `ee8e470e4` (source `f733fddb8`), with no upstream
+changes or merge conflicts. Destination command (Java21, DISPLAY=:0, absolute
+S3K ROM, serial queue):
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$OPENGGF_ROOT/s3k.gen -Dtest=TestDezSoloColdRouteCapture,TestDezMinibossInputAuthorTool,TestS3kDezGravityPuzzleHeadless,TestS3kDezGravityRoomHeadless test`.
+All35 tests pass,zero failures/errors/skips,2m03 Maven. This is the documented
+focused destination validation, not a full ordinary/guard run. Native Sonic,
+Tails and the new800px product pass, including58 two-cycle replay windows and
+real incoming control/history release. The isolated task branch is fully merged;
+cleanup follows the push. Unrelated main-workspace files/submodules are preserved.

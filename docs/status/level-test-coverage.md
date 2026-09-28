@@ -2,7 +2,7 @@
 
 ## Current S&K campaign position — 2026-09-28
 
-This summary reconciles the dated milestones below against integrated `f411b75db`.
+This summary reconciles the dated milestones below against integrated `ee8e470e4`.
 Earlier entries retain their historical scope; their old “pending” labels are not
 current blockers where a later entry records completion. No zone is certified by
 route completion alone. Viewport, supported donor/roster, lifecycle, rewind and
@@ -15,7 +15,7 @@ native presentation obligations remain in the linked matrices.
 | [SOZ](../architecture/validation/levels/s3k-soz-act2.md) | Native solo Sonic, Tails and Knuckles complete both acts; Knuckles also completes Act 2 at 800px with whole-world replay. | The Knuckles reset and repaired routes are integrated (`49586cd86`, `38f799053`). Other viewport/donor products and native presentation acceptance remain. |
 | [LRZ](../architecture/validation/levels/s3k-lrz-act2.md) | Native Sonic/team, solo Tails and Knuckles chains reach the appropriate next stage; repaired Knuckles route reaches HPZ. | The transport/glide repair and revised route are integrated in `49586cd86`; broader widths/donors and native presentation remain. |
 | [SSZ](../architecture/validation/levels/s3k-ssz-act1.md) | Native Sonic, Tails and pair complete Act 1; Tails completes 800px. Knuckles Act 2 reaches the accepted pre-ending stop at 320/800. | Selected original-game fight presentation is corroborated; this is not whole-scene parity. Remaining donor/roster, lifecycle and presentation products stay open; excluded ending ownership is not a campaign blocker. |
-| [DEZ](../architecture/validation/levels/s3k-dez-act2.md) | Native Sonic, Tails and pair complete both acts; incoming final-fight/escape checks and corrected gravity/floor behavior are documented. | Whole cold widescreen chains and remaining native-presentation/breadth obligations remain distinct from positioned fight checks. |
+| [DEZ](../architecture/validation/levels/s3k-dez-act2.md) | Native Sonic, Tails and pair complete both acts; Sonic now clears Act 1 at 800px into released Act 2 with 58 whole-world replay windows. Incoming final-fight/escape checks and corrected gravity/floor behavior are documented. | The captured turbine contact-owner fix and 800px Act 1 route are integrated (`f733fddb8`). Continuing cold widescreen Act 2 chains and remaining native-presentation/breadth obligations remain distinct from positioned fight checks. |
 | [DDZ](../architecture/validation/levels/s3k-ddz.md) | Fresh Super and positioned incoming Hyper complete at 320/800; native cold emerald-team DEZ1→DDZ reaches the accepted ending request. | Native scene comparison and remaining supported route products remain; the excluded ending implementation is outside this stop line. |
 
 The shared seamless-presentation fix (`8258c3aed`) retains sprite publication
@@ -27,11 +27,12 @@ All 672 structural guards passed. This is not a claim of a green full-suite run;
 post-integration focused verification of `f411b75db` passes 122 ordinary cases,
 six FBZ route cases and five separate structural guards, all with zero skips.
 
-DEZ 800px cold-route authoring now has a fresh-reproduced 17,230-input prefix
-through the six-panel turbine and upper staircase to the Act 1 boss (zero
-deaths, 15 rings). The [Act 1 matrix](../architecture/validation/levels/s3k-dez-act1.md#2026-09-28--cold-sonic-800px-act-1-boss-arrival) records the inputs and captures. It remains an unfinished route;
-the native 320px inputs cannot simply be reused at this width. No production
-DEZ change is justified by that input-authoring frontier alone.
+DEZ800 Act1 is integrated with21,100 frozen ordinary inputs, both eight-hit
+phases, real load at19,889 and released Act2 control. Destination checks pass35
+cases with zero skips; the [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#2026-09-28--sonic-cold-800px-act-1-completion-and-turbine-contact-rewind)
+records the58 whole-world replay windows and fresh videos. The continuing
+Act2 input-authoring frontier reaches the lower gravity section but is not yet
+a completed or independently certified Act2 product.
 
 ## Historical milestone ledger
 
