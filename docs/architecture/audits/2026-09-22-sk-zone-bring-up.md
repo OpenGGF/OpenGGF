@@ -9955,3 +9955,41 @@ lightning shield. A temporary cold-prefix state probe at12000,15000 and15578–
 flag. The attempted double jump therefore establishes no ability bug. No
 runtime change was made. The ordinary rotating-platform outer-edge release
 instead reaches the3600-area pillar at3591/3919, alive with93 rings.
+
+
+Further ordinary-input progress: the outer-edge jump reaches3591/3919; a
+controlled run-up reaches4161/3846 with93 rings. A wait scan before the next
+swinging carrier finds a16-frame wait plus held jump/right crossing to the
+5376 transport. Normal movement/jump activates it and reaches5376/3276 at
+17370 with98 rings and Tails present. The subsequent ascent reaches the correct
+height but misses the upper return bridges; the finding below supersedes the
+initial overshoot hypothesis.
+These authoring prefixes are not a complete-route acceptance claim.
+
+
+### Weekly-limit checkpoint: paired widescreen continuation
+
+First-replica regression and inputs are committed as `d27dd37c7`; no further
+runtime edits followed the delivered debris fix. Later exploratory inputs and
+restart notes are preserved under
+`~/Videos/OGGF/ssz-bring-up/campaign-20260928-wide-pair-resume`:
+`upper-transport` has 17,371 inputs and `missing-return-bridge` has 18,401.
+Neither is a complete-route acceptance fixture. Resume the latter around
+17,876 before the turn; the missed bridge is visible around 18,120–18,140.
+
+Both 320px and 800px engine probes use layer 0, top-solid bit 12 and side-solid
+bit 13. The difference is object lifetime: Tails crosses and collapses the
+upper diagonal bridges at (6016,2744) and (6144,2712) before Sonic returns.
+ROM `loc_44DEC` checks both standing bits, so Tails triggering collapse is
+intentional. Do not remove that behavior to rescue the route.
+
+A separate unfixed mismatch exists in both flat and diagonal bridge objects:
+`isPlayerRiding()` accepts either player, but `collapse(player)` receives the
+leader and chooses retreat/debris direction from that player's X. ROM
+`loc_44C9C`/`loc_44CAA` and `loc_44E02`/`loc_44E10` select the actual standing
+slot: P1 when standing (including both standing), otherwise P2. Next session
+should add a P2-only/opposite-side regression and P1 precedence coverage, then
+correct participant selection and verify rewind. This direction issue does
+not fully explain the route blocker: the pieces expire before Sonic returns
+regardless of direction. Continue ordinary controller authoring separately.
+No source fix for this finding was started at this checkpoint.
