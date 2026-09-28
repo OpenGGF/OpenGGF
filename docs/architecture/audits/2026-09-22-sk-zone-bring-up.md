@@ -9446,3 +9446,44 @@ that belongs to the separate Act2 fixture. Fresh replay of the exact committed
 wrong-offset trial died near the first hand and is discarded as controller
 setup evidence, not a gameplay defect. The corrected trial starts native input
 50994 after the widescreen handoff53443; its outcome is not yet certified.
+
+
+## DEZ800 cold ordinary ending — 2026-09-28, candidate
+
+Base`fe5b7ff44b791f2a109b74b6632b27544fe72fa2`; fetch/pull unchanged;
+`feature/ai-dez-wide-ending-route` / `.worktrees/ai-dez-wide-ending-route`.
+No runtime changes. Frozen60,298-input cold Sonic solo route clears both main
+acts and final fingers/core/ship, then loads the ordinary ending at60297.
+The final-arena matrix records the3072-input saving, confirmed prior timeout,
+rejected controller trials, all-hit observations,177 two-cycle replay spots
+and independently matched full capture. Candidate verification is in progress.
+
+The change-based plan falls back to all2939 ordinary classes plus guards because
+of route resources. Proportionate validation applies: new inputs and one isolated
+test method, no changed runtime/helper/codec/timing contract. Verify the new wide
+route, existing native solo Sonic ending route and four mandatory S3K loading
+classes, then the new route on destination. This is focused validation, not a
+full-suite pass; inherited campaign/native/breadth gaps remain open.
+
+
+Initial queued Java21/DISPLAY=:0/absolute-S3K-ROM command selected
+`TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding+coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+61 tests,60 passed,1 failed,0 skipped,2m26s. The new test incorrectly performed
+a raw registry restore inside the callback-bearing incoming fade at50372;
+`fademanager.hadPendingCompletion` changedtrue→false because callbacks are
+intentionally transient. Existing production rewind rejects those captures
+through`FadeManagerSnapshot.isPoisoned` /`GameLoop.isRewindBlocked`.
+The test now asserts that actual guard, then checks full restore/replay at50500
+after completion. No runtime change, hidden diff exclusion or skipped obligation.
+The corrected focused run includes the existing fade/rewind-gate regressions.
+
+
+Corrected queued Java21/DISPLAY=:0/absolute-ROM command:
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off   -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen   '-Dtest=TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding,TestGameLoopSpecialStageRewindGate,TestFadeManagerRewindSnapshot' test
+```
+Completed12 tests,0 failures/errors/skips,1m18s. All177 two-cycle checkpoints,
+all phase-hit assertions and both nonempty-history/reset checks pass. The60
+unaffected passing cases from the first run remain valid; no production edits
+followed. Fresh capture and its20-field full-route equality are recorded in the
+final-arena matrix. Integration/destination verification remains pending.

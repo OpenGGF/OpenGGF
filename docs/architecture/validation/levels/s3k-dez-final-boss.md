@@ -561,3 +561,50 @@ on `33a5b0e21` plus these test additions passed: 1 test, 0 failures/errors/skips
 -Dtest=TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding test`.
 The independent 56-window Act2 test already passed. Native full-scene, breadth/lifecycle and
 campaign integration/push obligations remain open.
+
+
+## Cold solo Sonic800 ending route (2026-09-28, candidate)
+
+Base`fe5b7ff44`, isolated`feature/ai-dez-wide-ending-route`. The new
+`dez-sonic-solo-cold-ending-800.{script,bk2}` preserves60,298 ordinary controller
+inputs from cold DEZ1 through both main-act bosses, all six final fingers,
+eight core hits, eight escape-ship hits and the actual ordinary ending load.
+Native Sonic solo,800px,donor off; no position, ring, emerald, timer, boss-health
+or clock seeds. No deaths. Final-stage load50371, core killing hit57136,
+ship killing hit60010, actual ending zone13/1 at60297. Controller observation
+logs report health changes one input later than the damage-producing step.
+
+The longer Act2 fixture remains independent. Its final continuation hit the
+real timeout at57804 (`LevelState.isTimeOver=true`,36000 timer frames).
+The completed route saves3072 Act2 inputs: it proceeds directly from the lower
+teleporter to the energy bridges, times the upper Spikebonker jump, and waits
+on solid floor before the tilting bridge to avoid a projectile interception.
+Blind stationary-wait cuts broke later interactions; a shorter launch-ledge
+wait reached the boss but did not reproduce its damage sequence. A controller
+that stayed near the teleporter centre did not clear the native release window;
+an explicit leave/re-enter controller cleared it but took longer. Those trials
+were rejected. No runtime changes or timer exceptions were introduced.
+
+The existing`DezFinalRouteAuthorTool` in`cold-solo` mode authored the final
+encounter from the real handoff. Its ordinary buttons were frozen and independently
+replayed; the tool's live observations are not runtime rules or trace hydration.
+`TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding`
+adds177 whole-registry restore/45-input replay checkpoints, two cycles each,
+including the changed Act2 traversal and every final phase. It checks all required
+hits, native roster/width, and nonempty outgoing live history plus frame-zero
+isolation at both full loads. The incoming callback fade at50372 is explicitly
+non-rewindable under the existing`FadeManagerSnapshot.isPoisoned` and
+`GameLoop.isRewindBlocked` contract; the test asserts rejection there and full
+restore/replay at50500 after the fade clears. The corrected candidate run passes
+12 tests,0 failures/errors/skips,1m18s; all177 two-cycle checkpoints and both live
+load-history checks pass. Earlier60 unaffected native/loading checks passed.
+Integration/destination verification remains pending.
+
+Fresh capture on`fe5b7ff44` matches all60,298 authored rows on20 state fields
+(input text formatting excluded), with no deaths. External
+`campaign-20260928-sonic-cold-ending-800/capture.mp4` covers50300–60297:
+9998frames,60fps,1600x448,166.633seconds. Full ffmpeg decode passed;
+54150,57150 and60020 inspected for core/floor and ship-defeat presentation.
+This is engine route evidence, not synchronized native pixel parity. The ordinary
+ending load is the accepted stop; subsequent ending/credits content is not added
+to scope. Remaining donor/roster/lifecycle and native-scene obligations remain open.

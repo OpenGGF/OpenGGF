@@ -1335,3 +1335,16 @@ four solo route cases pass13 tests,0 failures/errors/skips (3m31s), following th
 72-case candidate check. All110 wide rewind windows and the actual final-stage
 history reset pass. See the audit for unchanged forward evidence and remaining
 campaign scope. The final fight itself is a separate pending800px route.
+
+
+### Faster cold800 continuation to the ordinary ending (2026-09-28, candidate)
+
+The separate`dez-sonic-solo-cold-ending-800` route reaches the final stage at50371,
+3072 inputs earlier than the longer Act2 fixture, and then loads the ordinary
+ending at60297. The direct lower bridge path avoids exploratory pit recovery;
+upper-mace and tilting-bridge projectile timing are reauthored ordinary input.
+No runtime code or timer changes. The177-window whole-route test includes the
+changed Act2 interactions and both full-load history boundaries. See
+[the final-arena matrix](s3k-dez-final-boss.md#cold-solo-sonic800-ending-route-2026-09-28-candidate)
+for precise evidence, rejected trials and current verification status. The prior
+110-window Act2 fixture remains independent and unchanged.

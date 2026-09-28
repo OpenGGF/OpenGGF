@@ -835,3 +835,12 @@ failures/errors/skips. Destination verification adds13 passing tests with no
 skips; all110 wide rewind windows and load isolation pass. Fresh forward captures
 have no deaths. See the Act2 matrix and campaign audit; broader/native parity
 obligations remain open.
+
+
+DEZ800 ordinary ending (2026-09-28, candidate):60,298 cold solo Sonic inputs now
+clear both main acts and all final phases through actual ending zone13/1. The
+faster Act2 route saves3072 inputs without changing the timer. Fresh replay matches
+all20 state fields over the complete route, zero deaths. The177-window two-cycle
+rewind test and both full-load history checks pass in the corrected12-case
+focused run, zero failures/errors/skips. Integration is pending; see the
+final-arena matrix. The longer110-window Act2 route remains independent.
