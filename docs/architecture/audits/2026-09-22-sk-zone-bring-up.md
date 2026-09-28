@@ -9211,3 +9211,66 @@ The existing five controller products complete at20,909(Sonic),22,448(Tails),
 frozen Knuckles route passes50 whole-world windows, each replayed twice,
 77.55s test body. These are focused route checks, not a new full-suite pass.
 Integration and destination verification follow.
+
+
+## 2026-09-28 — resumed campaign integration
+
+The interrupted FBZ merge was resumed from the actual index. Both conflicts
+were append-only evidence sections in this audit and the coverage backlog;
+both MHZ and FBZ records were retained. Main stayed on `develop`. Integrated
+commits are seamless publication `8258c3aed`, native MHZ chase/pillars
+`a6df1f1d0`, FBZ Tails/debris `10b066947`, vine riders and frozen MHZ800
+`936292c33`, and frozen FBZ Knuckles `192a9956d`; destination is `f411b75db`.
+Unrelated disassembly submodule changes and untracked user files are preserved.
+
+The completed shared-change ordinary/guard run on `760a22892` is recorded
+above, including its one stale debris assertion and all skips. The later exact
+field registration and test-only route changes have bounded impact: existing
+player-reference codecs and forward physics are unchanged. Post-integration
+focused checks exercise both curve variants and player identities, all native
+MHZ cold consumers, the frozen800 route, all five FBZ controller products,
+frozen Knuckles replay, corrected FBZ boundary/debris checks, object/controller
+rewind, policies and the four mandatory S3K loading/bootstrap regressions.
+Separate compact-reachability and field-disposition guards cover the new exact
+registration. These are focused destination checks, not a new full-suite run.
+
+DEZ800 input authoring retains a fresh-reproduced6,884-input cold prefix at
+`$HOME/Videos/OGGF/s3k-dez-bring-up/authoring-20260927-wide-cold/`.
+All6,884 rows match the author on twelve player fields, zero deaths, ending at
+(8043,1544) with13 rings. Later attempted inputs lose the rings during descent
+and die near the lower passage. This is an input-authoring frontier, not evidence
+for a production physics change or whole-act completion. The accepted campaign
+scope and remaining matrices are unchanged.
+
+
+Destination verification on `f411b75db`, Java21, DISPLAY=:0, serial Maven queue,
+absolute `-Ds3k.rom.path=$OPENGGF_ROOT/s3k.gen` (expanded to this checkout):
+
+- `-Pfbz-routes` with the five `TestFbzAct1ColdRoute` products and
+  `TestFbzKnucklesColdRouteCapture`:6 pass,0 failures/errors/skips,2m18 Maven.
+  That profile filters ordinary tests; the initial combined command therefore
+  proved only these six cases. The remaining selection ran separately.
+- Ordinary `-Dtest=TestMhzTwistedVineRiderRewind,TestMhzTwistedVineObjectInstance,TestS3kControllerObjectRewind,TestRewindPolicyRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestMhzWideColdRouteCapture,TestS3kMhzAct2AuthoredRoute,TestFbzAct1RouteHeadless,TestFbzMinibossDefeatChildren`:
+  122 pass,0 failures/errors/skips,1m19 Maven. Frozen MHZ800 passes all25 replay
+  windows; all three native cold consumers and the corrected FBZ oracle pass.
+
+- Separate `-Pguards -Dtest=TestCapturedPolicyCompactReachabilityGuard,TestRewindFieldDispositionGuard`:
+  5 pass,0 failures/errors/skips,19.207s Maven. All destination checks completed.
+
+A fresh remote fetch on2026-09-28 found no upstream-only commits. The five task
+worktrees are fully merged with no tracked or untracked changes. Their ignored
+contents were inspected: generated Maven/probe outputs, image caches, copied
+example configuration and reference/config/ROM links. Winning inputs are
+committed or retained outside the repository; no unknown work needs deletion.
+Delivery cleanup removes only those five task trees after the push.
+
+
+The next ordinary-input branch crosses that DEZ lower passage: brake earlier,
+jump along the hazardous conveyor and jump the following floor gap. The frozen
+7,795-input prefix reaches the turbine at(9912,2100),eight rings,zero deaths.
+An independent uninterrupted capture on `f411b75db` matches all7,795 rows on
+twelve player fields. Durable script/BK2 and fresh evidence:
+`$HOME/Videos/OGGF/s3k-dez-bring-up/authoring-20260928-wide-cold/`.
+The clip starts at6,800:995 frames,60fps,1600x448,16.583s,complete decode passes;
+final turbine still inspected. It is an authoring frontier, not whole-act or
+rewind acceptance, and introduces no DEZ runtime change.

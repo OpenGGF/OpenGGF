@@ -1,8 +1,8 @@
 # Level test coverage backlog
 
-## Current S&K campaign position — 2026-09-27
+## Current S&K campaign position — 2026-09-28
 
-This summary reconciles the dated milestones below against integrated `6088735c8`.
+This summary reconciles the dated milestones below against integrated `f411b75db`.
 Earlier entries retain their historical scope; their old “pending” labels are not
 current blockers where a later entry records completion. No zone is certified by
 route completion alone. Viewport, supported donor/roster, lifecycle, rewind and
@@ -10,19 +10,27 @@ native presentation obligations remain in the linked matrices.
 
 | Zone | Observed route coverage | Current work / remaining acceptance |
 | --- | --- | --- |
-| [MHZ](../architecture/validation/levels/s3k-mhz-act2.md) | Native Sonic, Tails and native pair complete both acts; 800px Sonic completes Act 1 and the real Act 2 handoff. | 800px Act 2 reaches the chase. A separate unintegrated candidate corrects native camera projection and ROM pillar arithmetic; complete route replay and capture are pending. MHZ Knuckles expansion remains excluded by the accepted scope. |
-| [FBZ](../architecture/validation/levels/s3k-fbz-act1.md) | Act 1 Sonic solo and 320/400 native pair revalidated; Act 2 has its documented completion matrix. | The inherited Tails route frontier is crossed by a separate input-only candidate: 22,448 inputs reach playable Act 2 and match a fresh capture. Its rewind checks exposed converted-debris lifetime/gravity defects; fixes and focused verification are pending. Knuckles, wider/donor and native presentation obligations remain. |
+| [MHZ](../architecture/validation/levels/s3k-mhz-act2.md) | Native Sonic, Tails and native pair complete both acts; 800px Sonic completes both acts and reaches playable FBZ, with 25 whole-world replay windows. | Native camera/pillar corrections and persistent vine-rider rewind are integrated (`a6df1f1d0`, `936292c33`). Broader viewport/donor and native presentation obligations remain. MHZ Knuckles expansion remains excluded by the accepted scope. |
+| [FBZ](../architecture/validation/levels/s3k-fbz-act1.md) | Act 1 native Sonic, Tails, Knuckles and 320/400 native pair reach released Act 2; frozen Tails/Knuckles inputs pass 44/50 whole-world replay windows. Act 2 retains its documented completion matrix. | Tails debris corrections and Knuckles input recovery are integrated (`10b066947`, `192a9956d`). Wider/donor and native presentation obligations remain. |
 | [SOZ](../architecture/validation/levels/s3k-soz-act2.md) | Native solo Sonic, Tails and Knuckles complete both acts; Knuckles also completes Act 2 at 800px with whole-world replay. | The Knuckles reset and repaired routes are integrated (`49586cd86`, `38f799053`). Other viewport/donor products and native presentation acceptance remain. |
 | [LRZ](../architecture/validation/levels/s3k-lrz-act2.md) | Native Sonic/team, solo Tails and Knuckles chains reach the appropriate next stage; repaired Knuckles route reaches HPZ. | The transport/glide repair and revised route are integrated in `49586cd86`; broader widths/donors and native presentation remain. |
 | [SSZ](../architecture/validation/levels/s3k-ssz-act1.md) | Native Sonic, Tails and pair complete Act 1; Tails completes 800px. Knuckles Act 2 reaches the accepted pre-ending stop at 320/800. | Selected original-game fight presentation is corroborated; this is not whole-scene parity. Remaining donor/roster, lifecycle and presentation products stay open; excluded ending ownership is not a campaign blocker. |
 | [DEZ](../architecture/validation/levels/s3k-dez-act2.md) | Native Sonic, Tails and pair complete both acts; incoming final-fight/escape checks and corrected gravity/floor behavior are documented. | Whole cold widescreen chains and remaining native-presentation/breadth obligations remain distinct from positioned fight checks. |
 | [DDZ](../architecture/validation/levels/s3k-ddz.md) | Fresh Super and positioned incoming Hyper complete at 320/800; native cold emerald-team DEZ1→DDZ reaches the accepted ending request. | Native scene comparison and remaining supported route products remain; the excluded ending implementation is outside this stop line. |
 
-The shared seamless-presentation candidate retains sprite publication across
-in-place reloads and MHZ's background scroll origin. Its 187 focused checks and
-five rendered handoff captures are recorded in the campaign audit; the complete ordinary selection passed25,105 tests with29 skips; the
-separate structural guard lane passed672 tests with zero skips. Neither that candidate nor the
-separate MHZ2 arena candidate is integrated by this summary.
+The shared seamless-presentation fix (`8258c3aed`) retains sprite publication
+across in-place reloads and MHZ's background scroll origin. Combined ordinary
+validation on `760a22892` completed 25,122 tests: one stale FBZ debris-lifetime
+assertion, zero errors, 29 inherited skips. That oracle is corrected in
+`936292c33` and its complete class plus defeat-child checks pass 24 tests.
+All 672 structural guards passed. This is not a claim of a green full-suite run;
+post-integration focused verification of `f411b75db` passes 122 ordinary cases,
+six FBZ route cases and five separate structural guards, all with zero skips.
+
+DEZ 800px cold-route authoring has a fresh-reproduced 7,795-input prefix through
+the southwest passage into the turbine section (zero deaths, eight rings). It remains an unfinished route;
+the native 320px inputs cannot simply be reused at this width. No production
+DEZ change is justified by that input-authoring frontier alone.
 
 ## Historical milestone ledger
 
