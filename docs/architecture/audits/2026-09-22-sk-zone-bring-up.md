@@ -9274,3 +9274,40 @@ twelve player fields. Durable script/BK2 and fresh evidence:
 The clip starts at6,800:995 frames,60fps,1600x448,16.583s,complete decode passes;
 final turbine still inspected. It is an authoring frontier, not whole-act or
 rewind acceptance, and introduces no DEZ runtime change.
+
+
+## 2026-09-28 — cold Sonic 800px Act 1 boss arrival
+
+Controller-only authoring on integrated `f411b75db` extends the previously
+reproduced6,884-input southwest prefix to17,230 inputs and the real Act1 boss.
+No runtime code or seeded position/rings/health/clock changed. Sonic solo,
+800px, donor off, cold DEZ1, no settle step. The winning full script/BK2 lives
+in the external task evidence directory below; this remains an authoring
+frontier, not a completed act or whole-world rewind acceptance row.
+
+The lower route required earlier braking, repeated jumps through the hazardous
+conveyor and a jump across the next gap. Turbine steering initially left panel
+bits at0x39. Temporary read-only panel diagnostics identified the missing left
+middle/bottom contacts: a downward approach changes0x39→0x3b→0x3f and releases
+the gate. Short upper-staircase jumps fall back into the lower route; a longer
+ordinary run-up reaches the upper corridor. The fixed native-width fight tail
+then dies at17,963; controller-policy exploration is unfinished. This input
+failure is not evidence for a boss implementation change.
+
+Independent uninterrupted production captures match every author row on twelve
+player fields with zero deaths:
+
+| Frontier | Rows | Video (60fps,1600x448) | Final state |
+| --- | ---: | --- | --- |
+| Turbine entrance | 7,795 | 995 frames,16.583s | (9912,2100),8 rings |
+| Turbine gate released | 14,450 | 1,450 frames,24.167s | Past the real gate |
+| Act1 boss arrival | 17,230 | 2,090 frames,34.833s | (14234,749),15 rings |
+
+All three videos completely decode. Evidence root:
+`$HOME/Videos/OGGF/s3k-dez-bring-up/authoring-20260928-wide-cold/`.
+Inputs are `turbine-7795`, `turbine-clear-14450` and `boss-arrival-17230`
+(`.script/.bk2`); movie subdirectories are `fresh-prefix`, `turbine-clear` and
+`boss-arrival`, each with `capture.mp4` and `state.csv`. Engine rendering is not
+original-emulator pixel parity. Next: author and independently verify the boss
+clear, continue the real Act2 chain, then promote the completed route and its
+short/whole-world rewind obligations through the normal delivery workflow.

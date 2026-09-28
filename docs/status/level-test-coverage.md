@@ -27,8 +27,9 @@ All 672 structural guards passed. This is not a claim of a green full-suite run;
 post-integration focused verification of `f411b75db` passes 122 ordinary cases,
 six FBZ route cases and five separate structural guards, all with zero skips.
 
-DEZ 800px cold-route authoring has a fresh-reproduced 7,795-input prefix through
-the southwest passage into the turbine section (zero deaths, eight rings). It remains an unfinished route;
+DEZ 800px cold-route authoring now has a fresh-reproduced 17,230-input prefix
+through the six-panel turbine and upper staircase to the Act 1 boss (zero
+deaths, 15 rings). The [Act 1 matrix](../architecture/validation/levels/s3k-dez-act1.md#2026-09-28--cold-sonic-800px-act-1-boss-arrival) records the inputs and captures. It remains an unfinished route;
 the native 320px inputs cannot simply be reused at this width. No production
 DEZ change is justified by that input-authoring frontier alone.
 
