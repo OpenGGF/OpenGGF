@@ -55,7 +55,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the player and the camera the distance their placement asks for, and the two that wait on
   a defeated boss sit sunk in the floor until it is beaten and then rise back into place.
   The small floating platforms dip under a standing player, the tall columns break into eight
-  falling pieces when one is stood on, and the flat bridge sections crumble away from under the
+  falling pieces when one is stood on. Rewind preserves those falling pieces after
+  their column leaves the active world. The flat bridge sections crumble away from under the
   player four pieces at a time — except the one section the cartridge marks permanent — and the
   sloped walkways follow their ROM collision surfaces and break into eight, sliding
   along their own slope as they go. The permanent staircase now carries players

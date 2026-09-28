@@ -865,3 +865,11 @@ row. [Boss matrix](../architecture/validation/levels/s3k-lrz-boss.md#cold-800px-
 Integrated as `074dafe84` / `46666b019`; destination114 tests pass with no
 failures/errors/skips, final candidate guards672 pass. Other roster/donor/
 native-scene breadth remains open.
+
+
+SSZ collapsing-column lifetime (2026-09-28): the [Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#collapsing-column-parent-lifetime-2026-09-28)
+records a cold800 pair-route discovery and a short regression for falling debris
+whose parked parent has left the rewind world. Hanging/released links, the final
+parent-Y sample and repeated restore/forward replay are covered independently
+of the unfinished wide pair route. This does not close the act's breadth or
+native visual acceptance.

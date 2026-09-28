@@ -9827,3 +9827,88 @@ inputs die at6128 after the spring ascent. Braking20 left then100 neutral
 from6040 reaches6160 at4564/2668, alive on the receiving platform; it is an
 authoring frontier, not a new validated route. Temporary inputs/CSV/images are
 under main target/ssz-wide-pair-spring-brake-20260928. No SSZ runtime change.
+
+
+## 2026-09-28 — cold 800px SSZ Sonic+Tails continuation
+
+Base `c901b9a0f`, isolated `bugfix/ai-ssz-wide-cold-route`; clean reflink
+worktree and hooks installed. The unchanged native pair route dies at6128
+after its spring ascent. From6040,20 left then100 neutral gives a safe
+6160 landing at4564/2668. A50-left+jump,20-right,70-neutral branch then
+reaches6300 at4490/2668. These are temporary ordinary-controller prefixes,
+not independently validated route coverage.
+
+Branch capture at6300 fails in
+`SszCollapsingColumnDebrisObjectInstance#column`: the falling debris retains
+a Java reference to a column no longer registered in the active rewind world.
+ROM `loc_44C2C/loc_44C32` reports the release and reads parent Y on the
+zero-delay frame; the negative-delay gravity path never dereferences the
+parent again. A short800px placed-column regression is being run before
+releasing that reference after the final parent-Y read. Do not weaken the
+identity table or omit the debris key. Existing recreation tests must retain
+links for hanging pieces and expect detachment for already released ones.
+
+The short800px regression reproduces the exact unregistered-column capture
+failure after the parent leaves while pieces remain visible (1 failure, zero
+errors/skips). An initial test compile needed two assertion imports; that is
+not the red behavior result. Production now releases the reference only after
+the zero-delay parent-Y sample. The existing deletion/recreation test derives
+which links should remain from ROM word_46618 delays after21 dispatches,
+rather than requiring all fallen pieces to retain a parent. The complete
+traversal-platform test class is running on the candidate.
+
+Candidate `TestS3kSszTraversalPlatforms` passes9 tests, zero failures/errors/
+skips (queued Java21,DISPLAY=:0,explicit root S3K ROM,1m13 Maven). The exact
+cold6300 snapshot now succeeds and all three branch variants execute without
+identity errors. This verifies the reported failure; broader delivery checks
+and independent presentation remain pending. Route inspection found the first
+pillar contact at6212 (4465/2622), before the old tail drifted back onto the
+large platform. Continue from6213 before collapse rather than trying to jump
+onto the already-consumed pillar from6300.
+
+The change-based plan at c901b9a0f selects2601 ordinary classes plus guards.
+Proportionate focused validation applies to this local lifetime boundary: no
+shared identity algorithm, physics, clock, layout or art changes. Cover the
+zero-delay final parent-Y read, hanging and released links, parent retirement,
+recreation and repeated whole-world replay, SSZ compatibility/native routes,
+mandatory S3K stability and relevant rewind guards. The new coldwide route
+will independently exercise the reported capture state. No broad pass claimed.
+A direct ROM-row assertion additionally pins the one-frame piece's final Y
+before detachment, so releasing the reference too early cannot pass.
+
+Second-pillar variant0 from6213 (15 left+jump,25 right,45 neutral) reaches
+6298 at4349/2540 on the upper ledge. Its250-left ramp continuation reaches
+6548 at3189/2540,37 rings,zero deaths. Native input3322 is nearby3187/2540
+at the same integer ground speed; its3323 suffix is being tried as controller
+input only, with no assumption that phases/fractions match. The new exact
+final-parent-Y assertion is included in the running SSZ traversal/compatibility/
+Sonic-pair/solo/Tails cold-route and mandatory-S3K selection.
+
+
+The combined queued selection completed104 tests, zero failures/errors/skips:
+`TestS3kSszTraversalPlatforms,TestS3kSszCompatibilityMatrix,TestSszColdRouteCapture,TestSszSoloColdRouteCapture,TestSszTailsColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+with `-Dmse=off`, Java21,DISPLAY=:0 and explicit absolute S1/S2/S3K root ROM
+properties. This includes the final-Y assertion and existing complete native
+pair/solo/Tails routes. Separate `-Pguards` selection
+`TestRewindFieldDispositionGuard,TestRewindRecreateLinkToleranceGuard,TestRewindArchitectureGuard,TestRewindCoverageGuard,TestObjectServicesMigrationGuard`
+passed20 tests, zero failures/errors/skips (22.4s Maven). This is focused
+validation, not the complete ordinary or guard suite.
+
+The transferred upper-route inputs reach the GHZ arena but lose the fight
+(death8552). Existing `SszBossInputAuthorTool`, cold prefix7600 at800px,
+Sonic+Tails, produced a killing hit at7951 with46 rings and no deaths.
+The exported movie's fresh prefix replay reached that state and its neutral
+continuation completed through8751, alive at594/2156. The unlocked pad still
+requires ordinary movement to its centre; complete route/replay/media work
+continues. No boss gameplay or camera logic changed.
+
+
+Independent `GameplayCaptureTool` replay of the first-replica/pad prefix:
+9914 frames, zero deaths, all recorded CSV fields identical to the branch
+export,46 rings retained at the upper receiving platform(512,1420),Tails
+present. The durable directory is
+`~/Videos/OGGF/ssz-bring-up/campaign-20260928-paired-cold-first-replica-800`;
+exact BK2/script and setup provenance accompany the3914-frame60fps movie
+(source6000–9913). Full ffmpeg decode succeeds. This is engine presentation,
+not native-emulator visual parity. Upper-route continuation missed the moving
+carrier with transferred native inputs; controller-only release work is open.
