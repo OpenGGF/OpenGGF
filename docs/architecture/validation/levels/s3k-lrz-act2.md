@@ -957,7 +957,7 @@ zero deaths. External `lrz-bring-up/campaign-20260928-wide-cold-act2-clear-800/c
 shows37965–41347:3,383frames,60fps,1600x448,56.383333s. Full ffmpeg decode passes;
 38580/40900/41125/41300 stills inspected. The earlier door-eight clip covers the
 opening climb. These are engine presentation observations, not synchronized
-native pixel parity. Boss completion, integration and remaining
+native pixel parity. The separate coldwide boss route now reaches HPZ. Remaining
 roster/donor/viewport/native-scene matrix obligations remain open.
 
 Wide Act2 focused validation completed on the candidate: queued Java21,
@@ -967,3 +967,9 @@ one test,zero failures/errors/skips,104 whole-registry checkpoints with two
 boulder control,nine-ring destination carry,playable boss arrival and full-load
 live-history isolation all pass. The separate full guard lane also passed672 tests, zero failures/errors/skips
 (`-Dmse=off -Pguards test -B`,3m16s).
+
+Integrated as source `074dafe84`, merge `46666b019`. Destination combined LRZ/
+mandatory-S3K selection passes114 tests with zero failures/errors/skips,
+including all three coldwide routes and their complete rewind/history checks.
+Final candidate guards pass672 checks. This records the delivered slice;
+remaining roster/donor/viewport and native-scene obligations are unchanged.

@@ -862,4 +862,6 @@ The50,659-input cold wide boss continuation now reaches playable HPZ, with71
 two-cycle checkpoints, earned-shield/14-hit/capsule/results observations and
 full-load history isolation passing. Its independent video matches every CSV
 row. [Boss matrix](../architecture/validation/levels/s3k-lrz-boss.md#cold-800px-sonictails-complete-route-2026-09-28-candidate).
-Integration and other roster/donor/native-scene breadth remain open.
+Integrated as `074dafe84` / `46666b019`; destination114 tests pass with no
+failures/errors/skips, final candidate guards672 pass. Other roster/donor/
+native-scene breadth remains open.

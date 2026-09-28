@@ -1205,5 +1205,11 @@ lane passed25,146 tests with29 inspected skips; the separate guard lane passed67
 checks. The combined runner stopped between lanes because later test files were
 added during execution; see exact scope and separate Act2 validation in the
 [campaign evidence](../../audits/2026-09-22-sk-zone-bring-up.md#2026-09-28--cold-800px-lrz-act-1-clear).
-Coldwide Act2 now has separate route/rewind evidence. End-boss completion,
-integration and other roster/donor/native-scene obligations remain open.
+Coldwide Act2 and the end boss now have separate route/rewind evidence.
+Other roster/donor/native-scene obligations remain open.
+
+Integrated as source `074dafe84`, merge `46666b019`. Destination combined LRZ/
+mandatory-S3K selection passes114 tests with zero failures/errors/skips,
+including all three coldwide routes and their complete rewind/history checks.
+Final candidate guards pass672 checks. This records the delivered slice;
+remaining roster/donor/viewport and native-scene obligations are unchanged.

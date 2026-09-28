@@ -421,5 +421,11 @@ zero deaths. The6779-frame film43880–50658 is1600x448 at60fps,112.983333s;
 full ffmpeg decode passes and49177/49500/50000/50658 stills were inspected.
 External video: `lrz-bring-up/campaign-20260928-wide-cold-boss-hpz-800/capture.mp4`.
 This is engine presentation evidence, not synchronized native pixel parity.
-Integration and remaining roster/donor/viewport/native-scene breadth stay open. See the campaign audit for exact validation
+Remaining roster/donor/viewport/native-scene breadth stays open. See the campaign audit for exact validation
 lane accounting and the rejected controller-export attempt.
+
+Integrated as source `074dafe84`, merge `46666b019`. Destination combined LRZ/
+mandatory-S3K selection passes114 tests with zero failures/errors/skips,
+including all three coldwide routes and their complete rewind/history checks.
+Final candidate guards pass672 checks. This records the delivered slice;
+remaining roster/donor/viewport and native-scene obligations are unchanged.
