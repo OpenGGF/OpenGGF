@@ -422,3 +422,73 @@ Inputs are `turbine-7795`, `turbine-clear-14450` and `boss-arrival-17230`
 original-emulator pixel parity. Next: author and independently verify the boss
 clear, continue the real Act2 chain, then promote the completed route and its
 short/whole-world rewind obligations through the normal delivery workflow.
+
+
+## 2026-09-28 — Sonic cold 800px Act 1 completion and turbine contact rewind
+
+On base `121837f86`, branch `feature/ai-dez-wide-cold-route`, frozen
+`src/test/resources/routes/s3k/dez1-sonic-cold-800.script/.bk2` contains21,100
+ordinary inputs from cold DEZ1, Sonic solo/800px/donor off/no settle or state
+seeds. Both eight-hit phases are defeated, the actual Act2 load occurs at19,889,
+and the incoming transport releases control before the final ordinary movement.
+This completes this Act1 product, not the remaining Act2 route or other products.
+
+The first snapshot-based boss author (180-frame horizon,12 policies) died at
+18,252 after three hits. A300-frame horizon and18 policies, including ordinary
+jump release/repress inputs, reach the second phase's fatal hit at19,532.
+These are controller-author choices, not fitted gameplay values. The method is
+preserved as `DezMinibossInputAuthorTool`; its observer distinguishes the first
+phase's eight-hit counter from final defeat and never treats absence as victory.
+Fresh ordinary playback reproduces the winning input and the real Act2 load.
+
+The initial20,150-input recording stopped during incoming
+results/transport. It established the boss clear but did not establish released
+control. The accepted21,100-input recording extends the same buttons through
+release. `TestDezSoloColdRouteCapture` adds58 whole-registry restore/forward
+windows, each replayed twice, across traversal, all six panels, staircase,
+both boss phases, defeat/results, load and incoming release. No interval crosses
+the load. Live history separately verifies outgoing snapshots are discarded
+while the seamless frame numbering continues. Native Sonic/Tails routes remain.
+
+At13,174, the new route exposed `S3kDezGravityPuzzleObjectInstance` clearing
+`playerOnePushedThisUpdate` after the generic codec had restored it. The immediate
+snapshot diff was scalarData[4], expected1/actual0. That flag models the `a1`
+owner in `loc_499EC`: shipped `FixBugs=0` lets P2's same-pass contact mark P1's
+panel. The repair removes only the post-restore clear; the next ordinary update
+still clears it. An independent short two-player test restores between contacts
+and checks both native ownership and its normal next-update reset. No forward
+physics, collision, panel selection or visual timing changed.
+
+Validation plan: the change-based runner selects all2,939 ordinary classes
+because the author tool and route resources are shared/unclassified. Impact is
+bounded to a standalone diagnostic tool, tests and one object's restore hook;
+no shared codec, timing or runtime contract changed. Proportionate validation
+covers the short two-player behavior, complete puzzle/room tests, both native
+cold consumers, the new whole-world route and author phase-accounting tests.
+The first candidate selection completed65 tests with one exact wide-route
+restore failure above and no skips; all59 mandatory S3K loading/bootstrap cases
+and both native routes passed. After the repair and input extension,
+`-Dtest=TestDezSoloColdRouteCapture,TestDezMinibossInputAuthorTool,TestS3kDezGravityPuzzleHeadless,TestS3kDezGravityRoomHeadless`
+passes33 tests,zero failures/errors/skips,1m26 Maven. Java21, DISPLAY=:0,
+absolute root S3K ROM, serial Maven queue. This is focused validation, not a
+full-suite result. Destination verification/integration remain to be recorded.
+
+Fresh engine captures on unchanged forward runtime `f411b75db`:
+`$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260928-sonic-cold-act1-clear-800/`
+(2,950 frames,60fps,1600x448,49.167s) and
+`$HOME/Videos/OGGF/s3k-dez-bring-up/campaign-20260928-sonic-act2-release-800/`
+(2,232 frames,60fps,1600x448,37.2s). The latter independently runs22,032 inputs,
+zero deaths; all20,150 shared rows match the first capture on every CSV field.
+The first19,890 rows also match the input author on twelve player fields.
+The retained21,100-input route is a prefix of that verified release capture.
+Complete decode and selected boss/release stills checked. The boss currently
+uses the original left-anchored arena bounds, with the automatic mask on its
+right; centering/presentation acceptance is not newly claimed by this route.
+Original-emulator pixel parity and remaining viewport/donor/roster breadth stay
+open in the matrix. All earlier frontier-only notes are superseded for this
+specific Act1 route; the full seven-zone campaign remains open.
+
+The promoted author also cold-replays the frozen prefix and independently reports
+`DEFEATED` at19,532. Final author-only tests pass5 cases,zero skips,1m12 Maven,
+including invalid-prefix rejection before boot. The original33-case route/domain
+pass remains valid; the later edit only validates this diagnostic CLI argument.

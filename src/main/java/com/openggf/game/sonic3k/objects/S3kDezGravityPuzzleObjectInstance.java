@@ -340,7 +340,10 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
         if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
             bobAngle = extra.bobAngle();
         }
-        playerOnePushedThisUpdate = false;
+        // The generic codec restores playerOnePushedThisUpdate. It models the
+        // a1 owner retained by loc_499EC (FixBugs=0) after P1's contact; clearing
+        // it here corrupts the captured state and changes a following P2 contact.
+        // Only the next ordinary update starts a new contact pass and clears it.
     }
 
     private record RewindExtra(int bobAngle)

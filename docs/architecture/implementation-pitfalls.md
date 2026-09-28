@@ -1121,3 +1121,15 @@ cannot re-enter through the narrow admission window. Capture the collection
 with stable player references and test object recreation with replacement player
 instances, both participants and independent release. The2026-09-27 MHZ800
 cold route exposed this at input13000; short tests cover both curve halves.
+
+
+### Custom restore hooks must not clear generically captured contact ownership
+
+DEZ1's turbine puzzle retains whether P1 already pushed in this contact pass,
+modeling `loc_499EC`'s `a1` ownership with shipped `FixBugs=0`. The generic codec
+captures this flag, but an old custom restore hook cleared it after decoding.
+A snapshot taken on the sixth panel contact exposed an immediate world-state
+mismatch; a short P1-contact/restore/P2-contact test also detects the wrong
+panel owner. Restore the declared state exactly and let the next normal update
+clear the flag. Do not silently turn a captured flag into a derived cache in a
+custom hook. The original two-player bug remains preserved (2026-09-28).
