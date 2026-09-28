@@ -31,7 +31,10 @@ sections still fall. Keeping that unused address as a Java object reference
 makes whole-world capture fail after parent deletion. Clear it at the routine
 boundary; do not hide a still-used reference from the codec. Observe surviving
 sections through retirement in tests, rather than finding them only through
-the now-retired parent link.
+the now-retired parent link. SSZ column debris has a subtler boundary:
+`loc_44C2C/loc_44C32` reports at delay zero but still reads parent Y on that
+same update; detach only after that final read. Later negative-delay gravity
+updates never dereference the pointer, even if the ROM word still contains it.
 
 **A route splice needs more than equal visible coordinates.** Native word writes
 preserve position fractions. After the SSZ MTZ touch correction, two cold input

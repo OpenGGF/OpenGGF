@@ -29,7 +29,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -159,6 +162,18 @@ class TestS3kSszTraversalPlatforms {
                 column.pendingDebrisForTest(),
                 "routine(a0) counts the pieces still to report");
         assertEquals(8, expectedFrames.length, "word_46618 rows decoded from the ROM");
+        for (var piece : allActive(SszCollapsingColumnDebrisObjectInstance.class)) {
+            int row = piece.getSpawn().subtype();
+            if (rom.readU16BE(DEBRIS_TABLE + row * 8 + 4) == 1) {
+                int offset = (short) rom.readU16BE(DEBRIS_TABLE + row * 8 + 2);
+                assertEquals((column.getY() + offset) & 0xFFFF, piece.getY(),
+                        "zero-delay entry still samples the final parent Y before detaching");
+                assertNull(piece.columnForTest(), "no future ROM parent dereference after release");
+            } else {
+                assertSame(column, piece.columnForTest(), "hanging pieces still follow the parent");
+            }
+        }
+
 
         for (int frame = 0; frame < 600 && column.pendingDebrisForTest() > 0; frame++) {
             fixture.stepIdleFrames(1);
@@ -291,10 +306,11 @@ class TestS3kSszTraversalPlatforms {
      * all of them green). Here the capture is taken while the column's eight {@code word_46618}
      * pieces are falling, the run then continues until every piece has been deleted, and only then
      * is the snapshot restored. The pieces have to come back as <em>new</em> instances, and each
-     * one's {@code parent3(a0)} link has to resolve through the identity table to the live column.
+     * still-hanging piece's parent link must resolve to the live column. Released
+     * pieces no longer dereference that native pointer and must remain detached.
      */
     @Test
-    void restoringPastTheDebrisDeletionRecreatesThePiecesAndTheirColumnLink() {
+    void restoringPastTheDebrisDeletionRecreatesThePiecesAndTheirColumnLink() throws IOException {
         // $7E:$00 at ($600,$960).
         HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x600, 0x900);
         SszCollapsingColumnObjectInstance column = null;
@@ -341,8 +357,17 @@ class TestS3kSszTraversalPlatforms {
         for (SszCollapsingColumnDebrisObjectInstance piece : restored) {
             assertTrue(originals.stream().noneMatch(original -> original == piece),
                     "a piece survived the deletion instead of being recreated");
-            assertSame(liveColumn, piece.columnForTest(),
-                    "the ObjectRefId sidecar resolved parent3(a0) to the restored column");
+            int row = piece.getSpawn().subtype();
+            int delay = RomByteReader.fromRom(RomManager.getInstance().getRom())
+                    .readU16BE(DEBRIS_TABLE + row * 8 + 4);
+            // The child executes once on allocation, then twenty idle ticks
+            // precede this snapshot. The zero-delay frame performs the last read.
+            if (delay > 21) {
+                assertSame(liveColumn, piece.columnForTest(),
+                        "the hanging piece resolves its parent through the identity table");
+            } else {
+                assertNull(piece.columnForTest(), "released piece must not retain its retired parent");
+            }
         }
         sameSnapshot(before, registry.capture(), "restore past the debris deletion");
 
@@ -350,6 +375,37 @@ class TestS3kSszTraversalPlatforms {
                 new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
         fixture.stepIdleFrames(1);
         sameSnapshot(after, registry.capture(), "forward replay past the debris deletion");
+    }
+
+    @Test
+    void fallingDebrisRewindsAfterItsColumnLeavesTheActiveWorld() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(800, 0x600, 0x900);
+        SszCollapsingColumnObjectInstance column = null;
+        for (int frame = 0; frame < 240 && column == null; frame++) {
+            fixture.stepIdleFrames(1);
+            column = active(SszCollapsingColumnObjectInstance.class);
+        }
+        assertNotNull(column);
+        for (int frame = 0; frame < 600 && !column.collapsedForTest(); frame++) fixture.stepIdleFrames(1);
+        assertTrue(column.collapsedForTest());
+        for (int frame = 0; frame < 300
+                && allActive(SszCollapsingColumnObjectInstance.class).contains(column); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertFalse(allActive(SszCollapsingColumnObjectInstance.class).contains(column),
+                "loc_44B90 parks the parent after all release reports");
+        assertFalse(allActive(SszCollapsingColumnDebrisObjectInstance.class).isEmpty(),
+                "falling pieces remain visible after their parent leaves");
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = assertDoesNotThrow(registry::capture);
+        fixture.stepIdleFrames(12);
+        var after = registry.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(before);
+            fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+            fixture.stepIdleFrames(12);
+            sameSnapshot(after, registry.capture(), "detached falling debris cycle " + cycle);
+        }
     }
 
     private static void sameSnapshot(CompositeSnapshot a, CompositeSnapshot b, String label) {

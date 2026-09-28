@@ -98,6 +98,14 @@ public final class SszCollapsingColumnDebrisObjectInstance extends AbstractObjec
             if (column != null) {
                 y = (column.getY() + hangOffsetY) & 0xFFFF;
             }
+            // loc_44C32 still reads parent Y on the zero-delay frame. From
+            // the next negative-delay entry, loc_44C14 uses only local Y and
+            // gravity. Release our reference after that final read: the ROM
+            // no longer dereferences its pointer, and the column may now park
+            // and leave the rewind world while this piece is still falling.
+            if (hangDelay == 0) {
+                column = null;
+            }
             return;
         }
         fallAccumulator += GRAVITY;

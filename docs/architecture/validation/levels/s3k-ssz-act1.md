@@ -807,3 +807,20 @@ Final engine clips (60fps, 640x448, zero deaths, full decode checked):
 The latter continues with 143 neutral inputs after the fixture to show DEZ's
 entrance. Encounter + paired-route validation passes 21 cases; unchanged solo
 route validation passes 14. These are focused checks, not full-suite certification.
+
+
+### Collapsing-column parent lifetime (2026-09-28)
+
+The cold800 Sonic+Tails continuation exposed a rewind capture failure while
+column debris remained visible after its parent parked and left the active
+world. `loc_44C32` still samples parent Y on the zero-delay frame; subsequent
+negative-delay entries use only local gravity. The engine now releases the
+unused parent reference after that final sample, preserving forward movement.
+
+`TestS3kSszTraversalPlatforms#fallingDebrisRewindsAfterItsColumnLeavesTheActiveWorld`
+reproduces the original unregistered-parent failure at800px, then verifies two
+whole-registry restore/forward cycles after retirement. The existing recreation
+check uses ROM `word_46618` delays to distinguish hanging pieces, whose links
+must survive, from released pieces. The delay-one row also checks the final
+parent-Y read before detachment. These are short independent checks; the full
+800px pair route and visual evidence remain in progress in the campaign audit.
