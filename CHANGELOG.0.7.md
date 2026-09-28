@@ -384,6 +384,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   preserves the native wait and score bonus before the end sign. Converted arm
   and chain debris continues independently after parent retirement and rewind,
   uses the ROM's vertical cull, and capsule fragments apply MoveSprite gravity.
+  Frozen solo Tails and Knuckles routes reach playable Act 2 from cold entry,
+  with whole-world rewind checks through traversal, the boss and results.
   The ending
   pose retains existing plunger support across the seamless manager replacement. Zone-owned tumble
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1

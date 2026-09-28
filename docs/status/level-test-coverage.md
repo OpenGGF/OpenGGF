@@ -806,3 +806,10 @@ four independent lower/upper-curve and320/800px cases cover both player IDs
 and release after recreation. Source-only diagnostic replay passes; normal
 Maven verification and integration remain pending. See the Act2 matrix for
 capture provenance and the unresolved RecordingFrameDriver discrepancy.
+
+FBZ Knuckles follow-up (2026-09-27, candidate): input-only corrections retry
+the prior hub after knockback and time the upper-carousel jump. Frozen22,055
+inputs reach released Act2; an independent fresh capture matches all gameplay
+rows with zero deaths. Whole-world frozen-input replay and five existing route
+products await normal Maven verification; native320 only, not donor/width
+completion. The Act1 matrix records rejected inputs and provenance.

@@ -479,6 +479,12 @@ class TestFbzAct1ColdRoute {
                     mask = firstRotor.next(player, GameServices.level().getObjectManager());
                     if (firstRotor.finished) { firstRotatingPassed = true; movieRow = 15700; }
                 }
+                // Ordinary knockback can return Knuckles to the previous hub.
+                // Retry that transfer instead of steering toward a skipped hub.
+                if (player instanceof com.openggf.sprites.playable.Knuckles
+                        && firstRotatingPassed && remainingRotatingStage == 1 && px < 0x23E0) {
+                    remainingRotatingStage = 0;
+                }
                 if (firstRotatingPassed && remainingRotatingStage < 2 && py < 0x240) {
                     int launchX = remainingRotatingStage == 0 ? 0x2320 : 0x2420;
                     int landingX = remainingRotatingStage == 0 ? 0x2408 : 0x2508;
@@ -965,39 +971,33 @@ class TestFbzAct1ColdRoute {
                     target = null;
                 }
             } else if (stage == 3) {
-                if (target == null && (!(player instanceof com.openggf.sprites.playable.Knuckles)
-                        || x <= 0x2CC8)) {
+                if (player instanceof com.openggf.sprites.playable.Knuckles && !player.getAir()
+                        && player.getLatchedSolidObjectInstance() instanceof FbzFloatingPlatformObjectInstance
+                        && !departure.isEmpty() && (lastMask & 16) == 0) {
+                    target = null;
+                    departure = "";
+                }
+                // Knuckles jumps from the floating platform while the outer
+                // member approaches the bottom of its arc from the left. A
+                // later chase/glide meets its side instead of its top surface.
+                if (target == null) {
                     target = objects.activeObjectsOfType(FbzRotatingPlatformObjectInstance.class).stream()
                             .filter(o -> o.getOutOfRangeReferenceX() == 0x2C80)
                             .filter(o -> Math.abs((byte) o.memberRadius()) == 0x5C)
-                            .filter(o -> o.getX() > 0x2C80
-                                    && o.getY() >= (player instanceof com.openggf.sprites.playable.Knuckles ? 0x6A0 : 0x680)
-                                    && o.getY() <= 0x6B0)
+                            .filter(o -> player instanceof com.openggf.sprites.playable.Knuckles
+                                    ? o.getX() < 0x2C80 && o.getY() >= 0x6A0 && o.getY() <= 0x6AB
+                                    : o.getX() > 0x2C80 && o.getY() >= 0x680 && o.getY() <= 0x6B0)
                             .findFirst().orElse(null);
                 }
-                mask = target == null ? trapLandingMask(player,
-                        player instanceof com.openggf.sprites.playable.Knuckles ? 0x2CC8 : 0x2CE0)
+                mask = target == null ? trapLandingMask(player, 0x2CE0)
                         : trapLandingMask(player, target.getX()) | (!player.getAir() || player.getYSpeed() < 0 ? 16 : 0);
-                if (target != null && player instanceof com.openggf.sprites.playable.Knuckles
-                        && !player.getAir() && x > 0x2CC8) {
-                    // Build horizontal speed on the actual floating platform
-                    // while the upper member approaches the bottom of its arc.
-                    mask = 4;
-                }
-                if (target != null && player instanceof com.openggf.sprites.playable.Knuckles
-                        && player.getAir()) {
-                    // Extend the return to the moving upper member with the
-                    // character's ordinary glide; release before passing it.
-                    if (player.getDoubleJumpFlag() == 1) mask = x > target.getX() + 0x12 ? 20 : 0;
-                    else if (player.getDoubleJumpFlag() == 0 && player.getYSpeed() >= 0
-                            && x > target.getX() + 0x12 && (lastMask & 16) == 0) mask = 20;
-                }
                 if (departure.isEmpty() && target != null && !player.getAir()
                         && (mask & 16) != 0 && (lastMask & 16) == 0) {
                     departure = "%04X,%04X to %04X,%04X".formatted(x, y, target.getX(), target.getY());
                 }
                 if (target != null && player.isOnObject() && !player.getAir()
-                        && player.getLatchedSolidObjectInstance() instanceof FbzRotatingPlatformObjectInstance actual) {
+                        && player.getLatchedSolidObjectInstance() instanceof FbzRotatingPlatformObjectInstance actual
+                        && actual.getY() < 0x6D0) {
                     target = actual;
                     stage = 4;
                 }
