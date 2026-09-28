@@ -1337,7 +1337,7 @@ history reset pass. See the audit for unchanged forward evidence and remaining
 campaign scope. The final fight itself is a separate pending800px route.
 
 
-### Faster cold800 continuation to the ordinary ending (2026-09-28, candidate)
+### Faster cold800 continuation to the ordinary ending (2026-09-28)
 
 The separate`dez-sonic-solo-cold-ending-800` route reaches the final stage at50371,
 3072 inputs earlier than the longer Act2 fixture, and then loads the ordinary
@@ -1345,6 +1345,10 @@ ending at60297. The direct lower bridge path avoids exploratory pit recovery;
 upper-mace and tilting-bridge projectile timing are reauthored ordinary input.
 No runtime code or timer changes. The177-window whole-route test includes the
 changed Act2 interactions and both full-load history boundaries. See
-[the final-arena matrix](s3k-dez-final-boss.md#cold-solo-sonic800-ending-route-2026-09-28-candidate)
+[the final-arena matrix](s3k-dez-final-boss.md#cold-solo-sonic800-ending-route-2026-09-28)
 for precise evidence, rejected trials and current verification status. The prior
 110-window Act2 fixture remains independent and unchanged.
+
+Integrated`8cebbd847`: the complete destination route passes all177 two-cycle
+windows, phase-hit and full-load history checks. See the final-arena matrix for
+candidate/destination commands and remaining certification limits.

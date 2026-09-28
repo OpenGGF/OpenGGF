@@ -563,7 +563,7 @@ The independent 56-window Act2 test already passed. Native full-scene, breadth/l
 campaign integration/push obligations remain open.
 
 
-## Cold solo Sonic800 ending route (2026-09-28, candidate)
+## Cold solo Sonic800 ending route (2026-09-28)
 
 Base`fe5b7ff44`, isolated`feature/ai-dez-wide-ending-route`. The new
 `dez-sonic-solo-cold-ending-800.{script,bk2}` preserves60,298 ordinary controller
@@ -598,7 +598,9 @@ non-rewindable under the existing`FadeManagerSnapshot.isPoisoned` and
 restore/replay at50500 after the fade clears. The corrected candidate run passes
 12 tests,0 failures/errors/skips,1m18s; all177 two-cycle checkpoints and both live
 load-history checks pass. Earlier60 unaffected native/loading checks passed.
-Integration/destination verification remains pending.
+Delivered source`0114dfdfb`, integrated`8cebbd847`. The destination complete-route
+test passes (0 failures/errors/skips,1m18s), including all177 two-cycle windows
+and both load-history checks. No runtime code changed.
 
 Fresh capture on`fe5b7ff44` matches all60,298 authored rows on20 state fields
 (input text formatting excluded), with no deaths. External

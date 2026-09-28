@@ -6198,12 +6198,21 @@ and a missing Hyper mutation hook; those are covered by the encounter regression
 
 ---
 
-## Death Egg `$1700` Has No Resource Profile, Events or Arena
+## Death Egg `$1700` missing arena implementation (RESOLVED)
 
-- **Location** — `Sonic3kLevelResourceProfile` (only `$1701` has a custom profile), `Sonic3kScrollHandlerProvider` (`$1700` currently uses the default scroll handler), `Sonic3kLevelSelectConstants`
-- **Symptom** — A direct `$1700` load boots the real DEZ3 layout, art and palette but places the players from the Start Location file at centre `$60,$70` instead of `loc_7FD9E`'s `$30,$CD`/`$10,$CD`; there is no `Obj_5A7C8` arena floor, so the player falls out of the level and dies within about 100 frames. At that baseline the zone also inherited `SwScrlHpz` and lacked a level-select entry. The current campaign has separated `$1700` from the sanctuary and added its level-select identity; its bespoke events, scroll and arena remain missing. Measured 2026-09-17 at `035e48a58`; capture `~/Videos/OGGF/s3k-dez-bring-up/raw-00-baseline-before-work/1700-final-boss`.
-- **Suspected cause** — The zone was never implemented; only its level data is registered.
-- **Removal condition** — The S3K DEZ bring-up's slices 9 and 10 land: `$1700` resource profile, `SwScrlS3kDezFinalBoss`, the `DEZ3_*` events and arena objects, `Obj_DEZ3_Boss` and the `loc_803D6` exit, with the final-boss matrix's five claims recorded.
+- **Historical baseline** — At`035e48a58` (2026-09-17), direct`$1700` used the
+  Start Location coordinates rather than`loc_7FD9E`, had no arena floor or boss
+  implementation, and fell out of the level. That observation is superseded.
+- **Current implementation** — The final-boss resource profile, bespoke scroll,
+  DEZ3 events, floor/laser/art owners, hands/core/escape ship and exit dispatch
+  are connected. Native320 cold solo/team ending routes and positioned320/800
+  incoming DDZ routes are recorded in the final-arena matrix. The new ordinary
+  cold800 Sonic route (`0114dfdfb`, integrated`8cebbd847`) also reaches the ending,
+  with177 two-cycle world replay windows and both actual full-load history resets.
+- **Remaining acceptance** — Full native-scene/pixel matching and remaining
+  roster/donor/lifecycle products are still open. Implementation is resolved;
+  this is not whole-zone certification. Preserve the five separate claims in
+  [the final-arena matrix](../architecture/validation/levels/s3k-dez-final-boss.md).
 
 
 ## MHZ1 → MHZ2 Reload — Missing Sprite Publication (RESOLVED)
