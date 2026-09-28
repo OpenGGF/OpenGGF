@@ -6206,7 +6206,7 @@ and a missing Hyper mutation hook; those are covered by the encounter regression
 - **Removal condition** — The S3K DEZ bring-up's slices 9 and 10 land: `$1700` resource profile, `SwScrlS3kDezFinalBoss`, the `DEZ3_*` events and arena objects, `Obj_DEZ3_Boss` and the `loc_803D6` exit, with the final-boss matrix's five claims recorded.
 
 
-## MHZ1 → MHZ2 Reload — Missing Sprite Publication (CANDIDATE FIX)
+## MHZ1 → MHZ2 Reload — Missing Sprite Publication (RESOLVED)
 
 The background-DMA fix landed in `04440cc2e`. A follow-up on base `6088735c8`
 separates fresh-load reset from seamless reload: the latter retains prepared,
@@ -6222,19 +6222,27 @@ both. The handoff now restores that state and recomputes deformation without
 another animation/gameplay tick. A production reload regression failed with
 BG X expected6393, actual0 before this carry; the combined187-case focused
 selection passes. Fresh320/800 clips retain Sonic/HUD/signpost and continuous
-background positioning at the reload. Shared full-suite verification and
-integration are pending; this is not yet a delivered resolution.
+background positioning at the reload. Integrated and pushed as `8258c3aed`,
+with the combined ordinary/guard result and its corrected unrelated FBZ oracle
+recorded in the campaign audit; destination checks pass on `f411b75db`.
 
 Evidence: `$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-mhz-handoff-{320,800}/`.
 
-## Cold Route Evidence — FBZ Tails/Knuckles (OPEN)
+<a id="cold-route-evidence--fbz-tailsknuckles-open"></a>
+
+## Cold Route Evidence — FBZ Tails/Knuckles (RESOLVED)
 
 Observed against unchanged `6088735c8` on2026-09-27 during seamless-presentation
 validation. FBZ `TestFbzAct1ColdRoute.nativeSoloColdRouteReachesReleasedAct2`
 fails for Tails at ordinary frame2835 and Knuckles at13839, before the act
 handoff. A matched five-case base/candidate check has identical failing test
 identities and full failure messages; Sonic solo,320team and400team pass.
-These cases supersede older green-route claims for the current base.
+These cases superseded older green-route claims for that base.
+
+Resolved by `10b066947` (Tails/debris) and `192a9956d` (Knuckles inputs),
+integrated and pushed through `f411b75db`. All five current controller products
+pass; frozen Tails/Knuckles routes pass44/50 whole-world replay windows.
+Wider/donor and native-presentation obligations remain separate.
 
 **SOZ diagnostic correction:** the initial apparent SOZ route failure was a
 capture-configuration mismatch, not a demonstrated native-start route defect.
@@ -6248,7 +6256,7 @@ The native cold-route evidence therefore remains valid under its stated entry
 configuration. See the campaign audit and capture recipe; do not change gameplay
 to rescue playback made with a different entry mode.
 
-## MHZ2 Endboss Camera and Pillars (RESOLVED IN CANDIDATE)
+## MHZ2 Endboss Camera and Pillars (RESOLVED)
 
 2026-09-27: using widescreen's visible-left edge delayed the native chase gate
 and moved player clamps. The candidate retains ROM camera/bound words and
@@ -6256,10 +6264,11 @@ projects the displayed origin. Independently, `loc_55586`'s first DIVU remainder
 was discarded, changing both pillar scroll and collision-helper positions even
 at320px. Native emulator observations corroborate the corrected arithmetic.
 Five-preset gate/wrap/replay checks and native Sonic/Tails/team routes pass;
-800px full-route completion and integration remain pending. See the
+800px Sonic now completes both acts into playable FBZ with25 replay windows.
+Integrated and pushed in `a6df1f1d0` and `936292c33`; see the
 [campaign audit](../architecture/audits/2026-09-22-sk-zone-bring-up.md).
 
-## FBZ Miniboss Converted Debris — Rewind and Gravity (RESOLVED IN CANDIDATE)
+## FBZ Miniboss Converted Debris — Rewind and Gravity (RESOLVED)
 
 2026-09-27: cold Tails results replay exposed links that remained alive far below
 the arena and froze after their old arm was absent on restore. `loc_6F3C4`
@@ -6267,5 +6276,6 @@ converts them to independent `Obj_FlickerMove`; the candidate dispatches that
 phase before parent checks and restores its unsigned vertical removal window.
 Capsule fragments also regain `MoveSprite`'s `$38` gravity. Three baseline
 regressions fail before the repair;166 focused checks and the44-window cold
-Tails replay pass after it. Integration is pending; see the
+Tails replay pass after it. Integrated and pushed as `10b066947`; the stale
+results-family oracle is corrected in `936292c33`, and destination checks pass. See the
 [campaign audit](../architecture/audits/2026-09-22-sk-zone-bring-up.md).

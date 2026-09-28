@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -350,6 +351,41 @@ class TestS3kDezGravityPuzzleHeadless {
             assertEquals(1, back.panelBitsForTest(), "and so does the panel bitfield");
         } finally {
             SessionManager.clear();
+        }
+    }
+
+    @Test
+    void rewindPreservesTheNativePlayerOneOwnerForTheSecondContact() {
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        try {
+            var fixture = fixture();
+            var player = fixture.sprite();
+            var follower = sidekick();
+            assertNotNull(follower, "exercise the native two-player branch without a skip");
+            var puzzle = place();
+            moveTo(player, OBJECT_X - 0x20, OBJECT_Y - 0x30);
+            moveTo(follower, OBJECT_X + 0x20, OBJECT_Y + 0x10);
+            push(puzzle, player);
+            var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+            var saved = registry.capture();
+            puzzle.update(0, player); // A later update discards the old a1 ownership.
+            registry.restore(saved);
+            var back = restored(puzzle);
+            var restoredFollower = sidekick();
+            assertNotNull(restoredFollower);
+            push(back, restoredFollower);
+            assertEquals(1, back.panelBitsForTest(),
+                    "FixBugs=0 loc_499EC still marks P1's panel after restoring P1's contact");
+            assertEquals(0xC00, restoredFollower.getXSpeed(), "the second player is still launched");
+            back.update(1, GameServices.sprites().getMainPlayable());
+            push(back, restoredFollower);
+            assertEquals(0x21, back.panelBitsForTest(),
+                    "the next ordinary update resets ownership, so P2 now marks its own panel");
+        } finally {
+            SessionManager.clear();
+            config.clearSessionOverrides();
         }
     }
 

@@ -163,6 +163,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   opens onto. Act 1's turbine corridor blows you along it now as well, tumbling, with up and
   down to steer by. Its controller stays alive as the camera follows you, and the bobbing
   shaft and walls bounce airborne riders; hitting all six panels opens the exit,
+  and rewind retains the panel contact owner, including the original two-player behavior.
+  A cold 800px Sonic route now covers the complete first act, both boss phases and
+  released Act 2 control with whole-world replay checks,
   and the following door admits the player while the turbine still owns movement. The Spikebonker mace robots patrol both acts, hover, and swing at
   you when you come at them from the side they are walking toward. Act 2's retracting springs
   work: they push out of the wall while you are below them, pull back in once you are well

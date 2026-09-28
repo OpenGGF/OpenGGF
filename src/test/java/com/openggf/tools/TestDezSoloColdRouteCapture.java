@@ -53,12 +53,34 @@ class TestDezSoloColdRouteCapture {
         runColdRoute("tails", Tails.class, 29521, 28320, spots);
     }
 
+    @Test
+    void coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo() throws Exception {
+        // Independently reproduced 800px buttons: opening lifts, loop/conveyor,
+        // all six turbine panels, moving staircase, both boss phases and release.
+        // No replay window straddles the actual seamless load at 19889.
+        var spots = Set.of(260, 470, 1730, 1895, 2050, 2320, 2590, 3290,
+                3571, 3931, 4431, 5091, 5551, 5630, 5958, 6340, 6730, 6884,
+                7010, 7395, 7795, 11205, 13020, 13174, 14450, 15150, 15190,
+                15200, 15580, 16000, 16500, 16900, 17230, 17410, 17600,
+                17900, 18200, 18520, 18760, 18850, 18940, 19100, 19390,
+                19510, 19532, 19600, 19700, 19820, 19840, 19890, 19950, 20090, 20400, 20600, 20700, 20800, 20900, 21050);
+        runColdRoute("sonic", Sonic.class, 21100, 19889, spots, 800,
+                "dez1-sonic-cold-800.bk2", 2);
+    }
+
     private void runColdRoute(String character, Class<?> playerType, int frames,
                               int expectedLoadFrame, Set<Integer> spots) throws Exception {
+        runColdRoute(character, playerType, frames, expectedLoadFrame, spots, 320,
+                "dez1-" + character + "-solo-cold-complete-320.bk2", 1);
+    }
+
+    private void runColdRoute(String character, Class<?> playerType, int frames,
+                              int expectedLoadFrame, Set<Integer> spots, int width,
+                              String movieName, int replayCycles) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/dez1-" + character + "-solo-cold-complete-320.bk2"));
+                "src/test/resources/routes/s3k/" + movieName));
         assertEquals(frames, movie.getFrameCount());
-        var settings = new GameplayCaptureSession.Settings(320, character, "", "off", null, null, null);
+        var settings = new GameplayCaptureSession.Settings(width, character, "", "off", null, null, null);
         int historyStart = expectedLoadFrame - 72;
         var checked = new HashSet<Integer>();
         var hitField = DezMinibossInstance.class.getSuperclass().getDeclaredField("collisionProperty");
@@ -76,6 +98,7 @@ class TestDezSoloColdRouteCapture {
                 session.step(movie.getFrame(frame));
                 session.render();
                 assertFalse(session.player().getDead(), "death at input " + frame);
+                assertEquals(width, GameServices.camera().getWidth());
                 assertFalse(session.player().isSuperSonic());
                 assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
                 if (GameServices.level().getCurrentAct() == 0) {
@@ -93,11 +116,13 @@ class TestDezSoloColdRouteCapture {
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
                 var forward = registry.capture();
-                registry.restore(saved);
-                same(saved, registry.capture(), "restore at " + frame);
-                session.restoreInputHistory(movie.getFrame(frame));
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
-                same(forward, registry.capture(), "replay at " + frame);
+                for (int cycle = 0; cycle < replayCycles; cycle++) {
+                    registry.restore(saved);
+                    same(saved, registry.capture(), "restore at " + frame + " cycle " + cycle);
+                    session.restoreInputHistory(movie.getFrame(frame));
+                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                    same(forward, registry.capture(), "replay at " + frame + " cycle " + cycle);
+                }
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
