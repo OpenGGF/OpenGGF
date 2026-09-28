@@ -25,7 +25,7 @@ its original unimplemented counts must not be read as current production status.
 | MHZ | Native320 Sonic, Tails and the native Sonic+Tails pair each complete both acts through playable FBZ1. The pair retains its27,985-input Act1 fixture and now has a40,630-input complete route with16 Act2 full-world replay spots and production live-history isolation at FBZ. Tails floor-grab mappings, palette-fade reconstruction and horizontal-bar holder aliasing are corrected and integrated. All nine physical posts have343 contact/reload cases and630 real reloads across supported rosters, donors and five widths. Remaining route/presentation breadth and native comparisons remain open; accepted Knuckles/trace/standalone exclusions remain in force. |
 | FBZ | Cold native Act 1 and thirteen Act 2 completion rows already recorded; all eleven placed posts now activate through ordinary local movement for four native teams (44 cases), with immediate restore and two forward replays; physical contact now composes with two real death/reloads for every post, four native teams and all five selectable widths (220 cases/440 reloads); the supported S1/S2 standard-team product now adds 220 cases/440 reloads, with donor rules/art retained; finish cold-route and presentation obligations without undoing the accepted S1 elevator challenge. |
 | SOZ | Both acts, golem, end boss and playable exits implemented; native320 Sonic+Tails cold completions are revalidated on the current base, with reauthored Act2 inputs,61 periodic/destination full-world replay windows, semantic boss/capsule/background checks and actual LRZ history isolation. Solo Sonic Act1 now clears cold through playable Act2 in31,671 inputs, with33 additional full-world replay windows and a fresh movie (`bd1625cdb`). Solo Act2 now clears through eight hits, capsule and playable LRZ in31,797 inputs, with33 additional periodic/destination replay windows, semantic checks and actual history isolation. Tails Act1 now has a16,901-input cold golem/Act2 route; Tails Act2 now clears eight hits/capsule/playable LRZ in28,782 inputs with30 periodic/destination replay windows and semantic/load-isolation checks. Knuckles Act1 now cold-completes through a real bonus visit/return, golem and playable Act2 in24,059 inputs, with29 whole-world replay windows and both bonus-load history resets. Knuckles Act2 now cold-completes all eight boss hits, capsule and playable LRZ at native 320px in 35,315 inputs, with 48 whole-world replay windows and 18 semantic events (`49586cd86`). A separate 35,440-input 800px route also passes its permanent cold replay test and fresh capture, with the same 48-window obligation; delivery is recorded below. The lower Act2 cork/rock/switch/door puzzle now has ordinary Sonic and Knuckles passage at all five current presets, with157 whole-registry replay windows and native mechanism corroboration. All ten physical posts, repeated supported-team reloads and connected rooms now use all five production display presets (509 focused checks,480 death/reloads). Broader cold character/donor/team routes, remaining lifecycle products and synchronized native presentation remain open; retain explicit trace deferrals. |
-| LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Solo Knuckles now completes both acts and the direct HPZ exit in 49,526 inputs after the object-owned animation correction, with 89 passing replay windows on the repaired full route (`49586cd86`); earlier scoped-route evidence remains recorded below. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. Cold800 Sonic+Tails now reaches the first crusher collapse/release in6853 inputs with40 two-cycle rewind windows; native-window locks and explosion-helper restore are integrated in `25609a0ab`. Full wide continuation remains open. |
+| LRZ | Ordinary native320 Sonic+Tails now completes Act1, Act2 and boss act from cold entry in53047 inputs, zero deaths, reaching playable HPZ. The boss route collects its fire shield from a placed monitor and takes no encounter damage. Act1 has185 and Act2 has81 verified full-registry replay spots; the new boss-act fixture adds62 passing spots. Solo Tails now completes the full cold chain through playable HPZ in68977 inputs, zero deaths, with51 Act1,85 Act2 and62 boss-act replay spots. Solo Knuckles now completes both acts and the direct HPZ exit in 49,526 inputs after the object-owned animation correction, with 89 passing replay windows on the repaired full route (`49586cd86`); earlier scoped-route evidence remains recorded below. Native timing/pixel matching and remaining width/donor/roster/lifecycle products remain open. Cold800 Sonic+Tails now reaches the first crusher collapse/release in6853 inputs with40 two-cycle rewind windows; native-window locks and explosion-helper restore are integrated in `25609a0ab`. Candidate cold800 Sonic+Tails now completes the full chain in50,659 inputs, zero deaths, with115 Act1,104 Act2 and71 boss-act two-cycle full-world replay windows plus load-history isolation. Independent videos match every route CSV row. A capsule patrol-origin correction preserves the native arena under centred widescreen presentation. Broad comparator validation and focused capsule/native-route checks pass; final guards pass; integration pending. |
 | SSZ | Act-1 bosses, collapse, results and DEZ launch implemented; arrival Death Egg palette/RNG/cloud/mask/missile owners are now implemented and tested. Cold320 Sonic+Tails now defeats all three bosses and loads DEZ1 in19,457controller frames, zero deaths;37full-registry replay spots and the live SSZ→DEZ timeline reset pass. MTZ orbs now distinguish harmful/armed ordinary touch from the separate Hyper property write; paired inputs are reauthored after the correction. Knuckles cold320/800 routes now complete crane, both fights and the accepted pre-ending stop, including disk clear state and low-health/final-defeat replay. Solo Sonic now clears both replica bosses in 11,200 cold inputs without deaths, with 42 passing full-registry replay windows; his complete 19,845-input route now defeats Mecha and loads DEZ with 41 further passing replay windows and live-history isolation. Native 320px solo Tails now has a fresh 17,670-input completion through the actual DEZ load, without death; 100 additional native route replay windows and load isolation pass. The corrected preliminary camera bounds pass all five cold approach widths; an800px controller route clears both replicas with53 further replay windows. Wide solo Tails now completes all three bosses and actual DEZ arrival in16,893 inputs, with102 route replay windows and final-lock retirement verified. HPZ-pad incoming continuity and seeded island mask/redraw/scroll/palette tails have focused checks. The 800px cloud gap is corrected by clipping finite world coordinates while retaining native texture wrapping (`49586cd86`), with native-display regression checks and a fresh zero-death Knuckles movie. Native whole-fight comparison, Act-1 route breadth and remaining lifecycle cases remain open. |
 | DEZ | DEZ1 cold native Sonic+Tails now clears the turbine, both eight-hit miniboss phases and actual Act2 load in14,231frames, zero deaths. The two shorter routes retain40 replay spots; the complete route adds22 late spots and real load-boundary isolation. Ordinary solo Sonic now also completes Act1 and reaches released Act2 control in23533 inputs, zero deaths, with61 full-registry replay spots; Tails now completes the same cold Act1 handoff in29521 inputs with75 further replay windows. Solo Sonic Act2 now completes all8 boss hits and the final-stage load in53842 inputs with103 full-registry replay windows; Tails now completes Act2 and the actual final-stage load in62588 inputs with56 passing replay windows; the short47140-input lower-pad fixture remains independent. Sonic solo now completes the full cold DEZ1/DEZ2/final chain through the actual ending in60920 inputs after the native floor-contact correction, zero deaths, with68 additional replay windows. Tails now has an independently captured68266-input cold ordinary ending route with no deaths; all 84 final-route replay windows now pass. DEZ2 cold320 Sonic+Tails now completes the gravity boss and actual final-stage load in40,316frames from cold DEZ1, zero deaths or transformation, with204 Act2 full-registry replay spots across eight preserved routes and frame-zero load-history isolation. Both main acts have concrete placed-object factories and controller-driven boss/exit evidence. The ordinary cold native320 Sonic+Tails continuation now clears final hands/core/ship and loads the ending in49448frames after that correction with31 final-phase replay spots. Direct `$1700` routes now complete hands/core/ship and load DDZ at 320/800; wide retained scenery, zero-X-carry floor and exit camera projection have focused regressions. Capture115 shows the corrected 800px handoff. Positioned incoming DEZ2-to-full-final continuity now passes at320/800 through complete DDZ with eleven full-registry replay spots each. Ordinary cold800 solo Sonic now completes both main acts and all final phases through the actual ending in60,298 inputs, with177 two-cycle replay windows and both full-load history resets (`8cebbd847`). Full-phase native parity and roster/lifecycle breadth remain open. All seven physical posts now have351 inventory/contact/reload cases,644 real reloads across native/donor/team/width breadth, and92 inverted-gravity deaths through the placed swap. Other encounter/lifecycle and native-presentation obligations remain open. |
 | DDZ | Both boss phases and exit request implemented; seeded Hyper parity and fresh320/800Super completion now pass; strict-bootstrap remains separate. The real final-DEZ incoming load now reaches initial wide flight with correct camera projection; positioned DEZ2-to-DDZ completion now passes at320/800 with11full-registry replay spots each; full cold native320 DEZ1-to-DDZ now completes both boss phases and the ending request in59722 inputs after the final-floor correction with boot-only emeralds. Native Hyper-star queue phase and HUD redraw timing are matched with rewind checks; death reload and declared post-white-fade ending-request/load boundaries now verify live-history isolation at320/800. Whole-scene presentation and remaining breadth still need validation. |
@@ -44,7 +44,7 @@ remaining route and matrix obligations are not closed by the delivery.
 | MHZ | Integrated in develop; [completion audit](../research/s3k-zones/mhz-completion-audit.md) | Sonic/Tails implementation reviewed, followed by miniboss lifetime/defeat/transition fixes. Original audit explicitly excluded further Knuckles work and stopped traces. Per-act matrices now separate accepted scope and historical evidence from current gaps; route, lifecycle, visual and breadth validation still needed. Historical broad failures were not attributed to baseline and must not become a green claim. |
 | FBZ | Integrated; [outstanding actions](../research/s3k-zones/fbz-outstanding-actions.md), [Act 1](../validation/levels/s3k-fbz-act1.md), [Act 2](../validation/levels/s3k-fbz-act2.md) | Cold native Act 1 completion and 13 Act 2 completion rows are recorded; bounded reload/transition/rewind and native afterstates exist. Native checkpoint geometry, strict parity, SAT presentation and remaining matrix obligations stay open. Preserve the explicitly accepted S1 elevator challenge. |
 | SOZ | Integrated; [plan and evidence](../plans/2026-09-15-soz-methodology-v2.md) | Both acts, bosses and exits implemented; cold-route, recording and native pixel follow-ups greatly exceed the early plan summaries. Full supported route products, remaining lifecycle/participant obligations and native presentation certification need reconciliation against the two act matrices. Trace deferrals are not silently revoked by this audit. |
-| LRZ | Local `feature/ai-lrz-bring-up` at `c708e1a2b` | Act 1 census is zero placeholders; miniboss defeat, seamless act change, post-defeat palette/camera releases and Act 2 background stages exist. Act 2 has 23 placeholder placements; boss act has 8. Latest commit adds spike-ball launchers **and an unregistered turbine draft**, absent from the status summary. Remaining turbine/chained platforms, cutscenes, boss act, exits, palette rotation, breadth, rewind, cold completion and native comparisons are substantive work. |
+| LRZ | Local `feature/ai-lrz-bring-up` at `c708e1a2b` | Act 1 census is zero placeholders; miniboss defeat, seamless act change, post-defeat palette/camera releases and Act 2 background stages exist. Act 2 has 23 placeholder placements; boss act has 8. Latest commit adds spike-ball launchers **and an unregistered turbine draft**, absent from the status summary. Remaining turbine/chained platforms, cutscenes, boss act, exits, palette rotation, breadth, rewind, cold completion and native comparisons are substantive work. Candidate cold 800px Sonic+Tails Act1 now reaches playable Act2 in25,650 inputs with115 two-cycle replay windows and seamless-load history isolation; focused tests pass, broad validation/integration pending. Wide Act2/end-boss remains active. |
 | SSZ | Local `feature/ai-ssz-bring-up` at `55a999030` | Arrival, bridge, traversal families and Act 1 bosses exist. Latest commit adds Mecha Sonic defeat/handover, superseding the media index's claim that defeat is unimplemented. Collapse/launch completion and Knuckles Act 2 still need work. Cold route only reaches the early arrival area; most mechanisms/fights use declared checkpoint setups. Native and wide/rewind acceptance remain incomplete. |
 | DEZ | Local `feature/ai-s3k-dez-bring-up` at `b65b5966a` | Reverse gravity plus gravity mechanisms and selected traversal/badnik families implemented. Summary contradicts itself (93 covered reference rows above a stale 34-row table). Seeded Act 2 free-play prefix is 1256 frames, not a cold completion. Act 1, remaining objects, bosses, final act, transitions, missing gravity consumers and acceptance remain open. Latest capture-startup correction must be reviewed alongside other campaigns' tool edits. |
 | DDZ | Integrated; [plan](../plans/2026-09-17-ddz-bring-up.md), [matrix](../validation/levels/s3k-ddz.md) | Controller, both boss phases, wrap, death and exit request implemented. Recorded completion declares inherited V-int and camera-fraction seeds; unseeded entry and strict replay bootstrap remain different claims. Existing visual fixes supersede some initial observations; the known-bugs entry still lists stars/HUD/driver issues and needs checking against code. Ending/credits remain outside the original stop line. |
@@ -9560,3 +9560,249 @@ inputs5600–6852 (1253frames,60fps,1600x448). Full ffmpeg decode passes;
 6300/6500/6800 stills inspected. All6853 independent capture rows match the
 camera-candidate forward replay, zero deaths. The final helper candidate independently replays all6853 rows identically to
 that video, including every CSV field; ordinary forward behavior is unchanged.
+
+
+## 2026-09-28 — cold 800px LRZ Act 1 clear
+
+Base `f46863ed0`, isolated `feature/ai-lrz-wide-act1-clear`. The new frozen
+`lrz1-sonic-tails-cold-clear-800.{script,bk2}` contains 25,650 ordinary inputs,
+with native Sonic+Tails, donor off, cold Act1 entry and no gameplay seeds.
+The route reaches the miniboss, consumes all six drill hits (last at 23797),
+rebases into Act2 at 24349, waits through results and releases movement/camera
+into Act2 at(2357,1980). No engine changes are needed for this extension.
+
+Controller work preserves the native-width clear and the independent short
+wide crusher check. Wide Tails/object admission changes and moving-platform
+phase mean native held inputs do not reliably transfer. The late route faces
+right before the high spindash launch, escapes the Toxomister cloud with a
+spindash, waits for the west crushing platform, and jumps over the east spring.
+Simply repeating the native fight dies at 19830. Stationary edge jumps survive
+longer but leave three drill hits; moving clear during the committed drop and
+returning after the slam lets ordinary attacks finish it. These are authored
+inputs, not physics adjustments or gameplay hydrated from reference state.
+
+`TestLrzWideColdRouteCapture` retains its 6,853-input crusher method and adds a
+separate complete Act1 method. Periodic and semantic full-registry checkpoints
+cover traversal, side buttons, timed platforms, boss phases/defeat, results and
+post-load movement, with two 45-input replay cycles. Production live history is
+enabled before the seamless rebase to verify outgoing Act1 history is retired.
+Initial focused candidate run: 62 tests, 1 failure, 0 errors/skips. The unchanged
+native LRZ→HPZ route and all four mandatory S3K classes pass; the complete wide
+route first fails at 24750 in `s3k-title-card.combinedPatterns`, reporting Java
+identities after fresh title art decoding. A separate cold probe compares all 256
+tiles after the same45-input restore/replay:256 different identities, zero
+pixel differences. `placeArt` creates new Pattern instances for identical ROM
+bytes. A focused comparator regression is red (1/2 tests fails,0skip).
+
+`RewindSnapshotDiff` now compares every Pattern pixel, including nested art
+arrays. It still detects a changed pixel, null tile, array length and unrelated
+record fields, and reports the pixel path. No key or state is excluded. This is
+a comparison-helper repair; forward gameplay and art decoding are unchanged.
+The route also explicitly brackets all six drill hits with rewind windows.
+
+The original test/fixture-only selection was treated proportionately, but the
+shared comparator change now requires normal change-based validation. Preflight
+passes Java 21, Lua 5.4 and PowerShell.
+Focused final command `-Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestRewindSnapshotDiffPatterns,TestRewindSnapshotDiffTerrain,TestRewindSnapshotDiffDynamicIdentity,TestSonic3kTitleCardManagerRewind,TestLrzWideColdRouteCapture test` passes 21 cases,0 failures/errors/skips (1m58), including 115 two-cycle complete-route and 40 short-crusher checkpoints. Completed broad-lane accounting appears below.
+
+Independent GameplayCaptureTool replay of all 25,650 inputs matches every CSV
+field from the authoring probe, zero deaths. External
+`lrz-bring-up/campaign-20260928-wide-cold-act1-clear-800/capture.mp4` contains
+inputs18500–25649 (7,150frames,60fps,1600×448,119.166667s), through the fight,
+results and playable Act2. Full ffmpeg decode passes;19335/23797/24349/25350
+stills inspected. Runtime is base `f46863ed0`; the comparator has no forward
+runtime effect. This is engine presentation evidence, not native pixel parity.
+Act2 is now also independently verified below. The end-boss, other roster/donor
+products and native whole-scene acceptance remain open; this does not certify the zone.
+
+
+### Cold wide Act2 and validation
+
+The frozen `lrz2-sonic-tails-cold-boss-act-arrival-800.{script,bk2}` contains
+41,348 ordinary inputs from cold LRZ1, zero deaths, and ends at boss-act
+position296/1196 with10 rings and native Sonic+Tails. It opens door8, takes the
+upper route past the giant-ring corridor, rejoins the lower corridor and opens
+door6, then traverses the lifts, ceiling, collapsing bridge and Knuckles boulder
+sequence. Door5 is bypassed; the native route retains its direct coverage.
+No forward runtime change was needed.
+
+Authoring lessons retained in the final inputs: turbine launch needs both the
+correct angle phase and clearance above the ledge before steering left; facing
+must actually reverse before charging a spindash; leaving a descending lift too
+late misses its exit; the final collapsing bridge requires a grounded jump before
+it drops. The wide giant-ring entrance is avoided through the ordinary upper
+route, without altering activation. The apparent boulder stall was not a camera
+bug: `Obj_LRZ2CutsceneKnuckles` waits on player X $39B0, landing and the animation.
+Continuing ordinary inputs completed it. Probe-by-probe failed tails were
+superseded by the frozen script and are not accepted route evidence.
+
+Full boss load occurs at41127. `LevelContinuationCarry` restores nine rings on
+the first destination screen-event update41128; the zero on the raw load frame
+is temporary, not lost carry. An ordinary ring at41228 raises the count to10.
+`TestLrzWideActTwoColdRouteCapture` passes104 whole-registry checkpoints with
+two45-input replay cycles, door8/door6 opening, boulder control, carried rings,
+playable arrival and real outgoing/live-history isolation. Queued Java21,
+explicit root S3K ROM, `-Dmse=off -Dtest=TestLrzWideActTwoColdRouteCapture test`:
+1test,0failures/errors/skips,51.01s test time (1m12 Maven).
+
+Independent captures match every CSV field, with zero deaths:
+- `campaign-20260928-wide-cold-act2-door-eight-800/capture.mp4`: all31,225 rows
+  match; film25650–31224,5,575frames,60fps,1600x448,92.916667s. Endpoint6741/1484,
+  one ring; full decode and27889/28069/30230/31224 stills checked.
+- `campaign-20260928-wide-cold-act2-clear-800/capture.mp4`: all41,348 rows match;
+  film37965–41347,3,383frames,60fps,1600x448,56.383333s. Full decode and
+  38580/40900/41125/41300 stills checked.
+Both live under external `lrz-bring-up/` with inputs/provenance. These are engine
+presentation observations, not synchronized emulator pixel parity.
+
+The shared Pattern comparator justified the unchanged full2,941-class selection:
+- `20260928T132749Z-62ce082c`, default40-minute run: timeout after2,740 reports,
+  23,618tests,0reported failures/errors,26skips. Incomplete; guards not started.
+- `20260928T140834Z-a4c4b3e7`,two workers/90minutes: interrupted exit130 before
+  the limit, origin unidentified. Incomplete; individual passes are not a suite.
+- `20260928T144157Z-8937f620`,same selection/two workers/90minutes: ordinary
+  lane completed2,939 reports,25,146tests,0failures/errors,29skips,2,014.55s.
+  The runner then stopped before guards because Act2 test/fixtures/prose were
+  added after compilation. This is a completed ordinary lane on the unchanged
+  comparator/Act1 production candidate, not a completed combined run or proof
+  of the subsequently added Act2 test. The separate Act2 pass above covers it.
+- Separate queued `-Dmse=off -Pguards test -B`:672tests,0failures/errors/skips,
+  3m16s. Production source did not change after the focused comparator pass.
+
+Broad commands use `--base f46863ed002e359137cbe268bea819d204de9dc7` and
+`--run`; retries add `--workers 2 --max-minutes 90`. Java21,DISPLAY=:0,Lua5.4,
+serial Maven admission. Skips were inspected: optional capture/performance/
+native profiles, unavailable GPU capabilities/local audio references and the
+existing CPZ spin-tube assumption; no missing-ROM skip. Consumed category-run
+diagnostics were removed. Integration and final delivery remain pending.
+
+### Wide boss continuation in progress
+
+Align boss input tails to the actual full-load boundary, not merely a standing
+position: wide41128/native43571 share load age, whereas the earlier apparent
+arrival splice concealed29 updates. Even aligned inputs jump too late at the
+first lava gap (grounded42205, airborne42210, press42218). Five35-jump/35-run
+cycles from42205 reach42555, then six more reach42975 at2485/876 with20 rings.
+Shorter60-frame or longer80-frame cadences fail. This is controller authoring,
+not a physics oracle or permission to tune gameplay.
+
+The ordinary monitor approach needs a jump from43901 near the grounded edge:
+55 left+jump,20 right,60 neutral reaches44036 at2666/1174 with30 rings.
+A650-neutral descent finishes44686 at2666/1499 on the left platform. The cold
+probe explicitly observes `ShieldType.FIRE` there, corroborating the visible
+shield effect. Right-platform descent alone does not satisfy the native arena
+entry gate. Inputs remain temporary until the complete fight is independently
+replayed and covered by permanent assertions.
+
+Rejected arena tails: neutral dies45365 after drifting right; the320px fight
+suffix aligned by descent height dies45531. Controller centering targets2720
+and2696 lose the shield near45220 and die after three mine hits. Periodic jumps
+also die45459. A moving platform can carry Sonic right while ground speed is
+negative; simple velocity centering is not projectile avoidance. No runtime
+defect is established by these failed inputs.
+
+Temporary `target/LrzWideArenaSearch.java` now tries five horizontal targets,
+with/without jumps, in240-input engine-snapshot branches and commits30 inputs
+at a time, preferring survival and shield retention. It starts from the full
+cold44686 prefix; no gameplay values are seeded. A successful output still needs
+fresh uninterrupted replay. The probe must observe positive boss health before
+accepting zero as defeat: allocation initially exposes zero before initialization
+(at44853 the live boss has14 hits). The first zero-health early stop was rejected.
+
+The first look-ahead search terminates at46313 inputs with10 boss hits
+remaining. It survives beyond the fixed-policy failures but loses the shield
+and eventually dies; it is not a completed route. The next diagnostic measures
+initialization/hit timing on the already verified320px cold fixture before
+aligning another controller attempt. Rejected search output remains temporary.
+
+The native320px cold timing probe observes allocation47069, initialization
+with14 hits47291, and first mine-avoidance jump47639. Wide initialization44853
+is2438 inputs earlier, two frames different from the earlier descent-height
+splice; the initial player position also differed by26px. A new temporary
+controller attempt steers toward2692 before initialization, then applies the
+native suffix from47291. This alignment changes only authored inputs, never
+clock, player position or boss state. Independent replay remains required.
+
+The phase/position-aligned controller completes all14 boss hits: health reaches
+zero at49177. Its50,609-input cold replay has zero deaths and no hurt frames
+from44686 onward, retaining FIRE and30 rings. The copied native exit tail
+does not open the capsule or load HPZ; completion remains open. The final
+accepted prefix must preserve the successful fight through49177 before
+authoring capsule inputs. No production change was needed for this fight.
+
+### Centered-arena capsule correction (candidate)
+
+A fresh replay rejected the temporary aligned author's first exported movie:
+its serializer compared the whole input mask to Left/Right, dropping direction
+when the jump bit was also present (498 rows). The successful live run is not
+invalidated, but that export is. `corrected-input` reconstructs the suffix from
+the original BK2 rows; independent replay is mandatory before freezing it.
+
+The exit investigation found a separate production mismatch. `loc_8657A`
+spawns the capsule at native Camera_X+$A0; `loc_8662A` patrols native
+Camera_X+$30..$110 with the ROM's right overshoot. The shared capsule used
+the visible camera directly, shifting it left by the widescreen centering
+offset. A focused five-width regression passes320 but fails352/400/528/800
+(initial X2704/2680/2616/2480 instead of2720). No errors/skips.
+
+The shared owner now exposes a semantic patrol-camera origin with its original
+default. Only the LRZ capsule overrides it while the established native-arena
+centering mode is active. It recovers the native origin for both spawn and
+patrol; comments explain the ROM behavior and widescreen discrepancy. The
+regression also traverses both patrol extremes, retaining the one-pixel right
+overshoot. Focused green verification and fresh cold exit proof are pending.
+
+The focused patrol regression is green on all five widths:5 tests, zero
+failures/errors/skips. Independent corrected-input replay reaches49320 after
+the real defeat; its object list places the unfixed capsule at2494/1319,
+inside the masked margin (visible camera2320, native camera2560). The fixed
+cold replay and capsule-family/native-route stability selection are running.
+
+The combined change-based plan still selects the full ordinary suite because
+of the shared comparator, whose completed broad lane is recorded above. The
+additional capsule-origin fix is bounded: the default origin is unchanged for
+all other consumers and only the LRZ centering mode projects it. Verify all
+five patrol widths, existing capsule families, the native full LRZ route,
+positioned encounter roster/donor breadth, mandatory S3K stability and the new
+cold wide exit/rewind path. Apply proportionate focused validation to this
+follow-up rather than repeat the unchanged comparator's ordinary suite. This
+is focused validation of the final delta, not a full-suite claim for the final
+tree. Structural guards must be rerun for the new production/test changes.
+
+The corrected-input cold candidate reaches the genuine HPZ full load at50538
+(z22/a1,48/2796),50539 inputs,zero deaths. The fixed capsule now completes
+its ordinary opening/results/release chain using the preserved native tail.
+A120-right continuation is verifying playable arrival before freezing inputs;
+independent final movie and permanent full-world rewind proof remain pending.
+
+The capsule-family/native-route focused selection completes137 tests, zero
+failures/errors/skips: `TestLrzEndBossEncounterHeadless,TestCnzEggCapsuleInstance,
+TestFbzFinalEggCapsule,TestLbzFinalBoss2EggCapsuleInstance,TestLrzBossColdRouteCapture,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils`, queued Java21,DISPLAY=:0,explicit absolute S1/S2/S3K
+ROM paths. This includes all25 positioned width/roster/donor encounter rows and
+the unchanged native53047-input whole-zone clear. The new cold wide test remains
+separate and unverified until its final fixture is frozen and executed.
+
+The final ordinary120-right continuation reaches388/2796 in HPZ with3 rings
+and Tails,50,659 cold inputs and zero deaths. Frozen resource pair:
+`lrz-boss-sonic-tails-cold-hpz-800.{script,bk2}`. The independent capture films
+43880–50658 (shield pickup through playable HPZ) and the new whole-registry
+rewind/history test is running. No final media/test pass is claimed yet.
+
+Final wide boss focused execution passes71 two-cycle full-registry checkpoints
+and HPZ live-history isolation, zero failures/errors/skips (173.4s test,3m15
+Maven), using the explicit root S3K ROM. Independent GameplayCaptureTool output
+matches every field in all50,659 authoring rows, zero deaths; final388/2796,
+three rings and Tails. Film43880–50658 has6779frames,1600x448,60fps,112.983333s.
+Full ffmpeg decode and49177/49500/50000/50658 still inspection pass. External
+`lrz-bring-up/campaign-20260928-wide-cold-boss-hpz-800/capture.mp4`. These are
+engine presentation checks, not synchronized native pixel parity. Final guards
+are running for the added capsule/test changes; integration/push remain open.
+Fresh fetch/ff-only pull found main develop still at f46863ed0, no upstream
+changes or conflicts.
+
+Final candidate guards on the capsule/route tree pass672 tests, zero failures/
+errors/skips (`-Dmse=off -Pguards test -B`,3m31s). All required candidate
+validation is complete within the scope stated above; integration, destination
+verification, push and task-worktree cleanup remain pending.

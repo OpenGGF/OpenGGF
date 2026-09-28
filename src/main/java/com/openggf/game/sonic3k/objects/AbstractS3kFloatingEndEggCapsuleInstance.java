@@ -257,8 +257,13 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         // Route-specific pre-dispatch state.
     }
 
+    /** Camera origin for the native capsule patrol, independent of presentation framing. */
+    protected int patrolCameraX() {
+        return services().camera().getX();
+    }
+
     private void initializeRoute8FromCamera() {
-        int cameraX = services().camera().getX();
+        int cameraX = patrolCameraX();
         int cameraY = services().camera().getY();
 
         currentX = (cameraX + X_OFFSET) & 0xFFFF;
@@ -270,7 +275,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     }
 
     private void updateRoute8BeforeTrigger() {
-        int cameraX = services().camera().getX();
+        int cameraX = patrolCameraX();
         int cameraY = services().camera().getY();
 
         // ROM loc_8662A compares the current x_pos against the current

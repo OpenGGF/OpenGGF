@@ -14,7 +14,9 @@ playable Act2 at31440inputs, with185 full-registry replay spots. The complete ro
 uses no gameplay seeds and has zero deaths. A separate Tails-solo native320 cold
 route now clears the act and reaches playable Act2 in34128 inputs, with51
 full-registry restore/replay spots and no deaths. Other character/donor/width products,
-lifecycle coverage and native whole-scene acceptance remain open.
+lifecycle coverage and native whole-scene acceptance remain open. The new cold800
+native-pair candidate clears Act1 in25,650 inputs with115 two-cycle replay windows
+and seamless history isolation; broad validation/integration is pending.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
 load at the end of the campaign, not the route entry). Outgoing: seamless `$901`.
@@ -1185,3 +1187,23 @@ inputs5600–6852 (1253frames,60fps,1600x448). Full ffmpeg decode passes;
 6300/6500/6800 stills inspected. All6853 independent capture rows match the
 camera-candidate forward replay, zero deaths. The final helper candidate independently replays all6853 rows identically to
 that video, including every CSV field; ordinary forward behavior is unchanged.
+
+
+### 2026-09-28 — cold widescreen Act 1 completion
+
+The new native Sonic+Tails, donor-off 800 route has 25,650 inputs and reaches
+playable Act2 at(2357,1980), with zero deaths and no seeds. Six drill hits finish
+at 23797; the seamless rebase occurs at 24349. The frozen
+`lrz1-sonic-tails-cold-clear-800` fixture and the separate complete-route method
+in `TestLrzWideColdRouteCapture` add periodic/semantic two-cycle full-world
+replay and actual outgoing-history isolation. The existing short crusher check
+remains independently runnable. The focused candidate passes 115 complete-route two-cycle replay windows,
+including all six drill hits and the Act2 title-card transition; the short crusher
+method retains 40 windows. A shared comparator correction verifies re-decoded
+Pattern art by all 64 pixels instead of Java identity. The completed ordinary
+lane passed25,146 tests with29 inspected skips; the separate guard lane passed672
+checks. The combined runner stopped between lanes because later test files were
+added during execution; see exact scope and separate Act2 validation in the
+[campaign evidence](../../audits/2026-09-22-sk-zone-bring-up.md#2026-09-28--cold-800px-lrz-act-1-clear).
+Coldwide Act2 now has separate route/rewind evidence. End-boss completion,
+integration and other roster/donor/native-scene obligations remain open.

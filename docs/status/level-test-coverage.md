@@ -845,3 +845,21 @@ rewind test and both full-load history checks pass in the corrected12-case
 focused run, zero failures/errors/skips. The integrated full-route test also
 passes all177 windows and both load-history checks; see the
 final-arena matrix. The longer110-window Act2 route remains independent.
+
+
+LRZ cold 800 Act1 follow-up (2026-09-28): a separate25,650-input native-pair
+fixture now reaches all six miniboss hits, results, seamless rebase and playable
+Act2 without deaths. The 115 full-world two-cycle replay windows and live-history isolation pass;
+the completed ordinary lane passed25,146 tests with29 inspected skips, and the
+separate guard lane passed672 checks. The runner stopped between lanes because
+the later Act2 test was added during execution; that test passed separately.
+[The Act1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#2026-09-28--cold-widescreen-act-1-completion)
+records the final evidence. The short crusher check remains independent;
+The41,348-input cold wide Act2 continuation now reaches playable boss-act
+arrival with104 two-cycle checkpoints and full-load history isolation passing;
+see the [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#cold-800px-sonictails-act2-clear-2026-09-28-candidate).
+The50,659-input cold wide boss continuation now reaches playable HPZ, with71
+two-cycle checkpoints, earned-shield/14-hit/capsule/results observations and
+full-load history isolation passing. Its independent video matches every CSV
+row. [Boss matrix](../architecture/validation/levels/s3k-lrz-boss.md#cold-800px-sonictails-complete-route-2026-09-28-candidate).
+Integration and other roster/donor/native-scene breadth remain open.

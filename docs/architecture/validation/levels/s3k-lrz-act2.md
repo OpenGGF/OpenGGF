@@ -931,3 +931,39 @@ DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
 still clear them. Shared validation and exact route limitations are recorded in
 [the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
 This adds transition coverage, not another whole-act or native-pixel certification.
+
+
+## Cold 800px Sonic+Tails Act2 clear (2026-09-28, candidate)
+
+On base `f46863ed0`, the41,348-input
+`lrz2-sonic-tails-cold-boss-act-arrival-800.{script,bk2}` completes both preceding
+acts from ordinary cold LRZ1 entry, zero deaths, then reaches playable boss-act
+position296/1196 with10 rings and Tails. Act2 opens door8, takes the upper route
+past the giant-ring corridor, rejoins the lower corridor, opens door6, traverses
+the late lifts/ceiling/collapsing bridge and finishes the Knuckles boulder scene.
+No forward runtime change was needed. Door5 is bypassed by this upper route;
+the native route retains that mechanism's direct coverage.
+
+Full load is41127. `LevelContinuationCarry` restores the nine carried rings on
+the destination screen-event update41128; an ordinary ring is collected at41228.
+`TestLrzWideActTwoColdRouteCapture` adds two-cycle whole-registry replay windows
+and real outgoing/live-history isolation. Its separate focused execution passed
+104 checkpoints, with two replay cycles each and no failures/errors/skips.
+The new test was added after that broad run compiled, so that run alone cannot
+certify this additional test. No production source changed during the run.
+
+Independent GameplayCaptureTool output matches all41,348 authored CSV rows,
+zero deaths. External `lrz-bring-up/campaign-20260928-wide-cold-act2-clear-800/capture.mp4`
+shows37965–41347:3,383frames,60fps,1600x448,56.383333s. Full ffmpeg decode passes;
+38580/40900/41125/41300 stills inspected. The earlier door-eight clip covers the
+opening climb. These are engine presentation observations, not synchronized
+native pixel parity. Boss completion, integration and remaining
+roster/donor/viewport/native-scene matrix obligations remain open.
+
+Wide Act2 focused validation completed on the candidate: queued Java21,
+explicit root S3K ROM, `-Dmse=off -Dtest=TestLrzWideActTwoColdRouteCapture test`:
+one test,zero failures/errors/skips,104 whole-registry checkpoints with two
+45-input replay cycles each,51.01s test time (1m12 Maven). Door8/door6 opening,
+boulder control,nine-ring destination carry,playable boss arrival and full-load
+live-history isolation all pass. The separate full guard lane also passed672 tests, zero failures/errors/skips
+(`-Dmse=off -Pguards test -B`,3m16s).

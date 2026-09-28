@@ -130,6 +130,34 @@ class TestLrzEndBossEncounterHeadless {
                 .filter(c->c.getSpawn().subtype()==0xAC).count());
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {320, 352, 400, 528, 800})
+    void capsulePatrolUsesTheNativeArenaWhenPresentationIsCentered(int width) {
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        var aspect = java.util.Arrays.stream(com.openggf.configuration.WidescreenAspect.values())
+                .filter(a -> a.pixelWidth() == width).findFirst().orElseThrow();
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.DISPLAY_ASPECT, aspect.name());
+        config.resolveDisplayAspect();
+        SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        beforeBodyInitialization();
+        var state = S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        state.setCenterNativeArenaCamera(true);
+        GameServices.camera().setX((short) com.openggf.camera.NativeViewportFraming.visibleLeft(0xA00, width));
+        var capsule = GameServices.level().getObjectManager().createDynamicObject(LrzEndBossEggCapsule::new);
+        capsule.update(200, fixture.sprite());
+        // loc_8657A starts at native Camera_X+$A0. loc_8662A patrols
+        // Camera_X+$30..$110, retaining its one-pixel right overshoot.
+        assertEquals(0xAA0, capsule.getX());
+        int minimum = capsule.getX(), maximum = capsule.getX();
+        for (int tick = 201; tick < 701; tick++) {
+            capsule.update(tick, fixture.sprite());
+            minimum = Math.min(minimum, capsule.getX());
+            maximum = Math.max(maximum, capsule.getX());
+        }
+        assertEquals(0xA30, minimum);
+        assertEquals(0xB11, maximum);
+    }
+
     @Test void capsuleAcceptsAGroundedMovingPlayerButNotAnAirborneOrDeadOne() {
         beforeBodyInitialization();
         var capsule=GameServices.level().getObjectManager().createDynamicObject(LrzEndBossEggCapsule::new);

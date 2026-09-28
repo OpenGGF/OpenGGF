@@ -71,6 +71,21 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Authored controller export (2026-09-28): `Bk2FrameInput.p1InputMask` can include
+jump as well as direction. A temporary LRZ author compared the whole mask to
+Left/Right, dropping held directions on498 jump rows; its live run cleared but
+the exported movie died. Serialize individual direction/action bits or preserve
+the original BK2 rows, then round-trip and independently replay the exact export.
+A successful live authoring session is not proof that its movie reproduces it.
+
+Re-decoded art in rewind comparisons (2026-09-28): a title-card load replay can
+create new `Pattern` instances from identical ROM bytes. The LRZ800 Act2 title
+window at24750 reported256 different Java identities but zero pixel differences.
+Compare all64 pixels per tile, preserving null/length and surrounding-state
+checks; do not suppress the title-card key or change the loader to retain object
+identity. `RewindSnapshotDiff` owns this content rule and its mutation regression.
+
+
 SOZ cold capture entry mode (2026-09-27): GameplayCaptureSession defaults to
 S3K_SKIP_INTROS=true, but the committed SOZ1 cold route starts with the native
 falling intro. Default capture died at1796; adding a neutral setup frame alone

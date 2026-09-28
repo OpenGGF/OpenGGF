@@ -391,3 +391,35 @@ probe, then independently replayed as fixed input. No production movement,
 collision, boss or camera logic was changed. Knuckles' cold main-act chain,
 broader viewport/donor/roster/lifecycle products and native presentation remain
 separate obligations.
+
+
+## Cold 800px Sonic+Tails complete route (2026-09-28, candidate)
+
+`lrz-boss-sonic-tails-cold-hpz-800.{script,bk2}` freezes50,659 ordinary inputs
+from cold LRZ1, donor off and no gameplay seeds. It retains both main acts,
+earns the placed fire shield, consumes all14 mine hits (defeat49177), opens
+the capsule, completes results, loads HPZ at50538 and reaches playable388/2796
+with three rings and Tails. Authoring replay has zero deaths and no hurt from
+shielded arena entry44686 through the exit.
+
+The route exposed a widescreen capsule-origin error: `loc_8657A/loc_8662A`
+uses the native Camera_X for spawn and patrol, but presentation centering had
+shifted those anchors into the static mask. The LRZ capsule now projects back
+to the native arena origin only while that mode is active; all other capsule
+consumers retain their existing origin. The five-width patrol regression
+failed four wide cases before the fix and passes all five afterward, preserving
+the ROM's one-pixel right overshoot. The capsule-family/native-route/mandatory
+S3K focused selection passes137 tests with zero failures/errors/skips, including
+25 positioned width/roster/donor encounters and the native full clear.
+
+`TestLrzWideBossColdRouteCapture` adds two-cycle whole-registry windows around
+approach, shield pickup, arena initialization, mine cycles, defeat, capsule,
+results and HPZ. It also checks real outgoing live-history retirement on the
+full HPZ load. It passes71 checkpoints, two45-input replay cycles each, zero failures/errors/
+skips (173.4s test,3m15 Maven). Independent capture matches all50,659 CSV rows,
+zero deaths. The6779-frame film43880–50658 is1600x448 at60fps,112.983333s;
+full ffmpeg decode passes and49177/49500/50000/50658 stills were inspected.
+External video: `lrz-bring-up/campaign-20260928-wide-cold-boss-hpz-800/capture.mp4`.
+This is engine presentation evidence, not synchronized native pixel parity.
+Integration and remaining roster/donor/viewport/native-scene breadth stay open. See the campaign audit for exact validation
+lane accounting and the rejected controller-export attempt.
