@@ -1328,3 +1328,10 @@ The independent corrected-runtime forward replay matches all53,564 pre-fix
 capture rows exactly. The source change retires only the unused falling-section
 parent reference; short collapse/removal/capture coverage and both320/800 placed
 bridge replay cases pass. See the audit for the exact combined command.
+
+
+Delivered source`a6069820a`, integrated`559cb83d5`: destination bridge and all
+four solo route cases pass13 tests,0 failures/errors/skips (3m31s), following the
+72-case candidate check. All110 wide rewind windows and the actual final-stage
+history reset pass. See the audit for unchanged forward evidence and remaining
+campaign scope. The final fight itself is a separate pending800px route.

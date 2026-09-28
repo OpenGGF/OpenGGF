@@ -9430,3 +9430,19 @@ cases and all110 new two-cycle checkpoints. A separate fresh53564-frame replay
 on corrected candidate classes matches every exported state field of every
 pre-fix capture row. The video remains valid forward evidence. Final change-plan
 inspection still selects2939 classes; focused scope and its limits above stand.
+
+
+Integrated source`a6069820a` as`559cb83d5` on develop after a fresh fetch/pull,
+without conflicts. Destination queued Java21/DISPLAY=:0/absolute-root-ROM
+`-Dtest=TestS3kDezTiltingBridgeHeadless,TestDezSoloActTwoColdRouteCapture`
+passes13 tests,0 failures/errors/skips,3m31s. Candidate72-case validation and
+exact53564-row forward equivalence remain the supporting broader local evidence;
+this is focused validation, not a new full-suite claim. The110-window wide route,
+all eight boss hits and actual history-reset assertions now pass on develop.
+
+The next campaign route is the800px final fight. Do not splice from53722:
+that belongs to the separate Act2 fixture. Fresh replay of the exact committed
+60920-input ending movie locates its final-stage handoff at50993. An initial
+wrong-offset trial died near the first hand and is discarded as controller
+setup evidence, not a gameplay defect. The corrected trial starts native input
+50994 after the widescreen handoff53443; its outcome is not yet certified.

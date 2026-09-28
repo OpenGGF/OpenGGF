@@ -825,12 +825,13 @@ products await normal Maven verification; native320 only, not donor/width
 completion. The Act1 matrix records rejected inputs and provenance.
 
 
-DEZ Act2 800px follow-up (2026-09-28, candidate):53,564 cold solo Sonic inputs
+DEZ Act2 800px follow-up (2026-09-28, integrated559cb83d5):53,564 cold solo Sonic inputs
 clear both main acts and reach the actual final-stage load at53443. The new
 Act2 route adds110 whole-registry windows with two replay cycles each and
 live-history reset verification. The first run exposed a falling tilting-bridge
 section's stale parent reference; a local routine-boundary retirement fix and
 short independent regression pass in the72-case focused selection, with no
-failures/errors/skips. Integration is pending. Fresh forward captures
+failures/errors/skips. Destination verification adds13 passing tests with no
+skips; all110 wide rewind windows and load isolation pass. Fresh forward captures
 have no deaths. See the Act2 matrix and campaign audit; broader/native parity
 obligations remain open.
