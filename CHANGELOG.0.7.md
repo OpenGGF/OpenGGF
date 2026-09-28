@@ -165,7 +165,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   shaft and walls bounce airborne riders; hitting all six panels opens the exit,
   and rewind retains the panel contact owner, including the original two-player behavior.
   A cold 800px Sonic route now covers both main acts, their boss phases and
-  the final-stage handoff with whole-world replay checks. Falling tilting-bridge
+  the ordinary ending through the final fingers, core and escape ship, with
+  whole-world replay checks. Falling tilting-bridge
   sections release their retired controller reference so rewind remains available,
   and the following door admits the player while the turbine still owns movement. The Spikebonker mace robots patrol both acts, hover, and swing at
   you when you come at them from the side they are walking toward. Act 2's retracting springs

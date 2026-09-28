@@ -262,6 +262,146 @@ class TestDezIncomingFinalRouteCapture {
     }
 
     @org.junit.jupiter.api.Test
+    void coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(800, "sonic", "", "off", null,
+                null, null, null, false, false, null, null, false, null, false);
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/dez-sonic-solo-cold-ending-800.bk2"));
+        assertEquals(60298, movie.getFrameCount());
+        // Cold 800px route: the direct lower-bridge path, repaired timed hazards,
+        // all final phases and both actual full-load boundaries. No state seeding.
+        var spots = Set.of(
+                20800, 20874, 21200, 21600, 21700, 22000, 22400, 22700, 22800,
+                23100, 23200, 23600, 23800, 24000, 24200, 24400, 24654, 24720,
+                24800, 24834, 24875, 24955, 25075, 25200, 25300, 25600, 26000,
+                26400, 26800, 27200, 27464, 27600, 28000, 28400, 28800, 29200,
+                29415, 29600, 30000, 30015, 30400, 30800, 31000, 31200, 31600,
+                31800, 32000, 32400, 32800, 32919, 32960, 33000, 33200, 33600,
+                33700, 34000, 34400, 34800, 35000, 35200, 35600, 36000, 36400,
+                36800, 37025, 37128, 37200, 37250, 37400, 37500, 37600, 38000,
+                38400, 38800, 39000, 39200, 39600, 40000, 40400, 40800, 41000,
+                41200, 41600, 42000, 42400, 42800, 43000, 43200, 43600, 44000,
+                44400, 44800, 45000, 45200, 45600, 46000, 46400, 46800, 47000,
+                47200, 47600, 48000, 48400, 48800, 49000, 49200, 49600, 50000,
+                50200, 50300, 50500, 50400, 50600, 50800, 51000, 51200, 51600,
+                52000, 52400, 52800, 53000, 53200, 53400, 53600, 54000, 54220,
+                54240, 54400, 54590, 54620, 54800, 55180, 55200, 55210, 55590,
+                55600, 55630, 55920, 55960, 56000, 56280, 56320, 56400, 56640,
+                56680, 56800, 57110, 57150, 57200, 57300, 57580, 57600, 57630,
+                57870, 57910, 57960, 58000, 58400, 58460, 58510, 58760, 58800,
+                58810, 59170, 59200, 59210, 59470, 59520, 59600, 59770, 59820,
+                59980, 60000, 60030, 60100, 60200, 60240);
+        var checked = new HashSet<Integer>();
+        boolean handsSeen = false, handsDefeated = false;
+        boolean coreSeen = false, coreDefeated = false, shipSeen = false, shipDefeated = false;
+        int previousCore = 8, previousShip = 8, coreHits = 0, shipHits = 0;
+        int finalLoad = -1, endingLoad = -1;
+        boolean checkedPendingFade = false;
+        var rewindBlocked = com.openggf.GameLoop.class.getDeclaredMethod("isRewindBlocked");
+        rewindBlocked.setAccessible(true);
+        long outgoingFinalHistory = 0, outgoingActTwoHistory = 0;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                if (frame == 50200 || frame == 60050) GameServices.configuration().setSessionOverride(
+                        com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
+                step(session, movie.getFrame(frame));
+                assertEquals(800, GameServices.camera().getWidth());
+                if (frame == 50372) {
+                    // Incoming callback-bearing fades intentionally reject rewind:
+                    // FadeManagerSnapshot.isPoisoned / GameLoop.isRewindBlocked.
+                    // Do not bypass that contract with a raw registry restore.
+                    var fade = (com.openggf.graphics.FadeManagerSnapshot)
+                            SessionManager.getCurrentGameplayMode().getRewindRegistry().capture().get("fademanager");
+                    assertTrue(fade.isPoisoned());
+                    assertTrue((boolean) rewindBlocked.invoke(session.loop()));
+                    checkedPendingFade = true;
+                }
+                if (frame == 50500) assertFalse((boolean) rewindBlocked.invoke(session.loop()),
+                        "ordinary final gameplay becomes rewindable after the incoming fade");
+                int zone = GameServices.level().getCurrentZone();
+                if (zone == 11 && frame >= 50200) outgoingActTwoHistory = Math.max(outgoingActTwoHistory,
+                        SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                if (zone == 23 && finalLoad < 0) {
+                    finalLoad = frame;
+                    var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
+                    assertEquals(0, incoming.earliestAvailableFrame());
+                    assertTrue(incoming.currentFrame() <= 1);
+                    GameServices.configuration().setSessionOverride(
+                            com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, false);
+                }
+                if (zone == 23 && frame >= 60050) outgoingFinalHistory = Math.max(outgoingFinalHistory,
+                        SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                if (zone == 13 && GameServices.level().getCurrentAct() == 1 && endingLoad < 0) {
+                    endingLoad = frame;
+                    var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
+                    assertEquals(0, incoming.earliestAvailableFrame());
+                    assertTrue(incoming.currentFrame() <= 1);
+                }
+                assertFalse(session.player().getDead(), "death at " + frame);
+                assertFalse(session.player().isSuperSonic(), "ordinary cold route at " + frame);
+                assertInstanceOf(com.openggf.sprites.playable.Sonic.class, session.player());
+                assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+                if (GameServices.level().getCurrentZone() == 23) {
+                    int fingers = health("DezFinalHand$Finger");
+                    handsSeen |= fingers == 18;
+                    handsDefeated |= handsSeen && fingers == 0;
+                    int core = health("DezFinalCore");
+                    // Newly allocated children have zero property until init.
+                    // Start counting at the production eight-hit initialization.
+                    coreSeen |= core == 8;
+                    if (coreSeen && core >= 0) {
+                        assertTrue(core <= previousCore, "core must not regain health");
+                        coreHits += previousCore - core;
+                        previousCore = core;
+                        coreDefeated |= core == 0;
+                    }
+                    int ship = health("DezFinalEscapeShip");
+                    shipSeen |= ship == 8;
+                    if (shipSeen && ship >= 0) {
+                        assertTrue(ship <= previousShip, "ship must not regain health");
+                        shipHits += previousShip - ship;
+                        previousShip = ship;
+                        shipDefeated |= ship == 0;
+                    }
+                }
+                if (!spots.contains(frame)) continue;
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
+                var expected = registry.capture();
+                for (int cycle = 0; cycle < 2; cycle++) {
+                    registry.restore(saved);
+                    same(saved, registry.capture(), "wide restore at " + frame + " cycle " + cycle);
+                    session.restoreInputHistory(movie.getFrame(frame));
+                    for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
+                    same(expected, registry.capture(), "wide replay at " + frame + " cycle " + cycle);
+                }
+                registry.restore(saved);
+                session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertTrue(checkedPendingFade);
+            assertEquals(50371, finalLoad);
+            assertTrue(outgoingActTwoHistory > 10);
+            assertEquals(60297, endingLoad);
+            assertTrue(outgoingFinalHistory > 10, "ending load must retire a recorded final-stage timeline");
+            assertTrue(handsSeen && handsDefeated, "all six fingers must be cleared");
+            assertTrue(coreSeen && coreDefeated);
+            assertTrue(shipSeen && shipDefeated);
+            assertEquals(8, coreHits);
+            assertEquals(8, shipHits);
+            // With no emerald override this is the ordinary ending, not DDZ.
+            assertEquals(13, GameServices.level().getCurrentZone());
+            assertEquals(1, GameServices.level().getCurrentAct());
+            assertEquals(96, session.player().getCentreX());
+            assertEquals(300, session.player().getCentreY());
+            assertEquals(0, GameServices.sprites().getRegisteredSidekicks().size());
+        }
+    }
+
+    @org.junit.jupiter.api.Test
     void coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding() throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
