@@ -9993,3 +9993,15 @@ correct participant selection and verify rewind. This direction issue does
 not fully explain the route blocker: the pieces expire before Sonic returns
 regardless of direction. Continue ordinary controller authoring separately.
 No source fix for this finding was started at this checkpoint.
+
+
+Checkpoint integration: `d27dd37c7` and restart notes `5ab24225e` merged into
+`develop` as `19bc3ad239` without conflicts. Destination verification used
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk DISPLAY=:0 python3 tools/testing/maven_queue.py
+-Dmse=off -Ds3k.rom.path=<absolute-root-ROM> -Dtest=TestSszWidePairedColdRouteCapture test`:
+1 test passed, zero failures/errors/skips; all 40 two-cycle rewind windows
+completed (15.46s test, 36.588s Maven). This is focused route validation, not a
+full-suite claim. Runtime remains the previously verified `b5a9990d1` debris
+fix. User requested a clean checkpoint because weekly usage is nearly exhausted;
+full paired widescreen clear, standing-player bridge selection and the remaining
+campaign matrix obligations are deferred for resumption.
