@@ -744,7 +744,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   pieces, suppressing repeat rebounds during their recovery. Released slabs begin their shake
   countdown on the release frame, matching the original sequence. Then the rock underneath is
   cut away, collapsing slabs drop into the gap, the crusher falls through and explodes, and the
-  camera eases back out to the act's own bounds.
+  camera eases back out to the act's own bounds. Widescreen crusher locks now use
+  the centered native camera window, so the collapse can start before Sonic reaches
+  the wall. Rewinding during the falling explosions preserves their remaining
+  sequence and shared random-number state.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list

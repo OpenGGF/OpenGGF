@@ -1123,3 +1123,63 @@ DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
 still clear them. Shared validation and exact route limitations are recorded in
 [the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
 This adds transition coverage, not another whole-act or native-pixel certification.
+
+
+### 2026-09-28 — LRZ cold widescreen crusher lock and explosion rewind
+
+Base `1ba376a38`, isolated `bugfix/ai-lrz-wide-crusher`. Replaying the native
+53,047-input Sonic+Tails clear at800px dies at4827. The first leader motion
+change is3063: native bounces on the Toxomister at(4224,856), wide does not.
+A read-only lifetime probe shows that wide CPU Tails destroys it at2293 while
+rolling at(4212,857), with Sonic far above at(4226,364). Revised ordinary inputs
+clear the first door, corkscrew, westbound spring, upper gap, shield and elevator.
+This is controller adaptation, not a physics change or ROM-parity claim.
+
+The first crusher then exposes a real blocker. `loc_901F4` waits for
+`Camera_X_pos >= $1C(a0)` ($EA0 for subtype0), after copying current Camera_X to
+Camera_min_X. At800px, the physical wall stops Sonic at4040 and the visible
+camera at3640, short of3744; the timer never allocates. `Check_CameraInRange`,
+its latch and rumble-range reads now project the centered native320 window via
+`NativeViewportFraming`. Existing LRZ native-arena framing projects camera
+clamps while retaining ROM boundary words for player walls and gradual release.
+The projection persists through release like the existing miniboss policy; it
+is not a permanent X lock. Both subtype windows retain their ROM table values.
+Comments explain original behavior and the reason for the widescreen change.
+
+The new cold6853-input fixture reaches beyond the old wall at(4157,1841),
+99rings, zero deaths. Initial full-registry replay fails at6571 in the explosion
+phase: shared RNG differs and explosion children disappear. The crusher's
+transient explosion controller had no captured helper state. The capsule-style
+`RewindStateful` adapter now preserves its timers and pending children and
+rebinds the separately restored shared RNG. This changes restored execution,
+not ordinary forward behavior; no snapshot keys or differences are excluded.
+
+Validation in progress: initial width regression5fail/0skip against base
+(native320 fails the new projection-policy assertion, all four wide cases fail
+native-window entry). Camera candidate88focused cases pass,0skip, including
+both subtype thresholds at five widths, chunk edits, legacy positioned rewind
+and four mandatory S3K stability classes. Native full cold53047-input HPZ route
+passes; the new wide test's6571failure triggered the helper repair above.
+Final helper/cold-route candidate command
+`-Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dtest=TestLrzRockCrusher,TestLrzWideColdRouteCapture,TestLrzBossColdRouteCapture test`
+passes22 cases, zero failures/errors/skips:20 object cases, the unchanged
+53,047-input native HPZ clear and the cold800 crusher route with40 full-registry
+checkpoints, two45-input restore/replay cycles each. Queued Maven uses Java21,
+DISPLAY=:0 and serial admission in the task worktree. Fresh-JVM `-Pguards -Dtest=TestRewindTransientGuard,TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard test`
+passes4 cases, zero failures/errors/skips (21.671s). Destination delivery remains
+pending.
+
+Change-based plan selects2940 ordinary classes plus guards after adding the
+new route class. Proportionate focused validation covers this local owner:
+no shared camera algorithm, physics, clock or snapshot format changes. Exercise
+both table branches/all widths, actual cold timer/collapse/release, helper
+recreation/shared RNG, full-registry two-cycle replay, native whole-zone route,
+mandatory S3K stability checks and relevant rewind guards. This is not a full
+ordinary-suite or full-guard pass. Remaining coldwide Act1/Act2/boss and other
+roster/donor/native-scene obligations stay open.
+
+External video `lrz-bring-up/campaign-20260928-wide-crusher-fixed-800` shows
+inputs5600–6852 (1253frames,60fps,1600x448). Full ffmpeg decode passes;
+6300/6500/6800 stills inspected. All6853 independent capture rows match the
+camera-candidate forward replay, zero deaths. The final helper candidate independently replays all6853 rows identically to
+that video, including every CSV field; ordinary forward behavior is unchanged.

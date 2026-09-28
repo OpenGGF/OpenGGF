@@ -102,6 +102,64 @@ class TestLrzRockCrusher {
         }
     }
 
+    @Test
+    void fallingExplosionControllerRecreatesWithSharedRngAndItsRemainingTimer() {
+        var h = harness(0, 0xE40, 0x680);
+        var rng = new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S3K);
+        h.services.withRng(rng);
+        toRumble(h);
+        int tick = 3;
+        while (h.crusher.routine() != 8 && tick < 300) h.crusher.update(tick++, null);
+        assertEquals(8, h.crusher.routine(), "entered falling explosions");
+        for (int i = 0; i < 11; i++) h.crusher.update(tick++, null);
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.none();
+        var saved = h.crusher.captureRewindState(context);
+        var savedRng = rng.capture();
+        int start = tick;
+        for (int i = 0; i < 30; i++) h.crusher.update(start + i, null);
+        var expected = h.crusher.captureRewindState(context);
+        var expectedRng = rng.capture();
+        assertFalse(savedRng.equals(expectedRng), "explosions must consume RNG in the replay window");
+        var restored = h.crusher.recreateForRewind(new com.openggf.level.objects.RewindRecreateContext(
+                h.crusher.getSpawn(), saved, h.services));
+        restored.setServices(h.services);
+        restored.restoreRewindState(saved, context);
+        rng.restore(savedRng);
+        for (int i = 0; i < 30; i++) restored.update(start + i, null);
+        assertEquals(expectedRng, rng.capture(), "helper must keep using the owner-restored RNG");
+        var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                "crusher", expected, restored.captureRewindState(context));
+        assertTrue(differences.isEmpty(), differences.toString());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 352, 400, 528, 800})
+    void bothCrusherLocksUseTheNativeWindowWithinEachViewport(int width) {
+        for (int subtype : new int[]{0, 2}) {
+            int start = subtype == 0 ? 0xDC0 : 0x400;
+            int end = subtype == 0 ? 0xEA0 : 0x4A0;
+            int y = subtype == 0 ? 0x680 : 0x700;
+            int inset = (width - 320) / 2;
+            var h = harness(subtype, start - inset - 1, y, width);
+            h.crusher.update(0, null);
+            assertFalse(h.crusher.initialised(), "one native pixel before entry");
+            h.camera.setX((short) (start - inset));
+            h.crusher.update(1, null);
+            assertTrue(h.crusher.initialised(), "native entry projected into width " + width);
+            assertTrue(h.state.centerNativeArenaCamera(), "native bounds need viewport projection");
+            assertEquals(end, h.camera.getMaxX(), "player boundaries stay in ROM coordinates");
+            h.camera.setMaxY(h.camera.getMaxYTarget());
+            h.camera.setX((short) (end - inset - 1));
+            h.crusher.update(2, null);
+            assertEquals(0, h.crusher.routine(), "do not release one pixel early");
+            assertEquals(end - 1, h.camera.getMinX());
+            h.camera.setX((short) (end - inset));
+            h.crusher.update(3, null);
+            assertEquals(2, h.crusher.routine(), "the reachable native lock starts the timer");
+            assertEquals(end, h.camera.getMinX());
+        }
+    }
+
     /** The act 1 placement of subtype 0 is inside {@code word_901B8}'s window. */
     private static final int CRUSHER_X = 0x0E40;
     private static final int CRUSHER_Y = 0x0700;
@@ -381,7 +439,12 @@ class TestLrzRockCrusher {
     }
 
     private static LrzRockCrusher harness(int subtype, int cameraX, int cameraY) {
-        Camera camera = new Camera();
+        return harness(subtype, cameraX, cameraY, 320);
+    }
+
+    private static LrzRockCrusher harness(int subtype, int cameraX, int cameraY, int width) {
+        Camera camera = org.mockito.Mockito.spy(new Camera());
+        org.mockito.Mockito.doReturn((short) width).when(camera).getWidth();
         camera.setX((short) cameraX);
         camera.setY((short) cameraY);
         LrzZoneRuntimeState state =

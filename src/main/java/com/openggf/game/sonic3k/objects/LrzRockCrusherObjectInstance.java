@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -152,6 +153,22 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
     private int hitFlashTimer;
     private boolean hitCollisionDisabled;
     private transient S3kBossExplosionController explosionController;
+    // Child6_CreateBossExplosion survives its parent's falling phase in the ROM.
+    // Preserve the helper's timer/pending children and rebind the shared RNG;
+    // omitting it silently stops explosions and changes later RNG/allocation order.
+    private final com.openggf.game.rewind.RewindStateful<S3kBossExplosionController.Snapshot> explosionRewind =
+            new com.openggf.game.rewind.RewindStateful<>() {
+                @Override
+                public S3kBossExplosionController.Snapshot captureRewindStateValue() {
+                    return explosionController == null ? null : explosionController.captureSnapshot();
+                }
+
+                @Override
+                public void restoreRewindStateValue(S3kBossExplosionController.Snapshot snapshot) {
+                    explosionController = snapshot == null ? null
+                            : S3kBossExplosionController.fromSnapshot(snapshot, services().rng());
+                }
+            };
 
     public LrzRockCrusherObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LRZRockCrusher");
@@ -205,9 +222,14 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
             return false;
         }
         int cameraY = camera.getY() & 0xFFFF;
-        int cameraX = camera.getX() & 0xFFFF;
+        int cameraX = nativeCameraX(camera);
         return cameraY >= window[0] && cameraY <= window[1]
                 && cameraX >= window[2] && cameraX <= window[3];
+    }
+
+    /** Native 320px camera origin, also before the crusher enables bound projection. */
+    private static int nativeCameraX(Camera camera) {
+        return NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
     }
 
     /** The init tail (sonic3k.asm:197000-197013 and :197154-197174). */
@@ -217,6 +239,15 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         Camera camera = cameraOrNull();
         LrzZoneRuntimeState state = lrzState();
         if (camera != null && state != null) {
+            // ROM Check_CameraInRange/loc_901F4 read the left edge of a 320px
+            // viewport. A wide camera follows farther left: at 800px the first
+            // crusher's physical wall stops Sonic before visible Camera_X can
+            // reach $EA0, leaving its collapse timer permanently unallocated.
+            // Keep the ROM boundary words for player walls and gradual release,
+            // but project those limits through the existing native-window policy.
+            // This framing remains during/after release, like the LRZ miniboss;
+            // it projects bounds, not a permanent horizontal camera lock.
+            state.setCenterNativeArenaCamera(true);
             // Camera_stored_* <- the four live limits (:197001-197004).
             state.storeCameraBounds(camera.getMinX() & 0xFFFF, camera.getMaxX() & 0xFFFF,
                     camera.getMinY() & 0xFFFF, camera.getMaxYTarget() & 0xFFFF);
@@ -259,7 +290,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
             }
         }
         if (!minXLatched) {
-            int cameraX = camera.getX() & 0xFFFF;
+            int cameraX = nativeCameraX(camera);
             camera.setMinX((short) cameraX);
             // move.w $1C(a0),d0 / cmp.w (Camera_X_pos).w,d0 / bhi: latch once the camera has
             // reached or passed the stored X, NOT while it is still short of it.
@@ -309,7 +340,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         if (camera == null) {
             return true;
         }
-        int dx = ((motion.x & 0xFF80) - (camera.getX() & 0xFFFF)) & 0xFFFF;
+        int dx = ((motion.x & 0xFF80) - nativeCameraX(camera)) & 0xFFFF;
         if (dx > 0x280) {
             return false;
         }
