@@ -824,3 +824,21 @@ check uses ROM `word_46618` delays to distinguish hanging pieces, whose links
 must survive, from released pieces. The delay-one row also checks the final
 parent-Y read before detachment. These are short independent checks; the full
 800px pair route and visual evidence remain in progress in the campaign audit.
+
+
+### Cold 800px pair through the first replica (2026-09-28)
+
+`TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris`
+drives the committed `ssz1-sonic-tails-cold-first-replica-800` BK2 from ordinary
+SSZ entry for 9,914 inputs. Sonic and Tails reach the first receiving platform
+at (512,1420), after eight GHZ replica hits, with 46 rings and zero deaths.
+Forty whole-registry checkpoints each run two restore/forward cycles across
+arrival, bridge, traversal, released column debris, preliminary/final arena
+bounds, fight, escape and transport. The focused test passed with no skips.
+
+A separate uninterrupted GameplayCaptureTool replay matches all recorded fields
+of all 9,914 CSV rows. Its 60fps video covers source frames 6000–9913, including
+defeat and transport, under `~/Videos/OGGF/ssz-bring-up/campaign-20260928-paired-cold-first-replica-800`.
+This closes that pair-route prefix and its listed rewind windows; the complete
+800px pair route, other breadth and synchronized native visual matching remain
+open. No emulator parity is inferred from the engine movie.
