@@ -57,7 +57,15 @@ public final class S3kDezTiltingBridgeObjectInstance extends AbstractObjectInsta
                 if (standing(services().playerQuery().mainPlayerOrNull())) controller.nextP1 = partIndex;
                 if (standing(services().playerQuery().nativeP2OrNull())) controller.nextP2 = partIndex;
                 // Installing loc_46F18 does not run its x4 acceleration yet.
-                if (controller.collapse) routine = 1;
+                if (controller.collapse) {
+                    routine = 1;
+                    // ROM loc_46EAC installs loc_46F18; its falling routines never
+                    // read the former parent word at $3E again. The ROM leaves
+                    // that unused address in RAM, but retaining a Java reference
+                    // would make a surviving section's rewind snapshot point at
+                    // a retired parent. Release it at the same routine boundary.
+                    parent = null;
+                }
             }
         } else {
             if (routine == 1) { velocity <<= 2; routine = 2; }

@@ -1289,3 +1289,42 @@ DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
 still clear them. Shared validation and exact route limitations are recorded in
 [the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
 This adds transition coverage, not another whole-act or native-pixel certification.
+
+
+### Cold solo Sonic 800px completion (2026-09-28, candidate)
+
+`dez2-sonic-solo-incoming-clear-800.{script,bk2}` preserves 53,564 ordinary
+controller inputs from cold DEZ1, native Sonic solo, donor off, without position,
+ring, clock or settling seeds. It clears both Act1 boss phases, real seamless
+Act2 arrival, the lower energy bridges, gravity pads, ceiling spring, launch
+chain, upper return route, tilting bridge, gravity hubs and the eight-hit boss.
+The actual final-stage load occurs at input53,443; the remaining120 inputs
+exercise incoming gameplay. Controller authoring needed no runtime changes;
+rewind validation subsequently exposed a stale tilting-bridge parent reference.
+
+`TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage`
+adds110 whole-registry checkpoints with two independent restore/45-input replay
+cycles each, all-eight-hit and roster assertions, and real outgoing/live incoming
+history isolation at the full `$1700` load. Candidate verification passes all72
+selected tests, zero failures/errors/skips (3m35s); integration is pending.
+
+Fresh production replay on runtime`ee8e470e4` (checkout`8540cdab0`) has53,564 rows
+and no death. All53,444 rows shared with the branch author match every exported
+CSV field. External `campaign-20260928-wide-act2-clear-800/capture.mp4` films
+inputs49000–53563; full decode passes and frames52000/53500 were inspected.
+This is engine route/presentation evidence, not matched emulator pixel parity.
+New inputs also have independently matched30,450- and40,351-row progress captures.
+
+The tilting-bridge experiments explain why copying native-width buttons alone
+was insufficient: unbraked arrival stopped atx8725; braking stopped short at8633;
+ordinary20-frame Right input moved onto the left bridge section near8651. A180
+frame wait lowered it too far;110 neutral inputs followed by the known ascent
+cleared the climb. Repeated jumps from the low right side fell into the pit.
+These rejected trials provide no basis for changing collision or bridge physics.
+Broader viewport/donor/team, lifecycle and native-comparison obligations remain
+open as recorded elsewhere in this matrix.
+
+The independent corrected-runtime forward replay matches all53,564 pre-fix
+capture rows exactly. The source change retires only the unused falling-section
+parent reference; short collapse/removal/capture coverage and both320/800 placed
+bridge replay cases pass. See the audit for the exact combined command.

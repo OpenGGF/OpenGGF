@@ -164,8 +164,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   down to steer by. Its controller stays alive as the camera follows you, and the bobbing
   shaft and walls bounce airborne riders; hitting all six panels opens the exit,
   and rewind retains the panel contact owner, including the original two-player behavior.
-  A cold 800px Sonic route now covers the complete first act, both boss phases and
-  released Act 2 control with whole-world replay checks,
+  A cold 800px Sonic route now covers both main acts, their boss phases and
+  the final-stage handoff with whole-world replay checks. Falling tilting-bridge
+  sections release their retired controller reference so rewind remains available,
   and the following door admits the player while the turbine still owns movement. The Spikebonker mace robots patrol both acts, hover, and swing at
   you when you come at them from the side they are walking toward. Act 2's retracting springs
   work: they push out of the wall while you are below them, pull back in once you are well

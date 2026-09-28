@@ -111,6 +111,98 @@ class TestDezSoloActTwoColdRouteCapture {
     }
 
     @Test
+    void coldWideSonicAloneClearsActTwoAndLoadsFinalStage() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/dez2-sonic-solo-incoming-clear-800.bk2"));
+        assertEquals(53564, movie.getFrameCount());
+        var settings = new GameplayCaptureSession.Settings(800, "sonic", "", "off", null, null, null);
+        // Independent 800px cold route: periodic whole-world windows plus bridge,
+        // gravity, launcher, tilting-platform, hub, boss and incoming-load boundaries.
+        var spots = Set.of(
+                20874, 20900, 21300, 21700, 22100, 22500, 22900, 23300, 23700,
+                24100, 24500, 24900, 25300, 25700, 26100, 26500, 26900, 27300,
+                27447, 27700, 27712, 27860, 27920, 27970, 28100, 28120, 28320,
+                28500, 28900, 29300, 29700, 30100, 30449, 30500, 30900, 31300,
+                31700, 32100, 32450, 32500, 32900, 33050, 33300, 33700, 33780,
+                34100, 34500, 34750, 34900, 35000, 35300, 35700, 36100, 36500,
+                36900, 37300, 37700, 38100, 38500, 38750, 38900, 39300, 39700,
+                40087, 40100, 40200, 40330, 40500, 40800, 40900, 41300, 41700,
+                42100, 42500, 42900, 43150, 43300, 43700, 44100, 44500, 44900,
+                45000, 45300, 45700, 46100, 46500, 46900, 47000, 47300, 47700,
+                48100, 48500, 48900, 49000, 49300, 49700, 50000, 50100, 50500,
+                50900, 51000, 51300, 51700, 52000, 52100, 52500, 52900, 53000,
+                53300, 53370);
+        var checked = new HashSet<Integer>();
+        var health = DezEndBossInstance.class.getDeclaredMethod("healthForTest");
+        health.setAccessible(true);
+        int lastHealth = 8, hits = 0, loadFrame = -1;
+        boolean bossSeen = false;
+        long outgoingFrame = 0;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                if (frame == 53200) GameServices.configuration().setSessionOverride(
+                        com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
+                session.step(movie.getFrame(frame));
+                session.render();
+                assertEquals(800, GameServices.camera().getWidth());
+                assertFalse(session.player().getDead(), "death at input " + frame);
+                assertFalse(session.player().isSuperSonic());
+                assertInstanceOf(Sonic.class, session.player());
+                assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+                if (GameServices.level().getCurrentZone() == 11) {
+                    if (frame >= 53200) outgoingFrame = Math.max(outgoingFrame,
+                            SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                } else if (loadFrame < 0) {
+                    loadFrame = frame;
+                    var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
+                    assertEquals(0, incoming.earliestAvailableFrame());
+                    assertTrue(incoming.currentFrame() <= 1,
+                            "the actual full load must begin a new frame-zero history");
+                }
+                var boss = GameServices.level().getObjectManager().activeObjectsOfType(DezEndBossInstance.class)
+                        .stream().findFirst().orElse(null);
+                if (boss != null) {
+                    bossSeen = true;
+                    int currentHealth = (int) health.invoke(boss);
+                    assertTrue(currentHealth <= lastHealth, "boss must not respawn or regain health");
+                    hits += lastHealth - currentHealth;
+                    lastHealth = currentHealth;
+                }
+                if (!spots.contains(frame)) continue;
+                checked.add(frame);
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                var forward = registry.capture();
+                for (int cycle = 0; cycle < 2; cycle++) {
+                    registry.restore(saved);
+                    same(saved, registry.capture(), "restore at " + frame + " cycle " + cycle);
+                    session.restoreInputHistory(movie.getFrame(frame));
+                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                    same(forward, registry.capture(), "replay at " + frame + " cycle " + cycle);
+                }
+                registry.restore(saved);
+                session.restoreInputHistory(movie.getFrame(frame));
+            }
+            assertEquals(spots, checked);
+            assertTrue(bossSeen);
+            assertEquals(8, hits, "all eight hits must come from the production encounter");
+            assertEquals(53443, loadFrame);
+            assertEquals(23, GameServices.level().getCurrentZone());
+            assertEquals(0, GameServices.level().getCurrentAct());
+            assertTrue(outgoingFrame > 10);
+            // Unlike DEZ1's seamless handoff, StartNewLevel $1700 resets the frame origin.
+            var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+            assertEquals(0, rewind.earliestAvailableFrame());
+            rewind.seekTo(0);
+            assertEquals(0, rewind.currentFrame());
+            assertEquals(23, GameServices.level().getCurrentZone());
+            assertEquals(0, GameServices.level().getCurrentAct());
+        }
+    }
+
+    @Test
     void coldTailsAloneClearsActTwoAndLoadsFinalStage() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez2-tails-solo-incoming-clear-320.bk2"));

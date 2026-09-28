@@ -84,6 +84,14 @@ class TestS3kDezTiltingBridgeHeadless {
         var contacts=controlledStanding(parts,1,0);
         int steps=0;while(root.routineForTest()==0&&steps++<400)advance(parts);
         assertTrue(steps<400);assertEquals(1,root.routineForTest());
+        for (var part : parts) {
+            assertEquals(1, part.routineForTest());
+            assertNull(part.parentForTest(), "falling sections no longer read the tilt controller");
+        }
+        // The low end retires before the high end. Remaining sections must be
+        // independently snapshotable after the controller leaves the object set.
+        GameServices.level().getObjectManager().removeDynamicObject(root);
+        assertDoesNotThrow(() -> TestEnvironment.activeGameplayMode().getRewindRegistry().capture());
         verify(contacts,never()).checkPlayerReleaseFromObjectFloor(any());
         int velocity=root.velocityForTest(),y=root.yFixedForTest();
         root.update(0,null);
@@ -148,8 +156,9 @@ class TestS3kDezTiltingBridgeHeadless {
     }
     private void advance(List<S3kDezTiltingBridgeObjectInstance> parts){for(var p:parts)p.update(0,null);}
     private List<String> frames(HeadlessTestFixture f,S3kDezTiltingBridgeObjectInstance root,int count) {
+        var observedParts=family(root);
         var rows=new ArrayList<String>();for(int i=0;i<count;i++){f.stepIdleFrames(1);var p=f.sprite();
-            rows.add(p.getCentreX()+","+p.getCentreY()+","+p.getYSpeed()+","+p.isOnObject()+":"+family(root).stream().map(o->o.partIndexForTest()+","+o.getX()+","+o.yFixedForTest()+","+o.velocityForTest()+","+o.routineForTest()).toList());}return rows;
+            rows.add(p.getCentreX()+","+p.getCentreY()+","+p.getYSpeed()+","+p.isOnObject()+":"+observedParts.stream().filter(o->!o.isDestroyed()).map(o->o.partIndexForTest()+","+o.getX()+","+o.yFixedForTest()+","+o.velocityForTest()+","+o.routineForTest()).toList());}return rows;
     }
     private S3kDezTiltingBridgeObjectInstance placedRoot(){return GameServices.level().getObjectManager().getActiveObjects().stream()
             .filter(o->o instanceof S3kDezTiltingBridgeObjectInstance p&&p.parentForTest()==null&&p.partIndexForTest()==1)
