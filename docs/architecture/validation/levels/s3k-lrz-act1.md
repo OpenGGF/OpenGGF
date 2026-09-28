@@ -1166,8 +1166,10 @@ passes22 cases, zero failures/errors/skips:20 object cases, the unchanged
 53,047-input native HPZ clear and the cold800 crusher route with40 full-registry
 checkpoints, two45-input restore/replay cycles each. Queued Maven uses Java21,
 DISPLAY=:0 and serial admission in the task worktree. Fresh-JVM `-Pguards -Dtest=TestRewindTransientGuard,TestRewindFieldDispositionGuard,TestHelperStateRewindCoverageGuard test`
-passes4 cases, zero failures/errors/skips (21.671s). Destination delivery remains
-pending.
+passes4 cases, zero failures/errors/skips (21.671s). Integrated source `d1d7ec602` as `25609a0ab` after fresh fetch/fast-forward
+check, no conflicts. On destination, the same object/native-full-route/wide-route
+command passes22 cases, zero failures/errors/skips (1m59), including all40 wide
+replay windows. No executable edits followed.
 
 Change-based plan selects2940 ordinary classes plus guards after adding the
 new route class. Proportionate focused validation covers this local owner:
