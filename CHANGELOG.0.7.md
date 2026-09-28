@@ -747,7 +747,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   camera eases back out to the act's own bounds. Widescreen crusher locks now use
   the centered native camera window, so the collapse can start before Sonic reaches
   the wall. Rewinding during the falling explosions preserves their remaining
-  sequence and shared random-number state.
+  sequence and shared random-number state. A cold 800px Sonic+Tails route now
+  covers both main acts, the final mine fight, capsule and playable Hidden Palace,
+  with whole-world rewind and load-history checks. The
+  final capsule now patrols the native arena when widescreen centres the fight,
+  instead of shifting into the masked margin.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list

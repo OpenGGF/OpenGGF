@@ -4,6 +4,7 @@ import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
+import com.openggf.level.Pattern;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -190,6 +191,10 @@ public final class RewindSnapshotDiff {
             return;
         }
         Class<?> cls = av.getClass();
+        if (av instanceof Pattern pa && bv instanceof Pattern pb) {
+            collectDiffs(path + ".pixels", patternPixels(pa), patternPixels(pb), diffs);
+            return;
+        }
         if (av instanceof GenericObjectSnapshot ga && bv instanceof GenericObjectSnapshot gb) {
             collectGenericObjectSnapshotDiffs(path, ga, gb, diffs);
             return;
@@ -385,6 +390,11 @@ public final class RewindSnapshotDiff {
     private static boolean fieldContentEqual(Object av, Object bv) {
         if (av == bv) return true;
         if (av == null || bv == null) return false;
+        // ROM art decoded again during replay has fresh Pattern instances. Compare
+        // the complete tile, not Java identity; do not exempt any presentation key.
+        if (av instanceof Pattern pa && bv instanceof Pattern pb) {
+            return Arrays.equals(patternPixels(pa), patternPixels(pb));
+        }
         Class<?> cls = av.getClass();
         if (cls.isArray()) {
             Class<?> elem = cls.getComponentType();
@@ -420,6 +430,12 @@ public final class RewindSnapshotDiff {
             return true;
         }
         return Objects.equals(av, bv);
+    }
+
+    private static byte[] patternPixels(Pattern pattern) {
+        byte[] pixels = new byte[Pattern.PATTERN_SIZE_IN_MEM];
+        pattern.copyInto(pixels, 0);
+        return pixels;
     }
 
     private static boolean compareLevel(Object a, Object b) {
