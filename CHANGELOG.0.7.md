@@ -813,7 +813,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the original horizontal tracking. The Act 1 miniboss arrives as an object -- the hovering drill with its
   climb, swing, drop, slam and fall-back cycle, its player tracking, and both of its articulated
   arms with their firing hands and shots. Shields deflect those shots away and
-  permanently clear their damage, including across rewind. Retired crusher pieces become
+  permanently clear their damage, including across rewind. Destroyed arms peel away
+  with the ROM’s staggered three-burst explosions for every part. Retired crusher pieces become
   harmless falling debris and leave the object pool before the seamless Act 2 handoff.
   Every Act 1 placement in the zone now builds a real
   class. The two arms unroll link by link from the bottom of the screen rather than snapping out

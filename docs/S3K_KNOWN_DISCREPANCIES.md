@@ -926,3 +926,8 @@ LRZ fireball-launcher flip correction (2026-09-29): launcher rendering retains
 both placement flips, and `loc_42C1A`'s copied render flags now survive shot
 creation, movement and rewind recreation. Previously leftward shots retained
 rightward artwork, and both parent/child draw calls discarded vertical flips.
+
+LRZ1 miniboss arm explosions (2026-09-29): `loc_78B86` now creates the
+subtype6 explosion controller instead of one visual explosion. Each of the12
+retiring ring parts emits three randomized bursts at three-frame intervals.
+The hand-to-anchor retirement delays and surviving opposite arm are unchanged.

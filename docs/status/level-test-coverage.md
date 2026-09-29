@@ -953,3 +953,7 @@ remains unconfirmed pending location/team details. See both LRZ act matrices.
 Issue 5 covers all four launcher/projectile flip combinations and renderer
 arguments after movement and rewind recreation; unchanged cadence and hazard
 state retain their independent tests. Broader act gaps remain inherited.
+
+Issue 6 restores the arm’s subtype6 controllers:37 focused checks passed,zero
+skips, including exact three-burst cadence, allocation/RNG behavior and16-frame
+whole-world restoration across burst emission and controller retirement.

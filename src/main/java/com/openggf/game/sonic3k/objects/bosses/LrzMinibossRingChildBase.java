@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
-import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.game.sonic3k.objects.LrzEndBossExplosion;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -60,13 +61,13 @@ abstract class LrzMinibossRingChildBase extends AbstractBossChild implements Lrz
         if (retirePhase == RETIRE_PARKED) {
             retirePhase = RETIRE_EXPLODING;
             retireTimer = RETIRE_EXPLOSION_FRAMES;
-            // CreateChild1_Normal over Child6_CreateBossExplosion with subtype 6. The sound is
-            // the explosion object's, not this child's (Obj_CreateBossExplosion,
-            // sonic3k.asm:176659-176672). Subtype 6 selects its own
-            // CreateBossExpParameterIndex row, whose cadence is not modelled here.
+            // loc_78B86 allocates Obj_CreateBossExplosion subtype 6, not one visual burst.
+            // CreateBossExp06 -> Obj_BossExpControl1: three bursts, three frames apart,
+            // each independently randomized within [-$10,$F] by sub_83E90.
             final int burstX = getX();
             final int burstY = getY();
-            spawnChild(() -> S3kBossExplosionChild.createWithNativeInitSfx(burstX, burstY));
+            spawnChild(() -> new LrzEndBossExplosion(
+                    new ObjectSpawn(burstX, burstY, 0, 6, 0, false, 0)));
         } else {
             ObjectLifetimeOps.destroyBossChildLatched(this);                      // Go_Delete_Sprite
         }

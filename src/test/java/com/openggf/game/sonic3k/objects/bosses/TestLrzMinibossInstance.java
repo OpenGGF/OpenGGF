@@ -446,6 +446,42 @@ class TestLrzMinibossInstance {
      * order both end with the same empty ring.
      */
     @Test
+    void eachRetiringArmPartCreatesThreeStaggeredExplosions() {
+        boss.update(frameCursor, null);
+        var hand = hands().stream().filter(h -> !h.ringMirrored()).findFirst().orElseThrow();
+        hitEveryHandUntilDead(List.of(hand), 0x600);
+        var births = new java.util.IdentityHashMap<com.openggf.game.sonic3k.objects.LrzEndBossExplosion,
+                java.util.List<Integer>>();
+        var seen = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<com.openggf.game.sonic3k.objects.S3kBossExplosionChild, Boolean>());
+        for (int frame = 0; frame < 96; frame++) {
+            boss.update(nextFrame(), null);
+            var emitters = services.objectManager().activeObjectsOfType(
+                    com.openggf.game.sonic3k.objects.LrzEndBossExplosion.class);
+            for (var emitter : emitters) {
+                if (emitter.isDestroyed()) continue;
+                assertEquals(6, emitter.getSpawn().subtype());
+                var frames = births.computeIfAbsent(emitter, ignored -> new java.util.ArrayList<>());
+                emitter.update(frame, null);
+                for (var explosion : services.objectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.S3kBossExplosionChild.class)) {
+                    if (!seen.add(explosion)) continue;
+                    frames.add(frame);
+                    assertTrue(explosion.getX() - emitter.getX() >= -16 && explosion.getX() - emitter.getX() < 16);
+                    assertTrue(explosion.getY() - emitter.getY() >= -16 && explosion.getY() - emitter.getY() < 16);
+                }
+            }
+        }
+        assertEquals(12, births.size(), "one controller per arm anchor, ten links and hand");
+        assertEquals(36, seen.size(), "CreateBossExp06 creates three bursts per part");
+        for (var frames : births.values()) {
+            assertEquals(3, frames.size());
+            assertEquals(3, frames.get(1) - frames.get(0));
+            assertEquals(3, frames.get(2) - frames.get(1));
+        }
+    }
+
+    @Test
     void killingAHandPeelsItsOwnArmAwayFromTheHandEndFirst() {
         boss.update(frameCursor, null);          // loc_78562 creates the two rings
         LrzMinibossHandChild doomed = hands().stream().filter(h -> !h.ringMirrored())

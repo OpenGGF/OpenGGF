@@ -1485,3 +1485,20 @@ Issue 5 validation on parent `8b36eafd90`: queued Maven `-Dmse=off
 -Dtest=TestLrzFireballLauncher,TestLrzHazardRewindSpots test` passed14, zero
 skips. Proportionate scope: only this family’s render flags and recreation
 metadata changed; no shared rendering/physics/clock algorithm changed.
+
+Issue 6: `loc_78B86 -> Child6_CreateBossExplosion`, subtype6, selects
+`CreateBossExp06` (`4,$10,$10,0`) and `Obj_BossExpControl1`. Predecrement
+emits three bursts, at dispatch offsets0,3,6; each successful child allocation
+consumes one RNG value and offsets X/Y independently within[-16,15]. A single
+`S3kBossExplosionChild` was the wrong object identity. Reuse the existing
+`LrzEndBossExplosion` controller without altering its native lifecycle.
+The existing staged retirement remains hand -> ten links -> arm anchor.
+The local regression counts12 controllers/36 bursts and exact cadence/ranges;
+headless whole-world replay covers the live controllers, deletion and shared RNG.
+Player/donor/viewport state does not select this controller’s burst schedule.
+Inherited whole-scene native matching and act breadth remain open.
+
+Issue 6 validation on parent `4a0b498cc4`: queued Maven `-Dmse=off
+-Dtest=TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestLrzEndBossEncounterHeadless#explosionConsumesBurstBudgetButRandomizesOnlyAllocatedChildren
+-Ds3k.rom.path=<verified absolute ROM> test` passed37, zero skips. This includes
+the new16-frame whole-world arm-controller restore/replay through deletion.

@@ -70,6 +70,30 @@ class TestS3kLrzBossRewindHeadless {
         assertRoundTrip(fixture, LrzMinibossDebrisChild.class);
     }
 
+    @Test
+    void armExplosionControllersReplayThroughTheirLastBurstAndDeletion() {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(9, 0)
+                .startPosition((short) 0x2C00, (short) 0x600).startPositionIsCentre().build();
+        fixture.sprite().setRingCount(355);
+        for (int i = 0; i < 400; i++) fixture.stepFrame(false, false, false, true, false);
+        for (int i = 0; i < 1600 && !hasChild(com.openggf.game.sonic3k.objects.LrzEndBossExplosion.class); i++) {
+            for (var child : boss().getChildComponents()) {
+                if (child instanceof LrzMinibossHandChild hand && !hand.ringMirrored()
+                        && hand.isFiring() && hand.getCollisionFlags() != 0) hand.onPlayerAttack(null, null);
+            }
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertTrue(hasChild(com.openggf.game.sonic3k.objects.LrzEndBossExplosion.class));
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        for (int i = 0; i < 16; i++) fixture.stepFrame(false, false, false, false, false);
+        var after = registry.capture();
+        registry.restore(before);
+        assertSameState(before, registry.capture(), "restore during arm bursts");
+        for (int i = 0; i < 16; i++) fixture.stepFrame(false, false, false, false, false);
+        assertSameState(after, registry.capture(), "burst/deletion forward replay including shared RNG");
+    }
+
     private static boolean hasChild(Class<?> type) {
         return GameServices.level().getObjectManager().getActiveObjects().stream().anyMatch(type::isInstance);
     }
