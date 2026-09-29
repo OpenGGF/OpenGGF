@@ -1418,3 +1418,15 @@ The new binding regression failed on the old registry before correction.
 Java 21.0.10; ROM CRC32 `63522553`, SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
 The plan's 2949-class fallback includes the unrelated untracked S2 movie; this
 local resource fix uses proportionate focused validation, not a full-suite pass.
+
+Issue 2, 2026-09-29: `TestLrzSwingingSpikeBall.chainAndBallRenderOnTheSameCircle`
+checks all four cardinal positions in both acts and rotation directions, using
+ROM centre coordinates for each draw. This draw-only fix is independent of
+viewport/donor/roster; hazard rewind coverage remains applicable. Inherited
+whole-route/configuration/native-scene gaps remain open.
+
+Issue 2 validation on parent `7ffaa67457`: queued Maven `-Dmse=off
+-Dtest=TestLrzSwingingSpikeBall,TestLrzHazardRewindSpots test` passed13, zero
+skips. The first test-harness attempt omitted post-construction service injection;
+correcting that fixture enabled the intended draw assertions. No shared renderer,
+geometry, physics or captured state changed.

@@ -3,6 +3,13 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.objects.*;
+import com.openggf.level.render.PatternSpriteRenderer;
+import java.util.ArrayList;
+import static org.mockito.Mockito.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -16,6 +23,44 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * step past the last link.
  */
 class TestLrzSwingingSpikeBall {
+
+    @ParameterizedTest
+    @CsvSource({"0,0", "0,1", "1,0", "1,1"})
+    void chainAndBallRenderOnTheSameCircle(int act, int flags) {
+        var chain = mock(PatternSpriteRenderer.class);
+        var ballRenderer = mock(PatternSpriteRenderer.class);
+        var manager = mock(ObjectRenderManager.class);
+        when(chain.isReady()).thenReturn(true);
+        when(ballRenderer.isReady()).thenReturn(true);
+        when(manager.getRenderer(act == 0 ? Sonic3kObjectArtKeys.LRZ_SWINGING_SPIKE_BALL_CHAIN
+                : Sonic3kObjectArtKeys.LRZ2_SWINGING_SPIKE_BALL_CHAIN)).thenReturn(chain);
+        when(manager.getRenderer(act == 0 ? Sonic3kObjectArtKeys.LRZ_SWINGING_SPIKE_BALL
+                : Sonic3kObjectArtKeys.LRZ2_SWINGING_SPIKE_BALL)).thenReturn(ballRenderer);
+        var services = new StubObjectServices() {
+            @Override public int currentAct() { return act; }
+            @Override public ObjectRenderManager renderManager() { return manager; }
+        };
+        var object = ObjectConstructionContext.construct(services,
+                () -> new LrzSwingingSpikeBallObjectInstance(
+                        new ObjectSpawn(BASE_X, BASE_Y, OBJECT_ID, 3, flags, false, 0)));
+        object.setServices(services);
+        // Cardinal positions from sub_43604: 16px per link, ball one step beyond.
+        int[][] directions = {{1,0}, {0,1}, {-1,0}, {0,-1}};
+        for (int frame = 0; frame < 128; frame++) {
+            object.update(frame, null);
+            if (frame % 32 != 0) continue;
+            int dx = directions[frame / 32][0];
+            int dy = directions[frame / 32][1] * (flags == 0 ? 1 : -1);
+            object.appendRenderCommands(new ArrayList<>());
+            for (int link = 1; link <= 3; link++) {
+                verify(chain).drawFrameIndex(1, BASE_X + dx * link * 16,
+                        BASE_Y + dy * link * 16, false, false);
+            }
+            verify(ballRenderer).drawFrameIndex(0, BASE_X + dx * 64,
+                    BASE_Y + dy * 64, false, false);
+            clearInvocations(chain, ballRenderer);
+        }
+    }
 
     private static final int OBJECT_ID = Sonic3kObjectIds.MGZLBZ_SMASHING_PILLAR_ALT;
     private static final int BASE_X = 0x0800;

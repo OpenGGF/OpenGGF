@@ -911,3 +911,7 @@ LRZ lava-fall art correction (2026-09-29): `loc_436EE` uses literal tile `$0D3`,
 not `ArtTile_LRZMisc` (`$3A1`). The drop sheet now binds its four 4x4 pieces
 to terrain tiles `$11B–$13A`; the mappings normalize `$48/$58` to sheet offsets
 `0/$10`. This resolves the garbled drops without changing their timing.
+
+LRZ swinging spikeball chain correction (2026-09-29): chain rendering no longer
+subtracts the ball radius from `sub_43604`'s centre coordinates. Its own mapping
+already supplies the piece offsets, so the links and ball share their anchor.

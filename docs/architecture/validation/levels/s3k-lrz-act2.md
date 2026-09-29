@@ -1044,3 +1044,9 @@ lifecycle gaps remain inherited.
 The subsequent [facing correction](s3k-lrz-act1.md#facing-correction-after-the-presentation-fix-2026-09-29)
 also applies to Act2's shared object: live player-driven flip and the next breath
 now agree with `Find_SonicTails` / `Change_FlipX`.
+
+Issue 2, 2026-09-29: `TestLrzSwingingSpikeBall.chainAndBallRenderOnTheSameCircle`
+checks all four cardinal positions in both acts and rotation directions, using
+ROM centre coordinates for each draw. This draw-only fix is independent of
+viewport/donor/roster; hazard rewind coverage remains applicable. Inherited
+whole-route/configuration/native-scene gaps remain open.

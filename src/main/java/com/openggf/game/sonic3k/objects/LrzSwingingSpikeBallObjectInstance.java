@@ -239,7 +239,8 @@ public final class LrzSwingingSpikeBallObjectInstance extends AbstractObjectInst
         PatternSpriteRenderer chain = getRenderer(chainArtKey);
         if (chain != null) {
             for (int i = 0; i < linkCount; i++) {
-                chain.drawFrameIndex(1, linkX[i] - HALF_SIZE, linkY[i] - HALF_SIZE, false, false);
+                // sub_43604 supplies centres; mapping frame 1 already offsets by (-8,-8).
+                chain.drawFrameIndex(1, linkX[i], linkY[i], false, false);
             }
         }
         PatternSpriteRenderer ball = getRenderer(artKey);

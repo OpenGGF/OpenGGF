@@ -712,7 +712,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The act 1 lava falls pour: each one runs for part of every four-second cycle, dropping a
   blob every sixth frame using the terrain lava artwork, and every second blob carries the falling-lava sound. Fire shields
   protect against both the falling lava and launcher fireballs.
-  The swinging spike balls sweep their circles in both acts, chain and all, with act 2 using
+  The swinging spike balls and their chains sweep concentric circles in both acts, with act 2 using
   its own artwork.
   Act 1's smashing spike platforms work: each one accelerates down its own shaft, slams with a
   crash and a squash, holds for half a second and grinds back up a pixel at a time, hurting

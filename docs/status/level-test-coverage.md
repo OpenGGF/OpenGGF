@@ -936,3 +936,7 @@ The [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#ordered-lrz
 records the eight-issue delivery from develop `144ff8b165c6`. The lava-fall
 loaded-art regression checks the literal terrain tile base and mapping shape;
 local evidence does not certify the inherited route/configuration/native-pixel gaps.
+
+Issue 2 adds both-act, both-direction cardinal render checks plus existing
+hazard rewind tests:13 passed,zero skips. The chain draw offset is local and
+configuration independent; act-wide gaps remain inherited.
