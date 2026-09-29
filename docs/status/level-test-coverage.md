@@ -945,3 +945,7 @@ Issue 3 adds crusher art admission, upload, renderer and DMA restore/replay
 coverage:25 focused tests and8 rewind guard checks passed without skips; the
 final two resource checks also passed. Native cleanup enemy-art restoration
 remains an inherited limitation, recorded in the Act1 matrix.
+
+Issue 4 is an audit, not a claimed fix: the ROM targets Player1 and does not
+avoid walls. Added placement/P1/P2/render-facing regression; the reported scene
+remains unconfirmed pending location/team details. See both LRZ act matrices.

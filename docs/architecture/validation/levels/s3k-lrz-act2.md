@@ -1050,3 +1050,20 @@ checks all four cardinal positions in both acts and rotation directions, using
 ROM centre coordinates for each draw. This draw-only fix is independent of
 viewport/donor/roster; hazard rewind coverage remains applicable. Inherited
 whole-route/configuration/native-scene gaps remain open.
+
+Issue 4, Fireworm initial direction audit (2026-09-29): `loc_8F77A` uses
+`Find_SonicTails` only for proximity admission. The allocated head's
+`loc_8F7F4` calls `Set_VelocityXTrackSonic` with `d4=-$100`; that helper
+explicitly selects Player1 and `Find_OtherObject` returns right only for a
+negative signed object-minus-player X word. Equality selects left. It clears
+render bit0, then sets it and negates velocity for rightward travel. Placement
+flip and nearer P2 do not select the initial direction. `loc_8F862/loc_8F89A`
+turn after swimming half-cycles; neither routine tests walls.
+
+`TestFirewormBadnikInstance.initialFacingIgnoresPlacementFlipAndNearerFollower`
+checks all four placement flags, P1 left/equal/right, a closer opposite-side
+follower, rendered HFlip, latched direction and segment velocity inheritance.
+The reported scene has not been identified or reproduced, so no speculative
+direction/wall-avoidance change was made. Location/team clarification remains
+open. These local, player-slot-sensitive checks do not close inherited
+route/configuration/native-pixel gaps.

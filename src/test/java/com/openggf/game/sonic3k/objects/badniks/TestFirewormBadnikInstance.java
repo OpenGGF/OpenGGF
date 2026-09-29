@@ -317,6 +317,42 @@ class TestFirewormBadnikInstance {
         }
     }
 
+    @Test
+    void initialFacingIgnoresPlacementFlipAndNearerFollower() {
+        var renderer = org.mockito.Mockito.mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var renderManager = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectRenderManager.class);
+        org.mockito.Mockito.when(renderer.isReady()).thenReturn(true);
+        org.mockito.Mockito.when(renderManager.getRenderer(
+                com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FIREWORM)).thenReturn(renderer);
+        for (int flags = 0; flags < 4; flags++) {
+            for (int offset : new int[]{-64, 0, 64}) {
+                var services = new TestObjectServices() {
+                    @Override public com.openggf.level.objects.ObjectRenderManager renderManager() {
+                        return renderManager;
+                    }
+                }.withIsolatedObjectManager().withSidekicks(List.of(player(BASE_X - Integer.signum(offset))));
+                var head = new FirewormHeadInstance(new ObjectSpawn(
+                        BASE_X, BASE_Y, OBJECT_ID, 0, flags, false, 0));
+                head.setServices(services);
+                head.update(0, player(BASE_X + offset));
+                // loc_8F7F4 -> Set_VelocityXTrackSonic -> Find_OtherObject against Player_1.
+                // Equality returns d0=0, so retains -$100 and clears render bit 0.
+                boolean right = offset > 0;
+                assertEquals(right ? 0x100 : -0x100, head.xVel());
+                assertEquals(!right, head.badnikFacingLeft());
+                head.appendRenderCommands(new java.util.ArrayList<>());
+                org.mockito.Mockito.verify(renderer).drawFrameIndexForcedPriority(
+                        0, head.getCentreX(), head.getCentreY(), right, false, -1, true);
+                org.mockito.Mockito.clearInvocations(renderer);
+                for (int frame = 1; frame < 4; frame++) head.update(frame, player(BASE_X - offset));
+                assertEquals(right ? 0x100 : -0x100, head.xVel(), "initial target is latched, not tracked continuously");
+                for (var segment : segments(services)) {
+                    assertEquals(head.xVel(), segment.xVel(), "body inherits the head's travel direction");
+                }
+            }
+        }
+    }
+
     // ===== harness =====
 
     private static FirewormBadnikInstance spawner() {

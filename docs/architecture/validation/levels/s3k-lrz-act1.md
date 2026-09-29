@@ -1450,3 +1450,25 @@ resource-only rerun passed2, adding physical queue restore/replay with every
 rendered pixel compared again. Fresh `-Pguards` selection of
 `TestRewindArchitectureGuard,TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard,TestRewindTransientGuard`
 passed8, zero skips. This is focused validation, not full ordinary/guard coverage.
+
+Issue 4, Fireworm initial direction audit (2026-09-29): `loc_8F77A` uses
+`Find_SonicTails` only for proximity admission. The allocated head's
+`loc_8F7F4` calls `Set_VelocityXTrackSonic` with `d4=-$100`; that helper
+explicitly selects Player1 and `Find_OtherObject` returns right only for a
+negative signed object-minus-player X word. Equality selects left. It clears
+render bit0, then sets it and negates velocity for rightward travel. Placement
+flip and nearer P2 do not select the initial direction. `loc_8F862/loc_8F89A`
+turn after swimming half-cycles; neither routine tests walls.
+
+`TestFirewormBadnikInstance.initialFacingIgnoresPlacementFlipAndNearerFollower`
+checks all four placement flags, P1 left/equal/right, a closer opposite-side
+follower, rendered HFlip, latched direction and segment velocity inheritance.
+The reported scene has not been identified or reproduced, so no speculative
+direction/wall-avoidance change was made. Location/team clarification remains
+open. These local, player-slot-sensitive checks do not close inherited
+route/configuration/native-pixel gaps.
+
+Issue 4 validation on parent `cbdd271324`: queued Maven `-Dmse=off
+-Dtest=TestFirewormBadnikInstance,TestFirewormArt
+-Ds3k.rom.path=<verified absolute ROM> test` passed14, zero skips. No production
+code changed for this audit; the original reported scene remains unconfirmed.
