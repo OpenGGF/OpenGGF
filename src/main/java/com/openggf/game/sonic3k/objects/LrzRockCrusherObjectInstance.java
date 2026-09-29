@@ -201,6 +201,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
             }
             initialise();
         }
+        art.service(services());
         switch (routine) {
             case 0 -> waitForCameraLimits();
             case 2 -> rumble();
@@ -233,6 +234,8 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
     }
 
     /** The init tail (sonic3k.asm:197000-197013 and :197154-197174). */
+    private final LrzRockCrusherArtState art = new LrzRockCrusherArtState();
+
     private void initialise() {
         initialised = true;
         cameraTargetX = window[4];
@@ -256,6 +259,8 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
             camera.setMaxX((short) window[4]);
             camera.setMaxYTarget((short) window[5]);
         }
+        // loc_90188 submits the crusher archive and explosion PLC before palette/children.
+        art.submit(services());
         loadPalette();
         // ChildObjDat_9067A: one Obj_SpriteMask, positioned by subtype (:197018-197030).
         final int maskX = subtype == 0 ? MASK_X_SUBTYPE_ZERO : MASK_X_OTHER;
@@ -423,9 +428,9 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
 
     /**
      * {@code loc_90368} (sonic3k.asm:197175-197184). The two badnik art modules it requeues belong
-     * to slice 4's {@code Obj_Fireworm} and {@code Obj_Iwamodoki}; until those exist there is no
-     * consumer for the queue entries, so this restores the palette and deletes, and the art
-     * requeue is recorded as the remaining half of this routine.
+     * to {@code Obj_Fireworm} and {@code Obj_Iwamodoki}. Their standalone sheets remain intact,
+     * but restoring the native shared tile bank is still an unimplemented cleanup obligation.
+     * This currently restores the palette and deletes.
      */
     private void cleanUp() {
         restorePalette();

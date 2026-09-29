@@ -940,3 +940,8 @@ local evidence does not certify the inherited route/configuration/native-pixel g
 Issue 2 adds both-act, both-direction cardinal render checks plus existing
 hazard rewind tests:13 passed,zero skips. The chain draw offset is local and
 configuration independent; act-wide gaps remain inherited.
+
+Issue 3 adds crusher art admission, upload, renderer and DMA restore/replay
+coverage:25 focused tests and8 rewind guard checks passed without skips; the
+final two resource checks also passed. Native cleanup enemy-art restoration
+remains an inherited limitation, recorded in the Act1 matrix.

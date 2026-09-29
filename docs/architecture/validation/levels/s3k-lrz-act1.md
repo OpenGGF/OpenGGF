@@ -1430,3 +1430,23 @@ Issue 2 validation on parent `7ffaa67457`: queued Maven `-Dmse=off
 skips. The first test-harness attempt omitted post-construction service injection;
 correcting that fixture enabled the intended draw assertions. No shared renderer,
 geometry, physics or captured state changed.
+
+Issue 3: `loc_90188` submits ROM archive `$16F928` to VRAM `$A5C0` and
+`PLC_BossExplosion` before palette/children. `LrzRockCrusherArtState` follows
+the existing miniboss's physical DMA plus prepared-job lifecycle, with a
+captured ordinal and no new wait. Replacing the sheet with a preloaded standalone
+was rejected because the production upload/refresh owner was missing.
+`TestLrzRockCrusherResources` covers camera admission, single submission,
+source/destination identity, all three three-piece frames, every decoded pixel,
+renderer refresh and readiness claim. Art binding is viewport/donor/roster
+independent; existing crusher tests retain both camera windows and all widths.
+Native whole-scene matching and broader act certification remain inherited gaps,
+as does the previously documented enemy-art requeue at cleanup.
+
+Issue 3 validation on parent `a43ebce782`: queued Maven `-Dmse=off
+-Dtest=TestLrzRockCrusherResources,TestLrzRockCrusher,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard
+-Ds3k.rom.path=<verified absolute ROM> test` passed25, zero skips. The final
+resource-only rerun passed2, adding physical queue restore/replay with every
+rendered pixel compared again. Fresh `-Pguards` selection of
+`TestRewindArchitectureGuard,TestHelperStateRewindCoverageGuard,TestRewindFieldDispositionGuard,TestRewindTransientGuard`
+passed8, zero skips. This is focused validation, not full ordinary/guard coverage.

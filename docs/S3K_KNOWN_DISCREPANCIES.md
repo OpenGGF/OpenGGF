@@ -915,3 +915,9 @@ to terrain tiles `$11B–$13A`; the mappings normalize `$48/$58` to sheet offset
 LRZ swinging spikeball chain correction (2026-09-29): chain rendering no longer
 subtracts the ball radius from `sub_43604`'s centre coordinates. Its own mapping
 already supplies the piece offsets, so the links and ball share their anchor.
+
+LRZ rock-crusher visibility correction (2026-09-29): initialization now submits
+`ArtKosM_LRZRockCrusher` and the boss-explosion PLC at `loc_90188`, uploading
+and refreshing the registered level sheet. Previously only palette/children
+were initialized, leaving the crusher's tile bank unloaded. The pre-existing
+`loc_90368` enemy-art requeue omission remains outside this visibility fix.
