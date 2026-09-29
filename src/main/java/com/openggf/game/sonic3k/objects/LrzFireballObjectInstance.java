@@ -58,9 +58,14 @@ public final class LrzFireballObjectInstance extends AbstractObjectInstance
 
     /** Production constructor; {@code mirrored} is the launcher's {@code status} bit 0. */
     public LrzFireballObjectInstance(int x, int y, boolean mirrored) {
-        super(new ObjectSpawn(x, y, Sonic3kObjectIds.LBZ_PIPE_PLUG, 0, 0, false, 0),
+        this(x, y, mirrored ? 1 : 0);
+    }
+
+    /** loc_42C1A copies both render flips; status bit 0 also mirrors the velocity. */
+    public LrzFireballObjectInstance(int x, int y, int renderFlags) {
+        super(new ObjectSpawn(x, y, Sonic3kObjectIds.LBZ_PIPE_PLUG, 0, renderFlags & 3, false, 0),
                 "LRZFireball");
-        this.xVelocity = mirrored ? -SPEED : SPEED;
+        this.xVelocity = (renderFlags & 1) != 0 ? -SPEED : SPEED;
         this.xPosition = (x & 0xFFFF) << 16;
         this.yPosition = (y & 0xFFFF) << 16;
         this.mappingFrame = 0;
@@ -68,7 +73,8 @@ public final class LrzFireballObjectInstance extends AbstractObjectInstance
 
     /** Probe constructor for rewind recreation and reflection-level tests. */
     public LrzFireballObjectInstance(ObjectSpawn spawn) {
-        this(spawn == null ? 0 : spawn.x(), spawn == null ? 0 : spawn.y(), false);
+        this(spawn == null ? 0 : spawn.x(), spawn == null ? 0 : spawn.y(),
+                spawn == null ? 0 : spawn.renderFlags());
     }
 
     @Override
@@ -77,7 +83,7 @@ public final class LrzFireballObjectInstance extends AbstractObjectInstance
         int x = spawn != null ? spawn.x() : 0;
         int y = spawn != null ? spawn.y() : 0;
         return ObjectConstructionContext.construct(ctx.objectServices(),
-                () -> new LrzFireballObjectInstance(x, y, false));
+                () -> new LrzFireballObjectInstance(x, y, spawn != null ? spawn.renderFlags() : 0));
     }
 
     @Override
@@ -194,6 +200,7 @@ public final class LrzFireballObjectInstance extends AbstractObjectInstance
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+        renderer.drawFrameIndex(mappingFrame, getX(), getY(),
+                (getSpawn().renderFlags() & 1) != 0, (getSpawn().renderFlags() & 2) != 0);
     }
 }

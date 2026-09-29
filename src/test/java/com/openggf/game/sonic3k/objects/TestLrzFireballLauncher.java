@@ -41,6 +41,48 @@ class TestLrzFireballLauncher {
         GraphicsManager.getInstance().resetState();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1, 2, 3})
+    void launcherAndShotsKeepBothFlipsThroughRecreation(int flags) {
+        var launcherRenderer = org.mockito.Mockito.mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var shotRenderer = org.mockito.Mockito.mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var renderManager = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectRenderManager.class);
+        org.mockito.Mockito.when(launcherRenderer.isReady()).thenReturn(true);
+        org.mockito.Mockito.when(shotRenderer.isReady()).thenReturn(true);
+        org.mockito.Mockito.when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.LRZ_FIREBALL_LAUNCHER)).thenReturn(launcherRenderer);
+        org.mockito.Mockito.when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.LRZ_FIREBALL)).thenReturn(shotRenderer);
+        var services = new com.openggf.level.objects.TestObjectServices() {
+            @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return renderManager; }
+        }.withIsolatedObjectManager();
+        var launcher = services.objectManager().createDynamicObject(() -> new LrzFireballLauncherObjectInstance(
+                new ObjectSpawn(BASE_X, BASE_Y, 0x1B, 0, flags, false, 0)));
+        launcher.update(0, null);
+        launcher.update(1, null);
+        launcher.appendRenderCommands(new java.util.ArrayList<>());
+        boolean h = (flags & 1) != 0, v = (flags & 2) != 0;
+        org.mockito.Mockito.verify(launcherRenderer).drawFrameIndex(2, BASE_X, BASE_Y, h, v);
+        var shot = services.objectManager().getActiveObjects().stream()
+                .filter(LrzFireballObjectInstance.class::isInstance).map(LrzFireballObjectInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(BASE_X + (h ? -8 : 8), shot.getCentreX());
+        assertEquals(h ? -0x200 : 0x200, shot.xVelocity());
+        shot.update(4, null);
+        shot.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(shotRenderer).drawFrameIndex(1, BASE_X + (h ? -10 : 10), BASE_Y, h, v);
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.none();
+        var saved = shot.captureRewindState(context);
+        var restored = shot.recreateForRewind(new com.openggf.level.objects.RewindRecreateContext(shot.getSpawn(), saved, services));
+        restored.setServices(services);
+        restored.restoreRewindState(saved, context);
+        org.mockito.Mockito.clearInvocations(shotRenderer);
+        shot.update(8, null); restored.update(8, null);
+        shot.appendRenderCommands(new java.util.ArrayList<>());
+        restored.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(shotRenderer, org.mockito.Mockito.times(2)).drawFrameIndex(
+                0, BASE_X + (h ? -12 : 12), BASE_Y, h, v);
+        assertEquals(shot.captureRewindState(context), restored.captureRewindState(context));
+    }
+
     /** {@code moveq #0,d0 / move.b subtype(a0),d0 / lsl.w #2,d0} (sonic3k.asm:88159-88162). */
     @Test
     void thePeriodIsTheSubtypeTimesFour() {

@@ -116,10 +116,10 @@ public final class LrzFireballLauncherObjectInstance extends AbstractObjectInsta
         int offset = mirrored ? -SPAWN_OFFSET_X : SPAWN_OFFSET_X;
         final int childX = (getCentreX() + offset) & 0xFFFF;
         final int childY = getCentreY();
-        final boolean childMirrored = mirrored;
+        final int childRenderFlags = getSpawn().renderFlags() & 3;
         // AllocateObjectAfterCurrent (:88170) scans forward from this object's own slot, which is
         // spawnChild's contract.
-        spawnChild(() -> new LrzFireballObjectInstance(childX, childY, childMirrored));
+        spawnChild(() -> new LrzFireballObjectInstance(childX, childY, childRenderFlags));
         try {
             services().playSfx(Sonic3kSfx.LEVEL_PROJECTILE.id);
         } catch (Exception ignored) {
@@ -177,6 +177,8 @@ public final class LrzFireballLauncherObjectInstance extends AbstractObjectInsta
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(MAPPING_FRAME, getX(), getY(), false, false);
+        // Obj_LRZFireballLauncher preserves both placement flips (ori.b #4).
+        renderer.drawFrameIndex(MAPPING_FRAME, getX(), getY(),
+                (getSpawn().renderFlags() & 1) != 0, (getSpawn().renderFlags() & 2) != 0);
     }
 }

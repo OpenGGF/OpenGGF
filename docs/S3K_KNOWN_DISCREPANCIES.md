@@ -921,3 +921,8 @@ LRZ rock-crusher visibility correction (2026-09-29): initialization now submits
 and refreshing the registered level sheet. Previously only palette/children
 were initialized, leaving the crusher's tile bank unloaded. The pre-existing
 `loc_90368` enemy-art requeue omission remains outside this visibility fix.
+
+LRZ fireball-launcher flip correction (2026-09-29): launcher rendering retains
+both placement flips, and `loc_42C1A`'s copied render flags now survive shot
+creation, movement and rewind recreation. Previously leftward shots retained
+rightward artwork, and both parent/child draw calls discarded vertical flips.

@@ -1472,3 +1472,16 @@ Issue 4 validation on parent `cbdd271324`: queued Maven `-Dmse=off
 -Dtest=TestFirewormBadnikInstance,TestFirewormArt
 -Ds3k.rom.path=<verified absolute ROM> test` passed14, zero skips. No production
 code changed for this audit; the original reported scene remains unconfirmed.
+
+Issue 5: `Obj_LRZFireballLauncher` preserves placement bits with `ori.b #4`;
+`loc_42C1A` copies render flags to its shot, while status bit0 mirrors the
+X offset and velocity. Both renderer calls now retain HFlip/VFlip; dynamic
+spawn flags carry them through movement and recreation without a new snapshot
+field. The four-case rendering regression checks both animation frames, offset,
+velocity, and identical capture/recreate/forward replay. No viewport, donor or
+character/team dependency exists in this local presentation contract.
+
+Issue 5 validation on parent `8b36eafd90`: queued Maven `-Dmse=off
+-Dtest=TestLrzFireballLauncher,TestLrzHazardRewindSpots test` passed14, zero
+skips. Proportionate scope: only this family’s render flags and recreation
+metadata changed; no shared rendering/physics/clock algorithm changed.
