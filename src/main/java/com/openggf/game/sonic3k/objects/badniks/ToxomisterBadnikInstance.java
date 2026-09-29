@@ -82,6 +82,7 @@ public final class ToxomisterBadnikInstance extends AbstractObjectInstance
 
     public ToxomisterBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Toxomister");
+        facingRight = (spawn.renderFlags() & 1) == 0;
         // btst #1,render_flags(a0) / neg.w d1 (the init): the placement's Y flip.
         boolean flippedY = (spawn.renderFlags() & 0x2) != 0;
         this.childSpriteY = ((spawn.y() & 0xFFFF)
@@ -161,7 +162,7 @@ public final class ToxomisterBadnikInstance extends AbstractObjectInstance
     /** {@code sub_8FF72} (sonic3k.asm, {@code $8FF72}). */
     private void breathe() {
         playSfx(Sonic3kSfx.ENEMY_BREATH.id);
-        final int x = (getCentreX() + CLOUD_OFFSET_X) & 0xFFFF;
+        final int x = (getCentreX() + (facingRight ? CLOUD_OFFSET_X : -CLOUD_OFFSET_X)) & 0xFFFF;
         final int y = (getCentreY() + CLOUD_OFFSET_Y) & 0xFFFF;
         ToxomisterCloudInstance created = spawnFreeChild(() -> new ToxomisterCloudInstance(x, y));
         if (created == null) {
@@ -306,8 +307,8 @@ public final class ToxomisterBadnikInstance extends AbstractObjectInstance
             return;
         }
         // mainspr_childsprites 1: the body draws its own second sprite at sub2_y_pos.
-        renderer.drawFrameIndex(MAPPING_FRAME, getX(), getY(), !facingRight, false);
-        renderer.drawFrameIndex(0, getX(),
-                childSpriteY - HALF_SIZE, !facingRight, false);
+        boolean flippedY = (getSpawn().renderFlags() & 2) != 0;
+        renderer.drawFrameIndex(MAPPING_FRAME, getCentreX(), getCentreY(), !facingRight, flippedY);
+        renderer.drawFrameIndex(0, getCentreX(), childSpriteY, !facingRight, flippedY);
     }
 }

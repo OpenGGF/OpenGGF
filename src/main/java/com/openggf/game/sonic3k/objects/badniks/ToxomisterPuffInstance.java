@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.objects.S3kRawAnimation;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -17,6 +18,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -31,14 +33,14 @@ import java.util.List;
  * last-listed one first -- the same low-byte-of-a-word trick {@code $18}'s trigger distance uses.
  *
  * <p>{@code loc_8FEDC} then follows the parent through {@code Refresh_ChildPosition} and flickers:
- * it draws only when {@code (V_int_run_count+3)} bit 0 differs from the inverted index's bit 0
- * ({@code sne d0 / btst #0,subtype / not.b d0}), so alternate puffs are visible on alternate
- * frames and the cloud reads as churning.
+ * it draws when {@code (V_int_run_count+3)} bit 0 equals the inverted index's bit 0
+ * ({@code sne d0 / btst #0,subtype / not.b d0}). All seven indices are even, so they share
+ * the same alternating draw phase; staggered ROM animations give the cloud its shape.
  *
  * <p>When the parent raises {@code status} bit 7 the puff disperses ({@code loc_8FF12}): if the
  * parent also raised {@code $38} bit 2 -- the spindash escape -- {@code loc_90002} gives it an
  * outward {@code x_vel} from {@code word_90020} ({@code $100, $180, $200, $180, $100, $200, $180}),
- * signed by the BODY's facing, and {@code loc_8FF42} then subtracts {@code $10} from
+ * signed by the attached player's facing, and {@code loc_8FF42} then subtracts {@code $10} from
  * {@code y_vel} every frame so the puffs rise away.
  */
 public final class ToxomisterPuffInstance extends AbstractObjectInstance implements RewindRecreatable {
@@ -47,7 +49,8 @@ public final class ToxomisterPuffInstance extends AbstractObjectInstance impleme
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0000);
     /** {@code dc.b 8,8,2,0}. */
     private static final int HALF_SIZE = 8;
-    private static final int MAPPING_FRAME = 2;
+    private static final int GROW_SCRIPT = 0x90074;
+    private static final int DISPERSE_SCRIPT = 0x90085;
     /** {@code word_90020} (sonic3k.asm, {@code $90020}), indexed by the INVERTED child index. */
     private static final int[] DISPERSE_X_VEL = {0x100, 0x180, 0x200, 0x180, 0x100, 0x200, 0x180};
     /** {@code addi.w #-$10,y_vel(a0)} (loc_8FF42). */
@@ -65,6 +68,11 @@ public final class ToxomisterPuffInstance extends AbstractObjectInstance impleme
     /** True once the parent's {@code status} bit 7 sent it to {@code loc_8FF12}. */
     private boolean dispersing;
     private final SubpixelMotion.State motion;
+    private final S3kRawAnimation.State animation = new S3kRawAnimation.State();
+    @RewindTransient(reason = "immutable ROM animation bytes, reloaded lazily")
+    private S3kRawAnimation scripts;
+    /** Draw decision from loc_8FEDC's actual V_int_run_count, not the level clock. */
+    private boolean visible;
     /** ROM {@code parent3(a0)}: the cloud this puff belongs to. */
     @RewindTransient(reason = "parent3 link restored by ObjectRefId in restoreRewindState")
     private ToxomisterCloudInstance parent;
@@ -80,10 +88,13 @@ public final class ToxomisterPuffInstance extends AbstractObjectInstance impleme
         // lsl.b #2,d0 / move.b d0,$2F(a0): the LOW byte of the $2E word.
         this.openDelay = (this.invertedIndex << 2) & 0xFF;
         this.motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
+        animation.script = GROW_SCRIPT;
+        animation.mappingFrame = 2;
     }
 
     void attachTo(ToxomisterCloudInstance cloud) {
         this.parent = cloud;
+        follow();
     }
 
     @Override
@@ -94,11 +105,14 @@ public final class ToxomisterPuffInstance extends AbstractObjectInstance impleme
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        visible = false;
         if (dispersing) {
             // loc_8FF42: addi.w #-$10,y_vel then MoveSprite2.
             motion.yVel = (short) (motion.yVel + RISE_ACCELERATION);
             SubpixelMotion.moveSprite2(motion);
             updateDynamicSpawn(motion.x, motion.y);
+            animate();
+            visible = !isDestroyed();
             if (!isOnScreen()) {
                 ObjectLifetimeOps.expireDynamic(this);
             }
@@ -128,21 +142,35 @@ public final class ToxomisterPuffInstance extends AbstractObjectInstance impleme
             return;
         }
         follow();
+        animate();
+        visible = visibleThisFrame(vIntRunCount);
+    }
+
+    private void animate() {
+        if (scripts == null) {
+            try {
+                scripts = S3kRawAnimation.load(services().romReader(), GROW_SCRIPT, 0x19);
+            } catch (IOException | RuntimeException unavailable) {
+                return;
+            }
+        }
+        scripts.animateNoSst(animation, animation.script, () -> ObjectLifetimeOps.expireDynamic(this));
     }
 
     /** {@code loc_8FF12} and {@code loc_90002} (sonic3k.asm, {@code $8FF12}, {@code $90002}). */
     private void beginDisperse() {
         dispersing = true;
-        motion.x = parent.getCentreX();
-        motion.y = parent.getCentreY();
         motion.xVel = 0;
         motion.yVel = 0;
-        if (!parent.escapedBySpindash()) {
-            return;
+        if (parent.escapedBySpindash()) {
+            // word_90020 is word-indexed by subtype ($C,$A,...,0).
+            int magnitude = DISPERSE_X_VEL[invertedIndex / 2];
+            motion.xVel = parent.scatterFacingLeft() ? magnitude : -magnitude;
         }
-        int magnitude = DISPERSE_X_VEL[invertedIndex % DISPERSE_X_VEL.length];
-        // btst #0,render_flags(a2) on the BODY: clear means the value is negated.
-        motion.xVel = parent.bodyFacingRight() ? magnitude : -magnitude;
+        // loc_8FF22 replaces only $30: anim_frame/timer and position carry over.
+        animation.script = DISPERSE_SCRIPT;
+        parent = null;
+        visible = true;
     }
 
     /** {@code Refresh_ChildPosition} (sonic3k.asm:177281-177294). */
@@ -239,26 +267,14 @@ public final class ToxomisterPuffInstance extends AbstractObjectInstance impleme
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!open && !dispersing) {
-            return;
-        }
-        if (!dispersing && !visibleThisFrame(currentVIntRunCountOrZero())) {
+        if (!visible || isDestroyed()) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.TOXOMISTER);
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(MAPPING_FRAME, getX(), getY(), false, false);
+        renderer.drawFrameIndex(animation.mappingFrame, getCentreX(), getCentreY(), false, false);
     }
 
-    private int currentVIntRunCountOrZero() {
-        try {
-            return services().levelManager() != null
-                    ? services().levelManager().getFrameCounter()
-                    : 0;
-        } catch (Exception e) {
-            return 0;
-        }
-    }
 }

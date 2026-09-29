@@ -916,3 +916,12 @@ adds a permanent9,914-input cold prefix through GHZ defeat and its transport,
 with40 two-cycle whole-registry replay windows. Independent rendered replay
 matches all recorded state fields. The complete wide pair route and native
 visual parity remain open.
+
+
+LRZ Toxomister presentation (2026-09-29): the
+[Act1 evidence](../architecture/validation/levels/s3k-lrz-act1.md#toxomister-presentation-and-dispersal-2026-09-29)
+and [Act2 binding check](../architecture/validation/levels/s3k-lrz-act2.md#toxomister-presentation-follow-up-2026-09-29)
+cover native stalk coordinates, ROM cloud animation/deletion and puff rewind.
+Gameplay capture is blocked by the existing macOS headless OpenGL context;
+renderer commands and production ROM art are checked, without native pixel or
+broader route certification.

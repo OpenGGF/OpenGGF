@@ -894,3 +894,10 @@ preserve placement flips, matching `Obj_LRZButtonHorizontal`
 (`ori.b #4,render_flags(a0)`). The draw call previously forced both flips off.
 Press/release and recreation checks cover both acts and all four orientations;
 inherited route and whole-scene presentation gaps remain in the act matrices.
+
+
+LRZ Toxomister correction (2026-09-29): the stalk uses its native sub-sprite
+centre, and only the seven animated puff children draw the cloud. ROM growth
+and shrink/delete scripts replace the static tiny puffs; the native brief
+upward dispersal remains. No intentional discrepancy is introduced. See the
+[LRZ1 evidence and capture limitation](architecture/validation/levels/s3k-lrz-act1.md#toxomister-presentation-and-dispersal-2026-09-29).

@@ -1312,3 +1312,60 @@ Inherited route-product and native whole-scene presentation gaps remain open.
 
 Validation: focused Maven selection on develop based on `5a855456312`; see the
 2026-09-29 button entry in the coverage backlog for the command and outcome.
+
+
+## Toxomister presentation and dispersal (2026-09-29)
+
+Task: repair the floating stalk, undersized cloud and persistent upward drift,
+worked directly on `develop` from `cbf7b66e81db4b56ff382f4773050d3e19924b18`.
+`Obj_Toxomister` places its frame-0 sub-sprite at `y_pos + $18` (negated
+for Y flip); subtracting the eight-pixel object radius at draw time shortened
+the stalk. `loc_8FDBA` ends in `Child_AddToTouchList`, without drawing: the
+seven `loc_8FE8E` children alone display the cloud. They now consume the
+ROM's `byte_90074` growth/loop and `byte_90085` dispersal scripts through the
+existing raw-animation interpreter. `loc_8FF22` changes the script pointer
+without resetting animation cursor/timer, and `$F4` deletes the puff.
+
+Suppressing the upward movement was rejected: `loc_8FF42` explicitly subtracts
+`$10` from Y velocity. The missing animation/deletion, not that acceleration,
+caused the persistent drift. Dispersal retains each child's last offset position,
+releases its parent reference, and uses `word_90020` as a word-indexed table;
+`loc_90002` signs scatter from the attached player's facing. Breath X offsets
+follow `CreateChild10_NormalAdjusted`. Flicker uses the update's V-int counter;
+all seven inverted subtypes are even and therefore share the same draw phase.
+
+Focused validation (actual local S3K ROM verified as CRC32 `63522553`):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestToxomisterBadnikInstance,TestToxomisterPresentation,TestToxomisterArt,TestS3kLrzToxomisterReboundHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestPatternSpriteRendererCorruptionGuard' \
+  "-Ds3k.rom.path=$S3K_ROM" test
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  -Dtest=TestRewindArchitectureGuard test
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dtest=TestToxomisterPresentation "-Ds3k.rom.path=$S3K_ROM" test
+```
+
+The combined run passed81 tests, no skips; the fresh guard JVM passed4,
+no skips. The final presentation-only rerun passed6 tests with no skips, adding mid-growth
+recreation with a replacement parent and ordinary seven-puff expiry to the
+original4 checks (83 distinct ordinary checks, plus4 guards overall).
+It checks forward render-command equality through the growth/loop boundary,
+carried animation state through dispersal, deletion while still onscreen, both
+placement flip axes, and the invisible collision parent. `TestToxomisterArt`
+loads production art in both acts and checks palette/frame/tile selection.
+
+Proportionate validation applies: changes stay within this object family and
+its resource-cache annotation triage. The change-based plan selected2949
+classes/full ordinary plus guards because of an unrelated untracked S2 movie;
+that file was preserved. The full run was not performed. Tool preflight also
+reported missing Lua5.4 and PowerShell; the focused checks above do not use them.
+
+Presentation limitation: `GameplayCaptureTool` was attempted at native320,
+Sonic solo, LRZ1 `(4200,420)`,360 neutral frames and99 rings. After supplying
+macOS's `-XstartOnFirstThread` in a forked JVM, its existing OpenGL2.1 context
+failed to compile the version410 shader. No gameplay images or native visual
+parity are claimed. The renderer argument and ROM-art checks are the available
+presentation evidence. This local change is independent of viewport projection
+and movement donation; wider viewport/donor/team routes, native pixel matching
+and the existing act-wide coverage gaps remain inherited.

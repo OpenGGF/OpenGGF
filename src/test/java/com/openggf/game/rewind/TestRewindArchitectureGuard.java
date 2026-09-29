@@ -281,7 +281,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LrzRockCrusherPieceInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterBadnikInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterCloudInstance.java#@RewindTransient", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#@RewindTransient", 1),
+            // The added immutable ROM script window reloads lazily; animation state uses the generic codec.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ToxomisterPuffInstance.java#@RewindTransient", 2),
             // 2026-09-18 Lava Reef, the Fireworm. Two dispositions per class, neither rewindable
             // state: `scripts` is a read-only window of ROM bytes (byte_8FA40..byte_8FA56) that
             // reloads itself on demand, and the head's `segments` list is the object-graph link

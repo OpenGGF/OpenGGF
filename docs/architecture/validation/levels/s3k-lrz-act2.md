@@ -1030,3 +1030,13 @@ Inherited route-product and native whole-scene presentation gaps remain open.
 
 Validation: focused Maven selection on develop based on `5a855456312`; see the
 2026-09-29 button entry in the coverage backlog for the command and outcome.
+
+
+## Toxomister presentation follow-up (2026-09-29)
+
+The shared object correction and focused evidence are recorded in the
+[Act1 follow-up](s3k-lrz-act1.md#toxomister-presentation-and-dispersal-2026-09-29).
+`TestToxomisterArt` verifies the production Act2 palette and all eight mapping
+frames; object tests cover growth, dispersal and reconstruction. This is not
+an Act2 route or native-pixel certification. Existing viewport/donor/team and
+lifecycle gaps remain inherited.

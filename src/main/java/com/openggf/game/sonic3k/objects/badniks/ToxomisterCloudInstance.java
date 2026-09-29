@@ -6,7 +6,6 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.ShieldType;
-import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -22,7 +21,6 @@ import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -73,7 +71,6 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
     /** {@code word_9003A}: {@code dc.w 0} and {@code dc.b 8,8,2,0}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0000);
     private static final int HALF_SIZE = 8;
-    private static final int MAPPING_FRAME = 2;
     /** {@code move.b #$D8,collision_flags(a0)} (loc_8FDD8). */
     private static final int COLLISION_FLAGS = 0xD8;
     /** {@code move.b #$18,y_radius(a0)} (loc_8FDD8). */
@@ -105,6 +102,7 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
     private boolean dispersing;
     /** ROM {@code $38(a0)} bit 2: set only by the spindash escape. */
     private boolean escapedBySpindash;
+    private boolean scatterFacingLeft;
     /** ROM {@code $3C(a0)} / {@code $3D(a0)} inside {@code Check_LRControllerShake}. */
     private int shakeReversalsLeft;
     private int shakeWindow;
@@ -222,6 +220,7 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
         // cmpi.b #9,anim(a1) / beq loc_8FE82: the spindash escape, which also scatters the puffs.
         if (player.getAnimationId() == Sonic3kAnimationIds.SPINDASH.id()) {
             escapedBySpindash = true;
+            scatterFacingLeft = player.getDirection() == com.openggf.physics.Direction.LEFT;
             expire();
             return;
         }
@@ -421,9 +420,9 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
         return shakeReversalsLeft;
     }
 
-    /** The body's {@code render_flags} bit 0, which {@code loc_90002} signs the puffs with. */
-    public boolean bodyFacingRight() {
-        return body != null && body.facingRight();
+    /** loc_90002 reads the attached player's render_flags, through the cloud's $44. */
+    public boolean scatterFacingLeft() {
+        return scatterFacingLeft;
     }
 
     public int getCentreX() {
@@ -511,10 +510,7 @@ public final class ToxomisterCloudInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.TOXOMISTER);
-        if (renderer == null) {
-            return;
-        }
-        renderer.drawFrameIndex(MAPPING_FRAME, getX(), getY(), false, false);
+        // loc_8FDBA ends in Child_AddToTouchList, which never draws.
+        // Only the seven loc_8FE8E children publish cloud sprites.
     }
 }
