@@ -925,3 +925,7 @@ cover native stalk coordinates, ROM cloud animation/deletion and puff rewind.
 Gameplay capture is blocked by the existing macOS headless OpenGL context;
 renderer commands and production ROM art are checked, without native pixel or
 broader route certification.
+
+The [Toxomister facing follow-up](../architecture/validation/levels/s3k-lrz-act1.md#facing-correction-after-the-presentation-fix-2026-09-29)
+adds live nearest-player turning, breath-side, cadence and rewind checks; the
+previous placement-only flip test did not cover that path.

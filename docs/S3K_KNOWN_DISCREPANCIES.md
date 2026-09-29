@@ -901,3 +901,8 @@ centre, and only the seven animated puff children draw the cloud. ROM growth
 and shrink/delete scripts replace the static tiny puffs; the native brief
 upward dispersal remains. No intentional discrepancy is introduced. See the
 [LRZ1 evidence and capture limitation](architecture/validation/levels/s3k-lrz-act1.md#toxomister-presentation-and-dispersal-2026-09-29).
+
+Toxomister facing follow-up (2026-09-29): the mapping flip now matches
+`Find_SonicTails` / `Change_FlipX` (set bit0 when the nearest player is right),
+including the side of the next breath. Facing away was an implementation error,
+not shipped-ROM behavior.

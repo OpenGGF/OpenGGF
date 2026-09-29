@@ -725,7 +725,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   down an eighth a frame and taking a ring a second until you shake it off by rocking left and
   right, or blow it apart with a spindash. Cloud contact uses its own attachment response
   without ordinary hurt or boss rebound; rolling and bubble shields prevent attachment.
-  Its stalk now reaches the ground, and its cloud grows, churns and shrinks away
+  It faces the nearest player and breathes its cloud toward them. Its stalk
+  reaches the ground, and its cloud grows, churns and shrinks away
   using the ROM animation instead of remaining tiny and drifting offscreen.
   The badnik itself can now be destroyed: rolling or
   jumping into its body bursts it, scatters its cloud and rebounds you, where before a rolling

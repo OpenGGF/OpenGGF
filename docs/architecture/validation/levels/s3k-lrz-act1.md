@@ -1369,3 +1369,32 @@ parity are claimed. The renderer argument and ROM-art checks are the available
 presentation evidence. This local change is independent of viewport projection
 and movement donation; wider viewport/donor/team routes, native pixel matching
 and the existing act-wide coverage gaps remain inherited.
+
+
+### Facing correction after the presentation fix (2026-09-29)
+
+User follow-up at `c21b7a2466`: the sprite faces away from Sonic. The old
+`faceNearestPlayer` comment inverted `Find_SonicTails`'s result. The disassembly
+subtracts player X from object X as a signed word; a negative result returns
+`d0=2`. `Change_FlipX` sets render bit0 for that nonzero result, so rightward
+facing requires the flipped mapping; equality leaves the bit clear. The real
+ROM independently corroborates the helper chain: `sub_8FF5A` calls `$84B18`
+then jumps to `$84B5C`, whose instructions clear bit0, test D0 and conditionally
+set bit0. Toxomister's unflipped artwork faces left.
+
+The body now uses one consistent `facingRight` meaning for placement flags,
+render calls and `CreateChild10_NormalAdjusted` breath offsets. New regressions
+cover Sonic left/right/equal X, the next cloud's side, nearer native P2,
+equal-distance P1 precedence, the eight-V-int cadence, and facing restore/replay.
+The earlier renderer test only exercised placement flags and missed the live
+player-driven turn; that was insufficient evidence for facing behavior.
+The previously documented capture/platform and broader route limitations remain.
+
+Validation on the follow-up working tree based on `c21b7a2466`: the two new
+methods run against unchanged production code reproduced one renderer failure
+(two tests, one failure, no skips). After correction, the combined focused
+command above passed85 tests with zero failures/errors/skips. The change-based
+plan still selected2949 classes due to the unrelated untracked S2 movie;
+proportionate validation remains appropriate for this local flip/offset fix.
+No shared algorithm, asset, timing cadence or rewind schema changed, so the
+previously passing independent guard checks were not repeated.

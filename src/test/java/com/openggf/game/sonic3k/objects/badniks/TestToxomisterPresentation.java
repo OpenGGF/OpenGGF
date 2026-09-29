@@ -61,6 +61,59 @@ class TestToxomisterPresentation {
     }
 
     @Test
+    void bodyFacesNearestPlayerAndBreathesOnThatSide() {
+        // Find_SonicTails: signed objectX-playerX < 0 yields d0=2;
+        // Change_FlipX sets bit 0 for d0!=0. Equality leaves it clear.
+        for (int playerX : new int[]{140, 160, 180}) {
+            var body = new ToxomisterBadnikInstance(new ObjectSpawn(160, 100, 0x9B, 0, 0, false, 0));
+            body.setServices(services);
+            var player = new com.openggf.tests.TestablePlayableSprite("sonic", (short) playerX, (short) 100);
+            player.setCentreX((short) playerX);
+            body.update(1, player);
+            body.update(8, player);
+            clearInvocations(renderer);
+            body.appendRenderCommands(new ArrayList<>());
+            verify(renderer).drawFrameIndex(1, 160, 100, playerX > 160, false);
+            assertEquals(playerX > 160, body.facingRight());
+
+            body.cloud().setDestroyed(true);
+            body.update(9, player);
+            for (int frame = 10; frame <= 41; frame++) {
+                body.update(frame, player);
+            }
+            assertEquals(playerX > 160 ? 172 : 148, body.cloud().getCentreX(),
+                    "CreateChild10_NormalAdjusted emits toward the player");
+        }
+    }
+
+    @Test
+    void facingUsesNearestNativePlayerAndSurvivesRewind() {
+        var body = new ToxomisterBadnikInstance(new ObjectSpawn(160, 100, 0x9B, 0, 0, false, 0));
+        var sonic = new com.openggf.tests.TestablePlayableSprite("sonic", (short) 100, (short) 100);
+        sonic.setCentreX((short) 100);
+        var tails = new com.openggf.tests.TestablePlayableSprite("tails", (short) 180, (short) 100);
+        tails.setCentreX((short) 180);
+        services.withSidekicks(java.util.List.of(tails));
+        body.setServices(services);
+        body.update(1, sonic);
+        body.update(8, sonic);
+        assertTrue(body.facingRight(), "nearer P2 is to the right");
+        var identities = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        identities.registerObject(body.cloud(), com.openggf.game.rewind.identity.ObjectRefId.layout(7, 1, 12));
+        var context = RewindCaptureContext.withIdentityTable(identities);
+        var saved = body.captureRewindState(context);
+        sonic.setCentreX((short) 140); // equal distances select P1
+        body.update(9, sonic);
+        assertTrue(body.facingRight(), "sub_8FF5A only turns every eighth V-int");
+        body.update(16, sonic);
+        assertFalse(body.facingRight(), "equal distances prefer native P1");
+        body.restoreRewindState(saved, context);
+        assertTrue(body.facingRight());
+        body.update(16, sonic);
+        assertFalse(body.facingRight(), "restored turn replays identically");
+    }
+
+    @Test
     void collisionParentNeverDrawsAnExtraPuff() {
         cloud().appendRenderCommands(new ArrayList<>());
         verifyNoInteractions(renderer);

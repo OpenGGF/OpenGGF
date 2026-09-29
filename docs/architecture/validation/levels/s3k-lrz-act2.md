@@ -1040,3 +1040,7 @@ The shared object correction and focused evidence are recorded in the
 frames; object tests cover growth, dispersal and reconstruction. This is not
 an Act2 route or native-pixel certification. Existing viewport/donor/team and
 lifecycle gaps remain inherited.
+
+The subsequent [facing correction](s3k-lrz-act1.md#facing-correction-after-the-presentation-fix-2026-09-29)
+also applies to Act2's shared object: live player-driven flip and the next breath
+now agree with `Find_SonicTails` / `Change_FlipX`.
