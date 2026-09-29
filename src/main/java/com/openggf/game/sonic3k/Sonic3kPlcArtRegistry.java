@@ -2842,7 +2842,7 @@ public final class Sonic3kPlcArtRegistry {
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.LRZ_SINKING_ROCK,
                     Sonic3kConstants.MAP_LRZ_SINKING_ROCK_ADDR,
-                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    Sonic3kConstants.ARTTILE_LRZ1_SINKING_ROCK,
                     2,
                     null
             ));

@@ -36,6 +36,48 @@ Historical slice3 baseline: **21 built a `PlaceholderObjectInstance`**, `$9A` an
 3a and 3c, 83 after `$21`, 77 after `$22`, 75 after `$9C`); 331 live rings (332 records minus
 the leading `(0,0)` sentinel). The baseline only ratchets down.
 
+## Sinking-rock art binding correction (2026-09-29)
+
+Base: `dfd74e9791f663279f097b3cb0a52c27f71b3936`, current `develop` worktree.
+`Obj_LRZSinkingRock` at ROM `$4279E` loads mappings `$42834` and art word
+`$40D3`; its Act 2 branch uses `$4090`. The Act 1 registry instead used
+`ArtTile_LRZMisc` (`$3A1`), displaying unrelated object tiles. Only that
+registration changes; a dedicated constant preserves the distinction.
+
+`TestS3kLrzSinkingRockArt#loadedSheetUsesTheRocksTerrainTiles` boots both
+real acts, checks the two mapping frames (three/two pieces, exact dimensions
+and tile offsets), palette 2, and all twelve level-pattern bindings. On the
+unfixed base, Act 1 fails at tile 0 and Act 2 passes (2 tests, 1 failure,
+0 skips). Both pass with the correction. ROM SHA-1:
+`CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+Focused validation on the candidate: **154 tests, 0 failures/errors/skips**,
+including all 82 art-registry tests (the ROM-conditional mapping crawler ran),
+two renderer corruption checks and three rock restore/forward-replay spots:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Ds3k.rom.path=$PWD/Sonic 3 & Knuckles (W) [!].gen" \
+  '-Dtest=TestS3kLrzSinkingRockArt,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestLrzSinkingRockObjectInstance,TestLrzSinkingRockRewindSpot,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The change-based plan (`run_categories.py --base dfd74e9791f663279f097b3cb0a52c27f71b3936`)
+selects 2,945 ordinary classes plus guards because the registry/constants files
+are unclassified (and also sees an unrelated untracked S2 movie). Proportionate
+validation uses the focused command above: shared decoding, rendering and
+scheduling algorithms are unchanged. This is not a full-suite result.
+
+This PRESENT/ORACLE correction is independent of viewport, donor, character
+and team: all consumers use the same immutable art registration. Existing
+interaction/rewind contracts are unchanged. Full route/configuration and
+native whole-scene gaps remain inherited; this local check does not certify them.
+
+Visual verification was attempted with `GameplayCaptureTool --game s3k --zone lrz
+--act 1 --x 0x4F3 --y 0x500 --frames 40 --every 20 --stills 20,39 --no-video`,
+using the same ROM and a temporary capture directory. It failed before gameplay
+at shader compilation: the available OpenGL context does not support GLSL 4.10.
+No screenshot or native pixel-match claim is made.
+
 ## Obligations
 
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |

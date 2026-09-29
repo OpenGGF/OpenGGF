@@ -1861,6 +1861,8 @@ public class Sonic3kConstants {
      * The same base the act 2 door uses; named separately so neither owner reads as the other's.
      */
     public static final int ARTTILE_LRZ2_SINKING_ROCK = 0x0090;
+    /** {@code Obj_LRZSinkingRock}: {@code make_art_tile($0D3,2,0)}, not ArtTile_LRZMisc. */
+    public static final int ARTTILE_LRZ1_SINKING_ROCK = 0x00D3;
     public static final int MAP_HCZ_BUTTON_ADDR = 0x22BD1A;
     public static final int MAP_CNZ_BUTTON_ADDR = 0x22BD4A;
     public static final int ARTTILE_MHZ1_CUTSCENE_BUTTON = 0x0341;

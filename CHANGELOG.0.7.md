@@ -691,8 +691,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The act 1 corkscrew works: run into it with enough speed and it takes hold of you,
   sweeps you around the turn and spits you back out the way you came. Being caught by one
   now straightens you out of a roll the way the ROM does, so you leave the turn standing.
-  Act 1's sinking rocks are solid again: stand on one and it sinks smoothly under your
-  weight, rising back once you step off. Jumping off one while it is still sinking now leaves
+  Act 1's sinking rocks use their correct terrain artwork and are solid again: stand on one
+  and it sinks smoothly under your weight, rising back once you step off. Jumping off one
+  while it is still sinking now leaves
   exactly where the ROM leaves you: the pixel the block sinks on that frame is no longer added
   to the jump.
   Act 2's orbiting spike balls turn: fifty-two of them, a small one and a large one, each

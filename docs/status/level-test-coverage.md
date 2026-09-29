@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+LRZ1 sinking-rock art follow-up (2026-09-29): the
+[Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#sinking-rock-art-binding-correction-2026-09-29)
+records the ROM `$0D3` tile-base correction, a loaded-sheet regression for
+both acts, and 154 focused passes without skips. Gameplay capture is blocked
+by this environment's GLSL support; inherited route/configuration and native
+whole-scene coverage gaps remain open.
+
 ## Current S&K campaign position — 2026-09-28
 
 This summary reconciles the dated milestones below against integrated `ee8e470e4`.

@@ -845,6 +845,12 @@ campaign audit for execution and delivery status.
 
 ## Sprite_OnScreen_Test lifetime audit
 
+LRZ1 sinking-rock art correction (2026-09-29): `Obj_LRZSinkingRock` uses
+tile `$0D3`, palette 2, rather than `ArtTile_LRZMisc` (`$3A1`). The registry
+now binds the rock to its terrain tiles; Act 2 retains its separate `$090`
+base. The loaded-sheet regression checks both acts' ROM mappings and tile
+bindings. See the LRZ1 coverage matrix for validation and visual evidence.
+
 The LRZ cold-route audit based on `bc4e3285d` disproved the old guide claim
 that `Sprite_OnScreen_Test` only draws. Its out-of-range branch clears the
 respawn entry and deletes through `loc_1B5A0` (sonic3k.asm:37262–37278).
