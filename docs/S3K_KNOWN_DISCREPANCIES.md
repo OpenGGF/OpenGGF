@@ -906,3 +906,8 @@ Toxomister facing follow-up (2026-09-29): the mapping flip now matches
 `Find_SonicTails` / `Change_FlipX` (set bit0 when the nearest player is right),
 including the side of the next breath. Facing away was an implementation error,
 not shipped-ROM behavior.
+
+LRZ lava-fall art correction (2026-09-29): `loc_436EE` uses literal tile `$0D3`,
+not `ArtTile_LRZMisc` (`$3A1`). The drop sheet now binds its four 4x4 pieces
+to terrain tiles `$11B–$13A`; the mappings normalize `$48/$58` to sheet offsets
+`0/$10`. This resolves the garbled drops without changing their timing.

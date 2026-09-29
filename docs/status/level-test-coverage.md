@@ -929,3 +929,10 @@ broader route certification.
 The [Toxomister facing follow-up](../architecture/validation/levels/s3k-lrz-act1.md#facing-correction-after-the-presentation-fix-2026-09-29)
 adds live nearest-player turning, breath-side, cadence and rewind checks; the
 previous placement-only flip test did not cover that path.
+
+### LRZ ordered issue fixes — 2026-09-29
+
+The [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#ordered-lrz-issue-fixes-2026-09-29)
+records the eight-issue delivery from develop `144ff8b165c6`. The lava-fall
+loaded-art regression checks the literal terrain tile base and mapping shape;
+local evidence does not certify the inherited route/configuration/native-pixel gaps.

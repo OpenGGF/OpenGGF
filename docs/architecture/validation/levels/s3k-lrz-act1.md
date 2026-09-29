@@ -1398,3 +1398,23 @@ plan still selected2949 classes due to the unrelated untracked S2 movie;
 proportionate validation remains appropriate for this local flip/offset fix.
 No shared algorithm, asset, timing cadence or rewind schema changed, so the
 previously passing independent guard checks were not repeated.
+
+## Ordered LRZ issue fixes (2026-09-29)
+
+Direct develop delivery, initial base `144ff8b165c6b04e8f95f0eb22f581efb4f912ac`,
+one commit per reported issue. No worktrees or delegated agents.
+
+1. Lava fall: `loc_436EE` explicitly writes `$40D3`; the previous registry
+   substituted `$43A1`. `TestS3kLrzLavaFallArt` checks the real loaded sheet's
+   palette, four 4x4 pieces, normalized offsets and every referenced level tile.
+   This resource binding reads no viewport, donor, character or team state.
+   Existing hazard rewind checks cover the unchanged emitter/drop state.
+   Broader route breadth and native pixel comparison remain inherited gaps.
+
+Issue 1 validation: queued Maven `-Dmse=off
+-Dtest=TestS3kLrzLavaFallArt,TestLrzLavaFall,TestLrzHazardRewindSpots,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard
+-Ds3k.rom.path=<absolute verified locked-on ROM> test`: 14 passed, zero skips.
+The new binding regression failed on the old registry before correction.
+Java 21.0.10; ROM CRC32 `63522553`, SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+The plan's 2949-class fallback includes the unrelated untracked S2 movie; this
+local resource fix uses proportionate focused validation, not a full-suite pass.

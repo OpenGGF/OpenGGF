@@ -2657,11 +2657,11 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
         // Lava fall drops (SKL object $1F's children): make_art_tile($0D3,2,0)
-        // (sonic3k.asm:88797). $0D3 is ArtTile_LRZMisc.
+        // loc_436EE uses literal $0D3 terrain art, not ArtTile_LRZMisc ($3A1).
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.LRZ_LAVA_FALL,
                 Sonic3kConstants.MAP_LRZ_LAVA_FALL_ADDR,
-                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                0x0D3,
                 2,
                 null
         ));
