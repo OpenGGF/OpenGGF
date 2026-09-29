@@ -1,5 +1,28 @@
 # Level test coverage backlog
 
+LRZ horizontal-button orientation follow-up (2026-09-29): the
+[Act 1](../architecture/validation/levels/s3k-lrz-act1.md#horizontal-button-orientation-2026-09-29)
+and [Act 2](../architecture/validation/levels/s3k-lrz-act2.md#horizontal-button-orientation-2026-09-29)
+matrices record placement-flip coverage through press/release and recreation.
+Inherited route and whole-scene presentation gaps remain open.
+
+Focused validation on develop, base `5a855456312` (Java 21; absolute S3&K ROM
+path supplied, CRC32 `63522553`):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestLrzButtonHorizontalRendering,TestLrzDoorsButtonsAndTriggers,TestLrzDoorButtonRewindSpots,TestS3kLrzButtonHorizontalLandingHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestPatternSpriteRendererCorruptionGuard,TestObjectPriorityBucketGuard' "-Ds3k.rom.path=$PWD/Sonic 3 & Knuckles (W) [!].gen" test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestLrzButtonHorizontalRendering test
+```
+
+The first run passed 87 checks and failed the eight new cases because their
+fixture omitted post-construction service injection. After correcting that
+fixture, the second run passed all eight cases. Neither run skipped tests.
+The production fix was unchanged between runs. This is focused validation,
+not a full-suite pass. The change-based plan selected 2,947 classes due to an
+unrelated untracked S2 movie; proportionate validation covers this object's
+placement-only draw arguments, interaction states and recreation. No gameplay,
+shared renderer, art decoder or timing behavior changed. No visual capture run.
+
 LRZ Fireworm follow-up (2026-09-29): the
 [Act 1](../architecture/validation/levels/s3k-lrz-act1.md#fireworm-defeat-and-palette-audit-2026-09-29)
 and [Act 2](../architecture/validation/levels/s3k-lrz-act2.md#fireworm-defeat-and-palette-audit-2026-09-29)

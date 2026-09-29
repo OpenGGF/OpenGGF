@@ -240,6 +240,8 @@ public final class LrzButtonHorizontalObjectInstance extends AbstractObjectInsta
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+        // Obj_LRZButtonHorizontal: ori.b #4,render_flags(a0) preserves placement flips.
+        renderer.drawFrameIndex(mappingFrame, getX(), getY(),
+                (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
     }
 }

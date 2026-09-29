@@ -624,6 +624,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ROM-loaded art. The Act 1 corkscrew clears the approach slope when taking
   control, preserving its horizontal release into the lower route. Shooting-trigger
   projectiles rebound from shields and stop dealing damage after deflection.
+  Horizontal buttons retain their placement orientation in both acts, pressed or released.
   Chained platforms follow their ROM paths, carry players on top
   and hurt on contact with their spiked undersides. Rewinding the miniboss preserves its arms, hit flashes and defeat
   debris without resurrecting destroyed parts; the waiting hands also retain their

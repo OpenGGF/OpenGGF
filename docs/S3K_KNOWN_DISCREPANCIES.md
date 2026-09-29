@@ -888,3 +888,9 @@ open in the [boss-act matrix](architecture/validation/levels/s3k-lrz-boss.md).
 The ordinary cold Sonic+Tails route reaches HPZ with deterministic rewind at
 62 boss-act/exit spots; this does not certify the remaining width, donor and
 lifecycle combinations.
+
+LRZ horizontal-button orientation correction (2026-09-29): both act skins now
+preserve placement flips, matching `Obj_LRZButtonHorizontal`
+(`ori.b #4,render_flags(a0)`). The draw call previously forced both flips off.
+Press/release and recreation checks cover both acts and all four orientations;
+inherited route and whole-scene presentation gaps remain in the act matrices.

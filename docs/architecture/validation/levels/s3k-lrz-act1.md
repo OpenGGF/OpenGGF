@@ -1298,3 +1298,17 @@ Results:78 focused tests and41 structural checks passed,zero failures/errors/ski
 These are focused checks, not a full-suite pass. The initial sandbox launch could
 not acquire `.git/maven-admission.lock`; the completed runs used the approved
 native execution environment. No trace frontier was changed or measured.
+
+## Horizontal-button orientation (2026-09-29)
+
+`Obj_LRZButtonHorizontal` preserves placement flip bits via
+`ori.b #4,render_flags(a0)`. The draw call now passes those bits to the mapping
+renderer instead of forcing right-facing art. `TestLrzButtonHorizontalRendering`
+exercises both act skins, all four flip combinations, press/release and recreation.
+The existing `TestLrzDoorButtonRewindSpots` supplies capture/restore and forward
+replay checks for button state. This draw-only contract reads neither viewport,
+donor nor character/team state; no configuration cross-product is needed for it.
+Inherited route-product and native whole-scene presentation gaps remain open.
+
+Validation: focused Maven selection on develop based on `5a855456312`; see the
+2026-09-29 button entry in the coverage backlog for the command and outcome.
