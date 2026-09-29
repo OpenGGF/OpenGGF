@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+LRZ Fireworm follow-up (2026-09-29): the
+[Act 1](../architecture/validation/levels/s3k-lrz-act1.md#fireworm-defeat-and-palette-audit-2026-09-29)
+and [Act 2](../architecture/validation/levels/s3k-lrz-act2.md#fireworm-defeat-and-palette-audit-2026-09-29)
+matrices record defeat scatter/deletion, orphan rewind and loaded palette checks.
+Full route-product and native whole-scene presentation gaps remain inherited.
+
 LRZ1 sinking-rock art follow-up (2026-09-29): the
 [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md#sinking-rock-art-binding-correction-2026-09-29)
 records the ROM `$0D3` tile-base correction, a loaded-sheet regression for

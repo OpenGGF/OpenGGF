@@ -845,6 +845,16 @@ campaign audit for execution and delivery status.
 
 ## Sprite_OnScreen_Test lifetime audit
 
+LRZ Fireworm defeat correction (2026-09-29): body retirement previously cleared
+collision but froze the segments indefinitely. `loc_8F8F0` sets d0 to zero before
+`Child_DrawTouch_Sprite_FlickerMove`; `Set_IndexedVelocity` therefore selects the
+first four velocity pairs, reflected by render flip. Segments now execute
+`Obj_FlickerMove` gravity, alternating visibility and unsigned offscreen deletion,
+including after orphan recreation. Visible head/body/flame palette 1 already
+matches `ObjSlot_Fireworm` / `ObjDat3_8F9FC`; palette 3 is the invisible spawner.
+Both acts' loaded-art checks protect that distinction. See the LRZ act matrices
+for verification scope; this is not whole-scene native visual certification.
+
 LRZ1 sinking-rock art correction (2026-09-29): `Obj_LRZSinkingRock` uses
 tile `$0D3`, palette 2, rather than `ArtTile_LRZMisc` (`$3A1`). The registry
 now binds the rock to its terrain tiles; Act 2 retains its separate `$090`

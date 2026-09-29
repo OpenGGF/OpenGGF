@@ -278,6 +278,45 @@ class TestFirewormBadnikInstance {
                         + " pass is what then takes the destroyed slots out");
     }
 
+    @Test
+    void defeatedSegmentsScatterWithGravityAndExpireAfterRecreation() {
+        for (boolean flip : new boolean[]{false, true}) {
+            for (int index = 0; index < 4; index++) {
+                TestObjectServices services = services();
+                FirewormHeadInstance head = head(services);
+                FirewormSegmentInstance segment = new FirewormSegmentInstance(
+                        BASE_X, BASE_Y, index * 2, 0, flip, false);
+                segment.setServices(services);
+                segment.attachHead(head);
+                head.setDestroyed(true);
+                segment.update(1, null);
+                int vx = new int[]{-0x100, 0x100, -0x200, 0x200}[index] * (flip ? -1 : 1);
+                int vy = index < 2 ? -0x100 : -0x200;
+                assertEquals(vx, segment.xVel());
+                assertEquals(vy, segment.yVel());
+                assertEquals(BASE_Y, segment.getCentreY(), "conversion only draws; no movement yet");
+                segment.update(2, null);
+                assertEquals(BASE_X + (vx >> 8), segment.getCentreX());
+                assertEquals(BASE_Y + (vy >> 8), segment.getCentreY());
+                assertEquals(vy + 0x38, segment.yVel(), "MoveSprite uses old velocity before gravity");
+                var context = com.openggf.game.rewind.schema.RewindCaptureContext.none();
+                var saved = segment.captureRewindState(context);
+                FirewormSegmentInstance restored = segment(services, index * 2);
+                restored.restoreRewindState(saved, context);
+                for (int frame = 3; frame < 180 && !segment.isDestroyed(); frame++) {
+                    segment.update(frame, null);
+                    restored.update(frame, null);
+                    assertEquals(segment.captureRewindState(context), restored.captureRewindState(context),
+                            "orphan debris must replay identically without the deleted head");
+                    assertEquals(0, restored.getCollisionFlags());
+                    assertEquals(null, restored.flame(), "waiting debris must never grow a flame");
+                }
+                assertTrue(segment.isDestroyed(), "debris must leave the screen and release its slot");
+                assertTrue(restored.isDestroyed());
+            }
+        }
+    }
+
     // ===== harness =====
 
     private static FirewormBadnikInstance spawner() {

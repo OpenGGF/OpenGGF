@@ -1255,3 +1255,46 @@ mandatory-S3K selection passes114 tests with zero failures/errors/skips,
 including all three coldwide routes and their complete rewind/history checks.
 Final candidate guards pass672 checks. This records the delivered slice;
 remaining roster/donor/viewport and native-scene obligations are unchanged.
+
+
+## Fireworm defeat and palette audit (2026-09-29)
+
+Direct develop follow-up based on `7905de0696dbeaaaadc4f2d05f62e59953d04151`.
+The previous retirement stopped collision but deliberately left frozen segments.
+The earlier claim that the velocity index was unknown is disproved by
+`loc_8F8F0`'s explicit `moveq #0,d0` immediately before the child draw tail.
+`Set_IndexedVelocity` uses subtype 0/2/4/6 to select the first four pairs;
+`Obj_FlickerMove` supplies gravity, flicker and unsigned horizontal/vertical culling.
+Conversion draws without moving, and out-of-range deletion runs on the next dispatch.
+
+`TestFirewormBadnikInstance` covers both facing directions, all four velocities,
+old-velocity integration, gravity, harmlessness, no new flames while dying,
+orphan capture/recreation and identical forward replay through slot retirement.
+`TestFirewormArt` loads both LRZ acts and checks the head and segment/flame sheets:
+ROM palette 1 and mapping palette offset zero. No palette change was justified;
+palette 3 is only the invisible placement spawner.
+
+Validation is focused: the change-based plan selects 2,945 classes because of an
+unrelated pre-existing untracked S2 movie. The change modifies only Fireworm's
+retired phase, with no shared movement or palette algorithm edits. Existing
+LRZ route rewind and the four mandatory S3K smoke/loading checks supplement the
+short regression; object/rewind structural checks run separately. Full route,
+viewport/donor/roster breadth and whole-scene native pixel comparison remain
+inherited gaps. Debris is player/donor independent; native culling retains its
+fixed ROM rectangle rather than extending lifetime to the display width.
+
+Completed on the above develop base plus this patch, Java 21.0.10, verified locked-on
+ROM CRC32 `63522553` / SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`:
+
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 21) python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestFirewormBadnikInstance,TestFirewormArt,TestS3kLrzRouteRewindSpots,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$PWD/Sonic 3 & Knuckles (W) [!].gen" test
+JAVA_HOME=$(/usr/libexec/java_home -v 21) python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestObjectPriorityBucketGuard,TestObjectPhysicsStandardizationGuard,TestRewindArchitectureGuard,TestRewindFieldDispositionGuard,TestRewindTransientGuard' test
+```
+
+Results:78 focused tests and41 structural checks passed,zero failures/errors/skips.
+These are focused checks, not a full-suite pass. The initial sandbox launch could
+not acquire `.git/maven-admission.lock`; the completed runs used the approved
+native execution environment. No trace frontier was changed or measured.

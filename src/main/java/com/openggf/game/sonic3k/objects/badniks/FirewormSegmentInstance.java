@@ -66,6 +66,8 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
     private int mappingFrame = INITIAL_MAPPING_FRAME;
     /** ROM {@code status} bit 7 as {@code loc_849D8} sets it once the head is gone. */
     private boolean retired;
+    private boolean debrisHidden;
+    private boolean deletePending;
     private boolean flipX;
     private boolean flipY;
 
@@ -120,9 +122,7 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (retired) {
-            // loc_849D8 overwrote the object's routine pointer with Obj_FlickerMove, so a retired
-            // segment never runs its own dispatch again -- in particular a segment still waiting
-            // when the head died must not go on to grow a flame.
+            updateDebris();
             return;
         }
         if (phase == Phase.WAITING) {
@@ -155,20 +155,52 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
      * parent, so it runs {@code Go_Delete_Sprite} on its next dispatch -- which is why a killed
      * worm takes its flames with it instead of leaving four live hurt regions behind.
      *
-     * <p>Not modelled: {@code loc_849D8}'s {@code Set_IndexedVelocity}, so the retired segment
-     * stays where it is instead of flying off as debris. {@code d0} is whatever the segment's own
-     * routine left in it at that branch, which the disassembly does not settle; recorded rather
-     * than guessed.
+     * <p>loc_8F8F0 explicitly clears d0 before the draw tail. Set_IndexedVelocity therefore
+     * selects the first four Obj_VelocityIndex pairs using subtype 0, 2, 4, 6.
      */
     private void retireWithHead() {
         if (retired || head == null || !head.isDestroyed()) {
             return;
         }
         retired = true;
+        int index = (subtype >> 1) & 3;
+        // Obj_VelocityIndex: (-$100,-$100), ($100,-$100), (-$200,-$200), ($200,-$200).
+        motion.xVel = (index & 1) == 0 ? -0x100 : 0x100;
+        if (index >= 2) {
+            motion.xVel *= 2;
+        }
+        motion.yVel = index < 2 ? -0x100 : -0x200;
+        if (flipX) {
+            motion.xVel = -motion.xVel;
+        }
+        head = null; // Obj_FlickerMove is independent of the retired parent's slot.
         if (flame != null && !flame.isDestroyed()) {
             ObjectLifetimeOps.expireDynamic(flame);
         }
         flame = null;
+    }
+
+    /** Obj_FlickerMove: MoveSprite, native unsigned bounds, then alternate Draw_Sprite. */
+    private void updateDebris() {
+        if (deletePending) {
+            ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
+        SubpixelMotion.moveSprite(motion, 0x38);
+        motion.x &= 0xFFFF;
+        motion.y &= 0xFFFF;
+        motion.yVel = (short) motion.yVel;
+        updateDynamicSpawn(motion.x, motion.y);
+        int coarseBack = (cameraLeft() - 0x80) & 0xFF80;
+        int dx = ((motion.x & 0xFF80) - coarseBack) & 0xFFFF;
+        int dy = (motion.y - cameraTop() + 0x80) & 0xFFFF;
+        if (dx > 0x280 || dy > 0x200) {
+            // Go_Delete_Sprite_3 installs Delete_Current_Sprite for the next dispatch.
+            deletePending = true;
+            debrisHidden = true;
+            return;
+        }
+        debrisHidden = !debrisHidden;
     }
 
     /** {@code loc_8F94E}: {@code ChildObjDat_8FA30} at {@code (0,-$E)}. */
@@ -307,6 +339,9 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (isDestroyed() || debrisHidden) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FIREWORM_SEGMENTS);
         if (renderer == null) {
             return;

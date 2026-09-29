@@ -450,9 +450,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 
-- **S3K Fireworm:** killing a Lava Reef fireworm now retires its whole body. Its segments stop
-  moving and its flames go out, instead of the flames staying behind as invisible fire that
-  burned the player seconds later. Retired segments stay harmless after rewinding,
+- **S3K Fireworm:** killing a Lava Reef fireworm now retires its whole body. Its segments scatter, fall and flicker away and its flames go out, instead of leaving
+  frozen body pieces or invisible fire that burns the player seconds later.
+  Retired segments stay harmless and continue their fall after rewinding,
   even when their deleted head no longer exists in the restored world.
 
 - **S3K Lava Reef domes:** the background now locks onto the dome as the player crosses each
