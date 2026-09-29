@@ -936,3 +936,9 @@ LRZ1 miniboss main defeat explosions (2026-09-29): `loc_78C60` now allocates
 the subtype0 controller, preserving its31 randomized bursts across the
 drill/body’s defeat. Previously that controller was reduced to one visual
 explosion. The firing hands’ three-burst sequences are covered by the arm fix.
+
+LRZ1 ending signpost pole (2026-09-29): `Obj_SignpostStubMain` calls
+`Child_GetPriority`, copying both the sign face’s sprite bucket and art priority
+bit. The pole now does the same, preventing high-priority foreground tiles from
+hiding it below an otherwise visible sign. This shared child behavior also
+applies to the other S3K signposts without a zone-specific rendering exception.

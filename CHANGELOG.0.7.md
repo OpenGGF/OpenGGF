@@ -830,7 +830,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the drill itself now ends the fight: its full sequence of explosions plays as it fades out
   and breaks into eleven pieces on their own arcs,
   and hands over to the end-of-act sign and the results screen the way every other Sonic 3 &
-  Knuckles miniboss does. The end-of-act sign the defeat hands over to moves with the act
+  Knuckles miniboss does. The sign’s post follows the face’s foreground priority, keeping
+  the complete sign visible. The end-of-act sign the defeat hands over to moves with the act
   change as well; before, a real defeat stopped the change dead rather than carrying into
   Act 2.
   Beating the drill now changes the act. Once the tally is over, Lava Reef loads Act 2's art

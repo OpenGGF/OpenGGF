@@ -1519,3 +1519,64 @@ Issue 7 validation on parent `1f620513a7`: queued Maven `-Dmse=off
 -Dtest=TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestLrzMinibossHitPath
 -Ds3k.rom.path=<verified absolute ROM> test` passed40,zero skips, including the
 96-frame whole-world defeat replay and production touch hits.
+
+Issue 8: the pole sheet is valid (`Map_SignpostStub`: one1x2 piece at[-4,-8],
+two ROM art tiles), and `Obj_EndSignInit` creates its child at Y+$18.
+The missing owner operation was `Obj_SignpostStubMain -> Child_GetPriority`: both
+art_tile bit15 and the display-priority word must follow the sign face. The
+child now derives both from its live parent, including after rewind relinking;
+no new state or LRZ-specific exception is introduced. Tests cover high/low
+priority changes, different sprite buckets, render coordinates, real LRZ
+creation/art and reconstruction of the parent/child graph. The operation reads
+no viewport, donor or roster state; existing parent policy remains unchanged.
+This establishes rendering inputs, not a native whole-scene pixel comparison.
+
+Issue 8 validation on parent `68398f0d98`: queued Maven `-Dmse=off
+-Dtest=TestS3kSignpostInstance,TestS3kSignpostStubGraphRewind,TestS3kBossDefeatSignpostFlow
+-Ds3k.rom.path=<verified absolute ROM> test` passed27,zero skips.
+
+### Combined delivery validation and limits
+
+Final executable tree: the seven issue commits through `68398f0d98` plus
+the signpost priority patch. Java21.0.10 on macOS; every ROM-backed command
+used `"-Ds3k.rom.path=$PWD/Sonic 3 & Knuckles (W) [!].gen"` (absolute expansion,
+CRC32 `63522553`, SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`).
+No trace frontier was measured or moved.
+
+The combined change-based plan against `144ff8b165c6b04e8f95f0eb22f581efb4f912ac`
+selects2951 ordinary classes plus guards. Its full-suite fallback comes from
+the registry path and unrelated pre-existing untracked S2 movie. Proportionate
+validation uses the actual bounded changes: one LRZ tile binding, one omitted
+crusher resource submission using existing queue APIs, object-local draw flags,
+existing explosion-controller bindings, and the signpost child’s native priority
+copy. No shared renderer, decoder, physics algorithm, queue algorithm, clock or
+snapshot schema changed. The ROM crawler, pixel bindings, allocation failures,
+object state boundaries and whole-world replay exercise their plausible failures.
+This is focused validation, not a full ordinary-suite or full-guard pass.
+
+```sh
+python3 tools/testing/run_categories.py --base 144ff8b165c6b04e8f95f0eb22f581efb4f912ac --preflight
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestLrzBossColdRouteCapture,TestLrzWideColdRouteCapture,TestS3kLrzRouteRewindSpots' \
+  "-Ds3k.rom.path=$PWD/Sonic 3 & Knuckles (W) [!].gen" test
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestObjectPriorityBucketGuard,TestObjectPhysicsStandardizationGuard,TestRewindArchitectureGuard' test
+```
+
+Preflight fails before execution because Lua5.4 and PowerShell are absent.
+The combined Maven run completes68 tests:65 pass,3 errors,zero assertion
+failures/skips. All four mandatory S3K stability classes and the six local
+LRZ route-rewind spots pass (the LevelLoading selector matches both packages).
+All three errors occur before gameplay in the two cold-route classes:
+`HeadlessGameBoot.initGl -> GraphicsManager.init -> ShaderLoader` rejects GLSL
+version410 in this Mac’s context. This is the same presentation-tool limitation
+recorded in the earlier Toxomister audit; no route completion or captured-video
+claim is made, and graphics tooling was not changed to bypass it.
+The fresh targeted guard JVM passes38 checks,zero failures/errors/skips.
+
+Seven reported defects are corrected. Issue4 remains an unconfirmed scene
+report: direction selection follows the audited ROM path; location/team
+details were requested, and no wall-avoidance or placement-facing override
+was invented. Broader native visual parity, full cold routes in this environment,
+act-wide breadth and the crusher’s existing cleanup-art requeue remain explicit
+coverage/implementation limits. Temporary validation logs were inspected and removed.

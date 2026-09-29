@@ -961,3 +961,14 @@ whole-world restoration across burst emission and controller retirement.
 Issue 7 restores the main drill/body’s subtype0 death controller and adds
 31-burst counting plus96-frame whole-world restore/replay through its lifetime.
 The firing hand’s shorter controller is covered by issue6.
+
+Issue 8 covers the ending pole’s parent-owned art/display priority, both
+priority domains across changes and rewind relinking, and the actual LRZ
+child creation and loaded1x2 mapping. No new zone-specific renderer path.
+
+Final ordered-delivery checks: issue8’s27 checks pass; combined stability/local
+rewind has65 passes and3 cold-route bootstrap errors (GLSL410 unsupported),
+zero skips. Targeted structural guards pass38 with zero skips. The2951-class
+plan was not run; broad preflight lacks Lua5.4/PowerShell. See the Act1 matrix
+for exact commands, per-issue evidence and remaining limits. Issue4 remains
+unconfirmed; no claim that all eight reports or the full suite are green.

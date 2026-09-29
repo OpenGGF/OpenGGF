@@ -41,6 +41,64 @@ import static org.mockito.Mockito.verify;
 class TestS3kSignpostInstance {
 
     @Test
+    void postCopiesBothPriorityDomainsFromItsSignFace() {
+        var parent = mock(S3kSignpostInstance.class);
+        org.mockito.Mockito.when(parent.getWorldX()).thenReturn(0x2D40);
+        org.mockito.Mockito.when(parent.getWorldY()).thenReturn(0x780);
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var manager = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        org.mockito.Mockito.when(renderer.isReady()).thenReturn(true);
+        org.mockito.Mockito.when(manager.getRenderer(
+                com.openggf.game.sonic3k.Sonic3kObjectArtKeys.SIGNPOST_STUB)).thenReturn(renderer);
+        var services = new TestObjectServices() {
+            @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return manager; }
+        };
+        var stub = new S3kSignpostStubChild(parent);
+        stub.setServices(services);
+        for (boolean high : new boolean[]{true, false, true}) {
+            for (int bucket : new int[]{0, 4, 6}) {
+                org.mockito.Mockito.when(parent.isHighPriority()).thenReturn(high);
+                org.mockito.Mockito.when(parent.getPriorityBucket()).thenReturn(bucket);
+                stub.update(0, null);
+                assertEquals(high, stub.isHighPriority(), "Child_GetPriority copies art_tile bit15");
+                assertEquals(bucket, stub.getPriorityBucket(), "priority word is a separate copy");
+                stub.appendRenderCommands(new ArrayList<>());
+                verify(renderer).drawFrameIndex(0, 0x2D40, 0x798, false, false);
+                org.mockito.Mockito.clearInvocations(renderer);
+            }
+        }
+    }
+
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void lrzEndingCreatesAVisiblePostWithTheLoadedNativeMapping() {
+        com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(9, 0).build();
+        var levelManager = com.openggf.game.GameServices.level();
+        var manager = levelManager.getObjectManager();
+        var sign = manager.createDynamicObject(() -> new S3kSignpostInstance(0x2D40, 0));
+        sign.update(0, null);
+        var post = manager.activeObjectsOfType(S3kSignpostStubChild.class).getFirst();
+        post.update(0, null);
+        assertTrue(sign.isHighPriority());
+        assertEquals(sign.isHighPriority(), post.isHighPriority());
+        assertEquals(sign.getWorldX(), post.getX());
+        assertEquals(sign.getWorldY() + 0x18, post.getY());
+        var sheet = levelManager.getObjectRenderManager().getSheet(
+                com.openggf.game.sonic3k.Sonic3kObjectArtKeys.SIGNPOST_STUB);
+        assertEquals(1, sheet.getFrameCount());
+        assertEquals(2, sheet.getPatterns().length);
+        assertEquals(1, sheet.getFrame(0).pieces().size());
+        var piece = sheet.getFrame(0).pieces().getFirst();
+        assertEquals(1, piece.widthTiles()); assertEquals(2, piece.heightTiles());
+        assertEquals(-4, piece.xOffset()); assertEquals(-8, piece.yOffset());
+        int pixels = 0;
+        for (var tile : sheet.getPatterns()) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+            if (tile.getPixel(x, y) != 0) pixels++;
+        }
+        assertTrue(pixels > 0, "the post's ROM art contains visible pixels");
+    }
+
+    @Test
     void shortNativeResultsTailUsesOneChildRetireDispatch() {
         // ROM Obj_LevelResultsWait2 sees $30(a0) reach zero one pass after the
         // last child SST deletes (children allocate after the parent,
