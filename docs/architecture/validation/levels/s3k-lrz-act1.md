@@ -1580,3 +1580,44 @@ details were requested, and no wall-avoidance or placement-facing override
 was invented. Broader native visual parity, full cold routes in this environment,
 act-wide breadth and the crusher’s existing cleanup-art requeue remain explicit
 coverage/implementation limits. Temporary validation logs were inspected and removed.
+
+
+### Arm explosion renderer follow-up (2026-09-29)
+
+User observation after `50f0e826ba`: issue6 still appears unchanged. The earlier
+`1f620513a7` correction restored controller cadence but tested allocation/counts,
+not the drawing prerequisite. `S3kBossExplosionChild.appendRenderCommands`
+returned immediately because fresh LRZ1 had no `BOSS_EXPLOSION` renderer.
+`LrzMinibossArtState` already loaded `PLC_BossExplosion`; its tiles alone did
+not register a sheet. `ObjDat_BossExplosion1` selects `Map_BossExplosion`, tile
+`$500`, palette0. LRZ1 now registers that level-backed sheet, so the existing
+PLC refresh range includes its renderer. This also covers crusher and main-body
+bursts using the same art owner; no queue or explosion timing changed.
+
+The production boss resource regression fails on parent `50f0e826ba` with
+“arm bursts must have a registered renderer in fresh LRZ1” (one failure,
+zero errors/skips). It now checks a ready renderer, animation frame availability,
+live level-tile identity and every pixel against Nemesis-decoded ROM explosion
+art immediately after the real boss routine2 submission.
+
+The change-based plan against `50f0e826ba` selects2951 ordinary classes plus
+guards because the registry is classified as shared. Proportionate validation
+covers this single act-specific registration through the ROM mapping crawler,
+renderer corruption guard, boss/crusher resources, burst behavior and world
+rewind, plus the four required S3K stability classes. Shared renderer, queue and
+rewind algorithms are unchanged. This is focused validation, not a full-suite
+pass. Native GPU presentation remains unverified because of the already recorded
+GLSL410 startup failure; no repeat cold capture or platform workaround was used.
+
+Validation on `50f0e826ba` plus this follow-up (Java21, existing locked-on ROM):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestLrzMinibossResources,TestS3kLrzBossRewindHeadless,TestLrzMinibossInstance,TestLrzRockCrusherResources,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$PWD/Sonic 3 & Knuckles (W) [!].gen" test
+```
+
+Completed101 tests, all passing, zero failures/errors/skips. The level-loading
+selector matches both packages. Temporary plan and red/green logs were inspected
+and removed. Supported donor/team/viewport breadth and actual GPU output retain
+the inherited limits above; no additional presentation claim is made.

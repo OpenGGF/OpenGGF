@@ -814,7 +814,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   climb, swing, drop, slam and fall-back cycle, its player tracking, and both of its articulated
   arms with their firing hands and shots. Shields deflect those shots away and
   permanently clear their damage, including across rewind. Destroyed arms peel away
-  with the ROM’s staggered three-burst explosions for every part. Retired crusher pieces become
+  with the ROM’s staggered three-burst explosions for every part, using the registered
+  LRZ1 explosion renderer and its dynamically loaded art. Retired crusher pieces become
   harmless falling debris and leave the object pool before the seamless Act 2 handoff.
   Every Act 1 placement in the zone now builds a real
   class. The two arms unroll link by link from the bottom of the screen rather than snapping out

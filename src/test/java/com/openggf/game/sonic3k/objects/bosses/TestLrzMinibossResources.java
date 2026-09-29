@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzMinibossResources {
-    @Test void productionBossSubmitsOnceAtRoutineTwoAndKeepsTheNativeDelay() {
+    @Test void productionBossSubmitsOnceAtRoutineTwoAndKeepsTheNativeDelay() throws Exception {
         HeadlessTestFixture.builder().withZoneAndAct(9, 0).build();
         var services = TestEnvironment.objectServices();
         var camera = services.camera();
@@ -38,6 +38,25 @@ class TestLrzMinibossResources {
         long before = physical.queuedArchives().stream().filter(a -> a.archiveAddress() == 0x16FCDA).count();
         boss.update(601, null);
         assertEquals(4, boss.getRoutineByte());
+        // Counting spawned bursts is insufficient: their drawing path silently returns
+        // when LRZ1 has no registered boss-explosion renderer.
+        var explosionRenderer = services.renderManager().getBossExplosionRenderer();
+        assertNotNull(explosionRenderer, "arm bursts must have a registered renderer in fresh LRZ1");
+        assertTrue(explosionRenderer.isReady());
+        var explosionSheet = services.renderManager().getSheet(
+                com.openggf.level.objects.ObjectArtKeys.BOSS_EXPLOSION);
+        var expectedExplosion = com.openggf.util.PatternDecompressor.nemesis(
+                services.rom(), Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR);
+        assertTrue(explosionSheet.getFrameCount() >= 5);
+        assertTrue(explosionSheet.getPatterns().length >= expectedExplosion.length);
+        for (int tile = 0; tile < expectedExplosion.length; tile++) {
+            assertSame(services.currentLevel().getPattern(0x500 + tile),
+                    explosionSheet.getPatterns()[tile], "PLC updates must reach the rendered sheet");
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                assertEquals(expectedExplosion[tile].getPixel(x, y),
+                        explosionSheet.getPatterns()[tile].getPixel(x, y));
+            }
+        }
         assertEquals(before + 1, physical.queuedArchives().stream()
                 .filter(a -> a.archiveAddress() == 0x16FCDA).count());
         for (int pass = 0; pass < 47; pass++) boss.update(602 + pass, null);

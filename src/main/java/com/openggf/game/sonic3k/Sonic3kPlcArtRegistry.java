@@ -2512,6 +2512,12 @@ public final class Sonic3kPlcArtRegistry {
     private static void addLrzEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 0) {
+            // ObjDat_BossExplosion1 reads tile $500. The crusher and miniboss
+            // submit PLC_BossExplosion; bind its updates to the burst renderer.
+            levelArt.add(new LevelArtEntry(ObjectArtKeys.BOSS_EXPLOSION,
+                    Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0x500, 0, null));
+        }
         if (actIndex == 1) {
             // loc_57130: screen-space Death Egg; loc_57156 queues art into level VRAM.
             levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LRZ2_DEATH_EGG_BACKGROUND,

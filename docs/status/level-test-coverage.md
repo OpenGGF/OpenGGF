@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+LRZ1 arm-explosion visibility follow-up (2026-09-29): the
+[act matrix](../architecture/validation/levels/s3k-lrz-act1.md#arm-explosion-renderer-follow-up-2026-09-29)
+adds a fresh-level production-init regression for renderer readiness and every
+ROM explosion pixel. Previous burst-count/replay checks did not establish
+visibility; native presentation remains blocked by the documented GL context.
+
 LRZ horizontal-button orientation follow-up (2026-09-29): the
 [Act 1](../architecture/validation/levels/s3k-lrz-act1.md#horizontal-button-orientation-2026-09-29)
 and [Act 2](../architecture/validation/levels/s3k-lrz-act2.md#horizontal-button-orientation-2026-09-29)

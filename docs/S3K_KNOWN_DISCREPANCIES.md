@@ -931,6 +931,9 @@ LRZ1 miniboss arm explosions (2026-09-29): `loc_78B86` now creates the
 subtype6 explosion controller instead of one visual explosion. Each of the12
 retiring ring parts emits three randomized bursts at three-frame intervals.
 The hand-to-anchor retirement delays and surviving opposite arm are unchanged.
+A follow-up to `1f620513a7` registers the missing LRZ1 boss-explosion renderer
+against PLC tile `$500`: the earlier sequence-only fix still left every burst
+invisible. This also supplies the main defeat and crusher explosion drawing path.
 
 LRZ1 miniboss main defeat explosions (2026-09-29): `loc_78C60` now allocates
 the subtype0 controller, preserving its31 randomized bursts across the
