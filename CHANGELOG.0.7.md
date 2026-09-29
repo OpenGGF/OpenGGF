@@ -827,7 +827,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The hands take damage too, four hits each, with their own hit ring, their own invulnerability
   window and their own blink; killing one peels its whole arm away link by link from the hand end
   first, each link bursting as it goes, instead of quietly shortening the drill's hover. Killing
-  the drill itself now ends the fight: it fades out, breaks into eleven pieces on their own arcs,
+  the drill itself now ends the fight: its full sequence of explosions plays as it fades out
+  and breaks into eleven pieces on their own arcs,
   and hands over to the end-of-act sign and the results screen the way every other Sonic 3 &
   Knuckles miniboss does. The end-of-act sign the defeat hands over to moves with the act
   change as well; before, a real defeat stopped the change dead rather than carrying into

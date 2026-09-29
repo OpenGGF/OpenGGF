@@ -94,6 +94,31 @@ class TestS3kLrzBossRewindHeadless {
         assertSameState(after, registry.capture(), "burst/deletion forward replay including shared RNG");
     }
 
+    @Test
+    void mainDefeatBurstsReplayAcrossControllerRetirement() {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(9, 0)
+                .startPosition((short) 0x2C00, (short) 0x600).startPositionIsCentre().build();
+        fixture.sprite().setRingCount(355);
+        for (int i = 0; i < 400; i++) fixture.stepFrame(false, false, false, true, false);
+        for (int i = 0; i < 4608 && !boss().getState().defeated; i++) {
+            if (boss().getCollisionFlags() == 6) boss().onPlayerAttack(null, null);
+            fixture.sprite().setRingCount(355);
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertTrue(boss().getState().defeated);
+        assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(
+                com.openggf.game.sonic3k.objects.LrzEndBossExplosion.class).stream()
+                .anyMatch(e -> e.getSpawn().subtype() == 0));
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        for (int i = 0; i < 96; i++) fixture.stepFrame(false, false, false, false, false);
+        var after = registry.capture();
+        registry.restore(before);
+        assertSameState(before, registry.capture(), "restore during fatal-hit explosions");
+        for (int i = 0; i < 96; i++) fixture.stepFrame(false, false, false, false, false);
+        assertSameState(after, registry.capture(), "complete defeat burst replay including shared RNG");
+    }
+
     private static boolean hasChild(Class<?> type) {
         return GameServices.level().getObjectManager().getActiveObjects().stream().anyMatch(type::isInstance);
     }

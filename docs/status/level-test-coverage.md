@@ -957,3 +957,7 @@ state retain their independent tests. Broader act gaps remain inherited.
 Issue 6 restores the arm’s subtype6 controllers:37 focused checks passed,zero
 skips, including exact three-burst cadence, allocation/RNG behavior and16-frame
 whole-world restoration across burst emission and controller retirement.
+
+Issue 7 restores the main drill/body’s subtype0 death controller and adds
+31-burst counting plus96-frame whole-world restore/replay through its lifetime.
+The firing hand’s shorter controller is covered by issue6.

@@ -446,6 +446,32 @@ class TestLrzMinibossInstance {
      * order both end with the same empty ring.
      */
     @Test
+    void fatalDrillHitStartsTheCompleteThirtyOneBurstSequence() {
+        assertEquals(6, hitDrillUntilDefeated(0x1800));
+        var emitters = services.objectManager().activeObjectsOfType(
+                com.openggf.game.sonic3k.objects.LrzEndBossExplosion.class).stream()
+                .filter(e -> e.getSpawn().subtype() == 0).toList();
+        assertEquals(1, emitters.size(), "loc_78C60 creates one subtype-zero controller");
+        var emitter = emitters.getFirst();
+        var frames = new java.util.ArrayList<Integer>();
+        var seen = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<com.openggf.game.sonic3k.objects.S3kBossExplosionChild, Boolean>());
+        for (int frame = 0; frame <= 94; frame++) {
+            emitter.update(frame, null);
+            for (var burst : services.objectManager().activeObjectsOfType(
+                    com.openggf.game.sonic3k.objects.S3kBossExplosionChild.class)) {
+                if (!seen.add(burst)) continue;
+                frames.add(frame);
+                assertTrue(burst.getX() - emitter.getX() >= -32 && burst.getX() - emitter.getX() < 32);
+                assertTrue(burst.getY() - emitter.getY() >= -32 && burst.getY() - emitter.getY() < 32);
+            }
+        }
+        assertEquals(31, frames.size());
+        for (int burst = 0; burst < 31; burst++) assertEquals(burst * 3, frames.get(burst));
+        assertTrue(emitter.isDestroyed(), "zero-count callback then Go_Delete_Sprite dispatch");
+    }
+
+    @Test
     void eachRetiringArmPartCreatesThreeStaggeredExplosions() {
         boss.update(frameCursor, null);
         var hand = hands().stream().filter(h -> !h.ringMirrored()).findFirst().orElseThrow();

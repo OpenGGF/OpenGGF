@@ -8,7 +8,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.LrzPostDefeatCameraReleaseInstance;
 import com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.game.sonic3k.objects.LrzEndBossExplosion;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -874,15 +874,13 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         // the fade wait consumes whatever the interrupted phase had left in it, which is why the
         // pause before the drill breaks up is not a fixed length.
         defeatPhase = DEFEAT_WAIT_FADE;
-        // lea (Child6_CreateBossExplosion).l,a2 / jsr (CreateChild1_Normal).l -- one explosion,
-        // on the frame of the fatal hit, before anything else. The ROM's loc_78C60 plays no sound
-        // of its own: the sound belongs to the explosion object (Obj_CreateBossExplosion ->
-        // Obj_Explosion, sonic3k.asm:176659-176672), which is what the native-init-sfx variant
-        // models. Playing it from the boss instead would put it on the wrong object and the wrong
-        // frame.
+        // loc_78C60 creates Obj_CreateBossExplosion with cleared subtype 0.
+        // CreateBossExp00 emits 31 randomized bursts, three frames apart, from its own
+        // independent slot. It must outlive the drill's replacement with the signpost flow.
         final int explosionX = state.x;
         final int explosionY = state.y;
-        spawnChild(() -> S3kBossExplosionChild.createWithNativeInitSfx(explosionX, explosionY));
+        spawnChild(() -> new LrzEndBossExplosion(
+                new ObjectSpawn(explosionX, explosionY, 0, 0, 0, false, 0)));
         displacePlayerOffObject();
         stopLevelTimerOnBossDefeat();
         onDefeatStarted();

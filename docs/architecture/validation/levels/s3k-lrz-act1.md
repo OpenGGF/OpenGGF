@@ -1502,3 +1502,20 @@ Issue 6 validation on parent `4a0b498cc4`: queued Maven `-Dmse=off
 -Dtest=TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestLrzEndBossEncounterHeadless#explosionConsumesBurstBudgetButRandomizesOnlyAllocatedChildren
 -Ds3k.rom.path=<verified absolute ROM> test` passed37, zero skips. This includes
 the new16-frame whole-world arm-controller restore/replay through deletion.
+
+Issue 7: auditing the complete miniboss death path found `loc_78C60` also
+collapsed `Child6_CreateBossExplosion` to a single visual effect. Its cleared
+subtype0 selects `CreateBossExp00` (`$20,$20,$20,0`):31 successful-budget
+attempts, each three frames apart and randomized within[-32,31]. The controller
+has no parent-follow contract and remains independent of the drill’s replacement
+with the signpost flow. The hand-specific subtype6 sequence was fixed in issue6.
+A fatal-hit regression counts all31 bursts at offsets0..90; a96-frame
+whole-world rewind spans the main controller’s lifetime and shared RNG.
+The existing real touch-path test and full defeat/sign/results checks supplement it.
+Native whole-scene pixel matching and broader roster/donor/viewport routes remain
+inherited gaps; burst sequencing itself reads none of those configuration axes.
+
+Issue 7 validation on parent `1f620513a7`: queued Maven `-Dmse=off
+-Dtest=TestLrzMinibossInstance,TestS3kLrzBossRewindHeadless,TestLrzMinibossHitPath
+-Ds3k.rom.path=<verified absolute ROM> test` passed40,zero skips, including the
+96-frame whole-world defeat replay and production touch hits.
