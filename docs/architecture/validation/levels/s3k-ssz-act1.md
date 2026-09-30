@@ -982,3 +982,14 @@ not included.
    object camera bounds; supplying those made the launch run. A rejected oracle
    compared emitted whole-tile positions to nontransparent pixel FrameBounds;
    replaced it with independently decoded ROM mapping geometry.
+
+   Issue4 rewind follow-up on `39645745aa`: the broader column-recreation check
+   exposed EggRobo dynamicSpawn being reset to stale base currentX/Y by
+   AbstractBadnikInstance.restoreRewindState. A bounded matched check of
+   `TestS3kSszTraversalPlatforms#restoringPastTheDebrisDeletionRecreatesThePiecesAndTheirColumnLink`
+   failed on that candidate and passed with the four pre-fix EggRobo sources from
+   `012acaaee8` (same bridge candidate/setup, no skips). EggRobo now resyncs its
+   own restored x/y after the base restore, and the presentation recreation test
+   compares object-manager state immediately. Follow-up: queued `TestSszEggRoboPresentation,TestS3kSszEggRobo,TestS3kSszTraversalPlatforms`
+   within the bridge selection: **21 cases passed, no skips**. Four new bridge
+   cases still failed on a test-harness reference after recreation; handled in issue5.

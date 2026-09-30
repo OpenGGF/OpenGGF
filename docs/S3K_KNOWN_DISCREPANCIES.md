@@ -979,3 +979,6 @@ use the body's render-flip convention, including mirrored child offsets.
 and latches gun position/flags during firing. The flame uses live Y from
 `Refresh_ChildPositionAdjusted`. Scaled fly-by art and specialized animal
 launch differences remain inherited gaps.
+
+- SSZ EggRobo rewind restores its live x/y spawn metadata after the base badnik
+  restore; recreated moving bodies and attachments retain the captured position.

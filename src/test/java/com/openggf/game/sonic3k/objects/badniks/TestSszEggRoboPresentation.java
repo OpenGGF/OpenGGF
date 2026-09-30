@@ -65,6 +65,9 @@ class TestSszEggRoboPresentation {
         var saved = registry.capture();
         robo.setDestroyed(true); gun.setDestroyed(true); flame.setDestroyed(true);
         registry.restore(saved);
+        assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey("object-manager",
+                saved.get("object-manager"), registry.capture().get("object-manager")).isEmpty(),
+                "recreation preserves live position metadata as well as visible art");
         assertEquals(bodyFrame, draw(manager.activeObjectsOfType(EggRoboBadnikInstance.class).getFirst()));
         assertEquals(gunFrame, draw(manager.activeObjectsOfType(EggRoboGunArmChildInstance.class).getFirst()));
         assertEquals(flameFrame, draw(manager.activeObjectsOfType(EggRoboJetFlameChildInstance.class).getFirst()));
