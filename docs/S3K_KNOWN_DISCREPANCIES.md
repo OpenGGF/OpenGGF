@@ -955,3 +955,11 @@ to the player and clamping it to the floor bound. The small rise to camera
 `$BA8` followed by settling at `$BC0` remains intentional ROM behavior.
 See the [Act1 matrix](architecture/validation/levels/s3k-ssz-act1.md#arrival-camera-and-beam-presentation-2026-09-30)
 for focused contracts and inherited visual gaps.
+
+### SSZ opening Death Egg mask (2026-09-30)
+
+Resolved the rising Death Egg drawing through the skyline: `loc_65B24` sets
+`Spritemask_flag`, and SSZ now enables the SAT post-pass used by its frame `$C`
+mask. The low art priority and bucket `$380` remain ROM values. See the
+[Act1 matrix](architecture/validation/levels/s3k-ssz-act1.md#ssz-presentation-fixes-2026-09-30)
+for focused evidence and remaining coverage.

@@ -907,3 +907,29 @@ The rejected approach is suppressing the entire post-rise camera swing: native
 change shipped-ROM behavior. Only the forced title-entry snap and the extra
 beam pad were corrected. Diagnostics are consumed and acknowledged; the
 baseline checkout is temporary and removed after attribution.
+
+## SSZ presentation fixes (2026-09-30)
+
+Direct `develop` delivery starts at `332eaadf44482d4e5358be44783c6bbdf89f7188`.
+Issues are fixed, verified and pushed individually in the requested order. The
+combined change-based plan selects 2,952 classes through fallback classification
+and an unrelated untracked S2 movie. These localized contracts use proportionate
+focused validation; no full-suite or whole-scene parity claim is made. Java21,
+Lua5.4 and PowerShell preflight passes with the tools in
+`/private/tmp/openggf-validation-tools`.
+
+1. **Opening Death Egg:** `loc_65B24` already has a stationary frame `$C` mask
+   child, but SSZ lacked SAT-mask registration. Enable the existing pass rather
+   than change the correct art priority or force all terrain in front.
+   `TestSszDeathEggCutscene.risingEggPresentationIsClippedAtTheStationaryBackgroundMask`
+   submits ROM art and the real child through CPU presentation and asserts visible
+   egg pixels above `$C38` and none below. Existing cutscene graph recreation and
+   whole-registry forward replay cover the mask lifetime. Focused selection:
+   `TestSszDeathEggCutscene,TestS3kSpriteMaskSupport,TestGraphicsManagerSpriteSatReplay,TestSonic3kZoneFeatureProvider`
+   plus the four mandated S3K stability classes, using queued Maven `-Dmse=off`
+   and the absolute locked-on ROM path. **78 tests passed, no skips** on
+   the candidate based on `332eaadf`, before issue1 delivery.
+
+Inherited gaps: this local presentation change does not certify native visual
+parity across every viewport, donor, character or team. The existing route and
+compatibility obligations above remain open.

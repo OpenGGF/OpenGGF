@@ -1118,7 +1118,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.For
         // SOZ uses Map_SOZ1EndDoor's sand-surface mask, the placed Obj_SpriteMask,
         // and the end-boss laser mask. Their marker/companion pairs require the
         // same SAT post-pass as Gumball; ordinary painter rendering drops them.
+        // SSZ loc_65B24 sets Spritemask_flag for the stationary Death Egg mask
+        // (Map_SpriteMask frame $C), hiding the rising egg below the skyline.
         return zoneIndex == Sonic3kZoneIds.ZONE_GUMBALL || zoneIndex == Sonic3kZoneIds.ZONE_SOZ
+                || zoneIndex == Sonic3kZoneIds.ZONE_SSZ
                 || zoneIndex == Sonic3kZoneIds.ZONE_LRZ
                 || zoneIndex == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ;
     }

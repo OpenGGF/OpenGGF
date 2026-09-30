@@ -13,6 +13,35 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszDeathEggCutscene {
+    @Test void risingEggPresentationIsClippedAtTheStationaryBackgroundMask() {
+        HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        var services = TestEnvironment.objectServices();
+        var manager = GameServices.level().getObjectManager();
+        var state = (com.openggf.game.sonic3k.runtime.SszZoneRuntimeState) services.zoneRuntimeState();
+        state.setBackgroundCameraDelta(0); state.setCloudOscillator(0);
+        var egg = new SszDeathEggSmallObjectInstance(new ObjectSpawn(0x200, 0xC68, 0, 0, 0, false, 0));
+        egg.setServices(services); manager.addDynamicObject(egg);
+        for (int i = 0; i < 40; i++) egg.update(i, null);
+        var mask = manager.activeObjectsOfType(SszDeathEggChild.class).getFirst();
+        mask.update(40, null);
+        var graphics = services.graphicsManager();
+        var provider = new com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider();
+        assertTrue(provider.useSpriteSatMasking(10), "loc_65B24 requires the SAT mask pass");
+        var frame = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
+            graphics.beginSpriteSatCollection();
+            graphics.setCurrentSpriteSatBucket(mask.getPriorityBucket());
+            mask.appendRenderCommands(new java.util.ArrayList<>());
+            graphics.setCurrentSpriteSatBucket(egg.getPriorityBucket());
+            egg.appendRenderCommands(new java.util.ArrayList<>());
+            graphics.endSpriteSatCollectionAndReplay();
+        });
+        assertFalse(frame.tiles().isEmpty(), "the egg has risen above the skyline");
+        // Map_SpriteMask frame $C starts at -$30; the mask does not rise with the egg.
+        assertTrue(frame.tiles().stream().allMatch(t -> t.y() + t.rowEnd() <= 0xC38),
+                "no Death Egg pixels may draw through the terrain below the skyline");
+        assertFalse(egg.isHighPriority());
+    }
+
     @Test void cloudTrackingAdmitsOnlyOneOwnerAndReleasesBeforeDeferredDeletion() {
         HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
         var services = TestEnvironment.objectServices();

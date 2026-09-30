@@ -991,3 +991,8 @@ SSZ arrival presentation (2026-09-30): the [Act1 matrix](../architecture/validat
 adds 320/800 title-entry camera-lock checks, ROM swing/landing camera checks, and
 an independent beam draw/flicker regression. Existing arrival rewind breadth
 remains covered; whole-scene visual and donor products remain open.
+
+SSZ presentation fixes (2026-09-30): the [Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#ssz-presentation-fixes-2026-09-30)
+tracks the seven requested local corrections and focused validation. The opening
+Death Egg now uses its native skyline sprite mask; broad compatibility and native
+whole-scene parity remain inherited gaps.
