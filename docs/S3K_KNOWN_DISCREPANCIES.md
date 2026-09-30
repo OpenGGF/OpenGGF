@@ -971,3 +971,11 @@ renderer now draws the full `$C0` span and preserves the ROM art priority.
 SSZ elevator facing (2026-09-30): `loc_45400` now clears both render flips
 when grabbing a player. The native `$E5`/`$E9` mapping selection keeps logical
 facing intact and avoids reversing the left hang pose.
+
+SSZ EggRobo attachment (2026-09-30): the body now renders from its live native
+position rather than inherited spawn coordinates. Gun, flame and muzzle flash
+use the body's render-flip convention, including mirrored child offsets.
+`sub_91930` retains delayed hover Y, falls back to live Y while `$32` is zero,
+and latches gun position/flags during firing. The flame uses live Y from
+`Refresh_ChildPositionAdjusted`. Scaled fly-by art and specialized animal
+launch differences remain inherited gaps.

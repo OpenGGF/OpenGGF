@@ -44,8 +44,9 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
     private int x;
     private int y;
     private int mappingFrame = FRAME_RISING;
+    private boolean hFlip;
 
-    private record RewindExtra(ObjectRefId parentId, int x, int y, int mappingFrame)
+    private record RewindExtra(ObjectRefId parentId, int x, int y, int mappingFrame, boolean hFlip)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public EggRoboJetFlameChildInstance(ObjectSpawn spawn, EggRoboBadnikInstance parent) {
@@ -53,6 +54,7 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         this.parent = parent;
         this.x = spawn.x();
         this.y = spawn.y();
+        this.hFlip = (spawn.renderFlags() & 1) != 0;
     }
 
     /** Probe/rewind constructor. */
@@ -72,9 +74,10 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
             return;
         }
         // Refresh_ChildPositionAdjusted: the offset mirrors with the parent's render bit 0.
-        int dx = parent.badnikFacingLeft() ? -CHILD_DX : CHILD_DX;
+        hFlip = !parent.badnikFacingLeft();
+        int dx = hFlip ? -CHILD_DX : CHILD_DX;
         x = (parent.getX() + dx) & 0xFFFF;
-        y = (parent.childAnchorY() + CHILD_DY) & 0xFFFF;
+        y = (parent.getY() + CHILD_DY) & 0xFFFF;
         int velocity = parent.currentYVelocity();
         mappingFrame = velocity < 0 ? FRAME_RISING
                 : velocity < FAST_THRESHOLD ? FRAME_SLOW : FRAME_FAST;
@@ -94,7 +97,7 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndex(mappingFrame, x, y,
-                    parent != null && parent.badnikFacingLeft(), false, 0);
+                    hFlip, false, 0);
         }
     }
 
@@ -103,7 +106,7 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context)
-                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, mappingFrame));
+                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, mappingFrame, hFlip));
     }
 
     @Override
@@ -113,6 +116,7 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
             x = extra.x();
             y = extra.y();
             mappingFrame = extra.mappingFrame();
+            hFlip = extra.hFlip();
             parent = extra.parentId() == null ? null
                     : (EggRoboBadnikInstance) context.requireIdentityTable()
                     .resolveObject(extra.parentId(), true);

@@ -965,3 +965,20 @@ not included.
    in the new test was wrong and failed. Reading Map_Sonic `$E5`/`$E9` showed
    distinct art with unflipped pieces. Corrected that oracle and restricted the
    cases to LEFT/RIGHT: **both passed, no skips**.
+
+4. **EggRobo attachment:** body anchors now read the object's live x/y owner.
+   Base `currentX/currentY` were stale despite `getX/getY` moving, so the gun
+   departed from the visibly stationary body. Native art faces left unflipped;
+   child offsets and mapping flips now use the same `!facingLeft` convention.
+   Gun `$30/$32` history starts zero; `sub_91930` then falls back to live Y during
+   launch, records the hover lag, and is skipped during the firing cooldown.
+   Flame Y follows `Refresh_ChildPositionAdjusted`, without gun history.
+   `TestSszEggRoboPresentation` exercises launch movement in both orientations,
+   verifies ROM-backed body/child drawing, and checks recreation of the graph.
+   Queued selection `TestSszEggRoboPresentation,TestS3kSszEggRobo`, absolute S3K
+   ROM path, candidate based on `012acaaee8`. **8 existing cases and4 new
+   presentation cases passed, no skips**. Turning/mirrored muzzle and shot
+   direction are included. Initial direct-drive launch setup omitted cached
+   object camera bounds; supplying those made the launch run. A rejected oracle
+   compared emitted whole-tile positions to nontransparent pixel FrameBounds;
+   replaced it with independently decoded ROM mapping geometry.

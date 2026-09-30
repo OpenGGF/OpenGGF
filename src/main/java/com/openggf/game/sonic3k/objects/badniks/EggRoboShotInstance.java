@@ -126,7 +126,7 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(mappingFrame, x, y, facingLeft, false, 0);
+            renderer.drawFrameIndex(mappingFrame, x, y, !facingLeft, false, 0);
         }
     }
 }

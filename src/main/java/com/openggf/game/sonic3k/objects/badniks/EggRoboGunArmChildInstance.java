@@ -48,10 +48,11 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
     private EggRoboBadnikInstance parent;
     private int x;
     private int y;
+    private boolean hFlip;
     /** {@code $2E(a0)}: frames left before the parent's fire bit is cleared. */
     private int cooldown = -1;
 
-    private record RewindExtra(ObjectRefId parentId, int x, int y, int cooldown)
+    private record RewindExtra(ObjectRefId parentId, int x, int y, int cooldown, boolean hFlip)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public EggRoboGunArmChildInstance(ObjectSpawn spawn, EggRoboBadnikInstance parent) {
@@ -59,6 +60,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         this.parent = parent;
         this.x = spawn.x();
         this.y = spawn.y();
+        this.hFlip = (spawn.renderFlags() & 1) != 0;
     }
 
     /** Probe/rewind constructor. */
@@ -77,24 +79,26 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
-        // sub_91930: X from the parent's live x_pos, Y from its two-frame-old $32 slot.
-        boolean facingLeft = parent.badnikFacingLeft();
-        x = (parent.getX() + (facingLeft ? -CHILD_DX : CHILD_DX)) & 0xFFFF;
-        y = (parent.childAnchorY() + CHILD_DY) & 0xFFFF;
-        updateDynamicSpawn(x, y);
         if (cooldown >= 0) {
-            // loc_9173A: subq.w #1,$2E(a0) / bpl.
+            // loc_9173A draws the latched position/flags without sub_91930.
             if (--cooldown < 0) {
                 parent.clearGunArmed();
             }
             return;
         }
+        // sub_91930 copies the parent's render bit, not its logical facing.
+        // Native unflipped EggRobo art faces left.
+        hFlip = !parent.badnikFacingLeft();
+        x = (parent.getX() + (hFlip ? -CHILD_DX : CHILD_DX)) & 0xFFFF;
+        y = (parent.childAnchorY() + CHILD_DY) & 0xFFFF;
+        updateDynamicSpawn(x, y);
         if (!parent.gunArmed()) {
             return;
         }
         cooldown = FIRE_COOLDOWN;
-        int shotX = (x + (facingLeft ? -SHOT_DX : SHOT_DX)) & 0xFFFF;
+        int shotX = (x + (hFlip ? -SHOT_DX : SHOT_DX)) & 0xFFFF;
         int shotY = (y + SHOT_DY) & 0xFFFF;
+        boolean facingLeft = !hFlip;
         spawnChild(() -> new EggRoboShotInstance(
                 new ObjectSpawn(shotX, shotY, 0, 0, facingLeft ? 0 : 1, false, 0), facingLeft));
     }
@@ -112,7 +116,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndex(MAPPING_FRAME, x, y,
-                    parent != null && parent.badnikFacingLeft(), false, 0);
+                    hFlip, false, 0);
         }
     }
 
@@ -121,7 +125,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context)
-                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, cooldown));
+                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, cooldown, hFlip));
     }
 
     @Override
@@ -131,6 +135,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
             x = extra.x();
             y = extra.y();
             cooldown = extra.cooldown();
+            hFlip = extra.hFlip();
             parent = extra.parentId() == null ? null
                     : (EggRoboBadnikInstance) context.requireIdentityTable()
                     .resolveObject(extra.parentId(), true);

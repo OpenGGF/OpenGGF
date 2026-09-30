@@ -4973,3 +4973,21 @@ to `mainspr_childsprites`. This differs from ordinary sprites, where frame0 is
 a real mapping. `Obj_TeleporterBeamExpand` keeps its main frame0, so only its
 beam columns draw; blindly rendering mapping0 creates a floating teleporter pad.
 Regression: `TestTeleporterBeamRendering` (SSZ arrival presentation,2026-09-30).
+
+## Badnik rendering must use the live native position owner
+
+**Symptom.** A body remains at its spawn while attached parts follow movement,
+or a child appears on the opposite side and points the wrong way.
+
+**What to check.** A subclass with its own x/y fields must override the base body
+anchors used by drawing, touch and destruction, not just `getX/getY`. Child
+position offsets and child mapping flips must copy the parent's render bits;
+logical `facingLeft` may be their inverse. Preserve each child's independent
+anchor/history and firing-latch rules rather than rigidly attaching everything.
+
+**ROM citation.** SSZ EggRobo `loc_9159A` records `$30/$32` hover Y; `sub_91930`
+uses `$32` or live Y when zero and copies render bit0 while mirroring `child_dx`.
+The flame uses live Y through `Refresh_ChildPositionAdjusted`. `loc_9173A`
+draws the gun's latched position/flags without refreshing them.
+
+**Origin.** SSZ issue4 follow-up on develop, 2026-09-30, based on `012acaaee8`.

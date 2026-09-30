@@ -135,8 +135,8 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         };
         this.x = spawn.x();
         this.y = spawn.y();
-        this.previousY = spawn.y();
-        this.previousPreviousY = spawn.y();
+        // $30/$32 remain zero until loc_9159A records hover history. In the
+        // releaser's rising/falling states sub_91930 therefore uses live Y.
         this.flyX = spawn.x() << 16;
         this.flyY = spawn.y() << 16;
         this.mappingFrame = mode == Mode.FIGHTER ? FIGHTER_FRAME : 0;
@@ -359,7 +359,8 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     /** {@code $30(a1)}/{@code $32(a1)}: the Y history {@code sub_91930} reads for the children. */
     int childAnchorY() {
-        return previousPreviousY != 0 ? previousPreviousY : previousY;
+        // sub_91930 falls back to live y_pos when $32 is zero.
+        return previousPreviousY != 0 ? previousPreviousY : y;
     }
 
     /** {@code bset #1,$38(a0)} / {@code bclr #1,$38(a1)}. */
@@ -378,6 +379,10 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
+    // All EggRobo branches own x_pos/y_pos here, not the base's currentX/Y.
+    // Drawing, touch and destruction must use the same native body anchor.
+    @Override protected int getBodyAnchorX() { return x; }
+    @Override protected int getBodyAnchorY() { return y; }
     @Override public int getOnScreenHalfWidth() { return mode == Mode.FIGHTER ? 0x14 : 0x20; }
     @Override public int getOnScreenHalfHeight() { return mode == Mode.FIGHTER ? 0x18 : 0x20; }
 }

@@ -1001,3 +1001,7 @@ whole-scene parity remain inherited gaps.
 SSZ elevator hang facing: the same presentation-fix matrix now adds both incoming
 facings and restored ROM-backed player drawing, retaining the existing elevator
 whole-registry replay obligation.
+
+SSZ EggRobo attachment: the presentation-fix matrix adds real moving body/child
+anchors, mirrored offsets, live flame versus delayed gun Y and graph recreation
+in both orientations. Existing fly-by scaling and animal-launch gaps remain.
