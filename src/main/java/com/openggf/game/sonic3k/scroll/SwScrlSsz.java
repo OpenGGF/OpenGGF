@@ -119,8 +119,6 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     private static final int VDP_PLANE_WIDTH_PX = 512;
     /** {@code move.w #$1C00,d1}: background layout column 56, four chunks wide. */
     private static final int CLOUD_WINDOW_LAYOUT_X = 0x1C00;
-    /** Whether the frame this handler last advanced rendered the cloud bands. */
-    private boolean lastFrameUsedCloudBands;
 
     private int[] act2ForegroundBands;
     private int[] act2IslandBands;
@@ -266,9 +264,14 @@ public class SwScrlSsz extends SwScrlS3kDefault {
                 backgroundInit(state, cameraX, cameraY);
             }
             clouds = backgroundEvent(state, cameraX, cameraY);
-            lastFrameUsedCloudBands = clouds;
+            state.setBackgroundUsesCloudBands(clouds);
         } else {
-            clouds = lastFrameUsedCloudBands;
+            clouds = state.backgroundUsesCloudBands();
+            if (clouds) {
+                for (int i = 0; i < SCROLL_WORD_COUNT; i++) {
+                    hScrollTable.set(i, state.cloudScrollWord(i));
+                }
+            }
         }
 
         short fgScroll = negWord(cameraX);
@@ -439,6 +442,11 @@ public class SwScrlSsz extends SwScrlS3kDefault {
         setWords(value, 0x26, 0x2A);
         value += 2 * step + halfStep;
         setWords(value, 0x28);
+        // HScroll_table is persistent native RAM. Re-rendering a restored frame
+        // must use its words rather than the handler cache from a future frame.
+        for (int i = 0; i < SCROLL_WORD_COUNT; i++) {
+            state.setCloudScrollWord(i, (short) hScrollTable.get(i));
+        }
     }
 
     /** {@code move.w d0,offset(a1)} with {@code a1 = HScroll_table+$004}. */
@@ -476,9 +484,10 @@ public class SwScrlSsz extends SwScrlS3kDefault {
      *
      * <p>Without this override the tilemap window stays at the camera-derived default, which over
      * this stretch is layout columns 0-22 — all the flat sky chunk — so the plane rendered as
-     * empty blue for the whole ascent (s3k-known-bugs #41). Plain mode keeps returning
-     * {@code MIN_VALUE}: there the ROM really does use {@code Camera_X_pos_BG_copy}
-     * ({@code Reset_TileOffsetPositionEff}), which is a separate question.
+     * empty blue for the whole ascent (s3k-known-bugs #41). During the entering redraw,
+     * the whole-layout cache retains the outgoing plain source until its deformation
+     * switches. Plain mode publishes {@code Camera_X_pos_BG_copy}, as consumed by
+     * {@code Reset_TileOffsetPositionEff}.
      *
      * <p>This is the same mechanism {@code SwScrlMgz} state 8 uses, and the ICZ1 opening
      * ({@code d1 = $1880}) is the other zone that pins its plane this way.
@@ -518,11 +527,11 @@ public class SwScrlSsz extends SwScrlS3kDefault {
         if (state == null || state.actIndex() != 0) {
             return false;
         }
-        // Both cloud-path routines load #$1C00: loc_57946 (the entering redraw, which still
-        // renders the saved plain framing that frame) and loc_5799A (the steady state). So the
-        // plane source moves to the window on the frame the redraw starts, not a frame later.
-        int routine = state.backgroundRoutine();
-        return routine == BG_ENTERING_CLOUDS || routine == BG_CLOUDS;
+        // loc_5799A restores the outgoing plain framing while Events_bg+$0C
+        // is set. The ROM gradually refills its retained nametable; our whole
+        // layout cache must keep its outgoing window until deformation switches.
+        // Moving it early pairs cloud-layout blank rows with plain vertical scroll.
+        return state.backgroundUsesCloudBands();
     }
 
     private static int viewportWidth() {

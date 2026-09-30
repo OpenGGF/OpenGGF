@@ -45,3 +45,19 @@ Waterline tables are indexed by the ROM's water/camera relationship; inspect
 Resolve their ROM addresses rather than reading the disassembly `.bin` files.
 Fine deformation deltas likewise come through the ROM pipeline. Match table index
 wrap, phase clock, sign, and whether the delta applies to FG, BG, or both.
+
+## Displayed mode versus staged plane redraw
+
+Keep a whole-layout cache's source window aligned with the deformation actually
+being displayed. SSZ `loc_5799A` restores outgoing plain Camera_X/Y_BG copies
+while Events_bg+$0C is set, even though routine4 is already filling cloud rows.
+Selecting the fixed `$1C00` window immediately pairs blank cloud-layout rows
+with plain Y and produces an empty background frame. This engine completes the
+staged redraw in one frame: retain the outgoing window for that frame and switch
+source/deformation together. Do not infer displayed mode from the pending routine.
+
+Captured display mode and intermediate HScroll words must own same-frame rewind
+re-render; an unrewound handler cache can retain future mode/words without
+advancing the restored event. Regress window selection, actual CPU descriptor
+cache/ROM pixel samples at both boundaries, and re-render after visiting future
+modes. Origin: SSZ presentation issue7, 2026-09-30, based on `05b5e35863`.

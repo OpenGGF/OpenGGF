@@ -1013,3 +1013,6 @@ full stagger delays, deleted-fragment recreation and whole-registry replay.
 
 SSZ rotating platform presentation: the matrix adds all256 pose angles against
 ROM mapping geometry, both incoming facings, and complete post/carrier rotations.
+
+SSZ background transitions: the matrix records reproduced blank-cache frames
+at320/800 and adds both mode boundaries plus future-mode restore re-render checks.

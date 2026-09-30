@@ -38,7 +38,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     /** {@code Events_bg} is sixteen bytes; {@code LevelSetup} clears all of them. */
     public static final int EVENTS_BG_BYTES = 0x10;
 
-    private static final int CAPTURE_BYTES = EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 8 + 5 * Short.BYTES + SszLaunchState.CAPTURE_BYTES + 0x198 + SszEndingPlaneState.CAPTURE_BYTES;
+    private static final int CLOUD_SCROLL_WORDS = 32;
+    private static final int CAPTURE_BYTES = 1 + CLOUD_SCROLL_WORDS * Short.BYTES + EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 8 + 5 * Short.BYTES + SszLaunchState.CAPTURE_BYTES + 0x198 + SszEndingPlaneState.CAPTURE_BYTES;
 
 
     private boolean centerNativeArenaCamera;
@@ -190,6 +191,9 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
      * and the event has persistent state, so it is captured with the rest of it.
      */
     private int backgroundScrollFrame = Integer.MIN_VALUE;
+    /** Displayed deformation and HScroll words, distinct from the pending redraw routine. */
+    private boolean backgroundUsesCloudBands;
+    private final short[] cloudScrollWords = new short[CLOUD_SCROLL_WORDS];
 
     public SszZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -362,6 +366,11 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public int backgroundScrollFrame() { return backgroundScrollFrame; }
     public void setBackgroundScrollFrame(int value) { backgroundScrollFrame = value; }
 
+    public boolean backgroundUsesCloudBands() { return backgroundUsesCloudBands; }
+    public void setBackgroundUsesCloudBands(boolean value) { backgroundUsesCloudBands = value; }
+    public short cloudScrollWord(int index) { return cloudScrollWords[index]; }
+    public void setCloudScrollWord(int index, short value) { cloudScrollWords[index] = value; }
+
     @Override
     public byte[] captureBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES);
@@ -387,6 +396,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(cloudDriftAccumulator);
         buffer.put((byte) (backgroundInitApplied ? 1 : 0));
         buffer.putInt(backgroundScrollFrame);
+        buffer.put((byte) (backgroundUsesCloudBands ? 1 : 0));
+        for (short word : cloudScrollWords) buffer.putShort(word);
         buffer.putShort((short) unkFA82);
         buffer.put((byte) (bossFlag ? 1 : 0));
         buffer.put((byte) (act2EndingActive ? 1 : 0));
@@ -428,6 +439,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         cloudDriftAccumulator = buffer.getInt();
         backgroundInitApplied = buffer.get() != 0;
         backgroundScrollFrame = buffer.getInt();
+        backgroundUsesCloudBands = buffer.get() != 0;
+        for (int i = 0; i < cloudScrollWords.length; i++) cloudScrollWords[i] = buffer.getShort();
         unkFA82 = Short.toUnsignedInt(buffer.getShort());
         bossFlag = buffer.get() != 0;
         act2EndingActive = buffer.get() != 0;

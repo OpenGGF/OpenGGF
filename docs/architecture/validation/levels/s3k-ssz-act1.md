@@ -1040,3 +1040,73 @@ cases: **61 passed, no skips**; both failures were the new transition test's
 800px session/viewport setup, repaired separately. All21 EggRobo/traversal
 cases passed, including the new standard badnik coordinate assertions. Fresh
 RewindArchitectureGuard: **4 checks passed, no skips** on the final candidate.
+
+7. **Background black flash:** `loc_5799A` retains the outgoing plain framing
+   during the entering-cloud redraw. The engine replaces a whole layout cache,
+   so its source window must stay with that displayed framing until cloud
+   deformation begins. Switching the source to `$1C00` early sampled blank rows
+   with the plain Y. Displayed mode and native HScroll words now live in captured
+   SSZ state, avoiding handler caches from a future frame on rewind re-render.
+   `TestSszBackgroundTransitions` drives actual parallax/window selection and
+   CPU descriptor-cache generation at both `$800` and `$F00` boundaries, entering
+   and leaving, at320/800. ROM pattern pixels confirm the viewport has background
+   art each frame; restore re-render checks identical scanline words, source,
+   VScroll, tile bytes and unchanged runtime state after visiting future modes.
+   On baseline `05b5e35863`, two transition-only cases failed at pass1 with
+   routine4/sourceX7168/scrollY2399 and zero visible samples; two independent
+   rewind cases failed on restored scroll words. Candidate queued selection:
+   `TestSszBackgroundTransitions,TestS3kSszBackgroundLayout,TestS3kSszBackgroundClouds,TestS3kSszScrollBands,TestSszZoneRuntimeState,TestS3kSszLifecycleProduction,TestSszDeathEggCutscene,TestSszAct2BackgroundPriority`
+   with the absolute S3K ROM path. **42 cases passed, no skips**. This is CPU background-sampling
+   evidence; the native staged nametable timing and whole-scene GL/native capture
+   remain inherited gaps, as does broader donor/team compatibility.
+
+Combined delivery validation remains proportionate and focused. The unchanged
+runner plan against initial `332eaadf44482d4e5358be44783c6bbdf89f7188` selects
+2,956 ordinary classes plus guards: its fallback treats the SSZ provider/runtime/
+scroll files as unknown, and also sees the unrelated untracked S2 movie. The
+changed implementations are SSZ-local presentation owners; the direct ROM-backed
+regressions, production interactions, state recreation and affected background
+consumers bound their failure modes. The ordinary full suite was not run.
+The queued `-Dmse=off -Pguards test -B` run selected all87 guard classes:
+**672 checks, 3 failures, 1 error, no skips**. The EggRobo custom-restore failure
+was corrected in `6e19d6a3ef`; the fresh `TestRewindArchitectureGuard` run passed
+all4 checks. The remaining results were reproduced with all13 task-modified
+production files temporarily loaded from `332eaadf4448` in this same develop
+checkout, then restored in a try/finally block (no branch switch or worktree):
+
+- `TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations`:
+  the same existing LRZ flame touch-profile violation on baseline and candidate.
+- `TestObjectUpdateClockTerminologyGuard`: the same120-second subprocess timeout
+  and closed-stream error on baseline and candidate.
+- `TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`:
+  unchanged Python checkout-path normalization assertion. The isolated
+  `python3 -m unittest test_release_trace_collection.CollectTests.test_failure_messages_and_report_payloads_have_checkout_paths_normalized`
+  from `tools/testing` reproduced its `/var` versus `/private/var` mismatch;
+  the test and dependencies have no diff against the pre-task base.
+
+Five strict SSZ slices were checked with queued `-Dmse=off -Ptrace-segments
+-Dtest=TestS3kSonicTailsHpzSegmentTraceReplay,TestS3kSonicTailsHpz2SegmentTraceReplay,TestS3kSonicTailsHpz3SegmentTraceReplay,TestS3kTailsFullChainHpzSegmentTraceReplay,TestS3kTailsFullChainHpz2SegmentTraceReplay`,
+absolute S3K ROM path, `test`. These historically named HPZ fixtures contain SSZ;
+the fixtures named SSZ are Death Egg and were not substituted. Both candidate
+(`05b5e35863` plus the background fix) and matched pre-task production sources
+ran **5 cases, 5 failures, no skips**, with identical error counts and first errors:
+
+| Fixture class suffix | Errors | First frame/field | Expected / actual |
+| --- | ---: | --- | --- |
+| SonicTailsHpz | 2150 |119 `tails_x` | `$7F00` / `$0100` |
+| SonicTailsHpz2 |1140 |0 `rings` |150 /0 |
+| SonicTailsHpz3 |283 |0 `rings` |177 /0 |
+| TailsFullChainHpz |617 |1337 `g_speed` | `$0000` / `$0001` |
+| TailsFullChainHpz2 |948 |0 `x` | `$0640` / `$0100` |
+
+The final standard EggRobo capture-coordinate follow-up changes no native
+movement or render anchor; its object/recreation checks passed separately.
+No trace frontier moved. No full-suite pass or GL/native visual parity is claimed.
+
+Final background selection on `6e19d6a3ef` plus issue7: the combined63-case
+run passed all21 EggRobo/traversal cases and the existing background consumers.
+Two new800px cases exposed test-session reuse that retained a320px camera;
+resetting the session and asserting its width repaired the harness. The final
+queued `-Dmse=off -Dtest=TestSszBackgroundTransitions` with the absolute S3K ROM
+path passed **all4 transition/re-render cases, no skips**, at their asserted
+320/800 widths. No production correction was needed for those harness failures.

@@ -994,3 +994,7 @@ the same corrected delay/flip contract and stops drawing its intact image.
 
 SSZ EggRobo position restoration uses standard generic/badnik capture: inherited
 position state stays synchronized to native x/y, without a custom restore hook.
+
+- SSZ1 cloud-mode transitions keep the background source window aligned to the
+  displayed vertical scroll, eliminating the blank entering frame. Rewind
+  re-render restores the displayed mode and intermediate HScroll words.

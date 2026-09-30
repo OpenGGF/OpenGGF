@@ -198,10 +198,11 @@ class TestS3kSszBackgroundLayout {
         for (int frame = 0; frame < 400 && !reachedCloudBand; frame++) {
             fixture.stepIdleFrames(1);
             int wrappedCameraY = GameServices.camera().getY() & (Y_WRAP - 1);
-            reachedCloudBand = wrappedCameraY >= CLOUD_BAND_LOW && wrappedCameraY < CLOUD_BAND_HIGH;
+            reachedCloudBand = wrappedCameraY >= CLOUD_BAND_LOW && wrappedCameraY < CLOUD_BAND_HIGH
+                    && com.openggf.game.sonic3k.scroll.SwScrlSsz.cloudWindowActive();
         }
         assertTrue(reachedCloudBand,
-                "the arrival rise carries the camera into the cloud band [$800,$F00)");
+                "the arrival rise reaches the displayed cloud band after its staged plain frame");
         assertEquals(CLOUD_WINDOW_LAYOUT_X, parallax.getBgCameraX(),
                 "cloud mode pins the background plane's layout X to $1C00 (loc_5799A)");
     }
