@@ -61,6 +61,43 @@ green label, and "implemented" alone never closes a row.
 | LOAD: `$B00` (DEZ) presentation after the request | DEZ campaign | — | — | blocked | blocked | blocked | blocked | blocked | Out of scope; record what the engine does after the request |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz{,2,3}SegmentTraceReplay`, `TestS3kTailsFullChainHpz{,2}SegmentTraceReplay` | `-Ptrace-segments` | — | — | — | — | not measured | — | Slice 10 records each frontier |
 
+## Opening Death Egg camera tracking (2026-09-30)
+
+`TestSszDeathEggCutscene.cameraTrackerSuppliesSignedHalfDeltaToEggAndStationaryChildren`
+checks `loc_66072` initialization and `loc_6607E`'s signed `SUB.W` / `ASR.W`
+camera movement, including odd negative deltas and word wrap. The Egg, mask and
+cloud consume the same delta. `productionCutsceneGraphRecreatesAndReplaysEveryRegistryKey`
+checks ordinary-entry allocation before the Egg, then deletes and recreates the
+helper and cutscene graph and compares all registered state after 45 right-held
+frames, at 320, 352, 400, 528 and 800 pixels. This local camera mechanic is
+independent of movement donation; donor, roster and lifecycle breadth remains
+as recorded elsewhere in this matrix. The oracle is `loc_65794`'s allocation
+order and `MoveSprite_SSZBGAdjust`, rather than a fitted screen offset.
+
+Validation on `develop`, based on `9cbb22dcbed15258f11187c41f19114674f2abee`:
+
+- Queued Maven `-Dmse=off -Dtest=TestSszDeathEggCutscene test`: 13 passed,
+  zero skipped. The initial wide test reused a native-width session; reopening
+  the session after configuring the width repaired that test setup.
+- Queued Maven `-Dmse=off -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:
+  59 passed, zero skipped (completed together with the initial cutscene run).
+- Queued Maven `-Dmse=off -Pguards -Dtest=TestRewindCoverageGuard,TestRewindArchitectureGuard,TestObjectPriorityBucketGuard,TestObjectServicesMigrationGuard,TestObjectUpdateClockTerminologyGuard,TestSonic3kObjectProfileRegistryGuard,TestPatternSpriteRendererCorruptionGuard test`:
+  24 passed, zero skipped in a fresh JVM.
+- `GameplayCaptureTool --game s3k --zone ssz --act 1 --input <400 neutral; 300 right> --frames 601 --every 100 --no-video`:
+  frame 500 shows the Egg farther right with the restored parallax. All 601
+  player/camera/input CSV rows match the rebuilt baseline byte for byte.
+
+ROM-backed tests received the existing root ROM's absolute path through
+`-Ds3k.rom.path`. This file has CRC32 `0C06AA82` / SHA-1
+`B711A909CCE238CA4AF3E517A2EDCA306228EFA5`, rather than the canonical identity
+listed in `AGENTS.md`; the allocation and tracker instruction bytes at
+`$657B0` / `$66072` / `$6607E` were checked directly against the disassembly.
+These are focused checks, not a full-suite pass. The change-based plan selected
+2,465 classes across six categories; that is disproportionate for restoring this
+one object-local camera observer. Broad tool preflight found Lua 5.5 on the default
+path and no PowerShell. The guard command used `LUA_BIN=/usr/bin/lua5.4`.
+Whole-scene native capture comparison and inherited matrix gaps remain open.
+
 ## Current cold-route closure (2026-09-24)
 
 `TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents`

@@ -13,6 +13,38 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszDeathEggCutscene {
+    @Test void cameraTrackerSuppliesSignedHalfDeltaToEggAndStationaryChildren() {
+        HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        var services = TestEnvironment.objectServices();
+        var camera = services.camera();
+        var state = (com.openggf.game.sonic3k.runtime.SszZoneRuntimeState) services.zoneRuntimeState();
+        state.setCloudOscillator(0);
+        var tracker = new SszBackgroundCameraTracker(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        tracker.setServices(services);
+        var manager = services.objectManager();
+        var egg = new SszDeathEggSmallObjectInstance(new ObjectSpawn(0x200, 0xC68, 0, 0, 0, false, 0));
+        egg.setServices(services);
+        manager.addDynamicObject(egg);
+        camera.setX((short) 0x100);
+        tracker.update(0, null);
+        assertEquals(0, state.backgroundCameraDelta(), "initial camera is an anchor, not movement");
+        egg.update(0, null);
+        var children = manager.activeObjectsOfType(SszDeathEggChild.class);
+        int expectedX = 0x200;
+        for (int delta : new int[] {4, 5, -1, -5, 0, 0x7FFF, 2}) {
+            camera.setX((short) (camera.getX() + delta));
+            tracker.update(1, null);
+            assertEquals(delta >> 1, state.backgroundCameraDelta());
+            egg.update(1, null);
+            children.get(0).update(1, null);
+            children.get(1).update(1, null);
+            expectedX = (expectedX + (delta >> 1)) & 0xFFFF;
+            assertEquals(expectedX, egg.getX());
+            assertEquals(expectedX, children.get(0).getX(), "mask follows the same background delta");
+            assertEquals(expectedX, children.get(1).getX(), "cloud follows the same background delta");
+        }
+    }
+
     @Test void risingEggPresentationIsClippedAtTheStationaryBackgroundMask() {
         HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
         var services = TestEnvironment.objectServices();
@@ -94,23 +126,40 @@ class TestSszDeathEggCutscene {
         cloud.update(787, null); assertTrue(cloud.isDestroyed());
     }
 
-    @Test void productionCutsceneGraphRecreatesAndReplaysEveryRegistryKey() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 352, 400, 528, 800})
+    void productionCutsceneGraphRecreatesAndReplaysEveryRegistryKey(int width) {
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.DISPLAY_ASPECT,
+                com.openggf.configuration.WidescreenAspect.NATIVE_4_3.name());
+        config.resolveDisplayAspect();
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        // Camera dimensions belong to the gameplay session; reopen after configuration.
+        com.openggf.game.session.SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        assertEquals(width, GameServices.camera().getWidth());
         var manager = GameServices.level().getObjectManager();
         int passes = 0;
         while (manager.activeObjectsOfType(SszDeathEggChild.class).isEmpty() && passes++ < 600) fixture.stepIdleFrames(1);
         assertEquals(7, manager.activeObjectsOfType(SszDeathEggChild.class).size());
+        var trackers = manager.activeObjectsOfType(SszBackgroundCameraTracker.class);
+        assertEquals(1, trackers.size(), "loc_65794 allocates the camera tracker on ordinary entry");
+        assertTrue(trackers.getFirst().getSlotIndex()
+                < manager.activeObjectsOfType(SszDeathEggSmallObjectInstance.class).getFirst().getSlotIndex(),
+                "tracker runs before the rising Egg");
         var registry = fixture.gameplayMode().getRewindRegistry();
         for (int advance : new int[] {30, 315}) {
             fixture.stepIdleFrames(advance);
             var saved = registry.capture();
-            fixture.stepIdleFrames(45);
+            for (int frame = 0; frame < 45; frame++) fixture.stepFrame(false, false, false, true, false);
             var forward = registry.capture();
+            for (var tracker : manager.activeObjectsOfType(SszBackgroundCameraTracker.class)) tracker.setDestroyed(true);
             for (var child : manager.activeObjectsOfType(SszDeathEggChild.class)) child.setDestroyed(true);
             for (var egg : manager.activeObjectsOfType(SszDeathEggSmallObjectInstance.class)) egg.setDestroyed(true);
             fixture.stepIdleFrames(1);
             registry.restore(saved);
-            fixture.stepIdleFrames(45);
+            for (int frame = 0; frame < 45; frame++) fixture.stepFrame(false, false, false, true, false);
             var replay = registry.capture();
             for (String key : forward.entries().keySet()) {
                 var differences = RewindSnapshotDiff.diffKey(key, forward.get(key), replay.get(key));

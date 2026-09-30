@@ -958,6 +958,13 @@ for focused contracts and inherited visual gaps.
 
 ### SSZ opening Death Egg mask (2026-09-30)
 
+The opening also restores `loc_65794`'s separately allocated camera tracker
+(`loc_66072` / `loc_6607E`). It publishes the signed, word-wrapped half-camera
+delta before the Death Egg, its mask and its cloud update. Without that owner,
+`_unkFA84` stayed zero and running right pulled the rising Egg too far left.
+The helper's previous-camera word and initialization state are captured for
+rewind and recreated with the cutscene graph.
+
 Resolved the rising Death Egg drawing through the skyline: `loc_65B24` sets
 `Spritemask_flag`, and SSZ now enables the SAT post-pass used by its frame `$C`
 mask. The low art priority and bucket `$380` remain ROM values. See the

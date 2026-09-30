@@ -38,7 +38,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the Death Egg he watches rise, the grey button and the three-section bridge that extends over the gap,
   with the checkpoint it leaves behind — is in place. Death at that checkpoint
   restores the extended bridge and skips the arrival scene, including repeated reloads. The rising Death Egg applies and restores
-  its ROM cutscene palette, cloud, skyline sprite mask and animated trails, rising
+  its ROM cutscene palette, cloud, skyline sprite mask and animated trails, with
+  the Egg, cloud and mask following the camera at the ROM's half-speed parallax, rising
   behind the terrain, and launches its
   decorative missiles on the V-int cadence. The act's sky is its own now: the
   background switches between the plain sanctuary framing and the banded cloud layer as the

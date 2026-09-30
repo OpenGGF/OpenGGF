@@ -207,6 +207,10 @@ public final class CutsceneKnucklesSszInstance extends AbstractObjectInstance
         addY(distance);
         routine = 0x06;
         timer = 5;
+        // loc_65794 allocates loc_66072 before ChildObjDat_665F6, so the
+        // camera delta is published before the Death Egg and its children move.
+        spawnChild(() -> new SszBackgroundCameraTracker(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
         spawnChild(() -> new SszDeathEggSmallObjectInstance(
                 new ObjectSpawn(SszDeathEggSmallObjectInstance.SPAWN_X,
                         SszDeathEggSmallObjectInstance.SPAWN_Y, 0, 0, 0, false, 0)));
