@@ -60,6 +60,9 @@ class TestSszEggRoboPresentation {
         }
         assertTrue(moved, "exercise actual horizontal and vertical movement");
         assertNotNull(gun); assertNotNull(flame);
+        var badnikState = robo.captureRewindState().badnikExtra();
+        assertEquals(robo.getX(), badnikState.currentX(), "standard badnik capture keeps live X");
+        assertEquals(robo.getY(), badnikState.currentY(), "standard badnik capture keeps live Y");
         var gunFrame = draw(gun); var bodyFrame = draw(robo); var flameFrame = draw(flame);
         var registry = fixture.gameplayMode().getRewindRegistry();
         var saved = registry.capture();

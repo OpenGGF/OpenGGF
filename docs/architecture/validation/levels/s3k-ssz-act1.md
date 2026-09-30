@@ -1028,3 +1028,15 @@ not included.
    `4ec32623eb`, queued `TestSszRotatingPlatformPresentation,TestS3kSszCarriersAndSprings`
    with the absolute S3K ROM path. **31 cases passed, no skips**. Native visual capture remains
    unavailable as recorded above; compatibility breadth remains inherited.
+
+Issue4 architecture follow-up: the all-guards run rejected the new EggRobo
+restore override added in `f78333ecd6`. Retire that override rather than adding
+a baseline exception: synchronize inherited badnik currentX/Y with the live
+native x/y after movement, so standard BadnikRewindExtra restores matching
+spawn metadata. Native movement/render anchors are unchanged. The immediate
+object-manager recreation and broader column replay checks verify the standard
+restore. The final combined EggRobo/traversal/background selection ran63
+cases: **61 passed, no skips**; both failures were the new transition test's
+800px session/viewport setup, repaired separately. All21 EggRobo/traversal
+cases passed, including the new standard badnik coordinate assertions. Fresh
+RewindArchitectureGuard: **4 checks passed, no skips** on the final candidate.

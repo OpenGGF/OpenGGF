@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
@@ -9,7 +8,6 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -197,6 +195,10 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
             case FALLING -> updateFalling();
             default -> { }
         }
+        // Keep standard badnik capture/restore aligned with this routine's
+        // native position owner; the base restore resyncs dynamic spawn from it.
+        currentX = x;
+        currentY = y;
         updateDynamicSpawn(x, y);
     }
 
@@ -386,15 +388,6 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     @Override protected int getBodyAnchorX() { return x; }
     @Override protected int getBodyAnchorY() { return y; }
 
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        // AbstractBadnikInstance resyncs its currentX/currentY owner after restore.
-        // EggRobo instead owns native position in x/y, restored by generic capture.
-        if (snapshot.hasDynamicSpawn()) {
-            updateDynamicSpawn(x, y);
-        }
-    }
     @Override public int getOnScreenHalfWidth() { return mode == Mode.FIGHTER ? 0x14 : 0x20; }
     @Override public int getOnScreenHalfHeight() { return mode == Mode.FIGHTER ? 0x18 : 0x20; }
 }

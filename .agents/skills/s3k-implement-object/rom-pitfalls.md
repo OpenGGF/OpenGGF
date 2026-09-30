@@ -4990,6 +4990,13 @@ uses `$32` or live Y when zero and copies render bit0 while mirroring `child_dx`
 The flame uses live Y through `Refresh_ChildPositionAdjusted`. `loc_9173A`
 draws the gun's latched position/flags without refreshing them.
 
+When the native position is held outside base currentX/Y, also synchronize the
+base badnik position before standard capture. Its restore resyncs dynamicSpawn
+from BadnikRewindExtra; stale base coordinates corrupt immediate capture after
+recreation even when drawing uses the correct native anchors. Prefer the
+existing generic/badnik restore over a new per-object override, which requires
+explicit architecture triage. The SSZ moving-graph test checks both surfaces.
+
 **Origin.** SSZ issue4 follow-up on develop, 2026-09-30, based on `012acaaee8`.
 
 ## Synthetic child spawn metadata still obeys normalized field widths

@@ -991,3 +991,6 @@ the same corrected delay/flip contract and stops drawing its intact image.
 
 - SSZ rotating post/carrier player poses use the ROM table's direct render flips
   and retain incoming facing, keeping the displayed pose aligned to the rotation.
+
+SSZ EggRobo position restoration uses standard generic/badnik capture: inherited
+position state stays synchronized to native x/y, without a custom restore hook.
