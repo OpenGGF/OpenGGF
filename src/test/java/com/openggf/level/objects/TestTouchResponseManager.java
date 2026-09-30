@@ -82,6 +82,33 @@ public class TestTouchResponseManager {
         SessionManager.clear();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(com.openggf.game.ShieldType.class)
+    void lrzJetFlameOnlyAllowsFireShieldImmunity(com.openggf.game.ShieldType shield) {
+        var sonic = spy(new com.openggf.tests.TestablePlayableSprite("sonic", (short) 160, (short) 112));
+        sonic.setGameRulesForTest(GameRules.SONIC_3K);
+        sonic.setShieldStateForTest(true, shield);
+        doReturn((short) 160).when(sonic).getCentreX();
+        doReturn((short) 112).when(sonic).getCentreY();
+        var flame = new com.openggf.game.sonic3k.objects.LrzFlameObjectInstance(
+                160, 112, 0, 0, 0, 2, false, false);
+        setupTableSize(0x18, 12, 12);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, sonic, List.of(), 1);
+
+        if (shield == com.openggf.game.ShieldType.FIRE) {
+            assertTrue(sonic.hasShield());
+            assertFalse(sonic.isHurt());
+        } else {
+            assertFalse(sonic.hasShield());
+            assertTrue(sonic.isHurt());
+        }
+        assertEquals(0x98, flame.getCollisionFlags(), "Immunity must not disarm the flame");
+        assertEquals(TouchShieldDeflectCapability.NONE,
+                flame.getTouchResponseProfile().shieldDeflectCapability());
+    }
+
     @Test
     void patchedMultiSpriteTouchRetainsSeparateShippedDuckMappingTest() {
         var interaction = mock(com.openggf.game.rules.ObjectInteractionRules.class);

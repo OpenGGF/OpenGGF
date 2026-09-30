@@ -163,6 +163,12 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getShieldReactionFlags() {
+        // loc_43E4E / loc_43F84: bset #4,shield_reaction(a1) in both jet variants.
+        return 0x10;
+    }
+
+    @Override
     public int getPriorityBucket() {
         return PRIORITY_BUCKET;
     }

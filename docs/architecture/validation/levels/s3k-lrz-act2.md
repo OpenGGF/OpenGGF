@@ -1135,3 +1135,34 @@ five actual camera widths, source-row checks and restore/forward replay. Togethe
 with the unchanged checks from the combined run, all 117 selected cases passed;
 this remains focused validation. Also inspected frame 119 of the corrected 800px
 capture at camera (8872,1484); the visible cavern continues across the old boundary.
+
+### Flame jet fire-shield immunity (2026-09-30)
+
+On develop, based on `eef4474356d80e282949d6dcc62b0b4cfec2d0b6`, the flame child now
+publishes `shield_reaction` bit 4 as written by both `loc_43E4E` and
+`loc_43F84` in `sonic3k.asm`. The shared touch controller consequently passes
+`DamageCause.FIRE` to Sonic's existing shield handling. No projectile deflection,
+collision disarming, movement or lifetime change is introduced.
+
+`TestTouchResponseManager.lrzJetFlameOnlyAllowsFireShieldImmunity` exercises
+the real flame through ObjectManager against Sonic with each of the four
+shield types: fire retains the shield and avoids hurt; basic, lightning and
+bubble lose their shields and enter hurt. The flame remains harmful and does
+not acquire shield deflection.
+
+Focused validation (Java 21, verified locked-on ROM CRC32 `63522553`):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestLrzFlameThrower,TestTouchResponseManager,TestTouchResponseProfileMapping,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" "-Ds3k.rom.path=${PWD}/Sonic 3 & Knuckles (W) [!].gen" test
+```
+
+Result: 167 tests, zero failures/errors/skips. An initial compilation attempt
+used a nonexistent test getter; corrected to `isHurt()` before this completed run.
+The change-based plan selected 2,952 classes, including all categories because
+of an unrelated untracked S2 movie. Proportionate validation replaces that
+selection for this constant object metadata repair: collision dispatch, real
+shield handling, existing jet behavior and mandatory S3K loading regressions
+are covered directly. Broad preflight found Lua 5.4 and PowerShell unavailable;
+no full suite or structural-guard pass is claimed. Existing route/rewind,
+viewport, donor and roster obligations remain inherited; this check does not
+certify those products or add an act-route replay.
