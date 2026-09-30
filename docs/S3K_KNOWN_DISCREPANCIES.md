@@ -945,3 +945,13 @@ LRZ1 ending signpost pole (2026-09-29): `Obj_SignpostStubMain` calls
 bit. The pole now does the same, preventing high-priority foreground tiles from
 hiding it below an otherwise visible sign. This shared child behavior also
 applies to the other S3K signposts without a zone-specific rendering exception.
+
+### SSZ arrival presentation correction (2026-09-30)
+
+The arrival beam no longer draws a floating teleporter pad: the ROM multi-sprite
+renderer skips the main image when its mapping frame is zero. Title-card entry
+also preserves an already-locked arrival camera instead of forcibly snapping it
+to the player and clamping it to the floor bound. The small rise to camera
+`$BA8` followed by settling at `$BC0` remains intentional ROM behavior.
+See the [Act1 matrix](architecture/validation/levels/s3k-ssz-act1.md#arrival-camera-and-beam-presentation-2026-09-30)
+for focused contracts and inherited visual gaps.

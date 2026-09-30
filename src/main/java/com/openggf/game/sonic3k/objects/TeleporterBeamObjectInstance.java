@@ -260,8 +260,9 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         if (renderer == null) {
             return;
         }
-        // Multi-sprite main sprite: mapping_frame stays 0 until deletion.
-        renderer.drawFrameIndex(0, x, y, false, false, PALETTE_LINE);
+        // Render_Sprites loc_1AEE4 / loc_1AF1C: zero mapping_frame skips the
+        // multi-sprite main image and draws only its children. Frame 0 is a pad,
+        // so drawing it here creates a floating second teleporter under the beam.
         for (int index = 0; index < segmentCount && index < MAX_SEGMENTS; index++) {
             renderer.drawFrameIndex(childFrame[index], childX[index], childY[index], false, false, PALETTE_LINE);
         }

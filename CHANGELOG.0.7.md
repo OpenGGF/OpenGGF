@@ -30,7 +30,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   bucket, including through the final transport ascent and follower history.
   Sky Sanctuary act 1 now plays its teleporter arrival instead of
   dropping the player in at the level-start position. The screen init forces the arrival
-  camera and bounds, the controller beams Player 1 up the sanctuary column and hands control
+  camera and bounds, title-card entry preserves its camera lock, and the beam draws only
+  its light columns without a floating pad. The controller beams Player 1 up the sanctuary column and hands control
   back on the settle swing, Tails arrives on her own beam, and the act's dynamic camera bands
   and vertical wrap follow the player. The cutscene Knuckles who opens the route — his beam,
   the Death Egg he watches rise, the grey button and the bridge that extends over the gap,

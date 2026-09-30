@@ -4964,3 +4964,12 @@ a player in the middle of the curve is outside the entry window and cannot
 reacquire the object. Capture stable player references; test both curve halves,
 replacement participant instances and one rider releasing while the other stays.
 The2026-09-27 cold800px MHZ route exposed the missing rider collection.
+
+## Multi-sprite mapping frame zero suppresses the main image
+
+ROM `Render_Sprites` (`sonic3k.asm`, `loc_1AEE4` → `loc_1AF1C`) tests
+`mapping_frame` before resolving the main image: zero skips it and goes straight
+to `mainspr_childsprites`. This differs from ordinary sprites, where frame0 is
+a real mapping. `Obj_TeleporterBeamExpand` keeps its main frame0, so only its
+beam columns draw; blindly rendering mapping0 creates a floating teleporter pad.
+Regression: `TestTeleporterBeamRendering` (SSZ arrival presentation,2026-09-30).

@@ -984,3 +984,8 @@ zero skips. Targeted structural guards pass38 with zero skips. The2951-class
 plan was not run; broad preflight lacks Lua5.4/PowerShell. See the Act1 matrix
 for exact commands, per-issue evidence and remaining limits. Issue4 remains
 unconfirmed; no claim that all eight reports or the full suite are green.
+
+SSZ arrival presentation (2026-09-30): the [Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#arrival-camera-and-beam-presentation-2026-09-30)
+adds 320/800 title-entry camera-lock checks, ROM swing/landing camera checks, and
+an independent beam draw/flicker regression. Existing arrival rewind breadth
+remains covered; whole-scene visual and donor products remain open.

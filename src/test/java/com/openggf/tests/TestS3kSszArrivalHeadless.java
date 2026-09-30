@@ -89,6 +89,30 @@ class TestS3kSszArrivalHeadless {
         assertEquals(RISE_FRAMES, controller.riseRemainingForTest(), "move.b #$6C,$2D(a1)");
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {320, 800})
+    void presentedTitleCardPreservesTheScreenInitCameraLock(int width) throws Exception {
+        var fixture = boot(width, "");
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        var loop = new com.openggf.GameLoop(new com.openggf.control.InputHandler());
+        loop.setGameplayMode(fixture.gameplayMode());
+        // The fixture already initialized the omitted title's art lease. Substitute only
+        // presentation, retaining the real GameLoop entry and arrival objects.
+        var providerField = com.openggf.GameLoop.class.getDeclaredField("titleCardProvider");
+        providerField.setAccessible(true);
+        providerField.set(loop, org.mockito.Mockito.mock(com.openggf.game.TitleCardProvider.class));
+        loop.enterTitleCard(Sonic3kZoneIds.ZONE_SSZ, 0);
+
+        assertEquals(com.openggf.game.GameMode.TITLE_CARD, loop.getCurrentGameMode());
+        assertTrue(fixture.camera().getFrozen());
+        assertEquals(CAMERA_X, fixture.camera().getX() & 0xFFFF);
+        assertEquals(CAMERA_Y, fixture.camera().getY() & 0xFFFF,
+                "SSZ1_ScreenInit retains camera ownership through title entry");
+        assertEquals(PLAYER_Y, fixture.sprite().getCentreY() & 0xFFFF);
+        fixture.stepIdleFrames(1);
+        assertEquals(CAMERA_Y - RISE_STEP, fixture.camera().getY() & 0xFFFF);
+    }
+
     /**
      * {@code loc_57D50} moves Player 1 and the camera up 8 px for {@code $2D} frames, except that
      * the frame the counter reaches zero skips the camera step.
@@ -173,6 +197,21 @@ class TestS3kSszArrivalHeadless {
 
         assertEquals(0, state().eventsBgByte(0x05), "Events_bg+$05 stays clear");
         org.junit.jupiter.api.Assertions.assertNull(controller(), "no Obj_57C1E");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {320, 800})
+    void releaseCameraTracksTheRomSwingAndSettlesAtTheArrivalFloor(int width) {
+        var fixture = boot(width, "");
+        // loc_57D50 ends at $BF1. Obj_57D64 rises by $41 pixels before
+        // releasing Sonic; MoveCameraY follows his grounded roll at a $65 offset.
+        // The native hpz recording corroborates $BA8 at the swing apex and $BC0
+        // after landing. This slight upward-then-downward motion is ROM behavior.
+        fixture.stepIdleFrames(171);
+        assertEquals(0xBA8, fixture.camera().getY() & 0xFFFF);
+        fixture.stepIdleFrames(40);
+        assertEquals(CAMERA_MAX_Y, fixture.camera().getY() & 0xFFFF);
+        assertFalse(fixture.sprite().isObjectControlled());
     }
 
     static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> arrivalCases() {

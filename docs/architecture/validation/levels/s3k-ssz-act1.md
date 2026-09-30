@@ -842,3 +842,68 @@ defeat and transport, under `~/Videos/OGGF/ssz-bring-up/campaign-20260928-paired
 This closes that pair-route prefix and its listed rewind windows; the complete
 800px pair route, other breadth and synchronized native visual matching remain
 open. No emulator parity is inferred from the engine movie.
+
+## Arrival camera and beam presentation (2026-09-30)
+
+`TestS3kSszArrivalHeadless#presentedTitleCardPreservesTheScreenInitCameraLock`
+checks real GameLoop title entry at 320/800 after the initial screen/object pass,
+with only the already-initialized presentation provider substituted. Title entry
+must retain the scripted `$F49` camera and the first rise remains 8px. A forced
+player snap previously clamped the locked camera to `$BC0`.
+`releaseCameraTracksTheRomSwingAndSettlesAtTheArrivalFloor` checks the native
+`$BA8` swing apex and `$BC0` landing camera at both widths. The small upward
+swing followed by downward settling is intentional: `Obj_57D64` and
+`MoveCameraY`, corroborated by the comparison-only `hpz` recording.
+
+`TestTeleporterBeamRendering` verifies the two expanded beam columns and
+odd-frame flicker. `Render_Sprites` at `loc_1AEE4` branches to `loc_1AF1C` when
+the multi-sprite main `mapping_frame` is 0; it does not draw mapping0 (the pad).
+The beam now honors this, removing the floating second pad. Existing arrival
+restore/replay checks retain their character/team/viewport coverage; strict
+whole-scene pixels and outstanding donor/route products remain inherited gaps.
+
+Validation on develop base `27edb95989b90ae53663f13ceee463690c4cd456`
+plus this working change:
+
+- Java 21 queued focused selection `-Dtest=TestS3kSszArrivalHeadless,TestTeleporterBeamRendering`
+  passed. The final combined run includes 25 arrival cases and 1 beam case,
+  all passing without skips; arrival covers the existing character/team/viewport
+  restore/replay matrix. AIZ skip, level loading, bootstrap and decoding also
+  passed without skips.
+- `python3 tools/testing/run_categories.py --base 27edb95989b90ae53663f13ceee463690c4cd456 --preflight`
+  passed after temporary official Lua 5.4 and PowerShell tools were placed on
+  `LUA_BIN`/`PATH`; no system installation changed.
+- The same command with `--run` selected 2,952 ordinary classes plus guards.
+  Completed ordinary lane: 25,200 tests, 12 failures, 162 errors, 126 skips,
+  1,844.91 seconds. Completed guards: 672 tests, 0 failures/errors/skips,
+  500.66 seconds. This is a failed broad run, not a green delivery.
+- 159 errors share unsupported GLSL 4.10 during native initialization.
+  Matched queued `-Dtest=TestAiz2ForestRingCameraGeneration,TestS3kMovingCameraPresentation`
+  checks on the unchanged detached baseline and current code reproduce both
+  representative initialization errors. Native captures/pixel acceptance remain
+  unverified on this Mac.
+- Bounded baseline/current selections of the failing mod/build and audio classes
+  reproduce 11 failures and 3 errors: macOS `base64`, sample conversion/build,
+  missing `/usr/bin/bash`, Bash shell syntax and secure-directory traversal.
+  The selected classes are `TestPhase2SampleModIntegration`,
+  `TestPhase3SampleCharacterIntegration`, `TestPhase3StandaloneSampleIntegration`,
+  `TestSamplePlatformerIntegration`, `TestProjectScaffolder`,
+  `TestOverrideResumeReferenceBundle`, `TestS1AudioParityCli`,
+  `TestS1OverrideResumeAudioOracle`, `TestS2OverrideResumeAudioOracle`,
+  `TestCompleteRunAudioCli`, and `TestS1GameplayAudioTimelineCli`.
+  Both use `python3 tools/testing/maven_queue.py -Dmse=off -Dtest=<selection> test -q`
+  with Java 21 and the absolute root S3K ROM property. No engine changes were
+  made to repair these unrelated failures.
+- With the same PowerShell PATH as the broad run, matched baseline/current
+  `-Dtest=TestModApiHookPolicy#pinRenameRequiresDescriptorAndCurrentRequiresBothCompanions`
+  commands each reproduce 1 failure, 0 errors/skips. Without PowerShell this case
+  skips, which is why the first bounded selection alone could not attribute it.
+- The 126 ordinary skips include legacy hardcoded `s2.gen` lookups, unavailable
+  KiS2 lock-on dumps, and opt-in/native prerequisites. Root ROM identities were
+  discovered by the runner; no ROM was renamed or copied to satisfy a test.
+
+The rejected approach is suppressing the entire post-rise camera swing: native
+`hpz` rows corroborate its `$BA8` apex and `$BC0` landing, so removing it would
+change shipped-ROM behavior. Only the forced title-entry snap and the extra
+beam pad were corrected. Diagnostics are consumed and acknowledged; the
+baseline checkout is temporary and removed after attribution.

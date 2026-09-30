@@ -3443,9 +3443,12 @@ public class GameLoop {
             getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
         }
 
-        // Snap camera to player position immediately so it's correct from the start
-        // Normal updates during the title card will keep it settled
-        camera.updatePosition(true);
+        // ScreenInit can already own the camera through Scroll_lock (SSZ1_ScreenInit
+        // sets $F49 before Obj_57C1E positions the player). A forced player snap would
+        // override that scripted origin and clamp it against the arrival's $BC0 bound.
+        if (!camera.getFrozen()) {
+            camera.updatePosition(true);
+        }
 
         // Notify listener of mode change
         if (gameModeChangeListener != null) {
