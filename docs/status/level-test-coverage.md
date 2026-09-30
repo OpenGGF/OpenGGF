@@ -1006,3 +1006,7 @@ SSZ EggRobo attachment: the presentation-fix matrix adds real moving body/child
 anchors, mirrored offsets, live flame versus delayed gun Y and graph recreation
 in both orientations, including immediate object-manager capture after recreation.
 Existing fly-by scaling and animal-launch gaps remain.
+
+SSZ diagonal bridge collapse: the presentation-fix matrix records four local
+slope-flip × collapse-side cases, exact intact-to-fragment ROM tile composition,
+full stagger delays, deleted-fragment recreation and whole-registry replay.

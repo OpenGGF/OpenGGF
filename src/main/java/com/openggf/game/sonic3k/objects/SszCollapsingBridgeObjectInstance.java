@@ -124,7 +124,7 @@ public final class SszCollapsingBridgeObjectInstance extends AbstractObjectInsta
             final int spawnFrame = frames & 0xFF;
             final int spawnDelay = delay;
             if (spawnChild(() -> SszBridgeDebrisObjectInstance.piece(
-                    spawnX, getY(), spawnFrame, spawnDelay)) == null) {
+                    spawnX, getY(), spawnFrame, spawnDelay, getSpawn().renderFlags())) == null) {
                 break;
             }
             pieceX = (pieceX - step) & 0xFFFF;
@@ -160,6 +160,8 @@ public final class SszCollapsingBridgeObjectInstance extends AbstractObjectInsta
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // loc_44D22/loc_44D48 keep the solid but draw only its four child pieces.
+        if (collapsed) return;
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_CUTSCENE_BRIDGE);
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndex(0, x, getY(), isRenderFlipped(), false, PALETTE_LINE);

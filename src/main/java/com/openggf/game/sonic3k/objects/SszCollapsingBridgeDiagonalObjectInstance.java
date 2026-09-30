@@ -67,7 +67,7 @@ public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObj
     private static final int PIECE_STEP = 0x10;
     /** {@code move.w #$405,d3}: alternating mapping frames 5 and 4. */
     private static final int FRAME_WORD = 0x405;
-    /** {@code moveq #-8,d6}: the vertical stagger, which flips every other piece. */
+    /** {@code moveq #-8,d6}: the vertical stagger, advanced every other piece. */
     private static final int STAGGER = 8;
     /** {@code moveq #6,d4} then {@code addi.w #6,d4}: delays 6..48. */
     private static final int FIRST_DELAY = 6;
@@ -161,15 +161,18 @@ public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObj
             final int spawnFrame = frames & 0xFF;
             final int spawnDelay = delay;
             if (spawnChild(() -> SszBridgeDebrisObjectInstance.piece(
-                    spawnX, spawnY, spawnFrame, spawnDelay)) == null) {
+                    spawnX, spawnY, spawnFrame, spawnDelay, getSpawn().renderFlags())) == null) {
                 break;
             }
             pieceX = (pieceX - step) & 0xFFFF;
             frames = rotateFrameWord(frames);
             delay += DELAY_STEP;
-            // btst #0,d5 / bne: the stagger only moves on every other piece, toward zero.
+            // loc_44E80 tests the LONG sign but changes only the WORD. Preserve
+            // the upper word when the low word crosses zero: the slope continues
+            // in the same direction instead of alternating between two heights.
             if ((((DEBRIS_COUNT - 1) - piece) & 1) == 0) {
-                stagger += stagger < 0 ? STAGGER : -STAGGER;
+                int nextWord = (stagger + (stagger < 0 ? STAGGER : -STAGGER)) & 0xFFFF;
+                stagger = (stagger & 0xFFFF0000) | nextWord;
             }
         }
     }
@@ -246,6 +249,9 @@ public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObj
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // loc_44EBA/loc_44EF6 retain only shrinking collision. They do not
+        // submit the intact mapping; loc_45052's eight pieces own drawing.
+        if (collapsed) return;
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_CUTSCENE_BRIDGE);
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndex(MAPPING_FRAME, x, y, isRenderFlipped(), false, PALETTE_LINE);

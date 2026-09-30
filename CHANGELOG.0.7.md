@@ -60,7 +60,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   falling pieces when one is stood on. Rewind preserves those falling pieces after
   their column leaves the active world. The flat bridge sections crumble away from under the
   player four pieces at a time — except the one section the cartridge marks permanent — and the
-  sloped walkways follow their ROM collision surfaces and break into eight, sliding
+  sloped walkways follow their ROM collision surfaces and split into eight matching
+  fragments that fall in the cartridge's staggered order, with the shrinking solid sliding
   along their own slope as they go. The permanent staircase now carries players
   uphill instead of letting them fall beneath its tiles. The rest of
   the act's traversal is in too: the little clouds squash under a standing player and throw

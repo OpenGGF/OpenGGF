@@ -4991,3 +4991,19 @@ The flame uses live Y through `Refresh_ChildPositionAdjusted`. `loc_9173A`
 draws the gun's latched position/flags without refreshing them.
 
 **Origin.** SSZ issue4 follow-up on develop, 2026-09-30, based on `012acaaee8`.
+
+## Synthetic child spawn metadata still obeys normalized field widths
+
+SSZ `loc_44E52`/`loc_44CDE` give fragments word delays6..48 in `$2E`. Encoding
+those delays in `ObjectSpawn.renderFlags` truncates them to two bits before the
+child constructor reads them, and also loses the parent's actual flips. Keep
+flip bits in renderFlags and document the child's separate delay metadata.
+`SszBridgeDebrisObjectInstance` uses the synthetic spawn's16-bit rawYWord so
+spawn-based recreation retains both. Regress the complete delay range, mirrored
+ROM tile composition and deleted-child forward replay. Origin: SSZ issue5
+on develop, 2026-09-30, based on `39645745aa`.
+
+`loc_44E80` also tests the long sign of d6 but advances only its low word.
+Preserve the upper word through zero; testing a Java int after an unrestricted
+addition instead reverses the slope. Exact intact-to-fragment ROM tile-set
+comparison across both collapse sides and flips exposes this width error.

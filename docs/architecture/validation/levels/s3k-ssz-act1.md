@@ -993,3 +993,25 @@ not included.
    compares object-manager state immediately. Follow-up: queued `TestSszEggRoboPresentation,TestS3kSszEggRobo,TestS3kSszTraversalPlatforms`
    within the bridge selection: **21 cases passed, no skips**. Four new bridge
    cases still failed on a test-harness reference after recreation; handled in issue5.
+
+5. **Diagonal bridge collapse:** `loc_44EBA` retains the shrinking solid but
+   does not submit the intact mapping. Eight `loc_45052` pieces now replace it,
+   copying flips and art bit15. Native delays6..48 were encoded in
+   `ObjectSpawn.renderFlags`, whose canonical constructor masks to two bits;
+   store that synthetic child's delay in its16-bit rawYWord metadata instead.
+   The same fragment routine serves flat bridges, whose four pieces now retain
+   delays/flips and replace the intact image as `loc_44D22` requires.
+   `TestSszBridgeCollapsePresentation` checks that the fragment set exactly
+   reproduces every intact ROM tile/position/flip, then staggers the falls,
+   recreates deleted fragments and compares all registry keys after forward
+   replay. Four independent cases cover both flips and both collapse sides.
+   Queued selection `TestSszBridgeCollapsePresentation,TestS3kSszTraversalPlatforms`,
+   absolute S3K ROM path, candidate based on `39645745aa` plus EggRobo restore
+   follow-up `f78333ecd6`. **9 existing traversal cases passed** in the combined
+   run; after repairing the component harness, **4 new cases passed, no skips**.
+   Initial tile-set failures on rightward/mirrored collapse exposed the missing
+   upper-word preservation: `loc_44E80` tests d6.l but adjusts d6.w, so the low
+   word must continue past zero along the slope. Rejected Java int arithmetic
+   oscillated between two heights. Initial replay setup had not registered the
+   lazy insta-shield, and reused the retired dynamic bridge after restore;
+   completing registration and resolving the recreated bridge fixed the harness.

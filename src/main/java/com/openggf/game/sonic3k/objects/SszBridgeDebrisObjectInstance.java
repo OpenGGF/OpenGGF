@@ -39,12 +39,15 @@ public final class SszBridgeDebrisObjectInstance extends AbstractObjectInstance
     private static final int GRAVITY = 0x38;
 
     /**
-     * The spawn's subtype carries the mapping frame and its {@code renderFlags} slot the hang
-     * delay, so a spawn-based rewind recreation rebuilds the piece exactly.
+     * Synthetic child metadata: subtype carries the mapping frame, rawYWord the
+     * hang delay, and renderFlags the actual flips. ObjectSpawn masks renderFlags
+     * to two bits, so it cannot carry the native $2E word delay.
      */
     private int mappingFrame;
     /** {@code $2E(a0)}: frames left before the piece lets go. */
     private int hangDelay;
+    private boolean hFlip;
+    private boolean vFlip;
     /** 16.16 position and velocity, as {@code MoveSprite} keeps them. */
     private int xFixed;
     private int yFixed;
@@ -53,15 +56,21 @@ public final class SszBridgeDebrisObjectInstance extends AbstractObjectInstance
     public SszBridgeDebrisObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSZBridgeDebris");
         this.mappingFrame = spawn.subtype() & 0xFF;
-        this.hangDelay = spawn.renderFlags();
+        this.hangDelay = spawn.rawYWord();
+        this.hFlip = (spawn.renderFlags() & 1) != 0;
+        this.vFlip = (spawn.renderFlags() & 2) != 0;
         this.xFixed = spawn.x() << 16;
         this.yFixed = spawn.y() << 16;
     }
 
     /** Builds the piece {@code loc_44CDE} / {@code loc_44E52} creates. */
     public static SszBridgeDebrisObjectInstance piece(int x, int y, int mappingFrame, int delay) {
+        return piece(x, y, mappingFrame, delay, 0);
+    }
+
+    public static SszBridgeDebrisObjectInstance piece(int x, int y, int mappingFrame, int delay, int renderFlags) {
         return new SszBridgeDebrisObjectInstance(
-                new ObjectSpawn(x & 0xFFFF, y & 0xFFFF, 0, mappingFrame & 0xFF, delay, false, 0));
+                new ObjectSpawn(x, y, 0, mappingFrame, renderFlags, false, delay));
     }
 
     @Override
@@ -84,6 +93,8 @@ public final class SszBridgeDebrisObjectInstance extends AbstractObjectInstance
     @Override public int getX() { return (xFixed >> 16) & 0xFFFF; }
     @Override public int getY() { return (yFixed >> 16) & 0xFFFF; }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
+    /** loc_45052: make_art_tile(ArtTile_SSZMisc+$20,2,1). */
+    @Override public boolean isHighPriority() { return true; }
     @Override public int getOnScreenHalfWidth() { return 8; }
     @Override public int getOnScreenHalfHeight() { return 0x10; }
 
@@ -93,7 +104,7 @@ public final class SszBridgeDebrisObjectInstance extends AbstractObjectInstance
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_CUTSCENE_BRIDGE);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false, PALETTE_LINE);
+            renderer.drawFrameIndex(mappingFrame, getX(), getY(), hFlip, vFlip, PALETTE_LINE);
         }
     }
 }

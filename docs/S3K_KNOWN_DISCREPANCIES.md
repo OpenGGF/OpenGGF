@@ -982,3 +982,9 @@ launch differences remain inherited gaps.
 
 - SSZ EggRobo rewind restores its live x/y spawn metadata after the base badnik
   restore; recreated moving bodies and attachments retain the captured position.
+
+SSZ diagonal collapse (2026-09-30): the intact bridge stops drawing after
+fragment allocation. Debris inherits the native flip and art priority, and
+retains the full6..48 word delays instead of truncating them through the
+two-bit `ObjectSpawn.renderFlags`. The shared flat-bridge fragment owner uses
+the same corrected delay/flip contract and stops drawing its intact image.
