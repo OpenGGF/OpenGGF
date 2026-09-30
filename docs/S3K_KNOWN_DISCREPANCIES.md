@@ -988,3 +988,6 @@ fragment allocation. Debris inherits the native flip and art priority, and
 retains the full6..48 word delays instead of truncating them through the
 two-bit `ObjectSpawn.renderFlags`. The shared flat-bridge fragment owner uses
 the same corrected delay/flip contract and stops drawing its intact image.
+
+- SSZ rotating post/carrier player poses use the ROM table's direct render flips
+  and retain incoming facing, keeping the displayed pose aligned to the rotation.

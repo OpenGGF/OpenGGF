@@ -1015,3 +1015,16 @@ not included.
    oscillated between two heights. Initial replay setup had not registered the
    lazy insta-shield, and reused the retired dynamic bridge after restore;
    completing registration and resolving the recreated bridge fixed the harness.
+
+6. **Rotating player pose:** `loc_460A6` writes the pose table's low two render
+   flags and mapping frame, without changing Status_Facing. The helper now does
+   the same; changing Direction left object-owned render flips stale.
+   `TestSszRotatingPlatformPresentation` independently reads all 256 angle rows
+   and Map_Sonic geometry, verifies real player mapping/DPLC drawing for both
+   incoming facings, and restores the displayed pose. Four production-component
+   cases drive both the post and carrier through a complete native rotation and
+   check position, frame, flips and retained facing. Existing carrier interaction
+   and whole-registry replay tests remain in the selection. Candidate based on
+   `4ec32623eb`, queued `TestSszRotatingPlatformPresentation,TestS3kSszCarriersAndSprings`
+   with the absolute S3K ROM path. **31 cases passed, no skips**. Native visual capture remains
+   unavailable as recorded above; compatibility breadth remains inherited.

@@ -67,7 +67,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the act's traversal is in too: the little clouds squash under a standing player and throw
   them up and back in a puff of four, the horizontal bars catch a player from above and swing
   them in the correct facing pose before flinging them where they are steering, the short posts spin a player in place
-  and their invisible carriers walk them round in a circle, the swinging and rotating arms
+  and their invisible carriers walk them round in a circle, with the ROM pose
+  flips keeping the player sprite aligned throughout the turn, the swinging and rotating arms
   carry a player at the tip of a jointed arc, and the retracting springs fold away until
   somebody comes at them and then fire them along the deck from side contact,
   using the cartridge's full sloped collision rather than a top-only platform. Swinging carrier arms and rider bars

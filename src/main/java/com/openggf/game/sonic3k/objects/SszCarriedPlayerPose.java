@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
-import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
@@ -18,11 +17,9 @@ import java.util.logging.Logger;
  * three and shifting by five is {@code 256/12} rounded the way the 68000 does it, so the twelve
  * poses are not evenly spaced: rows at the ends of the cycle hold for one step longer.
  *
- * <p>The ROM writes the row's low two bits into {@code render_flags(a1)} directly. This engine
- * derives a player's horizontal flip from {@link Direction}, so the X-flip bit is applied that way
- * instead; that additionally moves the player's status facing bit, which the ROM leaves alone. The
- * player is under {@code object_control 3} throughout, so nothing reads the facing bit until the
- * release — see the SSZ entry in {@code docs/status/s3k-known-bugs.md}.
+ * <p>The ROM writes the row's low two bits into {@code render_flags(a1)} directly,
+ * retaining Status_Facing. Object-controlled player drawing consumes those render
+ * flips independently of the incoming facing direction.
  */
 public final class SszCarriedPlayerPose {
     private static final Logger LOGGER = Logger.getLogger(SszCarriedPlayerPose.class.getName());
@@ -52,7 +49,7 @@ public final class SszCarriedPlayerPose {
             byte[] row = rom.readBytes(TABLE_ADDR + offset, 2);
             int flags = row[0] & 0xFF;
             int frame = row[1] & 0xFF;
-            sprite.setDirection((flags & 1) != 0 ? Direction.LEFT : Direction.RIGHT);
+            sprite.setRenderFlips((flags & 1) != 0, (flags & 2) != 0);
             sprite.setObjectMappingFrameControl(true);
             sprite.setMappingFrame(frame);
         } catch (IOException e) {

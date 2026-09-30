@@ -1010,3 +1010,6 @@ Existing fly-by scaling and animal-launch gaps remain.
 SSZ diagonal bridge collapse: the presentation-fix matrix records four local
 slope-flip × collapse-side cases, exact intact-to-fragment ROM tile composition,
 full stagger delays, deleted-fragment recreation and whole-registry replay.
+
+SSZ rotating platform presentation: the matrix adds all256 pose angles against
+ROM mapping geometry, both incoming facings, and complete post/carrier rotations.
