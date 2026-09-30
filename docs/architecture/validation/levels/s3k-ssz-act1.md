@@ -951,3 +951,17 @@ first-thread validation. A forked `exec:exec` JVM with `-XstartOnFirstThread`
 reaches GL, but `HeadlessGameBoot` requests2.1 while shaders require4.1, failing
 before frames. No screenshot parity is claimed; unrelated tool changes were
 not included.
+
+3. **Elevator hang:** restore `loc_45400`'s `andi.b #$FC,render_flags(a1)`.
+   `$E9` has distinct pose art, so preserving the incoming left
+   render flip reverses the intended orientation. Do not modify Status_Facing.
+   `TestS3kSszCarriersAndSprings.elevatorHangUsesNativeMappingFlipsAndKeepsIncomingFacing`
+   checks both incoming facings, both native hang frames, real player mapping/DPLC
+   presentation and render-flip restoration. Existing elevator whole-world replay
+   and the carrier/spring interaction selection run alongside it. Candidate based
+   on `451daa47d5`; queued `-Dtest=TestS3kSszCarriersAndSprings` with the absolute
+   S3K ROM path. **23 existing carrier/spring cases passed** in the first
+   run (also two accidental UP/DOWN variants); the left-art flip-bit assertion
+   in the new test was wrong and failed. Reading Map_Sonic `$E5`/`$E9` showed
+   distinct art with unflipped pieces. Corrected that oracle and restricted the
+   cases to LEFT/RIGHT: **both passed, no skips**.

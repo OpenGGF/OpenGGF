@@ -176,6 +176,10 @@ public final class SszElevatorBarObjectInstance extends AbstractObjectInstance
         sprite.setAnimationId(Sonic3kAnimationIds.WALK);
         // object_control 3 keeps Animate_Sonic off, so the hang frame stays put.
         sprite.setObjectMappingFrameControl(true);
+        // loc_45400: andi.b #$FC,render_flags(a1). The left-facing $E9
+        // pose uses distinct ROM art; retaining Animate's X flip would
+        // reverse that pose while object control skips Animate.
+        sprite.setRenderFlips(false, false);
         sprite.setMappingFrame(sprite.getDirection() == com.openggf.physics.Direction.LEFT
                 ? HANG_FRAME_LEFT : HANG_FRAME_RIGHT);
     }

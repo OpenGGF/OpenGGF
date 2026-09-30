@@ -967,3 +967,7 @@ for focused evidence and remaining coverage.
 SSZ opening bridge (2026-09-30): resolved the invisible outer sections.
 `sub_45026` supplies three frame-zero subsprites spaced `$40` apart. The
 renderer now draws the full `$C0` span and preserves the ROM art priority.
+
+SSZ elevator facing (2026-09-30): `loc_45400` now clears both render flips
+when grabbing a player. The native `$E5`/`$E9` mapping selection keeps logical
+facing intact and avoids reversing the left hang pose.

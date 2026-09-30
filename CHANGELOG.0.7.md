@@ -65,7 +65,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   uphill instead of letting them fall beneath its tiles. The rest of
   the act's traversal is in too: the little clouds squash under a standing player and throw
   them up and back in a puff of four, the horizontal bars catch a player from above and swing
-  them before flinging them where they are steering, the short posts spin a player in place
+  them in the correct facing pose before flinging them where they are steering, the short posts spin a player in place
   and their invisible carriers walk them round in a circle, the swinging and rotating arms
   carry a player at the tip of a jointed arc, and the retracting springs fold away until
   somebody comes at them and then fire them along the deck from side contact,

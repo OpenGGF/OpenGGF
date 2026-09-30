@@ -997,3 +997,7 @@ tracks the seven requested local corrections and focused validation. The opening
 Death Egg now uses its native skyline sprite mask, and bridge rendering covers
 its full solid span through extension and local restore/replay at320/800; broad compatibility and native
 whole-scene parity remain inherited gaps.
+
+SSZ elevator hang facing: the same presentation-fix matrix now adds both incoming
+facings and restored ROM-backed player drawing, retaining the existing elevator
+whole-registry replay obligation.

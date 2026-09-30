@@ -351,6 +351,35 @@ class TestS3kSszCarriersAndSprings {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = com.openggf.physics.Direction.class, names = {"LEFT", "RIGHT"})
+    void elevatorHangUsesNativeMappingFlipsAndKeepsIncomingFacing(com.openggf.physics.Direction facing) {
+        var fixture = bootAtCheckpoint(320, 0x6C0, 0x520);
+        var sprite = fixture.sprite();
+        sprite.setDirection(facing);
+        sprite.setRenderFlips(facing == com.openggf.physics.Direction.LEFT, true);
+        var bar = new SszElevatorBarObjectInstance(
+                new com.openggf.level.objects.ObjectSpawn(sprite.getCentreX(), sprite.getCentreY(), 0x7A, 0, 0, false, 0));
+        bar.setServices(TestEnvironment.objectServices());
+        bar.update(0, sprite);
+        assertTrue(bar.holdingForTest(0));
+        assertEquals(facing, sprite.getDirection(), "status facing is not rewritten");
+        assertEquals(facing == com.openggf.physics.Direction.LEFT ? 0xE9 : 0xE5, sprite.getMappingFrame());
+        assertFalse(sprite.getRenderHFlip(), "andi.b #$FC clears the incoming X flip");
+        assertFalse(sprite.getRenderVFlip());
+        var before = com.openggf.level.render.SpritePresentationRenderer.prepare(GameServices.graphics(), 0, 0, sprite::draw);
+        assertFalse(before.tiles().isEmpty(), "real hang mappings and DPLC draw");
+        assertTrue(before.tiles().stream().noneMatch(t -> t.hFlip() || t.vFlip()),
+                "Map_Sonic $E5/$E9 use distinct DPLC art and unflipped mapping pieces");
+        var saved = fixture.gameplayMode().getRewindRegistry().capture();
+        sprite.setRenderFlips(true, true);
+        fixture.gameplayMode().getRewindRegistry().restore(saved);
+        assertFalse(sprite.getRenderHFlip());
+        assertFalse(sprite.getRenderVFlip());
+        var restored = com.openggf.level.render.SpritePresentationRenderer.prepare(GameServices.graphics(), 0, 0, sprite::draw);
+        assertEquals(before.tiles(), restored.tiles(), "restore retains the object-owned presentation");
+    }
+
     /**
      * {@code Obj_SSZRotatingPlatform} allocates the invisible carrier at {@code loc_45F10} in its
      * init, {@code $30} pixels below itself and {@code $60} or {@code $A0} wide by subtype bit 0.
