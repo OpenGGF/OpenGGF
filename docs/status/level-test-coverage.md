@@ -994,5 +994,6 @@ remains covered; whole-scene visual and donor products remain open.
 
 SSZ presentation fixes (2026-09-30): the [Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#ssz-presentation-fixes-2026-09-30)
 tracks the seven requested local corrections and focused validation. The opening
-Death Egg now uses its native skyline sprite mask; broad compatibility and native
+Death Egg now uses its native skyline sprite mask, and bridge rendering covers
+its full solid span through extension and local restore/replay at320/800; broad compatibility and native
 whole-scene parity remain inherited gaps.

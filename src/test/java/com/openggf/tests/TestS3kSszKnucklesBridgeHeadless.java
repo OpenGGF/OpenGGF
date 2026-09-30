@@ -35,6 +35,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kSszKnucklesBridgeHeadless {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 800})
+    void allThreeSectionsDrawAcrossTheSolidSpanDuringExtensionAndReplay(int width) {
+        var fixture = boot(width);
+        var object = new SszCutsceneBridgeObjectInstance(
+                new com.openggf.level.objects.ObjectSpawn(0x320, 0xC88, 0x77, 0, 0, false, 0));
+        object.setServices(TestEnvironment.objectServices());
+        state().setEventsBgWord(8, -1);
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.none();
+        var saved = object.captureRewindState(context);
+        for (int pass = 0; pass <= 96; pass++) {
+            var graphics = GameServices.graphics();
+            var frame = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
+                graphics.setCurrentSpriteHighPriority(object.isHighPriority());
+                object.appendRenderCommands(new java.util.ArrayList<>());
+            });
+            assertEquals(72, frame.tiles().size(), "three sections, two 4x3 pieces per section");
+            assertEquals(object.getX() - 0x60, frame.tiles().stream().mapToDouble(t -> t.x()).min().orElseThrow());
+            assertEquals(object.getX() + 0x60, frame.tiles().stream().mapToDouble(t -> t.x() + 8).max().orElseThrow());
+            assertTrue(frame.tiles().stream().allMatch(t -> t.occlusionMask() == 0), "ROM art_tile bit15");
+            if (pass < 96) object.update(pass, fixture.sprite());
+        }
+        assertTrue(object.extendedForTest());
+        object.restoreRewindState(saved, context);
+        for (int pass = 0; pass < 96; pass++) object.update(pass, fixture.sprite());
+        assertEquals(0, object.offsetForTest());
+        assertTrue(object.extendedForTest());
+    }
+
     /** {@code Obj_57C1E}: {@code move.w #$60,subtype(a1)} on the spawner. */
     private static final int SPAWNER_DELAY = 0x60;
     /** {@code Obj_57E34}: {@code move.w #$C4E,$3E(a0)}. */

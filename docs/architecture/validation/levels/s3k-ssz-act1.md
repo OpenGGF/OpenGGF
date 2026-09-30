@@ -933,3 +933,21 @@ Lua5.4 and PowerShell preflight passes with the tools in
 Inherited gaps: this local presentation change does not certify native visual
 parity across every viewport, donor, character or team. The existing route and
 compatibility obligations above remain open.
+
+2. **Opening bridge:** `sub_45026` draws three frame-zero sections at
+   X-$40/X/X+$40, with art priority bit15. Previously only the middle mapping
+   drew against the correct full-width solid.
+   `TestS3kSszKnucklesBridgeHeadless.allThreeSectionsDrawAcrossTheSolidSpanDuringExtensionAndReplay`
+   checks72 ROM-backed tiles, the192px span, art priority and96 extension
+   passes plus restore/replay at320/800. Queued Maven selection:
+   `TestS3kSszKnucklesBridgeHeadless,TestS3kSszLifecycleProduction`.
+   Candidate based on issue1 `d3e95d1486`: **5 bridge tests and3 lifecycle
+   tests passed, no skips**. The first run exposed a test assertion using the
+   mapping-piece priority instead of the object art occlusion mask; corrected
+   the oracle field and reran the5 bridge tests. Production span already passed.
+
+Native capture limitation: the skill's `exec:java` invocation fails macOS
+first-thread validation. A forked `exec:exec` JVM with `-XstartOnFirstThread`
+reaches GL, but `HeadlessGameBoot` requests2.1 while shaders require4.1, failing
+before frames. No screenshot parity is claimed; unrelated tool changes were
+not included.

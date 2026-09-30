@@ -963,3 +963,7 @@ Resolved the rising Death Egg drawing through the skyline: `loc_65B24` sets
 mask. The low art priority and bucket `$380` remain ROM values. See the
 [Act1 matrix](architecture/validation/levels/s3k-ssz-act1.md#ssz-presentation-fixes-2026-09-30)
 for focused evidence and remaining coverage.
+
+SSZ opening bridge (2026-09-30): resolved the invisible outer sections.
+`sub_45026` supplies three frame-zero subsprites spaced `$40` apart. The
+renderer now draws the full `$C0` span and preserves the ROM art priority.

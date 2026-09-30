@@ -40,7 +40,7 @@ import java.util.List;
  * cleared that at {@code loc_57D3C}.
  *
  * <p>{@code sub_45026} makes it a {@code SolidObjectTop} of {@code $60}/{@code $10}/{@code 9} and
- * positions three child sprites; the engine draws the mapping's own frames.
+ * positions three child sprites, each drawing mapping frame zero at X-$40, X and X+$40.
  */
 public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider {
@@ -165,6 +165,8 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
     }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
+    /** Obj_SSZCutsceneBridge: make_art_tile(ArtTile_SSZMisc+$20,2,1). */
+    @Override public boolean isHighPriority() { return true; }
     @Override public int getOnScreenHalfWidth() { return 0x60; }
     @Override public int getOnScreenHalfHeight() { return 0x10; }
 
@@ -172,7 +174,11 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_CUTSCENE_BRIDGE);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(0, getX(), y, false, false);
+            // sub_45026 sets three subsprites; the zero main frame is skipped by
+            // Draw_Sprite's multi-sprite path. Frame zero is a $40-wide section.
+            for (int dx = -0x40; dx <= 0x40; dx += 0x40) {
+                renderer.drawFrameIndex(0, getX() + dx, y, false, false);
+            }
         }
     }
 }
