@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.WidescreenAspect;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
@@ -147,6 +149,55 @@ class TestS3kLrzScrollRegistrationHeadless {
         assertEquals(0x100, state.animationPhaseX1());
         assertEquals(0x2000, state.cameraStoredMaxX());
         assertEquals(0x800, state.cameraStoredMaxY());
+    }
+
+    /** LRZ2 loc_5705C streams Draw_TileRow; source Y=$100 must not wrap to row zero. */
+    @ParameterizedTest
+    @EnumSource(WidescreenAspect.class)
+    void actTwoBackgroundKeepsLayoutRowsAcrossTheVdpBoundaryAndRewind(WidescreenAspect aspect) {
+        int width = aspect.pixelWidth();
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
+        config.resolveDisplayAspect();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 1)
+                .startPosition((short) 0x2438, (short) 0x629).startPositionIsCentre().build();
+        for (int i = 0; i < 3; i++) fixture.stepFrame(false, false, false, false, false);
+        assertEquals(width, fixture.camera().getWidth());
+        assertActTwoBackgroundRows();
+
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        fixture.stepFrame(false, false, false, false, false);
+        assertActTwoBackgroundRows();
+        byte[] expected = GameServices.level().getTilemapManager().getBackgroundTilemapData().clone();
+        registry.restore(before);
+        fixture.stepFrame(false, false, false, false, false);
+        assertActTwoBackgroundRows();
+        assertArrayEquals(expected, GameServices.level().getTilemapManager().getBackgroundTilemapData());
+    }
+
+    private static void assertActTwoBackgroundRows() {
+        var level = GameServices.level();
+        // This also ensures the same background cache consumed by the renderer is built.
+        level.captureBackgroundVdpPlane();
+        var tilemap = level.getTilemapManager();
+        assertTrue(tilemap.getBackgroundTilemapHeightTiles() > 32,
+                "LRZ2 streams the layout beyond the initial 256-pixel VDP window");
+        assertEquals(0, tilemap.getBackgroundVdpWrapHeightTiles(),
+                "the source layout must not wrap at the physical nametable boundary");
+        byte[] data = tilemap.getBackgroundTilemapData();
+        for (int y : new int[] {248, 256, 264, 384}) {
+            for (int x = 0; x < 512; x += 8) {
+                int offset = ((y / 8) * tilemap.getBackgroundTilemapWidthTiles() + x / 8) * 4;
+                int g = data[offset + 1] & 0xFF;
+                int descriptor = (data[offset] & 0xFF) | ((g & 7) << 8)
+                        | ((g & 0x18) << 10) | ((g & 0x60) << 6) | ((g & 0x80) << 8);
+                assertEquals(level.getBackgroundTileDescriptorAtWorld(x, y), descriptor,
+                        "background source cell at " + x + "," + y);
+            }
+        }
     }
 
     private int[] scanlineWordsAt(int width, int act) {

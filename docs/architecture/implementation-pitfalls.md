@@ -603,6 +603,14 @@ rewind. Read back the actual GPU texture as well as the CPU ring. Origin:
 2026-09-14 FBZ completion; the192-row cache regression and ordered reverse
 redraw capture isolate this from the separate VBlank publication issue.
 
+Conversely, an initial `Refresh_PlaneFull` does not imply permanent event ownership.
+LRZ2 follows it with `loc_5705C`'s `Draw_TileRow`; the source-window renderer must
+release the seeded ring and continue sampling layout rows. Retaining the initial
+64x32 image wrapped source Y=$100 to row zero, making a full-width cavern seam.
+`TestS3kLrzScrollRegistrationHeadless` checks source rows across that boundary,
+all five widths and rewind. LRZ3 already required the same release for its
+`DrawBGAsYouMove`/`DrawTilesVDeform2` paths.
+
 
 ### HUD warning phase is not elapsed time
 

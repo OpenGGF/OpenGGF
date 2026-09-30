@@ -670,7 +670,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   through defeat and results, including the floating capsule’s explosion emitter
   and the equipped shield’s update order.
   Lava Reef Acts 1 and 2 now scroll their own layered background
-  instead of the generic quarter-speed fallback, Act 2 animates its own lava tiles
+  instead of the generic quarter-speed fallback. Act 2 continues the cavern rows
+  beyond the initial tilemap window without a horizontal cut and animates its own lava tiles
   rather than Act 1's, and the invisible lava blocks that carry every lava-floor hit
   in the zone now hurt, with a fire shield making the player immune to them.
   Both acts also run Lava Reef's own scroll-driven lava animation, two background

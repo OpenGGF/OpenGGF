@@ -48,7 +48,7 @@ behavior at every placement; the remaining obligations below retain that distinc
 | BASELINE: placed object and ring census | `LRZ2_Sprites` `$1F7C9C` (455), `LRZ2_Rings` `$1F8C7E` (282 records, 281 live) | native | `TestS3kLrzPlacementCensus` | implemented | pass, `3418eba6e` | Ratchet target 0 placeholders |
 | OBJECT: orbiting spike balls `$2B` (12), `$2C` (40) | `Obj_LRZOrbitingSpikeBallHorizontal` (sonic3k.asm:89077-89145) and `Obj_LRZOrbitingSpikeBallVertical` (:89149-89222): `bclr #0,subtype` picks the 32x32 ball AND clears the bit, the byte angle is `(Level_frame_counter+1)*2` negated for `status` bit 0 plus the subtype, the ball is harmful (`collision_flags` `$9A` small, `$8F` large) and drawn in front only while that byte has bit 7 set, and the displacement is a fixed fraction of `cos` on one axis -- `cos asr 3`, `(cos + cos asr 1) asr 3`, `(cos + cos asr 2) asr 3` and `(cos asr 2) - (cos asr 5)` | native | `TestLrzOrbitingSpikeBall` (5) | implemented | pass | Five cases against the ROM's own `SineTable` through the routine's arithmetic, broken on purpose once (`cos asr 2` for `asr 3`) and failing on the two positional assertions only. **Owed**: no clip, no rewind spot on a route, no act 2 route position, and no wide/donor/roster row. The despawn uses the anchor x, `loc_1B666`'s own reference |
 | ENTRY: `$901` resources, bounds, object set | Registry/sprite/screen-event tables | native | `TestSonic3kLevelLoading` | implemented (inherited) | pass | Not re-verified for this campaign |
-| PRESENT: parallax, bands and shake | `sub_57082`, `LRZ2_BGDeformArray` `$20,$20,$20,$10x4,$F0,$10x3,$20`, `ApplyDeformation` at `HScroll_table`; `Camera_Y_pos_BG_copy` = `3Y/32` | 320 and 640 | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented | pass, `bbd156d37` | Direct-load background art corroborated against native on2026-09-25 (below); synchronized scroll/palette phase remains open |
+| PRESENT: parallax, bands and shake | `sub_57082`, `LRZ2_BGDeformArray` `$20,$20,$20,$10x4,$F0,$10x3,$20`, `ApplyDeformation` at `HScroll_table`; `Camera_Y_pos_BG_copy` = `3Y/32` | 320 and 640 | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented | pass, `bbd156d37` | Direct-load background art corroborated against native on2026-09-25 (below); source rows across the 256px boundary and rewind are covered by the [seam regression](#background-window-seam-2026-09-30); synchronized scroll/palette phase remains open |
 | PRESENT: animated tiles and `AniPLC_LRZ2` | `AnimateTiles_LRZ2` / `loc_282D0` and `loc_28364`; `Offs_AniFunc` pairs `$901` with `AniPLC_LRZ2` `$28A84`; `Animate_Init` does **not** seed `Anim_Counters+1/+3` for `$901` | native | `TestS3kLrzPatternAnimation` | implemented | pass, `1ef1256ca` | A direct or star-post `$901` load whose first phase is 0 skips its first upload, as the ROM does; current direct-load art is corroborated against native (below); full animation timing remains separate |
 | PRESENT: rock sprites | `LRZ2_Rock_Placement` (10 placements, all at `y=$7C8`), same window and vertical test as act 1 | native + wide | `TestLrzRockSpriteRenderer` | implemented | pass, `fbbb793f7` | Act 2's rocks sit in the opening corridor; not yet seen on a cold route |
 | PRESENT: palette cycles | `AnPal_LRZ2` (channel D keeps the `FixBugs = 0` duplicated pair) | native | `TestS3kLrzPaletteCycling` | implemented (inherited) | pass | Not re-verified |
@@ -1067,3 +1067,71 @@ The reported scene has not been identified or reproduced, so no speculative
 direction/wall-avoidance change was made. Location/team clarification remains
 open. These local, player-slot-sensitive checks do not close inherited
 route/configuration/native-pixel gaps.
+
+
+### Background window seam (2026-09-30)
+
+Baseline `f74e82a01`, direct `develop` work per user request. The screenshot's
+horizontal cavern cut came from `LRZ2_BackgroundInit` retaining its initial
+64x32 Plane-B image. Source Y=$100 wrapped to row zero rather than reading the
+next layout rows. `sub_57082` and `LRZ2_BGDeformArray` already match the ROM;
+changing their scroll ratios or bands would conceal the tilemap ownership bug.
+`loc_5705C` calls `Draw_TileRow` every background event. The source-window renderer
+now releases the seed after `Refresh_PlaneFull`, as LRZ3 already did for its
+`DrawBGAsYouMove`/`DrawTilesVDeform2` paths. No new state or ROM asset data is added.
+
+`TestS3kLrzScrollRegistrationHeadless#actTwoBackgroundKeepsLayoutRowsAcrossTheVdpBoundaryAndRewind`
+boots real LRZ2 at ($2438,$629), checks decoded ROM descriptors at source
+Y=$F8/$100/$108/$180, and repeats after capture/restore/forward stepping at
+320/352/400/528/800. The original production classes fail the native320 case at the
+32-row height assertion. The first run also had four wide-case setup failures
+(the pre-existing native camera was not recreated); those are not seam evidence. Existing Act1 dome and
+boss-act checks protect the other refresh consumers. This is a local presentation
+regression, not additional donor/team or full-route certification; inherited
+native whole-scene, lifecycle and breadth obligations remain open.
+
+Validation uses Java 21 and absolute `sonic3k.rom.path` pointing at the existing
+`Sonic 3 & Knuckles (W) [!].gen`, verified SHA1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. The change-based plan selects all 2951
+ordinary classes, including because of an unrelated untracked S2 movie. Under
+proportionate validation the bounded LRZ event change uses focused checks instead;
+the shared rendering code, scroll arithmetic and gameplay are unchanged. Broad
+preflight additionally reports missing Lua 5.4 and PowerShell. No broad-suite pass
+is claimed.
+
+
+Queued verification on the baseline plus this fix:
+
+```sh
+JAVA_HOME=$(/usr/libexec/java_home -v 21) python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kLrzScrollRegistrationHeadless,SwScrlLrzTest,SwScrlLrz3Test,TestLrz2BackgroundStageMachine,TestS3kLrzDomeBackgroundHeadless,TestS3kLrzBossCameraHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$PWD/Sonic 3 & Knuckles (W) [!].gen" test
+```
+
+Combined candidate run: 117 cases, 113 pass, 4 fail, 0 errors/skips.
+A first 12-case focused retry repeated the same four viewport failures.
+All candidate failures were new-test viewport assertions: the ROM extension had already opened a native-width gameplay session before
+the per-case configuration. The regression now explicitly selects each
+production `WidescreenAspect` and reopens the gameplay session before boot;
+its targeted rerun uses the same command with
+`-Dtest=TestS3kLrzScrollRegistrationHeadless`. Production code did not change
+between those runs.
+
+Visual check: `GameplayCaptureTool --game s3k --zone lrz --act 2 --x 0x2438
+--y 0x629 --frames 120 --capture-from 119 --no-video`, original versus corrected
+production classes. At frame 119, player (9272,1580), camera (9112,1484), the old
+source-Y=$100 wrap is visible at screen Y=117. The corrected image continues the
+cavern/lava rows instead of repeating its ceiling. All 120 gameplay CSV rows are
+byte-identical. This is engine before/after evidence plus disassembly ownership,
+not a new synchronized native capture. The macOS capture helper requested GL 2.1
+against GLSL 410: a temporary copy under `target/` requested a 4.1 core context and
+omitted legacy matrix calls for both captures, leaving the checked-in helper
+unchanged. Initial one-frame capture was discarded because startup art had not
+settled; both compared captures use the same 120-frame setup.
+
+
+Final focused rerun: 12 passed, 0 failures/errors/skips (33.126s), including all
+five actual camera widths, source-row checks and restore/forward replay. Together
+with the unchanged checks from the combined run, all 117 selected cases passed;
+this remains focused validation. Also inspected frame 119 of the corrected 800px
+capture at camera (8872,1484); the visible cavern continues across the old boundary.

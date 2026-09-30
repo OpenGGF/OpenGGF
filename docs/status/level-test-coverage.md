@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+LRZ2 background seam follow-up (2026-09-30): the [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#background-window-seam-2026-09-30)
+records the direct-load source-row regression at all five widths and after rewind.
+The initial physical tilemap must yield to streamed layout rows; broader route,
+donor/team and native whole-scene obligations remain separate.
+
+
 LRZ1 arm-explosion visibility follow-up (2026-09-29): the
 [act matrix](../architecture/validation/levels/s3k-lrz-act1.md#arm-explosion-renderer-follow-up-2026-09-29)
 adds a fresh-level production-init regression for renderer readiness and every
