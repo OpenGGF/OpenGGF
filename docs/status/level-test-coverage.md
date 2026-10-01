@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+Infinite Sonic prototype (2026-10-01): the [mod GHZ1 matrix](../architecture/validation/levels/infinite-sonic-ghz1.md) records seven passing ROM-backed package, traversal, backtracking, reload and rewind/replay checks. Five supported widths are covered for solo Sonic. GPU presentation, donor and physical death/respawn coverage remain open; this does not certify stock GHZ.
+
 LRZ2 flame-shield follow-up (2026-09-30): the [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#flame-jet-fire-shield-immunity-2026-09-30) records real collision/shield regressions for all four shields and 167 focused tests without skips. Both jet variants now publish the ROM fire-immunity flag. Inherited route/rewind, donor, viewport and roster gaps remain.
 
 LRZ2 background seam follow-up (2026-09-30): the [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#background-window-seam-2026-09-30)

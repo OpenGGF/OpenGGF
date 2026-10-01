@@ -1,0 +1,14 @@
+formatVersion: 1
+id: infinite-sonic
+name: Infinite Sonic
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: Seeded endless terrain assembled from your Sonic 1 Green Hill ROM data.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s1
+entrypoint: infinite.InfiniteSonicMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

@@ -42,6 +42,10 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
   original sprite/tile PNGs for `ggfmod convert art`, and swapping generated art into
   either build-along sample.
 
+## Experimental projects
+
+- [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate terrain-only Sonic 1 project using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the eight maintained gallery samples.
+
 ## Reference
 
 - [`ggfmod` command reference](ggfmod.md)
