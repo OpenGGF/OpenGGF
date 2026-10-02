@@ -1105,7 +1105,7 @@ abstract class AbstractRunChainTest {
             throw new IllegalArgumentException(
                     "start segment must be nonnegative: " + startSegmentIndex);
         }
-        return assertChainReplay(runDir, null, startSegmentIndex);
+        return assertChainReplay(runDir, null, startSegmentIndex, false);
     }
 
 
@@ -1170,12 +1170,12 @@ abstract class AbstractRunChainTest {
 
     private DynamicArtGapJournalEvidence assertChainReplay(
             Path runDir, ReplayPrefixTarget prefixTarget) throws Exception {
-        return assertChainReplay(runDir, prefixTarget, 0);
+        return assertChainReplay(runDir, prefixTarget, 0, true);
     }
 
     private DynamicArtGapJournalEvidence assertChainReplay(
-            Path runDir, ReplayPrefixTarget prefixTarget, int startSegmentIndex)
-            throws Exception {
+            Path runDir, ReplayPrefixTarget prefixTarget, int startSegmentIndex,
+            boolean preserveProductionLoadCamera) throws Exception {
         chainAxisFailures.clear();
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
@@ -1274,7 +1274,13 @@ abstract class AbstractRunChainTest {
         TraceReplayDriver driver = new TraceReplayDriver(
                 trace0, movie, fixture, loop, fixture::sprite, () -> { },
                 recordedHardwareTiming);
-        driver.start(bootZone, bootAct);
+        if (preserveProductionLoadCamera) {
+            driver.startWithProductionLoadCamera(bootZone, bootAct);
+        } else {
+            // The explicit start-at-segment diagnostic has no predecessor
+            // production state; retain its declared-position bootstrap.
+            driver.start(bootZone, bootAct);
+        }
         int initialComparisonCursor = driver.initialCursor();
 
         HardwareTimingCoordinator hardwareTiming =
