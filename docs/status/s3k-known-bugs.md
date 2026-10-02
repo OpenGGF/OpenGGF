@@ -381,6 +381,17 @@ the velocities. The engine collapsed both into one path.
 **Location:** `LevelManager.executeActTransition()` (`src/main/java/com/openggf/level/LevelManager.java`).
 **Trace reference:** `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun`, first strict error was at frame 5497 prior to fix.
 
+**Separate camera regression resolved, 2026-10-03:** the campaign based on
+`67c850fc51` also found `camera_x` divergence at this same row. The reload
+correctly wrote current X limits `$10/$10`, but retained the loaded act's
+engine smoothing targets. Its first ordinary camera tick changed min X to
+`$0E`. `AIZ1BGE_Finish` installs a fixed lock and `Do_ResizeEvents` eases only
+maximum Y; the AIZ transition now pins the engine's X targets to the lock.
+This removes both camera mismatch spans without changing later mismatch
+values. See the [campaign audit](../architecture/audits/2026-10-02-s3k-trace-green-campaign.md)
+for matched commands and remaining frontiers. This is distinct from the
+historical sidekick-bound fix described below.
+
 ### Symptom
 
 At frame 5497 the engine produced `tails_x = 0x2F20` vs the ROM's
