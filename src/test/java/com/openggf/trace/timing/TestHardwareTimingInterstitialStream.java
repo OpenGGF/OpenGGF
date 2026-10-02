@@ -7,6 +7,7 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareWorkPreparation;
 import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
 import com.openggf.game.timing.HardwareWorkSubmission;
+import com.openggf.game.timing.HardwareSubmissionFingerprint;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.timing.RecordedOrdinalSpan;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.Map;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
@@ -62,11 +66,11 @@ class TestHardwareTimingInterstitialStream {
 
         assertEquals(
                 Map.of(
-                        HardwareWorkKind.KOS_MODULE_QUEUE, new RecordedOrdinalSpan(14, 15),
-                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, new RecordedOrdinalSpan(27, 27)),
+                        HardwareWorkKind.KOS_MODULE_QUEUE, new RecordedOrdinalSpan(14, 15, List.of(fingerprint('a'), fingerprint('a'))),
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, new RecordedOrdinalSpan(27, 27, List.of(fingerprint('a')))),
                 spans.spansAfterSegment(1));
         assertEquals(
-                Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, new RecordedOrdinalSpan(36, 36)),
+                Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, new RecordedOrdinalSpan(36, 36, List.of(fingerprint('a')))),
                 spans.spansAfterSegment(3));
         assertEquals(Map.of(), spans.spansAfterSegment(2));
     }
@@ -223,6 +227,179 @@ class TestHardwareTimingInterstitialStream {
 
         assertTrue(error.getMessage().contains("holds pending submissions"), error::getMessage);
         assertFalse(service.isReady(pending), "nothing was released");
+    }
+
+    @Test
+    void completeClaimedSpanOnlyVerifiesReceiptsAndReplaysAfterRestore() {
+        var fixture = claimedSpan(2);
+        var before = fixture.service().capture();
+        var portBefore = fixture.port().capture();
+        var span = fixture.span();
+        fixture.port().handoffTo(nextSchedule(15), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, span));
+        assertEquals(before, fixture.service().capture(), "verification must not mutate production");
+        assertEquals(Set.of("KOS_MODULE_QUEUE#13", "KOS_MODULE_QUEUE#14"),
+                fixture.port().capture().consumedIdentities());
+
+        fixture.service().restore(before);
+        fixture.port().restore(portBefore);
+        fixture.port().handoffTo(nextSchedule(15), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, span));
+        assertEquals(before, fixture.service().capture());
+        assertEquals(2, fixture.port().capture().consumedIdentities().size());
+    }
+
+    @Test
+    void completedCursorWithoutFingerprintsIsNotProof() {
+        var fixture = claimedSpan(2);
+        var before = fixture.service().capture();
+        assertThrows(IllegalStateException.class, () -> fixture.port().handoffTo(
+                nextSchedule(15), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        new RecordedOrdinalSpan(13, 14))));
+        assertEquals(before, fixture.service().capture());
+    }
+
+    @Test
+    void fingerprintsMustMatchTheirOwnOrdinalsRatherThanTheSameSet() {
+        var fixture = claimedSpan(2);
+        var before = fixture.service().capture();
+        assertThrows(IllegalStateException.class, () -> fixture.port().handoffTo(
+                nextSchedule(15), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        new RecordedOrdinalSpan(13, 14, List.of(
+                                fixture.handles().get(1).submissionFingerprint(),
+                                fixture.handles().get(0).submissionFingerprint())))));
+        assertEquals(before, fixture.service().capture());
+        assertEquals(Set.of(), fixture.port().capture().consumedIdentities());
+    }
+
+    @Test
+    void partialProductionAndExtraProductionBothFailWithoutCursorChanges() {
+        var partial = claimedSpan(1);
+        var partialBefore = partial.service().capture();
+        assertThrows(IllegalStateException.class, () -> partial.port().handoffTo(
+                nextSchedule(15), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        new RecordedOrdinalSpan(13, 14, List.of(
+                                partial.handles().getFirst().submissionFingerprint(), fingerprint('a'))))));
+        assertEquals(partialBefore, partial.service().capture());
+
+        var extra = claimedSpan(3);
+        var extraBefore = extra.service().capture();
+        assertThrows(IllegalStateException.class, () -> extra.port().handoffTo(
+                nextSchedule(15), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        new RecordedOrdinalSpan(13, 14, extra.handles().subList(0, 2).stream()
+                                .map(HardwareWorkHandle::submissionFingerprint).toList()))));
+        assertEquals(extraBefore, extra.service().capture());
+    }
+
+    @Test
+    void readyButUnclaimedWorkCannotCertifyACompletedSpan() {
+        var fixture = claimedSpan(1);
+        var pending = fixture.service().submit(submission(1, 9));
+        fixture.service().service(POST_OBJECTS);
+        assertTrue(fixture.service().isReady(pending));
+        var before = fixture.service().capture();
+        assertThrows(IllegalStateException.class, () -> fixture.port().handoffTo(
+                nextSchedule(15), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        new RecordedOrdinalSpan(13, 14, List.of(
+                                fixture.handles().getFirst().submissionFingerprint(),
+                                pending.submissionFingerprint())))));
+        assertEquals(before.nextOrdinals(), fixture.service().capture().nextOrdinals());
+        assertTrue(fixture.service().isReady(pending), "failed proof cannot claim or release work");
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new byte[] {9}, fixture.service().claim(pending));
+    }
+
+    @Test
+    void failedKindCannotPartiallyAdvanceAnotherKindsUntouchedCursor() {
+        var fixture = claimedSpan(1);
+        var before = fixture.service().capture();
+        Map<HardwareWorkKind, RecordedOrdinalSpan> spans = new LinkedHashMap<>();
+        spans.put(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, new RecordedOrdinalSpan(0, 1));
+        spans.put(HardwareWorkKind.KOS_MODULE_QUEUE,
+                new RecordedOrdinalSpan(13, 13, List.of(fingerprint('a'))));
+        var next = new HardwareTimingSchedule(List.of(
+                new HardwareCompletionEdge(36, POST_OBJECTS,
+                        HardwareWorkKind.KOS_MODULE_QUEUE, 14, fingerprint('b')),
+                new HardwareCompletionEdge(36, PRE_MAIN_LOOP,
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 2, fingerprint('c'))));
+        assertThrows(IllegalStateException.class, () -> fixture.port().handoffTo(next, spans));
+        assertEquals(before, fixture.service().capture());
+        assertEquals(Set.of(), fixture.port().capture().consumedIdentities());
+    }
+
+    @Test
+    void nextScheduleCannotReuseAnInterstitialIdentityAfterItsFirstEdge() {
+        var fixture = claimedSpan(2);
+        var before = fixture.service().capture();
+        var next = new HardwareTimingSchedule(List.of(
+                new HardwareCompletionEdge(36, POST_OBJECTS,
+                        HardwareWorkKind.KOS_MODULE_QUEUE, 15, fingerprint('a')),
+                new HardwareCompletionEdge(37, POST_OBJECTS,
+                        HardwareWorkKind.KOS_MODULE_QUEUE, 14,
+                        fixture.handles().get(1).submissionFingerprint())));
+        var error = assertThrows(IllegalArgumentException.class, () -> fixture.port().handoffTo(
+                next, Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, fixture.span())));
+        // Schedule validation rejects this backwards identity before span proof.
+        assertTrue(error.getMessage().contains("noncontiguous hardware completion ordinals"),
+                error::getMessage);
+        assertEquals(before, fixture.service().capture());
+    }
+
+    @Test
+    void anAlreadyConsumedRepresentedEdgeCannotBeReclassifiedAsInterstitial() {
+        var service = new HardwareTimingService();
+        var authority = service.beginRecordedAdmission();
+        var port = new HardwareTimingReplayPort(authority);
+        var work = submission(1, 7);
+        var edge = new HardwareCompletionEdge(0, POST_OBJECTS,
+                HardwareWorkKind.KOS_MODULE_QUEUE, 13, HardwareSubmissionFingerprint.compute(work));
+        port.install(new HardwareTimingSchedule(List.of(edge)));
+        var handle = service.submit(work);
+        port.beginRawFrame(0);
+        service.service(POST_OBJECTS);
+        port.apply(POST_OBJECTS);
+        service.claim(handle);
+        var before = service.capture();
+        var portBefore = port.capture();
+        var error = assertThrows(IllegalStateException.class, () -> port.handoffTo(
+                nextSchedule(14), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        new RecordedOrdinalSpan(13, 13, List.of(handle.submissionFingerprint())))));
+        assertTrue(error.getMessage().contains("already-consumed identity"), error::getMessage);
+        assertEquals(before, service.capture());
+        assertEquals(portBefore, port.capture());
+    }
+
+    @Test
+    void fingerprintsCannotDescribeOnlyPartOfAnOrdinalSpan() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new RecordedOrdinalSpan(13, 14, List.of(fingerprint('a'))));
+    }
+
+    private static HardwareTimingSchedule nextSchedule(long ordinal) {
+        return new HardwareTimingSchedule(List.of(new HardwareCompletionEdge(
+                36, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, ordinal, fingerprint('a'))));
+    }
+
+    private static ClaimedSpan claimedSpan(int count) {
+        var service = new HardwareTimingService();
+        var authority = service.beginRecordedAdmission();
+        var port = new HardwareTimingReplayPort(authority);
+        port.install(new HardwareTimingSchedule(List.of()), Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, 13L));
+        port.enterUnrepresentedGap();
+        List<HardwareWorkHandle> handles = new ArrayList<>();
+        for (int index = 0; index < count; index++) {
+            var handle = service.submit(submission(1, index + 1));
+            service.service(POST_OBJECTS);
+            assertTrue(service.isReady(handle));
+            service.claim(handle);
+            handles.add(handle);
+        }
+        return new ClaimedSpan(service, port, handles);
+    }
+
+    private record ClaimedSpan(HardwareTimingService service, HardwareTimingReplayPort port,
+                               List<HardwareWorkHandle> handles) {
+        RecordedOrdinalSpan span() {
+            return new RecordedOrdinalSpan(handles.getFirst().ordinal(), handles.getLast().ordinal(),
+                    handles.stream().map(HardwareWorkHandle::submissionFingerprint).toList());
+        }
     }
 
     private void write(String... records) throws IOException {

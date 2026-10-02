@@ -14,14 +14,13 @@ import java.util.Objects;
  * run fixture only represents the segments it compares. The spans in between
  * — special-stage results, level reload, a locked level intro — still advanced
  * the ROM's hardware ledger, so the next segment's recorded ordinals start
- * above where the previous segment's ended. Production replaying the run does
- * not reproduce those submissions, so its own ledger would stay behind and
- * every later ordinal would miss by exactly the size of the gap.
+ * above where the previous segment's ended. Some entry loops submit no work;
+ * others reproduce and claim the complete resource batch independently.
  *
- * <p>This index carries only that gap: per segment boundary, per kind, the
- * first and last ordinal the recording consumed there. It holds no payload, no
- * boundary and no frame, and nothing here can complete, prepare or create
- * hardware work.
+ * <p>This index carries the first and last ordinal and their fingerprints per
+ * segment boundary and kind. Fingerprints verify already-claimed production
+ * work; they never select numbering. It holds no payload, service boundary or
+ * frame, and nothing here can complete, prepare or create hardware work.
  */
 public final class HardwareTimingInterstitialSpans {
 
