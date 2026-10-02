@@ -229,9 +229,8 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     @Override
     public SolidExecutionMode solidExecutionMode() {
-        // Obj18 calls SolidObjectFull before LBZCupElevator_PlayerControl, so a
-        // player who lands in this SST dispatch is immediately eligible for
-        // capture by the same object routine.
+        // loc_26EEA calls SolidObjectFull2_1P inside each player's control
+        // routine, before testing the freshly published standing bit for capture.
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
@@ -639,6 +638,13 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
                 state.cooldown--;
                 return;
             }
+            if (!isSolidAngle()) {
+                return;
+            }
+            // LBZCupElevator_PlayerControl/loc_26EEA: collision belongs after
+            // this player's cooldown/angle gates and before its capture test.
+            // Keep P1 contact/reaction before P2, matching the two native calls.
+            services().solidExecution().resolveSolidNowOnly(player);
             if (canCapture(player)) {
                 capturePlayer(player, state);
             }

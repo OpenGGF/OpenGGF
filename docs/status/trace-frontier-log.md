@@ -111761,3 +111761,14 @@ gameplay counter stays$185A, VBlank advances$517→$518, lag becomes1; native623
 resumes at engine6234's position. Ordinary capture is not hardware-timed replay.
 No frame-specific delay is added. Continue controller route authoring beyond
 the6201-frame cold prefix; strict replay and earlier discrepancies remain open.
+
+### 2026-10-03 — LBZ cup elevator dispatch
+
+Worker `trace-special-return`, base `ce26682b63`: queued matched
+`-Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay` with verified reference
+ROM and full diagnostics changes 6,557 errors / first3714 `x_speed` to 6,316
+errors / first9867 `tails_air` (0 versus1), each one failure and zero skips.
+`loc_26EEA` owns the missing manual solid checkpoint before per-player capture.
+No shared collision or trace-authoritative state changes. Commands, local
+rewind scope and inherited gaps are in the [LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md).
+The route remains red; new frontier coincides with rolling-drum deletion.
