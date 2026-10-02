@@ -255,8 +255,8 @@ class TestS3kInitialObjectSetupLifecycle {
     }
 
     @Test
-    void nonLevelTitleCardReleaseRetainsFreshSetupAuthority() throws Exception {
-        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+    void bonusTitleCardReleaseConsumesFreshSetupBeforeFirstGameplayRow() throws Exception {
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0x13, 0);
         try {
             LevelManager manager = GameServices.level();
             int before = manager.getObjectManager().getFrameCounter();
@@ -265,8 +265,13 @@ class TestS3kInitialObjectSetupLifecycle {
             assertTrue(releaseTitleCardInLogicalIteration(loop));
 
             assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
-            assertTrue(manager.hasPendingInitialProcessSpritesPass());
-            assertEquals(before, manager.getObjectManager().getFrameCounter());
+            assertFalse(manager.hasPendingInitialProcessSpritesPass());
+            assertEquals(before + 1, manager.getObjectManager().getFrameCounter());
+            assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
+                    LevelFrameTestStep.execute(
+                            LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
+                            manager, GameServices.camera(), () -> {
+                            }));
         } finally {
             sharedLevel.dispose();
         }

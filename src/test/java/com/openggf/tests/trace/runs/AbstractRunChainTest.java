@@ -3399,7 +3399,7 @@ abstract class AbstractRunChainTest {
      * special stage -- see {@link #attachInteriorComparator}).
      *
      * <p>The comparator's initial cursor for each interior kind (compared-bonus
-     * ENTRY = 1, special = uncompared) follows the COMPARATOR FRAME BASE contract
+     * ENTRY = 0, special = uncompared) follows the COMPARATOR FRAME BASE contract
      * on {@link #attachReturnedLevelSegment}.
      */
     private int prepareIntoInterior(
@@ -3411,40 +3411,13 @@ abstract class AbstractRunChainTest {
         int offset = interior.segment().bk2FrameOffset();
         GameMode target = TraceRunReplayWalker.expectedMode(interior.segment());
         if (!TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {
-            // COMPARED interior (bonus stage). The interior's FIRST gameplay tick is
-            // the single title-card-exit fall-through frame: GameLoop.exitTitleCard
-            // releases control and flips into BONUS_STAGE in the SAME loop.step(),
-            // then that step's LevelFrameStep ticks the player. That fall-through
-            // frame IS the recorded interior's frame 0, and for the S3K bonus
-            // machines it is load-bearing: the player enters air-forced-false for
-            // exactly one frame and, if the recorded frame-0 direction is pressed,
-            // does a single grounded ground-move (e.g. the gumball's g_speed -0x0C
-            // left nudge) before the ground probe finds no floor and flips it
-            // airborne. If that tick reads a neutral/stale input the grounded nudge
-            // is lost, the player free-falls with air-accel from frame 0, and the
-            // interior trajectory diverges enough to push the stage exit past the
-            // boundary window.
-            //
-            // Seek to the interior's recorded offset BEFORE waiting out the fade +
-            // title card. The shared cursor is frozen across the fade/title-card
-            // (those non-LEVEL/BONUS frames never call onLevelFrameAdvanced), so it
-            // stays parked at this offset until the fall-through frame -- unlike
-            // seeking AFTER waitForMode, which left the fall-through reading the
-            // stale pre-entry row. GameLoop.exitTitleCard's bonus branch re-arms the
-            // playback forced-input bridge right after flipping to BONUS_STAGE (the
-            // step-top syncPlaybackInputBridge ran while still TITLE_CARD, which
-            // PlaybackDebugManager.isDriving does not drive), so the fall-through
-            // player tick then samples this parked offset = recorded frame 0. Input
-            // alignment via the same forced-input bridge the interior already uses,
-            // never trace-field hydration.
+            // Title-card release is setup-only. Park input at the first interior
+            // row before releasing control; the next loop step owns its first
+            // gameplay tick, so neither input nor comparison may skip row zero.
             playback.startSession(movie, offset);
             waitForMode(loop, target, stepCap);
             primeInteriorEntryRngFromMetadata(interior);
-            // The fall-through frame already reproduced recorded frame 0 (the grounded
-            // entry tick) and advanced the cursor to offset+1, so compare from frame 1
-            // (the compared-bonus-ENTRY case of the COMPARATOR FRAME BASE contract on
-            // attachReturnedLevelSegment: initialCursor == cursorFrame - offset == 1).
-            return 1;
+            return 0;
         }
         // UNCOMPARED interior (special stage): the SS is driven separately by
         // uncomparedInteriorStep; the shared cursor is not read for its physics, so
@@ -3467,9 +3440,9 @@ abstract class AbstractRunChainTest {
             }
             comparator = attachInteriorComparator(interior, fixture);
         } else {
-            if (rowsConsumed != 1) {
+            if (rowsConsumed != 0) {
                 throw new AssertionError(
-                        "compared interior admission expected one published row but saw "
+                        "compared interior admission expected no published rows but saw "
                                 + rowsConsumed);
             }
             comparator = new LiveTraceComparator(
@@ -3580,10 +3553,9 @@ abstract class AbstractRunChainTest {
      *       {@link #attachLevelSegment}: the comparator attaches before the
      *       segment's frame 0 and the cursor is (re-)seeked to
      *       {@code segmentOffset}.</li>
-     *   <li><b>1</b> — a compared bonus interior ENTRY
-     *       ({@link #handoffIntoInterior}'s bonus/Option-B branch): the single
-     *       title-card-exit fall-through frame already reproduced the interior's
-     *       recorded frame 0, so comparison starts at frame 1.</li>
+     *   <li><b>0</b> — a compared bonus interior ENTRY: title-card release
+     *       completes setup only. The first gameplay tick and its input are
+     *       still pending when the comparator attaches.</li>
      *   <li><b>1</b> — a level RETURN after a special-stage (uncompared) interior
      *       (this method): the pre-seeked frozen cursor's one fall-through frame
      *       consumed the return segment's frame 0.</li>

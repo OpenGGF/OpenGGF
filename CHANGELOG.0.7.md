@@ -316,8 +316,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ICZ miniboss, LBZ launcher and grapple among them) no longer draw in front of the
   player. A structural guard now rejects any drawing object without a declared bucket.
 
-- **S3K slots bonus:** keep the player behind the central capsule glass during
-  gameplay; the shared bonus loop no longer overrides the slot player's priority.
+- **S3K bonus stages:** keep the slots player behind the central capsule glass
+  during gameplay; the shared bonus loop no longer overrides the slot player's
+  priority. Bonus title-card release completes the initial object setup before
+  the first gameplay tick, preserving the first controller input and its movement.
 
 - **Knuckles in Sonic 2:** selecting Knuckles as the Sonic 2 main
   character now activates a built-in game patch implemented from the s2disasm
