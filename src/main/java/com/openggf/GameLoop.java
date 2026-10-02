@@ -1553,6 +1553,15 @@ public class GameLoop {
     }
 
     private void updateSpecialStageResultsMode() {
+        if (resultsScreen instanceof com.openggf.game.internal.ResultsResourcePreparation preparation
+                && preparation.isPreparingResults()) {
+            // The resource loop has VBlank and queue tails, but no results sprite yet.
+            LevelFrameStep.executeHardwareTimedObjectScan(
+                    LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
+                    PlcLifecyclePhase.SPECIAL_STAGE_RESULTS, () -> { });
+            preparation.finishResultsPreparationIteration();
+            return;
+        }
         // ROM SS_NormalExit is a full loop iteration: VintID_TitleCards, a
         // V-int that runs ProcessPLC_9Tiles (docs/s1disasm/sonic.asm:946),
         // ExecuteObjects, BuildSprites, then RunPLC at the tail

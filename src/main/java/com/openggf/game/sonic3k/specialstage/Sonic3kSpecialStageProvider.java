@@ -14,6 +14,8 @@ import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 
 import java.io.IOException;
@@ -274,9 +276,19 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
         // Big Ring was collected in — still the loaded level at this point.
         boolean skSideOrigin = GameServices.hasRuntime()
                 && Sonic3kZoneIds.isSkSideZone(GameServices.level().getCurrentZone());
-        return new S3kSpecialStageResultsScreen(
-                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount,
-                manager.getPlayerCharacter(), manager.isSuperEmeraldMode(), skSideOrigin);
+        var character = manager.getPlayerCharacter();
+        boolean superEmeraldMode = manager.isSuperEmeraldMode();
+        try {
+            return new S3kSpecialStageResultsPreparation(GameServices.rom().getRom(), character,
+                    S3kRuntimeArtCoordinator.current().moduleQueue(),
+                    GameServices.module().getGameService(
+                            Sonic3kLevelTitlePlcService.class),
+                    () -> new S3kSpecialStageResultsScreen(
+                            ringsCollected, gotEmerald, stageIndex, totalEmeraldCount,
+                            character, superEmeraldMode, skSideOrigin));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to prepare special-stage results resources", exception);
+        }
     }
 
     // ==================== MiniGameProvider Methods ====================

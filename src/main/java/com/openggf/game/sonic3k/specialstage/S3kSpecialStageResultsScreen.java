@@ -386,6 +386,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
             playSfx(Sonic3kSfx.REGISTER.id);
             state = STATE_POST_TALLY;
             stateTimer = 0;
+            romTimer = POST_TALLY_WAIT;
             if (sanctuaryReveal) {
                 if (ringsCollected >= CONTINUE_RING_THRESHOLD) {
                     // loc_2E4C4 sets $2E = 120 and loc_2E4D6 decrements it the same frame.
@@ -395,6 +396,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
                     // loc_2E4D6 -> loc_2E50E -> loc_2E512 in the tally's final frame.
                     enterSanctuaryPan();
                 }
+            } else {
+                updatePostTally();
             }
         }
     }
@@ -406,7 +409,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
      * guard, matching ROM where routine 6 counts down $2E before checking emeralds.
      */
     private void updatePostTally() {
-        if (stateTimer <= POST_TALLY_WAIT) {
+        if (ringsCollected >= CONTINUE_RING_THRESHOLD && romTimer != 0) {
+            romTimer--;
             return;
         }
 
@@ -414,12 +418,14 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         // ROM: loc_2E4EA spawns icon, sets 270f timer, then falls through to routine 6
         if (ringsCollected >= CONTINUE_RING_THRESHOLD) {
             showContinueIcon = true;
+            romTimer = CONTINUE_WAIT;
             playSfx(Sonic3kSfx.CONTINUE.id);
         }
 
         // Advance to EMERALD_CHECK — the 270f continue wait runs there (ROM: routine 6 at loc_2E534)
         state = STATE_EMERALD_CHECK;
         stateTimer = 0;
+        updateEmeraldCheck();
     }
 
     /**
@@ -428,7 +434,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
      */
     private void updateEmeraldCheck() {
         // ROM: loc_2E534 counts down $2E (270f continue wait) before emerald check
-        if (showContinueIcon && stateTimer <= CONTINUE_WAIT) {
+        if (romTimer != 0) {
+            romTimer--;
             return;
         }
 
