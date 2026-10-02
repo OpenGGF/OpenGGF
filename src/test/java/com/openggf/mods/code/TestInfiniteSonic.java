@@ -96,7 +96,7 @@ class TestInfiniteSonic {
         int rebases = 0;
         int previous = fixture.sprite().getCentreX();
         for (int i = 0; i < 6000; i++) {
-            fixture.stepFrame(false, false, false, true, false);
+            stepCourse(fixture, 1);
             int x = fixture.sprite().getCentreX();
             if (previous - x > 4000) rebases++;
             assertFalse(fixture.sprite().getDead(), "death at frame " + i + ", x=" + x + ", y=" + fixture.sprite().getCentreY() + ", cameraMaxY=" + fixture.camera().getMaxY());
@@ -106,7 +106,7 @@ class TestInfiniteSonic {
         // A full registry snapshot proves object origin, terrain and player restore together.
         var registry = fixture.runtime().getRewindRegistry();
         var before = registry.capture();
-        for (int i = 0; i < 800; i++) fixture.stepFrame(false, false, false, true, false);
+        for (int i = 0; i < 800; i++) stepCourse(fixture, 1);
         int expectedX = fixture.sprite().getCentreX();
         int expectedY = fixture.sprite().getCentreY();
         int expectedFraction = fixture.sprite().getXSubpixelRaw();
@@ -116,7 +116,7 @@ class TestInfiniteSonic {
         registry.restore(before);
         assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", before.entries().get("object-manager"),
                 registry.capture().entries().get("object-manager")), "immediate object restore");
-        for (int i = 0; i < 800; i++) fixture.stepFrame(false, false, false, true, false);
+        for (int i = 0; i < 800; i++) stepCourse(fixture, 1);
         assertEquals(expectedX, fixture.sprite().getCentreX());
         assertEquals(expectedY, fixture.sprite().getCentreY());
         assertEquals(expectedFraction, fixture.sprite().getXSubpixelRaw());
@@ -127,7 +127,7 @@ class TestInfiniteSonic {
         int backwardsRebases = 0;
         previous = fixture.sprite().getCentreX();
         for (int i = 0; i < 1800; i++) {
-            fixture.stepFrame(false, false, true, false, false);
+            stepCourse(fixture, -1);
             int x = fixture.sprite().getCentreX();
             if (x - previous > 4000) backwardsRebases++;
             assertFalse(fixture.sprite().getDead());
@@ -155,6 +155,124 @@ class TestInfiniteSonic {
         assertFalse(patch.activatesFor(new GameplayLaunchRequest("s1", "tails", List.of())));
         assertFalse(patch.activatesFor(new GameplayLaunchRequest("s1", "sonic", List.of("tails"))));
         assertFalse(patch.activatesFor(new GameplayLaunchRequest("s2", "sonic", List.of())));
+    }
+
+    private long originPixels() throws Exception {
+        Object controller = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(o -> o.getClass().getName().equals("infinite.CourseController")).findFirst().orElseThrow();
+        return (long) controller.getClass().getMethod("originPixels").invoke(controller);
+    }
+
+    /** A deterministic player policy; terrain observations choose inputs, never set physics state. */
+    private void stepCourse(HeadlessTestFixture fixture, int direction) throws Exception {
+        long x = originPixels() + fixture.sprite().getCentreX();
+        boolean approachingGap = false;
+        for (int ahead = 0; ahead <= 48; ahead += 4) {
+            if (floorAt(x + direction * ahead) < 0) approachingGap = true;
+        }
+        boolean jump = fixture.sprite().getAir() || approachingGap;
+        fixture.stepFrame(false, false, direction < 0, direction > 0, jump);
+    }
+
+    private int gapWidth(long section) throws Exception {
+        return (int) terrain().getClass().getMethod("gapWidth", long.class).invoke(terrain(), section);
+    }
+
+    @Test void ringRowsCollectThroughGameplayAndRestoreWithTheCourse() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        ObjectInstance ring = null;
+        for (int frame = 0; frame < 300 && ring == null; frame++) {
+            stepCourse(fixture, 1);
+            ring = GameServices.level().getObjectManager().getActiveObjects().stream()
+                    .filter(o -> o.getClass().getName().equals("infinite.CourseRing"))
+                    .findFirst().orElse(null);
+        }
+        assertNotNull(ring, "opening runway introduces collectible rings");
+        var player = fixture.sprite();
+        NativePositionOps.writeXPosResetSubpixel(player, ring.getX());
+        NativePositionOps.writeYPosResetSubpixel(player, ring.getY());
+        player.setXSpeed((short) 0); player.setGSpeed((short) 0); player.setYSpeed((short) 0);
+        player.setAir(true);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        int count = GameServices.level().getLevelGamestate().getRings();
+        fixture.stepIdleFrames(1);
+        assertEquals(count + 1, GameServices.level().getLevelGamestate().getRings(), "real touch awards a ring");
+        var expected = registry.capture().entries().get("object-manager");
+        registry.restore(before);
+        assertEquals(count, GameServices.level().getLevelGamestate().getRings());
+        fixture.stepIdleFrames(1);
+        assertEquals(count + 1, GameServices.level().getLevelGamestate().getRings());
+        assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", expected,
+                registry.capture().entries().get("object-manager")), "collection sparkle replays");
+        fixture.stepIdleFrames(40);
+        assertEquals(count + 1, GameServices.level().getLevelGamestate().getRings(), "a collected ring stays collected");
+    }
+
+    @Test void gapsAreBoundedSeededAndHaveLevelRunways() throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3);
+        Set<Integer> widths = new HashSet<>();
+        int gaps = 0;
+        for (long section = 0; section < 1000; section++) {
+            int width = gapWidth(section);
+            assertEquals(width, gapWidth(section));
+            if (section < 3) assertEquals(0, width, "safe opening runway");
+            if (width == 0) continue;
+            gaps++;
+            widths.add(width);
+            assertNull(encounter(section), "jump sections have no badnik ambush");
+            long start = section * 512 + (512 - width) / 2;
+            int bank = floorAt(section * 512);
+            for (int x = 0; x < 512; x++) {
+                long world = section * 512 + x;
+                assertEquals(world >= start && world < start + width ? -1 : bank, floorAt(world));
+            }
+        }
+        assertEquals(Set.of(64, 96, 128), widths);
+        assertTrue(gaps > 150 && gaps < 350, "occasional jumps with recovery sections: " + gaps);
+    }
+
+    @ParameterizedTest @ValueSource(ints = {64, 96, 128})
+    void realPhysicsCanClearEachGapInBothDirections(int width) throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        long section = -1;
+        for (long candidate = 3; candidate < 1000; candidate++) {
+            if (gapWidth(candidate) == width) { section = candidate; break; }
+        }
+        assertTrue(section >= 0, "course must expose gap width " + width);
+        long worldStart = section * 512 + (512 - width) / 2;
+        while (worldStart - originPixels() > 7000) {
+            NativePositionOps.writeXPosResetSubpixel(fixture.sprite(), 8192);
+            NativePositionOps.writeYPosResetSubpixel(fixture.sprite(), 600);
+            fixture.stepIdleFrames(1);
+        }
+        int start = (int) (worldStart - originPixels());
+        for (int direction : new int[]{1, -1}) {
+            var player = fixture.sprite();
+            int takeoff = direction > 0 ? start - 32 : start + width + 32;
+            NativePositionOps.writeXPosResetSubpixel(player, takeoff);
+            NativePositionOps.writeYPosResetSubpixel(player, floorAt(originPixels() + takeoff) - 19);
+            player.setAir(false); player.setRolling(false);
+            player.setXSpeed((short) (direction * 0x300));
+            player.setGSpeed((short) (direction * 0x300));
+            player.setYSpeed((short) 0);
+            player.setInvulnerableFrames(300);
+            fixture.camera().setX((short) (takeoff - 160));
+            // Release first so the second direction has a fresh jump press.
+            fixture.stepFrame(false, false, direction < 0, direction > 0, false);
+            boolean airborne = false, landed = false;
+            for (int frame = 0; frame < 100; frame++) {
+                fixture.stepFrame(false, false, direction < 0, direction > 0, true);
+                airborne |= player.getAir();
+                assertFalse(player.getDead(), "gap " + width + ", direction " + direction);
+                if (airborne && !player.getAir()) { landed = true; break; }
+            }
+            assertTrue(airborne && landed, "jump must land on solid terrain");
+            assertTrue(direction > 0 ? player.getCentreX() >= start + width : player.getCentreX() < start,
+                    "must land beyond the gap at a 3px/frame approach speed");
+        }
     }
 
     private Object terrain() throws Exception {
@@ -216,19 +334,19 @@ class TestInfiniteSonic {
     }
 
     @ParameterizedTest @EnumSource(WidescreenAspect.class)
-    void holdingRightWithNoRingsIsNowLethal(WidescreenAspect aspect) throws Exception {
+    void holdingRightCannotCompleteTheCourse(WidescreenAspect aspect) throws Exception {
         var fixture = launch(aspect);
         assertEquals(0, GameServices.level().getLevelGamestate().getRings());
         assertEquals(0, fixture.sprite().getInvulnerableFrames());
         int frames = 0;
         while (!fixture.sprite().getDead() && frames++ < 2400) {
             fixture.stepFrame(false, false, false, true, false);
-            assertTrue(GameServices.level().getObjectManager().getAllocatedSlotCount() < 24,
+            assertTrue(GameServices.level().getObjectManager().getAllocatedSlotCount() < 64,
                     "bounded encounter population");
         }
-        assertTrue(fixture.sprite().getDead(), "holding Right must no longer beat every encounter");
+        assertTrue(fixture.sprite().getDead(), "holding Right must fail: x=" + fixture.sprite().getCentreX() + ", y=" + fixture.sprite().getCentreY() + ", speed=" + fixture.sprite().getGSpeed());
         assertTrue(fixture.sprite().getCentreX() > 1400, "safe opening runway");
-        assertTrue(fixture.sprite().getCentreY() < 1200, "enemy contact, not a pit");
+        assertTrue(originPixels() + fixture.sprite().getCentreX() < 2560, "first gap must require jumping");
     }
 
     @ParameterizedTest @ValueSource(ints = {0, 1})
@@ -238,7 +356,7 @@ class TestInfiniteSonic {
         fixture.sprite().setInvulnerableFrames(2000);
         ObjectInstance enemy = null;
         for (int i = 0; i < 1000 && enemy == null; i++) {
-            fixture.stepFrame(false, false, false, true, false);
+            stepCourse(fixture, 1);
             enemy = enemies().stream().filter(o -> o.getSpawn().subtype() == subtype).findFirst().orElse(null);
         }
         assertNotNull(enemy);

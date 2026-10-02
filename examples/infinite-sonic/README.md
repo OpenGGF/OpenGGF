@@ -1,7 +1,7 @@
 # Infinite Sonic — endless Green Hill challenge
 
 A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**, then enter
-**Green Hill Act 1**. Move and jump normally. There is no finish line, time limit or ring placement. Sonic starts with zero rings: one enemy hit is fatal. The HUD timer is paused. Disable the mod to restore GHZ1.
+**Green Hill Act 1**. Move and jump normally. There is no finish line or time limit. Collect the periodic ring rows to survive enemy hits; pits remain lethal. The HUD timer is paused. Disable the mod to restore GHZ1.
 Other acts and other character/team selections retain their stock behavior.
 
 The mod reads your Sonic 1 ROM through the normal level loader. It selects continuous
@@ -13,8 +13,19 @@ It never reads the disassembly or includes exported Sega assets.
 Seeded encounters mix ground Motobug patrols, flying Buzz Bomber patrols and empty
 sections. Ground enemies require a gentle stretch across their whole patrol; flyers
 stay clear of the highest terrain beneath their patrol and bob. The first 1,536 pixels
-are enemy-free. Jump or roll into enemies to defeat them and earn points. These use
+are enemy-free and have no pits. Jump or roll into enemies to defeat them and earn points. These use
 ROM sprites with custom bounded patrols; flyers do not fire missiles.
+
+Every fourth section after the opening is a jump corridor: a 64, 96 or 128 pixel
+pit with equal-height flat banks and at least 192 pixels of approach on either side.
+Hold Jump while moving to clear it; releasing Jump early shortens the arc. Enemy
+patrols never occupy these corridors. The other sections retain the ROM-derived
+hills and dips. Rows of rings appear periodically along the terrain.
+
+At local X=8,192 the engine shifts Sonic and the camera left by 4,096 pixels and
+advances the terrain window. Logical distance continues increasing, selecting new
+seeded sections. Individual motifs recur, but the complete window does not loop.
+Reverse travel below local X=2,048 restores the preceding window, until the start.
 
 From the repository root, with Java 21 and Maven on PATH:
 
@@ -43,7 +54,7 @@ fractional position and speed. Backtracking regenerates the same terrain from th
 same logical coordinates. Change `TerrainLibrary.SEED` and rebuild for another course.
 Enemy positions and patrol phases shift with the world and participate in rewind.
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
-from that window can regenerate its encounters. There are no loops, bridges, checkpoints
+from that window can regenerate its encounters. There are no loops, moving platforms, breakable floors, checkpoints
 or difficulty progression. Section reflections can mirror scenery. Background scrolling at a world
 rebase still needs visual verification. The coverage matrix and current evidence are
 in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).

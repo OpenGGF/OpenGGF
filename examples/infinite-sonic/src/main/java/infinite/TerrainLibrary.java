@@ -12,10 +12,13 @@ public final class TerrainLibrary {
     private final List<int[]> floorProfiles;
     private final List<Block> blocks = new ArrayList<>();
     private final int height;
+    private final int[][][] gapSections = new int[3][][];
+    private final int seamHeight;
 
     public TerrainLibrary(Level source) {
         height = source.getLayerHeightBlocks(0);
         int seam = floor(source, 0, 128);
+        seamHeight = seam;
         var candidates = new ArrayList<int[][]>();
         var profiles = new ArrayList<int[]>();
         for (int col = 0; col < source.getLayerWidthBlocks(0); col++) {
@@ -66,6 +69,37 @@ public final class TerrainLibrary {
         }
         if (candidates.size() < 2) throw new IllegalArgumentException(
                 "Green Hill requires at least two compatible terrain sections; found " + candidates.size());
+        // Use a genuinely flat ROM section for both banks. Cutting arbitrary hills
+        // can leave an uphill landing wall or a downhill launch that defeats a jump.
+        int flat = -1;
+        for (int i = 0; i < profiles.size(); i++) {
+            if (java.util.Arrays.stream(profiles.get(i)).allMatch(y -> y == seam)) {
+                flat = i;
+                break;
+            }
+        }
+        if (flat < 0) throw new IllegalArgumentException("No flat ROM section for jump banks");
+        for (int variant = 0; variant < gapSections.length; variant++) {
+            int halfGap = 32 + variant * 16;
+            int[][] section = new int[2][height];
+            for (int side = 0; side < 2; side++) {
+                for (int row = 0; row < height; row++) {
+                    Block original = blocks.get(candidates.get(flat)[side][row]);
+                    Block cut = new Block(16);
+                    for (int cy = 0; cy < 16; cy++) {
+                        for (int cx = 0; cx < 16; cx++) {
+                            int x = side * 256 + cx * 16;
+                            // Clear the whole column: no invisible floor beneath the pit.
+                            int word = x >= 256 - halfGap && x < 256 + halfGap
+                                    ? 0 : original.getChunkDesc(cx, cy).get();
+                            cut.setChunkDesc(cx, cy, new ChunkDesc(word));
+                        }
+                    }
+                    section[side][row] = intern(cut);
+                }
+            }
+            gapSections[variant] = section;
+        }
         if (blocks.size() > 256) throw new IllegalArgumentException("Terrain block budget exceeded");
         sections = List.copyOf(candidates);
         floorProfiles = List.copyOf(profiles);
@@ -94,12 +128,32 @@ public final class TerrainLibrary {
     }
 
     public int cell(long column, int row) {
-        return sections.get(sectionIndex(Math.floorDiv(column, 2)))[Math.floorMod(column, 2)][row];
+        long section = Math.floorDiv(column, 2);
+        int width = gapWidth(section);
+        return (width == 0 ? sections.get(sectionIndex(section))
+                : gapSections[(width - 64) / 32])[Math.floorMod(column, 2)][row];
+    }
+
+    /** Mod-designed jump corridors: one per four sections, separated by >= 1536px.
+     * Flat banks provide 192px minimum runway on either side of a 64/96/128px pit.
+     * Stock held jump is about 96px high and lasts about 60 frames on level ground;
+     * even a 3px/frame approach comfortably clears the largest pit. Actual physics
+     * traversal and bidirectional jumps are covered by TestInfiniteSonic.
+     */
+    public int gapWidth(long section) {
+        if (section < 3 || Math.floorMod(section, 4) != 3) return 0;
+        // Teach the jump requirement before speed can carry Sonic over narrower pits.
+        if (section == 3) return 128;
+        return 64 + 32 * (int) Long.remainderUnsigned(random(section + SEED + 0x474150L), 3);
     }
 
     /** Surface of the generated terrain, including translated and mirrored columns. */
     public int floorAt(long worldX) {
-        return floorProfiles.get(sectionIndex(Math.floorDiv(worldX, 512)))[Math.floorMod(worldX, 512)];
+        long section = Math.floorDiv(worldX, 512);
+        int x = Math.floorMod(worldX, 512);
+        int width = gapWidth(section);
+        if (width != 0) return x >= 256 - width / 2 && x < 256 + width / 2 ? -1 : seamHeight;
+        return floorProfiles.get(sectionIndex(section))[x];
     }
 
     /** Top floor in a decoded S1 column; rejects ceilings, walls and missing floor. */

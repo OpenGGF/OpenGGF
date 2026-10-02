@@ -7,17 +7,20 @@ new stock act. [Design and decisions](../../designs/2026-10-01-infinite-sonic.md
 | Contract | Evidence | Scope / gaps |
 | --- | --- | --- |
 | Real code package | `TestInfiniteSonic.compileAndValidate` compiles project sources and calls SDK `package` validation | No ROM payloads or baked assets shipped |
-| Entry and traversal | `protectedTraversalPreservesEncountersAcrossRebaseAndReplay` uses explicit test-only invulnerability and holds Right for 6,000 frames, asserts no death and at least four world rebases | All five current `WidescreenAspect` presets: 320, 352, 400, 528, 800; resolved camera width asserted |
+| Entry and traversal | `protectedTraversalPreservesEncountersAcrossRebaseAndReplay` uses explicit test-only invulnerability and runs Right with gap-aware Jump input for 6,000 frames, asserts no death and at least four world rebases | All five current `WidescreenAspect` presets: 320, 352, 400, 528, 800; resolved camera width asserted |
 | Rewind at world recycling | Same test captures the full registry, runs 800 frames across recycling, restores and replays | Compares X/Y, fractional X, ground speed entire map, enemy state and occupied object slots; native donor/off; does not test GameLoop's interactive history recorder |
-| Backtracking | Same test holds Left for 1,800 frames and proves reverse rebasing without death | Same five widths |
+| Backtracking | Same test runs Left with gap-aware Jump input for 1,800 frames and proves reverse rebasing without death | Same five widths |
 | Fresh reload / act isolation | `freshReloadResetsTheCourseAndOtherActsRemainStock` loads GHZ2, checks stock placements, reloads GHZ1 and checks original generated layout | 320px; physical death/respawn and live-history reset not yet covered |
 | Character/team scope | `patchOnlyActivatesForSoloSonic` checks solo Sonic, solo Tails, Sonic+Tails and wrong-game selection | Other teams/characters use stock GHZ, by explicit activation policy |
 | Install/registration | Local production scanner, state/trust handling and restricted classloader registration check | IntelliJ default project-root working directory; enabled local jar |
 | Art and presentation | Reuses ROM pipeline; mirrored chunks and stock GHZ background | GPU visual review and background seam continuity remain open |
 | Encounter habitats | `encountersAreSeededSpacedAndFitTheirEntirePatrolCorridor` checks 997 sections, both kinds, rest gaps and floor profiles against decoded collision | Fixed seed; ground relief and flying clearance checked across full patrol |
-| Zero-ring challenge | `holdingRightWithNoRingsIsNowLethal` dies from enemy contact after the safe opening | All five widths; normal damage, bounded live slots; automatic respawn remains open |
+| Jump requirement | `holdingRightCannotCompleteTheCourse` exercises ordinary unassisted Right input after the safe opening | All five widths; normal damage, bounded live slots; automatic respawn remains open |
 | Attacks and explosions | `aPhysicalStompDestroysTheBadnikAwardsScoreAndDoesNotRespawnIt` exercises ground and air enemies | Real touch response from a positioned descending spin; score, no immediate respawn and explosion rewind/replay |
-| Gameplay breadth | Terrain-aware bounded patrols, zero rings, paused timer, no finish | No missiles, rings, checkpoints, bosses or difficulty progression; donors unverified |
+| Ring collection | `ringRowsCollectThroughGameplayAndRestoreWithTheCourse` exercises real touch collection, ring count and restore/replay | Opening row, no repeated award after sparkle; GPU review remains open |
+| Gap geometry | `gapsAreBoundedSeededAndHaveLevelRunways` checks 1,000 sections; encounter habitat test compares actual decoded collision with the terrain oracle | 64/96/128px widths, no enemies in jump corridors, flat banks |
+| Jump reach | `realPhysicsCanClearEachGapInBothDirections` uses actual Sonic movement and landing | All three widths, both directions, 3px/frame initial speed with held direction and Jump |
+| Gameplay breadth | Terrain-aware bounded patrols, ring trails, pits, hills/dips, paused timer, no finish | No missiles, moving platforms, breakable floors, checkpoints, bosses or difficulty progression; donors unverified |
 
 ## Execution
 
@@ -65,3 +68,33 @@ with Java 21 (also first on `PATH`). Surefire reports **15 tests, 0 failures,
 the cached-engine limitation for delivery. SDK packaging runs inside this test.
 Validation remains focused; the full ordinary suite, structural guards and GPU
 review were not run.
+
+### Rings and jump corridors (0.3.0)
+
+On 2026-10-02, main checkout `feature/ai-infinite-sonic`, base
+`b6abb05e818954054392a144ca56377671aa7bfa` plus the uncommitted mod follow-up:
+
+```sh
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk \
+PATH=/usr/lib/jvm/java-21-openjdk/bin:/usr/share/idea/plugins/maven-plugin/lib/maven3/bin:$PATH \
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
+  "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+Completed: **20 tests, 0 failures, 0 errors, 0 skipped**, 12.83 seconds test time,
+34.786 seconds Maven time. Includes SDK package validation. The real jump checks
+start at 3px/frame with held directional input, so subsequent air acceleration is
+part of the tested maneuver. Traversal protection suppresses enemy damage only;
+pit collision and jumping remain real. Normal unprotected Right-only tests prove
+that running alone cannot complete the course. Rings now replace the original
+zero-ring behavior; the earlier results above describe previous versions.
+
+The user explicitly requested mod-specific validation only. No full engine suite,
+structural guards, visual capture, movement donor or automatic respawn claim.
+
+A subsequent focused `-Dtest=TestInfiniteSonic#holdingRightCannotCompleteTheCourse`
+run tightened the existing assertion: all five widths die before logical X=2560,
+within 2,400 frames, proving the first 128px pit requires a jump. **5 passed,
+0 failures/errors/skips**. Production code was unchanged after the 20-test run.
+The final 0.3.0 jar passed `build.py` SDK packaging and replaced the existing enabled,
+trusted local `mods/infinite-sonic.jar`; the stored SHA-256 matches the installed jar.
