@@ -4040,11 +4040,22 @@ public class GameLoop {
         setGameMode(GameMode.LEVEL);
         GameServices.gameState().startNewGameFromTitle();
         try {
-            levelManager.loadZoneAndActForFreshRuntime(0, 0);
+            levelManager.loadZoneAndActForFreshRuntime(titleStartZone(), 0);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load title screen start level", e);
         }
         GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+    }
+
+    private int titleStartZone() {
+        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
+        var module = GameServices.module();
+        var registry = module != null ? module.getZoneRegistry() : null;
+        if (titleScreen == null || registry == null) {
+            return 0;
+        }
+        int zone = titleScreen.startZoneIndex();
+        return zone >= 0 && zone < registry.getZoneCount() ? zone : 0;
     }
 
     private void handleTitleScreenExitFromProvider() {

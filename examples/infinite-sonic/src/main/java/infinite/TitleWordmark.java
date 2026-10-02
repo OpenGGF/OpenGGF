@@ -4,12 +4,15 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import java.util.List;
 
 /**
  * Wraps the stock Sonic 1 title and paints a code-drawn "INFINITE" wordmark in the
  * strip above the emblem (the wings and TitleSonic's head start near screen Y 30).
- * After Sonic rises it streaks in from the right, then glints periodically.
- * Everything else delegates to the ROM-driven title unchanged.
+ * After Sonic rises it streaks in from the right, then glints periodically. Once
+ * it lands, a {@link ZoneMenu} rises into the empty slot below the emblem and the
+ * one-player start launches the zone it shows. Everything else delegates to the
+ * ROM-driven title unchanged.
  */
 public final class TitleWordmark implements TitleScreenProvider {
     static final String WORD = "INFINITE";
@@ -44,23 +47,41 @@ public final class TitleWordmark implements TitleScreenProvider {
     private final float[][] rowColours = rowColours();
 
     private final TitleScreenProvider base;
+    private final ZoneMenu menu;
     private int activeFrames;
 
-    public TitleWordmark(TitleScreenProvider base) { this.base = base; }
+    /** {@code zoneNames} lists the selectable course zones in registry order. */
+    public TitleWordmark(TitleScreenProvider base, List<String> zoneNames) {
+        this.base = base;
+        this.menu = new ZoneMenu(zoneNames);
+    }
 
     TitleScreenProvider base() { return base; }
+    ZoneMenu menu() { return menu; }
 
     @Override public void update(InputHandler input) {
+        // Read the zone choice before the stock title sees this frame's confirm press.
+        boolean interactive = base.getState() == State.ACTIVE;
+        if (activeFrames > ENTRY_DELAY + ENTRY_FRAMES) menu.reveal();
+        menu.update(input, interactive);
         base.update(input);
         State state = base.getState();
         activeFrames = state == State.ACTIVE || state == State.EXITING ? activeFrames + 1 : 0;
     }
 
+    @Override public int startZoneIndex() { return menu.selected(); }
+
     @Override public void draw() {
         base.draw();
-        if (activeFrames <= ENTRY_DELAY) return;
+        if (activeFrames == 0) return;
         GraphicsManager graphics = GraphicsManager.getInstance();
         int viewport = graphics.getProjectionWidth() > 0 ? graphics.getProjectionWidth() : 320;
+        menu.draw(graphics, viewport);
+        if (activeFrames > ENTRY_DELAY) drawWordmark(graphics, viewport);
+        graphics.flushScreenSpace();
+    }
+
+    private void drawWordmark(GraphicsManager graphics, int viewport) {
         int frame = activeFrames - ENTRY_DELAY;
         int left = (viewport - WIDTH) / 2 + entryOffset(frame, viewport);
         boolean landed = frame >= ENTRY_FRAMES;
@@ -88,7 +109,6 @@ public final class TitleWordmark implements TitleScreenProvider {
             }
         }
         if (landed) drawTwinkle(graphics, left, frame - ENTRY_FRAMES);
-        graphics.flushScreenSpace();
     }
 
     /** Ease-out-back from off the right edge, overshooting a few pixels before settling. */
@@ -148,7 +168,7 @@ public final class TitleWordmark implements TitleScreenProvider {
         }
     }
 
-    private static void rect(GraphicsManager graphics, int x, int y, int width,
+    static void rect(GraphicsManager graphics, int x, int y, int width,
                              float r, float g, float b, float alpha) {
         if (width <= 0) return;
         graphics.registerCommand(alpha >= 1f
@@ -219,8 +239,8 @@ public final class TitleWordmark implements TitleScreenProvider {
     private static float g(int rgb) { return (rgb >> 8 & 0xFF) / 255f; }
     private static float b(int rgb) { return (rgb & 0xFF) / 255f; }
 
-    @Override public void initialize() { activeFrames = 0; base.initialize(); }
-    @Override public void reset() { activeFrames = 0; base.reset(); }
+    @Override public void initialize() { activeFrames = 0; menu.reset(); base.initialize(); }
+    @Override public void reset() { activeFrames = 0; menu.reset(); base.reset(); }
     @Override public void setClearColor() { base.setClearColor(); }
     @Override public State getState() { return base.getState(); }
     @Override public boolean isExiting() { return base.isExiting(); }

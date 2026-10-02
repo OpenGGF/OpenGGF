@@ -182,6 +182,11 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override
+    public boolean showsTitleCardActNumber(int zoneIndex, int actIndex) {
+        return base.showsTitleCardActNumber(zoneIndex, actIndex);
+    }
+
+    @Override
     public ZoneRegistry getZoneRegistry() {
         return base.getZoneRegistry();
     }

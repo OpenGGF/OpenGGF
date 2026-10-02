@@ -105,6 +105,15 @@ public interface TitleScreenProvider {
         return TitleScreenAction.OTHER;
     }
 
+    /**
+     * Zone index a one-player title exit starts at, always on its first act.
+     * Stock titles start the first zone; a title that offers a zone choice
+     * returns the selected index. Out-of-range values start the first zone.
+     */
+    default int startZoneIndex() {
+        return 0;
+    }
+
     default void setExitToLevelHandler(Runnable handler) {
         // Default: no-op.
     }

@@ -377,3 +377,42 @@ Enemies stay Motobug/Buzz Bomber; `Sonic1ObjectArtProvider` loads both in every 
 on palette line 0. Zone-native badniks would be a separate follow-up. Validation:
 see the coverage matrix's 0.8.0 section.
 
+## Title zone picker and act-less cards (0.9.0)
+
+Follow-up on `e2432a8d53`, same branch, 2026-10-02. The request was to drop "ACT n"
+from the mod's title cards and add a left/right zone menu (zone, not act) to the title.
+
+Engine hooks (additive to the unpublished 0.7 candidate; pin regenerated in place):
+
+- `TitleScreenProvider.startZoneIndex()` (default 0). `GameLoop` previously hard-coded
+  `loadZoneAndActForFreshRuntime(0, 0)` for a one-player title exit; it now loads the
+  provider's zone, act 0, falling back to 0 when out of range. Redirecting GHZ1 inside
+  `loadLevelOverride` was rejected: zone-indexed owners (title card, music, scroll and
+  palette-cycle handlers) would still see Green Hill.
+- `GameModule.showsTitleCardActNumber(zone, act)` (default true, delegated). The S1
+  card already hid the act element for Final Zone; a module veto hides it too and moves
+  the oval to 8 px after "ZONE" (`Card_ConData` FZ row: `$12C − $124`), keeping its slide
+  distance. The S2 card honours the veto as well. The mod vetoes zones 0–5.
+
+`ZoneMenu` sits in the only clear band: the emblem's ribbon tails end near Y 178 and
+"(C)SEGA 1991" occupies Y 200–207 right of centre. A first placement at Y 166–192
+(the unused PSB slot) covered the ribbon tails and copyright in a live widescreen
+capture and was moved to an 18 px banner at Y 181–199 with pips at Y 212, left of the
+copyright. The live capture also showed both chevrons pointing inward; fixed. The
+first slide crossfaded the old and new names on top of each other ("EEN H.MARBLE");
+it is now sequential (old whips out, new eases in, 12 frames). The menu rises in after
+the wordmark lands, an early left/right reveals it at once, presses play S1
+`sfx_Switch` ($CD), and the selection survives title resets. Layout states were checked
+in offline composites of captured draw commands over the earlier live capture; the
+final build was not re-captured live, and the act-less card was checked by element
+inspection, not a render.
+
+Validation: `run_categories.py --base e2432a8d53 --run` selected the full ordinary
+suite (2958 classes) plus guards. Its only change-caused failures were ten
+`TestGameLoop` title-exit errors (a test module with no zone registry); `titleStartZone`
+now falls back to zone 0, and `TestGameLoop` (92), `TestInfiniteSonic` (62, 0 skipped),
+`TestModApiSignatureSurface` and the S1/S2 title-card tests pass. Unattributed to this
+change: S3K ROM-backed audio errors (the root S3K ROM's SHA-1 does not match the
+documented dump, so no path was supplied), and `TestRemainingRewindTailInventory`
+(1316 vs 1315 classes) plus the `TestObjectPhysicsStandardizationGuard` violation in
+`LrzFlameObjectInstance`, both reproduced unchanged on `e2432a8d53`.

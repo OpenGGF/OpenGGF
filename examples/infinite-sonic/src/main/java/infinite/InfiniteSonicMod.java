@@ -109,8 +109,20 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public TitleScreenProvider getTitleScreenProvider() {
             TitleScreenProvider stock = super.getTitleScreenProvider();
             if (stock == null) return null;
-            if (title == null || title.base() != stock) title = new TitleWordmark(stock);
+            if (title == null || title.base() != stock) title = new TitleWordmark(stock, courseZoneNames());
             return title;
+        }
+        private List<String> courseZoneNames() {
+            var registry = base().getZoneRegistry();
+            var names = new java.util.ArrayList<String>();
+            for (int zone = 0; zone < Math.min(COURSE_ZONES, registry.getZoneCount()); zone++) {
+                names.add(registry.getZoneName(zone));
+            }
+            return names;
+        }
+        // Each course zone is one endless run, so its title card drops "ACT n".
+        @Override public boolean showsTitleCardActNumber(int zoneIndex, int actIndex) {
+            return zoneIndex >= COURSE_ZONES && super.showsTitleCardActNumber(zoneIndex, actIndex);
         }
         @Override public LevelEventProvider getLevelEventProvider() {
             return active ? endlessEvents : super.getLevelEventProvider();

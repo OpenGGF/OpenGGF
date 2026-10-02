@@ -4,7 +4,7 @@ A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**. **Green Hi
 Act 1** starts the course, and every act of **Green Hill, Marble, Spring Yard,
 Labyrinth, Star Light and Scrap Brain** (use level select) becomes an endless course
 built from that act's own ROM terrain, art, background and music. Final Zone and the
-ending stay stock. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
+ending stay stock. The title screen's zone picker chooses where a new game begins. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
 The camera scrolls at a minimum of **75% of Sonic’s normal maximum run speed**,
 letting Sonic gain ground until his centre reaches 60% of the screen width, just right of centre.
 There the camera follows his position, keeping him on screen while preserving
@@ -16,8 +16,12 @@ second, **PRESS SPACE TO RESTART** (player 1 button A) starts a fresh run at 1×
 with score reset, rather than returning to the title screen.
 
 The Sonic 1 title screen gains an **INFINITE** wordmark above the emblem: once
-Sonic has risen it streaks in from the right, then glints every few seconds. It is
-drawn in code over the stock ROM title, which otherwise behaves normally.
+Sonic has risen it streaks in from the right, then glints every few seconds. Below the
+emblem, a zone picker rises in: press **left/right** to choose Green Hill, Marble,
+Spring Yard, Labyrinth, Star Light or Scrap Brain, then Start to begin that zone's
+course. The choice wraps around and is remembered when you return to the title. Both
+are drawn in code over the stock ROM title, which otherwise behaves normally. Course
+title cards show only the zone name (no "ACT n"), because each zone is a single endless run.
 
 The HUD shows score, current speed, time until the next speedup, and rings.
 The last five seconds also show a large centered countdown with a chime each

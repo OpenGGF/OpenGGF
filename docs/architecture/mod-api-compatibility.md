@@ -250,3 +250,9 @@ rate for interactive custom pacing, delegated through `DelegatingGameModule`.
 The host bounds it to 1–32 and releases ownership outside paced play. This is an
 additive change to the unpublished 0.7 candidate; the descriptor and
 `ModApiVersion` remain 0.7.0 and the normalized candidate pin is updated in place.
+
+`TitleScreenProvider.startZoneIndex()` (default 0) lets a title choose the zone a
+one-player exit starts on (act 0; out-of-range values start zone 0), and
+`GameModule.showsTitleCardActNumber(int, int)` (default true, delegated by
+`DelegatingGameModule`) lets a module hide the act number on Sonic 1 and Sonic 2
+title cards. Both are additive to the unpublished 0.7 candidate; the pin is updated in place.

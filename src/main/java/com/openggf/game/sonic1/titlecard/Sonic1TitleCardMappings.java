@@ -267,6 +267,9 @@ public final class Sonic1TitleCardMappings {
             { -128, 160, -412, 164, 876, 876, 364, 172 },
     };
 
+    /** Final Zone's oval target sits 8px right of its "ZONE" target ($12C - $124). */
+    public static final int FZ_OVAL_AFTER_ZONE = 8;
+
     // Y positions (screen coords) from Card_ItemData
     public static final int Y_ZONE_NAME = 80;  // $D0 - 128
     public static final int Y_ZONE_TEXT = 100;  // $E4 - 128

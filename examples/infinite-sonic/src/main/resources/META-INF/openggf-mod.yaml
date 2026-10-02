@@ -1,7 +1,7 @@
 formatVersion: 1
 id: infinite-sonic
 name: Infinite Sonic
-version: 0.8.0
+version: 0.9.0
 authors:
   - OpenGGF contributors
 description: Escalating auto-scroll survival generated from any Sonic 1 zone before Final Zone, with rings, pits, ledges, elevation changes, badniks and speed-based scoring.

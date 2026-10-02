@@ -220,6 +220,16 @@ public interface GameModule {
     }
 
     /**
+     * Whether the title card shows the act number for this zone/act. Games
+     * that already omit it (single-act zones, Sonic 1's Final Zone) still do;
+     * returning {@code false} also omits it for other acts. Honoured by the
+     * Sonic 1 and Sonic 2 title cards.
+     */
+    default boolean showsTitleCardActNumber(int zoneIndex, int actIndex) {
+        return true;
+    }
+
+    /**
      * Owner of the GAME OVER / TIME OVER card spawn for this game, or
      * {@code null} when the game has no such flow yet. See
      * {@link GameOverFlowProvider}.

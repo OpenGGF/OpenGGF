@@ -179,6 +179,13 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
 
         // Act number element (hidden for Final Zone where startX == targetX)
         boolean hideAct = Sonic1TitleCardMappings.shouldHideActNumber(currentZone, currentAct);
+        // A module that drops the act number elsewhere tucks the oval against
+        // "ZONE" the way Final Zone's Card_ConData row does, keeping its slide distance.
+        int ovalShift = 0;
+        if (!hideAct && !moduleShowsActNumber()) {
+            hideAct = true;
+            ovalShift = conData[3] + Sonic1TitleCardMappings.FZ_OVAL_AFTER_ZONE - conData[7];
+        }
         if (!hideAct) {
             int actFrame = Sonic1TitleCardMappings.getActFrame(currentAct);
             elements.add(new TitleCardElement(
@@ -191,7 +198,7 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
         // Oval decoration element
         elements.add(new TitleCardElement(
                 Sonic1TitleCardMappings.FRAME_OVAL,
-                conData[6], conData[7],
+                conData[6] + ovalShift, conData[7] + ovalShift,
                 Sonic1TitleCardMappings.Y_OVAL,
                 0, 0x40));
 
@@ -203,6 +210,12 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
         for (TitleCardElement element : elements) {
             element.setEdgeMargin(edgeMargin);
         }
+    }
+
+    private boolean moduleShowsActNumber() {
+        var session = SessionManager.getCurrentWorldSession();
+        var module = session != null ? session.getGameModule() : null;
+        return module == null || module.showsTitleCardActNumber(currentZone, currentAct);
     }
 
     private void loadArt() {

@@ -225,6 +225,59 @@ class TestInfiniteSonic {
         assertTrue(edge[0].length <= 320, "fits the native viewport");
     }
 
+    @Test void titleZoneMenuChoosesStartZoneAndCourseCardsDropActNumber() throws Exception {
+        launch(WidescreenAspect.values()[0]);
+        GameModule module = GameServices.module();
+        TitleScreenProvider title = module.getTitleScreenProvider();
+        assertEquals(0, title.startZoneIndex(), "Green Hill is the default start");
+        var menuAccessor = title.getClass().getDeclaredMethod("menu");
+        menuAccessor.setAccessible(true);
+        Object menu = menuAccessor.invoke(title);
+        var update = menu.getClass().getDeclaredMethod("update", com.openggf.control.InputHandler.class, boolean.class);
+        update.setAccessible(true);
+        var input = new com.openggf.control.InputHandler();
+        int left = com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT;
+        int right = com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT;
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(left, left, 0, 0, false, false), null));
+        update.invoke(menu, input, false);
+        assertEquals(0, title.startZoneIndex(), "presses are ignored until the title is interactive");
+        update.invoke(menu, input, true);
+        assertEquals(5, title.startZoneIndex(), "left wraps from Green Hill to Scrap Brain");
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(right, right, 0, 0, false, false), null));
+        update.invoke(menu, input, true);
+        update.invoke(menu, input, true);
+        assertEquals(1, title.startZoneIndex(), "right wraps back through Green Hill to Marble");
+        title.reset();
+        assertEquals(1, title.startZoneIndex(), "the choice survives a return to the title");
+
+        for (int zone = 0; zone < 6; zone++) {
+            assertFalse(module.showsTitleCardActNumber(zone, 0), "course zone " + zone + " drops ACT n");
+        }
+        assertTrue(module.showsTitleCardActNumber(6, 0), "Final Zone keeps stock card rules");
+
+        // The S1 card omits the act element and tucks the oval 8 px after "ZONE", as Final Zone does.
+        var card = module.getTitleCardProvider();
+        card.initialize(1, 1);
+        var elementsField = card.getClass().getDeclaredField("elements");
+        elementsField.setAccessible(true);
+        var elements = (List<?>) elementsField.get(card);
+        var frame = com.openggf.game.titlecard.TitleCardElement.class.getMethod("getFrameIndex");
+        var target = com.openggf.game.titlecard.TitleCardElement.class.getDeclaredField("targetX");
+        target.setAccessible(true);
+        var frames = new ArrayList<Integer>();
+        for (Object element : elements) frames.add((Integer) frame.invoke(element));
+        assertFalse(frames.contains(com.openggf.game.sonic1.titlecard.Sonic1TitleCardMappings.getActFrame(1)),
+                "no ACT 2 element: " + frames);
+        assertEquals(3, elements.size());
+        int zoneText = target.getInt(elements.get(frames.indexOf(
+                com.openggf.game.sonic1.titlecard.Sonic1TitleCardMappings.FRAME_ZONE)));
+        int oval = target.getInt(elements.get(frames.indexOf(
+                com.openggf.game.sonic1.titlecard.Sonic1TitleCardMappings.FRAME_OVAL)));
+        assertEquals(zoneText + 8, oval);
+    }
+
     private Object controller() {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(o -> o.getClass().getName().equals("infinite.CourseController")).findFirst().orElseThrow();
