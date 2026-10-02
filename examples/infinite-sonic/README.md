@@ -3,7 +3,7 @@
 A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**, then enter
 **Green Hill Act 1**. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
 The camera scrolls at a minimum of **75% of Sonic’s normal maximum run speed**,
-letting Sonic gain ground until his centre is 48 pixels from the right edge.
+letting Sonic gain ground until his centre reaches 60% of the screen width, just right of centre.
 There the camera follows his position, keeping him on screen while preserving
 his native running and jumping physics. Leaving the left edge
 completely ends the run, regardless of rings or invulnerability. Pits and lethal

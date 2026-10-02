@@ -279,7 +279,7 @@ class TestInfiniteSonic {
         int initialLead = 120;
         NativePositionOps.writeXPosResetSubpixel(player, 1000);
         fixture.camera().setX((short) (1000 - initialLead));
-        int margin = fixture.camera().getWidth() - 48;
+        int margin = fixture.camera().getWidth() * 60 / 100;
         boolean reachedMargin = false;
         // Real player integration and module pacing on each presentation frame.
         // Reset only height/vertical velocity to isolate scrolling from course obstacles.

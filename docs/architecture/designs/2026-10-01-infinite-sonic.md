@@ -168,7 +168,7 @@ and labels the HUD MAX SPEED. At high speeds machine throughput can limit delive
 
 The camera advances at least 4.5px per simulation tick, retaining fractional
 pixels and vertical tracking. Sonic can gain ground until his centre reaches a
-48px right-hand margin; the camera then follows his position. It follows world
+follow point at 60% of the viewport width (just right of centre); the camera then follows his position. It follows world
 recycling with Sonic. The initial velocity-matching policy at `841fb3d98b` consumed
 every burst of downhill speed immediately but still took away ground on slowdowns,
 preventing the player from rebuilding a lead. Position-based following removes

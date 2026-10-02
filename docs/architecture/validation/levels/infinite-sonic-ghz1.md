@@ -214,3 +214,16 @@ run: production changes are confined to this mod's camera policy, whose viewport
 pacing, terrain, score, death and rewind consumers are exercised by this class.
 This is not a full-suite pass or a new visual capture; earlier broad-suite failures
 and ROM coverage limits above remain unchanged. The SDK build/package also passed.
+
+
+### Follow point moved just right of centre
+
+Follow-up to `382ae02673`: the follow point is now 60% of viewport width rather
+than 48px from the right edge. The same five-width regression checks the new
+position, lead recovery and the 1.5× transition. Queued `-Dmse=off
+-Dtest=TestInfiniteSonic` with absolute S1 ROM path: **38 passed, zero failures,
+errors or skips**, 38.4 seconds Maven time; SDK packaging passed. The plan against
+that base again selects all 2,957 classes because examples are unclassified;
+proportionate focused validation applies to this isolated mod framing adjustment
+for the same reasons above. No engine timing or physics changes; no new visual
+capture. The local enabled/trusted jar was rebuilt and refreshed.
