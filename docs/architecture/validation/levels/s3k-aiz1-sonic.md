@@ -8,6 +8,27 @@ Continuation base: `35488abb6` on `feature/ai-gameplay-capture`.
 The reviewed input helpers and pilot come from `435ec2e68`; unrelated develop
 engine changes were not imported. This is a partial matrix, not level certification.
 
+## Level-entry camera follow-up (2026-10-02)
+
+`Get_LevelSizeStart/loc_1BF74` subtracts `$A0/$60` from its focus registers,
+clamps underflow to zero and then clamps to maximum bounds; it does not read
+minimum bounds. `TestSonic3kLevelStartCamera` covers the AIZ1 `$1300` camera
+origin below the unchanged `$1308` runtime minimum, zero/max edge cases and
+MHZ1's independent `$160` focus with checkpoint bypass. The production entry
+hook runs before initial object placement is reseeded. This adds no persistent
+state or rewind owner; existing camera snapshots own the resulting words.
+
+At base `67c850fc51`, the Knuckles full chain opening segment had 12,600 errors;
+the camera correction removes 34, leaving 12,566 and the unchanged first
+non-camera mismatch at row 446 (`y_speed`). The multibonus Knuckles opening
+segment drops from 18 errors to one at row 4545 (`camera_y`). Both chains remain
+red; these prefixes do not certify a route. Sonic/Tails/wide MHZ cold route
+checks and the existing AIZ skip/bootstrap/load/decoding checks passed in the
+focused regression batch (140 cases, zero skips). Other character/donor/viewport
+entry and restore/replay breadth remain inherited obligations. Unrelated
+ICZ1 Tails spawn/bounds overrides and CNZ/LRZ/DEZ/HPZ cold intro camera offsets
+remain outside this correction.
+
 ## Configuration inventory
 
 The representative row is native/off, 320px, Sonic with CPU Tails. Width axes

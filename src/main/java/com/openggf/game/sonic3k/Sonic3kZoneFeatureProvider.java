@@ -57,7 +57,15 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.LevelStartCameraPosition, com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+    @Override
+    public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
+                                           int zone, int act, boolean checkpoint) {
+        Sonic3kLevelStartCamera.initialize(camera, player.getCentreX(), player.getCentreY(),
+                "knuckles".equalsIgnoreCase(player.getCode()),
+                zone, act, checkpoint);
+    }
+
     @Override public java.util.OptionalInt lockedNativeHorizontalCamera() {
         if (!GameServices.hasRuntime()) return java.util.OptionalInt.empty();
         int zone = getFeatureZoneId();
