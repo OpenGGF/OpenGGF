@@ -159,6 +159,28 @@ class TestInfiniteSonic {
     }
 
 
+    @Test void titleWrapsStockScreenWithWordmarkAboveTheEmblem() throws Exception {
+        launch(WidescreenAspect.values()[0]);
+        TitleScreenProvider title = GameServices.module().getTitleScreenProvider();
+        assertEquals("infinite.TitleWordmark", title.getClass().getName());
+        assertSame(title, GameServices.module().getTitleScreenProvider(), "wrapper is cached");
+        var base = title.getClass().getDeclaredMethod("base");
+        base.setAccessible(true);
+        Object stock = base.invoke(title);
+        assertEquals("com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager", stock.getClass().getName());
+        assertEquals(((TitleScreenProvider) stock).getState(), title.getState());
+        var topField = title.getClass().getDeclaredField("TOP");
+        var edgeField = title.getClass().getDeclaredField("edge");
+        topField.setAccessible(true);
+        edgeField.setAccessible(true);
+        int top = topField.getInt(null);
+        boolean[][] edge = (boolean[][]) edgeField.get(title);
+        // The emblem and TitleSonic's head begin at screen Y 30. The outline starts
+        // 2 px above the letters and its shadow drops 3 px below it.
+        assertTrue(top - 2 >= 0 && top + 1 + edge.length <= 30, "wordmark band " + top + "+" + edge.length);
+        assertTrue(edge[0].length <= 320, "fits the native viewport");
+    }
+
     private Object controller() {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(o -> o.getClass().getName().equals("infinite.CourseController")).findFirst().orElseThrow();

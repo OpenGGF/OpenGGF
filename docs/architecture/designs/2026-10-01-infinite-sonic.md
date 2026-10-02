@@ -292,3 +292,28 @@ repeat the source's bottom chunk row instead of leaving empty space below.
 
 Enemy habitats now exclude every corridor, including pit-less ledges. Validation
 is focused on the mod, whose engine dependency is unchanged; see the matrix.
+
+## Title wordmark (0.7.0)
+
+Follow-up on `69600f49c5`, same branch, 2026-10-02. The request was an
+INFINITE label above SONIC on the title screen. The only clear band is above the
+emblem: the logo starts at screen Y 32, and TitleSonic's highest mapping
+piece (Y offset 8 from final Y `$96`) reaches Y 30. SONIC sits in the ribbon at
+about Y 103–140, and Sonic fills the ring between them. `TitleWordmark` wraps
+the stock `TitleScreenProvider` and delegates everything. After the stock draw,
+it flushes a screen-space pass of GL rects. The pass contains a 5×7 font at 3× with a 6px italic lean, a
+fire gradient with a chrome horizon row, a 2px navy outline and a 3px drop
+shadow. The band spans Y 2–30. It is centred on the projection width, so
+widescreen keeps it centred.
+
+The word appears 40 active frames after the title's fade-in, after Sonic rises.
+It slides in from the right with an ease-out-back overshoot, trailing speed
+streaks. A diagonal glint then crosses it every 180 frames, followed by a
+twinkle. It is not drawn during fade-in or the frozen level-select background.
+
+The first draft held its masks in static arrays. `ggfmod` validation rejected
+it (`STATIC_STATE_UNSUPPORTED`: only literal static constants are allowed), so
+the masks and gradient are now instance fields. The placement was checked against
+a ROM-decoded Plane A render, without Sonic's sprite or the GHZ background.
+`TestInfiniteSonic.titleWrapsStockScreenWithWordmarkAboveTheEmblem` pins the
+wrapper, delegation and band height. The animation was not checked in a live window.

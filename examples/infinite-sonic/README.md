@@ -12,6 +12,10 @@ The run ends on the mod's own GAME OVER text instead of the stock card; after a
 second, **PRESS SPACE TO RESTART** (player 1 button A) starts a fresh run at 1×
 with score reset, rather than returning to the title screen.
 
+The Sonic 1 title screen gains an **INFINITE** wordmark above the emblem: once
+Sonic has risen it streaks in from the right, then glints every few seconds. It is
+drawn in code over the stock ROM title, which otherwise behaves normally.
+
 The HUD shows score, current speed, time until the next speedup, and rings.
 The last five seconds also show a large centered countdown with a chime each
 second. Music and sound effects speed up and rise in pitch with the challenge;

@@ -1,7 +1,7 @@
 formatVersion: 1
 id: infinite-sonic
 name: Infinite Sonic
-version: 0.6.0
+version: 0.7.0
 authors:
   - OpenGGF contributors
 description: Escalating auto-scroll survival in Green Hill, with rings, pits, ledges, elevation changes, badniks and speed-based scoring.

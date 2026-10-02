@@ -61,6 +61,13 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public GameOverFlowProvider getGameOverFlowProvider() {
             return active ? courseGameOver : super.getGameOverFlowProvider();
         }
+        private TitleWordmark title;
+        @Override public TitleScreenProvider getTitleScreenProvider() {
+            TitleScreenProvider stock = super.getTitleScreenProvider();
+            if (stock == null) return null;
+            if (title == null || title.base() != stock) title = new TitleWordmark(stock);
+            return title;
+        }
         @Override public LevelEventProvider getLevelEventProvider() {
             return active ? endlessEvents : super.getLevelEventProvider();
         }
