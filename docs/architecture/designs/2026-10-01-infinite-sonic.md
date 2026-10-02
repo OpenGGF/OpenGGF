@@ -174,13 +174,20 @@ every burst of downhill speed immediately but still took away ground on slowdown
 preventing the player from rebuilding a lead. Position-based following removes
 that ratchet without changing Sonic’s physics or the whole-game pacing contract. A running start supplies the opening reaction buffer. If Sonic's right edge
 is left of the camera, or another lethal event kills him, the controller ends the
-run and clears remaining lives to enter the stock game-over flow. Rings and hit
+run and clears remaining lives so the death routine takes its game-over branch.
+The module replaces the S1 `GameOverFlowProvider` with one that only fades the
+music: no GAME/OVER card spawns, the corpse is held with no restart countdown,
+and nothing exits to the title or continue screen. After 60 frames the
+controller accepts a fresh player 1 A press and requests the ordinary
+death-restart reload; lives stay at zero until then so a still-falling corpse
+cannot queue a second restart. The reload re-enters `loadLevelOverride` (clock
+reset) and the new controller resets score and lives on its first frame. Rings and hit
 invulnerability cannot prevent scrolling failure. Scoring earns one point per
 minimum-scroll pixel, retaining fractional credit: 270 points per real second at
 1× and 405 at 1.5×. Death freezes challenge scoring, progression and scrolling.
 
 The mod suppresses the stock HUD and draws score, speed/countdown, rings and
-game-over text using code-drawn glyphs through the CPU presentation primitive path.
+game-over/restart text using code-drawn glyphs through the CPU presentation primitive path.
 It has no GPU-owned mutable state and ships no additional ROM or bitmap assets.
 
 A running-speed-only implementation was tried first while awaiting clarification,

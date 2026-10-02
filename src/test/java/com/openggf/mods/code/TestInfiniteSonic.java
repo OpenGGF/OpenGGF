@@ -264,6 +264,42 @@ class TestInfiniteSonic {
         assertEquals(cameraX, fixture.camera().getX());
     }
 
+    @Test void gameOverSkipsStockCardAndJumpRestartsTheCourse() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        setTicks(1800 * 2 + 100);
+        GameServices.gameState().addScore(500);
+        player.applyCrushDeath();
+        fixture.stepIdleFrames(1);
+        assertTrue(gameOver());
+        var restartReady = controller().getClass().getMethod("restartReady");
+        // Hold jump through the early frames: a press carried over from play must not restart.
+        for (int i = 0; i < 300; i++) fixture.stepFrame(false, false, false, false, i < 30);
+        assertTrue(player.getDead());
+        assertEquals(0, GameServices.gameState().getLives());
+        assertTrue((boolean) restartReady.invoke(controller()));
+        assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
+                .noneMatch(o -> o instanceof AbstractGameOverCardObjectInstance), "stock GAME OVER card replaced");
+        assertFalse(GameServices.level().isRespawnRequestedForRewind(), "corpse is held until the player restarts");
+        fixture.stepFrame(false, false, false, false, true);
+        // GameLoop consumes the request, fades out and runs the death-restart load.
+        assertTrue(GameServices.level().consumeRespawnRequest());
+
+        Object oldController = controller();
+        GameServices.level().restartCurrentLevelAfterDeath();
+        assertNotSame(oldController, controller());
+        // GameLoop runs the restart's title card before play resumes.
+        assertTrue(GameServices.level().consumeTitleCardRequest());
+        fixture.stepIdleFrames(2);
+        assertFalse(fixture.sprite().getDead());
+        assertFalse(gameOver());
+        assertEquals(1.0, speed());
+        assertTrue(ticks() < 10, "challenge clock restarts");
+        assertEquals(3, GameServices.gameState().getLives());
+        assertTrue(GameServices.gameState().getScore() < 100, "score restarts with the run");
+    }
+
     @Test void minimumScrollAllowsFasterRunningAndSurvivalScoreScales() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         fixture.stepIdleFrames(2);

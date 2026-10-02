@@ -70,6 +70,10 @@ public final class CourseHud {
         if (course.gameOver()) {
             String message = "GAME OVER";
             text(services, message, (services.camera().getWidth() - message.length() * 8) / 2, 96, true);
+            String prompt = "PRESS SPACE TO RESTART";
+            if (course.restartReady()) {
+                text(services, prompt, (services.camera().getWidth() - prompt.length() * 8) / 2, 120, true);
+            }
         }
     }
     private static void text(ObjectServices services, String text, int x, int y, boolean shadow) {

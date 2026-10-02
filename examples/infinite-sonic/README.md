@@ -8,6 +8,9 @@ There the camera follows his position, keeping him on screen while preserving
 his native running and jumping physics. Leaving the left edge
 completely ends the run, regardless of rings or invulnerability. Pits and lethal
 enemy hits also end the run. Collect ring rows to survive ordinary enemy hits.
+The run ends on the mod's own GAME OVER text instead of the stock card; after a
+second, **PRESS SPACE TO RESTART** (player 1 button A) starts a fresh run at 1×
+with score reset, rather than returning to the title screen.
 
 The HUD shows score, current speed, time until the next speedup, and rings.
 The last five seconds also show a large centered countdown with a chime each

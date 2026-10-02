@@ -12,11 +12,16 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private static final int NORMAL_RUN_SPEED = 0x600;
     private static final int MINIMUM_SCROLL = NORMAL_RUN_SPEED * 3 / 4;
     private static final int FOLLOW_PERCENT = 60;
+    // Ignore a jump already held while dying; about one second before a restart is accepted.
+    private static final int RESTART_DELAY_FRAMES = 60;
     private int scrollFraction;
     private int scoreFraction;
     private boolean started;
     private boolean gameOver;
+    private int gameOverFrames;
+    private boolean restartRequested;
     public boolean gameOver() { return gameOver; }
+    public boolean restartReady() { return gameOver && gameOverFrames >= RESTART_DELAY_FRAMES; }
     public double speedMultiplier() { return clock().displayMultiplier(); }
     public int secondsRemaining() { return clock().secondsRemaining(); }
     private long origin;
@@ -42,10 +47,12 @@ public final class CourseController extends AbstractObjectInstance implements Re
         if (player == null) return;
         services().levelGamestate().pauseTimer();
         services().levelManager().setForceHudSuppressed(true);
-        if (gameOver) return;
+        if (gameOver) { awaitRestart(player); return; }
         if (player.getDead()) { endRun(player); return; }
         if (!started) {
             started = true;
+            // Every run, including a restart after game over, begins from a fresh score.
+            services().gameState().resetSession();
             // A running start gives the player room to react before the scrolling edge arrives.
             player.setGSpeed((short) NORMAL_RUN_SPEED);
             player.setXSpeed((short) NORMAL_RUN_SPEED);
@@ -86,6 +93,18 @@ public final class CourseController extends AbstractObjectInstance implements Re
         clock().end();
         while (services().gameState().getLives() > 0) services().gameState().loseLife();
         player.applyCrushDeath();
+    }
+
+    private void awaitRestart(PlayableEntity player) {
+        if (!restartReady()) { gameOverFrames++; return; }
+        // Player 1 A, SPACE by default. Lives stay at zero until the reload so a
+        // corpse still falling cannot queue an ordinary death restart; the reload
+        // re-enters loadLevelOverride (clock reset) and a fresh controller.
+        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite
+                && sprite.isJumpJustPressed() && !restartRequested) {
+            restartRequested = true;
+            services().levelManager().requestRespawn();
+        }
     }
 
     private void recycleTerrain(PlayableEntity player) {

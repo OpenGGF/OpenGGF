@@ -54,6 +54,13 @@ public final class InfiniteSonicMod implements GgfMod {
             library = new TerrainLibrary(original);
             return com.openggf.level.MutableLevel.snapshot(new InfiniteLevel(original, library));
         }
+        // The course draws its own GAME OVER and restart prompt, so replace the
+        // stock card pair. Returning a provider (rather than null) still lets the
+        // death routine hold the corpse with no restart countdown.
+        private final GameOverFlowProvider courseGameOver = (services, timeOver) -> services.fadeOutMusic();
+        @Override public GameOverFlowProvider getGameOverFlowProvider() {
+            return active ? courseGameOver : super.getGameOverFlowProvider();
+        }
         @Override public LevelEventProvider getLevelEventProvider() {
             return active ? endlessEvents : super.getLevelEventProvider();
         }
