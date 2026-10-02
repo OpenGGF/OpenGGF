@@ -5014,3 +5014,17 @@ on develop, 2026-09-30, based on `39645745aa`.
 Preserve the upper word through zero; testing a Java int after an unrestricted
 addition instead reverses the slope. Exact intact-to-fragment ROM tile-set
 comparison across both collapse sides and flips exposes this width error.
+
+
+## Raw animation callbacks observe the advanced counter
+
+`SSEntryFlash_Main` saves the old mapping, calls `Animate_RawAdjustFlipX`,
+then checks the changed mapping and `anim_frame == 3`. The animator increments
+its counter before publishing the mapping. Checking that counter before the
+call delays the parent's deletion flag by one dispatch without changing the
+flash's final 43-dispatch transition. The ring consumes the flag in its own
+SST order and submits explosion-art restoration through `loc_6196A`; therefore
+an animation-order bug can first appear as a Kosinski queue mismatch while
+all player motion still agrees. Preserve both animator/callback ordering and
+producer/consumer slot ordering. Origin: S3K trace-green campaign, 2026-10-02,
+Knuckles AIZ entry-ring frontier at row 1615, integration base `86c24c1040`.

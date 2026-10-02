@@ -488,8 +488,21 @@ The accompanying `TestS3kKnucklesSuperEmeraldRunChain` command used
 `-Ptrace-replay-r7 -Dsurefire.forkCount=1` and the verified locked-on ROM via
 an absolute `s3k.rom.path`. Its first non-camera disagreement advanced from
 row446 `y_speed` to row1615 `queue.s3k_kos_direct.busy`. Segment0 still reports
-41 errors including inherited camera differences, and the giant-ring exit
-boundary is not observed. This is a local object/timing improvement, not a green
+41 errors including inherited camera differences. The chain enters the special
+stage and exhausts its return interval at destination 8423. This is a local object/timing improvement, not a green
 Knuckles route or Sonic-route revalidation. The full width/donor/team route
 cross-product and object-graph recreation remain inherited gaps; the independent
 local regression covers scalar restore and forward replay.
+
+
+### Entry-flash callback and rewind (2026-10-02)
+
+`SSEntryFlash_Main` observes the animation counter after the raw animator
+advances it. The parent-ring deletion edge now has an independent regression
+and a recreated-object-graph restore/replay check. Focused formation and graph
+classes pass 29 cases without skips; the existing Sonic+Tails AIZ-to-special-stage
+prefix also passes. On campaign base `86c24c1040` plus this correction, Knuckles
+segment0 has 34 opening-camera errors and no non-camera mismatches (previously
+41 including row1615 explosion-art queue state). Its later return still fails
+at8423. This covers the native ring/flash edge, not the inherited width/donor/team
+route breadth or rendered-pixel equivalence.

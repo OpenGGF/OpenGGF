@@ -111805,10 +111805,24 @@ Campaign `bugfix/ai-trace-s3k-green`, integration `7e256310e4`, worker
 `TestS3kKnucklesSuperEmeraldRunChain` segment 0 from 12,600 errors / row 446
 `y_speed` to 41 errors / row 1615 `queue.s3k_kos_direct.busy` on the worker
 without camera changes. The chain reaches the uncompared interior and exhausts
-the return interval at destination 8423. Queued
-`-Dmse=off -Ptrace-replay
+the return interval at destination 8423. Worker queued selection
+`-Dmse=off
 -Dtest=TestMonkeyDudeBadnikInstance,TestS3kKnucklesSuperEmeraldRunChain
 -Ds3k.rom.path=<verified reference> test`: object regression 3 passed, chain
 failed; required S3K checks 59 passed, no skips. Combined regression pending.
 See the [campaign audit](../architecture/audits/2026-10-02-s3k-trace-green-campaign.md)
 for the rejected timer-only experiment and camera-bootstrap review.
+
+
+### 2026-10-02 — Entry-flash deletion callback
+
+Campaign worktree `.worktrees/trace-s3k-green`, base `86c24c1040` plus the
+source-backed `SSEntryFlash_Main` callback correction: queued `-Dmse=off
+-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestSonic3kSSEntryRingFormation,TestS3kSsEntryFlashGraphRewind,TestS3kKnucklesSuperEmeraldRunChain,TestS3kSonicTailsCompleteEmeraldRunPrefix
+-Ds3k.rom.path=<verified reference> test` completed 31 cases, 30 passed,
+one known Knuckles return failure at 8423, zero errors/skips. Knuckles segment0
+41→34 errors; row1615 queue mismatch removed, only opening camera X remains
+(first row0). Sonic+Tails prefix remains green. The independent new callback
+regression fails before the correction; object and graph checks pass29 after.
+Combined campaign/cross-game validation remains pending.

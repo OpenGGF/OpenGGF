@@ -176,10 +176,63 @@ non-camera disagreement at row 1615 `queue.s3k_kos_direct.busy`, versus baseline
 errors are included. The chain now reaches the uncompared interior and exhausts
 the return interval at destination 8423.
 
-Worker commands `maven_queue.py -Dmse=off -Ptrace-replay
+Worker selection `maven_queue.py -Dmse=off
 -Dtest=TestMonkeyDudeBadnikInstance,TestS3kKnucklesSuperEmeraldRunChain
 -Ds3k.rom.path=<reference> test` exercised three passing object regressions
 (including offscreen continuation and restore) plus the still-failing chain.
 The required S3K initialization/loading/bootstrap/decoding selection then passed
 59 cases with zero skips. These are focused results on the worker commit;
-combined campaign and cross-game verification remain outstanding.
+combined campaign and cross-game verification remain outstanding. The retained
+worker XML confirms the selector but not its Maven profile; the worker matrix
+records `trace-replay-r7`. Root independently reproduced the 41-error segment
+and return failure at 8423 using explicit `-Ptrace-replay` on `86c24c1040`
+plus a temporary observation-only flash probe, removed after measurement.
+
+
+## Native results/return phase partition
+
+Worker `c0ac004516` models the native sixty-VBlank `Demo_timer` exit instead
+of waiting for the player spin's 96-tick timer plus a generic fade. It also
+restores title resource ownership and the later 22-tick gameplay tail. Its
+focused GameLoop/initial lifecycle/snapshot/title batches pass 93/19/8/10 cases
+respectively, with no skips; combined trace verification is separate.
+
+Native BizHawk captures using the verified reference and original BK2 live at
+`$HOME/captures/s3k-special-return-20261002/native3/` and `native4/`.
+The first two captures used a stale recorder alias for Kosinski RAM and their
+Kosinski columns are invalid. The corrected locked-on addresses are `$FF60`
+for modules-left and `$FF64` for the module queue; `$FF04` was not authoritative.
+Independently verified mode/title/Nemesis fields remain useful. The measurement
+hazard is recorded in the existing briefing catalogue by the worker.
+
+Corrected observations: results resources drain at movie row 7411, owner
+installation/init occurs at 7412/7413, return title owner appears at 8687,
+title archives drain by 8696 and child creation occurs at 8697. Children reach
+idle at 8726; Nemesis finishes at 8767; terrain KosM work drains at 8793.
+The remaining interval is not an inferred title or palette wait:
+`LoadLevelLoadBlock2` directly decompresses blocks/chunks through `Kos_Decomp`
+at 8793–8812, then `Setup_TileRowDraw`/`VInt_VRAMWrite` fill tile planes at
+8813–8816. Mode LEVEL and title timer 22 appear at 8817 (still a lag row);
+the first level iteration follows at 8818. Existing per-row lag admission
+must preserve these CPU-work intervals without introducing a fitted 24-tick
+countdown. These observations supply evidence, never gameplay state.
+
+
+## Entry-flash callback order
+
+On `86c24c1040` plus the flash correction, queued `-Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1
+-Dtest=TestSonic3kSSEntryRingFormation,TestS3kSsEntryFlashGraphRewind,TestS3kKnucklesSuperEmeraldRunChain,TestS3kSonicTailsCompleteEmeraldRunPrefix
+-Ds3k.rom.path=<reference> test` completed 31 cases: 30 pass, one known Knuckles
+return failure at 8423, no errors/skips. The initial queue request was terminated
+143 before Maven started; only the completed retry is validation evidence.
+
+`SSEntryFlash_Main` calls `Animate_RawAdjustFlipX` before inspecting its advanced
+counter and changed mapping. Java previously inspected the old index. A new
+independent regression failed on the old implementation because the parent was
+not marked on its third animation advance. The corrected object/graph suites
+pass 25+4 cases, including recreation and replay across the deletion edge.
+Knuckles segment-zero errors fall 41→34, all remaining errors being opening
+camera X; no non-camera mismatch remains. Sonic+Tails' existing giant-ring
+prefix stays green with zero opening-segment errors. The flash completion still
+uses 43 object dispatches; no transition wait or recorded input changed.

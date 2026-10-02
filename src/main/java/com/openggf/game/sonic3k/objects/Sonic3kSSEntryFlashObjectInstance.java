@@ -153,20 +153,23 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     }
 
     private void updateAnimation() {
-        // Check for ring deletion trigger (ROM: at anim_frame == 3)
-        if (animIndex == RING_DELETE_ANIM_INDEX && !ringDeleteTriggered) {
+        int previousMappingFrame = ANIM_FRAMES[animIndex];
+        // SSEntryFlash_Main calls Animate_RawAdjustFlipX before testing the
+        // changed mapping and anim_frame == 3. Its counter names the newly
+        // published frame, not the frame from the preceding object dispatch.
+        animIndex++;
+        if (animIndex >= ANIM_FRAMES.length) {
+            // SSEntryFlash_Finished replaces the operation with Obj_Wait.
+            state = State.WAITING;
+            waitTimer = POST_ANIM_WAIT;
+            return;
+        }
+        if (ANIM_FRAMES[animIndex] != previousMappingFrame
+                && animIndex == RING_DELETE_ANIM_INDEX && !ringDeleteTriggered) {
             ringDeleteTriggered = true;
             if (parentRing != null) {
                 parentRing.markForDeletion();
             }
-        }
-
-        animIndex++;
-        if (animIndex >= ANIM_FRAMES.length) {
-            // Animation complete → enter wait state
-            // ROM: SSEntryFlash_Finished → Obj_Wait with $20 frames
-            state = State.WAITING;
-            waitTimer = POST_ANIM_WAIT;
         }
     }
 

@@ -597,7 +597,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. Offscreen giant rings wait
-  for art-queue capacity when wider visibility overlaps startup loading. MHZ end-boss debris
+  for art-queue capacity when wider visibility overlaps startup loading. Entry flashes
+  retire their parent rings after the native animation advance, restoring explosion
+  art on the correct object pass. MHZ end-boss debris
   retains the ROM trajectory when the boss faces left, and Madmole’s submerged
   body keeps its final collision position until the ROM’s deferred deletion.
   The MHZ endboss chase and ship departure use native arena coordinates at every
