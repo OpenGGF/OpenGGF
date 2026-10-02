@@ -148,7 +148,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   emerald and, once all seven are held, announces "NOW SONIC CAN BE HYPER SONIC"; the
   small Chaos Emerald indicators only show emeralds that have not been converted. Results
   wait for their ROM art queues before the tally begins, and their post-tally and
-  continue timers preserve the native same-pass countdown. Leaving any S3K special-stage results screen now fades to black without the stage
+  continue timers preserve the native same-pass countdown. The 5,000-point perfect bonus
+  requires collecting every ring, independently of earning the emerald, so non-perfect
+  clears return without an extra tally. Leaving any S3K special-stage results screen now fades to black without the stage
   transition sound, as in the ROM, instead of fading to white.
 - **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it
   at a quarter of the camera speed, cycle their console and panel colours, and animate their
