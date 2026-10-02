@@ -195,4 +195,31 @@ class TestS3kSpecialStageResultsTally {
         assertEquals(490, screen.ringBonusForTest(),
                 "First tally frame removes 10 from the 500 ring bonus");
     }
+    @Test
+    void chaosContinueTimersFallThroughOnTheTallyAndIconCreationPasses() {
+        S3kSpecialStageResultsScreen screen = screen(50, false, 0);
+        // 1 initialization + 360 pre-tally + 50 tally updates. On update 412,
+        // loc_2E4C4 stores 120 and falls through to loc_2E4D6, leaving 119.
+        for (int frame = 1; frame <= 531; frame++) screen.update(frame, null);
+        assertFalse(screen.continueIconShownForTest());
+        screen.update(532, null); // timer was zero: create icon, store 270, decrement to 269
+        assertTrue(screen.continueIconShownForTest());
+        for (int frame = 533; frame <= 801; frame++) screen.update(frame, null);
+        assertFalse(screen.isComplete(), "the update reaching timer zero still returns");
+        screen.update(802, null);
+        assertTrue(screen.isComplete());
+    }
+
+    @Test
+    void belowContinueThresholdCarriesThePostTallyTimerIntoRoutineSix() {
+        S3kSpecialStageResultsScreen screen = screen(0, false, 0);
+        // Zero bonuses: update 362 takes loc_2E4C4 -> loc_2E50E -> loc_2E534,
+        // retaining the 120 timer and consuming its first tick on the same pass.
+        for (int frame = 1; frame <= 481; frame++) screen.update(frame, null);
+        assertFalse(screen.isComplete());
+        assertFalse(screen.continueIconShownForTest());
+        screen.update(482, null);
+        assertTrue(screen.isComplete());
+    }
+
 }
