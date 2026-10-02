@@ -1,7 +1,10 @@
 # Infinite Sonic — GHZ1 solo Sonic prototype coverage
 
-This mod replaces stock GHZ1 (registry zone 0, act 0, level ID `0x80`) only when
-its explicit patch activates for solo Sonic. It is an endless terrain course, not a
+This mod replaced stock GHZ1 (registry zone 0, act 0, level ID `0x80`) only when
+its explicit patch activates for solo Sonic. Since 0.8.0 it replaces every act of
+registry zones 0–5 (GHZ, MZ, SYZ, LZ, SLZ, SBZ including SBZ3); Final Zone and the
+ending remain stock. The GHZ1 rows below remain the deep coverage; the per-act row
+covers the other zones. It is an endless terrain course, not a
 new stock act. [Design and decisions](../../designs/2026-10-01-infinite-sonic.md).
 
 | Contract | Evidence | Scope / gaps |
@@ -10,7 +13,8 @@ new stock act. [Design and decisions](../../designs/2026-10-01-infinite-sonic.md
 | Entry and traversal | `protectedTraversalPreservesEncountersAcrossRebaseAndReplay` uses explicit test-only invulnerability, 1× clock resets and camera recentering to isolate terrain; runs Right with gap/wall-aware Jump input for 6,000 frames, asserts no death and at least four world rebases | All five current `WidescreenAspect` presets: 320, 352, 400, 528, 800; resolved camera width asserted |
 | Rewind at world recycling | Same test captures the full registry, runs 800 frames across recycling, restores and replays | Compares X/Y, fractional X, ground speed entire map, enemy state and occupied object slots; native donor/off; does not test GameLoop's interactive history recorder |
 | Backtracking | Same terrain-only setup runs Left with gap/wall-aware Jump input for 1,800 frames, climbing ledge drops in reverse and proves reverse rebasing; normal challenge backtracking can be fatal | Same five widths |
-| Fresh reload / act isolation | `freshReloadResetsTheCourseAndOtherActsRemainStock` loads GHZ2, checks stock placements, reloads GHZ1 and checks original generated layout | 320px; physical death/respawn and live-history reset not yet covered |
+| Every pre-Final act (0.8.0) | `everyZoneActBuildsATraversableDryCourse` runs all 18 registry acts of zones 0–5: block budget, controller-only placement, no water, course start on the flat opening, 3,000 protected Right/Jump frames without death and at least two rebases | 320px only; damage, attacks, rewind and jump-reach physics are GHZ1-only; terrain renders reviewed offline (no GPU, no sprites) |
+| Fresh reload / act isolation | `freshReloadResetsTheCourseAndFinalZoneRemainsStock` loads Final Zone, checks stock placements, reloads GHZ1 and checks original generated layout | 320px; physical death/respawn and live-history reset not yet covered |
 | Character/team scope | `patchOnlyActivatesForSoloSonic` checks solo Sonic, solo Tails, Sonic+Tails and wrong-game selection | Other teams/characters use stock GHZ, by explicit activation policy |
 | Install/registration | Local production scanner, state/trust handling and restricted classloader registration check | IntelliJ default project-root working directory; enabled local jar |
 | Art and presentation | Reuses ROM pipeline; mirrored chunks and stock GHZ background | Native-width opening/HUD rendered in 0.4; background seam continuity at recycling and other-width GPU review remain open |
@@ -354,3 +358,17 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
 **41 passed, 0 failures, 0 skipped.** The engine is unchanged, so no engine
 category run was needed. Gameplay rendering of ledges and raised tiers has not
 been visually reviewed.
+
+## Every zone before Final Zone (0.8.0, 2026-10-02)
+
+Main checkout, `feature/ai-infinite-sonic`, base `bb62addc50`. Focused validation of
+the mod only (engine unchanged), with the S1 REV01 ROM, using the command above:
+**61 passed, 0 failures, 0 skipped** (35 s), including 18 per-act course runs.
+`build.py` packaged the 0.8.0 jar through `ggfmod` validation.
+
+A temporary test-side CPU render of each act's generated planes (world X 0–2560,
+Y 512–1280, with the terrain oracle overlaid) was reviewed for all 18 acts. It
+caught MZ lava chosen as ground (fixed, see the design record). Backgrounds were
+drawn without parallax, so this is a terrain review, not presentation evidence.
+Not covered outside GHZ1: damage, attacks, rewind/replay, backtracking, jump reach,
+non-native widths and live GPU presentation.

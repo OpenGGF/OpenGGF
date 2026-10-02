@@ -10,8 +10,8 @@ and explicitly kept the zero-ring challenge. Terrain prototype commit: `ff18f7ff
 
 The independent source project is [examples/infinite-sonic](../../../examples/infinite-sonic/README.md).
 Its owner-scoped registration contributes a Sonic 1 patch and a namespaced invisible
-controller. Only solo Sonic activates the terrain patch, and only GHZ1's registry
-level identifier is replaced. Other acts retain their stock events and layouts.
+controller. Only solo Sonic activates the terrain patch. Until 0.8.0 only GHZ1's registry
+level identifier was replaced; see the 0.8.0 section for every pre-Final act.
 Versions 0.1–0.3 left the existing Mod API and engine source unchanged; 0.4 adds
 the opt-in whole-game pacing hook described below.
 
@@ -317,3 +317,63 @@ the masks and gradient are now instance fields. The placement was checked agains
 a ROM-decoded Plane A render, without Sonic's sprite or the GHZ background.
 `TestInfiniteSonic.titleWrapsStockScreenWithWordmarkAboveTheEmblem` pins the
 wrapper, delegation and band height. The animation was not checked in a live window.
+
+## Every zone before Final Zone (0.8.0)
+
+Follow-up on `bb62addc50`, same branch and checkout, 2026-10-02. The request was
+support for every other Sonic 1 zone except Final Zone. Every act of registry zones
+0–5 (GHZ, MZ, SYZ, LZ, SLZ, SBZ, including SBZ3's LZ layout) now loads the course;
+zone 6 (Final Zone) and the ending stay stock. Each act builds its library from its
+own decoded layout, so art, chunks, collision, background, palette cycles and music
+are that zone's. All acts of a zone share a tileset; merging their layouts was not
+attempted because loading sibling levels from the override has unverified side effects.
+
+A probe of the 0.7.0 scanner built only GHZ1, SYZ1, SYZ3 and SLZ2. It required the
+*topmost* floor of a whole 256px column and assumed GHZ's seam residue, and the
+other zones' tunnels, ceilings and deeper layouts defeat both. The generalised scan:
+
+- Traces every standable surface (floor-capable solid pixel with open space above) in
+  each column, following it with at most 4px change per pixel. A section must keep
+  `CLEARANCE` = 112px of collision-free space above its floor at every X. Content
+  above that window is copied unchanged and may be solid, so the encounter regression
+  now scans down from `floor - CLEARANCE` rather than from the column top.
+- Picks the seam residue (floor Y mod 16) with a flat jump bank and the most
+  candidates. Sections still move by whole 16px chunk rows. Seam = 960 + residue.
+- Compacts the background to the source blocks its layer actually uses (4–13), not
+  the whole source block bank. That raises the generated-foreground budget from 173 to
+  243–252 slots. Ground sections are now budget-checked as well as raised tiers.
+- Caps the course at six 256px rows (camera limit 1536) and always clears jump-bank
+  scenery above `BANK_CLEARANCE` (176px). Without both, MZ3, SYZ2 and SBZ1 overflowed
+  the 256-entry index on their 8-row bank cut variants alone.
+- Makes section 0 a flat bank. A zone's first hill candidate could otherwise put the
+  start inside a slope.
+
+GHZ terrain changes as a result. The seam residue becomes 0 (seam 960, formerly 963),
+and its tiers have more shapes. The seeded rules for corridors, tiers, encounters and
+rings are unchanged.
+
+Course start: the stock descriptors put Sonic at each act's own start (e.g. SBZ3 at
+X=2944, Y=0). `CourseZones` delegates the stock registry but returns course
+descriptors whose start resolves lazily to (80, seam − 19). The level manager captures
+the descriptor before loading and reads its start after the override has built the
+library. A first-frame teleport from the controller was rejected because the camera
+and the first title-card frames would already use the stock start.
+
+Water: the S1 zone feature provider only owns LZ/SBZ3 water. It handles dynamic
+heights, wind tunnels and water slides, and its tunnels and slides match ROM layout
+block IDs (`Slide_Chunks`) that generated blocks reuse for unrelated terrain. Underwater
+top speed is also below the minimum scroll. The course therefore returns a dry
+`CourseFeatures` provider (it keeps S1's horizontal background wrapping) and a
+`WaterDataProvider` wrapper reporting no water. GHZ/SLZ loop handling stays inert
+because `Sonic1LoopManager` only acts on a `Sonic1Level`.
+
+Lava: MZ lava tiles are ordinary solid collision. The damage comes from invisible
+object $54 (`LTag_Main`, hurt sizes $14–$16), which the course never spawns. An offline
+render showed lava chosen as MZ flat banks and hill sections. Candidates covered by a
+stock Lava Tag (±$80 horizontally, ±$30 vertically) are now rejected. Lava still shows
+beneath some grass ledges, as in the stock zone, but is never walkable.
+
+Enemies stay Motobug/Buzz Bomber; `Sonic1ObjectArtProvider` loads both in every zone,
+on palette line 0. Zone-native badniks would be a separate follow-up. Validation:
+see the coverage matrix's 0.8.0 section.
+

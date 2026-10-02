@@ -32,10 +32,26 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public GameModule apply(GameModule base, PatchContext context) { return new Module(base); }
     }
 
+    /** Registry zones 0-5: GHZ, MZ, SYZ, LZ, SLZ and SBZ. Final Zone (6) and the ending stay stock. */
+    static final int COURSE_ZONES = 6;
+
+    /** The course has no water; the stock provider still supplies palettes for other levels. */
+    private record DryWater(WaterDataProvider stock) implements WaterDataProvider {
+        @Override public boolean hasWater(int zoneId, int actId, PlayerCharacter character) { return false; }
+        @Override public int getStartingWaterLevel(int zoneId, int actId) { return stock.getStartingWaterLevel(zoneId, actId); }
+        @Override public com.openggf.level.Palette[] getUnderwaterPalette(Rom rom, int zoneId, int actId, PlayerCharacter character) {
+            return stock.getUnderwaterPalette(rom, zoneId, actId, character);
+        }
+        @Override public DynamicWaterHandler getDynamicHandler(int zoneId, int actId, PlayerCharacter character) { return null; }
+    }
+
     public static final class Module extends DelegatingGameModule {
         private Game game;
         private TerrainLibrary library;
         private boolean active;
+        private int activeIndex = -1;
+        private CourseZones zones;
+        private final CourseFeatures dryFeatures = new CourseFeatures();
         private final ChallengeClock clock = new ChallengeClock();
         private final LevelEventProvider endlessEvents = new LevelEventProvider() {
             @Override public void initLevel(int zone, int act) { }
@@ -46,13 +62,41 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public Game createGame(com.openggf.game.GameDataSource source) {
             return game = super.createGame(source);
         }
+        /** True for every act of GHZ, MZ, SYZ, LZ, SLZ and SBZ (including SBZ3's LZ layout). */
+        private boolean courseLevel(int index) {
+            var registry = base().getZoneRegistry();
+            for (int zone = 0; zone < Math.min(COURSE_ZONES, registry.getZoneCount()); zone++) {
+                for (var act : registry.getLevelDataForZone(zone)) {
+                    if (act.levelIndex() == index) return true;
+                }
+            }
+            return false;
+        }
         @Override public Level loadLevelOverride(int index) throws IOException {
-            active = index == base().getZoneRegistry().getLevelDataForZone(0).getFirst().levelIndex();
+            active = courseLevel(index);
+            activeIndex = active ? index : -1;
+            library = null;
             clock.reset();
             if (!active) return super.loadLevelOverride(index);
             Level original = game.loadLevel(index);
             library = new TerrainLibrary(original);
             return com.openggf.level.MutableLevel.snapshot(new InfiniteLevel(original, library));
+        }
+        // Sonic's 19px standing radius puts his centre above the seam floor.
+        private int courseStartY(int index) {
+            return index == activeIndex && library != null ? library.seam() - 19 : -1;
+        }
+        @Override public ZoneRegistry getZoneRegistry() {
+            ZoneRegistry stock = super.getZoneRegistry();
+            if (zones == null || zones.base() != stock) zones = new CourseZones(stock, COURSE_ZONES, this::courseStartY);
+            return zones;
+        }
+        @Override public ZoneFeatureProvider getZoneFeatureProvider() {
+            return active ? dryFeatures : super.getZoneFeatureProvider();
+        }
+        @Override public WaterDataProvider getWaterDataProvider() {
+            WaterDataProvider stock = super.getWaterDataProvider();
+            return active && stock != null ? new DryWater(stock) : stock;
         }
         // The course draws its own GAME OVER and restart prompt, so replace the
         // stock card pair. Returning a provider (rather than null) still lets the

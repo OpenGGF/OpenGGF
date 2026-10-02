@@ -52,6 +52,10 @@ class TestInfiniteSonic {
     @AfterEach void closeSession() { if (bootstrap != null) bootstrap.dispose(); }
 
     private HeadlessTestFixture launch(WidescreenAspect aspect) throws Exception {
+        return launch(aspect, 0, 0);
+    }
+
+    private HeadlessTestFixture launch(WidescreenAspect aspect, int zone, int act) throws Exception {
         bootstrap = SharedLevel.load(SonicGame.SONIC_1, 0, 0);
         var config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
@@ -69,7 +73,7 @@ class TestInfiniteSonic {
             GameModuleRegistry.setCurrent(effective);
             TestEnvironment.activeGameplayMode();
         }
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(zone, act).build();
         GameServices.level().getObjectManager().setRewindClassResolver(new RewindClassResolver() {
             @Override public Optional<Class<?>> resolve(String owner, String name) {
                 try { return Optional.of(name.startsWith("infinite.") ? loader.loadClass(name) : Class.forName(name)); }
@@ -137,12 +141,52 @@ class TestInfiniteSonic {
         assertTrue(backwardsRebases > 0, "backtracking crosses the recycle boundary");
     }
 
-    @Test void freshReloadResetsTheCourseAndOtherActsRemainStock() throws Exception {
+    /** Registry zones 0-5 (GHZ, MZ, SYZ, LZ, SLZ, SBZ), every act, including SBZ3's LZ layout. */
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> courseActs() {
+        var acts = new ArrayList<org.junit.jupiter.params.provider.Arguments>();
+        for (int zone = 0; zone < 6; zone++) {
+            for (int act = 0; act < 3; act++) acts.add(org.junit.jupiter.params.provider.Arguments.of(zone, act));
+        }
+        return acts.stream();
+    }
+
+    @ParameterizedTest(name = "zone {0} act {1}")
+    @org.junit.jupiter.params.provider.MethodSource("courseActs")
+    void everyZoneActBuildsATraversableDryCourse(int zone, int act) throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3, zone, act);
+        Level level = GameServices.level().getCurrentLevel();
+        assertTrue(level.getBlockCount() <= 256, "byte layout block budget");
+        assertEquals(1, level.getObjects().size(), "the course controller replaces stock placement");
+        assertTrue(level.getRings().isEmpty());
+        assertFalse(GameServices.level().getZoneFeatureProvider().hasWater(level.getZoneIndex()));
+        int seam = (int) terrain().getClass().getMethod("seam").invoke(terrain());
+        assertEquals(80, fixture.sprite().getCentreX(), "course start replaces the stock start");
+        // Start Y is seam - 19 (standing radius); spawn placement may settle it a pixel higher.
+        assertTrue(Math.abs(fixture.sprite().getCentreY() - (seam - 19)) <= 1,
+                "standing on the flat opening: y=" + fixture.sprite().getCentreY() + ", seam=" + seam);
+        fixture.stepIdleFrames(2);
+        assertFalse(fixture.sprite().getAir());
+        fixture.sprite().setInvulnerableFrames(20000);
+        int rebases = 0;
+        int previous = fixture.sprite().getCentreX();
+        for (int i = 0; i < 3000; i++) {
+            stepTerrain(fixture, 1);
+            int x = fixture.sprite().getCentreX();
+            if (previous - x > 4000) rebases++;
+            assertFalse(fixture.sprite().getDead(), "death at frame " + i + ", x=" + x
+                    + ", y=" + fixture.sprite().getCentreY() + ", origin=" + originPixels());
+            assertFalse(fixture.sprite().isInWater(), "frame " + i);
+            previous = x;
+        }
+        assertTrue(rebases >= 2, "must traverse several windows; got " + rebases + ", x=" + previous);
+    }
+
+    @Test void freshReloadResetsTheCourseAndFinalZoneRemainsStock() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         byte[] initial = GameServices.level().getCurrentLevel().getMap().getData().clone();
         fixture.stepIdleFrames(2);
         assertTrue(GameServices.level().getLevelGamestate().isTimerPaused());
-        GameServices.level().loadZoneAndAct(0, 1);
+        GameServices.level().loadZoneAndAct(6, 0);
         assertTrue(GameServices.level().getCurrentLevel().getObjects().size() > 1);
         GameServices.level().loadZoneAndAct(0, 0);
         assertArrayEquals(initial, GameServices.level().getCurrentLevel().getMap().getData());
@@ -654,9 +698,12 @@ class TestInfiniteSonic {
         assertTrue(ground > 50 && air > 50 && empty > 50, ground + "/" + air + "/" + empty);
         // Independent decoded collision scan verifies cached floor profiles against the actual map.
         Level level = GameServices.level().getCurrentLevel();
-        var scan = terrain().getClass().getMethod("floor", Level.class, int.class, int.class);
+        // Sections keep CLEARANCE open above their floor; scenery above that may be solid.
+        var scan = terrain().getClass().getMethod("floorBelow", Level.class, int.class, int.class, int.class);
+        int clearance = terrain().getClass().getField("CLEARANCE").getInt(null);
         for (int x = 0; x < 16384; x += 3) {
-            assertEquals((int) scan.invoke(null, level, x / 256, x % 256), floorAt(x));
+            int floor = floorAt(x);
+            assertEquals((int) scan.invoke(null, level, x / 256, x % 256, floor < 0 ? 0 : floor - clearance), floor);
         }
     }
 

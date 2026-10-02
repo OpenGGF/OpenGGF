@@ -2,7 +2,9 @@ package infinite;
 
 import com.openggf.level.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.TreeSet;
 
 /** Selects ROM columns with continuous walkable floors and matching seam heights. */
 public final class TerrainLibrary {
@@ -16,66 +18,89 @@ public final class TerrainLibrary {
     static final int MAX_STEP = 64;
     /** Pit widths 64, 96, 128, 160 and 192px. */
     static final int GAP_COUNT = 5;
+    /** Open space every walkable section keeps above its floor: Sonic is 39px tall and a
+     * held jump rises about 96px. Mod design; it rejects tunnels, mazes and overhangs. */
+    public static final int CLEARANCE = 112;
+    /** Jump banks also keep headroom for a held jump launched from the lower side of a climb. */
+    static final int BANK_CLEARANCE = 176;
+    /** S1 object $54 (LTag_Main): invisible hurt zones laid over MZ lava, which is otherwise
+     * ordinary solid collision. Its touch sizes $14-$16 reach at most $80px horizontally and
+     * $20px vertically from the tag; the margins below cover the largest. */
+    private static final int LAVA_TAG = 0x54;
+    private static final int LAVA_REACH_X = 0x80;
+    private static final int LAVA_REACH_Y = 0x20 + 16;
+    /** The seam floor sits near GHZ1's stock start floor (Y=944 centre + 19px radius). */
+    private static final int SEAM_BASE = 960;
     private final List<List<int[][]>> sections = new ArrayList<>();
     private final List<List<int[]>> floorProfiles = new ArrayList<>();
     private final List<Block> blocks = new ArrayList<>();
+    /** Course rows: enough for the 1536px camera limit; deeper source rows are not copied. */
+    static final int MAX_HEIGHT = 6;
     private final int height;
+    private final int sourceHeight;
     private final int[][][] flatHalves = new int[TIER_COUNT][2][];
     private final int[][][][] gapHalves = new int[GAP_COUNT][TIER_COUNT][2][];
     private final int seamHeight;
 
+    /** One walkable 256px floor in a ROM foreground column. {@code profile} holds source Y. */
+    private record Candidate(int column, int[] profile, int clearance) {
+        int entry() { return profile[0]; }
+        boolean flat() { return Arrays.stream(profile).allMatch(y -> y == profile[0]); }
+    }
+
     public TerrainLibrary(Level source) {
-        height = source.getLayerHeightBlocks(0);
-        int budget = 256 - source.getBlockCount();
-        int seam = floor(source, 0, 128);
-        seamHeight = seam;
-        var columns = new ArrayList<Integer>();
-        var baseProfiles = new ArrayList<int[]>();
-        var groundSections = new ArrayList<int[][]>();
+        sourceHeight = source.getLayerHeightBlocks(0);
+        height = Math.min(sourceHeight, MAX_HEIGHT);
+        int budget = 256 - backgroundBlocks(source).length;
+        var found = new ArrayList<Candidate>();
         for (int col = 0; col < source.getLayerWidthBlocks(0); col++) {
-            int entry = floor(source, col, 0);
-            boolean safe = entry >= 64 && (seam - entry) % 16 == 0;
-            for (int row = 0; row < height; row++) {
-                if ((source.getMap().getValue(0, col, row) & 0x80) != 0) safe = false;
-            }
-            int previous = entry;
-            for (int x = 1; x < 256 && safe; x++) {
-                int next = floor(source, col, x);
-                if (next < 64 || Math.abs(next - previous) > 4
-                        || next + seam - entry < 256 || next + seam - entry > 1408) safe = false;
-                previous = next;
-            }
-            if (!safe) continue;
-            int[][] section = section(source, col, seam - entry);
-            if (groundSections.stream().noneMatch(c -> java.util.Arrays.deepEquals(c, section))) {
-                groundSections.add(section);
-                columns.add(col);
-                int[] profile = new int[512];
-                for (int x = 0; x < 256; x++) {
-                    profile[x] = floor(source, col, x) + seam - entry;
-                    profile[511 - x] = profile[x];
-                }
-                baseProfiles.add(profile);
+            for (int y = 0; y < sourceHeight * 256; y++) {
+                if (!surface(source, col, 0, y)) continue;
+                int[] profile = trace(source, col, y);
+                if (profile == null) continue;
+                int clearance = clearance(source, col, profile);
+                if (clearance >= CLEARANCE && !lava(source, col, profile)) found.add(new Candidate(col, profile, clearance));
             }
         }
-        if (groundSections.size() < 2) throw new IllegalArgumentException(
-                "Green Hill requires at least two compatible terrain sections; found " + groundSections.size());
+        // Sections shift by whole 16px chunk rows, so every seam floor shares one residue.
+        // Prefer a residue that offers a flat jump bank, then the most candidates.
+        int bestResidue = -1;
+        int bestScore = -1;
+        for (int residue = 0; residue < 16; residue++) {
+            int seam = SEAM_BASE + residue;
+            int count = 0;
+            boolean flat = false;
+            for (Candidate c : found) {
+                if (Math.floorMod(c.entry(), 16) == residue && fits(c, seam)) {
+                    count++;
+                    flat |= c.flat();
+                }
+            }
+            int score = (flat ? 1 << 20 : 0) + count;
+            if (score > bestScore) {
+                bestScore = score;
+                bestResidue = residue;
+            }
+        }
+        seamHeight = SEAM_BASE + bestResidue;
+        int residue = bestResidue;
+        var usable = found.stream()
+                .filter(c -> Math.floorMod(c.entry(), 16) == residue && fits(c, seamHeight)).toList();
         // Use a genuinely flat ROM section for both banks. Cutting arbitrary hills
         // can leave an uphill landing wall or a downhill launch that defeats a jump.
-        int flat = -1;
-        for (int i = 0; i < baseProfiles.size(); i++) {
-            if (java.util.Arrays.stream(baseProfiles.get(i)).allMatch(y -> y == seam)) {
-                flat = i;
-                break;
-            }
-        }
-        if (flat < 0) throw new IllegalArgumentException("No flat ROM section for jump banks");
-        int flatColumn = columns.get(flat);
-        int flatShift = seam - floor(source, flatColumn, 0);
+        Candidate flat = usable.stream().filter(Candidate::flat)
+                .max((a, b) -> Integer.compare(Math.min(a.clearance(), BANK_CLEARANCE),
+                        Math.min(b.clearance(), BANK_CLEARANCE)))
+                .orElse(null);
+        if (flat == null) throw new IllegalArgumentException("No flat ROM section for jump banks");
+        int flatShift = seamHeight - flat.entry();
         for (int tier = 0; tier < TIER_COUNT; tier++) {
             sections.add(new ArrayList<>());
             floorProfiles.add(new ArrayList<>());
-            int[][] banks = section(source, flatColumn, flatShift + tierOffset(tier));
+            // Banks always drop scenery above their jump headroom: overhangs above a pit
+            // would also multiply blocks for every cut width.
+            int[][] banks = section(source, flat.column(), flatShift + tierOffset(tier),
+                    seamHeight + tierOffset(tier) - BANK_CLEARANCE);
             flatHalves[tier] = banks;
             for (int w = 0; w < GAP_COUNT; w++) {
                 int halfGap = gapWidthAt(w) / 2;
@@ -100,27 +125,120 @@ public final class TerrainLibrary {
             }
         }
         if (blocks.size() > budget) throw new IllegalArgumentException("Terrain block budget exceeded");
-        // Ground level keeps every ROM section. Raised/lowered tiers take whole sections,
-        // in ROM order, while the shared 256-entry block index still has room.
-        for (int i = 0; i < columns.size(); i++) {
-            int col = columns.get(i);
-            int shift = seam - floor(source, col, 0);
+        // Ground level takes distinct ROM sections first; raised/lowered tiers then take whole
+        // sections, in ROM order, while the shared 256-entry block index still has room.
+        var ground = new ArrayList<Candidate>();
+        for (Candidate c : usable) {
+            int mark = blocks.size();
+            int[][] section = section(source, c.column(), seamHeight - c.entry(), -1);
+            if (blocks.size() > budget || sections.get(GROUND_TIER).stream().anyMatch(s -> Arrays.deepEquals(s, section))) {
+                blocks.subList(mark, blocks.size()).clear();
+                continue;
+            }
+            ground.add(c);
+            sections.get(GROUND_TIER).add(section);
+            floorProfiles.get(GROUND_TIER).add(courseProfile(c, 0));
+        }
+        if (ground.size() < 2) throw new IllegalArgumentException(
+                "Endless terrain requires at least two compatible ROM sections; found " + ground.size());
+        for (Candidate c : ground) {
             for (int tier = 0; tier < TIER_COUNT; tier++) {
+                if (tier == GROUND_TIER) continue;
                 int mark = blocks.size();
-                int[][] section = tier == GROUND_TIER ? groundSections.get(i) : section(source, col, shift + tierOffset(tier));
+                int[][] section = section(source, c.column(), seamHeight - c.entry() + tierOffset(tier), -1);
                 if (blocks.size() > budget) {
                     blocks.subList(mark, blocks.size()).clear();
                     continue;
                 }
                 sections.get(tier).add(section);
-                int offset = tierOffset(tier);
-                floorProfiles.get(tier).add(java.util.Arrays.stream(baseProfiles.get(i)).map(y -> y + offset).toArray());
+                floorProfiles.get(tier).add(courseProfile(c, tierOffset(tier)));
+            }
+        }
+        for (int tier = 0; tier < TIER_COUNT; tier++) {
+            // A tier with no hill shape of its own still has flat ground from the jump banks.
+            if (sections.get(tier).isEmpty()) {
+                sections.get(tier).add(flatHalves[tier]);
+                int floor = seamHeight + tierOffset(tier);
+                floorProfiles.get(tier).add(java.util.stream.IntStream.range(0, 512).map(x -> floor).toArray());
             }
         }
     }
 
-    /** A ROM column followed by its horizontal reflection, shifted down by {@code shift} pixels. */
-    private int[][] section(Level source, int col, int shift) {
+    /** True when a stock Lava Tag covers this floor: the course spawns no tags, so lava would be safe ground. */
+    private static boolean lava(Level level, int column, int[] profile) {
+        int top = Arrays.stream(profile).min().orElse(0);
+        int bottom = Arrays.stream(profile).max().orElse(0);
+        for (var spawn : level.getObjects()) {
+            if (spawn.objectId() != LAVA_TAG) continue;
+            if (spawn.x() + LAVA_REACH_X >= column * 256 && spawn.x() - LAVA_REACH_X < column * 256 + 256
+                    && spawn.y() + LAVA_REACH_Y >= top && spawn.y() - LAVA_REACH_Y <= bottom) return true;
+        }
+        return false;
+    }
+
+    /** Distinct background block indices; only these source blocks need layout slots. */
+    public static int[] backgroundBlocks(Level source) {
+        var used = new TreeSet<Integer>();
+        for (int x = 0; x < source.getLayerWidthBlocks(1); x++) {
+            for (int y = 0; y < source.getLayerHeightBlocks(1); y++) {
+                used.add(Byte.toUnsignedInt(source.getMap().getValue(1, x, y)));
+            }
+        }
+        return used.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    private boolean fits(Candidate c, int seam) {
+        int shift = seam - c.entry();
+        for (int y : c.profile()) {
+            if (y + shift < 256 || y + shift > 1408) return false;
+        }
+        return true;
+    }
+
+    private int[] courseProfile(Candidate c, int offset) {
+        int shift = seamHeight - c.entry() + offset;
+        int[] profile = new int[512];
+        for (int x = 0; x < 256; x++) {
+            profile[x] = c.profile()[x] + shift;
+            profile[511 - x] = profile[x];
+        }
+        return profile;
+    }
+
+    /** Follows one floor across a column, allowing at most 4px change per horizontal pixel. */
+    private static int[] trace(Level level, int column, int entry) {
+        int[] profile = new int[256];
+        profile[0] = entry;
+        for (int x = 1; x < 256; x++) {
+            int previous = profile[x - 1];
+            int next = -1;
+            for (int d = 0; d <= 4 && next < 0; d++) {
+                if (surface(level, column, x, previous - d)) next = previous - d;
+                else if (d > 0 && surface(level, column, x, previous + d)) next = previous + d;
+            }
+            if (next < 0) return null;
+            profile[x] = next;
+        }
+        return profile;
+    }
+
+    /** Smallest open height above the floor across the column, capped at 256px. */
+    private static int clearance(Level level, int column, int[] profile) {
+        int clearance = 256;
+        for (int x = 0; x < 256; x++) {
+            for (int dy = 1; dy < clearance; dy++) {
+                if (solid(level, column, x, profile[x] - dy)) {
+                    clearance = dy - 1;
+                    break;
+                }
+            }
+        }
+        return clearance;
+    }
+
+    /** A ROM column followed by its horizontal reflection, shifted down by {@code shift} pixels.
+     * Rows wholly above {@code clearAbove} (course Y, or -1) are emptied for jump headroom. */
+    private int[][] section(Level source, int col, int shift, int clearAbove) {
         // Both outside edges meet the same floor, while slopes form hills/dips.
         int[][] section = new int[2][height];
         for (int side = 0; side < 2; side++) {
@@ -128,10 +246,11 @@ public final class TerrainLibrary {
                 Block block = new Block(16);
                 for (int cy = 0; cy < 16; cy++) {
                     // Raised terrain repeats the bottom chunk row rather than leaving a void below.
-                    int sourceY = Math.min(row * 16 + cy - shift / 16, height * 16 - 1);
+                    int sourceY = Math.min(row * 16 + cy - shift / 16, sourceHeight * 16 - 1);
+                    boolean cleared = (row * 16 + cy + 1) * 16 <= clearAbove;
                     for (int cx = 0; cx < 16; cx++) {
                         int word = 0;
-                        if (sourceY >= 0) {
+                        if (sourceY >= 0 && !cleared) {
                             int id = Byte.toUnsignedInt(source.getMap().getValue(0, col, sourceY / 16));
                             word = source.getBlock(id).getChunkDesc(side == 0 ? cx : 15 - cx,
                                     sourceY % 16).get();
@@ -149,7 +268,7 @@ public final class TerrainLibrary {
     private int intern(Block block) {
         int[] state = block.saveState();
         for (int i = 0; i < blocks.size(); i++) {
-            if (java.util.Arrays.equals(state, blocks.get(i).saveState())) return i;
+            if (Arrays.equals(state, blocks.get(i).saveState())) return i;
         }
         blocks.add(block);
         return blocks.size() - 1;
@@ -157,11 +276,12 @@ public final class TerrainLibrary {
     public int candidateCount() { return sections.get(GROUND_TIER).size(); }
     public int candidateCount(int tier) { return sections.get(tier).size(); }
     public int height() { return height; }
+    /** Floor height where corridors and section edges meet at ground tier. */
+    public int seam() { return seamHeight; }
     public int blockCount() { return blocks.size(); }
     public Block block(int index) { return blocks.get(index); }
     private int sectionIndex(long section, int tier) {
-        return section == 0 ? 0
-                : (int) Long.remainderUnsigned(random(section + SEED), sections.get(tier).size());
+        return (int) Long.remainderUnsigned(random(section + SEED), sections.get(tier).size());
     }
 
     static long random(long value) {
@@ -216,6 +336,8 @@ public final class TerrainLibrary {
         long section = Math.floorDiv(column, 2);
         int side = Math.floorMod(column, 2);
         int tier = tierAt(section, side);
+        // The opening is a flat bank, so every zone starts Sonic on level seam floor.
+        if (section == 0) return flatHalves[tier][side][row];
         if (!isCorridor(section)) {
             return sections.get(tier).get(sectionIndex(section, tier))[side][row];
         }
@@ -248,6 +370,7 @@ public final class TerrainLibrary {
         int x = Math.floorMod(worldX, 512);
         int side = x < 256 ? 0 : 1;
         int tier = tierAt(section, side);
+        if (section == 0) return seamHeight + tierOffset(tier);
         if (isCorridor(section)) {
             int width = gapWidth(section);
             return x >= 256 - width / 2 && x < 256 + width / 2 ? -1 : seamHeight + tierOffset(tier);
@@ -257,23 +380,52 @@ public final class TerrainLibrary {
 
     /** Top floor in a decoded S1 column; rejects ceilings, walls and missing floor. */
     public static int floor(Level level, int column, int x) {
-        for (int y = 0; y < level.getLayerHeightBlocks(0) * 256; y += 16) {
-            // Layout values are full block indices here: the ROM loader already strips
-            // S1's loop flag, and generated layouts may use indices above 0x7F.
-            int id = Byte.toUnsignedInt(level.getMap().getValue(0, column, y / 256));
-            Block block = level.getBlock(id);
-            ChunkDesc desc = block.getChunkDesc(x / 16, (y % 256) / 16);
-            if (desc.getPrimaryCollisionMode() != CollisionMode.ALL_SOLID
-                    && desc.getPrimaryCollisionMode() != CollisionMode.TOP_SOLID) continue;
-            Chunk chunk = level.getChunk(desc.getChunkIndex());
-            int solid = chunk.getSolidTileIndex();
-            if (solid == 0) continue;
-            SolidTile tile = level.getSolidTile(solid);
-            int h = tile.getHeightAt((byte) (desc.getHFlip() ? 15 - x % 16 : x % 16));
-            if (h == 0) continue;
-            if (desc.getVFlip() || h < 0 || h > 16) return -1;
-            return y + 16 - h;
+        return floorBelow(level, column, x, 0);
+    }
+
+    /** First floor surface at or below {@code fromY}, or -1 when a ceiling or wall comes first. */
+    public static int floorBelow(Level level, int column, int x, int fromY) {
+        for (int y = Math.max(0, fromY); y < level.getLayerHeightBlocks(0) * 256; y++) {
+            if (surface(level, column, x, y)) return y;
+            if (solid(level, column, x, y)) return -1;
         }
         return -1;
+    }
+
+    /** Top pixel of a standable floor: solid from a floor-capable tile with open space above. */
+    static boolean surface(Level level, int column, int x, int y) {
+        if (solid(level, column, x, y - 1)) return false;
+        ChunkDesc desc = desc(level, column, x, y);
+        if (desc == null) return false;
+        CollisionMode mode = desc.getPrimaryCollisionMode();
+        if (mode != CollisionMode.ALL_SOLID && mode != CollisionMode.TOP_SOLID) return false;
+        int h = height(level, desc, x);
+        // Layout values are full block indices here: the ROM loader already strips
+        // S1's loop flag, and generated layouts may use indices above 0x7F.
+        return !desc.getVFlip() && h > 0 && h <= 16 && Math.floorMod(y, 16) == 16 - h;
+    }
+
+    /** Any primary collision at this pixel, including walls, ceilings and top-solid ledges. */
+    static boolean solid(Level level, int column, int x, int y) {
+        if (y < 0) return false;
+        ChunkDesc desc = desc(level, column, x, y);
+        if (desc == null || desc.getPrimaryCollisionMode() == CollisionMode.NO_COLLISION) return false;
+        int h = height(level, desc, x);
+        if (h == 0 || h > 16 || h < -16) return false;
+        int row = desc.getVFlip() ? 15 - Math.floorMod(y, 16) : Math.floorMod(y, 16);
+        return h > 0 ? row >= 16 - h : row < -h;
+    }
+
+    private static ChunkDesc desc(Level level, int column, int x, int y) {
+        if (y < 0 || y >= level.getLayerHeightBlocks(0) * 256) return null;
+        int id = Byte.toUnsignedInt(level.getMap().getValue(0, column, y / 256));
+        if (id >= level.getBlockCount()) return null;
+        return level.getBlock(id).getChunkDesc(x / 16, (y % 256) / 16);
+    }
+
+    private static int height(Level level, ChunkDesc desc, int x) {
+        int solid = level.getChunk(desc.getChunkIndex()).getSolidTileIndex();
+        if (solid == 0) return 0;
+        return level.getSolidTile(solid).getHeightAt((byte) (desc.getHFlip() ? 15 - x % 16 : x % 16));
     }
 }

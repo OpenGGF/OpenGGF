@@ -1,7 +1,10 @@
-# Infinite Sonic — endless Green Hill challenge
+# Infinite Sonic — endless Sonic 1 challenge
 
-A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**, then enter
-**Green Hill Act 1**. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
+A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**. **Green Hill
+Act 1** starts the course, and every act of **Green Hill, Marble, Spring Yard,
+Labyrinth, Star Light and Scrap Brain** (use level select) becomes an endless course
+built from that act's own ROM terrain, art, background and music. Final Zone and the
+ending stay stock. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
 The camera scrolls at a minimum of **75% of Sonic’s normal maximum run speed**,
 letting Sonic gain ground until his centre reaches 60% of the screen width, just right of centre.
 There the camera follows his position, keeping him on screen while preserving
@@ -24,14 +27,22 @@ Survival earns one point per minimum-scroll pixel: **270 points/second at 1×**,
 **405 at 1.5×**, and about **608 at 2.25×**, plus normal enemy points.
 All movement, enemies, animation and gameplay clocks accelerate together; native
 per-tick jump and collision rules remain unchanged. The host caps pacing at 32×
-(the HUD then says MAX SPEED). There is no finish line or stock time limit. Disable the mod to restore GHZ1.
-Other acts and other character/team selections retain their stock behavior.
+(the HUD then says MAX SPEED). There is no finish line or stock time limit. Disable the mod to restore the stock acts.
+Other character/team selections retain their stock behavior.
 
 The mod reads your Sonic 1 ROM through the normal level loader. It selects continuous
-floor sections, aligns them vertically, and pairs them with horizontal reflections
+floor sections with at least 112 pixels of open space above them (so mazes, tunnels and
+overhangs are skipped), aligns them vertically, and pairs them with horizontal reflections
 so their outside edges join. A fixed seed chooses sections as you move. Art, palettes,
 music and collision tiles come from the ROM; the jar contains only code and a manifest.
 It never reads the disassembly or includes exported Sega assets.
+
+Each zone keeps its own look: Marble's grass ledges and brick blocks, Labyrinth's
+stone slabs, Star Light's girders and Scrap Brain's machinery. Floors that the stock
+level marks with Marble Zone lava hazards are never used as ground. The course is dry:
+Labyrinth (and Scrap Brain Act 3, which reuses its layout) has no water, currents,
+water slides or drowning, because underwater top speed is slower than the scrolling
+edge. Every zone uses the same Motobug and Buzz Bomber patrols.
 
 Seeded encounters mix ground Motobug patrols, flying Buzz Bomber patrols and empty
 sections. Ground enemies require a gentle stretch across their whole patrol; flyers
