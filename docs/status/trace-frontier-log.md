@@ -111796,3 +111796,19 @@ with one fork and the same absolute reference ROM. Knuckles AIZ errors
 18→1, remaining first row4545 `camera_y`; MHZ3191/first6958 `rings` unchanged.
 Character identity review and combined no-regression verification remain
 pending. No trace tolerance, trace payload, or gameplay hydration was changed.
+
+
+### 2026-10-02 — Knuckles Monkey Dude continuation
+
+Campaign `bugfix/ai-trace-s3k-green`, integration `7e256310e4`, worker
+`ca79e59364`: native body continuation and zeroed raw animation timers move
+`TestS3kKnucklesSuperEmeraldRunChain` segment 0 from 12,600 errors / row 446
+`y_speed` to 41 errors / row 1615 `queue.s3k_kos_direct.busy` on the worker
+without camera changes. The chain reaches the uncompared interior and exhausts
+the return interval at destination 8423. Queued
+`-Dmse=off -Ptrace-replay
+-Dtest=TestMonkeyDudeBadnikInstance,TestS3kKnucklesSuperEmeraldRunChain
+-Ds3k.rom.path=<verified reference> test`: object regression 3 passed, chain
+failed; required S3K checks 59 passed, no skips. Combined regression pending.
+See the [campaign audit](../architecture/audits/2026-10-02-s3k-trace-green-campaign.md)
+for the rejected timer-only experiment and camera-bootstrap review.

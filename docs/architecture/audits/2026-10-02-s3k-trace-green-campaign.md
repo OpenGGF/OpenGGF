@@ -131,7 +131,7 @@ bootstrap is absent, so a camera-only partial override was rejected. Cold
 intro offsets for other zones are outside the initial AIZ/minimum correction.
 
 
-The final camera candidate also makes Tails full-chain segment 0 green:
+The initial camera candidate also makes Tails full-chain segment 0 green:
 17→0 errors, `complete=true`. Its chain still fails at destination 6221.
 The follow-up review replaced an instance-name check with character identity.
 A worker edited that source while an earlier Maven compilation was live;
@@ -152,3 +152,34 @@ Stages 2/5/6/7 have 12488/13339/16370/16993 errors respectively, first row 0
 `dynamic_art.outstanding_transfer_ids`; these are baseline failures, not caused
 by the S3K candidate. Remaining cases pass, including deterministic replay and
 both terminal-pass mapping checks.
+
+
+Camera follow-up `d9fd107179` (worker `e8f2c43ed4`) replaces instance names
+with character identity and separates explicitly positioned captures from cold
+load camera initialization. Its 22 focused tests pass without skips, including
+an actual positioned MHZ capture. Applying that same positioned operation to
+run-chain metadata restores the 17 AIZ camera errors. A subsequent uncommitted
+three-context experiment restores AIZ but adds an MHZ slice row-zero camera
+error. Neither result establishes a no-regression camera candidate. The owning
+cold-start versus positioned-bootstrap contract is under investigation; no
+coordinate or fixture-name predicate is accepted.
+
+`7e256310e4` (worker `ca79e59364`) corrects Monkey Dude's body continuation
+and raw animation timer. Once `Obj_WaitOffscreen` restores operation `$8715A`,
+the body keeps executing beyond the initial visibility window. Native
+`loc_871C2`/`loc_87218` reset the raw timer to zero. The timer-only experiment
+was rejected as incomplete: it exposed an earlier row 419 hurt and 14,717
+errors, while the engine's repeated visibility gate had lost 66 body dispatches.
+Correcting both owners yields 41 Knuckles segment-zero errors, with first
+non-camera disagreement at row 1615 `queue.s3k_kos_direct.busy`, versus baseline
+12,600 / row 446 `y_speed`. The worker has no camera fix; remaining camera
+errors are included. The chain now reaches the uncompared interior and exhausts
+the return interval at destination 8423.
+
+Worker commands `maven_queue.py -Dmse=off -Ptrace-replay
+-Dtest=TestMonkeyDudeBadnikInstance,TestS3kKnucklesSuperEmeraldRunChain
+-Ds3k.rom.path=<reference> test` exercised three passing object regressions
+(including offscreen continuation and restore) plus the still-failing chain.
+The required S3K initialization/loading/bootstrap/decoding selection then passed
+59 cases with zero skips. These are focused results on the worker commit;
+combined campaign and cross-game verification remain outstanding.
