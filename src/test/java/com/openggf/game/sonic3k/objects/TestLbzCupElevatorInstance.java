@@ -385,6 +385,7 @@ class TestLbzCupElevatorInstance {
     void activeElevatorDoesNotRecaptureReleasedAirbornePlayer() {
         LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
                 0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+        elevator.setServices(new TestObjectServices());
         Sonic player = new Sonic("sonic", (short) 0x1900, (short) 0x0500);
         player.setAir(true);
         int startX = player.getCentreX();

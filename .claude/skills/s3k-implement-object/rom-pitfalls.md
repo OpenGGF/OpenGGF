@@ -5028,3 +5028,18 @@ an animation-order bug can first appear as a Kosinski queue mismatch while
 all player motion still agrees. Preserve both animator/callback ordering and
 producer/consumer slot ordering. Origin: S3K trace-green campaign, 2026-10-02,
 Knuckles AIZ entry-ring frontier at row 1615, integration base `86c24c1040`.
+
+## Manual solid mode must dispatch the native collision helper
+
+Selecting `MANUAL_CHECKPOINT` only installs an object-scoped resolver; it does
+not execute a collision check. An object that never calls the resolver silently
+loses all solid contacts while its `isSolidFor` and dimensions remain correct.
+
+The LBZ cup elevator exposed this at complete-run row3714: its upright cup at
+`$11A0,$0888`, with zero player cooldown, must stop airborne Sonic at the padded
+right edge `$11CB`. `LBZCupElevator_PlayerControl/loc_26EEA` calls
+`SolidObjectFull2_1P` after the cooldown and angle gates, before testing the
+standing bit for capture. Preserve that per-player order with a participant-only
+checkpoint; a batch checkpoint can update Player2 before Player1's reaction.
+Test through a real ObjectManager dispatch, since direct object tests with
+manually seeded standing state cannot expose a missing collision call.

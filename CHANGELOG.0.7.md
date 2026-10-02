@@ -10,6 +10,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   independently of the runtime minimum bounds. This removes the opening AIZ1
   camera offset while preserving MHZ1’s separate locked-on camera focus.
 
+- **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission.
+
 - Automatically mask widescreen pixels beyond current native horizontal camera
   bounds, including asymmetric arena and level edges. During staged boss entry,
   the mask follows the earlier boundary until the final lock arrives. Each side

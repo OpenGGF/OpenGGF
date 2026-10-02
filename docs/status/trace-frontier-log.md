@@ -111908,3 +111908,14 @@ keeps segment0 green and reaches the complete returned segment2:41,653 errors,
 firstrow199 y449 versus448 (incorrect coconut hurt). This supersedes the older
 partial-worker firstrow1400 measurement. The next target is the native
 MonkeyDude arm-chain/projectile owner; broader combined checks remain pending.
+
+### 2026-10-03 — LBZ cup elevator dispatch
+
+Worker `trace-special-return`, base `ce26682b63`: queued matched
+`-Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay` with verified reference
+ROM and full diagnostics changes 6,557 errors / first3714 `x_speed` to 6,316
+errors / first9867 `tails_air` (0 versus1), each one failure and zero skips.
+`loc_26EEA` owns the missing manual solid checkpoint before per-player capture.
+No shared collision or trace-authoritative state changes. Commands, local
+rewind scope and inherited gaps are in the [LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md).
+The route remains red; new frontier coincides with rolling-drum deletion.
