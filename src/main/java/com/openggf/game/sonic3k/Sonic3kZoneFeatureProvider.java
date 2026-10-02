@@ -62,7 +62,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
                                            int zone, int act, boolean checkpoint) {
         Sonic3kLevelStartCamera.initialize(camera, player.getCentreX(), player.getCentreY(),
-                "knuckles".equalsIgnoreCase(player.getCode()),
+                com.openggf.game.CharacterKey.KNUCKLES.equals(player.characterKey()),
                 zone, act, checkpoint);
     }
 

@@ -63,6 +63,31 @@ class TestSonic3kLevelStartCamera {
         assertEquals(0, camera.getX());
     }
 
+    @Test
+    void mhzCameraUsesCharacterIdentityIndependentlyOfInstanceName() {
+        camera.setMinX((short) 0xC0);
+        var provider = new Sonic3kZoneFeatureProvider();
+        var knuckles = new com.openggf.sprites.playable.Knuckles(
+                "renamed-leader", (short) 0x60, (short) 0x400);
+        provider.initializeLevelStartCamera(camera, knuckles, Sonic3kZoneIds.ZONE_MHZ, 0, false);
+        assertEquals(0, camera.getX(), "Knuckles bypasses the Sonic/Tails focus override");
+        var sonic = new com.openggf.sprites.playable.Sonic(
+                "knuckles", (short) 0x60, (short) 0x400);
+        provider.initializeLevelStartCamera(camera, sonic, Sonic3kZoneIds.ZONE_MHZ, 0, false);
+        assertEquals(0xC0, camera.getX(), "An instance name cannot select Knuckles' branch");
+    }
+
+    @Test
+    void verticalMaximumComparisonUsesSignedSubtractionWord() {
+        camera.setMaxY((short) 0x1000);
+        start(0x200, 0x8060, true, Sonic3kZoneIds.ZONE_MGZ, 0, true);
+        assertEquals((short) 0x8000, camera.getY(),
+                "loc_1BF9C uses signed blt, so a negative result remains below maxY");
+        camera.setMaxY((short) -0x100);
+        start(0x200, 0x400, true, Sonic3kZoneIds.ZONE_MGZ, 0, true);
+        assertEquals(-0x100, camera.getY(), "The maximum word is signed too");
+    }
+
     private void start(int x, int y, boolean knuckles, int zone, int act, boolean checkpoint) {
         Sonic3kLevelStartCamera.initialize(camera, x, y, knuckles, zone, act, checkpoint);
     }

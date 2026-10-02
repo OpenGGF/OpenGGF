@@ -1467,7 +1467,7 @@ public final class TraceReplaySessionBootstrap {
                 }
             }
             GroundSensor.setLevelManager(level);
-            level.initCameraForLevel();
+            com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
             level.initLevelEventsForLevel();
             // Re-apply zone player state after sidekick reposition. ROM's
             // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8335-8427) sets
