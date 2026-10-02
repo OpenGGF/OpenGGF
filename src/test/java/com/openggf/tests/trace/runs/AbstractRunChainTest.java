@@ -2627,7 +2627,9 @@ abstract class AbstractRunChainTest {
             if (physicalRowIndex >= physicalRows.size()) {
                 throw new AssertionError(
                         "uncompared-interior physical walk exceeded destination "
-                                + destinationOffset);
+                                + destinationOffset + "; segment=" + segment.segment().dir()
+                                + "; mode=" + loop.getCurrentGameMode()
+                                + "; movieCursor=" + playback.getCursorFrame());
             }
             UncomparedInteriorPhysicalRow row =
                     physicalRows.get(physicalRowIndex++);

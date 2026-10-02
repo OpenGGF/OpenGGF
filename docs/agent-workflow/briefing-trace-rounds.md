@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Edits during compilation (2026-10-02): changing a Java source while an older
+Maven invocation is compiling it can leave old bytecode with a newer timestamp
+than the edit. The following incremental build may say “Nothing to compile”
+and run the old method. An S3K character-identity regression exposed this;
+`javap` still showed `getCode` despite source using `characterKey`. Freeze
+sources while compiling. After confirming the old process has exited, make the
+changed source eligible for recompilation and inspect the resulting bytecode
+when test evidence disagrees with the source. Do not count the stale build as
+validation of the new implementation.
+
+
 Authored controller export (2026-09-28): `Bk2FrameInput.p1InputMask` can include
 jump as well as direction. A temporary LRZ author compared the whole mask to
 Left/Right, dropping held directions on498 jump rows; its live run cleared but

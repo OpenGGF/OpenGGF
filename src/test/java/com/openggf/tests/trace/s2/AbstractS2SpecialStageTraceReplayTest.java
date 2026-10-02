@@ -162,8 +162,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     @Test
     void replayProducesFaithfulReport() throws Exception {
         File romFile = RomTestUtils.ensureSonic2RomAvailable();
-        assumeTrue(romFile != null && Files.exists(Path.of("s2.gen")),
-                "s2.gen ROM required for S2 special-stage trace replay");
+        assumeTrue(romFile != null && romFile.isFile(),
+                "Sonic 2 ROM required for S2 special-stage trace replay");
 
         Path dir = TraceFixtureRoot.resolve(traceDirectory());
         SegmentContext context = segmentContext(dir);

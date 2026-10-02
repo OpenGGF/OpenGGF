@@ -6,7 +6,6 @@ import com.openggf.trace.SpecialStageTraceData;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,8 +18,8 @@ class S2SpecialStageFinishBoundaryMappingTest {
     @Test
     void lagObservedFinishConsumesExactCapturedCompletedPass() throws Exception {
         File romFile = RomTestUtils.ensureSonic2RomAvailable();
-        assumeTrue(romFile != null && Files.exists(Path.of("s2.gen")),
-                "s2.gen ROM required for S2 special-stage finish mapping");
+        assumeTrue(romFile != null && romFile.isFile(),
+                "Sonic 2 ROM required for S2 special-stage finish mapping");
         Path dir = AbstractS2SpecialStageTraceReplayTest.TRACE_DIRECTORY;
         SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
         S2SpecialStageReplayHarness harness =
@@ -41,8 +40,8 @@ class S2SpecialStageFinishBoundaryMappingTest {
     @Test
     void finishingBeforeTerminalPassIsAnErrorAndStillConsumesTerminalExactlyOnce() throws Exception {
         File romFile = RomTestUtils.ensureSonic2RomAvailable();
-        assumeTrue(romFile != null && Files.exists(Path.of("s2.gen")),
-                "s2.gen ROM required for S2 special-stage finish mapping");
+        assumeTrue(romFile != null && romFile.isFile(),
+                "Sonic 2 ROM required for S2 special-stage finish mapping");
         Path dir = AbstractS2SpecialStageTraceReplayTest.TRACE_DIRECTORY;
         SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
         S2SpecialStageReplayHarness harness =

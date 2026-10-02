@@ -111761,3 +111761,38 @@ gameplay counter stays$185A, VBlank advances$517→$518, lag becomes1; native623
 resumes at engine6234's position. Ordinary capture is not hardware-timed replay.
 No frame-specific delay is added. Continue controller route authoring beyond
 the6201-frame cold prefix; strict replay and earlier discrepancies remain open.
+
+
+## 2026-10-02 — S3K fleet baseline and bonus first-row frontier
+
+Campaign base develop `67c850fc51`, worktree `.worktrees/trace-s3k-green`.
+The three baseline profiles (`trace-replay`, `trace-replay-r7`,
+`trace-segments`) completed with one fork and alphabetical order, using
+absolute ROM properties. Their tests/failures/errors/skips were respectively
+858/52/0/19, 113/85/10/0, and 70/53/7/0. The audit records skipped coverage,
+ROM identity, commands, and inherited failures:
+[2026-10-02 campaign](../architecture/audits/2026-10-02-s3k-trace-green-campaign.md).
+The reference S3K CRC32 is `63522553`; original root image CRC32 `0C06AA82`
+differs only at region byte `0x2001F0`. Both four-chain runs produced the same
+failures, so the image difference was rejected as their explanation.
+
+Commit `5566b8db17` (worker `cc0cbed9da`) fixes initial `Process_Sprites`
+ownership at BONUS title release (`loc_6468`) and removes the harness's stale
+assumption that the release step also executes gameplay. Command:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7
+-Dsurefire.forkCount=1 -Dtest=TestS3kMegaRunChain
+-Ds3k.rom.path=<absolute-reference-ROM> test`.
+Gumball segment 1 advances from 8021 errors / first row1 `x` to 12 errors /
+first row1276 `x`; the downstream duplicate `VINT_SERVICE` stop moves from
+raw1053 to1296. Segment0 retains18 inherited camera errors in that isolated
+measurement. Focused lifecycle/GameLoop tests pass108, zero skips. This is an
+advanced frontier, not a green chain; full candidate comparison is pending.
+
+Commit `56afa227ad` (worker `8f1e894d3b`) corrects S3K initial camera
+zero/max saturation without changing runtime forced snaps. Worker command
+uses `-Ptrace-replay -Dtest=TestS3kMegaRunChain,TestS3kKnucklesSuperEmeraldRunChain,TestS3kMhzZoneSliceTraceReplay`
+with one fork and the same absolute reference ROM. Knuckles AIZ errors
+12600→12566, physical first row446 `y_speed` unchanged; multibonus AIZ
+18→1, remaining first row4545 `camera_y`; MHZ3191/first6958 `rings` unchanged.
+Character identity review and combined no-regression verification remain
+pending. No trace tolerance, trace payload, or gameplay hydration was changed.

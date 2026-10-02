@@ -1,0 +1,154 @@
+# S3K trace green campaign — 2026-10-02
+
+## Scope and baseline
+
+The requested endpoint is every S3K trace green, with no regression in S3K,
+S1, or S2 traces. Advance and push each verified frontier. Segments remain
+diagnostic measurements; run chains must also pass. No comparator weakening,
+fixture-derived gameplay state, or fitted delays are permitted.
+
+Integration base: develop `67c850fc51`. Worktree:
+`.worktrees/trace-s3k-green`, branch `bugfix/ai-trace-s3k-green`.
+The main workspace remains on its original branch.
+
+Use Java 21, the queued Maven wrapper, and absolute ROM properties. This host
+has Maven under `/usr/share/idea/plugins/maven-plugin/lib/maven3/bin` and
+requires `LUA_BIN=/usr/bin/lua5.4`; the default Lua is not 5.4. Tool preflight
+passed with that selection and the installed PowerShell on PATH.
+
+## ROM identity
+
+The original root S3K ROM is CRC32 `0C06AA82`, SHA-1
+`b711a909cce238ca4af3e517a2edca306228efa5`, MD5
+`cfcc692427348e58682230a27d9e365d`. Following the user's request, a separate
+reference was obtained from
+[Archive.org](https://archive.org/details/sonic-and-knuckles-sonic-3_202309)
+outside the repository. Its independently computed hashes match the fixture:
+CRC32 `63522553`, SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`, MD5
+`c5b1c655c19f462ade0ac4e17a844d10`.
+
+Both images contain 4,194,304 bytes. The sole difference is offset `0x2001F0`:
+the original has `0x4A`, the reference `0x55`. No existing ROM was changed.
+Both four-chain runs completed with the same failure messages; the image
+difference does not explain these measured frontiers.
+
+## Initial chain measurements
+
+Command (with the discovered absolute ROM paths supplied):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kKnucklesSuperEmeraldRunChain,TestS3kMegaRunChain,TestS3kTailsFullChainRunChain \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
+  "-Ds3k.rom.path=$S3K_ROM" test
+```
+
+At the integration base, with the matching reference ROM: four tests, three
+failures, one error, zero skips. This is a focused chain baseline, not a fleet
+pass. Explicit test selection includes the Sonic+Tails class alongside the
+three deferred chains; none has the excluded `trace-scope-r6` tag.
+
+| Chain | Observed frontier |
+|---|---|
+| Knuckles super emeralds | AIZ giant-ring exit never observed; segment 0 has 12,600 errors, first non-camera mismatch row 446 `y_speed` |
+| Multibonus | Segment 0 has 18 camera errors; gumball segment 1 first non-camera mismatch row 1 `x`, then duplicate `VINT_SERVICE` at raw frame 1053 during title-card update |
+| Sonic+Tails emeralds | AIZ segment 0 has zero errors; special-stage return exhausts physical interval at movie cursor 8817 while still in `TITLE_CARD` |
+| Tails full chain | AIZ segment 0 has 17 camera errors; special-stage return exhausts physical interval at movie cursor 6221 |
+
+Sonic+Tails return diagnostic: title state `DISPLAY`, state timer 56, hold
+90, art loaded, no pending title art handles. The assertion remains strict;
+the diagnostic supplies no state to gameplay. Investigate native `Level`
+`loc_62CC` title/PLC admission and `loc_64DC` timer overwrite before changing
+the return lifecycle. Merely reducing a hold to fit the gap is not evidence.
+
+The initial camera discrepancy in the non-intro AIZ starts is `0x1308`
+versus `0x1300`; it reconverges after the opening rows. Native
+`Get_LevelSizeStart/loc_1BF74` subtracts `0xA0` and clamps to zero/max,
+whereas the engine's generic forced camera snap also clamps to the minimum.
+Any correction must preserve native cold-load focus overrides and runtime
+resnap semantics.
+
+## Fleet baseline
+
+The unchanged-production baseline runs the three profiles separately, each
+with one fork, alphabetical order, matching ROMs, and fresh profile-specific
+Surefire reports: `trace-replay`, `trace-replay-r7`, `trace-segments`.
+Their filename selections contain 216, 110, and 69 top-level test classes
+respectively; nested tag gates further determine executed cases. Completed
+counts, skips, failure messages, and comparator profiles must be inspected
+before using them for a no-regression claim.
+
+Completed baseline results (all three Maven processes exited normally with
+reported test failures, not fork crashes):
+
+| Profile | Tests | Failures | Errors | Skips |
+|---|---:|---:|---:|---:|
+| trace-replay | 858 | 52 | 0 | 19 |
+| trace-replay-r7 | 113 | 85 | 10 | 0 |
+| trace-segments | 70 | 53 | 7 | 0 |
+
+The 19 release-profile skips include five opt-in performance/report audits,
+a missing KiS2 lock-on ROM, two unrecorded bonus-roundtrip fixtures, and 11
+Sonic 2 special-stage cases incorrectly requiring a literal `s2.gen` despite
+a valid `sonic2.rom.path`. The latter checks are being repaired against the
+resolved file and measured separately on baseline and candidate; creating a
+ROM filename alias would conceal the defect. The remaining skips are explicit
+coverage limits, not passes.
+
+No full-green or no-regression claim is made yet.
+
+
+## First candidate frontiers
+
+`5566b8db17` (worker `cc0cbed9da`) completes the initial object pass at
+bonus title release and begins interior comparison at row zero. Native
+`loc_6468` runs `Process_Sprites` before `LevelLoop` for bonus zones too.
+The prior retained setup token consumed the first gameplay input as setup;
+the harness additionally assumed a now-removed same-step gameplay fallthrough.
+The gumball segment of `TestS3kMegaRunChain` moves from 8,021 errors / first
+row 1 `x` to 12 errors / first row 1276 `x`. Its later duplicate VINT boundary
+moves from raw 1053 to 1296. The chain remains red. Worker focused command
+`maven_queue.py -Dmse=off -Dtest=TestS3kInitialObjectSetupLifecycle,TestGameLoop
+-Ds3k.rom.path=<reference> test` passed 108 tests with zero skips.
+
+`56afa227ad` (worker `8f1e894d3b`) adds a game-internal level-start camera
+capability implemented by the existing S3K zone provider. Shared orchestration
+calls the capability before resetting object placement. Ordinary forced camera
+snaps and S1/S2 behavior are unchanged. MHZ1's native separate focus register
+is preserved explicitly instead of relying on minimum-bound clamping.
+Knuckles AIZ segment 0 errors fall from 12,600 to 12,566; first non-camera
+row 446 `y_speed` remains. Multibonus segment 0 falls from 18 errors to one,
+first row 4545 `camera_y`. The worker's MHZ slice retains 3,191 errors and
+first row 6958 `rings`. Focused final-scope camera/DEZ validation passed 17
+cases; a preceding broader candidate passed 140 cases, including real MHZ
+Sonic, Tails, and wide cold routes. Those preceding results are not attributed
+to the final narrowed source. Character identity follow-up and combined
+regression verification remain pending.
+
+Inherited camera gaps remain separate: ICZ1 Tails' complete start/bounds
+bootstrap is absent, so a camera-only partial override was rejected. Cold
+intro offsets for other zones are outside the initial AIZ/minimum correction.
+
+
+The final camera candidate also makes Tails full-chain segment 0 green:
+17→0 errors, `complete=true`. Its chain still fails at destination 6221.
+The follow-up review replaced an instance-name check with character identity.
+A worker edited that source while an earlier Maven compilation was live;
+the class file was then newer than the edit although it still contained the
+old method body, causing Maven to report “Nothing to compile.” `javap`
+identified the stale `getCode` call. Treat that failing identity test as an
+invalid candidate build until the changed source is explicitly recompiled;
+do not attribute it to the new implementation.
+
+
+Supplementary S2 baseline at `67c850fc51` with only the three ROM-availability
+guards repaired: queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical` selection
+`S2SpecialStageFinishBoundaryMappingTest,S2SpecialStageReplayDeterminismTest,TestS2SpecialStage1TraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage3TraceReplay,TestS2SpecialStage4TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2SpecialStage7TraceReplay,TestS2SpecialStageTraceReplay`
+with the absolute `sonic2.rom.path`: 12 tests, four failures, zero errors/skips.
+Eleven previously skipped cases now run (the twelfth was already ROM-independent).
+Stages 2/5/6/7 have 12488/13339/16370/16993 errors respectively, first row 0
+`dynamic_art.outstanding_transfer_ids`; these are baseline failures, not caused
+by the S3K candidate. Remaining cases pass, including deterministic replay and
+both terminal-pass mapping checks.
