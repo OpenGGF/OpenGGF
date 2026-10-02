@@ -3072,6 +3072,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
+            if (getZoneFeatureProvider() instanceof
+                    com.openggf.game.internal.LevelStartCameraPosition initialCamera) {
+                initialCamera.initializeLevelStartCamera(camera, playable, getFeatureZoneId(),
+                        getFeatureActId(), bigRingReturn != null
+                                || (checkpoint instanceof CheckpointState state && state.isActive()));
+            }
             if (objectManager != null
                     && (objectManager.usesTwoAxisCursorPlacement()
                             || (camera.getX() != preSnapCameraX

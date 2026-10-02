@@ -626,14 +626,9 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             // ROM Get_LevelSizeStart loc_1BF1E (sonic3k.asm:38214-38225): for MHZ1
             // (Current_zone_and_act==$0700) played as Sonic/Tails (Player_mode<3,
             // cmpi.w #3/bhs.s skip) with Sonic 3 locked on (SK_alone_flag==0), the
-            // level-load routine overrides Camera_min_X_pos to $C0 and forces the
-            // initial Camera_X_pos to $C0 (d1=$160, then subi.w #$A0 at :38246).
-            // The engine only models the locked-on ROM, so SK_alone_flag is always
-            // 0. Overriding the loaded min-X to $C0 both pins the left boundary and,
-            // via the level-load force-position clamp (Camera.updatePosition(force)
-            // -> clampAxisWithWrap), snaps the initial camera X up from
-            // playerCentreX-$A0 to $C0. The MHZ1 LevelSizes xstart is 0
-            // (sonic3k.asm:38111), so without this the camera starts too far left.
+            // level-load routine overrides Camera_min_X_pos to $C0.
+            // Sonic3kLevelStartCamera separately models its d1=$160 focus;
+            // the initial camera calculation does not clamp to this minimum.
             boundariesMinXOverride = 0xC0;
         }
 
