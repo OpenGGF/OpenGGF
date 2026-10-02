@@ -249,19 +249,16 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
      */
     @Override
     public void queueFreshLevelRuntimeArt(int levelIdx) throws IOException {
-        int s3kIdx = levelIdx >= 0xC0 ? levelIdx - 0xC0 : levelIdx;
-        int zone = s3kIdx / 2;
-        int act = s3kIdx % 2;
-        Sonic3kLoadBootstrap bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
-        int llbIndex = resolveLevelLoadBlockIndex(zone, act, bootstrap);
-        int llbAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
-                + llbIndex * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
-
-        int primaryArtAddr = rom.read32BitAddr(llbAddr) & 0x00FFFFFF;
-        int secondaryArtAddr = rom.read32BitAddr(llbAddr + 4) & 0x00FFFFFF;
-        ResolvedGameplayOverlay overlay = resolveGameplayOverlay(
-                zone, act, bootstrap, llbIndex, secondaryArtAddr, -1);
-        secondaryArtAddr = overlay.secondaryArtAddr();
+        // LoadLevelLoadBlock uses the same resolved selection as the CPU load.
+        // Saved2_* has already been consumed by the delayed title handoff;
+        // resolving bootstrap again here would select the opening intro art.
+        var currentLevel = GameServices.level().getCurrentLevel();
+        if (!(currentLevel instanceof Sonic3kLevel loadedLevel)) {
+            throw new IllegalStateException("Fresh S3K terrain requires an installed S3K level");
+        }
+        var sources = loadedLevel.terrainArtSources();
+        int primaryArtAddr = sources.primary();
+        int secondaryArtAddr = sources.secondary();
         S3kRuntimeArtCoordinator coordinator = S3kRuntimeArtCoordinator.current();
         // LoadLevelLoadBlock queues both parents at the call and only then
         // blocks at loc_7870 until Kos_modules_left reaches zero
@@ -670,7 +667,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 characterPaletteAddr, levelPaletteAddr,
                 boundariesMinXOverride,
                 objectSpawns, ringSpawns, ringSpriteSheet,
-                publishGraphics);
+                publishGraphics,
+                new Sonic3kLevel.TerrainArtSources(primaryArtAddr, secondaryArtAddr));
         validateCustomBounds(level, customResources);
         return level;
     }
