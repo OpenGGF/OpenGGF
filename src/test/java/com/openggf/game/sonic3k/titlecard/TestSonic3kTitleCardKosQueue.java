@@ -145,7 +145,11 @@ class TestSonic3kTitleCardKosQueue {
     void repeatedSameZoneCachedCardPublishesExactlyOneFreshTerrainBatch()
             throws Exception {
         Object previousGame = getLevelManagerGame();
-        setLevelManagerGame(new Sonic3k(rom));
+        var previousLevel = GameServices.level().getCurrentLevel();
+        var game = new Sonic3k(rom);
+        setLevelManagerGame(game);
+        setField(GameServices.level(), "level",
+                game.loadLevel(LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex()));
         try {
             installCachedTitleArt();
             manager.requestFreshLevelRuntimeArtHandoff(
@@ -168,13 +172,18 @@ class TestSonic3kTitleCardKosQueue {
                     "the armed handoff is consumed exactly once");
         } finally {
             setLevelManagerGame(previousGame);
+            setField(GameServices.level(), "level", previousLevel);
         }
     }
 
     @Test
     void freshLevelTerrainWaitsForTitleAndNemesisButNotChildExit() throws Exception {
         Object previousGame = getLevelManagerGame();
-        setLevelManagerGame(new Sonic3k(rom));
+        var previousLevel = GameServices.level().getCurrentLevel();
+        var game = new Sonic3k(rom);
+        setLevelManagerGame(game);
+        setField(GameServices.level(), "level",
+                game.loadLevel(LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex()));
         var previousPlc = GameServices.module().getGameService(
                 com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
         var plc = new com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService(rom);
@@ -230,6 +239,7 @@ class TestSonic3kTitleCardKosQueue {
             setField(GameServices.module(), "levelTitlePlcService", previousPlc);
             setPendingFreshLevelTransitionBoundary(false);
             setLevelManagerGame(previousGame);
+            setField(GameServices.level(), "level", previousLevel);
         }
     }
 

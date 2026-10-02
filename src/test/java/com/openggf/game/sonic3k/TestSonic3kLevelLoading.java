@@ -45,6 +45,31 @@ class TestSonic3kLevelLoading {
     private Object oldSkipIntros;
 
     @Test
+    void returnTerrainKeepsResolvedSourcesAfterSavedReturnIsConsumed() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
+        preparePlayable();
+        levelManager.saveBigRingReturn(new com.openggf.level.BigRingReturnState(
+                0x1800, 0x400, 0x1780, 0x300, 12,
+                (byte) 0, (byte) 0, 0x390, 0, 0));
+        levelManager.loadZoneAndAct(Sonic3kZoneConstants.ZONE_AIZ, 0);
+        levelManager.clearBigRingReturn();
+        assertEquals(Sonic3kLoadBootstrap.Mode.INTRO,
+                Sonic3kBootstrapResolver.resolve(0, 0).mode());
+        var art = S3kRuntimeArtCoordinator.current();
+        art.resetForMissingSnapshot();
+        levelManager.getGame().queueFreshLevelRuntimeArt(
+                LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex());
+        var parents = GameServices.hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.kind() == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE)
+                .toList();
+        var secondary = parents.get(parents.size() - 1);
+        assertEquals(0x3A944E, secondary.romSourceAddress(),
+                "deferred terrain must retain the actual return load's post-intro parent");
+        assertEquals(5, secondary.moduleCount());
+    }
+
+    @Test
     void headlessFreshRuntimeLoadArmsHandoffWithoutRetainingRenderedTitleCard()
             throws Exception {
         preparePlayable();
