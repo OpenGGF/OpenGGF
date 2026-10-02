@@ -244,16 +244,14 @@ public final class HardwareTimingReplayPort
      *
      * <p>The span describes ordinals the recording consumed between the two
      * segments — a special-stage results screen, a level reload, a locked
-     * intro — that production never submits, so production's identity cursor
-     * would otherwise stay behind and every later completion would miss by
-     * exactly the size of the gap.
+     * intro. Production may either have submitted none of a kind's span or
+     * independently completed and claimed that entire span.
      *
      * <p>Crossing one releases nothing and creates nothing; it only moves the
-     * cursor, and it is proved on both sides before it moves. The span must
-     * begin exactly where production's ledger stands (checked in the
-     * authority) and must end exactly where the next segment's recorded
-     * ordinals begin (checked here). Anything else throws, so a skew that is
-     * not the recorded span cannot be absorbed.
+     * cursor for an untouched span. An already-claimed span instead requires
+     * exact kind, ordinal and fingerprint matches and leaves the ledger alone.
+     * Partial, extra or mismatched work fails. Both cases must meet the next
+     * segment's recorded identity base, and neither may reuse a consumed identity.
      */
     public void handoffTo(
             HardwareTimingSchedule nextSchedule,
@@ -301,6 +299,7 @@ public final class HardwareTimingReplayPort
         }
 
         if (!interstitialSpans.isEmpty()) {
+            Set<String> interstitialIdentities = new LinkedHashSet<>();
             Map<HardwareWorkKind, Long> nextFirstOrdinals = firstOrdinals(checkedNext);
             for (Map.Entry<HardwareWorkKind, RecordedOrdinalSpan> entry
                     : interstitialSpans.entrySet()) {
@@ -318,8 +317,25 @@ public final class HardwareTimingReplayPort
                                     + entry.getValue().lastOrdinal()
                                     + ", next segment resumes at " + nextFirst);
                 }
+                RecordedOrdinalSpan span = entry.getValue();
+                for (int index = 0; index < span.submissionFingerprints().size(); index++) {
+                    String identity = entry.getKey() + "#" + (span.firstOrdinal() + index);
+                    if (consumedIdentities.contains(identity)) {
+                        throw new IllegalStateException(
+                                "recorded interstitial repeats an already-consumed identity: " + identity);
+                    }
+                    interstitialIdentities.add(identity);
+                }
+            }
+            for (HardwareCompletionEdge edge : checkedNext.edges()) {
+                if (interstitialIdentities.contains(identity(edge))) {
+                    throw new IllegalStateException(
+                            "next segment repeats a recorded interstitial identity: " + describe(edge));
+                }
             }
             authority.advanceOrdinalCursorAcrossRecordedSpan(interstitialSpans);
+            // Mark comparison receipts only after every kind's proof succeeds.
+            consumedIdentities.addAll(interstitialIdentities);
         }
 
         schedule = checkedNext;

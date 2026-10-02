@@ -25,8 +25,8 @@ public interface RecordedCompletionAuthority {
     void initializeOrdinalBases(Map<HardwareWorkKind, Long> firstOrdinals);
 
     /**
-     * Advances the hardware-relative identity cursor across a recorded span
-     * that production does not reproduce as submissions.
+     * Accounts for a recorded span that production either never submitted or
+     * independently completed and claimed in full.
      *
      * <p>This releases nothing. It neither creates, prepares, completes nor
      * retires a job: it only moves the number the next production submission
@@ -34,10 +34,11 @@ public interface RecordedCompletionAuthority {
      * ordinal axis the recording used. Every release still has to satisfy the
      * full kind, ordinal, fingerprint and boundary match afterwards.
      *
-     * <p>The move is proved on both sides. Each span must begin exactly where
-     * the production ledger currently stands, and production must hold nothing
-     * pending, so no existing submission is renumbered and a skew that is not
-     * exactly the recorded span fails instead of being absorbed.
+     * <p>An untouched span must begin at the production cursor. A fully claimed
+     * span must end immediately before it and supply exact per-ordinal fingerprints
+     * for comparison against existing claimed jobs; this case changes nothing.
+     * Production must hold nothing pending. All kinds are checked before any
+     * untouched cursor moves; partial, extra or mismatched work fails.
      */
     void advanceOrdinalCursorAcrossRecordedSpan(
             Map<HardwareWorkKind, RecordedOrdinalSpan> spans);
