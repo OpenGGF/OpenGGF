@@ -114,6 +114,8 @@ public class Sonic3kSpecialStageManager {
     private int ringsLeft;
     /** Whether the exit spin animation has been started. */
     private boolean exitSpinStarted;
+    /** loc_852E arms Demo_timer for sixty VInt_1C exit-loop waits. */
+    private int exitWaitFramesRemaining;
     /** Palette fade delay counter (ROM: Pal_fade_delay, counts down from 2). */
     private int palFadeDelay;
     /** Whether music has been sped up (first speed increase). */
@@ -264,6 +266,7 @@ public class Sonic3kSpecialStageManager {
         this.emeraldArtWorkOrdinal = -1;
         this.ringsLeft = 0;
         this.exitSpinStarted = false;
+        this.exitWaitFramesRemaining = 0;
         this.firstUpdateCall = true;
         this.preBootFadeHoldFrames = PAL_FADE_TO_WHITE_FRAMES;
         this.postBootFadeHoldFrames = 22;
@@ -671,6 +674,8 @@ public class Sonic3kSpecialStageManager {
             return;
         }
 
+        boolean exitLoopIteration = exitSpinStarted;
+
         // Banner state machine
         boolean bannerTriggeredAdvance = banner.update();
         if (bannerTriggeredAdvance) {
@@ -798,7 +803,7 @@ public class Sonic3kSpecialStageManager {
         // then resets to 2. This calls every 3 frames. Each call increments
         // each color channel by one Mega Drive step (3-bit: 7 steps to max).
         // In 0-255 range: step = ceil(255/7) = 37. Full white in ~21 frames.
-        if (exitSpinStarted && player.getFadeTimer() > 0) {
+        if (exitLoopIteration && player.getFadeTimer() > 0) {
             palFadeDelay--;
             if (palFadeDelay < 0 && palette != null) {
                 palFadeDelay = 2;
@@ -811,9 +816,10 @@ public class Sonic3kSpecialStageManager {
             }
         }
 
-        // Finish stage after the exit spin animation completes.
-        // fadeTimer goes 1→0x61 (spinning), then resets to 0 when aligned.
-        if (exitSpinStarted && player.getFadeTimer() == 0) {
+        // loc_8588 tests Demo_timer, not Special_stage_fade_timer. VInt_1C
+        // decrements it before each loc_853E object pass; the spin may still
+        // be active when the sixtieth pass returns to SpecialStage_Results.
+        if (exitLoopIteration && --exitWaitFramesRemaining == 0) {
             finished = true;
             // Reset music speed on exit
             if (musicSpedUp) {
@@ -940,6 +946,7 @@ public class Sonic3kSpecialStageManager {
                     player.setFailed(true);
                     player.setFadeTimer(1);
                     exitSpinStarted = true;
+                    exitWaitFramesRemaining = 60;
                     emeraldCollected = false;
                     GameServices.audio().playSfx(Sonic3kSfx.GOAL.id);
                 }
@@ -1013,8 +1020,7 @@ public class Sonic3kSpecialStageManager {
         clearRoutine = 4; // Skip to completion
         player.setFadeTimer(1);
         exitSpinStarted = true;
-        // Don't set finished=true here — let the spin animation play first.
-        // finished will be set when fadeTimer completes its cycle.
+        exitWaitFramesRemaining = 60;
         GameServices.audio().playSfx(Sonic3kSfx.GOAL.id);
     }
 
@@ -1255,6 +1261,7 @@ public class Sonic3kSpecialStageManager {
                 emeraldInteractIndex,
                 emeraldArtWorkOrdinal,
                 exitSpinStarted,
+                exitWaitFramesRemaining,
                 palFadeDelay,
                 musicSpedUp,
                 ringAnimTimer,
@@ -1312,6 +1319,7 @@ public class Sonic3kSpecialStageManager {
         emeraldArtWorkOrdinal = snapshot.emeraldArtWorkOrdinal();
         emeraldArtWork = null;
         exitSpinStarted = snapshot.exitSpinStarted();
+        exitWaitFramesRemaining = snapshot.exitWaitFramesRemaining();
         palFadeDelay = snapshot.palFadeDelay();
         musicSpedUp = snapshot.musicSpedUp();
         ringAnimTimer = snapshot.ringAnimTimer();
@@ -1428,6 +1436,8 @@ public class Sonic3kSpecialStageManager {
             renderer.resetStageGeometryCache();
         }
         initialized = false;
+        exitSpinStarted = false;
+        exitWaitFramesRemaining = 0;
         finished = false;
         emeraldCollected = false;
         ringsCollected = 0;

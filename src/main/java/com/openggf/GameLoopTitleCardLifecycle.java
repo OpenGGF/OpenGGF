@@ -56,9 +56,12 @@ final class GameLoopTitleCardLifecycle {
             titleCard.update();
         }
 
-        if (titleCard == null || titleCard.shouldReleaseControl()) {
+        if (titleCard == null || titleCard.shouldCompleteFreshLevelTransitionBoundary()) {
             int preludePasses = 0;
             if (titleCard != null) {
+                // Level/loc_64DC hands the surviving title owner to LevelLoop
+                // with a rewritten wait timer after the title and terrain queues drain.
+                titleCard.completeFreshLevelRuntimeArtHandoff();
                 preludePasses = titleCard.levelObjectPreludePassesAtRelease();
                 for (int i = 0; i < preludePasses; i++) {
                     OscillationManager.suppressNextFrames(1);

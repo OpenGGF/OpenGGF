@@ -665,6 +665,7 @@ class TestS3kInitialObjectSetupLifecycle {
     private static void installReleasingTitleProvider(GameLoop loop) throws Exception {
         TitleCardProvider provider = mock(TitleCardProvider.class);
         when(provider.shouldReleaseControl()).thenReturn(true);
+        when(provider.shouldCompleteFreshLevelTransitionBoundary()).thenReturn(true);
         setField(loop, "titleCardProvider", provider);
     }
 

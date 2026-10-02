@@ -3575,7 +3575,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LevelLoadContext ctx = new LevelLoadContext();
             ctx.setShowTitleCard(showTitleCard);
             ctx.setTitleCardRequiredInHeadlessMode(titleCardRequiredInHeadlessMode);
-            ctx.setQueueFreshLevelRuntimeArt(queueFreshLevelRuntimeArt);
+            // A results return re-enters Level: too: loc_6310 queues terrain
+            // only after the native title/Nemesis wait has finished.
+            ctx.setQueueFreshLevelRuntimeArt(queueFreshLevelRuntimeArt
+                    || transitions.isResultsReturnCardOwnedByCaller());
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
             ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
