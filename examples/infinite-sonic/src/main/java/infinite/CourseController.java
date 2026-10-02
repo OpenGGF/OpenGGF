@@ -11,6 +11,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
     // S1 Sonic normal maximum is 0x600 in PhysicsProfile; the mod scrolls at 75%.
     private static final int NORMAL_RUN_SPEED = 0x600;
     private static final int MINIMUM_SCROLL = NORMAL_RUN_SPEED * 3 / 4;
+    private static final int RIGHT_MARGIN = 48;
     private int scrollFraction;
     private int scoreFraction;
     private boolean started;
@@ -50,9 +51,13 @@ public final class CourseController extends AbstractObjectInstance implements Re
             player.setXSpeed((short) NORMAL_RUN_SPEED);
         }
         var camera = services().camera();
-        int scroll = Math.max(MINIMUM_SCROLL, Math.max(0, player.getXSpeed()));
-        scrollFraction += scroll;
-        camera.setX((short) (camera.getX() + scrollFraction / 256));
+        // Let Sonic bank a lead before following him at the right-hand margin.
+        // Matching velocity everywhere consumes downhill gains immediately, while
+        // the minimum scroll still takes away ground whenever he slows down.
+        scrollFraction += MINIMUM_SCROLL;
+        int minimumX = camera.getX() + scrollFraction / 256;
+        int followX = player.getCentreX() - (camera.getWidth() - RIGHT_MARGIN);
+        camera.setX((short) Math.max(minimumX, followX));
         scrollFraction %= 256;
         if (player.getCentreX() + player.getXRadius() < camera.getX()) {
             endRun(player);

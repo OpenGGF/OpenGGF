@@ -111,7 +111,7 @@ cadence), up to the bounded 32× host ceiling.
 | --- | --- | --- |
 | First speedup during traversal | `normalTraversalReachesFirstSpeedup` | All five widths; native physics, real scroll pressure and recycling; test-only enemy invulnerability |
 | 30-second compounding | `speedAndCountdownUseThirtySecondCompoundingIntervals` | Exact first two boundaries, 2700 simulation ticks for the second interval, PAL and ceiling |
-| Scroll and score | `minimumScrollTracksFasterRunningAndSurvivalScoreScales` | 1×/1.5×/2.25×; actual camera and score over 60 paced frames; positioned above terrain to isolate timing |
+| Scroll and score | `minimumScrollAllowsFasterRunningAndSurvivalScoreScales` | 1×/1.5×/2.25×; actual camera and score over 60 paced frames; positioned above terrain to isolate timing |
 | Left-edge game over | `fallingBehindEndsRunDespiteRingsAndInvulnerability` | All five widths; partial visibility survives, complete exit kills, lives exhausted, score/clock/camera freeze |
 | Boundary rewind | `speedupBoundaryRestoresAndReplaysWithScoreCameraAndHud` | Positioned 1×→1.5× boundary; clock adapter, controller, score, camera and HUD text |
 | Interactive host pacing | `TestGameLoop.customPresentationPacing*` | Complete-step budget, canonical single-step entry, scene boundaries, pause, rewind input and bounded creator budget |
@@ -188,3 +188,29 @@ frame 90 shows 1.5×, and frame 239 shows game over. The diagnostic seeded only
 the challenge clock at presentation frame 60; it did not modify Sonic's physics.
 State rows 61/62 advance 6/12 pixels, confirming alternating complete steps at 1.5×.
 These images verify the native HUD and opening, not full high-speed route coverage.
+
+
+## Right-margin camera follow correction (2026-10-02)
+
+Follow-up to `841fb3d98b`, in the same feature checkout. Immediate velocity matching
+prevented Sonic from banking a lead; the camera now retains its 4.5px/tick minimum
+until Sonic reaches a 48px right margin, then follows his position. No native
+physics, engine timing, API or rewind state shape changed.
+
+`sonicGainsGroundAcrossSpeedupAndIsHeldAtRightMargin` checks all five viewport
+widths through 600 presentation frames using the actual module step budget across
+1×→1.5×. It isolates horizontal integration from terrain by resetting height and
+vertical speed, supplies the normal 6px/tick running velocity, and verifies that
+Sonic gains ground, reaches the margin, remains bounded and survives. The separate
+normal traversal tests retain real terrain and movement. Scroll/score coverage
+also checks that high velocity before reaching the margin does not accelerate
+the camera. Existing game-over, recycling and rewind checks remain green.
+
+Validation: queued `-Dmse=off -Dtest=TestInfiniteSonic` with an absolute
+`sonic1.rom.path`, **38 tests, zero failures/errors/skips**, 40.7 seconds Maven time.
+The change-based plan against `841fb3d98b` selects 2,957 classes plus guards because
+example sources are unclassified. Proportionate focused validation replaces that
+run: production changes are confined to this mod's camera policy, whose viewport,
+pacing, terrain, score, death and rewind consumers are exercised by this class.
+This is not a full-suite pass or a new visual capture; earlier broad-suite failures
+and ROM coverage limits above remain unchanged. The SDK build/package also passed.

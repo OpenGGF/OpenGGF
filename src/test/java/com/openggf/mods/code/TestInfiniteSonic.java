@@ -239,7 +239,7 @@ class TestInfiniteSonic {
         assertEquals(cameraX, fixture.camera().getX());
     }
 
-    @Test void minimumScrollTracksFasterRunningAndSurvivalScoreScales() throws Exception {
+    @Test void minimumScrollAllowsFasterRunningAndSurvivalScoreScales() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         fixture.stepIdleFrames(2);
         var player = fixture.sprite();
@@ -267,7 +267,41 @@ class TestInfiniteSonic {
         int before = fixture.camera().getX();
         fixture.stepFrame(false, false, false, true, false);
         assertTrue(player.getXSpeed() > 1152);
-        assertEquals(player.getXSpeed() / 256.0, fixture.camera().getX() - before, 1);
+        assertEquals(4.5, fixture.camera().getX() - before, 1, "speed alone must not pull the camera forward");
+    }
+
+    @ParameterizedTest @EnumSource(WidescreenAspect.class)
+    void sonicGainsGroundAcrossSpeedupAndIsHeldAtRightMargin(WidescreenAspect aspect) throws Exception {
+        var fixture = launch(aspect);
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        setTicks(1790);
+        int initialLead = 120;
+        NativePositionOps.writeXPosResetSubpixel(player, 1000);
+        fixture.camera().setX((short) (1000 - initialLead));
+        int margin = fixture.camera().getWidth() - 48;
+        boolean reachedMargin = false;
+        // Real player integration and module pacing on each presentation frame.
+        // Reset only height/vertical velocity to isolate scrolling from course obstacles.
+        for (int frame = 0; frame < 600; frame++) {
+            int steps = GameServices.module().gameplayStepsPerFrame();
+            for (int step = 0; step < steps; step++) {
+                NativePositionOps.writeYPosResetSubpixel(player, 600);
+                player.setAir(true);
+                player.setYSpeed((short) 0);
+                player.setXSpeed((short) 0x600);
+                fixture.stepFrame(false, false, false, true, false);
+                int lead = player.getCentreX() - fixture.camera().getX();
+                assertTrue(lead >= initialLead, "Sonic must gain, not lose, ground at 1.5x");
+                // Controller precedes player integration: allow the current tick's 6px movement.
+                assertTrue(lead <= margin + 6, "right edge remains bounded");
+                reachedMargin |= lead >= margin;
+                assertFalse(player.getDead());
+            }
+        }
+        assertEquals(1.5, speed());
+        assertTrue(reachedMargin, "Sonic reaches the right-hand margin at every viewport width");
+        assertEquals(margin, player.getCentreX() - fixture.camera().getX(), 6);
     }
 
     @Test void speedupBoundaryRestoresAndReplaysWithScoreCameraAndHud() throws Exception {

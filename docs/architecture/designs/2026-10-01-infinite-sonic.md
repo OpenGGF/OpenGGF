@@ -166,9 +166,13 @@ leaving native movement, jumps, collision, objects and animation unchanged per t
 The host bounds creator pacing at 32 steps/frame; the challenge saturates at 32×
 and labels the HUD MAX SPEED. At high speeds machine throughput can limit delivery.
 
-The camera advances by max(4.5px, positive Sonic X velocity) per simulation tick,
-retaining fractional pixels and vertical tracking. It follows world recycling with
-Sonic. A running start supplies the opening reaction buffer. If Sonic's right edge
+The camera advances at least 4.5px per simulation tick, retaining fractional
+pixels and vertical tracking. Sonic can gain ground until his centre reaches a
+48px right-hand margin; the camera then follows his position. It follows world
+recycling with Sonic. The initial velocity-matching policy at `841fb3d98b` consumed
+every burst of downhill speed immediately but still took away ground on slowdowns,
+preventing the player from rebuilding a lead. Position-based following removes
+that ratchet without changing Sonic’s physics or the whole-game pacing contract. A running start supplies the opening reaction buffer. If Sonic's right edge
 is left of the camera, or another lethal event kills him, the controller ends the
 run and clears remaining lives to enter the stock game-over flow. Rings and hit
 invulnerability cannot prevent scrolling failure. Scoring earns one point per
