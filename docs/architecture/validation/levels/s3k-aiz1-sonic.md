@@ -14,17 +14,26 @@ engine changes were not imported. This is a partial matrix, not level certificat
 clamps underflow to zero and then clamps to maximum bounds; it does not read
 minimum bounds. `TestSonic3kLevelStartCamera` covers the AIZ1 `$1300` camera
 origin below the unchanged `$1308` runtime minimum, zero/max edge cases and
-MHZ1's independent `$160` focus with checkpoint bypass. The production entry
+MHZ1's independent `$160` focus with checkpoint bypass. Renamed playable
+instances use their stable character identity, and signed vertical-word edge
+cases preserve the ROM comparison. Explicit positioned entries use
+`LevelCameraInitialization.recenterPositionedEntry`, retaining bounds/event/object
+setup without rerunning cold camera-register overrides. The production entry
 hook runs before initial object placement is reseeded. This adds no persistent
 state or rewind owner; existing camera snapshots own the resulting words.
 
 At base `67c850fc51`, the Knuckles full chain opening segment had 12,600 errors;
 the camera correction removes 34, leaving 12,566 and the unchanged first
 non-camera mismatch at row 446 (`y_speed`). The multibonus Knuckles opening
-segment drops from 18 errors to one at row 4545 (`camera_y`). Both chains remain
-red; these prefixes do not certify a route. Sonic/Tails/wide MHZ cold route
+segment drops from 18 errors to one at row 4545 (`camera_y`). The Tails full-chain
+opening segment drops from 17 errors to zero (complete); its later uncompared
+walk still exceeds destination 6221. All three chains remain red; these prefixes
+do not certify a route. Sonic/Tails/wide MHZ cold route
 checks and the existing AIZ skip/bootstrap/load/decoding checks passed in the
-focused regression batch (140 cases, zero skips). Other character/donor/viewport
+focused regression batch (140 cases, zero skips). The final context correction
+passed 22 focused cases, including the actual two-frame positioned MHZ capture
+CSV/PNG path, a positioned fixture, native/wide/Tails cold MHZ routes and AIZ
+skip behavior (zero skips). Other character/donor/viewport
 entry and restore/replay breadth remain inherited obligations. Unrelated
 ICZ1 Tails spawn/bounds overrides and CNZ/LRZ/DEZ/HPZ cold intro camera offsets
 remain outside this correction.

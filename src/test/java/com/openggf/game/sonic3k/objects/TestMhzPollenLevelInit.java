@@ -88,6 +88,19 @@ class TestMhzPollenLevelInit {
                 "sonic3k.asm LevelInit_MHZ writes the pollen controller to Dynamic_object_RAM+object_size");
     }
 
+    @Test
+    void positionedEntryKeepsCameraAtDeclaredLocation() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .startPosition((short) 0x1200, (short) 0x0700)
+                .startPositionIsCentre()
+                .build();
+        assertEquals(0x1160, GameServices.camera().getX(),
+                "Positioned entry follows the declared player, not MHZ's cold d1=$160 focus");
+        assertEquals(1, pollenSpawnerCount(GameServices.level().getObjectManager()),
+                "Positioned camera setup still runs level events and fixed object placement");
+    }
+
     private static long pollenSpawnerCount(ObjectManager objectManager) {
         return objectManager.getActiveObjects().stream()
                 .filter(MhzPollenSpawnerInstance.class::isInstance)

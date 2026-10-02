@@ -3016,6 +3016,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * ROM: S1/S2 SetScreen/InitCameraValues, S3K Get_LevelSizeStart.
      */
     public void initCameraForLevel() {
+        initCameraForLevel(true);
+    }
+
+    // Package-private entry used by LevelCameraInitialization for explicit
+    // positioned captures/tests. Such a resnap is not Get_LevelSizeStart.
+    void initCameraForLevel(boolean initializeLoadRegisters) {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
             checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3072,7 +3078,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
-            if (getZoneFeatureProvider() instanceof
+            if (initializeLoadRegisters && getZoneFeatureProvider() instanceof
                     com.openggf.game.internal.LevelStartCameraPosition initialCamera) {
                 initialCamera.initializeLevelStartCamera(camera, playable, getFeatureZoneId(),
                         getFeatureActId(), bigRingReturn != null

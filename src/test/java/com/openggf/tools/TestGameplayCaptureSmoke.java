@@ -25,6 +25,25 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class TestGameplayCaptureSmoke {
 
     @Test
+    void positionedMhzRecordingKeepsTheRequestedCameraWindow() throws Exception {
+        Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        Path outDir = TestSessionOutputPaths.diagnostics("mhz-positioned-camera");
+        GameplayCaptureTool.Arguments arguments = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--game", "s3k", "--rom", rom.toString(), "--zone", "mhz", "--act", "1",
+                "--sidekick", "none", "--x", "0x1200", "--y", "0x700", "--frames", "2",
+                "--no-video", "--out-dir", outDir.toString()});
+        GameplayCaptureTool.Report report = GameplayCaptureTool.run(arguments);
+        assertEquals(2, report.framesStepped());
+        List<String> state = Files.readAllLines(report.stateCsv(), StandardCharsets.UTF_8);
+        List<String> columns = List.of(state.get(0).split(","));
+        int cameraColumn = columns.indexOf("cam_x");
+        assertTrue(cameraColumn >= 0);
+        assertEquals(0x1160, Integer.parseInt(state.get(1).split(",")[cameraColumn]),
+                "Recording starts at the requested window, not the cold MHZ camera");
+        assertTrue(report.pngCount() > 0);
+    }
+
+    @Test
     void capturesMovingLeaderWithVisiblePlayerPixels() throws Exception {
         Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
         Path outDir = TestSessionOutputPaths.diagnostics("gameplay-capture-smoke");
