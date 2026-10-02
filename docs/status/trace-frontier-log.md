@@ -111841,3 +111841,20 @@ fails segment2 ownership at movie12011. Sonic+Tails fails consumed-span checking
 with KOS_MODULE_QUEUE next24 versus recorded14..23. Tails retains the baseline
 results-mode6221 boundary. The frozen batch still needs cross-game trace and
 normal ordinary/guard checks; later worker fixes are excluded from that batch.
+
+
+## 2026-10-03 — AIZ reload lock advances both trace frontiers
+
+Worktree `.worktrees/trace-s3k-aiz-camera`, candidate over `6e6f13036f`.
+`AIZ1BGE_Finish`'s fixed X lock now also cancels engine horizontal easing by
+pinning the request's X targets. The short real-reload regression fails on
+old production with minX 14 instead of 16 after one easing tick.
+
+Queued `-Dmse=off -Ptrace-replay
+-Dtest=TestSonic3kAIZEvents,TestS3kAizTraceReplay,TestS3kReplayReferenceClosureIntegration,TestS3kAiz1ReloadRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+-Ds3k.rom.path=<verified-reference> test`: 127 cases, 125 passes, 2 known trace failures,
+0 errors/skips. AIZ 59→57 errors, first 5497 camera_x→20302 player_animation_id;
+reference closure 101→99, first 6302 camera_x→25589 player_animation_id.
+Only the two early camera spans disappear from each report; other mismatch
+values are unchanged (derived cascading flags reclassify). Both lock assertions
+and the independent reload rewind test pass. No all-green route claim.

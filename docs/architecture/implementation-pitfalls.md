@@ -1169,3 +1169,15 @@ mismatch; a short P1-contact/restore/P2-contact test also detects the wrong
 panel owner. Restore the declared state exactly and let the next normal update
 clear the flag. Do not silently turn a captured flag into a derived cache in a
 custom hook. The original two-player bug remains preserved (2026-09-28).
+
+
+### Fixed native bounds must not inherit engine smoothing targets
+
+A seamless reload's current camera overrides and target overrides are distinct.
+AIZ's `AIZ1BGE_Finish` writes min/max X `$10/$10`, while `Do_ResizeEvents`
+automatically eases only maximum Y. Leaving the loaded level's engine X targets
+active moved that fixed lock on the next boundary tick. Pin the engine targets
+when translating this fixed-bound operation; do not invent native target-word
+writes or globally change transitions that deliberately preserve targets.
+A short real-reload test followed by ordinary boundary ticks catches this even
+when immediate post-reload assertions pass (S3K trace campaign, 2026-10-03).

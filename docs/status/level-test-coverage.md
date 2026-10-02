@@ -1018,3 +1018,10 @@ ROM mapping geometry, both incoming facings, and complete post/carrier rotations
 
 SSZ background transitions: the matrix records reproduced blank-cache frames
 at320/800 and adds both mode boundaries plus future-mode restore re-render checks.
+
+
+AIZ fire-reload follow-up (2026-10-03): the
+[AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#fixed-fire-reload-camera-lock--2026-10-03)
+records fixed horizontal bounds, native lock/release assertions and independent
+reload timeline replay. Both affected traces advance to their inherited later
+failures; this does not close the matrix's broader configuration/route gaps.

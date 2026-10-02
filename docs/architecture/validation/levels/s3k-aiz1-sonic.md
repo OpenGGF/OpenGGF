@@ -528,3 +528,18 @@ and Tails in `TestS3kTailsFullChainRunPrefix`. Both opening segment reports are
 complete with zero errors. The explicit r7 profile includes both. Full chains
 remain red at later return/ownership frontiers; this discharges the native
 opening pin, not the inherited act/character/team/donor/viewport matrix.
+
+
+### Fixed fire-reload camera lock — 2026-10-03
+
+The local follow-up over `6e6f13036f` pins AIZ's engine X smoothing targets
+to the fixed `$10/$10` reload bounds. Independent
+`TestSonic3kAIZEvents#eventsFg5StartsFireTransitionAndAppliesSeamlessFlow`
+now checks ordinary boundary ticks after the real reload: old production
+fails 16→14, fixed production retains the lock. Both native trace lock/release
+assertions and `TestS3kAiz1ReloadRewind` pass. The focused 127-case invocation
+has 125 passes and 2 inherited later trace failures, zero errors/skips; details
+and commands are in the [campaign audit](../../audits/2026-10-02-s3k-trace-green-campaign.md).
+AIZ's first mismatch moves 5497→20302 and the independent reference route
+6302→25589. Remaining viewport/donor/team products and whole-act coverage
+are inherited gaps; these checks certify only the fixed reload contract.

@@ -303,3 +303,34 @@ comparison, followed by normal change-based ordinary/guard validation. The new
 Tails prefix is explicitly included in r7; the Knuckles pin is in its already
 included chain class. Subsequent bonus-condition and consumed-span work stays
 in worker branches during this measurement.
+
+
+## AIZ fixed horizontal reload bounds — next batch, 2026-10-03
+
+Worktree `.worktrees/trace-s3k-aiz-camera`, branch
+`bugfix/ai-s3k-aiz-camera`, candidate over frozen `6e6f13036f`.
+`AIZ1BGE_Finish` writes current min/max X `$10/$10`; native
+`Do_ResizeEvents` only eases maximum Y. The transition executor correctly
+distinguishes current and target writes, but the AIZ request omitted the
+engine's horizontal targets, leaving the loaded defaults to move the lock.
+The fix pins those two engine targets in the AIZ request. It does not claim
+that the ROM writes its stored target X words, nor alter shared camera rules.
+
+The independent existing fire-transition test now ticks boundary easing after
+reload. On unchanged production it fails `expected 16, actual 14` (one test,
+zero skips). After the fix, queued `-Dmse=off -Ptrace-replay
+-Dtest=TestSonic3kAIZEvents,TestS3kAizTraceReplay,TestS3kReplayReferenceClosureIntegration,TestS3kAiz1ReloadRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+-Ds3k.rom.path=<verified-reference> test` completes 127 cases: 125 pass,
+two inherited full-trace failures, no errors or skips. The short event suite,
+both camera-lock assertions, production reload timeline isolation and all four
+required S3K classes pass.
+
+Matched frozen-candidate reports show AIZ 59→57 errors, first 5497 camera X→20302
+player animation, and reference-closure 101→99, first 6302 camera X→25589 player
+animation. Each removes exactly two camera mismatch spans; after excluding
+the derived `cascading` classification, no mismatch span is added or changed.
+The remaining animation/physics failures are inherited. This is focused
+validation, not a full green route or ordinary-suite claim. The change-based
+plan against `6e6f13036f` selects 2,958 classes plus guards; delivery validation is combined
+with the next campaign batch, whose shared timing change already needs that
+normal broad selection. Wider/donor/team and whole-act coverage gaps remain.

@@ -491,6 +491,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Monkey Dude keeps climbing after the camera passes its initial visibility
   window and starts each animation on its native dispatch, preserving the moving
   body's collision timing and player bounce.
+  The fire reload keeps its horizontal camera lock until the native reveal
+  releases it, instead of easing back toward the loaded act's default bounds.
 
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late

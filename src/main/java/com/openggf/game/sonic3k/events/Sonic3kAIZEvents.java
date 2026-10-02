@@ -3024,6 +3024,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         .preserveOffsetCameraPosition(true)
                         .postTransitionMinX(0x10)
                         .postTransitionMaxX(0x10)
+                        // Do_ResizeEvents eases only the native maximum Y.
+                        // Keep the engine's horizontal smoothing targets at
+                        // this fixed lock so the loaded level defaults cannot
+                        // move it before AIZ2BGE_WaitFire releases max X.
+                        .postTransitionMinXTarget(0x10)
+                        .postTransitionMaxXTarget(0x10)
                         .postTransitionMinY(0)
                         .postTransitionMaxY(0x260)
                         .postTransitionMaxYTarget(0x260)
