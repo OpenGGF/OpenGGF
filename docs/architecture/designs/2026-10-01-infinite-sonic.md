@@ -12,7 +12,8 @@ The independent source project is [examples/infinite-sonic](../../../examples/in
 Its owner-scoped registration contributes a Sonic 1 patch and a namespaced invisible
 controller. Only solo Sonic activates the terrain patch, and only GHZ1's registry
 level identifier is replaced. Other acts retain their stock events and layouts.
-The existing Mod API and engine source are unchanged.
+Versions 0.1–0.3 left the existing Mod API and engine source unchanged; 0.4 adds
+the opt-in whole-game pacing hook described below.
 
 The normal ROM loader supplies GHZ art, palettes, chunks, collision and background.
 `TerrainLibrary` scans decoded foreground columns for continuous floor profiles with
@@ -32,7 +33,9 @@ ordinary object rewind codec. The level is a `MutableLevel.snapshot` and runtime
 writes use `LevelMutationSurface`, preserving copy-on-write snapshot boundaries.
 `PlayableEntity.shiftX` is the published fractional-position-preserving delta operation;
 the engine's equivalent `NativePositionOps` helper is not part of the compiled mod API.
-No stock physics constants change. The timer is paused. The controller populates nearby seeded encounters. There is no end condition.
+No stock physics constants change. The initial prototype paused the timer and
+populated nearby seeded encounters without an end condition; the 0.4 survival
+follow-up below adds the challenge clock, scrolling failure and replacement HUD.
 
 ## Rejected approaches and evidence
 
@@ -151,3 +154,45 @@ Validation is confined to the mod, as explicitly requested. The unchanged engine
 and public API do not need a broad regression run; the change-based fallback selects
 2,957 ordinary classes solely because `examples/` is unclassified. See the updated
 coverage matrix for completed checks and remaining presentation/respawn gaps.
+
+## Escalating survival challenge (0.4.0)
+
+Follow-up on `30f4e0654e79d3b56e0976277eede2919f0ad983`, current feature branch,
+main checkout, 2026-10-02. Whole-game speed compounds by 1.5 every 30 seconds
+of active play. `ChallengeClock` counts simulation time divided by the current
+rate and owns the fractional frame-step accumulator; its module rewind adapter
+restores both. Each rendered interactive frame pumps complete ordinary steps,
+leaving native movement, jumps, collision, objects and animation unchanged per tick.
+The host bounds creator pacing at 32 steps/frame; the challenge saturates at 32×
+and labels the HUD MAX SPEED. At high speeds machine throughput can limit delivery.
+
+The camera advances by max(4.5px, positive Sonic X velocity) per simulation tick,
+retaining fractional pixels and vertical tracking. It follows world recycling with
+Sonic. A running start supplies the opening reaction buffer. If Sonic's right edge
+is left of the camera, or another lethal event kills him, the controller ends the
+run and clears remaining lives to enter the stock game-over flow. Rings and hit
+invulnerability cannot prevent scrolling failure. Scoring earns one point per
+minimum-scroll pixel, retaining fractional credit: 270 points per real second at
+1× and 405 at 1.5×. Death freezes challenge scoring, progression and scrolling.
+
+The mod suppresses the stock HUD and draws score, speed/countdown, rings and
+game-over text using code-drawn glyphs through the CPU presentation primitive path.
+It has no GPU-owned mutable state and ships no additional ROM or bitmap assets.
+
+A running-speed-only implementation was tried first while awaiting clarification,
+then removed when the user selected whole-game acceleration. Increasing physics
+constants would change jump reach and terrain traversal; pumping complete steps
+preserves both. A static array of glyph strings was rejected by the package
+validator; literal immutable glyph data satisfies creator-state restrictions.
+
+The generic engine hook is `GameModule.gameplayStepsPerFrame()`. Engine presentation
+uses the new wrapper; canonical one-tick stepping is retained for trace and capture
+tools. Pause, rewind/release, external frame ownership, non-level modes, deaths and
+transitions suppress pumping. No game/zone identifiers occur in shared pacing code.
+This shared timing/API change requires normal change-based validation, unlike the
+earlier mod-only follow-ups. See the coverage matrix for final evidence and limits.
+
+The candidate descriptor deliberately remains unchanged at 0.7.0: its strict
+key/value parser rejects comments, so a temporary explanatory comment was removed
+after validation caught it. Version rationale belongs here and in the compatibility
+guide, not in that descriptor. The final API policy/signature checks pass.

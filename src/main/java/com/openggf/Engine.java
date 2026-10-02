@@ -3838,7 +3838,7 @@ public class Engine {
 	 * Updates the game state by one frame.
 	 */
 	public void update() {
-		gameLoop.step();
+		gameLoop.stepPresentationFrame();
 	}
 
 	/**

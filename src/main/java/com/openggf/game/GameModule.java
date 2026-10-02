@@ -109,6 +109,16 @@ public interface GameModule {
     }
 
     /**
+     * Number of complete simulation steps for one interactive presentation frame.
+     * Normal play uses one. Faster custom games may alternate counts to express
+     * fractional rates, owning that accumulator in a registered rewind adapter.
+     * The host clamps the count to 1..32 and uses this only for unpaused forward
+     * level play, never trace/movie-owned stepping, transitions or rewind.
+     * Called once per eligible presentation frame; canonical step() stays one tick.
+     */
+    default int gameplayStepsPerFrame() { return 1; }
+
+    /**
      * Returns session-owned game services whose mutable state participates in
      * a gameplay rewind. The composition root registers these adapters once
      * per {@link com.openggf.game.session.WorldSession}; games without such

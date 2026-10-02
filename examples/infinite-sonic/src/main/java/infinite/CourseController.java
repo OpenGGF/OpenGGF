@@ -8,6 +8,16 @@ import java.util.List;
 
 /** Scalar origin is captured by the ordinary mod-object rewind codec. */
 public final class CourseController extends AbstractObjectInstance implements RewindRecreatable {
+    // S1 Sonic normal maximum is 0x600 in PhysicsProfile; the mod scrolls at 75%.
+    private static final int NORMAL_RUN_SPEED = 0x600;
+    private static final int MINIMUM_SCROLL = NORMAL_RUN_SPEED * 3 / 4;
+    private int scrollFraction;
+    private int scoreFraction;
+    private boolean started;
+    private boolean gameOver;
+    public boolean gameOver() { return gameOver; }
+    public double speedMultiplier() { return clock().displayMultiplier(); }
+    public int secondsRemaining() { return clock().secondsRemaining(); }
     private long origin;
     private long visited; // One bit per retained 512px section, captured with origin.
     // One section bit per ring position lets allocation retry without duplicating a partial row.
@@ -18,14 +28,57 @@ public final class CourseController extends AbstractObjectInstance implements Re
     public long originPixels() { return origin * 256; }
     public CourseController(ObjectSpawn spawn) { super(spawn, "Infinite Sonic course"); }
     @Override public boolean isPersistent() { return true; }
-    @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    @Override public boolean isHighPriority() { return true; }
+    @Override public int getPriorityBucket() { return 0; }
+    @Override public void appendRenderCommands(List<GLCommand> commands) {
+        CourseHud.draw(services(), this);
+    }
+    private ChallengeClock clock() { return services().gameService(ChallengeClock.class); }
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
         return new CourseController(context.spawn());
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (player == null) return;
-        // This prototype has no timed failure; leave the stock HUD timer frozen.
         services().levelGamestate().pauseTimer();
+        services().levelManager().setForceHudSuppressed(true);
+        if (gameOver) return;
+        if (player.getDead()) { endRun(player); return; }
+        if (!started) {
+            started = true;
+            // A running start gives the player room to react before the scrolling edge arrives.
+            player.setGSpeed((short) NORMAL_RUN_SPEED);
+            player.setXSpeed((short) NORMAL_RUN_SPEED);
+        }
+        var camera = services().camera();
+        int scroll = Math.max(MINIMUM_SCROLL, Math.max(0, player.getXSpeed()));
+        scrollFraction += scroll;
+        camera.setX((short) (camera.getX() + scrollFraction / 256));
+        scrollFraction %= 256;
+        if (player.getCentreX() + player.getXRadius() < camera.getX()) {
+            endRun(player);
+            return;
+        }
+        // One point per minimum-scroll pixel: faster whole-game pacing increases points per second.
+        scoreFraction += MINIMUM_SCROLL;
+        services().gameState().addScore(scoreFraction / 256);
+        scoreFraction %= 256;
+        var config = services().configuration();
+        int fps = "PAL".equalsIgnoreCase(config.getString(com.openggf.configuration.SonicConfiguration.REGION))
+                ? 50 : config.getInt(com.openggf.configuration.SonicConfiguration.FPS);
+        clock().tick(fps);
+        recycleTerrain(player);
+        // Hold our horizontal position through the normal camera step; retain vertical tracking.
+        camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, player.getCentreY());
+    }
+
+    private void endRun(PlayableEntity player) {
+        gameOver = true;
+        clock().end();
+        while (services().gameState().getLives() > 0) services().gameState().loseLife();
+        player.applyCrushDeath();
+    }
+
+    private void recycleTerrain(PlayableEntity player) {
         int delta = player.getCentreX() >= 8192 ? 4096
                 : origin > 0 && player.getCentreX() < 2048 ? -4096 : 0;
         if (delta == 0) {

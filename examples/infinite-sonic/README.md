@@ -1,7 +1,18 @@
 # Infinite Sonic — endless Green Hill challenge
 
 A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**, then enter
-**Green Hill Act 1**. Move and jump normally. There is no finish line or time limit. Collect the periodic ring rows to survive enemy hits; pits remain lethal. The HUD timer is paused. Disable the mod to restore GHZ1.
+**Green Hill Act 1**. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
+The camera scrolls at a minimum of **75% of Sonic’s normal maximum run speed**,
+and matches his rightward speed whenever he moves faster. Leaving the left edge
+completely ends the run, regardless of rings or invulnerability. Pits and lethal
+enemy hits also end the run. Collect ring rows to survive ordinary enemy hits.
+
+The HUD shows score, current speed, time until the next speedup, and rings.
+Survival earns one point per minimum-scroll pixel: **270 points/second at 1×**,
+**405 at 1.5×**, and about **608 at 2.25×**, plus normal enemy points.
+All movement, enemies, animation and gameplay clocks accelerate together; native
+per-tick jump and collision rules remain unchanged. The host caps pacing at 32×
+(the HUD then says MAX SPEED). There is no finish line or stock time limit. Disable the mod to restore GHZ1.
 Other acts and other character/team selections retain their stock behavior.
 
 The mod reads your Sonic 1 ROM through the normal level loader. It selects continuous
@@ -25,7 +36,8 @@ hills and dips. Rows of rings appear periodically along the terrain.
 At local X=8,192 the engine shifts Sonic and the camera left by 4,096 pixels and
 advances the terrain window. Logical distance continues increasing, selecting new
 seeded sections. Individual motifs recur, but the complete window does not loop.
-Reverse travel below local X=2,048 restores the preceding window, until the start.
+The terrain generator supports reverse recycling below local X=2,048, but
+backtracking in normal play loses ground against the scrolling camera.
 
 From the repository root, with Java 21 and Maven on PATH:
 
@@ -54,7 +66,6 @@ fractional position and speed. Backtracking regenerates the same terrain from th
 same logical coordinates. Change `TerrainLibrary.SEED` and rebuild for another course.
 Enemy positions and patrol phases shift with the world and participate in rewind.
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
-from that window can regenerate its encounters. There are no loops, moving platforms, breakable floors, checkpoints
-or difficulty progression. Section reflections can mirror scenery. Background scrolling at a world
+from that window can regenerate its encounters. There are no loops, moving platforms, breakable floors or checkpoints. Section reflections can mirror scenery. Background scrolling at a world
 rebase still needs visual verification. The coverage matrix and current evidence are
 in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).

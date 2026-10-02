@@ -36,6 +36,7 @@ public final class InfiniteSonicMod implements GgfMod {
         private Game game;
         private TerrainLibrary library;
         private boolean active;
+        private final ChallengeClock clock = new ChallengeClock();
         private final LevelEventProvider endlessEvents = new LevelEventProvider() {
             @Override public void initLevel(int zone, int act) { }
             @Override public void update() { }
@@ -47,6 +48,7 @@ public final class InfiniteSonicMod implements GgfMod {
         }
         @Override public Level loadLevelOverride(int index) throws IOException {
             active = index == base().getZoneRegistry().getLevelDataForZone(0).getFirst().levelIndex();
+            clock.reset();
             if (!active) return super.loadLevelOverride(index);
             Level original = game.loadLevel(index);
             library = new TerrainLibrary(original);
@@ -55,7 +57,16 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public LevelEventProvider getLevelEventProvider() {
             return active ? endlessEvents : super.getLevelEventProvider();
         }
+        @Override public int gameplayStepsPerFrame() {
+            return active ? clock.nextFrameSteps() : super.gameplayStepsPerFrame();
+        }
+        @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+            var adapters = new java.util.ArrayList<com.openggf.game.rewind.RewindSnapshottable<?>>(super.rewindAdapters());
+            adapters.add(clock);
+            return List.copyOf(adapters);
+        }
         @Override public <T> T getGameService(Class<T> type) {
+            if (type == ChallengeClock.class) return type.cast(clock);
             return type == TerrainLibrary.class ? type.cast(library) : super.getGameService(type);
         }
     }

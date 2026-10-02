@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Matched baselines and relative ROM paths (2026-10-02): a temporary source export
+changes the test fork's working directory. Infinite Sonic's first baseline check
+skipped 29 audio cases while the candidate had null-ROM errors. Matching the fork
+working directory and absolute ROM properties, while keeping separate compiled
+classes/build output, reproduced all 43 failure/error case keys and messages.
+`@RequiresRom` can retain an available `RomCache` handle while a later
+`RomTestUtils` lookup rereads reset configuration and returns null. A skipped
+baseline is not exonerating evidence. Match launch context before attributing
+failures; never rename or link ROMs to make the comparison pass.
+
+
 Authored controller export (2026-09-28): `Bk2FrameInput.p1InputMask` can include
 jump as well as direction. A temporary LRZ author compared the whole mask to
 Left/Right, dropping held directions on498 jump rows; its live run cleared but

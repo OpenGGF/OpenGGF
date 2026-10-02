@@ -113,6 +113,70 @@ public class TestGameLoop {
     }
 
     @Test
+    void customPresentationPacingPumpsWholeStepsAndStopsAtModeBoundaries() throws Exception {
+        SessionManager.clear();
+        var module = new com.openggf.game.patch.DelegatingGameModule(new Sonic2GameModule(), "test:pace") {
+            @Override public int gameplayStepsPerFrame() { return 3; }
+        };
+        GameModuleRegistry.setCurrent(module);
+        TestEnvironment.activeGameplayMode();
+        int[] count = {0};
+        GameLoop loop = new GameLoop(mockInputHandler) {
+            @Override public void step() { count[0]++; }
+        };
+        loop.setGameMode(GameMode.LEVEL);
+        loop.stepPresentationFrame();
+        assertEquals(3, count[0]);
+        loop.step();
+        assertEquals(4, count[0], "canonical tooling/trace entry stays one simulation tick");
+        loop.setGameMode(GameMode.TITLE_SCREEN);
+        loop.stepPresentationFrame();
+        assertEquals(5, count[0]);
+        GameLoop changing = new GameLoop(mockInputHandler) {
+            @Override public void step() { count[0]++; setGameMode(GameMode.TITLE_SCREEN); }
+        };
+        changing.setGameMode(GameMode.LEVEL);
+        changing.stepPresentationFrame();
+        assertEquals(6, count[0], "do not pump across a mode boundary");
+        var levels = mock(com.openggf.level.LevelManager.class);
+        var first = mock(com.openggf.level.Level.class);
+        var second = mock(com.openggf.level.Level.class);
+        when(levels.getCurrentLevel()).thenReturn(first);
+        GameLoop loading = new GameLoop(mockInputHandler) {
+            @Override public void step() { count[0]++; when(levels.getCurrentLevel()).thenReturn(second); }
+        };
+        loading.setGameMode(GameMode.LEVEL);
+        setPrivateField(loading, "levelManager", levels);
+        loading.stepPresentationFrame();
+        assertEquals(7, count[0], "do not pump into a newly loaded level in the same session");
+    }
+
+    @Test
+    void customPresentationPacingDoesNotMultiplyPauseOrRewindInput() {
+        SessionManager.clear();
+        GameModuleRegistry.setCurrent(new com.openggf.game.patch.DelegatingGameModule(new Sonic2GameModule(), "test:pace") {
+            @Override public int gameplayStepsPerFrame() { return 1000; }
+        });
+        TestEnvironment.activeGameplayMode();
+        int[] count = {0};
+        GameLoop loop = new GameLoop(mockInputHandler) {
+            @Override public void step() { count[0]++; }
+        };
+        loop.setGameMode(GameMode.LEVEL);
+        loop.stepPresentationFrame();
+        assertEquals(32, count[0], "host ceiling bounds creator work per presentation");
+        loop.toggleUserPause();
+        loop.stepPresentationFrame();
+        assertEquals(33, count[0]);
+        loop.toggleUserPause();
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        when(mockInputHandler.isKeyDown(config.getInt(SonicConfiguration.LIVE_REWIND_KEY))).thenReturn(true);
+        loop.stepPresentationFrame();
+        assertEquals(34, count[0]);
+    }
+
+    @Test
     void liveDebugCompletionKeepsProviderRewardOwnershipAndDefersResultsUntilFade() throws Exception {
         AtomicBoolean enteredResults = new AtomicBoolean();
         GameLoop loop = new GameLoop(mockInputHandler) {

@@ -909,6 +909,32 @@ public class GameLoop {
         }
     }
 
+    /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
+    public void stepPresentationFrame() {
+        var modeAtStart = resolveGameplayModeContext();
+        var levelAtStart = levelManager == null ? null : levelManager.getCurrentLevel();
+        int steps = canUseGameplayPacing() && GameServices.module() != null
+                ? Math.clamp(GameServices.module().gameplayStepsPerFrame(), 1, 32) : 1;
+        step();
+        for (int i = 1; i < steps && resolveGameplayModeContext() == modeAtStart
+                && (levelManager == null ? null : levelManager.getCurrentLevel()) == levelAtStart
+                && canUseGameplayPacing(); i++) {
+            step();
+        }
+    }
+
+    private boolean canUseGameplayPacing() {
+        return currentGameMode == GameMode.LEVEL
+                && !isPaused() && !isNonRewindableTransitionPending()
+                && !ExternalFrameOrInputOwnership.active(engineServices)
+                && !userRecordingControls.shouldPumpFastForward()
+                && !liveRewindManager.isRewindingOrReleasing()
+                && !(configService.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED)
+                    && inputHandler != null
+                    && inputHandler.isKeyDown(configService.getInt(SonicConfiguration.LIVE_REWIND_KEY)))
+                && (camera == null || camera.getFocusedSprite() == null || !camera.getFocusedSprite().getDead());
+    }
+
     public void closePresence() {
         presenceManager.close();
     }

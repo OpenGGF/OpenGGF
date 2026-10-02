@@ -64,3 +64,13 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 
 The eight sample sources are built by the default test suite. Treat them as
 executable contracts rather than snippets copied out of context.
+
+Custom game modules can opt into faster interactive gameplay with
+`GameModule.gameplayStepsPerFrame()` (default 1, host range 1–32). Return alternating
+counts for fractional rates and capture the accumulator through `rewindAdapters()`.
+The host advances complete simulation ticks, preserving per-tick collision and
+movement. Pause, rewind, external movie/trace ownership, transitions and non-level
+scenes retain their normal pacing. `GameLoop.step()` remains one deterministic tick;
+interactive hosts use `stepPresentationFrame()`. The
+[Infinite Sonic example](../../examples/infinite-sonic/README.md) demonstrates a
+rewindable clock that compounds speed every 30 seconds of active play.

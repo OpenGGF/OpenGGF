@@ -96,7 +96,7 @@ class TestInfiniteSonic {
         int rebases = 0;
         int previous = fixture.sprite().getCentreX();
         for (int i = 0; i < 6000; i++) {
-            stepCourse(fixture, 1);
+            stepTerrain(fixture, 1);
             int x = fixture.sprite().getCentreX();
             if (previous - x > 4000) rebases++;
             assertFalse(fixture.sprite().getDead(), "death at frame " + i + ", x=" + x + ", y=" + fixture.sprite().getCentreY() + ", cameraMaxY=" + fixture.camera().getMaxY());
@@ -106,7 +106,7 @@ class TestInfiniteSonic {
         // A full registry snapshot proves object origin, terrain and player restore together.
         var registry = fixture.runtime().getRewindRegistry();
         var before = registry.capture();
-        for (int i = 0; i < 800; i++) stepCourse(fixture, 1);
+        for (int i = 0; i < 800; i++) stepTerrain(fixture, 1);
         int expectedX = fixture.sprite().getCentreX();
         int expectedY = fixture.sprite().getCentreY();
         int expectedFraction = fixture.sprite().getXSubpixelRaw();
@@ -116,7 +116,7 @@ class TestInfiniteSonic {
         registry.restore(before);
         assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", before.entries().get("object-manager"),
                 registry.capture().entries().get("object-manager")), "immediate object restore");
-        for (int i = 0; i < 800; i++) stepCourse(fixture, 1);
+        for (int i = 0; i < 800; i++) stepTerrain(fixture, 1);
         assertEquals(expectedX, fixture.sprite().getCentreX());
         assertEquals(expectedY, fixture.sprite().getCentreY());
         assertEquals(expectedFraction, fixture.sprite().getXSubpixelRaw());
@@ -127,7 +127,7 @@ class TestInfiniteSonic {
         int backwardsRebases = 0;
         previous = fixture.sprite().getCentreX();
         for (int i = 0; i < 1800; i++) {
-            stepCourse(fixture, -1);
+            stepTerrain(fixture, -1);
             int x = fixture.sprite().getCentreX();
             if (x - previous > 4000) backwardsRebases++;
             assertFalse(fixture.sprite().getDead());
@@ -157,10 +157,181 @@ class TestInfiniteSonic {
         assertFalse(patch.activatesFor(new GameplayLaunchRequest("s2", "sonic", List.of())));
     }
 
+
+    private Object controller() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(o -> o.getClass().getName().equals("infinite.CourseController")).findFirst().orElseThrow();
+    }
+    private Object clock() throws Exception {
+        return GameServices.module().getGameService(loader.loadClass("infinite.ChallengeClock"));
+    }
+    private Object clockSnapshot() throws Exception {
+        return clock().getClass().getMethod("capture").invoke(clock());
+    }
+    private double speed() throws Exception {
+        return (double) clock().getClass().getMethod("displayMultiplier").invoke(clock());
+    }
+    private int ticks() throws Exception {
+        Object snapshot = clockSnapshot();
+        return (int) snapshot.getClass().getMethod("stage").invoke(snapshot) * 1800
+                + (int) Math.round((double) snapshot.getClass().getMethod("elapsed").invoke(snapshot));
+    }
+    private boolean gameOver() throws Exception {
+        return (boolean) controller().getClass().getMethod("gameOver").invoke(controller());
+    }
+    private void setTicks(int value) throws Exception {
+        Class<?> snapshot = loader.loadClass("infinite.ChallengeClock$Snapshot");
+        Object state = snapshot.getConstructor(double.class, double.class, int.class, boolean.class)
+                .newInstance((double) (value % 1800), 0.0, value / 1800, false);
+        clock().getClass().getMethod("restore", snapshot).invoke(clock(), state);
+    }
+
+    @Test void speedAndCountdownUseThirtySecondCompoundingIntervals() throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3);
+        Object clock = clock();
+        var tick = clock.getClass().getMethod("tick");
+        var seconds = clock.getClass().getMethod("secondsRemaining");
+        assertEquals(1.0, speed());
+        assertEquals(30, seconds.invoke(clock));
+        for (int i = 0; i < 1799; i++) tick.invoke(clock);
+        assertEquals(1.0, speed());
+        assertEquals(1, seconds.invoke(clock));
+        tick.invoke(clock);
+        assertEquals(1.5, speed());
+        assertEquals(30, seconds.invoke(clock));
+        // 30 real seconds at 1.5x is 2700 simulation ticks, not another 1800.
+        for (int i = 0; i < 2699; i++) tick.invoke(clock);
+        assertEquals(1.5, speed());
+        tick.invoke(clock);
+        assertEquals(2.25, speed());
+        assertEquals(30, seconds.invoke(clock));
+        setTicks(0);
+        var palTick = clock.getClass().getMethod("tick", int.class);
+        for (int i = 0; i < 1500; i++) palTick.invoke(clock, 50);
+        assertEquals(1.5, speed(), "PAL still speeds up after 30 seconds");
+        setTicks(1800 * 20);
+        assertEquals(32.0, speed(), "bounded host pacing ceiling");
+    }
+
+    @ParameterizedTest @EnumSource(WidescreenAspect.class)
+    void fallingBehindEndsRunDespiteRingsAndInvulnerability(WidescreenAspect aspect) throws Exception {
+        var fixture = launch(aspect);
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        GameServices.level().getLevelGamestate().setRings(20);
+        player.setInvulnerableFrames(2000);
+        NativePositionOps.writeXPosResetSubpixel(player, 1000);
+        NativePositionOps.writeYPosResetSubpixel(player, floorAt(1000) - 19);
+        player.setAir(false); player.setGSpeed((short) 0); player.setXSpeed((short) 0);
+        fixture.camera().setX((short) (1000 + player.getXRadius() - 5));
+        fixture.stepIdleFrames(1);
+        assertFalse(player.getDead(), "a partly visible player is still in the run");
+        fixture.stepIdleFrames(1);
+        assertTrue(player.getDead());
+        assertTrue(gameOver());
+        assertEquals(0, GameServices.gameState().getLives());
+        int score = GameServices.gameState().getScore();
+        int elapsed = ticks();
+        int cameraX = fixture.camera().getX();
+        fixture.stepIdleFrames(10);
+        assertEquals(score, GameServices.gameState().getScore());
+        assertEquals(elapsed, ticks());
+        assertEquals(cameraX, fixture.camera().getX());
+    }
+
+    @Test void minimumScrollTracksFasterRunningAndSurvivalScoreScales() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        for (int stage : new int[]{0, 1800, 3600}) {
+            setTicks(stage);
+            player.setInvulnerableFrames(10000);
+            int score = GameServices.gameState().getScore();
+            int startCamera = fixture.camera().getX();
+            for (int frame = 0; frame < 60; frame++) {
+              int steps = GameServices.module().gameplayStepsPerFrame();
+              for (int step = 0; step < steps; step++) {
+                // Timing/scroll setup independent of terrain: airborne, well ahead, stationary.
+                NativePositionOps.writeXPosResetSubpixel(player, fixture.camera().getX() + 160);
+                NativePositionOps.writeYPosResetSubpixel(player, 600);
+                player.setAir(true); player.setXSpeed((short) 0); player.setYSpeed((short) 0);
+                fixture.stepIdleFrames(1);
+              }
+            }
+            int expected = (int) (270 * Math.pow(1.5, stage / 1800));
+            assertEquals(expected, fixture.camera().getX() - startCamera, 1);
+            assertEquals(expected, GameServices.gameState().getScore() - score, 1);
+            assertFalse(player.getDead());
+        }
+        player.setXSpeed((short) 0x1000);
+        int before = fixture.camera().getX();
+        fixture.stepFrame(false, false, false, true, false);
+        assertTrue(player.getXSpeed() > 1152);
+        assertEquals(player.getXSpeed() / 256.0, fixture.camera().getX() - before, 1);
+    }
+
+    @Test void speedupBoundaryRestoresAndReplaysWithScoreCameraAndHud() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        setTicks(1798);
+        var player = fixture.sprite();
+        NativePositionOps.writeXPosResetSubpixel(player, 1000);
+        NativePositionOps.writeYPosResetSubpixel(player, 600);
+        fixture.camera().setX((short) 840);
+        player.setAir(true); player.setXSpeed((short) 0x600); player.setYSpeed((short) 0);
+        fixture.stepFrame(false, false, false, true, false);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        fixture.stepFrame(false, false, false, true, false);
+        assertEquals(1800, ticks());
+        assertEquals(0x600, player.getMax(), "whole-game pacing preserves native physics");
+        assertEquals(1.5, speed());
+        assertEquals("SPEED 1.50X", loader.loadClass("infinite.CourseHud")
+                .getMethod("speedText", controller().getClass()).invoke(null, controller()));
+        assertEquals("NEXT 30S", loader.loadClass("infinite.CourseHud")
+                .getMethod("countdownText", controller().getClass()).invoke(null, controller()));
+        var after = registry.capture();
+        int score = GameServices.gameState().getScore();
+        int camera = fixture.camera().getX();
+        registry.restore(before);
+        assertEquals(0x600, player.getMax());
+        fixture.stepFrame(false, false, false, true, false);
+        assertEquals(0x600, player.getMax(), "whole-game pacing preserves native physics");
+        assertEquals(1.5, speed());
+        assertEquals(score, GameServices.gameState().getScore());
+        assertEquals(camera, fixture.camera().getX());
+        assertEquals(after.entries().get("infinite-sonic:clock"), registry.capture().entries().get("infinite-sonic:clock"));
+        assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", after.entries().get("object-manager"),
+                registry.capture().entries().get("object-manager")));
+    }
+
     private long originPixels() throws Exception {
         Object controller = GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(o -> o.getClass().getName().equals("infinite.CourseController")).findFirst().orElseThrow();
         return (long) controller.getClass().getMethod("originPixels").invoke(controller);
+    }
+
+    /** Terrain-only regression protection: keep 1x physics and recenter the scrolling camera.
+     * Challenge progression and failure are tested separately with unmodified controller state. */
+    private void stepTerrain(HeadlessTestFixture fixture, int direction) throws Exception {
+        setTicks(0);
+        fixture.camera().setX((short) Math.max(0, fixture.sprite().getCentreX() - 160));
+        stepCourse(fixture, direction);
+    }
+
+    @ParameterizedTest @EnumSource(WidescreenAspect.class)
+    void normalTraversalReachesFirstSpeedup(WidescreenAspect aspect) throws Exception {
+        var fixture = launch(aspect);
+        fixture.stepIdleFrames(2);
+        fixture.sprite().setInvulnerableFrames(2400); // Isolate terrain/scroll from badnik hits.
+        for (int frame = 0; frame < 1850; frame++) {
+            stepCourse(fixture, 1);
+            assertFalse(fixture.sprite().getDead(), "challenge traversal frame " + frame);
+        }
+        assertTrue(ticks() >= 1800);
+        assertEquals(0x600, fixture.sprite().getMax());
+        assertEquals(1.5, speed());
+        assertTrue(originPixels() > 0, "survive recycling under real scroll pressure");
     }
 
     /** A deterministic player policy; terrain observations choose inputs, never set physics state. */
@@ -264,6 +435,7 @@ class TestInfiniteSonic {
             fixture.stepFrame(false, false, direction < 0, direction > 0, false);
             boolean airborne = false, landed = false;
             for (int frame = 0; frame < 100; frame++) {
+                fixture.camera().setX((short) (player.getCentreX() - 160));
                 fixture.stepFrame(false, false, direction < 0, direction > 0, true);
                 airborne |= player.getAir();
                 assertFalse(player.getDead(), "gap " + width + ", direction " + direction);

@@ -71,6 +71,7 @@ public class DelegatingGameModule implements GameModule {
         return base.createRuntimeArtCoordinator(timing);
     }
 
+    @Override public int gameplayStepsPerFrame() { return base.gameplayStepsPerFrame(); }
     @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return base.rewindAdapters();
     }

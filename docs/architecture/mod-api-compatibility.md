@@ -236,3 +236,11 @@ Player raw-frame ownership now separates object scripts from player abilities.
 rewind, while the existing raw-frame query continues to cover both owners.
 The unpublished 0.7 candidate pin is regenerated in place; the release descriptor
 and runtime API version remain 0.7.0, with no published baseline changed.
+
+The unpublished 0.7 candidate also exposes `GameModule.gameplayStepsPerFrame()`
+(default one, delegated by `DelegatingGameModule`). Interactive forward level play
+accepts 1–32 complete simulation steps per presentation frame. Fractional-rate
+accumulators belong to a registered module rewind adapter. Canonical `GameLoop.step()`
+remains one tick for deterministic tools and traces; pause, rewind, externally driven
+movies, transitions and non-level scenes retain their existing pacing. The candidate
+version remains 0.7.0 and its normalized pin is regenerated in place.

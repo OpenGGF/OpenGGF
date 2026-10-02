@@ -1,10 +1,10 @@
 formatVersion: 1
 id: infinite-sonic
 name: Infinite Sonic
-version: 0.3.0
+version: 0.4.0
 authors:
   - OpenGGF contributors
-description: Endless Green Hill with collectible ring rows, jumpable pits, hills and badnik encounters.
+description: Escalating auto-scroll survival in Green Hill, with rings, pits, badniks and speed-based scoring.
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s1
