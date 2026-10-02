@@ -236,3 +236,70 @@ Knuckles segment-zero errors fall 41→34, all remaining errors being opening
 camera X; no non-camera mismatch remains. Sonic+Tails' existing giant-ring
 prefix stays green with zero opening-segment errors. The flash completion still
 uses 43 object dispatches; no transition wait or recorded input changed.
+
+
+## Integrated camera and results candidates
+
+Camera correction `ee8565ab6e` (worker `5b4dbc2f28`) preserves the camera
+established by production loading for continuous runs while retaining existing
+compatibility player/ground bootstrap. Isolated declared-position replay and
+start-at-segment diagnostics retain their positioned initialization. Removing
+all compatibility player setup was rejected: S2 gained 26 bootstrap history-Y
+mismatches (`$290` versus `$28F`), despite unchanged compared gameplay. The
+bounded correction restores exact baseline equality across twelve S1/S2 report
+projections, including zero bootstrap errors. Both isolated MHZ checks remain
+unchanged. The worker's new Tails opening-through-first-special-stage pin and
+startup checks pass 29 cases with zero skips. Root additionally registers the
+new prefix class in the r7 profile's explicit include list.
+
+Results prelude `df0b6eaab2` (worker `8888b57370`) submits the four native KosM
+parents and Nemesis ring-HUD job before installing the results owner. Its
+14 resource iterations arise from ROM work: the 38-pattern HUD entry and
+VInt_1E's three-pattern service budget, including its preparation boundary.
+No elapsed-frame constant supplies readiness. Focused preparation/tally/handoff
+checks and required S3K/mapping checks pass; the worker measured 41 focused,
+60 required/mapping, and a later strengthened 23-case batch, all without skips.
+With `c0ac004516`, Sonic+Tails advances past the old title block to a return
+hardware-ordinal rejection (next45 versus recorded direct span27..42).
+Knuckles advances beyond return8423 into segment2, which has 37,767 errors
+and later loses production ownership at movie12011. These are later frontiers,
+not green chains.
+
+Tails still stops at6221 in SPECIAL_STAGE_RESULTS. Rechecking the retained
+matched baseline r7 summary confirms the baseline was also SPECIAL_STAGE_RESULTS;
+an earlier conversational TITLE_CARD attribution was incorrect. The identical
+cursor alone was insufficient evidence, but the saved mode resolves this
+particular attribution. Native Tails capture independently identifies an existing
+results-bonus condition error; that follow-up remains outside this frozen batch.
+
+Terrain selection `56b7972f99` (worker `ce26682b63`) fixes the exact two extra
+Sonic+Tails jobs. The loaded level now retains immutable resolved terrain sources;
+delayed submission no longer re-resolves the consumed Saved2 flag. An independent
+real-return load/clear/submit regression fails before the change with secondary
+source `$3A647C` (intro, seven modules) instead of `$3A944E` (return, five).
+The live chain ledger corroborates results direct27..31, title32..35, primary
+terrain36..37, then erroneous secondary38..44. The fixed regression, mapping
+guard and ten title-queue cases pass without skips. No public API or timing
+admission changes are part of this correction. Acceptance of an already consumed
+recorded ordinal span is a separate follow-up, requiring exact production receipts.
+
+
+## Combined frontier check and first frozen sweep
+
+On `56b7972f99` plus the prefix registration/assertion changes, queued
+`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestS3kKnucklesSuperEmeraldRunChain,TestS3kTailsFullChainRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kTailsFullChainRunChain
+-Ds3k.rom.path=<reference> test` completes five cases, zero skips: two green
+opening-to-special-stage pins, two full-chain failures and one full-chain error.
+Knuckles opening segment0 is complete with zero errors (baseline12,600);
+Tails opening is complete with zero errors (baseline17). Knuckles later loses
+segment2 ownership at movie12011. Sonic+Tails now reaches a fully consumed span
+rejection (`KOS_MODULE_QUEUE` next24 versus recorded14..23), after the terrain
+selection repair removed the extra work. Tails remains at6221 in results,
+matching the baseline mode. No claim of full-chain success is made.
+
+The first candidate batch is frozen here for separate r6, r7 and segment profile
+comparison, followed by normal change-based ordinary/guard validation. The new
+Tails prefix is explicitly included in r7; the Knuckles pin is in its already
+included chain class. Subsequent bonus-condition and consumed-span work stays
+in worker branches during this measurement.

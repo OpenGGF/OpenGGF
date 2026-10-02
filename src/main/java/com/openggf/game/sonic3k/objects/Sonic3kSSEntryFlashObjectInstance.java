@@ -37,7 +37,7 @@ import java.util.logging.Logger;
  * delay=0, frames: 0, 0, 1, 2, 3(hflip), 3, 2, 1, 0, then $F4 (call finished routine).
  * Total: 9 animation frames at 1 game frame each.
  * <p>
- * At anim_frame index 3 (when mapping_frame changes for the 4th time):
+ * After advancing to anim_frame index 3 (mapping frame 2):
  * marks parent ring for deletion (ROM: bset #5,$38(a1)).
  * <p>
  * After animation: Obj_Wait counts $2E down with subq/bmi, so the $20 it is

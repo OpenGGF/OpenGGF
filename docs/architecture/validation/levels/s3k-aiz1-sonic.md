@@ -517,3 +517,14 @@ segment0 has 34 opening-camera errors and no non-camera mismatches (previously
 41 including row1615 explosion-art queue state). Its later return still fails
 at8423. This covers the native ring/flash edge, not the inherited width/donor/team
 route breadth or rendered-pixel equivalence.
+
+
+### Combined opening pins (2026-10-03)
+
+The combined campaign at `56b7972f99` plus prefix tests passes both independent
+opening-to-first-special-stage pins: Knuckles in
+`TestS3kKnucklesSuperEmeraldRunChain#aiz1ThroughGiantRingIntoFirstSpecialStageRow`
+and Tails in `TestS3kTailsFullChainRunPrefix`. Both opening segment reports are
+complete with zero errors. The explicit r7 profile includes both. Full chains
+remain red at later return/ownership frontiers; this discharges the native
+opening pin, not the inherited act/character/team/donor/viewport matrix.

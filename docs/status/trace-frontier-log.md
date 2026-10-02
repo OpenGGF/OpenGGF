@@ -111826,3 +111826,18 @@ one known Knuckles return failure at 8423, zero errors/skips. Knuckles segment0
 (first row0). Sonic+Tails prefix remains green. The independent new callback
 regression fails before the correction; object and graph checks pass29 after.
 Combined campaign/cross-game validation remains pending.
+
+
+### 2026-10-03 — Combined S3K opening pins
+
+Campaign `.worktrees/trace-s3k-green`, `56b7972f99` plus prefix registration:
+queued `-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestS3kKnucklesSuperEmeraldRunChain,TestS3kTailsFullChainRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kTailsFullChainRunChain
+-Ds3k.rom.path=<verified reference> test` completed5 cases, zero skips:
+2 opening-prefix passes, 2 later chain failures, 1 later chain error. Knuckles
+AIZ segment0 is complete/0errors (baseline12,600), Tails AIZ complete/0errors
+(baseline17); both reach their first special-stage row. Knuckles full chain
+fails segment2 ownership at movie12011. Sonic+Tails fails consumed-span checking
+with KOS_MODULE_QUEUE next24 versus recorded14..23. Tails retains the baseline
+results-mode6221 boundary. The frozen batch still needs cross-game trace and
+normal ordinary/guard checks; later worker fixes are excluded from that batch.
