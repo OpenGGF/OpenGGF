@@ -29,7 +29,7 @@ public final class AudioPresentationProducer {
      * full mixer pass inside the one outer frame, so this bounds the worst-case
      * cost of a runaway rate rather than expressing a musical limit.
      */
-    private static final double MAX_FORWARD_RATE = 8.0;
+    private static final double MAX_FORWARD_RATE = 32.0;
 
     private final Thread ownerThread;
     private final int sampleRate;

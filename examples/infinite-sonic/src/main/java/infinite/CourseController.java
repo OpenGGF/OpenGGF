@@ -70,7 +70,12 @@ public final class CourseController extends AbstractObjectInstance implements Re
         var config = services().configuration();
         int fps = "PAL".equalsIgnoreCase(config.getString(com.openggf.configuration.SonicConfiguration.REGION))
                 ? 50 : config.getInt(com.openggf.configuration.SonicConfiguration.FPS);
+        int previousSeconds = secondsRemaining();
         clock().tick(fps);
+        if (speedMultiplier() < 32 && secondsRemaining() <= 5
+                && secondsRemaining() < previousSeconds) {
+            services().audioManager().playSfx(com.openggf.audio.GameSound.AIR_DING);
+        }
         recycleTerrain(player);
         // Hold our horizontal position through the normal camera step; retain vertical tracking.
         camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, player.getCentreY());

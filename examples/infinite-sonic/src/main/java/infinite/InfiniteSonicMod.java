@@ -57,6 +57,9 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public LevelEventProvider getLevelEventProvider() {
             return active ? endlessEvents : super.getLevelEventProvider();
         }
+        @Override public double gameplayAudioPlaybackRate() {
+            return active ? clock.multiplier() : super.gameplayAudioPlaybackRate();
+        }
         @Override public int gameplayStepsPerFrame() {
             return active ? clock.nextFrameSteps() : super.gameplayStepsPerFrame();
         }

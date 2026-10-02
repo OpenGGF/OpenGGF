@@ -2729,6 +2729,12 @@ the discrete DAC.
   (previously +384). Types 1 and 2 (YM3438 output stage) rest at 0. Muted
   channels keep this resting contribution, as a keyed-off channel does on
   silicon. The offset is the model's own and is not adjusted.
+- **S1 cold-launch percussion (resolved 2026-10-02).** Direct gameplay boots
+  omitted `StopAllSound`'s DAC enable and music-load FM6 stereo routing, silencing
+  drums even with valid ROM samples. The S1 physical policy now applies those
+  shipped programs, including the seven-track FM6/DAC disposition. A cold-start
+  regression isolates DAC and checks a varying waveform on both output channels
+  for GHZ and title music; the previous policy fails the same regression.
 - **DAC cadence.** `playDac` streams PCM as `0x2A` writes every
   `(baseCycles + 26 * (rate - 1)) / 2` Z80 cycles, from the Z80 playback loops
   (`s1disasm sound/z80.asm zPlayPCMLoop`, `s2disasm s2.sounddriver.asm

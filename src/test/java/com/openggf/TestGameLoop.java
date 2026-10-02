@@ -152,6 +152,55 @@ public class TestGameLoop {
     }
 
     @Test
+    void customPacingUsesContinuousAudioRateAndReleasesItAtPauseAndModeExit() throws Exception {
+        SessionManager.clear();
+        GameModuleRegistry.setCurrent(new com.openggf.game.patch.DelegatingGameModule(new Sonic2GameModule(), "test:pace") {
+            @Override public int gameplayStepsPerFrame() { return 2; }
+            @Override public double gameplayAudioPlaybackRate() { return 1.5; }
+        });
+        TestEnvironment.activeGameplayMode();
+        GameLoop loop = new GameLoop(mockInputHandler) {
+            @Override public void step() { }
+        };
+        var audio = mock(com.openggf.audio.AudioManager.class);
+        setPrivateField(loop, "audioManager", audio);
+        loop.setGameMode(GameMode.LEVEL);
+        loop.stepPresentationFrame();
+        verify(audio).setForwardPlaybackRate(1.5);
+        loop.toggleUserPause();
+        loop.stepPresentationFrame();
+        verify(audio).setForwardPlaybackRate(1.0);
+        loop.toggleUserPause();
+        loop.stepPresentationFrame();
+        verify(audio, times(2)).setForwardPlaybackRate(1.5);
+        loop.setGameMode(GameMode.TITLE_SCREEN);
+        loop.stepPresentationFrame();
+        verify(audio, times(2)).setForwardPlaybackRate(1.0);
+        clearInvocations(audio);
+        loop.stepPresentationFrame();
+        verifyNoInteractions(audio); // no rate write over an unrelated owner
+
+        GameLoop changing = new GameLoop(mockInputHandler) {
+            @Override public void step() { setGameMode(GameMode.TITLE_SCREEN); }
+        };
+        setPrivateField(changing, "audioManager", audio);
+        changing.setGameMode(GameMode.LEVEL);
+        changing.stepPresentationFrame();
+        var ordered = inOrder(audio);
+        ordered.verify(audio).setForwardPlaybackRate(1.5);
+        ordered.verify(audio).setForwardPlaybackRate(1.0);
+
+        clearInvocations(audio);
+        loop.setGameMode(GameMode.LEVEL);
+        loop.stepPresentationFrame();
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        when(mockInputHandler.isKeyDown(config.getInt(SonicConfiguration.LIVE_REWIND_KEY))).thenReturn(true);
+        loop.stepPresentationFrame();
+        verify(audio).setForwardPlaybackRate(1.0);
+    }
+
+    @Test
     void customPresentationPacingDoesNotMultiplyPauseOrRewindInput() {
         SessionManager.clear();
         GameModuleRegistry.setCurrent(new com.openggf.game.patch.DelegatingGameModule(new Sonic2GameModule(), "test:pace") {

@@ -244,3 +244,9 @@ accumulators belong to a registered module rewind adapter. Canonical `GameLoop.s
 remains one tick for deterministic tools and traces; pause, rewind, externally driven
 movies, transitions and non-level scenes retain their existing pacing. The candidate
 version remains 0.7.0 and its normalized pin is regenerated in place.
+
+`GameModule.gameplayAudioPlaybackRate()` supplies the matching continuous audio
+rate for interactive custom pacing, delegated through `DelegatingGameModule`.
+The host bounds it to 1–32 and releases ownership outside paced play. This is an
+additive change to the unpublished 0.7 candidate; the descriptor and
+`ModApiVersion` remain 0.7.0 and the normalized candidate pin is updated in place.

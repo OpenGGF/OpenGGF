@@ -10,6 +10,9 @@ completely ends the run, regardless of rings or invulnerability. Pits and lethal
 enemy hits also end the run. Collect ring rows to survive ordinary enemy hits.
 
 The HUD shows score, current speed, time until the next speedup, and rings.
+The last five seconds also show a large centered countdown with a chime each
+second. Music and sound effects speed up and rise in pitch with the challenge;
+pause, rewind, game over and leaving the level release the playback rate.
 Survival earns one point per minimum-scroll pixel: **270 points/second at 1×**,
 **405 at 1.5×**, and about **608 at 2.25×**, plus normal enemy points.
 All movement, enemies, animation and gameplay clocks accelerate together; native

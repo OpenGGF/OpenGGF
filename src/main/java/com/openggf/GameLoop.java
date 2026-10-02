@@ -128,6 +128,7 @@ public class GameLoop {
     private final EngineContext engineServices;
     final SonicConfigurationService configService;
     private final AudioManager audioManager;
+    private boolean gameplayAudioRateOwned;
     private final OuterFramePresentation outerFramePresentation;
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
@@ -913,13 +914,36 @@ public class GameLoop {
     public void stepPresentationFrame() {
         var modeAtStart = resolveGameplayModeContext();
         var levelAtStart = levelManager == null ? null : levelManager.getCurrentLevel();
-        int steps = canUseGameplayPacing() && GameServices.module() != null
+        boolean paced = canUseGameplayPacing() && GameServices.module() != null;
+        if (paced) {
+            double rate = GameServices.module().gameplayAudioPlaybackRate();
+            rate = Double.isFinite(rate) ? Math.clamp(rate, 1.0, 32.0) : 1.0;
+            if (rate != 1.0 || gameplayAudioRateOwned) {
+                audioManager.setForwardPlaybackRate(rate);
+            }
+            gameplayAudioRateOwned = rate != 1.0;
+        } else {
+            releaseGameplayAudioRate();
+        }
+        int steps = paced
                 ? Math.clamp(GameServices.module().gameplayStepsPerFrame(), 1, 32) : 1;
         step();
         for (int i = 1; i < steps && resolveGameplayModeContext() == modeAtStart
                 && (levelManager == null ? null : levelManager.getCurrentLevel()) == levelAtStart
                 && canUseGameplayPacing(); i++) {
             step();
+        }
+        if (gameplayAudioRateOwned && (!canUseGameplayPacing()
+                || resolveGameplayModeContext() != modeAtStart
+                || (levelManager == null ? null : levelManager.getCurrentLevel()) != levelAtStart)) {
+            releaseGameplayAudioRate();
+        }
+    }
+
+    private void releaseGameplayAudioRate() {
+        if (gameplayAudioRateOwned) {
+            audioManager.setForwardPlaybackRate(1.0);
+            gameplayAudioRateOwned = false;
         }
     }
 
@@ -936,6 +960,7 @@ public class GameLoop {
     }
 
     public void closePresence() {
+        releaseGameplayAudioRate();
         presenceManager.close();
     }
 

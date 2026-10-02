@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Waveform tests need an explicit output rate (2026-10-02): `AudioManager.resetState`
+retains its backend. `TestGameLoopAudioPresentationModes` uses a six-Hz dummy;
+a later DAC-only regression received zero or one sample per frame and failed a
+within-packet waveform assertion despite passing alone. Own a normal-rate backend
+before loading the ROM, then run the predecessor and regression together. A
+nonzero packet alone is insufficient: chip resting DC can also pass that check.
+
 Matched baselines and relative ROM paths (2026-10-02): a temporary source export
 changes the test fork's working directory. Infinite Sonic's first baseline check
 skipped 29 audio cases while the candidate had null-ROM errors. Matching the fork

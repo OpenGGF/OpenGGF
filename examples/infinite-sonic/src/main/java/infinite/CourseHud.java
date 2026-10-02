@@ -54,17 +54,29 @@ public final class CourseHud {
     public static String countdownText(CourseController course) {
         return course.speedMultiplier() >= 32 ? "MAX SPEED" : "NEXT " + course.secondsRemaining() + "S";
     }
+    public static String warningText(CourseController course) {
+        return !course.gameOver() && course.speedMultiplier() < 32 && course.secondsRemaining() <= 5
+                ? "SPEED UP IN " + course.secondsRemaining() : "";
+    }
     public static void draw(ObjectServices services, CourseController course) {
         text(services, "SCORE " + services.gameState().getScore(), 16, 8, true);
         text(services, speedText(course) + "  " + countdownText(course), 16, 24, true);
         text(services, "RINGS " + services.levelGamestate().getRings(), 16, 40, true);
+        String warning = warningText(course);
+        if (!warning.isEmpty()) {
+            text(services, warning, (services.camera().getWidth() - warning.length() * 12) / 2,
+                    64, true, 3);
+        }
         if (course.gameOver()) {
             String message = "GAME OVER";
             text(services, message, (services.camera().getWidth() - message.length() * 8) / 2, 96, true);
         }
     }
     private static void text(ObjectServices services, String text, int x, int y, boolean shadow) {
-        if (shadow) text(services, text, x + 1, y + 1, false);
+        text(services, text, x, y, shadow, 2);
+    }
+    private static void text(ObjectServices services, String text, int x, int y, boolean shadow, int scale) {
+        if (shadow) text(services, text, x + 1, y + 1, false, scale);
         int cameraX = services.camera().getX();
         int cameraY = services.camera().getY();
         for (int letter = 0; letter < text.length(); letter++) {
@@ -73,11 +85,11 @@ public final class CourseHud {
             String glyph = GLYPHS.substring(index * 15, index * 15 + 15);
             for (int pixel = 0; pixel < 15; pixel++) {
                 if (glyph.charAt(pixel) != '1') continue;
-                int px = cameraX + x + letter * 8 + pixel % 3 * 2;
-                int py = cameraY + y + pixel / 3 * 2;
+                int px = cameraX + x + letter * 4 * scale + pixel % 3 * scale;
+                int py = cameraY + y + pixel / 3 * scale;
                 services.graphicsManager().registerCommand(new GLCommand(GLCommand.CommandType.RECTI,
                         0, shadow ? 1f : 0f, shadow ? 1f : 0f, shadow ? 0.5f : 0f,
-                        px, py, px + 2, py + 2));
+                        px, py, px + scale, py + scale));
             }
         }
     }

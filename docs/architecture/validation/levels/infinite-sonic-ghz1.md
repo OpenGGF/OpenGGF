@@ -227,3 +227,65 @@ that base again selects all 2,957 classes because examples are unclassified;
 proportionate focused validation applies to this isolated mod framing adjustment
 for the same reasons above. No engine timing or physics changes; no new visual
 capture. The local enabled/trusted jar was rebuilt and refreshed.
+
+## Five-second warning, matching audio and restored percussion (2026-10-02)
+
+Base `e21eaa933d52a2b9ba039565e075b0f87bf381ca`, same feature checkout. The mod's
+warning is clock-derived and covers 6→5 seconds, 1 second, the speedup, restored
+clock state, maximum speed and end-of-run playback reset. Existing five-width
+terrain, scrolling, scoring and world/object rewind regressions remain applicable.
+The shared host rate is continuous rather than the alternating integer tick
+budget, and is released on pause, rewind input, mode changes and teardown.
+
+Focused queued Maven checks (`-Dmse=off`, absolute S1 ROM property):
+`TestInfiniteSonic` **39 passed**, and `TestAudioPresentationProducer` **25 passed**.
+A subsequent focused invocation of `TestGameLoop`, `TestSmpsPhysicalPolicy`,
+`TestSonic1UnifiedAudioPresentationRomIntegration`, and `TestModApiSignatureSurface`
+passed **118 tests, no failures/errors/skips**. Earlier donor-policy assertions
+expected S1's obsolete 202-write legacy stop program; they were corrected to the
+36-write shipped StopAllSound program, with literal register assertions retained.
+The SDK example build/package passed, producing version 0.5.0.
+
+A bounded baseline diagnostic compiled only the pre-task S1 physical policy into
+an isolated temporary class directory and selected the new cold-percussion JUnit
+method with that class preceding current production/test classes. Same checkout,
+absolute S1 ROM path and dependencies: **1 failed, no skips**, on the GHZ drum
+waveform assertion. The corrected policy passes that same method. All sample
+bytes and music programs came from the ROM; the test solos physical DAC/FM6 and
+requires changing output in both speakers after register settling.
+
+Shared audio/timing/API changes require ordinary and structural validation, not
+the earlier mod-only proportionate exception. The plan selects 2,957 ordinary
+classes and all guards. Preflight passes with Java 21, portable PowerShell 7.4.6
+on PATH and `LUA_BIN=/usr/bin/lua5.4`. Final broad results are recorded below.
+No new gameplay screenshot or end-to-end high-speed route certification is claimed.
+
+Final broad command: `run_categories.py --base e21eaa933d52a2b9ba039565e075b0f87bf381ca --run`,
+on the candidate working tree in this checkout, run `20261002T122612Z-58d701bb`.
+Ordinary: **22,381 tests / 2 failures / 42 errors / 3,025 skips**, 392.86 seconds.
+Guards: **672 tests / 1 failure / 0 errors / 0 skips**, 250.96 seconds.
+The existing inventory failure (1315/1072 expected versus 1316/1073 actual),
+42 S3K null-ROM errors in the same seven classes, and LRZ flame profile guard
+violation match the previously baseline-reproduced failures documented above.
+Those unrelated paths were not changed. The skip sample again includes missing
+S3K/KiS2 ROMs, literal `s2.gen` requirements and opt-in diagnostics; the runner
+retained 1,000 of 3,025 skip reasons, so this is incomplete ROM coverage.
+
+The new percussion regression initially inherited the six-Hz dummy backend from
+`TestGameLoopAudioPresentationModes`. `resetState()` deliberately retains the
+device; zero/one sample per packet cannot demonstrate a within-packet waveform.
+The regression now installs a normal-rate no-device backend before ROM loading.
+A matched temporary JVM run of the preceding class sequence reproduced the
+failure and verified the correction. Final queued Maven command:
+`-Dmse=off -Dtest=TestGameLoopAudioPresentationModes,TestSonic1UnifiedAudioPresentationRomIntegration
+-Dsurefire.runOrder=alphabetical -Dsonic1.rom.path=<absolute S1 path> test`:
+**29 tests passed, no failures/errors/skips**. Only test setup changed after the
+broad run; the production candidate was unchanged. The boundary/policy follow-up
+also passed **107 tests**, including same-frame scene exit and rewind rate release.
+
+`exec:exec@prepare-openggf-mod-sdk` passed actual SDK/Javadoc generation; the
+normalized signature generator exactly matches the committed candidate pin.
+The example build/package passed and the enabled, trusted local jar was refreshed.
+Results and skip/failure summaries were inspected, and the category run acknowledged
+and deleted. Focused validation is green; the broad suite remains non-green for
+the recorded unrelated failures and is not represented as full certification.

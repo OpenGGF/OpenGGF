@@ -186,6 +186,30 @@ class TestInfiniteSonic {
         clock().getClass().getMethod("restore", snapshot).invoke(clock(), state);
     }
 
+    @Test void lastFiveSecondsWarnAndAudioRateFollowsRestoredChallengeState() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        var warning = loader.loadClass("infinite.CourseHud").getMethod("warningText", controller().getClass());
+        setTicks(1439);
+        assertEquals("", warning.invoke(null, controller()));
+        setTicks(1500);
+        Object before = clockSnapshot();
+        assertEquals("SPEED UP IN 5", warning.invoke(null, controller()));
+        setTicks(1740);
+        assertEquals("SPEED UP IN 1", warning.invoke(null, controller()));
+        setTicks(1800);
+        assertEquals("", warning.invoke(null, controller()));
+        assertEquals(1.5, GameServices.module().gameplayAudioPlaybackRate());
+        clock().getClass().getMethod("restore", before.getClass()).invoke(clock(), before);
+        assertEquals("SPEED UP IN 5", warning.invoke(null, controller()));
+        assertEquals(1.0, GameServices.module().gameplayAudioPlaybackRate());
+        setTicks(9 * 1800 + 1500);
+        assertEquals("", warning.invoke(null, controller()), "no warning at maximum speed");
+        assertEquals(32.0, GameServices.module().gameplayAudioPlaybackRate());
+        clock().getClass().getMethod("end").invoke(clock());
+        assertEquals(1.0, GameServices.module().gameplayAudioPlaybackRate());
+    }
+
     @Test void speedAndCountdownUseThirtySecondCompoundingIntervals() throws Exception {
         launch(WidescreenAspect.NATIVE_4_3);
         Object clock = clock();

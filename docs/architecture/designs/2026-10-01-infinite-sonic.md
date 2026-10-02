@@ -200,3 +200,30 @@ The candidate descriptor deliberately remains unchanged at 0.7.0: its strict
 key/value parser rejects comments, so a temporary explanatory comment was removed
 after validation caught it. Version rationale belongs here and in the compatibility
 guide, not in that descriptor. The final API policy/signature checks pass.
+
+## Countdown and accelerated audio (0.5.0)
+
+Follow-up on `e21eaa933d52a2b9ba039565e075b0f87bf381ca`, same branch and checkout.
+The final five seconds have a centered 3px-glyph countdown and one ROM warning
+chime at each second boundary. They disappear at the next stage, game over and
+the 32× ceiling. Warning decisions derive from the captured challenge clock;
+no independent timer or presentation-frame counter needs restoration.
+
+`GameModule.gameplayAudioPlaybackRate()` supplies the continuous multiplier,
+separately from the alternating whole-step budget. Using that integer budget as
+an audio rate was rejected because 1.5× would oscillate between normal and double
+pitch. GameLoop owns and releases its rate on pause/rewind, transition/death and
+teardown, without resetting unrelated external playback owners on ordinary
+frames. The existing resampling path raises tempo and pitch for music and effects;
+its bounded capacity now matches the gameplay ceiling of 32×.
+
+Missing drums were an engine Sonic 1 initialization defect, not missing mod
+assets: `Sonic1SmpsCompatibilityPolicy` used legacy silence for boot/stop and
+omitted the music header's FM6 disposition. Shipped `StopAllSound` starts with
+YM2612 2B=80 and 27=00, followed by FMSilenceAll/PSGSilenceAll. `Sound_PlayBGM`
+`.silencefm6` sets FM6 stereo (B6=C0); the seven-track branch disables DAC instead.
+The policy now emits these ROM programs. Enabling DAC only in the mod, forcing
+it on every note, or embedding drum samples would hide the owning initialization
+fault and was not used. All sample bytes still come from the user ROM.
+
+Validation and remaining coverage are recorded in the existing per-act matrix.

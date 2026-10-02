@@ -119,6 +119,14 @@ public interface GameModule {
     default int gameplayStepsPerFrame() { return 1; }
 
     /**
+     * Continuous audio playback rate accompanying custom interactive pacing.
+     * Unlike the alternating integer step budget, this stays steady at fractional
+     * speeds. The host bounds it to 1..32, restores normal playback outside paced
+     * level play, and leaves external trace/movie audio ownership intact.
+     */
+    default double gameplayAudioPlaybackRate() { return 1.0; }
+
+    /**
      * Returns session-owned game services whose mutable state participates in
      * a gameplay rewind. The composition root registers these adapters once
      * per {@link com.openggf.game.session.WorldSession}; games without such

@@ -68,6 +68,11 @@ executable contracts rather than snippets copied out of context.
 Custom game modules can opt into faster interactive gameplay with
 `GameModule.gameplayStepsPerFrame()` (default 1, host range 1–32). Return alternating
 counts for fractional rates and capture the accumulator through `rewindAdapters()`.
+Return the continuous matching rate from `gameplayAudioPlaybackRate()` (default
+1.0, bounded to 1–32) to accelerate music and effects without alternating their
+pitch with the integer step budget. The host releases its audio rate at pause,
+rewind, death, scene changes and teardown; external trace/movie owners retain
+control of their own playback.
 The host advances complete simulation ticks, preserving per-tick collision and
 movement. Pause, rewind, external movie/trace ownership, transitions and non-level
 scenes retain their normal pacing. `GameLoop.step()` remains one deterministic tick;
