@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -32,8 +34,8 @@ import java.util.regex.Pattern;
  * {@code after_segment_index} and a {@code bk2_frame} that exists purely as
  * provenance for whoever has to re-derive the capture. Nothing downstream
  * reads {@code bk2_frame} or {@code after_segment}: the only load-bearing
- * fields are the boundary index and the per-kind ordinals, which is what keeps
- * this off a frame index.
+ * fields are the boundary index, per-kind ordinals and submission fingerprints.
+ * Fingerprints only verify already-claimed work; they never select numbering.
  *
  * <p>A missing file is not an error. Every fixture recorded before this stream
  * existed loads as {@link HardwareTimingInterstitialSpans#empty()} and takes
@@ -118,7 +120,8 @@ public final class HardwareTimingInterstitialStreamLoader {
             RecordedOrdinalSpan open = boundarySpans.get(record.kind());
             if (open == null) {
                 boundarySpans.put(record.kind(),
-                        new RecordedOrdinalSpan(record.ordinal(), record.ordinal()));
+                        new RecordedOrdinalSpan(record.ordinal(), record.ordinal(),
+                                List.of(record.fingerprint())));
             } else {
                 // A span is the ledger's own consumption of a contiguous block,
                 // so a hole inside one boundary would mean the recorder lost a
@@ -130,8 +133,10 @@ public final class HardwareTimingInterstitialStreamLoader {
                             + ": expected ordinal " + open.nextOrdinal()
                             + ", found " + record.ordinal());
                 }
-                boundarySpans.put(record.kind(),
-                        new RecordedOrdinalSpan(open.firstOrdinal(), record.ordinal()));
+                List<String> fingerprints = new ArrayList<>(open.submissionFingerprints());
+                fingerprints.add(record.fingerprint());
+                boundarySpans.put(record.kind(), new RecordedOrdinalSpan(
+                        open.firstOrdinal(), record.ordinal(), fingerprints));
             }
         }
 
@@ -209,10 +214,11 @@ public final class HardwareTimingInterstitialStreamLoader {
         if (!FINGERPRINT.matcher(fingerprint).matches()) {
             throw rejected(path, "line " + lineNumber + " has invalid submission_fingerprint");
         }
-        return new Record(boundaryIndex, segmentName, kind, ordinal);
+        return new Record(boundaryIndex, segmentName, kind, ordinal, fingerprint);
     }
 
     private record Record(
-            int boundaryIndex, String segmentName, HardwareWorkKind kind, long ordinal) {
+            int boundaryIndex, String segmentName, HardwareWorkKind kind, long ordinal,
+            String fingerprint) {
     }
 }

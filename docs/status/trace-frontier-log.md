@@ -111883,3 +111883,16 @@ reference closure 101→99, first 6302 camera_x→25589 player_animation_id.
 Only the two early camera spans disappear from each report; other mismatch
 values are unchanged (derived cascading flags reclassify). Both lock assertions
 and the independent reload rewind test pass. No all-green route claim.
+
+
+## 2026-10-03 — Sonic/Tails second gameplay segment compares cleanly
+
+At `d3341faf90` (`.worktrees/trace-s3k-aiz-camera`), queued single-fork
+`-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain` with the verified
+S3K reference ROM completes segment2 with zero errors/warnings/bootstrap errors
+(previously 46 camera differences). Exact already-claimed span verification
+admits the production-completed special-stage return; it changes no readiness
+or gameplay state. The one chain case still errors at the next boundary on
+pending KosM30. First recorded admission failure: raw3290 PRE_MAIN_LOOP direct
+child56, preceding parent30 at3291. Timing/stream checks84 and authority guards25
+pass with no skips. Broader next-batch checks remain pending.

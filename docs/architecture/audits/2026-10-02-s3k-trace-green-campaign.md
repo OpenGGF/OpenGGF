@@ -446,3 +446,28 @@ validation, not a full green route or ordinary-suite claim. The change-based
 plan against `6e6f13036f` selects 2,958 classes plus guards; delivery validation is combined
 with the next campaign batch, whose shared timing change already needs that
 normal broad selection. Wider/donor/team and whole-act coverage gaps remain.
+
+
+## Completed-span verification and combined AIZ replay — 2026-10-03
+
+Original `bb7f8777b1`, integration equivalent `d3341faf90`, verifies an
+interstitial span already completed and claimed by production against every
+recorded kind, ordinal and full fingerprint. It neither creates work nor
+changes readiness, ordinals or gameplay state. Mixed, partial, missing, extra,
+unclaimed and mismatched spans remain rejected atomically. Worker checks:
+84 timing/stream cases and 25 authority guards pass without skips; nine
+coordinator cases pass. The walker check retains its independently reproduced
+malformed two-column CSV failure (37 of 38 pass).
+
+At `d3341faf90` in `.worktrees/trace-s3k-aiz-camera`, queued
+`-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=<reference> test`
+completes its one chain case with one error, no skips. The second gameplay
+segment is now complete with zero errors/warnings and zero bootstrap errors,
+removing the previous 46 camera differences. The next handoff rejects pending
+KosM parent 30 (MonkeyDude art). The earliest recorded admission failure is
+its direct child 56 at raw 3290 PRE_MAIN_LOOP, a lag row; later queue failures
+cascade from that missed completion. Pending ownership alone did not establish
+that a provider lost the job. A bounded boundary probe is the next diagnostic.
+Cross-game traces and combined ordinary validation of this next batch remain
+outstanding; the chain itself is not green.
