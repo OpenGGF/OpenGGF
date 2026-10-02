@@ -251,3 +251,37 @@ that would skip the intermediate notes' audio. The regression compares full
 note state and final PCM to the corresponding normal-speed recording at 1.5×,
 2×, 3.375× and 32× in NTSC/PAL. It also covers fractional restore, silent frames,
 and speed changes back to normal. See the existing validation matrix for runs.
+
+## Elevation tiers and wider pits (0.6.0)
+
+Follow-up on `7e14f78180`, same branch and checkout, 2026-10-02. The request was
+more varied solid ground: larger gaps and some elevation change. Corridors keep
+their place (every fourth section from section 3) and their flat ROM banks. Each
+corridor now joins two elevation *stretches*. A stretch is the three ordinary
+sections before it, raised or lowered by -64, -32, 0 or +32px.
+Ordinary sections are translated whole by 16px chunk rows. Their outside edges therefore still meet at a flat seam.
+
+Tiers stay stateless, so backtracking and recycling regenerate the same course.
+Even stretches choose a tier from the seed. Odd stretches choose a tier within 64px
+of both even neighbours. With a 96px tier span, that set is never empty. Independent
+per-stretch tiers were rejected: they could ask for a 96px climb, which is at the
+limit of a held jump (about 96.6px peak). Pit width is paired with the step:
+|step| = 64 allows up to 128px, |step| = 32 up to 160px, and level corridors up to
+192px. A held jump that climbs 64px still lands after roughly 47 frames. The physics regression
+takes each width at its largest paired step and crosses it in both directions.
+One direction is therefore always the climb. A third of drops are pit-less
+ledges. Forward travel is never a wall, and backtracking jumps a ledge of at most 64px.
+The opening and the first 128px taught pit stay at ground level.
+
+The real constraint is the byte layout's 256 block indices, shared with the 83 GHZ
+background/foreground source blocks. Each tier shift, and each pit width × tier ×
+bank, creates new blocks. Flats and every pit variant are built first. Ground
+keeps all 14 ROM hill/dip sections. Other tiers then take whole ROM sections in ROM
+order while the budget allows. With the REV01 ROM this fills exactly 256 slots
+and gives raised/lowered tiers three, two and one section shapes. Generated
+foreground indices now exceed 0x7F; `TerrainLibrary.floor` no longer masks S1's
+loop flag, which the ROM loader already strips from source layouts. Raised sections
+repeat the source's bottom chunk row instead of leaving empty space below.
+
+Enemy habitats now exclude every corridor, including pit-less ledges. Validation
+is focused on the mod, whose engine dependency is unchanged; see the matrix.

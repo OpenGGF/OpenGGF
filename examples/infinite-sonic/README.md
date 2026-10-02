@@ -32,11 +32,15 @@ stay clear of the highest terrain beneath their patrol and bob. The first 1,536 
 are enemy-free and have no pits. Jump or roll into enemies to defeat them and earn points. These use
 ROM sprites with custom bounded patrols; flyers do not fire missiles.
 
-Every fourth section after the opening is a jump corridor: a 64, 96 or 128 pixel
-pit with equal-height flat banks and at least 192 pixels of approach on either side.
-Hold Jump while moving to clear it; releasing Jump early shortens the arc. Enemy
-patrols never occupy these corridors. The other sections retain the ROM-derived
-hills and dips. Rows of rings appear periodically along the terrain.
+Every fourth section after the opening is a jump corridor: a 64 to 192 pixel pit
+between flat banks, with at least 160 pixels of approach on either side. Corridors
+also change elevation. The course moves between four ground levels 32 pixels apart,
+climbing or dropping up to 64 pixels per corridor. Climbs use pits of at most 128
+pixels, and 192 pixel pits stay level. Some drops are a plain ledge with no pit. Hold Jump while moving to clear a pit;
+releasing Jump early shortens the arc. Enemy patrols never occupy these corridors.
+The other sections retain the ROM-derived hills and dips, raised or lowered to the
+current level; raised and lowered levels use fewer hill shapes because the layout
+has 256 block slots. Rows of rings appear periodically along the terrain.
 
 At local X=8,192 the engine shifts Sonic and the camera left by 4,096 pixels and
 advances the terrain window. Logical distance continues increasing, selecting new

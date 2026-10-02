@@ -7,9 +7,9 @@ new stock act. [Design and decisions](../../designs/2026-10-01-infinite-sonic.md
 | Contract | Evidence | Scope / gaps |
 | --- | --- | --- |
 | Real code package | `TestInfiniteSonic.compileAndValidate` compiles project sources and calls SDK `package` validation | No ROM payloads or baked assets shipped |
-| Entry and traversal | `protectedTraversalPreservesEncountersAcrossRebaseAndReplay` uses explicit test-only invulnerability, 1× clock resets and camera recentering to isolate terrain; runs Right with gap-aware Jump input for 6,000 frames, asserts no death and at least four world rebases | All five current `WidescreenAspect` presets: 320, 352, 400, 528, 800; resolved camera width asserted |
+| Entry and traversal | `protectedTraversalPreservesEncountersAcrossRebaseAndReplay` uses explicit test-only invulnerability, 1× clock resets and camera recentering to isolate terrain; runs Right with gap/wall-aware Jump input for 6,000 frames, asserts no death and at least four world rebases | All five current `WidescreenAspect` presets: 320, 352, 400, 528, 800; resolved camera width asserted |
 | Rewind at world recycling | Same test captures the full registry, runs 800 frames across recycling, restores and replays | Compares X/Y, fractional X, ground speed entire map, enemy state and occupied object slots; native donor/off; does not test GameLoop's interactive history recorder |
-| Backtracking | Same terrain-only setup runs Left with gap-aware Jump input for 1,800 frames and proves reverse rebasing; normal challenge backtracking can be fatal | Same five widths |
+| Backtracking | Same terrain-only setup runs Left with gap/wall-aware Jump input for 1,800 frames, climbing ledge drops in reverse and proves reverse rebasing; normal challenge backtracking can be fatal | Same five widths |
 | Fresh reload / act isolation | `freshReloadResetsTheCourseAndOtherActsRemainStock` loads GHZ2, checks stock placements, reloads GHZ1 and checks original generated layout | 320px; physical death/respawn and live-history reset not yet covered |
 | Character/team scope | `patchOnlyActivatesForSoloSonic` checks solo Sonic, solo Tails, Sonic+Tails and wrong-game selection | Other teams/characters use stock GHZ, by explicit activation policy |
 | Install/registration | Local production scanner, state/trust handling and restricted classloader registration check | IntelliJ default project-root working directory; enabled local jar |
@@ -18,8 +18,8 @@ new stock act. [Design and decisions](../../designs/2026-10-01-infinite-sonic.md
 | Jump requirement | `holdingRightCannotCompleteTheCourse` exercises ordinary unassisted Right input after the safe opening | All five widths; normal damage, bounded live slots; automatic respawn remains open |
 | Attacks and explosions | `aPhysicalStompDestroysTheBadnikAwardsScoreAndDoesNotRespawnIt` exercises ground and air enemies | Real touch response from a positioned descending spin; score, no immediate respawn and explosion rewind/replay |
 | Ring collection | `ringRowsCollectThroughGameplayAndRestoreWithTheCourse` exercises real touch collection, ring count and restore/replay | Opening row, no repeated award after sparkle; GPU review remains open |
-| Gap geometry | `gapsAreBoundedSeededAndHaveLevelRunways` checks 1,000 sections; encounter habitat test compares actual decoded collision with the terrain oracle | 64/96/128px widths, no enemies in jump corridors, flat banks |
-| Jump reach | `realPhysicsCanClearEachGapInBothDirections` uses actual Sonic movement and landing | All three widths, both directions, 3px/frame initial speed with held direction and Jump |
+| Corridor geometry | `corridorsAreBoundedSeededAndHaveLevelRunways` checks 1,000 sections; encounter habitat test compares actual decoded collision with the terrain oracle | 64–192px widths, ±32/±64px steps, pit-less drops only, four elevation tiers, seamless section joins, no enemies in corridors, flat banks |
+| Jump reach | `realPhysicsCanClearEachGapInBothDirections` uses actual Sonic movement and landing | All five widths, each at its largest paired elevation change, both directions (one climbs), 3px/frame initial speed with held direction and Jump |
 | Gameplay breadth | Terrain-aware bounded patrols, ring trails, pits, hills/dips, speed/countdown HUD, no finish | No missiles, moving platforms, breakable floors, checkpoints or bosses; donors unverified |
 
 ## Execution
@@ -340,3 +340,17 @@ still `b711a909…`, so it was not supplied. `TestRemainingRewindTailInventory`
 guard are the baseline-reproduced failures recorded above. Diagnostics were
 inspected and acknowledged. The broad selection remains non-green and is not
 represented as certification.
+
+## Elevation tiers and wider pits (0.6.0, 2026-10-02)
+
+Main checkout, `feature/ai-infinite-sonic`, base `7e14f78180`. Focused validation of
+the mod only, with the S1 REV01 ROM:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
+  "-Dsonic1.rom.path=/absolute/path/to/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+**41 passed, 0 failures, 0 skipped.** The engine is unchanged, so no engine
+category run was needed. Gameplay rendering of ledges and raised tiers has not
+been visually reviewed.

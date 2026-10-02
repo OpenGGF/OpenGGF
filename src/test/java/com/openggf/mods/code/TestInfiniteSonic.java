@@ -82,6 +82,7 @@ class TestInfiniteSonic {
         return fixture;
     }
 
+
     @ParameterizedTest @EnumSource(WidescreenAspect.class)
     void protectedTraversalPreservesEncountersAcrossRebaseAndReplay(WidescreenAspect aspect) throws Exception {
         var fixture = launch(aspect);
@@ -399,12 +400,24 @@ class TestInfiniteSonic {
         for (int ahead = 0; ahead <= 48; ahead += 4) {
             if (floorAt(x + direction * ahead) < 0) approachingGap = true;
         }
-        boolean jump = fixture.sprite().getAir() || approachingGap;
+        // A ledge wall (backtracking over a drop) rises more than any ROM slope in one pixel.
+        boolean approachingWall = false;
+        for (int ahead = 1; ahead <= 32; ahead++) {
+            int before = floorAt(x + direction * (ahead - 1)), after = floorAt(x + direction * ahead);
+            if (before >= 0 && after >= 0 && before - after > 16) approachingWall = true;
+        }
+        boolean jump = fixture.sprite().getAir() || approachingGap || approachingWall;
         fixture.stepFrame(false, false, direction < 0, direction > 0, jump);
     }
 
     private int gapWidth(long section) throws Exception {
         return (int) terrain().getClass().getMethod("gapWidth", long.class).invoke(terrain(), section);
+    }
+    private int stepHeight(long section) throws Exception {
+        return (int) terrain().getClass().getMethod("stepHeight", long.class).invoke(terrain(), section);
+    }
+    private boolean isCorridor(long section) throws Exception {
+        return (boolean) terrain().getClass().getMethod("isCorridor", long.class).invoke(terrain(), section);
     }
 
     @Test void ringRowsCollectThroughGameplayAndRestoreWithTheCourse() throws Exception {
@@ -439,36 +452,62 @@ class TestInfiniteSonic {
         assertEquals(count + 1, GameServices.level().getLevelGamestate().getRings(), "a collected ring stays collected");
     }
 
-    @Test void gapsAreBoundedSeededAndHaveLevelRunways() throws Exception {
+    @Test void corridorsAreBoundedSeededAndHaveLevelRunways() throws Exception {
         launch(WidescreenAspect.NATIVE_4_3);
         Set<Integer> widths = new HashSet<>();
-        int gaps = 0;
+        Set<Integer> steps = new HashSet<>();
+        Set<Integer> elevations = new HashSet<>();
+        int gaps = 0, ledges = 0;
         for (long section = 0; section < 1000; section++) {
             int width = gapWidth(section);
+            int step = stepHeight(section);
             assertEquals(width, gapWidth(section));
-            if (section < 3) assertEquals(0, width, "safe opening runway");
-            if (width == 0) continue;
-            gaps++;
-            widths.add(width);
+            elevations.add(floorAt(section * 512));
+            assertEquals(floorAt(section * 512 - 1), floorAt(section * 512), "sections join without a seam step");
+            if (section < 3) assertFalse(isCorridor(section), "safe opening runway");
+            if (!isCorridor(section)) {
+                assertEquals(0, width);
+                assertEquals(0, step);
+                continue;
+            }
             assertNull(encounter(section), "jump sections have no badnik ambush");
+            assertTrue(Math.abs(step) <= 64, "a held jump must clear every climb: " + step);
+            // Climbs pair with shorter pits; the widest pits stay within one tier.
+            assertTrue(width <= (Math.abs(step) > 32 ? 128 : Math.abs(step) > 0 ? 160 : 192), width + "/" + step);
+            if (width == 0) {
+                assertTrue(step > 0, "a pit-less corridor is a ledge drop, never a forward wall");
+                ledges++;
+            } else {
+                gaps++;
+                widths.add(width);
+            }
+            steps.add(step);
             long start = section * 512 + (512 - width) / 2;
-            int bank = floorAt(section * 512);
+            int left = floorAt(section * 512), right = floorAt(section * 512 + 511);
+            assertEquals(step, right - left);
             for (int x = 0; x < 512; x++) {
                 long world = section * 512 + x;
-                assertEquals(world >= start && world < start + width ? -1 : bank, floorAt(world));
+                assertEquals(world >= start && world < start + width ? -1 : x < 256 ? left : right, floorAt(world));
             }
         }
-        assertEquals(Set.of(64, 96, 128), widths);
+        assertEquals(Set.of(64, 96, 128, 160, 192), widths);
+        assertEquals(Set.of(-64, -32, 0, 32, 64), steps);
+        assertEquals(Set.of(896, 928, 960, 992), elevations, "four elevation tiers");
         assertTrue(gaps > 150 && gaps < 350, "occasional jumps with recovery sections: " + gaps);
+        assertTrue(ledges > 10, "some drops are plain ledges: " + ledges);
     }
 
-    @ParameterizedTest @ValueSource(ints = {64, 96, 128})
+    @ParameterizedTest @ValueSource(ints = {64, 96, 128, 160, 192})
     void realPhysicsCanClearEachGapInBothDirections(int width) throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         fixture.stepIdleFrames(2);
+        // Exercise the largest elevation change paired with this width: one direction climbs it.
         long section = -1;
         for (long candidate = 3; candidate < 1000; candidate++) {
-            if (gapWidth(candidate) == width) { section = candidate; break; }
+            if (gapWidth(candidate) == width
+                    && (section < 0 || Math.abs(stepHeight(candidate)) > Math.abs(stepHeight(section)))) {
+                section = candidate;
+            }
         }
         assertTrue(section >= 0, "course must expose gap width " + width);
         long worldStart = section * 512 + (512 - width) / 2;

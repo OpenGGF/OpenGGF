@@ -9,7 +9,7 @@ public final class EncounterPlan {
     public record Encounter(long worldX, int y, boolean flying) { }
 
     public static Encounter at(TerrainLibrary terrain, long section) {
-        if (section < FIRST_SECTION || terrain.gapWidth(section) != 0) return null;
+        if (section < FIRST_SECTION || terrain.isCorridor(section)) return null;
         long random = TerrainLibrary.random(section + TerrainLibrary.SEED + 0x4241444e494bL);
         // A quarter of sections are rest space. Separate randomness keeps terrain unchanged.
         int choice = (int) Long.remainderUnsigned(random, 8);
