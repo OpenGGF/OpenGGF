@@ -151,7 +151,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   continue timers preserve the native same-pass countdown. Returns retain the resolved
   terrain art through saved-state restoration and repeat the native title-art load.
   Continuous replay verifies completed return-art jobs against their full recorded
-  identities without renumbering submitted work. Leaving any S3K special-stage
+  identities without renumbering submitted work. The 5,000-point perfect bonus
+  requires collecting every ring, independently of earning the emerald, so
+  non-perfect clears return without an extra tally. Leaving any S3K special-stage
   results screen now fades to black without the stage
   transition sound, as in the ROM, instead of fading to white.
 - **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it

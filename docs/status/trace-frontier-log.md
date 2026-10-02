@@ -111896,3 +111896,15 @@ or gameplay state. The one chain case still errors at the next boundary on
 pending KosM30. First recorded admission failure: raw3290 PRE_MAIN_LOOP direct
 child56, preceding parent30 at3291. Timing/stream checks84 and authority guards25
 pass with no skips. Broader next-batch checks remain pending.
+
+
+## 2026-10-03 — Tails passes the first special-stage results boundary
+
+Perfect bonus now uses remaining rings (`loc_2E3DA`), not emerald ownership.
+45 focused results cases pass; native completion6068/title6091 match without
+an added delay. Full-owner worker `0e50fed9f6` in
+`.worktrees/trace-s3k-tails-frontier`, queued r7 Tails chain with verified ROM,
+keeps segment0 green and reaches the complete returned segment2:41,653 errors,
+firstrow199 y449 versus448 (incorrect coconut hurt). This supersedes the older
+partial-worker firstrow1400 measurement. The next target is the native
+MonkeyDude arm-chain/projectile owner; broader combined checks remain pending.

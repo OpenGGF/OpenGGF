@@ -471,3 +471,24 @@ cascade from that missed completion. Pending ownership alone did not establish
 that a provider lost the job. A bounded boundary probe is the next diagnostic.
 Cross-game traces and combined ordinary validation of this next batch remain
 outstanding; the chain itself is not green.
+
+
+## Perfect bonus follows remaining rings — 2026-10-03
+
+Original `7eff0b147c` / fresh-base equivalent `ca820e7f62` captures the native
+remaining-ring word before special-stage reset and before asynchronous results
+preparation. `loc_2E3DA` awards the 5,000-point perfect bonus only when that word
+is zero; earning the emerald is independent. Native Tails collects12 and leaves52,
+so its bonus is zero. Removing the incorrect extra tally reaches native results
+completion6068/title6091; no fitted title delay is introduced.
+
+Worker validation:45 results cases pass;64 route/required cases contain61 passes
+and three existing trace failures, no skips. A fresh full-owner chain at
+`0e50fed9f6` (`.worktrees/trace-s3k-tails-frontier`, queued r7 Tails chain with
+verified reference ROM) keeps openingsegment0 green and now completes returned
+segment2 with41,653 errors, firstrow199 y449 versus448 and an incorrect hurt
+response. The earlier partial worker had firstrow1400; it lacked the root
+MonkeyDude changes and is not the combined baseline. Native corroboration now
+points to the coconut launch/chain trajectory, under separate investigation.
+The perfect-bonus change advances the old results-mode6221 boundary; it does
+not certify the newly reachable route as green.

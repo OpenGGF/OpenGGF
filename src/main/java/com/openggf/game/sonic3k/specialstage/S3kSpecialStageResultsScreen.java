@@ -214,13 +214,13 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     private int lastScoreValue = Integer.MIN_VALUE;
     private int viewportXOffset;
 
-    public S3kSpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
+    public S3kSpecialStageResultsScreen(int ringsCollected, boolean gotEmerald, int ringsRemaining,
                                          int stageIndex, int totalEmeraldCount,
                                          PlayerCharacter character) {
-        this(ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, character, false, false);
+        this(ringsCollected, gotEmerald, ringsRemaining, stageIndex, totalEmeraldCount, character, false, false);
     }
 
-    public S3kSpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
+    public S3kSpecialStageResultsScreen(int ringsCollected, boolean gotEmerald, int ringsRemaining,
                                          int stageIndex, int totalEmeraldCount,
                                          PlayerCharacter character,
                                          boolean superEmeraldStage, boolean skSideOrigin) {
@@ -238,9 +238,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
                 ? GameServices.gameState().getCollectedSuperEmeraldIndices().size()
                 : totalEmeraldCount;
 
-        // ROM lines 63320-63327: bonus calculation
+        // Obj_SpecialStage_Results/loc_2E3DA tests Special_stage_rings_left,
+        // independently of the spheres-left test that awards the emerald.
         this.ringBonus = ringsCollected * 10;
-        this.timeBonus = gotEmerald ? 5000 : 0;
+        this.timeBonus = ringsRemaining == 0 ? 5000 : 0;
 
         // Fade out music immediately (ROM line 63011)
         fadeOutMusic();

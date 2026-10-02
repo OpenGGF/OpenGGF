@@ -33,6 +33,11 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
     private final Sonic3kSpecialStageManager manager;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
 
+    // Results entry clears the stage manager before constructing its screen. The
+    // ROM retains Special_stage_rings_left across that boundary. This latch lives
+    // only through the non-rewindable results entry and is cleared on ordinary reset.
+    private int resultsRingsRemaining = -1;
+
     public Sonic3kSpecialStageProvider() {
         this(new Sonic3kSpecialStageManager());
     }
@@ -139,6 +144,7 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
     public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy)
             throws IOException {
         java.util.Objects.requireNonNull(policy, "policy");
+        resultsRingsRemaining = -1;
         manager.reset();
         manager.initialize(stageIndex);
     }
@@ -159,6 +165,7 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
                                 EmeraldRewardKind rewardKind) throws IOException {
         java.util.Objects.requireNonNull(policy, "policy");
         java.util.Objects.requireNonNull(rewardKind, "rewardKind");
+        resultsRingsRemaining = -1;
         manager.reset();
         manager.initialize(stageIndex, rewardKind);
     }
@@ -278,13 +285,14 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
                 && Sonic3kZoneIds.isSkSideZone(GameServices.level().getCurrentZone());
         var character = manager.getPlayerCharacter();
         boolean superEmeraldMode = manager.isSuperEmeraldMode();
+        int ringsRemaining = resultsRingsRemaining;
         try {
             return new S3kSpecialStageResultsPreparation(GameServices.rom().getRom(), character,
                     S3kRuntimeArtCoordinator.current().moduleQueue(),
                     GameServices.module().getGameService(
                             Sonic3kLevelTitlePlcService.class),
                     () -> new S3kSpecialStageResultsScreen(
-                            ringsCollected, gotEmerald, stageIndex, totalEmeraldCount,
+                            ringsCollected, gotEmerald, ringsRemaining, stageIndex, totalEmeraldCount,
                             character, superEmeraldMode, skSideOrigin));
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to prepare special-stage results resources", exception);
@@ -325,7 +333,15 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
 
     @Override
     public void reset() {
+        resultsRingsRemaining = -1;
         manager.reset();
+    }
+
+    @Override
+    public void resetForResults() {
+        resultsRingsRemaining = manager.getRingsLeft();
+        manager.reset();
+        onEnterResults();
     }
 
     @Override
