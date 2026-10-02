@@ -185,6 +185,10 @@ class TestSonic3kTitleCardKosQueue {
             manager.requestFreshLevelRuntimeArtHandoff(
                     LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex());
             manager.initializeFreshLevelTransition(0, 0);
+            assertTrue(manager.hasImmediateFreshLevelPalette());
+            assertEquals(4, moduleHandles().size(),
+                    "a same-act return must still submit Obj_TitleCardInit's archives");
+            drainThroughPostObjects(moduleHandles());
             setField(manager, "state", Sonic3kTitleCardState.DISPLAY);
             setField(manager, "freshLevelChildMovementObserved", true);
             var movementBoundary = manager.capture();
@@ -212,7 +216,10 @@ class TestSonic3kTitleCardKosQueue {
             assertFalse(manager.shouldCompleteFreshLevelTransitionBoundary(),
                     "LoadLevelLoadBlock must drain before ordinary gameplay begins");
             assertEquals(2, moduleHandles().size());
+            var terrainWait = manager.capture();
             manager.update();
+            assertEquals(terrainWait.stateTimer(), manager.capture().stateTimer(),
+                    "loc_7870 does not dispatch the surviving title owner");
             assertEquals(2, moduleHandles().size(), "terrain submission is one-shot");
             service(HardwareServiceBoundary.POST_OBJECTS);
             service(HardwareServiceBoundary.PRE_MAIN_LOOP);

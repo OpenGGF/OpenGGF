@@ -3035,7 +3035,8 @@ public class GameLoop {
                     activeSpecialStageRewardKind);
         }
 
-        if (fadeAlreadyWhite) {
+        if (fadeAlreadyWhite || (ssProvider instanceof com.openggf.game.internal.SpecialStageResultsEntry entry
+                && entry.hasCompletedResultsEntryFade())) {
             // Fade pre-started by SS manager (S1) - screen is already white.
             // Go directly to results; doEnterResultsScreen() calls startFadeFromWhite().
             doEnterResultsScreen();
@@ -3326,6 +3327,11 @@ public class GameLoop {
     }
 
     private void startResultsReturnFadeIn() {
+        if (getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                && boundary.hasImmediateFreshLevelPalette()) {
+            fadeManager.clearOverlayForImmediatePaletteLoad();
+            return;
+        }
         if (resultsExitToWhite) {
             GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
         } else {
@@ -3389,7 +3395,7 @@ public class GameLoop {
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
-            getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
+            getTitleCardProviderLazy().initializeFreshLevelTransition(zoneIndex, actIndex);
         }
 
         // Start zone music immediately when title card begins (not at the end)

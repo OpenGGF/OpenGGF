@@ -88,6 +88,34 @@ class TestSonic3kSpecialStageManagerSnapshot {
     }
 
     @Test
+    void emeraldExitUsesSixtyWaitsAndRewindsWhileSpinIsStillActive() throws Exception {
+        attachRuntime();
+        Sonic3kSpecialStageManager manager = new Sonic3kSpecialStageManager();
+        seedInitializedManager(manager);
+        set(manager, "stagePalettesUploaded", true);
+        set(manager, "preBootFadeHoldFrames", 0);
+        set(manager, "postBootFadeHoldFrames", 0);
+        set(manager, "firstUpdateCall", false);
+        manager.getPlayer().initialize(0x8000, 0x2222, 0x3333, false);
+        manager.getBanner().initialize();
+        Method collect = Sonic3kSpecialStageManager.class.getDeclaredMethod("collectEmerald");
+        collect.setAccessible(true);
+        collect.invoke(manager);
+        for (int i = 0; i < 30; i++) manager.update();
+        Sonic3kSpecialStageSnapshot halfway = manager.captureRewindSnapshot();
+        assertEquals(30, halfway.exitWaitFramesRemaining());
+        for (int i = 0; i < 29; i++) manager.update();
+        assertFalse(manager.isFinished());
+        manager.update();
+        assertTrue(manager.isFinished(), "loc_8588 exits when Demo_timer reaches zero");
+        assertTrue(manager.getPlayer().getFadeTimer() > 0,
+                "the native exit does not wait for the 0x61 spin timer");
+        manager.restoreRewindSnapshot(halfway);
+        for (int i = 0; i < 30; i++) manager.update();
+        assertTrue(manager.isFinished());
+    }
+
+    @Test
     void managerRestoreRejectsUninitializedLiveOrSnapshotState() {
         Sonic3kSpecialStageManager manager = new Sonic3kSpecialStageManager();
         assertThrows(IllegalStateException.class, manager::captureRewindSnapshot);
@@ -270,6 +298,7 @@ class TestSonic3kSpecialStageManagerSnapshot {
         set(manager, "emeraldTimer", 7);
         set(manager, "emeraldInteractIndex", 0x155);
         set(manager, "exitSpinStarted", true);
+        set(manager, "exitWaitFramesRemaining", 17);
         set(manager, "palFadeDelay", 1);
         set(manager, "musicSpedUp", true);
         set(manager, "ringAnimTimer", 2);
@@ -308,6 +337,7 @@ class TestSonic3kSpecialStageManagerSnapshot {
         set(manager, "emeraldTimer", 66);
         set(manager, "emeraldInteractIndex", 0x011);
         set(manager, "exitSpinStarted", false);
+        set(manager, "exitWaitFramesRemaining", 0);
         set(manager, "palFadeDelay", 8);
         set(manager, "musicSpedUp", false);
         set(manager, "ringAnimTimer", 6);
@@ -349,6 +379,7 @@ class TestSonic3kSpecialStageManagerSnapshot {
                 () -> assertEquals(7, get(manager, "emeraldTimer")),
                 () -> assertEquals(0x155, get(manager, "emeraldInteractIndex")),
                 () -> assertEquals(true, get(manager, "exitSpinStarted")),
+                () -> assertEquals(17, get(manager, "exitWaitFramesRemaining")),
                 () -> assertEquals(1, get(manager, "palFadeDelay")),
                 () -> assertEquals(true, get(manager, "musicSpedUp")),
                 () -> assertEquals(2, get(manager, "ringAnimTimer")),
