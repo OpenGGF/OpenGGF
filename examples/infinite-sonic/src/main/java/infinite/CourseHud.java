@@ -52,7 +52,7 @@ public final class CourseHud {
         return String.format(Locale.ROOT, "SPEED %.2fX", course.speedMultiplier());
     }
     public static String countdownText(CourseController course) {
-        return course.speedMultiplier() >= 32 ? "MAX SPEED" : "NEXT " + course.secondsRemaining() + "S";
+        return course.speedMultiplier() >= 32 ? "MAX SPEED" : "NEXT " + course.secondsRemaining();
     }
     public static String warningText(CourseController course) {
         return !course.gameOver() && course.speedMultiplier() < 32 && course.secondsRemaining() <= 5

@@ -383,7 +383,7 @@ class TestInfiniteSonic {
         assertEquals(1.5, speed());
         assertEquals("SPEED 1.50X", loader.loadClass("infinite.CourseHud")
                 .getMethod("speedText", controller().getClass()).invoke(null, controller()));
-        assertEquals("NEXT 30S", loader.loadClass("infinite.CourseHud")
+        assertEquals("NEXT 30", loader.loadClass("infinite.CourseHud")
                 .getMethod("countdownText", controller().getClass()).invoke(null, controller()));
         var after = registry.capture();
         int score = GameServices.gameState().getScore();
