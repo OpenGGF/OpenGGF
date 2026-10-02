@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
+`5637105e5c` while real SMPS songs retained normal note durations. Their chip
+render clock advanced faster, but the driver still received one service per
+output frame. Compare both sequencer state and final PCM against a normal-speed
+ROM recording played faster; neither a higher pitch nor more rendered samples
+proves that note timing advanced. Interleave services with synthesis, rather
+than issuing all fast-forward updates before rendering the packet.
+
 Waveform tests need an explicit output rate (2026-10-02): `AudioManager.resetState`
 retains its backend. `TestGameLoopAudioPresentationModes` uses a six-Hz dummy;
 a later DAC-only regression received zero or one sample per frame and failed a

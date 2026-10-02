@@ -289,3 +289,54 @@ The example build/package passed and the enabled, trusted local jar was refreshe
 Results and skip/failure summaries were inspected, and the category run acknowledged
 and deleted. Focused validation is green; the broad suite remains non-green for
 the recorded unrelated failures and is not represented as full certification.
+
+## SMPS tempo follows accelerated playback (2026-10-02)
+
+Base `5637105e5c7aa4172c509bb94a7e63d9765e401d`, same branch/checkout. The prior
+connection raised chip pitch without speeding up note services. The corrected
+producer interleaves service/render intervals and captures fractional source
+phase with audio snapshots. No mod source, physics, game pacing or ROM asset
+change is involved.
+
+Focused queued Maven checks (`-Dmse=off`, absolute S1 ROM property where needed):
+`TestAudioPresentationProducer,TestAudioPresentationProducerRewind,
+TestUnifiedAudioPresentationIntegration,TestAudioPresentationAllocationBudget`:
+**54 passed, no failures/errors/skips**, including zero steady-state allocation.
+`TestAcceleratedSmpsPlayback,TestModApiSignatureSurface`: **19 passed, no
+failures/errors/skips**. The new ROM class checks eight region/rate combinations,
+full note state and final PCM against the normal-speed source, fractional restore
+with silent presentation, and rate changes back to 1×. It uses independent
+48 kHz no-device presentations and the real S1 ROM loader.
+
+A bounded baseline diagnostic compiled only the pre-task producer and its nested
+classes into a separate temporary directory, ahead of current production/test
+classes on the classpath. Same checkout, dependencies and absolute S1 ROM path:
+the initial four NTSC speed cases plus fractional restore **all failed** against
+the old producer and **all passed** against the correction. The speed cases fail
+on note state, independently of audible pitch. No baseline engine build tree was
+shared or modified.
+
+The change-based plan selects **1,020 of 2,958 ordinary classes** (audio, common,
+rewind and tooling) plus guards. Java 21/Lua 5.4/PowerShell preflight passed.
+This is partial-suite selection, not a claim of complete engine or native audio
+parity coverage. The first category attempt was interrupted while rollback tests
+were added; the focused set above was then repeated on the final producer:
+**75 passed, no failures/errors/skips**.
+
+Category run `--base 5637105e5c --run` (Maven 3.9.16, Java 21, portable
+PowerShell 7.4.6, `LUA_BIN=/usr/bin/lua5.4`): ordinary **9,001 tests / 7
+failures / 185 errors / 58 skipped** in 400 seconds; guards **672 tests / 2
+failures** in 279 seconds. `TestAudioPresentationArchitectureGuard` still named
+the removed `mixSessionForward`. It now guards `mixSessionForwardAtRate`
+(session render plus `mixPcmVoices`, no legacy `mixer.mix`) and also requires
+the source service inside it. The queued guard class passed **38/38**.
+
+Every other failure is outside this change. The tooling selection added more
+S3K ROM consumers: all 185 errors and the remaining ordinary failures except
+the inventory are null S3K ROM lookups, a "requires the verified S3K ROM" boss
+explosion, or ROM-assumption aborts inside `assertThrows`. The root S3K SHA-1 is
+still `b711a909…`, so it was not supplied. `TestRemainingRewindTailInventory`
+(1315/1072 vs 1316/1073) and the `LrzFlameObjectInstance` physics-standardization
+guard are the baseline-reproduced failures recorded above. Diagnostics were
+inspected and acknowledged. The broad selection remains non-green and is not
+represented as certification.

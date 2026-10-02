@@ -227,3 +227,27 @@ it on every note, or embedding drum samples would hide the owning initialization
 fault and was not used. All sample bytes still come from the user ROM.
 
 Validation and remaining coverage are recorded in the existing per-act matrix.
+
+### Tempo correction after live playback feedback
+
+Follow-up on `5637105e5c7aa4172c509bb94a7e63d9765e401d`, same checkout.
+That version connected the existing forward playback rate, whose SMPS path
+rendered extra chip samples after only one driver service. The earlier sample-
+voice resampling tests proved pitch change, not shorter ROM note durations;
+the user's live playback exposed the missing clock advancement.
+
+The producer now services one source V-blank, renders its samples, then services
+the next. A fractional source-frame phase and the integer sample-clock remainder
+persist between output packets, participate in snapshot/restore, and roll back
+with a failed session transaction. Output remains one wall-clock packet; all
+source samples are consumed, including the tail beyond the final selected output
+sample. Silent and reverse presentation do not advance the source clock.
+Source cadence also advances existing load/fade/SFX state through its ordinary
+session service, rather than modifying per-song tempo constants.
+
+Pitch-only PCM resampling from the prior commit is rejected by the new ROM
+regression. Bursting extra sequencer services before rendering was also rejected:
+that would skip the intermediate notes' audio. The regression compares full
+note state and final PCM to the corresponding normal-speed recording at 1.5×,
+2×, 3.375× and 32× in NTSC/PAL. It also covers fractional restore, silent frames,
+and speed changes back to normal. See the existing validation matrix for runs.

@@ -889,6 +889,10 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     public AudioPresentationSnapshot snapshot() {
+        return snapshot(AudioPresentationSnapshot.ForwardTiming.INITIAL);
+    }
+
+    AudioPresentationSnapshot snapshot(AudioPresentationSnapshot.ForwardTiming timing) {
         assertOwnerBoundary();
         List<PresentationVoiceSnapshot> voices = new ArrayList<>();
         addMusicSnapshot(voices, activeMusic);
@@ -924,7 +928,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 coordFlagHandlers.state().snapshot(),
                 smpsSession == null ? null : smpsSession.captureSnapshot(),
                 smpsSession == null
-                        ? null : smpsSession.captureLogicalSnapshot());
+                        ? null : smpsSession.captureLogicalSnapshot(), timing);
     }
 
     public void restore(

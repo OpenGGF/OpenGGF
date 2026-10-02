@@ -2729,6 +2729,12 @@ the discrete DAC.
   (previously +384). Types 1 and 2 (YM3438 output stage) rest at 0. Muted
   channels keep this resting contribution, as a keyed-off channel does on
   silicon. The offset is the model's own and is not adjusted.
+- **Accelerated SMPS tempo (resolved 2026-10-02).** Forward playback previously
+  rendered extra chip samples but serviced note timing only once per output
+  frame, raising pitch without shortening notes. Source V-blank services now
+  interleave with synthesis at the playback rate; fractional source timing is
+  captured for rewind. ROM-backed tests compare accelerated note state and PCM
+  with the corresponding normal-speed source interval, in NTSC and PAL.
 - **S1 cold-launch percussion (resolved 2026-10-02).** Direct gameplay boots
   omitted `StopAllSound`'s DAC enable and music-load FM6 stereo routing, silencing
   drums even with valid ROM samples. The S1 physical policy now applies those
