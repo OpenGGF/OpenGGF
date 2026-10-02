@@ -172,8 +172,11 @@ class TestLbzResidualCompatibility {
         drumRoster.third.setDead(true); drum.update(1, drumRoster.main);
         assertFalse(drumRoster.third.isOnObject());
         drum.onUnload();
-        assertFalse(drumRoster.main.isOnObject());
-        assertFalse(drumRoster.first.isOnObject());
+        // loc_2C3CA deletes only its SST; native players retain Status_OnObj.
+        assertTrue(drumRoster.main.isOnObject());
+        assertTrue(drumRoster.first.isOnObject());
+        assertFalse(drumRoster.second.isOnObject(), "extension unload cleanup remains owned");
+        assertFalse(drumRoster.third.isOnObject(), "dead extension remains released");
     }
 
     private static void assertReplacementKeys(Object object, String field, Roster old, Roster replacement) throws Exception {

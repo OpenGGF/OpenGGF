@@ -111772,3 +111772,16 @@ errors / first9867 `tails_air` (0 versus1), each one failure and zero skips.
 No shared collision or trace-authoritative state changes. Commands, local
 rewind scope and inherited gaps are in the [LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md).
 The route remains red; new frontier coincides with rolling-drum deletion.
+
+### 2026-10-03 — LBZ rolling-drum deletion ownership
+
+Worker `trace-special-return`, base `d8851f0a41`, same queued
+`-Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay` reference-ROM command:
+6,316 errors / first9867 `tails_air` becomes 4,031 / first18939 `x_speed`
+(expected0018, actual000C), one failure and zero errors/skips. `loc_2C3CA`
+executes both participant routines before deleting only its SST; the engine
+previously unloaded early and synthesized a native rider release. Object-local
+post-routine deletion preserves live P1/P2 state while keeping dead/extension
+cleanup. All31 focused object/compatibility/deletion-rewind tests pass without
+skips. Commands and coverage limits: [LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md#rolling-drum-deletion-follow-up-2026-10-03).
+The trace remains red; row18939 owner has not yet been attributed.

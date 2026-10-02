@@ -5030,3 +5030,17 @@ standing bit for capture. Preserve that per-player order with a participant-only
 checkpoint; a batch checkpoint can update Player2 before Player1's reaction.
 Test through a real ObjectManager dispatch, since direct object tests with
 manually seeded standing state cannot expose a missing collision call.
+
+
+## Object deletion is not necessarily rider release
+
+LBZ `loc_2C3CA` calls both rolling-drum participant routines before
+`Delete_Sprite_If_Not_In_Range`. `Delete_Current_Sprite` clears its SST only;
+it does not perform `loc_2C48A` writes to the riders. Automatically releasing
+live native riders in `onUnload` therefore changes the next player dispatch.
+At LBZ trace row9867 that synthetic air bit delays Tails' CPU despawn.
+Use the existing post-routine range-check contract for this tail and preserve
+native player state. Keep engine extension/dead-player cleanup explicit;
+do not copy native stale-slot behavior to omitted extension participants.
+An independent test must execute the last participant update and real manager
+unload, including rewind, rather than asserting generic cleanup is desirable.
