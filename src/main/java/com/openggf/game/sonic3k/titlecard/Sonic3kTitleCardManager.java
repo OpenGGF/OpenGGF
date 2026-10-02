@@ -432,6 +432,9 @@ public class Sonic3kTitleCardManager
     public void initializeFreshLevelTransition(int zoneIndex, int actIndex) {
         // Obj_TitleCardInit stores 90, then Level overwrites the same owner
         // with #$16 just before LevelLoop (sonic3k.asm:62187, 7897-7900).
+        // Obj_TitleCardInit queues its archives on every Level: entry even
+        // when this process already retains decoded art from the same act.
+        artLoaded = false;
         initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES);
         freshLevelTransitionMode = true;
         var plc = GameServices.module().getGameService(
@@ -914,6 +917,11 @@ public class Sonic3kTitleCardManager
     }
 
     private void updateOwnedChildren() {
+        if (freshLevelTransitionMode && freshLevelTerrainStarted) {
+            // LoadLevelLoadBlock/loc_7870 services the queues but does not call
+            // Process_Sprites. The carried title owner resumes in LevelLoop.
+            return;
+        }
         if (freshLevelTransitionMode && state == Sonic3kTitleCardState.DISPLAY
                 && !freshLevelTitleReady) {
             // Obj_TitleCardWait first clears $34 from the preceding child
@@ -987,6 +995,14 @@ public class Sonic3kTitleCardManager
         }
         return state == Sonic3kTitleCardState.EXIT
                 || state == Sonic3kTitleCardState.COMPLETE;
+    }
+
+    @Override
+    public boolean hasImmediateFreshLevelPalette() {
+        // Level/loc_61DA calls LoadPalette_Immediate before loc_62CC.
+        // The later level reveal uses Palette_fade_timer at loc_64DC,
+        // not a blocking Pal_FadeFromBlack around the title loop.
+        return freshLevelTransitionMode;
     }
 
     @Override

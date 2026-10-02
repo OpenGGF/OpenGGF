@@ -6,6 +6,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.internal.SpecialStageResultsEntry;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
@@ -26,7 +27,7 @@ import java.util.Optional;
  * S3K special stages are accessed via giant rings hidden in levels.
  * Each stage awards one of seven Chaos Emeralds upon successful completion.
  */
-public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
+public class Sonic3kSpecialStageProvider implements SpecialStageProvider, SpecialStageResultsEntry {
     private final Sonic3kSpecialStageManager manager;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
 
@@ -48,6 +49,12 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     @Override
     public SpecialStageViewport getSpecialStageViewport() {
         return viewport;
+    }
+
+    @Override
+    public boolean hasCompletedResultsEntryFade() {
+        // loc_853E already calls Pal_ToWhite throughout its sixty-frame exit.
+        return manager.isFinished();
     }
 
     /**

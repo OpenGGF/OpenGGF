@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Legacy diagnostic RAM aliases (2026-10-02): the S3K return probe initially reused
+`V69_AIZ.ADDR_KOS_MODULES_LEFT = 0xFF04` from an old recorder diagnostic. The
+locked-on `sonic3k.constants.asm` layout places `Kos_modules_left` at `$FF60`
+and `Kos_module_queue` at `$FF64` (`Player_mode` is `$FF08`). Both original
+captures' Kosinski columns were invalidated; their independently verified game
+mode, results/title owner and Nemesis observations remained usable. A corrected
+capture from the same movie save repeated those fields and sampled the actual
+queue. Confirm diagnostic aliases against the owning RAM layout before treating
+plausible zero values as evidence that work has drained.
+
+
 Authored controller export (2026-09-28): `Bk2FrameInput.p1InputMask` can include
 jump as well as direction. A temporary LRZ author compared the whole mask to
 Left/Right, dropping held directions on498 jump rows; its live run cleared but
