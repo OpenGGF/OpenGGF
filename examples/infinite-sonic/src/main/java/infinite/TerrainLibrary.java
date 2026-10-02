@@ -9,6 +9,7 @@ public final class TerrainLibrary {
     public static final int WIDTH = 64;
     public static final long SEED = 0x534F4E4943L;
     private final List<int[][]> sections;
+    private final List<int[]> floorProfiles;
     private final List<Block> blocks = new ArrayList<>();
     private final int height;
 
@@ -16,6 +17,7 @@ public final class TerrainLibrary {
         height = source.getLayerHeightBlocks(0);
         int seam = floor(source, 0, 128);
         var candidates = new ArrayList<int[][]>();
+        var profiles = new ArrayList<int[]>();
         for (int col = 0; col < source.getLayerWidthBlocks(0); col++) {
             int entry = floor(source, col, 0);
             boolean safe = entry >= 64 && (seam - entry) % 16 == 0;
@@ -54,12 +56,19 @@ public final class TerrainLibrary {
             }
             if (candidates.stream().noneMatch(c -> java.util.Arrays.deepEquals(c, section))) {
                 candidates.add(section);
+                int[] profile = new int[512];
+                for (int x = 0; x < 256; x++) {
+                    profile[x] = floor(source, col, x) + seam - entry;
+                    profile[511 - x] = profile[x];
+                }
+                profiles.add(profile);
             }
         }
         if (candidates.size() < 2) throw new IllegalArgumentException(
                 "Green Hill requires at least two compatible terrain sections; found " + candidates.size());
         if (blocks.size() > 256) throw new IllegalArgumentException("Terrain block budget exceeded");
         sections = List.copyOf(candidates);
+        floorProfiles = List.copyOf(profiles);
     }
 
     private int intern(Block block) {
@@ -74,14 +83,23 @@ public final class TerrainLibrary {
     public int height() { return height; }
     public int blockCount() { return blocks.size(); }
     public Block block(int index) { return blocks.get(index); }
-    public int cell(long column, int row) {
-        if (column >= 0 && column < 2) return sections.getFirst()[(int) column][row];
-        long value = Math.floorDiv(column, 2) + SEED;
+    private int sectionIndex(long section) {
+        return section == 0 ? 0 : (int) Long.remainderUnsigned(random(section + SEED), sections.size());
+    }
+
+    static long random(long value) {
         value = (value ^ (value >>> 30)) * 0xbf58476d1ce4e5b9L;
         value = (value ^ (value >>> 27)) * 0x94d049bb133111ebL;
-        value ^= value >>> 31;
-        return sections.get((int) Long.remainderUnsigned(value, sections.size()))[
-                Math.floorMod(column, 2)][row];
+        return value ^ (value >>> 31);
+    }
+
+    public int cell(long column, int row) {
+        return sections.get(sectionIndex(Math.floorDiv(column, 2)))[Math.floorMod(column, 2)][row];
+    }
+
+    /** Surface of the generated terrain, including translated and mirrored columns. */
+    public int floorAt(long worldX) {
+        return floorProfiles.get(sectionIndex(Math.floorDiv(worldX, 512)))[Math.floorMod(worldX, 512)];
     }
 
     /** Top floor in a decoded S1 column; rejects ceilings, walls and missing floor. */

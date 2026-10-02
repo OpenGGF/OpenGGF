@@ -9,6 +9,8 @@ import java.util.List;
 /** Scalar origin is captured by the ordinary mod-object rewind codec. */
 public final class CourseController extends AbstractObjectInstance implements RewindRecreatable {
     private long origin;
+    private long visited; // One bit per retained 512px section, captured with origin.
+    public long originPixels() { return origin * 256; }
     public CourseController(ObjectSpawn spawn) { super(spawn, "Infinite Sonic course"); }
     @Override public boolean isPersistent() { return true; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
@@ -21,8 +23,13 @@ public final class CourseController extends AbstractObjectInstance implements Re
         services().levelGamestate().pauseTimer();
         int delta = player.getCentreX() >= 8192 ? 4096
                 : origin > 0 && player.getCentreX() < 2048 ? -4096 : 0;
-        if (delta == 0) return;
+        if (delta == 0) {
+            populateEncounters();
+            return;
+        }
         origin += delta / 256;
+        visited = delta > 0 ? visited >>> 8 : (visited << 8) & 0xffffffffL;
+        services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
         var library = services().gameService(TerrainLibrary.class);
         var level = services().currentLevel();
         var surface = LevelMutationSurface.forLevel(level);
@@ -38,5 +45,24 @@ public final class CourseController extends AbstractObjectInstance implements Re
         camera.setX((short) (camera.getX() - delta));
         camera.setXCopy((short) (camera.getXCopy() - delta));
         services().levelManager().invalidateAllTilemaps();
+        populateEncounters();
+    }
+
+    private void populateEncounters() {
+        var library = services().gameService(TerrainLibrary.class);
+        var camera = services().camera();
+        for (int i = 0; i < TerrainLibrary.WIDTH / 2; i++) {
+            long bit = 1L << i;
+            if ((visited & bit) != 0) continue;
+            var encounter = EncounterPlan.at(library, origin / 2 + i);
+            if (encounter == null) { visited |= bit; continue; }
+            int localX = (int) (encounter.worldX() - originPixels());
+            if (localX < camera.getX() - 192 || localX > camera.getX() + camera.getWidth() + 192) continue;
+            if (!services().objectManager().hasFreeDynamicSlot()) continue;
+            var spawn = new ObjectSpawn(localX, encounter.y(), 0, encounter.flying() ? 1 : 0,
+                    0, false, encounter.y(), -1, "infinite-sonic", "infinite-sonic:badnik");
+            spawnChild(() -> new CourseBadnik(spawn, encounter.worldX()));
+            visited |= bit;
+        }
     }
 }

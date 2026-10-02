@@ -13,6 +13,8 @@ import java.util.Set;
 public final class InfiniteSonicMod implements GgfMod {
     @Override public void register(ModContext context) {
         context.registerObject("controller", (spawn, registry) -> new CourseController(spawn));
+        context.registerObject("badnik", (spawn, registry) -> new CourseBadnik(spawn, spawn.x()));
+        context.registerObject("burst", (spawn, registry) -> new CourseBurst(spawn));
         context.registerGamePatch(new Patch());
     }
 

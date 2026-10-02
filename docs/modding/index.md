@@ -44,7 +44,7 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 
 ## Experimental projects
 
-- [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate terrain-only Sonic 1 project using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the eight maintained gallery samples.
+- [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the eight maintained gallery samples.
 
 ## Reference
 

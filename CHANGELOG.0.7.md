@@ -792,7 +792,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Development features carried forward
 
-- Added an independent [Infinite Sonic terrain mod prototype](examples/infinite-sonic/README.md): seeded endless Green Hill sections assembled from the user’s Sonic 1 ROM, with reversible world recycling for solo Sonic. Includes a source build/package script and focused ROM-backed traversal and rewind tests.
+- Added an independent [Infinite Sonic mod prototype](examples/infinite-sonic/README.md): seeded endless Green Hill sections assembled from the user’s Sonic 1 ROM, with reversible world recycling for solo Sonic, seeded terrain-aware ground/flying badnik patrols and a zero-ring challenge. Includes a source build/package script and focused ROM-backed traversal, enemy interaction and rewind tests.
 
 - **Maintenance:** share save decoding, fallback drawing, screen texture creation,
   tool WAV output, S2 participant-list handling, indexed palette validation and

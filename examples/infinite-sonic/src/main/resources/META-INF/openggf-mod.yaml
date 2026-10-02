@@ -1,10 +1,10 @@
 formatVersion: 1
 id: infinite-sonic
 name: Infinite Sonic
-version: 0.1.0
+version: 0.2.0
 authors:
   - OpenGGF contributors
-description: Seeded endless terrain assembled from your Sonic 1 Green Hill ROM data.
+description: Endless Green Hill with terrain-aware ground and flying badnik encounters.
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s1
