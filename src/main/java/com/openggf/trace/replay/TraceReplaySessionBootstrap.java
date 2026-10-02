@@ -1432,6 +1432,17 @@ public final class TraceReplaySessionBootstrap {
 
     public static void applyStartPositionAndGroundSnap(TraceData trace,
                                                        TraceReplayFixture fixture) {
+        applyStartPositionAndGroundSnap(trace, fixture, false);
+    }
+
+    /**
+     * A continuous run owns a real level-load camera. Keep its native camera
+     * registers while retaining the existing compatibility player bootstrap;
+     * isolated declared-position replays still need a positioned camera snap.
+     */
+    static void applyStartPositionAndGroundSnap(TraceData trace,
+                                               TraceReplayFixture fixture,
+                                               boolean preserveProductionLoadCamera) {
         if (!TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)) {
             return;
         }
@@ -1467,7 +1478,9 @@ public final class TraceReplaySessionBootstrap {
                 }
             }
             GroundSensor.setLevelManager(level);
-            com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
+            if (!preserveProductionLoadCamera) {
+                com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
+            }
             level.initLevelEventsForLevel();
             // Re-apply zone player state after sidekick reposition. ROM's
             // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8335-8427) sets

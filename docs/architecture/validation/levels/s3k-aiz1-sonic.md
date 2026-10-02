@@ -21,6 +21,11 @@ cases preserve the ROM comparison. Explicit positioned entries use
 setup without rerunning cold camera-register overrides. The production entry
 hook runs before initial object placement is reseeded. This adds no persistent
 state or rewind owner; existing camera snapshots own the resulting words.
+Continuous run startup explicitly preserves that production-loaded camera while
+retaining the existing compatibility player/ground bootstrap. Declared-position
+isolated replays and explicit start-at-segment diagnostics retain their positioned
+camera snap; the operation is selected by the caller, never fixture identity or
+coordinates.
 
 At base `67c850fc51`, the Knuckles full chain opening segment had 12,600 errors;
 the camera correction removes 34, leaving 12,566 and the unchanged first
@@ -33,7 +38,13 @@ checks and the existing AIZ skip/bootstrap/load/decoding checks passed in the
 focused regression batch (140 cases, zero skips). The final context correction
 passed 22 focused cases, including the actual two-frame positioned MHZ capture
 CSV/PNG path, a positioned fixture, native/wide/Tails cold MHZ routes and AIZ
-skip behavior (zero skips). Other character/donor/viewport
+skip behavior (zero skips). The run-start ownership follow-up passes 29
+focused checks, including `TestS3kTailsFullChainRunPrefix`: all opening AIZ
+rows and the first special-stage row are green. Matched Sonic 1/Sonic 2
+report projections remain identical to base `67c850fc51` (including zero
+bootstrap errors); isolated MHZ and Tails MHZ2 retain their existing 3,191
+and 583 errors respectively. These known-red fixtures are regression
+comparisons, not passing routes. Other character/donor/viewport
 entry and restore/replay breadth remain inherited obligations. Unrelated
 ICZ1 Tails spawn/bounds overrides and CNZ/LRZ/DEZ/HPZ cold intro camera offsets
 remain outside this correction.
