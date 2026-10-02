@@ -479,11 +479,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Reef rock crusher spawns, and the Fireworm's body segments, used to disappear on
   restore, and a restored segment's flame stayed behind while the segment swam on.
 
-- **AIZ1 rewind:** capture the hollow-tree reveal counter and intro Super Sonic
+- **AIZ1 routes and rewind:** capture the hollow-tree reveal counter and intro Super Sonic
   palette timer/frame, preserving tree reveal children and palette cadence after
   restoring gameplay. Add a native route matrix with independently reported intro,
   cutscene, tree and act-reload replay checks. Route controllers complete the
   viewport and movement-donor axes using ordinary inputs and live object gates.
+  Monkey Dude keeps climbing after the camera passes its initial visibility
+  window and starts each animation on its native dispatch, preserving the moving
+  body's collision timing and player bounce.
 
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late

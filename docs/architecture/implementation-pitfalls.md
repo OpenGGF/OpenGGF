@@ -87,6 +87,22 @@ consumer to inspect a convenient state flag conceals the upstream mismatch.
 The LRZ cold-route investigation and regression are recorded in the
 [bring-up audit](audits/2026-09-22-sk-zone-bring-up.md#knuckles-lrz-cold-route-cloud-escape-2026-09-25).
 
+**Offscreen initialization gates can remove themselves.** S3K
+`Obj_WaitOffscreen` stores the continuation after its caller's `jsr`; `loc_85B02`
+restores that continuation into the object operation and returns. Later
+MonkeyDude body dispatches therefore bypass the visibility gate, just as its
+children do. Rechecking the initial `$20` window froze the body while its arm
+kept running, losing wait ticks when the camera passed it. Keep the object's
+ordinary `Sprite_CheckDeleteTouch` unload range separate from initial release.
+
+**A cleared raw-animation timer is not the first frame's delay.** MonkeyDude's
+`loc_871C2` and `loc_87218` clear `anim_frame_timer` when changing scripts.
+`Animate_RawMultiDelay` decrements before testing, so the next dispatch
+publishes the next mapping frame and only then loads its delay. Initializing
+that timer to the script's seven instead delayed each active phase and changed
+when the moving body could be hit. Preserve the transition's timer write;
+verify the first publication, a complete direction change and restored replay.
+
 **Object-control early returns can still write character state.** S3K
 `Knuckles_Control/loc_165AE` clears `double_jump_flag` when object-control bit0
 suppresses movement, before reaching `Animate_Knuckles`. Skipping movement

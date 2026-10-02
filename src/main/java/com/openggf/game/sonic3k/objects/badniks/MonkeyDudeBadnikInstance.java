@@ -170,13 +170,10 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
             return;
         }
 
-        // Obj_WaitOffscreen replaces the operation only until the placeholder
-        // first becomes visible. Once restored, the separately allocated root
-        // child keeps running even after it leaves those bounds.
-        if (!withinWaitOffscreenBounds) {
-            updateNativeArmRoot(player);
-            return;
-        }
+        // Obj_WaitOffscreen rewrites the operation to the continuation after
+        // its jsr (the operation at $8715A). Once released, both the body and its children
+        // keep executing outside the initial visibility window; only the
+        // ordinary Sprite_CheckDeleteTouch unload range can retire them.
 
         if (throwCooldown > 0) {
             throwCooldown--;
@@ -244,7 +241,11 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         this.delays = delays;
         this.animIndex = 0;
         this.mappingFrame = frames[0];
-        this.animTimer = delays[0];
+        // loc_871C2 and loc_87218 clear anim_frame_timer when changing
+        // the raw animation. Animate_RawMultiDelay decrements before testing,
+        // so the next dispatch publishes the next mapping frame immediately
+        // (frame 2 for ACTIVE). Its seven-tick delay follows that publication.
+        this.animTimer = 0;
     }
 
     private void applyVerticalStepOnAnimationEdge() {

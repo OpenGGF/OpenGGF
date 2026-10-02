@@ -470,3 +470,26 @@ and `test` passed **32 cases, zero failures/errors/skips**, in 58.696 seconds.
 This includes native recording preservation, 15 entry configurations, seven
 independent rewind windows, reload timeline isolation, three opposing-spring
 negative-control/replay cases and both input helpers.
+
+
+### Monkey Dude local timing and Knuckles trace evidence (2026-10-02)
+
+The local object obligation now includes
+`TestMonkeyDudeBadnikInstance#releasedBodyKeepsAnimationCadenceOffscreenAndAcrossRewind`:
+a released body continues outside its initial visibility window, changes direction
+after its native wait, and restores/replays the same movement cadence. The focused
+class ran three tests with no failures, errors or skips in
+`.worktrees/trace-s3k-bonus`, based on `cc0cbed9da` plus the object correction.
+The ROM owners are `Obj_WaitOffscreen`/`loc_85B02`, `loc_871C2`,
+`loc_87218` and `Animate_RawMultiDelay`. The required AIZ skip, level loading,
+bootstrap and decoding classes also ran: 59 tests, no failures, errors or skips.
+
+The accompanying `TestS3kKnucklesSuperEmeraldRunChain` command used
+`-Ptrace-replay-r7 -Dsurefire.forkCount=1` and the verified locked-on ROM via
+an absolute `s3k.rom.path`. Its first non-camera disagreement advanced from
+row446 `y_speed` to row1615 `queue.s3k_kos_direct.busy`. Segment0 still reports
+41 errors including inherited camera differences, and the giant-ring exit
+boundary is not observed. This is a local object/timing improvement, not a green
+Knuckles route or Sonic-route revalidation. The full width/donor/team route
+cross-product and object-graph recreation remain inherited gaps; the independent
+local regression covers scalar restore and forward replay.
