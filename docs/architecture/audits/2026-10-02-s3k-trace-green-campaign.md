@@ -731,3 +731,21 @@ errors (886→0). Opening segment0 staysgreen. Segments4/6 retain1,783/67,150
 errors, first4930/101 x. The full chain remainsred at the segment6 giant-ring
 exit, with later segments outside reached coverage. A separate extended Tails
 prefix pin will defend this newly green return.
+
+
+### Integrated SOZ controller refresh (2026-10-03)
+
+The three-file authored-route refresh from `trace-s3k-mega-exit` is integrated
+over develop `0943caba1f`. Its native bonus return consumes the first input
+row in the already-correct production setup pass. Removing seven surplus
+locked-title Right rows repairs that completed Knuckles investigation; no new
+Knuckles frontier is opened. The route matrix records the baseline/input
+attribution and retained full-world replay obligations.
+
+Queued r7 single-fork `TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination`
+with the verified absolute S3K ROM executes five parameters: all pass, zero
+failures/errors/skips. The same checks after the two Tails prefix tests in one
+fork instead produce five early rewind failures; both prefix tests pass. The
+isolated candidate pass rules out this route refresh as the cause of those
+combined failures. Cleanup/state ownership is still being investigated; neither
+this focused run nor the red combined run constitutes full-suite validation.

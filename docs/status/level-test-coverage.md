@@ -93,6 +93,11 @@ now has a24,059-input cold route through a real bonus visit/return, golem,
 results and playable Act2, with29 full-world replay windows and both bonus
 load history resets. Fresh native320 capture passes; wider/native-parity
 acceptance and Knuckles Act2 remain open.
+The [2026-10-03 controller refresh](../architecture/validation/levels/s3k-soz-act1.md#bonus-return-controller-refresh-2026-10-03)
+updates that engine-authored movie to24,052 inputs after ROM-correct bonus setup
+moves its return seven inputs earlier. All five solo cold cases pass with zero
+skips; Knuckles retains29 full-world replay windows and both load-history resets.
+Runtime, native trace fixtures and assertions are unchanged.
 
 [SOZ solo Sonic Act1](../architecture/validation/levels/s3k-soz-act1.md#solo-sonic-cold-completion-2026-09-27)
 now has a31,671-input cold route through the golem, results and playable Act2,

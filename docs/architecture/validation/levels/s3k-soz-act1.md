@@ -459,3 +459,61 @@ at31392 with zero deaths; all31492 baseline/candidate state rows match. The
 initial default-tool failure was an intro-configuration mismatch, not a failure
 of this native-start route. Video:
 `$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-soz-handoff-320/capture.mp4`.
+
+## Bonus-return controller refresh (2026-10-03)
+
+The solo-Knuckles route remains an **engine-authored controller route**, not a
+native trace fixture. The corrected bonus-entry setup exposed an old dependency
+in its fixed controls. Native `Level/loc_6468` runs `Process_Sprites` before
+`LevelLoop` for the Pachinko zone too; the old engine instead consumed its first
+playable input row as setup. The correction was delivered in `cc0cbed9da`
+(integrated in the trace campaign and develop), and must not be reverted to
+preserve an authored movie.
+
+A bounded A/B in `.worktrees/trace-s3k-mega-exit`, based on `4435cfb5b8`, changed
+only `PostTitleCardDestination` back to `67c850fc51` for the diagnostic. Correct
+runtime failed the old route at input 15657; that single old-method substitution
+passed the original full cold route and rewind assertions. The first observed
+drift is input 3312: both variants hold Left, but correct runtime executes it
+(X 319, X speed -12, airborne) while the old runtime remains at X 320 with zero
+speed during setup. Both enter Pachinko at 3204 and release its title at 3311.
+Correct runtime returns to SOZ's title at 3566 and releases gameplay at 3691;
+the old route was authored around 3573 and 3698. Diagnostic runtime/test edits
+were removed before authoring or validation.
+
+The refreshed `soz1-cold-knuckles.bk2` shortens the Right hold across the locked
+return title from 30 to 23 inputs (the original run starts at 3669). It removes
+seven identical held inputs and preserves every other input in order. Inputs
+through the release at 3691 are unchanged; the first following gameplay input
+at 3692 now receives the original neutral input at 3699. The movie contains
+24,052 inputs instead of 24,059. `InputLogAuthorTool` compiles the RLE script
+and round-trips it through the production BK2 loader; a separate row comparison
+confirms only that seven-input deletion and the header frame-count change.
+No runtime, native trace, comparison tolerance or test assertion is changed.
+
+Verification uses the verified reference ROM via an absolute `$S3K_ROM` path:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination' \
+  "-Ds3k.rom.path=$S3K_ROM" test
+```
+
+All five solo cases pass, zero skips. The revised Knuckles route reaches playable
+Act 2 at 23850 (previously 23857), runs all 29 full-world 45-input restore/replay
+windows, and verifies both bonus load history resets, the real golem defeat,
+finished results, no deaths and 180 playable destination inputs. The other
+four cases cover solo Sonic and Tails in both acts. This is focused authored-route
+compatibility evidence, not a full-suite or native-parity claim; the broader
+viewport/donor/native obligations remain open.
+
+
+Integrated on develop `0943caba1f` plus this route-only refresh, queued
+`-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination`
+with the verified absolute S3K ROM: all five solo parameters pass, zero
+failures/errors/skips. This includes Sonic and Tails in both acts and the
+already-started Knuckles Act1 route. No runtime behavior or assertions change.
+A preceding same-JVM Tails trace-prefix run makes all five SOZ rewind checks
+fail; the fresh-JVM result attributes that separate isolation issue without
+claiming the combined run passes. It remains under investigation.
