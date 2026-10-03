@@ -111958,3 +111958,18 @@ The trace remains red; row18939 owner has not yet been attributed.
   [campaign audit](../architecture/audits/2026-10-02-s3k-trace-green-campaign.md).
   This is focused validation; shared timing and combined-delivery broad checks
   are tracked by the integration worker. No trace or comparator was changed.
+
+### 2026-10-03 — Sonic and Tails LBZ1 cup control handoff
+
+Worker `trace-special-return`, base `815f76a6d8`, queued
+`-Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay` with verified ROM:
+4,031 errors / first row 18939 `x_speed` becomes 3,304 / first row 18945
+`player_mapping_frame` (expected0096, actual0055), one failure, zero errors/skips.
+`loc_26F26` writes control at capture; held `loc_26FF4` must not overwrite
+NPC Knuckles' later `loc_6278A` release. The old-code regression fails at the
+control assertion. Corrected coverage completes 57 distinct focused checks
+without skips across the companion run and repaired cup-class rerun; details
+and exact commands are in the [LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md#cup-control-handoff-follow-up-2026-10-03).
+This is the Sonic-with-Tails fixture, not playable Knuckles. The remaining
+mapping boundary requires separate animation-bit ownership work; no forced
+mapping publication or fixture-specific release branch is included.

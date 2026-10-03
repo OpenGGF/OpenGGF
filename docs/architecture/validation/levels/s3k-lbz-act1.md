@@ -79,3 +79,69 @@ rendering/rewind/tooling categories plus guards; combined campaign validation
 remains the parent integration's responsibility.
 This extends local ownership/rewind coverage; inherited route/configuration
 and presentation gaps remain open.
+
+## Cup control handoff follow-up (2026-10-03)
+
+Base `815f76a6d8`: row18939 X/G speed is `0018` natively versus `000C` in
+engine; native X subpixel `EA00` versus engine `D200`. Cup-held Sonic starts
+moving on the first dispatch after the LBZ1 cutscene release, then the engine
+reasserts control suppression and freezes subsequent acceleration.
+
+`loc_26F26` writes `object_control=3` at capture. Held path `loc_26FF4`
+only writes position, priority and mapping. `CutsceneKnux_LBZ1/loc_6278A`
+clears both native players' control after the cup slot. The native held path
+respects that external write while continuing to publish cup position.
+Native aux removes range-helper slot39/code627C6 at row18937 and the parent
+slot38/Delete_Current_Sprite at18938. With Right held throughout, native speed
+is zero through18937, then `000C`, `0018`, `0024` on18938–18940. Engine matches
+the first release tick and freezes at `000C` thereafter.
+The old engine `holdPlayer` rewrote the control state every tick. No native
+control-byte observation is claimed from aux; the owning write sites and
+matched velocity/subpixel progression establish this hypothesis.
+
+The independent `heldCupDoesNotReassertControlClearedByLaterObjectAndRewinds`
+case enters through the real capture method after standing setup, clears
+native control as the later cutscene does, and checks the next held dispatch.
+An extension without a handoff must remain controlled. Rewind restores all
+three player states and the cup's captured participant state, then repeats.
+This is an ownership test, not a second collision admission test.
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestLbzCupElevatorInstance#heldCupDoesNotReassertControlClearedByLaterObjectAndRewinds' "-Ds3k.rom.path=$S3K_REFERENCE_ROM" test
+```
+
+Reviving the dormant cutscene-release flag was rejected: native held control
+has no such branch, and preserving capture-only write ownership handles any
+later external control writer without a cutscene-specific exception.
+The old-code regression on `815f76a6d8` fails exactly at the held-control
+assertion: expected false, actual true (one failure, zero errors/skips).
+The correction removes that repeated write; the original capture write stays.
+The older synthetic-inside cutscene-lock test now initializes the complete
+capture state instead of relying on the erroneous held write to create it.
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestLbzCupElevatorInstance,TestLbzCupElevatorSolidDispatch,TestS3kLbz1CutsceneGraphRewind,TestS3kLbz1KnucklesSequenceHeadless' "-Ds3k.rom.path=$S3K_REFERENCE_ROM" test
+```
+
+The corrected replay has 3,304 errors, first row18945
+`player_mapping_frame` expected `0096` / actual `0055`, versus the base's
+4,031 errors / first18939 `x_speed`. It completes with one assertion failure,
+zero errors/skips; there is no earlier comparison failure. At the new jump
+boundary, position, velocity and status match but the old cup mapping remains.
+No mapping correction is included in this control-write milestone.
+Focused coverage completes 57 distinct checks with zero skips: 35 companion
+checks passed in the combined invocation (2 solid-dispatch, 3 graph-rewind,
+30 LBZ1 headless), and the affected cup class passes all 22 after repairing
+the new regression's gameplay-session setup for player-timer restore. The
+first combined invocation had one setup error on the second rewind pass;
+an intermediate cleanup edit failed compilation by calling a private helper.
+The final class rerun uses public session cleanup and passes. Production was
+unchanged throughout these fixture repairs. This is focused coverage across
+two completed invocations, not a broad-suite pass.
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestLbzCupElevatorInstance' "-Ds3k.rom.path=$S3K_REFERENCE_ROM" test
+```
+ The change-based plan against
+`815f76a6d8` selects common/content/gameplay/physics/rendering/rewind/tooling
+plus guards; parent integration owns combined validation.

@@ -26,6 +26,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
@@ -353,6 +354,8 @@ class TestLbzCupElevatorInstance {
         Sonic player = new Sonic("sonic", (short) 0x1800, (short) 0x0600);
         Object p1State = getPrivateField(elevator, "p1");
         setPlayerStateInside(p1State, true);
+        // Complete the loc_26F26 capture state; held dispatch does not set it.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setJumpInputPressed(true, true);
 
         elevator.update(0, player);
@@ -517,6 +520,49 @@ class TestLbzCupElevatorInstance {
         elevator.update(2, main);
         for (TestablePlayableSprite player : List.of(originalP2, omitted, retained)) {
             assertTrue(player.isObjectControlled(), "reordering must not transfer or discard cup ownership");
+        }
+    }
+
+    @Test
+    void heldCupDoesNotReassertControlClearedByLaterObjectAndRewinds() {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                new com.openggf.game.sonic3k.Sonic3kGameModule());
+        try {
+            var main = playerAt(0x17C0, 0x0600);
+            var nativeP2 = playerAt(0x17C0, 0x0600);
+            var extension = playerAt(0x17C0, 0x0600);
+            var elevator = configuredElevator(main, List.of(nativeP2, extension));
+            var players = List.of(main, nativeP2, extension);
+            for (var player : players) standOn(player, elevator);
+            elevator.update(0, main);
+            for (var player : players) assertTrue(player.isObjectControlled(), "loc_26F26 capture write");
+            var context = rewindContext(main, nativeP2, extension);
+            var cupBefore = CompactFieldCapturer.capture(elevator, context);
+            var playersBefore = players.stream().map(TestablePlayableSprite::captureRewindState).toList();
+
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    CompactFieldCapturer.restore(elevator, cupBefore, context);
+                    for (int i = 0; i < players.size(); i++) players.get(i).restoreRewindState(playersBefore.get(i));
+                }
+                // loc_6278A runs later than the cup and clears both native controls.
+                for (var player : List.of(main, nativeP2)) {
+                    ObjectControlState.none().applyTo(player);
+                    player.setXSpeed((short) 0x18);
+                    player.setGSpeed((short) 0x18);
+                }
+                elevator.update(1, main);
+                for (var player : List.of(main, nativeP2)) {
+                    assertFalse(player.isObjectControlled(), "loc_26FF4 does not rewrite object_control");
+                    assertTrue(player.isOnObject(), "the cup still publishes its held position");
+                    assertEquals(elevator.getX(), player.getCentreX());
+                    assertEquals(0x18, player.getGSpeed(), "external handoff momentum remains live");
+                }
+                assertTrue(extension.isObjectControlled(), "a participant with no handoff stays controlled");
+            }
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
         }
     }
 

@@ -563,3 +563,24 @@ skips. LRZ, SOZ and SSZ cold-route/rewind failures need bounded matched baseline
 attribution; they are currently unattributed, not claimed inherited. The earlier
 23,721-case prefix and its130 skips remain separate measurements. Neither run
 is a full-suite green result.
+
+
+## Sonic+Tails LBZ cup control handoff — 2026-10-03
+
+The shipped cup capture (`loc_26F26`) writes object_control=$03 once; held
+`loc_26FF4` publishes position/presentation without rewriting that control.
+Removing the engine's repeated hold write lets the later NPC cutscene release
+(`loc_6278A`) remain authoritative. This affects the Sonic+Tails recording;
+NPC Knuckles is not a playable-Knuckles route. The old-code regression fails
+exactly on reasserted control. Corrected worker checks pass57 distinct cases,
+including native P1/P2, extension isolation and rewind; an initial test setup
+error was repaired before delivery. The exact source/tests patch applied to
+`develop` passes the same57 cases with zero failures/errors/skips via queued
+`-Dtest=TestLbzCupElevatorInstance,TestLbzCupElevatorSolidDispatch,
+TestS3kLbz1CutsceneGraphRewind,TestS3kLbz1KnucklesSequenceHeadless`, verified
+absolute S3K ROM property and fresh `target/lbz-control-integrated-reports`.
+
+Matched worker `-Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay` advances
+4,031→3,304 errors, firstrow18939 x_speed→18945 player_mapping_frame (96 versus55).
+Positions/velocities at the prior frontier now agree. The next raw-animation
+suppression ownership issue remains open; no forced jump frame is introduced.

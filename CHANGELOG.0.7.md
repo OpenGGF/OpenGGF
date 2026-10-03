@@ -10,7 +10,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   independently of the runtime minimum bounds. This removes the opening AIZ1
   camera offset while preserving MHZ1’s separate locked-on camera focus.
 
-- **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission. Rolling drums preserve native rider state when unloading, after completing their final player updates.
+- **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and respect control released by the Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates.
 
 - Automatically mask widescreen pixels beyond current native horizontal camera
   bounds, including asymmetric arena and level edges. During staged boss entry,

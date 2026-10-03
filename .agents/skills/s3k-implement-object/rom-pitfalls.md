@@ -5075,3 +5075,15 @@ and `sub_8592C` excludes that upper bound with `bhs` (see P39).
 Origin: Mega bonus frontier, 2026-10-03, base `6e6f13036f`. The native child at
 Y `$368` admits the player from `$358`; the engine pit callback ran at `$32F`
 and froze its next position `$33E`, two gameplay ticks before the native exit.
+
+
+## Capture-time control writes are not held-state writes
+
+Cup `loc_26F26` sets `object_control=$03` once on capture; `loc_26FF4`
+only publishes position, priority and mapping. Reasserting suppression on
+every held tick overrides later writers such as LBZ1 `loc_6278A`, which
+clears both native player controls. Native velocity then rises each player
+dispatch while the cup still publishes its integer position. Preserve these
+separate write sites instead of adding a cutscene-specific release flag.
+Test capture, external clear, the next held dispatch and rewind; a test that
+sets only the object's inside flag has not reproduced the capture state.

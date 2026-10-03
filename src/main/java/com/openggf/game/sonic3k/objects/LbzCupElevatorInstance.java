@@ -702,7 +702,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     private void holdPlayer(AbstractPlayableSprite player) {
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // loc_26FF4 only publishes position/presentation. object_control=$03
+        // belongs to capture (loc_26F26), so later writers such as the
+        // loc_6278A cutscene release remain authoritative on following ticks.
         holdPlayerPosition(player);
     }
 
