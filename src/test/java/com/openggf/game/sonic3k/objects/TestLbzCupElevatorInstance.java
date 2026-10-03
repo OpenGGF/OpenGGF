@@ -308,6 +308,9 @@ class TestLbzCupElevatorInstance {
         setPrivateInt(elevator, "angleWord", 0x4000);
         Sonic player = new Sonic("sonic", (short) 0x1800, (short) 0x0600);
 
+        // Seed the complete loc_26F26 capture before exercising held mapping.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        player.setObjectMappingFrameControl(true);
         invokeHoldPlayer(elevator, player);
 
         assertEquals(0x5B, player.getMappingFrame(),
@@ -356,6 +359,7 @@ class TestLbzCupElevatorInstance {
         setPlayerStateInside(p1State, true);
         // Complete the loc_26F26 capture state; held dispatch does not set it.
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        player.setObjectMappingFrameControl(true);
         player.setJumpInputPressed(true, true);
 
         elevator.update(0, player);
@@ -548,17 +552,67 @@ class TestLbzCupElevatorInstance {
                 // loc_6278A runs later than the cup and clears both native controls.
                 for (var player : List.of(main, nativeP2)) {
                     ObjectControlState.none().applyTo(player);
+                    player.setObjectMappingFrameControl(false);
                     player.setXSpeed((short) 0x18);
                     player.setGSpeed((short) 0x18);
                 }
                 elevator.update(1, main);
                 for (var player : List.of(main, nativeP2)) {
                     assertFalse(player.isObjectControlled(), "loc_26FF4 does not rewrite object_control");
+                    assertFalse(player.isObjectMappingFrameControl(), "held mapping does not reclaim bit1");
                     assertTrue(player.isOnObject(), "the cup still publishes its held position");
                     assertEquals(elevator.getX(), player.getCentreX());
                     assertEquals(0x18, player.getGSpeed(), "external handoff momentum remains live");
                 }
                 assertTrue(extension.isObjectControlled(), "a participant with no handoff stays controlled");
+            }
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+        }
+    }
+
+    @Test
+    void npcFullControlWriteClearsCupAnimationGateAndHeldCupDoesNotReclaimIt() {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                new com.openggf.game.sonic3k.Sonic3kGameModule());
+        try {
+            var main = playerAt(0x17C0, 0x0600);
+            var nativeP2 = playerAt(0x17C0, 0x0600);
+            nativeP2.setCpuControlled(true);
+            var extension = playerAt(0x17C0, 0x0600);
+            var elevator = configuredElevator(main, List.of(nativeP2, extension));
+            for (var player : List.of(main, nativeP2, extension)) standOn(player, elevator);
+            elevator.update(0, main);
+            for (var player : List.of(main, nativeP2, extension)) {
+                assertTrue(player.isObjectMappingFrameControl(), "capture writes object_control=$03");
+            }
+            var sprites = com.openggf.game.GameServices.sprites();
+            sprites.addSprite(nativeP2);
+            var npc = new CutsceneKnucklesLbz1Instance(new ObjectSpawn(
+                    0x1800, 0x0600, 0, 0x14, 0, false, 0));
+            var helper = new CutsceneKnucklesLbz1RangeHelper(npc, elevator.getX(), elevator.getY());
+            helper.setServices(new TestObjectServices().withSpriteManager(sprites));
+            var context = rewindContext(main, nativeP2, extension);
+            var cupBefore = CompactFieldCapturer.capture(elevator, context);
+            var players = List.of(main, nativeP2, extension);
+            var playersBefore = players.stream().map(TestablePlayableSprite::captureRewindState).toList();
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    CompactFieldCapturer.restore(elevator, cupBefore, context);
+                    for (int i = 0; i < players.size(); i++) players.get(i).restoreRewindState(playersBefore.get(i));
+                }
+                helper.update(1, main);
+                for (var player : List.of(main, nativeP2)) {
+                    assertTrue(player.isObjectControlSuppressesMovement(), "$81 retains bit0");
+                    assertFalse(player.isObjectMappingFrameControl(), "sub_62800 writes $81, clearing bit1");
+                }
+                elevator.update(2, main);
+                for (var player : List.of(main, nativeP2)) {
+                    assertFalse(player.isObjectMappingFrameControl(), "loc_26FF4 only publishes a frame");
+                    assertEquals(elevator.getX(), player.getCentreX());
+                }
+                assertTrue(extension.isObjectMappingFrameControl(), "unreplaced capture keeps bit1");
             }
         } finally {
             com.openggf.game.session.SessionManager.clear();

@@ -1054,8 +1054,10 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 "CutsceneKnux_LBZ1 exit does not spawn Obj_Song_Fade_ToLevelMusic; Knuckles music should remain "
                         + "active until the later miniboss handoff.");
         assertFalse(player.isObjectControlled(), "Exit should clear Player_1 object_control.");
+        assertFalse(player.isObjectMappingFrameControl(), "loc_6278A also clears animation-suppression bit1.");
         for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
             assertFalse(sidekick.isObjectControlled(), "Exit should clear native Player_2 object_control.");
+            assertFalse(sidekick.isObjectMappingFrameControl(), "native P2 animation gate is released too.");
         }
         assertEquals(0x3B60, fixture.camera().getMaxX() & 0xFFFF,
                 "Exit should restore Camera_stored_max_X_pos=$3B60.");

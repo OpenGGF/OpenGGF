@@ -5088,6 +5088,12 @@ separate write sites instead of adding a cutscene-specific release flag.
 Test capture, external clear, the next held dispatch and rewind; a test that
 sets only the object's inside flag has not reproduced the capture state.
 
+Animation suppression follows the same byte ownership: `$03` sets bit1,
+NPC helper `sub_62800` replaces it with `$81` (bit1 clear), and exit clears
+the byte. Keep a raw mapping write separate from claiming persistent animation
+suppression. Otherwise the player can move correctly after handoff yet retain
+an old cup mapping on the first jump; forcing the jump frame hides the stale gate.
+
 
 ## Linked child positions and attack flags own the projectile
 

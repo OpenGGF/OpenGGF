@@ -110,6 +110,9 @@ public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstanc
             state.setLbz1KnucklesCutsceneControlLocked(true);
         }
         ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // sub_62800 replaces the whole byte with $81: bit 0 holds movement,
+        // but bit 1 is clear, so Animate_Sonic/Tails resumes before cup mapping.
+        player.setObjectMappingFrameControl(false);
         // sub_62800 only writes object_control and facing.  Ctrl_1_logical is
         // left intact, so Sonic_RecordPos can retain the directional sample
         // that Player 2 consumes after the cutscene releases both slots.

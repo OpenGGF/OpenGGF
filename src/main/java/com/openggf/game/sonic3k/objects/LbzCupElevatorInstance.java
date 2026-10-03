@@ -689,6 +689,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         state.inside = true;
         state.cutsceneReleased = false;
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // loc_26F26's $03 also sets animation-suppression bit 1. Held mapping
+        // writes at loc_26FF4 must not reclaim it from a later control writer.
+        player.setObjectMappingFrameControl(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -818,7 +821,6 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         if (index >= PLAYER_TWIST_FRAMES.length) {
             index = 0;
         }
-        player.setObjectMappingFrameControl(true);
         player.setMappingFrame(PLAYER_TWIST_FRAMES[index]);
         boolean hFlip = PLAYER_TWIST_H_FLIPS[index];
         // loc_32610 masks and replaces only render_flags bits 0-1. It does not

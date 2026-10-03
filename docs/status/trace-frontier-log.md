@@ -112080,3 +112080,27 @@ bootstrap0; opening segment0 remains1 camera_y error at4545. The queued
 separate `-Pguards -Dtest=TestHardwareTimingAuthorityGuard` run passes25
 cases,0 failures/errors/skips. These focused checks do not certify full-chain
 parity or the pending combined ordinary/guard delivery.
+
+### 2026-10-03 — Sonic and Tails LBZ1 animation-bit handoff
+
+Worker `trace-special-return`, `815f76a6d8` plus preceding control-only patch:
+queued matched `-Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay` changes
+3,304 errors / first18945 mapping to 3,303 / first21662 `player_animation_id`
+(expected0005, actual0013); one failure, zero errors/skips, no earlier divergence.
+Cup capture `$03`, NPC helper `$81` and parent exit `$00` now own the animation
+bit exactly; a held mapping write does not reassert it. Old-code helper regression
+fails at bit1 clearance; corrected four-class scope passes58 without skips,
+including native P1/P2 and rewind. Full commands/source/limits are in the
+[LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md#cup-animation-bit-handoff-follow-up-2026-10-03).
+The later Act1 ending animation owner remains open; the route is not green.
+
+Integrated over develop `36e73ddcc2`: queued trace-segments single-fork
+`TestLbzCupElevatorInstance,TestS3kLbzZoneSliceTraceReplay` (the initial
+selector also named a nonexistent cutscene class; these two classes actually
+executed) with the verified absolute S3K ROM:23 object checks pass and one
+expected trace assertion,0 errors/skips. LBZ has3,303 errors, first21662
+player_animation_id ($0005/$0013), matching the worker. A separate queued
+ordinary `TestLbzCupElevatorSolidDispatch,TestS3kLbz1CutsceneGraphRewind,TestS3kLbz1KnucklesSequenceHeadless`
+passes35 cases without failures/errors/skips. Combined focused coverage is
+58 passing cases plus the known red native trace; broader validation remains
+pending. The Knuckles here is an NPC on the Sonic+Tails route.

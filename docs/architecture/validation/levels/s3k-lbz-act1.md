@@ -145,3 +145,35 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=T
  The change-based plan against
 `815f76a6d8` selects common/content/gameplay/physics/rendering/rewind/tooling
 plus guards; parent integration owns combined validation.
+
+## Cup animation-bit handoff follow-up (2026-10-03)
+
+The matched baseline is the preceding control-only content in worker
+`trace-special-return` (HEAD `815f76a6d8` plus the control patch applied to
+`develop`). Baseline: 3,304 errors, first row18945 mapping `0096` versus `0055`.
+
+`Sonic_Control/loc_10C62` and the corresponding Tails animation gate read
+object_control bit1. Cup capture `loc_26F26` writes `$03`; held `loc_26FF4`
+only publishes mapping and does not write that byte. NPC helper `sub_62800`
+writes `$81`, retaining movement suppression but clearing animation suppression.
+Parent exit `loc_6278A` writes zero. The engine's persistent raw-mapping flag
+must follow those exact writes rather than every call that sets a mapping frame.
+
+The cup now claims animation suppression only at capture; helper and parent
+clear it at their full-byte writes. No shared animation API or forced jump
+mapping was changed. Reviving `publishInitialJumpMapping` was rejected: native
+Animate already runs in the player slot before the cup's jump-release branch.
+
+The independent real-helper test fails on old code at the `$81` bit1-clear
+assertion (one failure, zero errors/skips). Corrected tests cover native P1/P2,
+an unaffected extension, subsequent cup hold, and restore/replay; existing
+headless cutscene exit assertions include both native animation gates.
+
+The same four-class focused command listed above now passes **58 tests**, zero
+failures/errors/skips. The same matched trace command completes with **3,303
+errors**, first **row21662 `player_animation_id`**, expected `0005` / actual
+`0013`: one assertion failure, zero errors/skips. No earlier comparison error
+is introduced; the complete NPC interval and jump mapping now match. The next
+animation mismatch occurs during the Act1 ending sequence and remains open.
+Viewport/donor/full-roster and whole-route parity gaps are unchanged. Combined
+validation belongs to the direct-develop integration; these are focused results.
