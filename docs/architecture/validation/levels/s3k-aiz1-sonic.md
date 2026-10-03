@@ -654,3 +654,14 @@ with delivered camera behavior. Opening Tails segment0 staysgreen; later
 segments4/6 remain red at4930/101 x. Both Sonic+Tails pins, the real-Tails
 release/landing restore regression and mandatory startup checks pass. Exact
 selection and coverage limits are in the campaign audit.
+
+
+### Solo-Tails first-return prefix (2026-10-03)
+
+`TestS3kTailsFullChainRunPrefix.firstSpecialStageReturnThroughSecondEntry`
+pins the full first return through segment3 row1, alongside the existing
+first-entry test. Both pass on develop `6a3131036c` plus the test: segment2
+contains3,886 compared rows, zero comparison/bootstrap errors. The combined
+command and separate unresolved SOZ rewind failures are recorded in the
+[frontier log](../../../status/trace-frontier-log.md#2026-10-03--solo-tails-first-return-prefix-pin).
+Later solo-Tails returns remain uncertified.

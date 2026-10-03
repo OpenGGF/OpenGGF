@@ -112033,3 +112033,18 @@ Sonic+Tails prefix pins pass. Native tree release holds literal9/19 radii
 until real Tails landing restores15. Later Tails segments4/6 remain
 1,783/67,150 errors, first4930/101 x; fullchain stillred at the giant-ring
 exit. Independent AIZ remains57 errors, first20302 player_animation_id.
+
+
+### 2026-10-03 — Solo-Tails first-return prefix pin
+
+On `6a3131036c` plus the prefix test in
+`.worktrees/trace-s3k-develop-delivery`, queued
+`-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestS3kTailsFullChainRunPrefix,TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination`
+with the verified absolute S3K ROM: both Tails prefix cases pass with no
+skips, including the complete first return through segment3 row1. Segment2
+compares all3,886 rows with zero comparison/bootstrap errors; the existing
+first-entry pin remains. This test-only milestone does not certify later
+returns. The combined seven-case run also has five SOZ rewind assertion
+failures, zero errors/skips; their isolation is under investigation and
+that route refresh is excluded from this milestone.

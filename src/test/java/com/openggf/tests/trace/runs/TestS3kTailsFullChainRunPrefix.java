@@ -21,4 +21,10 @@ class TestS3kTailsFullChainRunPrefix extends AbstractRunChainTest {
     void aiz1ThroughGiantRingIntoFirstSpecialStageRow() throws Exception {
         assertChainReplayThroughSegmentRow(RUN_DIR, 1, 1);
     }
+
+    /** Defends the complete first return before entering the second special stage. */
+    @Test
+    void firstSpecialStageReturnThroughSecondEntry() throws Exception {
+        assertChainReplayThroughSegmentRow(RUN_DIR, 3, 1);
+    }
 }
