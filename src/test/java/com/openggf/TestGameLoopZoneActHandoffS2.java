@@ -8,6 +8,7 @@ import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.tools.RecordingFrameDriver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -16,10 +17,12 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Sonic 2 zone/act requests load through the ordinary level path: the S3K fresh
- * title boundary (held players, carried ring count) must not apply.
+ * title boundary (held players, carried ring count) must not apply, in either
+ * the live loop or the headless recording driver.
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestGameLoopZoneActHandoffS2 {
@@ -52,5 +55,44 @@ class TestGameLoopZoneActHandoffS2 {
         assertEquals(playerY, fixture.sprite().getCentreY() & 0xFFFF, "player y");
         assertEquals(cameraX, GameServices.camera().getX() & 0xFFFF, "camera x");
         assertEquals(cameraY, GameServices.camera().getY() & 0xFFFF, "camera y");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "8, 0, 9, 0, 0x0060, 0x04CC", "9, 0, 10, 0, 0x0060, 0x012D" })
+    void recordingDriverLoadsDestinationThroughItsTitleCard(
+            int fromZone, int fromAct, int toZone, int toAct,
+            int playerX, int playerY) throws Exception {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(fromZone, fromAct).build();
+        var level = SessionManager.getCurrentGameplayMode().getLevelManager();
+        level.getLevelGamestate().setRings(42);
+        level.requestZoneAndAct(toZone, toAct, true);
+        RecordingFrameDriver driver = new RecordingFrameDriver(fixture.sprite());
+
+        boolean loaded = false;
+        boolean titleCardSeen = false;
+        for (int frame = 0; frame < 600; frame++) {
+            driver.stepFrame(false, false, false, false, false);
+            assertFalse(level.hasPendingFreshLevelTransitionBoundary(), "frame " + frame);
+            if (!loaded && level.getCurrentZone() == toZone && level.getCurrentAct() == toAct) {
+                loaded = true;
+                assertEquals(0, level.getLevelGamestate().getRings());
+                assertEquals(playerX, fixture.sprite().getCentreX() & 0xFFFF, "player x");
+                assertEquals(playerY, fixture.sprite().getCentreY() & 0xFFFF, "player y");
+            }
+            titleCardSeen |= loaded && titleCardActive(driver);
+            if (titleCardSeen && !titleCardActive(driver)) {
+                break;
+            }
+        }
+        assertTrue(loaded, "destination loaded");
+        assertTrue(titleCardSeen, "destination title card ran");
+    }
+
+    private static boolean titleCardActive(RecordingFrameDriver driver) throws Exception {
+        java.lang.reflect.Field field = RecordingFrameDriver.class.getDeclaredField("normalTitleCardActive");
+        field.setAccessible(true);
+        return field.getBoolean(driver);
     }
 }
