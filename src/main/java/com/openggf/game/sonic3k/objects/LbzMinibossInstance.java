@@ -124,8 +124,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private boolean defeatFlowSpawned;
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatExplosionCreationPending;
-    // The parent's install boundary and its later child emission must restore
-    // together. The session RNG restores separately; rebind to that live owner.
+    // Restored with the parent; rebinds to the separately restored session RNG.
     private final com.openggf.game.rewind.RewindStateful<S3kBossExplosionController.Snapshot> defeatExplosionRewind =
             new com.openggf.game.rewind.RewindStateful<>() {
                 @Override
@@ -698,10 +697,8 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         updatePanels();
         tickDefeatExplosions();
         if (pendingDefeatDispatch) {
-            // Touch_Enemy publishes the fatal hit before this boss dispatch.
             // loc_7289A installs Wait_NewDelay and BossDefeated writes $3F;
-            // neither executes the replacement routine in that same pass.
-            // The later explosion child still dispatches above, independently.
+            // the first decrement is on the next dispatch.
             pendingDefeatDispatch = false;
         } else if (defeatWaitTimer >= 0) {
             defeatWaitTimer--;

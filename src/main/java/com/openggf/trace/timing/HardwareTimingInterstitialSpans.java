@@ -17,10 +17,9 @@ import java.util.Objects;
  * above where the previous segment's ended. Some entry loops submit no work;
  * others reproduce and claim the complete resource batch independently.
  *
- * <p>This index carries the first and last ordinal and their fingerprints per
- * segment boundary and kind. Fingerprints verify already-claimed production
- * work; they never select numbering. It holds no payload, service boundary or
- * frame, and nothing here can complete, prepare or create hardware work.
+ * <p>Per segment boundary and kind, this holds the first/last ordinal and their
+ * fingerprints. Fingerprints only verify claimed work; nothing here creates,
+ * prepares or completes hardware work.
  */
 public final class HardwareTimingInterstitialSpans {
 

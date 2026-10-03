@@ -8,46 +8,26 @@ Continuation base: `35488abb6` on `feature/ai-gameplay-capture`.
 The reviewed input helpers and pilot come from `435ec2e68`; unrelated develop
 engine changes were not imported. This is a partial matrix, not level certification.
 
-## Level-entry camera follow-up (2026-10-02)
+## Level-entry camera (2026-10-02)
 
-`Get_LevelSizeStart/loc_1BF74` subtracts `$A0/$60` from its focus registers,
-clamps underflow to zero and then clamps to maximum bounds; it does not read
-minimum bounds. `TestSonic3kLevelStartCamera` covers the AIZ1 `$1300` camera
-origin below the unchanged `$1308` runtime minimum, zero/max edge cases and
-MHZ1's independent `$160` focus with checkpoint bypass. Renamed playable
-instances use their stable character identity, and signed vertical-word edge
-cases preserve the ROM comparison. Explicit positioned entries use
-`LevelCameraInitialization.recenterPositionedEntry`, retaining bounds/event/object
-setup without rerunning cold camera-register overrides. The production entry
-hook runs before initial object placement is reseeded. This adds no persistent
-state or rewind owner; existing camera snapshots own the resulting words.
-Continuous run startup explicitly preserves that production-loaded camera while
-retaining the existing compatibility player/ground bootstrap. Declared-position
-isolated replays and explicit start-at-segment diagnostics retain their positioned
-camera snap; the operation is selected by the caller, never fixture identity or
-coordinates.
+`Get_LevelSizeStart/loc_1BF74` subtracts `$A0` from the X focus and `$60` from
+the Y focus. It clamps underflow to zero, then clamps to the maximum bound; it
+never reads the minimum bound. The engine's forced snap also clamped to the
+minimum, which put AIZ1 at `$1308` instead of `$1300`.
 
-At base `67c850fc51`, the Knuckles full chain opening segment had 12,600 errors;
-the camera correction removes 34, leaving 12,566 and the unchanged first
-non-camera mismatch at row 446 (`y_speed`). The multibonus Knuckles opening
-segment drops from 18 errors to one at row 4545 (`camera_y`). The Tails full-chain
-opening segment drops from 17 errors to zero (complete); its later uncompared
-walk still exceeds destination 6221. All three chains remain red; these prefixes
-do not certify a route. Sonic/Tails/wide MHZ cold route
-checks and the existing AIZ skip/bootstrap/load/decoding checks passed in the
-focused regression batch (140 cases, zero skips). The final context correction
-passed 22 focused cases, including the actual two-frame positioned MHZ capture
-CSV/PNG path, a positioned fixture, native/wide/Tails cold MHZ routes and AIZ
-skip behavior (zero skips). The run-start ownership follow-up passes 29
-focused checks, including `TestS3kTailsFullChainRunPrefix`: all opening AIZ
-rows and the first special-stage row are green. Matched Sonic 1/Sonic 2
-report projections remain identical to base `67c850fc51` (including zero
-bootstrap errors); isolated MHZ and Tails MHZ2 retain their existing 3,191
-and 583 errors respectively. These known-red fixtures are regression
-comparisons, not passing routes. Other character/donor/viewport
-entry and restore/replay breadth remain inherited obligations. Unrelated
-ICZ1 Tails spawn/bounds overrides and CNZ/LRZ/DEZ/HPZ cold intro camera offsets
-remain outside this correction.
+`TestSonic3kLevelStartCamera` covers:
+- the zero and maximum edges
+- MHZ1's separate `$160` focus, which checkpoints bypass
+- stable character identity
+- signed words
+
+Positioned captures and replays resnap through
+`LevelCameraInitialization.recenterPositionedEntry`. Continuous runs keep the
+production load camera.
+
+Results: Knuckles opening 12,600→12,566 errors, Mega opening 18→1 and Tails
+opening 17→0. Matched S1/S2 report projections are unchanged. ICZ1 Tails bounds
+and the CNZ/LRZ/DEZ/HPZ cold intro offsets are outside this fix.
 
 ## Configuration inventory
 
@@ -482,186 +462,36 @@ This includes native recording preservation, 15 entry configurations, seven
 independent rewind windows, reload timeline isolation, three opposing-spring
 negative-control/replay cases and both input helpers.
 
+### Trace-campaign object coverage (2026-10-02/03)
 
-### Monkey Dude local timing and Knuckles trace evidence (2026-10-02)
+These are local object regressions with restore/replay. They do not certify the
+viewport, donor or team products for the whole act. Per-fix trace numbers are in
+the [frontier log](../../../status/trace-frontier-log.md#2026-10-03--s3k-trace-green-campaign-summary).
 
-The local object obligation now includes
-`TestMonkeyDudeBadnikInstance#releasedBodyKeepsAnimationCadenceOffscreenAndAcrossRewind`:
-a released body continues outside its initial visibility window, changes direction
-after its native wait, and restores/replays the same movement cadence. The focused
-class ran three tests with no failures, errors or skips in
-`.worktrees/trace-s3k-bonus`, based on `cc0cbed9da` plus the object correction.
-The ROM owners are `Obj_WaitOffscreen`/`loc_85B02`, `loc_871C2`,
-`loc_87218` and `Animate_RawMultiDelay`. The required AIZ skip, level loading,
-bootstrap and decoding classes also ran: 59 tests, no failures, errors or skips.
+| Object/owner | Regression | ROM owner |
+|---|---|---|
+| Monkey Dude body continuation and timer | `TestMonkeyDudeBadnikInstance#releasedBodyKeepsAnimationCadenceOffscreenAndAcrossRewind` | `Obj_WaitOffscreen/loc_85B02`, `loc_871C2`, `loc_87218` |
+| Monkey Dude linked hand | `#handLaunchesOnceFromItsPreviousFractionalChainPositionAcrossRewind`, `#armDoesNotStartAttackAtTheHorizontalRangeBoundary` | `sub_87524`, `sub_8756A`, `sub_87592`, `sub_875B4` |
+| Entry-flash ring deletion | `TestSonic3kSSEntryRingFormation`, `TestS3kSsEntryFlashGraphRewind` | `SSEntryFlash_Main` |
+| Tails tree release radii | `TestAizHollowTreeTailsRelease` (native aux: radius 15→19→15 at rows 2040, 2053, 2058) | `AIZTree_FallOff`, `Tails_TouchFloor` |
 
-The accompanying `TestS3kKnucklesSuperEmeraldRunChain` command used
-`-Ptrace-replay-r7 -Dsurefire.forkCount=1` and the verified locked-on ROM via
-an absolute `s3k.rom.path`. Its first non-camera disagreement advanced from
-row446 `y_speed` to row1615 `queue.s3k_kos_direct.busy`. Segment0 still reports
-41 errors including inherited camera differences. The chain enters the special
-stage and exhausts its return interval at destination 8423. This is a local object/timing improvement, not a green
-Knuckles route or Sonic-route revalidation. The full width/donor/team route
-cross-product and object-graph recreation remain inherited gaps; the independent
-local regression covers scalar restore and forward replay.
+The old Monkey Dude throw repeated every 120 updates and was driven by body
+animation. That is wrong: `sub_875B4` sets a once-only bit 0. Native Tails places
+the first projectile at `(0x1E64, 0x46A)` after its first movement (physical
+frame 6401).
 
-
-### Entry-flash callback and rewind (2026-10-02)
-
-`SSEntryFlash_Main` observes the animation counter after the raw animator
-advances it. The parent-ring deletion edge now has an independent regression
-and a recreated-object-graph restore/replay check. Focused formation and graph
-classes pass 29 cases without skips; the existing Sonic+Tails AIZ-to-special-stage
-prefix also passes. On campaign base `86c24c1040` plus this correction, Knuckles
-segment0 has 34 opening-camera errors and no non-camera mismatches (previously
-41 including row1615 explosion-art queue state). Its later return still fails
-at8423. This covers the native ring/flash edge, not the inherited width/donor/team
-route breadth or rendered-pixel equivalence.
-
-
-### Combined opening pins (2026-10-03)
-
-The combined campaign at `56b7972f99` plus prefix tests passes both independent
-opening-to-first-special-stage pins: Knuckles in
-`TestS3kKnucklesSuperEmeraldRunChain#aiz1ThroughGiantRingIntoFirstSpecialStageRow`
-and Tails in `TestS3kTailsFullChainRunPrefix`. Both opening segment reports are
-complete with zero errors. The explicit r7 profile includes both. Full chains
-remain red at later return/ownership frontiers; this discharges the native
-opening pin, not the inherited act/character/team/donor/viewport matrix.
-
+Route prefix pins:
+- `TestS3kKnucklesSuperEmeraldRunChain#aiz1ThroughGiantRingIntoFirstSpecialStageRow`
+- `TestS3kTailsFullChainRunPrefix`, both the first entry and the full first
+  return through segment 3 row 1
+- `TestS3kSonicTailsCompleteEmeraldRunPrefix`, through two returns to
+  segment 5 row 1
 
 ### Fixed fire-reload camera lock — 2026-10-03
 
-The local follow-up over `6e6f13036f` pins AIZ's engine X smoothing targets
-to the fixed `$10/$10` reload bounds. Independent
-`TestSonic3kAIZEvents#eventsFg5StartsFireTransitionAndAppliesSeamlessFlow`
-now checks ordinary boundary ticks after the real reload: old production
-fails 16→14, fixed production retains the lock. Both native trace lock/release
-assertions and `TestS3kAiz1ReloadRewind` pass. The focused 127-case invocation
-has 125 passes and 2 inherited later trace failures, zero errors/skips; details
-and commands are in the [campaign audit](../../audits/2026-10-02-s3k-trace-green-campaign.md).
-AIZ's first mismatch moves 5497→20302 and the independent reference route
-6302→25589. Remaining viewport/donor/team products and whole-act coverage
-are inherited gaps; these checks certify only the fixed reload contract.
-
-
-### Sonic+Tails return prefix pin (2026-10-03)
-
-`TestS3kSonicTailsCompleteEmeraldRunPrefix` now reaches the first row of
-special-stage segment5, defending complete zero-error gameplay segments2 and4
-through two prior returns. Queued `-Ptrace-replay -Dsurefire.forkCount=1
--Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix` on `b38e8354d4` plus the new
-pin, with verified absolute S3K ROM, passes2 cases with0 skips. This is a native
-route-prefix check; it does not close the full act/team/donor/viewport matrix
-or later route failures.
-
-
-### Monkey Dude linked hand and projectile (2026-10-03)
-
-The local obligation also covers `handLaunchesOnceFromItsPreviousFractionalChainPositionAcrossRewind`
-and `armDoesNotStartAttackAtTheHorizontalRangeBoundary` in
-`TestMonkeyDudeBadnikInstance`. The five-test class passes without skips in
-`.worktrees/trace-s3k-tails-frontier` at `0e50fed9f6` plus the object correction.
-The regression checks the native hand release after 61 active child dispatches,
-the projectile's first same-pass movement, once-only release across later body
-cycles, horizontal range rejection, and snapshot restoration/forward replay.
-Native owners are `loc_872CC`, `loc_8741C`, `loc_8744C`, `sub_87524`,
-`sub_875B4`, and `MoveSprite_CircularSimple`. The previous body-animation
-throw with a 120-update cooldown and an eight-pixel hand offset is rejected: it
-creates repeated projectiles absent from the native once-only child flag and
-loses the four linked 16.16 additions. Native Tails observation at physical
-frame 6401 places the first projectile at `(0x1E64, 0x46A)` after movement;
-the independent local regression reproduces that position with a stationary
-target at a different Y, without reading trace comparison state.
-
-This is local object coverage, not certification of the full AIZ1 matrix.
-Mirrored-facing, team targeting, viewport/donor breadth and object-manager
-recreation across projectile allocation remain inherited integration gaps.
-
-The matched `TestS3kTailsFullChainRunChain` run used `-Ptrace-replay-r7
--Dsurefire.forkCount=1` with the verified absolute `s3k.rom.path`. Segment 0
-remains green. Segment 2 advances from row 199 `y` / 41,653 comparator errors
-to row 2058 `y` (native `0x033A`, engine `0x033C`) / 934 total errors
-(910 physics, 24 animation), with zero bootstrap errors and complete segment
-comparison. Later segment 4 reports 1,783 errors starting row 4930 `x`;
-segment 6 reports 67,150 errors starting row 101 `x` and misses its giant-ring
-exit. The full test remains red (one executed test, no skips). This worker
-does not include the later develop AIZ camera-lock correction, so those later
-errors are not a measurement of the current combined develop candidate.
-
-Required startup regression command selected both `TestSonic3kLevelLoading`
-classes plus `TestS3kAiz1SkipHeadless`, `TestSonic3kBootstrapResolver` and
-`TestSonic3kDecodingUtils`: 60 tests pass, no skips. Focused object guards
-(`TestObjectPriorityBucketGuard`, `TestObjectServicesMigrationGuard`,
-`TestObjectPhysicsStandardizationGuard`, `TestSonic3kObjectProfileRegistryGuard`)
-run 49 tests: 48 pass, one flags unchanged `LrzFlameObjectInstance` for
-`TOUCH_PROFILE_HOOK_WITHOUT_PROFILE`, no skips. This is focused validation,
-not a full ordinary/guard suite pass; matched baseline attribution of that
-LRZ source guard is not supplied by this run.
-
-
-Integrated on `develop` over `043006aeb8`, the same object patch plus prior
-camera/timing delivery completes94 focused/startup/AIZ trace cases:83 pass,
-11 expected trace assertion failures,0 errors/skips. No selected passing case
-regresses; both Sonic+Tails prefix pins and all required startup checks pass.
-Solo-Tails segment2 now has886 errors, first2058 y, bootstrap0 and complete;
-opening segment0 remains green. Commands and inherited broad limits are in the
-[campaign audit](../../audits/2026-10-02-s3k-trace-green-campaign.md#integrated-monkey-dude-child-chain--2026-10-03).
-The LRZ object guard was independently reproduced on baseline67 and is inherited.
-
-
-### Tails hollow-tree release radii (2026-10-03)
-
-`TestAizHollowTreeTailsRelease` uses an actual solo Tails fixture, captures it
-on the tree, takes the upper exit, and checks unchanged centre coordinates
-and fixed `(x_radius=9, y_radius=19)` before real terrain landing restores
-Tails' default radius 15. Restoring the tree and player snapshots repeats the
-release and landing. This covers local captured state and forward replay, not
-full world history or recreation across a level load. Width/donor/team breadth
-remains inherited coverage.
-
-The owning `AIZTree_FallOff` writes literal radii for every character;
-`Tails_TouchFloor` restores default radii before its rolling branch. Existing
-comparison-only native `aiz_2/aux_state.jsonl.gz` records radius15 while riding
-at row2040, radius19 after release at row2053, and radius15 after landing at
-row2058. The previous `applyStandingRadii(false)` substitutes Tails' default15
-five rows too early. No shared physics correction is needed: ordinary S3K
-landing already restores nondefault radii, including the CNZ cage precedent.
-
-On `0e50fed9f6` plus the accepted Monkey Dude candidate, the new regression
-fails on old tree code with expected19/actual15 (one executed test, no skips).
-With the native radius write, a queued `-Dtest=TestAizHollowTreeTailsRelease,
-TestAizHollowTreeObjectInstance,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,
-TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` run with the verified
-absolute `s3k.rom.path` passes 69 tests, no skips.
-
-The matched `-Ptrace-replay-r7 -Dsurefire.forkCount=1
--Dtest=TestS3kTailsFullChainRunChain` run removes all non-camera mismatches
-from the complete 3,886-row segment2. Its total errors fall 934→48, all camera,
-first row2900 `camera_x`; bootstrap errors remain zero. Segment0 stays green.
-Segment4 and segment6 retain exactly their prior error counts/frontiers
-(1,783 at row4930 `x`; 67,150 at row101 `x`), and the full route remains red
-with the segment6 giant-ring exit not observed (one executed test, no skips).
-This worker lacks the later develop AIZ camera-lock correction; the camera
-residual is not a combined-develop result. Validation is focused, not a full
-ordinary/guard suite claim.
-
-
-The integrated `develop` candidate over `b217fe6bd8` completes88 focused
-checks:86 pass,2 expected trace assertions,0 errors/skips. Segment2 completes
-3,886 rows with zero comparison/bootstrap errors, combining the object write
-with delivered camera behavior. Opening Tails segment0 staysgreen; later
-segments4/6 remain red at4930/101 x. Both Sonic+Tails pins, the real-Tails
-release/landing restore regression and mandatory startup checks pass. Exact
-selection and coverage limits are in the campaign audit.
-
-
-### Solo-Tails first-return prefix (2026-10-03)
-
-`TestS3kTailsFullChainRunPrefix.firstSpecialStageReturnThroughSecondEntry`
-pins the full first return through segment3 row1, alongside the existing
-first-entry test. Both pass on develop `6a3131036c` plus the test: segment2
-contains3,886 compared rows, zero comparison/bootstrap errors. The combined
-command and separate unresolved SOZ rewind failures are recorded in the
-[frontier log](../../../status/trace-frontier-log.md#2026-10-03--solo-tails-first-return-prefix-pin).
-Later solo-Tails returns remain uncertified.
+`AIZ1BGE_Finish` writes min/max X `$10/$10`, and `Do_ResizeEvents` eases only
+max Y. The AIZ request now pins the engine's X smoothing targets as well, so the
+loaded defaults cannot move the lock. Without the fix,
+`TestSonic3kAIZEvents#eventsFg5StartsFireTransitionAndAppliesSeamlessFlow` fails
+after one ordinary boundary tick (expected 16, got 14). The native lock/release
+assertions and `TestS3kAiz1ReloadRewind` pass.

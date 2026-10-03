@@ -35,10 +35,8 @@ public interface RecordedCompletionAuthority {
      * full kind, ordinal, fingerprint and boundary match afterwards.
      *
      * <p>An untouched span must begin at the production cursor. A fully claimed
-     * span must end immediately before it and supply exact per-ordinal fingerprints
-     * for comparison against existing claimed jobs; this case changes nothing.
-     * Production must hold nothing pending. All kinds are checked before any
-     * untouched cursor moves; partial, extra or mismatched work fails.
+     * span must end just before it, and its fingerprints must match the claimed
+     * jobs; nothing changes. All kinds are checked before any cursor moves.
      */
     void advanceOrdinalCursorAcrossRecordedSpan(
             Map<HardwareWorkKind, RecordedOrdinalSpan> spans);

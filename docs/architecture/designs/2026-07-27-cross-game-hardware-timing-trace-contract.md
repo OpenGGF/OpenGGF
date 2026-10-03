@@ -274,45 +274,16 @@ builds on that method.
 
 #### 2026-10-03: fully submitted return spans are comparison-only receipts
 
-The missing-results and terrain producers described above are now modeled. On
-`cc016b1ef8` (the `ce26682b63` terrain-source correction applied after
-`8888b57370` results preparation), the first Sonic-and-Tails return independently
-submits and claims all 26 interstitial jobs: direct ordinals `27..42` and module
-ordinals `14..23`. Every full submission fingerprint matches the committed
-interstitial stream. Production consequently reaches cursors `43` and `24`
-without a recorded edge releasing any of that work. The old assertion still
-fails because it requires cursors `27` and `14` instead.
-
-Before retaining the loaded level's terrain sources, the secondary archive was
-`0x3A647C` (seven modules, fingerprint `ef32c333...`) instead of `0x3A944E`
-(five modules, `d713465c...`). Direct cursor `45` was a real producer error,
-not a span to absorb. That candidate remains invalid under the new check.
-
-The interstitial index now retains its already-validated fingerprints. A span
-whose cursor already equals `lastOrdinal + 1` is accepted only when every exact
-kind/ordinal/fingerprint identifies an existing **claimed** production job.
-This branch changes no production cursor, job, preparation, readiness, payload
-or gameplay state. It implements neither identity return nor the historical
-"generalise the span to a set" proposal: recorded data never chooses numbering
-for submitted work. Partial, extra, missing, unclaimed and mismatched work fails.
-
-Untouched spans retain their existing exact-start cursor advance. Every kind is
-validated before any untouched cursor moves. The replay port rejects identities
-already consumed or reused by the next schedule and records successful receipts
-in its existing rewindable identity set. The production ledger and port snapshots
-therefore restore this proof without new persistent state. Full-run parity and
-other return frontiers remain separate obligations.
-
-Focused verification on `cc016b1ef8` plus this change passed all 84 cases in
-`TestHardwareTimingInterstitialStream,TestHardwareTimingService,TestHardwareTimingReplayPort`
-and all 25 `TestHardwareTimingAuthorityGuard` cases in a separate `-Pguards`
-JVM, with zero skips. The `-Ptrace-replay -DforkCount=1` Sonic-and-Tails chain
-with the verified reference ROM crossed return 8817 and completed segment 2
-(46 physics errors, zero animation/bootstrap errors), then stopped on a later
-non-exportable pending module job, ordinal 30. Coordinator checks passed 9/9;
-walker checks passed 37/38, with the malformed two-column special-stage fixture
-failure also present on matched baseline `67c850fc51`. This is focused validation;
-the next combined delivery still requires its shared-timing category selection.
+Production now submits the results and return-terrain work itself. On the first
+Sonic+Tails return, it submits and claims all 26 interstitial jobs (direct
+`27..42` and module `14..23`). Every fingerprint matches the recorded stream.
+The interstitial index therefore keeps per-ordinal fingerprints. A span whose
+cursor is already `lastOrdinal + 1` passes only if every kind, ordinal and
+fingerprint names an existing **claimed** production job. This check changes no
+cursor, job, readiness or gameplay state, and recorded data never chooses
+numbering. Partial, extra, unclaimed and mismatched work fails. All kinds are
+validated before any untouched span's cursor moves. Successful receipts join the
+port's rewindable consumed-identity set (`8bf6486f60`).
 
 ### Historical pre-v5 wire format (not live)
 

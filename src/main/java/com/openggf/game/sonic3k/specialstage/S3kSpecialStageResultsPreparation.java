@@ -17,12 +17,8 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Native loc_2E0C4: resource preparation precedes installation of the results object.
- *
- * <p>Like the results screen itself, this owner lives only in the non-rewindable
- * results mode. GameLoop clears stage history at that mode boundary and discards
- * the screen on exit. Shared module, timing-ledger and Nemesis work retain their
- * existing session snapshot owners; this wrapper introduces no global state.
+ * Native loc_2E0C4: drains the results art queues before installing the results
+ * screen. Lives only in non-rewindable results mode and holds no global state.
  */
 final class S3kSpecialStageResultsPreparation
         implements ResultsScreen, LevelBackdropResultsScreen, ResultsResourcePreparation {

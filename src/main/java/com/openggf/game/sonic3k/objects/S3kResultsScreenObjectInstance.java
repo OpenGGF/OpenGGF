@@ -650,11 +650,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
-        // Load_Level retains this owner and all twelve real child SSTs.
-        // Obj_LevelResultsWait2 observes their count on the next parent pass;
-        // no embedded-render retirement tail remains to represent here.
-        // Legacy request/constructor hints stay compatible but cannot add
-        // dispatches after those production children have actually retired.
+        // Load_Level retains this owner and its twelve real child SSTs;
+        // Obj_LevelResultsWait2 counts them on the next parent pass. The
+        // carriedResultsRetireDispatches request value is ignored.
         carriedAcrossSeamlessTransition = true;
     }
 
@@ -1005,10 +1003,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     private boolean usesCarriedTitleResetDispatchOverlap() {
-        // Preserve the inherited title-manager reset policy independently of
-        // results publication. Its short-path create overlap is not evidence
-        // for submitting title art in loc_2DD06's publication dispatch. The
-        // native short-path display-reset phase still needs separate proof.
+        // Short-tail/explicit carried owners share one create dispatch with
+        // the title manager, shortening the display-reset count by one. This
+        // is unrelated to title art submission, which follows loc_2DD06.
         return carriedAcrossSeamlessTransition
                 && titlePublicationOwnedByCarriedObject
                 && (usesShortResultsChildRetireTail || carriedTitleTimingExplicit);
@@ -1064,8 +1061,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 } else {
                     s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
                             // Ordinary retained owners poll Obj_TitleCardWait's $34
-                            // child-movement latch (sonic3k.asm:62255-62278). Keep
-                            // the separate short-tail owner's inherited dispatch policy.
+                            // child-movement latch (sonic3k.asm:62255-62278);
+                            // short-tail owners use a dispatch count.
                             usesShortResultsChildRetireTail
                                     ? mutatedTitleCardResetDispatches(true,
                                             carriedPreloadedActCameraReleaseDispatches,
@@ -1161,8 +1158,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         int dispatches = MUTATED_TITLE_CARD_RESET_DISPATCHES
                 + (usesShortResultsChildRetireTail ? 2 : 0);
         if (retainedCreateDispatchOverlap) {
-            // Retain the existing title-manager create-overlap policy. This
-            // does not select the results owner's publication/init boundary.
+            // Shared create dispatch with the title manager.
             dispatches--;
         }
         // When the retained transition explicitly has no preloaded-camera

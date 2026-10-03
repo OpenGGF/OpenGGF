@@ -168,10 +168,9 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
 
     @Override
     public void onUnload() {
-        // Delete_Current_Sprite clears only the drum SST. Native live riders
-        // retain Status_OnObj/flip state until their next player dispatch;
-        // deleting the drum must not synthesize loc_2C48A's release writes.
-        // Dead and extension participants still need engine ownership cleanup.
+        // Delete_Current_Sprite clears only the drum SST; live native riders
+        // keep their state (no loc_2C48A release). Dead and extension
+        // participants are released here.
         releaseDeadNativeOwner(player1Owner, p1Riding, 0);
         releaseDeadNativeOwner(player2Owner, p2Riding, 1);
         extensionStates.forEach((owner, state) -> releaseOwner(owner, state.riding, 1));

@@ -88,20 +88,15 @@ The LRZ cold-route investigation and regression are recorded in the
 [bring-up audit](audits/2026-09-22-sk-zone-bring-up.md#knuckles-lrz-cold-route-cloud-escape-2026-09-25).
 
 **Offscreen initialization gates can remove themselves.** S3K
-`Obj_WaitOffscreen` stores the continuation after its caller's `jsr`; `loc_85B02`
-restores that continuation into the object operation and returns. Later
-MonkeyDude body dispatches therefore bypass the visibility gate, just as its
-children do. Rechecking the initial `$20` window froze the body while its arm
-kept running, losing wait ticks when the camera passed it. Keep the object's
-ordinary `Sprite_CheckDeleteTouch` unload range separate from initial release.
+`Obj_WaitOffscreen/loc_85B02` restores the caller's continuation, so later
+dispatches skip the visibility gate. Rechecking the `$20` window froze Monkey
+Dude's body while its arm kept running. Only the ordinary unload range retires
+the object.
 
-**A cleared raw-animation timer is not the first frame's delay.** MonkeyDude's
-`loc_871C2` and `loc_87218` clear `anim_frame_timer` when changing scripts.
-`Animate_RawMultiDelay` decrements before testing, so the next dispatch
-publishes the next mapping frame and only then loads its delay. Initializing
-that timer to the script's seven instead delayed each active phase and changed
-when the moving body could be hit. Preserve the transition's timer write;
-verify the first publication, a complete direction change and restored replay.
+**A cleared raw-animation timer is not the first frame's delay.**
+`Animate_RawMultiDelay` decrements before it tests. A timer cleared on a script
+change (`loc_871C2`, `loc_87218`) therefore publishes the next mapping on the
+very next dispatch. Seeding the timer with the script's delay shifts every phase.
 
 **Object-control early returns can still write character state.** S3K
 `Knuckles_Control/loc_165AE` clears `double_jump_flag` when object-control bit0
@@ -120,12 +115,9 @@ writes them. The SOZ2 cold route exposed this at `sub_40F52`: its correct
 `x_vel=-$200` was replaced by glide acceleration on the next frame.
 
 **A held input row still owns a queue tail.** A native LEVEL lag iteration
-skips gameplay dispatch but still services its owning Kosinski module/direct
-queue closure (`LevelLoop`, sonic3k.asm:7908/7887). Servicing VINT alone can
-leave a prepared child unready and stall its parent hundreds of rows later.
-Use the shared `TraceSuppressedRowClosure` across live, recording and standalone
-drivers. Keep trace authority limited to the matching prepared hardware job;
-never manufacture work or align ordinals to make the comparison continue.
+skips gameplay but still services the Kos module/direct queues (`LevelLoop`,
+sonic3k.asm:7908/7887). Use `TraceSuppressedRowClosure` in the live, recording
+and standalone drivers alike.
 
 **Reused position words.** A field named `x_sub` is not always a fraction.
 KiS2 `Knuckles_BeginClimb` and S3K `Knuckles_Gliding_HitWall` store the grab's
@@ -1181,11 +1173,7 @@ custom hook. The original two-player bug remains preserved (2026-09-28).
 
 ### Fixed native bounds must not inherit engine smoothing targets
 
-A seamless reload's current camera overrides and target overrides are distinct.
-AIZ's `AIZ1BGE_Finish` writes min/max X `$10/$10`, while `Do_ResizeEvents`
-automatically eases only maximum Y. Leaving the loaded level's engine X targets
-active moved that fixed lock on the next boundary tick. Pin the engine targets
-when translating this fixed-bound operation; do not invent native target-word
-writes or globally change transitions that deliberately preserve targets.
-A short real-reload test followed by ordinary boundary ticks catches this even
-when immediate post-reload assertions pass (S3K trace campaign, 2026-10-03).
+A seamless reload's current-bound and target-bound overrides are separate. AIZ's
+`AIZ1BGE_Finish` writes a fixed X lock of `$10/$10`, and `Do_ResizeEvents` eases
+only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
+on the next tick (S3K trace campaign, 2026-10-03).

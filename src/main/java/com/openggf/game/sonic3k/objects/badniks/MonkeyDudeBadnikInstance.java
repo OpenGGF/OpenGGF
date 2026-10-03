@@ -165,10 +165,8 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
             return;
         }
 
-        // Obj_WaitOffscreen rewrites the operation to the continuation after
-        // its jsr (the operation at $8715A). Once released, both the body and its children
-        // keep executing outside the initial visibility window; only the
-        // ordinary Sprite_CheckDeleteTouch unload range can retire them.
+        // Obj_WaitOffscreen restores the continuation ($8715A) once, so the
+        // body and children keep running offscreen until normal unload.
 
         updateFacingAndOffset(player);
         // Process_Sprites dispatches the body before its newly allocated children.
@@ -223,10 +221,8 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         this.delays = delays;
         this.animIndex = 0;
         this.mappingFrame = frames[0];
-        // loc_871C2 and loc_87218 clear anim_frame_timer when changing
-        // the raw animation. Animate_RawMultiDelay decrements before testing,
-        // so the next dispatch publishes the next mapping frame immediately
-        // (frame 2 for ACTIVE). Its seven-tick delay follows that publication.
+        // loc_871C2/loc_87218 clear anim_frame_timer; Animate_RawMultiDelay
+        // decrements first, so the next dispatch publishes the next frame.
         this.animTimer = 0;
     }
 

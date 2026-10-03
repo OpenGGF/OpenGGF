@@ -105,11 +105,7 @@ public final class TraceReplayDriver {
         start(zone, act, StartOrigin.DECLARED_POSITION);
     }
 
-    /**
-     * Starts a continuous run while retaining the camera registers established
-     * by the production level load. Existing compatibility player/ground setup
-     * still runs; it must not replace Get_LevelSizeStart with a positioned snap.
-     */
+    /** Starts a continuous run, keeping the production load camera (Get_LevelSizeStart). */
     public void startWithProductionLoadCamera(int zone, int act) throws Exception {
         start(zone, act, StartOrigin.PRODUCTION_LOAD_CAMERA);
     }

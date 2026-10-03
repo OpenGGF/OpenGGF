@@ -687,9 +687,7 @@ public final class HardwareTimingService
                 }
                 long cursor = nextOrdinals.getOrDefault(kind, 0L);
                 if (cursor == span.nextOrdinal() && !span.submissionFingerprints().isEmpty()) {
-                    // Comparison only: production independently submitted, prepared,
-                    // retired and claimed this entire span. Neither its cursor nor
-                    // any job lifecycle changes after this identity proof.
+                    // Comparison only: production already claimed this whole span.
                     for (int index = 0; index < span.submissionFingerprints().size(); index++) {
                         HardwareWorkHandle expected = new HardwareWorkHandle(kind,
                                 span.firstOrdinal() + index, span.submissionFingerprints().get(index));

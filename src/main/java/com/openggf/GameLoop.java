@@ -1896,10 +1896,8 @@ public class GameLoop {
                 // gates enter gameplay hundreds of VBlanks behind.
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
-                    // The held iteration still reaches its owning queue tail:
-                    // LevelLoop's Process_Kos_Module_Queue / Process_Kos_Queue
-                    // (sonic3k.asm:7908/7887). Recording and standalone replay
-                    // use this same closure without dispatching gameplay.
+                    // A held iteration still services LevelLoop's Kos queue
+                    // tail (sonic3k.asm:7908/7887), without gameplay dispatch.
                     TraceSuppressedRowClosure.execute(
                             LevelFrameContext.from(gameplayMode),
                             activePlcLifecycleFrame, levelManager,

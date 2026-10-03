@@ -551,10 +551,9 @@ public class Sonic3kTitleCardManager
     }
 
     /**
-     * Arms the native in-level {@code Obj_TitleCardWait} state reset after a
-     * native child-movement gate, or an explicit inherited dispatch policy.
-     * A retained results SST mutates directly into {@code Obj_TitleCard}; its
-     * counter ownership persists while the art queue and children settle.
+     * Arms the in-level {@code Obj_TitleCardWait} counter reset, either at the
+     * native child-movement gate ({@code NATIVE_WAIT_GATE}) or after a fixed
+     * number of dispatches. Counter ownership persists until the reset.
      */
     public void requestLevelGamestateResetAfterCreateDispatches(int dispatches) {
         if (inLevelMode) {
@@ -967,14 +966,11 @@ public class Sonic3kTitleCardManager
             // stop publishing movement (sonic3k.asm:62220-62235).
             resetLevelGamestateCountdown = 0;
             consumeLevelGamestateResetRequest();
+            // loc_2D810 clears global Timer/Ring_count, not the owner's $2E.
+            // Only non-retained owners start Wait2's hold from this gate.
             if (!retainedResultsHeldLevelCounterOwned) {
-                // The non-retained presentation maps Wait2's hold from this gate.
                 stateTimer = 0;
             }
-            // Retained owners preserve their independent presentation clock:
-            // loc_2D810 clears global Timer/Ring_count, not the owner's $2E.
-            // This preserves the inherited exit policy; it does not certify
-            // that policy as a complete native Wait2 implementation.
         }
         switch (state) {
             case SLIDE_IN -> updateSlideIn();

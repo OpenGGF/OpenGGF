@@ -248,10 +248,9 @@ public final class HardwareTimingReplayPort
      * independently completed and claimed that entire span.
      *
      * <p>Crossing one releases nothing and creates nothing; it only moves the
-     * cursor for an untouched span. An already-claimed span instead requires
-     * exact kind, ordinal and fingerprint matches and leaves the ledger alone.
-     * Partial, extra or mismatched work fails. Both cases must meet the next
-     * segment's recorded identity base, and neither may reuse a consumed identity.
+     * cursor for an untouched span; an already-claimed span must match exactly
+     * and leaves the ledger alone. Either must meet the next segment's base
+     * and may not reuse a consumed identity.
      */
     public void handoffTo(
             HardwareTimingSchedule nextSchedule,

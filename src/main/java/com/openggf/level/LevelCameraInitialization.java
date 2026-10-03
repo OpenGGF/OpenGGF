@@ -4,10 +4,7 @@ package com.openggf.level;
 public final class LevelCameraInitialization {
     private LevelCameraInitialization() { }
 
-    /**
-     * Rebind bounds and placement around the caller's declared player position.
-     * Cold ROM focus overrides belong only to a real level-load initialization.
-     */
+    /** Resnaps bounds and camera around a declared position, without cold-load focus overrides. */
     public static void recenterPositionedEntry(LevelManager level) {
         level.initCameraForLevel(false);
     }

@@ -514,10 +514,8 @@ public final class TraceRunPlaybackCoordinator {
                                             == currentLevelGeneration)
                                 || inLevelAdvances.contains(observation.level())
                                 || pastRecordedLevelLoop(segment, observation)))
-                        // The ROM remains in GameModeID_Level during its
-                        // represented load/title tail. The engine separates
-                        // TITLE_CARD, but this receipt retains comparison and
-                        // hardware timing until the source's physical end.
+                        // The ROM's load/title tail is still GameModeID_Level;
+                        // the engine's TITLE_CARD there stays owned by this segment.
                         || (observation.mode() == GameMode.TITLE_CARD
                             && pastRecordedLevelLoop(segment, observation)));
             case "bonus_stage" -> matchesBonus(segment, observation);

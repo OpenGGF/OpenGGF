@@ -71,48 +71,27 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
-Playback surviving a prefix (2026-10-03): the Tails chain prefix left the
-process-wide `PlaybackDebugManager` movie active after closing comparison and
-hardware-timing owners. A following cold capture boot reused that manager, so
-its declared controller input was replaced by the predecessor's movie. World
-restore did not rewind that unrelated movie cursor: all five SOZ cold-route
-rewind checks failed in the shared fork, while the identical five passed in a
-fresh JVM. The movie creator must close its playback lifetime on prefix, error
-and normal exits, including deferred level-load rebinds; preserve a replacement
-movie's ownership. Comparator detachment and gameplay-session teardown alone do
-not release this process-wide input owner. Test the predecessor and capture in
-one invocation rather than treating isolated passes as an isolation proof.
+Playback surviving a prefix (2026-10-03): a run-chain prefix that closes only its
+comparator and timing owners leaves the process-wide `PlaybackDebugManager` movie
+active. A later capture in the same JVM then plays the old movie's input. Each
+of the five SOZ rewind checks failed in a shared fork yet passed in a fresh JVM.
+Close the playback session on every exit path, and test the predecessor and the
+capture in one invocation.
 
+Mixed report shapes (2026-10-03): chain summaries use `errorCount`, while
+standalone reports use `error_count`. A collector that reads only one spelling
+gives plausible but partial totals. Removing an earlier mismatch can also change
+the derived `cascading` flag on later, unchanged mismatches.
 
-Mixed report shapes (2026-10-03): continuous-chain summaries use `errorCount`,
-while standalone trace reports use `error_count` and grouped `errors`. A
-collector filtering only one spelling silently omits the other family while
-still producing plausible totals. Inventory both shapes before comparing a
-sweep. Retain bounded projections or fingerprints while their baseline is
-needed, and distinguish exact mismatch comparison from case status/count/first
-failure comparison. Removing an earlier mismatch can also change the derived
-`cascading` flag on unchanged later mismatches; inspect their fields, spans and
-values before calling that reclassification a gameplay change.
+Edits during compilation (2026-10-02): editing a source while an older Maven run
+is compiling it can leave stale bytecode with a newer timestamp. The next build
+then reports "Nothing to compile". Freeze sources during builds, and check with
+`javap` when the test results contradict the source.
 
-Edits during compilation (2026-10-02): changing a Java source while an older
-Maven invocation is compiling it can leave old bytecode with a newer timestamp
-than the edit. The following incremental build may say “Nothing to compile”
-and run the old method. An S3K character-identity regression exposed this;
-`javap` still showed `getCode` despite source using `characterKey`. Freeze
-sources while compiling. After confirming the old process has exited, make the
-changed source eligible for recompilation and inspect the resulting bytecode
-when test evidence disagrees with the source. Do not count the stale build as
-validation of the new implementation.
-
-Legacy diagnostic RAM aliases (2026-10-02): the S3K return probe initially reused
-`V69_AIZ.ADDR_KOS_MODULES_LEFT = 0xFF04` from an old recorder diagnostic. The
-locked-on `sonic3k.constants.asm` layout places `Kos_modules_left` at `$FF60`
-and `Kos_module_queue` at `$FF64` (`Player_mode` is `$FF08`). Both original
-captures' Kosinski columns were invalidated; their independently verified game
-mode, results/title owner and Nemesis observations remained usable. A corrected
-capture from the same movie save repeated those fields and sampled the actual
-queue. Confirm diagnostic aliases against the owning RAM layout before treating
-plausible zero values as evidence that work has drained.
+Legacy diagnostic RAM aliases (2026-10-02): `V69_AIZ.ADDR_KOS_MODULES_LEFT =
+0xFF04` is stale. On the locked-on ROM, `Kos_modules_left` is `$FF60` and
+`Kos_module_queue` is `$FF64`. Check diagnostic aliases against the RAM layout
+before reading zeros as "drained".
 
 
 Authored controller export (2026-09-28): `Bk2FrameInput.p1InputMask` can include

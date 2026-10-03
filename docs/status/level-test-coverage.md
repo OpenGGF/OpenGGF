@@ -1,6 +1,6 @@
 # Level test coverage backlog
 
-LBZ1 cup-contact follow-up (2026-10-03): the [focused act matrix](../architecture/validation/levels/s3k-lbz-act1.md) records real per-player solid dispatch and restore/replay, plus rolling-drum deletion order, native/extension ownership, and cup movement/animation control through the NPC Knuckles cutscene. The miniboss fatal-hit dispatch and its explosion state now also survive restore/replay. Shared results coverage includes twelve real carried children, fresh restore/replay, P1/P2 control-slot release and separate title initialization; the protected MGZ comparison exposes an inherited missing-ring tally difference. The Sonic + Tails trace advances from row 3714 through 9867, 18939, 18945, 21662 and 22188, then through the retained title counter reset and camera release to 23533 (unwanted hurt), but still fails; downstream totals increase despite the longer matching prefix; full route, viewport, donor and roster obligations remain open.
+LBZ1 trace-campaign follow-up (2026-10-03): the [focused act matrix](../architecture/validation/levels/s3k-lbz-act1.md) covers cup contact and control ownership, rolling-drum deletion, the miniboss fatal hit, carried-results retirement and the retained title reset, and the Act 1→2 camera hold, each with restore/replay. The Sonic+Tails trace now matches through row 23532 but is still red. Full-route, viewport, donor and roster obligations remain open.
 
 LRZ2 flame-shield follow-up (2026-09-30): the [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#flame-jet-fire-shield-immunity-2026-09-30) records real collision/shield regressions for all four shields and 167 focused tests without skips. Both jet variants now publish the ROM fire-immunity flag. Inherited route/rewind, donor, viewport and roster gaps remain.
 
@@ -94,10 +94,7 @@ results and playable Act2, with29 full-world replay windows and both bonus
 load history resets. Fresh native320 capture passes; wider/native-parity
 acceptance and Knuckles Act2 remain open.
 The [2026-10-03 controller refresh](../architecture/validation/levels/s3k-soz-act1.md#bonus-return-controller-refresh-2026-10-03)
-updates that engine-authored movie to24,052 inputs after ROM-correct bonus setup
-moves its return seven inputs earlier. All five solo cold cases pass with zero
-skips; Knuckles retains29 full-world replay windows and both load-history resets.
-Runtime, native trace fixtures and assertions are unchanged.
+re-authors the movie for the corrected bonus setup pass; all five solo cold cases pass.
 
 [SOZ solo Sonic Act1](../architecture/validation/levels/s3k-soz-act1.md#solo-sonic-cold-completion-2026-09-27)
 now has a31,671-input cold route through the golem, results and playable Act2,
@@ -192,11 +189,8 @@ The [initial source inventory](../architecture/audits/2026-09-13-level-test-cove
 now covers 26 zones / 55 gameplay acts for estimation, with explicit delivered versus
 conditional S3K scope. Their rows link to that zone-level inventory; **conformance assessments remain pending**; the
 [AIZ1 Sonic matrix](../architecture/validation/levels/s3k-aiz1-sonic.md) now records
-the route-controller continuation, the source-backed level-entry camera correction,
-the independent Monkey Dude offscreen/timer, fractional arm-chain projectile
-and rewind replay checks, the solo-Tails hollow-tree release/landing restore
-regression, and entry-flash deletion/graph restore
-regressions and their inherited breadth/restore gaps; the
+the route-controller continuation, the level-entry camera correction and the
+trace-campaign object regressions, with their inherited gaps; the
 [HCZ1 partial matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) records water-route
 and miniboss composition, ten independent restore/replay spots, the production
 reload boundary, 30 viewport/donor entry/reset cases, all 15 full width/donor
@@ -1031,11 +1025,6 @@ at320/800 and adds both mode boundaries plus future-mode restore re-render check
 
 AIZ fire-reload follow-up (2026-10-03): the
 [AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#fixed-fire-reload-camera-lock--2026-10-03)
-records fixed horizontal bounds, native lock/release assertions and independent
-reload timeline replay. Both affected traces advance to their inherited later
-failures; this does not close the matrix's broader configuration/route gaps.
-
-The [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) now includes
-a focused fresh live-load obligation: real fade/title ordering, destination-slot
-restoration before initial Process_Sprites, pause, and repeated loads. This does
-not extend full-route or viewport/donor/team certification.
+covers the fixed reload lock. The
+[HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) adds the fresh
+live-load ordering obligation.

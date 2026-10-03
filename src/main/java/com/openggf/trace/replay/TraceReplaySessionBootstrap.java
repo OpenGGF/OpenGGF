@@ -1435,11 +1435,7 @@ public final class TraceReplaySessionBootstrap {
         applyStartPositionAndGroundSnap(trace, fixture, false);
     }
 
-    /**
-     * A continuous run owns a real level-load camera. Keep its native camera
-     * registers while retaining the existing compatibility player bootstrap;
-     * isolated declared-position replays still need a positioned camera snap.
-     */
+    /** Continuous runs keep the load camera; declared-position replays resnap it. */
     static void applyStartPositionAndGroundSnap(TraceData trace,
                                                TraceReplayFixture fixture,
                                                boolean preserveProductionLoadCamera) {

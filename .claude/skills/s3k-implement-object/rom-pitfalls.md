@@ -5018,148 +5018,76 @@ comparison across both collapse sides and flips exposes this width error.
 
 ## Raw animation callbacks observe the advanced counter
 
-`SSEntryFlash_Main` saves the old mapping, calls `Animate_RawAdjustFlipX`,
-then checks the changed mapping and `anim_frame == 3`. The animator increments
-its counter before publishing the mapping. Checking that counter before the
-call delays the parent's deletion flag by one dispatch without changing the
-flash's final 43-dispatch transition. The ring consumes the flag in its own
-SST order and submits explosion-art restoration through `loc_6196A`; therefore
-an animation-order bug can first appear as a Kosinski queue mismatch while
-all player motion still agrees. Preserve both animator/callback ordering and
-producer/consumer slot ordering. Origin: S3K trace-green campaign, 2026-10-02,
-Knuckles AIZ entry-ring frontier at row 1615, integration base `86c24c1040`.
+`SSEntryFlash_Main` calls `Animate_RawAdjustFlipX` first, then tests the changed
+mapping and `anim_frame == 3`. Testing the counter before the animator advances
+it marks the parent ring one dispatch late. Because the ring then restores
+explosion art (`loc_6196A`), the first visible symptom is a Kosinski queue
+mismatch, not a motion error. (Knuckles AIZ, row 1615.)
 
 ## Manual solid mode must dispatch the native collision helper
 
-Selecting `MANUAL_CHECKPOINT` only installs an object-scoped resolver; it does
-not execute a collision check. An object that never calls the resolver silently
-loses all solid contacts while its `isSolidFor` and dimensions remain correct.
+`MANUAL_CHECKPOINT` installs a resolver but does not run it. LBZ cup
+`loc_26EEA` calls `SolidObjectFull2_1P` inside each player's control routine,
+after the cooldown and angle gates and before the capture test. Use a
+per-participant checkpoint in that position. Test through real ObjectManager
+dispatch, because seeding the standing state hides a missing collision call.
 
-The LBZ cup elevator exposed this at complete-run row3714: its upright cup at
-`$11A0,$0888`, with zero player cooldown, must stop airborne Sonic at the padded
-right edge `$11CB`. `LBZCupElevator_PlayerControl/loc_26EEA` calls
-`SolidObjectFull2_1P` after the cooldown and angle gates, before testing the
-standing bit for capture. Preserve that per-player order with a participant-only
-checkpoint; a batch checkpoint can update Player2 before Player1's reaction.
-Test through a real ObjectManager dispatch, since direct object tests with
-manually seeded standing state cannot expose a missing collision call.
+## Object deletion is not rider release
 
-
-## Object deletion is not necessarily rider release
-
-LBZ `loc_2C3CA` calls both rolling-drum participant routines before
-`Delete_Sprite_If_Not_In_Range`. `Delete_Current_Sprite` clears its SST only;
-it does not perform `loc_2C48A` writes to the riders. Automatically releasing
-live native riders in `onUnload` therefore changes the next player dispatch.
-At LBZ trace row9867 that synthetic air bit delays Tails' CPU despawn.
-Use the existing post-routine range-check contract for this tail and preserve
-native player state. Keep engine extension/dead-player cleanup explicit;
-do not copy native stale-slot behavior to omitted extension participants.
-An independent test must execute the last participant update and real manager
-unload, including rewind, rather than asserting generic cleanup is desirable.
-
+LBZ rolling drum `loc_2C3CA` runs both participant routines before
+`Delete_Sprite_If_Not_In_Range`. `Delete_Current_Sprite` clears only the drum's
+own SST, without `loc_2C48A`'s rider writes. Do not release live native riders
+in `onUnload`. Use the post-routine range check. Keep explicit cleanup for
+extension participants and dead players.
 
 ## Death suppression does not request a bonus-stage exit
 
-`Obj_GumballMachine` sets `Disable_death_plane`. In
-`Player_Boundary_CheckBottom`, that flag returns before the ordinary pit kill;
-it does not set `Restart_level_flag`. The gumball exit child owns that write
-through `loc_61050`/`loc_61076`. Requesting a stage exit from a generic
-pit-death interceptor freezes the player before the native exit trigger.
-
-`word_610AE` supplies left/width/top/height, not four endpoints:
-`-$100,$200,-$10,$40` means X in `[-$100,+$100)` and Y in `[-$10,+$30)`.
-`Check_PlayerInRange` builds each upper bound from its lower bound plus extent,
-and `sub_8592C` excludes that upper bound with `bhs` (see P39).
-
-Origin: Mega bonus frontier, 2026-10-03, base `6e6f13036f`. The native child at
-Y `$368` admits the player from `$358`; the engine pit callback ran at `$32F`
-and froze its next position `$33E`, two gameplay ticks before the native exit.
-
+`Disable_death_plane` makes `Player_Boundary_CheckBottom` return before the kill.
+It does not set `Restart_level_flag`; the gumball exit child (`loc_61076`) owns
+that write. `word_610AE` is left/width/top/height (`-$100,$200,-$10,$40`), giving
+X `[-$100,+$100)` and Y `[-$10,+$30)`. The upper bound is exclusive (`bhs`; see
+P39).
 
 ## Capture-time control writes are not held-state writes
 
-Cup `loc_26F26` sets `object_control=$03` once on capture; `loc_26FF4`
-only publishes position, priority and mapping. Reasserting suppression on
-every held tick overrides later writers such as LBZ1 `loc_6278A`, which
-clears both native player controls. Native velocity then rises each player
-dispatch while the cup still publishes its integer position. Preserve these
-separate write sites instead of adding a cutscene-specific release flag.
-Test capture, external clear, the next held dispatch and rewind; a test that
-sets only the object's inside flag has not reproduced the capture state.
+Cup capture `loc_26F26` writes `object_control=$03` once. The held routine
+`loc_26FF4` publishes only position, priority and mapping. Reasserting control on
+every held tick overrides later writers: `sub_62800` writes `$81`, which clears
+bit 1 (animation), and `loc_6278A` writes `$00`. Track the animation bit with the
+same byte ownership; a raw mapping write is not an animation claim.
 
-Animation suppression follows the same byte ownership: `$03` sets bit1,
-NPC helper `sub_62800` replaces it with `$81` (bit1 clear), and exit clears
-the byte. Keep a raw mapping write separate from claiming persistent animation
-suppression. Otherwise the player can move correctly after handoff yet retain
-an old cup mapping on the first jump; forcing the jump frame hides the stale gate.
+## A fatal-hit dispatch installs the wait; it does not decrement it
 
-
-## LBZ fatal-hit dispatch installs the wait; it does not decrement it
-
-`Touch_Enemy` publishes zero HP before the miniboss dispatch. `loc_7289A`
-installs `Wait_NewDelay`, then `BossDefeated` writes `$3F` and returns; the
-replacement routine first decrements on the next dispatch. Starting defeat
-inside an attack callback and immediately decrementing in `updateDefeat`
-moves the whole signpost chain early. Preserve the installation boundary,
-not a compensating signpost delay or a different countdown constant.
-The later explosion child still performs its creation emission in that pass
-and keeps its independent three-dispatch interval. Capture pending parent
-state and the explosion helper together: a generic DEFERRED helper field
-does not restore its timer or pending emissions. Reuse the helper's value
-snapshot, rebinding the shared RNG, and compare child positions after replay.
-
+LBZ miniboss `loc_7289A` installs `Wait_NewDelay`, and `BossDefeated` writes
+`$3F` and returns. The first decrement is on the next dispatch. A DEFERRED helper
+field does not restore the explosion controller's timer or pending emissions.
+Snapshot the helper and rebind it to the shared RNG.
 
 ## Results child retirement is a real object-graph boundary
 
-Once all twelve `Obj_LevelResults` children are represented by dynamic SSTs,
-`Obj_LevelResultsWait2` observes their live `$30` count. Do not retain an
-embedded-render retirement counter after the final child's actual deletion.
-`loc_2DD06` clears `_unkFAA8`, changes the parent into `Obj_TitleCard`, and
-returns; title initialization and its art submissions belong to its next
-owner dispatch. `Obj_EndSignControlAwaitStart` restores P1/P2 only after
-observing `_unkFAA8` clear, in its own slot order. A child-count readiness
-shortcut restores control before the native publication and masks the
-extra parent delay. Audit these three owners together: deleting only a
-counter can expose an old same-pass title-init workaround in another route.
-Preserve distinct retained-boss hooks (ICZ2 folds `loc_71DE2` into its results
-owner) and the public transition-request compatibility surface. Test the
-actual twelve children through carry, deletion, fresh rewind recreation,
-publication, control restoration and title-art admission; forcing a private
-retirement counter to zero bypasses the behavior under test.
-
+`Obj_LevelResultsWait2` counts the twelve live child SSTs (`$30`). `loc_2DD06`
+clears `_unkFAA8`, swaps in `Obj_TitleCard` and returns. Title init runs on the
+next owner dispatch, and `Obj_EndSignControlAwaitStart` restores P1/P2 when it
+next observes the latch. Do not add a render-retirement counter, an early control
+shortcut or same-pass title init. Keep ICZ2's folded `loc_71DE2` hook.
 
 ## Linked child positions and attack flags own the projectile
 
-Monkey Dude's five linked arm children retain 16.16 positions through four
-`MoveSprite_CircularSimple` additions. Integer-rounding each joint changes
-the hand position. `sub_875B4` releases once from the previous hand position
-before that child's circular update; body animation and a repeating cooldown
-do not own the throw. `sub_87524` reads absolute horizontal distance from
-`Find_SonicTails`, with no vertical range gate. Preserve follower delay changes
-and their attack flags separately from the root's flag, including after rewind.
-Origin: solo-Tails AIZ return frontier, 2026-10-03, base `0e50fed9f6`.
-
+Monkey Dude's five arm children keep 16.16 positions through four
+`MoveSprite_CircularSimple` additions. `sub_875B4` throws once (bit 0) from the
+hand's previous position, before that child updates. `sub_87524` gates on
+absolute horizontal distance only. Followers propagate attack bit 1 and halve or
+double their delay (`sub_8756A`/`sub_87592`).
 
 ## Literal player radii may differ from character defaults
 
-`AIZTree_FallOff` writes x_radius9/y_radius$13 for every character. A helper
-that restores standing defaults instead writes Tails' $0F too early and loses
-the first floor contact. Keep the explicit native radii and preserve centre;
-`Tails_TouchFloor` restores defaults when the actual landing occurs. Test the
-real Tails capture, release, terrain landing and forward replay after restore.
-Origin: solo-Tails AIZ return frontier, 2026-10-03, base `0e50fed9f6`.
-
+`AIZTree_FallOff` writes x/y radii 9/`$13` for every character, and
+`Tails_TouchFloor` restores the defaults on landing. Restoring Tails' standing
+`$0F` at release shortens the falling sensors.
 
 ## Global title resets do not restart the owner clock
 
-`Obj_TitleCardWait/loc_2D810` resets Timer, Ring_count, air and music after
-the child movement latch clears; it does not rewrite the title owner's $2E.
-For a retained results owner, wait for real ROM art and the final stationary
-child poll rather than counting from initialization while art is still queued.
-Keep held-level-counter ownership through that wait. Reusing a native reset
-gate must preserve the independently owned presentation clock: restarting it
-can move later art admission even when the ring reset becomes correct.
-Exercise pending archives, last movement, the clear-only parent poll and
-restore/replay; compare later queue spans as well as the first fixed value.
-Origin: retained LBZ title wait, 2026-10-03, baseline `d427fdd9ba`.
+`Obj_TitleCardWait/loc_2D810` resets Timer, Ring_count, air and music after the
+child movement latch clears. It does not rewrite the owner's `$2E`. Retained
+owners must wait for the real ROM art and the final stationary child poll, and
+keep their presentation clock running.
