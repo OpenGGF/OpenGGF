@@ -4,9 +4,13 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
+import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
-/** ROM-art remix with bounded mod patrols, not a replacement for stock badnik behavior. */
+/**
+ * ROM-art remix with bounded mod patrols, not a replacement for stock badnik behavior.
+ * The spawn subtype holds the {@link CourseSpecies} ordinal chosen for the zone.
+ */
 public final class CourseBadnik extends AbstractBadnikInstance implements RewindRecreatable {
     private long worldAnchor;
     private int anchorX;
@@ -14,6 +18,7 @@ public final class CourseBadnik extends AbstractBadnikInstance implements Rewind
     private int offset;
     private int direction = -1;
     private int ticks;
+    private int spin; // Orbinaut spike angle: Orb_MoveOrb steps 1 per frame, against the facing.
 
     /** Spawn-only constructor lets the rewind codec create its restoration probe. */
     public CourseBadnik(ObjectSpawn spawn) {
@@ -21,13 +26,16 @@ public final class CourseBadnik extends AbstractBadnikInstance implements Rewind
     }
 
     public CourseBadnik(ObjectSpawn spawn, long worldAnchor) {
-        super(spawn, spawn.subtype() == 0 ? "Course Motobug" : "Course Buzz Bomber");
+        super(spawn, "Course " + CourseSpecies.of(spawn.subtype()).name());
         this.worldAnchor = worldAnchor;
         anchorX = spawn.x();
         anchorY = spawn.y();
     }
 
-    public boolean flying() { return spawn.subtype() != 0; }
+    /** The {@link CourseSpecies} id. */
+    public int species() { return Math.floorMod(spawn.subtype(), CourseSpecies.COUNT); }
+    private CourseSpecies.Traits traits() { return CourseSpecies.of(spawn.subtype()); }
+    public boolean flying() { return traits().flying(); }
     public long worldAnchor() { return worldAnchor; }
     @Override public boolean isPersistent() { return !isDestroyed(); }
     @Override public boolean participatesInLevelRepeatOffset() { return true; }
@@ -48,43 +56,70 @@ public final class CourseBadnik extends AbstractBadnikInstance implements Rewind
             setDestroyed(true);
             return;
         }
-        offset += direction;
-        if (Math.abs(offset) >= EncounterPlan.PATROL_RADIUS) direction = -direction;
-        currentX = anchorX + offset;
-        facingLeft = direction < 0;
+        var species = traits();
         ticks = (ticks + 1) & 127;
-        if (flying()) {
+        if (species.patrols()) {
+            offset += direction;
+            if (Math.abs(offset) >= EncounterPlan.PATROL_RADIUS) direction = -direction;
+            facingLeft = direction < 0;
+        } else {
+            // Stationary hoppers turn to face Sonic.
+            facingLeft = player == null || player.getCentreX() < currentX;
+        }
+        currentX = anchorX + offset;
+        spin = (spin + (facingLeft ? 1 : -1)) & 0xff;
+        if (species.flying()) {
             int bob = ticks < 64 ? ticks / 4 - 8 : (127 - ticks) / 4 - 8;
             currentY = anchorY + bob;
         } else {
-            currentY = services().gameService(TerrainLibrary.class).floorAt(worldAnchor + offset) - 14;
+            currentY = services().gameService(TerrainLibrary.class).floorAt(worldAnchor + offset) - species.depth();
+            // Ball Hog's jump frame (3) lifts it a little off the floor.
+            if (species.id() == CourseSpecies.BALL_HOG && species.frame(ticks) == 3) currentY -= 8;
         }
     }
     @Override protected void updateAnimation(int vIntRunCount) {
-        // Ani_Moto driving frames 0,1,0,2; Ani_Buzz flight frames 2,3.
-        animFrame = flying() ? 2 + ((ticks / 4) & 1) : switch ((ticks / 8) & 3) {
-            case 1 -> 1;
-            case 3 -> 2;
-            default -> 0;
-        };
+        animFrame = traits().frame(ticks);
     }
-    @Override protected int getCollisionSizeIndex() {
-        // Moto_Main col_40x32 ($0C); Buzz_Main col_48x24 ($08), shipped S1 tables.
-        return flying() ? 0x08 : 0x0c;
+    @Override protected int getCollisionSizeIndex() { return traits().collision() & 0x3f; }
+    @Override public int getCollisionFlags() {
+        // Hazards (Roller rolling $8E, Bomb $9A) keep col_hurt so attacks still hurt Sonic.
+        return isDestroyed() ? 0 : traits().collision();
+    }
+    @Override public TouchRegion[] getMultiTouchRegions() {
+        if (species() != CourseSpecies.ORBINAUT || isDestroyed()) return null;
+        var regions = new TouchRegion[5];
+        regions[0] = new TouchRegion(currentX, currentY, getCollisionFlags());
+        for (int i = 0; i < 4; i++) {
+            int[] spike = spike(i);
+            regions[i + 1] = new TouchRegion(spike[0], spike[1], CourseSpecies.ORBINAUT_SPIKE);
+        }
+        return regions;
+    }
+    /** Orb_CircleSpikeball: CalcSine at quarter-turn spacing, asr #4 gives the radius-16 orbit. */
+    private int[] spike(int index) {
+        int angle = (spin + index * 0x40) & 0xff;
+        return new int[]{currentX + (TrigLookupTable.cosHex(angle) >> 4),
+                currentY + (TrigLookupTable.sinHex(angle) >> 4)};
     }
     @Override protected DestructionEffects.DestructionConfig getDestructionConfig() {
         // S1 sfx_BreakItem=$C1. Shared destruction owns scoring and replacement-slot transfer.
         return new DestructionEffects.DestructionConfig(0xc1, null, false, null,
                 (x, y, services, points) -> new CourseBurst(CourseBurst.spawnAt(x, y)), false);
     }
-    @Override public int getPriorityBucket() {
-        // Buzz_Main obPriority=3; Moto_Main obPriority=4.
-        return RenderPriority.bucket(flying() ? 3 : 4);
-    }
-    @Override public int getOnScreenHalfWidth() { return flying() ? 24 : 20; }
+    @Override public int getPriorityBucket() { return RenderPriority.bucket(traits().priority()); }
+    @Override public int getOnScreenHalfWidth() { return traits().halfWidth(); }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
-        var renderer = getRenderer(flying() ? ObjectArtKeys.BUZZ_BOMBER : ObjectArtKeys.MOTOBUG);
-        if (renderer != null) renderer.drawFrameIndex(animFrame, currentX, currentY, !facingLeft, false);
+        var species = traits();
+        var renderer = getRenderer(species.artKey());
+        if (renderer == null) return;
+        boolean flip = species.flipFacingLeft() == facingLeft;
+        renderer.drawFrameIndex(animFrame, currentX, currentY, flip, false);
+        if (species.id() == CourseSpecies.ORBINAUT) {
+            for (int i = 0; i < 4; i++) {
+                int[] spike = spike(i);
+                renderer.drawFrameIndex(3, spike[0], spike[1], false, false);
+            }
+        }
     }
 }

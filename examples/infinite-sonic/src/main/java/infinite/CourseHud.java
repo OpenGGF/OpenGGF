@@ -7,7 +7,7 @@ import java.util.Locale;
 /** Tiny code-drawn HUD glyphs; no external art or GPU-owned state to restore. */
 public final class CourseHud {
     private CourseHud() { }
-    private static final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:";
+    private static final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:>";
     private static final String GLYPHS =
             "111101101101111"
             + "010110010010111"
@@ -47,7 +47,8 @@ public final class CourseHud {
             + "111001010100111"
             + "000000000000010"
             + "000000111000000"
-            + "000010000010000";
+            + "000010000010000"
+            + "100010001010100";
     public static String speedText(CourseController course) {
         return String.format(Locale.ROOT, "SPEED %.2fX", course.speedMultiplier());
     }
@@ -61,20 +62,36 @@ public final class CourseHud {
     public static void draw(ObjectServices services, CourseController course) {
         text(services, "SCORE " + services.gameState().getScore(), 16, 8, true);
         text(services, speedText(course) + "  " + countdownText(course), 16, 24, true);
-        text(services, "RINGS " + services.levelGamestate().getRings(), 16, 40, true);
+        text(services, livesText(services, course), 16, 40, true);
         String warning = warningText(course);
         if (!warning.isEmpty()) {
             text(services, warning, (services.camera().getWidth() - warning.length() * 12) / 2,
                     64, true, 3);
         }
-        if (course.gameOver()) {
-            String message = "GAME OVER";
-            text(services, message, (services.camera().getWidth() - message.length() * 8) / 2, 96, true);
-            String prompt = "PRESS SPACE TO RESTART";
-            if (course.restartReady()) {
-                text(services, prompt, (services.camera().getWidth() - prompt.length() * 8) / 2, 120, true);
-            }
+        if (!course.gameOver()) return;
+        if (course.canContinue()) {
+            centred(services, "LIVES LEFT " + course.displayLives(), 88);
+            if (!course.restartReady()) return;
+            var lines = menuLines(course);
+            // Both options share a left edge so the cursor column lines up.
+            int x = (services.camera().getWidth() - lines.get(0).length() * 8) / 2;
+            for (int i = 0; i < lines.size(); i++) text(services, lines.get(i), x, 112 + i * 16, true);
+            centred(services, "PRESS SPACE", 152);
+            return;
         }
+        centred(services, "GAME OVER", 96);
+        if (course.restartReady()) centred(services, "PRESS SPACE TO RESTART", 120);
+    }
+    public static String livesText(ObjectServices services, CourseController course) {
+        return "RINGS " + services.levelGamestate().getRings() + "  LIVES " + course.displayLives();
+    }
+    /** CONTINUE above RESTART; the cursor marks the choice SPACE (button A) confirms. */
+    public static java.util.List<String> menuLines(CourseController course) {
+        return java.util.List.of((course.restartSelected() ? "  " : "> ") + "CONTINUE",
+                (course.restartSelected() ? "> " : "  ") + "RESTART");
+    }
+    private static void centred(ObjectServices services, String text, int y) {
+        text(services, text, (services.camera().getWidth() - text.length() * 8) / 2, y, true);
     }
     private static void text(ObjectServices services, String text, int x, int y, boolean shadow) {
         text(services, text, x, y, shadow, 2);

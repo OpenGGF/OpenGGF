@@ -6,7 +6,13 @@ public final class EncounterPlan {
     public static final int AIR_CLEARANCE = 48;
     public static final int FIRST_SECTION = 3;
 
-    public record Encounter(long worldX, int y, boolean flying) { }
+    /** Bob amplitude below a flyer's anchor; {@link CourseBadnik} bobs from -8 to +7. */
+    public static final int BOB = 8;
+
+    /** {@code species} is a {@link CourseSpecies} id. */
+    public record Encounter(long worldX, int y, int species) {
+        public boolean flying() { return CourseSpecies.of(species).flying(); }
+    }
 
     public static Encounter at(TerrainLibrary terrain, long section) {
         if (section < FIRST_SECTION || terrain.isCorridor(section)) return null;
@@ -15,6 +21,8 @@ public final class EncounterPlan {
         int choice = (int) Long.remainderUnsigned(random, 8);
         if (choice < 2) return null;
         boolean flying = choice >= 6;
+        var line = flying ? CourseSpecies.air(terrain.romZone()) : CourseSpecies.ground(terrain.romZone());
+        var species = CourseSpecies.of(line[(int) Long.remainderUnsigned(random >>> 24, line.length)]);
         long centre = section * 512 + 256;
         int jitter = (int) Long.remainderUnsigned(random >>> 8, 97) - 48;
         // Search near the section centre rather than forcing a ground enemy onto a steep hill.
@@ -33,9 +41,9 @@ public final class EncounterPlan {
             }
             if (flying) {
                 // The entire sprite's patrol + bob stays above the highest surface in its corridor.
-                return new Encounter(x, low - AIR_CLEARANCE - 12 - 8, true);
+                return new Encounter(x, low - AIR_CLEARANCE - species.depth() - BOB, species.id());
             }
-            if (gentle && high - low <= 16) return new Encounter(x, terrain.floorAt(x) - 14, false);
+            if (gentle && high - low <= 16) return new Encounter(x, terrain.floorAt(x) - species.depth(), species.id());
         }
         return null; // No appropriate ground habitat: leave the section empty.
     }

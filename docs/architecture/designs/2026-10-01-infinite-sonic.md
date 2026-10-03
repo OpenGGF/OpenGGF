@@ -373,9 +373,9 @@ render showed lava chosen as MZ flat banks and hill sections. Candidates covered
 stock Lava Tag (±$80 horizontally, ±$30 vertically) are now rejected. Lava still shows
 beneath some grass ledges, as in the stock zone, but is never walkable.
 
-Enemies stay Motobug/Buzz Bomber; `Sonic1ObjectArtProvider` loads both in every zone,
-on palette line 0. Zone-native badniks would be a separate follow-up. Validation:
-see the coverage matrix's 0.8.0 section.
+Enemies stayed Motobug/Buzz Bomber in 0.8.0 (`Sonic1ObjectArtProvider` loads both in
+every zone); 0.10.0 replaces them with zone badniks. Validation: see the coverage
+matrix's 0.8.0 section.
 
 ## Title zone picker and act-less cards (0.9.0)
 
@@ -416,3 +416,50 @@ change: S3K ROM-backed audio errors (the root S3K ROM's SHA-1 does not match the
 documented dump, so no path was supplied), and `TestRemainingRewindTailInventory`
 (1316 vs 1315 classes) plus the `TestObjectPhysicsStandardizationGuard` violation in
 `LrzFlameObjectInstance`, both reproduced unchanged on `e2432a8d53`.
+
+## Zone badniks, session lives and the death menu (0.10.0)
+
+Follow-up on `cb5fe701ee`, same branch, 2026-10-03. The request: zone-appropriate
+badniks instead of GHZ's everywhere; lives that persist for the session; and a
+CONTINUE/RESTART menu when Sonic dies.
+
+**Badniks.** `CourseSpecies` lists each species' ROM art key, `obColType`, priority,
+display width, standing radius (`obHeight`/`y_radius`) and animation frames, taken from
+the shipped objects and the engine's S1 implementations. Line-ups are keyed by the
+source level's stock zone id (`Level.getZoneIndex`), the same id that selects the
+object art, so SBZ3 uses Labyrinth's line-up and art. Every listed species' art is
+loaded for its zone by `Sonic1ObjectArtProvider`. `EncounterPlan` draws the species
+from bits of its existing seeded value, so encounter positions and the empty/ground/air
+split are unchanged; ground Y is `floor − depth` and flyers clear the 48 px gap by
+their own depth. The spawn subtype stores the species id, so rewind recreation
+needs no extra state (append-only ids; GHZ keeps Motobug 0 / Buzz Bomber 1). A first
+draft used an enum; `ggfmod` validation rejects it (`STATIC_STATE_UNSUPPORTED`: mod
+classes may hold only literal static constants), so species are int ids and a
+`Traits` record built on demand.
+Behavior stays the mod's bounded patrol: Rollers ($8E while rolling) and Walking Bombs
+($9A) keep `col_hurt` and cannot be destroyed; Orbinauts expose four `$98` spike touch
+regions on the radius-16 `Orb_CircleSpikeball` orbit through the multi-region touch
+contract; Ball Hogs hop in place. Left out: Jaws (they only swim, and the course is
+dry), Caterkillers (segmented body chain), Chopper and Newtron (water/ambush
+behaviors), all projectiles, bomb fuses and Yadrin's `React_Yadrin` spiked top.
+
+**Lives.** `CourseSession` (module service and rewind adapter) outlives the death
+reload. It awards one life per 50,000 points of total score, mirroring REV01
+`AddPoints`' Japanese-console rule as a mod choice (overseas consoles only advance
+the threshold); 100/200-ring lives use the existing `LevelGamestate` award. The HUD
+row reads `RINGS n  LIVES n`.
+
+**Death menu.** On death the controller records the lives left, the score and a
+clock snapshot taken before `end()`, then sets the engine's lives to exactly 1. The
+death routine's own subtraction then reaches zero, takes the game-over branch to the
+course's `GameOverFlowProvider` and holds the corpse with no restart countdown, as the
+previous press-space restart did. Letting the stock routine run with lives left was
+rejected: it counts down and requests the reload itself, leaving no time for a menu.
+After 60 frames, edge-detected up/down move the cursor (`sfx_Switch`) and a fresh A
+press confirms; both choices use the ordinary death-restart reload. CONTINUE makes
+`loadLevelOverride` restore the saved clock instead of resetting it, and the new
+controller restores the score and session lives. RESTART (and the last-life GAME OVER
+restart) resets the session. A continue restarts from the course opening, not the
+death distance: the opening runway is the only start that is guaranteed to be flat,
+enemy-free and pit-free. Restoring the logical origin was rejected for that reason.
+

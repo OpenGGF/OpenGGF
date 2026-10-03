@@ -41,6 +41,7 @@ public final class TerrainLibrary {
     private final int[][][] flatHalves = new int[TIER_COUNT][2][];
     private final int[][][][] gapHalves = new int[GAP_COUNT][TIER_COUNT][2][];
     private final int seamHeight;
+    private final int romZone;
 
     /** One walkable 256px floor in a ROM foreground column. {@code profile} holds source Y. */
     private record Candidate(int column, int[] profile, int clearance) {
@@ -49,6 +50,7 @@ public final class TerrainLibrary {
     }
 
     public TerrainLibrary(Level source) {
+        romZone = source.getZoneIndex();
         sourceHeight = source.getLayerHeightBlocks(0);
         height = Math.min(sourceHeight, MAX_HEIGHT);
         int budget = 256 - backgroundBlocks(source).length;
@@ -279,6 +281,8 @@ public final class TerrainLibrary {
     /** Floor height where corridors and section edges meet at ground tier. */
     public int seam() { return seamHeight; }
     public int blockCount() { return blocks.size(); }
+    /** Stock S1 zone id of the source level, which also selects the loaded object art. */
+    public int romZone() { return romZone; }
     public Block block(int index) { return blocks.get(index); }
     private int sectionIndex(long section, int tier) {
         return (int) Long.remainderUnsigned(random(section + SEED), sections.get(tier).size());

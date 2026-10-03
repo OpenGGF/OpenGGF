@@ -372,3 +372,29 @@ caught MZ lava chosen as ground (fixed, see the design record). Backgrounds were
 drawn without parallax, so this is a terrain review, not presentation evidence.
 Not covered outside GHZ1: damage, attacks, rewind/replay, backtracking, jump reach,
 non-native widths and live GPU presentation.
+
+## Zone badniks, session lives and death menu (0.10.0, 2026-10-03)
+
+Main checkout, `feature/ai-infinite-sonic`, base `cb5fe701ee`. Mod, test and docs only;
+the engine is unchanged, so focused validation replaces an engine category run.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Zone line-ups and loaded art | `encountersUseTheZonesOwnBadniksWithLoadedRomArt` | GHZ/MZ/SYZ/LZ/SLZ/SBZ act 1 plus SBZ3: 600 planned sections use only the zone's species and every one appears; each species' ROM art renderer is registered; live spawns carry the planned species |
+| Habitat fit per species | `encountersAreSeededSpacedAndFitTheirEntirePatrolCorridor` | GHZ1: ground Y = floor − species depth; flyers clear 48 px by their own depth |
+| Indestructible hazards | `walkingBombsHurtInsteadOfBreaking` | SLZ1: a descending rolling Sonic loses rings and the bomb survives |
+| Stomp, score, explosion rewind | `aPhysicalStompDestroysTheBadnikAwardsScoreAndDoesNotRespawnIt` | GHZ1 Motobug and Buzz Bomber only |
+| Last-life game over | `lastLifeGameOverSkipsStockCardAndJumpRestartsTheCourse` | Held corpse, no stock card, press-space fresh session |
+| CONTINUE | `deathMenuContinueResumesScoreSpeedAndSessionLives` | Score, 2.25× stage and countdown position, session lives; a second death continues with the last life |
+| RESTART | `deathMenuRestartBeginsAFreshSession` | Edge-detected cursor, fresh 1× session with 3 lives |
+| Score extra lives | `everyFiftyThousandPointsAwardsASessionLife` | Survival and enemy points cross 50,000/100,000; one life per threshold; HUD lives text |
+| Left-edge death | `fallingBehindEndsRunDespiteRingsAndInvulnerability` | All five widths; now leaves two session lives and the CONTINUE menu |
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
+  "-Dsonic1.rom.path=/absolute/path/to/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+**73 passed, 0 failures, 0 skipped.** Not covered: Orbinaut spike contact, Roller and
+Ball Hog interactions, rewind across a CONTINUE reload, and live rendering of the new
+species and the death menu (no capture or visual review was made).

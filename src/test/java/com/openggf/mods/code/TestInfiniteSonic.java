@@ -373,7 +373,8 @@ class TestInfiniteSonic {
         fixture.stepIdleFrames(1);
         assertTrue(player.getDead());
         assertTrue(gameOver());
-        assertEquals(0, GameServices.gameState().getLives());
+        assertEquals(2, controllerInt("displayLives"), "the lost life leaves two for the session");
+        assertTrue(controllerFlag("canContinue"));
         int score = GameServices.gameState().getScore();
         int elapsed = ticks();
         int cameraX = fixture.camera().getX();
@@ -383,40 +384,122 @@ class TestInfiniteSonic {
         assertEquals(cameraX, fixture.camera().getX());
     }
 
-    @Test void gameOverSkipsStockCardAndJumpRestartsTheCourse() throws Exception {
-        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+    private boolean controllerFlag(String name) throws Exception {
+        return (boolean) controller().getClass().getMethod(name).invoke(controller());
+    }
+    private int controllerInt(String name) throws Exception {
+        return (int) controller().getClass().getMethod(name).invoke(controller());
+    }
+    private Object session() throws Exception {
+        return GameServices.module().getGameService(loader.loadClass("infinite.CourseSession"));
+    }
+
+    /** Dies with {@code lives} in the session, waits out the menu delay and returns the corpse. */
+    private void dieAndWaitForMenu(HeadlessTestFixture fixture, int lives) throws Exception {
         fixture.stepIdleFrames(2);
-        var player = fixture.sprite();
+        while (GameServices.gameState().getLives() > lives) GameServices.gameState().loseLife();
         setTicks(1800 * 2 + 100);
         GameServices.gameState().addScore(500);
-        player.applyCrushDeath();
+        fixture.sprite().applyCrushDeath();
         fixture.stepIdleFrames(1);
         assertTrue(gameOver());
-        var restartReady = controller().getClass().getMethod("restartReady");
-        // Hold jump through the early frames: a press carried over from play must not restart.
+        // Hold jump through the early frames: a press carried over from play must not choose.
         for (int i = 0; i < 300; i++) fixture.stepFrame(false, false, false, false, i < 30);
-        assertTrue(player.getDead());
-        assertEquals(0, GameServices.gameState().getLives());
-        assertTrue((boolean) restartReady.invoke(controller()));
+        assertTrue(fixture.sprite().getDead());
+        assertEquals(0, GameServices.gameState().getLives(), "the death routine held the corpse");
+        assertTrue(controllerFlag("restartReady"));
         assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
                 .noneMatch(o -> o instanceof AbstractGameOverCardObjectInstance), "stock GAME OVER card replaced");
-        assertFalse(GameServices.level().isRespawnRequestedForRewind(), "corpse is held until the player restarts");
-        fixture.stepFrame(false, false, false, false, true);
-        // GameLoop consumes the request, fades out and runs the death-restart load.
-        assertTrue(GameServices.level().consumeRespawnRequest());
+        assertFalse(GameServices.level().isRespawnRequestedForRewind(), "corpse is held until the player chooses");
+    }
 
+    /** GameLoop consumes the request, fades out, runs the death-restart load and its title card. */
+    private void reloadAfterChoice(HeadlessTestFixture fixture) throws Exception {
+        assertTrue(GameServices.level().consumeRespawnRequest());
         Object oldController = controller();
         GameServices.level().restartCurrentLevelAfterDeath();
         assertNotSame(oldController, controller());
-        // GameLoop runs the restart's title card before play resumes.
         assertTrue(GameServices.level().consumeTitleCardRequest());
         fixture.stepIdleFrames(2);
         assertFalse(fixture.sprite().getDead());
         assertFalse(gameOver());
+    }
+
+    @Test void lastLifeGameOverSkipsStockCardAndJumpRestartsTheCourse() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        dieAndWaitForMenu(fixture, 1);
+        assertFalse(controllerFlag("canContinue"), "no lives left: GAME OVER offers only a restart");
+        fixture.stepFrame(false, false, false, false, true);
+        reloadAfterChoice(fixture);
         assertEquals(1.0, speed());
         assertTrue(ticks() < 10, "challenge clock restarts");
         assertEquals(3, GameServices.gameState().getLives());
         assertTrue(GameServices.gameState().getScore() < 100, "score restarts with the run");
+    }
+
+    @Test void deathMenuContinueResumesScoreSpeedAndSessionLives() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        dieAndWaitForMenu(fixture, 3);
+        int score = GameServices.gameState().getScore();
+        assertTrue(score >= 500);
+        assertTrue(controllerFlag("canContinue"));
+        assertEquals(2, controllerInt("displayLives"));
+        var menu = loader.loadClass("infinite.CourseHud").getMethod("menuLines", controller().getClass());
+        assertEquals(List.of("> CONTINUE", "  RESTART"), menu.invoke(null, controller()));
+        fixture.stepFrame(false, false, false, false, true);
+        reloadAfterChoice(fixture);
+        assertEquals(2.25, speed(), "the run resumes at the speed it died at");
+        assertTrue(Math.abs(ticks() - (1800 * 2 + 100)) < 10, "and partway through that interval: " + ticks());
+        assertEquals(2, GameServices.gameState().getLives());
+        assertEquals(2, controllerInt("displayLives"));
+        assertTrue(GameServices.gameState().getScore() >= score, "score carries over");
+        // The resumed run can die again and continue with its last life.
+        dieAndWaitForMenu(fixture, 2);
+        assertEquals(1, controllerInt("displayLives"));
+        assertTrue(controllerFlag("canContinue"));
+    }
+
+    @Test void deathMenuRestartBeginsAFreshSession() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        dieAndWaitForMenu(fixture, 3);
+        // Down moves the cursor once however long it is held; up moves it back.
+        for (int i = 0; i < 10; i++) fixture.stepFrame(false, true, false, false, false);
+        assertTrue(controllerFlag("restartSelected"));
+        fixture.stepIdleFrames(1);
+        fixture.stepFrame(true, false, false, false, false);
+        assertFalse(controllerFlag("restartSelected"));
+        fixture.stepIdleFrames(1);
+        fixture.stepFrame(false, true, false, false, false);
+        var menu = loader.loadClass("infinite.CourseHud").getMethod("menuLines", controller().getClass());
+        assertEquals(List.of("  CONTINUE", "> RESTART"), menu.invoke(null, controller()));
+        fixture.stepFrame(false, false, false, false, true);
+        reloadAfterChoice(fixture);
+        assertEquals(1.0, speed());
+        assertTrue(ticks() < 10);
+        assertEquals(3, GameServices.gameState().getLives());
+        assertTrue(GameServices.gameState().getScore() < 100);
+    }
+
+    @Test void everyFiftyThousandPointsAwardsASessionLife() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        fixture.sprite().setInvulnerableFrames(2000);
+        int perLife = loader.loadClass("infinite.CourseSession").getField("SCORE_PER_LIFE").getInt(null);
+        GameServices.gameState().addScore(perLife - 1 - GameServices.gameState().getScore());
+        assertEquals(3, GameServices.gameState().getLives());
+        stepTerrain(fixture, 1);
+        assertEquals(4, GameServices.gameState().getLives(), "survival points cross 50,000");
+        String hud = (String) loader.loadClass("infinite.CourseHud")
+                .getMethod("livesText", ObjectServices.class, controller().getClass())
+                .invoke(null, GameServices.level().getObjectManager().getObjectServices(), controller());
+        assertTrue(hud.endsWith("  LIVES 4"), hud);
+        for (int i = 0; i < 30; i++) stepTerrain(fixture, 1);
+        assertEquals(4, GameServices.gameState().getLives(), "one life per threshold");
+        assertEquals(2 * perLife, (int) session().getClass().getMethod("nextLifeScore").invoke(session()));
+        // Enemy points also count toward the next threshold.
+        GameServices.gameState().addScore(2 * perLife - GameServices.gameState().getScore());
+        stepTerrain(fixture, 1);
+        assertEquals(5, GameServices.gameState().getLives());
     }
 
     @Test void minimumScrollAllowsFasterRunningAndSurvivalScoreScales() throws Exception {
@@ -718,6 +801,20 @@ class TestInfiniteSonic {
     private static boolean flying(Object encounter) throws Exception {
         return (boolean) encounter.getClass().getMethod("flying").invoke(encounter);
     }
+    private static int species(Object encounter) throws Exception {
+        return (int) encounter.getClass().getMethod("species").invoke(encounter);
+    }
+    /** A {@code CourseSpecies.Traits} component for a species id. */
+    private static Object trait(int species, String component) throws Exception {
+        Object traits = loader.loadClass("infinite.CourseSpecies").getMethod("of", int.class).invoke(null, species);
+        return traits.getClass().getMethod(component).invoke(traits);
+    }
+    private static int depth(Object encounter) throws Exception {
+        return (int) trait(species(encounter), "depth");
+    }
+    private static Set<Integer> ids(int[] species) {
+        return Arrays.stream(species).boxed().collect(java.util.stream.Collectors.toSet());
+    }
     private List<ObjectInstance> enemies() {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(o -> !o.isDestroyed() && o.getClass().getName().equals("infinite.CourseBadnik")).toList();
@@ -739,13 +836,13 @@ class TestInfiniteSonic {
             for (int dx = -88; dx <= 88; dx++) {
                 int floor = floorAt(x + dx);
                 min = Math.min(min, floor); max = Math.max(max, floor);
-                if (flying(plan)) assertTrue(encounterY(plan) + 8 + 12 + 48 <= floor);
+                if (flying(plan)) assertTrue(encounterY(plan) + 8 + depth(plan) + 48 <= floor);
             }
             if (flying(plan)) air++;
             else {
                 ground++;
                 assertTrue(max - min <= 16);
-                assertEquals(floorAt(x) - 14, encounterY(plan));
+                assertEquals(floorAt(x) - depth(plan), encounterY(plan));
             }
         }
         assertTrue(ground > 50 && air > 50 && empty > 50, ground + "/" + air + "/" + empty);
@@ -758,6 +855,72 @@ class TestInfiniteSonic {
             int floor = floorAt(x);
             assertEquals((int) scan.invoke(null, level, x / 256, x % 256, floor < 0 ? 0 : floor - clearance), floor);
         }
+    }
+
+    /** Registry zones GHZ, MZ, SYZ, LZ, SLZ, SBZ act 1, plus SBZ3 on Labyrinth's layout and art. */
+    @ParameterizedTest(name = "zone {0} act {1}")
+    @org.junit.jupiter.params.provider.CsvSource({"0,0", "1,0", "2,0", "3,0", "4,0", "5,0", "5,2"})
+    void encountersUseTheZonesOwnBadniksWithLoadedRomArt(int zone, int act) throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3, zone, act);
+        int romZone = GameServices.level().getCurrentLevel().getZoneIndex();
+        var speciesType = loader.loadClass("infinite.CourseSpecies");
+        var ground = ids((int[]) speciesType.getMethod("ground", int.class).invoke(null, romZone));
+        var air = ids((int[]) speciesType.getMethod("air", int.class).invoke(null, romZone));
+        var seen = new HashSet<Integer>();
+        for (long section = 3; section < 600; section++) {
+            Object plan = encounter(section);
+            if (plan == null) continue;
+            int species = species(plan);
+            assertTrue((flying(plan) ? air : ground).contains(species), species + " in zone " + romZone);
+            assertEquals(flying(plan), trait(species, "flying"));
+            seen.add(species);
+        }
+        var lineUp = new HashSet<Integer>(ground);
+        lineUp.addAll(air);
+        assertEquals(lineUp, seen, "every species in the zone's line-up appears");
+        for (int species : lineUp) {
+            String key = (String) trait(species, "artKey");
+            assertNotNull(GameServices.level().getObjectRenderManager().getRenderer(key),
+                    trait(species, "name") + " art is loaded for zone " + romZone);
+        }
+        if (romZone != 0) assertFalse(seen.contains(speciesType.getField("MOTOBUG").getInt(null)));
+        // Live spawns carry the planned species through the spawn subtype.
+        fixture.sprite().setInvulnerableFrames(20000);
+        for (int i = 0; i < 1500 && enemies().isEmpty(); i++) stepTerrain(fixture, 1);
+        assertFalse(enemies().isEmpty());
+        for (ObjectInstance enemy : enemies()) {
+            assertTrue(lineUp.contains(enemy.getClass().getMethod("species").invoke(enemy)));
+        }
+    }
+
+    @Test void walkingBombsHurtInsteadOfBreaking() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3, 4, 0); // Star Light: Bombs on the ground.
+        fixture.sprite().setInvulnerableFrames(2000);
+        ObjectInstance bomb = null;
+        for (int i = 0; i < 1500 && bomb == null; i++) {
+            stepCourse(fixture, 1);
+            bomb = enemies().stream().filter(o -> !flyingEnemy(o)).findFirst().orElse(null);
+        }
+        assertNotNull(bomb);
+        assertEquals("Walking Bomb", trait((int) bomb.getClass().getMethod("species").invoke(bomb), "name"));
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(0);
+        GameServices.level().getLevelGamestate().setRings(5);
+        NativePositionOps.writeXPosResetSubpixel(player, bomb.getX());
+        NativePositionOps.writeYPosResetSubpixel(player, bomb.getY() - 48);
+        player.setXSpeed((short) 0); player.setGSpeed((short) 0);
+        player.setYSpeed((short) 0x300); player.setAir(true); player.setRolling(true);
+        fixture.camera().setX((short) Math.max(0, bomb.getX() - 160));
+        for (int i = 0; i < 12 && GameServices.level().getLevelGamestate().getRings() > 0; i++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertEquals(0, GameServices.level().getLevelGamestate().getRings(), "a rolling hit still hurts");
+        assertFalse(bomb.isDestroyed(), "col_hurt bombs cannot be destroyed");
+        assertFalse(player.getDead());
+    }
+    private static boolean flyingEnemy(ObjectInstance enemy) {
+        try { return (boolean) enemy.getClass().getMethod("flying").invoke(enemy); }
+        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
     }
 
     @ParameterizedTest @EnumSource(WidescreenAspect.class)

@@ -53,6 +53,7 @@ public final class InfiniteSonicMod implements GgfMod {
         private CourseZones zones;
         private final CourseFeatures dryFeatures = new CourseFeatures();
         private final ChallengeClock clock = new ChallengeClock();
+        private final CourseSession session = new CourseSession();
         private final LevelEventProvider endlessEvents = new LevelEventProvider() {
             @Override public void initLevel(int zone, int act) { }
             @Override public void update() { }
@@ -76,7 +77,9 @@ public final class InfiniteSonicMod implements GgfMod {
             active = courseLevel(index);
             activeIndex = active ? index : -1;
             library = null;
-            clock.reset();
+            // A death menu CONTINUE resumes at the speed it died at; every other load starts at 1x.
+            if (active) session.prepareClock(clock);
+            else { clock.reset(); session.reset(); }
             if (!active) return super.loadLevelOverride(index);
             Level original = game.loadLevel(index);
             library = new TerrainLibrary(original);
@@ -136,10 +139,12 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
             var adapters = new java.util.ArrayList<com.openggf.game.rewind.RewindSnapshottable<?>>(super.rewindAdapters());
             adapters.add(clock);
+            adapters.add(session);
             return List.copyOf(adapters);
         }
         @Override public <T> T getGameService(Class<T> type) {
             if (type == ChallengeClock.class) return type.cast(clock);
+            if (type == CourseSession.class) return type.cast(session);
             return type == TerrainLibrary.class ? type.cast(library) : super.getGameService(type);
         }
     }

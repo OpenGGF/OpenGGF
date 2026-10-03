@@ -20,8 +20,17 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private boolean gameOver;
     private int gameOverFrames;
     private boolean restartRequested;
+    // Death menu: CONTINUE (resume the run) or RESTART; edge-detected so a held direction moves once.
+    private boolean restartSelected;
+    private boolean menuUpHeld;
+    private boolean menuDownHeld;
     public boolean gameOver() { return gameOver; }
     public boolean restartReady() { return gameOver && gameOverFrames >= RESTART_DELAY_FRAMES; }
+    /** Lives remain after this death, so the menu offers CONTINUE as well as RESTART. */
+    public boolean canContinue() { return gameOver && session().livesLeft() > 0; }
+    public boolean restartSelected() { return restartSelected; }
+    /** Session lives: the life just lost is already gone while the death menu is up. */
+    public int displayLives() { return gameOver ? session().livesLeft() : services().gameState().getLives(); }
     public double speedMultiplier() { return clock().displayMultiplier(); }
     public int secondsRemaining() { return clock().secondsRemaining(); }
     private long origin;
@@ -40,6 +49,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         CourseHud.draw(services(), this);
     }
     private ChallengeClock clock() { return services().gameService(ChallengeClock.class); }
+    private CourseSession session() { return services().gameService(CourseSession.class); }
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
         return new CourseController(context.spawn());
     }
@@ -47,12 +57,22 @@ public final class CourseController extends AbstractObjectInstance implements Re
         if (player == null) return;
         services().levelGamestate().pauseTimer();
         services().levelManager().setForceHudSuppressed(true);
-        if (gameOver) { awaitRestart(player); return; }
+        if (gameOver) { awaitChoice(player); return; }
         if (player.getDead()) { endRun(player); return; }
         if (!started) {
             started = true;
-            // Every run, including a restart after game over, begins from a fresh score.
-            services().gameState().resetSession();
+            var state = services().gameState();
+            int lives = session().livesLeft();
+            int resumeScore = session().consumeContinueScore();
+            if (resumeScore < 0) {
+                // A new run, including RESTART from the death menu, begins from a fresh session.
+                state.resetSession();
+                session().reset();
+            } else {
+                // CONTINUE keeps the score and session lives; the clock was restored by the reload.
+                state.addScore(resumeScore - state.getScore());
+                setLives(lives);
+            }
             // A running start gives the player room to react before the scrolling edge arrives.
             player.setGSpeed((short) NORMAL_RUN_SPEED);
             player.setXSpeed((short) NORMAL_RUN_SPEED);
@@ -74,6 +94,12 @@ public final class CourseController extends AbstractObjectInstance implements Re
         scoreFraction += MINIMUM_SCROLL;
         services().gameState().addScore(scoreFraction / 256);
         scoreFraction %= 256;
+        // Enemy points count too, so test the threshold against the whole score.
+        if (session().awardsLife(services().gameState().getScore())) {
+            services().gameState().addLife();
+            var profile = services().audioManager().getAudioProfile();
+            if (profile != null) services().audioManager().playMusic(profile.getExtraLifeMusicId());
+        }
         var config = services().configuration();
         int fps = "PAL".equalsIgnoreCase(config.getString(com.openggf.configuration.SonicConfiguration.REGION))
                 ? 50 : config.getInt(com.openggf.configuration.SonicConfiguration.FPS);
@@ -90,19 +116,41 @@ public final class CourseController extends AbstractObjectInstance implements Re
 
     private void endRun(PlayableEntity player) {
         gameOver = true;
+        var state = services().gameState();
+        session().died(state.getLives() - 1, state.getScore(), clock().capture());
         clock().end();
-        while (services().gameState().getLives() > 0) services().gameState().loseLife();
+        // The death routine subtracts the life itself once the corpse falls. Leaving exactly
+        // one makes that subtraction reach zero, so the corpse is held for the death menu
+        // (the course's game-over flow) instead of counting down to a stock restart.
+        setLives(1);
         player.applyCrushDeath();
     }
 
-    private void awaitRestart(PlayableEntity player) {
+    private void setLives(int lives) {
+        var state = services().gameState();
+        while (state.getLives() > lives) state.loseLife();
+        while (state.getLives() < lives) state.addLife();
+    }
+
+    private void awaitChoice(PlayableEntity player) {
+        if (!(player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite)) return;
+        boolean up = sprite.isUpPressed();
+        boolean down = sprite.isDownPressed();
+        boolean moved = (up && !menuUpHeld) || (down && !menuDownHeld);
+        menuUpHeld = up;
+        menuDownHeld = down;
         if (!restartReady()) { gameOverFrames++; return; }
+        if (restartRequested) return;
+        if (canContinue() && moved) {
+            restartSelected = !restartSelected;
+            services().audioManager().playSfx(ZoneMenu.SFX_SWITCH);
+        }
         // Player 1 A, SPACE by default. Lives stay at zero until the reload so a
         // corpse still falling cannot queue an ordinary death restart; the reload
-        // re-enters loadLevelOverride (clock reset) and a fresh controller.
-        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite
-                && sprite.isJumpJustPressed() && !restartRequested) {
+        // re-enters loadLevelOverride and a fresh controller.
+        if (sprite.isJumpJustPressed()) {
             restartRequested = true;
+            if (canContinue() && !restartSelected) session().requestContinue();
             services().levelManager().requestRespawn();
         }
     }
@@ -184,7 +232,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             int localX = (int) (encounter.worldX() - originPixels());
             if (localX < camera.getX() - 192 || localX > camera.getX() + camera.getWidth() + 192) continue;
             if (!services().objectManager().hasFreeDynamicSlot()) continue;
-            var spawn = new ObjectSpawn(localX, encounter.y(), 0, encounter.flying() ? 1 : 0,
+            var spawn = new ObjectSpawn(localX, encounter.y(), 0, encounter.species(),
                     0, false, encounter.y(), -1, "infinite-sonic", "infinite-sonic:badnik");
             spawnChild(() -> new CourseBadnik(spawn, encounter.worldX()));
             visited |= bit;

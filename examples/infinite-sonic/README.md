@@ -9,11 +9,17 @@ The camera scrolls at a minimum of **75% of Sonic’s normal maximum run speed**
 letting Sonic gain ground until his centre reaches 60% of the screen width, just right of centre.
 There the camera follows his position, keeping him on screen while preserving
 his native running and jumping physics. Leaving the left edge
-completely ends the run, regardless of rings or invulnerability. Pits and lethal
-enemy hits also end the run. Collect ring rows to survive ordinary enemy hits.
-The run ends on the mod's own GAME OVER text instead of the stock card; after a
-second, **PRESS SPACE TO RESTART** (player 1 button A) starts a fresh run at 1×
-with score reset, rather than returning to the title screen.
+completely loses a life, regardless of rings or invulnerability. Pits and lethal
+enemy hits also cost a life. Collect ring rows to survive ordinary enemy hits.
+
+A session starts with 3 lives, shown on the HUD. Extra lives come from 100 and 200
+rings and from every **50,000 points**, and they carry across deaths. When Sonic dies
+with lives left, the stock card is replaced by a menu: **CONTINUE** resumes the run
+from the course's opening runway with the score and speed it died at (the countdown to
+the next speedup carries over too); **RESTART** starts a fresh session at 1× with 3 lives
+and a zero score. Press up/down to choose and **SPACE** (player 1 button A) to confirm.
+Losing the last life shows the mod's own GAME OVER text; after a second, **PRESS SPACE TO
+RESTART** starts a fresh session. Neither path returns to the title screen.
 
 The Sonic 1 title screen gains an **INFINITE** wordmark above the emblem: once
 Sonic has risen it streaks in from the right, then glints every few seconds. Below the
@@ -23,7 +29,7 @@ course. The choice wraps around and is remembered when you return to the title. 
 are drawn in code over the stock ROM title, which otherwise behaves normally. Course
 title cards show only the zone name (no "ACT n"), because each zone is a single endless run.
 
-The HUD shows score, current speed, time until the next speedup, and rings.
+The HUD shows score, current speed, time until the next speedup, rings and lives.
 The last five seconds also show a large centered countdown with a chime each
 second. Music and sound effects speed up and rise in pitch with the challenge;
 pause, rewind, game over and leaving the level release the playback rate.
@@ -46,13 +52,28 @@ stone slabs, Star Light's girders and Scrap Brain's machinery. Floors that the s
 level marks with Marble Zone lava hazards are never used as ground. The course is dry:
 Labyrinth (and Scrap Brain Act 3, which reuses its layout) has no water, currents,
 water slides or drowning, because underwater top speed is slower than the scrolling
-edge. Every zone uses the same Motobug and Buzz Bomber patrols.
+edge.
 
-Seeded encounters mix ground Motobug patrols, flying Buzz Bomber patrols and empty
-sections. Ground enemies require a gentle stretch across their whole patrol; flyers
+Each zone uses its own badniks, drawn with the ROM art the zone loads:
+
+| Zone | Ground | Air |
+| --- | --- | --- |
+| Green Hill | Motobug, Crabmeat | Buzz Bomber |
+| Marble | Yadrin | Batbrain, Buzz Bomber |
+| Spring Yard | Yadrin, Crabmeat, Roller | Buzz Bomber |
+| Labyrinth (and Scrap Brain 3) | Burrobot | Orbinaut |
+| Star Light | Walking Bomb | Orbinaut |
+| Scrap Brain 1–2 | Ball Hog, Walking Bomb | Orbinaut |
+
+Rolling Rollers and Walking Bombs cannot be destroyed, as in the original game, so jump
+over them. Orbinauts keep their four circling spikes, which hurt on contact. Jaws are
+left out because the dry course has no water, and Caterkillers are not included.
+
+Seeded encounters mix ground patrols, flying patrols and empty sections. Ground enemies require a gentle stretch across their whole patrol; flyers
 stay clear of the highest terrain beneath their patrol and bob. The first 1,536 pixels
 are enemy-free and have no pits. Jump or roll into enemies to defeat them and earn points. These use
-ROM sprites with custom bounded patrols; flyers do not fire missiles.
+ROM sprites with custom bounded patrols. Ball Hogs hop in place instead of patrolling.
+None of them fire projectiles; bombs never light their fuses; Yadrin's spiked back is not modeled.
 
 Every fourth section after the opening is a jump corridor: a 64 to 192 pixel pit
 between flat banks, with at least 160 pixels of approach on either side. Corridors
@@ -97,6 +118,6 @@ fractional position and speed. Backtracking regenerates the same terrain from th
 same logical coordinates. Change `TerrainLibrary.SEED` and rebuild for another course.
 Enemy positions and patrol phases shift with the world and participate in rewind.
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
-from that window can regenerate its encounters. There are no loops, moving platforms, breakable floors or checkpoints. Section reflections can mirror scenery. Background scrolling at a world
+from that window can regenerate its encounters. There are no loops, moving platforms, breakable floors or checkpoints; CONTINUE always restarts from the opening runway. Section reflections can mirror scenery. Background scrolling at a world
 rebase still needs visual verification. The coverage matrix and current evidence are
 in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).
