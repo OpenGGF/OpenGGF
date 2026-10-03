@@ -243,3 +243,109 @@ control-release sequence; it remains open. The change-based plan against
 common/content/gameplay/physics/rendering/rewind/tooling. Direct-develop
 integration owns the combined category/guard validation. Viewport/donor/full
 roster and complete-route parity remain inherited gaps.
+
+
+## Shared results child/publication lifecycle follow-up (2026-10-03)
+
+Worker `trace-special-return`, `815f76a6d8` plus the preceding control, mapping
+and fatal-hit candidates. This is a separate shared-results patch for direct
+`develop` integration; it does not alter the accepted preceding patches.
+
+`Obj_LevelResultsWait2` tests the live twelve-child `$30` count. `loc_2DD06`
+clears `_unkFAA8`, replaces the code pointer with `Obj_TitleCard`, and returns.
+`Obj_EndSignControlAwaitStart` restores native P1/P2 only after observing the
+cleared latch in its slot; `Obj_TitleCardInit` runs on the following owner
+dispatch. The engine already has twelve real `S3kResultsElementObjectInstance`
+children. Its inherited carried render-tail counter duplicated their completed
+retirement. A pre-publication control-readiness shortcut and same-publication
+title-init shortcut concealed parts of that delay in other routes. Remove these
+three coupled shortcuts without changing countdown constants, adding route
+predicates, or removing the public transition request's compatibility plumbing.
+ICZ2's separate folded `loc_71DE2` hook remains unchanged. The short-path title
+manager reset arithmetic is preserved separately from actual title initialization;
+its native display-reset overlap still needs separate evidence. An initial
+candidate changed its requested reset from39 to40; that unproven policy change
+was rejected and restored to39 before the final affected checks.
+
+Native auxiliary events and bounded engine probes give:
+
+| LBZ boundary | Native row | Previous candidate | Corrected |
+|---|---:|---:|---:|
+| Final real results child deleted | 22187 | 22187 | 22187 |
+| Results owner publishes `_unkFAA8` clear | 22188 | 22191 | 22188 |
+| End-sign owner restores ending pose/control | 22188 | 22190 | 22188 |
+| Mutated title owner initializes | 22189 | 22192 | 22189 |
+
+The old-code run fails the real-child publication unit and both ROM-backed
+MGZ/LBZ carry regressions: three assertion failures, zero errors/skips. The unit
+no longer forces the private retirement counter to zero. Production manager
+reload retains all twelve children; fresh registry restore recreates them and
+replays the same child retirement, publication, title parents, held enemy-art
+admission and reset/exit ownership. Lower-slot control polling must wait for
+publication; the later-slot operation restores both Sonic and Tails.
+
+Matched `trace-segments` runs drive the six complete-run fixtures with the
+verified locked-on ROM. Every replay ends with an assertion failure and zero
+errors/skips; these are not green routes:
+
+| Fixture | Before errors / first row | After errors / first row | Boundary coverage |
+|---|---|---|---|
+| LBZ | 3229 / 22188 animation | 2991 / 22227 rings | Real retirement, control and title init; 46075 rows |
+| HCZ | 4699 / 9482 air | identical error spans | Real retirement/publication/init; 29302 rows |
+| MGZ | 10046 / 5255 Tails ground speed | 10634 / same first | Real retirement/publication/init; 39199 rows; attribution below |
+| CNZ | 5671 / 9190 camera Y | identical error spans | No results owner reached; 39895 rows |
+| ICZ | 1287 / 15940 Tails X speed | identical error spans | Both results boundaries, retained ICZ2 hook; 25226 rows |
+| MHZ | 3191 / 6958 rings | identical error spans | Parent created, retirement not reached; 28004 rows |
+
+MGZ is explicitly an increased mismatch count. Its existing missing-ring
+error begins at9260; native results enter with59 rings while the engine has58.
+Both create all twelve children on15982. The engine probe records time bonus10
+and ring bonus580; `loc_2DBA8` multiplies ring count by10 and `loc_2DC6E`
+removes10 per tally dispatch. This naturally shortens the engine tally and
+child lifetime by one dispatch: last child16509 versus native16510. The old
+extra retirement dispatch masked that dependency. The corrected publication
+is16510 versus native16511, and newly introduced error membership starts16510,
+never earlier. No expected ring count is injected and no compensating delay
+is added. An independent production-owner oracle loads58 and59 rings as test
+inputs, carries all twelve children through the actual MGZ reload, and proves
+59 versus60 tally dispatches including the zero-increment completion pass,
+one extra child-lifetime dispatch, and publication on the next parent dispatch
+in both cases. The earlier missing-ring gameplay frontier remains open.
+
+Focused validation covers212 distinct ordinary cases across completed runs,
+all ultimately passing with zero skips. This includes the four mandatory S3K
+checks, real MGZ/LBZ carry/rewind, ICZ2's61 cases, P1/P2 control release, CNZ's17
+real event/carry/rewind cases and a controller-only MHZ completion with rewind.
+The first focus had193/194 pass: the new unit used a carry request without title
+publication ownership, so publication passed but the requested title was
+correctly suppressed. Fixing that test setup made all16 result units pass.
+The final policy-preservation focus passes21 cases; the final independent
+ring-oracle run passes all5 cases in `TestS3kMgzLbzCarriedResultsTitleOwnership`.
+A first temporary probe failed compilation because reflection exceptions were
+not handled; it supplied no measurement. All temporary harness edits are removed.
+Java/POM files were frozen throughout each queued/running measurement.
+
+Reproduction commands (prefix each with the repository Maven/Lua environment;
+`ROM` below is the verified absolute reference path):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kResultsScreenObjectInstance,TestS3kResultsKosQueueAndChildren,TestS3kResultsKosQueueRewind,TestS3kResultsElementObjectInstance,TestS3kResultsCameraBoundsPolicy,TestS3kMgzLbzCarriedResultsTitleOwnership,TestS3kBossDefeatSignpostFlow,TestS3kSignpostInstance,TestS3kIczAct1TransitionHeadless,TestS3kIczEndBossObject,TestS3kMhzAuthoredRoute,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$ROM" test
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+  '-Dtest=TestS3kResultsScreenObjectInstance,TestS3kCnzAct1EventFlow,TestS3kLbzZoneSliceTraceReplay#replayMatchesTrace,TestS3kHczZoneSliceTraceReplay#replayMatchesTrace,TestS3kMgzZoneSliceTraceReplay#replayMatchesTrace,TestS3kCnzZoneSliceTraceReplay#replayMatchesTrace,TestS3kIczZoneSliceTraceReplay#replayMatchesTrace,TestS3kMhzZoneSliceTraceReplay#replayMatchesTrace' \
+  "-Ds3k.rom.path=$ROM" test
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+  '-Dtest=TestS3kResultsScreenObjectInstance,TestS3kMgzLbzCarriedResultsTitleOwnership,TestS3kMhzAuthoredRoute,TestS3kMgzZoneSliceTraceReplay#replayMatchesTrace' \
+  "-Ds3k.rom.path=$ROM" test
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kMgzLbzCarriedResultsTitleOwnership' "-Ds3k.rom.path=$ROM" test
+```
+
+The final worker change-based plan (including the preceding unintegrated worker
+patches) selects2616 ordinary classes plus separate guards. Normal combined
+validation belongs to the direct-develop integration; the212 cases above are
+focused validation only. CNZ/MHZ trace retirement gaps are not replaced by a
+claim of trace parity; their independent completion/rewind checks cover the
+changed production lifecycle with the stated limits. LBZ's next ring reset
+boundary at22227 remains open, as do the route/viewport/donor/roster matrix gaps.

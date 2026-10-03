@@ -5110,6 +5110,25 @@ does not restore its timer or pending emissions. Reuse the helper's value
 snapshot, rebinding the shared RNG, and compare child positions after replay.
 
 
+## Results child retirement is a real object-graph boundary
+
+Once all twelve `Obj_LevelResults` children are represented by dynamic SSTs,
+`Obj_LevelResultsWait2` observes their live `$30` count. Do not retain an
+embedded-render retirement counter after the final child's actual deletion.
+`loc_2DD06` clears `_unkFAA8`, changes the parent into `Obj_TitleCard`, and
+returns; title initialization and its art submissions belong to its next
+owner dispatch. `Obj_EndSignControlAwaitStart` restores P1/P2 only after
+observing `_unkFAA8` clear, in its own slot order. A child-count readiness
+shortcut restores control before the native publication and masks the
+extra parent delay. Audit these three owners together: deleting only a
+counter can expose an old same-pass title-init workaround in another route.
+Preserve distinct retained-boss hooks (ICZ2 folds `loc_71DE2` into its results
+owner) and the public transition-request compatibility surface. Test the
+actual twelve children through carry, deletion, fresh rewind recreation,
+publication, control restoration and title-art admission; forcing a private
+retirement counter to zero bypasses the behavior under test.
+
+
 ## Linked child positions and attack flags own the projectile
 
 Monkey Dude's five linked arm children retain 16.16 positions through four

@@ -112136,3 +112136,46 @@ assertion,0 errors/skips. LBZ now3,229 errors, first22188 player_animation_id
 explosion-controller/RNG replay, companion signpost and mandatory startup
 checks pass. Native loc_7289A/BossDefeated installs $3F and returns; Wait_NewDelay
 decrements only on the following owner dispatch. Full route remainsred.
+
+
+### 2026-10-03 — Shared carried results retire real children before publication
+
+Worker `trace-special-return`, `815f76a6d8` plus accepted control/mapping/defeat
+candidates: matched queued `-Ptrace-segments` LBZ replay advances **3229 /
+first22188 animation → 2991 / first22227 rings**, across46075 rows, one assertion
+failure and zero errors/skips. Native/engine last-child22187 now leads to
+publication/control22188 and next-owner title init22189. Remove the duplicated
+carried render tail and coupled early-control/early-title shortcuts; preserve
+ICZ2's retained-boss hook, public request compatibility and the separate inherited
+short-path title reset arithmetic. Three old-code regressions fail;212 distinct
+focused ordinary cases ultimately pass without skips, including real12-child
+carry/rewind, P1/P2, CNZ reload and authored MHZ completion.
+
+Matched HCZ/CNZ/ICZ/MHZ error spans remain identical (4699/5671/1287/3191), but
+CNZ never reaches results and MHZ never reaches retirement in those traces.
+MGZ explicitly increases **10046→10634**, same first5255: the existing58 versus
+59 ring difference makes its actual tally/children retire one dispatch early,
+previously hidden by the synthetic tail. Creation agrees at15982; no new error
+membership occurs before16510. A separate real-owner58/59 oracle proves the
+one-dispatch tally/lifetime/publication dependency, without injecting fixture
+values or adding a delay. Commands, exact boundary coverage, test setup/probe
+failures and policy-preservation decision are recorded in the
+[LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md#shared-results-childpublication-lifecycle-follow-up-2026-10-03).
+These are bounded focused results; no full-suite or green-route claim is made.
+
+Integrated results ownership over develop `588999752d`: queued trace-segments
+single-fork results/children/KosQ/rewind/camera, MGZ+LBZ real carried-title
+owners, signpost, ICZ transition/boss, authored MHZ completion, CNZ event flow,
+mandatory startup and six explicit zone replay methods (full selector in the
+LBZ1 matrix):218 cases,212 pass,6 expected trace assertions,0 errors/skips.
+LBZ advances3,229/22188 animation→2,991/22227 rings ($002E/$0000).
+HCZ4,699/9482 air, CNZ5,671/9190 camera_y, ICZ1,287/15940 tails_x_speed,
+and MHZ3,191/6958 rings match their worker baseline counts/frontiers. MGZ
+increases10,046→10,634 with unchanged first5255 tails_g_speed: native59
+versus engine58 rings already diverge from9260, causing one fewer tally
+decrement and last-child retirement16509 versus native16510. The synthetic
+extra tail had masked that upstream difference. The independent58/59 owner
+oracle passes; no compensating delay is installed. Native child publication
+and following-dispatch title initialization are corrected, but MGZ mismatch
+membership is explicitly changed and full parity remainsopen. These are
+focused checks, not a full ordinary/guard suite pass.

@@ -98,7 +98,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int act;  // 0-indexed: 0=Act 1, 1=Act 2
     private int waitDurationAdjustment;
     private int postControlHandoffDelayEntries;
-    private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
     private S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment =
             S3kSignpostInstance.ResultsChildTimingAdjustment.NONE;
     private boolean usesShortResultsChildRetireTail;
@@ -249,7 +248,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         this.act = act;
         this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
         this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
-        this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
         this.resultsChildTimingAdjustment = timingAdjustment;
         this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
 
@@ -620,29 +618,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         return artLoaded;
     }
 
-    /**
-     * Reports the retained-owner boundary at which Obj_EndSignControl can
-     * restore the players, before Obj_LevelResults publishes the next owner.
-     * The result children and the carried SST retirement tail are both gone,
-     * but the publication flag is still clear, so the next result dispatch is
-     * the one that clears End_of_level_active.
-     */
-    boolean isEndSignControlRestoreBoundaryReady() {
-        if (postControlHandoffDelayEntries > 0 || postControlHandoffPending) {
-            return false;
-        }
-        boolean deferredGeneralOwnerControlBoundary = resultsArtLoadDispatchDeferred
-                && state == STATE_EXIT
-                && childrenRemaining <= 0
-                && !exitPublicationComplete;
-        boolean ready = deferredGeneralOwnerControlBoundary || (state == STATE_EXIT
-                && childrenRemaining <= 0
-                && exitRetireDispatchesInitialized
-                && carriedResultsRenderRetireDispatches <= 0
-                && !exitPublicationComplete);
-        return ready;
-    }
-
     /** Additional owner dispatches after the dynamic result children retire. */
     protected int additionalChildRetireDispatches() {
         return 0;
@@ -665,7 +640,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     /**
-     * Called when the final embedded results child retires.  Route owners can
+     * Called when the final dynamic results child retires.  Route owners can
      * publish the ROM's child-count handoff before their parent performs its
      * final exit callback on the next object pass.
      */
@@ -675,11 +650,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
-        // HCZ/MGZ-style Load_Level paths retain Obj_LevelResults and its ROM
-        // child SSTs. The engine carries the parent but renders its twelve
-        // children as embedded elements, so preserve the final three child
-        // retirement dispatches that occur after the embedded set is gone.
-        carriedResultsRenderRetireDispatches = carriedResultsRetireDispatches;
+        // Load_Level retains this owner and all twelve real child SSTs.
+        // Obj_LevelResultsWait2 observes their count on the next parent pass;
+        // no embedded-render retirement tail remains to represent here.
+        // Legacy request/constructor hints stay compatible but cannot add
+        // dispatches after those production children have actually retired.
         carriedAcrossSeamlessTransition = true;
     }
 
@@ -701,9 +676,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         carriedTitleExitPhaseOneDispatchOverlap = titleTiming.exitPhaseOneDispatchOverlap();
         carriedPreloadedActCameraReleaseDispatches =
                 titleTiming.preloadedActCameraReleaseDispatches();
-        if (titleTiming.carriedResultsRetireDispatches() >= 0) {
-            carriedResultsRenderRetireDispatches = titleTiming.carriedResultsRetireDispatches();
-        }
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -838,11 +810,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     protected void onExitReady() {
         if (exitPublicationComplete) {
             if (titleInitializationPending) {
-                // ROM Obj_LevelResultsWait2 mutates this SST into
-                // Obj_TitleCard and returns. A retained generic title owner
-                // may have submitted Obj_TitleCardInit's art on the
-                // publication dispatch; its following owner pass only retires
-                // the old results shell.
+                // loc_2DD06 only replaces the routine pointer and returns.
+                // Obj_TitleCardInit submits art on this next owner dispatch,
+                // after the separate EndSignControl slot can observe _unkFAA8.
                 if (!titleCardInitialized) {
                     initializePublishedTitleCard();
                     titleCardInitialized = true;
@@ -1027,19 +997,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         } else {
             restoreNativeEndSignControlAtPublication();
         }
-        if (titleInitializationPending && initializeTitleCardOnPublication()) {
-            // The native carried title owner submits Obj_TitleCardInit's
-            // ROM-backed jobs on the same dispatch that mutates the results
-            // parent. Keep the generic retained shell for its following
-            // object pass; the short-tail owner retains its existing immediate
-            // retirement contract.
-            initializePublishedTitleCard();
-            titleCardInitialized = true;
-            if (usesShortResultsChildRetireTail) {
-                titleInitializationPending = false;
-                complete = true;
-            }
-        }
         if (!titleInitializationPending && !fbzCarriedTitleOwner) {
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
@@ -1047,7 +1004,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 zone, act, isAct2OrSpecial));
     }
 
-    private boolean initializeTitleCardOnPublication() {
+    private boolean usesCarriedTitleResetDispatchOverlap() {
+        // Preserve the inherited title-manager reset policy independently of
+        // results publication. Its short-path create overlap is not evidence
+        // for submitting title art in loc_2DD06's publication dispatch. The
+        // native short-path display-reset phase still needs separate proof.
         return carriedAcrossSeamlessTransition
                 && titlePublicationOwnedByCarriedObject
                 && (usesShortResultsChildRetireTail || carriedTitleTimingExplicit);
@@ -1105,7 +1066,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                             mutatedTitleCardResetDispatches(
                                     usesShortResultsChildRetireTail,
                                     carriedPreloadedActCameraReleaseDispatches,
-                                    initializeTitleCardOnPublication()));
+                                    usesCarriedTitleResetDispatchOverlap()));
                     if (carriedPreloadedActCameraReleaseDispatches == 0) {
                         s3kTitleCard.requestInLevelExitAdditionalDispatches(1);
                     }
@@ -1189,15 +1150,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     static int mutatedTitleCardResetDispatches(
             boolean usesShortResultsChildRetireTail,
             int preloadedActCameraReleaseDispatches,
-            boolean initializesOnPublication) {
+            boolean retainedCreateDispatchOverlap) {
         // A short child-retirement tail hands ownership to the mutated title
         // card one frame earlier, before the native child/create phase has
         // exposed its final two dispatches.
         int dispatches = MUTATED_TITLE_CARD_RESET_DISPATCHES
                 + (usesShortResultsChildRetireTail ? 2 : 0);
-        if (initializesOnPublication) {
-            // Sharing the publication dispatch removes one owner pass from the
-            // absolute display-reset schedule.
+        if (retainedCreateDispatchOverlap) {
+            // Retain the existing title-manager create-overlap policy. This
+            // does not select the results owner's publication/init boundary.
             dispatches--;
         }
         // When the retained transition explicitly has no preloaded-camera

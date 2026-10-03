@@ -51,8 +51,9 @@ class TestS3kResultsScreenObjectInstance {
         invokeCreateElements(results);
         placeElementsAtTargets(services);
         setPrivate(results, "resultsChildrenCreated", true);
-        setPrivate(results, "exitRetireDispatchesInitialized", true);
-        setPrivate(results, "carriedResultsRenderRetireDispatches", 0);
+        results.onCarriedAcrossSeamlessTransition(0, 0,
+                new CarriedTitlePublicationTiming(false, true, false,
+                        0, 0, false, 0, 0, -1));
         Field state = com.openggf.level.objects.AbstractResultsScreen.class
                 .getDeclaredField("state");
         state.setAccessible(true);
@@ -158,6 +159,12 @@ class TestS3kResultsScreenObjectInstance {
         player.setAnimationId(Sonic3kAnimationIds.VICTORY);
         player.setAnimationFrameIndex(3);
         player.setAnimationTick(9);
+        TestablePlayableSprite tails =
+                new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        ObjectControlState.nativeBit7FullControl().applyTo(tails);
+        tails.setAirForTest(true);
+        tails.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        services.withSidekicks(List.of(tails));
 
         results.update(0, player);
 
@@ -176,6 +183,9 @@ class TestS3kResultsScreenObjectInstance {
                 "the later EndSignControl slot consumes the publication in the same object pass");
         assertFalse(player.getAir());
         assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+        assertFalse(tails.isObjectControlled(), "the same control slot restores native P2");
+        assertFalse(tails.getAir());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), tails.getAnimationId());
 
         results.update(1, player);
 
@@ -204,15 +214,24 @@ class TestS3kResultsScreenObjectInstance {
         setPrivateEnum(controlOwner, "phase", "AWAIT_RESULTS");
         services.objectManager().addDynamicObject(controlOwner);
         controlOwner.setSlotIndex(8);
+        services.objectManager().addDynamicObject(results);
         results.setSlotIndex(12);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
+        when(services.gameState.isEndOfLevelActive()).thenReturn(true);
+        controlOwner.update(0, player);
+        assertTrue(player.isObjectControlled(),
+                "Obj_EndSignControlAwaitStart tests _unkFAA8, even after all children retire");
 
         results.update(0, player);
 
         assertTrue(player.isObjectControlled(),
                 "the results owner must not restore control for a lower-slot EndSignControl owner");
+        when(services.gameState.isEndOfLevelActive()).thenReturn(false);
+        controlOwner.update(1, player);
+        assertFalse(player.isObjectControlled(),
+                "the lower control slot consumes publication on its next dispatch");
     }
 
     @Test
@@ -504,8 +523,6 @@ class TestS3kResultsScreenObjectInstance {
             S3kResultsScreenObjectInstance results) throws Exception {
         setPrivate(results, "resultsChildrenCreated", true);
         setPrivate(results, "childrenRemaining", 0);
-        setPrivate(results, "exitRetireDispatchesInitialized", true);
-        setPrivate(results, "carriedResultsRenderRetireDispatches", 0);
         Field state = com.openggf.level.objects.AbstractResultsScreen.class
                 .getDeclaredField("state");
         state.setAccessible(true);
