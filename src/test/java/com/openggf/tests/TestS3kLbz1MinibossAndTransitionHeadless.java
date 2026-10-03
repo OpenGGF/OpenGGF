@@ -459,6 +459,29 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         assertEquals((0x3EA0 - 0x3A00) & 0xFFFF, camera.getMaxX() & 0xFFFF,
                 "Camera_max_X_pos is shifted by the same delta.");
 
+        assertEquals(camera.getMinX(), camera.getMinXTarget());
+        assertEquals(camera.getMaxX(), camera.getMaxXTarget());
+        assertEquals(camera.getMinY(), camera.getMinYTarget());
+        assertEquals(camera.getMaxY(), camera.getMaxYTarget());
+        camera.setFocusedSprite(player);
+        int heldPlayerX = player.getCentreX();
+        player.setCentreX((short) 0x0580);
+        for (int poll = 0; poll < 8; poll++) {
+            camera.updateBoundaryEasing();
+            camera.updatePosition(true);
+            assertEquals(0x04A0, camera.getMaxX() & 0xFFFF,
+                    "inherited maximum stays held until Change_Act2Sizes");
+            assertEquals(0x03A0, camera.getMinX() & 0xFFFF);
+            assertEquals(0x04A0, camera.getX() & 0xFFFF,
+                    "actual player follow clamps at the inherited right boundary");
+        }
+        player.setCentreX((short) 0x03A0);
+        camera.updateBoundaryEasing();
+        camera.updatePosition(true);
+        assertEquals(0x03A0, camera.getX() & 0xFFFF,
+                "actual player follow clamps at the inherited left boundary");
+        player.setCentreX((short) heldPlayerX);
+
         var map = GameServices.level().getCurrentLevel().getMap();
         assertEquals(0xDB, map.getValue(0, 5, 18) & 0xFF,
                 "Adjust_LBZ2Layout writes chunk $DB at FG (5,18) right after Load_Level.");

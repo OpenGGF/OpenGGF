@@ -1981,7 +1981,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void preparePreloadedActTitleCardRuntimeArtAdmission() {
         if (lbzEvents != null) {
-            lbzEvents.preparePostTitleAct2SizeChange();
+            lbzEvents.prepareRetainedTitleAct2SizeChange();
         }
     }
 

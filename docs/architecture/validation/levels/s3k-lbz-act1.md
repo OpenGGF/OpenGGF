@@ -405,3 +405,68 @@ comparator, public request builder, queue capacity or ordinal changed. The
 comparison-only diagnostic was removed. Remaining camera/animation discrepancies
 are unresolved. These are focused/domain checks, not a full ordinary-suite pass;
 root owns combined delivery validation.
+
+
+### 2026-10-03 — inherited camera hold and retained size-worker dispatch
+
+Worker `trace-s3k-lbz-camera-target`, base `030f66cb40`, fixes the native
+Sonic + Tails Act 1→2 camera boundary. `LBZ1BGE_DoTransition` subtracts `$3A00`
+from the inherited X bounds and keeps the Y bounds. `Obj_EndSignControlDoStart`
+waits for the title's `End_of_level_flag` before `Change_Act2Sizes` publishes the
+stored destination limits and creates three gradual workers. The LBZ request now
+holds its engine easing targets at those inherited current bounds until this
+owner acts; shared Camera and other transition requests are unchanged.
+
+The real reload regression exposed current max X `$04A0` with stale target
+`$6000`, and current min X `$03A0` with target zero. One real easing pass already
+changed max X to `$04A2`. The old-code check failed once, with zero errors/skips.
+The corrected test exercises both actual follow clamps and verifies all four
+current/target pairs remain held before release.
+
+Correcting targets alone exposed a separate creation-pass omission. Native
+`CreateChild1_Normal` calls `AllocateObjectAfterCurrent`; the size workers execute
+later in that same `Process_Sprites` walk. The retained-title runtime-art bridge
+now makes these children eligible for the upcoming centralized object pass.
+Generic out-of-pass title completion keeps its existing creation marker; Big Arm
+keeps its distinct already-executed creation-entry policy. No new persistent state,
+frame constant, fixture edit, comparator change or queue workaround is introduced.
+
+Read-only native evidence uses the pinned `GpgxHost`, verified reference ROM and
+`Bk2Reader` movie sync settings, with no RAM writes. The 56 sampled absolute
+frames 185810–185865 match committed camera X on every row (fixture row = absolute
+minus 163512). At absolute 185843 / row 22331, retained parent slot 28 and title
+slot 8 retire while worker slots 35/36/37 contain codes `$84A48/$84AA4/$84AD2` and
+already-advanced accumulators `$4000/$4000/$8000`. The first max-X increment is
+row 22334. The request-only engine instead left accumulators zero at 22331 and
+first incremented at 22335; the completed candidate matches the native sequence.
+Native min X in this route is `$03BE`; the regression's `$03A0` is a declared
+independent arena setup, not a value copied from the native trajectory.
+
+| Candidate | Errors / warnings | First divergence |
+|---|---:|---|
+| Base `030f66cb40` | 2990 / 0 | 22258 camera_x, native `$04A0`, engine `$04A3` |
+| Held targets only (incomplete) | 4477 / 0 | 22334 camera_x, native `$04A1`, engine `$04A0` |
+| Held targets + native worker entry | 4585 / 0 | 23533 x_speed, native `$016F`, engine `$0200` |
+
+All compared fields now match through row 23532. At 23533 the engine enters hurt
+(routine 4 versus native 2), loses 21 rings, stops rolling and receives Y speed
+`-$0400` versus native `-$0018`. The old baseline already diverged through this
+region; the higher downstream total is explicitly retained, not described as a
+no-regression span comparison. This milestone does not certify the remaining
+collision frontier or the complete LBZ trace.
+
+Validation uses queued Maven with `-Dmse=off -Ptrace-replay-r7` and
+`-Ds3k.rom.path=<verified-absolute-S3K-ROM>`.
+The owner-corrected selection is
+`-Dtest=TestS3kLbz1MinibossAndTransitionHeadless#eventsFg5ReloadsLbz2WithRomWorldOffsetAndAdjustedLayout,TestS3kMgzLbzCarriedResultsTitleOwnership,TestSonic3kLbzBigArmTransitionBridge,TestSonic3kLbzRewindRoundTrip,TestS3kLbzZoneSliceTraceReplay`:
+13 cases, 12 passes and the expected unresolved trace assertion, zero errors/skips.
+Coverage includes real title-driven release, exact first worker accumulators,
+whole-world restore/forward replay, generic completion, Big Arm and MGZ retained
+ownership. A separate invocation selects
+`-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kTailsFullChainRunPrefix,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kLbz1MinibossAndTransitionHeadless`:
+78 passes, zero failures/errors/skips. Both loading classes matched by the simple
+name run; both protected prefixes pass. The temporary trace prints were removed
+before this invocation. These are focused/domain checks, not a full ordinary-suite pass. The
+change-based plan selects 2963 ordinary classes plus guards; root owns the combined
+delivery selection. Native viewport/ROM semantics are protected here; wider,
+donor and broader roster route obligations remain open.

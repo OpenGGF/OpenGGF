@@ -191,6 +191,13 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         assertTrue(sourceObjects.snapshotPersistentTransitionOccupants().stream()
                         .anyMatch(occupant -> occupant.identity() == results),
                 "the live results owner must be eligible for seamless carry");
+        if (route.zone() == Sonic3kZoneIds.ZONE_LBZ) {
+            fixture.sprite().setCentreX((short) 0x3EC0);
+            fixture.sprite().setCentreY((short) 0x0160);
+            GameServices.camera().setX((short) 0x3DA0);
+            GameServices.camera().setMinX((short) 0x3DA0);
+            GameServices.camera().setMaxX((short) 0x3EA0);
+        }
         armProductionTransition(route.zone());
         int transitionFrames = 0;
         while (GameServices.level().getCurrentAct() == 0 && transitionFrames++ < 100_000) {
@@ -290,6 +297,14 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         assertExactParentOccurrences(timing, titleParents(route.zone()), 1,
                 "replayed following dispatch publishes the four title parents once");
 
+        var lbz = route.zone() == Sonic3kZoneIds.ZONE_LBZ
+                ? ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getLbzEvents()
+                : null;
+        if (lbz != null) {
+            assertEquals(0x04A0, GameServices.camera().getMaxX() & 0xFFFF);
+            assertEquals(0x04A0, GameServices.camera().getMaxXTarget() & 0xFFFF);
+            assertFalse(lbz.isPostTitleAct2SizeChangeActiveForTest());
+        }
         int titleFrames = 0;
         int observedResetDispatches = 0;
         int observedExitDelayDispatches = 0;
@@ -297,8 +312,18 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         var previousLevelGamestate = GameServices.level().getLevelGamestate();
         var previousTitleState = title.capture();
         while (!title.isComplete() && titleFrames++ < 2_000) {
+            boolean sizeWorkersActive = lbz != null && lbz.isPostTitleAct2SizeChangeActiveForTest();
             fixture.stepFrame(false, false, false, false, false);
             var currentTitleState = title.capture();
+            if (lbz != null && !sizeWorkersActive && lbz.isPostTitleAct2SizeChangeActiveForTest()) {
+                assertArrayEquals(new int[]{0x4000, 0x4000, 0x8000},
+                        lbz.postTitleAct2WorkerAccumulatorsForTest(),
+                        "AllocateObjectAfterCurrent children execute in the retained owner's creation pass");
+            }
+            if (lbz != null && !lbz.isPostTitleAct2SizeChangeActiveForTest()) {
+                assertEquals(0x04A0, GameServices.camera().getMaxX() & 0xFFFF,
+                        "real carried title must retain the inherited boundary until its release owner");
+            }
             observedResetDispatches += Math.max(0,
                     previousTitleState.resetLevelGamestateCountdown()
                             - currentTitleState.resetLevelGamestateCountdown());
@@ -336,6 +361,23 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         assertExactParentOccurrences(timing, route.enemyParents(), 1,
                 "the provider pump after COMPLETE admits the exact target enemy batch once");
 
+        if (lbz != null) {
+            assertTrue(lbz.isPostTitleAct2SizeChangeActiveForTest(),
+                    "actual title completion creates the gradual boundary workers");
+            int before = GameServices.camera().getMaxX() & 0xFFFF;
+            CompositeSnapshot release = rewind.capture();
+            for (int poll = 0; poll < 8; poll++) fixture.stepFrame(false, false, false, false, false);
+            int after = GameServices.camera().getMaxX() & 0xFFFF;
+            int[] workerState = lbz.postTitleAct2WorkerAccumulatorsForTest();
+            assertTrue(after > before && after < GameServices.level().getCurrentLevel().getMaxX(),
+                    "native workers expand gradually after the real title release");
+            rewind.restore(release);
+            assertEquals(before, GameServices.camera().getMaxX() & 0xFFFF);
+            for (int poll = 0; poll < 8; poll++) fixture.stepFrame(false, false, false, false, false);
+            assertEquals(after, GameServices.camera().getMaxX() & 0xFFFF);
+            assertArrayEquals(workerState, lbz.postTitleAct2WorkerAccumulatorsForTest(),
+                    "whole-world restore replays the retained gradual workers");
+        }
         CompositeSnapshot afterCompletion = rewind.capture();
         fixture.stepFrame(false, false, false, false, false);
         rewind.restore(afterCompletion);

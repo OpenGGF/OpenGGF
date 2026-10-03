@@ -1065,3 +1065,45 @@ validation is139 passes and one explicitly red chain assertion. The combined
 change-based plan against `67c850fc5132156acede8687ca169ada074f795f` selects2,964
 ordinary classes plus guards; that broad run remains pending the focused batch.
 These focused passes do not establish a green chain or full-suite pass.
+
+
+### 2026-10-03 — LBZ inherited camera targets and first size-worker entry
+
+Base `030f66cb40`, worker `trace-s3k-lbz-camera-target`: actual reload left max
+current `$04A0` / target `$6000` and min current `$03A0` / target zero. The native
+LBZ transition retains its old limits until the ending-sign/title owner reaches
+`Change_Act2Sizes`. Correcting only the LBZ request targets moved the first mismatch
+22258→22334 but increased totals 2990→4477. This was not exported as complete.
+
+A comparison-only engine probe showed zero size-worker accumulators on creation.
+Read-only pinned native GPGX/BK2 playback proved all three later-slot workers
+already advance in that pass: row 22331 / absolute 185843, slots 35/36/37,
+accumulators `$4000/$4000/$8000`. The retained runtime-art bridge now selects that
+eligibility, preserving generic and Big Arm policy. All fields match through
+23532; the new hurt frontier at 23533 leaves 4585 errors. Aggregate increase and
+remaining collision behavior are not called a no-regression result. The old
+baseline was already mismatching this region.
+
+GUI native attempts were cancelled without accepted sampled evidence because
+late-movie playback ran near ordinary speed. The existing headless GPGX host and
+BK2 reader completed the same read-only late-window observation in roughly a
+minute. No Lua or new recorder payload was used as gameplay input. The native
+56-frame camera sequence matched the committed fixture exactly. See the
+[LBZ matrix](../validation/levels/s3k-lbz-act1.md#2026-10-03--inherited-camera-hold-and-retained-size-worker-dispatch)
+for full source ownership, candidate profiles and validation limits.
+
+The clean candidate's protected-prefix/mandatory-loading invocation passed all
+78 cases, zero failures/errors/skips. The owner/cadence selection passed 12 cases
+beside one unresolved LBZ trace assertion. Temporary Java prints were removed;
+rejected GUI capture directories were deleted. Native phase evidence remains in
+the explicit external task directory, not as engine input. No branch commit or
+push was made by the worker; root owns develop integration and combined validation.
+
+Root integration on `develop` `9d48e7ddbd` plus this patch completed with
+queued Maven `-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical` and the owner/rewind, protected-prefix and
+mandatory-loading selections above, plus the full LBZ slice. The fresh
+`target/lbz-camera-integrated-surefire` reports contain 90 cases: 89 passes,
+one known LBZ comparison assertion (4585 errors, first row 23533 `x_speed`),
+zero errors/skips. This reproduces the clean worker frontier after the live
+fresh-title milestone. The normal combined change-based run remains pending.

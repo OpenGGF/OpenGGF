@@ -112305,3 +112305,32 @@ validation is139 passes and one explicitly red chain assertion. The combined
 change-based plan against `67c850fc5132156acede8687ca169ada074f795f` selects2,964
 ordinary classes plus guards; that broad run remains pending the focused batch.
 These focused passes do not establish a green chain or full-suite pass.
+
+
+### 2026-10-03 — LBZ camera hold and native size-worker entry
+
+Worker `trace-s3k-lbz-camera-target`, base `030f66cb40`; queued Maven
+`-Dmse=off -Ptrace-replay-r7 -Dtest=TestS3kLbzZoneSliceTraceReplay` with the absolute
+verified S3K ROM (plus focused owner regressions in the final invocation):
+base 2990 errors at 22258 camera_x → request-only 4477 at 22334 camera_x →
+owner-corrected 4585 at 23533 x_speed. All compared fields match through 23532;
+zero warnings. The next first row is an unwanted hurt response with rings 21→0.
+Higher downstream totals remain explicit; the full trace remains red. The native
+later-slot worker creation pass is independently observed, and focused checks
+pass 12 cases beside that one unresolved trace assertion, zero errors/skips.
+See the LBZ matrix/campaign audit for commands, native phase proof and protected
+checks. No native fixture or comparator was changed.
+
+Protected follow-up on the same clean worker: queued r7 selection
+`TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kTailsFullChainRunPrefix,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kLbz1MinibossAndTransitionHeadless`
+passes 78 cases, zero failures/errors/skips. This is focused validation, not a
+full ordinary-suite or full LBZ trace pass.
+
+Root integration on `develop` `9d48e7ddbd` plus this patch completed with
+queued Maven `-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical` and the owner/rewind, protected-prefix and
+mandatory-loading selections above, plus the full LBZ slice. The fresh
+`target/lbz-camera-integrated-surefire` reports contain 90 cases: 89 passes,
+one known LBZ comparison assertion (4585 errors, first row 23533 `x_speed`),
+zero errors/skips. This reproduces the clean worker frontier after the live
+fresh-title milestone. The normal combined change-based run remains pending.

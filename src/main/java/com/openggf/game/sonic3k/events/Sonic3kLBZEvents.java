@@ -335,6 +335,22 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         prepareAct2SizeChange(level.getMaxX(), level.getMinY(), level.getMaxY());
     }
 
+    /**
+     * Retained Obj_EndSignControlDoStart runs inside Process_Sprites.
+     * Change_Act2Sizes uses CreateChild1_Normal / AllocateObjectAfterCurrent,
+     * so its three later SST children execute in this same object pass.
+     */
+    public void prepareRetainedTitleAct2SizeChange() {
+        boolean alreadyActive = postTitleAct2SizeChangeActive;
+        preparePostTitleAct2SizeChange();
+        if (!alreadyActive && postTitleAct2SizeChangeActive) {
+            // The centralized object prelude is still ahead of this retained
+            // title publication. It owns the children's first real entries;
+            // generic out-of-pass title completion retains its creation marker.
+            postTitleAct2WorkersCreatedThisPass = false;
+        }
+    }
+
     /** Native Big Arm {@code loc_74DA4}: literal stored targets, not current bounds. */
     public void prepareBigArmFloorTransition() {
         if (activeAct == 1) {
@@ -846,6 +862,13 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 .postTransitionMaxX(postTransitionMaxX)
                 .postTransitionMinY(postTransitionMinY)
                 .postTransitionMaxY(postTransitionMaxY)
+                // LBZ1BGE_DoTransition offsets the inherited bounds; it does
+                // not release them toward LevelSizes. Obj_EndSignControlDoStart
+                // waits for title completion before Change_Act2Sizes creates
+                // the gradual workers. Keep generic easing parked meanwhile.
+                .postTransitionMinXTarget(postTransitionMinX)
+                .postTransitionMaxXTarget(postTransitionMaxX)
+                .postTransitionMinYTarget(postTransitionMinY)
                 .postTransitionMaxYTarget(postTransitionMaxY)
                 .playerOffset(LBZ2_TRANSITION_OFFSET_X, 0)
                 .cameraOffset(LBZ2_TRANSITION_OFFSET_X, 0)
