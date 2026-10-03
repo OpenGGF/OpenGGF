@@ -403,11 +403,20 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         }
         int zone = levelManager.getRequestedZone();
         int act = levelManager.getRequestedAct();
+        // Only a title owner that models the native fresh title/terrain loop
+        // (S3K Level/loc_6310-loc_64DC) holds players behind the title card.
+        // Other games load, place players and reset counters immediately.
+        boolean freshBoundary = GameServices.module().getTitleCardProvider()
+                instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication;
         var blockingFade = gameplayMode.plcFrameLifecycle().beginNativeBlockingFade();
         gameplayMode.getFadeManager().startFadeToBlack(
                 blockingFade.wrapCompletion(() -> {
                     try {
-                        levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+                        if (freshBoundary) {
+                            levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+                        } else {
+                            levelManager.loadZoneAndActWithTitleCard(zone, act);
+                        }
                         freshLevelLoadedThisIteration = true;
                     } catch (IOException exception) {
                         throw new IllegalStateException(

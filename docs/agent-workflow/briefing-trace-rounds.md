@@ -96,6 +96,28 @@ classes/build output, reproduced all 43 failure/error case keys and messages.
 baseline is not exonerating evidence. Match launch context before attributing
 failures; never rename or link ROMs to make the comparison pass.
 
+Playback surviving a prefix (2026-10-03): a run-chain prefix that closes only its
+comparator and timing owners leaves the process-wide `PlaybackDebugManager` movie
+active. A later capture in the same JVM then plays the old movie's input. Each
+of the five SOZ rewind checks failed in a shared fork yet passed in a fresh JVM.
+Close the playback session on every exit path, and test the predecessor and the
+capture in one invocation.
+
+Mixed report shapes (2026-10-03): chain summaries use `errorCount`, while
+standalone reports use `error_count`. A collector that reads only one spelling
+gives plausible but partial totals. Removing an earlier mismatch can also change
+the derived `cascading` flag on later, unchanged mismatches.
+
+Edits during compilation (2026-10-02): editing a source while an older Maven run
+is compiling it can leave stale bytecode with a newer timestamp. The next build
+then reports "Nothing to compile". Freeze sources during builds, and check with
+`javap` when the test results contradict the source.
+
+Legacy diagnostic RAM aliases (2026-10-02): `V69_AIZ.ADDR_KOS_MODULES_LEFT =
+0xFF04` is stale. On the locked-on ROM, `Kos_modules_left` is `$FF60` and
+`Kos_module_queue` is `$FF64`. Check diagnostic aliases against the RAM layout
+before reading zeros as "drained".
+
 
 Authored controller export (2026-09-28): `Bk2FrameInput.p1InputMask` can include
 jump as well as direction. A temporary LRZ author compared the whole mask to

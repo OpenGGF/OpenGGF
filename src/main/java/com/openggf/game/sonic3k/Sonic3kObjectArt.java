@@ -1305,6 +1305,20 @@ public class Sonic3kObjectArt {
         }
     }
 
+    /** SpecialStage_Results queues these four archives in this exact ROM order. */
+    public List<HardwareWorkHandle> queueSpecialStageResultsArt(
+            Rom rom, PlayerCharacter character, S3kKosModuleQueue queue) throws IOException {
+        return List.of(
+                queue.queue(rom, Sonic3kConstants.ART_KOSM_RESULTS_GENERAL_ADDR,
+                        Sonic3kConstants.VRAM_SS_RESULTS_GENERAL),
+                queue.queue(rom, getSsResultsFormWordArtAddr(character),
+                        Sonic3kConstants.VRAM_SS_RESULTS_SUPER),
+                queue.queue(rom, getCharacterNameArtAddr(character),
+                        Sonic3kConstants.VRAM_SS_RESULTS_CHAR_NAME),
+                queue.queue(rom, Sonic3kConstants.ART_KOSM_SS_RESULTS_ADDR,
+                        Sonic3kConstants.VRAM_SS_RESULTS_TEXT));
+    }
+
     /**
      * Load special stage results screen art from ROM.
      * <p>

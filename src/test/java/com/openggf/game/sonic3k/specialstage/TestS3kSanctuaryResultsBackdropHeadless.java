@@ -62,7 +62,7 @@ class TestS3kSanctuaryResultsBackdropHeadless {
         List<RewindBoundary> boundaries = new ArrayList<>();
         fixture.gameplayMode().setRewindBoundaryReporter(boundaries::add);
 
-        var screen = new S3kSpecialStageResultsScreen(30, true, 1, 7,
+        var screen = new S3kSpecialStageResultsScreen(30, true, 0, 1, 7,
                 PlayerCharacter.SONIC_ALONE, true, true);
 
         assertTrue(screen.drawsLevelBackdrop(), "SK_special_stage_flag rebuilds $1701");
@@ -160,7 +160,7 @@ class TestS3kSanctuaryResultsBackdropHeadless {
     void sevenSuperEmeraldsReleaseTheMasterEmeraldWhenTheHyperMessageArrives() {
         sanctuary(List.of(3, 3, 3, 3, 3, 3, 3));
 
-        var screen = new S3kSpecialStageResultsScreen(30, true, 0, 7,
+        var screen = new S3kSpecialStageResultsScreen(30, true, 0, 0, 7,
                 PlayerCharacter.KNUCKLES, true, true);
         ObjectManager objects = GameServices.level().getObjectManager();
         HPZSSEntryControlObjectInstance controller =
@@ -198,7 +198,7 @@ class TestS3kSanctuaryResultsBackdropHeadless {
     void failedStageKeepsTheWashedBackdropAndNeverPans() {
         sanctuary(List.of(3, 2, 2, 2, 2, 2, 2));
 
-        var screen = new S3kSpecialStageResultsScreen(30, false, 1, 7,
+        var screen = new S3kSpecialStageResultsScreen(30, false, 1, 1, 7,
                 PlayerCharacter.SONIC_AND_TAILS, true, true);
         ObjectManager objects = GameServices.level().getObjectManager();
 

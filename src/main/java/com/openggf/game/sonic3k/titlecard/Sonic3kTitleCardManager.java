@@ -432,6 +432,9 @@ public class Sonic3kTitleCardManager
     public void initializeFreshLevelTransition(int zoneIndex, int actIndex) {
         // Obj_TitleCardInit stores 90, then Level overwrites the same owner
         // with #$16 just before LevelLoop (sonic3k.asm:62187, 7897-7900).
+        // Obj_TitleCardInit queues its archives on every Level: entry even
+        // when this process already retains decoded art from the same act.
+        artLoaded = false;
         initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES);
         freshLevelTransitionMode = true;
         var plc = GameServices.module().getGameService(
@@ -548,17 +551,18 @@ public class Sonic3kTitleCardManager
     }
 
     /**
-     * Arms the native in-level {@code Obj_TitleCardWait} state reset after a
-     * known number of title-owner dispatches. This is used when a retained
-     * results SST mutates directly into {@code Obj_TitleCard}; unlike a fresh
-     * level title, its queue/create phase is already the only remaining gate.
+     * Arms the in-level {@code Obj_TitleCardWait} counter reset, either at the
+     * native child-movement gate ({@code NATIVE_WAIT_GATE}) or after a fixed
+     * number of dispatches. Counter ownership persists until the reset.
      */
     public void requestLevelGamestateResetAfterCreateDispatches(int dispatches) {
         if (inLevelMode) {
             resetLevelGamestateOnInLevelDisplay = true;
             heldLevelCounterDispatchOwned = true;
             retainedResultsHeldLevelCounterOwned = true;
-            resetLevelGamestateCountdown = Math.max(1, dispatches);
+            resetLevelGamestateCountdown =
+                    dispatches == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE
+                            ? dispatches : Math.max(1, dispatches);
         }
     }
 
@@ -914,6 +918,11 @@ public class Sonic3kTitleCardManager
     }
 
     private void updateOwnedChildren() {
+        if (freshLevelTransitionMode && freshLevelTerrainStarted) {
+            // LoadLevelLoadBlock/loc_7870 services the queues but does not call
+            // Process_Sprites. The carried title owner resumes in LevelLoop.
+            return;
+        }
         if (freshLevelTransitionMode && state == Sonic3kTitleCardState.DISPLAY
                 && !freshLevelTitleReady) {
             // Obj_TitleCardWait first clears $34 from the preceding child
@@ -957,10 +966,11 @@ public class Sonic3kTitleCardManager
             // stop publishing movement (sonic3k.asm:62220-62235).
             resetLevelGamestateCountdown = 0;
             consumeLevelGamestateResetRequest();
-            // Obj_TitleCardWait2's 90-pass $2E countdown starts at this gate (sonic3k.asm:62162,
-            // 62249-62255), not when the children first stop moving. This manager's EXIT already
-            // carries the child-before-owner pass split, so its hold restarts here.
-            stateTimer = 0;
+            // loc_2D810 clears global Timer/Ring_count, not the owner's $2E.
+            // Only non-retained owners start Wait2's hold from this gate.
+            if (!retainedResultsHeldLevelCounterOwned) {
+                stateTimer = 0;
+            }
         }
         switch (state) {
             case SLIDE_IN -> updateSlideIn();
@@ -987,6 +997,19 @@ public class Sonic3kTitleCardManager
         }
         return state == Sonic3kTitleCardState.EXIT
                 || state == Sonic3kTitleCardState.COMPLETE;
+    }
+
+    @Override
+    public boolean installsImmediateFreshLevelPalette() {
+        return true;
+    }
+
+    @Override
+    public boolean hasImmediateFreshLevelPalette() {
+        // Level/loc_61DA calls LoadPalette_Immediate before loc_62CC.
+        // The later level reveal uses Palette_fade_timer at loc_64DC,
+        // not a blocking Pal_FadeFromBlack around the title loop.
+        return freshLevelTransitionMode;
     }
 
     @Override

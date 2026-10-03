@@ -505,6 +505,14 @@ public final class PlaybackDebugManager {
         pendingLevelLoadActivationGuard = null;
     }
 
+    synchronized void endSessionIfOwnedBy(Bk2Movie expectedMovie) {
+        if ((movie != null && movie != expectedMovie)
+                || (pendingLevelLoadMovie != null && pendingLevelLoadMovie != expectedMovie)) {
+            return;
+        }
+        endSession();
+    }
+
     /** Programmatic teardown for {@link #startSession}. Idempotent. */
     public synchronized void endSession() {
         if (timeline != null) {

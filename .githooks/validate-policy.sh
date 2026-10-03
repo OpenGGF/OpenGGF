@@ -149,12 +149,12 @@ actual_pins() {
 
 current_api_value() {
     blob_text "$1" "$MOD_API_VERSION" |
-        sed -n '/^[[:space:]]*\(public[[:space:]]*\)\?static[[:space:]]*final.*CURRENT[[:space:]]*=/s/.*CURRENT[^=]*=[^(]*(\?"\([0-9][0-9.]*\)".*/\1/p' |
+        sed -E -n 's/^[[:space:]]*(public[[:space:]]+)?static[[:space:]]+final[^=]*CURRENT[[:space:]]*=[^"]*"([0-9][0-9.]*)".*/\2/p' |
         head -n 1
 }
 
 contains_mod_api_annotation() {
-    printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@ModApi([.([:space:]]|$)'
+    printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@(com\.openggf\.game\.)?ModApi([.([:space:]]|$)'
 }
 
 # Declaration text of a Java source that can change the normalized signature pin.

@@ -6,6 +6,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K level entry:** Initialize the camera with the ROM’s zero/maximum clamps,
+  independently of the runtime minimum bounds. This removes the opening AIZ1
+  camera offset while preserving MHZ1’s separate locked-on camera focus.
+  Live zone handoffs now run the fresh title and terrain-loading lifecycle,
+  restoring players before the initial sprite pass without adding a frame.
+
+- **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock. The seamless Act 2 reload holds the inherited camera limits until the title owner releases them, then runs its gradual boundary children in their native creation pass.
+
 - Automatically mask widescreen pixels beyond current native horizontal camera
   bounds, including asymmetric arena and level edges. During staged boss entry,
   the mask follows the earlier boundary until the final lock arrives. Each side
@@ -142,7 +150,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   zone's card. A cleared Super Emerald stage now tallies over the rebuilt sanctuary as it
   fades in from white, pans down to the pedestals, closes a ring of stars on the new
   emerald and, once all seven are held, announces "NOW SONIC CAN BE HYPER SONIC"; the
-  small Chaos Emerald indicators only show emeralds that have not been converted. Leaving any S3K special-stage results screen now fades to black without the stage
+  small Chaos Emerald indicators only show emeralds that have not been converted. Results
+  wait for their ROM art queues before the tally begins, and their post-tally and
+  continue timers preserve the native same-pass countdown. Returns retain the resolved
+  terrain art through saved-state restoration and repeat the native title-art load.
+  Continuous replay verifies completed return-art jobs against their full recorded
+  identities without renumbering submitted work. The 5,000-point perfect bonus
+  requires collecting every ring, independently of earning the emerald, so
+  non-perfect clears return without an extra tally. Leaving any S3K special-stage
+  results screen now fades to black without the stage
   transition sound, as in the ROM, instead of fading to white.
 - **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it
   at a quarter of the camera speed, cycle their console and panel colours, and animate their
@@ -298,7 +314,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   sanctuary shakes its background when the crystal lands; the ICZ miniboss ice shell
   is drawn from creation; Robotnik's ship is drawn in front of his head; LBZ2 boss
   smoke puffs keep the ROM's spawn and delete timing; Slot Machine randomness reads a
-  real power-on V-int count; and the Gumball exit fades for the ROM's 22 V-ints.
+  real power-on V-int count; and Gumball exits through its native trigger before
+  fading for the ROM's 22 V-ints, without an earlier exit from the disabled death plane.
+  Headless bonus-return replay prepares and advances each physical title/fade row,
+  closing source gameplay ownership after its final published row while retaining
+  recorded return-tail comparisons and timing checks.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now
@@ -316,8 +336,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ICZ miniboss, LBZ launcher and grapple among them) no longer draw in front of the
   player. A structural guard now rejects any drawing object without a declared bucket.
 
-- **S3K slots bonus:** keep the player behind the central capsule glass during
-  gameplay; the shared bonus loop no longer overrides the slot player's priority.
+- **S3K bonus stages:** keep the slots player behind the central capsule glass
+  during gameplay; the shared bonus loop no longer overrides the slot player's
+  priority. Bonus title-card release completes the initial object setup before
+  the first gameplay tick, preserving the first controller input and its movement.
 
 - **Knuckles in Sonic 2:** selecting Knuckles as the Sonic 2 main
   character now activates a built-in game patch implemented from the s2disasm
@@ -357,7 +379,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   writes. Coconuts retains its separate initialization pass before idle decisions. Special-stage return title cards
   release control after their final locked object pass without an extra wait.
   Continuous replay retains the locked title-card sequence across results-driven
-  act changes and starts destination gameplay only after the transition gap.
+  act changes and starts destination gameplay only after the transition gap. Held level iterations retain the native
+  queue-service tail without advancing gameplay.
   Remaining route and
   hardware-rendering limits are listed in the known-discrepancies entry and
   `docs/kis2/BRANCH_DIFFS.md`.
@@ -473,11 +496,20 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Reef rock crusher spawns, and the Fireworm's body segments, used to disappear on
   restore, and a restored segment's flame stayed behind while the segment swam on.
 
-- **AIZ1 rewind:** capture the hollow-tree reveal counter and intro Super Sonic
+- **AIZ1 routes and rewind:** capture the hollow-tree reveal counter and intro Super Sonic
   palette timer/frame, preserving tree reveal children and palette cadence after
   restoring gameplay. Add a native route matrix with independently reported intro,
   cutscene, tree and act-reload replay checks. Route controllers complete the
   viewport and movement-donor axes using ordinary inputs and live object gates.
+  Monkey Dude keeps climbing after the camera passes its initial visibility
+  window and starts each animation on its native dispatch, preserving the moving
+  body's collision timing and player bounce. Its five linked arm children retain
+  native fractional positions and delayed angles, releasing one coconut from
+  the hand's prior position instead of repeating a body-animation throw. Hollow-tree
+  release uses the native fixed collision radii until landing, preserving Tails'
+  first terrain contact after leaving the tree.
+  The fire reload keeps its horizontal camera lock until the native reveal
+  releases it, instead of easing back toward the loaded act's default bounds.
 
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late
@@ -588,7 +620,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. Offscreen giant rings wait
-  for art-queue capacity when wider visibility overlaps startup loading. MHZ end-boss debris
+  for art-queue capacity when wider visibility overlaps startup loading. Entry flashes
+  retire their parent rings after the native animation advance, restoring explosion
+  art on the correct object pass. MHZ end-boss debris
   retains the ROM trajectory when the boss faces left, and Madmole’s submerged
   body keeps its final collision position until the ROM’s deferred deletion.
   The MHZ endboss chase and ship departure use native arena coordinates at every

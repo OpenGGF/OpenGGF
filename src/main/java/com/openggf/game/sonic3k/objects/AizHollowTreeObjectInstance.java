@@ -336,7 +336,10 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
             player.setY((short) (player.getY() - (player.getRollHeightAdjustment() / 2)));
         }
         player.setRolling(false);
-        player.applyStandingRadii(false);
+        // AIZTree_FallOff writes literal x_radius=9 / y_radius=$13 for every
+        // character. Tails_TouchFloor restores Tails' default $0F on landing;
+        // restoring it here would shorten the falling collision sensors.
+        player.applyCustomRadii(9, 0x13);
         // move.w #1,anim writes the adjacent big-endian bytes anim=Walk and
         // prev_anim=Run; it does not select the engine's Run animation id.
         player.setAnimationId(Sonic3kAnimationIds.WALK);

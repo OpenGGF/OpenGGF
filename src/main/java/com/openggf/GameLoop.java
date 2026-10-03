@@ -1140,7 +1140,8 @@ public class GameLoop {
         // fadeManager can be null in non-gameplay modes (e.g.
         // MASTER_TITLE_SCREEN with no active session).
         return isNonRewindableTransitionPending()
-                || (fadeManager != null && fadeManager.hasPendingCompletion());
+                || (fadeManager != null && fadeManager.hasPendingCompletion())
+                || (levelManager != null && levelManager.hasPendingFreshLevelTransitionBoundary());
     }
 
     /**
@@ -1217,6 +1218,7 @@ public class GameLoop {
 
     private void stepInternal() {
         continueScreen.beginIteration();
+        levelIterationAdmission.beginIteration();
         refreshRuntimeBindings();
         GameplayModeContext lifecycleContext = resolveGameplayModeContext();
         if (lifecycleContext == null || !lifecycleContext.isGameplayRuntimeReady()) {
@@ -1604,6 +1606,15 @@ public class GameLoop {
     }
 
     private void updateSpecialStageResultsMode() {
+        if (resultsScreen instanceof com.openggf.game.internal.ResultsResourcePreparation preparation
+                && preparation.isPreparingResults()) {
+            // The resource loop has VBlank and queue tails, but no results sprite yet.
+            LevelFrameStep.executeHardwareTimedObjectScan(
+                    LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
+                    PlcLifecyclePhase.SPECIAL_STAGE_RESULTS, () -> { });
+            preparation.finishResultsPreparationIteration();
+            return;
+        }
         // ROM SS_NormalExit is a full loop iteration: VintID_TitleCards, a
         // V-int that runs ProcessPLC_9Tiles (docs/s1disasm/sonic.asm:946),
         // ExecuteObjects, BuildSprites, then RunPLC at the tail
@@ -1936,9 +1947,13 @@ public class GameLoop {
                 // gates enter gameplay hundreds of VBlanks behind.
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
-                    LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
-                            activePlcLifecycleFrame, PlcLifecyclePhase.LAG);
-                    levelManager.getObjectManager().advanceVblaCounter();
+                    // A held iteration still services LevelLoop's Kos queue
+                    // tail (sonic3k.asm:7908/7887), without gameplay dispatch.
+                    TraceSuppressedRowClosure.execute(
+                            LevelFrameContext.from(gameplayMode),
+                            activePlcLifecycleFrame, levelManager,
+                            this::startPendingInLevelTitleCard,
+                            this::applyTitleCardControlLock);
                 }
             }
             advanceGameplayAudioFrameForTick(doFrameStep);
@@ -3086,7 +3101,8 @@ public class GameLoop {
                     activeSpecialStageRewardKind);
         }
 
-        if (fadeAlreadyWhite) {
+        if (fadeAlreadyWhite || (ssProvider instanceof com.openggf.game.internal.SpecialStageResultsEntry entry
+                && entry.hasCompletedResultsEntryFade())) {
             // Fade pre-started by SS manager (S1) - screen is already white.
             // Go directly to results; doEnterResultsScreen() calls startFadeFromWhite().
             doEnterResultsScreen();
@@ -3377,6 +3393,11 @@ public class GameLoop {
     }
 
     private void startResultsReturnFadeIn() {
+        if (getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                && boundary.hasImmediateFreshLevelPalette()) {
+            fadeManager.clearOverlayForImmediatePaletteLoad();
+            return;
+        }
         if (resultsExitToWhite) {
             GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
         } else {
@@ -3440,7 +3461,7 @@ public class GameLoop {
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
-            getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
+            getTitleCardProviderLazy().initializeFreshLevelTransition(zoneIndex, actIndex);
         }
 
         // Start zone music immediately when title card begins (not at the end)
@@ -3469,12 +3490,13 @@ public class GameLoop {
             return;
         }
 
+        boolean freshBoundary = levelManager.hasPendingFreshLevelTransitionBoundary();
         GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
 
         // Freeze the player during title card - full state reset
         String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite playable) {
+        if (!freshBoundary && sprite instanceof AbstractPlayableSprite playable) {
             // Freeze all movement
             playable.setXSpeed((short) 0);
             playable.setYSpeed((short) 0);
@@ -3491,13 +3513,17 @@ public class GameLoop {
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
-            getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
+            if (freshBoundary) {
+                getTitleCardProviderLazy().initializeFreshLevelTransition(zoneIndex, actIndex);
+            } else {
+                getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
+            }
         }
 
         // ScreenInit can already own the camera through Scroll_lock (SSZ1_ScreenInit
         // sets $F49 before Obj_57C1E positions the player). A forced player snap would
         // override that scripted origin and clamp it against the arrival's $BC0 bound.
-        if (!camera.getFrozen()) {
+        if (!freshBoundary && !camera.getFrozen()) {
             camera.updatePosition(true);
         }
 
@@ -3597,7 +3623,8 @@ public class GameLoop {
 
             // Re-apply zone-specific player state (airborne intros like HCZ1, MGZ1)
             LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
-            if (levelEvents instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kEvents) {
+            if (!levelManager.hasPendingFreshLevelTransitionBoundary()
+                    && levelEvents instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kEvents) {
                 s3kEvents.applyZonePlayerStateAfterTitleCard();
             }
             LOGGER.info("Exited Title Card, starting level");
@@ -4551,7 +4578,18 @@ public class GameLoop {
             if (postLoadMusicId >= 0) {
                 levelManager.setSuppressNextMusicChange(true);
             }
-            levelManager.loadZoneAndAct(zone, act);
+            // Only a title owner that models the native fresh title/terrain loop
+            // (S3K Level/loc_6310-loc_64DC) holds players behind the title card.
+            // Other games place the destination players and reset counters now.
+            if (restoreSanctuaryOrigin
+                    || !(getTitleCardProviderLazy()
+                            instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication)) {
+                levelManager.loadZoneAndAct(zone, act);
+            } else {
+                levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+            }
+            levelIterationAdmission.loadedFreshBoundary(
+                    levelManager.hasPendingFreshLevelTransitionBoundary());
             activateScheduledPlaybackForLoadedLevel();
             if (postLoadMusicId >= 0) {
                 audioManager.playMusic(postLoadMusicId);
@@ -4576,7 +4614,13 @@ public class GameLoop {
             }
         }
 
-        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        if (levelManager.hasPendingFreshLevelTransitionBoundary()
+                && getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                && boundary.installsImmediateFreshLevelPalette()) {
+            fadeManager.clearOverlayForImmediatePaletteLoad();
+        } else {
+            GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        }
 
         LOGGER.info("Loaded zone " + zone + " act " + act);
     }

@@ -174,7 +174,8 @@ class TestRemainingRewindTailInventory {
         // Final fire emitter and flame retain scalar SST addresses and probe independently.
         // Final emerald probes independently; palette cursors are captured by each zone runtime.
         // Final escape scenery adds one scalar/parent-captured recreate owner.
-        return new TailInventory(1315, 1072, 243, 0, buckets);
+        // SSZ background camera tracker adds one spawn-recreatable scalar owner.
+        return new TailInventory(1316, 1073, 243, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

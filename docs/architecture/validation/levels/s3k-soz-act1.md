@@ -459,3 +459,23 @@ at31392 with zero deaths; all31492 baseline/candidate state rows match. The
 initial default-tool failure was an intro-configuration mismatch, not a failure
 of this native-start route. Video:
 `$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-soz-handoff-320/capture.mp4`.
+
+## Bonus-return controller refresh (2026-10-03)
+
+This route is an engine-authored controller movie, not a native trace. Commit
+`5566b8db17` made bonus title release run the initial `Process_Sprites` before
+`LevelLoop`, as native `Level/loc_6468` does. Before that change, the engine
+treated the first playable input row as setup. Afterwards the Pachinko return
+reached SOZ's title 7 inputs earlier (3566 instead of 3573), and the old movie
+died at input 15657.
+
+`soz1-cold-knuckles.bk2` was re-authored to match. It drops seven identical
+held-Right inputs from the locked return title, cutting the hold from 30 inputs
+to 23. Total inputs fall from 24,059 to 24,052, and no other input changed.
+Runtime behaviour and assertions are unchanged.
+`TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination`
+passes all five solo cases with zero skips. Knuckles reaches Act 2 at input 23850
+with all 29 full-world replay windows.
+
+Running these checks after a trace prefix in the same JVM used to fail. The
+cause was a leaked playback session, fixed in `d427fdd9ba`.

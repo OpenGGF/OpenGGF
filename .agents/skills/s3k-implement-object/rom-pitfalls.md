@@ -5014,3 +5014,80 @@ on develop, 2026-09-30, based on `39645745aa`.
 Preserve the upper word through zero; testing a Java int after an unrestricted
 addition instead reverses the slope. Exact intact-to-fragment ROM tile-set
 comparison across both collapse sides and flips exposes this width error.
+
+
+## Raw animation callbacks observe the advanced counter
+
+`SSEntryFlash_Main` calls `Animate_RawAdjustFlipX` first, then tests the changed
+mapping and `anim_frame == 3`. Testing the counter before the animator advances
+it marks the parent ring one dispatch late. Because the ring then restores
+explosion art (`loc_6196A`), the first visible symptom is a Kosinski queue
+mismatch, not a motion error. (Knuckles AIZ, row 1615.)
+
+## Manual solid mode must dispatch the native collision helper
+
+`MANUAL_CHECKPOINT` installs a resolver but does not run it. LBZ cup
+`loc_26EEA` calls `SolidObjectFull2_1P` inside each player's control routine,
+after the cooldown and angle gates and before the capture test. Use a
+per-participant checkpoint in that position. Test through real ObjectManager
+dispatch, because seeding the standing state hides a missing collision call.
+
+## Object deletion is not rider release
+
+LBZ rolling drum `loc_2C3CA` runs both participant routines before
+`Delete_Sprite_If_Not_In_Range`. `Delete_Current_Sprite` clears only the drum's
+own SST, without `loc_2C48A`'s rider writes. Do not release live native riders
+in `onUnload`. Use the post-routine range check. Keep explicit cleanup for
+extension participants and dead players.
+
+## Death suppression does not request a bonus-stage exit
+
+`Disable_death_plane` makes `Player_Boundary_CheckBottom` return before the kill.
+It does not set `Restart_level_flag`; the gumball exit child (`loc_61076`) owns
+that write. `word_610AE` is left/width/top/height (`-$100,$200,-$10,$40`), giving
+X `[-$100,+$100)` and Y `[-$10,+$30)`. The upper bound is exclusive (`bhs`; see
+P39).
+
+## Capture-time control writes are not held-state writes
+
+Cup capture `loc_26F26` writes `object_control=$03` once. The held routine
+`loc_26FF4` publishes only position, priority and mapping. Reasserting control on
+every held tick overrides later writers: `sub_62800` writes `$81`, which clears
+bit 1 (animation), and `loc_6278A` writes `$00`. Track the animation bit with the
+same byte ownership; a raw mapping write is not an animation claim.
+
+## A fatal-hit dispatch installs the wait; it does not decrement it
+
+LBZ miniboss `loc_7289A` installs `Wait_NewDelay`, and `BossDefeated` writes
+`$3F` and returns. The first decrement is on the next dispatch. A DEFERRED helper
+field does not restore the explosion controller's timer or pending emissions.
+Snapshot the helper and rebind it to the shared RNG.
+
+## Results child retirement is a real object-graph boundary
+
+`Obj_LevelResultsWait2` counts the twelve live child SSTs (`$30`). `loc_2DD06`
+clears `_unkFAA8`, swaps in `Obj_TitleCard` and returns. Title init runs on the
+next owner dispatch, and `Obj_EndSignControlAwaitStart` restores P1/P2 when it
+next observes the latch. Do not add a render-retirement counter, an early control
+shortcut or same-pass title init. Keep ICZ2's folded `loc_71DE2` hook.
+
+## Linked child positions and attack flags own the projectile
+
+Monkey Dude's five arm children keep 16.16 positions through four
+`MoveSprite_CircularSimple` additions. `sub_875B4` throws once (bit 0) from the
+hand's previous position, before that child updates. `sub_87524` gates on
+absolute horizontal distance only. Followers propagate attack bit 1 and halve or
+double their delay (`sub_8756A`/`sub_87592`).
+
+## Literal player radii may differ from character defaults
+
+`AIZTree_FallOff` writes x/y radii 9/`$13` for every character, and
+`Tails_TouchFloor` restores the defaults on landing. Restoring Tails' standing
+`$0F` at release shortens the falling sensors.
+
+## Global title resets do not restart the owner clock
+
+`Obj_TitleCardWait/loc_2D810` resets Timer, Ring_count, air and music after the
+child movement latch clears. It does not rewrite the owner's `$2E`. Retained
+owners must wait for the real ROM art and the final stationary child poll, and
+keep their presentation clock running.

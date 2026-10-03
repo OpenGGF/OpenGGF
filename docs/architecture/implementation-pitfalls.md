@@ -87,6 +87,17 @@ consumer to inspect a convenient state flag conceals the upstream mismatch.
 The LRZ cold-route investigation and regression are recorded in the
 [bring-up audit](audits/2026-09-22-sk-zone-bring-up.md#knuckles-lrz-cold-route-cloud-escape-2026-09-25).
 
+**Offscreen initialization gates can remove themselves.** S3K
+`Obj_WaitOffscreen/loc_85B02` restores the caller's continuation, so later
+dispatches skip the visibility gate. Rechecking the `$20` window froze Monkey
+Dude's body while its arm kept running. Only the ordinary unload range retires
+the object.
+
+**A cleared raw-animation timer is not the first frame's delay.**
+`Animate_RawMultiDelay` decrements before it tests. A timer cleared on a script
+change (`loc_871C2`, `loc_87218`) therefore publishes the next mapping on the
+very next dispatch. Seeding the timer with the script's delay shifts every phase.
+
 **Object-control early returns can still write character state.** S3K
 `Knuckles_Control/loc_165AE` clears `double_jump_flag` when object-control bit0
 suppresses movement, before reaching `Animate_Knuckles`. Skipping movement
@@ -102,6 +113,11 @@ capture handoff and subsequent held pass, not only an explicit forced pose.
 Preserve `double_jump_property` and radii unless the owning ROM routine
 writes them. The SOZ2 cold route exposed this at `sub_40F52`: its correct
 `x_vel=-$200` was replaced by glide acceleration on the next frame.
+
+**A held input row still owns a queue tail.** A native LEVEL lag iteration
+skips gameplay but still services the Kos module/direct queues (`LevelLoop`,
+sonic3k.asm:7908/7887). Use `TraceSuppressedRowClosure` in the live, recording
+and standalone drivers alike.
 
 **Reused position words.** A field named `x_sub` is not always a fraction.
 KiS2 `Knuckles_BeginClimb` and S3K `Knuckles_Gliding_HitWall` store the grab's
@@ -1153,3 +1169,11 @@ mismatch; a short P1-contact/restore/P2-contact test also detects the wrong
 panel owner. Restore the declared state exactly and let the next normal update
 clear the flag. Do not silently turn a captured flag into a derived cache in a
 custom hook. The original two-player bug remains preserved (2026-09-28).
+
+
+### Fixed native bounds must not inherit engine smoothing targets
+
+A seamless reload's current-bound and target-bound overrides are separate. AIZ's
+`AIZ1BGE_Finish` writes a fixed X lock of `$10/$10`, and `Do_ResizeEvents` eases
+only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
+on the next tick (S3K trace campaign, 2026-10-03).

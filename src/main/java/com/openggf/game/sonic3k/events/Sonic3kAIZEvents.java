@@ -3024,6 +3024,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         .preserveOffsetCameraPosition(true)
                         .postTransitionMinX(0x10)
                         .postTransitionMaxX(0x10)
+                        // Do_ResizeEvents eases only max Y; pin the X targets
+                        // so loaded defaults cannot move this fixed lock.
+                        .postTransitionMinXTarget(0x10)
+                        .postTransitionMaxXTarget(0x10)
                         .postTransitionMinY(0)
                         .postTransitionMaxY(0x260)
                         .postTransitionMaxYTarget(0x260)

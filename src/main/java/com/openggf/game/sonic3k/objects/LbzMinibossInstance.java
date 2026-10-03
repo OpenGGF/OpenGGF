@@ -120,9 +120,24 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private boolean defeated;
     private boolean bodyVisible = true;
     private int defeatWaitTimer = -1;
+    private boolean pendingDefeatDispatch;
     private boolean defeatFlowSpawned;
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatExplosionCreationPending;
+    // Restored with the parent; rebinds to the separately restored session RNG.
+    private final com.openggf.game.rewind.RewindStateful<S3kBossExplosionController.Snapshot> defeatExplosionRewind =
+            new com.openggf.game.rewind.RewindStateful<>() {
+                @Override
+                public S3kBossExplosionController.Snapshot captureRewindStateValue() {
+                    return defeatExplosionController == null ? null : defeatExplosionController.captureSnapshot();
+                }
+
+                @Override
+                public void restoreRewindStateValue(S3kBossExplosionController.Snapshot snapshot) {
+                    defeatExplosionController = snapshot == null ? null
+                            : S3kBossExplosionController.fromSnapshot(snapshot, services().rng());
+                }
+            };
     private LbzMinibossBoxKnuxInstance knucklesFightParent;
 
     private enum WaitCallback {
@@ -660,6 +675,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             }
         }
         defeatWaitTimer = DEFEAT_WAIT_FRAMES;
+        pendingDefeatDispatch = true;
         defeatExplosionController = new S3kBossExplosionController(getX(), getY(), 0, services().rng());
         // CreateChild1_Normal installs Obj_CreateBossExplosion after the live
         // boss slot. Because that child slot is still ahead of the current
@@ -680,7 +696,11 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private void updateDefeat() {
         updatePanels();
         tickDefeatExplosions();
-        if (defeatWaitTimer >= 0) {
+        if (pendingDefeatDispatch) {
+            // loc_7289A installs Wait_NewDelay and BossDefeated writes $3F;
+            // the first decrement is on the next dispatch.
+            pendingDefeatDispatch = false;
+        } else if (defeatWaitTimer >= 0) {
             defeatWaitTimer--;
             if (defeatWaitTimer < 0) {
                 // ROM Wait_NewDelay expiry -> loc_72562: the boss body stops

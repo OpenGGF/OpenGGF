@@ -375,13 +375,6 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     // =========================================================================
 
     private void updateAwaitResults(AbstractPlayableSprite player) {
-        if (restoreNativeControlAtResultsBoundary(player)) {
-            // Obj_EndSignControlAwaitStart owns this boundary independently of
-            // Obj_LevelResults' publication pass. Keep polling End_of_level_active
-            // so the results owner can publish and the normal handoff can set the
-            // next phase on its following owner dispatch.
-            return;
-        }
         if (!services().gameState().isEndOfLevelActive()) {
             if (!nativeResultsControlRestored) {
                 restoreNativePlayerControlIfNeeded(player);
@@ -393,19 +386,6 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
             phase = Phase.AWAIT_ACT_TRANSITION;
             LOG.fine("S3K defeat flow AWAIT_RESULTS -> AWAIT_ACT_TRANSITION");
         }
-    }
-
-    private boolean restoreNativeControlAtResultsBoundary(AbstractPlayableSprite player) {
-        if (services().objectManager() == null) {
-            return false;
-        }
-        boolean ready = services().objectManager()
-                .activeObjectsOfType(S3kResultsScreenObjectInstance.class).stream()
-                .anyMatch(S3kResultsScreenObjectInstance::isEndSignControlRestoreBoundaryReady);
-        if (!ready) {
-            return false;
-        }
-        return restoreNativeControlAtResultsPublication(player);
     }
 
     /**

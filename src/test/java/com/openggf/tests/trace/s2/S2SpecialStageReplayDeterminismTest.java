@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static com.openggf.tests.trace.s2.AbstractS2SpecialStageTraceReplayTest.TRACE_DIRECTORY;
@@ -30,8 +29,8 @@ class S2SpecialStageReplayDeterminismTest {
     @Test
     void twoReplaysProduceIdenticalReportJson() throws Exception {
         File romFile = com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable();
-        assumeTrue(romFile != null && Files.exists(Path.of("s2.gen")),
-                "s2.gen ROM required for S2 special-stage trace replay");
+        assumeTrue(romFile != null && romFile.isFile(),
+                "Sonic 2 ROM required for S2 special-stage trace replay");
 
         String firstJson = runReplay(TRACE_DIRECTORY, romFile);
         String secondJson = runReplay(TRACE_DIRECTORY, romFile);

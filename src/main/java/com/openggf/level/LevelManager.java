@@ -3016,6 +3016,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * ROM: S1/S2 SetScreen/InitCameraValues, S3K Get_LevelSizeStart.
      */
     public void initCameraForLevel() {
+        initCameraForLevel(true);
+    }
+
+    // Package-private entry used by LevelCameraInitialization for explicit
+    // positioned captures/tests. Such a resnap is not Get_LevelSizeStart.
+    void initCameraForLevel(boolean initializeLoadRegisters) {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
             checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3072,6 +3078,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
+            if (initializeLoadRegisters && getZoneFeatureProvider() instanceof
+                    com.openggf.game.internal.LevelStartCameraPosition initialCamera) {
+                initialCamera.initializeLevelStartCamera(camera, playable, getFeatureZoneId(),
+                        getFeatureActId(), bigRingReturn != null
+                                || (checkpoint instanceof CheckpointState state && state.isActive()));
+            }
             if (objectManager != null
                     && (objectManager.usesTwoAxisCursorPlacement()
                             || (camera.getX() != preSnapCameraX
@@ -3575,7 +3587,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LevelLoadContext ctx = new LevelLoadContext();
             ctx.setShowTitleCard(showTitleCard);
             ctx.setTitleCardRequiredInHeadlessMode(titleCardRequiredInHeadlessMode);
-            ctx.setQueueFreshLevelRuntimeArt(queueFreshLevelRuntimeArt);
+            // A results return re-enters Level: too: loc_6310 queues terrain
+            // only after the native title/Nemesis wait has finished.
+            ctx.setQueueFreshLevelRuntimeArt(queueFreshLevelRuntimeArt
+                    || transitions.isResultsReturnCardOwnedByCaller());
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
             ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);

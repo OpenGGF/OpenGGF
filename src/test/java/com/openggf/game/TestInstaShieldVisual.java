@@ -177,7 +177,7 @@ public class TestInstaShieldVisual {
         player.setY((short) 0x3B0);
         camera.updatePosition(true);
 
-        lm.initCameraForLevel();
+        com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(lm);
         lm.initLevelEventsForLevel();
         lm.updateObjectPositions();
 

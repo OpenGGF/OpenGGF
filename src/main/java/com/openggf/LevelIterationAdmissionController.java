@@ -21,6 +21,20 @@ import java.util.function.Supplier;
 /** Owns level/title admission and deferred seamless-boundary completion. */
 final class LevelIterationAdmissionController {
     private boolean seamlessBoundaryCompletionPending;
+    private boolean freshLoadThisIteration;
+    private boolean freshTitleCompleted;
+    private boolean freshOrdinaryBoundaryObserved;
+
+    void beginIteration() {
+        freshLoadThisIteration = false;
+    }
+
+    void loadedFreshBoundary(boolean pending) {
+        freshLoadThisIteration = pending;
+        freshTitleCompleted = false;
+        freshOrdinaryBoundaryObserved = false;
+    }
+
     private int lastAppliedPlaybackFrame = -1;
 
     LevelFrameResult admit(
@@ -63,6 +77,10 @@ final class LevelIterationAdmissionController {
             if (!updateTitleCard.getAsBoolean()) {
                 return LevelFrameResult.SETUP_ONLY;
             }
+            if (levelManager.hasPendingFreshLevelTransitionBoundary()) {
+                freshTitleCompleted = true;
+                freshOrdinaryBoundaryObserved = false;
+            }
             LevelFrameResult releaseResult = titleReleaseResult.get();
             if (TraceSessionLauncher.claimTitleCardControlReleaseBarrierIfActive()) {
                 return LevelFrameResult.SETUP_ONLY;
@@ -75,6 +93,34 @@ final class LevelIterationAdmissionController {
         if (mode != GameMode.LEVEL) {
             activateRepresentedHardwareTiming.run();
             return LevelFrameResult.GAMEPLAY_FRAME;
+        }
+        boolean pauseAlreadyChecked = false;
+        if (levelManager.hasPendingFreshLevelTransitionBoundary()) {
+            if (freshLoadThisIteration) {
+                // The fade callback installed the destination but this row
+                // remains owned by PaletteFade. Title init belongs to the next.
+                return LevelFrameResult.SETUP_ONLY;
+            }
+            if (!freshTitleCompleted) {
+                // Let the level dispatcher consume its pending title request;
+                // never consume initial Process_Sprites against held players.
+                return LevelFrameResult.GAMEPLAY_FRAME;
+            }
+            // Native Pause_Game belongs to LevelLoop, after the fresh
+            // palette/title loops have completed (loc_64DC -> LevelLoop).
+            var gameState = LevelFrameContext.from(gameplayMode).gameStateManager();
+            if (gameState != null && gameState.applyPauseToggle(startEdge)) {
+                return LevelFrameResult.PAUSED;
+            }
+            pauseAlreadyChecked = true;
+            if (!freshOrdinaryBoundaryObserved) {
+                freshOrdinaryBoundaryObserved = true;
+                levelManager.publishFreshLevelTransitionInitialBoundary();
+                return LevelFrameResult.SETUP_ONLY;
+            }
+            levelManager.completeFreshLevelTransitionBoundary();
+            freshTitleCompleted = false;
+            freshOrdinaryBoundaryObserved = false;
         }
         SeamlessLevelTransitionRequest request =
                 levelManager.consumeSeamlessTransitionRequest();
@@ -93,7 +139,8 @@ final class LevelIterationAdmissionController {
             activateRepresentedHardwareTiming.run();
         }
         return LevelFrameStep.admit(
-                LevelFrameContext.from(gameplayMode), levelManager, startEdge).result();
+                LevelFrameContext.from(gameplayMode), levelManager,
+                pauseAlreadyChecked ? false : startEdge).result();
     }
 
     boolean completePendingBoundary(
@@ -121,6 +168,9 @@ final class LevelIterationAdmissionController {
 
     void reset() {
         seamlessBoundaryCompletionPending = false;
+        freshLoadThisIteration = false;
+        freshTitleCompleted = false;
+        freshOrdinaryBoundaryObserved = false;
     }
 
     void finishPlaybackBoundary(

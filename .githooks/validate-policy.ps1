@@ -194,7 +194,7 @@ function Get-CurrentApiValue([string]$Ref) {
 }
 
 function Test-ContainsModApiAnnotation([string]$Text) {
-    return $Text -match '(?m)^\s*@ModApi(?:[.(\s]|$)'
+    return $Text -match '(?m)^\s*@(?:com\.openggf\.game\.)?ModApi(?:[.(\s]|$)'
 }
 
 # Mirrors mod_api_surface_text in validate-policy.sh.

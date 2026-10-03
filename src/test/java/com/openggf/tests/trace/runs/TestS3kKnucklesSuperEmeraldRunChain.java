@@ -33,16 +33,15 @@ class TestS3kKnucklesSuperEmeraldRunChain extends AbstractRunChainTest {
             "src", "test", "resources", "traces", "s3k", "runs",
             "s3k-knuckles-complete-superemeralds");
 
+    /** Holds AIZ1 physics, camera, entry-ring art and the first special-stage handoff. */
+    @Test
+    void aiz1ThroughGiantRingIntoFirstSpecialStageRow() throws Exception {
+        assertChainReplayThroughSegmentRow(RUN_DIR, 1, 1);
+    }
+
     /**
      * The whole route, end to end. This is the frontier the run exists to
      * measure; raise nothing and skip nothing to keep it quiet.
-     * <p>
-     * No {@link #assertChainReplayThroughSegmentRow} prefix pin accompanies it,
-     * unlike {@link TestS1CompleteEmeraldRunPrefix}: that target is only
-     * honoured on an INTERIOR segment's row driver, and the drive stops in
-     * segment 0's own AIZ1 source act -- before any interior exists -- so a
-     * prefix could not be placed short of the frontier. Add one once the drive
-     * reaches segment 1.
      */
     @Test
     void aiz1ToDoomsdayAcrossEverySpecialAndBonusStage() throws Exception {

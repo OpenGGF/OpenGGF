@@ -2,6 +2,8 @@
 
 Infinite Sonic prototype (2026-10-01): the [mod GHZ1 matrix](../architecture/validation/levels/infinite-sonic-ghz1.md) records 20 passing focused ROM-backed checks for ring collection, bidirectional gap jumps, terrain-aware encounters, damage, attacks, traversal, backtracking, reload and rewind/replay, confirmed through queued Maven on 2026-10-02. Five supported widths are covered for solo Sonic. Version 0.8.0 extends the course to all 18 GHZ–SBZ acts, each with a focused build/start/dry-course traversal check (61 tests passing). Version 0.10.0 adds per-zone badnik line-ups and a session lives/CONTINUE death menu; 0.11.0 derives line-ups from each act's stock placement, earns lives only from rings and makes CONTINUE revive in place (74 tests passing). GPU presentation, donor and automatic respawn coverage remain open; this does not certify stock GHZ.
 
+LBZ1 trace-campaign follow-up (2026-10-03): the [focused act matrix](../architecture/validation/levels/s3k-lbz-act1.md) covers cup contact and control ownership, rolling-drum deletion, the miniboss fatal hit, carried-results retirement and the retained title reset, and the Act 1→2 camera hold, each with restore/replay. The Sonic+Tails trace now matches through row 23532 but is still red. Full-route, viewport, donor and roster obligations remain open.
+
 LRZ2 flame-shield follow-up (2026-09-30): the [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#flame-jet-fire-shield-immunity-2026-09-30) records real collision/shield regressions for all four shields and 167 focused tests without skips. Both jet variants now publish the ROM fire-immunity flag. Inherited route/rewind, donor, viewport and roster gaps remain.
 
 LRZ2 background seam follow-up (2026-09-30): the [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#background-window-seam-2026-09-30)
@@ -93,6 +95,8 @@ now has a24,059-input cold route through a real bonus visit/return, golem,
 results and playable Act2, with29 full-world replay windows and both bonus
 load history resets. Fresh native320 capture passes; wider/native-parity
 acceptance and Knuckles Act2 remain open.
+The [2026-10-03 controller refresh](../architecture/validation/levels/s3k-soz-act1.md#bonus-return-controller-refresh-2026-10-03)
+re-authors the movie for the corrected bonus setup pass; all five solo cold cases pass.
 
 [SOZ solo Sonic Act1](../architecture/validation/levels/s3k-soz-act1.md#solo-sonic-cold-completion-2026-09-27)
 now has a31,671-input cold route through the golem, results and playable Act2,
@@ -187,7 +191,8 @@ The [initial source inventory](../architecture/audits/2026-09-13-level-test-cove
 now covers 26 zones / 55 gameplay acts for estimation, with explicit delivered versus
 conditional S3K scope. Their rows link to that zone-level inventory; **conformance assessments remain pending**; the
 [AIZ1 Sonic matrix](../architecture/validation/levels/s3k-aiz1-sonic.md) now records
-the route-controller continuation and its inherited gaps; the
+the route-controller continuation, the level-entry camera correction and the
+trace-campaign object regressions, with their inherited gaps; the
 [HCZ1 partial matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) records water-route
 and miniboss composition, ten independent restore/replay spots, the production
 reload boundary, 30 viewport/donor entry/reset cases, all 15 full width/donor
@@ -1018,3 +1023,10 @@ ROM mapping geometry, both incoming facings, and complete post/carrier rotations
 
 SSZ background transitions: the matrix records reproduced blank-cache frames
 at320/800 and adds both mode boundaries plus future-mode restore re-render checks.
+
+
+AIZ fire-reload follow-up (2026-10-03): the
+[AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#fixed-fire-reload-camera-lock--2026-10-03)
+covers the fixed reload lock. The
+[HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) adds the fresh
+live-load ordering obligation.

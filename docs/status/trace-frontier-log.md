@@ -111761,3 +111761,58 @@ gameplay counter stays$185A, VBlank advances$517→$518, lag becomes1; native623
 resumes at engine6234's position. Ordinary capture is not hardware-timed replay.
 No frame-specific delay is added. Continue controller route authoring beyond
 the6201-frame cold prefix; strict replay and earlier discrepancies remain open.
+
+
+## 2026-10-03 — S3K trace green campaign summary
+
+Base `67c850fc51`. Each fix was integrated directly into `develop`. Rationale and
+rejected approaches are in the
+[campaign audit](../architecture/audits/2026-10-02-s3k-trace-green-campaign.md).
+Every measurement used this command, with the verified absolute S3K ROM:
+
+`python3 tools/testing/maven_queue.py -Dmse=off -P<profile> -Dsurefire.forkCount=1 -Dtest=<class> "-Ds3k.rom.path=<rom>" test`
+
+Profiles: r6 = `trace-replay`, r7 = `trace-replay-r7`, seg = `trace-segments`.
+Before and after are shown as `errors @ first row field`.
+
+| Commit | Profile / class | Before | After |
+|---|---|---|---|
+| `5566b8db17` | r7 `TestS3kMegaRunChain`, gumball segment 1 | 8,021 @ 1 `x` | 12 @ 1276 `x` |
+| `56afa227ad` | r7 Mega, segment 0 | 18 @ camera | 1 @ 4545 `camera_y` |
+| `56afa227ad` | r7 `TestS3kTailsFullChainRunChain`, segment 0 | 17 | 0 |
+| `7e256310e4` | r7 `TestS3kKnucklesSuperEmeraldRunChain`, segment 0 | 12,600 @ 446 `y_speed` | 41 @ 1615 `queue.s3k_kos_direct.busy` |
+| `fe852448a9` | r6 Knuckles chain, segment 0 | 41 @ 1615 | 34, opening `camera_x` only |
+| `ee8565ab6e` | r7 Knuckles chain, segment 0 | 34 camera | 0 |
+| `8b947396f3` | r6 `TestS3kAizTraceReplay` | 59 @ 5497 `camera_x` | 57 @ 20302 `player_animation_id` |
+| `8b947396f3` | r6 reference-closure AIZ | 101 @ 6302 `camera_x` | 99 @ 25589 `player_animation_id` |
+| `8bf6486f60` | r6 `TestS3kSonicTailsCompleteEmeraldRunChain` | return 8817 span rejection | segment 2 clean; stops at KosM 30 handoff |
+| `298167c96a` | r7 Tails chain | results stop at 6221 | segment 2: 41,653 @ 199 `y` |
+| `c60df46ed6` | r7 Mega, gumball segment 1 | 12 @ 1276 `x` | 0 through reached rows |
+| `bda587a99b` | seg `TestS3kLbzZoneSliceTraceReplay` | 6,557 @ 3714 `x_speed` | 6,316 @ 9867 `tails_air` |
+| `7a85c01222` | seg LBZ | 6,316 @ 9867 | 4,031 @ 18939 `x_speed` |
+| `3fa9c0a88a` | seg LBZ | 4,031 @ 18939 | 3,304 @ 18945 `player_mapping_frame` |
+| `b38e8354d4` | r6 Sonic+Tails chain | KosM 30 handoff | segments 2 and 4 clean; segment 6: 189 @ 3319 `sidekick_x`; segment 8: 13,265 @ 1583 `sidekick_x` |
+| `b217fe6bd8` | r7 Tails chain, segment 2 | 41,653 @ 199 `y` | 886 @ 2058 `y` |
+| `6a3131036c` | r7 Tails chain, segment 2 | 886 @ 2058 | 0 (all 3,886 rows) |
+| `36e73ddcc2` | r7 Mega, gumball segment 1 | duplicate VINT at raw 1298 | complete: 18 @ 1300 `x` |
+| `c54cbfdf93` | seg LBZ | 3,304 @ 18945 | 3,303 @ 21662 `player_animation_id` |
+| `588999752d` | seg LBZ | 3,303 @ 21662 | 3,229 @ 22188 `player_animation_id` |
+| `aea1bb0206` | seg LBZ | 3,229 @ 22188 | 2,991 @ 22227 `rings` |
+| `aea1bb0206` | seg `TestS3kMgzZoneSliceTraceReplay` | 10,046 @ 5255 | 10,634 @ 5255 (masked tally difference exposed) |
+| `030f66cb40` | r7 LBZ | 2,991 @ 22227 `rings` | 2,990 @ 22258 `camera_x` |
+| `9d48e7ddbd` | r6 Sonic+Tails chain, HCZ segment 9 | FIFO stop at row 743 | all 3,574 rows compared, then giant-ring exit missed |
+| `9d48e7ddbd` | r6 Sonic+Tails chain, segment 8 | 13,265 @ 1583 | 13,254 @ 1583 |
+| `7324b9c50e` | r7 LBZ | 2,990 @ 22258 `camera_x` | 4,585 @ 23533 `x_speed` (all rows match through 23532) |
+
+Unrelated traces were checked with r6, r7 and seg fleet sweeps at
+`6e6f13036f`, `c60df46ed6` and `030f66cb40`. No previously passing case turned
+red. The `030f66cb40` sweep was 862/54/0/8, 117/86/9/0 and 70/53/7/0
+(tests/failures/errors/skips). The only spans that grew are the two MGZ cases,
+both attributed to `aea1bb0206`:
+
+- the slice above
+- short MGZ, from 8,465 to 8,469: four animation/mapping errors at 14384/14385
+
+The prefix pins `TestS3kSonicTailsCompleteEmeraldRunPrefix` and
+`TestS3kTailsFullChainRunPrefix` defend the green returns. Combined ordinary and
+guard validation is still pending.

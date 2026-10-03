@@ -1293,6 +1293,69 @@ public class TestGameLoop {
     }
 
     @Test
+    void resultsReturnInstallsFreshLevelTitleOwner() throws Exception {
+        TitleCardProvider titleCard = installBonusStageReturnMocks(mock(FadeManager.class));
+        Method method = GameLoop.class.getDeclaredMethod("enterTitleCardFromResults", int.class, int.class);
+        method.setAccessible(true);
+        method.invoke(gameLoop, 0, 0);
+        verify(titleCard).initializeFreshLevelTransition(0, 0);
+        verify(titleCard, never()).initialize(anyInt(), anyInt());
+    }
+
+    @Test
+    void stageOwnedExitFadeEntersResultsWithoutAnotherBlockingFade() throws Exception {
+        FadeManager fade = mock(FadeManager.class);
+        installBonusStageReturnMocks(fade);
+        var provider = mock(com.openggf.game.SpecialStageProvider.class, withSettings().extraInterfaces(
+                com.openggf.game.internal.SpecialStageResultsEntry.class));
+        when(((com.openggf.game.internal.SpecialStageResultsEntry) provider)
+                .hasCompletedResultsEntryFade()).thenReturn(true);
+        when(provider.getResultsMusicId()).thenReturn(-1);
+        setPrivateField(gameLoop, "activeSpecialStageProvider", provider);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.SPECIAL_STAGE);
+        Method method = GameLoop.class.getDeclaredMethod("enterResultsScreen", boolean.class);
+        method.setAccessible(true);
+        method.invoke(gameLoop, false);
+        assertEquals(GameMode.SPECIAL_STAGE_RESULTS, gameLoop.getCurrentGameMode());
+        verify(fade, never()).startFadeToWhite(any());
+    }
+
+    @Test
+    void immediateFreshTitlePaletteDoesNotClaimBlockingFadeVblanks() throws Exception {
+        FadeManager fade = mock(FadeManager.class);
+        installBonusStageReturnMocks(fade);
+        TitleCardProvider title = mock(TitleCardProvider.class, withSettings().extraInterfaces(
+                com.openggf.game.internal.FreshLevelTitleBoundaryPublication.class));
+        when(((com.openggf.game.internal.FreshLevelTitleBoundaryPublication) title)
+                .hasImmediateFreshLevelPalette()).thenReturn(true);
+        setPrivateField(gameLoop, "titleCardProvider", title);
+        invokePrivateMethod(gameLoop, "startResultsReturnFadeIn");
+        verify(fade).clearOverlayForImmediatePaletteLoad();
+        verify(fade, never()).startFadeFromBlack(any());
+        verify(fade, never()).startFadeFromWhite(any());
+    }
+
+    @Test
+    void titleResourceBoundaryReleasesGameplayBeforeOverlayExit() {
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(titleCard.shouldReleaseControl()).thenReturn(false);
+        when(titleCard.shouldCompleteFreshLevelTransitionBoundary()).thenReturn(true);
+        var level = mock(com.openggf.level.LevelManager.class);
+        var sprites = mock(com.openggf.sprites.managers.SpriteManager.class);
+        var frame = mock(com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class);
+        Runnable exit = mock(Runnable.class);
+        boolean released = GameLoopTitleCardLifecycle.update(
+                true, titleCard, frame, TestEnvironment.activeGameplayMode(), level, sprites,
+                mock(com.openggf.camera.Camera.class), mockInputHandler, () -> {},
+                PostTitleCardDestination.LEVEL, exit, result -> assertEquals(LevelFrameResult.SETUP_ONLY, result),
+                () -> {}, () -> {}, phase -> {}, (name, step) -> step.run());
+        assertTrue(released, "loc_64DC enters LevelLoop while the title pieces remain visible");
+        InOrder order = inOrder(titleCard, exit);
+        order.verify(titleCard).completeFreshLevelRuntimeArtHandoff();
+        order.verify(exit).run();
+    }
+
+    @Test
     public void testExitTitleCardAppliesDeferredBonusStageSetupWithoutSavedState() throws Exception {
         BonusStageProvider provider = mock(BonusStageProvider.class);
 
