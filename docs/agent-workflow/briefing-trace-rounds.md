@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Mixed report shapes (2026-10-03): continuous-chain summaries use `errorCount`,
+while standalone trace reports use `error_count` and grouped `errors`. A
+collector filtering only one spelling silently omits the other family while
+still producing plausible totals. Inventory both shapes before comparing a
+sweep. Retain bounded projections or fingerprints while their baseline is
+needed, and distinguish exact mismatch comparison from case status/count/first
+failure comparison. Removing an earlier mismatch can also change the derived
+`cascading` flag on unchanged later mismatches; inspect their fields, spans and
+values before calling that reclassification a gameplay change.
+
 Edits during compilation (2026-10-02): changing a Java source while an older
 Maven invocation is compiling it can leave old bytecode with a newer timestamp
 than the edit. The following incremental build may say “Nothing to compile”

@@ -111841,3 +111841,28 @@ fails segment2 ownership at movie12011. Sonic+Tails fails consumed-span checking
 with KOS_MODULE_QUEUE next24 versus recorded14..23. Tails retains the baseline
 results-mode6221 boundary. The frozen batch still needs cross-game trace and
 normal ordinary/guard checks; later worker fixes are excluded from that batch.
+
+
+## 2026-10-03 — First frozen campaign trace sweep
+
+At `6e6f13036f` in `.worktrees/trace-s3k-green`, queued single-fork alphabetical
+`-Ptrace-replay`, `-Ptrace-replay-r7`, `-Ptrace-segments` runs with all three
+verified ROM paths complete respectively 858/115/70 tests, with 55/85/53 failures,
+1/10/7 errors and 8/0/0 skips. Source stayed frozen. Matched baseline 67c850 plus
+the separate S2 availability check shows no passing case regressed. Two new
+opening pins pass; Knuckles opening 12,600→0 errors, Tails 17→0, Mega bonus
+8,021→12 (first non-camera row 1→1276; duplicate VINT 1053→1296). Existing
+isolated-segment results are unchanged. Sonic/Tails advances to completed-span
+verification; Knuckles reaches a later segment2 ownership failure at movie 12011.
+The [campaign audit](../architecture/audits/2026-10-02-s3k-trace-green-campaign.md)
+records exact commands, skip reasons and comparison limits. Normal 2,958-class
+ordinary/guard validation is pending; no all-green delivery claim is made.
+
+
+First-batch delivery validation: ordinary invocation timed out after 23,721
+cases (one inherited inventory failure, one corrected S2 mock error, 130 skips).
+The S2 correction passes its focused check. Fresh guards complete 672 cases,
+with one unchanged-file LRZ flame touch-profile violation and no skips. The
+remaining 221 ordinary classes and explicit-S3K-property checks continue.
+See the campaign audit for matched baseline attribution and coverage limits;
+this milestone is not an all-green suite or trace claim.

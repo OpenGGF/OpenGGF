@@ -303,3 +303,115 @@ comparison, followed by normal change-based ordinary/guard validation. The new
 Tails prefix is explicitly included in r7; the Knuckles pin is in its already
 included chain class. Subsequent bonus-condition and consumed-span work stays
 in worker branches during this measurement.
+
+
+## Frozen first-batch trace comparison — 2026-10-03
+
+Candidate `6e6f13036f`, `.worktrees/trace-s3k-green`; integration baseline
+`67c850fc51`. Three queued, single-fork alphabetical profile runs used absolute
+verified S1/S2/S3K ROM paths and separate fresh Surefire report directories:
+`python3 tools/testing/maven_queue.py -Dmse=off -P<profile>
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+-Dopenggf.surefire.reports=<fresh-target-directory>
+-Dsonic1.rom.path=<reference> -Dsonic2.rom.path=<reference>
+-Ds3k.rom.path=<reference> test`. Source/POM hashes remained unchanged across
+all three completed invocations; no compiler, fork or OOM failure occurred.
+
+| Profile | Baseline tests / failures / errors / skips | Candidate tests / failures / errors / skips |
+| --- | --- | --- |
+| trace-replay | 858 / 52 / 0 / 19 | 858 / 55 / 1 / 8 |
+| trace-replay-r7 | 113 / 85 / 10 / 0 | 115 / 85 / 10 / 0 |
+| trace-segments | 70 / 53 / 7 / 0 | 70 / 53 / 7 / 0 |
+
+No formerly passing case became failing. The apparent r6 failure increase is
+the independently matched S2 availability repair: eleven previously skipped
+cases now execute; the separate unchanged-production check has four of those
+failures. Sonic/Tails changes from its old return-boundary assertion to a later
+completed-span rejection (direct next 43 versus recorded 27..42). All 37 freshly
+written chain-report projections match their baseline exactly. The remaining
+eight skips are five opt-in audits, the missing KiS2 ROM, and two unrecorded
+S3K bonus-roundtrip placeholders. These skips are not passes.
+
+R7 adds two passing opening pins. Knuckles segment0 is complete/zero errors
+(previously 12,600), Tails segment0 zero (previously 17), Mega opening 18→1 and
+gumball 8,021→12 with first non-camera mismatch 1→1276. Mega's duplicate VINT
+frontier moves 1053→1296. Knuckles now reaches segment2 and eventually loses
+ownership at movie 12011; that newly reached segment has 37,767 errors, first
+row 34 direct-queue busy. Tails still stops at 6221 in SPECIAL_STAGE_RESULTS,
+exactly the baseline mode. Existing isolated-segment case outcomes and first
+failure messages remain unchanged.
+
+Comparison scope: all case statuses/counts/first failure messages, plus retained
+chain-report projections (including recent mismatch detail). The temporary
+first-batch collector recognizes camel-case chain reports; it did not retain
+the standalone snake-case report payloads from the original baseline. The
+current candidate's standalone reports now have bounded comparison fingerprints
+for the next batch. Do not present this as byte-for-byte baseline comparison of
+every standalone report, or as an all-green trace sweep.
+
+Normal delivery validation follows against the actual 67c850 integration base:
+2,958 ordinary classes plus separate structural guards. Tool preflight passed
+(Java21, Lua5.4, PowerShell); the ordinary execution is in progress. Subsequent span,
+perfect-bonus, cup and AIZ-lock fixes remain excluded from this frozen batch.
+
+
+Milestone delivery correction (2026-10-03): the user requires each ready
+frontier milestone to be committed, integrated into `develop`, and pushed.
+Publishing only `bugfix/ai-*` branches is not delivery. The first frozen batch
+was published at `6e6f13036f` while its ordinary/guard validation continued;
+an isolated `develop` checkout now owns integration, leaving the user's main
+workspace branch untouched. Completed task worktrees are removed after their
+changes and useful evidence are integrated. Active tests and unfinished changes
+remain protected until completion. Neither a push nor partial validation is an
+all-green claim.
+
+
+Ordinary validation limit: run `20261002T234336Z-c89570b4` at frozen engine
+`6e6f13036f` timed out after 2,400.65 seconds during
+`TestDezIncomingFinalRouteCapture`. Its 2,754 completed class reports contain
+23,721 cases, one failure, one error and 130 skips. The failure is
+`TestRemainingRewindTailInventory` (expected 1,315/1,072 total/passed objects,
+actual 1,316/1,073); baseline attribution is pending. The error is
+`TestSonic2VisibleTitleReleasePlcOrdering`: its Mockito title provider does not
+invoke the default `shouldCompleteFreshLevelTransitionBoundary` delegation.
+The isolated delivery checkout enables that real default method and queues a
+focused recheck. Production camera handling is unchanged by this test repair.
+
+Skips include legacy hard-coded `s2.gen`/`s3k.gen` availability checks, unavailable
+KiS2 lock-on data, opt-in benchmarks/captures, unavailable graphics contexts,
+and a spin-tube route assumption. They are not counted as passes. The S3K ROM
+was supplied through `SONIC_3K_ROM_PATH`; the runner emitted explicit S1/S2
+properties but did not discover the external S3K file. Tests that demand the
+explicit S3K property need separate verification with that property.
+
+The ordinary lane did not reach guards. Prose edits during execution also
+changed the runner's whole-tree fingerprint, although runtime/test/POM/fixture
+sources remained unchanged. Future category invocations freeze prose as well.
+The remaining 221 candidate classes, starting at the interrupted capture in
+the POM's alphabetical order, are queued through `maven_queue.py` with their
+full original scope and all three absolute ROM properties; the category plan
+itself is not narrowed. Separate fresh guards are queued in the isolated
+`develop` checkout. This is incomplete validation, not a full-suite pass.
+
+
+Matched failure attribution completed at baseline `67c850fc51` in
+`.worktrees/trace-regression-base`: queued
+`-Dtest=TestRemainingRewindTailInventory,TestSonic2VisibleTitleReleasePlcOrdering`
+with all three absolute ROM properties completes two cases, one failure, no
+errors/skips. The inventory mismatch is identical (1,316 total / 1,073 passed)
+and inherited; the S2 title ordering test passes on baseline. Its candidate
+error is therefore this batch's test-fixture regression, pending the focused
+real-default-method repair check. No inventory pin is changed to hide the
+inherited failure.
+
+
+Delivery check at `6e6f13036f` plus the S2 mock correction, isolated
+`.worktrees/trace-s3k-develop-delivery`: queued
+`-Dtest=TestSonic2VisibleTitleReleasePlcOrdering` passes one case, no skips.
+A fresh queued `-Pguards test -B` completes 672 cases, one failure, no errors
+or skips. Its sole violation is `LrzFlameObjectInstance.getShieldReactionFlags`
+(`TOUCH_PROFILE_HOOK_WITHOUT_PROFILE`). The flagged source and guard source are
+byte-identical to `67c850fc51`; this attribution is a source comparison, not a
+separate baseline execution of the guard. The remaining ordinary capture tail
+and three explicit-S3K-property classes continue separately. Delivery therefore
+has known validation failures/limits and is not certified fully green.
