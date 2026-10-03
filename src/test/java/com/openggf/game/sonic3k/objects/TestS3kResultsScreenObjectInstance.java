@@ -247,7 +247,7 @@ class TestS3kResultsScreenObjectInstance {
                                 services,
                                 () -> new S3kResultsScreenObjectInstance(
                                         PlayerCharacter.SONIC_AND_TAILS, 0,
-                                        aizWaitAdjustment, 13, 0, true)));
+                                        aizWaitAdjustment, 13, true)));
         results.setServices(services);
         prepareWaitDispatch(results);
 
@@ -430,7 +430,7 @@ class TestS3kResultsScreenObjectInstance {
         Object adjustment = Enum.valueOf((Class) adjustmentClass, adjustmentName);
         Constructor<S3kResultsScreenObjectInstance> constructor =
                 S3kResultsScreenObjectInstance.class.getDeclaredConstructor(
-                        PlayerCharacter.class, int.class, int.class, int.class, int.class,
+                        PlayerCharacter.class, int.class, int.class, int.class,
                         adjustmentClass, boolean.class);
         constructor.setAccessible(true);
         TestObjectServices services = new TestObjectServices();
@@ -446,7 +446,7 @@ class TestS3kResultsScreenObjectInstance {
             Object adjustment, boolean usesShortResultsChildRetireTail) {
         try {
             return constructor.newInstance(PlayerCharacter.SONIC_AND_TAILS, 0,
-                    0, 0, 3, adjustment, usesShortResultsChildRetireTail);
+                    0, 0, adjustment, usesShortResultsChildRetireTail);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Could not construct results child", e);
         }

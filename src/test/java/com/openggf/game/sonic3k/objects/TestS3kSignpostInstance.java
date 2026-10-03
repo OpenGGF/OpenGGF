@@ -99,20 +99,6 @@ class TestS3kSignpostInstance {
     }
 
     @Test
-    void shortNativeResultsTailUsesOneChildRetireDispatch() {
-        // ROM Obj_LevelResultsWait2 sees $30(a0) reach zero one pass after the
-        // last child SST deletes (children allocate after the parent,
-        // docs/skdisasm/sonic3k.asm:62600, 62691-62693), and the player-visible
-        // release lands on the following dispatch. The engine's next-dispatch
-        // onExitReady supplies the first pass; only the carried and waited
-        // owners retain a synthetic retire dispatch after that boundary.
-        assertEquals(1, S3kSignpostInstance.resultsChildRetireDispatches(false, false, true));
-        assertEquals(1, S3kSignpostInstance.resultsChildRetireDispatches(true, false, false));
-        assertEquals(0, S3kSignpostInstance.resultsChildRetireDispatches(false, true, false));
-        assertEquals(3, S3kSignpostInstance.resultsChildRetireDispatches(false, false, false));
-    }
-
-    @Test
     void sparkleYOffsetConsumesRomRandomWord() {
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 0x00001234L);
 

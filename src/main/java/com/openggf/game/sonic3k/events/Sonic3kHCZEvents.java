@@ -920,7 +920,6 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         .inLevelTitleCardResetAdditionalDispatches(0)
                         .lockPlayerControlForInLevelTitleCard(true)
                         .inLevelTitleCardExitAdditionalDispatches(0)
-                        .carriedResultsRetireDispatches(1)
                         // ROM subtracts $3600 from the live camera and its
                         // bounds; it does not recenter from Player_1 afterward.
                         .preserveOffsetCameraPosition(true)

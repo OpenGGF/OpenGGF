@@ -72,7 +72,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private static final int S3K_PRE_TALLY_DELAY = 360;  // 6*60 frames (ROM line 62580)
     private static final int S3K_WAIT_DURATION = 90;      // ROM line 62676
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
-    private static final int CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES = 3;
     private static final int MUTATED_TITLE_CARD_RESET_DISPATCHES = 38;
 
     // Time bonus table (ROM lines 62910-62918)
@@ -165,7 +164,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean postResultsEventHandoffPending;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
-        this(character, act, 0, 0, CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
+        this(character, act, 0, 0,
                 S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, true);
     }
 
@@ -177,7 +176,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     /** Side-effect-free shell used only by generic rewind recreation. */
     protected S3kResultsScreenObjectInstance(boolean rewindShell) {
         this(PlayerCharacter.SONIC_AND_TAILS, 0, 0, 0,
-                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
                 S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, !rewindShell);
     }
 
@@ -195,40 +193,29 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
                 S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, true);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
-            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
-        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches,
-                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, false);
-    }
-
-    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
-            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            int postControlHandoffDelayEntries,
             S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches, resultsChildTimingAdjustment, false, true);
+                resultsChildTimingAdjustment, false, true);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
-            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
-            boolean usesShortResultsChildRetireTail) {
+            int postControlHandoffDelayEntries, boolean usesShortResultsChildRetireTail) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches,
                 S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
                 usesShortResultsChildRetireTail, true);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
-            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            int postControlHandoffDelayEntries,
             S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment,
             boolean usesShortResultsChildRetireTail) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches, resultsChildTimingAdjustment,
-                usesShortResultsChildRetireTail, true);
+                resultsChildTimingAdjustment, usesShortResultsChildRetireTail, true);
     }
 
     /**
@@ -238,7 +225,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act,
             int waitDurationAdjustment, int postControlHandoffDelayEntries,
-            int carriedResultsRetireDispatches,
             S3kSignpostInstance.ResultsChildTimingAdjustment timingAdjustment,
             boolean usesShortResultsChildRetireTail,
             boolean initializeRuntimeState) {
@@ -651,8 +637,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
         // Load_Level retains this owner and its twelve real child SSTs;
-        // Obj_LevelResultsWait2 counts them on the next parent pass. The
-        // carriedResultsRetireDispatches request value is ignored.
+        // Obj_LevelResultsWait2 counts them on the next parent pass.
         carriedAcrossSeamlessTransition = true;
     }
 
