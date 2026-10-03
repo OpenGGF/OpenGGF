@@ -112104,3 +112104,35 @@ ordinary `TestLbzCupElevatorSolidDispatch,TestS3kLbz1CutsceneGraphRewind,TestS3k
 passes35 cases without failures/errors/skips. Combined focused coverage is
 58 passing cases plus the known red native trace; broader validation remains
 pending. The Knuckles here is an NPC on the Sonic+Tails route.
+
+
+### 2026-10-03 — Sonic and Tails LBZ1 miniboss fatal-hit dispatch
+
+Worker `trace-special-return`, `815f76a6d8` plus the preceding control/mapping
+patches: matched queued `-Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay`
+with the verified reference ROM changes 3,303 errors / first21662 to **3,229 /
+first22188 `player_animation_id`**, expected0005/actual0013. Final source includes
+the owner-local explosion rewind adapter; one assertion failure, zero errors/
+skips, no earlier comparison error. `loc_7289A` installs `Wait_NewDelay` and
+`BossDefeated` writes `$3F`; the same dispatch must not decrement it. Native
+boss, sign allocation, landing and ending-pose observations prove the whole
+one-row lead starts there. No signpost/countdown compensation was added.
+Old-code regressions fail for real P1/P2 at63 expected/62 actual. Forward child
+timing passed; fresh restore exposed the existing DEFERRED helper gap, repaired
+using its existing snapshot with shared RNG rebinding. Final affected focus
+passes55 without skips; 102 unchanged companions passed in the preceding run,
+including all required S3K checks. Commands, the initial two restore failures,
+source table and coverage limits are in the
+[LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md#miniboss-fatal-hit-dispatch-follow-up-2026-10-03).
+The later results/control-release boundary remains open; this is focused
+validation and an advancing frontier, not a green route or broad-suite claim.
+
+Integrated defeat-install verification over develop `c54cbfdf93`: queued
+trace-segments single-fork
+`TestS3kLbz1MinibossAndTransitionHeadless,TestS3kLbzMinibossGraphRewind,TestLbzMinibossPartBuckets,TestS3kBossExplosionController,TestS3kBossExplosionChild,TestS3kBossDefeatSignpostFlow,TestS3kSignpostInstance,TestGenericFieldCapturer,TestRewindPolicyRegistry,TestS3kLbzZoneSliceTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+with the verified absolute S3K ROM:158 cases,157 pass,1 expected native trace
+assertion,0 errors/skips. LBZ now3,229 errors, first22188 player_animation_id
+($0005/$0013), versus3,303 at21662. Real P1/P2 fatal-hit installation, recreated
+explosion-controller/RNG replay, companion signpost and mandatory startup
+checks pass. Native loc_7289A/BossDefeated installs $3F and returns; Wait_NewDelay
+decrements only on the following owner dispatch. Full route remainsred.

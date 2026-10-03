@@ -1,6 +1,6 @@
 # Level test coverage backlog
 
-LBZ1 cup-contact follow-up (2026-10-03): the [focused act matrix](../architecture/validation/levels/s3k-lbz-act1.md) records real per-player solid dispatch and restore/replay, plus rolling-drum deletion order, native/extension ownership, and cup movement/animation control through the NPC Knuckles cutscene. The Sonic + Tails trace advances from row 3714 through 9867, 18939 and 18945 to 21662 but still fails; full route, viewport, donor and roster obligations remain open.
+LBZ1 cup-contact follow-up (2026-10-03): the [focused act matrix](../architecture/validation/levels/s3k-lbz-act1.md) records real per-player solid dispatch and restore/replay, plus rolling-drum deletion order, native/extension ownership, and cup movement/animation control through the NPC Knuckles cutscene. The miniboss fatal-hit dispatch and its explosion state now also survive restore/replay. The Sonic + Tails trace advances from row 3714 through 9867, 18939, 18945 and 21662 to 22188 but still fails; full route, viewport, donor and roster obligations remain open.
 
 LRZ2 flame-shield follow-up (2026-09-30): the [Act2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#flame-jet-fire-shield-immunity-2026-09-30) records real collision/shield regressions for all four shields and 167 focused tests without skips. Both jet variants now publish the ROM fire-immunity flag. Inherited route/rewind, donor, viewport and roster gaps remain.
 

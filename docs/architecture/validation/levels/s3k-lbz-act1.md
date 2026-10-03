@@ -177,3 +177,69 @@ is introduced; the complete NPC interval and jump mapping now match. The next
 animation mismatch occurs during the Act1 ending sequence and remains open.
 Viewport/donor/full-roster and whole-route parity gaps are unchanged. Combined
 validation belongs to the direct-develop integration; these are focused results.
+
+
+## Miniboss fatal-hit dispatch follow-up (2026-10-03)
+
+Baseline: `trace-special-return`, HEAD `815f76a6d8` plus the preceding
+control and animation-bit patches exported for direct-develop integration.
+The unchanged Sonic + Tails movie has 3,303 errors, first row21662
+`player_animation_id` (`0005` versus `0013`). The bounded probe compares
+production object state with native `object_state` events; it does not feed
+either observation into gameplay.
+
+| Owner boundary | Native row | Old engine row |
+|---|---:|---:|
+| Fatal hit installs `Wait_NewDelay` | 21324, `$3F` | 21324, already `$3E` |
+| End-sign controller begins | 21388 | 21387 |
+| End sign is allocated/initialized | 21508 | 21507 |
+| End sign lands | 21597 | 21596 |
+| Landed countdown expires | 21662 | 21661 |
+| Ending pose is applied | 21663 | 21662 |
+
+`loc_7289A` installs `Wait_NewDelay`; `BossDefeated` initializes `$2E=$3F`
+and returns. The engine's attack callback starts defeat before the owner
+dispatch, so that dispatch must retain installation state instead of running
+the replacement wait. A captured pending-dispatch flag owns this distinction.
+The timer constant, signpost falling/landing/countdown and results delays are
+unchanged. A fitted signpost delay was rejected because the whole lead starts
+at the fatal hit and propagates unchanged. Panels and the explosion child's
+creation pass still execute, with later emissions every three dispatches.
+
+An independent parameterized regression uses the fixture's real Sonic and
+Tails as sixth-hit attackers. On old production both cases fail exactly at
+`$3F` expected / `$3E` actual (two failures, zero errors/skips). The test also
+checks same-pass first explosion, subsequent spacing, underflow-only handoff,
+fresh object recreation and full-registry restore/replay. This is explicit
+snapshot restoration, not a claim about recording live rewind history.
+The initial 118-check invocation found a pre-existing restore gap: the boss's
+DEFERRED explosion helper restored as null. An owner-local `RewindStateful`
+adapter now reuses its existing snapshot and rebinds the shared RNG. No shared
+controller, policy table or snapshot API changes are needed.
+
+Validation (all queued in this worker with the verified reference ROM):
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kLbz1MinibossAndTransitionHeadless,TestS3kLbzMinibossGraphRewind,TestLbzMinibossPartBuckets,TestS3kBossExplosionController,TestS3kBossExplosionChild,TestS3kBossDefeatSignpostFlow,TestS3kSignpostInstance,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Ds3k.rom.path=$S3K_REFERENCE_ROM" test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kLbz1MinibossAndTransitionHeadless,TestS3kLbzMinibossGraphRewind,TestGenericFieldCapturer,TestRewindPolicyRegistry' "-Ds3k.rom.path=$S3K_REFERENCE_ROM" test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay -Dtrace.context.diagnosticChars=full "-Ds3k.rom.path=$S3K_REFERENCE_ROM" test
+```
+
+The initial invocation ran 118 checks: 116 passed and the two new cases failed
+only after fresh restore at the missing explosion assertion, zero errors/skips.
+After adding the adapter, the affected encounter/graph plus generic capture and
+policy rerun passes **55/55**, zero failures/errors/skips. The 102 unchanged
+companion checks from the initial run passed, including all four mandatory S3K
+classes; this is 157 distinct focused checks across the two invocations, not a
+full ordinary-suite result. The restored tests compare identical child positions
+as well as timer, emission count and handoff state.
+
+Both the timer-only replay and the final adapter-inclusive replay complete with
+**3,229 errors**, first **row22188 `player_animation_id`** (`0005` versus `0013`),
+one assertion failure and zero errors/skips. No earlier comparison error is
+introduced across all 46,075 rows. The new boundary is later in the results/
+control-release sequence; it remains open. The change-based plan against
+`815f76a6d8` selects 2,616 ordinary classes plus guards across
+common/content/gameplay/physics/rendering/rewind/tooling. Direct-develop
+integration owns the combined category/guard validation. Viewport/donor/full
+roster and complete-route parity remain inherited gaps.

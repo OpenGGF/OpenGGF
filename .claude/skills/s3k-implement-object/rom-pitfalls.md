@@ -5095,6 +5095,21 @@ suppression. Otherwise the player can move correctly after handoff yet retain
 an old cup mapping on the first jump; forcing the jump frame hides the stale gate.
 
 
+## LBZ fatal-hit dispatch installs the wait; it does not decrement it
+
+`Touch_Enemy` publishes zero HP before the miniboss dispatch. `loc_7289A`
+installs `Wait_NewDelay`, then `BossDefeated` writes `$3F` and returns; the
+replacement routine first decrements on the next dispatch. Starting defeat
+inside an attack callback and immediately decrementing in `updateDefeat`
+moves the whole signpost chain early. Preserve the installation boundary,
+not a compensating signpost delay or a different countdown constant.
+The later explosion child still performs its creation emission in that pass
+and keeps its independent three-dispatch interval. Capture pending parent
+state and the explosion helper together: a generic DEFERRED helper field
+does not restore its timer or pending emissions. Reuse the helper's value
+snapshot, rebinding the shared RNG, and compare child positions after replay.
+
+
 ## Linked child positions and attack flags own the projectile
 
 Monkey Dude's five linked arm children retain 16.16 positions through four
