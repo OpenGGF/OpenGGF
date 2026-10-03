@@ -4516,7 +4516,12 @@ public class GameLoop {
             if (postLoadMusicId >= 0) {
                 levelManager.setSuppressNextMusicChange(true);
             }
-            if (restoreSanctuaryOrigin) {
+            // Only a title owner that models the native fresh title/terrain loop
+            // (S3K Level/loc_6310-loc_64DC) holds players behind the title card.
+            // Other games place the destination players and reset counters now.
+            if (restoreSanctuaryOrigin
+                    || !(getTitleCardProviderLazy()
+                            instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication)) {
                 levelManager.loadZoneAndAct(zone, act);
             } else {
                 levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);

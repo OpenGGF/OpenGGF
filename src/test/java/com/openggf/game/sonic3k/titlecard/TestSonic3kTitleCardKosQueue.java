@@ -577,10 +577,12 @@ class TestSonic3kTitleCardKosQueue {
             return;
         }
         var constructor = field.getType().getDeclaredConstructor(
-                short.class, short.class, List.class);
+                short.class, short.class, List.class,
+                com.openggf.game.InitialProcessSpritesLifecycle.class);
         constructor.setAccessible(true);
         field.set(controller, constructor.newInstance(
-                (short) 0, (short) 0, List.of()));
+                (short) 0, (short) 0, List.of(),
+                com.openggf.game.InitialProcessSpritesLifecycle.NONE));
     }
 
     private static final class CountingObjectArtProvider extends Sonic3kObjectArtProvider {

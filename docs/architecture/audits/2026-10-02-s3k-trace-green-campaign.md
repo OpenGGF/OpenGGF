@@ -45,7 +45,7 @@ The ROM pitfalls are in the S3K object skill's `rom-pitfalls.md` and in
 | `aea1bb0206` | `Obj_LevelResultsWait2`, `loc_2DD06` | Carried results wait for their twelve real children to retire, then publish. The title initializes on the following dispatch. |
 | `d427fdd9ba` | — | Test chains close their playback session on every exit path. |
 | `030f66cb40` | `Obj_TitleCardWait/loc_2D810` | Retained title owners reset counters through the native child-movement gate, without restarting `$2E`. |
-| `9d48e7ddbd` | `Level/loc_6310`, `loc_6468`, `loc_64DC` | Live zone loads use the fresh title/terrain boundary, with an immediate palette for S3K. |
+| `9d48e7ddbd` | `Level/loc_6310`, `loc_6468`, `loc_64DC` | Live zone loads use the fresh title/terrain boundary with an immediate palette. Only title owners that implement `FreshLevelTitleBoundaryPublication` (S3K) take this path. S1/S2 briefly took it too, which carried the old ring count and moved held players during the title card; the live loop now gates it on that capability. |
 | `7324b9c50e` | `LBZ1BGE_DoTransition`, `Change_Act2Sizes` | LBZ1→2 keeps its inherited bounds until the title owner runs the size workers in their creation pass. |
 
 ## Rejected approaches
