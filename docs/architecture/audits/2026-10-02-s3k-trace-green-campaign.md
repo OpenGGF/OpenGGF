@@ -666,3 +666,42 @@ That correct first dispatch shifts the engine-authored route's return load
 runtime cadence is rejected; re-author the controller-only cold-route movie
 against the corrected production behavior. Native parity fixtures and their
 comparisons remain authoritative and unchanged.
+
+
+## Solo-Sonic reference coverage — 2026-10-03
+
+The scoped S3K metadata inventory finds274 fixture metadata files:83
+Sonic+Tails,70 soloTails,121 soloKnuckles, and no main-Sonic fixture with an
+empty sidekick list. Existing Sonic-led native comparisons therefore exercise
+Sonic+Tails; they must not be described as solo-Sonic native parity. Solo-Sonic
+cold-route regressions remain in scope, and the missing native reference route
+is an inherited coverage gap rather than a green certification. New Knuckles
+parity frontiers remain excluded; the shared bonus adapter and authored SOZ
+regression repair finish work already underway.
+
+
+## Integrated Monkey Dude child chain — 2026-10-03
+
+Accepted worker patch over `0e50fed9f6` applies to `develop` over `043006aeb8`.
+The native five-child arm retains fractional positions, follower delays and
+once-only hand release; no body-animation throw, fitted cooldown or vertical
+target gate remains. Source owners and rejected approximations are in the
+AIZ matrix and mirrored object-pitfall catalogue.
+
+Queued `-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestMonkeyDudeBadnikInstance,TestS3kAizTraceReplay,
+TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kTailsFullChainRunChain,
+TestS3kSonicTailsAiz*SegmentTraceReplay,TestS3kTailsFullChainAiz*SegmentTraceReplay,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils` with verified absolute S3K ROM and fresh reports
+completes94 cases:83 pass,11 expected trace assertions fail,0 errors/skips.
+No selected formerly passing case regresses against the frozen lag sweep.
+Required startup, object regressions and both Sonic+Tails prefix pins pass.
+
+Solo-Tails gameplay segment2 advances41,653→886 errors, first199 y→2058 y
+(native033A/engine033C), complete with0 bootstrap errors. Opening segment0
+remains zero-error. Newly reached later segments4 and6 retain the worker's
+1,783/67,150 mismatches, first4930/101 x; the full chain remains red.
+The next radius-release fix is independently ready; it is not included here.
+This is focused native/domain validation; combined ordinary/guard limitations
+recorded above remain in force.

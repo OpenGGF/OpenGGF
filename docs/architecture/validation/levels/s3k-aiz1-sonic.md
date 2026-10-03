@@ -554,3 +554,57 @@ through two prior returns. Queued `-Ptrace-replay -Dsurefire.forkCount=1
 pin, with verified absolute S3K ROM, passes2 cases with0 skips. This is a native
 route-prefix check; it does not close the full act/team/donor/viewport matrix
 or later route failures.
+
+
+### Monkey Dude linked hand and projectile (2026-10-03)
+
+The local obligation also covers `handLaunchesOnceFromItsPreviousFractionalChainPositionAcrossRewind`
+and `armDoesNotStartAttackAtTheHorizontalRangeBoundary` in
+`TestMonkeyDudeBadnikInstance`. The five-test class passes without skips in
+`.worktrees/trace-s3k-tails-frontier` at `0e50fed9f6` plus the object correction.
+The regression checks the native hand release after 61 active child dispatches,
+the projectile's first same-pass movement, once-only release across later body
+cycles, horizontal range rejection, and snapshot restoration/forward replay.
+Native owners are `loc_872CC`, `loc_8741C`, `loc_8744C`, `sub_87524`,
+`sub_875B4`, and `MoveSprite_CircularSimple`. The previous body-animation
+throw with a 120-update cooldown and an eight-pixel hand offset is rejected: it
+creates repeated projectiles absent from the native once-only child flag and
+loses the four linked 16.16 additions. Native Tails observation at physical
+frame 6401 places the first projectile at `(0x1E64, 0x46A)` after movement;
+the independent local regression reproduces that position with a stationary
+target at a different Y, without reading trace comparison state.
+
+This is local object coverage, not certification of the full AIZ1 matrix.
+Mirrored-facing, team targeting, viewport/donor breadth and object-manager
+recreation across projectile allocation remain inherited integration gaps.
+
+The matched `TestS3kTailsFullChainRunChain` run used `-Ptrace-replay-r7
+-Dsurefire.forkCount=1` with the verified absolute `s3k.rom.path`. Segment 0
+remains green. Segment 2 advances from row 199 `y` / 41,653 comparator errors
+to row 2058 `y` (native `0x033A`, engine `0x033C`) / 934 total errors
+(910 physics, 24 animation), with zero bootstrap errors and complete segment
+comparison. Later segment 4 reports 1,783 errors starting row 4930 `x`;
+segment 6 reports 67,150 errors starting row 101 `x` and misses its giant-ring
+exit. The full test remains red (one executed test, no skips). This worker
+does not include the later develop AIZ camera-lock correction, so those later
+errors are not a measurement of the current combined develop candidate.
+
+Required startup regression command selected both `TestSonic3kLevelLoading`
+classes plus `TestS3kAiz1SkipHeadless`, `TestSonic3kBootstrapResolver` and
+`TestSonic3kDecodingUtils`: 60 tests pass, no skips. Focused object guards
+(`TestObjectPriorityBucketGuard`, `TestObjectServicesMigrationGuard`,
+`TestObjectPhysicsStandardizationGuard`, `TestSonic3kObjectProfileRegistryGuard`)
+run 49 tests: 48 pass, one flags unchanged `LrzFlameObjectInstance` for
+`TOUCH_PROFILE_HOOK_WITHOUT_PROFILE`, no skips. This is focused validation,
+not a full ordinary/guard suite pass; matched baseline attribution of that
+LRZ source guard is not supplied by this run.
+
+
+Integrated on `develop` over `043006aeb8`, the same object patch plus prior
+camera/timing delivery completes94 focused/startup/AIZ trace cases:83 pass,
+11 expected trace assertion failures,0 errors/skips. No selected passing case
+regresses; both Sonic+Tails prefix pins and all required startup checks pass.
+Solo-Tails segment2 now has886 errors, first2058 y, bootstrap0 and complete;
+opening segment0 remains green. Commands and inherited broad limits are in the
+[campaign audit](../../audits/2026-10-02-s3k-trace-green-campaign.md#integrated-monkey-dude-child-chain--2026-10-03).
+The LRZ object guard was independently reproduced on baseline67 and is inherited.

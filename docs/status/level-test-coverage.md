@@ -188,7 +188,8 @@ now covers 26 zones / 55 gameplay acts for estimation, with explicit delivered v
 conditional S3K scope. Their rows link to that zone-level inventory; **conformance assessments remain pending**; the
 [AIZ1 Sonic matrix](../architecture/validation/levels/s3k-aiz1-sonic.md) now records
 the route-controller continuation, the source-backed level-entry camera correction,
-the independent Monkey Dude offscreen/timer and entry-flash deletion/graph restore
+the independent Monkey Dude offscreen/timer, fractional arm-chain projectile
+and rewind replay checks, and entry-flash deletion/graph restore
 regressions and their inherited breadth/restore gaps; the
 [HCZ1 partial matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) records water-route
 and miniboss composition, ten independent restore/replay spots, the production

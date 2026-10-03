@@ -112007,3 +112007,16 @@ queued `-Ptrace-replay -Dsurefire.forkCount=1
 -Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix` run on `b38e8354d4` plus the
 new test, verified absolute S3K ROM and fresh reports:2 cases,0 failures/errors/
 skips. It defends both completed returns while retaining the earlier entry pin.
+
+
+### 2026-10-03 — Integrated solo-Tails native Monkey Dude hand
+
+Candidate in `trace-s3k-develop-delivery` over `043006aeb8`, queued
+`-Ptrace-replay-r7 -Dsurefire.forkCount=1` with the exact94-case selection
+and verified ROM recorded in the campaign audit:83 pass,11 expected native
+assertion failures,0 errors/skips. No selected passing case regresses.
+Tails segment2 completes with886 errors (previous41,653), first2058 y
+033A/033C (previous199 y); bootstrap0. Opening segment0 and both Sonic+Tails
+prefix pins remain green. The native linked hand releases once from its prior
+fractional position. Later newly reached Tails segments4/6 remain red at
+4930/101 x with1,783/67,150 errors; no full-chain green claim.

@@ -498,7 +498,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   viewport and movement-donor axes using ordinary inputs and live object gates.
   Monkey Dude keeps climbing after the camera passes its initial visibility
   window and starts each animation on its native dispatch, preserving the moving
-  body's collision timing and player bounce.
+  body's collision timing and player bounce. Its five linked arm children retain
+  native fractional positions and delayed angles, releasing one coconut from
+  the hand's prior position instead of repeating a body-animation throw.
   The fire reload keeps its horizontal camera lock until the native reveal
   releases it, instead of easing back toward the loaded act's default bounds.
 

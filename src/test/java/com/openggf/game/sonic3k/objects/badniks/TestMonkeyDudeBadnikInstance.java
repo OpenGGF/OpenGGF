@@ -108,6 +108,65 @@ class TestMonkeyDudeBadnikInstance {
         }
     }
 
+    @Test
+    void handLaunchesOnceFromItsPreviousFractionalChainPositionAcrossRewind() {
+        AbstractObjectInstance.updateCameraBounds(0x1E00, 0x400, 0x1F40, 0x500, 0);
+        var manager = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectManager.class);
+        var projectiles = new java.util.ArrayList<S3kBadnikProjectileInstance>();
+        var services = new TestObjectServices().withDirectObjectManager(manager);
+        org.mockito.Mockito.doAnswer(call -> {
+            projectiles.add(call.getArgument(0));
+            return null;
+        }).when(manager).addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.any());
+        var monkey = new MonkeyDudeBadnikInstance(
+                new ObjectSpawn(0x1E58, 0x490, 0x8E, 0x10, 1, false, 0));
+        monkey.setServices(services);
+        // sub_87524 tests horizontal distance only; the vertical separation
+        // deliberately exceeds the old approximation's $80 range.
+        TestPlayer player = player(0x1EA6, 0x700);
+        runVisibleInitFrames(monkey, player);
+        for (int frame = 1; frame <= 50; frame++) monkey.updateMovement(frame, player);
+        assertEquals(0, projectiles.size());
+        var snapshot = monkey.captureRewindState();
+        var rng = services.rng().capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) {
+                monkey.restoreRewindState(snapshot);
+                services.rng().restore(rng);
+                projectiles.clear();
+            }
+            for (int frame = 51; frame <= 60; frame++) monkey.updateMovement(frame, player);
+            assertEquals(0, projectiles.size());
+            monkey.updateMovement(61, player);
+            assertEquals(1, projectiles.size());
+            var coconut = projectiles.getFirst();
+            // Native child dispatch: the hand tests the second follower before
+            // its own circular move. GetSineCosine / ASR.L #5 retain subpixels
+            // across all four followers; CreateChild2 copies the resulting words.
+            assertEquals(0x1E62, coconut.getX());
+            assertEquals(0x46E, coconut.getY());
+            coconut.update(61, player);
+            assertEquals(0x1E64, coconut.getX());
+            assertEquals(0x46A, coconut.getY());
+            for (int frame = 62; frame <= 400; frame++) monkey.updateMovement(frame, player);
+            assertEquals(1, projectiles.size(), "hand bit 0 never rearms during later body cycles");
+        }
+    }
+
+    @Test
+    void armDoesNotStartAttackAtTheHorizontalRangeBoundary() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        var manager = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectManager.class);
+        var services = new TestObjectServices().withDirectObjectManager(manager);
+        var monkey = new MonkeyDudeBadnikInstance(new ObjectSpawn(100, 100, 0x8E, 0x10, 1, false, 0));
+        monkey.setServices(services);
+        TestPlayer player = player(100 + 14 + 0x80, 100);
+        runVisibleInitFrames(monkey, player);
+        for (int frame = 1; frame <= 400; frame++) monkey.updateMovement(frame, player);
+        org.mockito.Mockito.verify(manager, org.mockito.Mockito.never())
+                .addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.any());
+    }
+
     private static void runVisibleInitFrames(MonkeyDudeBadnikInstance monkey, TestPlayer player) {
         monkey.updateMovement(0, player);
         monkey.updateMovement(0, player);

@@ -5087,3 +5087,15 @@ dispatch while the cup still publishes its integer position. Preserve these
 separate write sites instead of adding a cutscene-specific release flag.
 Test capture, external clear, the next held dispatch and rewind; a test that
 sets only the object's inside flag has not reproduced the capture state.
+
+
+## Linked child positions and attack flags own the projectile
+
+Monkey Dude's five linked arm children retain 16.16 positions through four
+`MoveSprite_CircularSimple` additions. Integer-rounding each joint changes
+the hand position. `sub_875B4` releases once from the previous hand position
+before that child's circular update; body animation and a repeating cooldown
+do not own the throw. `sub_87524` reads absolute horizontal distance from
+`Find_SonicTails`, with no vertical range gate. Preserve follower delay changes
+and their attack flags separately from the root's flag, including after rewind.
+Origin: solo-Tails AIZ return frontier, 2026-10-03, base `0e50fed9f6`.
