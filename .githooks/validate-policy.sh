@@ -154,7 +154,7 @@ current_api_value() {
 }
 
 contains_mod_api_annotation() {
-    printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@ModApi([.([:space:]]|$)'
+    printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@(com\.openggf\.game\.)?ModApi([.([:space:]]|$)'
 }
 
 # Declaration text of a Java source that can change the normalized signature pin.
