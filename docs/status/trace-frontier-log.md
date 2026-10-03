@@ -111973,3 +111973,34 @@ and exact commands are in the [LBZ1 matrix](../architecture/validation/levels/s3
 This is the Sonic-with-Tails fixture, not playable Knuckles. The remaining
 mapping boundary requires separate animation-bit ownership work; no forced
 mapping publication or fixture-specific release branch is included.
+
+
+### 2026-10-03 — Sonic+Tails live lag closure reaches later returns
+
+Candidate in `.worktrees/trace-s3k-develop-delivery` over `3fa9c0a88a`, queued
+`-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestGameLoop,TestTraceSuppressedRowClosure,TestHardwareTimingAuthorityGuard,
+TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+with verified absolute S1/S2/S3K ROM properties:184 cases,183 pass,1 chain
+assertion failure,0 errors/skips. Native LEVEL lag keeps the queue tail,
+so the live loop now uses the existing suppressed-row closure.
+
+Gameplay segments2 and4 complete with zero comparison/bootstrap errors,
+advancing past the former AIZ_2 MODULE30 handoff stop. Segment6 is complete
+with189 physics errors, first3319 sidekick_x ($31C1/$31CA); segment8 is
+complete with13,265 physics errors, first1583 sidekick_x ($366C/$3674).
+HCZ segment9 is incomplete at5121 after runtime KosM FIFO failure.
+Missing native destination title/terrain production jobs, rather than FIFO
+capacity, are the next loading owner. The full chain remains red.
+Frozen queued profiles use alphabetical single-fork runs, all three verified
+absolute ROM properties, and fresh report directories. r6 completes858 cases
+(54 failures/0 errors/8 skips), r7 completes115 (85/10/0), segments completes70
+(53/7/0). Source/POM hashes remain unchanged across all profiles. Against
+integrated `c60df46ed6`, no passing case becomes red. All common standalone
+mismatch fingerprints match except LBZ1's separately delivered cup handoff
+(4,031→3,304). The Sonic+Tails chain changes from infrastructure error to
+comparison failure, with four newly reached segment reports. Existing common
+chain reports match. These profiles remain red; this is not a full-suite pass.
+An extended prefix pin through segment5's first row is queued for separate
+verification; it is not included in this runtime milestone.

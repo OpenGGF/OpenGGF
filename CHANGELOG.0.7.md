@@ -374,7 +374,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   writes. Coconuts retains its separate initialization pass before idle decisions. Special-stage return title cards
   release control after their final locked object pass without an extra wait.
   Continuous replay retains the locked title-card sequence across results-driven
-  act changes and starts destination gameplay only after the transition gap.
+  act changes and starts destination gameplay only after the transition gap. Held level iterations retain the native
+  queue-service tail without advancing gameplay.
   Remaining route and
   hardware-rendering limits are listed in the known-discrepancies entry and
   `docs/kis2/BRANCH_DIFFS.md`.

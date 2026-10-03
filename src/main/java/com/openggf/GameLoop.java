@@ -1894,9 +1894,15 @@ public class GameLoop {
                 // gates enter gameplay hundreds of VBlanks behind.
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
-                    LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
-                            activePlcLifecycleFrame, PlcLifecyclePhase.LAG);
-                    levelManager.getObjectManager().advanceVblaCounter();
+                    // The held iteration still reaches its owning queue tail:
+                    // LevelLoop's Process_Kos_Module_Queue / Process_Kos_Queue
+                    // (sonic3k.asm:7908/7887). Recording and standalone replay
+                    // use this same closure without dispatching gameplay.
+                    TraceSuppressedRowClosure.execute(
+                            LevelFrameContext.from(gameplayMode),
+                            activePlcLifecycleFrame, levelManager,
+                            this::startPendingInLevelTitleCard,
+                            this::applyTitleCardControlLock);
                 }
             }
             advanceGameplayAudioFrameForTick(doFrameStep);

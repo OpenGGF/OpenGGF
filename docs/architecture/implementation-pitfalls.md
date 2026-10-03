@@ -119,6 +119,14 @@ Preserve `double_jump_property` and radii unless the owning ROM routine
 writes them. The SOZ2 cold route exposed this at `sub_40F52`: its correct
 `x_vel=-$200` was replaced by glide acceleration on the next frame.
 
+**A held input row still owns a queue tail.** A native LEVEL lag iteration
+skips gameplay dispatch but still services its owning Kosinski module/direct
+queue closure (`LevelLoop`, sonic3k.asm:7908/7887). Servicing VINT alone can
+leave a prepared child unready and stall its parent hundreds of rows later.
+Use the shared `TraceSuppressedRowClosure` across live, recording and standalone
+drivers. Keep trace authority limited to the matching prepared hardware job;
+never manufacture work or align ordinals to make the comparison continue.
+
 **Reused position words.** A field named `x_sub` is not always a fraction.
 KiS2 `Knuckles_BeginClimb` and S3K `Knuckles_Gliding_HitWall` store the grab's
 native X word there, then the climbing routine compares it with `x_pos` and

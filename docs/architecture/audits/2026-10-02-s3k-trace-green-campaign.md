@@ -545,8 +545,9 @@ already underway, then exclude new Knuckles investigations. Other traces remain
 regression checks. Implementation and milestone delivery use the isolated
 `develop` checkout directly. Ready fixes are committed/pushed to `develop`, and
 finished worktrees are removed after preserving unfinished work and evidence.
-The goal interface exposes status changes only; its saved objective text cannot
-be rewritten through the available tool, so this records the operative scope.
+The model goal tool exposes status changes only. After the user requested the
+CLI control, the installed app-server protocol `thread/goal/set` updated the
+saved objective and active status to this scope, preserving accumulated usage.
 
 The integrated `c60df46ed6` sweep completes all three profiles with unchanged
 source hashes: r6 858/53/1/8, r7 115/85/10/0, segments70/53/7/0
@@ -584,3 +585,84 @@ Matched worker `-Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay` advances
 4,031→3,304 errors, firstrow18939 x_speed→18945 player_mapping_frame (96 versus55).
 Positions/velocities at the prior frontier now agree. The next raw-animation
 suppression ownership issue remains open; no forced jump frame is introduced.
+
+
+## Matched inherited failures — 2026-10-03
+
+A detached baseline checkout at `67c850fc5132156acede8687ca169ada074f795f`
+ran the twelve failing cold-route methods plus the single LRZ structural guard
+through queued Maven, with verified absolute ROM paths and fresh reports.
+The bounded run completes18 cases:12 failures,0 errors/skips. Ten LRZ/SSZ
+cold-route failures reproduce the exact current6e assertion and input row;
+the eleventh, SSZ solo-Tails rewind at4018, reproduces the exact structural
+difference after ignoring only JVM blob identity strings. The LRZ flame
+`TOUCH_PROFILE_HOOK_WITHOUT_PROFILE` guard also reproduces identically.
+These failures are inherited from the integration base. SOZ solo cold-route
+parameter5 passes the isolated baseline method. The identical queued method
+on frozen6e completes5 cases with1 failure/0 errors/skips, reproducing death
+at15657. This is a confirmed earlier-batch regression on the Knuckles SOZ1
+bonus-return cold route, not inherited. Repairing it falls under preservation
+of passing routes and finishing the shared work already underway; investigation
+is assigned without opening a new Knuckles parity frontier.
+
+Command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=<twelve failing methods plus the LRZ guard method>
+-Dsonic1.rom.path=<absolute verified S1> -Dsonic2.rom.path=<absolute verified S2>
+-Ds3k.rom.path=<absolute verified S3K>
+-Dopenggf.surefire.reports=target/paired-baseline-reports test`.
+This attributes particular failures; it does not turn the incomplete ordinary
+validation or red guard suite into a passing delivery.
+
+
+## Live suppressed-row queue closure — 2026-10-03
+
+The AIZ worker's bounded observer probe at raw3288–3292 showed that a LEVEL
+lag iteration in the live loop reached only VINT. Prepared direct child56
+remained unready and MODULE30 could not complete. Native `LevelLoop` still
+reaches its `Process_Kos_Module_Queue`/`Process_Kos_Queue` tail
+(`sonic3k.asm:7908/7887`). Reusing `TraceSuppressedRowClosure` joins the live
+loop to the recording and standalone drivers' existing semantic closure; it
+services POST_OBJECTS/PRE_MAIN_LOOP and title/event VBlank state without
+dispatching gameplay. The temporary row-specific print probe is discarded.
+
+Candidate over `3fa9c0a88a`, queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestGameLoop,TestTraceSuppressedRowClosure,TestHardwareTimingAuthorityGuard,
+TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+with all three verified absolute ROM properties and fresh reports completes
+184 cases:183 pass, one full-chain assertion fails, zero errors/skips.
+Sonic+Tails gameplay segments2 and4 now complete with zero comparison/bootstrap
+errors. Segment6 completes with189 physics errors, first3319 sidekick_x;
+segment8 completes with13,265 physics errors, first1583 sidekick_x.
+HCZ segment9 stops at5121 after a runtime art FIFO failure.
+
+Native AIZ_5 tail requests four title archives and two terrain archives
+(MODULE97–102, direct144–155). Those production jobs are absent, shifting
+the correctly fingerprinted next HCZ job to97 instead of103.
+`GameLoop.doZoneAct` uses the generic loader; `RecordingFrameDriver` uses
+the existing fresh title-card boundary. The next investigation must restore
+that owning lifecycle, not resize the FIFO or resynchronize ordinals.
+The frozen three-profile sweep completes r6 858/54/0/8, r7 115/85/10/0,
+segments70/53/7/0 (tests/failures/errors/skips), with unchanged source hashes.
+No previously passing case regresses against integratedc60. Common standalone
+mismatch fingerprints remain exact except the independently delivered LBZ cup
+control handoff (4,031→3,304); common chain reports remain exact. The Sonic+Tails
+chain now reaches a comparison assertion rather than infrastructure failure,
+and four additional segment reports exist. Source timing authority stays
+inside prepared, production-submitted ROM jobs. The ordinary combined delivery
+selection still spans the full suite and guards; its prior incomplete results
+and inherited failures remain explicit, not represented as a green run.
+
+
+The SOZ single-case A/B on `4435cfb5b8` isolates the regression to
+`PostTitleCardDestination`: restoring only the old setup-pass placement passes
+the original full cold route and rewind assertions (1case,0 skips). Both
+candidates enter Pachinko at3204 and release the title at3311. At3312 the
+corrected engine executes the held LEFT (x319/vx-12/air1/map7); the old
+engine spends that gameplay input on setup (x320/vx0/air0/map0). Native
+`loc_6468` performs `Process_Sprites` before `LevelLoop` for bonus zones too.
+That correct first dispatch shifts the engine-authored route's return load
+3566 vs3573, and SOZ resume3691 vs its documented3698. Restoring the wrong
+runtime cadence is rejected; re-author the controller-only cold-route movie
+against the corrected production behavior. Native parity fixtures and their
+comparisons remain authoritative and unchanged.
