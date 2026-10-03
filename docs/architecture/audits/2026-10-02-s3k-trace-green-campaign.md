@@ -535,3 +535,31 @@ the frozen `6e6f13036f` baseline. Commands and remaining frontiers are in the
 2026-10-03 frontier-log entry. The change-based plan over `6e6f13036f` includes
 the shared timing milestone and selects the full ordinary suite; that combined
 validation belongs to integration, not this focused worker result.
+
+
+## Resumed delivery and route scope — 2026-10-03
+
+The user resumed the goal and clarified its final scope: fix Sonic, Tails and
+Sonic+Tails routes; finish fixes already in progress, including Knuckles work
+already underway, then exclude new Knuckles investigations. Other traces remain
+regression checks. Implementation and milestone delivery use the isolated
+`develop` checkout directly. Ready fixes are committed/pushed to `develop`, and
+finished worktrees are removed after preserving unfinished work and evidence.
+The goal interface exposes status changes only; its saved objective text cannot
+be rewritten through the available tool, so this records the operative scope.
+
+The integrated `c60df46ed6` sweep completes all three profiles with unchanged
+source hashes: r6 858/53/1/8, r7 115/85/10/0, segments70/53/7/0
+(tests/failures/errors/skips). Compared with frozen6e, no formerly passing case
+regresses; two AIZ reload-camera assertions become green. The combined focused
+run completes143 cases with one test-isolation error and no skips: the new
+bonus death-plane test inherited a Sonic2 gameplay context. Rebuilding its
+fixture through `configureGameModuleFixture(SONIC_3K)` fixes the owner rather
+than casting or modifying runtime behavior. The matched audio-predecessor plus
+bonus-test check passes4 cases with no skips.
+
+The unfinished ordinary tail at6e completes1,530 cases with12 failures and3
+skips. LRZ, SOZ and SSZ cold-route/rewind failures need bounded matched baseline
+attribution; they are currently unattributed, not claimed inherited. The earlier
+23,721-case prefix and its130 skips remain separate measurements. Neither run
+is a full-suite green result.
