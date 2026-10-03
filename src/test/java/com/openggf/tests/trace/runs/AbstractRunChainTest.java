@@ -697,6 +697,17 @@ abstract class AbstractRunChainTest {
                             >= descriptors.get(source).levelLoopRowCount();
         }
 
+        private boolean ownsRepresentedLevelTail(LiveTraceComparator comparator) {
+            int source = coordinator.currentSegmentIndex();
+            if (comparator == null || source < 0) {
+                return false;
+            }
+            TraceRunSegmentDescriptor descriptor = descriptors.get(source);
+            return "level".equals(descriptor.segment().kind())
+                    && comparator.cursor() >= descriptor.levelLoopRowCount()
+                    && comparator.cursor() < descriptor.rowCount();
+        }
+
         private void closeCurrent(GameMode mode, boolean publicationComplete) {
             int source = coordinator.currentSegmentIndex();
             if (!publicationComplete) {
@@ -5203,7 +5214,14 @@ abstract class AbstractRunChainTest {
         int slotProbeRowIndex = slotOccupancyProbe != null && preStepComparator != null
                 ? preStepComparator.cursor()
                 : -1;
-        loop.step();
+        if (coordinator != null && coordinator.ownsRepresentedLevelTail(preStepComparator)) {
+            // The source still owns its recorded physical load/title tail.
+            // Retain comparison/timing and publish exactly one movie row;
+            // this does not close the coordinator or create a VInt.
+            PhysicalMovieRowDrive.run(PlaybackDebugManager.getInstance(), loop::step);
+        } else {
+            loop.step();
+        }
         afterProductionStep.run();
         if (slotProbeRowIndex >= 0) {
             var slotProbeLevel = GameServices.levelOrNull();

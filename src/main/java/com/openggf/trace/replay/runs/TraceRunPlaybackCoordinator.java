@@ -507,13 +507,19 @@ public final class TraceRunPlaybackCoordinator {
             // The retained advances hold their own load generation, so an
             // identity that merely looks alike at another generation is still
             // an ownership loss.
-            case "level" -> observation.mode() == GameMode.LEVEL
-                    && observation.level() != null
-                    && ((matchesLevel(segment, observation.level())
+            case "level" -> observation.level() != null
+                    && ((observation.mode() == GameMode.LEVEL
+                            && ((matchesLevel(segment, observation.level())
                                     && observation.level().loadGeneration()
                                             == currentLevelGeneration)
-                            || inLevelAdvances.contains(observation.level())
-                            || pastRecordedLevelLoop(segment, observation));
+                                || inLevelAdvances.contains(observation.level())
+                                || pastRecordedLevelLoop(segment, observation)))
+                        // The ROM remains in GameModeID_Level during its
+                        // represented load/title tail. The engine separates
+                        // TITLE_CARD, but this receipt retains comparison and
+                        // hardware timing until the source's physical end.
+                        || (observation.mode() == GameMode.TITLE_CARD
+                            && pastRecordedLevelLoop(segment, observation)));
             case "bonus_stage" -> matchesBonus(segment, observation);
             // A recorded special_stage segment spans the ROM's whole
             // GameModeID_SpecialStage, results screen included; the engine

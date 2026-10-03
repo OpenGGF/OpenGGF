@@ -187,6 +187,42 @@ class TestLevelIterationAdmissionController {
                 "S1/S3K setup-only release must still arm prepared replay");
     }
 
+    @Test
+    void startCannotPauseFreshFadeOrPretitleButCanPauseFirstOrdinaryHold() {
+        var controller = new LevelIterationAdmissionController();
+        var level = mock(LevelManager.class);
+        when(level.hasPendingFreshLevelTransitionBoundary()).thenReturn(true);
+        var context = new GameplayModeContext(new WorldSession(new Sonic2GameModule()));
+        context.attachGameplayManagers(new com.openggf.camera.Camera(),
+                new com.openggf.timer.TimerManager(), new com.openggf.game.GameStateManager(),
+                new com.openggf.graphics.FadeManager(),
+                new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S1_S2),
+                new com.openggf.game.solid.DefaultSolidExecutionRegistry());
+        context.getGameStateManager().startNewGameFromTitle();
+        var recording = mock(UserRecordingRuntimeControls.class);
+        java.util.function.BiFunction<GameMode, Boolean, LevelFrameResult> admit = (mode, start) ->
+                controller.admit(mode, () -> true, () -> LevelFrameResult.SETUP_ONLY,
+                        level, context, start, recording, () -> { }, () -> { }, () -> { });
+        controller.loadedFreshBoundary(true);
+        assertEquals(LevelFrameResult.SETUP_ONLY, admit.apply(GameMode.LEVEL, true));
+        assertFalse(context.getGameStateManager().isGamePaused());
+        controller.beginIteration();
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, admit.apply(GameMode.LEVEL, true));
+        assertFalse(context.getGameStateManager().isGamePaused());
+        assertEquals(LevelFrameResult.SETUP_ONLY, admit.apply(GameMode.TITLE_CARD, false));
+        assertEquals(LevelFrameResult.PAUSED, admit.apply(GameMode.LEVEL, true));
+        org.mockito.Mockito.verify(level, org.mockito.Mockito.never())
+                .publishFreshLevelTransitionInitialBoundary();
+        assertEquals(LevelFrameResult.SETUP_ONLY, admit.apply(GameMode.LEVEL, true));
+        assertFalse(context.getGameStateManager().isGamePaused());
+        verify(level).publishFreshLevelTransitionInitialBoundary();
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, admit.apply(GameMode.LEVEL, false));
+        verify(level).completeFreshLevelTransitionBoundary();
+        controller.reset();
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, admit.apply(GameMode.LEVEL, true));
+        assertFalse(context.getGameStateManager().isGamePaused(), "reset removes completed-title authority");
+    }
+
     private static void setActiveTraceSession(TraceSessionLauncher session)
             throws Exception {
         Field field = TraceSessionLauncher.class.getDeclaredField("activeSession");

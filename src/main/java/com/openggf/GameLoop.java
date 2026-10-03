@@ -1089,7 +1089,8 @@ public class GameLoop {
         // fadeManager can be null in non-gameplay modes (e.g.
         // MASTER_TITLE_SCREEN with no active session).
         return isNonRewindableTransitionPending()
-                || (fadeManager != null && fadeManager.hasPendingCompletion());
+                || (fadeManager != null && fadeManager.hasPendingCompletion())
+                || (levelManager != null && levelManager.hasPendingFreshLevelTransitionBoundary());
     }
 
     /**
@@ -1166,6 +1167,7 @@ public class GameLoop {
 
     private void stepInternal() {
         continueScreen.beginIteration();
+        levelIterationAdmission.beginIteration();
         refreshRuntimeBindings();
         GameplayModeContext lifecycleContext = resolveGameplayModeContext();
         if (lifecycleContext == null || !lifecycleContext.isGameplayRuntimeReady()) {
@@ -3439,12 +3441,13 @@ public class GameLoop {
             return;
         }
 
+        boolean freshBoundary = levelManager.hasPendingFreshLevelTransitionBoundary();
         GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
 
         // Freeze the player during title card - full state reset
         String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite playable) {
+        if (!freshBoundary && sprite instanceof AbstractPlayableSprite playable) {
             // Freeze all movement
             playable.setXSpeed((short) 0);
             playable.setYSpeed((short) 0);
@@ -3461,13 +3464,17 @@ public class GameLoop {
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
-            getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
+            if (freshBoundary) {
+                getTitleCardProviderLazy().initializeFreshLevelTransition(zoneIndex, actIndex);
+            } else {
+                getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
+            }
         }
 
         // ScreenInit can already own the camera through Scroll_lock (SSZ1_ScreenInit
         // sets $F49 before Obj_57C1E positions the player). A forced player snap would
         // override that scripted origin and clamp it against the arrival's $BC0 bound.
-        if (!camera.getFrozen()) {
+        if (!freshBoundary && !camera.getFrozen()) {
             camera.updatePosition(true);
         }
 
@@ -3567,7 +3574,8 @@ public class GameLoop {
 
             // Re-apply zone-specific player state (airborne intros like HCZ1, MGZ1)
             LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
-            if (levelEvents instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kEvents) {
+            if (!levelManager.hasPendingFreshLevelTransitionBoundary()
+                    && levelEvents instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kEvents) {
                 s3kEvents.applyZonePlayerStateAfterTitleCard();
             }
             LOGGER.info("Exited Title Card, starting level");
@@ -4510,7 +4518,13 @@ public class GameLoop {
             if (postLoadMusicId >= 0) {
                 levelManager.setSuppressNextMusicChange(true);
             }
-            levelManager.loadZoneAndAct(zone, act);
+            if (restoreSanctuaryOrigin) {
+                levelManager.loadZoneAndAct(zone, act);
+            } else {
+                levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+            }
+            levelIterationAdmission.loadedFreshBoundary(
+                    levelManager.hasPendingFreshLevelTransitionBoundary());
             activateScheduledPlaybackForLoadedLevel();
             if (postLoadMusicId >= 0) {
                 audioManager.playMusic(postLoadMusicId);
@@ -4535,7 +4549,13 @@ public class GameLoop {
             }
         }
 
-        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        if (levelManager.hasPendingFreshLevelTransitionBoundary()
+                && getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                && boundary.installsImmediateFreshLevelPalette()) {
+            fadeManager.clearOverlayForImmediatePaletteLoad();
+        } else {
+            GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        }
 
         LOGGER.info("Loaded zone " + zone + " act " + act);
     }

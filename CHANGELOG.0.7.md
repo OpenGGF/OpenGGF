@@ -9,6 +9,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **S3K level entry:** Initialize the camera with the ROM’s zero/maximum clamps,
   independently of the runtime minimum bounds. This removes the opening AIZ1
   camera offset while preserving MHZ1’s separate locked-on camera focus.
+  Live zone handoffs now run the fresh title and terrain-loading lifecycle,
+  restoring players before the initial sprite pass without adding a frame.
 
 - **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock.
 

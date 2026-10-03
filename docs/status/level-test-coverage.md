@@ -1034,3 +1034,8 @@ AIZ fire-reload follow-up (2026-10-03): the
 records fixed horizontal bounds, native lock/release assertions and independent
 reload timeline replay. Both affected traces advance to their inherited later
 failures; this does not close the matrix's broader configuration/route gaps.
+
+The [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) now includes
+a focused fresh live-load obligation: real fade/title ordering, destination-slot
+restoration before initial Process_Sprites, pause, and repeated loads. This does
+not extend full-route or viewport/donor/team certification.

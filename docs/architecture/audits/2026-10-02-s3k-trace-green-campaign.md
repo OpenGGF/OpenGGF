@@ -867,3 +867,201 @@ case pass, with zero errors/skips. Five other zone trace arrays were unchanged.
 See [LBZ validation](../validation/levels/s3k-lbz-act1.md#2026-10-03-retained-title-counter-reset)
 for commands, phase observations, rewind coverage and limits. Presentation Wait2
 parity and the remaining trace failures are not certified by this bounded fix.
+
+
+### Fresh live-zone handoff implementation evidence (2026-10-03)
+
+Worker `trace-s3k-live-fresh-handoff`, base `c54cbfdf93`, routes normal live
+zone loads through the existing fresh boundary controller. The real fade
+callback retains its latched PALETTE_FADE iteration and submits no art work;
+the following title initialization submits the four title archives. A default
+false internal provider capability selects immediate fresh palette installation
+for S3K while generic providers keep fade-from-black. Sanctuary Saved2 returns
+and title-bypassing continuations retain their existing ownership.
+
+The initial Process_Sprites token was armed by Sonic3kLevelInitProfile and then
+discarded by the fresh boundary controller without executing it. Native
+`loc_6468` executes that pass before `loc_64DC`/LevelLoop, with no intervening
+VInt. The candidate retains the token inside the transient boundary, restores
+destination players/camera, and consumes it synchronously before admitting the
+ordinary gameplay pass. Publication is idempotent and happens before completion
+clears the title provider's fresh mode. The later ordinary hold is armed only
+by actual title completion; pause does not consume it and pending fresh
+boundaries exclude rewind. No timer, ordinal, FIFO capacity or trace-derived
+gameplay value changes.
+
+Four independent ROM-backed TestGameLoopFreshLevelHandoff cases pass: real
+FadeManager ownership/deferred archive submission, generic reveal, recording
+driver initial+ordinary dispatch in one iteration, and live pause plus two
+consecutive loads. An early observer was retired by normal out-of-range cleanup
+after its first dispatch; the corrected persistent test observer measures both
+passes. The tentative slot-collision explanation was rejected. Subsequent route and
+structural results are recorded below.
+
+The repaired persistent observer still fails against the original boundary
+controller (one dispatch versus initial-plus-ordinary two); all four candidate
+cases pass. Required S3K load checks pass without skips. Both Sonic+Tails prefix
+cases and both separately profiled Tails prefix cases pass. The first full-chain
+probe retains the baseline segment 6: 189 errors (first non-camera row 3319,
+sidekick_x `31C1/31CA`), then exposes two masked playback-adapter gaps: source
+ownership rejected TITLE_CARD during its already-recorded level-load tail, and
+title production did not advance that tail's physical movie row. Matching real
+submissions for module97–100 and direct144 were present at the first rejection;
+no remapping or queue-capacity change was used.
+
+The observational correction permits TITLE_CARD only under the existing
+post-LevelLoop receipt with a nonnull level identity. Ordinary identity and
+load-generation checks remain intact, and destination admission still requires
+LEVEL with title completion. The full represented source tail keeps its
+comparison and hardware schedule. Physical movie-row preparation/publication is
+factored from ComparedInteriorRowDrive, without borrowing its interior-specific
+source-close callback: successful production advances once only when it has not
+already advanced; failures do not publish. Early closure and a mode-wide timing
+bypass were rejected. Start-edge admission likewise waits until actual
+LevelLoop ownership, after the completed palette callback and pre-title row.
+
+The all-guards run on the initial candidate completed 672 cases, 671 passes and
+one inherited LRZ TOUCH_PROFILE_HOOK_WITHOUT_PROFILE failure, zero errors/skips
+(5m18s). The campaign's existing matched `67c850` baseline proof attributes that
+unchanged source violation; it was not re-tested merely to reproduce attribution.
+The shared-loop change-based plan selects 2963 ordinary classes plus guards;
+combined destination-base validation belongs to integration. These are focused
+and domain measurements, not a full-suite pass.
+
+Final physical-tail candidate: 40 cases, 39 passes and one chain assertion,
+zero errors/skips. All 3,574 HCZ rows now compare before the missed giant-ring
+exit; first mismatch is row0 y_sub `0000/3800`. Downstream unmatched direct171
+and module118 at HCZ rows3537/3538 remain reported. The source entry jobs are
+no longer blocked or absent. Root baseline `030f66` and candidate segment-6
+report projections are identical; complete segment8 decreases 13,265→13,254
+(physics 13,120→13,113; animation 145→141), with the same first row1583.
+Remaining row7126 position/publication mismatches are explicit. HCZ's old
+5,121-error report stopped at row743; its new 32,343-error report spans the
+whole segment, so total counts are not comparable over equal coverage.
+Reports retain bounded recent-mismatch projections, not every mismatch; no
+claim of pointwise equality follows from those projections. Final targeted
+authority guards pass 37/37, zero skips. The final Tails prefix repeat passes both cases, zero errors/skips.
+
+The four real title parents are `Obj_TitleCardInit/loc_2D6C8`'s RedAct
+(`0D6F28` → tile `0500`), S3KZone (`15C3A2` → `0510`), Num1
+(`0D6D84` → `053D`) and HCZ letters (`39BEDA` → `054D`). The initial
+source-mode failure explicitly found matching unclaimed production identities
+for all four, with the following full fingerprints; the corrected physical-tail
+run then traversed their completion edges and the two terrain parents before
+HCZ admission. These identities are evidence, never producer inputs.
+
+| Module ordinal | Fingerprint SHA-256 |
+| --- | --- |
+| 97 | `10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca` |
+| 98 | `05324378670c6afa8c6d99f6e5313d625d2d926e6bc16f25cd9d8d1a5a195bf8` |
+| 99 | `7059802f2a045495d22a16d8c858c1758b786bf5d5f46c45838fa10bc0d1f6aa` |
+| 100 | `2c17b1dba426e8b37a9b4dd2e2fc175f78010f755f4d1d43d7b0a9948eee4ba2` |
+
+`loc_6310` establishes starting positions/camera before terrain loading;
+`loc_6468` assembles players and executes initial Process_Sprites without a
+Wait_VSync. `loc_64DC` rewrites the surviving title timer, then LevelLoop owns
+Pause_Game and Wait_VSync. The first-boundary hold reuses RecordingFrameDriver's
+existing admission separation. The corrected native return capture above
+independently observes initial LEVEL publication on a lag row and the first
+level iteration next; no fixed duration or VInt service is added here. Exact
+cold HCZ pose/publication parity remains an open frontier, not a claim proved
+by the old return capture. The separate native title-SST graph milestone moves
+the graph timer reset after the actual initial pass for both live and Saved2
+loads.
+
+
+### Frozen develop fleet before fresh loading integration (2026-10-03)
+
+On `030f66cb40` in `.worktrees/trace-s3k-develop-delivery`, the queued
+`trace-replay`, `trace-replay-r7`, and `trace-segments` profiles completed
+sequentially with one alphabetical Surefire fork and the three independently
+verified absolute ROM properties. Each profile used a new report directory;
+the Java/POM digest stayed unchanged across all three. The temporary campaign
+collector inventories both standalone `error_count` and chain `errorCount`
+reports; these results are trace diagnostics, not ordinary/guard validation.
+
+| Profile | Classes | Cases | Failures | Errors | Skips |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| trace-replay | 169 | 862 | 54 | 0 | 8 |
+| trace-replay-r7 | 113 | 117 | 86 | 9 | 0 |
+| trace-segments | 69 | 70 | 53 | 7 | 0 |
+
+Comparison against the completed pre-results fleet finds no formerly passing
+case becoming red. Four added r6 cases and two added r7 cases pass. The completed
+Knuckles Mega adapter replaces its duplicate-VInt exception with the already
+recorded missing stage-exit assertion; no new Knuckles frontier is selected.
+Tails now completes its previously blocked segment2 and reaches the known
+segment4/6 frontiers. LBZ advances from3,304 errors at18945 mapping to2,990 at
+22258 camera_x. The separately documented MGZ slice increase10,046→10,634
+remains; another MGZ segment retains4,806 errors and its first10709 x mismatch
+but changes its detailed fingerprint, so equal totals are not exact span proof.
+Known parity failures, profile infrastructure errors and eight r6 skips remain
+visible. The sweep is not a green fleet claim.
+
+### Short MGZ results/control exposure (2026-10-03)
+
+Bounded matched queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestS3kMgzTraceReplay` runs with the verified absolute S3K ROM execute one
+case each: one expected trace assertion, zero errors/skips. On `588999752d`,
+the short trace has8,465 errors; on `aea1bb0206`, it has8,469, and that latter
+error/warning array exactly matches the frozen `030f66cb40` sweep. The only four
+added spans are player/Tails animation at14384 (`13/05`) and their mapping at
+14385 (`B2/BA`, `A6/AD`). All prior spans remain. This attributes the increase
+to the real-results-child milestone, not retained-title reset or playback cleanup.
+
+A read-only BizHawk2.11/GPGX capture of the committed MGZ movie under the verified
+ROM completes924 live-SST observations over absolute frames16960..17005, with
+no RAM writes and no host failures. Native results slot8 (`2DAD0`) observes
+its last child retiring at16986 (trace14383), publishes `_unkFAA8=0` and mutates
+to title owner `2D690` at16987 (14384). The lower EndSignControl slot7 remains
+`85C00`, object_control81 and victory animation13 on that publication pass;
+on16988 (14385), it becomes`85C1A` and restores control/Wait. This corroborates
+`Obj_LevelResultsWait2`/`loc_2DD06` and `Obj_EndSignControlAwaitStart`: the lower
+owner already ran before the latch cleared and must observe it next pass.
+The engine's actual controller/result slots still need observation before a fix;
+no fitted extra retirement dispatch is justified by these four errors.
+
+Capture provenance: external task `s3k-mgz-results-control-20261003/native1`,
+movie SHA256 `FD576D4096C9208742162449E756491D1030DECAE28D52AE7C93A4D249D60C02`,
+exporter SHA256 `143E567250BF15D121165E9BD97AAFF9E8576856E49E5746F26FDB9B7C9E91B4`,
+plan SHA256 `05A5165DF3B64DEAE6AFCA789499A6D3EBB2F1081FF28F65A5A57638B4B28C00`.
+The native-reference host command supplies the official2.11 home, absolute ROM,
+expected SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`, committed
+`traces/s3k/mgz/s3k-mgz-sonic-tails.bk2`, task exporter/plan, new output directory,
+`--require-output state.csv --require-output done.txt --timeout 180`. Independent
+row/clock/control review establishes the above conclusion; host completion alone
+does not certify parity or visuals.
+
+The eight r6 skips were inspected: the opt-in baseline audit and four opt-in
+performance cases, the absent KiS2 lock-on ROM, and two absent standalone bonus
+round-trip directories. None is evidence of an executed replay passing. The
+existing trace baseline audit was not enabled because these profiles retain
+known red frontiers; the explicit paired report comparison above supplies the
+bounded evidence actually claimed.
+
+The bounded engine publication probe on unchanged `030f66cb40` reports result
+slot7 and control-flow slot21; it reproduces the same8,469-error verdict, with
+no infrastructure errors/skips. This reverses native controller7/results8 order.
+A rejected prototype transfers the MGZ miniboss's current slot into the existing
+signpost-flow replacement API (following LRZ's ownership pattern). It does not
+remove the four pose errors and instead adds earlier queue mismatches:8,477
+errors, first13903 `queue.s3k_kos_direct.busy` (nativefalse/enginetrue). Its code
+is removed after the terminal run. Native `loc_887CA` establishes same-owner
+transformation, but that fact alone does not establish the engine miniboss's
+initial slot or install-dispatch phase. The next probe observes actual earlier
+SST population; no replacement-only or extra-retirement patch is delivered.
+
+Integrated live fresh handoff over `030f66cb40` in
+`.worktrees/trace-s3k-develop-delivery`: the same queued r6 selection plus all
+four mandatory S3K startup checks (both same-named loading classes actually run)
+executes100 cases:99 pass, one expected chain assertion, zero errors/skips.
+The r7 Tails prefix class executes all three methods, including the
+prefix-to-cold-capture rewind isolation check:3/3 pass. Separate fresh-JVM
+`-Pguards` selection `TestHardwareTimingAuthorityGuard,
+TestTraceRunVblankClockAuthorityGuard,TestTraceReplayInvariantGuard` passes37/37,
+zero errors/skips. The integrated chain exactly reproduces worker segment6/8/9
+counts and first-error fields, comparing all3,574 HCZ rows. Total focused
+validation is139 passes and one explicitly red chain assertion. The combined
+change-based plan against `67c850fc5132156acede8687ca169ada074f795f` selects2,964
+ordinary classes plus guards; that broad run remains pending the focused batch.
+These focused passes do not establish a green chain or full-suite pass.

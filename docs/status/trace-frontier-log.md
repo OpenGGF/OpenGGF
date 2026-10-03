@@ -112233,3 +112233,75 @@ LBZ now2,990 errors, first22258 camera_x ($04A0/$04A3), matching the worker.
 The only removed span is rings at22227; native and engine reset at22228.
 Real pending ROM art, final movement latch, independent title clock, whole-world
 carried ownership and restore/replay remain covered. Broader validation is pending.
+
+
+## 2026-10-03 — Sonic+Tails fresh live HCZ handoff
+
+- Worker `.worktrees/trace-s3k-live-fresh-handoff`, candidate over `c54cbfdf93`.
+  Matched inherited projections also checked against root `030f66` r6 sweep.
+- Command: queued Maven `-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+  -Dtest=TestGameLoopFreshLevelHandoff,TestLevelIterationAdmissionController,TestTraceRunPlaybackCoordinator,TestComparedInteriorRowDrive,TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kSonicTailsCompleteEmeraldRunPrefix
+  "-Ds3k.rom.path=<verified-absolute-S3K-ROM>" test`.
+  Terminal result: 40 cases, 39 passes, one chain assertion, zero errors/skips.
+- The real fresh title/terrain owners now traverse the represented AIZ load
+  tail and admit HCZ. The former HCZ row743 FIFO stop is gone; the chain compares
+  all 3,574 HCZ rows, then misses the giant-ring exit. Entry timing identities
+  remain strict; no ordinal remapping or capacity increase was introduced.
+- Segment 6 is unchanged at 189 errors, first non-camera row3319 sidekick_x
+  `31C1/31CA`. Complete segment 8 changes from 13,265 to 13,254 errors
+  (physics 13,120→13,113; animation 145→141), retaining first row1583 sidekick_x
+  `366C/3674`. Its row7126 tail still differs in player/camera position; removing
+  old sidekick-presence/pose mismatches does not establish full parity.
+- HCZ was previously incomplete with 5,121 errors through row743; it is now
+  complete with 32,343 errors (physics 30,131; animation 2,212). These totals
+  cover different spans and cannot be compared as a regression count. The first
+  mismatch changes from row0 y `0020/0021` to y_sub `0000/3800`. Later missing
+  direct171/module118 completions at HCZ rows3537/3538 accompany the missed
+  giant ring and remain explicit downstream failures.
+- Both Sonic+Tails prefix pins and both Tails prefix pins pass on the final
+  shared physical-row helper (Tails uses `-Ptrace-replay-r7`; the ordinary trace
+  profile filters its tag). All required S3K load checks passed without skips. Final targeted
+  timing/VBlank/trace invariant guards pass 37/37. The prior full guard run had
+  672 cases, one already-baselined LRZ source-policy failure, no errors/skips.
+  Combined ordinary-suite validation remains an integration obligation.
+
+
+## 2026-10-03 — Frozen cross-game fleet before fresh loading integration
+
+Queued alphabetical single-fork `trace-replay`, `trace-replay-r7` and
+`trace-segments` runs in `.worktrees/trace-s3k-develop-delivery` at `030f66cb40`
+use the three verified absolute ROM properties, fresh per-profile report
+folders and an unchanged Java/POM digest. Terminal totals respectively are
+862/54/0/8,117/86/9/0,70/53/7/0 (cases/failures/errors/skips). No formerly
+passing case becomes red against the earlier completed fleet; all six added
+prefix/helper cases pass. Known trace failures and infrastructure errors remain.
+The completed Mega adapter replaces its old duplicate-VInt error with its
+already-recorded exit assertion; no new Knuckles work is selected. LBZ retains
+the delivered2,990/22258 camera frontier, Tails reaches segment4/6, and Sonic+
+Tails segment6/8/9 projections exactly match the previous frozen baseline.
+
+Two existing MGZ reds have increased mismatch spans: the previously documented
+slice10,046→10,634 and short trace8,465→8,469. Matched queued single-case short
+MGZ runs on `588999752d` and `aea1bb0206` attribute the latter to the result-child
+milestone: four added single-frame animation/mapping errors at14384/14385, no
+removed spans, and the `aea1bb0206` error/warning arrays exactly equal current
+`030f66cb40`. First error remains13939 camera_x (`0000/0002`). Independent native
+SST/control observation confirms results slot8 publishes on14384 while lower
+control slot7 restores on14385; engine slot ownership is being inspected rather
+than restoring obsolete extra retirement delays. See campaign audit for exact
+commands, native provenance, skip reasons and detailed-comparison limits.
+
+Integrated live fresh handoff over `030f66cb40` in
+`.worktrees/trace-s3k-develop-delivery`: the same queued r6 selection plus all
+four mandatory S3K startup checks (both same-named loading classes actually run)
+executes100 cases:99 pass, one expected chain assertion, zero errors/skips.
+The r7 Tails prefix class executes all three methods, including the
+prefix-to-cold-capture rewind isolation check:3/3 pass. Separate fresh-JVM
+`-Pguards` selection `TestHardwareTimingAuthorityGuard,
+TestTraceRunVblankClockAuthorityGuard,TestTraceReplayInvariantGuard` passes37/37,
+zero errors/skips. The integrated chain exactly reproduces worker segment6/8/9
+counts and first-error fields, comparing all3,574 HCZ rows. Total focused
+validation is139 passes and one explicitly red chain assertion. The combined
+change-based plan against `67c850fc5132156acede8687ca169ada074f795f` selects2,964
+ordinary classes plus guards; that broad run remains pending the focused batch.
+These focused passes do not establish a green chain or full-suite pass.

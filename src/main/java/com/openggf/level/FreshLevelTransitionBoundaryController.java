@@ -11,6 +11,7 @@ import java.util.List;
 /** Owns the transient player/camera boundary around a fresh level title card. */
 final class FreshLevelTransitionBoundaryController {
     private Boundary pending;
+    private boolean initialPublished;
 
     void load(LevelManager level, int zone, int act) throws IOException {
         if (pending != null) {
@@ -72,8 +73,10 @@ final class FreshLevelTransitionBoundaryController {
             sidekick.setAir(false);
             sidekick.setNativeSlotPresent(false);
         }
+        var initialPass = level.capturePendingInitialProcessSpritesLifecycleForRewind();
         level.discardPendingInitialProcessSpritesForStateRestoration();
-        pending = new Boundary(destinationCameraX, destinationCameraY, playableStates);
+        pending = new Boundary(destinationCameraX, destinationCameraY, playableStates, initialPass);
+        initialPublished = false;
     }
 
     void complete(LevelManager level) {
@@ -82,11 +85,17 @@ final class FreshLevelTransitionBoundaryController {
         }
         restorePlayables(level);
         applyDestinationCamera(level);
+        // loc_6468's Process_Sprites has no VInt of its own. Run it only
+        // after destination players are assembled, before LevelLoop admission,
+        // rather than inserting another setup-only ordinary iteration.
+        level.restorePendingInitialProcessSpritesLifecycleForRewind(pending.initialPass());
+        level.consumePendingInitialProcessSpritesPass();
         pending = null;
+        initialPublished = false;
     }
 
     void publishInitial(LevelManager level) {
-        if (pending == null) {
+        if (pending == null || initialPublished) {
             return;
         }
         restorePlayables(level);
@@ -114,6 +123,7 @@ final class FreshLevelTransitionBoundaryController {
             sidekick.setNativeSlotPresent(false);
         }
         applyDestinationCamera(level);
+        initialPublished = true;
     }
 
     void publishCamera(LevelManager level) {
@@ -154,7 +164,8 @@ final class FreshLevelTransitionBoundaryController {
     private record Boundary(
             short destinationCameraX,
             short destinationCameraY,
-            List<PlayableState> playableStates) {
+            List<PlayableState> playableStates,
+            com.openggf.game.InitialProcessSpritesLifecycle initialPass) {
         private Boundary {
             playableStates = List.copyOf(playableStates);
         }

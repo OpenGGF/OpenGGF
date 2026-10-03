@@ -23,14 +23,7 @@ final class ComparedInteriorRowDrive implements Runnable {
 
     @Override
     public void run() {
-        int movieRow = playback.getCursorFrame();
-        playback.prepareCurrentFrame();
-        production.run();
-        // Bonus gameplay advances itself; fade/title owners need the physical
-        // row driver to advance after their production iteration instead.
-        if (playback.getCursorFrame() == movieRow) {
-            playback.onLevelFrameAdvanced();
-        }
+        PhysicalMovieRowDrive.run(playback, production);
         // The existing descriptor identifies the final source LevelLoop row
         // (S3K LevelLoop sets the reload bit before its fade/title tail). Close
         // its production ownership before the destination title loads, while

@@ -1004,6 +1004,11 @@ public class Sonic3kTitleCardManager
     }
 
     @Override
+    public boolean installsImmediateFreshLevelPalette() {
+        return true;
+    }
+
+    @Override
     public boolean hasImmediateFreshLevelPalette() {
         // Level/loc_61DA calls LoadPalette_Immediate before loc_62CC.
         // The later level reveal uses Palette_fade_timer at loc_64DC,

@@ -32,7 +32,9 @@ enum PostTitleCardDestination {
         // S3K loc_6468 runs the initial Process_Sprites before LevelLoop
         // for bonus zones too. Leaving it pending consumes their first input
         // row as setup-only instead of executing the first gameplay tick.
-        setupOnly |= levelManager.consumePendingInitialProcessSpritesPass();
+        if (!levelManager.hasPendingFreshLevelTransitionBoundary()) {
+            setupOnly |= levelManager.consumePendingInitialProcessSpritesPass();
+        }
         exitTitleCard.run();
         return setupOnly ? LevelFrameResult.SETUP_ONLY : LevelFrameResult.GAMEPLAY_FRAME;
     }

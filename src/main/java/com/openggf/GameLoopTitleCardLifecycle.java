@@ -56,6 +56,15 @@ final class GameLoopTitleCardLifecycle {
             titleCard.update();
         }
 
+        // Publish while the provider still owns its fresh mode; completing
+        // the title handoff below clears that mode and its terrain-ready gate.
+        if (levelManager.hasPendingFreshLevelTransitionBoundary() && titleCard != null
+                && (titleCard instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                        ? boundary.shouldPublishFreshLevelTransitionInitialBoundary()
+                        : titleCard.shouldCompleteFreshLevelTransitionBoundary())) {
+            levelManager.publishFreshLevelTransitionInitialBoundary();
+        }
+
         if (titleCard == null || titleCard.shouldCompleteFreshLevelTransitionBoundary()) {
             int preludePasses = 0;
             if (titleCard != null) {
