@@ -705,3 +705,29 @@ remains zero-error. Newly reached later segments4 and6 retain the worker's
 The next radius-release fix is independently ready; it is not included here.
 This is focused native/domain validation; combined ordinary/guard limitations
 recorded above remain in force.
+
+
+## Integrated Tails tree release — 2026-10-03
+
+`AIZTree_FallOff` literal x9/y19 must survive until Tails actually lands;
+`Tails_TouchFloor` then restores15. The previous standing-default helper
+shortens the falling sensors early. No shared movement code changes. The
+real-Tails release/terrain/restore regression fails old code19vs15 and passes
+with this one owning write. Local snapshot replay does not certify whole-world
+recreation or width/donor/team breadth; the AIZ matrix retains these gaps.
+
+Integrated over `b217fe6bd8`, queued `-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestAizHollowTreeTailsRelease,TestAizHollowTreeObjectInstance,
+TestS3kAizTraceReplay,TestS3kSonicTailsCompleteEmeraldRunPrefix,
+TestS3kTailsFullChainRunChain,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,
+TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` with verified absolute
+S3K ROM/fresh reports completes88 cases:86 pass,2 expected trace assertions,
+0 errors/skips. The ordinary AIZ native trace retains57 errors, first20302
+player_animation_id, unchanged from the immediately prior Monkey candidate.
+Both Sonic+Tails pins and required startup/object regressions pass.
+
+Solo-Tails segment2 now completes3,886 rows with ZERO comparison/bootstrap
+errors (886→0). Opening segment0 staysgreen. Segments4/6 retain1,783/67,150
+errors, first4930/101 x. The full chain remainsred at the segment6 giant-ring
+exit, with later segments outside reached coverage. A separate extended Tails
+prefix pin will defend this newly green return.

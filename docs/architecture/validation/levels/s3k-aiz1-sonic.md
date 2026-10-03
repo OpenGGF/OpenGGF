@@ -608,3 +608,49 @@ Solo-Tails segment2 now has886 errors, first2058 y, bootstrap0 and complete;
 opening segment0 remains green. Commands and inherited broad limits are in the
 [campaign audit](../../audits/2026-10-02-s3k-trace-green-campaign.md#integrated-monkey-dude-child-chain--2026-10-03).
 The LRZ object guard was independently reproduced on baseline67 and is inherited.
+
+
+### Tails hollow-tree release radii (2026-10-03)
+
+`TestAizHollowTreeTailsRelease` uses an actual solo Tails fixture, captures it
+on the tree, takes the upper exit, and checks unchanged centre coordinates
+and fixed `(x_radius=9, y_radius=19)` before real terrain landing restores
+Tails' default radius 15. Restoring the tree and player snapshots repeats the
+release and landing. This covers local captured state and forward replay, not
+full world history or recreation across a level load. Width/donor/team breadth
+remains inherited coverage.
+
+The owning `AIZTree_FallOff` writes literal radii for every character;
+`Tails_TouchFloor` restores default radii before its rolling branch. Existing
+comparison-only native `aiz_2/aux_state.jsonl.gz` records radius15 while riding
+at row2040, radius19 after release at row2053, and radius15 after landing at
+row2058. The previous `applyStandingRadii(false)` substitutes Tails' default15
+five rows too early. No shared physics correction is needed: ordinary S3K
+landing already restores nondefault radii, including the CNZ cage precedent.
+
+On `0e50fed9f6` plus the accepted Monkey Dude candidate, the new regression
+fails on old tree code with expected19/actual15 (one executed test, no skips).
+With the native radius write, a queued `-Dtest=TestAizHollowTreeTailsRelease,
+TestAizHollowTreeObjectInstance,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,
+TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` run with the verified
+absolute `s3k.rom.path` passes 69 tests, no skips.
+
+The matched `-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestS3kTailsFullChainRunChain` run removes all non-camera mismatches
+from the complete 3,886-row segment2. Its total errors fall 934→48, all camera,
+first row2900 `camera_x`; bootstrap errors remain zero. Segment0 stays green.
+Segment4 and segment6 retain exactly their prior error counts/frontiers
+(1,783 at row4930 `x`; 67,150 at row101 `x`), and the full route remains red
+with the segment6 giant-ring exit not observed (one executed test, no skips).
+This worker lacks the later develop AIZ camera-lock correction; the camera
+residual is not a combined-develop result. Validation is focused, not a full
+ordinary/guard suite claim.
+
+
+The integrated `develop` candidate over `b217fe6bd8` completes88 focused
+checks:86 pass,2 expected trace assertions,0 errors/skips. Segment2 completes
+3,886 rows with zero comparison/bootstrap errors, combining the object write
+with delivered camera behavior. Opening Tails segment0 staysgreen; later
+segments4/6 remain red at4930/101 x. Both Sonic+Tails pins, the real-Tails
+release/landing restore regression and mandatory startup checks pass. Exact
+selection and coverage limits are in the campaign audit.

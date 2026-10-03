@@ -500,7 +500,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   window and starts each animation on its native dispatch, preserving the moving
   body's collision timing and player bounce. Its five linked arm children retain
   native fractional positions and delayed angles, releasing one coconut from
-  the hand's prior position instead of repeating a body-animation throw.
+  the hand's prior position instead of repeating a body-animation throw. Hollow-tree
+  release uses the native fixed collision radii until landing, preserving Tails'
+  first terrain contact after leaving the tree.
   The fire reload keeps its horizontal camera lock until the native reveal
   releases it, instead of easing back toward the loaded act's default bounds.
 

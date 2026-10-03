@@ -5099,3 +5099,13 @@ do not own the throw. `sub_87524` reads absolute horizontal distance from
 `Find_SonicTails`, with no vertical range gate. Preserve follower delay changes
 and their attack flags separately from the root's flag, including after rewind.
 Origin: solo-Tails AIZ return frontier, 2026-10-03, base `0e50fed9f6`.
+
+
+## Literal player radii may differ from character defaults
+
+`AIZTree_FallOff` writes x_radius9/y_radius$13 for every character. A helper
+that restores standing defaults instead writes Tails' $0F too early and loses
+the first floor contact. Keep the explicit native radii and preserve centre;
+`Tails_TouchFloor` restores defaults when the actual landing occurs. Test the
+real Tails capture, release, terrain landing and forward replay after restore.
+Origin: solo-Tails AIZ return frontier, 2026-10-03, base `0e50fed9f6`.

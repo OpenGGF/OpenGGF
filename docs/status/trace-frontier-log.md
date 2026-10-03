@@ -112020,3 +112020,16 @@ Tails segment2 completes with886 errors (previous41,653), first2058 y
 prefix pins remain green. The native linked hand releases once from its prior
 fractional position. Later newly reached Tails segments4/6 remain red at
 4930/101 x with1,783/67,150 errors; no full-chain green claim.
+
+
+### 2026-10-03 — Solo-Tails first return is green on develop
+
+Candidate in `trace-s3k-develop-delivery` over `b217fe6bd8`, queued r7
+single-fork tree/startup/AIZ/prefix/full-Tails88-case selection recorded in
+the campaign audit:86 pass,2 expected trace assertions,0 errors/skips.
+Solo-Tails segment2 completes3,886 rows with0 comparison/bootstrap errors
+(previous886 errors, first2058 y). Opening segment0 remainsgreen and both
+Sonic+Tails prefix pins pass. Native tree release holds literal9/19 radii
+until real Tails landing restores15. Later Tails segments4/6 remain
+1,783/67,150 errors, first4930/101 x; fullchain stillred at the giant-ring
+exit. Independent AIZ remains57 errors, first20302 player_animation_id.
