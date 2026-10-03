@@ -112199,5 +112199,8 @@ Comparator/timing detachment alone had left process-wide controller input
 active. A worker control disabling only scope closure fails the active-movie
 assertion after the successful prefix; no gameplay values, admission rules
 or comparison policy are changed. The package-private manager helper and
-non-ModApi scope add no Mod API signature surface. Playback companions remain
-queued; full ordinary/guard combined delivery remainspending.
+non-ModApi scope add no Mod API signature surface. Playback companions
+completed on unchanged candidate source: queued ordinary
+`TestPlaybackDebugManagerPreparedInput,TestPlaybackDebugManagerOverlayOwnership,TestPlaybackAdvanceOnlyInputBridge,TestPlaybackTimelineController,TestPlaybackController`
+passes 29 cases, zero failures/errors/skips. Full ordinary/guard combined
+delivery remains pending.

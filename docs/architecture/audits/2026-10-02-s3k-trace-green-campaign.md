@@ -836,3 +836,13 @@ and four ownership cases all pass:12 cases,0 failures/errors/skips. Command
 and remaining broad validation limits are in the frontier log. This resolves
 the previously recorded combined SOZ failure; it does not turn later native
 trace frontiers green.
+
+
+Playback companions on unchanged `d427fdd9ba` candidate source pass all 29
+cases, zero failures/errors/skips; exact selection is recorded in the frontier
+log. The completed `trace-special-return` and `trace-s3k-mega-exit` worktrees
+were removed after their accepted source was checked against delivered develop
+and their evidence incorporated here and in the act matrices. The retained-title
+wait and live fresh-handoff investigations use new independent worktrees; the
+Tails placement frontier remains in its active worktree. No unrelated checkout
+or main-workspace branch was changed.
