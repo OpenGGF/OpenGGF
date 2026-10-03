@@ -510,3 +510,56 @@ used. Holding the corpse is unchanged (lives set to 1 so the death routine reach
 and takes the course's game-over flow). RESTART and the no-lives GAME OVER still use
 the ordinary death-restart reload. The 0.10.0 reload-based continue, which restarted
 from the opening runway, was rejected by the user.
+
+## Platform stretches, ring arcs, 16:9 and single-level zones (0.12.0)
+
+Follow-up on `53573ea280` after merging develop (`d112667006`), same branch, 2026-10-03.
+Request: make play more varied, particularly platforming; force 16:9; each zone is one
+level, so remove the in-game level select.
+
+**Platform stretches.** Sections 4k+2 and 4k+3 of a third of eligible stretches (k ≥ 2,
+banks within one tier) become one 320–448 px pit: 4k+2 keeps a flat bank and opens
+with a corridor half-cut at its right end, 4k+3 is an empty column then the far bank's
+half-cut. The only new block is one empty block. `PlatformPlan` places one to three
+stones level with the lower bank, adding stones until every open span is ≤ 144 px.
+The stones are the shipped objects, created through the session `ObjectRegistry`
+(exposed as a module game service): Obj18 subtypes $00/$03 (stationary, falls after 30
+frames) and Obj52 at subtype `look << 4` for each appearance the act places. Kinds come
+from the act's own stock placement, as badniks do, so the zone has loaded their art.
+Both objects seat Sonic at obY−9 (`MvSonicOnPtfm2`), so a stone's centre is its surface
++9. SBZ appearance 2 is excluded because only full subtype $28 selects the stomper art.
+
+Stock objects delete themselves outside `out_of_range` (camera−128 to camera+width+192
+in 128 px steps), so the controller spawns each stone only within 64 px of the screen,
+tracked by per-section bits like rings. They keep their spawn coordinates and do not
+follow the 4096 px world shift, so the shift waits until no stone is loaded and is
+forced at local X 12,288 (stones dropped and re-spawned). Rings arc over corridor pits
+(four rings, 40–94 px above the higher bank, overhanging each bank by 32 px) and sit
+above stones.
+
+Rejected: Obj52's 32 px look (the only Labyrinth block, also MZ3). In the first physics
+run the policy landed on the last pixels of a 32 px MZ3 stone and ran off before it
+could re-jump; at running speed a 32 px stone gives about five frames. Stones are now
+≥ 64 px, so the Labyrinth course keeps ordinary corridors. Acts without usable stones:
+MZ3, LZ1–3, SLZ1, SBZ2–3; pooling a zone's acts is a possible follow-up. Also rejected:
+the test policy holding forward whenever its predicted landing was on a stone; it
+drifted to the far edge of MZ2's stone and fell. The policy now coasts toward a short
+surface's centre, and re-presses jump on even level frames so a held jump cannot
+block a new one while replays stay deterministic.
+
+**16:9 and level select.** `GameModule.requiredDisplayAspect()` and
+`suppressesLevelSelect()` are additive 0.7 candidate hooks. `Engine.initializeGame`
+applies the required aspect as a session override once the patch resolves, before
+gameplay opens; clearing session overrides at the master title restores the player's
+aspect, and `resolveDisplayAspect` still forces 4:3 in trace test mode. Suppression
+ignores `LEVEL_SELECT_ON_STARTUP`, maps a title LEVEL_SELECT exit to one-player play and
+disables the debug level-select key. The polarity is "suppresses" so Mockito module mocks
+(default `false`) keep level select.
+
+Validation (focused, 2026-10-03, queued Maven, S1 REV01): `TestInfiniteSonic` 129 run,
+0 failures, 14 skipped (the crossing test for the seven acts without stones, at both
+aspects); `TestEngine` 33, `TestGameLoop` 97, `TestModApiSignatureSurface` 9,
+`TestModApiPinPolicy` 4, `TestModApiReleasePolicy` 13, `TestModApiHookPolicy` 19, all
+passing. The crossing test drives the input policy over each act's first stretch at 4:3
+and 16:9 and requires every planned stone to spawn as a stock object and Sonic to ride
+one. Live play and a visual check of the stones were not performed.

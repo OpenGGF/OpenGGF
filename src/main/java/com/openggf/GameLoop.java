@@ -4121,11 +4121,15 @@ public class GameLoop {
         if (exitAction == null) {
             exitAction = TitleScreenProvider.TitleScreenAction.OTHER;
         }
+        boolean levelSelectAllowed = !gameModule.suppressesLevelSelect();
+        if (!levelSelectAllowed && exitAction == TitleScreenProvider.TitleScreenAction.LEVEL_SELECT) {
+            exitAction = TitleScreenProvider.TitleScreenAction.ONE_PLAYER;
+        }
         return startupRouteResolver.resolveTitleAction(
                 gameModule,
                 resolveDataSelectPresentation(),
                 true,
-                configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP),
+                levelSelectAllowed && configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP),
                 exitAction);
     }
 
@@ -4325,6 +4329,10 @@ public class GameLoop {
      */
     public void enterLevelSelect() {
         if (currentGameMode != GameMode.LEVEL) {
+            return;
+        }
+        GameModule module = GameServices.module();
+        if (module != null && module.suppressesLevelSelect()) {
             return;
         }
 

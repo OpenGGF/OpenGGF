@@ -127,6 +127,23 @@ public interface GameModule {
     default double gameplayAudioPlaybackRate() { return 1.0; }
 
     /**
+     * Display aspect preset ({@code display.aspect} name such as {@code "WIDE_16_9"})
+     * this module requires for its whole interactive session, or {@code null} to keep
+     * the player's setting. The host applies it as a session override once the launch
+     * resolves, before gameplay opens; returning to the master title restores the
+     * player's aspect. Trace test mode still forces native 4:3, and deterministic
+     * recording/trace launches ignore it. Unknown names fall back to native 4:3.
+     */
+    default String requiredDisplayAspect() { return null; }
+
+    /**
+     * Whether this session hides the level select. When {@code true}, the host ignores
+     * {@code LEVEL_SELECT_ON_STARTUP}, a title level-select exit starts a one-player game
+     * instead, and the in-level level-select debug key does nothing.
+     */
+    default boolean suppressesLevelSelect() { return false; }
+
+    /**
      * Returns session-owned game services whose mutable state participates in
      * a gameplay rewind. The composition root registers these adapters once
      * per {@link com.openggf.game.session.WorldSession}; games without such

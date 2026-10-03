@@ -416,3 +416,20 @@ Main checkout, `feature/ai-infinite-sonic`, base `9423b53e23`; mod, test and doc
 were printed from the live course with a temporary diagnostic (not kept). Not covered:
 continuing after a left-edge death specifically, rewind across a continue, and any live-engine
 render of the new behavior.
+
+## Platform stretches, 16:9 and single-level zones (0.12.0, 2026-10-03)
+
+Main checkout, `feature/ai-infinite-sonic`, base `d112667006` (develop merged); mod,
+engine hooks, tests and docs.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Stretch geometry | `platformStretchesBridgeTheirPitWithTheActsStockPlatforms` | All 18 acts, 250 stretches each: 320–448 px bottomless pit, flat ≥352/≥160 px banks, ≤1 tier, spans 16–144 px, stones level with the lower bank, no encounters, kinds only from the act's placement; acts without stones keep ordinary corridors |
+| Real crossing on stock objects | `sonicCrossesAPlatformStretchOnSpawnedStockPlatforms` | Each act with stones, first stretch, 4:3 and 16:9: every planned stone spawns as the stock object at its planned height, Sonic rides one and lands beyond; skipped for MZ3, LZ1–3, SLZ1, SBZ2–3 |
+| Traversal through stretches | `everyZoneActBuildsATraversableDryCourse`, `protectedTraversalPreservesEncountersAcrossRebaseAndReplay` | Input policy over 3000/6000 frames including stretches; rebase deferral and rewind/replay of stock stones exercised indirectly |
+| Ordinary corridors | `corridorsAreBoundedSeededAndHaveLevelRunways` | Platform stretches excluded; ring arcs not asserted geometrically |
+| Session aspect / level select | `TestEngine.requiredModuleAspectPinsTheSessionUntilOverridesClear`, `TestGameLoop.testTitleScreenExitStartsLevelWhenModuleSuppressesLevelSelect`, `sessionPinsWidescreenAndHidesLevelSelect` | Hook unit coverage; no windowed launch was run |
+
+**129 run, 0 failures, 14 skipped** (same focused command). Not covered: a falling Obj18
+stone collapsing under a waiting Sonic, a forced rebase with stones loaded, a dedicated
+rewind across a stone ride, and any live render of stones or ring arcs.

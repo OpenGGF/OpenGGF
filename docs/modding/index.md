@@ -79,3 +79,7 @@ scenes retain their normal pacing. `GameLoop.step()` remains one deterministic t
 interactive hosts use `stepPresentationFrame()`. The
 [Infinite Sonic example](../../examples/infinite-sonic/README.md) demonstrates a
 rewindable clock that compounds speed every 30 seconds of active play.
+A module can also pin a display aspect for its session with
+`GameModule.requiredDisplayAspect()` (a `display.aspect` preset name; the master title
+restores the player's setting) and hide the level select with
+`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both.

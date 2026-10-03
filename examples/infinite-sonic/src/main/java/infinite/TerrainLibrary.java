@@ -44,6 +44,9 @@ public final class TerrainLibrary {
     private final int romZone;
     private final int[] groundSpecies;
     private final int[] airSpecies;
+    private final List<CoursePlatforms.Kind> platformKinds;
+    /** An empty column: the open middle of a platform stretch's pit. */
+    private final int[] emptyHalf;
 
     /** One walkable 256px floor in a ROM foreground column. {@code profile} holds source Y. */
     private record Candidate(int column, int[] profile, int clearance) {
@@ -57,6 +60,7 @@ public final class TerrainLibrary {
         var stockObjects = source.getObjects();
         groundSpecies = CourseSpecies.lineUp(stockObjects, false, romZone);
         airSpecies = CourseSpecies.lineUp(stockObjects, true, romZone);
+        platformKinds = CoursePlatforms.lineUp(stockObjects, romZone);
         sourceHeight = source.getLayerHeightBlocks(0);
         height = Math.min(sourceHeight, MAX_HEIGHT);
         int budget = 256 - backgroundBlocks(source).length;
@@ -132,6 +136,8 @@ public final class TerrainLibrary {
                 }
             }
         }
+        emptyHalf = new int[height];
+        Arrays.fill(emptyHalf, intern(new Block(16)));
         if (blocks.size() > budget) throw new IllegalArgumentException("Terrain block budget exceeded");
         // Ground level takes distinct ROM sections first; raised/lowered tiers then take whole
         // sections, in ROM order, while the shared 256-entry block index still has room.
@@ -292,6 +298,8 @@ public final class TerrainLibrary {
     /** Weighted {@link CourseSpecies} ids for ground and air encounters in this act. */
     public int[] groundSpecies() { return groundSpecies.clone(); }
     public int[] airSpecies() { return airSpecies.clone(); }
+    /** Stock platform kinds this act lends its platform stretches; empty when it places none. */
+    public List<CoursePlatforms.Kind> platformKinds() { return platformKinds; }
     public Block block(int index) { return blocks.get(index); }
     private int sectionIndex(long section, int tier) {
         return (int) Long.remainderUnsigned(random(section + SEED), sections.get(tier).size());
@@ -351,6 +359,15 @@ public final class TerrainLibrary {
         int tier = tierAt(section, side);
         // The opening is a flat bank, so every zone starts Sonic on level seam floor.
         if (section == 0) return flatHalves[tier][side][row];
+        if (platformRun(section)) {
+            long stretch = Math.floorDiv(section, 4);
+            // Section 4k+2 keeps a flat bank and opens at its right end; 4k+3 is open until
+            // the far bank. Both cuts reuse the corridor halves.
+            if (Math.floorMod(section, 4) == 2) {
+                return side == 0 ? flatHalves[tier][0][row] : gapHalves[platformCut(stretch, 0)][tier][0][row];
+            }
+            return side == 0 ? emptyHalf[row] : gapHalves[platformCut(stretch, 1)][tier][1][row];
+        }
         if (!isCorridor(section)) {
             return sections.get(tier).get(sectionIndex(section, tier))[side][row];
         }
@@ -367,7 +384,7 @@ public final class TerrainLibrary {
      * Actual physics traversal and bidirectional jumps are covered by TestInfiniteSonic.
      */
     public int gapWidth(long section) {
-        if (!isCorridor(section)) return 0;
+        if (!isCorridor(section) || platformRun(section)) return 0;
         // Teach the jump requirement before speed can carry Sonic over narrower pits.
         if (section == 3) return 128;
         int step = stepHeight(section);
@@ -377,6 +394,38 @@ public final class TerrainLibrary {
         return gapWidthAt((int) Long.remainderUnsigned(random, choices));
     }
 
+    /**
+     * Platform stretches: sections 4k+2 and 4k+3 become one 320-448px pit, bridged by stock
+     * platforms ({@link PlatformPlan}). Mod design: a third of eligible stretches, from the
+     * third corridor on, where the banks differ by at most one tier. The approach keeps a
+     * flat bank of at least 352px and the far bank at least 160px before the next section.
+     */
+    public boolean platformRun(long section) {
+        long part = Math.floorMod(section, 4);
+        return (part == 2 || part == 3) && platformStretch(Math.floorDiv(section, 4));
+    }
+
+    private boolean platformStretch(long stretch) {
+        if (platformKinds.isEmpty() || stretch < 2) return false;
+        if (Math.abs(stepHeight(stretch * 4 + 3)) > TIER_STEP) return false;
+        return Long.remainderUnsigned(random(stretch + SEED + 0x504c4154L), 3) == 0;
+    }
+
+    /** Corridor cut index for the near (0) or far (1) edge of a platform stretch's pit. */
+    private int platformCut(long stretch, int side) {
+        return (int) Long.remainderUnsigned(random(stretch + SEED + 0x435554L) >>> (side * 16), GAP_COUNT);
+    }
+
+    /** First open pixel of a platform stretch's pit. */
+    public long platformPitStart(long stretch) {
+        return (stretch * 4 + 3) * 512 - gapWidthAt(platformCut(stretch, 0)) / 2;
+    }
+
+    /** First far-bank pixel after a platform stretch's pit. */
+    public long platformPitEnd(long stretch) {
+        return (stretch * 4 + 3) * 512 + 256 + gapWidthAt(platformCut(stretch, 1)) / 2;
+    }
+
     /** Surface of the generated terrain, including translated and mirrored columns. */
     public int floorAt(long worldX) {
         long section = Math.floorDiv(worldX, 512);
@@ -384,6 +433,11 @@ public final class TerrainLibrary {
         int side = x < 256 ? 0 : 1;
         int tier = tierAt(section, side);
         if (section == 0) return seamHeight + tierOffset(tier);
+        if (platformRun(section)) {
+            long stretch = Math.floorDiv(section, 4);
+            return worldX >= platformPitStart(stretch) && worldX < platformPitEnd(stretch)
+                    ? -1 : seamHeight + tierOffset(tier);
+        }
         if (isCorridor(section)) {
             int width = gapWidth(section);
             return x >= 256 - width / 2 && x < 256 + width / 2 ? -1 : seamHeight + tierOffset(tier);

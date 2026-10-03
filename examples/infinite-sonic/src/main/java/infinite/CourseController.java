@@ -20,6 +20,9 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private static final int SAFE_BEHIND = 32;
     private static final int SAFE_AHEAD = 64;
     private static final int SAFE_RELIEF = 24;
+    // Mod design: the window waits for loaded stock platforms up to this local X (window 16384).
+    private static final int FORCED_REBASE_X = 12288;
+    private static final int STONE_WINDOW = 64;
     // Post-continue blink, as long as the stock post-hit invulnerability ($78).
     private static final int RESUME_INVULNERABLE_FRAMES = 0x78;
     private int scrollFraction;
@@ -53,6 +56,10 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long rings1;
     private long rings2;
     private long rings3;
+    // One section bit per stone index, as for rings.
+    private long stones0;
+    private long stones1;
+    private long stones2;
     public long originPixels() { return origin * 256; }
     public CourseController(ObjectSpawn spawn) { super(spawn, "Infinite Sonic course"); }
     @Override public boolean isPersistent() { return true; }
@@ -241,9 +248,22 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private void recycleTerrain(PlayableEntity player) {
         int delta = player.getCentreX() >= 8192 ? 4096
                 : origin > 0 && player.getCentreX() < 2048 ? -4096 : 0;
+        // Stock platforms keep their spawn coordinates and do not follow the shift, so the
+        // window waits until none are loaded. The 16384px window leaves thousands of pixels
+        // of slack; past the hard limit any still-loaded stones are dropped and re-spawned.
+        var live = liveStones();
+        if (delta != 0 && !live.isEmpty()) {
+            boolean forced = delta > 0 ? player.getCentreX() >= FORCED_REBASE_X : player.getCentreX() < 1024;
+            if (!forced) delta = 0;
+            else {
+                for (var stone : live) stone.setDestroyed(true);
+                stones0 = stones1 = stones2 = 0;
+            }
+        }
         if (delta == 0) {
             populateEncounters();
             populateRings();
+            populateStones();
             return;
         }
         origin += delta / 256;
@@ -252,6 +272,9 @@ public final class CourseController extends AbstractObjectInstance implements Re
         rings1 = shiftSections(rings1, delta);
         rings2 = shiftSections(rings2, delta);
         rings3 = shiftSections(rings3, delta);
+        stones0 = shiftSections(stones0, delta);
+        stones1 = shiftSections(stones1, delta);
+        stones2 = shiftSections(stones2, delta);
         services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
         var library = services().gameService(TerrainLibrary.class);
         var level = services().currentLevel();
@@ -270,6 +293,49 @@ public final class CourseController extends AbstractObjectInstance implements Re
         services().levelManager().invalidateAllTilemaps();
         populateEncounters();
         populateRings();
+        populateStones();
+    }
+
+    /** Loaded stock platforms. The course places no other stock objects with these ids. */
+    private List<AbstractObjectInstance> liveStones() {
+        var live = new java.util.ArrayList<AbstractObjectInstance>();
+        for (var object : services().objectManager().getActiveObjects()) {
+            int id = object.getSpawn().objectId();
+            if ((id == CoursePlatforms.PLATFORM || id == CoursePlatforms.MOVING_BLOCK)
+                    && object instanceof AbstractObjectInstance stock && !stock.isDestroyed()) live.add(stock);
+        }
+        return live;
+    }
+
+    /**
+     * Spawns the stock platforms of upcoming platform stretches. Stock objects delete
+     * themselves outside the out_of_range window (camera-128 to camera+width+192, in 128px
+     * steps), so stones only spawn within 64px of the screen.
+     */
+    private void populateStones() {
+        var library = services().gameService(TerrainLibrary.class);
+        var camera = services().camera();
+        for (int section = 0; section < TerrainLibrary.WIDTH / 2; section++) {
+            long bit = 1L << section;
+            if ((stones0 & stones1 & stones2 & bit) != 0) continue;
+            var stones = PlatformPlan.at(library, origin / 2 + section);
+            for (int i = 0; i < PlatformPlan.MAX_STONES; i++) {
+                long mask = switch (i) { case 0 -> stones0; case 1 -> stones1; default -> stones2; };
+                if ((mask & bit) != 0) continue;
+                if (i < stones.length) {
+                    var stone = stones[i];
+                    int localX = (int) (stone.worldX() - originPixels());
+                    if (localX < camera.getX() - STONE_WINDOW
+                            || localX > camera.getX() + camera.getWidth() + STONE_WINDOW) continue;
+                    if (!services().objectManager().hasFreeDynamicSlot()) return;
+                    var registry = services().gameService(ObjectRegistry.class);
+                    var spawn = new ObjectSpawn(localX, stone.y(), stone.objectId(), stone.subtype(), 0, false,
+                            stone.y(), -1);
+                    spawnFreeChild(() -> (AbstractObjectInstance) registry.create(spawn));
+                }
+                switch (i) { case 0 -> stones0 |= bit; case 1 -> stones1 |= bit; default -> stones2 |= bit; }
+            }
+        }
     }
 
     private static long shiftSections(long bits, int delta) {
@@ -287,14 +353,19 @@ public final class CourseController extends AbstractObjectInstance implements Re
                 rings0 |= bit; rings1 |= bit; rings2 |= bit; rings3 |= bit;
                 continue;
             }
+            // Shorter rows (above stones) mark their unused ring indices as already placed.
+            for (int i = row.count(); i < RingPlan.COUNT; i++) {
+                switch (i) { case 0 -> rings0 |= bit; case 1 -> rings1 |= bit;
+                    case 2 -> rings2 |= bit; default -> rings3 |= bit; }
+            }
             for (int i = 0; i < row.count(); i++) {
                 long mask = switch (i) { case 0 -> rings0; case 1 -> rings1; case 2 -> rings2; default -> rings3; };
                 if ((mask & bit) != 0) continue;
-                long worldX = row.worldX() + i * RingPlan.SPACING;
+                long worldX = row.x()[i];
                 int localX = (int) (worldX - originPixels());
                 if (localX < camera.getX() - 192 || localX > camera.getX() + camera.getWidth() + 192) continue;
                 if (!services().objectManager().hasFreeDynamicSlot()) return;
-                int y = library.floorAt(worldX) - RingPlan.CLEARANCE;
+                int y = row.y()[i];
                 var spawn = new ObjectSpawn(localX, y, 0, 0, 0, false, y, -1,
                         "infinite-sonic", "infinite-sonic:ring");
                 spawnFreeChild(() -> new CourseRing(spawn));

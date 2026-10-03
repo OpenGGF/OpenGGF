@@ -256,3 +256,12 @@ one-player exit starts on (act 0; out-of-range values start zone 0), and
 `GameModule.showsTitleCardActNumber(int, int)` (default true, delegated by
 `DelegatingGameModule`) lets a module hide the act number on Sonic 1 and Sonic 2
 title cards. Both are additive to the unpublished 0.7 candidate; the pin is updated in place.
+
+`GameModule.requiredDisplayAspect()` (default `null`) names a `display.aspect` preset
+the session requires; interactive launches apply it as a session override after patch
+resolution, so the master title restores the player's aspect and trace test mode still
+resolves native 4:3. `GameModule.suppressesLevelSelect()` (default `false`) makes the
+host ignore `LEVEL_SELECT_ON_STARTUP`, route a title level-select exit to one-player
+play, and ignore the in-level level-select key. Both are delegated by
+`DelegatingGameModule` and additive to the unpublished 0.7 candidate; the pin is
+updated in place.

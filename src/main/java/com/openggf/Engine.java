@@ -34,6 +34,7 @@ import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.KeyChord;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.WidescreenAspect;
 import com.openggf.debug.DebugOption;
 import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugOverlayManager;
@@ -993,6 +994,25 @@ public class Engine {
 				configService.getInt(SonicConfiguration.SCREEN_HEIGHT));
 	}
 
+	/**
+	 * Pins the aspect a resolved module requires as a session override. Returning to
+	 * the master title clears session overrides, restoring the player's aspect;
+	 * {@code resolveDisplayAspect} still forces native 4:3 in trace test mode.
+	 */
+	void applyRequiredDisplayAspect(GameModule module) {
+		String required = module.requiredDisplayAspect();
+		if (required == null) {
+			return;
+		}
+		String aspect = WidescreenAspect.parse(required).name();
+		if (aspect.equals(configService.getString(SonicConfiguration.DISPLAY_ASPECT))) {
+			return;
+		}
+		configService.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect);
+		configService.resolveDisplayAspect();
+		applyResolvedDisplayDimensions();
+	}
+
 	void applyResolvedDisplayDimensions() {
 		ResolvedDisplayDimensions resolved = readResolvedDisplayDimensionsForLaunch();
 		realWidth = resolved.pixelWidth();
@@ -1057,6 +1077,7 @@ public class Engine {
 		if (module == null) {
 			return;
 		}
+		applyRequiredDisplayAspect(module);
 		if (!preparePresentationForLaunch(module)) {
 			return;
 		}
@@ -1861,7 +1882,8 @@ public class Engine {
 		boolean levelSelectOnStartup = configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP);
 		if (titleScreenOnStartup) {
 			gameLoop.initializeTitleScreenMode();
-		} else if (levelSelectOnStartup) {
+		} else if (levelSelectOnStartup
+				&& (GameServices.module() == null || !GameServices.module().suppressesLevelSelect())) {
 			gameLoop.initializeLevelSelectMode();
 		} else {
 			loadDefaultStartingLevel(true);

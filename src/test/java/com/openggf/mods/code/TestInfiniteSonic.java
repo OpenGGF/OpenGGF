@@ -173,8 +173,10 @@ class TestInfiniteSonic {
             stepTerrain(fixture, 1);
             int x = fixture.sprite().getCentreX();
             if (previous - x > 4000) rebases++;
+            long section = Math.floorDiv(originPixels() + x, 512);
             assertFalse(fixture.sprite().getDead(), "death at frame " + i + ", x=" + x
-                    + ", y=" + fixture.sprite().getCentreY() + ", origin=" + originPixels());
+                    + ", y=" + fixture.sprite().getCentreY() + ", origin=" + originPixels()
+                    + ", section " + section + (platformRun(section) ? " (platform stretch)" : ""));
             assertFalse(fixture.sprite().isInWater(), "frame " + i);
             previous = x;
         }
@@ -191,6 +193,12 @@ class TestInfiniteSonic {
         GameServices.level().loadZoneAndAct(0, 0);
         assertArrayEquals(initial, GameServices.level().getCurrentLevel().getMap().getData());
         assertEquals(1, GameServices.level().getCurrentLevel().getObjects().size());
+    }
+
+    @Test void sessionPinsWidescreenAndHidesLevelSelect() throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3);
+        assertEquals("WIDE_16_9", GameServices.module().requiredDisplayAspect());
+        assertTrue(GameServices.module().suppressesLevelSelect(), "the title zone picker replaces level select");
     }
 
     @Test void patchOnlyActivatesForSoloSonic() throws Exception {
@@ -706,10 +714,11 @@ class TestInfiniteSonic {
 
     /** A deterministic player policy; terrain observations choose inputs, never set physics state. */
     private void stepCourse(HeadlessTestFixture fixture, int direction) throws Exception {
-        long x = originPixels() + fixture.sprite().getCentreX();
+        var player = fixture.sprite();
+        long x = originPixels() + player.getCentreX();
         boolean approachingGap = false;
         for (int ahead = 0; ahead <= 48; ahead += 4) {
-            if (floorAt(x + direction * ahead) < 0) approachingGap = true;
+            if (surfaceAt(x + direction * ahead) < 0) approachingGap = true;
         }
         // A ledge wall (backtracking over a drop) rises more than any ROM slope in one pixel.
         boolean approachingWall = false;
@@ -717,8 +726,88 @@ class TestInfiniteSonic {
             int before = floorAt(x + direction * (ahead - 1)), after = floorAt(x + direction * ahead);
             if (before >= 0 && after >= 0 && before - after > 16) approachingWall = true;
         }
-        boolean jump = fixture.sprite().getAir() || approachingGap || approachingWall;
-        fixture.stepFrame(false, false, direction < 0, direction > 0, jump);
+        boolean left = direction < 0, right = direction > 0;
+        boolean jump;
+        if (player.getAir()) {
+            jump = true;
+            int steer = steerTowardLanding(player, x, direction);
+            if (steer != KEEP_RUNNING) { left = steer * direction < 0; right = steer * direction > 0; }
+        } else {
+            // Re-press on even level frames: a jump still held from the air cannot start a new
+            // one, and parity of the rewound frame counter keeps replays deterministic.
+            jump = (approachingGap || approachingWall) && GameServices.level().getFrameCounter() % 2 == 0;
+        }
+        fixture.stepFrame(false, false, left, right, jump);
+    }
+
+    /** Terrain floor, else the surface of a planned stepping stone, else -1. */
+    private int surfaceAt(long x) throws Exception {
+        int floor = floorAt(x);
+        if (floor >= 0) return floor;
+        long section = Math.floorDiv(x, 512);
+        for (long s = section - 1; s <= section + 1; s++) {
+            for (Object stone : stones(s)) {
+                if (Math.abs(x - (long) call(stone, "worldX")) <= (int) call(stone, "halfWidth") - 4) {
+                    return (int) call(stone, "surface");
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static final int KEEP_RUNNING = 2;
+
+    /**
+     * Air steering toward a surface: predicts the ballistic landing on each surface ahead
+     * (held jump, ROM gravity $38). A landing on a long surface keeps running; a landing on a
+     * short one (a stone) aims for its middle; a miss leans toward the nearest surface.
+     * Returns -1 (lean back), 0 (coast), +1 (lean forward) or {@link #KEEP_RUNNING}.
+     */
+    private int steerTowardLanding(com.openggf.sprites.playable.AbstractPlayableSprite player, long x,
+            int direction) throws Exception {
+        double vx = player.getXSpeed() / 256.0, vy = player.getYSpeed() / 256.0, g = 0x38 / 256.0;
+        java.util.List<long[]> intervals = new ArrayList<>();
+        long start = -1;
+        for (int d = -64; d <= 640; d += 4) {
+            long at = x + (long) direction * d;
+            boolean solid = surfaceAt(at) >= 0;
+            if (solid && start < 0) start = at;
+            if ((!solid || d == 640) && start >= 0) {
+                intervals.add(new long[]{Math.min(start, at), Math.max(start, at)});
+                start = -1;
+            }
+        }
+        long bestDistance = Long.MAX_VALUE;
+        int steer = 0;
+        for (long[] interval : intervals) {
+            long lo = interval[0], hi = interval[1];
+            int surface = surfaceAt((lo + hi) / 2) - 19;
+            double c = player.getCentreY() - surface, disc = vy * vy - 2 * g * c;
+            if (disc < 0) continue;
+            double t = (-vy + Math.sqrt(disc)) / g;
+            if (t <= 0) continue;
+            long landing = x + Math.round(vx * t);
+            if (landing >= lo + 8 && landing <= hi - 8) {
+                if (hi - lo > 160) return KEEP_RUNNING;
+                long centre = (lo + hi) / 2;
+                if (Math.abs(landing - centre) <= 8) return 0;
+                return (landing < centre) == (direction > 0) ? 1 : -1;
+            }
+            long distance = landing < lo + 8 ? lo + 8 - landing : landing - (hi - 8);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                steer = (landing < lo + 8) == (direction > 0) ? 1 : -1;
+            }
+        }
+        return steer;
+    }
+
+    private Object[] stones(long section) throws Exception {
+        return (Object[]) loader.loadClass("infinite.PlatformPlan").getMethod("at", terrain().getClass(), long.class)
+                .invoke(null, terrain(), section);
+    }
+    private static Object call(Object target, String method) throws Exception {
+        return target.getClass().getMethod(method).invoke(target);
     }
 
     private int gapWidth(long section) throws Exception {
@@ -727,6 +816,136 @@ class TestInfiniteSonic {
     private int stepHeight(long section) throws Exception {
         return (int) terrain().getClass().getMethod("stepHeight", long.class).invoke(terrain(), section);
     }
+    private boolean platformRun(long section) throws Exception {
+        return (boolean) terrain().getClass().getMethod("platformRun", long.class).invoke(terrain(), section);
+    }
+    private long pitStart(long stretch) throws Exception {
+        return (long) terrain().getClass().getMethod("platformPitStart", long.class).invoke(terrain(), stretch);
+    }
+    private long pitEnd(long stretch) throws Exception {
+        return (long) terrain().getClass().getMethod("platformPitEnd", long.class).invoke(terrain(), stretch);
+    }
+
+    /** Stock object ids the act places that the course lends to platform stretches. */
+    private Set<Integer> platformKindIds() throws Exception {
+        var ids = new TreeSet<Integer>();
+        for (Object kind : (List<?>) call(terrain(), "platformKinds")) ids.add((int) call(kind, "objectId"));
+        return ids;
+    }
+
+    @ParameterizedTest(name = "zone {0} act {1}")
+    @org.junit.jupiter.params.provider.MethodSource("courseActs")
+    void platformStretchesBridgeTheirPitWithTheActsStockPlatforms(int zone, int act) throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3, zone, act);
+        var stock = new HashSet<Integer>();
+        for (var spawn : new com.openggf.game.sonic1.Sonic1GameModule().createGame(GameServices.rom().getRom())
+                .loadLevel(levelIndex(zone, act)).getObjects()) stock.add(spawn.objectId());
+        Set<Integer> kinds = platformKindIds();
+        for (int id : kinds) assertTrue(stock.contains(id), "only platforms the act itself places: " + id);
+        int runs = 0;
+        for (long stretch = 0; stretch < 250; stretch++) {
+            long near = stretch * 4 + 2, far = stretch * 4 + 3;
+            assertEquals(platformRun(near), platformRun(far), "a platform stretch spans two sections");
+            if (!platformRun(far)) {
+                assertEquals(0, stones(far).length);
+                continue;
+            }
+            runs++;
+            assertTrue(stretch >= 2, "the first two corridors teach ordinary jumps");
+            assertTrue(Math.abs(stepHeight(far)) <= 32, "banks differ by at most a tier");
+            assertNull(encounter(near));
+            assertNull(encounter(far));
+            long start = pitStart(stretch), end = pitEnd(stretch);
+            assertTrue(end - start >= 320 && end - start <= 448, "pit width " + (end - start));
+            int bank = floorAt(start - 1);
+            for (long x = near * 512; x < start; x++) assertEquals(bank, floorAt(x), "flat approach bank");
+            assertTrue(start - near * 512 >= 352, "approach runway");
+            int farBank = floorAt(end);
+            for (long x = end; x < (far + 1) * 512; x++) assertEquals(farBank, floorAt(x), "flat far bank");
+            assertTrue((far + 1) * 512 - end >= 160, "far runway");
+            for (long x = start; x < end; x++) assertEquals(-1, floorAt(x), "bottomless pit");
+            Object[] stones = stones(far);
+            assertTrue(stones.length >= 1 && stones.length <= 3);
+            long edge = start;
+            for (Object stone : stones) {
+                long centre = (long) call(stone, "worldX");
+                int half = (int) call(stone, "halfWidth");
+                assertTrue(kinds.contains((int) call(stone, "objectId")));
+                assertEquals(Math.max(bank, farBank), (int) call(stone, "surface"), "level with the lower bank");
+                long span = centre - half - edge;
+                assertTrue(span >= 16 && span <= 144, "jumpable span " + span);
+                edge = centre + half;
+            }
+            assertTrue(end - edge >= 16 && end - edge <= 144, "final span " + (end - edge));
+        }
+        if (kinds.isEmpty()) assertEquals(0, runs, "acts without stock platforms keep ordinary corridors");
+        else assertTrue(runs >= 25 && runs <= 120, "a share of corridors becomes a platform stretch: " + runs);
+    }
+
+    private static int levelIndex(int zone, int act) {
+        return GameServices.module().getZoneRegistry().getLevelDataForZone(zone).get(act).levelIndex();
+    }
+
+    /**
+     * Real physics and ROM objects: the input policy crosses the act's first platform stretch on
+     * the stock platforms the controller spawns at their planned positions, through the
+     * engine's own solid-object riding.
+     */
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> courseActsAtBothAspects() {
+        return courseActs().flatMap(a -> java.util.stream.Stream.of(WidescreenAspect.NATIVE_4_3, WidescreenAspect.WIDE_16_9)
+                .map(aspect -> org.junit.jupiter.params.provider.Arguments.of(a.get()[0], a.get()[1], aspect)));
+    }
+
+    @ParameterizedTest(name = "zone {0} act {1} {2}")
+    @org.junit.jupiter.params.provider.MethodSource("courseActsAtBothAspects")
+    void sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int zone, int act, WidescreenAspect aspect) throws Exception {
+        var fixture = launch(aspect, zone, act);
+        org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty(), "act places no platforms");
+        long stretch = 2;
+        while (!platformRun(stretch * 4 + 3)) stretch++;
+        long start = pitStart(stretch), end = pitEnd(stretch);
+        Object[] planned = stones(stretch * 4 + 3);
+        fixture.stepIdleFrames(2);
+        fixture.sprite().setInvulnerableFrames(20000);
+        Set<Long> seen = new HashSet<>();
+        var trail = new StringBuilder();
+        boolean rode = false;
+        for (int frame = 0; frame < 6000 && originPixels() + fixture.sprite().getCentreX() < end + 64; frame++) {
+            stepTerrain(fixture, 1);
+            var player = fixture.sprite();
+            trail.append(String.format(" [%d,%d air=%b obj=%b vx=%d]", originPixels() + player.getCentreX(),
+                    player.getCentreY(), player.getAir(), player.isOnObject(), (int) player.getXSpeed()));
+            if (trail.length() > 6000) trail.delete(0, trail.length() - 6000);
+            if (player.getDead()) {
+                var desc = new StringBuilder("pit " + start + ".." + end + " bank " + floorAt(start - 1) + "/" + floorAt(end));
+                for (Object stone : planned) desc.append(" stone ").append(stone);
+                for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                    if (!object.getClass().getName().startsWith("infinite.")) desc.append(" live ")
+                            .append(object.getClass().getSimpleName()).append('@').append(object.getX() + originPixels())
+                            .append(',').append(object.getY()).append(object.isDestroyed() ? "(x)" : "");
+                }
+                fail("death at world x=" + (originPixels() + player.getCentreX()) + " " + desc + "\n" + trail);
+            }
+            for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                if (object.getClass().getName().startsWith("infinite.") || object.isDestroyed()) continue;
+                for (Object stone : planned) {
+                    if (object.getSpawn().objectId() == (int) call(stone, "objectId")
+                            && object.getSpawn().x() + originPixels() == (long) call(stone, "worldX")) {
+                        // The reported position follows the stock sink when stood on; check it on arrival.
+                        if (seen.add((long) call(stone, "worldX"))) {
+                            assertEquals((int) call(stone, "y"), object.getSpawn().y(), "planned height");
+                        }
+                    }
+                }
+            }
+            long worldX = originPixels() + player.getCentreX();
+            rode |= player.isOnObject() && !player.getAir() && worldX > start && worldX < end;
+        }
+        assertTrue(originPixels() + fixture.sprite().getCentreX() >= end, "crossed the pit");
+        assertEquals(planned.length, seen.size(), "every planned stone spawned as a stock object");
+        assertTrue(rode, "Sonic stood on a stock platform over the pit");
+    }
+
     private boolean isCorridor(long section) throws Exception {
         return (boolean) terrain().getClass().getMethod("isCorridor", long.class).invoke(terrain(), section);
     }
@@ -773,9 +992,11 @@ class TestInfiniteSonic {
             int width = gapWidth(section);
             int step = stepHeight(section);
             assertEquals(width, gapWidth(section));
-            elevations.add(floorAt(section * 512));
+            if (floorAt(section * 512) >= 0) elevations.add(floorAt(section * 512));
             assertEquals(floorAt(section * 512 - 1), floorAt(section * 512), "sections join without a seam step");
             if (section < 3) assertFalse(isCorridor(section), "safe opening runway");
+            // Platform stretches have their own test below.
+            if (platformRun(section)) continue;
             if (!isCorridor(section)) {
                 assertEquals(0, width);
                 assertEquals(0, step);

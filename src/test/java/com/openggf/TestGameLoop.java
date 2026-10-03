@@ -2648,6 +2648,40 @@ public class TestGameLoop {
         verify((FadeManager) getPrivateField(gameLoop, "fadeManager"), never()).startFadeToBlack(any());
     }
 
+    @Test
+    void testTitleScreenExitStartsLevelWhenModuleSuppressesLevelSelect() throws Exception {
+        SessionManager.clear();
+        com.openggf.configuration.SonicConfigurationService.getInstance()
+                .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, true);
+
+        StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.LEVEL_SELECT);
+        titleScreen.supportsLevelSelectOverlay = true;
+        GameModule module = neutralGameModule();
+        com.openggf.game.LevelSelectProvider levelSelect = mock(com.openggf.game.LevelSelectProvider.class);
+        when(module.suppressesLevelSelect()).thenReturn(true);
+        when(module.getTitleScreenProvider()).thenReturn(titleScreen);
+        when(module.getLevelSelectProvider()).thenReturn(levelSelect);
+        when(module.getDataSelectProvider()).thenReturn(new StubDataSelectProvider(DataSelectAction.none()));
+        when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
+
+        com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
+        setPrivateField(gameLoop, "levelManager", levelManager);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.TITLE_SCREEN);
+
+        GameModuleRegistry.setCurrent(module);
+        invokePrivateMethod(gameLoop, "doExitTitleScreen");
+
+        assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
+        verify(levelSelect, never()).initializeFromTitleScreen();
+        verify(levelSelect, never()).initialize();
+        com.openggf.configuration.SonicConfigurationService.getInstance()
+                .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
+    }
+
     private MasterTitleLaunchCoordinator installLaunchCoordinator(SonicConfigurationService config,
                                                                   TrackingLaunchProfileStore store)
             throws Exception {

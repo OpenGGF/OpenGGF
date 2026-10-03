@@ -58,7 +58,13 @@ public final class InfiniteSonicMod implements GgfMod {
             @Override public void initLevel(int zone, int act) { }
             @Override public void update() { }
         };
+        private com.openggf.level.objects.ObjectRegistry stockObjects;
         public Module(GameModule base) { super(base, "infinite-sonic:terrain"); }
+        /** The session's object registry, which the course uses to spawn stock platforms. */
+        private com.openggf.level.objects.ObjectRegistry stockObjects() {
+            if (stockObjects == null) stockObjects = createObjectRegistry();
+            return stockObjects;
+        }
         @Override public Game createGame(Rom rom) { return game = super.createGame(rom); }
         @Override public Game createGame(com.openggf.game.GameDataSource source) {
             return game = super.createGame(source);
@@ -130,6 +136,10 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public LevelEventProvider getLevelEventProvider() {
             return active ? endlessEvents : super.getLevelEventProvider();
         }
+        /** The course is designed for the 400px 16:9 view: more lookahead at the scroll speed. */
+        @Override public String requiredDisplayAspect() { return "WIDE_16_9"; }
+        /** The title zone picker is the course's only zone choice; acts are not separate courses. */
+        @Override public boolean suppressesLevelSelect() { return true; }
         @Override public double gameplayAudioPlaybackRate() {
             return active ? clock.multiplier() : super.gameplayAudioPlaybackRate();
         }
@@ -145,6 +155,7 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public <T> T getGameService(Class<T> type) {
             if (type == ChallengeClock.class) return type.cast(clock);
             if (type == CourseSession.class) return type.cast(session);
+            if (type == com.openggf.level.objects.ObjectRegistry.class) return type.cast(stockObjects());
             return type == TerrainLibrary.class ? type.cast(library) : super.getGameService(type);
         }
     }

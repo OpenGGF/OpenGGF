@@ -1,10 +1,16 @@
 # Infinite Sonic — endless Sonic 1 challenge
 
-A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**. **Green Hill
-Act 1** starts the course, and every act of **Green Hill, Marble, Spring Yard,
-Labyrinth, Star Light and Scrap Brain** (use level select) becomes an endless course
-built from that act's own ROM terrain, art, background and music. Final Zone and the
-ending stay stock. The title screen's zone picker chooses where a new game begins. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
+A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**. The title
+screen's zone picker chooses **Green Hill, Marble, Spring Yard, Labyrinth, Star Light
+or Scrap Brain**, and that zone becomes one endless course built from its first act's
+ROM terrain, art, background and music. Each zone is a single level: the stock level
+select is unavailable while the mod is active (the `LEVEL_SELECT_ON_STARTUP` setting
+and the debug level-select key are ignored). Final Zone and the ending stay stock.
+
+The mod always plays in **16:9** (the 400-pixel `WIDE_16_9` view), whatever the
+global aspect setting: the wider screen shows more of the course ahead at scroll
+speed. The player's own aspect returns at the master title. Trace test mode still
+forces native 4:3. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
 The camera scrolls at a minimum of **75% of Sonic’s normal maximum run speed**,
 letting Sonic gain ground until his centre reaches 60% of the screen width, just right of centre.
 There the camera follows his position, keeping him on screen while preserving
@@ -57,7 +63,8 @@ Labyrinth (and Scrap Brain Act 3, which reuses its layout) has no water, current
 water slides or drowning, because underwater top speed is slower than the scrolling
 edge.
 
-Each act uses the badniks its own stock level places, read from the ROM's object
+The course logic still accepts any stock act, which keeps the table below and the tests
+covering acts 2 and 3, but only act 1 of each zone is reachable in play. Each act uses the badniks its own stock level places, read from the ROM's object
 layout for that act and picked as often as the act places them (so Marble's sky is
 mostly Batbrains, and Green Hill Act 3 is heavy on Buzz Bombers). They are drawn with
 the ROM art the zone loads:
@@ -88,6 +95,20 @@ also change elevation. The course moves between four ground levels 32 pixels apa
 climbing or dropping up to 64 pixels per corridor. Climbs use pits of at most 128
 pixels, and 192 pixel pits stay level. Some drops are a plain ledge with no pit. Hold Jump while moving to clear a pit;
 releasing Jump early shortens the arc. Enemy patrols never occupy these corridors.
+Four rings arc over each pit, highest in the middle, tracing the jump that clears it.
+
+From the third corridor on, about a third of corridors become a **platform stretch**:
+a 320 to 448 pixel bottomless pit bridged by one to three of the zone's own stock
+platforms, level with the lower bank, with at most 144 pixels between footholds. These
+are the shipped Sonic 1 objects themselves, with their ROM art, solidity, riding and
+sink: Green Hill and Spring Yard use the floating platform (Obj18), half
+the time as the kind that falls 30 frames after Sonic lands; Marble and Scrap Brain use
+the wide moving blocks (Obj52) held stationary. Only platforms the act's own stock layout
+places are used, and only those at least 64 pixels wide, so the Labyrinth course (whose
+only block is 32 pixels) and the Star Light course (whose first act places none) keep
+ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
+stretches in one jump; wider ones need a platform. No enemies patrol platform stretches.
+
 The other sections retain the ROM-derived hills and dips, raised or lowered to the
 current level; raised and lowered levels use fewer hill shapes because the layout
 has 256 block slots. Rows of rings appear periodically along the terrain.
@@ -125,6 +146,8 @@ fractional position and speed. Backtracking regenerates the same terrain from th
 same logical coordinates. Change `TerrainLibrary.SEED` and rebuild for another course.
 Enemy positions and patrol phases shift with the world and participate in rewind.
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
-from that window can regenerate its encounters. There are no loops, moving platforms, breakable floors or checkpoints. Section reflections can mirror scenery. Background scrolling at a world
+from that window can regenerate its encounters. Stock platforms keep their own
+coordinates, so the window waits to shift until none are loaded (forcing the shift at
+local X=12,288 if necessary). There are no loops, moving platforms, breakable floors or checkpoints. Section reflections can mirror scenery. Background scrolling at a world
 rebase still needs visual verification. The coverage matrix and current evidence are
 in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).

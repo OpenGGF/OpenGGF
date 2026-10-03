@@ -15,7 +15,7 @@ public final class EncounterPlan {
     }
 
     public static Encounter at(TerrainLibrary terrain, long section) {
-        if (section < FIRST_SECTION || terrain.isCorridor(section)) return null;
+        if (section < FIRST_SECTION || terrain.isCorridor(section) || terrain.platformRun(section)) return null;
         long random = TerrainLibrary.random(section + TerrainLibrary.SEED + 0x4241444e494bL);
         // A quarter of sections are rest space. Separate randomness keeps terrain unchanged.
         int choice = (int) Long.remainderUnsigned(random, 8);
