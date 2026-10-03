@@ -21,7 +21,7 @@ public final class EncounterPlan {
         int choice = (int) Long.remainderUnsigned(random, 8);
         if (choice < 2) return null;
         boolean flying = choice >= 6;
-        var line = flying ? CourseSpecies.air(terrain.romZone()) : CourseSpecies.ground(terrain.romZone());
+        var line = flying ? terrain.airSpecies() : terrain.groundSpecies();
         var species = CourseSpecies.of(line[(int) Long.remainderUnsigned(random >>> 24, line.length)]);
         long centre = section * 512 + 256;
         int jitter = (int) Long.remainderUnsigned(random >>> 8, 97) - 48;

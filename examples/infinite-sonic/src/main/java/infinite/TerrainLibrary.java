@@ -42,6 +42,8 @@ public final class TerrainLibrary {
     private final int[][][][] gapHalves = new int[GAP_COUNT][TIER_COUNT][2][];
     private final int seamHeight;
     private final int romZone;
+    private final int[] groundSpecies;
+    private final int[] airSpecies;
 
     /** One walkable 256px floor in a ROM foreground column. {@code profile} holds source Y. */
     private record Candidate(int column, int[] profile, int clearance) {
@@ -51,6 +53,10 @@ public final class TerrainLibrary {
 
     public TerrainLibrary(Level source) {
         romZone = source.getZoneIndex();
+        // The act's own stock placement decides which badniks the course uses.
+        var stockObjects = source.getObjects();
+        groundSpecies = CourseSpecies.lineUp(stockObjects, false, romZone);
+        airSpecies = CourseSpecies.lineUp(stockObjects, true, romZone);
         sourceHeight = source.getLayerHeightBlocks(0);
         height = Math.min(sourceHeight, MAX_HEIGHT);
         int budget = 256 - backgroundBlocks(source).length;
@@ -283,6 +289,9 @@ public final class TerrainLibrary {
     public int blockCount() { return blocks.size(); }
     /** Stock S1 zone id of the source level, which also selects the loaded object art. */
     public int romZone() { return romZone; }
+    /** Weighted {@link CourseSpecies} ids for ground and air encounters in this act. */
+    public int[] groundSpecies() { return groundSpecies.clone(); }
+    public int[] airSpecies() { return airSpecies.clone(); }
     public Block block(int index) { return blocks.get(index); }
     private int sectionIndex(long section, int tier) {
         return (int) Long.remainderUnsigned(random(section + SEED), sections.get(tier).size());

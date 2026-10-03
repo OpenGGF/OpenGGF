@@ -373,8 +373,8 @@ class TestInfiniteSonic {
         fixture.stepIdleFrames(1);
         assertTrue(player.getDead());
         assertTrue(gameOver());
-        assertEquals(2, controllerInt("displayLives"), "the lost life leaves two for the session");
-        assertTrue(controllerFlag("canContinue"));
+        assertEquals(0, controllerInt("displayLives"), "the session starts with no spare lives");
+        assertFalse(controllerFlag("canContinue"));
         int score = GameServices.gameState().getScore();
         int elapsed = ticks();
         int cameraX = fixture.camera().getX();
@@ -390,19 +390,21 @@ class TestInfiniteSonic {
     private int controllerInt(String name) throws Exception {
         return (int) controller().getClass().getMethod(name).invoke(controller());
     }
-    private Object session() throws Exception {
-        return GameServices.module().getGameService(loader.loadClass("infinite.CourseSession"));
+
+    private void setSpareLives(int lives) {
+        while (GameServices.gameState().getLives() > lives) GameServices.gameState().loseLife();
+        while (GameServices.gameState().getLives() < lives) GameServices.gameState().addLife();
     }
 
-    /** Dies with {@code lives} in the session, waits out the menu delay and returns the corpse. */
-    private void dieAndWaitForMenu(HeadlessTestFixture fixture, int lives) throws Exception {
-        fixture.stepIdleFrames(2);
-        while (GameServices.gameState().getLives() > lives) GameServices.gameState().loseLife();
+    /** Dies with {@code spare} lives, waits out the menu delay and returns with the corpse held. */
+    private void dieAndWaitForMenu(HeadlessTestFixture fixture, int spare) throws Exception {
+        setSpareLives(spare);
         setTicks(1800 * 2 + 100);
         GameServices.gameState().addScore(500);
         fixture.sprite().applyCrushDeath();
         fixture.stepIdleFrames(1);
         assertTrue(gameOver());
+        assertEquals(spare, controllerInt("displayLives"));
         // Hold jump through the early frames: a press carried over from play must not choose.
         for (int i = 0; i < 300; i++) fixture.stepFrame(false, false, false, false, i < 30);
         assertTrue(fixture.sprite().getDead());
@@ -425,43 +427,104 @@ class TestInfiniteSonic {
         assertFalse(gameOver());
     }
 
+    /** Runs some real course so the controller has recorded a safe spot well past the start. */
+    private void runCourse(HeadlessTestFixture fixture, int frames) throws Exception {
+        fixture.stepIdleFrames(2);
+        fixture.sprite().setInvulnerableFrames(20000);
+        for (int i = 0; i < frames; i++) stepTerrain(fixture, 1);
+        fixture.sprite().setInvulnerableFrames(0);
+    }
+
     @Test void lastLifeGameOverSkipsStockCardAndJumpRestartsTheCourse() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
-        dieAndWaitForMenu(fixture, 1);
-        assertFalse(controllerFlag("canContinue"), "no lives left: GAME OVER offers only a restart");
+        fixture.stepIdleFrames(2);
+        dieAndWaitForMenu(fixture, 0);
+        assertFalse(controllerFlag("canContinue"), "no spare lives: GAME OVER offers only a restart");
         fixture.stepFrame(false, false, false, false, true);
         reloadAfterChoice(fixture);
         assertEquals(1.0, speed());
         assertTrue(ticks() < 10, "challenge clock restarts");
-        assertEquals(3, GameServices.gameState().getLives());
+        assertEquals(0, GameServices.gameState().getLives(), "a fresh session has no spare lives");
         assertTrue(GameServices.gameState().getScore() < 100, "score restarts with the run");
     }
 
-    @Test void deathMenuContinueResumesScoreSpeedAndSessionLives() throws Exception {
+    @Test void deathMenuContinueRevivesInPlaceAtTheLastSafeSpot() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
-        dieAndWaitForMenu(fixture, 3);
+        runCourse(fixture, 900);
+        long safe = (long) controller().getClass().getMethod("safeWorldX").invoke(controller());
+        assertTrue(safe > 1536, "a safe spot past the opening: " + safe);
+        GameServices.level().getLevelGamestate().setRings(30);
+        Object controller = controller();
+        dieAndWaitForMenu(fixture, 2);
         int score = GameServices.gameState().getScore();
-        assertTrue(score >= 500);
         assertTrue(controllerFlag("canContinue"));
-        assertEquals(2, controllerInt("displayLives"));
         var menu = loader.loadClass("infinite.CourseHud").getMethod("menuLines", controller().getClass());
         assertEquals(List.of("> CONTINUE", "  RESTART"), menu.invoke(null, controller()));
         fixture.stepFrame(false, false, false, false, true);
-        reloadAfterChoice(fixture);
+        // No reload: the same controller and terrain carry on.
+        assertFalse(GameServices.level().isRespawnRequestedForRewind(), "CONTINUE does not reload the level");
+        assertSame(controller, controller());
+        assertFalse(gameOver());
+        var player = fixture.sprite();
+        assertFalse(player.getDead());
+        assertEquals(safe, originPixels() + player.getCentreX(), "revived at the last safe spot");
+        assertEquals(floorAt(safe) - 19, player.getCentreY());
+        assertTrue(player.getInvulnerableFrames() > 0, "post-continue blink");
+        assertEquals(1, GameServices.gameState().getLives(), "CONTINUE spends one spare life");
+        assertEquals(1, controllerInt("displayLives"));
+        assertEquals(0, GameServices.level().getLevelGamestate().getRings());
+        assertTrue(GameServices.gameState().getScore() >= score, "score carries over");
         assertEquals(2.25, speed(), "the run resumes at the speed it died at");
         assertTrue(Math.abs(ticks() - (1800 * 2 + 100)) < 10, "and partway through that interval: " + ticks());
-        assertEquals(2, GameServices.gameState().getLives());
-        assertEquals(2, controllerInt("displayLives"));
-        assertTrue(GameServices.gameState().getScore() >= score, "score carries over");
-        // The resumed run can die again and continue with its last life.
-        dieAndWaitForMenu(fixture, 2);
-        assertEquals(1, controllerInt("displayLives"));
+        assertTrue(fixture.camera().getX() < player.getCentreX() - player.getXRadius(), "Sonic is on screen");
+        for (int i = 0; i < 4; i++) fixture.stepFrame(false, false, false, true, false);
+        assertFalse(player.getAir(), "standing on the floor");
+        int cameraX = fixture.camera().getX();
+        for (int i = 0; i < 60; i++) fixture.stepFrame(false, false, false, true, false);
+        assertFalse(player.getDead());
+        assertTrue(fixture.camera().getX() > cameraX, "the course scrolls again");
+        // The resumed run can die again and continue with its last spare life.
+        dieAndWaitForMenu(fixture, 1);
         assertTrue(controllerFlag("canContinue"));
+        fixture.stepFrame(false, false, false, false, true);
+        assertFalse(fixture.sprite().getDead());
+        assertEquals(0, GameServices.gameState().getLives());
+    }
+
+    @Test void continueAfterAPitDeathRevivesBeforeThePit() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        runCourse(fixture, 600);
+        var player = fixture.sprite();
+        long x = originPixels() + player.getCentreX();
+        while (floorAt(x) >= 0) x += 4; // the next pit ahead
+        long pit = x;
+        long safe = (long) controller().getClass().getMethod("safeWorldX").invoke(controller());
+        assertTrue(safe < pit);
+        setSpareLives(1);
+        int local = (int) (pit + 32 - originPixels());
+        NativePositionOps.writeXPosResetSubpixel(player, local);
+        NativePositionOps.writeYPosResetSubpixel(player, floorAt(safe) - 40);
+        player.setAir(true); player.setXSpeed((short) 0); player.setGSpeed((short) 0);
+        fixture.camera().setX((short) (local - 160));
+        for (int i = 0; i < 240 && !player.getDead(); i++) fixture.stepIdleFrames(1);
+        assertTrue(player.getDead(), "fell into the pit");
+        assertTrue(gameOver());
+        for (int i = 0; i < 300; i++) fixture.stepIdleFrames(1);
+        assertTrue(controllerFlag("canContinue"));
+        fixture.stepFrame(false, false, false, false, true);
+        assertFalse(player.getDead());
+        long revived = originPixels() + player.getCentreX();
+        assertEquals(safe, revived, "back at the last safe spot");
+        assertTrue(revived < pit);
+        for (int i = 0; i < 4; i++) fixture.stepIdleFrames(1);
+        assertFalse(player.getAir(), "standing on solid floor");
+        assertFalse(player.getDead());
     }
 
     @Test void deathMenuRestartBeginsAFreshSession() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
-        dieAndWaitForMenu(fixture, 3);
+        fixture.stepIdleFrames(2);
+        dieAndWaitForMenu(fixture, 2);
         // Down moves the cursor once however long it is held; up moves it back.
         for (int i = 0; i < 10; i++) fixture.stepFrame(false, true, false, false, false);
         assertTrue(controllerFlag("restartSelected"));
@@ -476,30 +539,40 @@ class TestInfiniteSonic {
         reloadAfterChoice(fixture);
         assertEquals(1.0, speed());
         assertTrue(ticks() < 10);
-        assertEquals(3, GameServices.gameState().getLives());
+        assertEquals(0, GameServices.gameState().getLives());
         assertTrue(GameServices.gameState().getScore() < 100);
     }
 
-    @Test void everyFiftyThousandPointsAwardsASessionLife() throws Exception {
+    @Test void livesComeOnlyFromEveryHundredRings() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         fixture.stepIdleFrames(2);
         fixture.sprite().setInvulnerableFrames(2000);
-        int perLife = loader.loadClass("infinite.CourseSession").getField("SCORE_PER_LIFE").getInt(null);
-        GameServices.gameState().addScore(perLife - 1 - GameServices.gameState().getScore());
-        assertEquals(3, GameServices.gameState().getLives());
+        var rings = GameServices.level().getLevelGamestate();
+        assertEquals(0, GameServices.gameState().getLives(), "the session starts with no spare lives");
+        GameServices.gameState().addScore(120_000);
         stepTerrain(fixture, 1);
-        assertEquals(4, GameServices.gameState().getLives(), "survival points cross 50,000");
+        assertEquals(0, GameServices.gameState().getLives(), "score never awards lives");
+        rings.setRings(99);
+        stepTerrain(fixture, 1);
+        assertEquals(0, GameServices.gameState().getLives());
+        rings.addRings(1); // the ordinary collection path, including the stock 100-ring check
+        stepTerrain(fixture, 1);
+        assertEquals(1, GameServices.gameState().getLives(), "one life at 100, not a second stock one");
         String hud = (String) loader.loadClass("infinite.CourseHud")
                 .getMethod("livesText", ObjectServices.class, controller().getClass())
                 .invoke(null, GameServices.level().getObjectManager().getObjectServices(), controller());
-        assertTrue(hud.endsWith("  LIVES 4"), hud);
-        for (int i = 0; i < 30; i++) stepTerrain(fixture, 1);
-        assertEquals(4, GameServices.gameState().getLives(), "one life per threshold");
-        assertEquals(2 * perLife, (int) session().getClass().getMethod("nextLifeScore").invoke(session()));
-        // Enemy points also count toward the next threshold.
-        GameServices.gameState().addScore(2 * perLife - GameServices.gameState().getScore());
+        assertTrue(hud.endsWith("  LIVES 1"), hud);
+        rings.addRings(100);
         stepTerrain(fixture, 1);
-        assertEquals(5, GameServices.gameState().getLives());
+        assertEquals(2, GameServices.gameState().getLives(), "200");
+        rings.addRings(100);
+        stepTerrain(fixture, 1);
+        assertEquals(3, GameServices.gameState().getLives(), "every further 100, beyond the stock 200");
+        rings.resetRingsForLoss();
+        stepTerrain(fixture, 1);
+        rings.addRings(100);
+        stepTerrain(fixture, 1);
+        assertEquals(4, GameServices.gameState().getLives(), "reaching 100 again after losing rings");
     }
 
     @Test void minimumScrollAllowsFasterRunningAndSurvivalScoreScales() throws Exception {
@@ -864,8 +937,10 @@ class TestInfiniteSonic {
         var fixture = launch(WidescreenAspect.NATIVE_4_3, zone, act);
         int romZone = GameServices.level().getCurrentLevel().getZoneIndex();
         var speciesType = loader.loadClass("infinite.CourseSpecies");
-        var ground = ids((int[]) speciesType.getMethod("ground", int.class).invoke(null, romZone));
-        var air = ids((int[]) speciesType.getMethod("air", int.class).invoke(null, romZone));
+        // The act's own stock placement chooses the line-up.
+        var ground = ids((int[]) terrain().getClass().getMethod("groundSpecies").invoke(terrain()));
+        var air = ids((int[]) terrain().getClass().getMethod("airSpecies").invoke(terrain()));
+        assertFalse(ground.isEmpty() || air.isEmpty());
         var seen = new HashSet<Integer>();
         for (long section = 3; section < 600; section++) {
             Object plan = encounter(section);
@@ -947,7 +1022,8 @@ class TestInfiniteSonic {
         ObjectInstance enemy = null;
         for (int i = 0; i < 1000 && enemy == null; i++) {
             stepCourse(fixture, 1);
-            enemy = enemies().stream().filter(o -> o.getSpawn().subtype() == subtype).findFirst().orElse(null);
+            // 0 = a ground badnik, 1 = a flyer (whichever species the act's line-up chose).
+            enemy = enemies().stream().filter(o -> flyingEnemy(o) == (subtype == 1)).findFirst().orElse(null);
         }
         assertNotNull(enemy);
         var player = fixture.sprite();

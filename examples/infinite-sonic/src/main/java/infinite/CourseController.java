@@ -14,6 +14,14 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private static final int FOLLOW_PERCENT = 60;
     // Ignore a jump already held while dying; about one second before a restart is accepted.
     private static final int RESTART_DELAY_FRAMES = 60;
+    // Sonic's standing radius: his centre sits 19px above the floor.
+    private static final int STANDING_RADIUS = 19;
+    // A safe spot has floor from 32px behind to 64px ahead, varying by at most 24px.
+    private static final int SAFE_BEHIND = 32;
+    private static final int SAFE_AHEAD = 64;
+    private static final int SAFE_RELIEF = 24;
+    // Post-continue blink, as long as the stock post-hit invulnerability ($78).
+    private static final int RESUME_INVULNERABLE_FRAMES = 0x78;
     private int scrollFraction;
     private int scoreFraction;
     private boolean started;
@@ -24,13 +32,18 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private boolean restartSelected;
     private boolean menuUpHeld;
     private boolean menuDownHeld;
+    // Logical world X of the last grounded, pit-free spot; -1 until one is seen.
+    private long safeWorldX = -1;
+    // Ring count last frame: a life is earned each time it reaches a new multiple of 100.
+    private int ringsSeen;
     public boolean gameOver() { return gameOver; }
     public boolean restartReady() { return gameOver && gameOverFrames >= RESTART_DELAY_FRAMES; }
-    /** Lives remain after this death, so the menu offers CONTINUE as well as RESTART. */
+    /** A spare life remains, so the menu offers CONTINUE (spending it) as well as RESTART. */
     public boolean canContinue() { return gameOver && session().livesLeft() > 0; }
     public boolean restartSelected() { return restartSelected; }
-    /** Session lives: the life just lost is already gone while the death menu is up. */
+    /** Spare lives: the session starts with none and earns one per 100 rings. */
     public int displayLives() { return gameOver ? session().livesLeft() : services().gameState().getLives(); }
+    public long safeWorldX() { return safeWorldX; }
     public double speedMultiplier() { return clock().displayMultiplier(); }
     public int secondsRemaining() { return clock().secondsRemaining(); }
     private long origin;
@@ -61,18 +74,12 @@ public final class CourseController extends AbstractObjectInstance implements Re
         if (player.getDead()) { endRun(player); return; }
         if (!started) {
             started = true;
-            var state = services().gameState();
-            int lives = session().livesLeft();
-            int resumeScore = session().consumeContinueScore();
-            if (resumeScore < 0) {
-                // A new run, including RESTART from the death menu, begins from a fresh session.
-                state.resetSession();
-                session().reset();
-            } else {
-                // CONTINUE keeps the score and session lives; the clock was restored by the reload.
-                state.addScore(resumeScore - state.getScore());
-                setLives(lives);
-            }
+            // Every load, including RESTART from the death menu, begins a fresh session with
+            // no spare lives; CONTINUE never reloads, so it never reaches this.
+            services().gameState().resetSession();
+            session().reset();
+            setLives(0);
+            ringsSeen = services().levelGamestate().getRings();
             // A running start gives the player room to react before the scrolling edge arrives.
             player.setGSpeed((short) NORMAL_RUN_SPEED);
             player.setXSpeed((short) NORMAL_RUN_SPEED);
@@ -94,12 +101,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
         scoreFraction += MINIMUM_SCROLL;
         services().gameState().addScore(scoreFraction / 256);
         scoreFraction %= 256;
-        // Enemy points count too, so test the threshold against the whole score.
-        if (session().awardsLife(services().gameState().getScore())) {
-            services().gameState().addLife();
-            var profile = services().audioManager().getAudioProfile();
-            if (profile != null) services().audioManager().playMusic(profile.getExtraLifeMusicId());
-        }
+        awardRingLives();
+        rememberSafeSpot(player);
         var config = services().configuration();
         int fps = "PAL".equalsIgnoreCase(config.getString(com.openggf.configuration.SonicConfiguration.REGION))
                 ? 50 : config.getInt(com.openggf.configuration.SonicConfiguration.FPS);
@@ -114,10 +117,44 @@ public final class CourseController extends AbstractObjectInstance implements Re
         camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, player.getCentreY());
     }
 
+    /**
+     * Lives come only from rings: one each time the counter reaches 100, 200, 300 and so on.
+     * The stock 100/200 awards are pre-claimed every frame so they never add a second life.
+     */
+    private void awardRingLives() {
+        var level = services().levelGamestate();
+        level.setRingExtraLifeFlags(0x06);
+        int rings = level.getRings();
+        int earned = rings / CourseSession.RINGS_PER_LIFE - ringsSeen / CourseSession.RINGS_PER_LIFE;
+        ringsSeen = rings;
+        if (earned <= 0) return;
+        for (int i = 0; i < earned; i++) services().gameState().addLife();
+        var profile = services().audioManager().getAudioProfile();
+        if (profile != null) services().audioManager().playMusic(profile.getExtraLifeMusicId());
+    }
+
+    private void rememberSafeSpot(PlayableEntity player) {
+        if (player.getAir() || player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite
+                && sprite.isHurt()) return;
+        long worldX = originPixels() + player.getCentreX();
+        if (safeFloor(worldX)) safeWorldX = worldX;
+    }
+
+    private boolean safeFloor(long worldX) {
+        var library = services().gameService(TerrainLibrary.class);
+        int floor = library.floorAt(worldX);
+        if (floor < 0) return false;
+        for (int dx = -SAFE_BEHIND; dx <= SAFE_AHEAD; dx += 4) {
+            int other = library.floorAt(worldX + dx);
+            if (other < 0 || Math.abs(other - floor) > SAFE_RELIEF) return false;
+        }
+        return true;
+    }
+
     private void endRun(PlayableEntity player) {
         gameOver = true;
         var state = services().gameState();
-        session().died(state.getLives() - 1, state.getScore(), clock().capture());
+        session().died(state.getLives(), clock().capture());
         clock().end();
         // The death routine subtracts the life itself once the corpse falls. Leaving exactly
         // one makes that subtraction reach zero, so the corpse is held for the death menu
@@ -145,14 +182,60 @@ public final class CourseController extends AbstractObjectInstance implements Re
             restartSelected = !restartSelected;
             services().audioManager().playSfx(ZoneMenu.SFX_SWITCH);
         }
-        // Player 1 A, SPACE by default. Lives stay at zero until the reload so a
-        // corpse still falling cannot queue an ordinary death restart; the reload
-        // re-enters loadLevelOverride and a fresh controller.
-        if (sprite.isJumpJustPressed()) {
-            restartRequested = true;
-            if (canContinue() && !restartSelected) session().requestContinue();
-            services().levelManager().requestRespawn();
+        // Player 1 A, SPACE by default.
+        if (!sprite.isJumpJustPressed()) return;
+        if (canContinue() && !restartSelected) {
+            resume(sprite);
+            return;
         }
+        // Lives stay at zero until the reload so a corpse still falling cannot queue an
+        // ordinary death restart; the reload re-enters loadLevelOverride and a fresh controller.
+        restartRequested = true;
+        services().levelManager().requestRespawn();
+    }
+
+    /**
+     * CONTINUE: revive Sonic in place at the last safe spot, without reloading the level.
+     * Score, speed stage and countdown position, terrain and cleared enemies all carry on.
+     */
+    private void resume(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        setLives(session().resume(clock()));
+        var camera = services().camera();
+        long worldX = resumeSpot(camera);
+        int localX = (int) (worldX - originPixels());
+        int y = services().gameService(TerrainLibrary.class).floorAt(worldX) - STANDING_RADIUS;
+        // resetState is the level-start reset: it clears the death routine, hurt, object
+        // control, rolling and the dead animation without touching rings or score.
+        sprite.resetState();
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(sprite, localX);
+        com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(sprite, y);
+        sprite.resetPositionAndStatTableHistoryAtCentre((short) localX, (short) y);
+        sprite.setDirection(com.openggf.physics.Direction.RIGHT);
+        sprite.setGSpeed((short) NORMAL_RUN_SPEED);
+        sprite.setXSpeed((short) NORMAL_RUN_SPEED);
+        sprite.setYSpeed((short) 0);
+        sprite.setInvulnerableFrames(RESUME_INVULNERABLE_FRAMES);
+        // As a stock respawn, the run resumes with no rings.
+        services().levelGamestate().setRings(0);
+        ringsSeen = 0;
+        // Applying the death froze the camera; put Sonic a quarter of the way across.
+        camera.setFrozen(false);
+        camera.setX((short) Math.max(0, localX - camera.getWidth() / 4));
+        camera.setY((short) Math.max(0, y - camera.getHeight() / 2));
+        scrollFraction = 0;
+        gameOver = false;
+        gameOverFrames = 0;
+        restartSelected = false;
+        // The death flow faded the music out.
+        services().audioManager().playMusic(services().levelManager().getCurrentLevelMusicId());
+    }
+
+    /** The last safe spot, or the first safe floor ahead of the screen's left edge. */
+    private long resumeSpot(com.openggf.camera.Camera camera) {
+        if (safeWorldX >= 0 && safeWorldX - originPixels() >= 64) return safeWorldX;
+        long x = originPixels() + Math.max(64, camera.getX() + 64);
+        for (int i = 0; i < 1024 && !safeFloor(x); i++) x += 16;
+        return x;
     }
 
     private void recycleTerrain(PlayableEntity player) {

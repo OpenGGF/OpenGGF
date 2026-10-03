@@ -398,3 +398,21 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
 **73 passed, 0 failures, 0 skipped.** Not covered: Orbinaut spike contact, Roller and
 Ball Hog interactions, rewind across a CONTINUE reload, and live rendering of the new
 species and the death menu (no capture or visual review was made).
+
+## Act line-ups, ring-only lives and in-place CONTINUE (0.11.0, 2026-10-03)
+
+Main checkout, `feature/ai-infinite-sonic`, base `9423b53e23`; mod, test and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Act-derived line-ups | `encountersUseTheZonesOwnBadniksWithLoadedRomArt` | Six zones' act 1 plus SBZ3; planned species come only from the act's line-up, all appear, art registered |
+| Ring-only lives | `livesComeOnlyFromEveryHundredRings` | 0 at start; 120,000 points award nothing; 100/200/300 each award one (no stock duplicate); re-reaching 100 after a loss |
+| In-place CONTINUE | `deathMenuContinueRevivesInPlaceAtTheLastSafeSpot` | After 900 frames of course: no respawn request, same controller, exact safe spot and floor Y, blink, one life spent, rings 0, score/2.25×/countdown kept, on screen, standing, scroll resumes; a second continue |
+| CONTINUE after a pit | `continueAfterAPitDeathRevivesBeforeThePit` | Real fall into the next pit; revived at the recorded spot before it, standing |
+| No-lives game over | `lastLifeGameOverSkipsStockCardAndJumpRestartsTheCourse` | Restart gives a fresh session with 0 spare lives |
+| RESTART | `deathMenuRestartBeginsAFreshSession` | Cursor and fresh 0-life session |
+
+**74 passed, 0 failures, 0 skipped** (same focused command). The line-ups for all 18 acts
+were printed from the live course with a temporary diagnostic (not kept). Not covered:
+continuing after a left-edge death specifically, rewind across a continue, and any live-engine
+render of the new behavior.

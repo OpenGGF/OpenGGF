@@ -79,7 +79,35 @@ public final class CourseSpecies {
         };
     }
 
-    /** Stock S1 zone ids (Level.getZoneIndex): GHZ 0, LZ 1, MZ 2, SLZ 3, SYZ 4, SBZ 5. */
+    /** The species for a stock S1 object id (Sonic1ObjectIds), or -1 if the course has none. */
+    public static int fromObjectId(int objectId) {
+        return switch (objectId) {
+            case 0x40 -> MOTOBUG;
+            case 0x22 -> BUZZ_BOMBER;
+            case 0x1f -> CRABMEAT;
+            case 0x50 -> YADRIN;
+            case 0x43 -> ROLLER;
+            case 0x55 -> BATBRAIN;
+            case 0x2d -> BURROBOT;
+            case 0x60 -> ORBINAUT;
+            case 0x5f -> BOMB;
+            case 0x1e -> BALL_HOG;
+            default -> -1;
+        };
+    }
+
+    /**
+     * Line-up for an act: one entry per badnik the stock act places (so common species are
+     * picked more often), split into ground or air; the zone defaults below fill an empty side.
+     */
+    public static int[] lineUp(java.util.List<com.openggf.level.objects.ObjectSpawn> stockObjects,
+            boolean flying, int romZone) {
+        int[] picks = stockObjects.stream().mapToInt(o -> fromObjectId(o.objectId()))
+                .filter(id -> id >= 0 && of(id).flying() == flying).toArray();
+        return picks.length > 0 ? picks : flying ? air(romZone) : ground(romZone);
+    }
+
+    /** Fallback by stock S1 zone id (Level.getZoneIndex): GHZ 0, LZ 1, MZ 2, SLZ 3, SYZ 4, SBZ 5. */
     public static int[] ground(int romZone) {
         return switch (romZone) {
             case 1 -> new int[]{BURROBOT};

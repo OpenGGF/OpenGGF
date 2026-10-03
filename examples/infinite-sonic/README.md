@@ -12,14 +12,17 @@ his native running and jumping physics. Leaving the left edge
 completely loses a life, regardless of rings or invulnerability. Pits and lethal
 enemy hits also cost a life. Collect ring rows to survive ordinary enemy hits.
 
-A session starts with 3 lives, shown on the HUD. Extra lives come from 100 and 200
-rings and from every **50,000 points**, and they carry across deaths. When Sonic dies
-with lives left, the stock card is replaced by a menu: **CONTINUE** resumes the run
-from the course's opening runway with the score and speed it died at (the countdown to
-the next speedup carries over too); **RESTART** starts a fresh session at 1× with 3 lives
-and a zero score. Press up/down to choose and **SPACE** (player 1 button A) to confirm.
-Losing the last life shows the mod's own GAME OVER text; after a second, **PRESS SPACE TO
-RESTART** starts a fresh session. Neither path returns to the title screen.
+A session starts with **no spare lives**. The only way to earn one is rings: every time
+the ring counter reaches 100, 200, 300 and so on, you gain a life (reaching 100 again
+after losing your rings counts too). Points never award lives. Spare lives are shown on
+the HUD. When Sonic dies with a spare life, the stock card is replaced by a menu:
+**CONTINUE** spends the life and revives Sonic right where the run is, at the last safe
+spot he stood on (solid, pit-free floor), with no level reload. Score, speed, the
+countdown to the next speedup, the terrain and cleared enemies all carry on; rings reset
+to 0 and Sonic blinks for two seconds. **RESTART** reloads a fresh session at 1× with no
+spare lives and a zero score. Press up/down to choose and **SPACE** (player 1 button A)
+to confirm. Dying with no spare lives shows the mod's own GAME OVER text; after a second,
+**PRESS SPACE TO RESTART** starts a fresh session. Neither path returns to the title screen.
 
 The Sonic 1 title screen gains an **INFINITE** wordmark above the emblem: once
 Sonic has risen it streaks in from the right, then glints every few seconds. Below the
@@ -54,20 +57,24 @@ Labyrinth (and Scrap Brain Act 3, which reuses its layout) has no water, current
 water slides or drowning, because underwater top speed is slower than the scrolling
 edge.
 
-Each zone uses its own badniks, drawn with the ROM art the zone loads:
+Each act uses the badniks its own stock level places, read from the ROM's object
+layout for that act and picked as often as the act places them (so Marble's sky is
+mostly Batbrains, and Green Hill Act 3 is heavy on Buzz Bombers). They are drawn with
+the ROM art the zone loads:
 
 | Zone | Ground | Air |
 | --- | --- | --- |
 | Green Hill | Motobug, Crabmeat | Buzz Bomber |
 | Marble | Yadrin | Batbrain, Buzz Bomber |
-| Spring Yard | Yadrin, Crabmeat, Roller | Buzz Bomber |
+| Spring Yard | Crabmeat, Yadrin, Roller (acts 1–2) | Buzz Bomber |
 | Labyrinth (and Scrap Brain 3) | Burrobot | Orbinaut |
 | Star Light | Walking Bomb | Orbinaut |
 | Scrap Brain 1–2 | Ball Hog, Walking Bomb | Orbinaut |
 
 Rolling Rollers and Walking Bombs cannot be destroyed, as in the original game, so jump
 over them. Orbinauts keep their four circling spikes, which hurt on contact. Jaws are
-left out because the dry course has no water, and Caterkillers are not included.
+left out because the dry course has no water, and Caterkillers (Marble's most common
+ground badnik) are not included.
 
 Seeded encounters mix ground patrols, flying patrols and empty sections. Ground enemies require a gentle stretch across their whole patrol; flyers
 stay clear of the highest terrain beneath their patrol and bob. The first 1,536 pixels
@@ -118,6 +125,6 @@ fractional position and speed. Backtracking regenerates the same terrain from th
 same logical coordinates. Change `TerrainLibrary.SEED` and rebuild for another course.
 Enemy positions and patrol phases shift with the world and participate in rewind.
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
-from that window can regenerate its encounters. There are no loops, moving platforms, breakable floors or checkpoints; CONTINUE always restarts from the opening runway. Section reflections can mirror scenery. Background scrolling at a world
+from that window can regenerate its encounters. There are no loops, moving platforms, breakable floors or checkpoints. Section reflections can mirror scenery. Background scrolling at a world
 rebase still needs visual verification. The coverage matrix and current evidence are
 in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).

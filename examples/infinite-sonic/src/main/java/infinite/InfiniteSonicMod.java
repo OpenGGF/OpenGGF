@@ -77,9 +77,9 @@ public final class InfiniteSonicMod implements GgfMod {
             active = courseLevel(index);
             activeIndex = active ? index : -1;
             library = null;
-            // A death menu CONTINUE resumes at the speed it died at; every other load starts at 1x.
-            if (active) session.prepareClock(clock);
-            else { clock.reset(); session.reset(); }
+            // CONTINUE revives in place, so every load starts a fresh run at 1x.
+            clock.reset();
+            session.reset();
             if (!active) return super.loadLevelOverride(index);
             Level original = game.loadLevel(index);
             library = new TerrainLibrary(original);

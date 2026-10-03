@@ -463,3 +463,50 @@ restart) resets the session. A continue restarts from the course opening, not th
 death distance: the opening runway is the only start that is guaranteed to be flat,
 enemy-free and pit-free. Restoring the logical origin was rejected for that reason.
 
+
+## Act line-ups, ring-only lives and in-place CONTINUE (0.11.0)
+
+Follow-up on `9423b53e23`, same branch, 2026-10-03. Feedback on 0.10.0: start with
+0 lives and earn them only from 100 rings; badniks still not zone appropriate; CONTINUE
+must not reload but resume from the last safe spot.
+
+**Badnik investigation.** The 0.10.0 selection was checked in the live course rather
+than assumed. In every zone the spawned species matched the table, and the art sheets
+those badniks draw from, rendered offline from the loaded `Sonic1ObjectArtProvider`
+sheets with the level palette, showed the right sprites (MZ: Yadrin, Buzz Bomber,
+Batbrain; SBZ: Walking Bomb, Orbinaut, Ball Hog). Sheets hold their own pattern copies, so
+there is no VRAM-slot aliasing. Neither the jar contents nor the code path explained
+the report. Code mods only load at JVM start, so an engine still running the previous
+jar is the remaining explanation; this was not confirmed. A GL capture with the mod is
+not available: `GameplayCaptureTool` boots with the DETERMINISTIC launch policy, which
+disables external content, and the STANDARD policy alone did not discover the installed
+mod. The hand-written zone table was itself a guess, so line-ups now come from the act's own stock
+object layout (`TerrainLibrary` reads the source level's `getObjects()` and maps
+Sonic1 object ids). Each placed badnik becomes one entry, so species appear as often as
+the act places them. The zone table stays only as a fallback for an act with no supported
+ground or air badnik; no shipped act needs it. Derived line-ups (ground | air):
+GHZ Motobug+Crabmeat | Buzz Bomber; MZ Yadrin (one placed per act; Caterkillers
+unsupported) | Batbrain+Buzz Bomber; SYZ Crabmeat+Yadrin(+Roller acts 1–2) | Buzz
+Bomber; LZ and SBZ3 Burrobot | Orbinaut; SLZ Walking Bomb | Orbinaut; SBZ1–2 Ball Hog+
+Walking Bomb | Orbinaut.
+
+**Lives.** The session starts with 0 spare lives (`resetSession` then 0). The
+controller pre-claims the stock `LevelGamestate` 100/200 flags every frame and awards
+a life itself whenever the ring count reaches a new multiple of 100, including a
+return to 100 after a ring loss. The 0.10.0 every-50,000-point life is removed. HUD and
+menu show spare lives.
+
+**In-place CONTINUE.** The controller records the logical world X of the last frame
+Sonic stood (not airborne, not hurt) on floor that exists from 32 px behind to 64 px
+ahead within 24 px of relief. CONTINUE spends a spare life, restores the clock captured
+at death, calls the sprite's level-start `resetState()` (clears dead, death routine,
+hurt, object control and animation), writes the position (`floor − 19`), resets the
+position history, faces right with the usual running start and $78 frames of
+invulnerability, zeroes rings, unfreezes the camera that `applyDeath` froze, puts Sonic a
+quarter of the way across the screen and restarts the zone music the death flow faded.
+Terrain, origin, cleared encounters and score are untouched because nothing reloads. If
+the spot has left the retained window, the first safe floor right of the screen edge is
+used. Holding the corpse is unchanged (lives set to 1 so the death routine reaches zero
+and takes the course's game-over flow). RESTART and the no-lives GAME OVER still use
+the ordinary death-restart reload. The 0.10.0 reload-based continue, which restarted
+from the opening runway, was rejected by the user.
