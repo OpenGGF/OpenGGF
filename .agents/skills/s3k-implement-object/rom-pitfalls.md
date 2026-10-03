@@ -5057,3 +5057,21 @@ native player state. Keep engine extension/dead-player cleanup explicit;
 do not copy native stale-slot behavior to omitted extension participants.
 An independent test must execute the last participant update and real manager
 unload, including rewind, rather than asserting generic cleanup is desirable.
+
+
+## Death suppression does not request a bonus-stage exit
+
+`Obj_GumballMachine` sets `Disable_death_plane`. In
+`Player_Boundary_CheckBottom`, that flag returns before the ordinary pit kill;
+it does not set `Restart_level_flag`. The gumball exit child owns that write
+through `loc_61050`/`loc_61076`. Requesting a stage exit from a generic
+pit-death interceptor freezes the player before the native exit trigger.
+
+`word_610AE` supplies left/width/top/height, not four endpoints:
+`-$100,$200,-$10,$40` means X in `[-$100,+$100)` and Y in `[-$10,+$30)`.
+`Check_PlayerInRange` builds each upper bound from its lower bound plus extent,
+and `sub_8592C` excludes that upper bound with `bhs` (see P39).
+
+Origin: Mega bonus frontier, 2026-10-03, base `6e6f13036f`. The native child at
+Y `$368` admits the player from `$358`; the engine pit callback ran at `$32F`
+and froze its next position `$33E`, two gameplay ticks before the native exit.

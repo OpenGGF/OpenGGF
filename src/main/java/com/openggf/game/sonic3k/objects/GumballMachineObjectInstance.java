@@ -1114,7 +1114,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
      * Exit trigger child — detects player in range and signals bonus stage completion.
      * <p>
      * ROM: Positioned at (0, +0x2A0) from parent. Detects player within
-     * (-0x100/+0x200 X, -0x10/+0x40 Y) and calls requestExit() on the
+     * [-0x100,+0x100) X and [-0x10,+0x30) Y and calls requestExit() on the
      * bonus stage provider.
      * <p>
      * <b>CRITICAL:</b> This is how the bonus stage ends. Without it, the player
@@ -1122,11 +1122,12 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
      */
     static class ExitTriggerChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
-        // ROM: Exit trigger detection range
+        // ROM word_610AE: left/width/top/height = -$100,$200,-$10,$40.
+        // Check_PlayerInRange/sub_8592C rejects the exclusive upper bounds.
         private static final int EXIT_X_MIN = -0x100;
-        private static final int EXIT_X_MAX = 0x200;
+        private static final int EXIT_X_MAX = 0x100;
         private static final int EXIT_Y_MIN = -0x10;
-        private static final int EXIT_Y_MAX = 0x40;
+        private static final int EXIT_Y_MAX = 0x30;
 
         private boolean exitFired;
 
@@ -1150,8 +1151,8 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             int dx = playerX - spawn.x();
             int dy = playerY - spawn.y();
 
-            if (dx >= EXIT_X_MIN && dx <= EXIT_X_MAX
-                    && dy >= EXIT_Y_MIN && dy <= EXIT_Y_MAX) {
+            if (dx >= EXIT_X_MIN && dx < EXIT_X_MAX
+                    && dy >= EXIT_Y_MIN && dy < EXIT_Y_MAX) {
                 exitFired = true;
                 LOGGER.info("GumballExitTrigger: player in exit range, requesting bonus stage exit");
                 try {

@@ -492,3 +492,46 @@ MonkeyDude changes and is not the combined baseline. Native corroboration now
 points to the coconut launch/chain trajectory, under separate investigation.
 The perfect-bonus change advances the old results-mode6221 boundary; it does
 not certify the newly reachable route as green.
+
+
+### 2026-10-03: Mega gumball exit ownership
+
+Worker `.worktrees/trace-s3k-mega-exit` starts from frozen `6e6f13036f` plus
+`d5f9613e5b` (the already-claimed timing-span fix). Its diagnostic baseline
+reproduced 12 bonus-segment mismatches, first row 1276 `x` (`$102` versus `$103`),
+and duplicate `VINT_SERVICE` at raw row 1296. Opening AIZ retains one camera-Y
+error at row 4545; it is independent of this fix.
+
+A temporary callback probe showed `interceptPitDeath` requesting exit at player
+`($103,$32F)`; the real gumball exit child never fired. The ordinary player pass
+then finished at Y `$33E` and froze. Native `Obj_GumballMachine` sets
+`Disable_death_plane`; `Player_Boundary_CheckBottom` returns without setting
+restart. Native exit child `loc_61050` at Y `$368` instead waits for its `$358`
+lower bound, reached at row 1277, Y `$35C`. This explains the two missing
+movement passes without fitting a delay. The callback probe was removed.
+
+The production correction preserves death suppression without requesting an
+exit. `word_610AE` is also decoded as left/width/top/height, giving X
+`[-$100,+$100)` and Y `[-$10,+$30)`; the previous trigger and its tests had
+incorrectly treated widths as inclusive endpoints. No new persistent state,
+trace input exception, or comparator tolerance is introduced.
+
+The next headless issue remains separate: the compared bonus interior uses a
+bare engine step, and `TITLE_CARD` stops pumping its playback-row observer.
+The timing observer consequently retains the final bonus raw row and rejects
+the next title VINT as a duplicate. Merely disabling recorded admission would
+be wrong: this bonus segment records real return-title/terrain completions
+from raw row 1302. `doExitBonusStage` also still uses the older immediate level
+load/title initialization path, so resource ownership needs investigation once
+the physical-row driver reaches it.
+
+
+Candidate verification removes all 12 reached bonus errors; the report stays
+incomplete because the next title-card duplicate VINT now occurs at raw 1298
+(previously 1296). All 11 focused regressions and 63 required S3K/bonus boot
+checks pass with zero skips. Independent original gumball remains green;
+Sonic/Tails gumball retains exactly 78 errors, first row 209 `tails_x`, matching
+the frozen `6e6f13036f` baseline. Commands and remaining frontiers are in the
+2026-10-03 frontier-log entry. The change-based plan over `6e6f13036f` includes
+the shared timing milestone and selects the full ordinary suite; that combined
+validation belongs to integration, not this focused worker result.

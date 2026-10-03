@@ -2379,9 +2379,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * ROM: Obj_GumballMachine init does st (Disable_death_plane).w — bonus
      * stages don't kill the player for falling off the bottom. Instead,
      * falling through triggers the stage exit via the exit trigger child.
-     * <p>
-     * If the player falls below the exit trigger (past the bottom of the stage),
-     * force the stage to end.
+     * Player_Boundary_CheckBottom returns when Disable_death_plane is set;
+     * suppressing death must not request an exit ahead of the stage's own objects.
      */
     @Override
     public boolean interceptPitDeath(AbstractPlayableSprite player) {
@@ -2406,12 +2405,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return true;
         }
         if (isInBonusStage()) {
-            // Trigger bonus stage exit if player has fallen out of the arena
-            com.openggf.game.BonusStageProvider provider =
-                    com.openggf.game.GameServices.bonusStageOrNull();
-            if (provider != null) {
-                provider.requestExit();
-            }
+            // ROM Player_Boundary_CheckBottom: Disable_death_plane bypasses
+            // the kill only. loc_61076 owns the Gumball Restart_level_flag write.
             return true; // Suppress death
         }
         return false;

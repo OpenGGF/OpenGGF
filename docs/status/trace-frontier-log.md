@@ -111932,3 +111932,29 @@ post-routine deletion preserves live P1/P2 state while keeping dead/extension
 cleanup. All31 focused object/compatibility/deletion-rewind tests pass without
 skips. Commands and coverage limits: [LBZ1 matrix](../architecture/validation/levels/s3k-lbz-act1.md#rolling-drum-deletion-follow-up-2026-10-03).
 The trace remains red; row18939 owner has not yet been attributed.
+
+
+## 2026-10-03 — Mega gumball exit belongs to its native trigger
+
+- Worker `.worktrees/trace-s3k-mega-exit`, branch
+  `bugfix/ai-trace-s3k-mega-exit`, candidate over `d5f9613e5b`
+  (`6e6f13036f` plus claimed-span verification).
+- Command: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -DforkCount=1 '-Dtest=TestS3kMegaRunChain,TestBonusStageDeathPlane,TestGumballMachineExitTrigger,TestBonusStageLifecycle' "-Ds3k.rom.path=$S3K_ROM" test`.
+- `$S3K_ROM` was the verified absolute reference-ROM path.
+- Mega bonus segment 1 changes from 12 errors (first row 1276 `x`, expected
+  `$102`, actual `$103`) to zero errors through the reached frontier. The
+  segment remains incomplete: the independent title-card row-driving failure
+  now reports duplicate `VINT_SERVICE` at raw row 1298 instead of 1296.
+  Opening segment 0 remains at one camera-Y error, row 4545 (`$1F2` vs `$1EE`).
+- The same invocation passes all 11 death-plane, exit-range and bonus-lifecycle
+  regression cases; the chain remains red. Separate required S3K loading,
+  bootstrap, decoding and bonus-boot checks pass 63/63. All runs have zero skips.
+- Independent replay command uses the same wrapper/profile/ROM and
+  `-Dtest=TestS3kGumballBonusTraceReplay,TestS3kSonicTailsGumballBonusTraceReplay`.
+  Original gumball stays green; Sonic/Tails gumball stays at the frozen
+  `6e6f13036f` baseline's 78 errors, first row 209 `tails_x`
+  (`$10B` vs `$109`). Two tests, one inherited failure, zero skips.
+- ROM evidence and rejected early-exit behavior are recorded in the
+  [campaign audit](../architecture/audits/2026-10-02-s3k-trace-green-campaign.md).
+  This is focused validation; shared timing and combined-delivery broad checks
+  are tracked by the integration worker. No trace or comparator was changed.
