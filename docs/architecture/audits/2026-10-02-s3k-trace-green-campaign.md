@@ -749,3 +749,67 @@ fork instead produce five early rewind failures; both prefix tests pass. The
 isolated candidate pass rules out this route refresh as the cause of those
 combined failures. Cleanup/state ownership is still being investigated; neither
 this focused run nor the red combined run constitutes full-suite validation.
+
+### 2026-10-03: compared-interior physical rows
+
+The follow-up in `.worktrees/trace-s3k-mega-exit`, based on `4435cfb5b8`,
+replaces the bare compared-interior engine step with a physical-row adapter.
+BONUS_STAGE advances playback itself, but TITLE_CARD does not. Preparing each
+row before production and advancing only when production has not done so
+removes duplicate VINT service without disabling recorded hardware admission.
+The source coordinator closes once its existing descriptor reports the source
+LevelLoop exhausted. The comparator and timing sidecar remain attached for the
+represented return tail; queue mismatches there remain visible.
+
+The first row-only probe removed duplicate VINT 1298 and exposed coordinator
+ownership loss at raw 1300. Source aux already identifies the restart-owning
+row 1277 (`game_mode=$8C`), so the existing `levelLoopRowCount` is 1278. Delaying
+coordinator closure until destination gameplay incorrectly assigns title
+production to that exhausted bonus owner. The combined probe closes from this
+existing structural predicate, rather than a fitted fade duration or fixture
+row. It next exposes return load-state/resource mismatches at raw 1300 and an unobserved
+stage-exit boundary. The older immediate bonus return load/title lifecycle is
+not changed here. No comparator policy, job identity, or completion admission
+is weakened.
+
+Focused verification covers real playback/timing-port row ownership, publication
+before closure, failure without advancement, and existing coordinator/frame/
+payload contracts: 48 tests pass, zero skips. The hardware timing authority
+guard passes 25 tests, zero skips, in a separate guards JVM. The worker plan
+selects all 2959 ordinary classes plus guards for shared test infrastructure;
+these focused results are not a full-suite claim, and integration owns combined
+validation. See the frontier log for the final trace command and result.
+
+
+### Fresh live-zone handoff review (2026-10-03; implementation pending)
+
+The Sonic+Tails AIZ-to-HCZ chain lacks destination title/terrain production
+submissions, not FIFO capacity. Native title initialization queues four archives
+(`ObjTitleCardInit/loc_2D6C8`), then `LoadLevelLoadBlock` queues primary and
+secondary HCZ terrain after title/Nemesis readiness (`Level/loc_6310`). Existing
+`RecordingFrameDriver` already drives `loadZoneAndActAtFreshTitleCardBoundary`
+and the deferred fresh title initialization; live `GameLoop.doZoneAct` still
+uses the ordinary loader. Missing jobs must be submitted by their real owners,
+without ordinal resynchronization, fabricated work or extra queue capacity.
+
+Read-only review with the bonus-boundary worker identified ordering obligations
+for the pending live integration. LEVEL admission runs before title-request
+consumption and can consume the initial ProcessSprites pass prematurely. Fresh
+entry must preserve the held players/camera, publish initial positions after
+title update but before title completion resets its fresh mode, and defer the
+initial ProcessSprites pass until destination players are restored. Arm the
+post-title ordinary hold only on actual completion, preserve pause semantics,
+and exclude the transient pending boundary from rewind until fully restored.
+The existing same-iteration title-release barrier does not implement the later
+ordinary hold. Saved2 special-stage returns retain their distinct load policy.
+
+The fade callback needs an explicit pre-initialization provider capability:
+`hasImmediateFreshLevelPalette` becomes true only after deferred initialization,
+so querying it earlier cannot select the correct reveal policy. For an actual
+pending fresh boundary and an immediate-palette provider, clear the completed
+black overlay without initializing the title or submitting jobs in the callback.
+Merely omitting fade-from-black leaves HOLD_BLACK active. Generic providers and
+continuation bypasses retain fade-from-black. NativeBlockingFade closes its owner
+before the callback, while current-iteration PLC ownership remains latched;
+verify that separation with a real FadeManager callback regression. These are
+reviewed implementation constraints, not a delivered fix or validation claim.

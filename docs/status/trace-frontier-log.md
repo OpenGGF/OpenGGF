@@ -112048,3 +112048,35 @@ first-entry pin remains. This test-only milestone does not certify later
 returns. The combined seven-case run also has five SOZ rewind assertion
 failures, zero errors/skips; their isolation is under investigation and
 that route refresh is excluded from this milestone.
+
+### 2026-10-03 — Compared bonus return rows retain physical timing ownership
+
+- Worker `.worktrees/trace-s3k-mega-exit`, base `4435cfb5b8`, uncommitted
+  compared-interior adapter candidate for direct develop integration.
+- Final command: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dtest=TestS3kMegaRunChain "-Ds3k.rom.path=$S3K_ROM" test`,
+  with the verified absolute reference ROM path. One test fails, zero skips.
+- The prior incomplete bonus report stopped with duplicate VINT at raw 1298.
+  Physical-row preparation/advancement and closure of exhausted source ownership
+  now permit the entire bonus report to publish: 18 errors, first raw 1300 `x`
+  (native `$0000`, engine `$2778`), zero animation/bootstrap errors. The newly
+  reached return-load tail also exposes queue-state differences; stage_exit is
+  not observed within its window. This is additional measured coverage, not a
+  claim that the chain passes. Opening AIZ remains one camera-Y error at 4545.
+- `TestComparedInteriorRowDrive,TestHeadlessRunActivePayloadLifecycle,TestTraceRunFrameDriver,TestTraceRunHardwareTimingCoordinator,TestTraceRunPlaybackCoordinator`
+  pass 48 tests, zero skips, via the queued Maven wrapper. Separate
+  `-Pguards -Dtest=TestHardwareTimingAuthorityGuard` passes 25, zero skips.
+- The change-based plan selects 2959 ordinary classes plus guards; only focused
+  worker verification is claimed here, with combined validation owned by root
+  integration. See the campaign audit for the rejected row-only probe and
+  the remaining immediate bonus-return loading limitation.
+
+Integrated compared-interior verification on `36cd9ee9d4` plus the adapter:
+queued r7 single-fork selection
+`TestComparedInteriorRowDrive,TestHeadlessRunActivePayloadLifecycle,TestTraceRunFrameDriver,TestTraceRunHardwareTimingCoordinator,TestTraceRunPlaybackCoordinator,TestS3kMegaRunChain,TestS3kTailsFullChainRunPrefix,TestS3kSonicTailsCompleteEmeraldRunPrefix`
+with the verified absolute S3K ROM:53 cases,52 pass,1 expected Mega-chain
+exit assertion,0 errors/skips. Both pairs of protected prefix tests staygreen.
+Mega bonus segment1 completes with18 errors, first1300 x ($0000/$2778),
+bootstrap0; opening segment0 remains1 camera_y error at4545. The queued
+separate `-Pguards -Dtest=TestHardwareTimingAuthorityGuard` run passes25
+cases,0 failures/errors/skips. These focused checks do not certify full-chain
+parity or the pending combined ordinary/guard delivery.

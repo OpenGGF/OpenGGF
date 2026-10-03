@@ -314,6 +314,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   smoke puffs keep the ROM's spawn and delete timing; Slot Machine randomness reads a
   real power-on V-int count; and Gumball exits through its native trigger before
   fading for the ROM's 22 V-ints, without an earlier exit from the disabled death plane.
+  Headless bonus-return replay prepares and advances each physical title/fade row,
+  closing source gameplay ownership after its final published row while retaining
+  recorded return-tail comparisons and timing checks.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now

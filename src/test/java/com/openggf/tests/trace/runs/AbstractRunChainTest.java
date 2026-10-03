@@ -1537,6 +1537,7 @@ abstract class AbstractRunChainTest {
                 boolean uncomparedInterior = TraceRunReplayWalker.isUncomparedInterior(seg.segment());
                 Runnable stepOneFrame;
                 UncomparedInteriorBoundaryDrive uncomparedDrive = null;
+                ComparedInteriorRowDrive comparedDrive = null;
                 if (uncomparedInterior) {
                     uncomparedDrive = new UncomparedInteriorBoundaryDrive(
                             run.runId(), i, seg, loop, inputHandler, movie,
@@ -1546,7 +1547,13 @@ abstract class AbstractRunChainTest {
                             returnSegment.segment().bk2FrameOffset());
                     stepOneFrame = uncomparedDrive;
                 } else {
-                    stepOneFrame = () -> stepEngineFrame(loop);
+                    comparedDrive = new ComparedInteriorRowDrive(
+                            playback, () -> stepEngineFrame(loop),
+                            () -> runCoordinator.sourceComparatorExhausted(
+                                    productionComparator),
+                            () -> runCoordinator.closeCurrent(
+                                    loop.getCurrentGameMode(), true));
+                    stepOneFrame = comparedDrive;
                 }
                 int returnOffset = descriptors.get(i + 1)
                         .segment().bk2FrameOffset();
@@ -1579,9 +1586,10 @@ abstract class AbstractRunChainTest {
                 //    (returnOffset == modeChangeBk2Frame for every stage_exit in this run),
                 //    so the first driven bonus frame pushes the cursor PAST the edge and
                 //    awaitBoundary returns NOT_OBSERVED before the stage ever completes.
-                //    Leaving it live lets the fade/title-card freeze (no onLevelFrameAdvanced)
-                //    and the fall-through frame supply the +1, landing the cursor exactly on
-                //    returnOffset (framesConsumed == 0).
+                //    The compared row drive also advances presentation iterations,
+                //    which do not call onLevelFrameAdvanced themselves. Each physical
+                //    return row must prepare its own timing boundary; a frozen input
+                //    cursor would apply successive VINTs to the last bonus row.
                 //
                 // Comparison-only either way: this only positions the INPUT cursor, exactly
                 // as handoffIntoInterior/attachLevelSegment already do -- no trace FIELD is
@@ -1594,8 +1602,9 @@ abstract class AbstractRunChainTest {
                 }
                 boolean dynamicArtGapOpened = uncomparedDrive != null
                         && uncomparedDrive.gapOpened();
-                boolean interiorCoordinatorSourceClosed = uncomparedDrive != null
-                        && uncomparedDrive.sourceClosed();
+                boolean interiorCoordinatorSourceClosed = comparedDrive != null
+                        && comparedDrive.sourceClosed()
+                        || uncomparedDrive != null && uncomparedDrive.sourceClosed();
                 if (uncomparedDrive != null) {
                     uncomparedDrive.releasePayloadBackedLocals();
                     uncomparedDrive = null;
