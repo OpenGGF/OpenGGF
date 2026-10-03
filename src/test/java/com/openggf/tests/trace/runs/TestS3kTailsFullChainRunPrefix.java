@@ -1,5 +1,14 @@
 package com.openggf.tests.trace.runs;
 
+import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.tools.GameplayCaptureSession;
+import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.tests.RomTestUtils;
+import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.rewind.RewindSnapshotDiff;
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Tag;
@@ -26,5 +35,40 @@ class TestS3kTailsFullChainRunPrefix extends AbstractRunChainTest {
     @Test
     void firstSpecialStageReturnThroughSecondEntry() throws Exception {
         assertChainReplayThroughSegmentRow(RUN_DIR, 3, 1);
+    }
+
+    /** A prefix must release its movie before another driver boots in this JVM. */
+    @Test
+    void openingPrefixReleasesInputBeforeColdCaptureRewind() throws Exception {
+        assertChainReplayThroughSegmentRow(RUN_DIR, 1, 1);
+        var playback = PlaybackDebugManager.getInstance();
+        assertFalse(playback.hasActiveOrScheduledSession());
+        var settings = new GameplayCaptureSession.Settings(
+                320, "sonic", "", "off", null, null, null);
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(
+                Path.of("src/test/resources/routes/s3k/soz2-cold-sonic.bk2"));
+        try (var capture = new GameplayCaptureSession(settings)) {
+            capture.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),
+                    8, 1, settings);
+            assertTrue(
+                    GameServices.level().consumePendingInitialProcessSpritesPass());
+            // Keep input held across restore so no external edge-history reset is needed.
+            var input = movie.getFrame(0);
+            capture.step(input);
+            var registry = SessionManager.getCurrentGameplayMode()
+                    .getRewindRegistry();
+            var saved = registry.capture();
+            for (int frame = 0; frame < 45; frame++) capture.step(input);
+            var expected = registry.capture();
+            registry.restore(saved);
+            for (int frame = 0; frame < 45; frame++) capture.step(input);
+            var actual = registry.capture();
+            assertEquals(expected.entries().keySet(), actual.entries().keySet());
+            for (var key : expected.entries().keySet()) {
+                var difference = RewindSnapshotDiff.diffKey(
+                        key, expected.get(key), actual.get(key));
+                assertTrue(difference.isEmpty(), key + ": " + difference);
+            }
+        }
     }
 }

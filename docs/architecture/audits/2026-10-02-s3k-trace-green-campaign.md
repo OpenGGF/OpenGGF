@@ -813,3 +813,26 @@ continuation bypasses retain fade-from-black. NativeBlockingFade closes its owne
 before the callback, while current-iteration PLC ownership remains latched;
 verify that separation with a real FadeManager callback regression. These are
 reviewed implementation constraints, not a delivered fix or validation claim.
+
+
+### Prefix playback isolation resolved (2026-10-03)
+
+The isolated SOZ route pass did not establish safe same-JVM composition.
+`AbstractRunChainTest` closed comparison/timing owners but left its immutable
+movie active after a prefix; later headless capture reused the process-wide
+playback manager. Capture's own input/rewind therefore competed with an
+unrelated advancing movie cursor. The movie creator now owns an idempotent
+PlaybackSessionScope, whose atomic identity check preserves a replacement
+active or pending movie. The manager helper is package-private; its scope
+is outside the annotated Mod API. No physics, capture input, timing authority
+or trace comparison changes are involved.
+
+A worker control disabling only the scope close fails after a successful
+first-entry prefix: active playback is unexpectedly retained. The corrected
+candidate passes four ownership cases and the real prefix followed by45-step
+full-world SOZ2 capture restore/replay. Integrated over `aea1bb0206`, the exact
+original predecessor+five-SOZ selection, both prefix pins, new capture case
+and four ownership cases all pass:12 cases,0 failures/errors/skips. Command
+and remaining broad validation limits are in the frontier log. This resolves
+the previously recorded combined SOZ failure; it does not turn later native
+trace frontiers green.

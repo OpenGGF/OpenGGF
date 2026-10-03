@@ -112179,3 +112179,25 @@ oracle passes; no compensating delay is installed. Native child publication
 and following-dispatch title initialization are corrected, but MGZ mismatch
 membership is explicitly changed and full parity remainsopen. These are
 focused checks, not a full ordinary/guard suite pass.
+
+
+### 2026-10-03 — Prefix-owned playback releases before cold capture
+
+Integrated candidate over develop `aea1bb0206` in
+`.worktrees/trace-s3k-develop-delivery`, queued
+`-Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+-Dtest=TestPlaybackSessionScope,TestS3kTailsFullChainRunPrefix,TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination`
+with the verified absolute S3K ROM:12 cases pass,0 failures/errors/skips.
+The original combined selection previously had two passing prefix pins and
+five failing SOZ rewind parameters; the isolated SOZ selection passed allfive.
+The new real predecessor/capture regression and four playback-owner checks
+now pass alongside both retained prefix pins and allfive full SOZ routes.
+
+The chain closes its immutable movie's playback lifetime on prefix, normal
+and error exits, preserving a different active or scheduled replacement.
+Comparator/timing detachment alone had left process-wide controller input
+active. A worker control disabling only scope closure fails the active-movie
+assertion after the successful prefix; no gameplay values, admission rules
+or comparison policy are changed. The package-private manager helper and
+non-ModApi scope add no Mod API signature surface. Playback companions remain
+queued; full ordinary/guard combined delivery remainspending.

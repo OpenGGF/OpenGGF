@@ -11,6 +11,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.debug.playback.PlaybackSessionScope;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
@@ -1227,11 +1228,14 @@ abstract class AbstractRunChainTest {
         } catch (IOException e) {
             throw new AssertionError("Failed to open initial run segment", e);
         }
+        PlaybackSessionScope playbackScope = null;
         try {
             afterInitialHeadlessPayloadOpen.run();
         TraceData trace0 = initialPayload.trace();
         Path bk2Path = resolveRunBk2(runDir, run.sourceBk2());
         Bk2Movie movie = new Bk2MovieLoader().load(bk2Path);
+        playbackScope = new PlaybackSessionScope(
+                PlaybackDebugManager.getInstance(), movie);
 
         // Must run before the FIRST HeadlessTestFixture build below (recorded
         // team, cross-game off, S3K intro-skip derived from trace metadata) --
@@ -2091,6 +2095,11 @@ abstract class AbstractRunChainTest {
                 throw error;
             }
             throw (Exception) failure;
+        } finally {
+            // A prefix/error can finish while its movie still owns process-wide input.
+            if (playbackScope != null) {
+                playbackScope.close();
+            }
         }
     }
 

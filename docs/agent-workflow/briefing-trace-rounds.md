@@ -71,6 +71,19 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Playback surviving a prefix (2026-10-03): the Tails chain prefix left the
+process-wide `PlaybackDebugManager` movie active after closing comparison and
+hardware-timing owners. A following cold capture boot reused that manager, so
+its declared controller input was replaced by the predecessor's movie. World
+restore did not rewind that unrelated movie cursor: all five SOZ cold-route
+rewind checks failed in the shared fork, while the identical five passed in a
+fresh JVM. The movie creator must close its playback lifetime on prefix, error
+and normal exits, including deferred level-load rebinds; preserve a replacement
+movie's ownership. Comparator detachment and gameplay-session teardown alone do
+not release this process-wide input owner. Test the predecessor and capture in
+one invocation rather than treating isolated passes as an isolation proof.
+
+
 Mixed report shapes (2026-10-03): continuous-chain summaries use `errorCount`,
 while standalone trace reports use `error_count` and grouped `errors`. A
 collector filtering only one spelling silently omits the other family while
