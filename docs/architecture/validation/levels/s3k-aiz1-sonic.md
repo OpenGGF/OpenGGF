@@ -543,3 +543,14 @@ and commands are in the [campaign audit](../../audits/2026-10-02-s3k-trace-green
 AIZ's first mismatch moves 5497→20302 and the independent reference route
 6302→25589. Remaining viewport/donor/team products and whole-act coverage
 are inherited gaps; these checks certify only the fixed reload contract.
+
+
+### Sonic+Tails return prefix pin (2026-10-03)
+
+`TestS3kSonicTailsCompleteEmeraldRunPrefix` now reaches the first row of
+special-stage segment5, defending complete zero-error gameplay segments2 and4
+through two prior returns. Queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix` on `b38e8354d4` plus the new
+pin, with verified absolute S3K ROM, passes2 cases with0 skips. This is a native
+route-prefix check; it does not close the full act/team/donor/viewport matrix
+or later route failures.

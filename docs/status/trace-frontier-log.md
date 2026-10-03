@@ -112002,5 +112002,8 @@ mismatch fingerprints match except LBZ1's separately delivered cup handoff
 (4,031→3,304). The Sonic+Tails chain changes from infrastructure error to
 comparison failure, with four newly reached segment reports. Existing common
 chain reports match. These profiles remain red; this is not a full-suite pass.
-An extended prefix pin through segment5's first row is queued for separate
-verification; it is not included in this runtime milestone.
+The extended prefix pin through segment5's first row passes in a separate
+queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix` run on `b38e8354d4` plus the
+new test, verified absolute S3K ROM and fresh reports:2 cases,0 failures/errors/
+skips. It defends both completed returns while retaining the earlier entry pin.

@@ -47,4 +47,14 @@ class TestS3kSonicTailsCompleteEmeraldRunPrefix extends AbstractRunChainTest {
     void aiz1ThroughGiantRingIntoFirstSpecialStageRow() throws Exception {
         assertChainReplayThroughSegmentRow(RUN_DIR, 1, 1);
     }
+
+    /**
+     * Reaching the third special-stage entry defends both earlier returns:
+     * gameplay segments 2 and 4 must consume their complete comparison rows.
+     * LEVEL lag iterations retain the native queue tail while holding gameplay.
+     */
+    @Test
+    void twoSpecialStageReturnsThroughThirdEntry() throws Exception {
+        assertChainReplayThroughSegmentRow(RUN_DIR, 5, 1);
+    }
 }
