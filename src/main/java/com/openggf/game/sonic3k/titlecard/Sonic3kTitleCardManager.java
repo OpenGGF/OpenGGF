@@ -552,16 +552,18 @@ public class Sonic3kTitleCardManager
 
     /**
      * Arms the native in-level {@code Obj_TitleCardWait} state reset after a
-     * known number of title-owner dispatches. This is used when a retained
-     * results SST mutates directly into {@code Obj_TitleCard}; unlike a fresh
-     * level title, its queue/create phase is already the only remaining gate.
+     * native child-movement gate, or an explicit inherited dispatch policy.
+     * A retained results SST mutates directly into {@code Obj_TitleCard}; its
+     * counter ownership persists while the art queue and children settle.
      */
     public void requestLevelGamestateResetAfterCreateDispatches(int dispatches) {
         if (inLevelMode) {
             resetLevelGamestateOnInLevelDisplay = true;
             heldLevelCounterDispatchOwned = true;
             retainedResultsHeldLevelCounterOwned = true;
-            resetLevelGamestateCountdown = Math.max(1, dispatches);
+            resetLevelGamestateCountdown =
+                    dispatches == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE
+                            ? dispatches : Math.max(1, dispatches);
         }
     }
 
@@ -965,10 +967,14 @@ public class Sonic3kTitleCardManager
             // stop publishing movement (sonic3k.asm:62220-62235).
             resetLevelGamestateCountdown = 0;
             consumeLevelGamestateResetRequest();
-            // Obj_TitleCardWait2's 90-pass $2E countdown starts at this gate (sonic3k.asm:62162,
-            // 62249-62255), not when the children first stop moving. This manager's EXIT already
-            // carries the child-before-owner pass split, so its hold restarts here.
-            stateTimer = 0;
+            if (!retainedResultsHeldLevelCounterOwned) {
+                // The non-retained presentation maps Wait2's hold from this gate.
+                stateTimer = 0;
+            }
+            // Retained owners preserve their independent presentation clock:
+            // loc_2D810 clears global Timer/Ring_count, not the owner's $2E.
+            // This preserves the inherited exit policy; it does not certify
+            // that policy as a complete native Wait2 implementation.
         }
         switch (state) {
             case SLIDE_IN -> updateSlideIn();

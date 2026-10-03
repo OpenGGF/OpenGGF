@@ -112204,3 +112204,32 @@ completed on unchanged candidate source: queued ordinary
 `TestPlaybackDebugManagerPreparedInput,TestPlaybackDebugManagerOverlayOwnership,TestPlaybackAdvanceOnlyInputBridge,TestPlaybackTimelineController,TestPlaybackController`
 passes 29 cases, zero failures/errors/skips. Full ordinary/guard combined
 delivery remains pending.
+
+
+### 2026-10-03 — LBZ retained title child gate
+
+Base `d427fdd9ba`, worker `trace-s3k-retained-title-wait`: queued Maven
+`-Dmse=off -Ptrace-replay-r7 -Dtest=TestSonic3kLbzZoneSliceTraceReplay`
+with the absolute verified S3K reference ROM reproduces 2991 errors/0 warnings,
+first 22227 rings. The native-child-gate candidate (same trace plus the focused
+retained-reset and LBZ carried-owner methods) completes 3 cases: 2 pass, 1 inherited
+trace failure,0 errors/skips. LBZ becomes 2990 errors/0 warnings, first 22258 camera_x
+(native `$04A0`,engine `$04A3`). Full span comparison removes only rings 22227 and
+adds none. Native and engine reset at 22228 after the last child movement and
+stationary poll. Five sibling trace error/warning arrays stayed byte-equivalent
+in the earlier bounded sweep; short-MHZ and explicit carried policies are
+unchanged. See the LBZ act1 matrix and campaign audit for old-code regression
+proof, rejected presentation-clock restart and validation limits.
+
+Integrated retained-title wait over develop `52213b69d4` in
+`.worktrees/trace-s3k-develop-delivery`: queued trace-segments single-fork
+`TestSonic3kTitleCardKosQueue,TestS3kMgzLbzCarriedResultsTitleOwnership,TestS3kMhzAuthoredRoute,TestS3kLbzZoneSliceTraceReplay#replayMatchesTrace`
+with the verified absolute S3K ROM executes18 cases:17 pass,1 expected native
+trace assertion,0 errors/skips. The initial selector also included an unmatched
+rewind-class spelling; the actual `TestSonic3kTitleCardManagerRewind` is run
+separately through the ordinary queued wrapper and passes12 cases, no failures/
+errors/skips. Combined focused coverage is29 passes plus the known red trace.
+LBZ now2,990 errors, first22258 camera_x ($04A0/$04A3), matching the worker.
+The only removed span is rings at22227; native and engine reset at22228.
+Real pending ROM art, final movement latch, independent title clock, whole-world
+carried ownership and restore/replay remain covered. Broader validation is pending.

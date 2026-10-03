@@ -349,3 +349,59 @@ focused validation only. CNZ/MHZ trace retirement gaps are not replaced by a
 claim of trace parity; their independent completion/rewind checks cover the
 changed production lifecycle with the stated limits. LBZ's next ring reset
 boundary at22227 remains open, as do the route/viewport/donor/roster matrix gaps.
+
+
+### 2026-10-03 retained title counter reset
+
+Worker `trace-s3k-retained-title-wait`, base `d427fdd9ba`, fixes the ordinary
+retained results/title owner's counter-reset gate. `Obj_TitleCardWait`
+(`sonic3k.asm:62255–62278`, `loc_2D810`) clears the children's `$34` movement
+latch and returns before resetting global Timer/Ring_count on the next stationary
+poll. Its reset does not rewrite the title owner's `$2E` presentation countdown.
+The existing native wait gate now accepts this retained owner directly; explicit
+carried policies and the short-results-child policy (including MHZ's inherited
+39-dispatch reset) remain unchanged. Both held-counter ownership flags remain set.
+
+Native committed LBZ physics/aux data publishes the title at 22188, initializes it
+at 22189 and creates children at 22199. The act child is then at `$0334` after its
+first movement from `$0344`; its target is `$0184`. With uninterrupted dispatches,
+its final movement is 22226, the parent clears movement at 22227, and resets rings
+at 22228. The aux schema does not record `$34` itself: the latch sequence is derived
+from the owning ROM routine, observed child creation/position and counter deltas.
+The engine probe confirmed the same creation and movement phases (screen X is
+native X minus 128), but the old countdown reset rings one poll early.
+
+| Row | Engine child/title state | Native rings | Before | After |
+|---|---|---:|---:|---:|
+| 22199 | art ready; act child X 692 |46|46|46|
+| 22226 | all children at target; DISPLAY timer 0 |46|46|46|
+| 22227 | first stationary parent poll; timer 1 |46|0|46|
+| 22228 | reset poll; timer 2 |0|0|0|
+
+Focused command (absolute reference ROM supplied):
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dtest=TestSonic3kTitleCardKosQueue#retainedResetWaitsForArtAndLastChildMovementAndRestoresThatGate,TestS3kMgzLbzCarriedResultsTitleOwnership#lbzCarriedResultsHoldsEnemyAdmissionUntilItsTitleOwnerPoll -Ds3k.rom.path=<absolute-reference-ROM> test`.
+Both cases passed as part of the final three-case invocation that also selected
+`TestS3kLbzZoneSliceTraceReplay`:2 passes,1 inherited trace failure,0 errors/skips.
+The new regression with the old clamp restored failed specifically because the
+owner reset counters while real ROM archives were still pending (1 failure,
+0 errors/skips). It also verifies rewind at the final movement latch, retained
+ownership and an unchanged presentation clock after reset.
+
+The full LBZ 46075-row trace improves 2991→2990 errors,0 warnings; first divergence
+moves from 22227 rings to 22258 camera_x (`$04A0` native, `$04A3` engine). Comparing
+all error spans except the derived cascading annotation removes only the single
+rings error and adds none. An earlier six-zone comparison kept CNZ 5671, HCZ 4699,
+ICZ 1287, MGZ 10634 and MHZ 3191 error/warning arrays identical to baseline. Its
+focused selection passed 107 cases (including title rewind, actual 58/59-ring
+carried ownership, MHZ completion and mandatory S3K loading checks); a new fixture
+setup error was repaired and verified by the final invocation. No skips occurred.
+
+Rejected intermediate approach: selecting the native gate while unconditionally
+restarting `stateTimer` fixed rings but added 8 queue-field errors at 22331
+(total 2998). Preserving the retained owner's independent presentation clock
+removed those new errors. This preserves the inherited presentation policy;
+it does not certify complete native `Obj_TitleCardWait2` timing. No fixture,
+comparator, public request builder, queue capacity or ordinal changed. The
+comparison-only diagnostic was removed. Remaining camera/animation discrepancies
+are unresolved. These are focused/domain checks, not a full ordinary-suite pass;
+root owns combined delivery validation.

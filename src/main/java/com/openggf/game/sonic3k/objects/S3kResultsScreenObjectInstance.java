@@ -1063,10 +1063,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                             carriedTitleExitPhaseOneDispatchOverlap);
                 } else {
                     s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                            mutatedTitleCardResetDispatches(
-                                    usesShortResultsChildRetireTail,
-                                    carriedPreloadedActCameraReleaseDispatches,
-                                    usesCarriedTitleResetDispatchOverlap()));
+                            // Ordinary retained owners poll Obj_TitleCardWait's $34
+                            // child-movement latch (sonic3k.asm:62255-62278). Keep
+                            // the separate short-tail owner's inherited dispatch policy.
+                            usesShortResultsChildRetireTail
+                                    ? mutatedTitleCardResetDispatches(true,
+                                            carriedPreloadedActCameraReleaseDispatches,
+                                            usesCarriedTitleResetDispatchOverlap())
+                                    : com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
                     if (carriedPreloadedActCameraReleaseDispatches == 0) {
                         s3kTitleCard.requestInLevelExitAdditionalDispatches(1);
                     }

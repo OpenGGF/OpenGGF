@@ -846,3 +846,24 @@ and their evidence incorporated here and in the act matrices. The retained-title
 wait and live fresh-handoff investigations use new independent worktrees; the
 Tails placement frontier remains in its active worktree. No unrelated checkout
 or main-workspace branch was changed.
+
+
+### 2026-10-03 retained title counter reset
+
+Worker `trace-s3k-retained-title-wait`, base `d427fdd9ba`: the actual LBZ child
+creation/movement phases match native, but the inherited countdown resets rings
+at 22227 instead of 22228. Reuse `NATIVE_WAIT_GATE` for ordinary retained owners;
+preserve explicit carried policies, short-owner MHZ arithmetic and both retained
+counter ownership flags. `loc_2D810` resets global counters without rewriting
+owner `$2E`, so the retained presentation clock stays independent.
+
+Rejected: merely reusing the native gate restarted `stateTimer` and added eight
+queue-field errors at 22331 (2998 total). Separating counter reset from retained
+presentation removes those new errors. The final 46075-row LBZ comparison is
+2991→2990 errors, with only rings at 22227 removed and no new spans; first remaining
+error is camera_x at 22258. The old-clamp control fails the new regression while
+ROM archives remain pending; the final focused regression and actual carried-owner
+case pass, with zero errors/skips. Five other zone trace arrays were unchanged.
+See [LBZ validation](../validation/levels/s3k-lbz-act1.md#2026-10-03-retained-title-counter-reset)
+for commands, phase observations, rewind coverage and limits. Presentation Wait2
+parity and the remaining trace failures are not certified by this bounded fix.

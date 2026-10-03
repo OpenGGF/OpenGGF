@@ -5149,3 +5149,17 @@ the first floor contact. Keep the explicit native radii and preserve centre;
 `Tails_TouchFloor` restores defaults when the actual landing occurs. Test the
 real Tails capture, release, terrain landing and forward replay after restore.
 Origin: solo-Tails AIZ return frontier, 2026-10-03, base `0e50fed9f6`.
+
+
+## Global title resets do not restart the owner clock
+
+`Obj_TitleCardWait/loc_2D810` resets Timer, Ring_count, air and music after
+the child movement latch clears; it does not rewrite the title owner's $2E.
+For a retained results owner, wait for real ROM art and the final stationary
+child poll rather than counting from initialization while art is still queued.
+Keep held-level-counter ownership through that wait. Reusing a native reset
+gate must preserve the independently owned presentation clock: restarting it
+can move later art admission even when the ring reset becomes correct.
+Exercise pending archives, last movement, the clear-only parent poll and
+restore/replay; compare later queue spans as well as the first fixed value.
+Origin: retained LBZ title wait, 2026-10-03, baseline `d427fdd9ba`.

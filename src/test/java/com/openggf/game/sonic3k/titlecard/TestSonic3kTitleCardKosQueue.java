@@ -67,6 +67,43 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     @Test
+    void retainedResetWaitsForArtAndLastChildMovementAndRestoresThatGate() throws Exception {
+        GameServices.level().resetLevelGamestate(GameServices.module().createLevelState());
+        manager.initializeInLevel(0, 1);
+        manager.requestLevelGamestateResetAfterCreateDispatches(
+                com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
+        var original = GameServices.level().getLevelGamestate();
+        original.setRings(37);
+        for (int poll = 0; poll < 50; poll++) manager.update();
+        assertEquals(37, original.getRings());
+        org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
+                "owner polls cannot reset counters while its ROM archives are still pending");
+        drainThroughPostObjects(moduleHandles());
+        for (int poll = 0; poll < 100 && manager.getStateName().equals("SLIDE_IN"); poll++) {
+            manager.update();
+        }
+        assertEquals("DISPLAY", manager.getStateName());
+        var lastMovement = manager.capture();
+        assertEquals(0, lastMovement.stateTimer());
+        assertTrue(lastMovement.heldLevelCounterDispatchOwned());
+        assertTrue(lastMovement.retainedResultsHeldLevelCounterOwned());
+        manager.update();
+        org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
+                "the first parent poll clears the last movement latch and returns");
+        manager.restore(lastMovement);
+        manager.update();
+        org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
+                "rewind restores the unconsumed movement latch");
+        manager.update();
+        org.junit.jupiter.api.Assertions.assertNotSame(original, GameServices.level().getLevelGamestate());
+        assertEquals(0, GameServices.level().getLevelGamestate().getRings());
+        assertEquals(2, manager.capture().stateTimer(),
+                "global counter reset must not restart the retained presentation clock");
+        assertTrue(manager.capture().heldLevelCounterDispatchOwned());
+        assertTrue(manager.capture().retainedResultsHeldLevelCounterOwned());
+    }
+
+    @Test
     void normalCardQueuesFourArchivesInOrderAndRewindsInFlightBoundary() throws Exception {
         List<HardwareWorkHandle> expected =
                 expectedHandles(NORMAL_SOURCES, NORMAL_DESTINATIONS);

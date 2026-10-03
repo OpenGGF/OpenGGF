@@ -88,7 +88,7 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                                 Sonic3kConstants.ARTTILE_RIBOT),
                         new KosParent(Sonic3kConstants.ART_KOSM_CORKEY_ADDR,
                                 Sonic3kConstants.ARTTILE_CORKEY)),
-                38,
+                com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE,
                 11,
                 false);
 
@@ -307,6 +307,13 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                             - currentTitleState.inLevelExitDelayFrames());
             var currentLevelGamestate = GameServices.level().getLevelGamestate();
             if (currentLevelGamestate != previousLevelGamestate) {
+                if (route.expectedResetDispatches() == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE) {
+                    assertEquals(com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardState.DISPLAY,
+                            previousTitleState.state());
+                    assertTrue(previousTitleState.stateTimer() >= 1,
+                            "native reset follows the stationary child poll, never the last movement");
+                    assertFalse(previousTitleState.artLoading());
+                }
                 levelGamestateResets++;
                 previousLevelGamestate = currentLevelGamestate;
             }
@@ -318,8 +325,8 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
             }
         }
         assertTrue(title.isComplete());
-        assertEquals(route.expectedResetDispatches(), observedResetDispatches,
-                "the title owner must execute every requested reset countdown dispatch");
+        assertEquals(Math.max(0, route.expectedResetDispatches()), observedResetDispatches,
+                "explicit policies count dispatches; the native gate never ages a reset countdown");
         assertEquals(1, levelGamestateResets,
                 "the carried title owner must publish exactly one display-time gamestate reset");
         assertEquals(route.expectedExitDispatches(), observedExitDelayDispatches,
