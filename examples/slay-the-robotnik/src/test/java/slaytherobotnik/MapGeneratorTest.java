@@ -1,0 +1,80 @@
+package slaytherobotnik;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import slaytherobotnik.core.Rng;
+import slaytherobotnik.core.RoomType;
+import slaytherobotnik.map.ActMap;
+import slaytherobotnik.map.MapGenerator;
+import slaytherobotnik.map.MapNode;
+
+/** Slay the Spire's map rules hold for many seeds. */
+class MapGeneratorTest {
+
+    @Test
+    void fixedFloorsAndPlacementRules() {
+        for (long seed = 1; seed <= 300; seed++) {
+            ActMap map = MapGenerator.generate(new Rng(seed));
+            String drawing = "seed " + seed + "\n" + map.render();
+            assertTrue(map.row(0).size() >= 2, drawing);
+            for (MapNode n : map.usedNodes()) {
+                String room = n.room();
+                if (n.y() == 0) {
+                    assertEquals(RoomType.MONSTER, room, drawing);
+                } else if (n.y() == 8) {
+                    assertEquals(RoomType.TREASURE, room, drawing);
+                } else if (n.y() == ActMap.HEIGHT - 1) {
+                    assertEquals(RoomType.REST, room, drawing);
+                    assertTrue(n.connectsToBoss(), drawing);
+                }
+                if (n.y() < 5) {
+                    assertFalse(room.equals(RoomType.ELITE) || room.equals(RoomType.REST), drawing);
+                }
+                if (n.y() == ActMap.HEIGHT - 2) {
+                    assertFalse(room.equals(RoomType.REST), drawing);
+                }
+                if (n.y() < ActMap.HEIGHT - 1) {
+                    assertFalse(n.children().isEmpty(), "dead end " + n + "\n" + drawing);
+                }
+                for (MapNode child : n.children()) {
+                    assertEquals(n.y() + 1, child.y());
+                    assertTrue(Math.abs(child.x() - n.x()) <= 1, drawing);
+                }
+                if (n.y() > 0) {
+                    assertFalse(n.parents().isEmpty(), "unreachable " + n + "\n" + drawing);
+                }
+            }
+        }
+    }
+
+    @Test
+    void pathsNeverCross() {
+        for (long seed = 1; seed <= 300; seed++) {
+            ActMap map = MapGenerator.generate(new Rng(seed));
+            for (int y = 0; y < ActMap.HEIGHT - 1; y++) {
+                List<MapNode> row = map.row(y);
+                for (MapNode a : row) {
+                    for (MapNode b : row) {
+                        if (a.x() >= b.x()) {
+                            continue;
+                        }
+                        for (MapNode ac : a.children()) {
+                            for (MapNode bc : b.children()) {
+                                assertTrue(ac.x() <= bc.x(), "crossing at seed " + seed + "\n" + map.render());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void sameSeedSameMap() {
+        assertEquals(MapGenerator.generate(new Rng(42)).render(), MapGenerator.generate(new Rng(42)).render());
+    }
+}
