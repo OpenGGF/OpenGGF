@@ -13,7 +13,7 @@ speed. The player's own aspect returns at the master title. Trace test mode stil
 forces native 4:3. On the course Sonic's top running speed is **7/8 of stock** (0x540
 instead of 0x600; acceleration, jumps and rolling are unchanged), and he starts running at
 that speed. He still shows the stock full-speed running frames (and the faster rolling frames),
-from 0x500 instead of the stock 0x600 he can no longer reach. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Each step glides in over about a second
+from 0x500 instead of the stock 0x600 he can no longer reach. The whole game speeds up **every 30 seconds of active play**, each time by a quarter of its current speed (rounded to 0.05×), so every step feels about as big as the last: 1× → 1.25× → 1.55× → 1.95× → 2.45× → 3.05× and so on. Each step glides in over about a second
 (as the rewind tape coast ramps its speed) rather than snapping. Pausing stops the countdown.
 The camera scrolls at a minimum of **two thirds of Sonic’s stock maximum run speed** (4 pixels per tick),
 letting Sonic gain ground until his centre reaches **45% of the screen width**, just left of centre, so

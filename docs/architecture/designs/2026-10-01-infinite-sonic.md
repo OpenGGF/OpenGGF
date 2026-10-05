@@ -171,6 +171,15 @@ ramped too aggressively in play. Each stage now adds 0.25× linearly (1× → 1.
 → 1.5× → 1.75× → 2×); the 32× ceiling and MAX SPEED label are unchanged but now
 sit far beyond a realistic run.
 
+Follow-up, 2026-10-05 (later): equal +0.25× steps felt smaller the faster the game already
+ran, since what the player notices is the relative change. Each stage now adds a quarter of
+the current speed, rounded to 0.05× in integer hundredths (1× → 1.25× → 1.55× → 1.95× →
+2.45× → 3.05× → 3.8× → 4.75×; about 20 stages reach the 32× ceiling). This is a 1.25×
+compounding curve, gentler than the rejected 1.5× one: by two minutes it is at 2.45×
+against 1.5×'s 5.06× and linear's 2×. The first step is unchanged. Each stage's glide now
+takes 60 frames whatever its size (the per-frame ramp is the stage's step / 60, never less
+than 0.25/60), so larger steps still arrive in about a second.
+
 The camera advances at least 4px per simulation tick (4.5px before 0.13.0), retaining fractional
 pixels and vertical tracking. Sonic can gain ground until his centre reaches a
 follow point at 60% of the viewport width (just right of centre); the camera then follows his position. It follows world
@@ -775,7 +784,7 @@ back at the same point instead of a quarter of the way across.
 lives already earned for it are not paid twice. RESTART and EXIT reload, which clears them.
 
 **Speed ramp.** `ChallengeClock` keeps a live `rate` that moves 0.25/60 per presentation
-frame toward the stage multiplier, as `RewindSpeedController` ramps the tape coast; the step
+frame (later: the stage's step / 60, so every stage glides over 60 frames) toward the stage multiplier, as `RewindSpeedController` ramps the tape coast; the step
 budget, the audio rate and the countdown's real-time conversion all read it. The stage
 (HUD speed, score per second, leaderboard speed) still changes on the boundary. The rate is
 in the rewind snapshot; the old four-field snapshot constructor now means a settled rate.

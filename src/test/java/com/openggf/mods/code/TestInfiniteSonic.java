@@ -622,7 +622,7 @@ class TestInfiniteSonic {
         assertEquals(1.0, GameServices.module().gameplayAudioPlaybackRate());
     }
 
-    @Test void speedAndCountdownUseThirtySecondLinearIntervals() throws Exception {
+    @Test void speedAndCountdownUseThirtySecondProportionalIntervals() throws Exception {
         launch(WidescreenAspect.NATIVE_4_3);
         Object clock = clock();
         var tick = clock.getClass().getMethod("tick");
@@ -653,8 +653,20 @@ class TestInfiniteSonic {
         for (int i = 0; i < 2249; i++) tick.invoke(clock);
         assertEquals(1.25, speed());
         tick.invoke(clock);
-        assertEquals(1.5, speed());
+        assertEquals(1.55, speed(), "the second stage adds a quarter of 1.25x, rounded to 0.05x");
         assertEquals(30, seconds.invoke(clock));
+        // The larger step still glides in over 60 frames.
+        for (int frame = 0; frame < 59; frame++) steps.invoke(clock);
+        assertTrue((double) rate.invoke(clock) < 1.55, "still gliding at frame 59");
+        steps.invoke(clock);
+        assertEquals(1.55, (double) rate.invoke(clock), 1e-9, "the 0.30x stage ramps over 60 frames");
+        // Each speed-up adds a quarter of the current speed, so steps grow with the pace.
+        var target = clock.getClass().getDeclaredMethod("target", int.class);
+        target.setAccessible(true);
+        double[] expected = {1.0, 1.25, 1.55, 1.95, 2.45, 3.05, 3.8, 4.75};
+        for (int stage = 0; stage < expected.length; stage++) {
+            assertEquals(expected[stage], (double) target.invoke(null, stage), 1e-9, "stage " + stage);
+        }
         setTicks(0);
         var palTick = clock.getClass().getMethod("tick", int.class);
         for (int i = 0; i < 1500; i++) palTick.invoke(clock, 50);
@@ -836,7 +848,7 @@ class TestInfiniteSonic {
         assertEquals(restartX, player.getCentreX());
         assertEquals(deathTicks, ticks(), "the clock waits through the glide and READY");
         assertEquals(frozenScore, GameServices.gameState().getScore(), "so does the score");
-        assertEquals(1.5, speed(), "the run keeps the speed stage it died at");
+        assertEquals(1.55, speed(), "the run keeps the speed stage it died at");
         for (int i = 0; i < 20 && controllerInt("resumePhase") == 2; i++) fixture.stepFrame(false, false, false, true, false);
         assertEquals(0, controllerInt("resumePhase"), "right sets off");
         assertFalse(player.isObjectControlled());
@@ -848,7 +860,7 @@ class TestInfiniteSonic {
         var rate = clock.getClass().getMethod("multiplier");
         assertEquals(1.0, (double) rate.invoke(clock), 1e-9);
         for (int i = 0; i < 90; i++) clock.getClass().getMethod("nextFrameSteps").invoke(clock);
-        assertEquals(1.5, (double) rate.invoke(clock), 1e-9);
+        assertEquals(1.55, (double) rate.invoke(clock), 1e-9);
         assertTrue(fixture.camera().getX() < player.getCentreX() - player.getXRadius(), "Sonic is on screen");
         int cameraX = fixture.camera().getX();
         for (int i = 0; i < 60; i++) fixture.stepFrame(false, false, false, true, false);
@@ -970,6 +982,7 @@ class TestInfiniteSonic {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         fixture.stepIdleFrames(2);
         var player = fixture.sprite();
+        double[] multipliers = {1.0, 1.25, 1.55};
         for (int stage : new int[]{0, 1800, 3600}) {
             setTicks(stage);
             player.setInvulnerableFrames(10000);
@@ -987,7 +1000,7 @@ class TestInfiniteSonic {
               }
             }
             // Two thirds of the 0x600 run speed: 4px per tick, 240 points per second at 1x.
-            int expected = (int) (240 * (1.0 + 0.25 * (stage / 1800)));
+            int expected = (int) Math.round(240 * multipliers[stage / 1800]);
             assertEquals(expected, fixture.camera().getX() - startCamera, 1);
             assertEquals(expected, GameServices.gameState().getScore() - score, 1);
             assertFalse(player.getDead());

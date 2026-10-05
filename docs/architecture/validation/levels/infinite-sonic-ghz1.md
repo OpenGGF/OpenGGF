@@ -114,7 +114,7 @@ cadence), up to the bounded 32× host ceiling.
 | Contract | Evidence | Scope / gaps |
 | --- | --- | --- |
 | First speedup during traversal | `normalTraversalReachesFirstSpeedup` | All five widths; native physics, real scroll pressure and recycling; test-only enemy invulnerability |
-| 30-second linear steps | `speedAndCountdownUseThirtySecondLinearIntervals` | Exact first two boundaries (+0.25× each), 2250 simulation ticks for the second interval, PAL and ceiling |
+| 30-second proportional steps | `speedAndCountdownUseThirtySecondProportionalIntervals` | Exact first two boundaries (+0.25×, then +0.30×), both glides over 60 frames, the first eight stage targets, 2250 simulation ticks for the second interval, PAL and ceiling |
 | Scroll and score | `minimumScrollAllowsFasterRunningAndSurvivalScoreScales` | 1×/1.25×/1.5×; actual camera and score over 60 paced frames; positioned above terrain to isolate timing |
 | Left-edge game over | `fallingBehindEndsRunDespiteRingsAndInvulnerability` | All five widths; partial visibility survives, complete exit kills, lives exhausted, score/clock/camera freeze |
 | Boundary rewind | `speedupBoundaryRestoresAndReplaysWithScoreCameraAndHud` | Positioned 1×→1.25× boundary; clock adapter, controller, score, camera and HUD text |
