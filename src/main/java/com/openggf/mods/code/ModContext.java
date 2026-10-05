@@ -48,6 +48,7 @@ public final class ModContext {
     private boolean frozen;
     private ModRegistrationException poison;
     private com.openggf.game.GameModule gameModule;
+    private com.openggf.mods.scene.ModSceneFactory startupScene;
 
     ModContext(String owner, String baseGame, ModAssetRoot assets) {
         this(owner, baseGame, assets, null);
@@ -221,6 +222,23 @@ public final class ModContext {
         });
     }
 
+    /**
+     * Opens a full-screen {@link com.openggf.mods.scene.ModScene} instead of the base game's
+     * title screen whenever this patch mod is active. The scene draws with a
+     * {@link com.openggf.mods.scene.SceneCanvas} and can return to the stock title
+     * ({@link com.openggf.mods.scene.SceneContext#exitToGameTitle()}) or the master title.
+     * Every scene callback runs inside the mod fault boundary. One startup scene per mod;
+     * when several enabled mods register one, the last mod applied wins.
+     */
+    public void registerStartupScene(com.openggf.mods.scene.ModSceneFactory factory) {
+        mutate(() -> {
+            if (standalone) throw failure("Standalone manifests cannot register a startup scene");
+            Objects.requireNonNull(factory, "factory");
+            if (startupScene != null) throw failure("Startup scene is already registered");
+            startupScene = factory;
+        });
+    }
+
     public void registerHudProfile(ModHudProfileContribution contribution) {
         mutate(() -> {
             Objects.requireNonNull(contribution, "contribution");
@@ -282,7 +300,7 @@ public final class ModContext {
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
                     zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt,
-                    launchTeams, inputFilters, hudProfiles);
+                    launchTeams, inputFilters, hudProfiles, startupScene);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",

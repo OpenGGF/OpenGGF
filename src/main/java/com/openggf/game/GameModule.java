@@ -144,6 +144,14 @@ public interface GameModule {
     default boolean suppressesLevelSelect() { return false; }
 
     /**
+     * A mod scene that replaces this game's title screen, or {@code null} for the stock
+     * title. Patch mods contribute one with {@code ModContext.registerStartupScene}; the
+     * engine opens it instead of the title (never in trace test mode) and returns to the
+     * stock title when the scene asks to.
+     */
+    default com.openggf.mods.scene.ModSceneFactory startupScene() { return null; }
+
+    /**
      * Returns session-owned game services whose mutable state participates in
      * a gameplay rewind. The composition root registers these adapters once
      * per {@link com.openggf.game.session.WorldSession}; games without such

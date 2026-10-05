@@ -584,6 +584,11 @@ public class Engine {
 				inputHandler.handleMouseButton(button, action);
 			}
 		});
+		org.lwjgl.glfw.GLFW.glfwSetScrollCallback(window, (windowHandle, xOffset, yOffset) -> {
+			if (inputHandler != null) {
+				inputHandler.handleScroll(yOffset);
+			}
+		});
 
 		// Setup window resize callback
 		glfwSetFramebufferSizeCallback(window, (windowHandle, width, height) -> {
@@ -1878,6 +1883,10 @@ public class Engine {
 	}
 
 	private void enterConfiguredStartupMode() {
+		if (ModSceneLauncher.openStartupScene(gameLoop, configService, window, graphicsManager,
+				(int) projectionWidth, (int) realHeight)) {
+			return;
+		}
 		boolean titleScreenOnStartup = configService.getBoolean(SonicConfiguration.TITLE_SCREEN_ON_STARTUP);
 		boolean levelSelectOnStartup = configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP);
 		if (titleScreenOnStartup) {
@@ -3267,7 +3276,7 @@ public class Engine {
 			case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS,
 					TITLE_SCREEN, CONTINUE_SCREEN, DATA_SELECT, LEVEL_SELECT, EDITOR, CREDITS_TEXT,
 					CREDITS_DEMO, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, TRY_AGAIN_END,
-					ENDING_CUTSCENE, BONUS_STAGE, NATIVE_MOD_NOTICE -> true;
+					ENDING_CUTSCENE, BONUS_STAGE, NATIVE_MOD_NOTICE, MOD_SCENE -> true;
 		};
 		boolean renderedState = switch (Objects.requireNonNull(state, "state")) {
 			case NORMAL, MODAL_SHADER_PICKER, PAUSED, FRAME_STEP, REWIND -> true;
@@ -3564,6 +3573,10 @@ public class Engine {
 		}
 		@Override public void levelSelect() { drawLevelSelect(); }
 		@Override public void dataSelect() { drawDataSelect(); }
+		@Override public void modScene() {
+			resetCameraForScreenSpace();
+			ModSceneLauncher.draw(gameLoop, graphicsManager, getProjectionMatrixBuffer());
+		}
 		@Override public void endingCutscene() { drawEndingCutscene(); }
 		@Override public void creditsText() { drawCreditsText(); }
 		@Override public void creditsDemo() { drawCreditsDemo(); }

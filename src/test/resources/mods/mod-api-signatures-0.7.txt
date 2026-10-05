@@ -888,6 +888,23 @@ CF-ANNOTATION TYPE com.openggf.mods.code.RomArtRequest visible @com.openggf.game
 CF-ANNOTATION TYPE com.openggf.mods.code.StandaloneLevelLoader visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.mods.scene.ModScene visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.ModSceneFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.ModSceneFactory visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.mods.scene.RomSpriteRequest visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.RomSpriteRequest$Compression visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.RomSpriteRequest$DplcLayout visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneArt visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneAudio visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneCanvas visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneContext visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneDraw visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneImage visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMouse visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneRomArt visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneSprite visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneSpriteSet visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneStorage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession$Phase visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.MasterClient visible @com.openggf.game.ModApi
@@ -1663,6 +1680,11 @@ CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  <i
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$TrackMusic public  <init>(com.openggf.mods.TrackKey)
 CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int)
+CONSTRUCTOR com.openggf.mods.scene.RomSpriteRequest public  <init>(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int,int,com.openggf.mods.scene.RomSpriteRequest$DplcLayout,int,int)
+CONSTRUCTOR com.openggf.mods.scene.SceneDraw public  <init>(float,float,boolean,boolean,int,int)
+CONSTRUCTOR com.openggf.mods.scene.SceneImage public  <init>(int,int,int[])
+CONSTRUCTOR com.openggf.mods.scene.SceneMouse public  <init>(int,int,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean)
+CONSTRUCTOR com.openggf.mods.scene.SceneSprite public  <init>(com.openggf.mods.scene.SceneImage,int,int)
 CONSTRUCTOR com.openggf.net.client.ClientRaceSession public  <init>(java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Control public  <init>(com.openggf.net.protocol.ControlMessage)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Disconnected public  <init>(java.lang.String)
@@ -2402,6 +2424,7 @@ FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode LE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode LEVEL
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode LEVEL_SELECT
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode MASTER_TITLE_SCREEN
+FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode MOD_SCENE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode NATIVE_MOD_NOTICE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode SPECIAL_STAGE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode SPECIAL_STAGE_RESULTS
@@ -2878,6 +2901,12 @@ FIELD com.openggf.level.scroll.BgTilemapUpdateMode public,static,final com.openg
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression KOSINSKI
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression NEMESIS
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression UNCOMPRESSED
+FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression KOSINSKI
+FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression KOSINSKI_MODULED
+FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression NEMESIS
+FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression UNCOMPRESSED
+FIELD com.openggf.mods.scene.RomSpriteRequest$DplcLayout public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout OBJECT
+FIELD com.openggf.mods.scene.RomSpriteRequest$DplcLayout public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout PLAYER
 FIELD com.openggf.net.client.ClientRaceSession public,static,final int CHAT_LINES_KEPT
 FIELD com.openggf.net.client.ClientRaceSession public,static,final int CLOCK_SAMPLES_TARGET
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase COUNTDOWN
@@ -4318,11 +4347,13 @@ METHOD com.openggf.control.InputHandler public  boolean menuAcceptExcludingBackA
 METHOD com.openggf.control.InputHandler public  com.openggf.control.LogicalInputSnapshot logical()
 METHOD com.openggf.control.InputHandler public  double getMouseX()
 METHOD com.openggf.control.InputHandler public  double getMouseY()
+METHOD com.openggf.control.InputHandler public  int consumeScrollNotches()
 METHOD com.openggf.control.InputHandler public  void clearKeyState()
 METHOD com.openggf.control.InputHandler public  void clearLogicalOverride()
 METHOD com.openggf.control.InputHandler public  void handleKeyEvent(int,int)
 METHOD com.openggf.control.InputHandler public  void handleMouseButton(int,int)
 METHOD com.openggf.control.InputHandler public  void handleMouseMove(double,double)
+METHOD com.openggf.control.InputHandler public  void handleScroll(double)
 METHOD com.openggf.control.InputHandler public  void refreshLogicalSnapshot()
 METHOD com.openggf.control.InputHandler public  void setLogicalOverride(com.openggf.control.LogicalInputSnapshot)
 METHOD com.openggf.control.InputHandler public  void update()
@@ -5171,6 +5202,7 @@ METHOD com.openggf.game.GameModule public  com.openggf.level.InitialFixedSstDisp
 METHOD com.openggf.game.GameModule public  com.openggf.level.Level loadLevelOverride(int) THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public  com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet() THROWS java.io.IOException
+METHOD com.openggf.game.GameModule public  com.openggf.mods.scene.ModSceneFactory startupScene()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.playable.SidekickCarryTrigger getSidekickCarryTrigger()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.playable.SuperStateController createSuperStateController(com.openggf.sprites.playable.AbstractPlayableSprite)
@@ -6485,6 +6517,7 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.obj
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet() THROWS java.io.IOException
+METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.mods.scene.ModSceneFactory startupScene()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.sprites.playable.SidekickCarryTrigger getSidekickCarryTrigger()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.sprites.playable.SuperStateController createSuperStateController(com.openggf.sprites.playable.AbstractPlayableSprite)
@@ -11177,6 +11210,7 @@ METHOD com.openggf.mods.code.ModContext public  void registerObject(java.lang.St
 METHOD com.openggf.mods.code.ModContext public  void registerObjectArt(java.lang.String,com.openggf.mods.code.BakedSheetRef)
 METHOD com.openggf.mods.code.ModContext public  void registerObjectPreview(java.lang.String,java.lang.String)
 METHOD com.openggf.mods.code.ModContext public  void registerRomObjectArt(java.lang.String,com.openggf.mods.code.RomArtRequest)
+METHOD com.openggf.mods.code.ModContext public  void registerStartupScene(com.openggf.mods.scene.ModSceneFactory)
 METHOD com.openggf.mods.code.ModContext public  void registerZone(com.openggf.mods.code.ModZoneContribution)
 METHOD com.openggf.mods.code.ModHudProfileContribution public  com.openggf.game.ZoneKey destination()
 METHOD com.openggf.mods.code.ModHudProfileContribution public  com.openggf.level.objects.HudProfile profile()
@@ -11302,6 +11336,123 @@ METHOD com.openggf.mods.code.RomArtRequest public,final  int hashCode()
 METHOD com.openggf.mods.code.RomArtRequest public,final  java.lang.String toString()
 METHOD com.openggf.mods.code.StandaloneLevelLoader public,static  com.openggf.level.Level load(com.openggf.io.ModAssetRoot,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.level.rings.RingSpriteSheet) THROWS java.io.IOException
 METHOD com.openggf.mods.code.ZoneEventFactory public,abstract  com.openggf.game.LevelEventProvider create()
+METHOD com.openggf.mods.scene.ModScene public  void exit(com.openggf.mods.scene.SceneContext)
+METHOD com.openggf.mods.scene.ModScene public,abstract  void draw(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.SceneCanvas)
+METHOD com.openggf.mods.scene.ModScene public,abstract  void enter(com.openggf.mods.scene.SceneContext)
+METHOD com.openggf.mods.scene.ModScene public,abstract  void update(com.openggf.mods.scene.SceneContext)
+METHOD com.openggf.mods.scene.ModSceneFactory public,abstract  com.openggf.mods.scene.ModScene create()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  boolean hasDplc()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  com.openggf.mods.scene.RomSpriteRequest withTileOffset(int)
+METHOD com.openggf.mods.scene.RomSpriteRequest public  com.openggf.mods.scene.RomSpriteRequest$Compression compression()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  com.openggf.mods.scene.RomSpriteRequest$DplcLayout dplcLayout()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  int artAddress()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  int artSize()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  int dplcAddress()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  int mappingAddress()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  int paletteLine()
+METHOD com.openggf.mods.scene.RomSpriteRequest public  int tileOffset()
+METHOD com.openggf.mods.scene.RomSpriteRequest public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.RomSpriteRequest public,final  int hashCode()
+METHOD com.openggf.mods.scene.RomSpriteRequest public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.RomSpriteRequest public,static  com.openggf.mods.scene.RomSpriteRequest of(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int)
+METHOD com.openggf.mods.scene.RomSpriteRequest public,static  com.openggf.mods.scene.RomSpriteRequest streamed(int,int,int,int,com.openggf.mods.scene.RomSpriteRequest$DplcLayout,int)
+METHOD com.openggf.mods.scene.RomSpriteRequest$Compression public,static  com.openggf.mods.scene.RomSpriteRequest$Compression valueOf(java.lang.String)
+METHOD com.openggf.mods.scene.RomSpriteRequest$Compression public,static  com.openggf.mods.scene.RomSpriteRequest$Compression[] values()
+METHOD com.openggf.mods.scene.RomSpriteRequest$DplcLayout public,static  com.openggf.mods.scene.RomSpriteRequest$DplcLayout valueOf(java.lang.String)
+METHOD com.openggf.mods.scene.RomSpriteRequest$DplcLayout public,static  com.openggf.mods.scene.RomSpriteRequest$DplcLayout[] values()
+METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.SceneImage image(int,int,int[])
+METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.SceneImage png(byte[])
+METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.SceneRomArt rom()
+METHOD com.openggf.mods.scene.SceneAudio public,abstract  void fadeOutMusic()
+METHOD com.openggf.mods.scene.SceneAudio public,abstract  void playMusic(int)
+METHOD com.openggf.mods.scene.SceneAudio public,abstract  void playSfx(int)
+METHOD com.openggf.mods.scene.SceneAudio public,abstract  void stopMusic()
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int height()
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int textWidth(java.lang.String)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int width()
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void clear(int)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void clip(int,int,int,int)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void draw(com.openggf.mods.scene.SceneImage,float,float)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void draw(com.openggf.mods.scene.SceneImage,float,float,com.openggf.mods.scene.SceneDraw)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void draw(com.openggf.mods.scene.SceneSprite,float,float,com.openggf.mods.scene.SceneDraw)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void drawRegion(com.openggf.mods.scene.SceneImage,int,int,int,int,float,float,float,float,com.openggf.mods.scene.SceneDraw)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void fill(int,int,int,int,int)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void text(java.lang.String,int,int,int)
+METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void unclip()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean keyDown(int)
+METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean keyPressed(int)
+METHOD com.openggf.mods.scene.SceneContext public,abstract  com.openggf.control.LogicalInputSnapshot input()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  com.openggf.mods.scene.SceneArt art()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  com.openggf.mods.scene.SceneAudio audio()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  com.openggf.mods.scene.SceneMouse mouse()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  com.openggf.mods.scene.SceneStorage storage()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  int height()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  int width()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  java.lang.String ownerModId()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  long ticks()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  void exitToGameTitle()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  void exitToMasterTitle()
+METHOD com.openggf.mods.scene.SceneDraw public  boolean flipX()
+METHOD com.openggf.mods.scene.SceneDraw public  boolean flipY()
+METHOD com.openggf.mods.scene.SceneDraw public  com.openggf.mods.scene.SceneDraw withAlpha(float)
+METHOD com.openggf.mods.scene.SceneDraw public  com.openggf.mods.scene.SceneDraw withFlash(int)
+METHOD com.openggf.mods.scene.SceneDraw public  com.openggf.mods.scene.SceneDraw withFlipX(boolean)
+METHOD com.openggf.mods.scene.SceneDraw public  com.openggf.mods.scene.SceneDraw withFlipY(boolean)
+METHOD com.openggf.mods.scene.SceneDraw public  com.openggf.mods.scene.SceneDraw withScale(float)
+METHOD com.openggf.mods.scene.SceneDraw public  com.openggf.mods.scene.SceneDraw withScale(float,float)
+METHOD com.openggf.mods.scene.SceneDraw public  com.openggf.mods.scene.SceneDraw withTint(int)
+METHOD com.openggf.mods.scene.SceneDraw public  float scaleX()
+METHOD com.openggf.mods.scene.SceneDraw public  float scaleY()
+METHOD com.openggf.mods.scene.SceneDraw public  int flash()
+METHOD com.openggf.mods.scene.SceneDraw public  int tint()
+METHOD com.openggf.mods.scene.SceneDraw public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.SceneDraw public,final  int hashCode()
+METHOD com.openggf.mods.scene.SceneDraw public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneDraw public,static  com.openggf.mods.scene.SceneDraw plain()
+METHOD com.openggf.mods.scene.SceneImage public  com.openggf.mods.scene.SceneImage crop(int,int,int,int)
+METHOD com.openggf.mods.scene.SceneImage public  int height()
+METHOD com.openggf.mods.scene.SceneImage public  int pixel(int,int)
+METHOD com.openggf.mods.scene.SceneImage public  int width()
+METHOD com.openggf.mods.scene.SceneImage public  int[] pixels()
+METHOD com.openggf.mods.scene.SceneMouse public  boolean active()
+METHOD com.openggf.mods.scene.SceneMouse public  boolean inside()
+METHOD com.openggf.mods.scene.SceneMouse public  boolean leftDown()
+METHOD com.openggf.mods.scene.SceneMouse public  boolean leftPressed()
+METHOD com.openggf.mods.scene.SceneMouse public  boolean leftReleased()
+METHOD com.openggf.mods.scene.SceneMouse public  boolean moved()
+METHOD com.openggf.mods.scene.SceneMouse public  boolean over(int,int,int,int)
+METHOD com.openggf.mods.scene.SceneMouse public  boolean rightPressed()
+METHOD com.openggf.mods.scene.SceneMouse public  int wheel()
+METHOD com.openggf.mods.scene.SceneMouse public  int x()
+METHOD com.openggf.mods.scene.SceneMouse public  int y()
+METHOD com.openggf.mods.scene.SceneMouse public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.SceneMouse public,final  int hashCode()
+METHOD com.openggf.mods.scene.SceneMouse public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneMouse public,static  com.openggf.mods.scene.SceneMouse none()
+METHOD com.openggf.mods.scene.SceneRomArt public,abstract  byte[] read(int,int)
+METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneSpriteSet character(java.lang.String)
+METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneSpriteSet characterAccessory(java.lang.String)
+METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneSpriteSet sprites(com.openggf.mods.scene.RomSpriteRequest,int[])
+METHOD com.openggf.mods.scene.SceneRomArt public,abstract  int[] characterPalette(java.lang.String)
+METHOD com.openggf.mods.scene.SceneRomArt public,abstract  int[] palette(int,int)
+METHOD com.openggf.mods.scene.SceneRomArt public,abstract  java.lang.String gameId()
+METHOD com.openggf.mods.scene.SceneSprite public  com.openggf.mods.scene.SceneImage image()
+METHOD com.openggf.mods.scene.SceneSprite public  int height()
+METHOD com.openggf.mods.scene.SceneSprite public  int originX()
+METHOD com.openggf.mods.scene.SceneSprite public  int originY()
+METHOD com.openggf.mods.scene.SceneSprite public  int width()
+METHOD com.openggf.mods.scene.SceneSprite public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.SceneSprite public,final  int hashCode()
+METHOD com.openggf.mods.scene.SceneSprite public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneSprite public,static  com.openggf.mods.scene.SceneSprite of(com.openggf.mods.scene.SceneImage)
+METHOD com.openggf.mods.scene.SceneSpriteSet public,abstract  com.openggf.mods.scene.SceneSprite frame(int)
+METHOD com.openggf.mods.scene.SceneSpriteSet public,abstract  int animationDelay(int)
+METHOD com.openggf.mods.scene.SceneSpriteSet public,abstract  int frameCount()
+METHOD com.openggf.mods.scene.SceneSpriteSet public,abstract  int[] animationFrames(int)
+METHOD com.openggf.mods.scene.SceneStorage public,abstract  boolean delete(java.lang.String)
+METHOD com.openggf.mods.scene.SceneStorage public,abstract  boolean write(java.lang.String,java.lang.String)
+METHOD com.openggf.mods.scene.SceneStorage public,abstract  java.util.List<java.lang.String> list()
+METHOD com.openggf.mods.scene.SceneStorage public,abstract  java.util.Optional<java.lang.String> read(java.lang.String)
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isWindowOpen()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean needsMoreClockSamples()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.client.ClientRaceSession$Phase phase()
@@ -14250,6 +14401,8 @@ NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDe
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$StockMusic
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$TrackMusic
+NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$Compression
+NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
 NESTED com.openggf.net.client.ClientRaceSession com.openggf.net.client.ClientRaceSession$Phase
 NESTED com.openggf.net.host.HostMasterLink com.openggf.net.host.HostMasterLink$MessageSink
 NESTED com.openggf.net.hub.GhostHub com.openggf.net.hub.GhostHub$HubViolationRecorder
@@ -16160,6 +16313,33 @@ RECORD-COMPONENT com.openggf.mods.code.RomArtRequest dplcAddress int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest mappingAddress int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest paletteLine int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest uncompressedByteSize int
+RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest artAddress int
+RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest artSize int
+RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest compression com.openggf.mods.scene.RomSpriteRequest$Compression
+RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest dplcAddress int
+RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest dplcLayout com.openggf.mods.scene.RomSpriteRequest$DplcLayout
+RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest mappingAddress int
+RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest paletteLine int
+RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest tileOffset int
+RECORD-COMPONENT com.openggf.mods.scene.SceneDraw flash int
+RECORD-COMPONENT com.openggf.mods.scene.SceneDraw flipX boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneDraw flipY boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneDraw scaleX float
+RECORD-COMPONENT com.openggf.mods.scene.SceneDraw scaleY float
+RECORD-COMPONENT com.openggf.mods.scene.SceneDraw tint int
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse active boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse inside boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse leftDown boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse leftPressed boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse leftReleased boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse moved boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse rightPressed boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse wheel int
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse x int
+RECORD-COMPONENT com.openggf.mods.scene.SceneMouse y int
+RECORD-COMPONENT com.openggf.mods.scene.SceneSprite image com.openggf.mods.scene.SceneImage
+RECORD-COMPONENT com.openggf.mods.scene.SceneSprite originX int
+RECORD-COMPONENT com.openggf.mods.scene.SceneSprite originY int
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Control message com.openggf.net.protocol.ControlMessage
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Disconnected reason java.lang.String
 RECORD-COMPONENT com.openggf.net.client.RaceClient$GhostData aggregate com.openggf.net.protocol.GhostPackets$Aggregate
@@ -17269,6 +17449,7 @@ TYPE class public,final com.openggf.level.rings.SpillAnimationState SUPER java.l
 TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.StandaloneLevelLoader SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.ClientRaceSession SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.MasterClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.host.HostMasterLink SUPER java.lang.Object
@@ -17449,6 +17630,8 @@ TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$T
 TYPE enum public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant SUPER java.lang.Enum<com.openggf.level.objects.ObjectRenderManager$SpringVariant>
 TYPE enum public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind SUPER java.lang.Enum<com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind>
 TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase SUPER java.lang.Enum<com.openggf.level.resources.KosinskiModuleQueue$Phase>
+TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
+TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
 TYPE enum public,static,final com.openggf.net.hub.HostRoundEngine$Phase SUPER java.lang.Enum<com.openggf.net.hub.HostRoundEngine$Phase>
 TYPE enum public,static,final com.openggf.physics.CollisionEvent$EventType SUPER java.lang.Enum<com.openggf.physics.CollisionEvent$EventType>
@@ -17567,6 +17750,15 @@ TYPE interface public,abstract com.openggf.level.scroll.ZoneScrollHandler SUPER 
 TYPE interface public,abstract com.openggf.level.spawn.SpawnPoint SUPER <none>
 TYPE interface public,abstract com.openggf.mods.code.GgfMod SUPER <none>
 TYPE interface public,abstract com.openggf.mods.code.ZoneEventFactory SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.ModScene SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.ModSceneFactory SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneArt SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneAudio SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneCanvas SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneContext SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneRomArt SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneSpriteSet SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneStorage SUPER <none>
 TYPE interface public,abstract com.openggf.net.client.RaceConnection SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.HubConnection SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.TrackValidationProfileSource SUPER <none>
@@ -17773,6 +17965,10 @@ TYPE record public,final com.openggf.mods.code.ModInputFilterContribution SUPER 
 TYPE record public,final com.openggf.mods.code.ModLaunchTeamContribution SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.ModZoneContribution SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.RomArtRequest SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.scene.RomSpriteRequest SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.scene.SceneMouse SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.scene.SceneSprite SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.RoomHostConfig SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.RoomHostHooks SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.TrackValidationProfile SUPER java.lang.Record
@@ -18846,6 +19042,23 @@ TYPE-ANNOTATION com.openggf.mods.code.RomArtRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.StandaloneLevelLoader @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.mods.scene.ModScene @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.ModSceneFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.ModSceneFactory @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.mods.scene.RomSpriteRequest @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.RomSpriteRequest$Compression @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.RomSpriteRequest$DplcLayout @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneArt @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneAudio @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneCanvas @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneContext @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneDraw @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneImage @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneMouse @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneRomArt @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneSprite @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneSpriteSet @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneStorage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession$Phase @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.MasterClient @com.openggf.game.ModApi

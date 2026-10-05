@@ -86,6 +86,9 @@ public final class ModBackedGamePatch implements GamePatch {
         if (!plan.characters().isEmpty() && faultBoundary == null) {
             throw new IllegalArgumentException("Mod characters require an installed fault boundary");
         }
+        if (plan.startupScene() != null && faultBoundary == null) {
+            throw new IllegalArgumentException("Mod startup scenes require an installed fault boundary");
+        }
         if ((!plan.launchTeams().isEmpty() || !plan.inputFilters().isEmpty()
                 || !plan.hudProfiles().isEmpty()) && faultBoundary == null) {
             throw new IllegalArgumentException(
@@ -259,6 +262,14 @@ public final class ModBackedGamePatch implements GamePatch {
                     };
                 }
                 return gameplayPolicies;
+            }
+
+            @Override
+            public com.openggf.mods.scene.ModSceneFactory startupScene() {
+                return plan.startupScene() == null
+                        ? super.startupScene()
+                        : new com.openggf.mods.scene.OwnedSceneFactory(plan.ownerModId(), plan.startupScene(),
+                                faultBoundary::run);
             }
 
             @Override

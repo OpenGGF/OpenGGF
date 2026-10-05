@@ -30,6 +30,7 @@ public class InputHandler {
 	private double mouseX;
 	private double mouseY;
 	private boolean mouseInputSeen;
+	private double scrollAccumulator;
 	private boolean controllerPresentation;
 	private boolean keyboardPresentationPending;
 	final MenuRepeat menuRepeat = new MenuRepeat();
@@ -91,6 +92,22 @@ public class InputHandler {
 		mouseX = x;
 		mouseY = y;
 		mouseInputSeen = true;
+	}
+
+	/** Records mouse-wheel movement; {@code yOffset} is positive when scrolling away from the user. */
+	public void handleScroll(double yOffset) {
+		mouseInputSeen = true;
+		scrollAccumulator += yOffset;
+	}
+
+	/**
+	 * Whole wheel notches scrolled since the last call (positive = away from the user),
+	 * keeping any fractional remainder from smooth-scrolling devices.
+	 */
+	public int consumeScrollNotches() {
+		int notches = (int) scrollAccumulator;
+		scrollAccumulator -= notches;
+		return notches;
 	}
 
 	public void handleMouseButton(int button, int action) {

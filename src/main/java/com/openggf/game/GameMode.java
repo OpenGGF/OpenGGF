@@ -55,5 +55,8 @@ public enum GameMode {
     ENDING_CUTSCENE,
 
     /** S3K bonus stage (Gumball, Pachinko, Slots) — uses level pipeline with coordinator lifecycle */
-    BONUS_STAGE
+    BONUS_STAGE,
+
+    /** A full-screen mod scene ({@code com.openggf.mods.scene.ModScene}) drawn on a scene canvas. */
+    MOD_SCENE
 }

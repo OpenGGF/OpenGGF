@@ -152,6 +152,7 @@ public class GameLoop {
     private final GameLoopContinueCoordinator continueScreen = new GameLoopContinueCoordinator(this);
 
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
+    private final com.openggf.mods.scene.ModSceneHost modSceneHost = new com.openggf.mods.scene.ModSceneHost();
     private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
             new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;
@@ -1474,6 +1475,10 @@ public class GameLoop {
             return;
         } else if (currentGameMode == GameMode.DATA_SELECT) {
             updateDataSelectMode();
+            profiler.endSection("input");
+            return;
+        } else if (currentGameMode == GameMode.MOD_SCENE) {
+            menuScreenModeController.updateModScene(modSceneHost, inputHandler);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.CREDITS_TEXT
@@ -3777,6 +3782,7 @@ public class GameLoop {
      * gameplay state. Called by {@link TraceSessionLauncher#teardown()}.
      */
     void returnToMasterTitle() {
+        modSceneHost.close();
         escapeToMasterTitleController.reset();
         levelIterationAdmission.reset();
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
@@ -4173,6 +4179,36 @@ public class GameLoop {
             case LEVEL_SELECT -> doEnterLevelSelect();
             case LEVEL, TWO_PLAYER, OPTIONS, OTHER -> startLevelFromTitleScreenImmediate();
         }
+    }
+
+    // ==================== Mod Scene Methods ====================
+
+    com.openggf.mods.scene.ModSceneHost getModSceneHost() {
+        return modSceneHost;
+    }
+
+    /** Opens a mod's startup scene in place of the title screen (see {@code GameModule#startupScene}). */
+    void enterModScene(com.openggf.mods.scene.ModSceneFactory factory,
+                              com.openggf.mods.scene.SceneServices services, int width, int height) {
+        GameMode oldMode = changeGameModeForBoundary(GameMode.MOD_SCENE);
+        modSceneHost.open(factory, services, width, height);
+        if (gameModeChangeListener != null) {
+            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
+        }
+        fadeManager.startFadeFromBlack(null);
+    }
+
+    /** Fades out of the mod scene to the base game's title screen. */
+    void exitModSceneToGameTitle() {
+        resolveFadeManager().startFadeToBlack(() -> {
+            modSceneHost.close();
+            initializeTitleScreenMode();
+        });
+    }
+
+    /** Fades out of the mod scene to the master title (as holding Escape does). */
+    void exitModSceneToMasterTitle() {
+        startEscapeToMasterTitleTransition();
     }
 
     // ==================== Data Select Methods ====================

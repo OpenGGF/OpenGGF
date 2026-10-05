@@ -265,3 +265,15 @@ host ignore `LEVEL_SELECT_ON_STARTUP`, route a title level-select exit to one-pl
 play, and ignore the in-level level-select key. Both are delegated by
 `DelegatingGameModule` and additive to the unpublished 0.7 candidate; the pin is
 updated in place.
+
+Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
+`ModScene`, `ModSceneFactory`, `SceneContext`, `SceneCanvas`, `SceneDraw`, `SceneImage`,
+`SceneSprite`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `RomSpriteRequest` (with its
+`Compression` and `DplcLayout` enums), `SceneMouse`, `SceneAudio` and `SceneStorage`, plus
+`ModContext.registerStartupScene`, `GameModule.startupScene()` (default `null`, delegated
+by `DelegatingGameModule`), `GameMode.MOD_SCENE`, and `InputHandler.handleScroll` /
+`consumeScrollNotches`. The host classes in the same package (`ModSceneHost`,
+`SceneServices`, `OwnedSceneFactory`, `SceneRomArtFactory`) are engine-internal and stay
+unreachable from the pinned surface; `GameLoop`'s scene entry points are package-private
+for that reason. All additions are additive to the unpublished 0.7 candidate; the
+descriptor and `ModApiVersion` remain 0.7.0 and the normalized pin is updated in place.
