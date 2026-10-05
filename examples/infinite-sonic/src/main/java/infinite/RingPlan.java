@@ -23,7 +23,7 @@ public final class RingPlan {
 
     public static Row at(TerrainLibrary terrain, long section) {
         if (section < 0) return null;
-        long random = TerrainLibrary.random(section + TerrainLibrary.SEED + 0x52494e4753L);
+        long random = TerrainLibrary.random(section + terrain.seed() + 0x52494e4753L);
         // The opening trail teaches collection; thereafter leave a third of sections empty.
         if (section != 0 && Long.remainderUnsigned(random, 3) == 0) return null;
         var stones = PlatformPlan.at(terrain, section);

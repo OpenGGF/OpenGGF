@@ -90,6 +90,8 @@ shield and fewer than 20 rings, so the next hit knocks him back and takes every 
 him with none) he sweats: little drops fly off the back of his head (twice as often with no
 rings), and the ring count flashes red.
 The last five seconds also show a large centered countdown with a chime each
+second. When the speed-up lands, the screen flashes, speed lines rush past along the top and
+bottom edges, and the new speed (for example **SPEED 1.25X**) takes the countdown's place for a
 second. Music and sound effects speed up and rise in pitch with the challenge;
 pause, rewind, game over and leaving the level release the playback rate.
 Survival earns one point per minimum-scroll pixel: **240 points/second at 1×**,
@@ -102,7 +104,9 @@ Other character/team selections retain their stock behavior.
 The mod reads your Sonic 1 ROM through the normal level loader. It selects continuous
 floor sections with at least 112 pixels of open space above them (so mazes, tunnels and
 overhangs are skipped), aligns them vertically, and pairs them with horizontal reflections
-so their outside edges join. A fixed seed chooses sections as you move. Art, palettes,
+so their outside edges join. Every run lays a **new random course**: a fresh seed is drawn each
+time a course loads (starting from the title, RESTART), while CONTINUE keeps the course it revives
+on. The seed chooses sections as you move. Leaderboards are per zone, whatever the course. Art, palettes,
 music and collision tiles come from the ROM; the jar contains only code and a manifest.
 It never reads the disassembly or includes exported Sega assets.
 
@@ -226,8 +230,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
 ```
 
 The finite 64-column window recycles in 16-column steps while preserving Sonic's
-fractional position and speed. The same logical coordinates always generate the same
-terrain. Change `TerrainLibrary.SEED` and rebuild for another course.
+fractional position and speed. Within a run the same logical coordinates always generate the
+same terrain. To replay one course every time, start the JVM with
+`-Dinfinite-sonic.seed=<number>` (decimal or `0x` hex; the original fixed course was
+`0x534F4E4943`); the tests pin that seed.
 Enemy positions and patrol phases shift with the world and participate in rewind.
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
 from that window can regenerate its encounters. Stock platforms keep their own

@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_1)
 class TestInfiniteSonic {
     @TempDir static Path temp;
+    static final String SEED_PROPERTY = "infinite-sonic.seed", FIXED_SEED = "0x534F4E4943";
     static URLClassLoader loader;
     static Path jar;
     SharedLevel bootstrap;
@@ -34,6 +35,8 @@ class TestInfiniteSonic {
     @BeforeAll static void compileAndValidate() throws Exception {
         // The leaderboard is saved under the save root; keep the tests' scores out of the real one.
         System.setProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY, temp.resolve("saves").toString());
+        // Every run normally lays a fresh random course; the layout assertions below pin the original one.
+        System.setProperty(SEED_PROPERTY, FIXED_SEED);
         Path project = Path.of("examples/infinite-sonic");
         Path classes = Files.createDirectory(temp.resolve("classes"));
         var args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
@@ -52,6 +55,7 @@ class TestInfiniteSonic {
     }
     @AfterAll static void closeLoader() throws Exception {
         System.clearProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+        System.clearProperty(SEED_PROPERTY);
         if (loader != null) loader.close();
     }
     @AfterEach void closeSession() { if (bootstrap != null) bootstrap.dispose(); }
@@ -195,6 +199,26 @@ class TestInfiniteSonic {
         GameServices.level().loadZoneAndAct(0, 0);
         assertArrayEquals(initial, GameServices.level().getCurrentLevel().getMap().getData());
         assertEquals(1, GameServices.level().getCurrentLevel().getObjects().size());
+    }
+
+    @Test void everyLoadLaysAFreshRandomCourseUnlessTheSeedIsPinned() throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3);
+        var seed = terrain().getClass().getMethod("seed");
+        assertEquals(Long.decode(FIXED_SEED), seed.invoke(terrain()), "pinned by the property");
+        System.clearProperty(SEED_PROPERTY);
+        try {
+            var seeds = new java.util.HashSet<Object>();
+            var maps = new java.util.HashSet<String>();
+            for (int load = 0; load < 3; load++) {
+                GameServices.level().loadZoneAndAct(0, 0);
+                seeds.add(seed.invoke(terrain()));
+                maps.add(java.util.Arrays.toString(GameServices.level().getCurrentLevel().getMap().getData()));
+            }
+            assertEquals(3, seeds.size(), "each load draws its own seed");
+            assertTrue(maps.size() > 1, "and lays a different course");
+        } finally {
+            System.setProperty(SEED_PROPERTY, FIXED_SEED);
+        }
     }
 
     @Test void sessionPinsWidescreenAndHidesLevelSelect() throws Exception {
@@ -637,6 +661,33 @@ class TestInfiniteSonic {
         assertEquals(1.25, speed(), "PAL still speeds up after 30 seconds");
         setTicks(1800 * 130);
         assertEquals(32.0, speed(), "bounded host pacing ceiling");
+    }
+
+    @Test void eachSpeedUpFlashesAndAnnouncesTheNewSpeedAndRewinds() throws Exception {
+        var fixture = launch(WidescreenAspect.WIDE_16_9);
+        fixture.stepIdleFrames(2);
+        fixture.sprite().setInvulnerableFrames(20000);
+        assertEquals(0, controllerInt("speedUpFrames"));
+        setTicks(1798);
+        stepCourse(fixture, 1);
+        assertEquals(1.0, speed());
+        assertEquals(0, controllerInt("speedUpFrames"), "nothing before the stage changes");
+        stepCourse(fixture, 1);
+        assertEquals(1.25, speed());
+        assertEquals(60, controllerInt("speedUpFrames"), "the stage change starts the flourish");
+        assertEquals("SPEED 1.25X", loader.loadClass("infinite.CourseHud")
+                .getMethod("speedText", controller().getClass()).invoke(null, controller()));
+        var registry = fixture.runtime().getRewindRegistry();
+        var flashing = registry.capture();
+        // Drawing the flash, speed lines and banner must not disturb the course.
+        ((com.openggf.level.objects.AbstractObjectInstance) controller()).appendRenderCommands(new ArrayList<>());
+        for (int i = 0; i < 20; i++) stepCourse(fixture, 1);
+        assertEquals(40, controllerInt("speedUpFrames"));
+        registry.restore(flashing);
+        assertEquals(60, controllerInt("speedUpFrames"), "the flourish rewinds with the course");
+        for (int i = 0; i < 60; i++) stepCourse(fixture, 1);
+        assertEquals(0, controllerInt("speedUpFrames"), "and lasts one second at the base rate");
+        assertEquals(1.25, speed(), "no further speed-up");
     }
 
     @ParameterizedTest @EnumSource(WidescreenAspect.class)

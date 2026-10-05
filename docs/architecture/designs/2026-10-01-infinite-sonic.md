@@ -870,3 +870,38 @@ alternating sides, arcing up and falling over 18 updates and fading at the end; 
 `dangerFrames` counter (rewound with the controller) drives them. The HUD ring count flashes
 red eight updates on, eight off. The HUD now reads TOP (the zone's best, or the run's score
 once ahead), SCORE, SPEED and RINGS/LIVES; the speed-up warning moved down to y 72 to clear it.
+
+## Random courses and the speed-up flourish (0.22.0)
+
+Follow-up on `374775a40d`, 2026-10-05. Requests: make each level random and different every time
+while keeping one leaderboard per zone regardless of seed; make speed-ups feel like a moment
+(a screen-edge streak or palette flash); and keep the picked zone's background through the
+title-to-zone transition if that does not need messy engine code.
+
+**Random seed.** `TerrainLibrary.SEED` was a static constant read by every plan. It is now a
+per-library `seed()`: `InfiniteSonicMod.Module.loadLevelOverride` builds each course's library
+with `courseSeed()`, a fresh `ThreadLocalRandom` long, or the `infinite-sonic.seed` system
+property when set (`Long.decode`, so decimal or `0x` hex). Every load (title start, RESTART)
+therefore lays a new course; CONTINUE never reloads, so it keeps its course, and rewind within
+a run restores against the same library. `MonitorPlan.kind` gained the terrain parameter it now
+needs. The leaderboard was already keyed by zone and run id only, so no change was needed for
+it. `TestInfiniteSonic` pins `FIXED_SEED` (`0x534F4E4943`, the old constant) so the layout
+assertions keep their course; a new test clears the property and checks three loads draw three
+seeds and lay different maps.
+
+**Speed-up flourish.** Rejected: a true palette flash (palette lines are shared and the stock
+palette fade belongs to the engine's FadeManager). The controller notes when `tick` raises the
+displayed multiplier and starts `speedUpFrames` (60 updates, rewound with the controller). For
+its first 12 updates a warm translucent rectangle over the screen fades out; 16 speed lines,
+each with a fixed hashed length, pace and band (the outer 30% of the screen height, alternating
+top and bottom), rush right to left and fade over the last 15 updates; and the HUD draws
+`SPEED n.nnX` in gold at the countdown's place (y 72), which the countdown has just vacated.
+Nothing shows during the death menu or CONTINUE. No new sound: Sonic 1 has no dash effect in the
+mapped set, and the countdown chimes already lead in.
+
+**Title-to-zone background (not done).** The fade is owned by `GameLoop.exitTitleScreen`, which
+fades to black whenever `shouldFadeTitleScreenExit(route)` holds, then resets the title, loads the
+level and fades the title card in from black. No `TitleScreenProvider` or `GameModule` hook skips
+or replaces that fade, so carrying the background over would need a new engine hook in the
+fresh-title boundary that the trace fixtures guard. The user asked not to proceed if it meant
+messy engine code, so this was left alone.

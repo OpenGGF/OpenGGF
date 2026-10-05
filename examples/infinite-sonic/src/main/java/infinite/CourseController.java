@@ -48,6 +48,9 @@ public final class CourseController extends AbstractObjectInstance implements Re
     // Sweat: a drop leaves Sonic's head every 28 updates while in danger, every 14 with no rings;
     // each takes 18 updates to arc away and fall.
     static final int SWEAT_PERIOD = 28, SWEAT_PERIOD_BROKE = 14, SWEAT_LIFE = 18;
+    // Mod design: each speed-up flashes the screen, rushes speed lines past the edges and
+    // announces the new speed for a second; the flash itself lasts the first 12 updates.
+    static final int SPEED_UP_FRAMES = 60, SPEED_UP_FLASH = 12, SPEED_LINES = 16;
     /** CONTINUE phases. */
     static final int RESUME_NONE = 0, RESUME_GLIDE = 1, RESUME_READY = 2;
     private int scrollFraction;
@@ -90,6 +93,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private boolean ghostFlip;
     private int deathX;
     private int deathY;
+    // Updates left of the speed-up flourish; 0 when none is showing.
+    private int speedUpFrames;
     public boolean gameOver() { return gameOver; }
     public boolean restartReady() { return gameOver && gameOverFrames >= RESTART_DELAY_FRAMES; }
     /** A spare life remains, so the menu offers CONTINUE (spending it) as well as RESTART. */
@@ -141,6 +146,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     /** True for a few seconds after the run's score overtakes the zone's previous top score. */
     public boolean celebrating() { return celebrateFrames > 0; }
     public int celebrateFrames() { return celebrateFrames; }
+    /** Updates left of the flourish that marks the latest speed-up; 0 when none is showing. */
+    public int speedUpFrames() { return gameOver || resumePhase != RESUME_NONE ? 0 : speedUpFrames; }
     private long origin;
     private long visited; // One bit per retained 512px section, captured with origin.
     // One section bit per ring position lets allocation retry without duplicating a partial row.
@@ -171,6 +178,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         drawGhost();
         drawSweat();
+        drawSpeedUp();
         CourseHud.draw(services(), this);
     }
     private ChallengeClock clock() { return services().gameService(ChallengeClock.class); }
@@ -198,6 +206,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         }
         if (player.getDead()) { endRun(player); return; }
         if (goFrames > 0) goFrames--;
+        if (speedUpFrames > 0) speedUpFrames--;
         if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
             ghostFrame = sprite.getMappingFrame();
             ghostFlip = sprite.getRenderHFlip();
@@ -240,7 +249,9 @@ public final class CourseController extends AbstractObjectInstance implements Re
         int fps = "PAL".equalsIgnoreCase(config.getString(com.openggf.configuration.SonicConfiguration.REGION))
                 ? 50 : config.getInt(com.openggf.configuration.SonicConfiguration.FPS);
         int previousSeconds = secondsRemaining();
+        double previousSpeed = speedMultiplier();
         clock().tick(fps);
+        if (speedMultiplier() > previousSpeed) speedUpFrames = SPEED_UP_FRAMES;
         if (speedMultiplier() < 32 && secondsRemaining() <= 5
                 && secondsRemaining() < previousSeconds) {
             services().audioManager().playSfx(com.openggf.audio.GameSound.AIR_DING);
@@ -530,6 +541,41 @@ public final class CourseController extends AbstractObjectInstance implements Re
     }
 
     /** A 4x5 teardrop with a white glint. */
+    /**
+     * The speed-up flourish in screen space: a warm flash that fades over its first updates, then
+     * speed lines rushing right to left along the top and bottom edges. The HUD draws the new speed.
+     */
+    private void drawSpeedUp() {
+        int frames = speedUpFrames();
+        if (frames <= 0) return;
+        var camera = services().camera();
+        int left = camera.getX(), top = camera.getY(), width = camera.getWidth(), height = camera.getHeight();
+        int age = SPEED_UP_FRAMES - frames;
+        var graphics = services().graphicsManager();
+        if (age < SPEED_UP_FLASH) {
+            float flash = 0.35f * (SPEED_UP_FLASH - age) / SPEED_UP_FLASH;
+            graphics.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, 0, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
+                    1f, 0.95f, 0.75f, flash, left, top, left + width, top + height));
+        }
+        float alpha = 0.6f * Math.min(1f, frames / 15f);
+        for (int line = 0; line < SPEED_LINES; line++) {
+            // Fixed per-line shape and pace, so the lines read as a steady rush rather than noise.
+            long hash = TerrainLibrary.random(line * 0x9E3779B97F4A7C15L + 0x5350454544L);
+            int band = height * 3 / 10;
+            int y = (int) Long.remainderUnsigned(hash, band);
+            if (line % 2 == 1) y = height - 1 - y;
+            int length = 48 + (int) Long.remainderUnsigned(hash >>> 16, 96);
+            int speed = 20 + (int) Long.remainderUnsigned(hash >>> 32, 16);
+            int thickness = 1 + (int) (hash >>> 48 & 1);
+            int travel = width + length;
+            int head = width - (int) ((age * speed + Long.remainderUnsigned(hash >>> 40, travel)) % travel);
+            int from = Math.max(0, head), to = Math.min(width, head + length);
+            if (to <= from) continue;
+            graphics.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, 0, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
+                    1f, 1f, 1f, alpha, left + from, top + y, left + to, top + y + thickness));
+        }
+    }
+
     private void drawDrop(int x, int y, float alpha) {
         String[] rows = {".bb.", ".bb.", "bwbb", "bbbb", ".bb."};
         var graphics = services().graphicsManager();

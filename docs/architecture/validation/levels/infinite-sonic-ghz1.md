@@ -568,3 +568,15 @@ Main checkout, `feature/ai-infinite-sonic`, base `72667b1958`; mod, tests and do
 
 **196 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not covered:
 the rendered drops and HUD layout (headless draws nothing) and live play.
+
+## Random courses and the speed-up flourish (0.22.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `374775a40d`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Random seed per load, pinnable | `everyLoadLaysAFreshRandomCourseUnlessTheSeedIsPinned` | the property pins the old seed; unpinned, three GHZ loads draw three seeds and differ in map data; every other test runs on the pinned seed |
+| Speed-up flourish | `eachSpeedUpFlashesAndAnnouncesTheNewSpeedAndRewinds` | starts on the 1x to 1.25x stage change only, counts down over 60 updates, rewinds with the registry, banner text `SPEED 1.25X`; the render path runs headless without error |
+
+**198 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not covered:
+the rendered flash, lines and banner (headless draws nothing), other zones on unpinned seeds, and live play.

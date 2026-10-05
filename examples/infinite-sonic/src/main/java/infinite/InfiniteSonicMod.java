@@ -34,6 +34,15 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public GameModule apply(GameModule base, PatchContext context) { return new Module(base); }
     }
 
+    /** Set to pin every course to one seed (decimal or 0x hex), for tests and reproducing a course. */
+    static final String SEED_PROPERTY = "infinite-sonic.seed";
+
+    /** The pinned seed if {@link #SEED_PROPERTY} is set, otherwise a fresh random one. */
+    static long courseSeed() {
+        String pinned = System.getProperty(SEED_PROPERTY);
+        return pinned != null ? Long.decode(pinned.trim()) : java.util.concurrent.ThreadLocalRandom.current().nextLong();
+    }
+
     /** Registry zones 0-5: GHZ, MZ, SYZ, LZ, SLZ and SBZ. Final Zone (6) and the ending stay stock. */
     static final int COURSE_ZONES = 6;
 
@@ -121,7 +130,8 @@ public final class InfiniteSonicMod implements GgfMod {
             run = new CourseRun(System.nanoTime());
             if (!active) return super.loadLevelOverride(index);
             Level original = game.loadLevel(index);
-            library = new TerrainLibrary(original);
+            // Every load (a fresh run, RESTART) lays a new course; CONTINUE never reloads, so it keeps its own.
+            library = new TerrainLibrary(original, courseSeed());
             return com.openggf.level.MutableLevel.snapshot(new InfiniteLevel(original, library));
         }
         // Sonic's 19px standing radius puts his centre above the seam floor.
