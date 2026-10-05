@@ -466,3 +466,21 @@ Main checkout, `feature/ai-infinite-sonic`, base `5220937207`; mod, tests and do
 **134 run, 0 failures, 14 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not
 covered: a rebase deferred by live spilled rings, and live play.
 
+
+## Spring chasms, monitors, exit and run frames (0.15.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `2a4ca53aa0`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Spring chasm launches Sonic clear of its pit | `springChasmLaunchesSonicOverTheWidePit` | First chasm of act 1 in all six zones at 16:9, holding right and jumping at the edge; one launch, >300 px rise, lands on the far side |
+| Chasm layout and frequency | `platformStretchesBridgeTheirPitWithTheActsStockPlatforms` | All 18 acts, 250 stretches: no stones in chasms; 25–120 chasms in acts without platforms, 8–60 elsewhere |
+| Launch-line rings | `springLaunchLineRingsTraceTheFlight` | Plan geometry only |
+| Monitor mix and rewards | `monitorsAreSeededOnLevelGroundWithAMixOfKinds`, `touchingAMonitorBreaksItGivesItsRewardAndReplays[4,5,6]` | Shield, Invincibility, Super Ring; break and burst replay |
+| EXIT and Escape request the title | `deathMenuExitLeavesForTheTitleScreen`, `deathMenuWithASpareLifeOffersContinueRestartAndExit`, `escapeLeavesTheCourseForTheTitleScreen` | Headless: asserts the `TITLE_SCREEN` exit request and released audio rate; the `GameLoop` fade/title entry is the stock path, not run here |
+| Run frames at course speed | `cruisingSonicShowsTheFullSpeedRunFrames` | GHZ flat ground: run mapping frames below 0x600 |
+| Backtracking still recycles | `protectedTraversalPreservesEncountersAcrossRebaseAndReplay` | Chasms are one-way; the backward runner is carried across them |
+
+**153 run, 0 failures, 14 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; the
+skips are the platform crossing in acts without platforms). Not covered: a visual check of
+the spring and monitor icons, the live title return, and live play.

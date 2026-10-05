@@ -12,7 +12,8 @@ global aspect setting: the wider screen shows more of the course ahead at scroll
 speed. The player's own aspect returns at the master title. Trace test mode still
 forces native 4:3. On the course Sonic's top running speed is **7/8 of stock** (0x540
 instead of 0x600; acceleration, jumps and rolling are unchanged), and he starts running at
-that speed. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Pausing stops the countdown.
+that speed. He still shows the stock full-speed running frames (and the faster rolling frames),
+from 0x500 instead of the stock 0x600 he can no longer reach. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Pausing stops the countdown.
 The camera scrolls at a minimum of **two thirds of Sonic’s stock maximum run speed** (4 pixels per tick),
 letting Sonic gain ground until his centre reaches **30% of the screen width**, left of centre, so most
 of the screen shows the course ahead. There the camera follows his position, keeping him on screen
@@ -30,12 +31,14 @@ half-second of blinking has passed. With no shield and fewer than 20
 rings the stock hit applies: Sonic is knocked back and drops every ring, and with no rings
 at all the hit is lethal. Pits and the left edge are unaffected by shields and rings.
 
-Shield monitors stand on level ground in about one in ten open sections from the seventh
-section on (roughly one every 25 seconds at 1×). They use the ROM monitor art and its
-flickering shield icon, but unlike the solid stock box any touch breaks them, so running
-into one never stalls Sonic against the scrolling edge. Breaking one plays the stock
-break and shield sounds and puts the stock shield on Sonic; a box broken while already
-shielded only plays the sound. Death, CONTINUE and RESTART clear the shield.
+Monitors stand on level ground in about one in eight open sections from the seventh
+section on (roughly one every 20 seconds at 1×): half are **shields**, three in ten
+**Super Rings** (ten rings, which count toward ring lives) and one in five **Invincibility**
+(the stock stars and music). They use the ROM monitor art and its flickering icons, but
+unlike the solid stock box any touch breaks them, so running into one never stalls Sonic
+against the scrolling edge. Breaking a shield box plays the stock break and shield sounds
+and puts the stock shield on Sonic; one broken while already shielded only plays the sound.
+Death, CONTINUE and RESTART clear the shield.
 
 A session starts with **no spare lives**. The only way to earn one is rings: every time
 the ring counter reaches 100, 200, 300 and so on, you gain a life (reaching 100 again
@@ -45,9 +48,12 @@ the HUD. When Sonic dies with a spare life, the stock card is replaced by a menu
 spot he stood on (solid, pit-free floor), with no level reload. Score, speed, the
 countdown to the next speedup, the terrain and cleared enemies all carry on; rings reset
 to 0 and Sonic blinks for two seconds. **RESTART** reloads a fresh session at 1× with no
-spare lives and a zero score. Press up/down to choose and **SPACE** (player 1 button A)
-to confirm. Dying with no spare lives shows the mod's own GAME OVER text; after a second,
-**PRESS SPACE TO RESTART** starts a fresh session. Neither path returns to the title screen.
+spare lives and a zero score. **EXIT** fades out to the Sonic 1 title screen, where the zone
+picker can start another course. Press up/down to choose and **SPACE** (player 1 button A)
+to confirm. Dying with no spare lives shows the mod's own GAME OVER text over a
+**RESTART**/**EXIT** menu. During a run, a tap of **Escape** (or the gamepad Back button)
+also leaves for the Sonic 1 title; holding Escape for two seconds still reaches the
+engine's own title as everywhere else.
 
 The Sonic 1 title screen gains an **INFINITE** wordmark above the emblem: once
 Sonic has risen it streaks in from the right, then glints every few seconds. Below the
@@ -128,9 +134,20 @@ only block is 32 pixels) and the Star Light course (whose first act places none)
 ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
 stretches in one jump; wider ones need a platform. No enemies patrol platform stretches.
 
+Other wide pits are **spring chasms**: a red spring (the ROM spring art and sound) stands
+on the approach bank 48 pixels before the pit and launches Sonic with the stock red
+power, about 585 pixels high, clear across the chasm. A line of four rings rises off it
+along the flight. In Labyrinth and Star Light (no usable platforms) every wide pit is a
+spring chasm; elsewhere about one in six otherwise ordinary corridors from the third on
+becomes one. Unlike the solid stock spring, it fires whenever Sonic passes over it on the
+ground or low in a jump, so jumping at the pit's edge cannot miss it and running into it
+never stalls him; it lifts a slower Sonic to at least 4 pixels per frame forward. Chasms
+are one-way: there is no spring on the far bank.
+
 The other sections retain the ROM-derived hills and dips, raised or lowered to the
 current level; raised and lowered levels use fewer hill shapes because the layout
-has 256 block slots. Rows of rings appear periodically along the terrain.
+has 256 block slots. Rows of rings appear periodically along the terrain; a third of them
+are hop arcs whose middle rings need a short jump.
 
 At local X=8,192 the engine shifts Sonic and the camera left by 4,096 pixels and
 advances the terrain window. Logical distance continues increasing, selecting new

@@ -69,26 +69,23 @@ public final class CourseHud {
                     64, true, 3);
         }
         if (!course.gameOver()) return;
-        if (course.canContinue()) {
-            centred(services, "LIVES LEFT " + course.displayLives(), 88);
-            if (!course.restartReady()) return;
-            var lines = menuLines(course);
-            // Both options share a left edge so the cursor column lines up.
-            int x = (services.camera().getWidth() - lines.get(0).length() * 8) / 2;
-            for (int i = 0; i < lines.size(); i++) text(services, lines.get(i), x, 112 + i * 16, true);
-            centred(services, "PRESS SPACE", 152);
-            return;
-        }
-        centred(services, "GAME OVER", 96);
-        if (course.restartReady()) centred(services, "PRESS SPACE TO RESTART", 120);
+        centred(services, course.canContinue() ? "LIVES LEFT " + course.displayLives() : "GAME OVER", 88);
+        int top = 112;
+        if (!course.restartReady()) return;
+        var lines = menuLines(course);
+        // Every option shares a left edge so the cursor column lines up.
+        int width = lines.stream().mapToInt(String::length).max().orElse(0);
+        int x = (services.camera().getWidth() - width * 8) / 2;
+        for (int i = 0; i < lines.size(); i++) text(services, lines.get(i), x, top + i * 16, true);
+        centred(services, "PRESS SPACE", top + lines.size() * 16 + 8);
     }
     public static String livesText(ObjectServices services, CourseController course) {
         return "RINGS " + services.levelGamestate().getRings() + "  LIVES " + course.displayLives();
     }
-    /** CONTINUE above RESTART; the cursor marks the choice SPACE (button A) confirms. */
+    /** CONTINUE (with a spare life), RESTART and EXIT; the cursor marks the choice SPACE (button A) confirms. */
     public static java.util.List<String> menuLines(CourseController course) {
-        return java.util.List.of((course.restartSelected() ? "  " : "> ") + "CONTINUE",
-                (course.restartSelected() ? "> " : "  ") + "RESTART");
+        String selected = course.menuSelection();
+        return course.menuOptions().stream().map(option -> (option.equals(selected) ? "> " : "  ") + option).toList();
     }
     private static void centred(ObjectServices services, String text, int y) {
         text(services, text, (services.camera().getWidth() - text.length() * 8) / 2, y, true);

@@ -49,6 +49,7 @@ public final class TitleWordmark implements TitleScreenProvider {
     private final TitleScreenProvider base;
     private final ZoneMenu menu;
     private int activeFrames;
+    private InputHandler input;
 
     /** {@code zoneNames} lists the selectable course zones in registry order. */
     public TitleWordmark(TitleScreenProvider base, List<String> zoneNames) {
@@ -59,7 +60,11 @@ public final class TitleWordmark implements TitleScreenProvider {
     TitleScreenProvider base() { return base; }
     ZoneMenu menu() { return menu; }
 
+    /** The engine's live input handler, captured at the title, which every course is launched from. */
+    InputHandler input() { return input; }
+
     @Override public void update(InputHandler input) {
+        this.input = input;
         // Read the zone choice before the stock title sees this frame's confirm press.
         boolean interactive = base.getState() == State.ACTIVE;
         if (activeFrames > ENTRY_DELAY + ENTRY_FRAMES) menu.reveal();

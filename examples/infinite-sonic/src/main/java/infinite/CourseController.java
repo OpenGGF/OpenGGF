@@ -10,6 +10,14 @@ import java.util.List;
 public final class CourseController extends AbstractObjectInstance implements RewindRecreatable {
     // Mod design: Sonic's top running speed on the course, 7/8 of the stock S1 0x600.
     public static final int COURSE_MAX_SPEED = 0x540;
+    // Mod design: Sonic_Animate shows the full-speed Run (and fast Roll2) from inertia $600, which the
+    // lower top speed never reaches; the course shows them from 0x500, just under its top speed.
+    public static final int RUN_ANIMATION_SPEED = 0x500;
+    // GLFW_KEY_ESCAPE: a tap leaves the course for the Sonic 1 title (holding it still reaches the
+    // engine's master title).
+    private static final int KEY_ESCAPE = 256;
+    /** Death menu options. */
+    public static final String CONTINUE = "CONTINUE", RESTART = "RESTART", EXIT = "EXIT";
     // The camera's minimum scroll: 4px per tick, two thirds of the stock 0x600.
     private static final int MINIMUM_SCROLL = 0x400;
     private static final int FOLLOW_PERCENT = 30;
@@ -32,8 +40,9 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private boolean gameOver;
     private int gameOverFrames;
     private boolean restartRequested;
-    // Death menu: CONTINUE (resume the run) or RESTART; edge-detected so a held direction moves once.
-    private boolean restartSelected;
+    private boolean exitRequested;
+    // Death menu: index into menuOptions(); edge-detected so a held direction moves once.
+    private int menuChoice;
     private boolean menuUpHeld;
     private boolean menuDownHeld;
     // Logical world X of the last grounded, pit-free spot; -1 until one is seen.
@@ -44,7 +53,16 @@ public final class CourseController extends AbstractObjectInstance implements Re
     public boolean restartReady() { return gameOver && gameOverFrames >= RESTART_DELAY_FRAMES; }
     /** A spare life remains, so the menu offers CONTINUE (spending it) as well as RESTART. */
     public boolean canContinue() { return gameOver && session().livesLeft() > 0; }
-    public boolean restartSelected() { return restartSelected; }
+    /** CONTINUE (when a spare life remains), RESTART and EXIT, top to bottom. */
+    public List<String> menuOptions() {
+        return canContinue() ? List.of(CONTINUE, RESTART, EXIT) : List.of(RESTART, EXIT);
+    }
+    public String menuSelection() {
+        var options = menuOptions();
+        return options.get(Math.min(menuChoice, options.size() - 1));
+    }
+    public boolean restartSelected() { return RESTART.equals(menuSelection()); }
+    public boolean exitRequested() { return exitRequested; }
     /** Spare lives: the session starts with none and earns one per 100 rings. */
     public int displayLives() { return gameOver ? session().livesLeft() : services().gameState().getLives(); }
     public long safeWorldX() { return safeWorldX; }
@@ -61,8 +79,10 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long stones0;
     private long stones1;
     private long stones2;
-    // One section bit per placed shield monitor.
+    // One section bit per placed monitor.
     private long monitors;
+    // One section bit per placed launch spring.
+    private long springs;
     public long originPixels() { return origin * 256; }
     public CourseController(ObjectSpawn spawn) { super(spawn, "Infinite Sonic course"); }
     @Override public boolean isPersistent() { return true; }
@@ -77,9 +97,11 @@ public final class CourseController extends AbstractObjectInstance implements Re
         return new CourseController(context.spawn());
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
-        if (player == null) return;
+        if (player == null || exitRequested) return;
         services().levelGamestate().pauseTimer();
         services().levelManager().setForceHudSuppressed(true);
+        showRunAtCourseSpeed(player);
+        if (escapePressed()) { exitToTitle(); return; }
         if (gameOver) { awaitChoice(player); return; }
         if (player.getDead()) { endRun(player); return; }
         if (!started) {
@@ -125,6 +147,32 @@ public final class CourseController extends AbstractObjectInstance implements Re
         recycleTerrain(player);
         // Hold our horizontal position through the normal camera step; retain vertical tracking.
         camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, player.getCentreY());
+    }
+
+    /** Lowers the profile's Run/Roll2 threshold so cruising Sonic shows his full-speed frames. */
+    private static void showRunAtCourseSpeed(PlayableEntity player) {
+        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite
+                && sprite.getAnimationProfile()
+                        instanceof com.openggf.sprites.animation.ScriptedVelocityAnimationProfile profile
+                && profile.getRunSpeedThreshold() != RUN_ANIMATION_SPEED) {
+            sprite.setAnimationProfile(profile.withRunSpeedThreshold(RUN_ANIMATION_SPEED));
+        }
+    }
+
+    /** Escape, or the gamepad Back button, this frame. The module captures the live input at the title. */
+    private boolean escapePressed() {
+        var input = services().gameService(com.openggf.control.InputHandler.class);
+        return input != null && (input.isKeyPressed(KEY_ESCAPE) || input.isGamepadBackButtonPressed());
+    }
+
+    /**
+     * EXIT: leave the course for the Sonic 1 title and its zone picker, through the engine's
+     * GAME OVER exit (fade to black, then the title screen), as the stock card does with no continues.
+     */
+    private void exitToTitle() {
+        exitRequested = true;
+        clock().end();
+        services().levelManager().requestGameOverExit(com.openggf.game.GameOverExit.TITLE_SCREEN);
     }
 
     /**
@@ -188,15 +236,20 @@ public final class CourseController extends AbstractObjectInstance implements Re
         menuDownHeld = down;
         if (!restartReady()) { gameOverFrames++; return; }
         if (restartRequested) return;
-        if (canContinue() && moved) {
-            restartSelected = !restartSelected;
-            services().audioManager().playSfx(ZoneMenu.SFX_SWITCH);
+        if (moved) {
+            int last = menuOptions().size() - 1;
+            int next = Math.max(0, Math.min(last, menuChoice + (down && !up ? 1 : up && !down ? -1 : 0)));
+            if (next != menuChoice) {
+                menuChoice = next;
+                services().audioManager().playSfx(ZoneMenu.SFX_SWITCH);
+            }
         }
         // Player 1 A, SPACE by default.
         if (!sprite.isJumpJustPressed()) return;
-        if (canContinue() && !restartSelected) {
-            resume(sprite);
-            return;
+        switch (menuSelection()) {
+            case CONTINUE -> { resume(sprite); return; }
+            case EXIT -> { exitToTitle(); return; }
+            default -> { }
         }
         // Lives stay at zero until the reload so a corpse still falling cannot queue an
         // ordinary death restart; the reload re-enters loadLevelOverride and a fresh controller.
@@ -233,9 +286,11 @@ public final class CourseController extends AbstractObjectInstance implements Re
         camera.setX((short) Math.max(0, localX - camera.getWidth() / 4));
         camera.setY((short) Math.max(0, y - camera.getHeight() / 2));
         scrollFraction = 0;
+        // A revive before a spring chasm needs its spring even if it has left the screen.
+        springs = 0;
         gameOver = false;
         gameOverFrames = 0;
-        restartSelected = false;
+        menuChoice = 0;
         // The death flow faded the music out.
         services().audioManager().playMusic(services().levelManager().getCurrentLevelMusicId());
     }
@@ -273,6 +328,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             populateRings();
             populateStones();
             populateMonitors();
+            populateSprings();
             return;
         }
         origin += delta / 256;
@@ -285,6 +341,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         stones1 = shiftSections(stones1, delta);
         stones2 = shiftSections(stones2, delta);
         monitors = shiftSections(monitors, delta);
+        springs = shiftSections(springs, delta);
         services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
         var library = services().gameService(TerrainLibrary.class);
         var level = services().currentLevel();
@@ -305,6 +362,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         populateRings();
         populateStones();
         populateMonitors();
+        populateSprings();
     }
 
     private void populateMonitors() {
@@ -313,16 +371,44 @@ public final class CourseController extends AbstractObjectInstance implements Re
         for (int section = 0; section < TerrainLibrary.WIDTH / 2; section++) {
             long bit = 1L << section;
             if ((monitors & bit) != 0) continue;
-            var monitor = ShieldPlan.at(library, origin / 2 + section);
+            var monitor = MonitorPlan.at(library, origin / 2 + section);
             if (monitor == null) { monitors |= bit; continue; }
             int localX = (int) (monitor.worldX() - originPixels());
             if (localX < camera.getX() - 192 || localX > camera.getX() + camera.getWidth() + 192) continue;
             if (!services().objectManager().hasFreeDynamicSlot()) return;
-            var spawn = new ObjectSpawn(localX, monitor.y(), 0, 0, 0, false, monitor.y(), -1,
+            var spawn = new ObjectSpawn(localX, monitor.y(), 0, monitor.kind(), 0, false, monitor.y(), -1,
                     "infinite-sonic", "infinite-sonic:monitor");
             spawnFreeChild(() -> new CourseMonitor(spawn));
             monitors |= bit;
         }
+    }
+
+    private void populateSprings() {
+        var library = services().gameService(TerrainLibrary.class);
+        var camera = services().camera();
+        for (int section = 0; section < TerrainLibrary.WIDTH / 2; section++) {
+            long bit = 1L << section;
+            if ((springs & bit) != 0) continue;
+            var spring = SpringPlan.at(library, origin / 2 + section);
+            if (spring == null) { springs |= bit; continue; }
+            int localX = (int) (spring.worldX() - originPixels());
+            if (localX < camera.getX() - 192 || localX > camera.getX() + camera.getWidth() + 192) continue;
+            // CONTINUE clears these bits so a spring that already left the screen returns; one
+            // still standing is simply re-marked.
+            if (liveSpringAt(localX)) { springs |= bit; continue; }
+            if (!services().objectManager().hasFreeDynamicSlot()) return;
+            var spawn = new ObjectSpawn(localX, spring.y(), 0, 0, 0, false, spring.y(), -1,
+                    "infinite-sonic", "infinite-sonic:spring");
+            spawnFreeChild(() -> new CourseSpring(spawn));
+            springs |= bit;
+        }
+    }
+
+    private boolean liveSpringAt(int localX) {
+        for (var object : services().objectManager().getActiveObjects()) {
+            if (object instanceof CourseSpring spring && !spring.isDestroyed() && spring.getX() == localX) return true;
+        }
+        return false;
     }
 
     private boolean spilledRings() {

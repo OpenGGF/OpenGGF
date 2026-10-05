@@ -17,6 +17,7 @@ public final class InfiniteSonicMod implements GgfMod {
         context.registerObject("ring", (spawn, registry) -> new CourseRing(spawn));
         context.registerObject("burst", (spawn, registry) -> new CourseBurst(spawn));
         context.registerObject("monitor", (spawn, registry) -> new CourseMonitor(spawn));
+        context.registerObject("spring", (spawn, registry) -> new CourseSpring(spawn));
         context.registerGamePatch(new Patch());
     }
 
@@ -180,6 +181,8 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public <T> T getGameService(Class<T> type) {
             if (type == ChallengeClock.class) return type.cast(clock);
             if (type == CourseSession.class) return type.cast(session);
+            // The live input the title last saw: the course reads Escape from it to leave.
+            if (type == com.openggf.control.InputHandler.class) return title == null ? null : type.cast(title.input());
             if (type == com.openggf.level.objects.ObjectRegistry.class) return type.cast(stockObjects());
             return type == TerrainLibrary.class ? type.cast(library) : super.getGameService(type);
         }

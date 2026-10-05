@@ -645,3 +645,55 @@ The running start and CONTINUE use 0x540. The 4 px/tick minimum scroll is now ex
 more of the course ahead. The CONTINUE placement (25%) and the course start (80 px) are
 both left of it.
 
+
+## Spring chasms, monitor variety, exit to title and the run frames (0.15.0)
+
+Follow-up on `2a4ca53aa0`, same branch, main checkout, 2026-10-05. Request: more variety in
+the levels; a way back to the title screen (EXIT at death, and Escape); show Sonic's
+full-speed running animation even though the course caps him below it.
+
+**Spring chasms.** The wide-pit terrain of platform stretches (sections 4k+2/4k+3, a
+320–448 px bottomless pit) now has a second crossing: a red launch spring 48 px before the
+pit. `TerrainLibrary.wideKind` keeps the old platform choice (a third of eligible
+stretches) and turns it into a spring chasm where the act has no usable platforms (MZ3, all
+of LZ, SLZ1, SBZ2 and SBZ3), so those courses gain their first
+set piece; acts with platforms also make half of another third of stretches spring chasms.
+The 0x504c4154 seed is unchanged, so every existing platform stretch stays where it was.
+`CourseSpring` draws Map_Spring with the stock `SPRING_VERTICAL` sheet (palette line 0, the
+red spring; S1 loads Nem_HSpring in every zone) and the Ani_Spring .up frames, and applies
+Spring_BounceUp's effects: -$1000 Y speed, air, not on an object, spring animation $10,
+the $F spring timer and hurt cleared. Mod differences, each forced by the scrolling edge:
+it is non-solid and fires anywhere over its plate up to 128 px above it (the stock spring
+fires only when stood on, and its side would stall Sonic); it clears the jump flag (a launch
+caught mid-jump would otherwise be cut to -$400 by Sonic_JumpHeight when the button is
+released); and it raises X speed to at least 0x400, whose 146-frame flight covers 584 px,
+beyond the widest pit plus the spring's lead. It re-arms after 30 frames rather than firing
+once, and CONTINUE clears the spring bits (skipping a spring still live) so a revive before
+a chasm always finds its spring. A rejected alternative was the solid stock Obj41 itself.
+Four rings trace the first 17 frames of a 0x4A0 flight, close enough to the launch that
+any speed from 0x400 to 0x540 collects most of them.
+
+**Monitor variety.** `ShieldPlan` became `MonitorPlan` (one in eight eligible sections,
+up from one in ten) with S1 Pow subtypes as kinds from a separate seed: 5/10 shield,
+3/10 Super Ring (Pow_ChkRings: +10, sfx_Ring) and 2/10 Invincibility (Pow_ChkInvinc:
+`giveInvincibility()` and bgm_Invincible), shown with Map_Monitor icons 6, 8 and 7.
+Found while testing: S1's touch pass handles only the first overlapping object, so a
+badnik patrolling over a monitor takes the touch first; that is normal play, and the
+test clears nearby patrols.
+
+**Hop arcs.** A third of ring rows lift their middle pair by 28 px.
+
+**Exit to title.** The death menu is now an option list: CONTINUE (with a spare life),
+RESTART and EXIT; the no-lives GAME OVER shows RESTART/EXIT instead of a press-space
+restart. EXIT ends the challenge clock and calls `requestGameOverExit(TITLE_SCREEN)`, the
+stock GAME OVER card's own exit, so `GameLoop` fades to black and enters the Sonic 1 title
+(with the zone picker) through the existing path. A tap of Escape (GLFW 256) or the
+gamepad Back button does the same mid-run. Level objects have no keyboard access, so the
+module captures the live `InputHandler` the title screen receives (every course is
+started from it) and serves it through `getGameService`. Holding Escape for two seconds
+still reaches the engine's master title.
+
+**Run frames.** Sonic_Animate selects SonAni_Run (and Roll2) from inertia $600, which the
+0x540 cap never reaches. The controller swaps Sonic's `ScriptedVelocityAnimationProfile`
+for `withRunSpeedThreshold(0x500)` each tick it differs, so cruising shows the run frames;
+the frame delay is unchanged ($800 - inertia >> 8 is 2 at both 0x540 and 0x600).

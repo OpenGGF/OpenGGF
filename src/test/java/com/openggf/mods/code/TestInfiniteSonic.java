@@ -132,6 +132,7 @@ class TestInfiniteSonic {
         int backwardsRebases = 0;
         previous = fixture.sprite().getCentreX();
         for (int i = 0; i < 1800; i++) {
+            hopSpringChasmBackwards(fixture);
             stepTerrain(fixture, -1);
             int x = fixture.sprite().getCentreX();
             if (x - previous > 4000) backwardsRebases++;
@@ -467,7 +468,7 @@ class TestInfiniteSonic {
         int score = GameServices.gameState().getScore();
         assertTrue(controllerFlag("canContinue"));
         var menu = loader.loadClass("infinite.CourseHud").getMethod("menuLines", controller().getClass());
-        assertEquals(List.of("> CONTINUE", "  RESTART"), menu.invoke(null, controller()));
+        assertEquals(List.of("> CONTINUE", "  RESTART", "  EXIT"), menu.invoke(null, controller()));
         fixture.stepFrame(false, false, false, false, true);
         // No reload: the same controller and terrain carry on.
         assertFalse(GameServices.level().isRespawnRequestedForRewind(), "CONTINUE does not reload the level");
@@ -542,7 +543,7 @@ class TestInfiniteSonic {
         fixture.stepIdleFrames(1);
         fixture.stepFrame(false, true, false, false, false);
         var menu = loader.loadClass("infinite.CourseHud").getMethod("menuLines", controller().getClass());
-        assertEquals(List.of("  CONTINUE", "> RESTART"), menu.invoke(null, controller()));
+        assertEquals(List.of("  CONTINUE", "> RESTART", "  EXIT"), menu.invoke(null, controller()));
         fixture.stepFrame(false, false, false, false, true);
         reloadAfterChoice(fixture);
         assertEquals(1.0, speed());
@@ -821,6 +822,9 @@ class TestInfiniteSonic {
     private boolean platformRun(long section) throws Exception {
         return (boolean) terrain().getClass().getMethod("platformRun", long.class).invoke(terrain(), section);
     }
+    private boolean springStretch(long stretch) throws Exception {
+        return (boolean) terrain().getClass().getMethod("springStretch", long.class).invoke(terrain(), stretch);
+    }
     private long pitStart(long stretch) throws Exception {
         return (long) terrain().getClass().getMethod("platformPitStart", long.class).invoke(terrain(), stretch);
     }
@@ -844,7 +848,7 @@ class TestInfiniteSonic {
                 .loadLevel(levelIndex(zone, act)).getObjects()) stock.add(spawn.objectId());
         Set<Integer> kinds = platformKindIds();
         for (int id : kinds) assertTrue(stock.contains(id), "only platforms the act itself places: " + id);
-        int runs = 0;
+        int runs = 0, springs = 0;
         for (long stretch = 0; stretch < 250; stretch++) {
             long near = stretch * 4 + 2, far = stretch * 4 + 3;
             assertEquals(platformRun(near), platformRun(far), "a platform stretch spans two sections");
@@ -852,8 +856,13 @@ class TestInfiniteSonic {
                 assertEquals(0, stones(far).length);
                 continue;
             }
-            runs++;
             assertTrue(stretch >= 2, "the first two corridors teach ordinary jumps");
+            if (springStretch(stretch)) {
+                springs++;
+                assertEquals(0, stones(far).length, "a spring chasm has no platforms");
+                continue;
+            }
+            runs++;
             assertTrue(Math.abs(stepHeight(far)) <= 32, "banks differ by at most a tier");
             assertNull(encounter(near));
             assertNull(encounter(far));
@@ -880,8 +889,13 @@ class TestInfiniteSonic {
             }
             assertTrue(end - edge >= 16 && end - edge <= 144, "final span " + (end - edge));
         }
-        if (kinds.isEmpty()) assertEquals(0, runs, "acts without stock platforms keep ordinary corridors");
-        else assertTrue(runs >= 25 && runs <= 120, "a share of corridors becomes a platform stretch: " + runs);
+        if (kinds.isEmpty()) {
+            assertEquals(0, runs, "acts without stock platforms bridge no pits with them");
+            assertTrue(springs >= 25 && springs <= 120, "their wide pits are spring chasms instead: " + springs);
+        } else {
+            assertTrue(runs >= 25 && runs <= 120, "a share of corridors becomes a platform stretch: " + runs);
+            assertTrue(springs >= 8 && springs <= 60, "and a smaller share a spring chasm: " + springs);
+        }
     }
 
     private static int levelIndex(int zone, int act) {
@@ -904,7 +918,7 @@ class TestInfiniteSonic {
         var fixture = launch(aspect, zone, act);
         org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty(), "act places no platforms");
         long stretch = 2;
-        while (!platformRun(stretch * 4 + 3)) stretch++;
+        while (!platformRun(stretch * 4 + 3) || springStretch(stretch)) stretch++;
         long start = pitStart(stretch), end = pitEnd(stretch);
         Object[] planned = stones(stretch * 4 + 3);
         fixture.stepIdleFrames(2);
@@ -1028,7 +1042,8 @@ class TestInfiniteSonic {
         assertEquals(Set.of(64, 96, 128, 160, 192), widths);
         assertEquals(Set.of(-64, -32, 0, 32, 64), steps);
         assertEquals(Set.of(896, 928, 960, 992), elevations, "four elevation tiers");
-        assertTrue(gaps > 150 && gaps < 350, "occasional jumps with recovery sections: " + gaps);
+        // Fewer since a share of eligible stretches became spring chasms.
+        assertTrue(gaps > 120 && gaps < 350, "occasional jumps with recovery sections: " + gaps);
         assertTrue(ledges > 10, "some drops are plain ledges: " + ledges);
     }
 
@@ -1264,14 +1279,16 @@ class TestInfiniteSonic {
         assertEquals(5, rings.getRings());
     }
 
-    @Test void shieldMonitorsAreSeededOnLevelGround() throws Exception {
+    @Test void monitorsAreSeededOnLevelGroundWithAMixOfKinds() throws Exception {
         launch(WidescreenAspect.NATIVE_4_3);
         int monitors = 0;
+        var kinds = new TreeMap<Integer, Integer>();
         for (long section = 0; section < 1000; section++) {
-            Object monitor = shieldMonitor(section);
-            assertEquals(monitor, shieldMonitor(section), "seeded");
+            Object monitor = monitor(section);
+            assertEquals(monitor, monitor(section), "seeded");
             if (monitor == null) continue;
             monitors++;
+            kinds.merge((int) call(monitor, "kind"), 1, Integer::sum);
             assertTrue(section >= 6, "no monitor on the opening runway");
             assertFalse(isCorridor(section) || platformRun(section), "monitors stand on ordinary ground");
             long x = (long) call(monitor, "worldX");
@@ -1279,34 +1296,56 @@ class TestInfiniteSonic {
             assertEquals(floor - 15, (int) call(monitor, "y"), "standing on the floor");
             for (long dx = -16; dx <= 16; dx++) assertTrue(Math.abs(floorAt(x + dx) - floor) <= 4, "level ground");
         }
-        assertTrue(monitors >= 30 && monitors <= 120, "about one in ten open sections: " + monitors);
+        assertTrue(monitors >= 40 && monitors <= 140, "about one in eight open sections: " + monitors);
+        // S1 monitor subtypes: 4 shield, 6 Super Ring, 5 Invincibility.
+        assertEquals(Set.of(4, 5, 6), kinds.keySet());
+        assertTrue(kinds.get(4) > kinds.get(6) && kinds.get(6) > kinds.get(5), "mostly shields: " + kinds);
     }
 
-    @Test void touchingAShieldMonitorBreaksItGivesAShieldAndReplays() throws Exception {
+    @ParameterizedTest @ValueSource(ints = {4, 5, 6})
+    void touchingAMonitorBreaksItGivesItsRewardAndReplays(int kind) throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         fixture.stepIdleFrames(2);
         fixture.sprite().setInvulnerableFrames(20000);
         ObjectInstance monitor = null;
-        for (int frame = 0; frame < 8000 && monitor == null; frame++) {
+        for (int frame = 0; frame < 20000 && monitor == null; frame++) {
             stepTerrain(fixture, 1);
+            // Leave the other kinds unbroken: their rewards (a shield, stars) would carry into the check.
+            for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                if (object.getClass().getName().equals("infinite.CourseMonitor") && (int) call(object, "kind") != kind
+                        && object instanceof com.openggf.level.objects.AbstractObjectInstance other) other.setDestroyed(true);
+            }
             monitor = GameServices.level().getObjectManager().getActiveObjects().stream()
                     .filter(o -> !o.isDestroyed() && o.getClass().getName().equals("infinite.CourseMonitor"))
+                    .filter(o -> { try { return (int) call(o, "kind") == kind && !(boolean) call(o, "isBroken"); } catch (Exception e) { throw new AssertionError(e); } })
                     .findFirst().orElse(null);
         }
-        assertNotNull(monitor, "the course places shield monitors");
+        assertNotNull(monitor, "the course places monitors of kind " + kind);
         var player = fixture.sprite();
         player.setInvulnerableFrames(0);
-        assertFalse(player.hasShield());
+        var rings = GameServices.level().getLevelGamestate();
+        rings.setRings(3);
+        // Monitors and patrols share open sections; the touch pass handles only the first overlap.
+        for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+            if (object.getClass().getName().equals("infinite.CourseBadnik") && Math.abs(object.getX() - monitor.getX()) < 160
+                    && object instanceof com.openggf.level.objects.AbstractObjectInstance badnik) badnik.setDestroyed(true);
+        }
         NativePositionOps.writeXPosResetSubpixel(player, monitor.getX());
         NativePositionOps.writeYPosResetSubpixel(player, monitor.getY());
         player.setXSpeed((short) 0); player.setGSpeed((short) 0); player.setYSpeed((short) 0);
         player.setAir(true);
         fixture.camera().setX((short) Math.max(0, monitor.getX() - 160));
+        // The search may have crossed a spring chasm, leaving the camera high above the box.
+        fixture.camera().setY((short) Math.max(0, monitor.getY() - 112));
         var registry = fixture.runtime().getRewindRegistry();
         var before = registry.capture();
         fixture.stepIdleFrames(1);
-        assertTrue(player.hasShield(), "any touch breaks the box, even without rolling");
-        assertTrue((boolean) call(monitor, "isBroken"));
+        assertTrue((boolean) call(monitor, "isBroken"), "any touch breaks the box, even without rolling");
+        switch (kind) {
+            case 4 -> assertTrue(player.hasShield(), "shield");
+            case 5 -> assertTrue(player.getInvincibleFrames() > 0, "invincibility");
+            default -> assertEquals(13, rings.getRings(), "Super Ring: ten rings");
+        }
         fixture.stepIdleFrames(8);
         var expected = registry.capture().entries().get("object-manager");
         registry.restore(before);
@@ -1314,9 +1353,188 @@ class TestInfiniteSonic {
         assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", expected,
                 registry.capture().entries().get("object-manager")), "break and burst replay");
     }
-    private Object shieldMonitor(long section) throws Exception {
-        return loader.loadClass("infinite.ShieldPlan").getMethod("at", terrain().getClass(), long.class)
+    private Object monitor(long section) throws Exception {
+        return loader.loadClass("infinite.MonitorPlan").getMethod("at", terrain().getClass(), long.class)
                 .invoke(null, terrain(), section);
+    }
+
+    private Object springPlan(long section) throws Exception {
+        return loader.loadClass("infinite.SpringPlan").getMethod("at", terrain().getClass(), long.class)
+                .invoke(null, terrain(), section);
+    }
+
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> springZones() {
+        return java.util.stream.IntStream.range(0, 6).boxed().flatMap(zone -> java.util.stream.Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of(zone, false),
+                org.junit.jupiter.params.provider.Arguments.of(zone, true)));
+    }
+
+    /**
+     * Real physics: the act's first spring chasm launches Sonic clear of its pit whether he runs
+     * onto the spring holding right, or jumps at the pit's edge (the traversal policy).
+     */
+    @ParameterizedTest(name = "zone {0} jump at edge {1}")
+    @org.junit.jupiter.params.provider.MethodSource("springZones")
+    void springChasmLaunchesSonicOverTheWidePit(int zone, boolean jumpAtEdge) throws Exception {
+        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        long stretch = 2;
+        while (!springStretch(stretch)) stretch++;
+        assertTrue(stretch < 40, "every zone has spring chasms: first at stretch " + stretch);
+        assertFalse(platformStretch(stretch));
+        assertEquals(0, stones(stretch * 4 + 3).length);
+        long start = pitStart(stretch), end = pitEnd(stretch);
+        Object plan = springPlan(stretch * 4 + 2);
+        assertNotNull(plan);
+        long springX = (long) call(plan, "worldX");
+        int bank = floorAt(springX);
+        assertEquals(start - 48, springX, "the spring stands just before the pit");
+        assertEquals(bank - 8, (int) call(plan, "y"), "on the approach bank");
+        for (long x = springX - 64; x < start; x++) assertEquals(bank, floorAt(x), "flat approach");
+        for (long section = stretch * 4; section < stretch * 4 + 4; section++) {
+            if (section != stretch * 4 + 2) assertNull(springPlan(section), "one spring per chasm");
+        }
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(20000);
+        for (int frame = 0; frame < 20000 && originPixels() + player.getCentreX() < springX - 400; frame++) {
+            stepTerrain(fixture, 1);
+            assertFalse(player.getDead());
+        }
+        int highest = Integer.MAX_VALUE;
+        int launches = 0;
+        for (int frame = 0; frame < 2000 && originPixels() + player.getCentreX() < end + 64; frame++) {
+            if (jumpAtEdge) {
+                stepTerrain(fixture, 1);
+            } else {
+                setTicks(0);
+                fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
+                fixture.stepFrame(false, false, false, true, false);
+            }
+            assertFalse(player.getDead(), "death at world x=" + (originPixels() + player.getCentreX())
+                    + ", pit " + start + ".." + end);
+            highest = Math.min(highest, player.getCentreY());
+            for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                if (object.getClass().getName().equals("infinite.CourseSpring")) {
+                    launches = Math.max(launches, (int) call(object, "launches"));
+                }
+            }
+        }
+        assertTrue(originPixels() + player.getCentreX() >= end, "crossed the chasm");
+        assertEquals(1, launches, "the spring fired once");
+        assertTrue(bank - 19 - highest > 300, "a red-spring launch: rose " + (bank - 19 - highest));
+        for (int i = 0; i < 240 && player.getAir(); i++) {
+            setTicks(0);
+            fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        assertFalse(player.getAir(), "landed on the far side");
+        assertFalse(player.getDead());
+    }
+
+    private boolean platformStretch(long stretch) throws Exception {
+        return (boolean) terrain().getClass().getMethod("platformStretch", long.class).invoke(terrain(), stretch);
+    }
+
+    /**
+     * Spring chasms are one-way: their 320-448px pit has a spring only on the approach bank. The
+     * backtracking check is about terrain recycling, so it carries Sonic over to the approach bank.
+     */
+    private void hopSpringChasmBackwards(HeadlessTestFixture fixture) throws Exception {
+        var player = fixture.sprite();
+        long x = originPixels() + player.getCentreX();
+        long stretch = Math.floorDiv(x, 2048);
+        if (player.getAir() || !springStretch(stretch) || x < pitEnd(stretch) || x >= pitEnd(stretch) + 64) return;
+        long landing = pitStart(stretch) - 64;
+        NativePositionOps.writeXPosResetSubpixel(player, (int) (landing - originPixels()));
+        NativePositionOps.writeYPosResetSubpixel(player, floorAt(landing) - 19);
+    }
+
+    @Test void springLaunchLineRingsTraceTheFlight() throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3, 3, 0);
+        var rings = loader.loadClass("infinite.RingPlan").getMethod("at", terrain().getClass(), long.class);
+        long stretch = 2;
+        // A third of ring rows are seeded rests; take the first chasm that has one.
+        while (!springStretch(stretch) || rings.invoke(null, terrain(), stretch * 4 + 3) == null) stretch++;
+        assertTrue(stretch < 200);
+        Object plan = springPlan(stretch * 4 + 2);
+        Object row = rings.invoke(null, terrain(), stretch * 4 + 3);
+        long[] x = (long[]) call(row, "x");
+        int[] y = (int[]) call(row, "y");
+        assertEquals(4, x.length);
+        long springX = (long) call(plan, "worldX");
+        for (int i = 0; i < 4; i++) {
+            assertTrue(x[i] > springX && x[i] < springX + 100, "close after the spring: " + x[i]);
+            if (i > 0) assertTrue(y[i] < y[i - 1] - 40, "rising steeply");
+        }
+    }
+
+    @Test void deathMenuExitLeavesForTheTitleScreen() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        dieAndWaitForMenu(fixture, 0);
+        var menu = loader.loadClass("infinite.CourseHud").getMethod("menuLines", controller().getClass());
+        assertEquals(List.of("> RESTART", "  EXIT"), menu.invoke(null, controller()));
+        for (int i = 0; i < 10; i++) fixture.stepFrame(false, true, false, false, false);
+        assertEquals(List.of("  RESTART", "> EXIT"), menu.invoke(null, controller()), "down stops at the last option");
+        fixture.stepFrame(false, false, false, false, true);
+        assertTrue(controllerFlag("exitRequested"));
+        assertEquals(GameOverExit.TITLE_SCREEN, GameServices.level().getGameOverExitRequested(),
+                "the engine's GAME OVER exit fades to the title screen");
+        assertFalse(GameServices.level().isRespawnRequestedForRewind(), "no restart is queued");
+        assertEquals(1.0, GameServices.module().gameplayAudioPlaybackRate(), "the challenge releases the audio rate");
+    }
+
+    @Test void deathMenuWithASpareLifeOffersContinueRestartAndExit() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        dieAndWaitForMenu(fixture, 1);
+        var menu = loader.loadClass("infinite.CourseHud").getMethod("menuLines", controller().getClass());
+        fixture.stepFrame(false, true, false, false, false);
+        fixture.stepIdleFrames(1);
+        fixture.stepFrame(false, true, false, false, false);
+        assertEquals(List.of("  CONTINUE", "  RESTART", "> EXIT"), menu.invoke(null, controller()));
+        fixture.stepFrame(false, false, false, false, true);
+        assertEquals(GameOverExit.TITLE_SCREEN, GameServices.level().getGameOverExitRequested());
+    }
+
+    @Test void escapeLeavesTheCourseForTheTitleScreen() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        // The module reads Escape from the live input its title screen last received.
+        var title = GameServices.module().getTitleScreenProvider();
+        var input = new com.openggf.control.InputHandler();
+        var field = title.getClass().getDeclaredField("input");
+        field.setAccessible(true);
+        field.set(title, input);
+        fixture.stepIdleFrames(30);
+        assertFalse(controllerFlag("exitRequested"));
+        assertNull(GameServices.level().getGameOverExitRequested());
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        fixture.stepIdleFrames(1);
+        assertTrue(controllerFlag("exitRequested"), "a tap of Escape leaves mid-run");
+        assertEquals(GameOverExit.TITLE_SCREEN, GameServices.level().getGameOverExitRequested());
+        assertFalse(fixture.sprite().getDead(), "leaving is not a death");
+    }
+
+    @Test void cruisingSonicShowsTheFullSpeedRunFrames() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(20000);
+        var profile = (com.openggf.sprites.animation.ScriptedVelocityAnimationProfile) player.getAnimationProfile();
+        assertEquals(0x500, profile.getRunSpeedThreshold(), "the course lowers the stock 0x600 Run threshold");
+        var run = new HashSet<>(player.getAnimationSet().getScript(
+                com.openggf.game.sonic1.constants.Sonic1AnimationIds.RUN.id()).frames());
+        int runFrames = 0, fastest = 0;
+        for (int frame = 0; frame < 600; frame++) {
+            stepTerrain(fixture, 1);
+            if (player.getAir() || player.getAngle() != 0) continue;
+            int speed = Math.abs(player.getGSpeed());
+            fastest = Math.max(fastest, speed);
+            if (speed >= 0x520 && run.contains(player.getMappingFrame())) runFrames++;
+        }
+        assertTrue(fastest < 0x600, "flat cruising never reaches the stock Run speed: " + fastest);
+        assertTrue(runFrames > 60, "but shows the Run frames: " + runFrames);
     }
 
     private static boolean flyingEnemy(ObjectInstance enemy) {
