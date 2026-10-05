@@ -79,6 +79,10 @@ public final class Shell {
 
     /** Plays a music track unless it is already playing. */
     public void music(int id) {
+        if (profile.get(SettingsScreen.NO_MUSIC) == 1) {
+            currentMusic = id;
+            return;
+        }
         if (id != currentMusic) {
             currentMusic = id;
             ctx.audio().playMusic(id);
@@ -90,12 +94,25 @@ public final class Shell {
         ctx.audio().fadeOutMusic();
     }
 
+    /** Plays the current track again after the music setting is switched back on. */
+    public void resumeMusic() {
+        if (currentMusic >= 0 && profile.get(SettingsScreen.NO_MUSIC) == 0) {
+            ctx.audio().playMusic(currentMusic);
+        }
+    }
+
     public void sfx(int id) {
+        if (profile.get(SettingsScreen.NO_SFX) == 1) {
+            return;
+        }
         ctx.audio().playSfx(id);
     }
 
     /** Shakes the screen for a few ticks (big hits). */
     public void shake(int ticks) {
+        if (profile.get(SettingsScreen.NO_SHAKE) == 1) {
+            return;
+        }
         shake = Math.max(shake, ticks);
     }
 

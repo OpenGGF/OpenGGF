@@ -223,7 +223,7 @@ final class CombatView implements RunScreen.RoomView {
         tickEffects();
         boolean fast = shell.ctx.input().player1().actionHeldMask() != 0 || shell.in.mouse.leftDown();
         if (wait > 0) {
-            wait -= fast ? 3 : 1;
+            wait -= (fast ? 3 : 1) * (shell.profile.get(SettingsScreen.FAST_COMBAT) == 1 ? 2 : 1);
             if (wait > 0) {
                 return;
             }
