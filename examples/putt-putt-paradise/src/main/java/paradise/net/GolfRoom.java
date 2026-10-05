@@ -12,6 +12,7 @@ import static paradise.net.GolfPacket.*;
 public final class GolfRoom implements AutoCloseable {
     public static final int MAX_EVENTS = 256;
     public static final int RECONNECT_SECONDS = 30;
+    public static final String CONCEDED_REASON = "conceded";
     private static final long RETRY_NANOS = 250_000_000L;
     public sealed interface Event { }
     public record Received(GolfPacket packet) implements Event { }
@@ -48,7 +49,10 @@ public final class GolfRoom implements AutoCloseable {
     private boolean ready;
     private boolean held = true;
     private boolean ended;
-    private boolean paused;
+    private boolean localPaused;
+    private boolean remotePaused;
+    private String localPauseReason = "paused";
+    private String remotePauseReason = "paused";
     private String message = "waiting for peer";
     private long disconnectSeconds = -1;
     private long retryAtNanos;
@@ -156,9 +160,8 @@ public final class GolfRoom implements AutoCloseable {
                     || !fingerprints.compatibleWith(response.fingerprints()) || !guestCharacter.equals(response.character())) {
                 violation("invalid ready"); return;
             }
-            ready = true; connected = true; held = paused; disconnectSeconds = -1;
-            message = paused ? "paused" : "ready";
-            send(paused ? new Pause(match, "paused") : new Resume(match, tickOrdinal)); emit(packet); replay();
+            ready = true; connected = true; disconnectSeconds = -1;
+            emit(packet); publishHold(); replay();
         } else if (packet instanceof ShotRequest request && ready && match.equals(request.id().match()) && request.id().owner() == 1) {
             var inspection = receipts.inspect(request, 1);
             if (inspection.status() == ShotReceipts.Status.DUPLICATE) replayReceipt(inspection.receipt());
@@ -166,16 +169,20 @@ public final class GolfRoom implements AutoCloseable {
             else if (held) send(new Rejected(request.id(), "room held"));
             else if (pendingRemote == null) { pendingRemote = request; emit(request); }
             else if (!pendingRemote.equals(request)) send(new Rejected(request.id(), "conflicting pending shot"));
-        } else if (packet instanceof Pause pause && ready && match.equals(pause.match())) {
-            paused = true; held = true; message = pause.reason(); send(packet); emit(packet);
-        } else if (packet instanceof Resume resume && ready && match.equals(resume.match())) {
-            paused = false; held = false; message = "ready"; send(new Resume(match, tickOrdinal)); emit(packet);
+        } else if (packet instanceof Pause pause && match.equals(pause.match())) {
+            // Only assigned fingerprint/token-validated peers reach this handler. Pause intent precedes Ready.
+            remotePaused = true; remotePauseReason = pause.reason(); publishHold();
+        } else if (packet instanceof Resume resume && match.equals(resume.match())) {
+            remotePaused = false; publishHold();
         } else if (packet instanceof Leave leave && leave.owner() == 1 && match.equals(leave.match())) {
-            emit(packet); end("guest left", true);
+            emit(packet);
+            if (CONCEDED_REASON.equals(leave.reason())) end(CONCEDED_REASON, true, leave);
+            else end("guest left", true);
         } else violation("unauthorized guest packet");
     }
     private void fromHost(GolfPacket packet) {
-        if (packet instanceof Leave leave && leave.owner() == 0 && (match == null || match.equals(leave.match()))) {
+        if (packet instanceof Leave leave && (leave.owner() == 0 || CONCEDED_REASON.equals(leave.reason()))
+                && (match == null || match.equals(leave.match()))) {
             emit(packet); end(leave.reason(), false); return;
         }
         if (packet instanceof Ready response) {
@@ -185,14 +192,19 @@ public final class GolfRoom implements AutoCloseable {
             }
             match = response.match(); roomToken = response.roomToken(); hostCharacter = response.character();
             connected = true; ready = false; held = true;
-            send(new Ready(match, 1, roomToken, fingerprints, guestCharacter)); emit(packet); return;
+            // Menu intent can change while disconnected. Publish it before Ready so the host cannot briefly unhold.
+            send(localPaused ? new Pause(match, localPauseReason) : new Resume(match, tickOrdinal));
+            send(new Ready(match, 1, roomToken, fingerprints, guestCharacter));
+            emit(packet); return;
         }
         if (match == null) { violation("missing host handshake"); return; }
         if (packet instanceof Resume resume && match.equals(resume.match())) {
-            connected = true; ready = true; held = false; disconnectSeconds = -1; message = "ready"; emit(packet);
-            if (pendingGuest != null) send(pendingGuest);
+            connected = true; ready = true; remotePaused = false; held = localPaused;
+            disconnectSeconds = -1; message = held ? localPauseReason : "ready"; emit(packet);
+            if (!held && pendingGuest != null) send(pendingGuest);
         } else if (packet instanceof Pause pause && match.equals(pause.match())) {
-            connected = true; ready = true; held = true; disconnectSeconds = -1; message = pause.reason(); emit(packet);
+            connected = true; ready = true; remotePaused = true; held = true;
+            disconnectSeconds = -1; message = pause.reason(); emit(packet);
         } else if (packet instanceof TurnOpened opened && match.equals(opened.id().match())) {
             if (turn != null && (opened.id().hole() < turn.id().hole()
                     || opened.id().hole() == turn.id().hole() && opened.id().turn() < turn.id().turn())) return;
@@ -269,17 +281,34 @@ public final class GolfRoom implements AutoCloseable {
         if (ready) send(cue);
     }
     public void pause(String reason) {
-        if (ended || !ready) return;
-        var pause = new Pause(match, reason);
-        if (host) { paused = true; held = true; message = reason; emit(pause); }
-        else held = true;
-        send(pause);
+        if (ended) return;
+        GolfPacket.text(reason); localPaused = true; localPauseReason = reason;
+        if (host) publishHold();
+        else { held = true; message = reason; if (ready) send(new Pause(match, reason)); }
     }
     public void resume() {
-        if (ended || !ready) return;
-        var resume = new Resume(match, tickOrdinal);
-        if (host) { paused = false; held = false; message = "ready"; emit(resume); }
-        send(resume);
+        if (ended) return;
+        localPaused = false;
+        if (host) publishHold();
+        else if (ready) send(new Resume(match, tickOrdinal)); // Remain held until the authoritative aggregate response.
+    }
+    /** Host publishes the aggregate pause state, retaining each owner's independent contribution. */
+    private void publishHold() {
+        boolean wasHeld = held;
+        held = !ready || localPaused || remotePaused;
+        if (!ready) return;
+        message = held ? localPaused ? localPauseReason : remotePauseReason : "ready";
+        GolfPacket control = held ? new Pause(match, message) : new Resume(match, tickOrdinal);
+        send(control); emit(control);
+        // A request offered before a later Pause in the same drained batch was never accepted.
+        if (wasHeld && !held && pendingRemote != null) emit(pendingRemote);
+    }
+    /** Explicit local DNF. The bound owner survives terminal delivery; retained scores stay unchanged. */
+    public void concede() {
+        if (ended) return;
+        Leave leave = match == null ? null : new Leave(match, host ? 0 : 1, CONCEDED_REASON);
+        if (leave != null) emit(leave);
+        end(CONCEDED_REASON, true, leave);
     }
     private void emit(GolfPacket packet) {
         if (packet instanceof ViewFrame) events.removeIf(event -> event instanceof Received received && received.packet() instanceof ViewFrame);
@@ -306,9 +335,11 @@ public final class GolfRoom implements AutoCloseable {
         retryAtNanos = System.nanoTime() + RETRY_NANOS; add(new Disconnected(reason));
     }
     private void end(String reason, boolean notify) {
+        end(reason, notify, match == null ? null : new Leave(match, host ? 0 : 1, reason));
+    }
+    private void end(String reason, boolean notify, Leave leave) {
         if (ended) return;
         ended = true; held = true; connected = false; ready = false; message = reason;
-        Leave leave = match == null ? null : new Leave(match, host ? 0 : 1, reason);
         if (listener != null) { if (notify && leave != null) listener.finish(leave); else listener.close(); }
         if (peer != null) { if (notify && leave != null) peer.finish(leave); else peer.close(); }
         for (Candidate candidate : candidates) if (!notify) candidate.connection.close();

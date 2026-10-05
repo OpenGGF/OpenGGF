@@ -13,4 +13,22 @@ class TestGolfTransport {
     @Test void productionRoomHandshakeExactlyOnceReconnectAndHostExit() throws Exception {
         TestGolfProtocol.runProbe(temp, "RoomProbe", "run");
     }
+    @Test void guestResumeRetainsHostPause() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "guestResumeRetainsHostPause");
+    }
+    @Test void hostResumeRetainsGuestPause() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "hostResumeRetainsGuestPause");
+    }
+    @Test void pausedPendingRequestIsReofferedOnce() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "pausedPendingRequestIsReofferedOnce");
+    }
+    @Test void concessionsPreserveOwnerAndScores() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "concessionsPreserveOwnerAndScores");
+    }
+    @Test void pauseIntentResynchronizesAfterReconnect() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "pauseIntentResynchronizesAfterReconnect");
+    }
+    @Test void handshakePauseIntentPrecedesReady() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "handshakePauseIntentPrecedesReady");
+    }
 }
