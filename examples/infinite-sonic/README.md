@@ -31,8 +31,8 @@ half-second of blinking has passed. With no shield and fewer than 20
 rings the stock hit applies: Sonic is knocked back and drops every ring, and with no rings
 at all the hit is lethal. Pits and the left edge are unaffected by shields and rings.
 
-Monitors stand on level ground in about one in eight open sections from the seventh
-section on (roughly one every 20 seconds at 1×): half are **shields**, three in ten
+Monitors stand on level ground (or on a high route's last platform, below) in about one
+in eight open sections from the seventh section on (roughly one every 20 seconds at 1×): half are **shields**, three in ten
 **Super Rings** (ten rings, which count toward ring lives) and one in five **Invincibility**
 (the stock stars and music). They use the ROM monitor art and its flickering icons, but
 unlike the solid stock box any touch breaks them, so running into one never stalls Sonic
@@ -128,11 +128,37 @@ platforms, level with the lower bank, with at most 144 pixels between footholds.
 are the shipped Sonic 1 objects themselves, with their ROM art, solidity, riding and
 sink: Green Hill and Spring Yard use the floating platform (Obj18), half
 the time as the kind that falls 30 frames after Sonic lands; Marble and Scrap Brain use
-the wide moving blocks (Obj52) held stationary. Only platforms the act's own stock layout
-places are used, and only those at least 64 pixels wide, so the Labyrinth course (whose
-only block is 32 pixels) and the Star Light course (whose first act places none) keep
-ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
+the wide moving blocks (Obj52) held stationary; Star Light uses its 80-pixel elevators
+(Obj59), which rise a short way once stood on, as the stock ones do. Only platforms the
+act's own stock layout places are used, and only those at least 64 pixels wide, so the
+Labyrinth course (whose only block is 32 pixels) keeps ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
 stretches in one jump; wider ones need a platform. No enemies patrol platform stretches.
+
+About one in five open sections from the seventh on is a **high route** where the ground
+allows (it varies by at most 16 pixels): a ledge of three of those same stationary stock
+platforms, 48 pixels above the highest floor beneath and 24 pixels apart, so Sonic runs
+straight across once a jump has put him on it. The ledge carries the section's rings and,
+half the time, a monitor on its last platform, while a ground badnik patrols below. Taking
+the high line pays better and skips the badnik; missing it just leaves Sonic on the ground
+route. A jump from about 140 pixels before the ledge lands on it, from level ground or a
+hill (whose slope tilts part of the jump forward). Labyrinth has no high routes.
+
+**Zone hazards** use each zone's own ROM art and the shipped hit boxes, and need timing:
+
+| Zone | Hazard |
+| --- | --- |
+| Green Hill | A checkered wrecking ball swinging on a chain across the path |
+| Marble, Star Light | Fireballs leaping out of jump-corridor pits (alternately 133 and 192 pixels high) |
+| Spring Yard | A giant spiked ball rolling back and forth along the ground |
+| Labyrinth | A spiked ball and chain circling over the path |
+| Scrap Brain | A floor pipe that bursts into a column of flame |
+
+Every zone also has **spike beds** (the stock three-spike art) to jump. Ground hazards take
+about one in four open sections from the sixth on, two in three of them the zone's signature
+(spikes only, in Marble and Star Light); fireballs take half of the pits from the third
+corridor on that are at least 96 pixels wide. None is solid, so none can stall Sonic, and a
+hazard section has no badnik or monitor. A hazard hit is treated like a badnik hit: a shield
+or the 20-ring toll absorbs it without knockback; otherwise the stock hit applies.
 
 
 The other sections retain the ROM-derived hills and dips, raised or lowered to the
@@ -175,6 +201,6 @@ Enemy positions and patrol phases shift with the world and participate in rewind
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
 from that window can regenerate its encounters. Stock platforms keep their own
 coordinates, so the window waits to shift until none are loaded (forcing the shift at
-local X=12,288 if necessary). There are no loops, moving platforms, breakable floors or checkpoints. Section reflections can mirror scenery. Background scrolling at a world
+local X=12,288 if necessary). There are no loops, moving platforms (other than the elevator's short rise), breakable floors or checkpoints. Section reflections can mirror scenery. Background scrolling at a world
 rebase still needs visual verification. The coverage matrix and current evidence are
 in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).

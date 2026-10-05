@@ -27,7 +27,12 @@ public final class RingPlan {
         // The opening trail teaches collection; thereafter leave a third of sections empty.
         if (section != 0 && Long.remainderUnsigned(random, 3) == 0) return null;
         var stones = PlatformPlan.at(terrain, section);
-        if (stones.length > 0) return aboveStones(stones);
+        if (stones.length > 0) {
+            // A high route's monitor stands on its last platform; the rings take the others.
+            var monitor = RoutePlan.has(terrain, section) ? MonitorPlan.at(terrain, section) : null;
+            if (monitor != null) stones = java.util.Arrays.copyOf(stones, stones.length - 1);
+            return aboveStones(stones);
+        }
         int gap = terrain.gapWidth(section);
         if (gap > 0) return arc(terrain, section, gap);
         // Try either approach before the middle, keeping rings away from centred gaps.

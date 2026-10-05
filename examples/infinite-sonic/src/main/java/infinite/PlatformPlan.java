@@ -11,9 +11,10 @@ public final class PlatformPlan {
         public int surface() { return y - CoursePlatforms.SURFACE_OFFSET; }
     }
 
-    /** Stones for the pit that ends in this section (4k+3 of a platform stretch), left to right. */
+    /** Stones for the pit that ends in this section (4k+3 of a platform stretch), else the
+     * section's high-route platforms ({@link RoutePlan}), left to right. */
     public static Stone[] at(TerrainLibrary terrain, long section) {
-        if (Math.floorMod(section, 4) != 3 || !terrain.platformRun(section)) return new Stone[0];
+        if (Math.floorMod(section, 4) != 3 || !terrain.platformRun(section)) return RoutePlan.at(terrain, section);
         long stretch = Math.floorDiv(section, 4);
         long start = terrain.platformPitStart(stretch);
         long end = terrain.platformPitEnd(stretch);

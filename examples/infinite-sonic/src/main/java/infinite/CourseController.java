@@ -81,6 +81,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long stones2;
     // One section bit per placed monitor.
     private long monitors;
+    // One section bit per placed zone hazard.
+    private long hazards;
     public long originPixels() { return origin * 256; }
     public CourseController(ObjectSpawn spawn) { super(spawn, "Infinite Sonic course"); }
     @Override public boolean isPersistent() { return true; }
@@ -324,6 +326,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             populateRings();
             populateStones();
             populateMonitors();
+            populateHazards();
             return;
         }
         origin += delta / 256;
@@ -336,6 +339,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         stones1 = shiftSections(stones1, delta);
         stones2 = shiftSections(stones2, delta);
         monitors = shiftSections(monitors, delta);
+        hazards = shiftSections(hazards, delta);
         services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
         var library = services().gameService(TerrainLibrary.class);
         var level = services().currentLevel();
@@ -356,6 +360,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         populateRings();
         populateStones();
         populateMonitors();
+        populateHazards();
     }
 
     private void populateMonitors() {
@@ -376,6 +381,25 @@ public final class CourseController extends AbstractObjectInstance implements Re
         }
     }
 
+    private void populateHazards() {
+        var library = services().gameService(TerrainLibrary.class);
+        var camera = services().camera();
+        for (int section = 0; section < TerrainLibrary.WIDTH / 2; section++) {
+            long bit = 1L << section;
+            if ((hazards & bit) != 0) continue;
+            var hazard = HazardPlan.at(library, origin / 2 + section);
+            if (hazard == null) { hazards |= bit; continue; }
+            int localX = (int) (hazard.worldX() - originPixels());
+            // Swinging hazards reach about 100px either side, so they arrive a little earlier.
+            if (localX < camera.getX() - 256 || localX > camera.getX() + camera.getWidth() + 256) continue;
+            if (!services().objectManager().hasFreeDynamicSlot()) return;
+            var spawn = new ObjectSpawn(localX, hazard.floor(), 0, hazard.kind() | hazard.phase() << 4, 0, false,
+                    hazard.floor(), -1, "infinite-sonic", "infinite-sonic:hazard");
+            spawnFreeChild(() -> new CourseHazard(spawn));
+            hazards |= bit;
+        }
+    }
+
     private boolean spilledRings() {
         for (var object : services().objectManager().getActiveObjects()) {
             if (object instanceof com.openggf.level.rings.LostRingObjectInstance && !object.isDestroyed()) return true;
@@ -390,7 +414,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             // Player-owned power-ups (the shield) have no spawn.
             if (object.getSpawn() == null) continue;
             int id = object.getSpawn().objectId();
-            if ((id == CoursePlatforms.PLATFORM || id == CoursePlatforms.MOVING_BLOCK)
+            if (CoursePlatforms.isCoursePlatform(id)
                     && object instanceof AbstractObjectInstance stock && !stock.isDestroyed()) live.add(stock);
         }
         return live;

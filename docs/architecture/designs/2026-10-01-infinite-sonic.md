@@ -683,3 +683,49 @@ still reaches the engine's master title.
 0x540 cap never reaches. The controller swaps Sonic's `ScriptedVelocityAnimationProfile`
 for `withRunSpeedThreshold(0x500)` each tick it differs, so cruising shows the run frames;
 the frame delay is unchanged ($800 - inertia >> 8 is 2 at both 0x540 and 0x600).
+
+## High routes and zone hazards (0.16.0)
+
+Follow-up on `e974573148`, same branch, main checkout, 2026-10-05. Request: after the spring
+chasms were removed, implement two of five proposed variety ideas: zone hazards that need
+timing, and high/low route splits.
+
+**High routes.** `RoutePlan` hangs three of the act's stationary stock platforms (Obj18 type
+0, Obj52 $x0, and now SLZ's Obj59) as one ledge over an open section whose floor varies by
+at most 16 px; one in five eligible sections from the seventh. They reuse the platform
+stretch machinery: `PlatformPlan.at` returns route stones for ordinary sections, so the
+controller's stone spawning, rebase wait, and the ring row above stones all apply. The
+route section forces a ground badnik beneath (when the patrol finds gentle footing) and,
+half the time, a monitor on the last platform; the ring row skips that platform.
+Tried and changed: stones spread evenly across the section (171 px apart) are overshot by a
+full-speed jump (about 300 px), so the ledge became three platforms 24 px apart that Sonic
+runs across (a 4 px/frame run-off drops about 4 px, inside PlatformObject's 16 px catch).
+A 64 px rise was also too high: a held jump rises about 96 px on level ground but the
+measured takeoff on a GHZ slope launched at -$597 and rose about 70 px, so the ledge is 48 px
+above the highest floor (at most 64 px above any). The physics test jumps 140 px before it;
+a full-height jump can overshoot the first platform and still ride the ledge to its end.
+Obj59 subtype 0 is not stationary (Elev_Var2 entry 0 is action 1: wait, then rise $10);
+kept as the stock behaviour. Adding it gives SLZ1 platform stretches too.
+
+**Hazards.** Rejected: spawning the stock hazard objects (Obj13/14 lava balls, Obj57, Obj58,
+Obj6D). They hurt through the engine's own hit path, bypassing `CourseGuard`, and stock
+knockback at the 30% follow point almost always ends the run at the left edge; they also
+keep their own coordinates through the world shift. `CourseHazard` instead draws each zone's
+ROM sheet (zone-gated in the S1 art provider, so every act of the zone has it) with hit boxes
+from React_Sizes, mod motion, a `CourseGuard` touch listener, and the level-repeat offset:
+spikes (Map_Spike frame 0, col_40x32), Obj14 fireballs (types 1/2, -$500/-$600, gravity
+$18, every 72 ticks while on screen), the Obj58 ball (col_32x32, a 96 px cosine roll), the
+LZ Obj57 chain (radius $50, -$180 per tick as subtype $D5, only the spikeball hurts), the
+Obj6D pipe (Ani_Flame frames, col_24x48 only at the full-flame frame $0A), and a GHZ giant
+ball (Map_GBall, col_40x40) on Map_Swing_GHZ chain links. `HazardPlan` places them in open
+sections (no badnik, monitor or route there) and MZ/SLZ fireballs in corridor pits of 96 px
+or more. The controller spawns them with a section bitset like monitors.
+
+**Plan memo.** The controller asks every plan about every unspawned section each tick, and
+route/hazard/encounter plans scan hundreds of floor samples; `TerrainLibrary.memo` caches
+them per section (pure seeded functions; derived data outside rewind). The test class went
+from 87 s to 74 s.
+
+Found while testing: a stomp test picked a badnik under a high route, and the falling Sonic
+landed on the ledge; a monitor test's search crossed hazards and broke other monitors.
+Both tests now avoid the overlap.

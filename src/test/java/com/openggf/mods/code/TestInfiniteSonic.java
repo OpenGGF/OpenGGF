@@ -1276,7 +1276,15 @@ class TestInfiniteSonic {
             kinds.merge((int) call(monitor, "kind"), 1, Integer::sum);
             assertTrue(section >= 6, "no monitor on the opening runway");
             assertFalse(isCorridor(section) || platformRun(section), "monitors stand on ordinary ground");
+            assertNull(hazard(section), "no monitor in a hazard section");
             long x = (long) call(monitor, "worldX");
+            Object[] route = route(section);
+            if (route.length > 0) {
+                Object last = route[route.length - 1];
+                assertEquals((long) call(last, "worldX"), x, "a high route's monitor stands on its last platform");
+                assertEquals((int) call(last, "surface") - 15, (int) call(monitor, "y"));
+                continue;
+            }
             int floor = floorAt(x);
             assertEquals(floor - 15, (int) call(monitor, "y"), "standing on the floor");
             for (long dx = -16; dx <= 16; dx++) assertTrue(Math.abs(floorAt(x + dx) - floor) <= 4, "level ground");
@@ -1341,6 +1349,245 @@ class TestInfiniteSonic {
     private Object monitor(long section) throws Exception {
         return loader.loadClass("infinite.MonitorPlan").getMethod("at", terrain().getClass(), long.class)
                 .invoke(null, terrain(), section);
+    }
+
+    private Object[] route(long section) throws Exception {
+        return (Object[]) loader.loadClass("infinite.RoutePlan").getMethod("at", terrain().getClass(), long.class)
+                .invoke(null, terrain(), section);
+    }
+    private Object hazard(long section) throws Exception {
+        return loader.loadClass("infinite.HazardPlan").getMethod("at", terrain().getClass(), long.class)
+                .invoke(null, terrain(), section);
+    }
+    private static final int SPIKES = 0, FIREBALL = 1, BIG_BALL = 2, CHAIN = 3, FLAME = 4, WRECKING_BALL = 5;
+    /** Registry zones 0-5 are GHZ, MZ, SYZ, LZ, SLZ, SBZ; each one's ground signature hazard. */
+    private static int signature(int zone) {
+        return switch (zone) { case 0 -> WRECKING_BALL; case 2 -> BIG_BALL; case 3 -> CHAIN; case 5 -> FLAME; default -> -1; };
+    }
+
+    @ParameterizedTest(name = "zone {0} act {1}")
+    @org.junit.jupiter.params.provider.MethodSource("courseActs")
+    void highRoutesHangTheActsStockPlatformsAboveLevelGround(int zone, int act) throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3, zone, act);
+        var stationary = new TreeSet<Integer>();
+        for (Object kind : (List<?>) call(terrain(), "platformKinds")) {
+            if (!(boolean) call(kind, "falls")) stationary.add((int) call(kind, "objectId"));
+        }
+        int routes = 0, guarded = 0;
+        for (long section = 0; section < 1000; section++) {
+            Object[] stones = route(section);
+            if (stones.length == 0) continue;
+            routes++;
+            assertTrue(section >= 6);
+            assertFalse(isCorridor(section) || platformRun(section), "routes hang over open sections");
+            assertEquals(3, stones.length);
+            assertArrayEquals(stones, stones(section), "the controller spawns them as this section's stones");
+            int surface = (int) call(stones[0], "surface");
+            long left = (long) call(stones[0], "worldX") - (int) call(stones[0], "halfWidth");
+            long right = (long) call(stones[2], "worldX") + (int) call(stones[2], "halfWidth");
+            assertTrue(left >= section * 512 && right <= section * 512 + 512, "inside the section");
+            int high = Integer.MAX_VALUE, low = Integer.MIN_VALUE;
+            for (long x = section * 512; x < section * 512 + 512; x++) {
+                high = Math.min(high, floorAt(x));
+                low = Math.max(low, floorAt(x));
+            }
+            assertEquals(high - 48, surface, "48px above the highest floor beneath");
+            assertTrue(low - surface <= 64, "reachable even with a jump tilted by a hill (about 70px) from the lowest floor");
+            for (int i = 0; i < 3; i++) {
+                assertTrue(stationary.contains((int) call(stones[i], "objectId")), "a stationary stock platform the act places");
+                assertEquals(surface, (int) call(stones[i], "surface"), "one level ledge");
+                if (i > 0) {
+                    long gap = (long) call(stones[i], "worldX") - (int) call(stones[i], "halfWidth")
+                            - (long) call(stones[i - 1], "worldX") - (int) call(stones[i - 1], "halfWidth");
+                    assertEquals(24, gap, "close enough to run across");
+                }
+            }
+            Object below = encounter(section);
+            if (below != null) {
+                guarded++;
+                assertFalse((boolean) call(below, "flying"), "the patrol beneath is on the ground");
+            }
+            assertNull(hazard(section));
+        }
+        if (stationary.isEmpty()) assertEquals(0, routes, "acts without wide stationary platforms have no high routes");
+        else {
+            assertTrue(routes >= 15 && routes <= 200, "high routes: " + routes);
+            // A patrol needs gentle footing across its whole beat, which a few routes lack.
+            assertTrue(guarded * 10 >= routes * 7, "most routes guard the low line: " + guarded + "/" + routes);
+        }
+    }
+
+    /** Real physics: one jump from the ground lands on the act's first high route and runs its length. */
+    @ParameterizedTest(name = "zone {0}")
+    @ValueSource(ints = {0, 1, 2, 4, 5})
+    void sonicJumpsOntoAHighRouteAndRunsAcrossIt(int zone) throws Exception {
+        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        long section = 6;
+        while (route(section).length == 0) section++;
+        Object[] stones = route(section);
+        long left = (long) call(stones[0], "worldX") - (int) call(stones[0], "halfWidth");
+        long right = (long) call(stones[2], "worldX") + (int) call(stones[2], "halfWidth");
+        int surface = (int) call(stones[0], "surface");
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(20000);
+        for (int frame = 0; frame < 20000 && originPixels() + player.getCentreX() < left - 400; frame++) {
+            stepTerrain(fixture, 1);
+        }
+        boolean jumped = false;
+        Set<Long> rode = new TreeSet<>();
+        var trail = new StringBuilder();
+        for (int frame = 0; frame < 600 && originPixels() + player.getCentreX() < right + 32; frame++) {
+            long x = originPixels() + player.getCentreX();
+            boolean jump;
+            // Plain running (no policy jumps) into one held jump from about 140px before the ledge.
+            if (x < left - 140 || !jumped && player.getAir()) {
+                trail.setLength(0);
+                setTicks(0);
+                fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
+                fixture.stepFrame(false, false, false, true, false);
+                continue;
+            }
+            jump = !jumped || player.getAir();
+            jumped = true;
+            setTicks(0);
+            fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
+            fixture.stepFrame(false, false, false, true, jump);
+            x = originPixels() + player.getCentreX();
+            if (x >= left - 24) trail.append(String.format(" [%d,%d air=%b obj=%b vy=%d]", x, player.getCentreY(),
+                    player.getAir(), player.isOnObject(), (int) player.getYSpeed()));
+            assertFalse(player.getDead());
+            if (!player.getAir() && player.isOnObject()) {
+                for (Object stone : stones) {
+                    if (Math.abs(x - (long) call(stone, "worldX")) <= (int) call(stone, "halfWidth")) rode.add((long) call(stone, "worldX"));
+                }
+            }
+            if (!rode.isEmpty() && x < right - 8) {
+                assertTrue(player.getCentreY() < surface, "stayed on the high line: " + trail);
+            }
+        }
+        // A full-height jump can carry Sonic past the first platform; he still rides the ledge to its end.
+        assertTrue(rode.size() >= 2 && rode.contains((long) call(stones[2], "worldX")),
+                "landed on the ledge and ran across it: surface " + surface + " left " + left + trail);
+    }
+
+    @ParameterizedTest(name = "zone {0} act {1}")
+    @org.junit.jupiter.params.provider.MethodSource("courseActs")
+    void hazardsAreTheZonesOwnOnLevelGroundOrInPits(int registryZone, int act) throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3, registryZone, act);
+        // The hazard follows the ROM layout's zone (SBZ3 reuses Labyrinth's), in registry numbering.
+        int zone = switch ((int) call(terrain(), "romZone")) { case 0 -> 0; case 1 -> 3; case 2 -> 1; case 3 -> 4; case 4 -> 2; default -> 5; };
+        var counts = new TreeMap<Integer, Integer>();
+        for (long section = 0; section < 1000; section++) {
+            Object hazard = hazard(section);
+            assertEquals(hazard, hazard(section), "seeded");
+            if (hazard == null) continue;
+            int kind = (int) call(hazard, "kind");
+            counts.merge(kind, 1, Integer::sum);
+            assertTrue(section >= 5, "the opening is hazard-free");
+            assertFalse(platformRun(section));
+            long x = (long) call(hazard, "worldX");
+            if (kind == FIREBALL) {
+                assertTrue(zone == 1 || zone == 4, "fireballs in Marble and Star Light only");
+                assertTrue(isCorridor(section) && gapWidth(section) >= 96, "fireballs leap from corridor pits");
+                assertEquals(-1, floorAt(x), "from the middle of the pit");
+                continue;
+            }
+            assertFalse(isCorridor(section), "ground hazards stand on open sections");
+            assertTrue(kind == SPIKES || kind == signature(zone), "the zone's own hazard: " + kind);
+            assertEquals(floorAt(x), (int) call(hazard, "floor"));
+            assertNull(encounter(section), "no badnik shares a hazard section");
+            assertNull(monitor(section));
+            assertEquals(0, route(section).length);
+        }
+        assertTrue(counts.getOrDefault(SPIKES, 0) >= 10, "spike beds in every zone: " + counts);
+        if (signature(zone) >= 0) assertTrue(counts.getOrDefault(signature(zone), 0) >= 20, "signature: " + counts);
+        if (zone == 1 || zone == 4) assertTrue(counts.getOrDefault(FIREBALL, 0) >= 20, "pit fireballs: " + counts);
+    }
+
+    /**
+     * Real physics and timing: from one snapshot before the act's first signature hazard (fireball
+     * pits in Marble and Star Light), several approaches are replayed: coasting for a while first,
+     * then running or jumping at different distances. At least one passes cleanly, at least one is
+     * hit, and a hit takes the 20-ring toll without knockback, as a badnik hit does.
+     */
+    @ParameterizedTest(name = "zone {0}")
+    @ValueSource(ints = {0, 1, 2, 3, 4, 5})
+    void eachZoneHazardNeedsTimingAndHitsThroughTheRingToll(int zone) throws Exception {
+        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        int wanted = signature(zone) >= 0 ? signature(zone) : FIREBALL;
+        long section = 5;
+        while (hazard(section) == null || (int) call(hazard(section), "kind") != wanted) section++;
+        Object plan = hazard(section);
+        long hx = (long) call(plan, "worldX");
+        int reach = switch (wanted) {
+            case FIREBALL -> gapWidth(section) / 2 + 16;
+            case BIG_BALL -> 130;
+            case CHAIN -> 100;
+            case WRECKING_BALL -> 130;
+            default -> 32;
+        };
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(20000);
+        for (int frame = 0; frame < 20000 && originPixels() + player.getCentreX() < hx - reach - 360; frame++) {
+            stepTerrain(fixture, 1);
+            clearPickups(hx);
+        }
+        player.setInvulnerableFrames(0);
+        player.setInvincibleFrames(0);
+        if (player.hasShield()) player.removeShield();
+        GameServices.level().getLevelGamestate().setRings(50);
+        fixture.stepIdleFrames(1);
+        var registry = fixture.runtime().getRewindRegistry();
+        var start = registry.capture();
+        int passes = 0, hits = 0;
+        var outcomes = new StringBuilder();
+        for (int coast = 0; coast <= 60; coast += 12) {
+            for (int lead = -1; lead <= 200; lead += lead < 0 ? 41 : 20) {
+                registry.restore(start);
+                boolean jumped = false, hit = false;
+                for (int frame = 0; frame < 900; frame++) {
+                    long x = originPixels() + player.getCentreX();
+                    if (x > hx + reach + 48 && !player.getAir()) break;
+                    boolean jump = lead >= 0 && (player.getAir() ? jumped : x >= hx - reach - lead && !jumped);
+                    if (jump) jumped = true;
+                    setTicks(0);
+                    fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
+                    fixture.stepFrame(false, false, false, frame >= coast, jump);
+                    if (player.getDead()) { hit = true; break; }
+                    if (GameServices.level().getLevelGamestate().getRings() < 50) {
+                        hit = true;
+                        assertEquals(30, GameServices.level().getLevelGamestate().getRings(), "the 20-ring toll");
+                        assertFalse(player.isHurt(), "no knockback");
+                        assertTrue(player.getInvulnerableFrames() > 0, "post-hit blink");
+                        break;
+                    }
+                }
+                outcomes.append(String.format(" coast%d/lead%d:%s", coast, lead, hit ? "hit" : "pass"));
+                if (hit) hits++; else passes++;
+            }
+        }
+        assertTrue(passes > 0, "timing can beat it:" + outcomes);
+        assertTrue(hits > 0, "it is a real hazard:" + outcomes);
+        // The hazard replays exactly from the snapshot.
+        registry.restore(start);
+        for (int i = 0; i < 90; i++) { setTicks(0); fixture.stepFrame(false, false, false, true, false); }
+        var expected = registry.capture().entries().get("object-manager");
+        registry.restore(start);
+        for (int i = 0; i < 90; i++) { setTicks(0); fixture.stepFrame(false, false, false, true, false); }
+        assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", expected,
+                registry.capture().entries().get("object-manager")), "hazard motion replays");
+    }
+
+    /** Leaves only the hazard ahead: badniks and monitors near it would muddy the timing trials. */
+    private void clearPickups(long hazardX) throws Exception {
+        for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+            String name = object.getClass().getName();
+            if ((name.equals("infinite.CourseBadnik") || name.equals("infinite.CourseMonitor"))
+                    && Math.abs(object.getX() + originPixels() - hazardX) < 700
+                    && object instanceof com.openggf.level.objects.AbstractObjectInstance other) other.setDestroyed(true);
+        }
     }
 
     @Test void deathMenuExitLeavesForTheTitleScreen() throws Exception {
@@ -1412,6 +1659,13 @@ class TestInfiniteSonic {
         assertTrue(runFrames > 60, "but shows the Run frames: " + runFrames);
     }
 
+    private boolean underRoute(ObjectInstance enemy) {
+        try {
+            long anchor = (long) enemy.getClass().getMethod("worldAnchor").invoke(enemy);
+            return route(Math.floorDiv(anchor, 512)).length > 0;
+        } catch (Exception e) { throw new AssertionError(e); }
+    }
+
     private static boolean flyingEnemy(ObjectInstance enemy) {
         try { return (boolean) enemy.getClass().getMethod("flying").invoke(enemy); }
         catch (ReflectiveOperationException e) { throw new AssertionError(e); }
@@ -1437,12 +1691,13 @@ class TestInfiniteSonic {
     void aPhysicalStompDestroysTheBadnikAwardsScoreAndDoesNotRespawnIt(int subtype) throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         // Reach a live encounter without damage, then set up a local descending jump.
-        fixture.sprite().setInvulnerableFrames(2000);
+        fixture.sprite().setInvulnerableFrames(20000);
         ObjectInstance enemy = null;
-        for (int i = 0; i < 1000 && enemy == null; i++) {
-            stepCourse(fixture, 1);
+        for (int i = 0; i < 4000 && enemy == null; i++) {
+            stepTerrain(fixture, 1);
             // 0 = a ground badnik, 1 = a flyer (whichever species the act's line-up chose).
-            enemy = enemies().stream().filter(o -> flyingEnemy(o) == (subtype == 1)).findFirst().orElse(null);
+            // A high route's ledge would catch the falling Sonic above the patrol beneath it.
+            enemy = enemies().stream().filter(o -> flyingEnemy(o) == (subtype == 1) && !underRoute(o)).findFirst().orElse(null);
         }
         assertNotNull(enemy);
         var player = fixture.sprite();

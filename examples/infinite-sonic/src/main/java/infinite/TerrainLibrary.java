@@ -301,6 +301,25 @@ public final class TerrainLibrary {
     /** Stock platform kinds this act lends its platform stretches; empty when it places none. */
     public List<CoursePlatforms.Kind> platformKinds() { return platformKinds; }
     public Block block(int index) { return blocks.get(index); }
+
+    /** Plan ids for {@link #memo}. */
+    static final int ROUTE_PLAN = 0, HAZARD_PLAN = 1, ENCOUNTER_PLAN = 2;
+    private static final int PLAN_COUNT = 3;
+    private static final int MEMO_LIMIT = 8192;
+    /** Seeded plans are pure functions of the section; the controller asks every tick until a
+     * section's object spawns, so their terrain scans are kept (derived data, not rewound). */
+    private final java.util.Map<Long, java.util.Optional<Object>> plans = new java.util.HashMap<>();
+
+    @SuppressWarnings("unchecked")
+    <T> T memo(int plan, long section, java.util.function.Supplier<T> compute) {
+        long key = section * PLAN_COUNT + plan;
+        var known = plans.get(key);
+        if (known != null) return (T) known.orElse(null);
+        T value = compute.get();
+        if (plans.size() >= MEMO_LIMIT) plans.clear();
+        plans.put(key, java.util.Optional.ofNullable(value));
+        return value;
+    }
     private int sectionIndex(long section, int tier) {
         return (int) Long.remainderUnsigned(random(section + SEED), sections.get(tier).size());
     }

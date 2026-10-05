@@ -480,3 +480,19 @@ Main checkout, `feature/ai-infinite-sonic`, base `2a4ca53aa0`; mod, tests and do
 **140 run, 0 failures, 14 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; the
 skips are the platform crossing in acts without platforms). Not covered: a visual check of
 the monitor icons, the live title return, and live play.
+
+## High routes and zone hazards (0.16.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `e974573148`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Route geometry | `highRoutesHangTheActsStockPlatformsAboveLevelGround` | All 18 acts, 1000 sections: stationary stock kinds the act places, one level ledge 48 px over the highest floor and at most 64 px over any, 24 px gaps, mostly ground-guarded, no hazard |
+| Route reachable and runnable | `sonicJumpsOntoAHighRouteAndRunsAcrossIt` | GHZ, MZ, SYZ, SLZ, SBZ act 1 at 16:9: one held jump 140 px early lands on the ledge and runs to its last platform without dropping |
+| Hazard placement | `hazardsAreTheZonesOwnOnLevelGroundOrInPits` | All 18 acts (SBZ3 follows its LZ layout): zone's own kinds, fireballs only in MZ/SLZ pits, no badnik/monitor/route sharing |
+| Hazards need timing; hits use the ring toll | `eachZoneHazardNeedsTimingAndHitsThroughTheRingToll` | First signature hazard of each zone's act 1, 42 coast/jump timings from one snapshot: at least one passes, at least one is hit (20-ring toll, no knockback), motion replays |
+| SLZ elevator platforms | `platformStretchesBridge...`, `sonicCrossesAPlatformStretch...` | SLZ1 now crosses on Obj59 at 4:3 and 16:9 |
+
+**187 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; the skips
+are the platform crossing in acts without platforms). Not covered: spike beds' timing trial
+(geometry and toll path are shared), a visual check of every hazard sprite, and live play.

@@ -18,6 +18,9 @@ public final class CoursePlatforms {
     static final int PLATFORM = 0x18;
     /** Obj52 Moving Blocks (MZ, LZ, SBZ). */
     static final int MOVING_BLOCK = 0x52;
+    /** Obj59 SLZ Elevators: subtype 0 is Elev_Var1 width $28 with action 1, which waits for Sonic,
+     * then rises $10 units and stops (type 2), as the stock elevator does. */
+    static final int ELEVATOR = 0x59;
     /** Obj18 type $03: stationary until stood on for 30 frames, then falls. */
     static final int PLATFORM_FALLS = 0x03;
     /** Both objects stand Sonic on obY-9 (MvSonicOnPtfm2), so a centre sits 9px below the surface. */
@@ -31,14 +34,17 @@ public final class CoursePlatforms {
 
     /**
      * Platform kinds for an act. Obj18 contributes its stationary and falling types; Obj52
-     * contributes the stationary type ($x0) of every appearance (high nybble) the act places.
+     * contributes the stationary type ($x0) of every appearance (high nybble) the act places;
+     * Obj59 contributes the 80px elevator (subtype 0).
      */
     public static List<Kind> lineUp(List<ObjectSpawn> stock, int romZone) {
         var kinds = new ArrayList<Kind>();
         var blockLooks = new TreeSet<Integer>();
         boolean platform = false;
+        boolean elevator = false;
         for (ObjectSpawn spawn : stock) {
             if (spawn.objectId() == PLATFORM) platform = true;
+            if (spawn.objectId() == ELEVATOR) elevator = true;
             if (spawn.objectId() == MOVING_BLOCK) blockLooks.add((spawn.subtype() >> 4) & 0x0f);
         }
         if (platform) {
@@ -54,7 +60,14 @@ public final class CoursePlatforms {
             int halfWidth = blockHalfWidth(look);
             if (halfWidth >= MIN_HALF_WIDTH) kinds.add(new Kind(MOVING_BLOCK, look << 4, halfWidth, false));
         }
+        // Elev_Var1 entry 0: obActWid $28.
+        if (elevator) kinds.add(new Kind(ELEVATOR, 0x00, 0x28, false));
         return List.copyOf(kinds);
+    }
+
+    /** True for the stock platform objects the course spawns (which keep their own coordinates). */
+    static boolean isCoursePlatform(int objectId) {
+        return objectId == PLATFORM || objectId == MOVING_BLOCK || objectId == ELEVATOR;
     }
 
     /** MBlock_Var obActWid by appearance, or 0 for looks the table does not define. */

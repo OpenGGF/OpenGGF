@@ -1,8 +1,8 @@
 package infinite;
 
 /**
- * Seeded monitors standing on level ground: shields, Super Rings and Invincibility. Frequency,
- * mix and placement are mod design choices.
+ * Seeded monitors standing on level ground or on a high route's last platform: shields, Super
+ * Rings and Invincibility. Frequency, mix and placement are mod design choices.
  */
 public final class MonitorPlan {
     public static final int FIRST_SECTION = 6;
@@ -24,7 +24,15 @@ public final class MonitorPlan {
 
     public static Monitor at(TerrainLibrary terrain, long section) {
         if (section < FIRST_SECTION || terrain.isCorridor(section) || terrain.platformRun(section)) return null;
+        if (HazardPlan.at(terrain, section) != null) return null;
         long random = TerrainLibrary.random(section + TerrainLibrary.SEED + 0x534849454cL);
+        var route = RoutePlan.at(terrain, section);
+        if (route.length > 0) {
+            // Half of high routes carry a monitor on their last platform: the reward for the high line.
+            if ((random >>> 32 & 1) != 0) return null;
+            var stone = route[route.length - 1];
+            return new Monitor(stone.worldX(), stone.surface() - FLOOR_OFFSET, kind(section));
+        }
         if (Long.remainderUnsigned(random, ODDS) != 0) return null;
         for (int offset : new int[] { OFFSET, FALLBACK_OFFSET }) {
             long x = section * 512 + offset;
