@@ -91,6 +91,14 @@ public final class Art {
         return set;
     }
 
+    /**
+     * A zoomed-out render of a zone act's level, at most {@code maxHeight} pixels tall, or null
+     * when the game cannot render one. Pending the engine's level-overview support.
+     */
+    public SceneImage levelOverview(int zone, int act, int maxHeight) {
+        return null;
+    }
+
     /** One frame of a ROM sprite, or null. */
     public SceneSprite romFrame(String key, int frame) {
         SceneSpriteSet set = rom(key);

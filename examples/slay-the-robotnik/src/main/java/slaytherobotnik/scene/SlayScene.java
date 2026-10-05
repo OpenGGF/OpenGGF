@@ -59,6 +59,10 @@ public final class SlayScene implements ModScene {
      * {@code "kill"} to defeat every enemy in the current fight, or {@code "die"} to lose it.
      */
     public void debugJump(String command) {
+        if ((command.equals("kill") || command.equals("die"))
+                && !(shell.run != null && shell.run.room() instanceof slaytherobotnik.run.CombatRoom)) {
+            return; // not in a fight
+        }
         if (command.equals("kill") && shell.run != null
                 && shell.run.room() instanceof slaytherobotnik.run.CombatRoom room) {
             // Defeat every enemy in the current fight (to see deaths and the victory flow).
@@ -85,6 +89,8 @@ public final class SlayScene implements ModScene {
         shell.attach(run);
         if (parts[2].equals("fight")) {
             run.enterFight(parts[3]);
+        } else if (parts[2].equals("map")) {
+            run.skipToMap(Integer.parseInt(parts[3]));
         } else if (parts[2].equals("room")) {
             // "sonic:7:room:Shop:2" enters a Shop / Rest / Treasure room, optionally in act 2.
             String[] room = parts[3].split(":");

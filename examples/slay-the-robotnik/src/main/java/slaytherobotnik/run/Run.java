@@ -315,6 +315,16 @@ public final class Run {
         startCombat(encounterId, type, null);
     }
 
+    /** Skips to act {@code act}'s map, past the Tornado start (debugging and screenshots). */
+    public void skipToMap(int act) {
+        while (state.act() < act) {
+            state.advanceAct();
+        }
+        map = buildMap();
+        prepareEncounters();
+        room = new MapRoom();
+    }
+
     /** Opens a specific event straight away, ignoring its acts and condition (debugging and tests). */
     public void enterEvent(String eventId) {
         openEvent(state.catalog().event(eventId));
