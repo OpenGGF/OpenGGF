@@ -71,6 +71,8 @@ public final class ProtocolProbe {
         var other = new Fingerprints(GolfCodec.SCHEMA, "0.7.0", "engine", "paradise", "rules",
                 Fingerprints.SONIC_2_SHA1, "competition", 320, 224);
         check(!prints().compatibleWith(other), "mismatched viewport rejected");
+        for (int width : new int[]{352, 528}) new Fingerprints(1, "api", "engine", "mod", "rules", Fingerprints.SONIC_2_SHA1, "competition", width, 224);
+        for (int width : new int[]{512, 640}) rejects(() -> new Fingerprints(1, "api", "engine", "mod", "rules", Fingerprints.SONIC_2_SHA1, "competition", width, 224));
         rejects(() -> new Fingerprints(1, "api", "engine", "mod", "rules", "BAD", "competition", 320, 224));
 
         var receipts = new ShotReceipts();

@@ -6,14 +6,14 @@ import static paradise.net.GolfPacket.*;
 
 /** Two caller-owned room seats. Time arguments use one caller-supplied monotonic seconds clock. */
 public final class ReconnectSessions {
-    public static final Duration DEFAULT_WINDOW = Duration.ofSeconds(30);
+    public static final int DEFAULT_WINDOW_SECONDS = 30;
     private record Seat(UUID match, UUID token, Long disconnectedAt) { }
     private final Seat[] seats = new Seat[2];
     private final long windowSeconds;
-    public ReconnectSessions() { this(DEFAULT_WINDOW); }
+    public ReconnectSessions() { this(Duration.ofSeconds(DEFAULT_WINDOW_SECONDS)); }
     public ReconnectSessions(Duration window) {
         Objects.requireNonNull(window);
-        if (window.isNegative() || window.isZero() || window.compareTo(DEFAULT_WINDOW) > 0 || window.getNano() != 0)
+        if (window.isNegative() || window.isZero() || window.compareTo(Duration.ofSeconds(DEFAULT_WINDOW_SECONDS)) > 0 || window.getNano() != 0)
             throw new IllegalArgumentException("reconnect window must be whole seconds in 1..30");
         windowSeconds = window.toSeconds();
     }

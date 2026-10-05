@@ -10,4 +10,7 @@ class TestGolfTransport {
     @Test void localhostOrderingBoundsDeadlineAndCleanup() throws Exception {
         TestGolfProtocol.runProbe(temp, "TransportProbe", "run");
     }
+    @Test void productionRoomHandshakeExactlyOnceReconnectAndHostExit() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "run");
+    }
 }

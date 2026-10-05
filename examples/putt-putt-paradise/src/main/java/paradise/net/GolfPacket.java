@@ -19,8 +19,8 @@ public sealed interface GolfPacket {
         public Fingerprints {
             range(protocol, 1, 255, "protocol"); text(api); text(engine); text(mod); text(rules); text(mode);
             if (!SONIC_2_SHA1.equals(romSha1)) throw new IllegalArgumentException("native S2 ROM identity required");
-            if (viewportWidth != 320 && viewportWidth != 400 && viewportWidth != 512
-                    && viewportWidth != 640 && viewportWidth != 800) throw new IllegalArgumentException("viewport width");
+            if (viewportWidth != 320 && viewportWidth != 352 && viewportWidth != 400
+                    && viewportWidth != 528 && viewportWidth != 800) throw new IllegalArgumentException("viewport width");
             if (viewportHeight != 224) throw new IllegalArgumentException("viewport height");
         }
         /** Character choice is deliberately separate: the golfers may choose independently. */

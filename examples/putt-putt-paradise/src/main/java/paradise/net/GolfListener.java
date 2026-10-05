@@ -49,11 +49,16 @@ public final class GolfListener implements AutoCloseable {
     }
     /** Closing the listener also closes drained peers: callers need no blocking join operation. */
     @Override public void close() {
+        stop(null);
+    }
+    /** Stops accepting immediately; owned peers deliver one bounded terminal control before their asynchronous close. */
+    public void finish(GolfPacket.Leave leave) { stop(Objects.requireNonNull(leave)); }
+    private void stop(GolfPacket.Leave leave) {
         if (!closed.compareAndSet(false, true)) return;
         try { server.close(); } catch (IOException ignored) { }
         List<GolfConnection> owned;
         synchronized (peers) { owned = List.copyOf(peers); peers.clear(); accepted.clear(); }
-        for (GolfConnection connection : owned) connection.close();
+        for (GolfConnection connection : owned) { if (leave == null) connection.close(); else connection.finish(leave); }
         worker.interrupt();
     }
 }

@@ -28,6 +28,14 @@ public final class ShotReceipts {
 
     /** The caller must bind senderOwner to the ready/reconnected socket, rather than trusting the packet owner. */
     public Result accept(ShotRequest request, int senderOwner, long acceptedTick) {
+        Result inspection = inspect(request, senderOwner);
+        if (inspection.status() != Status.ACCEPTED) return inspection;
+        var ack = new ShotAccepted(request.id(), acceptedTick, request.firstCharge() + request.secondCharge());
+        current = new Receipt(request, ack, null);
+        return new Result(Status.ACCEPTED, current);
+    }
+    /** Identity/duplicate validation without committing a stroke; the model owner decides when to accept. */
+    public Result inspect(ShotRequest request, int senderOwner) {
         Objects.requireNonNull(request);
         if (senderOwner != request.id().owner()) return new Result(Status.WRONG_TURN, null);
         for (Receipt receipt : new Receipt[]{current, last}) {
@@ -36,9 +44,7 @@ public final class ShotReceipts {
             }
         }
         if (!request.id().equals(open)) return new Result(Status.WRONG_TURN, null);
-        var ack = new ShotAccepted(request.id(), acceptedTick, request.firstCharge() + request.secondCharge());
-        current = new Receipt(request, ack, null);
-        return new Result(Status.ACCEPTED, current);
+        return new Result(Status.ACCEPTED, null);
     }
 
     /** Local host shot convenience. Remote callers should use the sender-bound overload. */

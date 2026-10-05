@@ -2,7 +2,6 @@ package paradise.net;
 
 import java.io.IOException;
 import java.net.*;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -15,7 +14,7 @@ import java.util.concurrent.locks.LockSupport;
  */
 public final class GolfConnection implements AutoCloseable {
     public static final int MAX_INCOMING_COMMANDS = 256;
-    public static final Duration WRITE_DEADLINE = Duration.ofSeconds(5);
+    public static final int WRITE_DEADLINE_SECONDS = 5;
     private static final long FRAME_INTERVAL_NANOS = 1_000_000_000L / 60 + 1;
     public sealed interface Event { }
     public record Received(GolfPacket packet) implements Event { }
@@ -28,6 +27,7 @@ public final class GolfConnection implements AutoCloseable {
     private final OutboundPackets outbound = new OutboundPackets();
     private final ArrayDeque<Received> incoming = new ArrayDeque<>();
     private final AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicBoolean finishing = new AtomicBoolean();
     private final List<Thread> workers = new CopyOnWriteArrayList<>();
     private final Object deadlineLock = new Object();
     private long writeDeadline;
@@ -68,7 +68,7 @@ public final class GolfConnection implements AutoCloseable {
     /** Publishing is bounded and does no network IO. A false return also schedules a disconnect event. */
     public boolean send(GolfPacket packet) {
         Objects.requireNonNull(packet);
-        if (closed.get()) return false;
+        if (closed.get() || finishing.get()) return false;
         if (!outbound.offer(packet)) { disconnect("outbound queue overflow"); return false; }
         return true;
     }
@@ -82,6 +82,12 @@ public final class GolfConnection implements AutoCloseable {
         }
     }
     public boolean isClosed() { return closed.get(); }
+    /** Bounded asynchronous terminal control delivery; the writer closes after sending it or on its deadline. */
+    public void finish(GolfPacket.Leave leave) {
+        Objects.requireNonNull(leave);
+        if (closed.get() || !finishing.compareAndSet(false, true)) return;
+        if (!outbound.offer(leave)) disconnect("outbound queue overflow");
+    }
     /** Nonblocking lifecycle observation; includes virtual workers omitted by getAllStackTraces. */
     public int activeWorkers() { return (int) workers.stream().filter(Thread::isAlive).count(); }
     public Stats stats() {
@@ -121,11 +127,12 @@ public final class GolfConnection implements AutoCloseable {
                         LockSupport.parkNanos(remaining);
                 }
                 if (closed.get()) return;
-                synchronized (deadlineLock) { writeDeadline = System.nanoTime() + WRITE_DEADLINE.toNanos(); deadlineLock.notifyAll(); }
+                synchronized (deadlineLock) { writeDeadline = System.nanoTime() + WRITE_DEADLINE_SECONDS * 1_000_000_000L; deadlineLock.notifyAll(); }
                 socket.getOutputStream().write(next);
                 synchronized (deadlineLock) { writeDeadline = 0; deadlineLock.notifyAll(); }
                 if (view) lastViewWrite = System.nanoTime();
                 inFlightFrame = 0;
+                if (finishing.get() && next[5] == 10) { disconnect("local leave"); return; }
             }
         } catch (IOException failure) { disconnect("write failed"); }
         catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
@@ -146,7 +153,11 @@ public final class GolfConnection implements AutoCloseable {
     private synchronized void disconnect(String reason) {
         if (!closed.compareAndSet(false, true)) return;
         outbound.close();
-        synchronized (incoming) { incoming.clear(); disconnected = new Disconnected(reason); }
+        synchronized (incoming) {
+            // A terminal Leave must survive the immediately following EOF, so rooms distinguish exit from a broken link.
+            Received terminal = incoming.stream().filter(e -> e.packet() instanceof GolfPacket.Leave).reduce((a, b) -> b).orElse(null);
+            incoming.clear(); if (terminal != null) incoming.add(terminal); disconnected = new Disconnected(reason);
+        }
         try { socket.close(); } catch (IOException ignored) { }
         synchronized (deadlineLock) { writeDeadline = 0; deadlineLock.notifyAll(); }
         for (Thread worker : workers) if (worker != Thread.currentThread()) worker.interrupt();
