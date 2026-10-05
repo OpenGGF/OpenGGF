@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.game.GameId;
+import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.save.SavePaths;
@@ -50,10 +51,20 @@ final class ModSceneLauncher {
                 romArt(module),
                 SavePaths.root(),
                 window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
-                gameLoop::exitModSceneToGameTitle,
-                gameLoop::exitModSceneToMasterTitle);
-        gameLoop.enterModScene(factory, services, logicalWidth, logicalHeight);
+                () -> exitToGameTitle(gameLoop),
+                gameLoop::startEscapeToMasterTitleTransition);
+        gameLoop.setGameMode(GameMode.MOD_SCENE);
+        gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
+        gameLoop.resolveFadeManager().startFadeFromBlack(null);
         return true;
+    }
+
+    /** Fades out of the mod scene to the base game's title screen. */
+    private static void exitToGameTitle(GameLoop gameLoop) {
+        gameLoop.resolveFadeManager().startFadeToBlack(() -> {
+            gameLoop.modSceneHost.close();
+            gameLoop.initializeTitleScreenMode();
+        });
     }
 
     private static com.openggf.mods.scene.SceneRomArt romArt(GameModule module) {
@@ -122,6 +133,6 @@ final class ModSceneLauncher {
     static void draw(GameLoop gameLoop, GraphicsManager graphics, float[] projection) {
         int[] viewport = {graphics.getViewportX(), graphics.getViewportY(), graphics.getViewportWidth(),
                 graphics.getViewportHeight()};
-        gameLoop.getModSceneHost().draw(graphics.isGlInitialized() ? projection : null, viewport);
+        gameLoop.modSceneHost.draw(graphics.isGlInitialized() ? projection : null, viewport);
     }
 }

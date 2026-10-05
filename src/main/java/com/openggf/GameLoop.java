@@ -152,7 +152,8 @@ public class GameLoop {
     private final GameLoopContinueCoordinator continueScreen = new GameLoopContinueCoordinator(this);
 
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
-    private final com.openggf.mods.scene.ModSceneHost modSceneHost = new com.openggf.mods.scene.ModSceneHost();
+    /** The open mod scene, if any; {@link ModSceneLauncher} opens, draws and leaves it. */
+    final com.openggf.mods.scene.ModSceneHost modSceneHost = new com.openggf.mods.scene.ModSceneHost();
     private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
             new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;
@@ -1478,7 +1479,7 @@ public class GameLoop {
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.MOD_SCENE) {
-            menuScreenModeController.updateModScene(modSceneHost == null ? null : modSceneHost::update, inputHandler);
+            menuScreenModeController.updateModScene(modSceneHost::update, inputHandler);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.CREDITS_TEXT
@@ -3797,7 +3798,7 @@ public class GameLoop {
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 
-    private void startEscapeToMasterTitleTransition() {
+    void startEscapeToMasterTitleTransition() {
         FadeManager manager = resolveFadeManager();
         if (manager.isActive()) {
             return;
@@ -4179,36 +4180,6 @@ public class GameLoop {
             case LEVEL_SELECT -> doEnterLevelSelect();
             case LEVEL, TWO_PLAYER, OPTIONS, OTHER -> startLevelFromTitleScreenImmediate();
         }
-    }
-
-    // ==================== Mod Scene Methods ====================
-
-    com.openggf.mods.scene.ModSceneHost getModSceneHost() {
-        return modSceneHost;
-    }
-
-    /** Opens a mod's startup scene in place of the title screen (the module's {@code ModSceneFactory} game service). */
-    void enterModScene(com.openggf.mods.scene.ModSceneFactory factory,
-                              com.openggf.mods.scene.SceneServices services, int width, int height) {
-        GameMode oldMode = changeGameModeForBoundary(GameMode.MOD_SCENE);
-        modSceneHost.open(factory, services, width, height);
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
-        fadeManager.startFadeFromBlack(null);
-    }
-
-    /** Fades out of the mod scene to the base game's title screen. */
-    void exitModSceneToGameTitle() {
-        resolveFadeManager().startFadeToBlack(() -> {
-            modSceneHost.close();
-            initializeTitleScreenMode();
-        });
-    }
-
-    /** Fades out of the mod scene to the master title (as holding Escape does). */
-    void exitModSceneToMasterTitle() {
-        startEscapeToMasterTitleTransition();
     }
 
     // ==================== Data Select Methods ====================
