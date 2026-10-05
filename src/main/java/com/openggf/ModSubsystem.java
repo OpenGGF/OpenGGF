@@ -257,12 +257,14 @@ public final class ModSubsystem implements AutoCloseable {
     }
 
     public ModManagerScreenHost createManager(PixelFont font) {
-        if (pendingEditor == null) {
+        if (pendingEditor == null && !policy().mayScanAtBoot()) {
             throw new IllegalStateException("The disabled subsystem has no pending-state editor");
         }
+        PendingModStateEditor managerEditor = pendingEditor != null ? pendingEditor
+                : PendingModStateEditor.readOnly(startupModState, processCatalog.scanned());
         ModManagerScreen.TextSink text = font == null ? null : ModManagerScreenHost.textSink(font);
         return new ModManagerScreenHost(new ModManagerScreen(
-                processCatalog, pendingEditor, runtimeFindings, text, patternWindowAllocator,
+                processCatalog, managerEditor, runtimeFindings, text, patternWindowAllocator,
                 compiledModsSupported));
     }
 

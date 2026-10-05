@@ -36,6 +36,8 @@ class TestDevelopmentModBoot {
             var effective=subsystem.processCatalog().effective().orderedEnabled();
             assertEquals(1,effective.size());assertEquals("fresh-dev",effective.getFirst().manifest().id());
             assertEquals(java.util.Set.of("fresh-dev"),subsystem.trustedCodeOwners());
+            ModSubsystem active = subsystem;
+            assertDoesNotThrow(() -> active.createManager(null));
             assertFalse(Files.exists(normalRoot.resolve("modstate.json")));
         } finally {
             if(subsystem!=null)subsystem.close();
@@ -53,6 +55,7 @@ class TestDevelopmentModBoot {
             ModSubsystem.installAtBoot(new ExternalContentPolicy(Engine.externalContentBootMode(true)),()->{
                 invoked.set(true);throw new AssertionError("scanner invoked");});
             assertFalse(invoked.get());
+            assertThrows(IllegalStateException.class, () -> ModSubsystem.current().createManager(null));
         }finally{ModSubsystem.clearProcess();if(previous==null)System.clearProperty(DevelopmentModSource.PROPERTY);
             else System.setProperty(DevelopmentModSource.PROPERTY,previous);}
     }

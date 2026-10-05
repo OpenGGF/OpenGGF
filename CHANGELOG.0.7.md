@@ -853,7 +853,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **Unpublished Mod API candidate:** mod loading, creator tooling, characters,
   standalone games, and custom-zone work are now available on the development
-  line. The API descriptor remains the version/publication authority; this
+  line. Explicit development-directory launches show their active mod, details,
+  and notices in a read-only Mod Manager without changing installed-mod settings.
+  The API descriptor remains the version/publication authority; this
   branch rollover does not publish or freeze it.
 - **Gameplay capture tooling:** `GameplayCaptureTool` pictures or films any
   gameplay section on the production boot path (any game, zone, act, position,

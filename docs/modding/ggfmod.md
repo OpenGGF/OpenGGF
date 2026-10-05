@@ -54,6 +54,10 @@ Use `ggfmod validate <mod.jar>` to print the sorted findings for an existing jar
 engine with `-Dggfmod.dev.modDir=<absolute-build-output>`. The engine snapshots that
 directory once into engine-owned immutable storage and never rereads the creator tree
 during the session. Merely enabling test mode does not enable directory loading.
+The development mod is enabled and trusted for that launch. Mods on the title
+screen shows its details and notices in a read-only view; enable/disable, ordering,
+and Apply remain available for normally installed mods. Development launches do
+not read or write installed-mod settings.
 
 For complete Mod API 0.7 examples, see [Content mods](content-mods.md),
 [Playable characters](characters.md), and [Standalone games](standalone-games.md).

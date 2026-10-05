@@ -1162,3 +1162,44 @@ workspace correction remain in shared history. The ordinary suite's 28 matched
 baseline failures and two inherited guards are recorded above, without a claim
 that the final whole suite is green. Remaining route/parity axes are explicit in
 the linked validation matrix.
+
+### Development-launch Mod Manager follow-up (2026-10-06)
+
+Opening Mods from the local launcher failed in `ModSubsystem.createManager`.
+The development descriptor was enabled and trusted correctly; the failure came
+from treating the deliberately absent persisted-state editor as a disabled
+subsystem. `ggfmod run` now creates a frozen manager view of its startup state.
+It exposes the active row, Details, Notices and Back; normal installed-mod
+enable/disable, ordering and Apply retain their existing behavior. The frozen
+editor rejects settings changes and saves and has no filesystem store. Disabled
+deterministic startup still cannot create a manager.
+
+The boot regression first reproduced the reported exception with
+`python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestDevelopmentModBoot' test`:
+two tests, one expected failure, no errors/skips. Final focused validation on
+`049658d5d` plus this follow-up passed 88 tests, no failures/errors/skips:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestDevelopmentModBoot,TestDevelopmentModSource,TestPendingModStateEditor,TestModManagerScreen,TestModManagerScreenNativeGuard,TestModManagerScreenHost,TestMasterTitleSecondaryActions,TestChildMenuFeedback,TestExternalContentPolicy,TestGgfModCliCommands' test
+```
+
+A separate contract/architecture JVM ran 69 checks, with 68 passing, no
+errors/skips, and the already-recorded exact
+`TestArchUnitRules.virtual_pattern_base_fields_are_backed_by_pattern_atlas_range`
+failure for `Sonic1TitleScreenManager.BACKGROUND_OVERRIDE_PATTERN_BASE` at
+`0xd4000`. Its owning source, range declaration and assertion are unchanged
+against the pre-follow-up commit. All API signature, pin, release policy and
+engine-wiring checks passed; no creator API or pin changed.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModEngineWiringSeams,TestArchUnitRules' test
+```
+
+The change-based plan against `049658d5d` selected all 2,976 ordinary classes
+because the root launcher and shared manager paths use its fallback. Proportionate
+focused validation replaces that run: the change is confined to manager creation
+and its frozen input/render state, with direct tests of boot, navigation,
+persistence refusal, deterministic suppression and the existing editable flow.
+This is neither a full-suite pass nor a new native GUI capture. The local launcher
+remains executable and uncommitted; Bash syntax and dry-run checks pass. The main
+workspace, remote history, feature branch and worktree remain preserved.
