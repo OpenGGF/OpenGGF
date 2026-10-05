@@ -39,22 +39,27 @@ lives). They use the ROM monitor art and its flickering icons, but
 unlike the solid stock box any touch breaks them, so running into one never stalls Sonic
 against the scrolling edge. Breaking a shield box plays the stock break and shield sounds
 and puts the stock shield on Sonic; one broken while already shielded only plays the sound.
-Death, CONTINUE and RESTART clear the shield.
+Death and RESTART clear the shield; CONTINUE's rewind gives back a shield Sonic had at the
+moment it rewinds to (its no-history fallback does not).
 
 A session starts with **no spare lives**. The only way to earn one is rings: every time
 the ring counter reaches 100, 200, 300 and so on, you gain a life (reaching 100 again
 after losing your rings counts too). Points never award lives. Spare lives are shown on
 the HUD. When Sonic dies with a spare life, the stock card is replaced by a menu:
-**CONTINUE** spends the life and revives Sonic right where the run is, with no level reload.
-The restart spot is the last safe spot he stood on (solid, pit-free floor), or the nearest one
-behind it with **448 pixels of floor and no pit ahead**, so a run never restarts on the lip of
-a hole. A translucent ghost of Sonic, with two fading echoes, glides back from where he died
-to that spot (45 to 90 frames) while the camera follows. Then Sonic appears and **READY**
-waits until you press right or jump (or two seconds pass); he sets off with a running start,
-**GO!** flashes, and the game speed eases back up from 1× to the speed stage it died at over
-a second and a half. The clock, score and scrolling wait through the glide and READY. Score, speed, the
-countdown to the next speedup, the terrain, cleared enemies and Sonic's rings all carry on, and
-Sonic blinks for two seconds. Only RESTART, EXIT and GAME OVER clear the rings. **RESTART** reloads a fresh session at 1× with no
+**CONTINUE** spends the life and **rewinds the run** with the engine's own rewind (the VHS
+picture and reversed sound of held live rewind, which the course uses even with live rewind
+switched off), with no level reload. The tape runs quickly back through the death and the menu,
+then at three times speed through play, and stops at the first moment at least a second before
+the death that makes a fair restart: Sonic alive, on the ground and unhurt, keeping up with the
+scroll, on solid floor with **448 pixels of floor and no pit ahead**, so a run never restarts on
+the lip of a hole. Everything is as it was at that moment: the score, rings, enemies, terrain, and
+the speed stage and countdown. Only the spent life stays spent, and ring lives already paid are
+not paid again for the same hundreds. **READY** then holds Sonic there until you press right or
+jump (or two seconds pass); he sets off with a running start, **GO!** flashes, and the game speed
+eases back up from 1× to its speed stage over a second and a half. The clock, score and scrolling
+wait through READY, and Sonic blinks for two seconds. If no fair moment is left in the rewind
+history, Sonic is instead revived on the last safe spot (or the nearest one behind it with that
+runway), keeping the run as it was when he died. RESTART, EXIT and GAME OVER clear the rings. **RESTART** reloads a fresh session at 1× with no
 spare lives and a zero score. **EXIT** fades out to the Sonic 1 title screen, where the zone
 picker can start another course. Press up/down to choose and **SPACE** (player 1 button A)
 to confirm. Dying with no spare lives shows the mod's own GAME OVER text over a

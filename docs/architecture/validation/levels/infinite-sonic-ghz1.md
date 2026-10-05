@@ -580,3 +580,29 @@ Main checkout, `feature/ai-infinite-sonic`, base `374775a40d`; mod, tests and do
 
 **198 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not covered:
 the rendered flash, lines and banner (headless draws nothing), other zones on unpinned seeds, and live play.
+
+## CONTINUE by the engine's rewind (0.23.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `4fd1997e3e`; engine hook (`GameModule.scriptedRewind`,
+`ScriptedRewind`, `LiveRewindManager`, one `GameLoop` argument), mod, tests and docs.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| CONTINUE rewinds through the real game loop | `continueRewindsTheRunToAFairRestart` | live rewind setting off; 480 driven loop frames, a left-edge death, 240 menu frames; the rewind took 40 presentation frames and landed 64 gameplay frames before the death, score rolled back (2240 to 1980), one life spent, READY, runway clear, then sets off and history records again |
+| No-history fallback | `continueWithoutRewindHistoryRevivesAtTheLastSafeSpot`, `continueAfterAPitDeathRevivesBeforeThePit` | headless fixture without the loop: lands on the next update at the last safe spot, run kept |
+| Ring lives paid once | `ringLivesWonBackAfterARewindDoNotPayAgain` | director accounting only |
+| Mod API pin | `TestModApiSignatureSurface` | 0.7 candidate pin regenerated in place (+9 lines) |
+
+Focused: `TestInfiniteSonic` **200 run, 0 failures, 12 skipped** (platform crossing in acts without
+platforms), plus rewind, `GameLoop`, Mod API and architecture guard classes (590 run).
+Change-based broad run (full ordinary suite, 2968 classes): **incomplete**, stopped by the 40-minute
+invocation timeout after 2629 classes (22608 tests, 4 failures, 12 errors). The 12 errors are
+OpenGL shader `version 410` failures in this launch environment; `TestFbzSandopolisTimelineHeadless`,
+two `TestS3kMhzAct2AuthoredRoute` cases and `TestPhase3SampleCharacterIntegration` (`base64`
+flags) fail identically at the base commit. About 339 ordinary classes did not run. Guards
+(`-Pguards`, 672): the new `GameServices` access in `LiveRewindManager` was fixed; the `GameLoop`
+size ratchet (3404 at base, budget 3381, now 3405), the LRZ flame physics guard, the virtual
+pattern atlas rule and the release-tooling Python test fail identically at base; the clock
+terminology guard exceeded its 2-minute subprocess limit (base: 117.9 s) and passes when its
+subprocess runs directly (101 s, exit 0). Not covered: the rendered VHS presentation and reverse
+audio (headless) and live play.

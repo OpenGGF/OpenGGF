@@ -84,6 +84,7 @@ public final class InfiniteSonicMod implements GgfMod {
         private final CourseFeatures dryFeatures = new CourseFeatures();
         private final ChallengeClock clock = new ChallengeClock();
         private final CourseSession session = new CourseSession();
+        private final CourseRewind rewind = new CourseRewind(this::courseController);
         private Leaderboard leaderboard;
         // Identifies the current level load's run on the leaderboard.
         private CourseRun run = new CourseRun(0);
@@ -127,6 +128,7 @@ public final class InfiniteSonicMod implements GgfMod {
             // CONTINUE revives in place, so every load starts a fresh run at 1x.
             clock.reset();
             session.reset();
+            rewind.reset();
             run = new CourseRun(System.nanoTime());
             if (!active) return super.loadLevelOverride(index);
             Level original = game.loadLevel(index);
@@ -152,13 +154,18 @@ public final class InfiniteSonicMod implements GgfMod {
         }
         /** The live course window's origin in pixels, which the background scrolls from; 0 off the course. */
         private long courseOrigin() {
+            var course = courseController();
+            return course == null ? 0 : course.originPixels();
+        }
+        /** The course's controller as currently restored, or null off the course. */
+        private CourseController courseController() {
             var level = active ? GameServices.levelOrNull() : null;
             var objects = level == null ? null : level.getObjectManager();
-            if (objects == null) return 0;
+            if (objects == null) return null;
             for (var object : objects.getActiveObjects()) {
-                if (object instanceof CourseController course) return course.originPixels();
+                if (object instanceof CourseController course) return course;
             }
-            return 0;
+            return null;
         }
         @Override public ZoneFeatureProvider getZoneFeatureProvider() {
             return active ? dryFeatures : super.getZoneFeatureProvider();
@@ -239,6 +246,10 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public int gameplayStepsPerFrame() {
             return active ? clock.nextFrameSteps() : super.gameplayStepsPerFrame();
         }
+        /** CONTINUE winds the run back with the engine's rewind; see {@link CourseRewind}. */
+        @Override public com.openggf.game.rewind.ScriptedRewind scriptedRewind() {
+            return active ? rewind : super.scriptedRewind();
+        }
         @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
             var adapters = new java.util.ArrayList<com.openggf.game.rewind.RewindSnapshottable<?>>(super.rewindAdapters());
             adapters.add(clock);
@@ -248,6 +259,7 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public <T> T getGameService(Class<T> type) {
             if (type == ChallengeClock.class) return type.cast(clock);
             if (type == CourseSession.class) return type.cast(session);
+            if (type == CourseRewind.class) return type.cast(rewind);
             if (type == Leaderboard.class) return type.cast(leaderboard());
             if (type == CourseRun.class) return type.cast(run);
             // The live input the title last saw: the course reads Escape from it to leave.

@@ -39,9 +39,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     static final int OPENING_BOARD_FRAMES = 300, OPENING_BOARD_FADE = 30;
     // Overtaking the zone's top score flashes a banner for three seconds.
     static final int CELEBRATE_FRAMES = 180;
-    // Mod design: CONTINUE replays Sonic's way back as a ghost (45-90 frames by distance), then
-    // holds him at the restart spot until the player goes (up to two seconds), then shows GO!.
-    static final int GLIDE_MIN_FRAMES = 45, GLIDE_MAX_FRAMES = 90;
+    // Mod design: CONTINUE rewinds the run (CourseRewind), then holds Sonic where it stopped until
+    // the player goes (up to two seconds), then shows GO!.
     static final int READY_FRAMES = 120, READY_INPUT_DELAY = 20, GO_FRAMES = 40;
     // A restart spot needs pit-free floor this far ahead (about 1.4s at the course top speed).
     static final int RESUME_RUNWAY = 448;
@@ -51,8 +50,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     // Mod design: each speed-up flashes the screen, rushes speed lines past the edges and
     // announces the new speed for a second; the flash itself lasts the first 12 updates.
     static final int SPEED_UP_FRAMES = 60, SPEED_UP_FLASH = 12, SPEED_LINES = 16;
-    /** CONTINUE phases. */
-    static final int RESUME_NONE = 0, RESUME_GLIDE = 1, RESUME_READY = 2;
+    /** CONTINUE phases: none, or waiting at the rewound spot for the player to go. */
+    static final int RESUME_NONE = 0, RESUME_READY = 1;
     private int scrollFraction;
     private int scoreFraction;
     private boolean started;
@@ -68,6 +67,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long safeWorldX = -1;
     // Ring count last frame: a life is earned each time it reaches a new multiple of 100.
     private int ringsSeen;
+    // Multiples of 100 the ring count has reached this run; CourseRewind pays each only once.
+    private int ringLives;
     // Updates since the run started, counted up to the end of the opening leaderboard.
     private int openingFrames;
     // The zone's top score from earlier runs when this run started; -1 until then.
@@ -75,24 +76,18 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private int celebrateFrames;
     // This run's leaderboard rank once it has been recorded (at a death or exit), 0 if unplaced.
     private int rank;
-    // CONTINUE sequence: phase, frames into it, the glide's length, and its endpoints (local).
+    // CONTINUE was chosen this update; the rewind starts on the next frame. Never true in a
+    // rewound state, since the rewind starts after the update that set it.
+    private boolean continueRequested;
+    // CONTINUE sequence: phase, frames into it, and the camera X held while READY.
     private int resumePhase;
     private int resumeFrame;
-    private int glideFrames;
-    private int ghostFromX;
-    private int ghostFromY;
-    private int ghostToX;
-    private int ghostToY;
-    private int cameraFromX;
-    private int cameraToX;
+    private int readyCameraX;
     private int goFrames;
     // Updates spent in danger (fewer than 20 rings, no shield); drives the sweat drops.
     private int dangerFrames;
-    // Sonic's last living pose and where he died, which the ghost starts from.
-    private int ghostFrame;
-    private boolean ghostFlip;
+    // Where Sonic died (local X), which the fallback restart spot searches back from.
     private int deathX;
-    private int deathY;
     // Updates left of the speed-up flourish; 0 when none is showing.
     private int speedUpFrames;
     public boolean gameOver() { return gameOver; }
@@ -139,7 +134,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
     public int topScore() {
         return Math.max(services().gameService(Leaderboard.class).best(zone(), runId()), services().gameState().getScore());
     }
-    /** RESUME_NONE, RESUME_GLIDE (the ghost glides back) or RESUME_READY (waiting to go). */
+    /** RESUME_NONE, or RESUME_READY (waiting at the rewound spot to go). */
     public int resumePhase() { return resumePhase; }
     /** Frames of GO! left after a resumed run sets off. */
     public int goFrames() { return goFrames; }
@@ -176,13 +171,15 @@ public final class CourseController extends AbstractObjectInstance implements Re
     @Override public boolean isHighPriority() { return true; }
     @Override public int getPriorityBucket() { return 0; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
-        drawGhost();
         drawSweat();
         drawSpeedUp();
         CourseHud.draw(services(), this);
     }
     private ChallengeClock clock() { return services().gameService(ChallengeClock.class); }
     private CourseSession session() { return services().gameService(CourseSession.class); }
+    private CourseRewind rewind() { return services().gameService(CourseRewind.class); }
+    /** CONTINUE's rewind is winding the run back; the death menu is not drawn over it. */
+    public boolean rewinding() { return rewind().rewinding(); }
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
         return new CourseController(context.spawn());
     }
@@ -192,6 +189,12 @@ public final class CourseController extends AbstractObjectInstance implements Re
         services().levelManager().setForceHudSuppressed(true);
         showRunAtCourseSpeed(player);
         if (escapePressed()) { exitToTitle(); return; }
+        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+            // The rewind only ever lands between updates, so a replayed update never sees it.
+            if (rewind().landed()) { land(sprite); return; }
+            // CONTINUE was chosen but nothing was rewound (no history): restart from here instead.
+            if (continueRequested) { rewind().ended(false); land(sprite); return; }
+        }
         if (gameOver) { awaitChoice(player); return; }
         if (resumePhase != RESUME_NONE
                 && player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
@@ -201,16 +204,11 @@ public final class CourseController extends AbstractObjectInstance implements Re
             }
             // Nothing in the course can kill him here, but a death still ends the sequence cleanly.
             resumePhase = RESUME_NONE;
-            sprite.setHidden(false);
             sprite.setObjectControlled(false);
         }
         if (player.getDead()) { endRun(player); return; }
         if (goFrames > 0) goFrames--;
         if (speedUpFrames > 0) speedUpFrames--;
-        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
-            ghostFrame = sprite.getMappingFrame();
-            ghostFlip = sprite.getRenderHFlip();
-        }
         if (!started) {
             started = true;
             // Every load, including RESTART from the death menu, begins a fresh session with
@@ -219,6 +217,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             session().reset();
             setLives(0);
             ringsSeen = services().levelGamestate().getRings();
+            ringLives = 0;
             scoreToBeat = services().gameService(Leaderboard.class).best(zone(), runId());
             // A running start gives the player room to react before the scrolling edge arrives.
             player.setGSpeed((short) COURSE_MAX_SPEED);
@@ -325,8 +324,12 @@ public final class CourseController extends AbstractObjectInstance implements Re
         var level = services().levelGamestate();
         level.setRingExtraLifeFlags(0x06);
         int rings = level.getRings();
-        int earned = rings / CourseSession.RINGS_PER_LIFE - ringsSeen / CourseSession.RINGS_PER_LIFE;
+        int crossed = rings / CourseSession.RINGS_PER_LIFE - ringsSeen / CourseSession.RINGS_PER_LIFE;
         ringsSeen = rings;
+        if (crossed <= 0) return;
+        // After a CONTINUE rewind, the hundreds won back were already paid for.
+        ringLives += crossed;
+        int earned = rewind().awardRingLives(ringLives);
         if (earned <= 0) return;
         for (int i = 0; i < earned; i++) services().gameState().addLife();
         var profile = services().audioManager().getAudioProfile();
@@ -354,7 +357,6 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private void endRun(PlayableEntity player) {
         gameOver = true;
         deathX = player.getCentreX();
-        deathY = player.getCentreY();
         var state = services().gameState();
         session().died(state.getLives(), clock().capture());
         recordScore();
@@ -392,7 +394,12 @@ public final class CourseController extends AbstractObjectInstance implements Re
         // Player 1 A, SPACE by default.
         if (!sprite.isJumpJustPressed()) return;
         switch (menuSelection()) {
-            case CONTINUE -> { resume(sprite); return; }
+            case CONTINUE -> {
+                // The engine rewinds from the next frame; land() takes over where it stops.
+                rewind().start(session().livesLeft() - 1);
+                continueRequested = true;
+                return;
+            }
             case EXIT -> { exitToTitle(); return; }
             default -> { }
         }
@@ -403,14 +410,40 @@ public final class CourseController extends AbstractObjectInstance implements Re
     }
 
     /**
-     * CONTINUE: spends the life and starts the way back. Sonic is revived at the restart spot
-     * (hidden, held still and protected), and a ghost of him glides there from where he died
-     * while the camera follows. Then he waits, visible, until the player sets off (or two
-     * seconds pass); only then does the run, its clock and its scrolling resume. Score, speed
-     * stage and countdown, terrain, rings and cleared enemies all carry on. No level reload.
+     * CONTINUE, once the engine's rewind has wound the run back (or found no history): spends
+     * the life and holds Sonic, visible and protected, where the rewind stopped until the player
+     * sets off (or two seconds pass). Everything else is as it was at that moment: score, rings,
+     * terrain, enemies and the speed stage and countdown. If the rewind could not reach a fair
+     * restart, Sonic is placed on the nearest safe spot behind instead.
      */
-    private void resume(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
-        setLives(session().livesLeft() - 1);
+    private void land(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        var rewind = rewind();
+        boolean fair = rewind.atTarget() || resumableHere();
+        rewind.finish();
+        continueRequested = false;
+        setLives(rewind.livesAfter());
+        var camera = services().camera();
+        camera.setFrozen(false);
+        if (!fair) placeAtRestartSpot(sprite);
+        sprite.setGSpeed((short) 0);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        sprite.setObjectControlled(true);
+        sprite.setInvulnerableFrames(RESUME_INVULNERABLE_FRAMES);
+        // The clock waits through READY, then eases back up from 1x to the stage it was at.
+        session().died(0, clock().capture());
+        clock().end();
+        readyCameraX = camera.getX();
+        resumePhase = RESUME_READY;
+        resumeFrame = 0;
+        scrollFraction = 0;
+        gameOver = false;
+        gameOverFrames = 0;
+        menuChoice = 0;
+    }
+
+    /** The fallback when no fair moment was rewound to: revive Sonic on a safe spot with a clear runway. */
+    private void placeAtRestartSpot(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
         var camera = services().camera();
         long worldX = resumeSpot(camera);
         int localX = (int) (worldX - originPixels());
@@ -422,100 +455,50 @@ public final class CourseController extends AbstractObjectInstance implements Re
         com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(sprite, y);
         sprite.resetPositionAndStatTableHistoryAtCentre((short) localX, (short) y);
         sprite.setDirection(com.openggf.physics.Direction.RIGHT);
-        sprite.setGSpeed((short) 0);
-        sprite.setXSpeed((short) 0);
-        sprite.setYSpeed((short) 0);
-        sprite.setObjectControlled(true);
-        sprite.setHidden(true);
-        sprite.setInvulnerableFrames(RESUME_INVULNERABLE_FRAMES);
-        // Unlike a stock respawn, the run keeps its rings; only RESTART and EXIT clear them.
-        // Ring lives already earned for the count are not awarded again.
-        ringsSeen = services().levelGamestate().getRings();
-        // The death froze the camera; the glide moves it back to the follow point.
-        camera.setFrozen(false);
-        cameraFromX = camera.getX();
-        cameraToX = Math.max(0, localX - camera.getWidth() * FOLLOW_PERCENT / 100);
-        // A pit death ends below the screen: the ghost rises from its bottom edge.
-        ghostFromX = Math.max(camera.getX() + 16, Math.min(camera.getX() + camera.getWidth() - 16, deathX));
-        ghostFromY = Math.max(camera.getY() + 16, Math.min(camera.getY() + camera.getHeight() - 16, deathY));
-        ghostToX = localX;
-        ghostToY = y;
-        int distance = Math.abs(ghostToX - ghostFromX) + Math.abs(ghostToY - ghostFromY);
-        glideFrames = Math.max(GLIDE_MIN_FRAMES, Math.min(GLIDE_MAX_FRAMES, GLIDE_MIN_FRAMES / 2 + distance / 12));
-        resumePhase = RESUME_GLIDE;
-        resumeFrame = 0;
-        scrollFraction = 0;
-        gameOver = false;
-        gameOverFrames = 0;
-        menuChoice = 0;
-        // The death flow faded the music out.
+        camera.setX((short) Math.max(0, localX - camera.getWidth() * FOLLOW_PERCENT / 100));
+        // A rewind that stopped in the death had the music faded out.
         services().audioManager().playMusic(services().levelManager().getCurrentLevelMusicId());
     }
 
-    /** Advances the CONTINUE glide and ready hold; the clock, score and scrolling wait. */
+    /** Living play to rewind through, as opposed to the death and its menu. */
+    public boolean resumeAlive() {
+        var player = services().camera().getFocusedSprite();
+        return !gameOver && player != null && !player.getDead();
+    }
+
+    /**
+     * A fair moment to restart a CONTINUE from: Sonic alive, on the ground and unhurt, keeping up
+     * with the scroll, on safe floor with {@link #RESUME_RUNWAY} pixels of pit-free floor ahead.
+     */
+    public boolean resumableHere() {
+        var player = services().camera().getFocusedSprite();
+        if (!resumeAlive() || resumePhase != RESUME_NONE || player.getAir()) return false;
+        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite && sprite.isHurt()) return false;
+        var camera = services().camera();
+        // No further behind his usual place than a quarter of the screen.
+        if (player.getCentreX() - camera.getX() < camera.getWidth() * FOLLOW_PERCENT / 100 - camera.getWidth() / 4) {
+            return false;
+        }
+        long worldX = originPixels() + player.getCentreX();
+        return safeFloor(worldX) && runwayClear(worldX);
+    }
+
+    /** Holds Sonic at the rewound spot until the player goes; the clock, score and scrolling wait. */
     private void continueResume(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
         var camera = services().camera();
         sprite.setInvulnerableFrames(RESUME_INVULNERABLE_FRAMES);
         resumeFrame++;
-        if (resumePhase == RESUME_GLIDE) {
-            double t = glideProgress(resumeFrame);
-            camera.setX((short) Math.round(cameraFromX + (cameraToX - cameraFromX) * t));
-            // Camera Y follows the ghost through the camera's own vertical tracking.
-            camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, ghostY());
-            if (resumeFrame >= glideFrames) {
-                resumePhase = RESUME_READY;
-                resumeFrame = 0;
-                sprite.setHidden(false);
-            }
-            return;
-        }
-        camera.setX((short) cameraToX);
+        camera.setX((short) readyCameraX);
         camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, sprite.getCentreY());
         boolean go = resumeFrame > READY_INPUT_DELAY && (sprite.isRightPressed() || sprite.isJumpPressed());
         if (!go && resumeFrame < READY_FRAMES) return;
-        // Set off: the clock eases back up to the speed the run died at, from a running start.
+        // Set off: the clock eases back up to its speed stage, from a running start.
         session().resume(clock());
         resumePhase = RESUME_NONE;
         sprite.setObjectControlled(false);
         sprite.setGSpeed((short) COURSE_MAX_SPEED);
         sprite.setXSpeed((short) COURSE_MAX_SPEED);
         goFrames = GO_FRAMES;
-    }
-
-    /** Smoothstep through the glide: slow out of the death spot, slow into the restart spot. */
-    private double glideProgress(int frame) {
-        double t = Math.min(1.0, (double) frame / Math.max(1, glideFrames));
-        return t * t * (3 - 2 * t);
-    }
-    /** The ghost's local position this frame. */
-    public int ghostX() { return ghostX(resumeFrame); }
-    public int ghostY() { return ghostY(resumeFrame); }
-    private int ghostX(int frame) { return (int) Math.round(ghostFromX + (ghostToX - ghostFromX) * glideProgress(frame)); }
-    private int ghostY(int frame) { return (int) Math.round(ghostFromY + (ghostToY - ghostFromY) * glideProgress(frame)); }
-
-    /**
-     * Draws the gliding ghost with Sonic's own sprite art and last living pose, translucent,
-     * with two fainter echoes trailing back towards where he died.
-     */
-    private void drawGhost() {
-        if (resumePhase != RESUME_GLIDE) return;
-        if (!(services().camera().getFocusedSprite()
-                instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite)) return;
-        var renderer = sprite.getSpriteRenderer();
-        if (renderer == null) return;
-        var graphics = services().graphicsManager();
-        for (int echo = 2; echo >= 0; echo--) {
-            int frame = Math.max(0, resumeFrame - echo * 4);
-            graphics.flushPatternBatch();
-            graphics.beginGhostRenderEffect(0.55f - echo * 0.18f);
-            graphics.beginPatternBatch();
-            try {
-                renderer.drawFrame(ghostFrame, ghostX(frame), ghostY(frame), ghostFlip, false);
-            } finally {
-                graphics.flushPatternBatch();
-                graphics.endGhostRenderEffect();
-            }
-        }
     }
 
     /**

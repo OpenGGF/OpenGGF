@@ -114,7 +114,8 @@ public final class CourseHud {
             glyphs(services, go, (services.camera().getWidth() - go.length() * 16) / 2, 84, 4, 1f, 0.82f, 0.19f,
                     Math.min(1f, course.goFrames() / 10f));
         }
-        if (!course.gameOver()) return;
+        // CONTINUE's rewind passes back through the death; its menu stays down.
+        if (!course.gameOver() || course.rewinding()) return;
         String rank = rankText(course);
         if (!rank.isEmpty()) {
             int scale = course.rank() == 1 ? 3 : 2;

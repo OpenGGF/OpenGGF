@@ -127,6 +127,14 @@ public interface GameModule {
     default double gameplayAudioPlaybackRate() { return 1.0; }
 
     /**
+     * A rewind this game drives itself during live level play, or {@code null}. While
+     * one is returned the host records rewind history even with live rewind switched
+     * off, and runs the rewind whenever it asks. See
+     * {@link com.openggf.game.rewind.ScriptedRewind}.
+     */
+    default com.openggf.game.rewind.ScriptedRewind scriptedRewind() { return null; }
+
+    /**
      * Display aspect preset ({@code display.aspect} name such as {@code "WIDE_16_9"})
      * this module requires for its whole interactive session, or {@code null} to keep
      * the player's setting. The host applies it as a session override once the launch

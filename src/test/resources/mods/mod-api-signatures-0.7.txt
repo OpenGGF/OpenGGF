@@ -516,6 +516,7 @@ CF-ANNOTATION TYPE com.openggf.game.rewind.RewindSnapshottable visible @com.open
 CF-ANNOTATION TYPE com.openggf.game.rewind.RewindTransient visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.RewindTransient visible @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
 CF-ANNOTATION TYPE com.openggf.game.rewind.RewindTransient visible @java.lang.annotation.Target(value=[java.lang.annotation.ElementType.FIELD])
+CF-ANNOTATION TYPE com.openggf.game.rewind.ScriptedRewind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.identity.ObjectRefId visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.identity.ObjectRefKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.identity.PlayerRefId visible @com.openggf.game.ModApi
@@ -5163,6 +5164,7 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.dataselect.DataSelec
 METHOD com.openggf.game.GameModule public  com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter()
 METHOD com.openggf.game.GameModule public  com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(com.openggf.game.modzone.ModZoneRuntimeContribution,com.openggf.level.Level,com.openggf.game.ObjectArtProvider)
 METHOD com.openggf.game.GameModule public  com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile()
+METHOD com.openggf.game.GameModule public  com.openggf.game.rewind.ScriptedRewind scriptedRewind()
 METHOD com.openggf.game.GameModule public  com.openggf.game.rules.GameRules getRules()
 METHOD com.openggf.game.GameModule public  com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.timing.LoadTimeProfile createLoadTimeProfile(com.openggf.game.timing.LoadTimeSimulationMode,com.openggf.game.timing.LoadTimeProfile,java.util.function.Consumer<java.lang.String>)
@@ -6473,6 +6475,7 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.data
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(com.openggf.game.modzone.ModZoneRuntimeContribution,com.openggf.level.Level,com.openggf.game.ObjectArtProvider)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile()
+METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.rewind.ScriptedRewind scriptedRewind()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.rules.GameRules getRules()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.timing.LoadTimeProfile createLoadTimeProfile(com.openggf.game.timing.LoadTimeSimulationMode,com.openggf.game.timing.LoadTimeProfile,java.util.function.Consumer<java.lang.String>)
@@ -6846,6 +6849,10 @@ METHOD com.openggf.game.rewind.RewindSnapshottable public,abstract  S capture()
 METHOD com.openggf.game.rewind.RewindSnapshottable public,abstract  java.lang.String key()
 METHOD com.openggf.game.rewind.RewindSnapshottable public,abstract  void restore(S)
 METHOD com.openggf.game.rewind.RewindTransient public,abstract  java.lang.String reason()
+METHOD com.openggf.game.rewind.ScriptedRewind public,abstract  boolean reachedTarget()
+METHOD com.openggf.game.rewind.ScriptedRewind public,abstract  boolean requested()
+METHOD com.openggf.game.rewind.ScriptedRewind public,abstract  int stepsThisFrame()
+METHOD com.openggf.game.rewind.ScriptedRewind public,abstract  void ended(boolean)
 METHOD com.openggf.game.rewind.identity.ObjectRefId public  com.openggf.game.rewind.identity.ObjectRefKind kind()
 METHOD com.openggf.game.rewind.identity.ObjectRefId public  int dynamicId()
 METHOD com.openggf.game.rewind.identity.ObjectRefId public  int generation()
@@ -17533,6 +17540,7 @@ TYPE interface public,abstract com.openggf.game.rewind.InputSource SUPER <none>
 TYPE interface public,abstract com.openggf.game.rewind.KeyframeStore SUPER <none>
 TYPE interface public,abstract com.openggf.game.rewind.RewindBoundaryReporter SUPER <none>
 TYPE interface public,abstract com.openggf.game.rewind.RewindSnapshottable<S> SUPER <none>
+TYPE interface public,abstract com.openggf.game.rewind.ScriptedRewind SUPER <none>
 TYPE interface public,abstract com.openggf.game.save.SaveSnapshotProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.session.ModeContext SUPER <none>
 TYPE interface public,abstract com.openggf.game.solid.SolidExecutionRegistry SUPER <none>
@@ -18474,6 +18482,7 @@ TYPE-ANNOTATION com.openggf.game.rewind.RewindSnapshottable @com.openggf.game.Mo
 TYPE-ANNOTATION com.openggf.game.rewind.RewindTransient @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.RewindTransient @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
 TYPE-ANNOTATION com.openggf.game.rewind.RewindTransient @java.lang.annotation.Target(value=[java.lang.annotation.ElementType.FIELD])
+TYPE-ANNOTATION com.openggf.game.rewind.ScriptedRewind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.identity.ObjectRefId @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.identity.ObjectRefKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.identity.PlayerRefId @com.openggf.game.ModApi

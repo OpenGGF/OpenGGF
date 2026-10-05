@@ -245,6 +245,15 @@ remains one tick for deterministic tools and traces; pause, rewind, externally d
 movies, transitions and non-level scenes retain their existing pacing. The candidate
 version remains 0.7.0 and its normalized pin is regenerated in place.
 
+`GameModule.scriptedRewind()` (default `null`, delegated by `DelegatingGameModule`)
+returns a `com.openggf.game.rewind.ScriptedRewind`, which lets a module run the live
+rewind itself in level play: the host records history whenever one is returned, rewinds
+while `requested()` holds (`stepsThisFrame()` steps per presentation frame, stopping at the
+first step whose restored state passes `reachedTarget()` or at the history floor), then
+calls `ended(boolean)`. The player's live rewind setting still alone arms the rewind key,
+and stock modules return `null`, so their rewind is unchanged. Additive to the unpublished
+0.7 candidate; the descriptor and `ModApiVersion` remain 0.7.0 and the pin is updated in place.
+
 `GameModule.gameplayAudioPlaybackRate()` supplies the matching continuous audio
 rate for interactive custom pacing, delegated through `DelegatingGameModule`.
 The host bounds it to 1–32 and releases ownership outside paced play. This is an

@@ -449,6 +449,7 @@ class TestInfiniteSonic {
         int first = GameServices.gameState().getScore();
         assertEquals(first, entryScore(top(0).get(0)));
         fixture.stepFrame(false, false, false, false, true);
+        fixture.stepIdleFrames(1);
         assertFalse(gameOver(), "continued");
         finishContinue(fixture);
         dieAndWaitForMenu(fixture, 0);
@@ -793,7 +794,11 @@ class TestInfiniteSonic {
         assertTrue(GameServices.gameState().getScore() < 100, "score restarts with the run");
     }
 
-    @Test void deathMenuContinueRevivesInPlaceAtTheLastSafeSpot() throws Exception {
+    /**
+     * Without rewind history (the headless fixture steps the level without the game loop), CONTINUE
+     * falls back to reviving Sonic in place on the last safe spot, keeping the run as it was.
+     */
+    @Test void continueWithoutRewindHistoryRevivesAtTheLastSafeSpot() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         runCourse(fixture, 900);
         long safe = (long) controller().getClass().getMethod("safeWorldX").invoke(controller());
@@ -807,6 +812,10 @@ class TestInfiniteSonic {
         assertEquals(List.of("> CONTINUE", "  RESTART", "  EXIT"), menu.invoke(null, controller()));
         int deathTicks = ticks();
         fixture.stepFrame(false, false, false, false, true);
+        assertTrue(controllerFlag("rewinding"), "CONTINUE asks the engine to rewind");
+        // Nothing rewinds here, so the next update revives in place.
+        fixture.stepIdleFrames(1);
+        assertFalse(controllerFlag("rewinding"));
         // No reload: the same controller and terrain carry on.
         assertFalse(GameServices.level().isRespawnRequestedForRewind(), "CONTINUE does not reload the level");
         assertSame(controller, controller());
@@ -819,37 +828,22 @@ class TestInfiniteSonic {
         assertEquals(floorAt(revived) - 19, player.getCentreY());
         assertEquals(1, GameServices.gameState().getLives(), "CONTINUE spends one spare life");
         assertEquals(1, controllerInt("displayLives"));
-        assertEquals(30, GameServices.level().getLevelGamestate().getRings(), "CONTINUE keeps the rings");
+        assertEquals(30, GameServices.level().getLevelGamestate().getRings(), "the rings carry on");
         assertTrue(GameServices.gameState().getScore() >= score, "score carries over");
 
-        // A ghost of Sonic glides back from where he died while the real Sonic waits, hidden.
-        assertEquals(1, controllerInt("resumePhase"), "the glide");
-        assertTrue(player.isHidden() && player.isObjectControlled());
-        int restartX = player.getCentreX();
-        int previousGhost = controllerInt("ghostX"), previousCamera = fixture.camera().getX(), glide = 0;
-        int frozenScore = GameServices.gameState().getScore();
-        while (controllerInt("resumePhase") == 1 && glide++ < 120) {
-            fixture.stepFrame(false, false, false, true, true); // input does not move him yet
-            int ghost = controllerInt("ghostX");
-            assertTrue(Math.abs(ghost - restartX) <= Math.abs(previousGhost - restartX), "the ghost closes in");
-            assertTrue(Math.abs(fixture.camera().getX() - previousCamera) <= 12, "the camera glides, no cut");
-            previousGhost = ghost;
-            previousCamera = fixture.camera().getX();
-            assertEquals(restartX, player.getCentreX());
-        }
-        assertTrue(glide >= 45 && glide <= 91, "a 45-90 frame glide: " + glide);
-        assertEquals(restartX, controllerInt("ghostX"), "the ghost lands on the restart spot");
-
-        // READY: Sonic appears and waits; nothing runs until the player goes.
-        assertEquals(2, controllerInt("resumePhase"));
+        // READY: Sonic waits, held still; nothing runs until the player goes.
+        assertEquals(1, controllerInt("resumePhase"));
+        assertTrue(player.isObjectControlled());
         assertFalse(player.isHidden());
-        for (int i = 0; i < 10; i++) fixture.stepIdleFrames(1);
-        assertEquals(2, controllerInt("resumePhase"), "still waiting");
+        int restartX = player.getCentreX();
+        int frozenScore = GameServices.gameState().getScore();
+        for (int i = 0; i < 10; i++) fixture.stepFrame(false, false, false, true, true); // too early to go
+        assertEquals(1, controllerInt("resumePhase"), "still waiting");
         assertEquals(restartX, player.getCentreX());
-        assertEquals(deathTicks, ticks(), "the clock waits through the glide and READY");
+        assertEquals(deathTicks, ticks(), "the clock waits through READY");
         assertEquals(frozenScore, GameServices.gameState().getScore(), "so does the score");
         assertEquals(1.55, speed(), "the run keeps the speed stage it died at");
-        for (int i = 0; i < 20 && controllerInt("resumePhase") == 2; i++) fixture.stepFrame(false, false, false, true, false);
+        for (int i = 0; i < 20 && controllerInt("resumePhase") == 1; i++) fixture.stepFrame(false, false, false, true, false);
         assertEquals(0, controllerInt("resumePhase"), "right sets off");
         assertFalse(player.isObjectControlled());
         assertTrue(controllerInt("goFrames") > 0, "GO!");
@@ -871,10 +865,125 @@ class TestInfiniteSonic {
         dieAndWaitForMenu(fixture, 1);
         assertTrue(controllerFlag("canContinue"));
         fixture.stepFrame(false, false, false, false, true);
+        fixture.stepIdleFrames(1);
         assertFalse(fixture.sprite().getDead());
         assertEquals(0, GameServices.gameState().getLives());
         finishContinue(fixture);
         assertFalse(fixture.sprite().getDead());
+    }
+
+    /**
+     * Through the game loop, CONTINUE runs the engine's rewind (with live rewind switched off):
+     * the run winds back through the death to a fair moment at least a second earlier, where
+     * Sonic waits for the player with one life spent and the run as it was then.
+     */
+    @Test void continueRewindsTheRunToAFairRestart() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        boolean liveRewind = config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        var input = new com.openggf.control.InputHandler();
+        com.openggf.GameLoop loop = null;
+        try {
+            var fixture = launch(WidescreenAspect.NATIVE_4_3);
+            fixture.stepIdleFrames(2);
+            loop = new com.openggf.GameLoop(input);
+            loop.setGameplayMode(fixture.gameplayMode());
+            loop.setGameMode(GameMode.LEVEL);
+            var player = fixture.sprite();
+            // Protection for the drive only: the run ends at the left edge, which ignores it.
+            player.setInvulnerableFrames(20000);
+            setSpareLives(2);
+            GameServices.level().getLevelGamestate().setRings(30);
+            for (int i = 0; i < 480; i++) stepCourse(loop, input, fixture);
+            assertFalse(player.getDead(), "the drive survives");
+            var history = fixture.gameplayMode().getRewindController();
+            assertNotNull(history, "the course records rewind history although live rewind is off");
+            // Let go: Sonic slows and the scrolling edge catches him.
+            release(input);
+            for (int i = 0; i < 600 && !gameOver(); i++) loop.step();
+            assertTrue(gameOver(), "left behind by the scroll");
+            int deathScore = GameServices.gameState().getScore();
+            for (int i = 0; i < 240; i++) loop.step();
+            assertTrue(controllerFlag("canContinue"));
+            int menuFrame = history.currentFrame();
+
+            press(input, GLFW_KEY_SPACE, true);
+            loop.step();
+            press(input, GLFW_KEY_SPACE, false);
+            assertTrue(controllerFlag("rewinding"));
+            int frames = 0;
+            int previous = history.currentFrame();
+            while (controllerFlag("rewinding") && frames++ < 400) {
+                loop.step();
+                assertTrue(history.currentFrame() <= previous, "the tape only winds back");
+                previous = history.currentFrame();
+            }
+            assertFalse(controllerFlag("rewinding"), "the rewind stopped");
+            assertTrue(frames > 10, "and took a visible moment: " + frames);
+            loop.step(); // the course takes over from the restored state
+            int landed = history.currentFrame();
+            assertTrue(landed < menuFrame - 240 - 60, "at least a second of play before the death");
+
+            assertFalse(gameOver());
+            assertFalse(player.getDead());
+            assertFalse(player.getAir());
+            assertEquals(1, controllerInt("resumePhase"), "READY");
+            assertTrue(player.isObjectControlled());
+            assertEquals(1, GameServices.gameState().getLives(), "one spare life spent");
+            assertTrue(GameServices.gameState().getScore() < deathScore, "the score is as it was then");
+            assertEquals(30, GameServices.level().getLevelGamestate().getRings());
+            long revived = originPixels() + player.getCentreX();
+            assertRunway(revived);
+            assertTrue(player.getCentreX() - fixture.camera().getX() >= fixture.camera().getWidth() / 5,
+                    "keeping up with the scroll");
+
+            // Right sets off, and the run carries on.
+            press(input, GLFW_KEY_RIGHT, true);
+            for (int i = 0; i < 40 && controllerInt("resumePhase") != 0; i++) loop.step();
+            assertEquals(0, controllerInt("resumePhase"), "right sets off");
+            assertTrue(controllerInt("goFrames") > 0, "GO!");
+            assertEquals(1, GameServices.gameState().getLives());
+            for (int i = 0; i < 60; i++) stepCourse(loop, input, fixture);
+            assertFalse(player.getDead());
+            assertTrue(history.currentFrame() > landed, "history records again from the restart");
+        } finally {
+            release(input);
+            if (loop != null) loop.closePresence();
+            config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, liveRewind);
+        }
+    }
+
+    @Test void ringLivesWonBackAfterARewindDoNotPayAgain() throws Exception {
+        Class<?> type = loader.loadClass("infinite.CourseRewind");
+        Object rewind = type.getConstructor(java.util.function.Supplier.class).newInstance((java.util.function.Supplier<?>) () -> null);
+        var award = type.getMethod("awardRingLives", int.class);
+        assertEquals(1, award.invoke(rewind, 1), "100 rings");
+        assertEquals(1, award.invoke(rewind, 2), "200 rings");
+        // A rewind takes the count back to one hundred; reaching 200 again pays nothing.
+        assertEquals(0, award.invoke(rewind, 2));
+        assertEquals(1, award.invoke(rewind, 3), "a new hundred still pays");
+        type.getMethod("reset").invoke(rewind);
+        assertEquals(1, award.invoke(rewind, 1), "a new run starts over");
+    }
+
+    private static final int GLFW_KEY_SPACE = 32, GLFW_KEY_LEFT = 263, GLFW_KEY_RIGHT = 262;
+
+    private static void press(com.openggf.control.InputHandler input, int key, boolean down) {
+        input.handleKeyEvent(key, down ? org.lwjgl.glfw.GLFW.GLFW_PRESS : org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+    }
+
+    private static void release(com.openggf.control.InputHandler input) {
+        for (int key : new int[]{GLFW_KEY_SPACE, GLFW_KEY_LEFT, GLFW_KEY_RIGHT}) press(input, key, false);
+    }
+
+    /** One game-loop step driving the course forward with the keys stepCourse would press. */
+    private void stepCourse(com.openggf.GameLoop loop, com.openggf.control.InputHandler input,
+                            HeadlessTestFixture fixture) throws Exception {
+        boolean[] keys = courseInputs(fixture, 1);
+        press(input, GLFW_KEY_LEFT, keys[0]);
+        press(input, GLFW_KEY_RIGHT, keys[1]);
+        press(input, GLFW_KEY_SPACE, keys[2]);
+        loop.step();
     }
 
     /** A restart spot has pit-free floor for the 448px runway ahead. */
@@ -884,7 +993,7 @@ class TestInfiniteSonic {
         }
     }
 
-    /** Holds right through the CONTINUE glide and READY until the run sets off. */
+    /** Holds right through READY until the run sets off. */
     private void finishContinue(HeadlessTestFixture fixture) throws Exception {
         for (int i = 0; i < 400 && controllerInt("resumePhase") != 0; i++) {
             fixture.stepFrame(false, false, false, true, false);
@@ -913,6 +1022,7 @@ class TestInfiniteSonic {
         for (int i = 0; i < 300; i++) fixture.stepIdleFrames(1);
         assertTrue(controllerFlag("canContinue"));
         fixture.stepFrame(false, false, false, false, true);
+        fixture.stepIdleFrames(1);
         assertFalse(player.getDead());
         long revived = originPixels() + player.getCentreX();
         assertTrue(revived <= safe, "back at or behind the last safe spot");
@@ -1112,6 +1222,12 @@ class TestInfiniteSonic {
 
     /** A deterministic player policy; terrain observations choose inputs, never set physics state. */
     private void stepCourse(HeadlessTestFixture fixture, int direction) throws Exception {
+        boolean[] keys = courseInputs(fixture, direction);
+        fixture.stepFrame(false, false, keys[0], keys[1], keys[2]);
+    }
+
+    /** Left, right and jump for one frame of driving the course in {@code direction}. */
+    private boolean[] courseInputs(HeadlessTestFixture fixture, int direction) throws Exception {
         var player = fixture.sprite();
         long x = originPixels() + player.getCentreX();
         boolean approachingGap = false;
@@ -1135,7 +1251,7 @@ class TestInfiniteSonic {
             // one, and parity of the rewound frame counter keeps replays deterministic.
             jump = (approachingGap || approachingWall) && GameServices.level().getFrameCounter() % 2 == 0;
         }
-        fixture.stepFrame(false, false, left, right, jump);
+        return new boolean[]{left, right, jump};
     }
 
     /** Terrain floor, else the surface of a planned stepping stone, else -1. */

@@ -914,3 +914,52 @@ level and fades the title card in from black. No `TitleScreenProvider` or `GameM
 or replaces that fade, so carrying the background over would need a new engine hook in the
 fresh-title boundary that the trace fixtures guard. The user asked not to proceed if it meant
 messy engine code, so this was left alone.
+
+## CONTINUE by the engine's rewind (0.23.0)
+
+Follow-up on `4fd1997e3e`, 2026-10-05. Request: CONTINUE should use the engine's rewind
+rather than a ghost moving back to the restart spot.
+
+**Engine hook.** Live rewind was only driven by the held key, and only recorded when the
+player's `LIVE_REWIND_ENABLED` setting was on. `GameModule.scriptedRewind()` (default
+`null`) returns a `ScriptedRewind`; `LiveRewindManager` takes it through a supplier that
+`GameLoop` passes from `LevelRewindFrameRecorder.activeScriptedRewind` (level mode only, never
+bonus or special stages; `GameLoop` grows by that one argument line). While one is returned, history is
+recorded whatever the setting; the key still needs the setting. When `requested()` holds,
+`stepScripted` runs the same presentation as the key (reverse audio, reverse fade, VHS envelope),
+takes `stepsThisFrame()` backward steps, checks `reachedTarget()` after each (the scripted
+path shares the held key's presentation calls, adding no new global-service access to the
+rewind package), and on reaching it
+or the history floor calls `ended(atTarget)` and does the ordinary release. The debug
+`REWIND n` HUD label is suppressed for a scripted rewind. Stock modules return `null`, so their
+paths are unchanged.
+
+**Course side.** `CourseRewind` (module-owned, deliberately not a rewind adapter) is the
+director. CONTINUE calls `start(spareLives - 1)` and sets `continueRequested`; the rewind starts
+on the next presentation frame, so that update is never replayed and `continueRequested` is
+never true in a restored state. Steps: 12 per frame while the restored state is dead or in the
+menu (a long wait at the menu passes quickly), 3 per frame through play. Target: at least 60
+steps of living play, then the first state where `CourseController.resumableHere()` holds: alive,
+grounded, unhurt, not already in READY, centre at least 20% of the screen from the left edge
+(45% follow point less a quarter screen), and the old restart tests (`safeFloor`, 448 px
+`runwayClear`). After `ended`, the controller's next live update calls `land`: spare lives set
+from the director, speeds zeroed and object control on for READY, the clock captured into the
+session and ended (READY then GO! as before, easing up from 1x), and the camera X held. The
+landed check reads non-rewound state only once the rewind is over, so replayed updates during
+the rewind behave as recorded.
+
+**What rewinds.** Everything in the registry: score, rings, enemies, terrain window, shield,
+clock stage and countdown. Only the spent life and the leaderboard (which only raises a run's
+entry) survive. Ring lives: the controller counts 100-ring crossings in a rewound field and the
+director pays only crossings past the most it has paid this run, so hundreds won back after a
+rewind do not pay twice (updates replayed during the rewind find nothing new to pay, which only
+affects states the rewind passes through).
+
+**Fallback.** If the rewind cannot start (no history in the headless fixture, a blocked rewind)
+the next live update sees `continueRequested` and lands at once; if it ends at the floor without
+a fair moment, `land` places Sonic with the old restart-spot search (`resetState`, last safe
+spot, runway) and restarts the level music, as the ghost version did without the glide.
+
+**Removed.** The ghost glide (`drawGhost`, its pose capture and the 45-90 frame camera glide).
+`RESUME_READY` is now 1.
+
