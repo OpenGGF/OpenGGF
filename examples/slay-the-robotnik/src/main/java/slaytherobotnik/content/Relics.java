@@ -27,12 +27,17 @@ public final class Relics {
     public static final String TINKER_KIT = "relic:tinker_kit";
     public static final String MASTER_EMERALD_SHARD = "relic:master_emerald_shard";
     public static final String CIRCLET = "relic:circlet";
+    public static final String EMERALD_IDOL = "relic:emerald_idol";
+    public static final String MUSHROOM_CAP = "relic:mushroom_cap";
+    public static final String ANCIENT_TABLET = "relic:ancient_tablet";
+    public static final String COLLECTORS_BADGE = "relic:collectors_badge";
 
     private Relics() {
     }
 
     public static void register(Catalog c) {
         starters(c);
+        eventRelics(c);
         commons(c);
         uncommons(c);
         rares(c);
@@ -117,6 +122,99 @@ public final class Relics {
             @Override
             public String description() {
                 return "Just a ring. A very, very shiny ring.";
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------ event
+
+    /** Relics only events give (Slay the Spire's Event tier). */
+    private static void eventRelics(Catalog c) {
+        // Golden Idol.
+        c.addRelic(() -> new Relic(EMERALD_IDOL, "Emerald Idol", RelicTier.EVENT) {
+            @Override
+            public int modifyCombatRings(RunState run, int rings) {
+                return rings + rings / 4;
+            }
+
+            @Override
+            public String description() {
+                return "Enemies drop 25% more rings.";
+            }
+
+            @Override
+            public String flavor() {
+                return "Taken from the altar in the ruins. The ruins did not take it well.";
+            }
+        });
+        // Odd Mushroom, as a small defensive boon.
+        c.addRelic(() -> new Relic(MUSHROOM_CAP, "Mushroom Cap", RelicTier.EVENT) {
+            @Override
+            public void atBattleStart(Combat combat) {
+                flash(combat);
+                combat.applyPower(combat.player(), combat.player(), Powers.artifact(1));
+            }
+
+            @Override
+            public String description() {
+                return "At the start of each combat, gain 1 *Artifact*.";
+            }
+
+            @Override
+            public String flavor() {
+                return "Bouncy. Smells faintly of Mushroom Hill.";
+            }
+        });
+        // Enchiridion.
+        c.addRelic(() -> new Relic(ANCIENT_TABLET, "Ancient Tablet", RelicTier.EVENT) {
+            @Override
+            public void atTurnStartPostDraw(Combat combat) {
+                if (combat.turn() != 1) {
+                    return;
+                }
+                List<slaytherobotnik.core.CardDef> powers = new ArrayList<>();
+                String color = combat.run().character().color();
+                for (String rarity : new String[] {slaytherobotnik.core.CardRarity.COMMON,
+                        slaytherobotnik.core.CardRarity.UNCOMMON, slaytherobotnik.core.CardRarity.RARE}) {
+                    for (var def : combat.catalog().cards(color, rarity)) {
+                        if (def.type().equals(CardType.POWER)) {
+                            powers.add(def);
+                        }
+                    }
+                }
+                if (!powers.isEmpty()) {
+                    flash(combat);
+                    Card card = new Card(powers.get(combat.cardRng().nextInt(powers.size())));
+                    card.setCostForTurn(0);
+                    combat.addCreatedCard(card, "hand");
+                }
+            }
+
+            @Override
+            public String description() {
+                return "At the start of each combat, add a random Power card to your hand. It costs 0 this turn.";
+            }
+
+            @Override
+            public String flavor() {
+                return "Echidna carvings of a power older than the island.";
+            }
+        });
+        // Question Card, as N'loth's thanks.
+        c.addRelic(() -> new Relic(COLLECTORS_BADGE, "Collector's Badge", RelicTier.EVENT) {
+            @Override
+            public int modifyCardRewardSize(RunState run, int count) {
+                return count + 1;
+            }
+
+            @Override
+            public String description() {
+                return "Card rewards offer 1 additional card.";
+            }
+
+            @Override
+            public String flavor() {
+                return "Proof that you traded with the strangest robot on the island.";
             }
         });
     }

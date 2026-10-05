@@ -21,6 +21,17 @@ final class RomSprites {
     private static final int PAL_AIZ_END_BOSS = 0x069E80;     // Pal_AIZEndBoss (line 1)
     private static final int PAL_AIZ_INTRO_EMERALDS = 0x067AAA; // Pal_AIZIntroEmeralds (line 3)
     private static final int PAL_CONTINUE = 0x05CBCA;         // Pal_ContinueScreen (all 4 lines; Egg Robo on line 1)
+    private static final int PAL_HCZ = 0x0A8D9C;              // Pal_HCZ1 (lines 1-3, Hydrocity act 1)
+    private static final int PAL_HCZ_MINIBOSS = 0x06AE56;     // Pal_HCZMiniboss (line 1)
+    private static final int PAL_HCZ_END_BOSS = 0x06BF0A;     // Pal_HCZEndBoss (line 1)
+    private static final int PAL_LBZ = 0x0A929C;              // Pal_LBZ1 (lines 1-3, Launch Base act 1)
+    private static final int PAL_LBZ_FINAL_BOSS1 = 0x073886;  // Pal_LBZFinalBoss1 (line 1)
+    private static final int PAL_LBZ_FINAL_BOSS2 = 0x0751AA;  // Pal_LBZFinalBoss2 (line 1)
+    private static final int PAL_SSZ = 0x0A973C;              // Pal_SSZ1 (lines 1-3, Sky Sanctuary)
+    private static final int PAL_MECHA = 0x07D850;            // Pal_SSZGHZMisc (Mecha Sonic, line 1)
+    private static final int PAL_MECHA_SUPER1 = 0x07DADC;     // Super Mecha Sonic cycle (word_7DA60 .headr2)
+    private static final int PAL_MECHA_SUPER2 = 0x07DAFE;
+    private static final int PAL_MECHA_SUPER3 = 0x07DB20;
 
     private RomSprites() {
     }
@@ -58,6 +69,84 @@ final class RomSprites {
             case "boss_explosion" -> rom.sprites(RomSpriteRequest.of(
                     0x0D73CE, Compression.NEMESIS,       // ArtNem_BossExplosion
                     0x083FFC, 0), aiz(rom));             // Map_BossExplosion
+
+            // ---- Hydrocity badniks ----
+            case "jawz" -> rom.sprites(RomSpriteRequest.of(
+                    0x36A552, Compression.KOSINSKI_MODULED, // ArtKosM_Jawz
+                    0x361364, 1), zone(rom, PAL_HCZ));   // Map_Jawz
+            case "blastoid" -> rom.sprites(RomSpriteRequest.of(
+                    0x36A7C6, Compression.KOSINSKI_MODULED, // ArtKosM_Blastoid
+                    0x360DD0, 1), zone(rom, PAL_HCZ));   // Map_Blastoid
+            case "buggernaut" -> rom.sprites(RomSpriteRequest.of(
+                    0x36A3E0, Compression.NEMESIS,       // ArtNem_HCZDragonfly
+                    0x360EB4, 1), zone(rom, PAL_HCZ));   // Map_Buggernaut
+            case "turbo_spiker" -> rom.sprites(RomSpriteRequest.of(
+                    0x36A968, Compression.KOSINSKI_MODULED, // ArtKosM_TurboSpiker
+                    0x361212, 1), zone(rom, PAL_HCZ));   // Map_TurboSpiker
+            case "mega_chopper" -> rom.sprites(RomSpriteRequest.of(
+                    0x36A6C4, Compression.KOSINSKI_MODULED, // ArtKosM_MegaChopper
+                    0x360F26, 1), zone(rom, PAL_HCZ));   // Map_MegaChopper
+            case "pointdexter" -> rom.sprites(RomSpriteRequest.of(
+                    0x36AD8A, Compression.KOSINSKI_MODULED, // ArtKosM_Pointdexter
+                    0x360E72, 1), zone(rom, PAL_HCZ));   // Map_Poindexter
+
+            // ---- Hydrocity bosses ----
+            case "hcz_miniboss" -> rom.sprites(RomSpriteRequest.of(
+                    0x368400, Compression.NEMESIS,       // ArtNem_HCZMiniboss
+                    0x3629E0, 1), zoneBoss(rom, PAL_HCZ, PAL_HCZ_MINIBOSS)); // Map_HCZMiniboss
+            case "hcz_miniboss_l0" -> rom.sprites(RomSpriteRequest.of(
+                    0x368400, Compression.NEMESIS,       // the thruster and rocket flames use line 0
+                    0x3629E0, 0), zoneBoss(rom, PAL_HCZ, PAL_HCZ_MINIBOSS));
+            case "hcz_end_boss" -> rom.sprites(RomSpriteRequest.of(
+                    0x36929E, Compression.NEMESIS,       // ArtNem_HCZEndBoss
+                    0x3634D4, 1), zoneBoss(rom, PAL_HCZ, PAL_HCZ_END_BOSS)); // Map_HCZEndBoss
+
+            // ---- Launch Base badniks ----
+            case "snale_blaster" -> rom.sprites(RomSpriteRequest.of(
+                    0x377996, Compression.KOSINSKI_MODULED, // ArtKosM_SnaleBlaster
+                    0x360400, 1), zone(rom, PAL_LBZ));   // Map_SnaleBlaster
+            case "orbinaut" -> rom.sprites(RomSpriteRequest.of(
+                    0x377D1A, Compression.KOSINSKI_MODULED, // ArtKosM_Orbinaut
+                    0x3604A4, 1), zone(rom, PAL_LBZ));   // Map_Orbinaut
+            case "ribot" -> rom.sprites(RomSpriteRequest.of(
+                    0x377BE8, Compression.KOSINSKI_MODULED, // ArtKosM_Ribot
+                    0x3604B8, 1), zone(rom, PAL_LBZ));   // Map_Ribot
+            case "corkey" -> rom.sprites(RomSpriteRequest.of(
+                    0x377DFC, Compression.KOSINSKI_MODULED, // ArtKosM_Corkey
+                    0x3605C2, 1), zone(rom, PAL_LBZ));   // Map_Corkey
+            case "flybot" -> rom.sprites(RomSpriteRequest.streamed(
+                    0x377EBE, 0x1320,                   // ArtUnc_Flybot767
+                    0x36065A, 0x3607EC,                 // Map_Flybot767, DPLC_Flybot767
+                    DplcLayout.OBJECT, 1), zone(rom, PAL_LBZ));
+
+            // ---- Launch Base bosses ----
+            case "lbz_final_boss1" -> rom.sprites(RomSpriteRequest.of(
+                    0x37599C, Compression.NEMESIS,       // ArtNem_LBZFinalBoss1
+                    0x3645A8, 1), zoneBoss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS1)); // Map_LBZFinalBoss1
+            case "lbz_final_boss1_l0" -> rom.sprites(RomSpriteRequest.of(
+                    0x37599C, Compression.NEMESIS,       // the thruster flames use line 0
+                    0x3645A8, 0), zoneBoss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS1));
+            case "lbz_final_boss2" -> rom.sprites(RomSpriteRequest.of(
+                    0x376874, Compression.KOSINSKI_MODULED, // ArtKosM_LBZFinalBoss2
+                    0x364A96, 1), zoneBoss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS2)); // Map_LBZFinalBoss2
+            case "lbz_final_boss2_l0" -> rom.sprites(RomSpriteRequest.of(
+                    0x376874, Compression.KOSINSKI_MODULED, // the rear hazard sprite uses line 0
+                    0x364A96, 0), zoneBoss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS2));
+            case "robotnik_ship_lbz" -> rom.sprites(RomSpriteRequest.of(
+                    0x0D771E, Compression.NEMESIS,       // ArtNem_RobotnikShip, over the Launch Base palette
+                    0x06820C, 0), zone(rom, PAL_LBZ));
+            case "robotnik_ship_hcz" -> rom.sprites(RomSpriteRequest.of(
+                    0x0D771E, Compression.NEMESIS,       // ArtNem_RobotnikShip, over the Hydrocity palette
+                    0x06820C, 0), zone(rom, PAL_HCZ));
+
+            // ---- Sky Sanctuary ----
+            case "mecha_sonic" -> mecha(rom, PAL_MECHA);
+            case "mecha_super1" -> mecha(rom, PAL_MECHA_SUPER1);
+            case "mecha_super2" -> mecha(rom, PAL_MECHA_SUPER2);
+            case "mecha_super3" -> mecha(rom, PAL_MECHA_SUPER3);
+            case "egg_robo_ssz" -> rom.sprites(RomSpriteRequest.of(
+                    0x17B17E, Compression.KOSINSKI_MODULED, // ArtKosM_EggRoboBadnik; pieces carry line 1
+                    0x184F34, 0), zone(rom, PAL_SSZ));   // Map_EggRobo
 
             // ---- Characters and props ----
             case "egg_robo" -> rom.sprites(RomSpriteRequest.of(
@@ -117,6 +206,29 @@ final class RomSprites {
         int[] palette = new int[64];
         System.arraycopy(rom.palette(PAL_SONIC_TAILS, 16), 0, palette, 0, 16);
         System.arraycopy(rom.palette(PAL_AIZ, 48), 0, palette, 16, 48);
+        return palette;
+    }
+
+    /** Mecha Sonic: one DPLC sprite (its head is part of the body frames) over a line-1 palette. */
+    private static SceneSpriteSet mecha(SceneRomArt rom, int line1) {
+        return rom.sprites(RomSpriteRequest.streamed(
+                0x175A9E, 0x56E0,                       // ArtUnc_MechaSonic
+                0x1853AA, 0x185852,                     // Map_MechaSonic, DPLC_MechaSonic
+                DplcLayout.OBJECT, 1), zoneBoss(rom, PAL_SSZ, line1));
+    }
+
+    /** Player line 0 plus a zone's 48-colour palette on lines 1-3. */
+    private static int[] zone(SceneRomArt rom, int zonePalette) {
+        int[] palette = new int[64];
+        System.arraycopy(rom.palette(PAL_SONIC_TAILS, 16), 0, palette, 0, 16);
+        System.arraycopy(rom.palette(zonePalette, 48), 0, palette, 16, 48);
+        return palette;
+    }
+
+    /** A zone palette with a boss's own 16 colours loaded over line 1, as the boss's PLC does. */
+    private static int[] zoneBoss(SceneRomArt rom, int zonePalette, int bossLine) {
+        int[] palette = zone(rom, zonePalette);
+        System.arraycopy(rom.palette(bossLine, 16), 0, palette, 16, 16);
         return palette;
     }
 

@@ -42,7 +42,15 @@ final class RunBot {
 
     /** Plays until the run ends or {@code maxSteps} actions; returns true if the run ended. */
     boolean play(int maxSteps) {
+        return playUntil(maxSteps, r -> false);
+    }
+
+    /** Plays until the run ends, {@code stop} holds, or {@code maxSteps} actions; true unless it ran out of steps. */
+    boolean playUntil(int maxSteps, java.util.function.Predicate<Run> stop) {
         while (!run.over() && steps < maxSteps) {
+            if (stop.test(run)) {
+                return true;
+            }
             steps++;
             if (run.deckChoice() != null) {
                 answer(run.deckChoice());

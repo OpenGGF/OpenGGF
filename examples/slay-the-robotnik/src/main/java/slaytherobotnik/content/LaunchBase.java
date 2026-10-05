@@ -526,6 +526,8 @@ public final class LaunchBase {
                 for (Power p : powers()) {
                     c.removePower(this, p.id());
                 }
+                // Its lower column segment blows off, as when the ROM boss loses a segment.
+                setArt("lbz:beam_rocket_core");
                 c.events().add(new CombatEvent.Cue(this, "second_stage"));
             }
         }

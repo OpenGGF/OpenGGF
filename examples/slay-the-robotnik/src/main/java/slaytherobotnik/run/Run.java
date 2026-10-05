@@ -302,7 +302,24 @@ public final class Run {
             startCombat(nextFrom(state.monsterQueue(), EncounterDef.STRONG), RoomType.MONSTER, null);
             return;
         }
-        EventDef def = rng.pick(pool);
+        openEvent(rng.pick(pool));
+    }
+
+    /** Starts a specific fight straight away, in its own act (debugging, tests and screenshots). */
+    public void enterFight(String encounterId) {
+        EncounterDef encounter = state.catalog().encounter(encounterId);
+        state.setPosition(encounter.act(), state.floor(), state.actFloor(), state.nodeX());
+        String type = encounter.pool().equals(EncounterDef.BOSS) ? RoomType.BOSS
+                : encounter.pool().equals(EncounterDef.ELITE) ? RoomType.ELITE : RoomType.MONSTER;
+        startCombat(encounterId, type, null);
+    }
+
+    /** Opens a specific event straight away, ignoring its acts and condition (debugging and tests). */
+    public void enterEvent(String eventId) {
+        openEvent(state.catalog().event(eventId));
+    }
+
+    private void openEvent(EventDef def) {
         state.seenEvents().add(def.id());
         state.stats().eventsSeen++;
         EventRoom event = new EventRoom(this, def);

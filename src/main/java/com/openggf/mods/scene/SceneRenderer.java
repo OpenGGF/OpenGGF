@@ -116,6 +116,13 @@ final class SceneRenderer {
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
+        // Upload images seen for the first time before drawing: an upload rebinds GL_TEXTURE_2D,
+        // which would otherwise change the texture of the batch still waiting to be flushed.
+        for (SceneDrawOp op : ops) {
+            if (op.image() != null) {
+                texture(op.image());
+            }
+        }
         int batchTexture = -1;
         int[] batchClip = null;
         int quads = 0;

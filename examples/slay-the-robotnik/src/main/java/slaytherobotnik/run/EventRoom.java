@@ -8,6 +8,7 @@ import slaytherobotnik.core.CardDef;
 import slaytherobotnik.core.EventContext;
 import slaytherobotnik.core.EventDef;
 import slaytherobotnik.core.EventOption;
+import slaytherobotnik.core.PotionDef;
 import slaytherobotnik.core.Reward;
 import slaytherobotnik.core.Rng;
 import slaytherobotnik.core.RunRngs;
@@ -148,5 +149,81 @@ public final class EventRoom implements Room, EventContext {
     @Override
     public void notify(String text) {
         banner = text;
+    }
+
+    @Override
+    public void removeCards(int count, Runnable then) {
+        RunState state = run.state();
+        deckChoice("Choose " + plural(count) + " to remove.", state.removableCards(), count, DeckChoice.REMOVE,
+                chosen -> chosen.forEach(state::removeCard), then);
+    }
+
+    @Override
+    public void upgradeCards(int count, Runnable then) {
+        RunState state = run.state();
+        deckChoice("Choose " + plural(count) + " to upgrade.", state.upgradableCards(), count, DeckChoice.UPGRADE,
+                chosen -> chosen.forEach(state::upgradeCard), then);
+    }
+
+    @Override
+    public void transformCards(int count, Runnable then) {
+        RunState state = run.state();
+        deckChoice("Choose " + plural(count) + " to transform.", state.removableCards(), count, DeckChoice.TRANSFORM,
+                chosen -> {
+                    RewardGenerator gen = new RewardGenerator(state);
+                    for (Card card : chosen) {
+                        state.removeCard(card);
+                        state.addCard(new Card(gen.transformTarget(card, state.rngs().stream(RunRngs.CARDS))));
+                    }
+                }, then);
+    }
+
+    @Override
+    public void duplicateCard(Runnable then) {
+        RunState state = run.state();
+        deckChoice("Choose a card to copy.", state.deck(), 1, DeckChoice.PICK,
+                chosen -> chosen.forEach(card -> state.addCard(card.duplicate())), then);
+    }
+
+    @Override
+    public String obtainRandomPotion() {
+        RunState state = run.state();
+        PotionDef potion = new RewardGenerator(state).randomPotion();
+        if (potion == null || !state.addPotion(potion)) {
+            return null;
+        }
+        notify("Obtained " + potion.name() + "!");
+        return potion.name();
+    }
+
+    @Override
+    public String obtainRelicOfTier(String tier) {
+        RunState state = run.state();
+        String id = state.takeRelicFromPool(tier);
+        if (id == null) {
+            return null;
+        }
+        state.obtainRelic(id);
+        String name = state.relic(id).name();
+        notify("Obtained " + name + "!");
+        return name;
+    }
+
+    /** Opens a deck grid for {@code count} cards (fewer if the deck is short); skips it when there is nothing to pick. */
+    private void deckChoice(String prompt, List<Card> options, int count, String mode, Consumer<List<Card>> apply,
+            Runnable then) {
+        int n = Math.min(count, options.size());
+        if (n == 0) {
+            then.run();
+            return;
+        }
+        run.openDeckChoice(new DeckChoice(prompt, options, n, n, mode, chosen -> {
+            apply.accept(chosen);
+            then.run();
+        }));
+    }
+
+    private static String plural(int count) {
+        return count == 1 ? "a card" : count + " cards";
     }
 }

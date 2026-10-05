@@ -27,6 +27,8 @@ public final class CommonCards {
     public static final String SELF_DOUBT = "curse:self_doubt";
     public static final String RUST = "curse:rust";
     public static final String TANGLED = "curse:tangled";
+    /** Event-only card from the Robotnik's Offer event (Slay the Spire's Bite). */
+    public static final String ROBO_ARM = "colorless:robo_arm";
 
     private CommonCards() {
     }
@@ -127,6 +129,15 @@ public final class CommonCards {
     }
 
     private static void colorless(Catalog c) {
+        // Bite: only Robotnik's Offer gives it.
+        c.add(colorless(ROBO_ARM, "Robo Arm", CardType.ATTACK, CardRarity.SPECIAL)
+                .cost(1).target(CardTarget.ENEMY).damage(7, 1).magic(2, 1)
+                .text("Deal {D} damage. Heal {M} HP.")
+                .effect(p -> {
+                    p.attack();
+                    p.combat().healPlayer(p.magic());
+                })
+                .build());
         // Finesse-like quick draw.
         c.add(colorless("colorless:speed_shoes", "Speed Shoes", CardType.SKILL, CardRarity.UNCOMMON)
                 .cost(0).target(CardTarget.SELF).magic(2, 1)

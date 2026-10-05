@@ -20,7 +20,9 @@ import org.lwjgl.glfw.GLFW;
  *   com.openggf.mods.code.SlayTheRobotnikCapture s3k.gen out/ "60:enter 90:right 120:enter" 30
  * </pre>
  * Arguments: ROM path, output directory, key script ("tick:key ..." with keys enter, space,
- * up, down, left, right, back, e, d, m), and the capture interval in ticks.
+ * up, down, left, right, back, e, d, m, or {@code jump=<room>} to jump into a room such as
+ * "sonic:42:fight:hcz:big_shaker", see SlayScene.debugJump), the capture interval in ticks,
+ * the total ticks, and optionally a room to jump to before the first tick.
  * Origin: Slay the Robotnik example mod, 2026-10-05.
  */
 public final class SlayTheRobotnikCapture {
@@ -37,11 +39,16 @@ public final class SlayTheRobotnikCapture {
         int scale = 2;
         System.setProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY, out.resolve("saves").toString());
         List<int[]> keys = new ArrayList<>();
+        java.util.Map<Integer, String> jumps = new java.util.HashMap<>();
         int lastTick = 0;
         for (String step : script.trim().isEmpty() ? new String[0] : script.trim().split("\\s+")) {
-            String[] parts = step.split(":");
+            String[] parts = step.split(":", 2);
             int tick = Integer.parseInt(parts[0]);
-            keys.add(new int[] {tick, key(parts[1])});
+            if (parts[1].startsWith("jump=")) {
+                jumps.put(tick, parts[1].substring(5));
+            } else {
+                keys.add(new int[] {tick, key(parts[1])});
+            }
             lastTick = Math.max(lastTick, tick);
         }
         int total = args.length > 4 ? Integer.parseInt(args[4]) : lastTick + 120;
@@ -51,10 +58,20 @@ public final class SlayTheRobotnikCapture {
                 var effective = harness.apply(GameServices.module());
                 GameModuleRegistry.setCurrent(effective);
                 harness.open(effective, out.resolve("saves"), width, height);
+                if (args.length > 5) {
+                    // Jump straight into a room ("sonic:42:fight:hcz:big_shaker"); see SlayScene.debugJump.
+                    harness.tick();
+                    Object scene = harness.scene();
+                    scene.getClass().getMethod("debugJump", String.class).invoke(scene, args[5]);
+                }
                 float[] projection = ortho(width, height);
                 int[] viewport = {0, 0, width * scale, height * scale};
                 org.lwjgl.opengl.GL11.glViewport(0, 0, width * scale, height * scale);
                 for (int tick = 0; tick <= total; tick++) {
+                    if (jumps.containsKey(tick)) {
+                        Object scene = harness.scene();
+                        scene.getClass().getMethod("debugJump", String.class).invoke(scene, jumps.get(tick));
+                    }
                     for (int[] k : keys) {
                         if (k[0] == tick) {
                             harness.input().handleKeyEvent(k[1], GLFW.GLFW_PRESS);
@@ -70,6 +87,13 @@ public final class SlayTheRobotnikCapture {
                         org.lwjgl.opengl.GL11.glFinish();
                         var image = ScreenshotCapture.captureFramebuffer(width * scale, height * scale);
                         ScreenshotCapture.savePNG(image, out.resolve(String.format(Locale.ROOT, "frame-%05d.png", tick)));
+                        if (tick == total && System.getenv("SLAY_DUMP_OPS") != null) {
+                            var m = com.openggf.mods.scene.ModSceneHost.class.getDeclaredMethod("lastFrame");
+                            m.setAccessible(true);
+                            for (Object op : (List<?>) m.invoke(harness.host())) {
+                                System.out.println("OP " + op);
+                            }
+                        }
                     }
                 }
             }

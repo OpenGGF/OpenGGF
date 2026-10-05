@@ -1,6 +1,7 @@
 package slaytherobotnik.scene;
 
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneSprite;
 import slaytherobotnik.core.PotionDef;
 import slaytherobotnik.core.Relic;
@@ -35,14 +36,8 @@ final class HudIcons {
             c.draw(shell.art.icon("ui_potion_slot"), x + 1, y + 1);
             return;
         }
-        SceneSprite box = shell.art.romFrame("monitor", 0);
-        int iconFrame = monitorIcon(potion.id());
-        SceneSprite icon = iconFrame < 0 ? null : shell.art.romFrame("monitor", iconFrame);
-        if (box != null) {
-            c.draw(box, x + 6, y + 12, com.openggf.mods.scene.SceneDraw.plain().withScale(0.75f));
-            if (icon != null) {
-                c.draw(icon, x + 6, y + 12, com.openggf.mods.scene.SceneDraw.plain().withScale(0.75f));
-            }
+        if (shell.art.romFrame("monitor", 0) != null) {
+            monitor(shell, c, monitorFace(potion.id()), x + 6, y + 12, 0.75f, shell.ticks);
             return;
         }
         int color = switch (potion.rarity()) {
@@ -56,19 +51,68 @@ final class HudIcons {
         c.fill(x + 3, y + 3, 2, 2, Colors.WHITE);
     }
 
-    /** The monitor frame that shows a potion's icon in the ROM's monitor mappings, or -1. */
-    static int monitorIcon(String potionId) {
+    /**
+     * Draws an item monitor showing {@code face}: a {@code Map_Monitor} frame number as a
+     * string ("3" Robotnik, "4" rings, "5" shoes, "6" fire, "7" lightning, "8" bubble, "9"
+     * invincibility, "10" super), "static", or a short text such as "1UP" painted onto a
+     * static screen (the ROM loads the 1-Up face from the life icon art, which this table
+     * does not). {@code x, y} is the sprite origin, as for the ROM object.
+     */
+    static void monitor(Shell shell, SceneCanvas c, String face, float x, float y, float scale, long ticks) {
+        SceneDraw style = SceneDraw.plain().withScale(scale);
+        int frame = switch (face) {
+            case "3", "4", "5", "6", "7", "8", "9", "10" -> Integer.parseInt(face);
+            default -> (int) ((ticks / 2) % 3); // frames 0-2: static
+        };
+        SceneSprite sprite = shell.art.romFrame("monitor", frame);
+        if (sprite == null) {
+            return;
+        }
+        c.draw(sprite, x, y, style);
+        if (frame <= 2 && !face.equals("static")) {
+            // Paint the face on the screen: the screen is the box's top 16x14 area.
+            float left = x - sprite.originX() * scale;
+            float top = y - sprite.originY() * scale;
+            int sw = Math.round(14 * scale);
+            int sh = Math.round(12 * scale);
+            int sx = Math.round(left + sprite.width() * scale / 2f - sw / 2f);
+            int sy = Math.round(top + 4 * scale);
+            c.fill(sx, sy, sw, sh, 0xFF102048);
+            int tw = shell.font.width(face);
+            shell.font.draw(c, face, sx + (sw - tw) / 2 + 1, sy + (sh - 5) / 2, faceColor(face));
+        }
+    }
+
+    private static int faceColor(String face) {
+        return switch (face) {
+            case "1UP" -> 0xFF6CB6FF;
+            case "P" -> 0xFFFF6C48;
+            case "F" -> 0xFF6CDAFF;
+            case "G" -> 0xFF48DA48;
+            case "+" -> 0xFFFF4890;
+            case "E" -> 0xFFFFDA24;
+            default -> Colors.WHITE;
+        };
+    }
+
+    /** What a potion's monitor shows (see {@link #monitor}). */
+    static String monitorFace(String potionId) {
         return switch (potionId) {
-            case "potion:speed_shoes" -> 5;
-            case "potion:fire_shield" -> 6;
-            case "potion:lightning_shield" -> 7;
-            case "potion:blue_shield" -> 8;
-            case "potion:invincibility" -> 9;
-            case "potion:super_monitor" -> 10;
-            case "potion:robotnik_monitor" -> 1;
-            case "potion:extra_life" -> 2;
-            case "potion:ring_burst" -> 4;
-            default -> -1;
+            case "potion:robotnik_monitor" -> "3";
+            case "potion:ring_burst", "potion:super_ring" -> "4";
+            case "potion:speed_shoes" -> "5";
+            case "potion:fire_shield" -> "6";
+            case "potion:lightning_shield" -> "7";
+            case "potion:blue_shield" -> "8";
+            case "potion:invincibility" -> "9";
+            case "potion:super_monitor" -> "10";
+            case "potion:extra_life" -> "1UP";
+            case "potion:power_monitor" -> "P";
+            case "potion:focus_monitor" -> "F";
+            case "potion:glove_monitor" -> "G";
+            case "potion:health_monitor" -> "+";
+            case "potion:energy_capsule" -> "E";
+            default -> "static";
         };
     }
 

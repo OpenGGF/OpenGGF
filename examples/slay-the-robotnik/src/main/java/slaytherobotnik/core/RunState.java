@@ -233,6 +233,11 @@ public final class RunState {
         obtainRelic(catalog.newRelic(id));
     }
 
+    /** Gives up a relic (events that trade relics away). */
+    public void loseRelic(String id) {
+        relics.removeIf(r -> r.id().equals(id));
+    }
+
     /**
      * Takes the next relic of {@code tier} from its shuffled pool (Slay the Spire style),
      * falling back through rarer tiers when a pool runs dry. Returns null when nothing is left.

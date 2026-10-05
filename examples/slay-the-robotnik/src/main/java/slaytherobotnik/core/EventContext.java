@@ -55,4 +55,22 @@ public interface EventContext {
 
     /** Shows a short banner ("Obtained Speed Shoes!") over the event. */
     void notify(String text);
+
+    /** Lets the player remove {@code count} cards from the deck, then runs {@code then}. */
+    void removeCards(int count, Runnable then);
+
+    /** Lets the player upgrade {@code count} cards, then runs {@code then}. */
+    void upgradeCards(int count, Runnable then);
+
+    /** Lets the player transform {@code count} cards into random cards of the same colour. */
+    void transformCards(int count, Runnable then);
+
+    /** Lets the player pick a card to copy into the deck. */
+    void duplicateCard(Runnable then);
+
+    /** Obtains a random potion when a slot is free; returns its name, or null. */
+    String obtainRandomPotion();
+
+    /** Obtains a random relic of {@code tier} ({@link RelicTier}); returns its name, or null. */
+    String obtainRelicOfTier(String tier);
 }

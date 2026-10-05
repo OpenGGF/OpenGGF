@@ -155,11 +155,25 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
         tick();
     }
 
-    /** The open scene object (from the mod's class loader). */
+    /** The open scene object (from the mod's class loader), unwrapped from the engine's fault-boundary wrapper. */
     public Object scene() throws ReflectiveOperationException {
         var field = ModSceneHost.class.getDeclaredField("scene");
         field.setAccessible(true);
-        return field.get(host);
+        Object scene = field.get(host);
+        while (scene != null && scene.getClass().getName().startsWith("com.openggf.")) {
+            Object inner = null;
+            for (var f : scene.getClass().getDeclaredFields()) {
+                if (com.openggf.mods.scene.ModScene.class.isAssignableFrom(f.getType())) {
+                    f.setAccessible(true);
+                    inner = f.get(scene);
+                }
+            }
+            if (inner == null) {
+                break;
+            }
+            scene = inner;
+        }
+        return scene;
     }
 
     public ClassLoader loader() {
