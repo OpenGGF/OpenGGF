@@ -741,7 +741,12 @@ final class CombatView implements RunScreen.RoomView {
             }
         } else if (options.size() > 4) {
             // Long piles (draw, discard, exhaust) scroll in a small-card grid.
-            choiceGrid(options).layout(spots, shell);
+            CardGrid g = choiceGrid(options);
+            g.layout(spots, shell);
+            if (g.scrollForMove(shell, spots)) {
+                spots.clear();
+                g.layout(spots, shell);
+            }
         } else {
             int n = options.size();
             int gap = 8;
@@ -761,10 +766,9 @@ final class CombatView implements RunScreen.RoomView {
                 spots.add("confirm", w - 74, HAND_Y - 18, 68, 14, ready);
             }
         }
-        String before = spots.focused();
         String picked = spots.update(shell.in);
         if (grid) {
-            choiceGrid(options).scroll(shell, spots, before);
+            choiceGrid(options).wheel(shell);
         }
         if (picked == null) {
             return;

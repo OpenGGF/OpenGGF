@@ -243,7 +243,8 @@ public final class Run {
         startCombat(state.boss(), RoomType.BOSS, null);
     }
 
-    void enterRoom(String type) {
+    /** Enters a room of {@code type} ({@link RoomType}), as stepping onto a map node does; public for debugging. */
+    public void enterRoom(String type) {
         for (Relic relic : List.copyOf(state.relics())) {
             relic.onEnterRoom(state, type);
         }

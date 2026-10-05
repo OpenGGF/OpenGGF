@@ -49,27 +49,39 @@ final class CardGrid {
     }
 
     /**
-     * Handles the mouse wheel, and scrolls a row when the d-pad pushes past the visible rows.
-     * Call after {@code spots.update}, passing the focus from before it: a press that already
-     * moved the focus to a visible card must not scroll as well.
+     * Call before {@code spots.update}: when the d-pad pushes past the visible rows, scrolls one
+     * row, moves the focus to the card that came into view and consumes the press (so focus
+     * does not jump to a button below the grid). Returns true when it scrolled, so the caller
+     * lays the spots out again.
      */
-    void scroll(Shell shell, Hotspots spots, String focusBefore) {
-        int maxRow = Math.max(0, (cards.size() + columns - 1) / columns - rows);
-        if (shell.in.mouse.wheel() != 0) {
-            scrollRow = Math.max(0, Math.min(maxRow, scrollRow - shell.in.mouse.wheel()));
-        }
+    boolean scrollForMove(Shell shell, Hotspots spots) {
         String f = spots.focused();
-        if (f == null || !f.startsWith("card") || !f.equals(focusBefore) || !(shell.in.up || shell.in.down)) {
-            return;
+        if (f == null || !f.startsWith("card")) {
+            return false;
         }
+        int maxRow = Math.max(0, (cards.size() + columns - 1) / columns - rows);
         int index = Integer.parseInt(f.substring(4));
         int row = index / columns;
         if (shell.in.down && row == scrollRow + rows - 1 && scrollRow < maxRow) {
             scrollRow++;
             spots.focus("card" + Math.min(cards.size() - 1, index + columns));
-        } else if (shell.in.up && row == scrollRow && scrollRow > 0) {
+            shell.in.down = false;
+            return true;
+        }
+        if (shell.in.up && row == scrollRow && scrollRow > 0) {
             scrollRow--;
             spots.focus("card" + (index - columns));
+            shell.in.up = false;
+            return true;
+        }
+        return false;
+    }
+
+    /** Scrolls with the mouse wheel. */
+    void wheel(Shell shell) {
+        int maxRow = Math.max(0, (cards.size() + columns - 1) / columns - rows);
+        if (shell.in.mouse.wheel() != 0) {
+            scrollRow = Math.max(0, Math.min(maxRow, scrollRow - shell.in.mouse.wheel()));
         }
     }
 

@@ -136,13 +136,16 @@ final class CompendiumScreen implements Screen {
     @Override
     public void update(Shell shell) {
         layout(shell);
+        if (tab < CARD_COLORS.length && grid.scrollForMove(shell, spots)) {
+            layout(shell);
+        }
         String before = spots.focused();
         String picked = spots.update(shell.in);
         if (before != null && !before.equals(spots.focused())) {
             shell.sfx(Sounds.SFX_CURSOR);
         }
         if (tab < CARD_COLORS.length) {
-            grid.scroll(shell, spots, before);
+            grid.wheel(shell);
         } else {
             scrollIcons(shell);
         }

@@ -28,9 +28,12 @@ final class DeckViewer {
     void update(Shell shell, RunScreen screen) {
         spots.clear();
         grid.layout(spots, shell);
-        String before = spots.focused();
+        if (grid.scrollForMove(shell, spots)) {
+            spots.clear();
+            grid.layout(spots, shell);
+        }
         spots.update(shell.in);
-        grid.scroll(shell, spots, before);
+        grid.wheel(shell);
         if (shell.in.back || shell.in.deck || shell.in.mouse.rightPressed()) {
             closed = true;
             shell.sfx(Sounds.SFX_SWITCH);

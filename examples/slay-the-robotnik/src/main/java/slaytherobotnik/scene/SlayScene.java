@@ -54,7 +54,8 @@ public final class SlayScene implements ModScene {
     /**
      * Starts a run and jumps straight into one room, for screenshot tools and debugging:
      * {@code "sonic:42:fight:hcz:big_shaker"} or {@code "tails:7:event:event:slot_machine"}
-     * (character, seed, then {@code fight} or {@code event} and the id), {@code "compendium:2"},
+     * (character, seed, then {@code fight} or {@code event} and the id, or {@code room} and a
+     * room type such as {@code Shop:2} for a shop in act 2), {@code "compendium:2"},
      * or {@code "kill"} to defeat every enemy in the current fight.
      */
     public void debugJump(String command) {
@@ -78,6 +79,15 @@ public final class SlayScene implements ModScene {
         shell.attach(run);
         if (parts[2].equals("fight")) {
             run.enterFight(parts[3]);
+        } else if (parts[2].equals("room")) {
+            // "sonic:7:room:Shop:2" enters a Shop / Rest / Treasure room, optionally in act 2.
+            String[] room = parts[3].split(":");
+            if (room.length > 1) {
+                run.state().setPosition(Integer.parseInt(room[1]), run.state().floor(), run.state().actFloor(),
+                        run.state().nodeX());
+            }
+            run.state().gainRings(300);
+            run.enterRoom(room[0]);
         } else {
             run.state().setPosition(shell.catalog.event(parts[3]).acts().stream().min(Integer::compare).orElse(1),
                     run.state().floor(), run.state().actFloor(), run.state().nodeX());

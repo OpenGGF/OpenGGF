@@ -39,32 +39,37 @@ final class ShopView implements RunScreen.RoomView {
         line = pool[lineIndex];
     }
 
+    /**
+     * Row one: the five hero cards. Row two: the colourless cards, then relics and monitors.
+     * The left column shows the Egg Robo, or the focused card at full size.
+     */
     private void layout(Shell shell) {
         spots.clear();
         List<ShopRoom.Item> items = room.items();
-        int cardIndex = 0;
-        int otherIndex = 0;
+        int heroCards = 0;
+        int lowerCards = 0;
+        int others = 0;
         for (int i = 0; i < items.size(); i++) {
             ShopRoom.Item item = items.get(i);
-            if (room.sold(i)) {
-                if (item.card() != null) {
-                    cardIndex++;
-                } else {
-                    otherIndex++;
+            boolean sold = room.sold(i);
+            if (item.card() != null && item.kind().equals(ShopRoom.CARD)) {
+                if (!sold) {
+                    spots.add("i" + i, 104 + heroCards * 50, 36, CardRenderer.SMALL_W, CardRenderer.SMALL_H);
                 }
-                continue;
-            }
-            if (item.card() != null) {
-                int x = 120 + cardIndex * 40;
-                spots.add("i" + i, x, 40, CardRenderer.SMALL_W, CardRenderer.SMALL_H);
-                cardIndex++;
+                heroCards++;
+            } else if (item.card() != null) {
+                if (!sold) {
+                    spots.add("i" + i, 104 + lowerCards * 50, 114, CardRenderer.SMALL_W, CardRenderer.SMALL_H);
+                }
+                lowerCards++;
             } else {
-                int x = 120 + otherIndex * 34;
-                spots.add("i" + i, x, 118, 26, 26);
-                otherIndex++;
+                if (!sold) {
+                    spots.add("i" + i, 212 + others * 30, 124, 26, 26);
+                }
+                others++;
             }
         }
-        spots.add("remove", 120, 160, 120, 16, !room.removalUsed() && shell.run.state().rings() >= room.removalPrice());
+        spots.add("remove", 104, 192, 120, 16, !room.removalUsed() && shell.run.state().rings() >= room.removalPrice());
         spots.add("leave", shell.width() - 90, 196, 80, 16);
     }
 
@@ -112,26 +117,32 @@ final class ShopView implements RunScreen.RoomView {
         int h = shell.height();
         Gfx.checker(c, 0, 0, w, h, 16, 0xFF241848, 0xFF2C2058, (int) (shell.ticks / 4));
         SmallFont f = shell.font;
-        // The shopkeeper.
-        Gfx.panel(c, 6, 32, 104, 160, 0xE0100820, 0xFF904890);
-        SceneSprite robo = shell.art.romFrame("egg_robo", 0);
-        if (robo != null) {
-            c.draw(robo, 58, 128 + (float) Math.sin(shell.ticks * 0.08) * 2, SceneDraw.plain().withScale(1));
-        } else {
-            c.draw(shell.art.icon("node_shop"), 40, 80, SceneDraw.plain().withScale(2));
+        layout(shell);
+        ShopRoom.Item hovered = null;
+        for (int i = 0; i < room.items().size(); i++) {
+            if (spots.isFocused("i" + i) && spots.spot("i" + i) != null) {
+                hovered = room.items().get(i);
+            }
         }
-        f.drawCentered(c, "EGG ROBO", 58, 138, Colors.TEXT_BAD);
-        f.drawCentered(c, "(OFF DUTY)", 58, 146, Colors.TEXT_DIM);
+        // The shopkeeper, or the focused card at full size in his place.
+        Gfx.panel(c, 4, 32, 94, 160, 0xE0100820, 0xFF904890);
+        if (hovered != null && hovered.card() != null) {
+            screen.cards.drawBig(c, hovered.card(), null, null, 7, 34, false);
+        } else {
+            drawEggRobo(shell, c, 51, 96);
+            f.drawCentered(c, "EGG ROBO", 51, 136, Colors.TEXT_BAD);
+            f.drawCentered(c, "(OFF DUTY)", 51, 144, Colors.TEXT_DIM);
+        }
         if (line != null) {
-            Gfx.panel(c, 10, 156, 96, 32, 0xF0FFFFFF, Colors.BLACK);
-            int ly = 160;
-            for (String l : f.wrap(line, 88)) {
-                f.draw(c, l, 14, ly, 0xFF101010);
+            Gfx.panel(c, 4, 160, 94, 32, 0xF0FFFFFF, Colors.BLACK);
+            int ly = 164;
+            for (String l : f.wrap(line, 86)) {
+                f.draw(c, l, 8, ly, 0xFF101010);
                 ly += SmallFont.LINE;
             }
         }
-        f.drawShadowed(c, "CARDS", 120, 32, Colors.GOLD);
-        f.drawShadowed(c, "RELICS & MONITORS", 120, 108, Colors.GOLD);
+        f.drawShadowed(c, "CARDS", 104, 27, Colors.GOLD);
+        f.drawShadowed(c, "RELICS & MONITORS", 212, 114, Colors.GOLD);
         layout(shell);
         List<ShopRoom.Item> items = room.items();
         ShopRoom.Item focusItem = null;
@@ -175,15 +186,36 @@ final class ShopView implements RunScreen.RoomView {
                 shell.ticks);
         if (focusItem != null) {
             if (focusItem.card() != null) {
-                screen.cards.drawBig(c, focusItem.card(), null, null, w - CardRenderer.BIG_W - 8, 36, false);
+                // Shown full size in the left column instead.
             } else if (focusItem.relicId() != null) {
                 Relic r = shell.catalog.newRelic(focusItem.relicId());
-                screen.tooltip(r.name().toUpperCase(), r.description(), focusSpot.x(), focusSpot.y() + 40);
+                screen.tooltip(r.name().toUpperCase(), r.description(), Math.min(focusSpot.x(), w - 150),
+                        focusSpot.y() + 40);
             } else {
                 var p = focusItem.potion();
-                screen.tooltip(p.name().toUpperCase(), p.describe(shell.run.state().potionPotency(p)), focusSpot.x(),
-                        focusSpot.y() + 40);
+                screen.tooltip(p.name().toUpperCase(), p.describe(shell.run.state().potionPotency(p)),
+                        Math.min(focusSpot.x(), w - 150), focusSpot.y() + 40);
             }
         }
+    }
+
+    /** The Egg Robo as ChildObjDat_919D0 builds it: gun arm and legs behind the hovering body. */
+    private static void drawEggRobo(Shell shell, SceneCanvas c, float x, float y) {
+        float bob = (float) Math.sin(shell.ticks * 0.05) * 3;
+        SceneSprite arm = shell.art.romFrame("egg_robo", 2);
+        SceneSprite legs = shell.art.romFrame("egg_robo", 5);
+        SceneSprite body = shell.art.romFrame("egg_robo", shell.ticks % 2 == 0 ? 1 : 3);
+        if (body == null) {
+            c.draw(shell.art.icon("node_shop"), x - 12, y - 12, SceneDraw.plain().withScale(2));
+            return;
+        }
+        SceneDraw style = SceneDraw.plain();
+        if (arm != null) {
+            c.draw(arm, x - 0x1C, y - 4 + bob, style);
+        }
+        if (legs != null) {
+            c.draw(legs, x - 0xC, y + 0x1C + bob, style);
+        }
+        c.draw(body, x, y + bob, style);
     }
 }

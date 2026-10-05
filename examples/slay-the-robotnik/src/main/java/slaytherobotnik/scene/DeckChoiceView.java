@@ -57,10 +57,12 @@ final class DeckChoiceView {
 
     void update(Shell shell, RunScreen screen) {
         layout(shell);
-        String before = spots.focused();
+        if (!bigRow && grid.scrollForMove(shell, spots)) {
+            layout(shell);
+        }
         String picked = spots.update(shell.in);
         if (!bigRow) {
-            grid.scroll(shell, spots, before);
+            grid.wheel(shell);
         }
         if ((shell.in.back || shell.in.mouse.rightPressed()) && choice.cancellable()) {
             shell.run.cancelDeckChoice();
