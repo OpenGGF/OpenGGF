@@ -8,9 +8,9 @@ import java.util.List;
 
 /** Scalar origin is captured by the ordinary mod-object rewind codec. */
 public final class CourseController extends AbstractObjectInstance implements RewindRecreatable {
-    // S1 Sonic normal maximum is 0x600 in PhysicsProfile; the mod scrolls at 75%.
+    // S1 Sonic normal maximum is 0x600 in PhysicsProfile; the mod scrolls at two thirds (4px/tick).
     private static final int NORMAL_RUN_SPEED = 0x600;
-    private static final int MINIMUM_SCROLL = NORMAL_RUN_SPEED * 3 / 4;
+    private static final int MINIMUM_SCROLL = NORMAL_RUN_SPEED * 2 / 3;
     private static final int FOLLOW_PERCENT = 60;
     // Ignore a jump already held while dying; about one second before a restart is accepted.
     private static final int RESTART_DELAY_FRAMES = 60;
@@ -60,6 +60,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long stones0;
     private long stones1;
     private long stones2;
+    // One section bit per placed shield monitor.
+    private long monitors;
     public long originPixels() { return origin * 256; }
     public CourseController(ObjectSpawn spawn) { super(spawn, "Infinite Sonic course"); }
     @Override public boolean isPersistent() { return true; }
@@ -264,6 +266,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             populateEncounters();
             populateRings();
             populateStones();
+            populateMonitors();
             return;
         }
         origin += delta / 256;
@@ -275,6 +278,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         stones0 = shiftSections(stones0, delta);
         stones1 = shiftSections(stones1, delta);
         stones2 = shiftSections(stones2, delta);
+        monitors = shiftSections(monitors, delta);
         services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
         var library = services().gameService(TerrainLibrary.class);
         var level = services().currentLevel();
@@ -294,12 +298,33 @@ public final class CourseController extends AbstractObjectInstance implements Re
         populateEncounters();
         populateRings();
         populateStones();
+        populateMonitors();
+    }
+
+    private void populateMonitors() {
+        var library = services().gameService(TerrainLibrary.class);
+        var camera = services().camera();
+        for (int section = 0; section < TerrainLibrary.WIDTH / 2; section++) {
+            long bit = 1L << section;
+            if ((monitors & bit) != 0) continue;
+            var monitor = ShieldPlan.at(library, origin / 2 + section);
+            if (monitor == null) { monitors |= bit; continue; }
+            int localX = (int) (monitor.worldX() - originPixels());
+            if (localX < camera.getX() - 192 || localX > camera.getX() + camera.getWidth() + 192) continue;
+            if (!services().objectManager().hasFreeDynamicSlot()) return;
+            var spawn = new ObjectSpawn(localX, monitor.y(), 0, 0, 0, false, monitor.y(), -1,
+                    "infinite-sonic", "infinite-sonic:monitor");
+            spawnFreeChild(() -> new CourseMonitor(spawn));
+            monitors |= bit;
+        }
     }
 
     /** Loaded stock platforms. The course places no other stock objects with these ids. */
     private List<AbstractObjectInstance> liveStones() {
         var live = new java.util.ArrayList<AbstractObjectInstance>();
         for (var object : services().objectManager().getActiveObjects()) {
+            // Player-owned power-ups (the shield) have no spawn.
+            if (object.getSpawn() == null) continue;
             int id = object.getSpawn().objectId();
             if ((id == CoursePlatforms.PLATFORM || id == CoursePlatforms.MOVING_BLOCK)
                     && object instanceof AbstractObjectInstance stock && !stock.isDestroyed()) live.add(stock);

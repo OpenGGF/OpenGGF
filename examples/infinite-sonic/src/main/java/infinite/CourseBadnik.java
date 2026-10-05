@@ -11,7 +11,8 @@ import java.util.List;
  * ROM-art remix with bounded mod patrols, not a replacement for stock badnik behavior.
  * The spawn subtype holds the {@link CourseSpecies} ordinal chosen for the zone.
  */
-public final class CourseBadnik extends AbstractBadnikInstance implements RewindRecreatable {
+public final class CourseBadnik extends AbstractBadnikInstance
+        implements RewindRecreatable, TouchResponseListener {
     private long worldAnchor;
     private int anchorX;
     private int anchorY;
@@ -100,6 +101,12 @@ public final class CourseBadnik extends AbstractBadnikInstance implements Rewind
         int angle = (spin + index * 0x40) & 0xff;
         return new int[]{currentX + (TrigLookupTable.cosHex(angle) >> 4),
                 currentY + (TrigLookupTable.sinHex(angle) >> 4)};
+    }
+    /** Runs before the engine's hurt pass: a shield or 20 rings absorb the hit (see {@link CourseGuard}). */
+    @Override public void onTouchResponse(PlayableEntity entity, TouchResponseResult result, int frameCounter) {
+        if (!isDestroyed() && entity instanceof com.openggf.sprites.playable.AbstractPlayableSprite player) {
+            CourseGuard.absorb(services(), player, result);
+        }
     }
     @Override protected DestructionEffects.DestructionConfig getDestructionConfig() {
         // S1 sfx_BreakItem=$C1. Shared destruction owns scoring and replacement-slot transfer.

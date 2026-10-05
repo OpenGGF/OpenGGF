@@ -171,7 +171,7 @@ ramped too aggressively in play. Each stage now adds 0.25× linearly (1× → 1.
 → 1.5× → 1.75× → 2×); the 32× ceiling and MAX SPEED label are unchanged but now
 sit far beyond a realistic run.
 
-The camera advances at least 4.5px per simulation tick, retaining fractional
+The camera advances at least 4px per simulation tick (4.5px before 0.13.0), retaining fractional
 pixels and vertical tracking. Sonic can gain ground until his centre reaches a
 follow point at 60% of the viewport width (just right of centre); the camera then follows his position. It follows world
 recycling with Sonic. The initial velocity-matching policy at `841fb3d98b` consumed
@@ -188,8 +188,8 @@ death-restart reload; lives stay at zero until then so a still-falling corpse
 cannot queue a second restart. The reload re-enters `loadLevelOverride` (clock
 reset) and the new controller resets score and lives on its first frame. Rings and hit
 invulnerability cannot prevent scrolling failure. Scoring earns one point per
-minimum-scroll pixel, retaining fractional credit: 270 points per real second at
-1×, about 337 at 1.25× and 405 at 1.5×. Death freezes challenge scoring, progression and scrolling.
+minimum-scroll pixel, retaining fractional credit: 240 points per real second at
+1×, 300 at 1.25× and 360 at 1.5× (270/337/405 before 0.13.0). Death freezes challenge scoring, progression and scrolling.
 
 The mod suppresses the stock HUD and draws score, speed/countdown, rings and
 game-over/restart text using code-drawn glyphs through the CPU presentation primitive path.
@@ -568,3 +568,52 @@ aspects); `TestEngine` 33, `TestGameLoop` 97, `TestModApiSignatureSurface` 9,
 passing. The crossing test drives the input policy over each act's first stretch at 4:3
 and 16:9 and requires every planned stone to spawn as a stock object and Sonic to ride
 one. Live play and a visual check of the stones were not performed.
+
+## Gentler hits, shield monitors and a slower scroll (0.13.0)
+
+Follow-up on `741b2b34cc`, same branch, main checkout, 2026-10-05. Request: one enemy hit
+was effectively a game over (the knockback alone drops Sonic behind the scrolling edge);
+with 20 rings a hit should cost just 20 rings and no knockback; slow the minimum scroll
+to give more time on platform stretches; add a shield pickup that negates knockback for
+one hit.
+
+**Hit absorption.** Every hazard in the course is a `CourseBadnik` (stock platforms do
+not hurt), so absorption lives in that object's `TouchResponseListener`. The engine's
+touch pass calls the listener before it applies damage. `CourseGuard.absorb` decides
+whether the contact would hurt (category HURT, or ENEMY while Sonic is not attacking,
+mirroring the engine's S1 test: roll animation with the rolling status, or the shared
+anim 9); if so, a shield is removed (rings kept), else 20+ rings pay a 20-ring toll.
+Then it sets the stock $78 post-hit invulnerability, which makes the engine's following
+`applyHurt` return immediately: no knockback, no lost-ring spawn, no hurt routine.
+Below 20 rings with no shield the stock path runs unchanged (knockback and full ring
+loss, or death with none). No engine hook was needed. Rejected: an engine damage-policy
+hook on `GameModule` (Mod API surface change for a single mod) and undoing a hurt after
+the fact from the controller (lost rings already scheduled, velocity already replaced).
+
+**Shield monitors.** `ShieldPlan` places at most one box per open section (not a corridor
+or platform stretch, section ≥ 6, seeded one in ten), on ground flat within 4 px across
+its 32 px width, at offset 304 or 160 so it never overlaps a ring row. `CourseMonitor`
+draws `Map_Monitor` with the `.shield` animation (static frames 0/1/2 alternating with
+icon 6, speed 1) and the broken shell (frame 11). It is a non-solid `col_item` ($46): the
+stock Obj26 is solid at the sides, and a stall against it at scroll speed would push
+Sonic off the left edge. Any touch breaks it, spawns the mod's explosion and calls the
+stock `giveShield()` with sfx $C1 and $AF. It follows world rebases and rewinds like the
+other mod objects.
+
+Found while testing: `CourseController.liveStones()` dereferenced every active object's
+spawn, but the player-bound shield has none, so the first shield crashed the controller
+every frame; it now skips spawnless objects. Also found: `giveShield()` replacing a live
+shield leaves the destroyed instance in the fixed power-up slot, and a rewind restore
+then consumes that stale captured entry for the respawned shield, so the shield vanished
+(reproduced in stock S1 headless; the same applies to two stock shield monitors in a
+row). The mod avoids replacement (a box broken while shielded only plays the sound); the
+engine quirk is left for a separate fix.
+
+**Scroll.** The minimum scroll drops from 75% (0x480, 4.5 px/tick) to two thirds of
+0x600 (0x400, 4 px/tick), about 11% slower; survival scoring follows (240 points/s at 1×).
+
+**SDK packaging on macOS.** `build.py` failed in `ggfmod package` with "Directory entry
+escapes root": `ModAssetSnapshot` copied the tree under `Files.createTempDirectory`,
+which on macOS is `/var/...`, while the containment check compares each entry's real path
+(`/private/var/...`). The snapshot now returns its temp root as a real path.
+

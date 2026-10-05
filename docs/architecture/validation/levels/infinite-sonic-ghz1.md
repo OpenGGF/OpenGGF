@@ -433,3 +433,22 @@ engine hooks, tests and docs.
 **129 run, 0 failures, 14 skipped** (same focused command). Not covered: a falling Obj18
 stone collapsing under a waiting Sonic, a forced rebase with stones loaded, a dedicated
 rewind across a stone ride, and any live render of stones or ring arcs.
+
+## Gentler hits, shield monitors and slower scroll (0.13.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `741b2b34cc`; mod, tests, docs and the
+one-line `ModAssetSnapshot` temp-root fix.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| 20-ring toll, no knockback | `ringTollOrShieldAbsorbsAnEnemyHitWithoutKnockback[toll]` | GHZ ground badnik, real running touch: 25 → 5 rings, not hurt, speed kept, blink set, no repeat charge over 4 frames |
+| Shield absorbs one hit | `ringTollOrShieldAbsorbsAnEnemyHitWithoutKnockback[shield]` | Shield removed, all 5 rings kept, no knockback |
+| Stock hit below 20 rings | `ringTollOrShieldAbsorbsAnEnemyHitWithoutKnockback[few]`, `walkingBombsHurtInsteadOfBreaking` | Knockback and full ring loss unchanged |
+| Shield monitor placement | `shieldMonitorsAreSeededOnLevelGround` | GHZ1, 1000 sections: seeded, section ≥ 6, never corridors/stretches, standing on flat floor |
+| Shield monitor pickup | `touchingAShieldMonitorBreaksItGivesAShieldAndReplays` | Real non-rolling touch breaks the box and grants the stock shield; break and burst rewind/replay |
+| Slower scroll and scoring | `minimumScrollAllowsFasterRunningAndSurvivalScoreScales` | 240 camera px and points per second at 1×, scaling with speed |
+| Traversal and rewind with shields | `protectedTraversalPreservesEncountersAcrossRebaseAndReplay`, `everyZoneActBuildsATraversableDryCourse` | Long runs now pick up shield monitors; shield restore across rewind |
+
+Not covered: the toll or shield against Orbinaut spikes, Rollers and flyers specifically
+(same listener path), and live play or a visual check of the monitor art.
+

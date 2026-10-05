@@ -11,12 +11,27 @@ The mod always plays in **16:9** (the 400-pixel `WIDE_16_9` view), whatever the
 global aspect setting: the wider screen shows more of the course ahead at scroll
 speed. The player's own aspect returns at the master title. Trace test mode still
 forces native 4:3. Sonic starts running at normal speed. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Pausing stops the countdown.
-The camera scrolls at a minimum of **75% of Sonic’s normal maximum run speed**,
+The camera scrolls at a minimum of **two thirds of Sonic’s normal maximum run speed** (4 pixels per tick),
 letting Sonic gain ground until his centre reaches 60% of the screen width, just right of centre.
 There the camera follows his position, keeping him on screen while preserving
 his native running and jumping physics. Leaving the left edge
 completely loses a life, regardless of rings or invulnerability. Pits and lethal
-enemy hits also cost a life. Collect ring rows to survive ordinary enemy hits.
+enemy hits also cost a life.
+
+Enemy hits are gentler than stock. A **shield** absorbs one hit: Sonic loses the shield,
+keeps every ring and keeps running with no knockback. Without a shield, carrying **20 or
+more rings** pays a 20-ring toll instead: the ring counter drops by 20 (with the
+ring-spill sound) and, again, there is no knockback. Either way Sonic blinks for the stock
+two seconds, so one contact cannot be charged twice. With no shield and fewer than 20
+rings the stock hit applies: Sonic is knocked back and drops every ring, and with no rings
+at all the hit is lethal. Pits and the left edge are unaffected by shields and rings.
+
+Shield monitors stand on level ground in about one in ten open sections from the seventh
+section on (roughly one every 25 seconds at 1×). They use the ROM monitor art and its
+flickering shield icon, but unlike the solid stock box any touch breaks them, so running
+into one never stalls Sonic against the scrolling edge. Breaking one plays the stock
+break and shield sounds and puts the stock shield on Sonic; a box broken while already
+shielded only plays the sound. Death, CONTINUE and RESTART clear the shield.
 
 A session starts with **no spare lives**. The only way to earn one is rings: every time
 the ring counter reaches 100, 200, 300 and so on, you gain a life (reaching 100 again
@@ -42,8 +57,8 @@ The HUD shows score, current speed, time until the next speedup, rings and lives
 The last five seconds also show a large centered countdown with a chime each
 second. Music and sound effects speed up and rise in pitch with the challenge;
 pause, rewind, game over and leaving the level release the playback rate.
-Survival earns one point per minimum-scroll pixel: **270 points/second at 1×**,
-about **337 at 1.25×**, and **405 at 1.5×**, plus normal enemy points.
+Survival earns one point per minimum-scroll pixel: **240 points/second at 1×**,
+**300 at 1.25×**, and **360 at 1.5×**, plus normal enemy points.
 All movement, enemies, animation and gameplay clocks accelerate together; native
 per-tick jump and collision rules remain unchanged. The host caps pacing at 32×
 (the HUD then says MAX SPEED). There is no finish line or stock time limit. Disable the mod to restore the stock acts.

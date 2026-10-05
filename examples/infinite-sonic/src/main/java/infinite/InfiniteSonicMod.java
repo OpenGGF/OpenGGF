@@ -16,6 +16,7 @@ public final class InfiniteSonicMod implements GgfMod {
         context.registerObject("badnik", (spawn, registry) -> new CourseBadnik(spawn, spawn.x()));
         context.registerObject("ring", (spawn, registry) -> new CourseRing(spawn));
         context.registerObject("burst", (spawn, registry) -> new CourseBurst(spawn));
+        context.registerObject("monitor", (spawn, registry) -> new CourseMonitor(spawn));
         context.registerGamePatch(new Patch());
     }
 

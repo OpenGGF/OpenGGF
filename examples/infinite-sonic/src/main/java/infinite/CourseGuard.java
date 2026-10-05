@@ -1,0 +1,54 @@
+package infinite;
+
+import com.openggf.audio.GameSound;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+/**
+ * Mod design: a shield, or else a 20-ring toll, absorbs an enemy hit with no knockback.
+ * Sonic keeps running and blinks for the stock post-hit time. With fewer than 20 rings and
+ * no shield the stock hurt (losing every ring) or death applies.
+ */
+final class CourseGuard {
+    static final int RING_TOLL = 20;
+    // Stock post-hit invulnerability ($78), so one contact cannot be charged twice.
+    static final int GUARD_INVULNERABLE_FRAMES = 0x78;
+    // S1 Sonic anim ids the engine's touch pass counts as an attack: Roll (with the rolling
+    // status) and 9 (the shared spindash id).
+    private static final int ANIM_ROLL = 0x02;
+    private static final int ANIM_SPINDASH = 0x09;
+
+    /**
+     * Called from a badnik's touch listener, which the engine runs before it applies damage.
+     * Leaving Sonic flashing makes the engine's hurt pass return without knockback or ring loss.
+     */
+    static boolean absorb(ObjectServices services, AbstractPlayableSprite player, TouchResponseResult result) {
+        if (player.getDead() || player.isDebugMode() || player.isCpuControlled() || player.getInvulnerable()) {
+            return false;
+        }
+        boolean harmful = result.category() == TouchCategory.HURT
+                || result.category() == TouchCategory.ENEMY && !attacking(player);
+        if (!harmful) return false;
+        if (player.hasShield()) {
+            player.removeShield();
+            services.audioManager().playSfx(GameSound.HURT);
+        } else if (player.getRingCount() >= RING_TOLL) {
+            player.setRingCount(player.getRingCount() - RING_TOLL);
+            services.audioManager().playSfx(GameSound.RING_SPILL);
+        } else {
+            return false;
+        }
+        player.setInvulnerableFrames(GUARD_INVULNERABLE_FRAMES);
+        return true;
+    }
+
+    /** Mirrors the engine's attack test for solo S1 Sonic (invincibility is already excluded). */
+    private static boolean attacking(AbstractPlayableSprite player) {
+        int animation = player.getAnimationId();
+        return animation == ANIM_SPINDASH || animation == ANIM_ROLL && player.getRolling();
+    }
+
+    private CourseGuard() { }
+}

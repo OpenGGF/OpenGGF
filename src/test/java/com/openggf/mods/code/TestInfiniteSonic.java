@@ -602,7 +602,8 @@ class TestInfiniteSonic {
                 fixture.stepIdleFrames(1);
               }
             }
-            int expected = (int) (270 * (1.0 + 0.25 * (stage / 1800)));
+            // Two thirds of the 0x600 run speed: 4px per tick, 240 points per second at 1x.
+            int expected = (int) (240 * (1.0 + 0.25 * (stage / 1800)));
             assertEquals(expected, fixture.camera().getX() - startCamera, 1);
             assertEquals(expected, GameServices.gameState().getScore() - score, 1);
             assertFalse(player.getDead());
@@ -610,8 +611,8 @@ class TestInfiniteSonic {
         player.setXSpeed((short) 0x1000);
         int before = fixture.camera().getX();
         fixture.stepFrame(false, false, false, true, false);
-        assertTrue(player.getXSpeed() > 1152);
-        assertEquals(4.5, fixture.camera().getX() - before, 1, "speed alone must not pull the camera forward");
+        assertTrue(player.getXSpeed() > 0x400);
+        assertEquals(4, fixture.camera().getX() - before, 1, "speed alone must not pull the camera forward");
     }
 
     @ParameterizedTest @EnumSource(WidescreenAspect.class)
@@ -927,7 +928,8 @@ class TestInfiniteSonic {
                 fail("death at world x=" + (originPixels() + player.getCentreX()) + " " + desc + "\n" + trail);
             }
             for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
-                if (object.getClass().getName().startsWith("infinite.") || object.isDestroyed()) continue;
+                if (object.getClass().getName().startsWith("infinite.") || object.isDestroyed()
+                        || object.getSpawn() == null) continue;
                 for (Object stone : planned) {
                     if (object.getSpawn().objectId() == (int) call(stone, "objectId")
                             && object.getSpawn().x() + originPixels() == (long) call(stone, "worldX")) {
@@ -1214,6 +1216,105 @@ class TestInfiniteSonic {
         assertFalse(bomb.isDestroyed(), "col_hurt bombs cannot be destroyed");
         assertFalse(player.getDead());
     }
+    /**
+     * A real running (not rolling) touch into a Green Hill ground badnik: 20 rings, or else a
+     * shield, absorb the hit with no knockback; with neither the stock hurt applies.
+     */
+    @ParameterizedTest @ValueSource(strings = {"toll", "shield", "few"})
+    void ringTollOrShieldAbsorbsAnEnemyHitWithoutKnockback(String guard) throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.sprite().setInvulnerableFrames(2000);
+        ObjectInstance enemy = null;
+        for (int i = 0; i < 1500 && enemy == null; i++) {
+            stepCourse(fixture, 1);
+            enemy = enemies().stream().filter(o -> !flyingEnemy(o)).findFirst().orElse(null);
+        }
+        assertNotNull(enemy);
+        var player = fixture.sprite();
+        var rings = GameServices.level().getLevelGamestate();
+        rings.setRings(guard.equals("toll") ? 25 : 5);
+        if (guard.equals("shield")) player.giveShield();
+        player.setInvulnerableFrames(0);
+        NativePositionOps.writeXPosResetSubpixel(player, enemy.getX());
+        NativePositionOps.writeYPosResetSubpixel(player, enemy.getY());
+        player.setRolling(false); player.setAir(true);
+        player.setXSpeed((short) 0x400); player.setGSpeed((short) 0x400); player.setYSpeed((short) 0);
+        fixture.camera().setX((short) Math.max(0, enemy.getX() - 160));
+        fixture.stepIdleFrames(1);
+        assertFalse(player.getDead());
+        assertFalse(enemy.isDestroyed(), "a running touch is not an attack");
+        if (guard.equals("few")) {
+            assertTrue(player.isHurt(), "fewer than 20 rings and no shield: stock knockback");
+            assertEquals(0, rings.getRings());
+            return;
+        }
+        assertFalse(player.isHurt(), "no knockback");
+        assertEquals(0x400, player.getXSpeed(), "Sonic keeps running");
+        assertTrue(player.getInvulnerableFrames() > 0x70, "post-hit blink");
+        assertFalse(player.hasShield());
+        // 25 - 20 for the toll; a shield keeps all 5.
+        assertEquals(5, rings.getRings(), guard.equals("toll") ? "the toll costs exactly 20 rings"
+                : "a shield keeps every ring");
+        fixture.stepIdleFrames(4);
+        assertFalse(player.isHurt(), "the blink keeps the same badnik from hitting again");
+        assertEquals(5, rings.getRings());
+    }
+
+    @Test void shieldMonitorsAreSeededOnLevelGround() throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3);
+        int monitors = 0;
+        for (long section = 0; section < 1000; section++) {
+            Object monitor = shieldMonitor(section);
+            assertEquals(monitor, shieldMonitor(section), "seeded");
+            if (monitor == null) continue;
+            monitors++;
+            assertTrue(section >= 6, "no monitor on the opening runway");
+            assertFalse(isCorridor(section) || platformRun(section), "monitors stand on ordinary ground");
+            long x = (long) call(monitor, "worldX");
+            int floor = floorAt(x);
+            assertEquals(floor - 15, (int) call(monitor, "y"), "standing on the floor");
+            for (long dx = -16; dx <= 16; dx++) assertTrue(Math.abs(floorAt(x + dx) - floor) <= 4, "level ground");
+        }
+        assertTrue(monitors >= 30 && monitors <= 120, "about one in ten open sections: " + monitors);
+    }
+
+    @Test void touchingAShieldMonitorBreaksItGivesAShieldAndReplays() throws Exception {
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        fixture.sprite().setInvulnerableFrames(20000);
+        ObjectInstance monitor = null;
+        for (int frame = 0; frame < 8000 && monitor == null; frame++) {
+            stepTerrain(fixture, 1);
+            monitor = GameServices.level().getObjectManager().getActiveObjects().stream()
+                    .filter(o -> !o.isDestroyed() && o.getClass().getName().equals("infinite.CourseMonitor"))
+                    .findFirst().orElse(null);
+        }
+        assertNotNull(monitor, "the course places shield monitors");
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(0);
+        assertFalse(player.hasShield());
+        NativePositionOps.writeXPosResetSubpixel(player, monitor.getX());
+        NativePositionOps.writeYPosResetSubpixel(player, monitor.getY());
+        player.setXSpeed((short) 0); player.setGSpeed((short) 0); player.setYSpeed((short) 0);
+        player.setAir(true);
+        fixture.camera().setX((short) Math.max(0, monitor.getX() - 160));
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        fixture.stepIdleFrames(1);
+        assertTrue(player.hasShield(), "any touch breaks the box, even without rolling");
+        assertTrue((boolean) call(monitor, "isBroken"));
+        fixture.stepIdleFrames(8);
+        var expected = registry.capture().entries().get("object-manager");
+        registry.restore(before);
+        fixture.stepIdleFrames(9);
+        assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", expected,
+                registry.capture().entries().get("object-manager")), "break and burst replay");
+    }
+    private Object shieldMonitor(long section) throws Exception {
+        return loader.loadClass("infinite.ShieldPlan").getMethod("at", terrain().getClass(), long.class)
+                .invoke(null, terrain(), section);
+    }
+
     private static boolean flyingEnemy(ObjectInstance enemy) {
         try { return (boolean) enemy.getClass().getMethod("flying").invoke(enemy); }
         catch (ReflectiveOperationException e) { throw new AssertionError(e); }
