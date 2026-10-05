@@ -92,6 +92,15 @@ public final class CourseHud {
             text(services, warning, (services.camera().getWidth() - warning.length() * 12) / 2,
                     72, true, 3);
         }
+        int speedUp = course.speedUpFrames();
+        if (speedUp > 0) {
+            // The new speed takes the countdown's place, fading over its last quarter second.
+            String announced = speedText(course);
+            glyphs(services, announced, (services.camera().getWidth() - announced.length() * 12) / 2 + 1, 73, 3,
+                    0f, 0f, 0f, Math.min(1f, speedUp / 15f));
+            glyphs(services, announced, (services.camera().getWidth() - announced.length() * 12) / 2, 72, 3,
+                    1f, 0.82f, 0.19f, Math.min(1f, speedUp / 15f));
+        }
         if (course.celebrating() && course.celebrateFrames() / 6 % 2 == 0) {
             glyphs(services, TOP_SCORE, (services.camera().getWidth() - TOP_SCORE.length() * 12) / 2, 88, 3,
                     1f, 0.82f, 0.19f, 1f);
@@ -105,7 +114,8 @@ public final class CourseHud {
             glyphs(services, go, (services.camera().getWidth() - go.length() * 16) / 2, 84, 4, 1f, 0.82f, 0.19f,
                     Math.min(1f, course.goFrames() / 10f));
         }
-        if (!course.gameOver()) return;
+        // CONTINUE's rewind passes back through the death; its menu stays down.
+        if (!course.gameOver() || course.rewinding()) return;
         String rank = rankText(course);
         if (!rank.isEmpty()) {
             int scale = course.rank() == 1 ? 3 : 2;
