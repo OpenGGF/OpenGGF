@@ -99,12 +99,14 @@ and strong shots deliberately achievable. These are two power-building hits,
 not a power hit followed by an angle-accuracy test. The selected elevation does
 not acquire timing error or random dispersion.
 
-More earned power produces more spindash charge sounds and a higher pitch
-before release. After the second timed hit, play the remaining charge feedback,
-hold a brief pause, then release automatically. No further A press is required
-to launch, and extra presses cannot add more charges during that feedback or
-pause. Their durations and the pitch progression are presentation tuning
-parameters, not ROM constants.
+Apply earned charges through the game's existing Sonic 2 spindash mechanics,
+preserving their charge sounds and innate pitch rise. This is existing game
+behavior to retain, not a new audio feature or a separately tuned power-to-pitch
+curve. After the second timed hit, complete the existing charge feedback, hold
+a brief pause, then release automatically. No further A press is required to
+launch, and extra presses cannot add more charges during that feedback or pause.
+The brief pause duration is a golf presentation tuning parameter; the spindash
+sound and pitch behavior remain native.
 
 Power is a normalized shot parameter. Its velocity mapping must be tuned
 against the S2 rolling and airborne profiles, with identical limits for both
@@ -364,8 +366,8 @@ object graphs or transmit executable creator content.
    Demonstrate short putts, steep chips, slopes, successful loops, rollback,
    settlement and the signpost-area golf finish using ROM-backed assets.
 2. **Add the game feel.** Up/Down elevation, Left/Right direction, A-to-duck,
-   two timed spindash charges, power-scaled sound/pitch, brief prelaunch pause,
-   automatic release and rolling until settlement. Add the truthful departure
+   two timed spindash charges preserving native charge feedback, brief prelaunch
+   pause, automatic release and rolling until settlement. Add the truthful departure
    guide, survey camera, shot HUD and penalty flow. Remove free movement and
    stock progression/reward systems from the golf session.
 3. **Prove alternating play.** Two independent golfer course states, both
@@ -386,7 +388,7 @@ remote world presentation, not the power meter.
 | Up/Down elevation and Left/Right direction | Up raises putt into progressively steeper chips; Down returns to putt; facing changes without moving the character |
 | A and two timed charges | Initial A ducks and starts the meter; first timed A initiates spindash; second adds charge; feedback and pause lead to automatic release |
 | Charge timing and selected elevation | Both hits determine power; selected elevation is preserved without a separate accuracy stage |
-| Stronger shot feedback | More charge sounds and higher pitch precede release; extra A presses after commitment do not add charges or count strokes |
+| Native spindash feedback | Preserve S2's existing charge sounds and pitch rise; extra A presses after commitment do not add charges or count strokes |
 | Very weak / full-power putt | Distinct useful distances, coherent rolling state, no input steering |
 | Chip onto a slope | Native collision resolves landing; turn waits for settlement |
 | Rolling retention through flight and contacts | Character remains curled through landing, spring interactions and low-speed motion until settlement is accepted |
@@ -430,7 +432,9 @@ report skips; no engine tests have been run to validate this proposal.
 - **Two timed charges, automatic release:** the user's control refinement
   replaces the original document's separate accuracy stage (`9a263f828`).
   Up/Down supplies continuous elevation from putt through chip; both timed A
-  hits build power, with charge sound/pitch and a brief pause before release.
+  hits build power through the game's existing spindash charge feedback,
+  preserving its innate pitch rise, followed by a brief pause before release.
+  Pitch behavior is preserved game functionality, not an added golf feature.
   Rolling persists until settlement instead of inheriting native early unroll.
 - **Gate finish, not precision-speed cup entry:** crossing the act endpoint
   fulfils the requested goal and avoids an extra finishing mechanic in the MVP.
