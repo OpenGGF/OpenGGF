@@ -109,7 +109,7 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
 
     /** Opens the startup scene with ROM art from the current session and storage under {@code saves}. */
     public void open(GameModule effective, Path saves, int width, int height) {
-        ModSceneFactory factory = effective.startupScene();
+        ModSceneFactory factory = effective.getGameService(ModSceneFactory.class);
         var players = new java.util.function.Supplier<com.openggf.data.PlayerSpriteArtProvider>() {
             private com.openggf.data.PlayerSpriteArtProvider cached;
 

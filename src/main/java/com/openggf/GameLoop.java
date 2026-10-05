@@ -1478,7 +1478,7 @@ public class GameLoop {
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.MOD_SCENE) {
-            menuScreenModeController.updateModScene(modSceneHost, inputHandler);
+            menuScreenModeController.updateModScene(modSceneHost == null ? null : modSceneHost::update, inputHandler);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.CREDITS_TEXT
@@ -4187,7 +4187,7 @@ public class GameLoop {
         return modSceneHost;
     }
 
-    /** Opens a mod's startup scene in place of the title screen (see {@code GameModule#startupScene}). */
+    /** Opens a mod's startup scene in place of the title screen (the module's {@code ModSceneFactory} game service). */
     void enterModScene(com.openggf.mods.scene.ModSceneFactory factory,
                               com.openggf.mods.scene.SceneServices services, int width, int height) {
         GameMode oldMode = changeGameModeForBoundary(GameMode.MOD_SCENE);

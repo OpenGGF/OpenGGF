@@ -5206,7 +5206,6 @@ METHOD com.openggf.game.GameModule public  com.openggf.level.InitialFixedSstDisp
 METHOD com.openggf.game.GameModule public  com.openggf.level.Level loadLevelOverride(int) THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public  com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet() THROWS java.io.IOException
-METHOD com.openggf.game.GameModule public  com.openggf.mods.scene.ModSceneFactory startupScene()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.playable.SidekickCarryTrigger getSidekickCarryTrigger()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.playable.SuperStateController createSuperStateController(com.openggf.sprites.playable.AbstractPlayableSprite)
@@ -6521,7 +6520,6 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.obj
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet() THROWS java.io.IOException
-METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.mods.scene.ModSceneFactory startupScene()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.sprites.playable.SidekickCarryTrigger getSidekickCarryTrigger()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.sprites.playable.SuperStateController createSuperStateController(com.openggf.sprites.playable.AbstractPlayableSprite)

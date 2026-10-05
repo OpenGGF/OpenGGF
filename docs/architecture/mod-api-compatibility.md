@@ -271,8 +271,9 @@ Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `SceneSprite`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `RomSpriteRequest` (with its
 `Compression` and `DplcLayout` enums), `SceneBackdrop` (with its `Band` record), `SceneMouse`,
 `SceneAudio` and `SceneStorage`, plus
-`ModContext.registerStartupScene`, `GameModule.startupScene()` (default `null`, delegated
-by `DelegatingGameModule`), `GameMode.MOD_SCENE`, and `InputHandler.handleScroll` /
+`ModContext.registerStartupScene` (the engine finds the scene as the effective module's
+`getGameService(ModSceneFactory.class)`, so the `game` package never depends on mod types),
+`GameMode.MOD_SCENE`, and `InputHandler.handleScroll` /
 `consumeScrollNotches`. The host classes in the same package (`ModSceneHost`,
 `SceneServices`, `OwnedSceneFactory`, `SceneRomArtFactory`) are engine-internal and stay
 unreachable from the pinned surface; `GameLoop`'s scene entry points are package-private

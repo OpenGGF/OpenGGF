@@ -41,7 +41,7 @@ final class ModSceneLauncher {
     static boolean openStartupScene(GameLoop gameLoop, SonicConfigurationService config, long window,
             GraphicsManager graphics, int logicalWidth, int logicalHeight) {
         GameModule module = GameServices.module();
-        ModSceneFactory factory = module == null ? null : module.startupScene();
+        ModSceneFactory factory = module == null ? null : module.getGameService(ModSceneFactory.class);
         if (factory == null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             return false;
         }

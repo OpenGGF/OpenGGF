@@ -22,9 +22,9 @@ public final class MenuScreenModeController {
     }
 
     /** One tick of the open mod scene; it reads this frame's input before the edges advance. */
-    public void updateModScene(com.openggf.mods.scene.ModSceneHost host, InputHandler inputHandler) {
-        if (host != null) {
-            host.update(inputHandler);
+    public void updateModScene(java.util.function.Consumer<InputHandler> scene, InputHandler inputHandler) {
+        if (scene != null) {
+            scene.accept(inputHandler);
         }
         inputHandler.update();
     }

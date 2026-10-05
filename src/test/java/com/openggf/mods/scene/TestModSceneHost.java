@@ -96,7 +96,8 @@ class TestModSceneHost {
         GameModule base = mock(GameModule.class);
         GameModule module = new ModBackedGamePatch(plan, boundary(new ModRuntimeFindingStore()))
                 .apply(base, mock(PatchContext.class));
-        OwnedSceneFactory factory = assertInstanceOf(OwnedSceneFactory.class, module.startupScene());
+        OwnedSceneFactory factory = assertInstanceOf(OwnedSceneFactory.class,
+                module.getGameService(ModSceneFactory.class));
         assertEquals("cards", factory.ownerModId());
     }
 
