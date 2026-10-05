@@ -37,6 +37,7 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
     private final ModSceneHost host = new ModSceneHost();
     private final InputHandler input = new InputHandler();
     private final List<String> exits = new ArrayList<>();
+    private final ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
 
     private SlayTheRobotnikHarness(URLClassLoader loader, ModRegistrationPlan plan) {
         this.loader = loader;
@@ -86,13 +87,18 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
         }
     }
 
+    /** Faults the engine's fault boundary caught from the mod, by owner (empty when it ran cleanly). */
+    public Map<String, List<com.openggf.mods.ModFinding>> findings() {
+        return findings.snapshot();
+    }
+
     public ModRegistrationPlan plan() {
         return plan;
     }
 
     /** The module the engine would run with the mod applied on top of {@code base}. */
     public GameModule apply(GameModule base) {
-        ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+        ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), findings,
                 owners -> new ModStateSaveResult.Saved(), owners -> { });
         GameModule effective = new ModBackedGamePatch(plan, boundary).apply(base, null);
         for (var patch : plan.explicitPatches()) {
