@@ -39,6 +39,14 @@ public final class CourseController extends AbstractObjectInstance implements Re
     static final int OPENING_BOARD_FRAMES = 300, OPENING_BOARD_FADE = 30;
     // Overtaking the zone's top score flashes a banner for three seconds.
     static final int CELEBRATE_FRAMES = 180;
+    // Mod design: CONTINUE replays Sonic's way back as a ghost (45-90 frames by distance), then
+    // holds him at the restart spot until the player goes (up to two seconds), then shows GO!.
+    static final int GLIDE_MIN_FRAMES = 45, GLIDE_MAX_FRAMES = 90;
+    static final int READY_FRAMES = 120, READY_INPUT_DELAY = 20, GO_FRAMES = 40;
+    // A restart spot needs pit-free floor this far ahead (about 1.4s at the course top speed).
+    static final int RESUME_RUNWAY = 448;
+    /** CONTINUE phases. */
+    static final int RESUME_NONE = 0, RESUME_GLIDE = 1, RESUME_READY = 2;
     private int scrollFraction;
     private int scoreFraction;
     private boolean started;
@@ -61,6 +69,22 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private int celebrateFrames;
     // This run's leaderboard rank once it has been recorded (at a death or exit), 0 if unplaced.
     private int rank;
+    // CONTINUE sequence: phase, frames into it, the glide's length, and its endpoints (local).
+    private int resumePhase;
+    private int resumeFrame;
+    private int glideFrames;
+    private int ghostFromX;
+    private int ghostFromY;
+    private int ghostToX;
+    private int ghostToY;
+    private int cameraFromX;
+    private int cameraToX;
+    private int goFrames;
+    // Sonic's last living pose and where he died, which the ghost starts from.
+    private int ghostFrame;
+    private boolean ghostFlip;
+    private int deathX;
+    private int deathY;
     public boolean gameOver() { return gameOver; }
     public boolean restartReady() { return gameOver && gameOverFrames >= RESTART_DELAY_FRAMES; }
     /** A spare life remains, so the menu offers CONTINUE (spending it) as well as RESTART. */
@@ -89,6 +113,10 @@ public final class CourseController extends AbstractObjectInstance implements Re
         if (!started || gameOver || openingFrames >= OPENING_BOARD_FRAMES) return 0f;
         return Math.min(1f, (float) (OPENING_BOARD_FRAMES - openingFrames) / OPENING_BOARD_FADE);
     }
+    /** RESUME_NONE, RESUME_GLIDE (the ghost glides back) or RESUME_READY (waiting to go). */
+    public int resumePhase() { return resumePhase; }
+    /** Frames of GO! left after a resumed run sets off. */
+    public int goFrames() { return goFrames; }
     /** True for a few seconds after the run's score overtakes the zone's previous top score. */
     public boolean celebrating() { return celebrateFrames > 0; }
     public int celebrateFrames() { return celebrateFrames; }
@@ -120,6 +148,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
     @Override public boolean isHighPriority() { return true; }
     @Override public int getPriorityBucket() { return 0; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
+        drawGhost();
         CourseHud.draw(services(), this);
     }
     private ChallengeClock clock() { return services().gameService(ChallengeClock.class); }
@@ -134,7 +163,23 @@ public final class CourseController extends AbstractObjectInstance implements Re
         showRunAtCourseSpeed(player);
         if (escapePressed()) { exitToTitle(); return; }
         if (gameOver) { awaitChoice(player); return; }
+        if (resumePhase != RESUME_NONE
+                && player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+            if (!player.getDead()) {
+                continueResume(sprite);
+                return;
+            }
+            // Nothing in the course can kill him here, but a death still ends the sequence cleanly.
+            resumePhase = RESUME_NONE;
+            sprite.setHidden(false);
+            sprite.setObjectControlled(false);
+        }
         if (player.getDead()) { endRun(player); return; }
+        if (goFrames > 0) goFrames--;
+        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+            ghostFrame = sprite.getMappingFrame();
+            ghostFlip = sprite.getRenderHFlip();
+        }
         if (!started) {
             started = true;
             // Every load, including RESTART from the death menu, begins a fresh session with
@@ -274,6 +319,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
 
     private void endRun(PlayableEntity player) {
         gameOver = true;
+        deathX = player.getCentreX();
+        deathY = player.getCentreY();
         var state = services().gameState();
         session().died(state.getLives(), clock().capture());
         recordScore();
@@ -322,11 +369,14 @@ public final class CourseController extends AbstractObjectInstance implements Re
     }
 
     /**
-     * CONTINUE: revive Sonic in place at the last safe spot, without reloading the level.
-     * Score, speed stage and countdown position, terrain and cleared enemies all carry on.
+     * CONTINUE: spends the life and starts the way back. Sonic is revived at the restart spot
+     * (hidden, held still and protected), and a ghost of him glides there from where he died
+     * while the camera follows. Then he waits, visible, until the player sets off (or two
+     * seconds pass); only then does the run, its clock and its scrolling resume. Score, speed
+     * stage and countdown, terrain, rings and cleared enemies all carry on. No level reload.
      */
     private void resume(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
-        setLives(session().resume(clock()));
+        setLives(session().livesLeft() - 1);
         var camera = services().camera();
         long worldX = resumeSpot(camera);
         int localX = (int) (worldX - originPixels());
@@ -338,17 +388,28 @@ public final class CourseController extends AbstractObjectInstance implements Re
         com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(sprite, y);
         sprite.resetPositionAndStatTableHistoryAtCentre((short) localX, (short) y);
         sprite.setDirection(com.openggf.physics.Direction.RIGHT);
-        sprite.setGSpeed((short) COURSE_MAX_SPEED);
-        sprite.setXSpeed((short) COURSE_MAX_SPEED);
+        sprite.setGSpeed((short) 0);
+        sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
+        sprite.setObjectControlled(true);
+        sprite.setHidden(true);
         sprite.setInvulnerableFrames(RESUME_INVULNERABLE_FRAMES);
         // Unlike a stock respawn, the run keeps its rings; only RESTART and EXIT clear them.
         // Ring lives already earned for the count are not awarded again.
         ringsSeen = services().levelGamestate().getRings();
-        // Applying the death froze the camera; put Sonic back at the follow point.
+        // The death froze the camera; the glide moves it back to the follow point.
         camera.setFrozen(false);
-        camera.setX((short) Math.max(0, localX - camera.getWidth() * FOLLOW_PERCENT / 100));
-        camera.setY((short) Math.max(0, y - camera.getHeight() / 2));
+        cameraFromX = camera.getX();
+        cameraToX = Math.max(0, localX - camera.getWidth() * FOLLOW_PERCENT / 100);
+        // A pit death ends below the screen: the ghost rises from its bottom edge.
+        ghostFromX = Math.max(camera.getX() + 16, Math.min(camera.getX() + camera.getWidth() - 16, deathX));
+        ghostFromY = Math.max(camera.getY() + 16, Math.min(camera.getY() + camera.getHeight() - 16, deathY));
+        ghostToX = localX;
+        ghostToY = y;
+        int distance = Math.abs(ghostToX - ghostFromX) + Math.abs(ghostToY - ghostFromY);
+        glideFrames = Math.max(GLIDE_MIN_FRAMES, Math.min(GLIDE_MAX_FRAMES, GLIDE_MIN_FRAMES / 2 + distance / 12));
+        resumePhase = RESUME_GLIDE;
+        resumeFrame = 0;
         scrollFraction = 0;
         gameOver = false;
         gameOverFrames = 0;
@@ -357,12 +418,98 @@ public final class CourseController extends AbstractObjectInstance implements Re
         services().audioManager().playMusic(services().levelManager().getCurrentLevelMusicId());
     }
 
-    /** The last safe spot, or the first safe floor ahead of the screen's left edge. */
+    /** Advances the CONTINUE glide and ready hold; the clock, score and scrolling wait. */
+    private void continueResume(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        var camera = services().camera();
+        sprite.setInvulnerableFrames(RESUME_INVULNERABLE_FRAMES);
+        resumeFrame++;
+        if (resumePhase == RESUME_GLIDE) {
+            double t = glideProgress(resumeFrame);
+            camera.setX((short) Math.round(cameraFromX + (cameraToX - cameraFromX) * t));
+            // Camera Y follows the ghost through the camera's own vertical tracking.
+            camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, ghostY());
+            if (resumeFrame >= glideFrames) {
+                resumePhase = RESUME_READY;
+                resumeFrame = 0;
+                sprite.setHidden(false);
+            }
+            return;
+        }
+        camera.setX((short) cameraToX);
+        camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, sprite.getCentreY());
+        boolean go = resumeFrame > READY_INPUT_DELAY && (sprite.isRightPressed() || sprite.isJumpPressed());
+        if (!go && resumeFrame < READY_FRAMES) return;
+        // Set off: the clock eases back up to the speed the run died at, from a running start.
+        session().resume(clock());
+        resumePhase = RESUME_NONE;
+        sprite.setObjectControlled(false);
+        sprite.setGSpeed((short) COURSE_MAX_SPEED);
+        sprite.setXSpeed((short) COURSE_MAX_SPEED);
+        goFrames = GO_FRAMES;
+    }
+
+    /** Smoothstep through the glide: slow out of the death spot, slow into the restart spot. */
+    private double glideProgress(int frame) {
+        double t = Math.min(1.0, (double) frame / Math.max(1, glideFrames));
+        return t * t * (3 - 2 * t);
+    }
+    /** The ghost's local position this frame. */
+    public int ghostX() { return ghostX(resumeFrame); }
+    public int ghostY() { return ghostY(resumeFrame); }
+    private int ghostX(int frame) { return (int) Math.round(ghostFromX + (ghostToX - ghostFromX) * glideProgress(frame)); }
+    private int ghostY(int frame) { return (int) Math.round(ghostFromY + (ghostToY - ghostFromY) * glideProgress(frame)); }
+
+    /**
+     * Draws the gliding ghost with Sonic's own sprite art and last living pose, translucent,
+     * with two fainter echoes trailing back towards where he died.
+     */
+    private void drawGhost() {
+        if (resumePhase != RESUME_GLIDE) return;
+        if (!(services().camera().getFocusedSprite()
+                instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite)) return;
+        var renderer = sprite.getSpriteRenderer();
+        if (renderer == null) return;
+        var graphics = services().graphicsManager();
+        for (int echo = 2; echo >= 0; echo--) {
+            int frame = Math.max(0, resumeFrame - echo * 4);
+            graphics.flushPatternBatch();
+            graphics.beginGhostRenderEffect(0.55f - echo * 0.18f);
+            graphics.beginPatternBatch();
+            try {
+                renderer.drawFrame(ghostFrame, ghostX(frame), ghostY(frame), ghostFlip, false);
+            } finally {
+                graphics.flushPatternBatch();
+                graphics.endGhostRenderEffect();
+            }
+        }
+    }
+
+    /**
+     * Where CONTINUE restarts: the last safe spot at or before the death, or the nearest one
+     * behind it, that has {@link #RESUME_RUNWAY} pixels of pit-free floor ahead, so the run
+     * never resumes on the lip of a pit. If the retained window has none behind, the first
+     * such spot ahead of the screen's left edge.
+     */
     private long resumeSpot(com.openggf.camera.Camera camera) {
-        if (safeWorldX >= 0 && safeWorldX - originPixels() >= 64) return safeWorldX;
+        long death = originPixels() + deathX;
+        long start = safeWorldX >= 0 ? Math.min(safeWorldX, death) : death;
+        long limit = originPixels() + 64;
+        for (long x = start; x >= limit; x -= 16) {
+            if (safeFloor(x) && runwayClear(x)) return x;
+        }
         long x = originPixels() + Math.max(64, camera.getX() + 64);
-        for (int i = 0; i < 1024 && !safeFloor(x); i++) x += 16;
-        return x;
+        for (int i = 0; i < 2048; i++, x += 16) {
+            if (safeFloor(x) && runwayClear(x)) return x;
+        }
+        return safeWorldX >= 0 && safeWorldX - originPixels() >= 64 ? safeWorldX : x;
+    }
+
+    private boolean runwayClear(long worldX) {
+        var library = services().gameService(TerrainLibrary.class);
+        for (int dx = 0; dx <= RESUME_RUNWAY; dx += 8) {
+            if (library.floorAt(worldX + dx) < 0) return false;
+        }
+        return true;
     }
 
     private void recycleTerrain(PlayableEntity player) {

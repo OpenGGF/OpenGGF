@@ -45,8 +45,14 @@ A session starts with **no spare lives**. The only way to earn one is rings: eve
 the ring counter reaches 100, 200, 300 and so on, you gain a life (reaching 100 again
 after losing your rings counts too). Points never award lives. Spare lives are shown on
 the HUD. When Sonic dies with a spare life, the stock card is replaced by a menu:
-**CONTINUE** spends the life and revives Sonic right where the run is, at the last safe
-spot he stood on (solid, pit-free floor), with no level reload. Score, speed, the
+**CONTINUE** spends the life and revives Sonic right where the run is, with no level reload.
+The restart spot is the last safe spot he stood on (solid, pit-free floor), or the nearest one
+behind it with **448 pixels of floor and no pit ahead**, so a run never restarts on the lip of
+a hole. A translucent ghost of Sonic, with two fading echoes, glides back from where he died
+to that spot (45 to 90 frames) while the camera follows. Then Sonic appears and **READY**
+waits until you press right or jump (or two seconds pass); he sets off with a running start,
+**GO!** flashes, and the game speed eases back up from 1× to the speed stage it died at over
+a second and a half. The clock, score and scrolling wait through the glide and READY. Score, speed, the
 countdown to the next speedup, the terrain, cleared enemies and Sonic's rings all carry on, and
 Sonic blinks for two seconds. Only RESTART, EXIT and GAME OVER clear the rings. **RESTART** reloads a fresh session at 1× with no
 spare lives and a zero score. **EXIT** fades out to the Sonic 1 title screen, where the zone

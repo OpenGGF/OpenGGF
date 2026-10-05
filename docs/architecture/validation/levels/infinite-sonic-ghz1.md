@@ -545,3 +545,15 @@ guard 42 run, 0 failures** (queued Maven, S1 REV01). The change-based runner sel
 ordinary suite (unclassified example-mod and title paths); focused validation was used because
 the engine change is an optional hook with a null default. Not covered: the GL-rendered title
 (checked by a software render of the same tile lookup) and live play.
+
+## CONTINUE ghost glide, READY hold and restart runway (0.20.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `2fd4004444`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Glide, READY, set-off, ease-back | `deathMenuContinueRevivesInPlaceAtTheLastSafeSpot` | Hidden and still during a 45-90 frame glide whose ghost closes in and lands on the spot, camera moves at most 12 px a frame, input ignored; READY waits with clock and score frozen; right sets off at 0x540 with blink and GO!; pace 1x rising to 1.5x in 90 frames; a second CONTINUE |
+| Restart runway | same, `continueAfterAPitDeathRevivesBeforeThePit` | 448 px pit-free ahead; the pit death restarts more than 448 px before the pit |
+
+**195 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not covered:
+the GL-rendered ghost (headless draws nothing) and live play.

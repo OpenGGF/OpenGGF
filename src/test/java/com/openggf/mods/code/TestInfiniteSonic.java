@@ -426,6 +426,7 @@ class TestInfiniteSonic {
         assertEquals(first, entryScore(top(0).get(0)));
         fixture.stepFrame(false, false, false, false, true);
         assertFalse(gameOver(), "continued");
+        finishContinue(fixture);
         dieAndWaitForMenu(fixture, 0);
         int second = GameServices.gameState().getScore();
         assertTrue(second > first);
@@ -701,6 +702,7 @@ class TestInfiniteSonic {
         assertTrue(controllerFlag("canContinue"));
         var menu = loader.loadClass("infinite.CourseHud").getMethod("menuLines", controller().getClass());
         assertEquals(List.of("> CONTINUE", "  RESTART", "  EXIT"), menu.invoke(null, controller()));
+        int deathTicks = ticks();
         fixture.stepFrame(false, false, false, false, true);
         // No reload: the same controller and terrain carry on.
         assertFalse(GameServices.level().isRespawnRequestedForRewind(), "CONTINUE does not reload the level");
@@ -708,28 +710,83 @@ class TestInfiniteSonic {
         assertFalse(gameOver());
         var player = fixture.sprite();
         assertFalse(player.getDead());
-        assertEquals(safe, originPixels() + player.getCentreX(), "revived at the last safe spot");
-        assertEquals(floorAt(safe) - 19, player.getCentreY());
-        assertTrue(player.getInvulnerableFrames() > 0, "post-continue blink");
+        long revived = originPixels() + player.getCentreX();
+        assertTrue(revived <= safe, "back at or behind the last safe spot");
+        assertRunway(revived);
+        assertEquals(floorAt(revived) - 19, player.getCentreY());
         assertEquals(1, GameServices.gameState().getLives(), "CONTINUE spends one spare life");
         assertEquals(1, controllerInt("displayLives"));
         assertEquals(30, GameServices.level().getLevelGamestate().getRings(), "CONTINUE keeps the rings");
         assertTrue(GameServices.gameState().getScore() >= score, "score carries over");
-        assertEquals(1.5, speed(), "the run resumes at the speed it died at");
-        assertTrue(Math.abs(ticks() - (1800 * 2 + 100)) < 10, "and partway through that interval: " + ticks());
+
+        // A ghost of Sonic glides back from where he died while the real Sonic waits, hidden.
+        assertEquals(1, controllerInt("resumePhase"), "the glide");
+        assertTrue(player.isHidden() && player.isObjectControlled());
+        int restartX = player.getCentreX();
+        int previousGhost = controllerInt("ghostX"), previousCamera = fixture.camera().getX(), glide = 0;
+        int frozenScore = GameServices.gameState().getScore();
+        while (controllerInt("resumePhase") == 1 && glide++ < 120) {
+            fixture.stepFrame(false, false, false, true, true); // input does not move him yet
+            int ghost = controllerInt("ghostX");
+            assertTrue(Math.abs(ghost - restartX) <= Math.abs(previousGhost - restartX), "the ghost closes in");
+            assertTrue(Math.abs(fixture.camera().getX() - previousCamera) <= 12, "the camera glides, no cut");
+            previousGhost = ghost;
+            previousCamera = fixture.camera().getX();
+            assertEquals(restartX, player.getCentreX());
+        }
+        assertTrue(glide >= 45 && glide <= 91, "a 45-90 frame glide: " + glide);
+        assertEquals(restartX, controllerInt("ghostX"), "the ghost lands on the restart spot");
+
+        // READY: Sonic appears and waits; nothing runs until the player goes.
+        assertEquals(2, controllerInt("resumePhase"));
+        assertFalse(player.isHidden());
+        for (int i = 0; i < 10; i++) fixture.stepIdleFrames(1);
+        assertEquals(2, controllerInt("resumePhase"), "still waiting");
+        assertEquals(restartX, player.getCentreX());
+        assertEquals(deathTicks, ticks(), "the clock waits through the glide and READY");
+        assertEquals(frozenScore, GameServices.gameState().getScore(), "so does the score");
+        assertEquals(1.5, speed(), "the run keeps the speed stage it died at");
+        for (int i = 0; i < 20 && controllerInt("resumePhase") == 2; i++) fixture.stepFrame(false, false, false, true, false);
+        assertEquals(0, controllerInt("resumePhase"), "right sets off");
+        assertFalse(player.isObjectControlled());
+        assertTrue(controllerInt("goFrames") > 0, "GO!");
+        assertTrue(player.getInvulnerableFrames() > 60, "post-continue blink");
+        assertEquals(0x540, player.getGSpeed(), "a running start");
+        // The pace sets off at 1x and eases back up to the stage within 90 frames.
+        var clock = clock();
+        var rate = clock.getClass().getMethod("multiplier");
+        assertEquals(1.0, (double) rate.invoke(clock), 1e-9);
+        for (int i = 0; i < 90; i++) clock.getClass().getMethod("nextFrameSteps").invoke(clock);
+        assertEquals(1.5, (double) rate.invoke(clock), 1e-9);
         assertTrue(fixture.camera().getX() < player.getCentreX() - player.getXRadius(), "Sonic is on screen");
-        for (int i = 0; i < 4; i++) fixture.stepFrame(false, false, false, true, false);
-        assertFalse(player.getAir(), "standing on the floor");
         int cameraX = fixture.camera().getX();
         for (int i = 0; i < 60; i++) fixture.stepFrame(false, false, false, true, false);
         assertFalse(player.getDead());
         assertTrue(fixture.camera().getX() > cameraX, "the course scrolls again");
+        assertTrue(ticks() > deathTicks, "and the clock runs");
         // The resumed run can die again and continue with its last spare life.
         dieAndWaitForMenu(fixture, 1);
         assertTrue(controllerFlag("canContinue"));
         fixture.stepFrame(false, false, false, false, true);
         assertFalse(fixture.sprite().getDead());
         assertEquals(0, GameServices.gameState().getLives());
+        finishContinue(fixture);
+        assertFalse(fixture.sprite().getDead());
+    }
+
+    /** A restart spot has pit-free floor for the 448px runway ahead. */
+    private void assertRunway(long worldX) throws Exception {
+        for (int dx = 0; dx <= 448; dx += 8) {
+            assertTrue(floorAt(worldX + dx) >= 0, "pit " + dx + "px ahead of the restart spot " + worldX);
+        }
+    }
+
+    /** Holds right through the CONTINUE glide and READY until the run sets off. */
+    private void finishContinue(HeadlessTestFixture fixture) throws Exception {
+        for (int i = 0; i < 400 && controllerInt("resumePhase") != 0; i++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        assertEquals(0, controllerInt("resumePhase"));
     }
 
     @Test void continueAfterAPitDeathRevivesBeforeThePit() throws Exception {
@@ -755,8 +812,10 @@ class TestInfiniteSonic {
         fixture.stepFrame(false, false, false, false, true);
         assertFalse(player.getDead());
         long revived = originPixels() + player.getCentreX();
-        assertEquals(safe, revived, "back at the last safe spot");
-        assertTrue(revived < pit);
+        assertTrue(revived <= safe, "back at or behind the last safe spot");
+        assertTrue(revived + 448 < pit, "far enough back to see the pit coming: " + (pit - revived) + "px");
+        assertRunway(revived);
+        finishContinue(fixture);
         for (int i = 0; i < 4; i++) fixture.stepIdleFrames(1);
         assertFalse(player.getAir(), "standing on solid floor");
         assertFalse(player.getDead());

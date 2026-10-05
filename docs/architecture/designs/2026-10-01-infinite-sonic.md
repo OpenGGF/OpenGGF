@@ -831,3 +831,27 @@ above the act's start, and fades a newly picked zone in over 12 frames. Green Hi
 stock title background (water palette cycle included). The wrapper marks the override active
 only around its own calls into the stock title, so a session without the mod draws stock.
 Verified with a temporary software render of each zone's plane (removed) and a regression test.
+
+## CONTINUE ghost glide, READY hold and restart runway (0.20.0)
+
+Follow-up on `2fd4004444`, 2026-10-05. Requests: a more gradual CONTINUE, perhaps a ghost
+of Sonic moving back to the restart spot; and runs sometimes restarted right before a big
+hole, so Sonic fell in before the player could react.
+
+**Restart runway.** The last safe spot only needed floor 32 px behind and 64 px ahead. The
+restart spot now also needs 448 px of pit-free floor ahead (about 1.4 s at the course top
+speed), searching back from the last safe spot (or the death, if earlier) through the
+retained window in 16 px steps, then forward from the screen's left edge as before.
+
+**Sequence.** CONTINUE spends the life and revives Sonic at the spot hidden, object-controlled
+(no physics) and invulnerable. Glide: 45-90 frames by distance, smoothstep; a ghost drawn with
+Sonic's own `PlayerSpriteRenderer`, his last living mapping frame and facing, under the
+engine's ghost render effect (as time-attack ghosts), plus two fainter echoes 4 and 8 frames
+behind; it starts from the death point clamped to the screen (a pit death rises from the
+bottom edge). The camera X follows the same curve; Y uses the camera's own tracking of the
+ghost. READY: Sonic shows and waits; right or jump after 20 frames, or 120 frames, sets off
+with the course's running start and GO!. The clock stays ended (1x steps) until then, so the
+countdown and score wait; `ChallengeClock.resumeFrom` restores the death-time clock at 1x and
+ramps back to the stage over 90 frames (a `step` field, in the snapshot, replaces the fixed
+ramp until the stage is reached). Previously Sonic was revived at full speed on the frame
+CONTINUE was pressed, at the full death-time pace.

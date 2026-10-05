@@ -25,10 +25,10 @@ public final class CourseSession implements RewindSnapshottable<CourseSession.Sn
         resumeClock = clock;
     }
 
-    /** Spends one spare life and restores the clock; returns the spare lives remaining. */
+    /** Spends one spare life and restores the clock, easing up from 1x; returns the spare lives remaining. */
     public int resume(ChallengeClock clock) {
         int remaining = livesLeft - 1;
-        if (resumeClock != null) clock.restore(resumeClock);
+        if (resumeClock != null) clock.resumeFrom(resumeClock);
         reset();
         return remaining;
     }

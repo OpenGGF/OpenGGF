@@ -57,7 +57,7 @@ public final class CourseHud {
         return course.speedMultiplier() >= 32 ? "MAX SPEED" : "NEXT " + course.secondsRemaining();
     }
     public static String warningText(CourseController course) {
-        return !course.gameOver() && course.speedMultiplier() < 32 && course.secondsRemaining() <= 5
+        return !course.gameOver() && course.resumePhase() == CourseController.RESUME_NONE && course.speedMultiplier() < 32 && course.secondsRemaining() <= 5
                 ? "SPEED UP IN " + course.secondsRemaining() : "";
     }
     /** Shown over the run while it overtakes the zone's top score, and on the death screen for one. */
@@ -86,6 +86,15 @@ public final class CourseHud {
         if (course.celebrating() && course.celebrateFrames() / 6 % 2 == 0) {
             glyphs(services, TOP_SCORE, (services.camera().getWidth() - TOP_SCORE.length() * 12) / 2, 88, 3,
                     1f, 0.82f, 0.19f, 1f);
+        }
+        if (course.resumePhase() == CourseController.RESUME_READY) {
+            String ready = "READY";
+            glyphs(services, ready, (services.camera().getWidth() - ready.length() * 12) / 2, 88, 3, 1f, 0.82f, 0.19f, 1f);
+            centred(services, "RIGHT OR JUMP TO GO", 116);
+        } else if (course.goFrames() > 0) {
+            String go = "GO!";
+            glyphs(services, go, (services.camera().getWidth() - go.length() * 16) / 2, 84, 4, 1f, 0.82f, 0.19f,
+                    Math.min(1f, course.goFrames() / 10f));
         }
         if (!course.gameOver()) return;
         String rank = rankText(course);
