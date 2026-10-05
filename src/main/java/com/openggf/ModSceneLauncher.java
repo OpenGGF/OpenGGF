@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.PlayerSpriteArtProvider;
@@ -9,7 +10,9 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.save.SavePaths;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.Sonic3kZoneArt;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.render.ZonePictureSource;
 import com.openggf.mods.scene.ModSceneFactory;
 import com.openggf.mods.scene.SceneRomArtFactory;
 import com.openggf.mods.scene.SceneServices;
@@ -24,6 +27,7 @@ import org.lwjgl.glfw.GLFW;
  * assembles its services (audio, ROM art, storage, mouse mapping, exits), and draws it.
  * Kept out of {@link Engine} so the engine only gains one-line hooks.
  */
+@CompositionRoot
 final class ModSceneLauncher {
     private static final Logger LOG = Logger.getLogger(ModSceneLauncher.class.getName());
 
@@ -72,11 +76,20 @@ final class ModSceneLauncher {
                     return cached;
                 }
             };
-            return SceneRomArtFactory.create(rom, id, players, module::loadTailsTailArt);
+            return SceneRomArtFactory.create(rom, id, players, module::loadTailsTailArt, zoneArt(id, rom));
         } catch (IOException | RuntimeException e) {
             LOG.log(Level.WARNING, "Mod scene opened without ROM art", e);
             return null;
         }
+    }
+
+    /**
+     * The stock game's zone backdrop and overview builder (Sonic 3 &amp; Knuckles only so far),
+     * reading the same ROM; null when the game has none. It builds detached levels and never
+     * touches the running one.
+     */
+    private static ZonePictureSource zoneArt(GameId id, Rom rom) {
+        return id == GameId.S3K ? new Sonic3kZoneArt(rom) : null;
     }
 
     /** Window coordinates (GLFW screen units) to logical scene pixels, through the letterboxed viewport. */

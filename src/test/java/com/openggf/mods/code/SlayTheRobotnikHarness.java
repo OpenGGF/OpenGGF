@@ -126,7 +126,7 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
         try {
             var rom = GameServices.rom().getRom();
             SceneServices services = new SceneServices(null, SceneRomArtFactory.create(rom, GameId.S3K, players,
-                    effective::loadTailsTailArt),
+                    effective::loadTailsTailArt, new com.openggf.game.sonic3k.Sonic3kZoneArt(rom)),
                     saves, (x, y) -> new int[] {(int) x, (int) y, 1}, () -> exits.add("game"),
                     () -> exits.add("master"));
             host.open(factory, services, width, height);

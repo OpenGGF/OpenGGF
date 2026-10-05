@@ -11,6 +11,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.ZonePictureSource;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 
@@ -31,14 +33,21 @@ final class RomSceneArt implements SceneRomArt {
     private final GameId game;
     private final Supplier<PlayerSpriteArtProvider> players;
     private final Supplier<SpriteArtSet> tailsTails;
+    private final ZonePictureSource zones;
     private RomByteReader reader;
     private final Map<String, SceneSpriteSet> characterCache = new HashMap<>();
+    /** Per zone and act; unsupported zones cache as empty so they are asked once. */
+    private final Map<List<Integer>, Optional<SceneBackdrop>> backdropCache = new HashMap<>();
+    /** Per zone, act and height limit. */
+    private final Map<List<Integer>, Optional<SceneImage>> overviewCache = new HashMap<>();
 
-    RomSceneArt(Rom rom, GameId game, Supplier<PlayerSpriteArtProvider> players, Supplier<SpriteArtSet> tailsTails) {
+    RomSceneArt(Rom rom, GameId game, Supplier<PlayerSpriteArtProvider> players, Supplier<SpriteArtSet> tailsTails,
+            ZonePictureSource zones) {
         this.rom = rom;
         this.game = game;
         this.players = players;
         this.tailsTails = tailsTails;
+        this.zones = zones;
     }
 
     private RomByteReader reader() {
@@ -134,6 +143,44 @@ final class RomSceneArt implements SceneRomArt {
             }
         }
         return out;
+    }
+
+    // Zone pictures are built on the calling thread: the ROM's reads share one channel position.
+    @Override
+    public SceneBackdrop zoneBackdrop(int zone, int act) {
+        if (zones == null || zone < 0 || act < 0) {
+            return null;
+        }
+        return backdropCache.computeIfAbsent(List.of(zone, act),
+                key -> Optional.ofNullable(zones.backdrop(zone, act)).map(RomSceneArt::toSceneBackdrop))
+                .orElse(null);
+    }
+
+    @Override
+    public SceneImage levelOverview(int zone, int act, int maxHeight) {
+        if (maxHeight < 1) {
+            throw new IllegalArgumentException("maxHeight must be positive: " + maxHeight);
+        }
+        if (zones == null || zone < 0 || act < 0) {
+            return null;
+        }
+        int rows = Math.min(maxHeight, 4096);
+        return overviewCache.computeIfAbsent(List.of(zone, act, rows),
+                key -> Optional.ofNullable(zones.overview(zone, act, rows)).map(RomSceneArt::toSceneImage))
+                .orElse(null);
+    }
+
+    private static SceneImage toSceneImage(ZonePictureSource.Picture picture) {
+        return new SceneImage(picture.width(), picture.height(), picture.argb());
+    }
+
+    /** Also checks the engine's bands against the API contract (they cover the image in order). */
+    private static SceneBackdrop toSceneBackdrop(ZonePictureSource.Backdrop backdrop) {
+        List<SceneBackdrop.Band> bands = new ArrayList<>(backdrop.bands().size());
+        for (ZonePictureSource.Band band : backdrop.bands()) {
+            bands.add(new SceneBackdrop.Band(band.top(), band.height(), band.speed(), band.drift()));
+        }
+        return new SceneBackdrop(toSceneImage(backdrop.picture()), bands);
     }
 
     private static int[] padPalette(int[] palette) {

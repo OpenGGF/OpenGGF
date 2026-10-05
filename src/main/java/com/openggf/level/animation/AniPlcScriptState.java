@@ -117,6 +117,29 @@ public class AniPlcScriptState {
         applyFrame(level, graphicsManager, frameTileIds[0]);
     }
 
+    /**
+     * Copies the first frame into a detached tile array at this script's destination, as
+     * {@link #prime} does for a live level, without touching a level or any graphics owner.
+     * For presentation copies of a level's tiles (mod scene backdrops); destinations outside
+     * {@code patterns} are skipped.
+     */
+    public void primeInto(Pattern[] patterns) {
+        if (frameTileIds.length == 0 || artPatterns.length == 0) {
+            return;
+        }
+        int tileId = frameTileIds[0];
+        for (int i = 0; i < tilesPerFrame; i++) {
+            int srcIndex = tileId + i;
+            int destIndex = destTileIndex + i;
+            if (srcIndex < 0 || srcIndex >= artPatterns.length || destIndex < 0 || destIndex >= patterns.length) {
+                continue;
+            }
+            Pattern copy = new Pattern();
+            copy.copyFrom(artPatterns[srcIndex]);
+            patterns[destIndex] = copy;
+        }
+    }
+
     /** Returns the current countdown timer (rewind-restore access). */
     public int getTimer() { return timer; }
 

@@ -896,6 +896,8 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.RomSpriteRequest$Compression visible @
 CF-ANNOTATION TYPE com.openggf.mods.scene.RomSpriteRequest$DplcLayout visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneArt visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneAudio visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneBackdrop visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneBackdrop$Band visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneCanvas visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneDraw visible @com.openggf.game.ModApi
@@ -1681,6 +1683,8 @@ CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$TrackMusic public  <init>(c
 CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int)
 CONSTRUCTOR com.openggf.mods.scene.RomSpriteRequest public  <init>(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int,int,com.openggf.mods.scene.RomSpriteRequest$DplcLayout,int,int)
+CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop public  <init>(com.openggf.mods.scene.SceneImage,java.util.List<com.openggf.mods.scene.SceneBackdrop$Band>)
+CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop$Band public  <init>(int,int,double,double)
 CONSTRUCTOR com.openggf.mods.scene.SceneDraw public  <init>(float,float,boolean,boolean,int,int)
 CONSTRUCTOR com.openggf.mods.scene.SceneImage public  <init>(int,int,int[])
 CONSTRUCTOR com.openggf.mods.scene.SceneMouse public  <init>(int,int,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean)
@@ -11367,6 +11371,19 @@ METHOD com.openggf.mods.scene.SceneAudio public,abstract  void fadeOutMusic()
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void playMusic(int)
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void playSfx(int)
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void stopMusic()
+METHOD com.openggf.mods.scene.SceneBackdrop public  com.openggf.mods.scene.SceneImage image()
+METHOD com.openggf.mods.scene.SceneBackdrop public  int column(com.openggf.mods.scene.SceneBackdrop$Band,double,long)
+METHOD com.openggf.mods.scene.SceneBackdrop public  java.util.List<com.openggf.mods.scene.SceneBackdrop$Band> bands()
+METHOD com.openggf.mods.scene.SceneBackdrop public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.SceneBackdrop public,final  int hashCode()
+METHOD com.openggf.mods.scene.SceneBackdrop public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneBackdrop$Band public  double drift()
+METHOD com.openggf.mods.scene.SceneBackdrop$Band public  double speed()
+METHOD com.openggf.mods.scene.SceneBackdrop$Band public  int height()
+METHOD com.openggf.mods.scene.SceneBackdrop$Band public  int top()
+METHOD com.openggf.mods.scene.SceneBackdrop$Band public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.SceneBackdrop$Band public,final  int hashCode()
+METHOD com.openggf.mods.scene.SceneBackdrop$Band public,final  java.lang.String toString()
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int height()
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int textWidth(java.lang.String)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int width()
@@ -11429,6 +11446,8 @@ METHOD com.openggf.mods.scene.SceneMouse public,final  boolean equals(java.lang.
 METHOD com.openggf.mods.scene.SceneMouse public,final  int hashCode()
 METHOD com.openggf.mods.scene.SceneMouse public,final  java.lang.String toString()
 METHOD com.openggf.mods.scene.SceneMouse public,static  com.openggf.mods.scene.SceneMouse none()
+METHOD com.openggf.mods.scene.SceneRomArt public  com.openggf.mods.scene.SceneBackdrop zoneBackdrop(int,int)
+METHOD com.openggf.mods.scene.SceneRomArt public  com.openggf.mods.scene.SceneImage levelOverview(int,int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  byte[] read(int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneSpriteSet character(java.lang.String)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneSpriteSet characterAccessory(java.lang.String)
@@ -14403,6 +14422,7 @@ NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDe
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$TrackMusic
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$Compression
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
+NESTED com.openggf.mods.scene.SceneBackdrop com.openggf.mods.scene.SceneBackdrop$Band
 NESTED com.openggf.net.client.ClientRaceSession com.openggf.net.client.ClientRaceSession$Phase
 NESTED com.openggf.net.host.HostMasterLink com.openggf.net.host.HostMasterLink$MessageSink
 NESTED com.openggf.net.hub.GhostHub com.openggf.net.hub.GhostHub$HubViolationRecorder
@@ -16321,6 +16341,12 @@ RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest dplcLayout com.openggf.
 RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest mappingAddress int
 RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest paletteLine int
 RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest tileOffset int
+RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop bands java.util.List<com.openggf.mods.scene.SceneBackdrop$Band>
+RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop image com.openggf.mods.scene.SceneImage
+RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band drift double
+RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band height int
+RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band speed double
+RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band top int
 RECORD-COMPONENT com.openggf.mods.scene.SceneDraw flash int
 RECORD-COMPONENT com.openggf.mods.scene.SceneDraw flipX boolean
 RECORD-COMPONENT com.openggf.mods.scene.SceneDraw flipY boolean
@@ -17966,6 +17992,7 @@ TYPE record public,final com.openggf.mods.code.ModLaunchTeamContribution SUPER j
 TYPE record public,final com.openggf.mods.code.ModZoneContribution SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.RomArtRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.RomSpriteRequest SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.scene.SceneBackdrop SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneMouse SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneSprite SUPER java.lang.Record
@@ -18121,6 +18148,7 @@ TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$Start S
 TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$StockMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$TrackMusic SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.scene.SceneBackdrop$Band SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Control SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Disconnected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$GhostData SUPER java.lang.Record
@@ -19050,6 +19078,8 @@ TYPE-ANNOTATION com.openggf.mods.scene.RomSpriteRequest$Compression @com.openggf
 TYPE-ANNOTATION com.openggf.mods.scene.RomSpriteRequest$DplcLayout @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneArt @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneAudio @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneBackdrop @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneBackdrop$Band @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneCanvas @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneDraw @com.openggf.game.ModApi

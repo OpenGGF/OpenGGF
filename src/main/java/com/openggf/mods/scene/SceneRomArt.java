@@ -40,4 +40,53 @@ public interface SceneRomArt {
 
     /** The palette the character's sprites use (16 colours). */
     int[] characterPalette(String characterCode);
+
+    /**
+     * A zone's background as the game loads it (level art, layout, load-time palette and
+     * animated tiles at their first frame), with its parallax bands; see
+     * {@link SceneBackdrop} for drawing it. Built from the ROM on the first request for a
+     * zone and act (tens of milliseconds) and cached; it never touches a running level.
+     *
+     * <p>Sonic 3 &amp; Knuckles zone ids: 0 Angel Island, 1 Hydrocity, 6 Launch Base,
+     * 10 Sky Sanctuary. Supported today: Angel Island acts 1 and 2 (act 1's main level, not
+     * the intro beach), Hydrocity act 1 (seen from below the waterline), Launch Base act 1
+     * and Sky Sanctuary act 1 (its cloud sea).
+     *
+     * @param zone the game's zone id
+     * @param act  0 for act 1, 1 for act 2
+     * @return the backdrop, or null when this game or zone has none
+     */
+    default SceneBackdrop zoneBackdrop(int zone, int act) {
+        return null;
+    }
+
+    /**
+     * A whole act as one small opaque picture, for maps and level-select screens: the
+     * foreground plane over the background plane (the background at the same level
+     * coordinates, repeating as its layout does; no objects, rings or water tint), cropped to
+     * the area the camera can show, then shrunk by the smallest whole factor that makes it at
+     * most {@code maxHeight} pixels tall and 4096 wide. Each output pixel is the average of
+     * its square of level pixels, so it reads as a miniature; edge pixels average the part of
+     * their square inside the level. Uses the art and palette the act loads with, and animated
+     * tiles at their first frame.
+     *
+     * <pre>{@code
+     * SceneImage map = ctx.art().rom().levelOverview(1, 0, 196);   // Hydrocity act 1
+     * canvas.drawRegion(map, scrollX, 0, canvas.width(), map.height(), 0, 14, canvas.width(),
+     *         map.height(), SceneDraw.plain());
+     * }</pre>
+     *
+     * <p>Same zones and acts as {@link #zoneBackdrop}. Built on the first request (up to about
+     * a second for a long act) and cached per zone, act and {@code maxHeight}; it never touches
+     * a running level.
+     *
+     * @param zone      the game's zone id
+     * @param act       0 for act 1, 1 for act 2
+     * @param maxHeight the tallest result wanted, in pixels (1 or more; 4096 at most is used)
+     * @return the picture, or null when this game or zone has none
+     * @throws IllegalArgumentException when {@code maxHeight} is less than 1
+     */
+    default SceneImage levelOverview(int zone, int act, int maxHeight) {
+        return null;
+    }
 }
