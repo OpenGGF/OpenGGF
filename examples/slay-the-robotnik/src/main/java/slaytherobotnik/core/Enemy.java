@@ -59,9 +59,14 @@ public abstract class Enemy extends Creature {
     public boolean halfDead() { return halfDead; }
     protected void setHalfDead(boolean value) { halfDead = value; }
 
-    /** Alive and still in the fight. */
+    /** Alive, in the fight and targetable. */
     public boolean isActive() {
-        return !isDead() && !escaped;
+        return !isDead() && !escaped && !halfDead;
+    }
+
+    /** Still part of the fight: alive, or down but about to revive (it keeps taking turns). */
+    public boolean isPresent() {
+        return !escaped && (hp > 0 || halfDead);
     }
 
     /** Called once when the combat starts, after all enemies exist (apply starting powers here). */

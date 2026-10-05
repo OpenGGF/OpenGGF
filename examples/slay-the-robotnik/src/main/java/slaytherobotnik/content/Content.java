@@ -20,6 +20,9 @@ public final class Content {
         Potions.register(c);
         Characters.register(c);
         AngelIsland.register(c);
+        Hydrocity.register(c);
+        LaunchBase.register(c);
+        SkySanctuary.register(c);
         Events.register(c);
         return c;
     }

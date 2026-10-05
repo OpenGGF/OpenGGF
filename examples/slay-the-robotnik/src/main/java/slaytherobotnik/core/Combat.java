@@ -58,6 +58,7 @@ public final class Combat {
     private int hpLostThisCombat;
     private final List<Card> playedThisCombat = new ArrayList<>();
     private Card cardBeingPlayed;
+    private boolean endTurnRequested;
 
     /**
      * Creates a fight for the current floor of {@code run}. The player's deck is copied, so
@@ -272,7 +273,7 @@ public final class Combat {
         phase = ENEMY_TURN;
         events.add(new CombatEvent.TurnStarted(turn, false));
         for (Enemy e : List.copyOf(enemies)) {
-            if (!e.isActive()) {
+            if (!e.isPresent()) {
                 continue;
             }
             if (!retainsBlock(e)) {
@@ -281,7 +282,7 @@ public final class Combat {
             for (Power p : e.powers()) {
                 p.atTurnStart(this);
             }
-            if (!e.isActive()) {
+            if (!e.isPresent()) {
                 continue;
             }
             events.add(new CombatEvent.EnemyMove(e, e.nextMove()));
@@ -289,7 +290,7 @@ public final class Combat {
             if (isOver()) {
                 return;
             }
-            if (e.isActive()) {
+            if (e.isPresent()) {
                 e.rollMove(this, aiRng);
             }
         }
@@ -369,6 +370,10 @@ public final class Combat {
         if (!card.isXCost() && !card.freeToPlayOnce() && effectiveCost(card) > player.energy()) {
             return "Not enough Energy.";
         }
+        if (CardTarget.needsChoice(card.target()) && activeEnemies().isEmpty()) {
+            // Every enemy is down but reviving (a boss changing phase): nothing to aim at.
+            return "There is nothing to target.";
+        }
         CardDef.PlayCondition condition = card.def().condition();
         if (condition != null) {
             return condition.blockedReason(this, card);
@@ -446,7 +451,21 @@ public final class Combat {
             l.afterCardPlayed(this, card);
         }
         pumpChoices();
+        if (endTurnRequested && !isOver()) {
+            endTurnRequested = false;
+            choices.clear();
+            activeOptions = null;
+            endTurn();
+        }
         return true;
+    }
+
+    /**
+     * Ends the player's turn once the card being played has finished resolving (Big Arm's
+     * grab, Slay the Spire's Time Warp). Pending choices are dropped.
+     */
+    public void endTurnAfterCard() {
+        endTurnRequested = true;
     }
 
     private void sendPlayedCard(Card card, String destination) {
@@ -719,21 +738,26 @@ public final class Combat {
         }
         boolean anyLeader = false;
         boolean leaderAlive = false;
+        boolean anyAlive = false;
         for (Enemy e : enemies) {
+            if (e.isPresent()) {
+                anyAlive = true;
+            }
             if (!e.isMinion()) {
                 anyLeader = true;
-                if (e.isActive() || e.halfDead()) {
+                if (e.isPresent()) {
                     leaderAlive = true;
                 }
             }
         }
-        boolean anyAlive = !activeEnemies().isEmpty();
         if (anyLeader ? leaderAlive : anyAlive) {
             return;
         }
-        for (Enemy e : activeEnemies()) {
-            e.escapeSilently();
-            events.add(new CombatEvent.EnemyEscaped(e));
+        for (Enemy e : List.copyOf(enemies)) {
+            if (e.isPresent()) {
+                e.escapeSilently();
+                events.add(new CombatEvent.EnemyEscaped(e));
+            }
         }
         phase = VICTORY;
         for (Relic relic : relics()) {

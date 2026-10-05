@@ -156,6 +156,8 @@ final class RunBot {
         Combat c = room.combat();
         if (strengthBoost > 0 && c.turn() == 1) {
             c.applyPower(c.player(), c.player(), slaytherobotnik.core.Powers.strength(strengthBoost));
+            // Sturdy runs exist to reach every room and boss, so top the bot up for each fight.
+            c.healPlayer(c.player().maxHp());
         }
         int actions = 0;
         while (!c.isOver() && actions++ < 400) {

@@ -257,13 +257,14 @@ public final class Powers {
             }
 
             @Override
-            public void atTurnEnd(Combat c) {
+            public void atTurnStart(Combat c) {
+                // Lasts through the opponent's turn: it wears off when the owner's next turn starts.
                 c.reducePower(owner(), INTANGIBLE, 1);
             }
 
             @Override
             public String description() {
-                return "Reduces all damage taken to 1 for " + turns(amount()) + ".";
+                return "Reduces all damage taken to 1 until the start of its next turn.";
             }
         };
     }
