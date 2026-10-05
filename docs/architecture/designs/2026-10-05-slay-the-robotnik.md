@@ -78,11 +78,11 @@ stat is only the one that character's own card pool builds.
 
 ### Characters
 
-| Character | HP | Starter deck | Starting relic (draft) |
+| Character | HP | Starter deck | Starting relic |
 |---|---|---|---|
-| Sonic | 72 | 4 Spin Attack, 4 Side Step, Spin Dash, Homing Attack | Red Sneakers — the first Combo card each turn repeats once more. |
-| Tails | 70 | 4 Tail Swipe, 5 Tail Guard, Twin Tail Toss, Workbench | Toolbox — at the start of each combat, add a Ring Bomb to your hand. |
-| Knuckles | 80 | 5 Punch, 4 Guard, Hammer Punch | Spiked Gloves — after each combat, heal 6 HP. |
+| Sonic | 72 | 4 Spin Attack, 4 Side Step, Spin Dash, Homing Attack | Red Sneakers — the first Combo card each turn repeats 1 more time. |
+| Tails | 70 | 5 Tail Swipe, 5 Tail Guard, Tail Flick, Tinker | Tinker Kit — at the start of each combat, add 2 Ring Bombs to your hand. |
+| Knuckles | 80 | 5 Punch, 4 Guard, Hammer Punch | Master Emerald Shard — at the end of combat, heal 6 HP. |
 
 Tails' token card is the **Ring Bomb** (0 Energy Attack, deal 4 damage, Exhaust), Tails'
 counterpart to the Silent's Shiv; bombs are Tails' weapon in *Tails Adventure*.
@@ -139,7 +139,15 @@ A new Mod API capability lets a mod own the whole screen as a **scene**:
   Decoding to RGBA sidesteps palette-line conflicts entirely: every sprite carries its own
   colours, and tinting, flashing and scaling become per-draw options.
 - Zone backgrounds with stock parallax rendered from the ROM level data, without starting a
-  level.
+  level (`SceneRomArt.zoneBackdrop`, added late in the task; see the progress log).
+
+### Content as data
+
+The mod keeps its look editable without code: the pixel font, every icon and the relic
+icons are text art (`art/font.txt`, `art/icons.txt`), and every card and relic picture is a
+one-line recipe of layers (`art/cards.txt`, `art/relics.txt`: hero poses, ROM sprite
+frames, item monitors, icons and drawn effects). Enemy looks are code
+(`scene/EnemyVisuals`) because they are assembled from each object's ROM child offsets.
 
 
 ## Progress log
@@ -147,3 +155,55 @@ A new Mod API capability lets a mod own the whole screen as a **scene**:
 - 2026-10-05: worktree created from `origin/develop` at `7aed87c4f`, fast-forwarded to
   `fa129ccf4` after James merged Infinite Sonic, which introduced the top-level `examples/`
   convention this mod follows.
+- `975cd17c5`: rules core (combat engine with an event log, StS damage/Block pipeline,
+  intents, choices, map generator, rewards, shop, rest, events, save codec) and first
+  content. The rules are plain Java with no engine imports so the bot and tests run without
+  a ROM.
+- `8d668c7d8`: the mod scene API (`GameMode.MOD_SCENE`, `ModContext.registerStartupScene`,
+  `SceneCanvas`, `SceneRomArt`, scene storage, mouse in game pixels and wheel notches),
+  pinned in the 0.7 candidate surface.
+- `542ee3aee`: the scene, its screens and ROM art; `fb4d11b14`: acts 2-4 and Mecha Sonic;
+  `3e3f2e736`/`494089dac`: Tails' and Knuckles' 42-card pools (written by two subagents in
+  their own worktrees, then cherry-picked); `faa565f80`: twenty events and act 2-4 enemy
+  art; `f817ec47c`: compendium and card recipes; `2135821cd`: relic art and death effects;
+  `76abd6aa0`: engine-suite tests that build the example, run its tests and smoke-test the
+  scene against S3K.
+
+### Rejected approaches and their evidence
+
+- **Enums and static tables in the mod.** The mod validator rejects class initialisers and
+  non-literal static fields (`STATIC_STATE_UNSUPPORTED`). Card types, rarities, intents and
+  the like are String-constant classes; tables that would be static arrays are instance
+  fields or locals. The packaging step catches regressions (it failed once on the
+  compendium's tab arrays).
+- **Sonic 2 as the base game.** Requested briefly, then withdrawn: Knuckles and the Egg
+  Robo are not in the Sonic 2 ROM.
+- **The Death Egg Robot as the final boss.** It is drawn on the background plane
+  (`DezFinalBossController`), not as sprites, so it cannot be composed from mapping frames
+  like the other bosses; Mecha Sonic (one DPLC sprite with ROM Super palettes) took its place.
+- **Requiring every bot run to win.** The sturdy run bot played full runs and asserted every
+  run won; it failed for reasons that were bot weakness, not rules bugs (Fire Breath's
+  divider scales with HP, stalemates against Block-heavy enemies, attrition). It now heals
+  at each fight start, gets a Strength boost against stalemates, and asserts that at least
+  three quarters of runs win and every act boss falls (44-45 of 45 at the time of writing).
+  Two real rules bugs it did find: a manual 1-Up use set HP to 30% (AUTO potions are now
+  blocked from manual use), and a permanently Intangible elite (Intangible now expires at
+  its owner's turn start, as StS).
+- **Half-dead bosses counted as inactive.** Two-phase bosses (Beam Rocket, Mecha Sonic)
+  ended the fight when they "died" before reviving. `Enemy.isPresent()` (still takes turns,
+  blocks victory) is now separate from `isActive()` (targetable).
+
+### Engine bugs found by the example
+
+- `SceneRenderer` uploaded first-seen images mid-frame; the upload rebinds `GL_TEXTURE_2D`
+  and unbinds it, so the pending batch drew with texture 0 and every fill in it came out
+  black (seen as whole event panels and the HUD HP text vanishing). New images are now
+  uploaded before drawing (`faa565f80`).
+- The test harness never refreshed the mapped input snapshot each tick, so d-pad input never
+  reached scenes in captures (`f817ec47c`).
+- Found by the art research, not fixed here (ROM-faithfulness gaps in unrelated objects):
+  CaterkillerJrBodyInstance spark frames/delays, AizMinibossFlameChild and
+  AizMinibossImpactFlameChild using the wrong sheets, the Egg Robo fighter never bobbing,
+  and `(vIntRunCount + 3) & 1` read as arithmetic instead of the byte at
+  `V_int_run_count+3` in EggRoboShotInstance and two others. Recorded in
+  `docs/status/s3k-known-bugs.md`.

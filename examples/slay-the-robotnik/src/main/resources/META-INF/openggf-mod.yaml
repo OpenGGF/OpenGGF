@@ -4,7 +4,7 @@ name: Slay the Robotnik
 version: 0.1.0
 authors:
   - OpenGGF contributors
-description: A deck-building roguelike in the style of Slay the Spire, played with Sonic, Tails and Knuckles across Sonic 3 & Knuckles zones. Build a deck of cards, collect relics, and climb from Angel Island to the Death Egg. Requires your Sonic 3 & Knuckles ROM.
+description: A deck-building roguelike in the style of Slay the Spire, played with Sonic, Tails and Knuckles across Sonic 3 & Knuckles zones. Build a deck of cards, collect relics, and climb from Angel Island to Sky Sanctuary. Requires your Sonic 3 & Knuckles ROM.
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s3k
