@@ -1,0 +1,534 @@
+# Slay the Robotnik icons, as text pixel art (format: slaytherobotnik.art.TextArt).
+# Colours stay close to the Mega Drive's 9-bit palette (multiples of 0x24).
+
+palette
+. 000000 0
+K 000000
+W FFFFFF
+w B6B6B6
+g 6C6C6C
+d 242424
+R DA2424
+r 900000
+O FF9000
+o B64800
+Y FFDA24
+y B69000
+G 48DA48
+n 006C00
+B 2490FF
+b 0048B6
+C 6CDAFF
+P B648FF
+p 6C2490
+S FFB690
+s B66C48
+
+# ---------------------------------------------------------------- intents (12x12)
+
+sprite intent_attack
+.........KK.
+........KWWK
+.......KWwK.
+......KWwK..
+.....KWwK...
+.K..KWwK....
+KYK.KwK.....
+.KYKwK......
+..KYK.......
+.KYKYK......
+KYK.KYK.....
+.K...K......
+
+sprite intent_defend
+..KKKKKKKK..
+.KBBBBBBBBK.
+KBCCBBBBBBBK
+KBCBBBBBBBBK
+KBCBBBBBBBBK
+KBBBBBBBBBBK
+KBBBBBBBBBbK
+.KBBBBBBBbK.
+.KBBBBBBbbK.
+..KBBBBbbK..
+...KBBbbK...
+....KKKK....
+
+sprite intent_buff
+.....KK.....
+....KGGK....
+...KGGGGK...
+..KGGGGGGK..
+.KGGGGGGGGK.
+KKKKGGGGKKKK
+...KGGGGK...
+...KGGGGK...
+...KGGGGK...
+...KGGGGK...
+...KnnnnK...
+...KKKKKK...
+
+sprite intent_debuff
+...KKKKKK...
+...KPPPPK...
+...KPPPPK...
+...KPPPPK...
+...KPPPPK...
+KKKKPPPPKKKK
+.KPPPPPPPPK.
+..KPPPPPPK..
+...KPPPPK...
+....KPPK....
+.....KK.....
+
+sprite intent_strong_debuff
+...KKKKKK...
+..KwwwwwwK..
+.KwWWWWWWwK.
+.KWKKWWKKWK.
+.KWKKWWKKWK.
+.KWWWKKWWWK.
+..KWWWWWWK..
+...KWKWKWK..
+...KKKKKKK..
+
+sprite intent_unknown
+...KKKKKK...
+..KYYYYYYK..
+.KYKKKKKYYK.
+.KKK...KYYK.
+......KYYK..
+.....KYYK...
+....KYYK....
+....KYYK....
+.....KK.....
+....KYYK....
+....KYYK....
+.....KK.....
+
+sprite intent_sleep
+KKKKKK......
+KWWWWK......
+KKKWK.......
+..KWK.KKKK..
+.KWKK.KWWK..
+KWWWWKKKWK..
+KKKKKK.KWK..
+......KWKK..
+......KWWK..
+......KKKK..
+
+sprite intent_stun
+..K.....K...
+.KYK...KYK..
+KYYYK.KYYYK.
+.KYK...KYK..
+..K..K..K...
+....KYK.....
+...KYYYK....
+....KYK.....
+.....K......
+
+sprite intent_escape
+......KK....
+......KWK...
+KKKKKKKWWK..
+KWWWWWWWWWK.
+KKKKKKKWWK..
+......KWK...
+......KK....
+
+# ---------------------------------------------------------------- map nodes (15x15)
+
+sprite node_monster
+....KKKKKKK....
+..KKRRRRRRRKK..
+.KRRRRRRRRRRRK.
+.KRRWWWRRRRRRK.
+KRRWWKKWRRRRRRK
+KRRWWKKWRRRRRRK
+KRRRWWWRRRRRRRK
+KrRRRRRRRRRRRrK
+KrrRRRRRRRRRrrK
+.KrrrrrrrrrrrK.
+.KKgggKKKgggKK.
+.KgwggK.KgwggK.
+.KggggK.KggggK.
+..KKKK...KKKK..
+
+sprite node_elite
+.K...........K.
+KPK.KKKKKKK.KPK
+KPPKPPPPPPPKPPK
+.KPPPPPPPPPPPK.
+.KPPWWPPPWWPPK.
+KPPWRKWPWRKWPPK
+KPPWKKWPWKKWPPK
+KPPPWWPPPWWPPPK
+KpPPPPPPPPPPPpK
+KppPKWKWKWKPppK
+.KppPWKWKWPppK.
+.KppppppppppK..
+..KKKKKKKKKK...
+
+sprite node_event
+....KKKKKKK....
+..KKGGGGGGGKK..
+.KGGGKKKKKGGGK.
+.KGGKYYYYYKGGK.
+KGGGKYKKKYYKGGK
+KGGGGKK.KYYKGGK
+KGGGGGGKYYKGGGK
+KGGGGGKYYKGGGGK
+KGGGGGKYYKGGGGK
+KGGGGGGKKGGGGGK
+.KGGGGKYYKGGGK.
+.KnGGGKYYKGGnK.
+..KKnnGKKGnKK..
+....KKKKKKK....
+
+sprite node_treasure
+...KKKKKKKKK...
+..KYYYYYYYYYK..
+.KYyyyyyyyyyYK.
+KYyoooooooooyYK
+KYyoooooooooyYK
+KKKKKKKKKKKKKKK
+KYYYYYKWKYYYYYK
+KyyyyyKWKyyyyyK
+KoooooKKKoooooK
+KoooooooooooooK
+KoooooooooooooK
+KyyyyyyyyyyyyyK
+.KKKKKKKKKKKKK.
+
+sprite node_shop
+.....KKKKK.....
+....KgwwwgK....
+...KgwKKKwgK...
+..KKKK...KKKK..
+.KYYYYYYYYYYYK.
+KYYyyyyyyyyyYYK
+KYyyKKKKKKKyyYK
+KYyKYYYYYYYKyYK
+KYyKYKKKKKKKyYK
+KYyKYYYYYYKyyYK
+KYyyKKKKKYKyyYK
+KYyKKKKKKKKyyYK
+KYYyyyyyyyyyYYK
+.KYYYYYYYYYYYK.
+..KKKKKKKKKKK..
+
+sprite node_rest
+......KKK......
+.....KBBBK.....
+....KBCBBBK....
+....KBBBBBK....
+.....KBBBK.....
+......KgK......
+......KwK......
+......KgK......
+......KwK......
+......KgK......
+......KwK......
+......KgK......
+....KKKKKKK....
+...KgwwwwwgK...
+...KKKKKKKKK...
+
+sprite node_boss
+....KKKKKKK....
+...KRRRRRRRK...
+..KRRRRRRRRRK..
+..KSSSSSSSSSK..
+.KSSKKSSSKKSSK.
+.KSSWBSSSBWSSK.
+.KSSSSSSSSSSSK.
+KoooooSSSoooooK
+KooooooooooooK.
+.KKKSSSSSSKKK..
+...KSSKKSSK....
+...KSSSSSSK....
+....KKKKKK.....
+
+# ---------------------------------------------------------------- powers (9x9)
+
+sprite pow_strength
+...KKK...
+..KRRRK..
+.KRRRRRK.
+KRRWRWRRK
+KRRRRRRRK
+KRRRRRRRK
+.KRRRRRK.
+..KrrrK..
+...KKK...
+
+sprite pow_dexterity
+..KKKKK..
+.KGGGGGK.
+KGGWGGGGK
+KGWGGGGGK
+KGGGGGGGK
+.KGGGGGnK
+..KGGGnK.
+...KGnK..
+....KK...
+
+sprite pow_focus
+.....KK..
+....KBK..
+...KBBK..
+..KBBK...
+.KBBBBBK.
+...KBBK..
+..KBBK...
+..KBK....
+..KK.....
+
+sprite pow_vulnerable
+.KKKKKKK.
+KOOOOOOOK
+KOOKOOOOK
+KOOOKOOOK
+KOOOKKOOK
+KOOOOOKOK
+.KOOOOOK.
+..KOOOK..
+...KKK...
+
+sprite pow_weak
+.......K.
+......KwK
+.....KwK.
+....KwK..
+.K.KwK...
+.KKgK....
+..KgK....
+.KgKgK...
+KgK.K....
+
+sprite pow_frail
+.KKKKKKK.
+KBBBBBBBK
+KBBKBBBBK
+KBBBKBBBK
+KBBBBKKBK
+KBBBBBBBK
+.KBBBKBK.
+..KBBBK..
+...KKK...
+
+sprite pow_artifact
+....K....
+...KWK...
+..KWCWK..
+.KWCCCWK.
+KWCCCCCWK
+.KCCCCCK.
+..KCCCK..
+...KCK...
+....K....
+
+sprite pow_thorns
+....K....
+...KgK...
+K.KgwgK.K
+KgKgwgKgK
+.KgwwwgK.
+KgwwwwwgK
+.KKKKKKK.
+
+sprite pow_metallicize
+.KKKKKKK.
+KwwwwwwwK
+KwgggggwK
+KwgwwwgwK
+KwgwwwgwK
+KwgggggwK
+KwwwwwwwK
+.KKKKKKK.
+
+sprite pow_buff
+...KKK...
+...KGK...
+.KKKGKKK.
+.KGGGGGK.
+.KKKGKKK.
+...KGK...
+...KKK...
+
+sprite pow_debuff
+.........
+.........
+.KKKKKKK.
+.KPPPPPK.
+.KKKKKKK.
+.........
+
+sprite pow_intangible
+..KKKKK..
+.KWWWWWK.
+KWWKWKWWK
+KWWWWWWWK
+KWWWWWWWK
+KWWWWWWWK
+KWKWKWKWK
+KK.K.K.KK
+
+sprite pow_ritual
+....K....
+...KOK...
+..KOYOK..
+..KOYOK..
+.KOYYYOK.
+.KOYWYOK.
+.KOYYYOK.
+..KOOOK..
+...KKK...
+
+sprite pow_regen
+.KK...KK.
+KRRK.KRRK
+KRRRKRRRK
+KRRRRRRRK
+.KRRWRRK.
+..KRRRK..
+...KRK...
+....K....
+
+sprite pow_energy
+....KK...
+...KYK...
+..KYYK...
+.KYYYKKK.
+.KKKYYYK.
+...KYYK..
+...KYK...
+...KK....
+
+sprite pow_card
+.KKKKKK..
+.KwwwwKK.
+.KwWWwKwK
+.KwwwwKwK
+.KwWWwKwK
+.KwwwwKwK
+.KKKKKKwK
+..KwwwwwK
+..KKKKKKK
+
+# ---------------------------------------------------------------- UI glyphs
+
+sprite ui_heart
+.KK.KK.
+KRRKRRK
+KRWRRRK
+KRRRRRK
+.KRRRK.
+..KRK..
+...K...
+
+sprite ui_block
+.KKKKK.
+KBCCBBK
+KBCBBBK
+KBBBBBK
+.KBBBK.
+..KBK..
+...K...
+
+sprite ui_deck
+..KKKKKK.
+.KwwwwwwK
+KKwwwwwwK
+KwKwwwwwK
+KwKwwwwwK
+KwKwwwwwK
+KwKKKKKKK
+KwwwwwwK.
+KKKKKKKK.
+
+sprite ui_map
+KKKKKKKKK
+KYYYYYYYK
+KYyKYYyYK
+KYYYKyYYK
+KYyYYKYyK
+KYYyYYKYK
+KYYYYyYYK
+KKKKKKKKK
+
+sprite ui_gear
+...KKK...
+.KKwwwKK.
+.KwwwwwK.
+KwwgggwwK
+KwwgKgwwK
+KwwgggwwK
+.KwwwwwK.
+.KKwwwKK.
+...KKK...
+
+sprite ui_draw_pile
+.KKKKKKK.
+KBBBBBBBK
+KBbbbbbBK
+KBbBBBbBK
+KBbBBBbBK
+KBbbbbbBK
+KBBBBBBBK
+.KKKKKKK.
+
+sprite ui_discard_pile
+.KKKKKKK.
+KwwwwwwwK
+KwggggwwK
+KwgwwgwwK
+KwgwwgwwK
+KwggggwwK
+KwwwwwwwK
+.KKKKKKK.
+
+sprite ui_exhaust_pile
+...K.K...
+..KOKOK..
+.KOYOYOK.
+.KOYYYOK.
+KOYYWYYOK
+KOYWWWYOK
+.KOYYYOK.
+..KKKKK..
+
+sprite ui_potion_slot
+.KKKKKKK.
+KgdddddgK
+KdgggggdK
+KdgdddgdK
+KdgggggdK
+KgdddddgK
+KKKKKKKKK
+..KgggK..
+..KKKKK..
+
+sprite ui_arrow_right
+K....
+KK...
+KWK..
+KWWK.
+KWK..
+KK...
+K....
+
+sprite ui_cursor
+K.......
+KK......
+KWK.....
+KWWK....
+KWWWK...
+KWWWWK..
+KWWWWWK.
+KWWWKKK.
+KWKKWK..
+KK..KWK.
+.....KK.

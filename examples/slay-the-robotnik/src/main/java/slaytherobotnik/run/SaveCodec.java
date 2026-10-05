@@ -47,6 +47,11 @@ public final class SaveCodec {
         p.setProperty("floor", Integer.toString(s.floor()));
         p.setProperty("actFloor", Integer.toString(s.actFloor()));
         p.setProperty("nodeX", Integer.toString(s.nodeX()));
+        List<String> path = new ArrayList<>();
+        for (int column : s.pathColumns()) {
+            path.add(Integer.toString(column));
+        }
+        p.setProperty("path", String.join(";", path));
         p.setProperty("deck", joinCards(s.deck()));
         List<String> relics = new ArrayList<>();
         for (Relic r : s.relics()) {
@@ -161,6 +166,9 @@ public final class SaveCodec {
                 Integer.parseInt(unknown.get(2)));
         readStats(p, s.stats());
         s.setPosition(intOf(p, "act"), intOf(p, "floor"), intOf(p, "actFloor"), intOf(p, "nodeX"));
+        for (String column : list(p, "path")) {
+            s.pathColumns().add(Integer.parseInt(column));
+        }
 
         Run run = new Run(s);
         String savePoint = p.getProperty("savePoint", Run.SAVE_MAP);

@@ -28,6 +28,7 @@ public final class RunState {
     private final List<Relic> relics = new ArrayList<>();
     private final List<PotionDef> potions = new ArrayList<>();
     private int act = 1;
+    private final List<Integer> pathColumns = new ArrayList<>();
     private int floor;
     private int actFloor = -1;
     private int nodeX = -1;
@@ -336,11 +337,24 @@ public final class RunState {
     public int floor() { return floor; }
     /** Row on the current act map: -1 before the first room, 15 at the boss. */
     public int actFloor() { return actFloor; }
+    /** Columns visited on each row of the current act's map (index = row). */
+    public List<Integer> pathColumns() { return pathColumns; }
+
     /** Column on the current act map, -1 before the first room. */
     public int nodeX() { return nodeX; }
 
     /** Moves onto a map node and advances the floor counter. */
     public void moveTo(int x, int y) {
+        if (y >= 0 && y < 15) {
+            while (pathColumns.size() < y) {
+                pathColumns.add(-1);
+            }
+            if (pathColumns.size() == y) {
+                pathColumns.add(x);
+            } else {
+                pathColumns.set(y, x);
+            }
+        }
         nodeX = x;
         actFloor = y;
         floor++;
@@ -353,6 +367,7 @@ public final class RunState {
         act++;
         actFloor = -1;
         nodeX = -1;
+        pathColumns.clear();
         monsterQueue.clear();
         eliteQueue.clear();
         boss = null;
