@@ -11,7 +11,8 @@ import java.util.List;
  * strip above the emblem (the wings and TitleSonic's head start near screen Y 30).
  * After Sonic rises it streaks in from the right, then glints periodically. Once
  * it lands, a {@link ZoneMenu} rises into the empty slot below the emblem and the
- * one-player start launches the zone it shows. Left idle, the title gives way to the
+ * one-player start launches the zone it shows, and the {@link TitleBackground} shows that
+ * zone's background behind the emblem. Left idle, the title gives way to the
  * {@link LeaderboardScreen} attract board and then returns. Everything else delegates to
  * the ROM-driven title unchanged.
  */
@@ -50,19 +51,28 @@ public final class TitleWordmark implements TitleScreenProvider {
     private final TitleScreenProvider base;
     private final ZoneMenu menu;
     private final LeaderboardScreen board;
+    private final TitleBackground background;
     private int activeFrames;
     private InputHandler input;
 
     /** {@code zoneNames} lists the selectable course zones in registry order. */
-    public TitleWordmark(TitleScreenProvider base, List<String> zoneNames, LeaderboardScreen board) {
+    /** {@code levels} returns a zone's act 1 level for its title background (null to keep the stock one). */
+    public TitleWordmark(TitleScreenProvider base, List<String> zoneNames, LeaderboardScreen board,
+                         java.util.function.IntFunction<com.openggf.level.Level> levels,
+                         java.util.function.IntUnaryOperator cameraY) {
         this.base = base;
         this.menu = new ZoneMenu(zoneNames);
         this.board = board;
+        this.background = new TitleBackground(menu::selected, levels, cameraY);
+        if (base instanceof com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager stock) {
+            stock.setBackgroundOverride(background);
+        }
     }
 
     TitleScreenProvider base() { return base; }
     ZoneMenu menu() { return menu; }
     LeaderboardScreen board() { return board; }
+    TitleBackground background() { return background; }
 
     /** The engine's live input handler, captured at the title, which every course is launched from. */
     InputHandler input() { return input; }
@@ -78,7 +88,8 @@ public final class TitleWordmark implements TitleScreenProvider {
             return;
         }
         menu.update(input, interactive && !board.showing());
-        base.update(input);
+        background.setActive(true);
+        try { base.update(input); } finally { background.setActive(false); }
         State state = base.getState();
         activeFrames = state == State.ACTIVE || state == State.EXITING ? activeFrames + 1 : 0;
     }
@@ -86,7 +97,8 @@ public final class TitleWordmark implements TitleScreenProvider {
     @Override public int startZoneIndex() { return menu.selected(); }
 
     @Override public void draw() {
-        base.draw();
+        background.setActive(true);
+        try { base.draw(); } finally { background.setActive(false); }
         if (activeFrames == 0) return;
         GraphicsManager graphics = GraphicsManager.getInstance();
         int viewport = graphics.getProjectionWidth() > 0 ? graphics.getProjectionWidth() : 320;
@@ -254,9 +266,12 @@ public final class TitleWordmark implements TitleScreenProvider {
     private static float g(int rgb) { return (rgb >> 8 & 0xFF) / 255f; }
     private static float b(int rgb) { return (rgb & 0xFF) / 255f; }
 
-    @Override public void initialize() { activeFrames = 0; menu.reset(); board.reset(); base.initialize(); }
-    @Override public void reset() { activeFrames = 0; menu.reset(); board.reset(); base.reset(); }
-    @Override public void setClearColor() { base.setClearColor(); }
+    @Override public void initialize() { activeFrames = 0; menu.reset(); board.reset(); background.reset(); base.initialize(); }
+    @Override public void reset() { activeFrames = 0; menu.reset(); board.reset(); background.reset(); base.reset(); }
+    @Override public void setClearColor() {
+        background.setActive(true);
+        try { base.setClearColor(); } finally { background.setActive(false); }
+    }
     @Override public State getState() { return base.getState(); }
     @Override public boolean isExiting() { return base.isExiting(); }
     @Override public boolean isActive() { return base.isActive(); }

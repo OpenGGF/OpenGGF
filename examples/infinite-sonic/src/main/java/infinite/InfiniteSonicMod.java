@@ -174,9 +174,35 @@ public final class InfiniteSonicMod implements GgfMod {
             TitleScreenProvider stock = super.getTitleScreenProvider();
             if (stock == null) return null;
             if (title == null || title.base() != stock) {
-                title = new TitleWordmark(stock, courseZoneNames(), new LeaderboardScreen(courseZoneNames(), this::leaderboard));
+                title = new TitleWordmark(stock, courseZoneNames(), new LeaderboardScreen(courseZoneNames(), this::leaderboard),
+                        this::titleLevel, this::titleCameraY);
             }
             return title;
+        }
+        // Act 1 of each course zone, read once for the title background; empty if it could not be read.
+        private final java.util.Map<Integer, java.util.Optional<Level>> titleLevels = new java.util.HashMap<>();
+        private Game titleGame;
+        /**
+         * A course zone's stock act 1, for its title background. Uses its own {@code Sonic1} reader
+         * rather than createGame, which would replace the session's PLC service.
+         */
+        private Level titleLevel(int zone) {
+            if (zone < 0 || zone >= COURSE_ZONES) return null;
+            return titleLevels.computeIfAbsent(zone, z -> {
+                try {
+                    if (titleGame == null) titleGame = new com.openggf.game.sonic1.Sonic1(GameServices.rom().getRom());
+                    return java.util.Optional.of(titleGame.loadLevel(base().getZoneRegistry().getLevelDataForZone(z).get(0).levelIndex()));
+                } catch (IOException | RuntimeException e) {
+                    java.util.logging.Logger.getLogger(InfiniteSonicMod.class.getName())
+                            .log(java.util.logging.Level.WARNING, "No title background for zone " + z, e);
+                    return java.util.Optional.empty();
+                }
+            }).orElse(null);
+        }
+        /** The camera Y the title shows a zone's background for: framing its stock act 1 start. */
+        private int titleCameraY(int zone) {
+            var act = base().getZoneRegistry().getLevelDataForZone(zone).get(0);
+            return Math.max(0, act.startY() - 112);
         }
         private List<String> courseZoneNames() {
             var registry = base().getZoneRegistry();

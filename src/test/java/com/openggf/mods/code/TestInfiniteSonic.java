@@ -235,6 +235,70 @@ class TestInfiniteSonic {
         assertTrue(edge[0].length <= 320, "fits the native viewport");
     }
 
+    @Test void titleShowsThePickedZonesOwnBackground() throws Exception {
+        launch(WidescreenAspect.WIDE_16_9);
+        TitleScreenProvider title = GameServices.module().getTitleScreenProvider();
+        var base = title.getClass().getDeclaredMethod("base");
+        var menuAccessor = title.getClass().getDeclaredMethod("menu");
+        var backgroundAccessor = title.getClass().getDeclaredMethod("background");
+        for (var method : List.of(base, menuAccessor, backgroundAccessor)) method.setAccessible(true);
+        var stock = (com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager) base.invoke(title);
+        var overrideField = stock.getClass().getDeclaredField("backgroundOverride");
+        overrideField.setAccessible(true);
+        Object background = backgroundAccessor.invoke(title);
+        assertSame(background, overrideField.get(stock), "the wrapper installs its background on the stock title");
+        Object menu = menuAccessor.invoke(title);
+        var select = menu.getClass().getDeclaredMethod("select", int.class, int.class);
+        var setActive = background.getClass().getDeclaredMethod("setActive", boolean.class);
+        var showing = background.getClass().getDeclaredMethod("showing");
+        var update = background.getClass().getDeclaredMethod("update", int.class);
+        var lines = background.getClass().getDeclaredMethod("lines");
+        var vscroll = background.getClass().getDeclaredMethod("vscroll");
+        var tileWord = background.getClass().getDeclaredMethod("tileWord", Level.class, int.class, int.class);
+        for (var method : List.of(select, setActive, showing, update, lines, vscroll, tileWord)) method.setAccessible(true);
+        var override = (com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager.BackgroundOverride) background;
+        var none = com.openggf.game.titlescreen.SegaPaletteFade.Mode.NONE;
+
+        select.invoke(menu, 2, 1);
+        assertNull(override.backdrop(none, 0), "outside the wrapper's own calls the stock title is untouched");
+        setActive.invoke(background, true);
+        select.invoke(menu, 0, -1);
+        update.invoke(background, 1);
+        assertEquals(-1, showing.invoke(background), "Green Hill keeps the stock title background");
+        assertNull(override.backdrop(none, 0));
+        for (int zone = 1; zone < 6; zone++) {
+            select.invoke(menu, zone, 1);
+            for (int frame = 0; frame < 20; frame++) update.invoke(background, frame);
+            assertEquals(zone, showing.invoke(background));
+            var level = (Level) ((java.util.function.IntFunction<?>) fieldValue(background, "levels")).apply(zone);
+            assertNotNull(level, "zone " + zone + " act 1 is read from the ROM");
+            var expected = level.getPalette(2).getColor(0);
+            var backdrop = override.backdrop(none, 0);
+            assertEquals(expected.rFloat(), backdrop.rFloat(), 1e-6, "backdrop is the zone's line 2 colour 0 once faded in");
+            // The screen is mostly covered by the zone's own background tiles.
+            int[] scroll = (int[]) lines.invoke(background);
+            int v = (int) vscroll.invoke(background), drawn = 0;
+            for (int row = 0; row < 28; row++) {
+                int bgX = -(short) scroll[row * 8];
+                for (int column = 0; column < 50; column++) {
+                    if ((int) tileWord.invoke(null, level, bgX + column * 8, v + row * 8) != 0) drawn++;
+                }
+            }
+            assertTrue(drawn > 28 * 50 / 3, "zone " + zone + " draws its background: " + drawn + " tiles");
+            int[] before = scroll.clone();
+            for (int frame = 21; frame < 29; frame++) update.invoke(background, frame);
+            assertFalse(Arrays.equals(before, (int[]) lines.invoke(background)), "zone " + zone + " background scrolls");
+        }
+        setActive.invoke(background, false);
+        assertEquals(-1, showing.invoke(background));
+    }
+
+    private static Object fieldValue(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
     @Test void titleZoneMenuChoosesStartZoneAndCourseCardsDropActNumber() throws Exception {
         launch(WidescreenAspect.values()[0]);
         GameModule module = GameServices.module();

@@ -71,7 +71,10 @@ The Sonic 1 title screen gains an **INFINITE** wordmark above the emblem: once
 Sonic has risen it streaks in from the right, then glints every few seconds. Below the
 emblem, a zone picker rises in: press **left/right** to choose Green Hill, Marble,
 Spring Yard, Labyrinth, Star Light or Scrap Brain, then Start to begin that zone's
-course. The choice wraps around and is remembered when you return to the title. Both
+course. The choice wraps around and is remembered when you return to the title. Behind the
+emblem the title shows the chosen zone's own background, scrolling with that zone's stock
+parallax and fading in when picked (Green Hill keeps the stock title background); its art,
+palette and layout come from the zone's act 1 in your ROM. Both
 are drawn in code over the stock ROM title, which otherwise behaves normally. Course
 title cards show only the zone name (no "ACT n"), because each zone is a single endless run.
 

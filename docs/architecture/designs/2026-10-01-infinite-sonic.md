@@ -809,3 +809,25 @@ Found while testing: the hazard timing trial passed at 30% by luck. Hazards only
 the object window and pit fireballs only launch while on screen, so a coast taken far before
 the hazard could not move its phase; at 45% Star Light's fireballs lined up with every
 arrival. The trial now brakes and waits just before the hazard, once it is running.
+
+## Title background follows the zone picker (0.19.0)
+
+Follow-up on `7be4f86ea7`, 2026-10-05. Request: the title background should match the zone
+the picker shows.
+
+The stock S1 title draws its GHZ Plane B inside `draw()`, between the backdrop and the
+emblem, so a wrapper cannot replace it. Engine change: `Sonic1TitleScreenManager` takes an
+optional `BackgroundOverride` (null keeps the stock path) that advances in the main-screen
+update, draws Plane B under the title's fade and supplies the backdrop. Its art goes in the
+upper half of the existing S1 title background atlas range (no new `PatternAtlasRange`, which
+is Mod API surface). It may upload its own palette lines 0-3; the title re-uploads its
+palette after the override has flushed, before Plane A. Rejected: a donor render context for
+extra palette lines (global, session-scoped state for one screen).
+
+Mod: `TitleBackground` loads each zone's act 1 once through its own `Sonic1` reader (calling
+`createGame` would replace the session's PLC service, a rewind adapter), draws its background
+layer with that zone's stock `Deform_*` handler at the title's 2 px/frame and a camera Y 112 px
+above the act's start, and fades a newly picked zone in over 12 frames. Green Hill keeps the
+stock title background (water palette cycle included). The wrapper marks the override active
+only around its own calls into the stock title, so a session without the mod draws stock.
+Verified with a temporary software render of each zone's plane (removed) and a regression test.

@@ -529,3 +529,19 @@ Main checkout, `feature/ai-infinite-sonic`, base `8e6d2e26e3`; mod, tests and do
 **194 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; skips are the
 platform crossing in acts without platforms). Not covered: a rendered check of the HUD board,
 banners and title attract board, and live play.
+
+## Title background follows the zone picker (0.19.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `7be4f86ea7`; mod, tests, docs and an
+optional `Sonic1TitleScreenManager` hook.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Zone background on the title | `titleShowsThePickedZonesOwnBackground` | MZ, SYZ, LZ, SLZ, SBZ: act 1 read from the ROM, backdrop is the zone's line 2 colour 0, over a third of the screen drawn from its background layer, scrolling; GHZ and inactive calls keep the stock title |
+| Stock title unaffected | `TestSonic1TitleScreenPaletteFade`, `TestSonic1SegaLogoScanMap`, `TestSonic1SegaScreenFadeTiming`, `TestSonic1TitleScreenWidescreenLayout`, `TestOrdinaryTitleScreenCommandEvidence`, `TestGameLoop`, guard `TestProductionSingletonClosureGuard` | Focused: the hook is null by default |
+
+**TestInfiniteSonic 195 run, 0 failures, 12 skipped; title/game-loop classes 117 run, 0 failures;
+guard 42 run, 0 failures** (queued Maven, S1 REV01). The change-based runner selected the full
+ordinary suite (unclassified example-mod and title paths); focused validation was used because
+the engine change is an optional hook with a null default. Not covered: the GL-rendered title
+(checked by a software render of the same tile lookup) and live play.
