@@ -68,9 +68,6 @@ public class GraphicsManager {
 	private int currentPaletteTextureHeight = 0;
 	private DisplayColorProfile displayColorProfile = DisplayColorProfile.RAW_RGB;
 	private PatternAtlas patternAtlas;
-	// Immutable CPU samples used to resolve displayed slots to local ROM recipes.
-	// They are presentation residency, never rewind/gameplay data or network payloads.
-	private final Map<Integer, SpritePresentation.PatternVersion> scenePatternSamples = new HashMap<>();
 	private com.openggf.debug.PerformanceProfiler profiler;
 	// Lazily allocated to avoid LWJGL native library loading in headless tests
 	private ByteBuffer paletteUploadBuffer;
@@ -635,9 +632,6 @@ public class GraphicsManager {
 	 * Cache a pattern texture (contains color indices) in the GPU.
 	 */
 	public void cachePatternTexture(Pattern pattern, int patternId) {
-		if (pattern != null) {
-			scenePatternSamples.put(patternId, com.openggf.game.presentation.RomSceneArtCatalog.version(pattern));
-		}
 		ensurePatternAtlas();
 		if (headlessMode || !glInitialized) {
 			patternAtlas.cachePatternHeadless(pattern, patternId);
@@ -648,9 +642,6 @@ public class GraphicsManager {
 
 	public void updatePatternTexture(Pattern pattern, int patternId) {
 		// Native null uploads allocate residency but leave existing GPU bytes intact.
-		if (pattern != null) {
-			scenePatternSamples.put(patternId, com.openggf.game.presentation.RomSceneArtCatalog.version(pattern));
-		}
 		ensurePatternAtlas();
 		if (headlessMode || !glInitialized) {
 			patternAtlas.updatePatternHeadless(pattern, patternId);
@@ -1920,7 +1911,6 @@ public class GraphicsManager {
 	 * Clears render command queues and palette caches.
 	 */
 	public void resetState() {
-		scenePatternSamples.clear();
 		discardCommands(commands, 0);
 		commands.clear();
 		clearPendingRenderThreadTasks();
@@ -1980,8 +1970,8 @@ public class GraphicsManager {
 	}
 
 	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
-	public SpritePresentation.PatternVersion scenePatternSample(int patternId) {
-		return scenePatternSamples.get(patternId);
+	SpritePresentation.PatternVersion scenePatternSample(int patternId) {
+		return patternAtlas == null ? null : patternAtlas.scenePatternSample(patternId);
 	}
 
 	/**

@@ -102,7 +102,7 @@ public final class LoadedLevelScene {
             if (version == null && tile.patternId() < level.getCurrentLevel().getPatternCount()) {
                 version = RomSceneArtCatalog.version(level.getCurrentLevel().getPattern(tile.patternId()));
             }
-            if (version == null) version = graphics.scenePatternSample(tile.patternId());
+            if (version == null) version = SpritePresentation.patternSample(graphics, tile.patternId());
             if (version == null) throw new IllegalStateException("Unresolved displayed pattern " + tile.patternId());
             var layer = switch (tile.layer()) {
                 case PLAYER -> ScenePresentationFrame.Layer.PLAYER;
@@ -122,7 +122,14 @@ public final class LoadedLevelScene {
             if (primitive.layer().isHud() || (pose.kind() != PlayerPresentationPose.Kind.NATIVE
                     && primitive.layer() == SpritePresentation.Layer.PLAYER)) continue;
             int before = Math.max(terrainCount, mappedIndices[primitive.beforeTile()]);
-            primitives.add(SpritePresentation.scenePrimitive(primitive, before));
+            var geometry = SpritePresentation.geometry(primitive);
+            var kind = switch (geometry.kind()) {
+                case RECTANGLE -> ScenePresentationFrame.PrimitiveKind.RECTANGLE;
+                case VERTEX -> ScenePresentationFrame.PrimitiveKind.VERTEX;
+            };
+            var vertices = geometry.vertices().stream().map(vertex -> new ScenePresentationFrame.Vertex(
+                    vertex.x1(), vertex.y1(), vertex.x2(), vertex.y2(), vertex.argb())).toList();
+            primitives.add(new ScenePresentationFrame.Primitive(before, kind, geometry.method(), vertices));
         }
         int count = Math.max(4, level.getCurrentLevel().getPaletteCount());
         int[] palette = new int[count * 16];

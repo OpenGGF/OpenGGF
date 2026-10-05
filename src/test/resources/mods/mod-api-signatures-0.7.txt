@@ -673,7 +673,6 @@ CF-ANNOTATION TYPE com.openggf.graphics.PixelFontVariant visible @com.openggf.ga
 CF-ANNOTATION TYPE com.openggf.graphics.RenderContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.ShaderProgram visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.SpriteMaskReplayRole visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.graphics.SpritePresentation$PatternVersion visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.SpritePriorityShaderProgram visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.TexturedQuadRenderer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.TilePriorityFBO visible @com.openggf.game.ModApi
@@ -1517,7 +1516,6 @@ CONSTRUCTOR com.openggf.graphics.PixelFontTextRenderer protected  <init>(com.ope
 CONSTRUCTOR com.openggf.graphics.PixelFontTextRenderer public  <init>()
 CONSTRUCTOR com.openggf.graphics.PixelFontTextRenderer public  <init>(com.openggf.graphics.PixelFontVariant)
 CONSTRUCTOR com.openggf.graphics.ShaderProgram public  <init>(java.lang.String,java.lang.String) THROWS java.io.IOException
-CONSTRUCTOR com.openggf.graphics.SpritePresentation$PatternVersion public  <init>(long,long,long,long)
 CONSTRUCTOR com.openggf.graphics.SpritePriorityShaderProgram public  <init>(java.lang.String) THROWS java.io.IOException
 CONSTRUCTOR com.openggf.graphics.TexturedQuadRenderer public  <init>()
 CONSTRUCTOR com.openggf.graphics.TilePriorityFBO public  <init>()
@@ -8241,7 +8239,6 @@ METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.ShaderP
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.ShaderProgram getInstancedShaderProgram()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.ShaderProgram getShaderProgram()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.ShaderProgram getShadowShaderProgram()
-METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.SpritePresentation$PatternVersion scenePatternSample(int)
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.SpritePriorityShaderProgram getSpritePriorityShaderProgram()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.TilePriorityFBO getTilePriorityFBO()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.TilePriorityFBO getTilePriorityFBO(int,int)
@@ -8493,13 +8490,6 @@ METHOD com.openggf.graphics.ShaderProgram public  void stop()
 METHOD com.openggf.graphics.ShaderProgram public  void use()
 METHOD com.openggf.graphics.SpriteMaskReplayRole public,static  com.openggf.graphics.SpriteMaskReplayRole valueOf(java.lang.String)
 METHOD com.openggf.graphics.SpriteMaskReplayRole public,static  com.openggf.graphics.SpriteMaskReplayRole[] values()
-METHOD com.openggf.graphics.SpritePresentation$PatternVersion public  long a()
-METHOD com.openggf.graphics.SpritePresentation$PatternVersion public  long b()
-METHOD com.openggf.graphics.SpritePresentation$PatternVersion public  long c()
-METHOD com.openggf.graphics.SpritePresentation$PatternVersion public  long d()
-METHOD com.openggf.graphics.SpritePresentation$PatternVersion public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.graphics.SpritePresentation$PatternVersion public,final  int hashCode()
-METHOD com.openggf.graphics.SpritePresentation$PatternVersion public,final  java.lang.String toString()
 METHOD com.openggf.graphics.SpritePriorityShaderProgram public  int getTilePriorityTextureLocation()
 METHOD com.openggf.graphics.SpritePriorityShaderProgram public  int getUnderwaterPaletteLocation()
 METHOD com.openggf.graphics.SpritePriorityShaderProgram public  void cacheUniformLocations()
@@ -15806,10 +15796,6 @@ RECORD-COMPONENT com.openggf.graphics.PatternAtlas$Entry v1 float
 RECORD-COMPONENT com.openggf.graphics.PatternAtlas$PatternRange base int
 RECORD-COMPONENT com.openggf.graphics.PatternAtlas$PatternRange category java.lang.String
 RECORD-COMPONENT com.openggf.graphics.PatternAtlas$PatternRange size int
-RECORD-COMPONENT com.openggf.graphics.SpritePresentation$PatternVersion a long
-RECORD-COMPONENT com.openggf.graphics.SpritePresentation$PatternVersion b long
-RECORD-COMPONENT com.openggf.graphics.SpritePresentation$PatternVersion c long
-RECORD-COMPONENT com.openggf.graphics.SpritePresentation$PatternVersion d long
 RECORD-COMPONENT com.openggf.graphics.TilemapGpuRenderer$BackgroundRenderState contentGeneration int
 RECORD-COMPONENT com.openggf.graphics.TilemapGpuRenderer$BackgroundRenderState ringBaseXTiles int
 RECORD-COMPONENT com.openggf.graphics.TilemapGpuRenderer$BackgroundRenderState ringBaseYTiles int
@@ -18199,7 +18185,6 @@ TYPE record public,static,final com.openggf.game.rewind.snapshot.WaterSystemSnap
 TYPE record public,static,final com.openggf.game.timeattack.TimeAttackTrackCatalog$Track SUPER java.lang.Record
 TYPE record public,static,final com.openggf.graphics.PatternAtlas$Entry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.graphics.PatternAtlas$PatternRange SUPER java.lang.Record
-TYPE record public,static,final com.openggf.graphics.SpritePresentation$PatternVersion SUPER java.lang.Record
 TYPE record public,static,final com.openggf.graphics.TilemapGpuRenderer$BackgroundRenderState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.LevelManager$LevelRenderOptions SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.MutableLevel$ObjectBackedRingState SUPER java.lang.Record
@@ -18949,7 +18934,6 @@ TYPE-ANNOTATION com.openggf.graphics.PixelFontVariant @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.RenderContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.ShaderProgram @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.SpriteMaskReplayRole @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.graphics.SpritePresentation$PatternVersion @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.SpritePriorityShaderProgram @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.TexturedQuadRenderer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.TilePriorityFBO @com.openggf.game.ModApi

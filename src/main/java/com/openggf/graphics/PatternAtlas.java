@@ -89,6 +89,7 @@ public class PatternAtlas {
     private int[] dirtyMaxTileY;
     private boolean batchMode = false;
     private byte[] patternUploadScratch;
+    private final Map<Integer, SpritePresentation.PatternVersion> scenePatternSamples = new HashMap<>();
     private final PerformanceProfiler profiler;
     // GL upload seam: production sink issues the real GL calls; tests install a
     // recording sink so dirty-tracking/upload decisions run without a GL context.
@@ -418,14 +419,22 @@ public class PatternAtlas {
         if (entry == null) {
             return null;
         }
-        if (initialized && pattern != null) {
-            uploadPattern(pattern, entry);
+        if (pattern != null) {
+            scenePatternSamples.put(patternId, uploadPattern(pattern, initialized ? entry : null));
         }
         return entry;
     }
 
     public Entry cachePatternHeadless(Pattern pattern, int patternId) {
-        return ensureEntry(patternId, true);
+        Entry entry = ensureEntry(patternId, true);
+        if (entry != null && pattern != null) {
+            scenePatternSamples.put(patternId, uploadPattern(pattern, null));
+        }
+        return entry;
+    }
+
+    SpritePresentation.PatternVersion scenePatternSample(int patternId) {
+        return scenePatternSamples.get(patternId);
     }
 
     public Entry updatePattern(Pattern pattern, int patternId) {
@@ -603,6 +612,7 @@ public class PatternAtlas {
         Arrays.fill(fastEntries, null);
         Arrays.fill(rangeEntries, null);
         sparseFallback.clear();
+        scenePatternSamples.clear();
         slotRefCounts.clear();
         pages.clear();
         cpuPixels = null;
@@ -791,11 +801,14 @@ public class PatternAtlas {
         clearDirtyState(atlasIndex);
     }
 
-    void uploadPattern(Pattern pattern, Entry entry) {
-        int pixelX = entry.tileX() * TILE_SIZE;
-        int pixelY = entry.tileY() * TILE_SIZE;
+    /** A null entry samples CPU art without touching GL (headless or pre-initialization). */
+    SpritePresentation.PatternVersion uploadPattern(Pattern pattern, Entry entry) {
         byte[] patternPixels = ensurePatternUploadScratch();
         pattern.copyInto(patternPixels, 0);
+        var version = SpritePresentation.patternVersion(patternPixels);
+        if (entry == null) return version;
+        int pixelX = entry.tileX() * TILE_SIZE;
+        int pixelY = entry.tileY() * TILE_SIZE;
 
         // Always write to the CPU-side buffer (keeps it in sync for future batches)
         if (cpuPixels != null && entry.atlasIndex() < cpuPixels.length) {
@@ -810,7 +823,7 @@ public class PatternAtlas {
         if (batchMode) {
             // Record the dirty tile — actual GL upload deferred to endBatch()
             markTileDirty(entry.atlasIndex(), entry.slot(), entry.tileX(), entry.tileY());
-            return;
+            return version;
         }
 
         // Immediate upload (non-batch path): bind, upload one tile, unbind.
@@ -821,6 +834,7 @@ public class PatternAtlas {
         } finally {
             uploadSink.end();
         }
+        return version;
     }
 
     /** Production sink: stages CPU pixels into a direct buffer and issues the GL calls. */

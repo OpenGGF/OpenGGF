@@ -829,7 +829,7 @@ Half-width/112 margins retain the same wire bounds (800 end: 33,754 tiles,
 
 Native captures caught an overlapping clear-air label, now above the HUD, and a
 320px manager viewport cache after wider title selection, now rebuilt from the
-live camera. The opaque checkpoint's UUID getter leaked an unaudited public type;
+resolved presentation configuration (independent of trace gameplay-camera width). The opaque checkpoint's UUID getter leaked an unaudited public type;
 it uses an engine-owned Object identity token instead, with no mutable owner
 cycles. A descriptor prose comment failed its strict key=value parser and was
 removed; the authoritative candidate remains 0.7.0 without changing topology or
@@ -920,8 +920,8 @@ after 2,400.89 seconds: 2,772 completed XML reports, 24,109 tests, four failures
 eleven errors and 38 skips. The ordinary lane was incomplete and the guard lane
 did not start; these figures are not a completed suite result. The retained tail
 showed continuing cold-route work rather than a no-output timeout. All fifteen
-reported failure identities and all skips were inspected. Acknowledgment is
-queued; consumed diagnostics must be removed before delivery.
+reported failure identities and all skips were inspected. Acknowledgment completed
+and deleted the consumed diagnostics; no raw logs were archived.
 
 The eleven errors were new null-registry failures in `TestGameLoop` title exit
 cases. The new act selector now mirrors the existing zone selector's missing-
@@ -963,3 +963,169 @@ The production boundary is retained; it is not removed to satisfy reflection.
 The corrected sample case plus `TestOwnerBoundGamePatch` passed all ten checks
 without skips. This repair changes the fixture's boundary inspection, not
 creator rendering or rewind callback ownership.
+
+### Completed combined run and targeted repair
+
+At `59ce8309b`, the normal combined selection completed with the supported two-
+worker ordinary shape and a 65-minute per-invocation limit:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base d5eaa3efc24b45e7f0d25b0a3392ef61dc5352a1 \
+  --workers 2 --max-minutes 65 --run
+```
+
+Run `20261005T220607Z-4219c50e` completed 2,974 ordinary XML reports with 25,650
+checks: 30 failures, zero errors, 41 skips, in 2,065.9 seconds. The separate guard
+lane completed 86 reports with 672 checks: six failures, zero errors/skips, in
+199.95 seconds. This is a completed red run, not a full-suite pass. The 41 skips
+were inspected: 12 unavailable Infinite Sonic platforms, four unavailable native
+GL/EGL checks, opt-in capture/benchmark/soak diagnostics, and the maintained CPZ
+spin-tube assumption. The mod acceptance checks did not skip.
+
+Two new failures in `TraceCaptureBootDimensionsTest` exposed a rejected approach:
+refreshing render caches from the gameplay camera incorrectly reduces 400/528px
+trace presentation to 320px. Trace gameplay intentionally keeps its native-width
+camera. Destination-load caches now refresh from the resolved presentation
+configuration; the normal mod title still refreshes its gameplay camera before
+loading. The independent native-gameplay/wide-presentation contract is retained.
+
+Four new guard failures identified actual ownership violations: game→mods package
+edges/cycle, low-level graphics→game scene dependencies, and registry constructor
+self-delegation outside the session composition roots. Mod metadata hashing now
+belongs to `ModSubsystem`, exposing strings to the course control. Procedural
+geometry stays in graphics-owned immutable values and is converted to scene wire
+values by `LoadedLevelScene`. Pattern versions sample the existing atlas upload's
+CPU pixels, preserving null-upload residency and headless behavior without a new
+runtime-layer dependency. Compatibility registry constructors initialize their
+fields directly; the session still owns the controller-aware constructor. No
+frozen guard baseline or package-edge ratchet was loosened.
+
+Matched baseline checks use a separate detached `d5eaa3efc` worktree, the same queue
+and discovered absolute ROM properties. All seven Death Egg incoming/final cases
+reproduced by exact test identity and failure message, with zero errors/skips.
+The four-class Lava Reef invocation ran 22 cases: 19 passed, and the Act2/team,
+boss/team and Knuckles Hidden Palace failures exactly matched the current run.
+The separate Tails Lava Reef invocation reproduced all four failures at input
+19460, also with no errors/skips. The Mushroom Hill paired timeline assertion, wide whole-world state-byte
+assertion, and wide Lava Reef boss position also exactly matched the baseline.
+The remaining red identities received the same bounded attribution below. Follow-up checks cover the mod routes/scenes/network/rewind, trace
+boot dimensions, atlas upload behavior and the complete structural guard lane.
+
+The remaining attribution completed without skips. The baseline failure inventory
+is 28 ordinary cases plus two guards:
+
+| Baseline owner | Matched ordinary failures | Exact assertion / state boundary |
+| --- | ---: | --- |
+| FBZ→SOZ timeline | 1 | false→true insta-shield registration on restore |
+| MHZ authored / paired / wide routes | 4 | Tails/team pulley ownership, actual timeline reset, wide zone-runtime bytes |
+| DEZ incoming / final routes | 7 | ending centreX or death at 26706/26750/53897 |
+| LRZ cold / boss / Knuckles / Tails / wide | 8 | death at 36526/19460, Hidden Palace centreX 1069→899, boss centreX 2796→524 |
+| SSZ paired / solo / Tails routes | 7 | deaths at 7311/7671, Tails destination centreX 48→0, object replay at 4018 |
+| S1 audio CLI environment check | 1 | safe help expected exit 0, observed exit 4 |
+
+Every failure message matches exactly, except the SSZ Tails 800 object replay's
+ordinary Java identity strings. Its full retained detail (not just the collector's
+2048-character message prefix) matches the full baseline assertion after replacing
+only `RewindObjectStateBlob@<hex identity>` values. Missing jet-flame/gun-arm
+children, used slots 24/29 and both remapped object slots are identical; no physics
+or state fields were normalized. The trace-dimension baseline ran both 400/528
+cases successfully, confirming the two dimension failures were new regressions.
+The owned ordinary baseline groups ran 65 cases total with 28 failures, zero errors
+and zero skips; stock-title and sample-platformer attribution are recorded above.
+
+The baseline guard invocation was:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  "-Dtest=TestArchUnitRules,TestObjectPhysicsStandardizationGuard" test
+```
+
+It ran 62 checks: two failures, zero errors/skips. The exact existing failures are
+`LrzFlameObjectInstance.getShieldReactionFlags()` lacking its touch profile and
+`Sonic1TitleScreenManager.BACKGROUND_OVERRIDE_PATTERN_BASE` hard-coding a virtual
+pattern ID inside the registered title range. These unrelated owners are retained.
+The new architecture violations received the complete follow-up guard run
+recorded below; no baseline failure is counted as a passing check.
+
+The targeted repair follow-up on the `59ce8309b` tree plus the recorded ownership/
+render-cache patch ran the nine mod/scene/registry/graphics classes and both
+`TraceCaptureBootDimensionsTest` cases: 159 passed, zero failures/errors/skips.
+This reran all 20 fresh act/character/viewport routes and all four complete local
+pairings, as well as normal boot, online JVM integration and non-keyframe rewind.
+The atlas follow-up ran 47 checks across slot reclamation, range registration,
+lookup, dynamic ranges, dirty CPU/GPU uploads, page ordering and shadow batches;
+all passed without skips. Commands used the queue and absolute ROM properties:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Dtest=TestGolfModel,TestGolfMenu,TestGolfProtocol,TestGolfTransport,TestGolfOnlineIntegration,TestPuttPuttParadise,TestGolfScenePresentation,TestRewindRegistry,TestGraphicsManagerHeadless,TraceCaptureBootDimensionsTest" \
+  "-Dsonic1.rom.path=${S1_ROM}" "-Dsonic2.rom.path=${S2_ROM}" "-Ds3k.rom.path=${S3K_ROM}" test
+python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Dtest=TestPatternAtlasSlotReclamation,TestPatternAtlasRangeRegistration,TestPatternAtlasLookup,TestPatternAtlasDynamicRanges,TestPatternAtlasDirtyUploads,TestGraphicsManagerPatternAtlasPageOrdering,TestShadowBatchAtlasPages" test
+```
+
+The first command as invoked also contained the unmatched selectors
+`TestPatternAtlas,TestPatternAtlasBatchUploads`; they added no checks. The 47-case
+invocation above exercised the actual maintained atlas classes separately.
+The ordinary broad suite was not repeated after these bounded repairs: unchanged
+physics/route failures were attributed by matched tests, and the affected mod,
+render/upload and rewind paths were rerun directly. The complete structural guard
+follow-up is recorded separately; targeted passes are not a full-suite pass.
+
+The complete queued `-Dmse=off -Pguards test -B` follow-up ran 672 checks:
+670 passed, the two exactly matched baseline guards remained, and there were zero
+errors/skips. All four new architecture failures disappeared. The separate
+`-Pguards -Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy`
+invocation passed 26 checks without skips. Candidate 0.7 signatures and release
+policy, frozen architecture files and top-level dependency ratchets are unchanged
+by the repair. Only a stale rendering-field comment was removed afterward; no
+behavior changed after these checks.
+
+Both category run directories were acknowledged and deleted after their results,
+skips and attribution were recorded. The owned detached baseline checkout was
+removed after verifying its exact base, completed commands, clean tracked/
+untracked state and known generated links/output. The three worker checkouts and
+branches had already been accounted for and removed. Provider-owned saved
+conversations and the native capture directory remain preserved. Main `develop`
+remains at `fc4729c375`; its dirty disassemblies and unrelated untracked files are
+preserved. The remote develop ref advanced independently during the task and was
+not reconciled here: the user explicitly required this concept/implementation to
+remain local, without merge, push, or removal of the retained concept worktree.
+
+The first repair commit attempt was rejected by the existing API-pin hook. The
+internal `GraphicsManager.scenePatternSample` getter had accidentally published
+packed atlas residency as creator API in the initial golf implementation. The
+scene consumer now uses an unannotated engine presentation bridge; the getter is
+package-private and `PatternVersion` returns to its original engine-only status.
+The actual candidate snapshot will be regenerated to remove that lookup/type,
+without changing the 0.7 candidate version/status or any published pin. This is a
+contract tightening within the unpublished candidate, not a hook bypass or a
+synthetic pin edit. The creator mod consumes bounded ROM-backed scene values and
+never called the internal sampler.
+
+The normalized snapshot regeneration removed exactly 16 rows: the public sampler
+method and `PatternVersion`'s type/annotation/record/member rows. It added none;
+19,385 canonical rows remain. The post-tightening scene/headless-graphics/online
+invocation passed 52 checks without errors/skips. Its unused `TestSdkJavadoc`
+selector added no checks; the real `TestModApiJavadocTool` and
+`TestModApiSdkPackager` are invoked separately for the final candidate contract.
+
+Final post-tightening contract/architecture verification ran 132 checks: 131 passed
+and only the exact inherited S1 title-range assertion failed; zero errors/skips.
+This invocation included the API surface/pin/release policy, all ArchUnit rules,
+source budgets and architectural review guard. The actual SDK Javadoc and package
+boundary classes separately passed 13 checks, zero errors/skips:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  "-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestArchUnitRules,TestArchitecturalSourceGuard,TestArchitecturalReviewGuard" test
+python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Dtest=TestModApiJavadocTool,TestModApiSdkPackager" test
+```
+
+No hook, frozen architecture baseline, release descriptor or published pin was
+modified to admit the repair. The candidate pin records the real internal-sampler
+API removal. The preceding completed broad run and matched baselines establish
+the inherited failure inventory; the final focused runs establish the repaired
+paths and narrowed candidate contract. There is no full-suite-green claim.

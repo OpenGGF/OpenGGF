@@ -46,22 +46,9 @@ public final class CourseControl {
     public void advanceEntryPresentation() { if (context.getFadeManager().isActive()) context.getFadeManager().update(); }
     public boolean presentationReady() { return !context.getFadeManager().isActive(); }
     public String engineIdentity() { return com.openggf.version.AppVersion.get(); }
-    public String apiIdentity() { return com.openggf.mods.ModApiVersion.CURRENT.toString(); }
+    public String apiIdentity() { return com.openggf.ModSubsystem.current().apiIdentity(); }
     /** Engine-frozen content identities of every enabled mod, in deterministic activation order. */
-    public String modContentSha256() {
-        try {
-            var digest = java.security.MessageDigest.getInstance("SHA-256");
-            for (var descriptor : com.openggf.ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
-                digest.update(descriptor.manifest().id().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                digest.update((byte) 0);
-                digest.update(descriptor.sha256().getBytes(java.nio.charset.StandardCharsets.US_ASCII));
-                digest.update((byte) '\n');
-            }
-            return java.util.HexFormat.of().formatHex(digest.digest());
-        } catch (java.security.NoSuchAlgorithmException impossible) {
-            throw new IllegalStateException(impossible);
-        }
-    }
+    public String modContentSha256() { return com.openggf.ModSubsystem.current().modContentSha256(); }
     /** Identifies the actual immutable logical ROM; paths and header checksums are insufficient. */
     public String romSha1() {
         try {

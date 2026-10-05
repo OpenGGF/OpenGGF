@@ -35,11 +35,13 @@ public final class RewindRegistry {
     private LayoutState layoutState;
 
     public RewindRegistry() {
-        this(null, null);
+        this.profiler = null;
+        this.modeAdapter = null;
     }
 
     public RewindRegistry(SectionProfiler profiler) {
-        this(profiler, null);
+        this.profiler = profiler;
+        this.modeAdapter = null;
     }
 
     /** The session supplies its actual controller; creator keys never select the partition. */

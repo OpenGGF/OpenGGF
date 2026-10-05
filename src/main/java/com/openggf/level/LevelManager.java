@@ -833,9 +833,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         // A creator title can select its session aspect after this manager was
-        // constructed. Rebuild native render geometry at the destination load.
-        cachedScreenWidth = camera.getWidth();
-        cachedScreenHeight = camera.getHeight();
+        // constructed. Trace gameplay can retain a native-width camera, so render
+        // geometry must use the resolved presentation dimensions independently.
+        cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+        cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         blockPixelSize = level.getBlockPixelSize();
         chunksPerBlockSide = level.getChunksPerBlockSide();
         debugRenderer = new LevelDebugRenderer(new LevelDebugContext(

@@ -25,8 +25,11 @@ the camera toward `$2AB0`. Derive the custom finish from ROM placements and
 release its view bound explicitly, rather than simulating a boss to open it.
 
 **A title can select a different viewport after manager construction.** Refresh
-the camera dimensions before level load, and rebuild render geometry from those
-live dimensions. A scene-only width fix still leaves the native framebuffer or
+the camera dimensions before level load, and rebuild render geometry from the
+resolved presentation configuration. Trace playback intentionally keeps a320px
+gameplay camera even with wider presentation; using that camera for render-cache
+sizing breaks the native-camera/wide-presentation split. A scene-only width fix
+still leaves the native framebuffer or
 background period using the manager's old cache. Putt Putt Paradise's normal
 title-to-level and 320→800 scene tests cover both boundaries.
 

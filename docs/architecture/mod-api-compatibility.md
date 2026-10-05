@@ -276,3 +276,9 @@ host ignore `LEVEL_SELECT_ON_STARTUP`, route a title level-select exit to one-pl
 play, and ignore the in-level level-select key. Both are delegated by
 `DelegatingGameModule` and additive to the unpublished 0.7 candidate; the pin is
 updated in place.
+
+Putt Putt Paradise's course controller and bounded scene values extend this same
+unpublished candidate. Atlas residency lookup and packed `PatternVersion` data
+remain engine-internal presentation details; creators use the ROM-backed scene
+contract instead. The candidate pin is regenerated in place when removing the
+initial internal-sampler exposure; version/status and published pins are unchanged.
