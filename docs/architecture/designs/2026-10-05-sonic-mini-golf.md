@@ -1,4 +1,6 @@
-# Sonic Mini Golf — Sonic 2 MVP concept
+# Putt Putt Paradise
+
+Subtitle: **Sonic 2 Mini Golf**
 
 Date: 2026-10-05
 
@@ -332,7 +334,7 @@ Use a namespaced code-bearing S2 patch, distributed as an external mod example
 and run through the JVM jar. Reuse ROM-backed EHZ assets and stock character art.
 Keep gameplay in mod/session owners with injected services and rewind capture;
 do not add a golf-specific branch to `Engine.java` or load disassembly assets.
-An illustrative future directory is `examples/sonic-mini-golf/`; it does not
+An illustrative future directory is `examples/putt-putt-paradise/`; it does not
 exist as an implementation because this document is the concept deliverable.
 
 | Capability | Current evidence and proposed treatment |
