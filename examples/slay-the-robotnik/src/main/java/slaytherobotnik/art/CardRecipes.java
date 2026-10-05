@@ -22,6 +22,8 @@ import java.util.Map;
  *   <li>{@code rom KEY FRAME} a frame of a ROM sprite named in {@link RomSprites}, or
  *       {@code anim=F1/F2/...@TICKS} to cycle frames;</li>
  *   <li>{@code icon NAME} a text-art icon from {@code icons.txt};</li>
+ *   <li>{@code monitor FACE} an item monitor: a Map_Monitor frame number (3-10) or a short
+ *       text such as {@code 1UP} painted on its screen;</li>
  *   <li>{@code fx NAME} a drawn effect: speed, burst, sparkle, rings, fire, water, zap, stars.</li>
  * </ul>
  * After the required words, a layer takes any of: {@code X,Y} (offset from the window's
@@ -72,7 +74,7 @@ public final class CardRecipes {
         String kind = t[0];
         int required = switch (kind) {
             case "hero", "rom" -> 3;
-            case "bg", "icon", "fx" -> 2;
+            case "bg", "icon", "fx", "monitor" -> 2;
             default -> throw new IllegalArgumentException("cards.txt line " + line + ": unknown layer '" + kind + "'");
         };
         if (t.length < required) {

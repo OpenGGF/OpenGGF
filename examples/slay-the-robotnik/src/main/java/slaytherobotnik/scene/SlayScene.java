@@ -16,18 +16,20 @@ public final class SlayScene implements ModScene {
     private final byte[] fontText;
     private final byte[] iconText;
     private final byte[] cardText;
+    private final byte[] relicText;
     private Shell shell;
 
-    public SlayScene(byte[] fontText, byte[] iconText, byte[] cardText) {
+    public SlayScene(byte[] fontText, byte[] iconText, byte[] cardText, byte[] relicText) {
         this.fontText = fontText;
         this.iconText = iconText;
         this.cardText = cardText;
+        this.relicText = relicText;
     }
 
     @Override
     public void enter(SceneContext ctx) {
         SmallFont font = new SmallFont(ctx.art(), fontText);
-        Art art = new Art(ctx, iconText, cardText);
+        Art art = new Art(ctx, iconText, cardText, relicText);
         shell = new Shell(ctx, font, art, Content.build());
         shell.goNow(new TitleScreen());
     }
@@ -52,9 +54,19 @@ public final class SlayScene implements ModScene {
     /**
      * Starts a run and jumps straight into one room, for screenshot tools and debugging:
      * {@code "sonic:42:fight:hcz:big_shaker"} or {@code "tails:7:event:event:slot_machine"}
-     * (character, seed, then {@code fight} or {@code event} and the id), or {@code "compendium:2"}.
+     * (character, seed, then {@code fight} or {@code event} and the id), {@code "compendium:2"},
+     * or {@code "kill"} to defeat every enemy in the current fight.
      */
     public void debugJump(String command) {
+        if (command.equals("kill") && shell.run != null
+                && shell.run.room() instanceof slaytherobotnik.run.CombatRoom room) {
+            // Defeat every enemy in the current fight (to see deaths and the victory flow).
+            for (slaytherobotnik.core.Enemy e : room.combat().activeEnemies()) {
+                room.combat().loseHp(e, e.hp());
+            }
+            room.combat().checkVictory();
+            return;
+        }
         if (command.startsWith("compendium")) {
             // "compendium:N" opens the compendium on tab N.
             String[] c = command.split(":");

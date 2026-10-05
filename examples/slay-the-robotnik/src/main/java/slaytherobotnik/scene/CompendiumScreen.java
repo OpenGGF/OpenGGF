@@ -227,7 +227,7 @@ final class CompendiumScreen implements Screen {
             }
             Gfx.panel(c, s.x(), s.y(), s.w(), s.h());
             if (tab == 4) {
-                HudIcons.relic(shell, c, relics.get(i), s.x() + 5, s.y() + 5);
+                HudIcons.relic(shell, c, relics.get(i), s.x() + 1, s.y() + 1, 20);
             } else {
                 HudIcons.potion(shell, c, potions.get(i), s.x() + 5, s.y() + 4);
             }

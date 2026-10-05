@@ -187,7 +187,7 @@ final class RewardView implements RunScreen.RoomView {
                 Relic relic = shell.catalog.newRelic(b.relicIds().get(i));
                 boolean focus = spots.isFocused(s.id());
                 Gfx.panel(c, s.x(), s.y(), s.w(), 110);
-                HudIcons.relic(shell, c, relic, s.x() + s.w() / 2 - 6, s.y() + 6);
+                HudIcons.relic(shell, c, relic, s.x() + s.w() / 2 - 8, s.y() + 4, 16);
                 f.drawCentered(c, relic.name().toUpperCase(), s.x() + s.w() / 2, s.y() + 22, Colors.GOLD);
                 int ly = s.y() + 32;
                 for (String line : f.wrap(relic.description(), s.w() - 10)) {

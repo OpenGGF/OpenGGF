@@ -148,7 +148,7 @@ final class ShopView implements RunScreen.RoomView {
                 screen.cards.drawSmall(c, item.card(), null, s.x(), s.y() - (focus ? 3 : 0), true, false);
             } else if (item.relicId() != null) {
                 Gfx.panel(c, s.x(), s.y(), s.w(), s.h());
-                HudIcons.relic(shell, c, shell.catalog.newRelic(item.relicId()), s.x() + 7, s.y() + 7);
+                HudIcons.relic(shell, c, shell.catalog.newRelic(item.relicId()), s.x() + 5, s.y() + 5, 16);
             } else {
                 Gfx.panel(c, s.x(), s.y(), s.w(), s.h());
                 HudIcons.potion(shell, c, item.potion(), s.x() + 7, s.y() + 7);

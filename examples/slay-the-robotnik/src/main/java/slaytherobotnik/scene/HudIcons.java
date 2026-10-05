@@ -116,8 +116,34 @@ final class HudIcons {
         };
     }
 
-    /** A relic badge, 12x12: a coloured gem with the relic's initial (art per relic comes later). */
+    /** A relic in the 12x12 relic-bar size. */
     static void relic(Shell shell, SceneCanvas c, Relic relic, int x, int y) {
+        relic(shell, c, relic, x, y, 12);
+    }
+
+    /**
+     * A relic's picture from {@code art/relics.txt} in a {@code size} square (a coloured gem
+     * with its initial when it has none), dimmed once used up, with its counter if it keeps one.
+     */
+    static void relic(Shell shell, SceneCanvas c, Relic relic, int x, int y, int size) {
+        java.util.List<slaytherobotnik.art.CardRecipes.Layer> picture = shell.art.relics().recipe(relic.id());
+        if (picture != null) {
+            c.clip(x, y, size, size);
+            new RecipePainter(shell).paint(c, picture, x + size / 2f, y + size / 2f, size / 24f, x, y, size, size);
+            c.unclip();
+        } else {
+            gem(shell, c, relic, x + (size - 12) / 2, y + (size - 12) / 2);
+        }
+        if (relic.usedUp()) {
+            c.fill(x, y, size, size, 0x90000010);
+        }
+        if (relic.counter() >= 0) {
+            String n = Integer.toString(relic.counter());
+            shell.font.drawOutlined(c, n, x + size - shell.font.width(n), y + size - 4, Colors.GOLD, 1);
+        }
+    }
+
+    private static void gem(Shell shell, SceneCanvas c, Relic relic, int x, int y) {
         int color = switch (relic.tier()) {
             case RelicTier.STARTER -> 0xFFDA4824;
             case RelicTier.UNCOMMON -> 0xFF2490FF;
@@ -126,18 +152,13 @@ final class HudIcons {
             case RelicTier.SHOP -> 0xFF48DA48;
             default -> 0xFFB6B6B6;
         };
-        int fill = relic.usedUp() ? 0xFF484848 : color;
         c.fill(x + 2, y, 8, 12, Colors.BLACK);
         c.fill(x, y + 2, 12, 8, Colors.BLACK);
         c.fill(x + 1, y + 1, 10, 10, Colors.BLACK);
-        c.fill(x + 2, y + 1, 8, 10, fill);
-        c.fill(x + 1, y + 2, 10, 8, fill);
+        c.fill(x + 2, y + 1, 8, 10, color);
+        c.fill(x + 1, y + 2, 10, 8, color);
         c.fill(x + 3, y + 2, 3, 2, Colors.alpha(Colors.WHITE, 0.6f));
         String initial = relic.name().substring(0, 1);
         shell.font.drawOutlined(c, initial, x + 6 - shell.font.width(initial) / 2, y + 4, Colors.WHITE, 1);
-        if (relic.counter() >= 0) {
-            String n = Integer.toString(relic.counter());
-            shell.font.drawOutlined(c, n, x + 12 - shell.font.width(n), y + 8, Colors.GOLD, 1);
-        }
     }
 }

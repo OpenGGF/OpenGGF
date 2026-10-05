@@ -82,6 +82,34 @@ final class CombatView implements RunScreen.RoomView {
     private List<Card> choiceGridOptions = List.of();
     private int endTimer;
 
+    /**
+     * A short sprite effect: a ROM explosion, a boss explosion or a freed animal. Frames step
+     * every {@code frameTicks}; it moves by its velocity and waits {@code delay} ticks first.
+     */
+    private static final class Fx {
+        final String key;
+        final int[] frames;
+        final int frameTicks;
+        final int life;
+        float x;
+        float y;
+        float vx;
+        float vy;
+        int delay;
+        int age;
+
+        Fx(String key, int[] frames, int frameTicks, int life, float x, float y) {
+            this.key = key;
+            this.frames = frames;
+            this.frameTicks = frameTicks;
+            this.life = life;
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    private final List<Fx> effects = new ArrayList<>();
+
     /** A floating number or word. */
     private static final class Popup {
         final String text;
@@ -243,6 +271,16 @@ final class CombatView implements RunScreen.RoomView {
         tickMap(lunge);
         tickMap(hurt);
         dying.replaceAll((k, v) -> v + 1);
+        for (Fx fx : effects) {
+            if (fx.delay > 0) {
+                fx.delay--;
+                continue;
+            }
+            fx.age++;
+            fx.x += fx.vx;
+            fx.y += fx.vy;
+        }
+        effects.removeIf(fx -> fx.age >= fx.life);
         popups.removeIf(p -> ++p.age > p.life);
         for (Popup p : popups) {
             p.y -= 0.35f;
@@ -413,7 +451,7 @@ final class CombatView implements RunScreen.RoomView {
             }
             case CombatEvent.EnemyDied d -> {
                 dying.put(d.enemy(), 0);
-                shell.sfx(Sounds.SFX_BREAK);
+                explode(shell, d.enemy());
                 yield 18;
             }
             case CombatEvent.EnemyEscaped x -> {
@@ -450,6 +488,37 @@ final class CombatView implements RunScreen.RoomView {
             case CombatEvent.Victory v -> 0;
             case CombatEvent.Defeat d -> 0;
         };
+    }
+
+    /**
+     * A badnik bursts into the ROM's explosion and frees its animal, as in the games; a boss
+     * goes up in a chain of boss explosions instead.
+     */
+    private void explode(Shell shell, Enemy enemy) {
+        EnemyVisuals.Box box = boxes.get(enemy);
+        float cx = box != null ? box.centerX() : enemyX(Math.max(0, shown.indexOf(enemy)));
+        float cy = box != null ? box.y() + box.h() / 2f : GROUND - 20;
+        boolean boss = combat.roomType().equals("Boss") && enemy.maxHp() >= 250;
+        if (boss) {
+            shell.sfx(Sounds.SFX_EXPLODE);
+            for (int i = 0; i < 8; i++) {
+                float ox = (box != null ? box.w() : 60) * ((i * 37 % 100) / 100f - 0.5f);
+                float oy = (box != null ? box.h() : 60) * ((i * 61 % 100) / 100f - 0.5f);
+                Fx fx = new Fx("boss_explosion", new int[] {0, 1, 2, 3, 4, 5}, 4, 24, cx + ox, cy + oy);
+                fx.delay = i * 5;
+                effects.add(fx);
+            }
+            return;
+        }
+        shell.sfx(Sounds.SFX_BREAK);
+        effects.add(new Fx("explosion", new int[] {0, 1, 2, 3, 4}, 5, 25, cx, cy));
+        // Released animal: falls out (frame 2) then flaps (0/1) off up and to the right.
+        Fx flicky = new Fx("flicky", new int[] {2, 2, 2, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+                4, 84, cx, cy);
+        flicky.delay = 10;
+        flicky.vx = 1.6f;
+        flicky.vy = -1.1f;
+        effects.add(flicky);
     }
 
     private void popup(String text, int color, float x, float y, int life, int scale) {
@@ -741,6 +810,14 @@ final class CombatView implements RunScreen.RoomView {
         for (int i = 0; i < shown.size(); i++) {
             drawEnemy(shell, screen, c, shown.get(i), i, shake);
         }
+        for (Fx fx : effects) {
+            if (fx.delay > 0) {
+                continue;
+            }
+            int frame = fx.frames[Math.min(fx.frames.length - 1, fx.age / fx.frameTicks)];
+            Poses.centre(c, shell.art.romFrame(fx.key, frame), fx.x + shake, fx.y,
+                    com.openggf.mods.scene.SceneDraw.plain());
+        }
         for (Popup p : popups) {
             float t = p.age / (float) p.life;
             int color = Colors.alpha(p.color, t < 0.7f ? 1f : 1f - (t - 0.7f) / 0.3f);
@@ -825,10 +902,6 @@ final class CombatView implements RunScreen.RoomView {
         EnemyVisuals.Box box = EnemyVisuals.draw(shell, c, enemy, x, GROUND, shell.ticks + index * 17L, f, alpha);
         boxes.put(enemy, box);
         if (deathTicks != null) {
-            if (deathTicks < 12) {
-                int r = deathTicks * 2;
-                c.fill(box.centerX() - r, box.y() + box.h() / 2 - r, r * 2, r * 2, Colors.alpha(0xFFFFDA24, 0.6f));
-            }
             return;
         }
         int[] st = stat(enemy);

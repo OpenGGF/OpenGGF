@@ -73,11 +73,35 @@ class CardRecipesTest {
                     case "rom" -> RomSprites.load(ANY_ROM, layer.key()) != null;
                     case "icon" -> icons.contains(layer.key());
                     case "fx" -> EFFECTS.contains(layer.key());
+                    case "monitor" -> layer.key().matches("[3-9]|10|static|.{1,3}");
                     case "bg" -> layer.key().matches("[0-9A-Fa-f]{6}");
                     default -> false;
                 };
                 if (!ok) {
                     problems.add(id + ": bad " + layer.kind() + " '" + layer.key() + "'");
+                }
+            }
+        });
+        assertEquals(List.of(), problems);
+    }
+
+    @Test
+    void everyRelicHasAPictureOfRealThings() throws IOException {
+        CardRecipes pictures = new CardRecipes(resource("/art/relics.txt"));
+        Catalog catalog = Content.build();
+        List<String> problems = new ArrayList<>();
+        for (Catalog.RelicEntry entry : catalog.allRelics()) {
+            if (pictures.recipe(entry.id()) == null) {
+                problems.add(entry.id() + ": no picture");
+            }
+        }
+        pictures.all().forEach((id, layers) -> {
+            if (!catalog.hasRelic(id)) {
+                problems.add(id + ": no such relic");
+            }
+            for (CardRecipes.Layer layer : layers) {
+                if (layer.kind().equals("rom") && RomSprites.load(ANY_ROM, layer.key()) == null) {
+                    problems.add(id + ": bad rom key " + layer.key());
                 }
             }
         });

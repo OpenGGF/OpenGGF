@@ -21,11 +21,18 @@ public final class Art {
     private SceneImage blank;
 
     private final CardRecipes cards;
+    private final CardRecipes relics;
 
-    public Art(SceneContext ctx, byte[] iconText, byte[] cardText) {
+    public Art(SceneContext ctx, byte[] iconText, byte[] cardText, byte[] relicText) {
         this.ctx = ctx;
         this.icons = TextArt.parse(ctx.art(), iconText);
         this.cards = new CardRecipes(cardText);
+        this.relics = new CardRecipes(relicText);
+    }
+
+    /** Relic pictures from {@code art/relics.txt} (the same recipe format as cards). */
+    public CardRecipes relics() {
+        return relics;
     }
 
     /** Card illustrations from {@code art/cards.txt}. */
@@ -87,6 +94,6 @@ public final class Art {
     /** One frame of a ROM sprite, or null. */
     public SceneSprite romFrame(String key, int frame) {
         SceneSpriteSet set = rom(key);
-        return set == null ? null : set.frame(frame);
+        return set == null || frame < 0 || frame >= set.frameCount() ? null : set.frame(frame);
     }
 }
