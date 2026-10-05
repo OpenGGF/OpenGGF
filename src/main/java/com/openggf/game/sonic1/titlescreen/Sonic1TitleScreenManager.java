@@ -189,6 +189,42 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     // Credit text rendering
     private boolean creditTextCached = false;
 
+    /**
+     * Pattern IDs a {@link BackgroundOverride} may cache its art at: the upper half of the
+     * title background range, clear of the stock GHZ background patterns below it.
+     */
+    public static final int BACKGROUND_OVERRIDE_PATTERN_BASE =
+            Sonic1TitleScreenDataLoader.GHZ_PATTERN_BASE + 0x4000;
+    public static final int BACKGROUND_OVERRIDE_PATTERN_LIMIT = 0x4000;
+
+    /**
+     * Replaces the main title's Plane B (the scrolling GHZ background) and its backdrop
+     * colour, for front ends that show a different zone behind the emblem. Plane A, the
+     * sprites and the palette fades are unchanged.
+     */
+    public interface BackgroundOverride {
+        /** Advances one main-screen frame, where the stock title scrolls its background. */
+        void update(int frameCounter);
+
+        /**
+         * Draws Plane B in screen space, faded like the title palette, and flushes it
+         * ({@code flushPatternBatch} then {@code flushScreenSpace}). It may upload its own
+         * palette lines 0-3; the title restores its palette afterwards. Returns false to
+         * leave this frame to the stock background.
+         */
+        boolean draw(GraphicsManager gm, int viewportWidth, SegaPaletteFade.Mode fadeMode, int fadeSteps);
+
+        /** The backdrop colour under the same fade, or null for the stock one. */
+        Palette.Color backdrop(SegaPaletteFade.Mode fadeMode, int fadeSteps);
+    }
+
+    private BackgroundOverride backgroundOverride;
+
+    /** Installs (or, with null, removes) a replacement for the title's Plane B. */
+    public void setBackgroundOverride(BackgroundOverride override) {
+        this.backgroundOverride = override;
+    }
+
     public Sonic1TitleScreenManager() {
         this(null);
     }
@@ -466,6 +502,9 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         // Update parallax scroll handler with current camera position
         // cameraY=0 (no vertical scroll on title screen), actId=0
         scrollHandler.update(horizScrollBuf, bgCameraX, 0, frameCounter, 0);
+        if (backgroundOverride != null) {
+            backgroundOverride.update(frameCounter);
+        }
 
         // Update palette cycling (water animation)
         updatePaletteCycle();
@@ -696,12 +735,18 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         dataLoader.cacheGhzToGpu(gm);
         dataLoader.cacheForegroundToGpu(gm);
 
-        // --- Render Plane B (GHZ background) ---
-        gm.beginPatternBatch();
-        renderPlaneB(gm);
-        gm.flushPatternBatch();
-        // Flush Plane B to framebuffer before Plane A starts (matches S2 pattern)
-        gm.flushScreenSpace();
+        // --- Render Plane B (GHZ background, unless overridden) ---
+        if (backgroundOverride != null
+                && backgroundOverride.draw(gm, viewportWidth(), paletteFadeMode(), paletteFadeSteps())) {
+            // The override may have drawn with its own palette lines; restore the title's.
+            dataLoader.cachePalettesToGpu(gm, paletteFadeMode(), paletteFadeSteps());
+        } else {
+            gm.beginPatternBatch();
+            renderPlaneB(gm);
+            gm.flushPatternBatch();
+            // Flush Plane B to framebuffer before Plane A starts (matches S2 pattern)
+            gm.flushScreenSpace();
+        }
 
         // --- Render Plane A upper portion (behind sprites) ---
         // The original game uses a "sprite line limiter" (M_PSB_Limiter) to mask
@@ -1080,6 +1125,12 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         // Main title screen uses VDP register $8720 = palette line 2, color 0.
         // The backdrop is a CRAM entry, so PaletteFadeIn fades it like every other
         // colour; read it through the same fade step draw() uploads.
+        Palette.Color override = backgroundOverride == null ? null
+                : backgroundOverride.backdrop(paletteFadeMode(), paletteFadeSteps());
+        if (override != null) {
+            glClearColor(override.rFloat(), override.gFloat(), override.bFloat(), 1.0f);
+            return;
+        }
         Palette bgPal = dataLoader.resolveTitlePaletteLine(2, paletteFadeMode(), paletteFadeSteps());
         if (bgPal != null) {
             Palette.Color backdrop = bgPal.getColor(0);

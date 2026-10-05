@@ -71,6 +71,31 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
+`5637105e5c` while real SMPS songs retained normal note durations. Their chip
+render clock advanced faster, but the driver still received one service per
+output frame. Compare both sequencer state and final PCM against a normal-speed
+ROM recording played faster; neither a higher pitch nor more rendered samples
+proves that note timing advanced. Interleave services with synthesis, rather
+than issuing all fast-forward updates before rendering the packet.
+
+Waveform tests need an explicit output rate (2026-10-02): `AudioManager.resetState`
+retains its backend. `TestGameLoopAudioPresentationModes` uses a six-Hz dummy;
+a later DAC-only regression received zero or one sample per frame and failed a
+within-packet waveform assertion despite passing alone. Own a normal-rate backend
+before loading the ROM, then run the predecessor and regression together. A
+nonzero packet alone is insufficient: chip resting DC can also pass that check.
+
+Matched baselines and relative ROM paths (2026-10-02): a temporary source export
+changes the test fork's working directory. Infinite Sonic's first baseline check
+skipped 29 audio cases while the candidate had null-ROM errors. Matching the fork
+working directory and absolute ROM properties, while keeping separate compiled
+classes/build output, reproduced all 43 failure/error case keys and messages.
+`@RequiresRom` can retain an available `RomCache` handle while a later
+`RomTestUtils` lookup rereads reset configuration and returns null. A skipped
+baseline is not exonerating evidence. Match launch context before attributing
+failures; never rename or link ROMs to make the comparison pass.
+
 Playback surviving a prefix (2026-10-03): a run-chain prefix that closes only its
 comparator and timing owners leaves the process-wide `PlaybackDebugManager` movie
 active. A later capture in the same JVM then plays the old movie's input. Each

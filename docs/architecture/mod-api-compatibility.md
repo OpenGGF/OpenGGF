@@ -236,3 +236,32 @@ Player raw-frame ownership now separates object scripts from player abilities.
 rewind, while the existing raw-frame query continues to cover both owners.
 The unpublished 0.7 candidate pin is regenerated in place; the release descriptor
 and runtime API version remain 0.7.0, with no published baseline changed.
+
+The unpublished 0.7 candidate also exposes `GameModule.gameplayStepsPerFrame()`
+(default one, delegated by `DelegatingGameModule`). Interactive forward level play
+accepts 1–32 complete simulation steps per presentation frame. Fractional-rate
+accumulators belong to a registered module rewind adapter. Canonical `GameLoop.step()`
+remains one tick for deterministic tools and traces; pause, rewind, externally driven
+movies, transitions and non-level scenes retain their existing pacing. The candidate
+version remains 0.7.0 and its normalized pin is regenerated in place.
+
+`GameModule.gameplayAudioPlaybackRate()` supplies the matching continuous audio
+rate for interactive custom pacing, delegated through `DelegatingGameModule`.
+The host bounds it to 1–32 and releases ownership outside paced play. This is an
+additive change to the unpublished 0.7 candidate; the descriptor and
+`ModApiVersion` remain 0.7.0 and the normalized candidate pin is updated in place.
+
+`TitleScreenProvider.startZoneIndex()` (default 0) lets a title choose the zone a
+one-player exit starts on (act 0; out-of-range values start zone 0), and
+`GameModule.showsTitleCardActNumber(int, int)` (default true, delegated by
+`DelegatingGameModule`) lets a module hide the act number on Sonic 1 and Sonic 2
+title cards. Both are additive to the unpublished 0.7 candidate; the pin is updated in place.
+
+`GameModule.requiredDisplayAspect()` (default `null`) names a `display.aspect` preset
+the session requires; interactive launches apply it as a session override after patch
+resolution, so the master title restores the player's aspect and trace test mode still
+resolves native 4:3. `GameModule.suppressesLevelSelect()` (default `false`) makes the
+host ignore `LEVEL_SELECT_ON_STARTUP`, route a title level-select exit to one-player
+play, and ignore the in-level level-select key. Both are delegated by
+`DelegatingGameModule` and additive to the unpublished 0.7 candidate; the pin is
+updated in place.

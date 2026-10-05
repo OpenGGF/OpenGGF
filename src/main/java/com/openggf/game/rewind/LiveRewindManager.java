@@ -286,6 +286,9 @@ public final class LiveRewindManager {
                 || mode == GameMode.SPECIAL_STAGE;
     }
 
+    /** Host pacing must not multiply rewind or release-reconciliation steps. */
+    public boolean isRewindingOrReleasing() { return rewinding || releasePending; }
+
     /** Current VHS rewind presentation intensity, 0..1. */
     public float effectIntensity() {
         return effectEnvelope.intensity();

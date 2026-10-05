@@ -205,7 +205,9 @@ class TestAudioPresentationArchitectureGuard {
         String producer = Files.readString(PRODUCTION_ROOT.resolve(
                 "audio/presentation/AudioPresentationProducer.java"));
         String sessionMix = compactMethod(producer,
-                "private short[] mixSessionForward(");
+                "private short[] mixSessionForwardAtRate(");
+        assertTrue(sessionMix.contains("smpsSession.serviceForward()"),
+                "accelerated playback must interleave source services with synthesis");
         assertTrue(sessionMix.contains("smpsSession.renderFrames("));
         assertTrue(sessionMix.contains("mixer.mixPcmVoices("));
         assertFalse(sessionMix.contains("mixer.mix("));

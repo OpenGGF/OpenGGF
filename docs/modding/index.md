@@ -42,6 +42,10 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
   original sprite/tile PNGs for `ggfmod convert art`, and swapping generated art into
   either build-along sample.
 
+## Experimental projects
+
+- [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the eight maintained gallery samples.
+
 ## Reference
 
 - [`ggfmod` command reference](ggfmod.md)
@@ -60,3 +64,22 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 
 The eight sample sources are built by the default test suite. Treat them as
 executable contracts rather than snippets copied out of context.
+
+Custom game modules can opt into faster interactive gameplay with
+`GameModule.gameplayStepsPerFrame()` (default 1, host range 1–32). Return alternating
+counts for fractional rates and capture the accumulator through `rewindAdapters()`.
+Return the continuous matching rate from `gameplayAudioPlaybackRate()` (default
+1.0, bounded to 1–32) to accelerate music and effects without alternating their
+pitch with the integer step budget. The host releases its audio rate at pause,
+rewind, death, scene changes and teardown; external trace/movie owners retain
+control of their own playback.
+The host advances complete simulation ticks, preserving per-tick collision and
+movement. Pause, rewind, external movie/trace ownership, transitions and non-level
+scenes retain their normal pacing. `GameLoop.step()` remains one deterministic tick;
+interactive hosts use `stepPresentationFrame()`. The
+[Infinite Sonic example](../../examples/infinite-sonic/README.md) demonstrates a
+rewindable clock that compounds speed every 30 seconds of active play.
+A module can also pin a display aspect for its session with
+`GameModule.requiredDisplayAspect()` (a `display.aspect` preset name; the master title
+restores the player's setting) and hide the level select with
+`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both.

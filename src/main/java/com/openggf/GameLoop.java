@@ -128,6 +128,7 @@ public class GameLoop {
     private final EngineContext engineServices;
     final SonicConfigurationService configService;
     private final AudioManager audioManager;
+    private boolean gameplayAudioRateOwned;
     private final OuterFramePresentation outerFramePresentation;
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
@@ -909,7 +910,57 @@ public class GameLoop {
         }
     }
 
+    /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
+    public void stepPresentationFrame() {
+        var modeAtStart = resolveGameplayModeContext();
+        var levelAtStart = levelManager == null ? null : levelManager.getCurrentLevel();
+        boolean paced = canUseGameplayPacing() && GameServices.module() != null;
+        if (paced) {
+            double rate = GameServices.module().gameplayAudioPlaybackRate();
+            rate = Double.isFinite(rate) ? Math.clamp(rate, 1.0, 32.0) : 1.0;
+            if (rate != 1.0 || gameplayAudioRateOwned) {
+                audioManager.setForwardPlaybackRate(rate);
+            }
+            gameplayAudioRateOwned = rate != 1.0;
+        } else {
+            releaseGameplayAudioRate();
+        }
+        int steps = paced
+                ? Math.clamp(GameServices.module().gameplayStepsPerFrame(), 1, 32) : 1;
+        step();
+        for (int i = 1; i < steps && resolveGameplayModeContext() == modeAtStart
+                && (levelManager == null ? null : levelManager.getCurrentLevel()) == levelAtStart
+                && canUseGameplayPacing(); i++) {
+            step();
+        }
+        if (gameplayAudioRateOwned && (!canUseGameplayPacing()
+                || resolveGameplayModeContext() != modeAtStart
+                || (levelManager == null ? null : levelManager.getCurrentLevel()) != levelAtStart)) {
+            releaseGameplayAudioRate();
+        }
+    }
+
+    private void releaseGameplayAudioRate() {
+        if (gameplayAudioRateOwned) {
+            audioManager.setForwardPlaybackRate(1.0);
+            gameplayAudioRateOwned = false;
+        }
+    }
+
+    private boolean canUseGameplayPacing() {
+        return currentGameMode == GameMode.LEVEL
+                && !isPaused() && !isNonRewindableTransitionPending()
+                && !ExternalFrameOrInputOwnership.active(engineServices)
+                && !userRecordingControls.shouldPumpFastForward()
+                && !liveRewindManager.isRewindingOrReleasing()
+                && !(configService.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED)
+                    && inputHandler != null
+                    && inputHandler.isKeyDown(configService.getInt(SonicConfiguration.LIVE_REWIND_KEY)))
+                && (camera == null || camera.getFocusedSprite() == null || !camera.getFocusedSprite().getDead());
+    }
+
     public void closePresence() {
+        releaseGameplayAudioRate();
         presenceManager.close();
     }
 
@@ -4016,11 +4067,22 @@ public class GameLoop {
         setGameMode(GameMode.LEVEL);
         GameServices.gameState().startNewGameFromTitle();
         try {
-            levelManager.loadZoneAndActForFreshRuntime(0, 0);
+            levelManager.loadZoneAndActForFreshRuntime(titleStartZone(), 0);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load title screen start level", e);
         }
         GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+    }
+
+    private int titleStartZone() {
+        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
+        var module = GameServices.module();
+        var registry = module != null ? module.getZoneRegistry() : null;
+        if (titleScreen == null || registry == null) {
+            return 0;
+        }
+        int zone = titleScreen.startZoneIndex();
+        return zone >= 0 && zone < registry.getZoneCount() ? zone : 0;
     }
 
     private void handleTitleScreenExitFromProvider() {
@@ -4059,11 +4121,15 @@ public class GameLoop {
         if (exitAction == null) {
             exitAction = TitleScreenProvider.TitleScreenAction.OTHER;
         }
+        boolean levelSelectAllowed = !gameModule.suppressesLevelSelect();
+        if (!levelSelectAllowed && exitAction == TitleScreenProvider.TitleScreenAction.LEVEL_SELECT) {
+            exitAction = TitleScreenProvider.TitleScreenAction.ONE_PLAYER;
+        }
         return startupRouteResolver.resolveTitleAction(
                 gameModule,
                 resolveDataSelectPresentation(),
                 true,
-                configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP),
+                levelSelectAllowed && configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP),
                 exitAction);
     }
 
@@ -4263,6 +4329,10 @@ public class GameLoop {
      */
     public void enterLevelSelect() {
         if (currentGameMode != GameMode.LEVEL) {
+            return;
+        }
+        GameModule module = GameServices.module();
+        if (module != null && module.suppressesLevelSelect()) {
             return;
         }
 

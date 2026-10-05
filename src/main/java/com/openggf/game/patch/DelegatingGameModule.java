@@ -71,6 +71,10 @@ public class DelegatingGameModule implements GameModule {
         return base.createRuntimeArtCoordinator(timing);
     }
 
+    @Override public double gameplayAudioPlaybackRate() { return base.gameplayAudioPlaybackRate(); }
+    @Override public int gameplayStepsPerFrame() { return base.gameplayStepsPerFrame(); }
+    @Override public String requiredDisplayAspect() { return base.requiredDisplayAspect(); }
+    @Override public boolean suppressesLevelSelect() { return base.suppressesLevelSelect(); }
     @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return base.rewindAdapters();
     }
@@ -177,6 +181,11 @@ public class DelegatingGameModule implements GameModule {
     @Override
     public TitleCardProvider getTitleCardProvider() {
         return base.getTitleCardProvider();
+    }
+
+    @Override
+    public boolean showsTitleCardActNumber(int zoneIndex, int actIndex) {
+        return base.showsTitleCardActNumber(zoneIndex, actIndex);
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.openggf.game.sonic1.audio;
 
-import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
 import com.openggf.audio.session.SmpsChipWrite;
 import com.openggf.audio.session.SmpsMusicActivation;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
@@ -19,11 +18,21 @@ public final class Sonic1SmpsCompatibilityPolicy
             new Sonic1SmpsCompatibilityPolicy();
 
     private static final Identity IDENTITY =
-            new Identity("sonic1-compatibility-v2");
-    private static final LegacyCompatibilitySmpsPhysicalPolicy DELEGATE =
-            LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
+            new Identity("sonic1-compatibility-v3");
     private static final SmpsWriteProgram ACTIVATE_MUSIC =
             initMusicPlaybackSilenceProgram();
+
+    private static final SmpsWriteProgram STOP_ALL = stopAllProgram();
+
+    private static SmpsWriteProgram stopAllProgram() {
+        // s1.sounddriver.asm:StopAllSound, shipped FixBugs=0. The fixed branch
+        // changes RAM clearing only; both branches enable DAC and reset FM mode.
+        List<SmpsChipWrite> writes = new ArrayList<>();
+        writes.add(new SmpsChipWrite.Ym2612(0, 0x2B, 0x80));
+        writes.add(new SmpsChipWrite.Ym2612(0, 0x27, 0));
+        writes.addAll(ACTIVATE_MUSIC.writes());
+        return new SmpsWriteProgram(writes);
+    }
 
     private Sonic1SmpsCompatibilityPolicy() {
     }
@@ -51,18 +60,30 @@ public final class Sonic1SmpsCompatibilityPolicy
 
     @Override
     public SmpsWriteProgram boot() {
-        return DELEGATE.boot();
+        return STOP_ALL;
     }
 
     @Override
     public SmpsWriteProgram stopAll() {
-        return DELEGATE.stopAll();
+        return STOP_ALL;
     }
 
     @Override
     public SmpsWriteProgram activateMusic(SmpsMusicActivation activation) {
         Objects.requireNonNull(activation, "activation");
-        return ACTIVATE_MUSIC;
+        List<SmpsChipWrite> writes = new ArrayList<>(ACTIVATE_MUSIC.writes());
+        // Sound_PlayBGM's .silencefm6 follows InitMusicPlayback. Seven FM/DAC
+        // slots select FM6 instead; ordinary songs need FM6 stereo for DAC.
+        if (activation.fmDacTrackCount() == 7) {
+            writes.add(new SmpsChipWrite.Ym2612(0, 0x2B, 0));
+        } else {
+            writes.add(new SmpsChipWrite.Ym2612(0, 0x28, 6));
+            for (int register : new int[] {0x42, 0x4A, 0x46, 0x4E}) {
+                writes.add(new SmpsChipWrite.Ym2612(1, register, 0x7F));
+            }
+            writes.add(new SmpsChipWrite.Ym2612(1, 0xB6, 0xC0));
+        }
+        return new SmpsWriteProgram(writes);
     }
 
     private static SmpsWriteProgram initMusicPlaybackSilenceProgram() {

@@ -29,10 +29,11 @@ public final class AudioPresentationProducer {
      * full mixer pass inside the one outer frame, so this bounds the worst-case
      * cost of a runaway rate rather than expressing a musical limit.
      */
-    private static final double MAX_FORWARD_RATE = 8.0;
+    private static final double MAX_FORWARD_RATE = 32.0;
 
     private final Thread ownerThread;
     private final int sampleRate;
+    private final int frameRate;
     private final int maxStereoFrames;
     private final int crossfadeFrames;
     private final AudioVoiceRegistry registry;
@@ -63,6 +64,10 @@ public final class AudioPresentationProducer {
     private AudioPresentationDependencyResolver selectedRestoreResolver;
     private PreparedPresentationRestore preparedSelectedRestore;
     private double forwardRate = 1.0;
+    private double sourceFramePhase;
+    private int sourceFrameSamples;
+    private int sourceSampleRemainder;
+    private boolean forwardSfxTrackStopped;
     private int captureCount;
     private int releaseCrossfadeRemaining;
     private short lastReverseLeft;
@@ -85,7 +90,8 @@ public final class AudioPresentationProducer {
 
     private record PreparedPresentationRestore(
             AudioVoiceRegistry.PreparedSnapshotRestore registry,
-            SmpsDriverSession.PreparedRestore session) {
+            SmpsDriverSession.PreparedRestore session,
+            AudioPresentationSnapshot.ForwardTiming timing) {
         private PreparedPresentationRestore {
             Objects.requireNonNull(registry, "registry");
         }
@@ -198,6 +204,7 @@ public final class AudioPresentationProducer {
         }
         ownerThread = Thread.currentThread();
         this.sampleRate = sampleRate;
+        this.frameRate = frameRate;
         maxStereoFrames = (sampleRate + frameRate - 1) / frameRate;
         this.crossfadeFrames = crossfadeFrames;
         this.registry = Objects.requireNonNull(registry, "registry");
@@ -434,7 +441,7 @@ public final class AudioPresentationProducer {
 
     public AudioPresentationSnapshot snapshot() {
         assertOwnerBoundary();
-        return registry.snapshot();
+        return registry.snapshot(forwardTiming());
     }
 
     public boolean areSfxRequestsBlocked() {
@@ -472,7 +479,18 @@ public final class AudioPresentationProducer {
                 reverseActive,
                 reverseFrameOutput,
                 hasLastReverseFrame,
-                captureCount);
+                captureCount, forwardTiming());
+    }
+
+    private AudioPresentationSnapshot.ForwardTiming forwardTiming() {
+        return new AudioPresentationSnapshot.ForwardTiming(
+                sourceFramePhase, sourceFrameSamples, sourceSampleRemainder);
+    }
+
+    private void restoreForwardTiming(AudioPresentationSnapshot.ForwardTiming timing) {
+        sourceFramePhase = timing.phase();
+        sourceFrameSamples = timing.frameSamples();
+        sourceSampleRemainder = timing.sampleRemainder();
     }
 
     /**
@@ -497,7 +515,8 @@ public final class AudioPresentationProducer {
             boolean reverseActive,
             boolean reverseFrameOutput,
             boolean hasLastReverseFrame,
-            int captureCount) {
+            int captureCount,
+            AudioPresentationSnapshot.ForwardTiming forwardTiming) {
         public TransactionFingerprint {
             voiceIdentities = List.copyOf(voiceIdentities);
         }
@@ -620,6 +639,10 @@ public final class AudioPresentationProducer {
     private PreparedPresentationRestore preparePresentationRestore(
             AudioPresentationSnapshot snapshot,
             AudioPresentationDependencyResolver resolver) {
+        if (snapshot.forwardTiming().frameSamples() > maxStereoFrames
+                || snapshot.forwardTiming().sampleRemainder() >= frameRate) {
+            throw new IllegalArgumentException("forward audio timing does not match producer clock");
+        }
         SmpsDriverSession.PreparedRestore preparedSession = null;
         if (smpsSession != null) {
             if (snapshot.smpsSession() == null
@@ -648,7 +671,7 @@ public final class AudioPresentationProducer {
         AudioVoiceRegistry.PreparedSnapshotRestore preparedRegistry =
                 registry.prepareSnapshotRestore(snapshot, resolver);
         return new PreparedPresentationRestore(
-                preparedRegistry, preparedSession);
+                preparedRegistry, preparedSession, snapshot.forwardTiming());
     }
 
     private void commitPreparedRestore(
@@ -656,6 +679,7 @@ public final class AudioPresentationProducer {
         Objects.requireNonNull(restore, "restore");
         if (smpsSession == null) {
             registry.commitPreparedRestore(restore.registry());
+            restoreForwardTiming(restore.timing());
             return;
         }
         if (restore.session() == null) {
@@ -695,6 +719,7 @@ public final class AudioPresentationProducer {
             }
             throw failure;
         }
+        restoreForwardTiming(restore.timing());
         try {
             registry.publishPreparedRestoreDiagnostics(restore.registry());
         } catch (RuntimeException ignored) {
@@ -904,6 +929,9 @@ public final class AudioPresentationProducer {
     }
 
     private short[] presentSessionForward(int stereoFrames) {
+        double phaseBefore = sourceFramePhase;
+        int samplesBefore = sourceFrameSamples;
+        int remainderBefore = sourceSampleRemainder;
         SmpsDriverSession.LiveMutationToken sessionMutation = null;
         AudioVoiceRegistry.LiveMutationToken registryMutation = null;
         AudioPresentationCommandQueue.PendingBatch commandBatch = null;
@@ -980,15 +1008,10 @@ public final class AudioPresentationProducer {
                 forwardBoundary.applyOutcome(requestOutcome);
             }
             registry.beginRendering();
-            SmpsServiceOutcome outcome = smpsSession.serviceForward();
-            if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
-                registry.clearForGlobalStopWithoutWrites();
-            }
-            short[] pcm = forwardRate > 1.0
-                    ? mixSessionForwardResampled(stereoFrames)
-                    : mixSessionForward(stereoFrames);
+            forwardSfxTrackStopped = false;
+            short[] pcm = mixSessionForwardAtRate(stereoFrames);
             registry.endRendering();
-            if (forwardBoundary != null && smpsSession.sfxTrackStoppedDuringService()) {
+            if (forwardBoundary != null && forwardSfxTrackStopped) {
                 forwardBoundary.onSfxTrackStop();
             }
             if (commandBatch != null) {
@@ -1035,6 +1058,11 @@ public final class AudioPresentationProducer {
             }
             return pcm;
         } catch (RuntimeException failure) {
+            if (!sessionCommitted) {
+                sourceFramePhase = phaseBefore;
+                sourceFrameSamples = samplesBefore;
+                sourceSampleRemainder = remainderBefore;
+            }
             if (registryMutation != null && !registryCommitted) {
                 try {
                     registry.rollbackLiveMutation(registryMutation);
@@ -1157,44 +1185,50 @@ public final class AudioPresentationProducer {
                 smpsSession, registry, command);
     }
 
-    private short[] mixSessionForward(int stereoFrames) {
-        smpsSession.renderFrames(
-                smpsSourcePcm, 0, stereoFrames);
-        return mixer.mixPcmVoices(
-                registry, stereoFrames, smpsSourcePcm, 0);
-    }
-
-    private short[] mixSessionForwardResampled(int stereoFrames) {
-        if (stereoFrames <= 0) {
-            return forwardPcm;
-        }
-        int sourceFramesNeeded = Math.toIntExact(
-                (long) Math.floor(
-                        (stereoFrames - 1) * forwardRate + 0.5) + 1);
-        smpsSession.renderFrames(
-                smpsSourcePcm, 0, sourceFramesNeeded);
-        int consumedSourceFrames = 0;
-        int outputFrame = 0;
-        while (consumedSourceFrames < sourceFramesNeeded) {
-            int chunkFrames = Math.min(maxStereoFrames,
-                    sourceFramesNeeded - consumedSourceFrames);
-            short[] chunk = mixer.mixPcmVoices(
-                    registry, chunkFrames, smpsSourcePcm,
-                    consumedSourceFrames * CHANNELS);
-            while (outputFrame < stereoFrames) {
-                long picked = (long) Math.floor(
-                        outputFrame * forwardRate + 0.5);
-                if (picked >= consumedSourceFrames + chunkFrames) {
-                    break;
+    /**
+     * Service the driver at each source V-blank, rendering the intervening PCM
+     * before the next service. Rendering extra chip samples alone raises pitch
+     * but leaves note durations at wall-clock speed. Fractional source frames
+     * carry across output packets (and snapshot/rollback), keeping both clocks
+     * at the same rate without bursting all note updates before synthesis.
+     */
+    private short[] mixSessionForwardAtRate(int stereoFrames) {
+        double remaining = Math.max(1.0, forwardRate);
+        int sourceFrames = 0;
+        while (remaining > 1e-10) {
+            if (sourceFramePhase == 0) {
+                int numerator = sampleRate + sourceSampleRemainder;
+                sourceFrameSamples = numerator / frameRate;
+                sourceSampleRemainder = numerator % frameRate;
+                SmpsServiceOutcome outcome = smpsSession.serviceForward();
+                forwardSfxTrackStopped |= smpsSession.sfxTrackStoppedDuringService();
+                if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
+                    registry.clearForGlobalStopWithoutWrites();
                 }
-                int sourceIndex =
-                        (int) (picked - consumedSourceFrames) * CHANNELS;
-                int targetIndex = outputFrame * CHANNELS;
-                forwardPcm[targetIndex] = chunk[sourceIndex];
-                forwardPcm[targetIndex + 1] = chunk[sourceIndex + 1];
-                outputFrame++;
             }
-            consumedSourceFrames += chunkFrames;
+            double span = Math.min(remaining, 1.0 - sourceFramePhase);
+            double end = sourceFramePhase + span;
+            boolean boundary = end >= 1.0 - 1e-10;
+            int endSample = boundary ? sourceFrameSamples : (int) (end * sourceFrameSamples);
+            int frames = endSample - (int) (sourceFramePhase * sourceFrameSamples);
+            if (frames > 0) {
+                smpsSession.renderFrames(smpsSourcePcm, sourceFrames * CHANNELS, frames);
+                short[] chunk = mixer.mixPcmVoices(registry, frames,
+                        smpsSourcePcm, sourceFrames * CHANNELS);
+                System.arraycopy(chunk, 0, smpsSourcePcm, sourceFrames * CHANNELS, frames * CHANNELS);
+                sourceFrames += frames;
+            }
+            sourceFramePhase = boundary ? 0 : end;
+            remaining -= span;
+        }
+        // The final packet is always one wall-clock frame long. Consume the
+        // entire source interval, including the tail after the last picked
+        // sample, so accelerated playback cannot lose time at every packet.
+        for (int output = 0; output < stereoFrames; output++) {
+            int source = sourceFrames == 0 ? 0
+                    : (int) ((long) output * sourceFrames / stereoFrames) * CHANNELS;
+            forwardPcm[output * CHANNELS] = sourceFrames == 0 ? 0 : smpsSourcePcm[source];
+            forwardPcm[output * CHANNELS + 1] = sourceFrames == 0 ? 0 : smpsSourcePcm[source + 1];
         }
         return forwardPcm;
     }

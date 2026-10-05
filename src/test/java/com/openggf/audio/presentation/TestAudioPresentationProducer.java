@@ -146,6 +146,17 @@ class TestAudioPresentationProducer {
     }
 
     @Test
+    void maximumGameplayRateIsSupportedAndBounded() {
+        Fixture fixture = fixture(8, 2, rampStereo("max-speed", 256));
+        fixture.submitTone();
+        fixture.producer.setForwardRate(1000.0);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {0, 100, 32, 132, 64, 164, 96, 196},
+                fixture.sink.lastPacket(4));
+        assertEquals(97L << 32, sampleCursor(fixture.registry));
+    }
+
+    @Test
     void nonPositiveOrNaNForwardRateFallsBackToRealTime() {
         Fixture fixture = fixture(8, 2, rampStereo("bad-rate", 16));
         fixture.submitTone();

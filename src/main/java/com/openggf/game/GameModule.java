@@ -109,6 +109,41 @@ public interface GameModule {
     }
 
     /**
+     * Number of complete simulation steps for one interactive presentation frame.
+     * Normal play uses one. Faster custom games may alternate counts to express
+     * fractional rates, owning that accumulator in a registered rewind adapter.
+     * The host clamps the count to 1..32 and uses this only for unpaused forward
+     * level play, never trace/movie-owned stepping, transitions or rewind.
+     * Called once per eligible presentation frame; canonical step() stays one tick.
+     */
+    default int gameplayStepsPerFrame() { return 1; }
+
+    /**
+     * Continuous audio playback rate accompanying custom interactive pacing.
+     * Unlike the alternating integer step budget, this stays steady at fractional
+     * speeds. The host bounds it to 1..32, restores normal playback outside paced
+     * level play, and leaves external trace/movie audio ownership intact.
+     */
+    default double gameplayAudioPlaybackRate() { return 1.0; }
+
+    /**
+     * Display aspect preset ({@code display.aspect} name such as {@code "WIDE_16_9"})
+     * this module requires for its whole interactive session, or {@code null} to keep
+     * the player's setting. The host applies it as a session override once the launch
+     * resolves, before gameplay opens; returning to the master title restores the
+     * player's aspect. Trace test mode still forces native 4:3, and deterministic
+     * recording/trace launches ignore it. Unknown names fall back to native 4:3.
+     */
+    default String requiredDisplayAspect() { return null; }
+
+    /**
+     * Whether this session hides the level select. When {@code true}, the host ignores
+     * {@code LEVEL_SELECT_ON_STARTUP}, a title level-select exit starts a one-player game
+     * instead, and the in-level level-select debug key does nothing.
+     */
+    default boolean suppressesLevelSelect() { return false; }
+
+    /**
      * Returns session-owned game services whose mutable state participates in
      * a gameplay rewind. The composition root registers these adapters once
      * per {@link com.openggf.game.session.WorldSession}; games without such
@@ -199,6 +234,16 @@ public interface GameModule {
      */
     default TitleCardProvider getTitleCardProvider() {
         return NoOpTitleCardProvider.INSTANCE;
+    }
+
+    /**
+     * Whether the title card shows the act number for this zone/act. Games
+     * that already omit it (single-act zones, Sonic 1's Final Zone) still do;
+     * returning {@code false} also omits it for other acts. Honoured by the
+     * Sonic 1 and Sonic 2 title cards.
+     */
+    default boolean showsTitleCardActNumber(int zoneIndex, int actIndex) {
+        return true;
     }
 
     /**

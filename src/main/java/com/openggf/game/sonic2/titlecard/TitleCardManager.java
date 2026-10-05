@@ -532,7 +532,10 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         elements.add(blueBackgroundElement);  // Blue background animates with other elements
 
         // Only add act number for multi-act zones
-        if (!TitleCardMappings.isSingleActZone(currentZone)) {
+        var session = SessionManager.getCurrentWorldSession();
+        var module = session != null ? session.getGameModule() : null;
+        if (!TitleCardMappings.isSingleActZone(currentZone)
+                && (module == null || module.showsTitleCardActNumber(currentZone, currentAct))) {
             actNumberElement = TitleCardElement.createActNumber(currentAct);
             elements.add(actNumberElement);
         } else {
