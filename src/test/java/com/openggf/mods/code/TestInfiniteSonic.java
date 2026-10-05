@@ -32,6 +32,8 @@ class TestInfiniteSonic {
     SharedLevel bootstrap;
 
     @BeforeAll static void compileAndValidate() throws Exception {
+        // The leaderboard is saved under the save root; keep the tests' scores out of the real one.
+        System.setProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY, temp.resolve("saves").toString());
         Path project = Path.of("examples/infinite-sonic");
         Path classes = Files.createDirectory(temp.resolve("classes"));
         var args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
@@ -48,7 +50,10 @@ class TestInfiniteSonic {
                 "--out", jar.toString()}, System.out));
         loader = new URLClassLoader(new java.net.URL[]{jar.toUri().toURL()}, TestInfiniteSonic.class.getClassLoader());
     }
-    @AfterAll static void closeLoader() throws Exception { if (loader != null) loader.close(); }
+    @AfterAll static void closeLoader() throws Exception {
+        System.clearProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+        if (loader != null) loader.close();
+    }
     @AfterEach void closeSession() { if (bootstrap != null) bootstrap.dispose(); }
 
     private HeadlessTestFixture launch(WidescreenAspect aspect) throws Exception {
@@ -129,16 +134,13 @@ class TestInfiniteSonic {
         assertArrayEquals(expectedMap, GameServices.level().getCurrentLevel().getMap().getData());
         assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", expectedObjects,
                 registry.capture().entries().get("object-manager")));
-        int backwardsRebases = 0;
-        previous = fixture.sprite().getCentreX();
-        for (int i = 0; i < 1800; i++) {
+        // The camera never scrolls back, so the window never shifts back either.
+        long origin = originPixels();
+        for (int i = 0; i < 600; i++) {
             stepTerrain(fixture, -1);
-            int x = fixture.sprite().getCentreX();
-            if (x - previous > 4000) backwardsRebases++;
             assertFalse(fixture.sprite().getDead());
-            previous = x;
         }
-        assertTrue(backwardsRebases > 0, "backtracking crosses the recycle boundary");
+        assertEquals(origin, originPixels(), "backtracking does not recycle the window backwards");
     }
 
     /** Registry zones 0-5 (GHZ, MZ, SYZ, LZ, SLZ, SBZ), every act, including SBZ3's LZ layout. */
@@ -314,6 +316,159 @@ class TestInfiniteSonic {
         clock().getClass().getMethod("restore", snapshot).invoke(clock(), state);
     }
 
+    private static Path leaderboardFile() {
+        return temp.resolve("saves").resolve("infinite-sonic").resolve("leaderboard.txt");
+    }
+    private Object leaderboard() throws Exception {
+        return GameServices.module().getGameService(loader.loadClass("infinite.Leaderboard"));
+    }
+    @SuppressWarnings("unchecked")
+    private List<Object> top(int zone) throws Exception {
+        return (List<Object>) leaderboard().getClass().getMethod("top", int.class).invoke(leaderboard(), zone);
+    }
+    private static int entryScore(Object entry) throws Exception {
+        return (int) entry.getClass().getMethod("score").invoke(entry);
+    }
+
+    @Test void leaderboardRecordsEachRunOnceAndCongratulatesANewTopScore() throws Exception {
+        Files.createDirectories(leaderboardFile().getParent());
+        Files.writeString(leaderboardFile(), "# earlier runs\n0 5000 125\n0 3000 100\n2 9999 150\n");
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        var hud = loader.loadClass("infinite.CourseHud");
+        assertTrue((float) controller().getClass().getMethod("openingBoardAlpha").invoke(controller()) > 0,
+                "the zone's top 10 shows as the run starts");
+        assertEquals(" 1    5000  1.25X", hud.getMethod("boardLine", int.class, loader.loadClass("infinite.Leaderboard$Entry"))
+                .invoke(null, 1, top(0).get(0)));
+        assertEquals(List.of(5000, 3000), top(0).stream().map(e -> {
+            try { return entryScore(e); } catch (Exception x) { throw new AssertionError(x); } }).toList(),
+                "only Green Hill's scores, highest first");
+        // Overtaking the zone's top score cheers mid-run.
+        assertFalse(controllerFlag("celebrating"));
+        GameServices.gameState().addScore(5000);
+        fixture.stepIdleFrames(1);
+        assertTrue(controllerFlag("celebrating"), "a banner as the run passes 5000");
+        fixture.sprite().setInvulnerableFrames(20000);
+        for (int i = 0; i < 400; i++) stepTerrain(fixture, 1);
+        assertFalse((float) controller().getClass().getMethod("openingBoardAlpha").invoke(controller()) > 0,
+                "the opening board has gone");
+        fixture.sprite().setInvulnerableFrames(0);
+
+        // A death records the run; CONTINUE and a later death replace that entry rather than adding one.
+        dieAndWaitForMenu(fixture, 1);
+        assertEquals(1, controllerInt("rank"));
+        assertEquals("NEW TOP SCORE!", hud.getMethod("rankText", controller().getClass()).invoke(null, controller()));
+        int first = GameServices.gameState().getScore();
+        assertEquals(first, entryScore(top(0).get(0)));
+        fixture.stepFrame(false, false, false, false, true);
+        assertFalse(gameOver(), "continued");
+        dieAndWaitForMenu(fixture, 0);
+        int second = GameServices.gameState().getScore();
+        assertTrue(second > first);
+        assertEquals(3, top(0).size(), "one entry per run");
+        assertEquals(second, entryScore(top(0).get(0)));
+        assertEquals(1, top(2).size(), "other zones are untouched");
+        // Saved to disk, and read back by a fresh table.
+        var reread = loader.loadClass("infinite.Leaderboard").getConstructor(Path.class).newInstance(leaderboardFile());
+        var rereadTop = (List<?>) reread.getClass().getMethod("top", int.class).invoke(reread, 0);
+        assertEquals(second, entryScore(rereadTop.get(0)));
+
+        // Each zone keeps only its top 10; a run outside them is not ranked.
+        var submit = leaderboard().getClass().getMethod("submit", int.class, long.class, int.class, double.class);
+        for (int run = 1; run <= 12; run++) submit.invoke(leaderboard(), 0, (long) run, 100_000 + run, 2.0);
+        assertEquals(10, top(0).size());
+        assertEquals(100_012, entryScore(top(0).get(0)));
+        assertEquals(0, submit.invoke(leaderboard(), 0, 99L, 1, 1.0), "too low to place");
+        assertEquals(5, submit.invoke(leaderboard(), 0, 100L, 100_009, 1.0), "a tie places after the earlier run");
+    }
+
+    @Test void idleTitleShowsTheZoneLeaderboardsThenReturns() throws Exception {
+        Files.createDirectories(leaderboardFile().getParent());
+        Files.writeString(leaderboardFile(), "0 5000 125\n4 700 100\n");
+        launch(WidescreenAspect.NATIVE_4_3);
+        TitleScreenProvider title = GameServices.module().getTitleScreenProvider();
+        var boardAccessor = title.getClass().getDeclaredMethod("board");
+        boardAccessor.setAccessible(true);
+        Object board = boardAccessor.invoke(title);
+        var update = board.getClass().getDeclaredMethod("update", com.openggf.control.InputHandler.class, boolean.class);
+        var showing = board.getClass().getDeclaredMethod("showing");
+        var pageZone = board.getClass().getDeclaredMethod("pageZone");
+        var pageCount = board.getClass().getDeclaredMethod("pageCount");
+        for (var method : List.of(update, showing, pageZone, pageCount)) method.setAccessible(true);
+        var idleField = board.getClass().getDeclaredField("IDLE_FRAMES");
+        var pageField = board.getClass().getDeclaredField("PAGE_FRAMES");
+        idleField.setAccessible(true);
+        pageField.setAccessible(true);
+        int idle = idleField.getInt(null);
+        int page = pageField.getInt(null);
+        var input = new com.openggf.control.InputHandler();
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.neutral());
+        for (int i = 0; i < idle - 1; i++) assertFalse((boolean) update.invoke(board, input, true));
+        assertFalse((boolean) showing.invoke(board), "the title shows until it has been idle");
+        update.invoke(board, input, false);
+        for (int i = 0; i < idle - 1; i++) update.invoke(board, input, true);
+        assertFalse((boolean) showing.invoke(board), "leaving the active title restarts the countdown");
+        update.invoke(board, input, true);
+        assertTrue((boolean) showing.invoke(board));
+        assertEquals(3, pageCount.invoke(board), "ZONE LEADERS, then Green Hill and Star Light");
+        assertEquals(-1, pageZone.invoke(board));
+        for (int i = 0; i < page; i++) update.invoke(board, input, true);
+        assertEquals(0, pageZone.invoke(board));
+        for (int i = 0; i < page; i++) update.invoke(board, input, true);
+        assertEquals(4, pageZone.invoke(board));
+        for (int i = 0; i < page; i++) update.invoke(board, input, true);
+        assertFalse((boolean) showing.invoke(board), "back to the title after the last page");
+        for (int i = 0; i < idle; i++) update.invoke(board, input, true);
+        assertTrue((boolean) showing.invoke(board), "and back again after another idle spell");
+        int left = com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT;
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(left, left, 0, 0, false, false), null));
+        assertTrue((boolean) update.invoke(board, input, true), "the dismissing press is kept from the title");
+        assertFalse((boolean) showing.invoke(board));
+        assertEquals(0, title.startZoneIndex(), "the press did not move the zone picker");
+    }
+
+    @ParameterizedTest(name = "zone {0}")
+    @ValueSource(ints = {0, 1, 2, 3, 4, 5})
+    void backgroundStaysContinuousAcrossWindowShifts(int zone) throws Exception {
+        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        fixture.stepIdleFrames(2);
+        fixture.sprite().setInvulnerableFrames(20000);
+        var parallax = GameServices.parallaxOrNull();
+        int[] previous = null;
+        int previousCamera = 0;
+        int shifts = 0;
+        for (int frame = 0; frame < 3000 && shifts < 2; frame++) {
+            long origin = originPixels();
+            stepTerrain(fixture, 1);
+            boolean shifted = originPixels() != origin;
+            if (shifted) shifts++;
+            // Re-derive this frame's scroll from the final camera (an idempotent repeat for the stock routines).
+            GameServices.level().recomputeParallaxAfterRewindRestore();
+            int[] lines = parallax.getHScroll().clone();
+            int camera = fixture.camera().getX();
+            for (int line = 0; line < 224; line++) {
+                assertEquals((short) -camera, (short) (lines[line] >> 16), "FG stays on the local camera");
+            }
+            if (previous != null && shifted) {
+                // Across a shift, bands move no further than the camera itself (plus GHZ's 1px cloud
+                // drift). Band boundaries follow camera Y, so a few lines may change band (GHZ's water
+                // lines re-slice whenever camera Y crosses 32px, as in the stock level); a shift that
+                // moved the bands would move nearly every line.
+                int step = Math.abs(camera + (shifted ? 4096 : 0) - previousCamera);
+                int jumped = 0;
+                for (int line = 0; line < 224; line++) {
+                    if (Math.abs((short) ((short) lines[line] - (short) previous[line])) > step + 2) jumped++;
+                }
+                assertTrue(jumped <= 24, "zone " + zone + ": " + jumped + " background lines jumped at frame "
+                        + frame + " (camera moved " + step + (shifted ? ", window shifted" : "") + ")");
+            }
+            previous = lines;
+            previousCamera = camera;
+        }
+        assertEquals(2, shifts, "crossed two window shifts");
+    }
+
     @Test void lastFiveSecondsWarnAndAudioRateFollowsRestoredChallengeState() throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         fixture.stepIdleFrames(2);
@@ -351,6 +506,20 @@ class TestInfiniteSonic {
         tick.invoke(clock);
         assertEquals(1.25, speed());
         assertEquals(30, seconds.invoke(clock));
+        // The live rate glides up to the new stage (as the rewind tape coast does) rather than snapping.
+        var steps = clock.getClass().getMethod("nextFrameSteps");
+        var rate = clock.getClass().getMethod("multiplier");
+        double last = (double) rate.invoke(clock);
+        assertEquals(1.0, last, "the step rate has not moved yet");
+        for (int frame = 0; frame < 60; frame++) {
+            steps.invoke(clock);
+            double now = (double) rate.invoke(clock);
+            assertTrue(now > last && now - last < 0.005, "smooth ramp at frame " + frame + ": " + last + " -> " + now);
+            last = now;
+        }
+        assertEquals(1.25, last, 1e-9, "one 0.25x stage ramps over 60 frames");
+        steps.invoke(clock);
+        assertEquals(1.25, (double) rate.invoke(clock), 1e-9, "and holds at the stage");
         // 30 real seconds at 1.25x is 2250 simulation ticks, not another 1800.
         for (int i = 0; i < 2249; i++) tick.invoke(clock);
         assertEquals(1.25, speed());
@@ -480,7 +649,7 @@ class TestInfiniteSonic {
         assertTrue(player.getInvulnerableFrames() > 0, "post-continue blink");
         assertEquals(1, GameServices.gameState().getLives(), "CONTINUE spends one spare life");
         assertEquals(1, controllerInt("displayLives"));
-        assertEquals(0, GameServices.level().getLevelGamestate().getRings());
+        assertEquals(30, GameServices.level().getLevelGamestate().getRings(), "CONTINUE keeps the rings");
         assertTrue(GameServices.gameState().getScore() >= score, "score carries over");
         assertEquals(1.5, speed(), "the run resumes at the speed it died at");
         assertTrue(Math.abs(ticks() - (1800 * 2 + 100)) < 10, "and partway through that interval: " + ticks());
@@ -596,7 +765,7 @@ class TestInfiniteSonic {
               int steps = GameServices.module().gameplayStepsPerFrame();
               for (int step = 0; step < steps; step++) {
                 // Timing/scroll setup independent of terrain: airborne, stationary, and left of
-                // the 30% follow point (96px at 4:3) so only the minimum scroll moves the camera.
+                // the 45% follow point (144px at 4:3) so only the minimum scroll moves the camera.
                 NativePositionOps.writeXPosResetSubpixel(player, fixture.camera().getX() + 64);
                 NativePositionOps.writeYPosResetSubpixel(player, 600);
                 player.setAir(true); player.setXSpeed((short) 0); player.setYSpeed((short) 0);
@@ -625,7 +794,7 @@ class TestInfiniteSonic {
         int initialLead = 40;
         NativePositionOps.writeXPosResetSubpixel(player, 1000);
         fixture.camera().setX((short) (1000 - initialLead));
-        int margin = fixture.camera().getWidth() * 30 / 100;
+        int margin = fixture.camera().getWidth() * 45 / 100;
         boolean reachedMargin = false;
         // Real player integration and module pacing on each presentation frame.
         // Reset only height/vertical velocity to isolate scrolling from course obstacles.
@@ -1618,10 +1787,14 @@ class TestInfiniteSonic {
         var start = registry.capture();
         int passes = 0, hits = 0;
         var outcomes = new StringBuilder();
-        for (int coast = 0; coast <= 60; coast += 12) {
+        // Coasting brakes to a stop just short of the hazard, once it is on screen and running (pit
+        // fireballs only launch while visible), and waits there, so arrivals span a whole hazard
+        // cycle (the flame's is 126 frames) as a player slowing down would.
+        for (int coast = 0; coast <= 120; coast += 12) {
             for (int lead = -1; lead <= 200; lead += lead < 0 ? 41 : 20) {
                 registry.restore(start);
                 boolean jumped = false, hit = false;
+                int waitFrom = -1;
                 for (int frame = 0; frame < 900; frame++) {
                     long x = originPixels() + player.getCentreX();
                     if (x > hx + reach + 48 && !player.getAir()) break;
@@ -1629,7 +1802,10 @@ class TestInfiniteSonic {
                     if (jump) jumped = true;
                     setTicks(0);
                     fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
-                    fixture.stepFrame(false, false, false, frame >= coast, jump);
+                    if (waitFrom < 0 && x >= hx - reach - 120) waitFrom = frame;
+                    boolean waiting = waitFrom >= 0 && frame < waitFrom + coast;
+                    boolean brake = waiting && player.getGSpeed() > 0 && !player.getAir();
+                    fixture.stepFrame(false, false, brake, !waiting, jump);
                     if (player.getDead()) { hit = true; break; }
                     if (GameServices.level().getLevelGamestate().getRings() < 50) {
                         hit = true;

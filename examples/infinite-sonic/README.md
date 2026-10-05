@@ -13,10 +13,11 @@ speed. The player's own aspect returns at the master title. Trace test mode stil
 forces native 4:3. On the course Sonic's top running speed is **7/8 of stock** (0x540
 instead of 0x600; acceleration, jumps and rolling are unchanged), and he starts running at
 that speed. He still shows the stock full-speed running frames (and the faster rolling frames),
-from 0x500 instead of the stock 0x600 he can no longer reach. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Pausing stops the countdown.
+from 0x500 instead of the stock 0x600 he can no longer reach. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Each step glides in over about a second
+(as the rewind tape coast ramps its speed) rather than snapping. Pausing stops the countdown.
 The camera scrolls at a minimum of **two thirds of Sonic’s stock maximum run speed** (4 pixels per tick),
-letting Sonic gain ground until his centre reaches **30% of the screen width**, left of centre, so most
-of the screen shows the course ahead. There the camera follows his position, keeping him on screen
+letting Sonic gain ground until his centre reaches **45% of the screen width**, just left of centre, so
+more of the screen shows the course ahead than behind. There the camera follows his position, keeping him on screen
 while preserving his native running and jumping physics. Leaving the left edge
 completely loses a life, regardless of rings or invulnerability. Pits and lethal
 enemy hits also cost a life.
@@ -46,14 +47,25 @@ after losing your rings counts too). Points never award lives. Spare lives are s
 the HUD. When Sonic dies with a spare life, the stock card is replaced by a menu:
 **CONTINUE** spends the life and revives Sonic right where the run is, at the last safe
 spot he stood on (solid, pit-free floor), with no level reload. Score, speed, the
-countdown to the next speedup, the terrain and cleared enemies all carry on; rings reset
-to 0 and Sonic blinks for two seconds. **RESTART** reloads a fresh session at 1× with no
+countdown to the next speedup, the terrain, cleared enemies and Sonic's rings all carry on, and
+Sonic blinks for two seconds. Only RESTART, EXIT and GAME OVER clear the rings. **RESTART** reloads a fresh session at 1× with no
 spare lives and a zero score. **EXIT** fades out to the Sonic 1 title screen, where the zone
 picker can start another course. Press up/down to choose and **SPACE** (player 1 button A)
 to confirm. Dying with no spare lives shows the mod's own GAME OVER text over a
 **RESTART**/**EXIT** menu. During a run, a tap of **Escape** (or the gamepad Back button)
 also leaves for the Sonic 1 title; holding Escape for two seconds still reaches the
 engine's own title as everywhere else.
+
+Every zone keeps a **top-10 leaderboard**, saved in `saves/infinite-sonic/leaderboard.txt`
+(under the engine's save root) so it survives restarts. Each entry is a run's score and the
+speed it reached. A run is recorded when Sonic dies and when you leave with Escape; a run
+that continues and dies again replaces its own entry, so one run never fills two places.
+The zone's top 10 shows at the top right for the first five seconds of every run. Passing the
+zone's previous top score mid-run flashes **NEW TOP SCORE!** with a chime, and the death
+screen repeats it (or shows **RANK n OF 10**) for a run that places. Leave the title screen
+idle for ten seconds and it flicks to an arcade-style board: **ZONE LEADERS** (each zone's
+top score), then the top 10 of every zone with scores, five seconds a page, then back to the
+title. Any key or button returns to the title at once without starting a game.
 
 The Sonic 1 title screen gains an **INFINITE** wordmark above the emblem: once
 Sonic has risen it streaks in from the right, then glints every few seconds. Below the
@@ -173,8 +185,10 @@ are hop arcs whose middle rings need a short jump.
 At local X=8,192 the engine shifts Sonic and the camera left by 4,096 pixels and
 advances the terrain window. Logical distance continues increasing, selecting new
 seeded sections. Individual motifs recur, but the complete window does not loop.
-The terrain generator supports reverse recycling below local X=2,048, but
-backtracking in normal play loses ground against the scrolling camera.
+The camera never scrolls back, so the window only ever moves forward. The stock background
+routines are fed the logical camera X (window origin plus local camera X), so every
+parallax band keeps its stock speed straight through a shift with no jump; only the
+foreground scroll is put back on the local camera.
 
 From the repository root, with Java 21 and Maven on PATH:
 
@@ -199,12 +213,13 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
 ```
 
 The finite 64-column window recycles in 16-column steps while preserving Sonic's
-fractional position and speed. Backtracking regenerates the same terrain from the
-same logical coordinates. Change `TerrainLibrary.SEED` and rebuild for another course.
+fractional position and speed. The same logical coordinates always generate the same
+terrain. Change `TerrainLibrary.SEED` and rebuild for another course.
 Enemy positions and patrol phases shift with the world and participate in rewind.
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
 from that window can regenerate its encounters. Stock platforms keep their own
 coordinates, so the window waits to shift until none are loaded (forcing the shift at
-local X=12,288 if necessary). There are no loops, moving platforms (other than the elevator's short rise), breakable floors or checkpoints. Section reflections can mirror scenery. Background scrolling at a world
-rebase still needs visual verification. The coverage matrix and current evidence are
+local X=12,288 if necessary). There are no loops, moving platforms (other than the elevator's short rise), breakable floors or checkpoints. Section reflections can mirror scenery. Over a long run Green Hill's water lines, which
+the stock routine interpolates towards the camera, drift into a busier pattern, as they would
+in an extremely long stock level. The coverage matrix and current evidence are
 in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).

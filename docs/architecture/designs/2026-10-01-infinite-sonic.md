@@ -760,3 +760,52 @@ the hazard meets the path (±48 px for the swing and chain); the Spring Yard bal
 floor, so its run only has to be gentle.
 
 **Monitors.** Invincibility is removed: three in five shields, two in five Super Rings.
+
+## Follow point, leaderboards, speed ramp, seamless background, kept rings (0.18.0)
+
+Follow-up on `8e6d2e26e3`, same branch, main checkout, 2026-10-05. Play review asked for
+Sonic nearer the middle, per-zone leaderboards (at each zone's start and on an idle title,
+arcade style), a smooth speed-up, a background that does not jump when the window shifts,
+and CONTINUE keeping the rings.
+
+**Follow point.** 30% → 45% of the viewport (180 px at 16:9). CONTINUE puts the camera
+back at the same point instead of a quarter of the way across.
+
+**Kept rings.** CONTINUE no longer zeroes the rings; `ringsSeen` takes the kept count so
+lives already earned for it are not paid twice. RESTART and EXIT reload, which clears them.
+
+**Speed ramp.** `ChallengeClock` keeps a live `rate` that moves 0.25/60 per presentation
+frame toward the stage multiplier, as `RewindSpeedController` ramps the tape coast; the step
+budget, the audio rate and the countdown's real-time conversion all read it. The stage
+(HUD speed, score per second, leaderboard speed) still changes on the boundary. The rate is
+in the rewind snapshot; the old four-field snapshot constructor now means a settled rate.
+
+**Background across a shift.** Every S1 `Deform_*` handler derives its bands from camera X:
+GHZ, MZ, LZ, SBZ accumulate camera deltas at 96/256, 128/256 and similar, GHZ's water lines
+interpolate from bg2 X to camera X, and SYZ/SLZ read camera X directly. The -4096 px shift
+therefore moved GHZ's mountains 1536 px and its hills 2048 px inside an 8192 px period, and
+bent the water. Rejected: subclassing the handlers to shift their accumulators (most keep
+them private) and wrapping the logical X at a period (no single period is seamless for every
+band: GHZ's water alone needs 104 × 16384 px). Landed: `CourseScroll` wraps the module's
+scroll provider and gives each stock handler the logical camera X (origin + local X), which
+only moves forward, then adds the origin back to each FG word (keeping any per-line deform)
+and recomputes the BG-FG spread. Background window selection already wraps with
+`floorMod`, so large BG camera X values are safe. Off the course the origin is 0 and the
+calls are stock. Reverse recycling is removed: the camera never scrolls back, so it was
+unreachable. Known: over a long run GHZ's water interpolation spreads (as it would in a
+very long stock level).
+
+**Leaderboards.** `Leaderboard` keeps each zone's top 10 (score, speed reached) in
+`saves/infinite-sonic/leaderboard.txt` under `SavePaths.root()`, outside rewind. A run
+(identified per level load) submits at each death and on an Escape exit and replaces its own
+entry, so CONTINUE and rewind cannot list it twice. The HUD shows the top 10 for the first
+300 updates, flashes NEW TOP SCORE! with the checkpoint chime when the score passes the
+earlier top, and the death screen shows NEW TOP SCORE! or RANK n OF 10. `LeaderboardScreen`
+is the title's attract board: after 600 idle frames on the active title it pages ZONE
+LEADERS and each zone with scores (300 frames a page), then returns; the dismissing press
+is kept from the title so it cannot start a game. Name entry was not added.
+
+Found while testing: the hazard timing trial passed at 30% by luck. Hazards only tick inside
+the object window and pit fireballs only launch while on screen, so a coast taken far before
+the hazard could not move its phase; at 45% Star Light's fireballs lined up with every
+arrival. The trial now brakes and waits just before the hazard, once it is running.

@@ -510,3 +510,22 @@ Main checkout, `feature/ai-infinite-sonic`, base `5bceccc8bc`; mod, tests and do
 
 **186 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not covered:
 live play and a visual check of the road and hazards.
+
+## Follow point, leaderboards, speed ramp, seamless background, kept rings (0.18.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `8e6d2e26e3`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Follow point 45% | `sonicGainsGroundAcrossSpeedupAndIsHeldAtTheFollowPoint[*]` | Every width |
+| CONTINUE keeps rings | `deathMenuContinueRevivesInPlaceAtTheLastSafeSpot` | 30 rings survive CONTINUE |
+| Smooth speed-up | `speedAndCountdownUseThirtySecondLinearIntervals` | Rate rises monotonically in steps under 0.005 and settles at 1.25 after 60 frames |
+| Background across shifts | `backgroundStaysContinuousAcrossWindowShifts[0-5]` | Act 1 of every zone at 16:9, two shifts each: at most 24 lines move further than the camera, FG words equal the local camera. Without `CourseScroll` all six fail with all 224 lines jumping at the shift |
+| Forward-only recycling | `protectedTraversalPreservesEncountersAcrossRebaseAndReplay[*]` | Backtracking leaves the origin unchanged |
+| Leaderboard | `leaderboardRecordsEachRunOnceAndCongratulatesANewTopScore` | Reads a seeded file, opening board shows then fades, mid-run banner, death rank, CONTINUE replaces the run's entry, saved and re-read, top-10 cap, ties after earlier runs |
+| Title attract board | `idleTitleShowsTheZoneLeaderboardsThenReturns` | Idle countdown, pages (leaders, zones with scores), return, dismissal swallowing the press |
+| Hazard timing trial | `eachZoneHazardNeedsTimingAndHitsThroughTheRingToll[0-5]` | The trial now brakes and waits once the hazard is on screen (coast 0–120 frames): at 45% the Star Light fireballs launch later relative to Sonic, and a far-back coast could not move their phase |
+
+**194 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; skips are the
+platform crossing in acts without platforms). Not covered: a rendered check of the HUD board,
+banners and title attract board, and live play.

@@ -7,7 +7,7 @@ import java.util.Locale;
 /** Tiny code-drawn HUD glyphs; no external art or GPU-owned state to restore. */
 public final class CourseHud {
     private CourseHud() { }
-    private static final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:>";
+    private static final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:>!";
     private static final String GLYPHS =
             "111101101101111"
             + "010110010010111"
@@ -48,7 +48,8 @@ public final class CourseHud {
             + "000000000000010"
             + "000000111000000"
             + "000010000010000"
-            + "100010001010100";
+            + "100010001010100"
+            + "010010010000010";
     public static String speedText(CourseController course) {
         return String.format(Locale.ROOT, "SPEED %.2fX", course.speedMultiplier());
     }
@@ -59,7 +60,21 @@ public final class CourseHud {
         return !course.gameOver() && course.speedMultiplier() < 32 && course.secondsRemaining() <= 5
                 ? "SPEED UP IN " + course.secondsRemaining() : "";
     }
+    /** Shown over the run while it overtakes the zone's top score, and on the death screen for one. */
+    public static final String TOP_SCORE = "NEW TOP SCORE!";
+    /** The death screen's congratulation: a new top score, or the run's place in the zone's top 10. */
+    public static String rankText(CourseController course) {
+        int rank = course.rank();
+        return rank == 1 ? TOP_SCORE : rank > 1 ? "RANK " + rank + " OF " + Leaderboard.SIZE : "";
+    }
+    /** One line of the top-10 board: place, score and the speed the run reached. */
+    public static String boardLine(int place, Leaderboard.Entry entry) {
+        return entry == null ? String.format(Locale.ROOT, "%2d %7s", place, "-")
+                : String.format(Locale.ROOT, "%2d %7d %5.2fX", place, entry.score(), entry.speed());
+    }
     public static void draw(ObjectServices services, CourseController course) {
+        float board = course.openingBoardAlpha();
+        if (board > 0) drawBoard(services, course, board);
         text(services, "SCORE " + services.gameState().getScore(), 16, 8, true);
         text(services, speedText(course) + "  " + countdownText(course), 16, 24, true);
         text(services, livesText(services, course), 16, 40, true);
@@ -68,7 +83,17 @@ public final class CourseHud {
             text(services, warning, (services.camera().getWidth() - warning.length() * 12) / 2,
                     64, true, 3);
         }
+        if (course.celebrating() && course.celebrateFrames() / 6 % 2 == 0) {
+            glyphs(services, TOP_SCORE, (services.camera().getWidth() - TOP_SCORE.length() * 12) / 2, 88, 3,
+                    1f, 0.82f, 0.19f, 1f);
+        }
         if (!course.gameOver()) return;
+        String rank = rankText(course);
+        if (!rank.isEmpty()) {
+            int scale = course.rank() == 1 ? 3 : 2;
+            glyphs(services, rank, (services.camera().getWidth() - rank.length() * 4 * scale) / 2, 64, scale,
+                    1f, 0.82f, 0.19f, 1f);
+        }
         centred(services, course.canContinue() ? "LIVES LEFT " + course.displayLives() : "GAME OVER", 88);
         int top = 112;
         if (!course.restartReady()) return;
@@ -93,8 +118,31 @@ public final class CourseHud {
     private static void text(ObjectServices services, String text, int x, int y, boolean shadow) {
         text(services, text, x, y, shadow, 2);
     }
+    /** The zone's top 10, top right, over a translucent panel that fades as the run gets going. */
+    private static void drawBoard(ObjectServices services, CourseController course, float alpha) {
+        var top = services.gameService(Leaderboard.class).top(course.zone());
+        int width = 168, left = services.camera().getWidth() - width - 8, y = 56;
+        int height = 26 + Leaderboard.SIZE * 12;
+        int cameraX = services.camera().getX(), cameraY = services.camera().getY();
+        services.graphicsManager().registerCommand(new GLCommand(GLCommand.CommandType.RECTI, 0,
+                GLCommand.BlendType.ONE_MINUS_SRC_ALPHA, 0.04f, 0.06f, 0.2f, 0.7f * alpha,
+                cameraX + left, cameraY + y, cameraX + left + width, cameraY + y + height));
+        glyphs(services, "TOP 10 SCORES", left + 8, y + 6, 2, 1f, 0.82f, 0.19f, alpha);
+        for (int i = 0; i < Leaderboard.SIZE; i++) {
+            String line = boardLine(i + 1, i < top.size() ? top.get(i) : null);
+            glyphs(services, line, left + 8, y + 22 + i * 12, 2, 1f, 1f, 1f, alpha);
+        }
+    }
+
     private static void text(ObjectServices services, String text, int x, int y, boolean shadow, int scale) {
         if (shadow) text(services, text, x + 1, y + 1, false, scale);
+        if (shadow) glyphs(services, text, x, y, scale, 1f, 1f, 0.5f, 1f);
+        else glyphs(services, text, x, y, scale, 0f, 0f, 0f, 1f);
+    }
+
+    /** Draws {@code text} in one colour; below full opacity it blends over the scene. */
+    private static void glyphs(ObjectServices services, String text, int x, int y, int scale,
+                               float r, float g, float b, float alpha) {
         int cameraX = services.camera().getX();
         int cameraY = services.camera().getY();
         for (int letter = 0; letter < text.length(); letter++) {
@@ -105,9 +153,10 @@ public final class CourseHud {
                 if (glyph.charAt(pixel) != '1') continue;
                 int px = cameraX + x + letter * 4 * scale + pixel % 3 * scale;
                 int py = cameraY + y + pixel / 3 * scale;
-                services.graphicsManager().registerCommand(new GLCommand(GLCommand.CommandType.RECTI,
-                        0, shadow ? 1f : 0f, shadow ? 1f : 0f, shadow ? 0.5f : 0f,
-                        px, py, px + scale, py + scale));
+                services.graphicsManager().registerCommand(alpha >= 1f
+                        ? new GLCommand(GLCommand.CommandType.RECTI, 0, r, g, b, px, py, px + scale, py + scale)
+                        : new GLCommand(GLCommand.CommandType.RECTI, 0, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
+                                r, g, b, alpha, px, py, px + scale, py + scale));
             }
         }
     }

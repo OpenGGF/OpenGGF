@@ -11,8 +11,9 @@ import java.util.List;
  * strip above the emblem (the wings and TitleSonic's head start near screen Y 30).
  * After Sonic rises it streaks in from the right, then glints periodically. Once
  * it lands, a {@link ZoneMenu} rises into the empty slot below the emblem and the
- * one-player start launches the zone it shows. Everything else delegates to the
- * ROM-driven title unchanged.
+ * one-player start launches the zone it shows. Left idle, the title gives way to the
+ * {@link LeaderboardScreen} attract board and then returns. Everything else delegates to
+ * the ROM-driven title unchanged.
  */
 public final class TitleWordmark implements TitleScreenProvider {
     static final String WORD = "INFINITE";
@@ -48,17 +49,20 @@ public final class TitleWordmark implements TitleScreenProvider {
 
     private final TitleScreenProvider base;
     private final ZoneMenu menu;
+    private final LeaderboardScreen board;
     private int activeFrames;
     private InputHandler input;
 
     /** {@code zoneNames} lists the selectable course zones in registry order. */
-    public TitleWordmark(TitleScreenProvider base, List<String> zoneNames) {
+    public TitleWordmark(TitleScreenProvider base, List<String> zoneNames, LeaderboardScreen board) {
         this.base = base;
         this.menu = new ZoneMenu(zoneNames);
+        this.board = board;
     }
 
     TitleScreenProvider base() { return base; }
     ZoneMenu menu() { return menu; }
+    LeaderboardScreen board() { return board; }
 
     /** The engine's live input handler, captured at the title, which every course is launched from. */
     InputHandler input() { return input; }
@@ -68,7 +72,12 @@ public final class TitleWordmark implements TitleScreenProvider {
         // Read the zone choice before the stock title sees this frame's confirm press.
         boolean interactive = base.getState() == State.ACTIVE;
         if (activeFrames > ENTRY_DELAY + ENTRY_FRAMES) menu.reveal();
-        menu.update(input, interactive);
+        // The press that dismisses the attract board stays with the board.
+        if (board.update(input, interactive && activeFrames > ENTRY_DELAY + ENTRY_FRAMES)) {
+            activeFrames++;
+            return;
+        }
+        menu.update(input, interactive && !board.showing());
         base.update(input);
         State state = base.getState();
         activeFrames = state == State.ACTIVE || state == State.EXITING ? activeFrames + 1 : 0;
@@ -83,6 +92,7 @@ public final class TitleWordmark implements TitleScreenProvider {
         int viewport = graphics.getProjectionWidth() > 0 ? graphics.getProjectionWidth() : 320;
         menu.draw(graphics, viewport);
         if (activeFrames > ENTRY_DELAY) drawWordmark(graphics, viewport);
+        board.draw(graphics, viewport);
         graphics.flushScreenSpace();
     }
 
@@ -244,8 +254,8 @@ public final class TitleWordmark implements TitleScreenProvider {
     private static float g(int rgb) { return (rgb >> 8 & 0xFF) / 255f; }
     private static float b(int rgb) { return (rgb & 0xFF) / 255f; }
 
-    @Override public void initialize() { activeFrames = 0; menu.reset(); base.initialize(); }
-    @Override public void reset() { activeFrames = 0; menu.reset(); base.reset(); }
+    @Override public void initialize() { activeFrames = 0; menu.reset(); board.reset(); base.initialize(); }
+    @Override public void reset() { activeFrames = 0; menu.reset(); board.reset(); base.reset(); }
     @Override public void setClearColor() { base.setClearColor(); }
     @Override public State getState() { return base.getState(); }
     @Override public boolean isExiting() { return base.isExiting(); }

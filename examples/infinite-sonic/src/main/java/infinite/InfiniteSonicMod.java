@@ -75,6 +75,17 @@ public final class InfiniteSonicMod implements GgfMod {
         private final CourseFeatures dryFeatures = new CourseFeatures();
         private final ChallengeClock clock = new ChallengeClock();
         private final CourseSession session = new CourseSession();
+        private Leaderboard leaderboard;
+        // Identifies the current level load's run on the leaderboard.
+        private CourseRun run = new CourseRun(0);
+        /** The saved per-zone top scores, read on first use. */
+        private Leaderboard leaderboard() {
+            if (leaderboard == null) {
+                leaderboard = new Leaderboard(com.openggf.game.save.SavePaths.root()
+                        .resolve("infinite-sonic").resolve("leaderboard.txt"));
+            }
+            return leaderboard;
+        }
         private final LevelEventProvider endlessEvents = new LevelEventProvider() {
             @Override public void initLevel(int zone, int act) { }
             @Override public void update() { }
@@ -107,6 +118,7 @@ public final class InfiniteSonicMod implements GgfMod {
             // CONTINUE revives in place, so every load starts a fresh run at 1x.
             clock.reset();
             session.reset();
+            run = new CourseRun(System.nanoTime());
             if (!active) return super.loadLevelOverride(index);
             Level original = game.loadLevel(index);
             library = new TerrainLibrary(original);
@@ -120,6 +132,23 @@ public final class InfiniteSonicMod implements GgfMod {
             ZoneRegistry stock = super.getZoneRegistry();
             if (zones == null || zones.base() != stock) zones = new CourseZones(stock, COURSE_ZONES, this::courseStartY);
             return zones;
+        }
+        private CourseScroll scroll;
+        @Override public ScrollHandlerProvider getScrollHandlerProvider() {
+            ScrollHandlerProvider stock = super.getScrollHandlerProvider();
+            if (stock == null) return null;
+            if (scroll == null || scroll.base() != stock) scroll = new CourseScroll(stock, this::courseOrigin);
+            return scroll;
+        }
+        /** The live course window's origin in pixels, which the background scrolls from; 0 off the course. */
+        private long courseOrigin() {
+            var level = active ? GameServices.levelOrNull() : null;
+            var objects = level == null ? null : level.getObjectManager();
+            if (objects == null) return 0;
+            for (var object : objects.getActiveObjects()) {
+                if (object instanceof CourseController course) return course.originPixels();
+            }
+            return 0;
         }
         @Override public ZoneFeatureProvider getZoneFeatureProvider() {
             return active ? dryFeatures : super.getZoneFeatureProvider();
@@ -144,7 +173,9 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public TitleScreenProvider getTitleScreenProvider() {
             TitleScreenProvider stock = super.getTitleScreenProvider();
             if (stock == null) return null;
-            if (title == null || title.base() != stock) title = new TitleWordmark(stock, courseZoneNames());
+            if (title == null || title.base() != stock) {
+                title = new TitleWordmark(stock, courseZoneNames(), new LeaderboardScreen(courseZoneNames(), this::leaderboard));
+            }
             return title;
         }
         private List<String> courseZoneNames() {
@@ -181,6 +212,8 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public <T> T getGameService(Class<T> type) {
             if (type == ChallengeClock.class) return type.cast(clock);
             if (type == CourseSession.class) return type.cast(session);
+            if (type == Leaderboard.class) return type.cast(leaderboard());
+            if (type == CourseRun.class) return type.cast(run);
             // The live input the title last saw: the course reads Escape from it to leave.
             if (type == com.openggf.control.InputHandler.class) return title == null ? null : type.cast(title.input());
             if (type == com.openggf.level.objects.ObjectRegistry.class) return type.cast(stockObjects());

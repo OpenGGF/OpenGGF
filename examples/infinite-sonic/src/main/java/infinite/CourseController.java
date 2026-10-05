@@ -20,7 +20,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     public static final String CONTINUE = "CONTINUE", RESTART = "RESTART", EXIT = "EXIT";
     // The camera's minimum scroll: 4px per tick, two thirds of the stock 0x600.
     private static final int MINIMUM_SCROLL = 0x400;
-    private static final int FOLLOW_PERCENT = 30;
+    // Sonic is held just left of centre: enough lookahead, and room behind him to recover.
+    static final int FOLLOW_PERCENT = 45;
     // Ignore a jump already held while dying; about one second before a restart is accepted.
     private static final int RESTART_DELAY_FRAMES = 60;
     // Sonic's standing radius: his centre sits 19px above the floor.
@@ -34,6 +35,10 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private static final int STONE_WINDOW = 64;
     // Post-continue blink, as long as the stock post-hit invulnerability ($78).
     private static final int RESUME_INVULNERABLE_FRAMES = 0x78;
+    // The zone's top 10 shows for the first five seconds of a run, fading over the last half second.
+    static final int OPENING_BOARD_FRAMES = 300, OPENING_BOARD_FADE = 30;
+    // Overtaking the zone's top score flashes a banner for three seconds.
+    static final int CELEBRATE_FRAMES = 180;
     private int scrollFraction;
     private int scoreFraction;
     private boolean started;
@@ -49,6 +54,13 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long safeWorldX = -1;
     // Ring count last frame: a life is earned each time it reaches a new multiple of 100.
     private int ringsSeen;
+    // Updates since the run started, counted up to the end of the opening leaderboard.
+    private int openingFrames;
+    // The zone's top score from earlier runs when this run started; -1 until then.
+    private int scoreToBeat = -1;
+    private int celebrateFrames;
+    // This run's leaderboard rank once it has been recorded (at a death or exit), 0 if unplaced.
+    private int rank;
     public boolean gameOver() { return gameOver; }
     public boolean restartReady() { return gameOver && gameOverFrames >= RESTART_DELAY_FRAMES; }
     /** A spare life remains, so the menu offers CONTINUE (spending it) as well as RESTART. */
@@ -68,6 +80,18 @@ public final class CourseController extends AbstractObjectInstance implements Re
     public long safeWorldX() { return safeWorldX; }
     public double speedMultiplier() { return clock().displayMultiplier(); }
     public int secondsRemaining() { return clock().secondsRemaining(); }
+    /** The registry zone the course was built from, which keys its leaderboard. */
+    public int zone() { return services().levelManager().getCurrentZone(); }
+    /** This run's 1-based place in the zone's top 10 after its last recorded death or exit; 0 if unplaced. */
+    public int rank() { return rank; }
+    /** Opacity of the zone's top-10 board shown as the run starts; 0 once it has gone. */
+    public float openingBoardAlpha() {
+        if (!started || gameOver || openingFrames >= OPENING_BOARD_FRAMES) return 0f;
+        return Math.min(1f, (float) (OPENING_BOARD_FRAMES - openingFrames) / OPENING_BOARD_FADE);
+    }
+    /** True for a few seconds after the run's score overtakes the zone's previous top score. */
+    public boolean celebrating() { return celebrateFrames > 0; }
+    public int celebrateFrames() { return celebrateFrames; }
     private long origin;
     private long visited; // One bit per retained 512px section, captured with origin.
     // One section bit per ring position lets allocation retry without duplicating a partial row.
@@ -119,6 +143,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             session().reset();
             setLives(0);
             ringsSeen = services().levelGamestate().getRings();
+            scoreToBeat = services().gameService(Leaderboard.class).best(zone(), runId());
             // A running start gives the player room to react before the scrolling edge arrives.
             player.setGSpeed((short) COURSE_MAX_SPEED);
             player.setXSpeed((short) COURSE_MAX_SPEED);
@@ -141,6 +166,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         services().gameState().addScore(scoreFraction / 256);
         scoreFraction %= 256;
         awardRingLives();
+        celebrateTopScore();
         rememberSafeSpot(player);
         var config = services().configuration();
         int fps = "PAL".equalsIgnoreCase(config.getString(com.openggf.configuration.SonicConfiguration.REGION))
@@ -154,6 +180,34 @@ public final class CourseController extends AbstractObjectInstance implements Re
         recycleTerrain(player);
         // Hold our horizontal position through the normal camera step; retain vertical tracking.
         camera.requestForcedScroll(camera.getX() + camera.getWidth() / 2, player.getCentreY());
+    }
+
+    private long runId() { return services().gameService(CourseRun.class).id(); }
+
+    /** Counts down the opening board, and cheers the moment the run takes the zone's top score. */
+    private void celebrateTopScore() {
+        if (openingFrames < OPENING_BOARD_FRAMES) openingFrames++;
+        if (celebrateFrames > 0) celebrateFrames--;
+        // A first run on an empty board has nobody to overtake, so it is congratulated when it ends.
+        if (scoreToBeat <= 0 || services().gameState().getScore() <= scoreToBeat) return;
+        scoreToBeat = Integer.MAX_VALUE;
+        celebrateFrames = CELEBRATE_FRAMES;
+        services().audioManager().playSfx(com.openggf.audio.GameSound.CHECKPOINT);
+    }
+
+    /**
+     * Records this run's score on the zone's leaderboard (replacing its own earlier entry), and
+     * cheers a new top score. Called at every death and when leaving, so the board always holds
+     * the run's best even if it continues and later quits.
+     */
+    private void recordScore() {
+        int score = services().gameState().getScore();
+        int previousTop = services().gameService(Leaderboard.class).best(zone(), runId());
+        rank = services().gameService(Leaderboard.class)
+                .submit(zone(), runId(), score, clock().displayMultiplier());
+        if (rank == 1 && score > previousTop) {
+            services().audioManager().playSfx(com.openggf.audio.GameSound.CHECKPOINT);
+        }
     }
 
     /** Lowers the profile's Run/Roll2 threshold so cruising Sonic shows his full-speed frames. */
@@ -177,6 +231,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
      * GAME OVER exit (fade to black, then the title screen), as the stock card does with no continues.
      */
     private void exitToTitle() {
+        // A live run is recorded here; a dead one was recorded when Sonic died.
+        if (!gameOver && started) recordScore();
         exitRequested = true;
         clock().end();
         services().levelManager().requestGameOverExit(com.openggf.game.GameOverExit.TITLE_SCREEN);
@@ -220,6 +276,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         gameOver = true;
         var state = services().gameState();
         session().died(state.getLives(), clock().capture());
+        recordScore();
         clock().end();
         // The death routine subtracts the life itself once the corpse falls. Leaving exactly
         // one makes that subtraction reach zero, so the corpse is held for the death menu
@@ -285,12 +342,12 @@ public final class CourseController extends AbstractObjectInstance implements Re
         sprite.setXSpeed((short) COURSE_MAX_SPEED);
         sprite.setYSpeed((short) 0);
         sprite.setInvulnerableFrames(RESUME_INVULNERABLE_FRAMES);
-        // As a stock respawn, the run resumes with no rings.
-        services().levelGamestate().setRings(0);
-        ringsSeen = 0;
-        // Applying the death froze the camera; put Sonic a quarter of the way across.
+        // Unlike a stock respawn, the run keeps its rings; only RESTART and EXIT clear them.
+        // Ring lives already earned for the count are not awarded again.
+        ringsSeen = services().levelGamestate().getRings();
+        // Applying the death froze the camera; put Sonic back at the follow point.
         camera.setFrozen(false);
-        camera.setX((short) Math.max(0, localX - camera.getWidth() / 4));
+        camera.setX((short) Math.max(0, localX - camera.getWidth() * FOLLOW_PERCENT / 100));
         camera.setY((short) Math.max(0, y - camera.getHeight() / 2));
         scrollFraction = 0;
         gameOver = false;
@@ -309,19 +366,16 @@ public final class CourseController extends AbstractObjectInstance implements Re
     }
 
     private void recycleTerrain(PlayableEntity player) {
-        int delta = player.getCentreX() >= 8192 ? 4096
-                : origin > 0 && player.getCentreX() < 2048 ? -4096 : 0;
+        // The camera never scrolls back, so the window only ever moves forward.
+        int delta = player.getCentreX() >= 8192 ? 4096 : 0;
         // Stock platforms keep their spawn coordinates and do not follow the shift, so the
         // window waits until none are loaded. The 16384px window leaves thousands of pixels
         // of slack; past the hard limit any still-loaded stones are dropped and re-spawned.
         var live = liveStones();
         // Spilled rings keep their local coordinates too; let them settle before shifting.
-        if (delta != 0 && live.isEmpty() && spilledRings()) {
-            boolean forced = delta > 0 ? player.getCentreX() >= FORCED_REBASE_X : player.getCentreX() < 1024;
-            if (!forced) delta = 0;
-        }
+        boolean forced = player.getCentreX() >= FORCED_REBASE_X;
+        if (delta != 0 && live.isEmpty() && spilledRings() && !forced) delta = 0;
         if (delta != 0 && !live.isEmpty()) {
-            boolean forced = delta > 0 ? player.getCentreX() >= FORCED_REBASE_X : player.getCentreX() < 1024;
             if (!forced) delta = 0;
             else {
                 for (var stone : live) stone.setDestroyed(true);
@@ -337,21 +391,21 @@ public final class CourseController extends AbstractObjectInstance implements Re
             return;
         }
         origin += delta / 256;
-        visited = shiftSections(visited, delta);
-        rings0 = shiftSections(rings0, delta);
-        rings1 = shiftSections(rings1, delta);
-        rings2 = shiftSections(rings2, delta);
-        rings3 = shiftSections(rings3, delta);
-        stones0 = shiftSections(stones0, delta);
-        stones1 = shiftSections(stones1, delta);
-        stones2 = shiftSections(stones2, delta);
-        stones3 = shiftSections(stones3, delta);
-        stones4 = shiftSections(stones4, delta);
-        stones5 = shiftSections(stones5, delta);
-        stones6 = shiftSections(stones6, delta);
-        stones7 = shiftSections(stones7, delta);
-        monitors = shiftSections(monitors, delta);
-        hazards = shiftSections(hazards, delta);
+        visited = shiftSections(visited);
+        rings0 = shiftSections(rings0);
+        rings1 = shiftSections(rings1);
+        rings2 = shiftSections(rings2);
+        rings3 = shiftSections(rings3);
+        stones0 = shiftSections(stones0);
+        stones1 = shiftSections(stones1);
+        stones2 = shiftSections(stones2);
+        stones3 = shiftSections(stones3);
+        stones4 = shiftSections(stones4);
+        stones5 = shiftSections(stones5);
+        stones6 = shiftSections(stones6);
+        stones7 = shiftSections(stones7);
+        monitors = shiftSections(monitors);
+        hazards = shiftSections(hazards);
         services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
         var library = services().gameService(TerrainLibrary.class);
         var level = services().currentLevel();
@@ -470,8 +524,9 @@ public final class CourseController extends AbstractObjectInstance implements Re
         }
     }
 
-    private static long shiftSections(long bits, int delta) {
-        return delta > 0 ? bits >>> 8 : (bits << 8) & 0xffffffffL;
+    /** Drops the 16 sections the forward shift leaves behind. */
+    private static long shiftSections(long bits) {
+        return bits >>> 8;
     }
 
     private void populateRings() {

@@ -35,7 +35,7 @@ final class ZoneMenu {
     /** Sonic 1 sfx_Switch ($CD), the ROM's short button click. */
     static final int SFX_SWITCH = 0xCD;
 
-    private static final String GLYPHS =
+    static final String GLYPHS =
             "01110100011000111111100011000110001"   // A
             + "11110100011000111110100011000111110" // B
             + "01111100001000010000100001000001111" // C
