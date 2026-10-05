@@ -9,8 +9,9 @@ Framework research base: `fa129ccf4` (`develop`, including Infinite Sonic)
 ## The game
 
 Play an entire Sonic act as a golf hole, using Sonic or Tails as the ball.
-Choose a ground putt or an airborne chip, time the shot meters, and watch a
-spindash carry the character through slopes, loops, springs and badniks.
+Raise the shot from a ground putt into an airborne chip, time two spindash
+charges on the power meter, and watch the character roll through slopes,
+loops, springs and badniks.
 Players alternate shots until both reach the finish. Lowest total strokes
 across Emerald Hill acts 1 and 2 wins.
 
@@ -56,43 +57,64 @@ The course is paused. Pan the camera to inspect the next section, then return
 to the character. An opponent's last lie is a labeled marker rather than a
 physical obstacle. No sidekick AI operates in this mode.
 
-Choose **PUTT** or **CHIP**, face left or right, and set the elevation for a
-chip. A putt follows the supporting surface's tangent; it is not a
-world-horizontal velocity that clips into a slope. Chip elevation is measured
-away from that tangent. The first prototype should offer a useful range of
-low through steep chips, rather than claiming an untested exact degree limit.
+**Up/Down** continuously adjusts elevation: at zero elevation the shot is a
+**PUTT**; Up raises it into a **CHIP**, and further Up makes the chip steeper.
+Down lowers the chip until it returns to a putt. There is no separate shot-type
+toggle. Elevation clamps at zero and the supported maximum rather than wrapping
+or becoming a downward shot. **Left/Right** changes the facing and shot direction
+without moving the character or changing the selected elevation.
 
-A dotted guide shows the intended departure at a reference power. Once power
-is locked it updates to that power. For a chip, show the initial flight only,
-ending at the first predicted collision or the preview horizon. For a putt,
+A putt follows the supporting surface's tangent; it is not a world-horizontal
+velocity that clips into a slope. Chip elevation is measured away from that
+tangent. The first prototype should offer a useful range of low through steep
+chips, rather than claiming an untested exact degree limit.
+
+A dotted guide shows the intended departure at a reference power. As the two
+charges establish power it updates to the earned power. For a chip, show the
+initial flight only, ending at the first predicted collision or the preview
+horizon. For a putt,
 show the departure direction and strength. Do not draw a promised final lie
 through loops, springs or moving objects unless a later predictor actually
 models them. Previewing never advances or mutates the real course.
 
-### 2. Lock power
+### 2. Duck and start the power meter
 
-Confirm starts a meter sweeping between weak and full power. Confirm again
-locks its current value. The character curls and the spindash sound rises
-with power. Weak putts are for precision; strong putts are for distance and
-loops; powerful chips trade forward travel against height.
+**A** confirms the selected direction and elevation, makes the main character
+duck, and starts an oscillating power meter. Direction and elevation remain
+locked during charging. The course stays paused while the meter advances on
+its presentation clock; ducking and charge feedback cannot creep the character
+away from its lie.
+
+### 3. Time two spindash charges
+
+Press **A** at the desired spot on the meter to initiate the spindash and earn
+the first charge. The meter then offers a second timed hit: press **A** again
+at the desired spot to add another charge. Both timings contribute to the
+final power; the first establishes the initial charge and the second increases
+it, up to the shared maximum. Weak putts are for precision; strong putts are
+for distance and loops; powerful chips trade forward travel against height.
+
+The meter's value-to-charge mapping is deterministic and must make both weak
+and strong shots deliberately achievable. These are two power-building hits,
+not a power hit followed by an angle-accuracy test. The selected elevation does
+not acquire timing error or random dispersion.
+
+More earned power produces more spindash charge sounds and a higher pitch
+before release. After the second timed hit, play the remaining charge feedback,
+hold a brief pause, then release automatically. No further A press is required
+to launch, and extra presses cannot add more charges during that feedback or
+pause. Their durations and the pitch progression are presentation tuning
+parameters, not ROM constants.
 
 Power is a normalized shot parameter. Its velocity mapping must be tuned
 against the S2 rolling and airborne profiles, with identical limits for both
 characters. It must cover short finishing putts and viable EHZ loop routes.
 Native spindash speed is a starting reference, not proof of a good golf range.
 
-### 3. Time the release
-
-A second marker sweeps across a narrow accuracy zone. Confirm releases the
-shot. A central hit gives the selected launch exactly; an early or late hit
-gives a small, deterministic error. For chips this changes elevation; for
-putts it changes strength because there is no sideways axis in this game.
-Show the actual locked outcome before the launch animation completes.
-
-The error range is a playtest parameter, not a ROM constant. It should create
-near misses without turning a reasonable shot into an arbitrary disaster.
-There is no random dispersion. Cancel returns to aim before release and costs
-no stroke. Once release is accepted the shot is committed and costs one stroke.
+Cancel returns to aim before the second timed hit is accepted and costs no
+stroke. Acceptance of that final charge commits the shot and costs one stroke;
+the ensuing feedback, pause and automatic release cannot be used to cancel or
+retry it. Show the final power before the character departs.
 
 An optional slower-meter setting can follow the core prototype. Both players
 use the same room setting. Direct power/angle selection is a practice aid,
@@ -101,10 +123,13 @@ not the default competition control scheme.
 ### 4. Watch it play out
 
 Launch the character curled, with ground speed for a putt or a coherent
-airborne velocity for a chip. The shot then uses the S2 terrain collision,
-gravity, slope response and rolling behavior. Springs and successful rolling
-attacks remain useful. Entering a loop requires sufficient momentum; a weak
-shot can roll back out.
+airborne velocity for a chip. **The character stays rolling until settled**,
+through flight, landing, slopes and spring interactions. Native transitions
+that would uncurl it before settlement must be suppressed by the scoped shot
+rule, rather than ending the shot on landing or at the ordinary unroll threshold.
+The shot otherwise uses the S2 terrain collision, gravity, slope response and
+rolling behavior. Springs and successful rolling attacks remain useful.
+Entering a loop requires sufficient momentum; a weak shot can roll back out.
 
 Directional input cannot steer, brake or start another spindash after release.
 The camera follows the shot with lookahead. The active player may concede a
@@ -128,8 +153,11 @@ requiring zero world velocity. A wall or ceiling contact is not a valid lie.
 At settlement, pin the character to that valid lie and pause the course. This
 small golf-specific stop rule prevents an almost stationary character from
 drifting while someone uses the meters. Do not teleport it to a convenient
-tile or flatten its supporting slope. Preserve support identity, rolling
-radii, centre position and coherent collision state for the next launch.
+tile or flatten its supporting slope. Only after settlement is accepted may
+the character uncurl into its neutral aiming pose. Use a contact-safe radius
+and centre conversion; preserve support identity and coherent collision state
+when saving the lie. The next shot starts by ducking on A, not by walking or
+performing an uncontrolled native spindash.
 
 The first playable prototype must specifically test shots that stall inside
 loops, reverse on slopes, and land on supports. A bounded simulation watchdog
@@ -190,11 +218,12 @@ afterward. If both leave without a result, record no winner.
 stateDiagram-v2
     [*] --> Lobby
     Lobby --> Aim: both ready / practice start
-    Aim --> Power: confirm
-    Power --> Accuracy: lock power
-    Power --> Aim: cancel
-    Accuracy --> Aim: cancel before release
-    Accuracy --> Resolving: release / count stroke
+    Aim --> FirstCharge: A / duck and start meter
+    FirstCharge --> SecondCharge: timed A / initiate spindash
+    FirstCharge --> Aim: cancel
+    SecondCharge --> Aim: cancel before final charge
+    SecondCharge --> Prelaunch: timed A / add charge and count stroke
+    Prelaunch --> Resolving: charge feedback and brief pause / automatic release
     Resolving --> ResolveTurn: settlement, finish or penalty
     ResolveTurn --> Aim: restore next unfinished golfer
     ResolveTurn --> HoleResults: both finished
@@ -205,9 +234,10 @@ stateDiagram-v2
 ```
 
 The HUD shows course, active player, stroke totals, shot type, power and chip
-angle. A turn announcement recentres the camera. During aim the two shot meters
-occupy a compact lower strip; during flight that strip reduces to stroke and
-player information. Results show strokes, penalties and total for each act.
+angle. A turn announcement recentres the camera. During charging, one power
+meter shows the current charge stage (first or second) and earned total power
+in a compact lower strip; during flight that strip reduces to stroke and player
+information. Results show strokes, penalties and total for each act.
 Rings remain secondary statistics and do not break a tied golf score.
 
 ## Emerald Hill course treatment
@@ -250,15 +280,17 @@ reliable commands more than low-latency remote steering. The host owns both
 course states, shot simulation, penalties, turn order and score. Remote clients
 never submit their own lie or resulting score as authoritative gameplay.
 
-The active player runs the meters locally and submits the **locked result**
-(direction, shot kind, elevation, power and timing error), tagged with match,
-hole, turn and shot identities. This deliberately trusts the player's meter
-result; no anti-cheat project is needed. Bounds, turn ownership and duplicate
-handling still prevent accidental double shots and invalid session state.
-Network round-trip time must not decide whether the marker hit the sweet spot.
+The active player runs the power meter locally and submits the **locked result**
+(direction, shot kind, elevation and the two earned charge values), tagged with
+match, hole, turn and shot identities. The host derives final power using the
+shared charge mapping. This deliberately trusts the player's meter results;
+no anti-cheat project is needed. Bounds, turn ownership and duplicate handling
+still prevent accidental double shots and invalid session state. Network
+round-trip time must not decide whether the marker hit the intended spot.
 
-The host accepts the shot, increments its stroke once, runs it, and sends a
-bounded presentation stream so both players can watch. That stream needs the
+The host accepts the shot, increments its stroke once, completes the charge
+feedback and prelaunch pause, runs the shot, and sends a bounded presentation
+stream so both players can watch. That stream needs the
 active character, relevant object poses/visibility, camera and course visual
 changes. A player ghost stream alone cannot show moving bridges or destroyed
 badniks. Guests render that presentation using locally loaded art; they do not
@@ -305,7 +337,7 @@ exist as an implementation because this document is the concept deliverable.
 | --- | --- |
 | ROM-backed module decoration | `GamePatch` / `DelegatingGameModule`; Infinite Sonic already decorates a ROM game |
 | Level event and physics providers | Existing module seams; use golf-scoped providers for EHZ ending behavior and explicit shared shot rules |
-| Shot launch | Playable state and velocity methods exist; prove a coherent rolling/airborne launch with radius, contact and controller state before claiming an adequate supported seam |
+| Shot launch and rolling retention | Playable state and velocity methods exist; prove a coherent rolling/airborne launch and retained curled state through contacts until settlement before claiming an adequate supported seam |
 | Input ownership | Deterministic launch input filters exist for owned mod destinations; do not assume their tagged-zone registration automatically covers stock EHZ patch launches |
 | HUD | The published HUD profile is row-only; an aim arc and animated meters need a richer overlay or a supported mod rendering adapter |
 | Menu and camera | Existing title providers and Infinite Sonic presentation/controller code offer examples; survey without altering the object-loading window still needs proof |
@@ -331,9 +363,11 @@ object graphs or transmit executable creator content.
 1. **Prove the shot.** One golfer, EHZ1, temporary direct power/angle controls.
    Demonstrate short putts, steep chips, slopes, successful loops, rollback,
    settlement and the signpost-area golf finish using ROM-backed assets.
-2. **Add the game feel.** Timed power/release meters, truthful departure guide,
-   survey camera, shot HUD and penalty flow. Remove free movement and stock
-   progression/reward systems from the golf session.
+2. **Add the game feel.** Up/Down elevation, Left/Right direction, A-to-duck,
+   two timed spindash charges, power-scaled sound/pitch, brief prelaunch pause,
+   automatic release and rolling until settlement. Add the truthful departure
+   guide, survey camera, shot HUD and penalty flow. Remove free movement and
+   stock progression/reward systems from the golf session.
 3. **Prove alternating play.** Two independent golfer course states, both
    characters and duplicate choices, reversible turn handoff, complete EHZ2
    without the boss flow, and the two-hole scorecard.
@@ -349,8 +383,13 @@ remote world presentation, not the power meter.
 
 | Acceptance scenario | Required observable behavior |
 | --- | --- |
+| Up/Down elevation and Left/Right direction | Up raises putt into progressively steeper chips; Down returns to putt; facing changes without moving the character |
+| A and two timed charges | Initial A ducks and starts the meter; first timed A initiates spindash; second adds charge; feedback and pause lead to automatic release |
+| Charge timing and selected elevation | Both hits determine power; selected elevation is preserved without a separate accuracy stage |
+| Stronger shot feedback | More charge sounds and higher pitch precede release; extra A presses after commitment do not add charges or count strokes |
 | Very weak / full-power putt | Distinct useful distances, coherent rolling state, no input steering |
 | Chip onto a slope | Native collision resolves landing; turn waits for settlement |
+| Rolling retention through flight and contacts | Character remains curled through landing, spring interactions and low-speed motion until settlement is accepted |
 | Weak and strong loop attempts | Weak shot can reverse; sufficient momentum completes the loop |
 | Settling on a moving support | Relative dwell works; restored lie retains the correct support |
 | Camera survey | No change to object membership, pickup state, timers or the eventual shot result |
@@ -370,9 +409,11 @@ remote world presentation, not the power meter.
 Implementation must supply per-act/character route matrices and record the
 mod's intentional differences under the
 [level test standard](../../guide/contributing/level-test-standard.md).
-Cover capture/restore and forward replay across shots, penalties, handoffs and
-loads, including isolated timelines. Debug rewind within an offline test must
-capture the complete golf state; competitive UI does not expose a free retry.
+Cover capture/restore and forward replay across charging, prelaunch feedback
+and pause, shots, penalties, handoffs and loads, including isolated timelines.
+Debug rewind within an offline test must capture the complete golf state,
+including charge stage, values and presentation timers; competitive UI does
+not expose a free retry.
 Test supported viewport widths because the aim HUD and survey camera are part
 of play. All ROM-backed checks must use discovered absolute S2 ROM paths and
 report skips; no engine tests have been run to validate this proposal.
@@ -386,6 +427,11 @@ report skips; no engine tests have been run to validate this proposal.
   choice knowingly adds state-isolation work.
 - **Committed shots, not continuous platformer control:** unrestricted steering
   or Tails flight would make launch planning and stroke scoring secondary.
+- **Two timed charges, automatic release:** the user's control refinement
+  replaces the original document's separate accuracy stage (`9a263f828`).
+  Up/Down supplies continuous elevation from putt through chip; both timed A
+  hits build power, with charge sound/pitch and a brief pause before release.
+  Rolling persists until settlement instead of inheriting native early unroll.
 - **Gate finish, not precision-speed cup entry:** crossing the act endpoint
   fulfils the requested goal and avoids an extra finishing mechanic in the MVP.
 - **Host simulation, not client-claimed results or two authoritative replays:**
