@@ -85,8 +85,10 @@ public final class GolfRoom implements AutoCloseable {
             hostCharacter, guestCharacter, host ? 0 : 1, owner, turn, player0, player1); }
     public List<Event> drainEvents() { var result = List.copyOf(events); events.clear(); return result; }
     public int activeWorkers() {
+        // Host listener retains all accepted connections through worker retirement.
+        // Counting room peer/candidates again would double-count the same workers.
+        if (listener != null) return listener.activeWorkers();
         int count = peer == null ? 0 : peer.activeWorkers();
-        if (listener != null) count += listener.activeWorkers();
         for (Candidate candidate : candidates) count += candidate.connection.activeWorkers();
         for (GolfConnection connection : retiring) count += connection.activeWorkers();
         return count;

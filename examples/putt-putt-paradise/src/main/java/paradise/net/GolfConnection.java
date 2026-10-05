@@ -34,7 +34,13 @@ public final class GolfConnection implements AutoCloseable {
     private volatile int inFlightFrame;
     private Disconnected disconnected;
 
-    private GolfConnection(Socket socket, Runnable released) { this.socket = socket; this.released = released; }
+    private GolfConnection(Socket socket, Runnable released) {
+        this.socket = socket; this.released = released;
+        // Terminal delivery can outlive creator-loader close. Resolve worker-created helpers
+        // before launch, including the first inbound event and deadline disconnect record.
+        Objects.requireNonNull(Received.class); Objects.requireNonNull(Disconnected.class);
+        GolfCodec.prepareWorkers();
+    }
 
     public static GolfConnection connect(String hostname, int port) {
         Objects.requireNonNull(hostname);

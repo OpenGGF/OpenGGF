@@ -26,20 +26,30 @@ public final class GolfListener implements AutoCloseable {
     }
     public int boundPort() { return server.getLocalPort(); }
     public boolean isClosed() { return closed.get(); }
-    public int activeWorkers() { return worker.isAlive() ? 1 : 0; }
-    public List<GolfConnection> drain() {
-        synchronized (peers) { var result = List.copyOf(accepted); accepted.clear(); return result; }
+    /** Includes every accepted socket, even before drain and during terminal flushing. */
+    public int activeWorkers() {
+        synchronized (peers) {
+            discardRetired();
+            return (worker.isAlive() ? 1 : 0) + peers.stream().mapToInt(GolfConnection::activeWorkers).sum();
+        }
     }
+    public List<GolfConnection> drain() {
+        synchronized (peers) { discardRetired(); var result = List.copyOf(accepted); accepted.clear(); return result; }
+    }
+    // The disconnect callback runs before its worker has returned. Retain ownership until
+    // all threads have actually stopped; at most MAX_PEERS connections can be retained.
+    private void discardRetired() { peers.removeIf(connection -> connection.isClosed() && connection.activeWorkers() == 0); }
     private void acceptLoop() {
         try {
             while (!closed.get()) {
                 Socket socket = server.accept();
                 GolfConnection connection;
                 synchronized (peers) {
+                    discardRetired();
                     if (closed.get() || peers.size() >= MAX_PEERS) { socket.close(); continue; }
                     var holder = new GolfConnection[1];
                     connection = GolfConnection.accepted(socket, () -> {
-                        synchronized (peers) { peers.remove(holder[0]); accepted.remove(holder[0]); }
+                        synchronized (peers) { accepted.remove(holder[0]); }
                     });
                     holder[0] = connection; peers.add(connection); accepted.addLast(connection);
                 }
@@ -57,7 +67,7 @@ public final class GolfListener implements AutoCloseable {
         if (!closed.compareAndSet(false, true)) return;
         try { server.close(); } catch (IOException ignored) { }
         List<GolfConnection> owned;
-        synchronized (peers) { owned = List.copyOf(peers); peers.clear(); accepted.clear(); }
+        synchronized (peers) { owned = List.copyOf(peers); accepted.clear(); }
         for (GolfConnection connection : owned) { if (leave == null) connection.close(); else connection.finish(leave); }
         worker.interrupt();
     }

@@ -10,6 +10,18 @@ class TestGolfTransport {
     @Test void localhostOrderingBoundsDeadlineAndCleanup() throws Exception {
         TestGolfProtocol.runProbe(temp, "TransportProbe", "run");
     }
+    @Test void undrainedAcceptedWorkersRemainListenerOwned() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "undrainedAcceptedWorkersRemainOwned");
+    }
+    @Test void terminalFlushRetainsWorkerAccountingUntilDeadline() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "terminalFlushRetainsWorkers");
+    }
+    @Test void creatorLoaderCanCloseImmediatelyWhileWorkersRetire() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "creatorLoaderCanCloseImmediately");
+    }
+    @Test void bufferedPacketsDecodeAfterFreshCreatorLoaderCloses() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "bufferedPacketsRemainReadableAfterLoaderClose");
+    }
     @Test void productionRoomHandshakeExactlyOnceReconnectAndHostExit() throws Exception {
         TestGolfProtocol.runProbe(temp, "RoomProbe", "run");
     }

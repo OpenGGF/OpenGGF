@@ -3,6 +3,7 @@ package paradise.net;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.Objects;
 import static paradise.net.GolfPacket.*;
 
 /** Four-byte big-endian payload length, one-byte schema, one-byte type, bounded typed fields. */
@@ -11,6 +12,17 @@ public final class GolfCodec {
     public static final int MAX_FRAME_BYTES = 2 * 1024 * 1024;
     public static final int MAX_VIEW_BYTES = MAX_FRAME_BYTES - 128;
     private GolfCodec() { }
+
+    /** Buffered socket decoding may finish after creator-loader close; no dynamic loading occurs here. */
+    static void prepareWorkers() {
+        // Keep this finite list aligned with read/encode. Class literals resolve definitions;
+        // only the Outcome enum needs initialization. This array is local to connection setup.
+        for (Class<?> type : new Class<?>[]{GolfPacket.class, Fingerprints.class, ShotId.class, Score.class,
+                Hello.class, Ready.class, TurnOpened.class, ShotRequest.class, ShotAccepted.class,
+                ViewFrame.class, TurnCommitted.class, Pause.class, Resume.class, Leave.class,
+                Reconnect.class, SoundCue.class, Rejected.class}) Objects.requireNonNull(type);
+        Objects.requireNonNull(Outcome.SETTLED);
+    }
 
     public static byte[] encode(GolfPacket packet) {
         try {
