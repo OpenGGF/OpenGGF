@@ -4,7 +4,7 @@ Subtitle: **Sonic 2 Mini Golf**
 
 Date: 2026-10-05
 
-Status: local implementation under final verification; retained branch/worktree, no merge or push
+Status: locally delivered with focused acceptance verified and inherited suite failures recorded; retained branch/worktree, no merge or push
 
 Spec: [Putt Putt Paradise design](../designs/2026-10-05-sonic-mini-golf.md)
 
@@ -1129,3 +1129,36 @@ modified to admit the repair. The candidate pin records the real internal-sample
 API removal. The preceding completed broad run and matched baselines establish
 the inherited failure inventory; the final focused runs establish the repaired
 paths and narrowed candidate contract. There is no full-suite-green claim.
+
+### Local delivery and cleanup
+
+Production code and the final candidate contract are committed as
+`9653aba62cbbb55f3f2a8b1fd3f2fa1c2fc379cb`, following the complete implementation
+`b69b8fc3c` and compatibility fixture/title correction `59ce8309b`. The final
+normal build at 9653 used `python3 examples/putt-putt-paradise/build.py` and passed
+ordinary SDK package validation. The jar is 135,844 bytes with 83 Java classes and
+only `META-INF/openggf-mod.yaml` as a non-class resource; it contains no ROM bytes
+or art/music assets. SHA-256:
+
+`5d623df9509fff5c56e652859a4318f93407c35e0891a6b4ed31e82ae80dfadd`
+
+The artifact remains at `target/putt-putt-paradise/putt-putt-paradise.jar`; launch
+with the existing example README's `--run --rom` command. The build records the
+actual matching local development contract; released 0.6/native-image engines are
+outside its supported scope.
+
+The owned worker and detached baseline worktrees/branches are removed, with their
+changes/results accounted for. Consumed root task logs, scratch classpath/commit
+messages, category-plan output and CPU menu previews were inspected and removed;
+ordinary category diagnostics had already been acknowledged. Native framebuffer
+captures, the final jar, root concept worktree/branch and provider-owned histories
+remain. The private temporary-agent run is closed with a lifecycle cleanup receipt
+outside the repository. No task worker or queued Maven invocation remains.
+
+Main `develop` is preserved at `fc4729c375de0273659d262f89cfb6966acc6308`, with its
+original dirty submodules and unrelated untracked files. This work is local only;
+there was no merge or push. Earlier concept commits already pushed before the
+workspace correction remain in shared history. The ordinary suite's 28 matched
+baseline failures and two inherited guards are recorded above, without a claim
+that the final whole suite is green. Remaining route/parity axes are explicit in
+the linked validation matrix.
