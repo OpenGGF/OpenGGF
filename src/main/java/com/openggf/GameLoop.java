@@ -4002,9 +4002,13 @@ public class GameLoop {
 
     private int titleStartAct() {
         var provider = getTitleScreenProviderLazy();
-        var registry = GameServices.module().getZoneRegistry();
+        var module = GameServices.module();
+        var registry = module != null ? module.getZoneRegistry() : null;
+        if (provider == null || registry == null) {
+            return 0;
+        }
         int count = Math.max(1, registry.getActCount(titleStartZone()));
-        return provider == null ? 0 : Math.clamp(provider.startActIndex(), 0, count - 1);
+        return Math.clamp(provider.startActIndex(), 0, count - 1);
     }
 
     private int titleStartZone() {

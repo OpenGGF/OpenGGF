@@ -913,3 +913,53 @@ guard lane. It remains required because frame admission, checkpoints, rendering
 and the public candidate contract are shared engine paths. Expected historical
 cost is 24 minutes ordinary plus 10 minutes guards; the runner uses a 40-minute
 combined invocation timeout and a 10-minute no-output timeout, excluding queue wait.
+
+The first combined attempt on `b69b8fc3c` used the command above with default
+one-worker/40-minute limits. It expired during `TestDezIncomingFinalRouteCapture`
+after 2,400.89 seconds: 2,772 completed XML reports, 24,109 tests, four failures,
+eleven errors and 38 skips. The ordinary lane was incomplete and the guard lane
+did not start; these figures are not a completed suite result. The retained tail
+showed continuing cold-route work rather than a no-output timeout. All fifteen
+reported failure identities and all skips were inspected. Acknowledgment is
+queued; consumed diagnostics must be removed before delivery.
+
+The eleven errors were new null-registry failures in `TestGameLoop` title exit
+cases. The new act selector now mirrors the existing zone selector's missing-
+provider/registry default to act zero, while still bounding a selected act against
+the real registry. Stock title routing and the actual Tails/EHZ2/400 menu launch
+are checked together after this correction.
+
+The four other failures require matched attribution at the pinned `d5eaa3efc`
+baseline: sample-platformer concrete-delegate versus proxy assertion; FBZ→SOZ
+restore changing `instaShieldRegistered` from false to true; MHZ2 authored Tails
+and team routes missing their late-pulley ownership assertions. They are recorded
+by test identity and assertion, not inferred from totals. No unrelated route
+repair is included without attribution.
+
+The 38 observed skips include twelve previously identified Infinite Sonic
+platform cases, four unavailable native GL/EGL checks, opt-in benchmarks/soaks/
+captures, and the maintained CPZ object-bug check. These are separate from the
+mod's no-skip focused acceptance. A longer normal combined attempt with the
+supported two-worker ordinary profile is required after the title fix; the
+selection remains 2,976 classes and all guards, without manual narrowing.
+
+Matched `d5eaa3efc` baseline checks used the queue in a separate owned detached
+worktree. `TestGameLoop` passed all 97 cases, establishing the title regression;
+after the null-registry correction those 97 plus the actual normal Tails/EHZ2/400
+boot passed (98 checks, no skips). `TestFbzSandopolisTimelineHeadless` reproduces
+the exact false→true insta-shield snapshot assertion at baseline. All three
+`TestS3kMhzAct2AuthoredRoute` inputs executed at baseline; Sonic passed, and the
+Tails/team cases reproduce the exact late-pulley ownership assertions. Their
+ROM-backed baseline invocations supplied the discovered absolute S3K ROM path.
+
+The sample-platformer case passed at baseline (one check, no skips) and failed
+again in a matched current-only invocation. `e97f46679` correctly adds an outer
+owner boundary for standalone rewind adapters; the old fixture peeled only the
+provider wrapper and mistook the remaining proxy for the creator module. The
+fixture now explicitly asserts both engine-owned wrapper types before inspecting
+the actual creator module. Its original assertions forbidding creator-owned art
+provider decoration and exercising real object rendering/recreation remain.
+The production boundary is retained; it is not removed to satisfy reflection.
+The corrected sample case plus `TestOwnerBoundGamePatch` passed all ten checks
+without skips. This repair changes the fixture's boundary inspection, not
+creator rendering or rewind callback ownership.

@@ -214,7 +214,13 @@ class TestSamplePlatformerIntegration {
         Path jar = buildSample();
         try (Fixture fixture = load(jar)) {
             GameModule module = fixture.runtime.prepareStandaloneModule(OWNER).orElseThrow();
-            Object boundaryHandler = java.lang.reflect.Proxy.getInvocationHandler(module);
+            Object rewindHandler = java.lang.reflect.Proxy.getInvocationHandler(module);
+            assertEquals("com.openggf.mods.runtime.OwnerBoundGamePatch$Handler",
+                    rewindHandler.getClass().getName(), "standalone rewind callbacks retain their owner boundary");
+            Object providerModule = getField(rewindHandler, "delegate");
+            Object boundaryHandler = java.lang.reflect.Proxy.getInvocationHandler(providerModule);
+            assertEquals("com.openggf.mods.code.OwnerAwareStandaloneModule$BoundaryHandler",
+                    boundaryHandler.getClass().getName(), "standalone providers retain their owner boundary");
             Object delegate = getField(boundaryHandler, "delegate");
             assertEquals("example.platformer.PlatformerModule", delegate.getClass().getName());
             assertThrows(NoSuchMethodException.class,
