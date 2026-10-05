@@ -32,6 +32,9 @@ plan and subsequent concept changes on the retained local branch/worktree;
 do not merge, push, or remove them without a later user instruction changing
 that flow. Pin the actual pre-implementation base before executable edits.
 
+Run the Task 3a rendering feasibility spike after Task 3 and before Tasks 4–5
+commit to the presentation API. Task 8 then completes that proven path for guests.
+
 ## Constraints and review focus
 
 - Sonic 2 World REV01 supplies all runtime art, terrain, collision and sound.
@@ -96,12 +99,12 @@ type with `@ModApi`. Default stock behavior remains one ordinary simulation step
 | --- | --- |
 | `GameplayModeExtension` | `presentationTick(ModePresentationTick)`, `admission()` returning `RUN` or `HOLD`, `afterCommittedStep(ModeStepObservation)`, `drawOverlay(ModeOverlayCanvas)`, `close()`; one instance per resolved world session |
 | `GameModule.createGameplayModeExtension(ModeServices)` | Default no-op; forward through `DelegatingGameModule`; composition root supplies bounded services and wraps creator callbacks in the existing fault boundary |
-| `ModePresentationTick` | Logical input edges/held directions plus a presentation-tick ordinal; no level/V-int clock mutation. Recorded offline test ticks can drive the same callback |
+| `ModePresentationTick` | Logical input edges/held directions, recorded mode commands and a mode-iteration ordinal; no level/V-int clock mutation. Live recording, replay and offline capture use the same coordinator |
 | `ModeServices` | Checkpoints, playable launch/pose commands, read-only scene capture/presentation and scoped progression policy; no unrestricted engine/renderer object access |
 | `CourseCheckpointService` | `capture()` returns opaque `CourseCheckpoint`; `restore(checkpoint)` runs only at a committed boundary; validates session generation, level identity and complete adapter layout before mutation |
 | `GameModule.courseRewindAdapters()` | Default empty; module-owned per-course adapters join engine course capture. Existing `rewindAdapters()` contains mode/match state; ordinary debug rewind captures both domains |
 | `PlayableLaunchControl` | `setAimPose(direction, DUCK/NEUTRAL)`, `beginCharge()`, `addCharge()`, `release(LaunchVector, ShotMotionPolicy)` and `settle()`; engine owns coherent radii, animation, sensors, fractions, velocity and attachment transitions |
-| `ModeStepObservation` | Previous/current native centre, velocity, support observation and typed damage/death/attack outcome after the canonical committed step. No inferred penalty from ring count or raw collision overlap |
+| `ModeStepObservation` | Previous/current native centre, velocity, support observation and typed damage/death/attack candidates after the canonical committed step; one terminal arbiter chooses the result. No inferred penalty from ring count or raw collision overlap |
 | `SupportObservation` | Stable support identity, contact normal, terrain/object distinction, support displacement and relative velocity; read existing solid/support ownership after inline resolution |
 | `ScenePresentationFrame` | Immutable revisioned terrain view changes, scroll/deformation/animation phase, ROM-art references, ordered sprite pieces and visibility, overlay values and sequenced native sound cues |
 | `SceneViewPresenter` / `ModeOverlayCanvas` | Render a supplied view transform and bounded drawing primitives using locally resolved assets, without touching authoritative camera, objects, collision, RNG or clocks |
@@ -115,11 +118,23 @@ ones. Do not use a mutable global handle lookup or discard a handle still refere
 by rewind history. Account for their payload in the existing rewind memory budget.
 
 Course restore must restore/rebind the roster, registered managers, art/palette
-state and object/support references coherently. It must fork/reset replay history
-at the restored boundary so previous-player input cannot run into the new lie.
-Mode restore, penalty restore and an act load are distinct operations with distinct
-ledger/timeline behavior. A checkpoint from an old hole/session fails before any
-partial mutation; missing required domains are errors rather than silently skipped.
+state and object/support references coherently. Penalty/handoff are mode-timeline
+events: keep the current mode ordinal and past debug history, discard stale cached
+future state and capture the replacement course at the completed mode boundary.
+Do not use the existing seamless-load history reset for these operations. Replaying
+a handoff executes the recorded mode event once and never applies the other
+golfer's old inputs to the restored world. Replay preserves its recorded suffix;
+only new forward branching discards future input history. An act load creates a new generation
+and deliberately resets history; test isolation on both sides, not cross-act seeking.
+A checkpoint from an old hole/session fails before any partial mutation; missing
+required domains are errors rather than silently skipped.
+
+Course restore is a controller-owned boundary, not just `registry.restore`:
+the audio timeline lives outside that registry. Keep audio stamps on the current
+mode ordinal, discard queued effects belonging to the abandoned course branch,
+stop transient charge/hurt/death effects and resynchronize EHZ music before the
+next turn. A native hit cue already heard is not re-enqueued. Ordinary debug rewind
+continues to restore its audio keyframes and mode-to-audio mapping.
 
 Hold gates authoritative V-int, executed-frame and level counters, timers, RNG,
 physics, object loading/culling, camera follow, world events, palette/pattern
@@ -127,9 +142,31 @@ animation and PLC/hardware service admission. Input, meters, network processing,
 overlay animation and native audio playback may advance on presentation ticks.
 Queue completion can be received while held but cannot publish world/art changes
 until an admitted step. Startup/title/load boundaries finish before golf captures
-its first playable lie. Trace/movie-owned stepping retains its existing contract;
-offline golf tests explicitly supply mode ticks rather than deriving them from
-trace comparison rows.
+its first playable lie. HOLD wins over native pause admission. In golf, Start opens
+the mode menu/room pause, which holds both the course and shot-feedback timers;
+online pause/resume is host coordinated. Native Start pause remains unchanged in
+stock sessions. No aiming-menu path may enter native V-blank pause servicing.
+
+Offline golf records one logical mode iteration per presented tick, whether its
+admission is HOLD or RUN. Ordering is: establish the input/audio ordinal; run the
+mode tick once; admit at most one canonical course step; arbitrate outcomes; record
+the completed mode boundary. A held row advances mode state/history and native
+audio presentation, but no gameplay clocks or PLC services. `LiveRewindStepper`
+and capture drivers replay that coordinator, not an unconditional level step.
+Record any mode command not reconstructible from controller rows in an owned
+sidecar; do not change trace comparison data into input or modify the V5 contract.
+For an explicitly launched offline golf BK2 capture, one input row supplies one
+mode iteration, including held aiming rows. Stock movies/traces retain their
+existing stepping behavior. Online competitive rewind remains unavailable.
+
+Duck/spindash animation and dust while held are render-only pose phases using
+native S2 mappings/timing. They do not tick native players/dust objects, allocate
+world children, consume RNG or advance course animation clocks. Record their phase
+in mode state and include it in scene projection. This also supplies the guest's
+local pre-acceptance pose. Stamp each held-tick native sound request on that tick's
+audio ordinal; service the existing sound driver without changing its pitch ladder.
+Menu/disconnect pause freezes feedback scheduling and uses the existing audio-pause
+policy, separately from ordinary live-meter HOLD.
 
 ## Mod layout and state machine
 
@@ -139,7 +176,8 @@ Create `examples/putt-putt-paradise/` with `build.py`, `README.md`,
 - `PuttPuttParadiseMod`, `GolfModule`, `GolfCourseDefinition`, `GolfRules`:
   registration, S2 decoration, the two ROM-backed acts and immutable rule constants.
 - `GolfSession`, `MatchState`, `GolferState`, `GolfMode`, `ShotSelection`,
-  `ShotPower`, `SettlementDetector`: turn/shot decisions and mode rewind values.
+  `ShotPower`, `SettlementDetector`, `ShotResolution`: turn/shot decisions,
+  terminal arbitration and mode rewind values.
 - `GolfMenu`, `GolfOverlay`, `DeparturePreview`: launch choices and presentation.
 - `net/GolfWire`, `GolfTransport`, `GolfHost`, `GolfClient`: bounded value codec,
   socket lifecycle and command/presentation ownership; no engine dependencies in
@@ -150,7 +188,7 @@ Flow: `LOBBY -> TURN_OPEN -> AIM -> CHARGE_ONE -> CHARGE_TWO -> PRE_RELEASE
 `DISCONNECTED` branches. Practice has one golfer and a selected act; competition
 plays both acts. Record two saved courses, active player, starter, scores,
 finished/DNF flags, charge values/stage, presentation timers, committed-shot ID,
-pre-shot checkpoint and dwell/watchdog state in mode rewind. World state belongs
+pre-shot checkpoint, pose/dust phase and dwell/watchdog state in mode rewind. World state belongs
 to course checkpoints. Network connections and socket objects never enter snapshots.
 
 Capture the neutral lie's course at TURN_OPEN, before aim/charge pose commands.
@@ -161,6 +199,14 @@ Failure restores that course, retains the stroke, adds one penalty and advances
 the turn. Success saves the evolving course/lie for that golfer. Hole-finished
 players are skipped; reverse the first starter for act 2. Lowest summed strokes
 and penalties wins, ties draw, and concession is DNF and loses the match.
+
+`ShotResolution` is the sole terminal arbiter. At a completed course/mode boundary,
+choose the first applicable outcome in this order: damaging hit/death; swept finish;
+valid settlement; pending explicit lost ball; watchdog expiry. Thus damage wins
+over finish in the same step, and a valid finish/settlement wins over a timeout.
+Ignore lost-ball input for an already resolved shot. Resolve at most once per shot
+ID, with one ledger/result transition. This intentionally uses committed-step
+precedence, not an unimplemented claim about sub-frame collision chronology.
 
 ## Task 1 — establish the external mod and executable proof harness
 
@@ -193,13 +239,20 @@ establishes the harness, not a playable-golf claim.
 `src/test/java/com/openggf/game/`.
 **Modify:** `GameModule`, `game/patch/DelegatingGameModule`,
 `game/session/GameplayModeContext`, `GameLoop`, `LevelIterationAdmissionController`,
-`LevelFrameStep` and `src/test/java/com/openggf/tests/HeadlessTestRunner.java`.
+`LevelFrameStep`, live rewind recording/input/stepper/controller owners and
+`src/test/java/com/openggf/tests/HeadlessTestRunner.java`.
+**Audit all entry points:** `GameLoop.step()`/`stepPresentationFrame()`,
+`GameLoopTitleCardLifecycle`, `TraceSessionLauncher`, `tools/RecordingFrameDriver`
+and `tools/HeadlessGameBoot`. Setup/load/stock-trace paths have explicit exemptions;
+every golf-capable path must enter the coordinator before advancing clocks/PLC.
 
 - [ ] Add a session-owned extension/no-op default and owner-wrapped callbacks.
   Route interactive and headless mode ticks through one shared coordinator.
   Sample input once per presentation tick; consume A edges once, including across
-  a held-to-running transition. Keep accelerated ordinary play and native Start
-  pause behavior intact.
+  a held-to-running transition. Keep accelerated ordinary play and stock native
+  Start pause behavior intact. Golf Start is handled by the extension; HOLD takes
+  precedence over native pause and direct-step/capture calls cannot bypass it.
+  Keep the coordinator out of the large `GameLoop` body and pass its source guard.
 - [ ] Gate HOLD before authoritative counters and hardware/PLC admission, not
   merely before sprite movement. Prove no course snapshot key changes over
   600 held idle ticks while the meter and native sound playback advance. Explicit
@@ -210,7 +263,19 @@ establishes the harness, not a playable-golf claim.
   boundaries. An extension fault holds or exits cleanly rather than freeing input
   into stock platformer movement.
 - [ ] Register presentation-stage state for debug rewind. Test capture/restore in
-  each charge/pre-release stage and replay the same mode-input suffix.
+  each charge/pre-release stage and replay the same mode-input suffix. Use a small
+  deterministic test extension with synthetic charge stages before `GolfMode`
+  exists; later reuse the tests with the actual mod rather than retaining a second
+  production state machine.
+- [ ] Define and implement the mode-iteration input/audio recording contract above.
+  Test real live-rewind seeking to a non-keyframe inside a 600-tick HOLD, across
+  automatic release and across penalty/handoff; replay must reproduce meter,
+  pose, edges and command timing without advancing the frozen course. Distinguish
+  retained past debug history from discarded future cache and act-load reset.
+- [ ] Prove render-only charge/dust feedback and correctly stamped native rev
+  requests through interactive, direct-step, replay and golf BK2 capture entry
+  points. Check pause/resume during each feedback stage. Do not advance a dust
+  object or run player physics merely to animate charging.
 
 **Check:** new hold tests plus existing `TestInGamePause`, frame/rewind boundary
 tests affected by the edit, and the API checks below. This is a shared timing
@@ -247,14 +312,52 @@ and owning snapshot adapters only where the audit demonstrates a missing field.
   timelines exclude the other golfer's inputs, and a mode snapshot containing
   checkpoint handles is acyclic and stays within the rewind memory policy.
   A failed restore ends/holds the match with a clear error, never a partial lie.
+- [ ] Add controller-level course-replacement boundaries for handoff/penalty and
+  explicit audio reconciliation. Preserve prior mode keyframes and checkpoint
+  handles within the memory budget; test debug seeking across both operations.
+  Only real act/session loads invalidate the previous generation and timeline.
 
 **Exit gate:** full state and forward replay agree for both characters. Do not
 continue to competitive turn switching with coordinate-only save/restore.
 
+### Task 3a — early presentation and guest-session feasibility spike
+
+**Create:** the first `ScenePresentationFrame`/`SceneViewPresenter` prototype and
+`TestGolfScenePresentation` under `src/test/java/com/openggf/game/presentation/`.
+Task 8 extends these into production guest presentation. This spike runs before
+Tasks 4–5 freeze launch/pose/overlay contracts, not after the local game is finished.
+
+- [ ] Inventory all render paths reachable in full EHZ golf, including both player
+  bodies, Tails' tails, render-only charge dust, placed objects and dynamic children
+  such as explosions, animals, score pieces and lost rings. Inspect custom
+  `GLCommand` actions as well as ordinary prepared sprite pieces; neither opaque
+  callbacks nor atlas indices alone can serve as a portable scene value.
+- [ ] Capture emitted piece/primitive values before GPU submission. Add a ROM-art
+  provenance registry mapping local pattern allocations to stable ROM source/
+  recipe identities and animation phase. Cover every reachable custom render
+  path with a bounded value adapter or fail the spike with concrete evidence.
+- [ ] Bootstrap a guest resource session through the normal ROM act load, then
+  hold it permanently after setup and substitute `SceneViewPresenter` for stock
+  drawing. Its locally created players/objects never simulate or supply guest
+  scene state; received values never restore those objects or collision. This
+  reuses held admission rather than assuming a new asset-only load API exists.
+  Presentation asset decoding/residency is separate from the held world's PLC
+  runner, so resolving guest art cannot admit a gameplay/hardware service step.
+- [ ] Render transmitted view/scroll/deformation values without invoking mutable
+  camera-follow or background-deformation handlers. Survey uses the same pure
+  transform over terrain/current presentation. Separate render-cache/art setup
+  from authoritative gameplay state in invariance assertions.
+- [ ] Prove local-ROM art resolution, character swap, platform/bridge changes and
+  object removal with two independent presenters. Then choose the final scene
+  schema and reuse it in Task 5. Record unsupported render paths as blockers.
+
+**Exit gate:** capture point, art identity and permanently held guest-resource
+session all work on both acts; no premature finalization of the presentation API.
+
 ## Task 4 — coherent putt/chip launch and settlement
 
 **Create:** `PlayableLaunchControl`, immutable launch/contact values;
-`ShotPower`, `SettlementDetector`; focused tests `TestPlayableLaunchControl`
+`ShotPower`, `SettlementDetector`, `ShotResolution`; focused tests `TestPlayableLaunchControl`
 under `src/test/java/com/openggf/sprites/managers/`.
 **Modify:** `PlayableSpriteMovement`, `AbstractPlayableSprite`, relevant semantic
 movement/landing rules, `NativePositionOps` only where required, and solid support
@@ -276,13 +379,20 @@ observation at the existing `ObjectManager`/latched-contact boundary.
   fractions, facing, ground/air velocity and support detachment for a chip.
   Retain native post-launch gravity, slopes, collision, loops, springs and attacks.
   A scoped shot-motion rule suppresses early unroll on landing/roll stop/spring;
-  restore it in snapshots and remove it when the mode exits.
+  restore it in snapshots and remove it when the mode exits. A zero-speed roll
+  stays curled at zero speed; it must not use pinball mode's automatic ±0x400
+  speed boost. Preserve rolling radii on landing and inventory object-forced
+  uncurl paths, including springs, against their owning routines. Confirm native
+  pinball/object-preserved handoffs remain unchanged outside the scoped rule.
 - [ ] Accept settlement only on valid floor support with low support-relative
   velocity for a configured dwell. Walls/ceilings, brief apexes, spring recontact,
   support loss or a reversing loop reset dwell. Pin the settled lie coherently;
   neutral aiming pose/duck changes must preserve floor contact.
 - [ ] Add bounded shot duration/no-progress watchdog and explicit lost-ball action.
-  Both use the penalty rollback path, never a free forward teleport.
+  Both use `ShotResolution` and the checkpoint rollback service, never a free
+  forward teleport. Introduce a one-golfer test resolver/ledger now; Task 6 connects
+  real EHZ outcomes and Task 7 supplies the competitive match ledger. Test compound
+  damage/finish/settlement/timeout candidates and one result per committed shot.
 
 **Check:** weak reversal/strong loop traversal, chips onto slopes, repeated spring
 contacts, low-speed rolling, moving-support dwell and restore/forward replay;
@@ -300,7 +410,7 @@ extend stock-destination HUD policy only as required by the tested patch path.
   second timed A adds charge, fixes both power contributions and commits once.
   Preserve selected elevation; neither hit introduces an accuracy-error stage.
 - [ ] Define meter period/curve, charge feedback cadence and pre-release delay in
-  named rule constants. Cancel before commitment for free; after commitment
+  named rule constants. B cancels setup before commitment for free; after commitment
   ignore aim/cancel/extra A. Reset input edges on menus, turn changes and restores.
   Test every state transition through the same extension tick used in production.
 - [ ] Render direction/type, elevation, meter stage, active player, strokes,
@@ -314,7 +424,9 @@ extend stock-destination HUD policy only as required by the tested patch path.
   state and the same launched-shot suffix before/after a long survey.
 - [ ] Add practice act selection/restart and validate held meters/audio/overlay
   remain responsive. Unsupported team/donor options are unavailable and rejected
-  on launch, rather than silently overridden mid-game.
+  on launch, rather than silently overridden mid-game. Introduce the minimal
+  supported title-to-practice destination/character selection seam here, including
+  direct act-2 start; Task 10 completes host/join text entry and menu polish.
 
 **Check:** controls at boundary elevations/powers, held/repeated A, cancellation,
 auto-release, course freeze, honest preview and survey invariance; render at
@@ -341,9 +453,17 @@ checkpoint/monitor placement and `GameStateManager` progression consumers.
   monitors. Use semantic rules/providers; avoid blanket invulnerability and
   per-frame corrective writes that hide stock side effects.
 - [ ] Route actual damaging hits/death to one failure outcome before stock
-  respawn/score mutation. A rolled badnik attack remains successful combat.
+  respawn/reload progression. Contact hooks collect typed candidates during the
+  canonical step; `ShotResolution` decides after the committed step, before the
+  next death-timer/respawn step. Scoped rules prevent irreversible stock lives,
+  score/progression and reload side effects; checkpoint restore reverses native
+  hurt/velocity/ring/object changes. Apply the declared audio boundary policy.
+  A rolled badnik attack remains successful combat.
   Rings are secondary per-golfer stats, not a shield from golf penalties or a
   tie breaker. Verify full pickups/objects/clocks restored with the stroke retained.
+- [ ] Test damaging hit plus finish in one step, finish plus watchdog, settlement
+  plus watchdog and a late lost-ball request. Use the declared priority regardless
+  of callback ordering and publish exactly one result/turn transition.
 
 **Check:** both full acts terminate through golf gates with no bosses, locks,
 capsule dependency, stock result or accidental next act; pit/spike/badnik failure
@@ -359,8 +479,11 @@ and `TestGolfLocalMatch` under `src/test/java/com/openggf/mods/code/`.
   Save the active successful course; restore the other golfer before opening aim.
 - [ ] Implement alternating strokes, skip completed players, EHZ1 then EHZ2,
   reversed act-2 starter, sum strokes+penalties, draw and concession/DNF. Give
-  one logical controller to the active owner; secondary controllers cannot steer
-  or double-commit a turn.
+  one logical input stream to the active owner. In local hot seat, either enabled
+  controller may feed that stream; merge held masks and deduplicate action edges
+  so simultaneous A presses commit once. Neither controller steers a released
+  ball or controls a separate inactive sprite. Online command ownership remains
+  restricted to the active assigned player.
 - [ ] Make penalty restore retain the ledger, successful handoff retain each
   evolving course, debug rewind restore the complete mode+course state, and an
   act load create fresh handles/history. Do not expose competitive rewind as a
@@ -374,8 +497,8 @@ leakage. Local play remains available if networking is not yet ready.
 
 ## Task 8 — prove an object-complete read-only guest view
 
-**Create:** proposed scene presentation types and implementation;
-`TestGolfScenePresentation` under `src/test/java/com/openggf/game/presentation/`.
+**Extend:** Task 3a's scene presentation types, guest resource-session bootstrap
+and `TestGolfScenePresentation` into complete production guest presentation.
 **Modify:** `level/render/SpritePieceRenderer`, sprite/object render collection,
 `GraphicsManager`, level tilemap/parallax/art owners and mode view routing.
 
@@ -385,7 +508,8 @@ leakage. Local play remains available if networking is not yet ready.
   order. Stable ROM-art identities resolve through local asset loading; virtual
   pattern/GPU IDs alone are not portable identities.
 - [ ] Provide a render-only guest mode with local ROM decoding and no authoritative
-  sprite/object physics. Resolve dynamic art residency/animation and palette
+  sprite/object physics, using the permanently held resource session proved in
+  Task 3a. Resolve dynamic art residency/animation and palette
   effects from agreed ROM recipes/identities and phase values, not transferred
   pixel or ROM-art payloads. Terrain view edits never hydrate collision/gameplay.
 - [ ] Use full view frames initially, with session/hole/turn/shot and monotonically
@@ -420,6 +544,12 @@ existing race transport is reference only, not a golf schema.
   Socket threads decode bounded immutable values only; drain commands on the
   host presentation tick. Coalesce pending presentation frames to the newest
   complete revision while retaining reliable control/score/sound-cue messages.
+- [ ] Bound reliable outbound queues to 64 messages or 4 MiB, whichever is reached
+  first; keep at most one pending full presentation frame plus one in-flight frame.
+  A writer has a 5-second write deadline enforced by closing its owned socket.
+  Overflow/deadline expiry disconnects and holds the room; no socket write or
+  backpressure wait can block the simulation/presentation thread. Verify slow-reader
+  memory bounds and port/worker cleanup. Revisit measured limits before finalizing.
 - [ ] Define `Hello/Ready` with engine/API/mod/protocol/rules fingerprints, S2 ROM
   SHA-1, characters, selected mode and viewport. Reject mismatches before play;
   no ROM bytes/art or executable content crosses the connection.
@@ -441,7 +571,9 @@ existing race transport is reference only, not a golf schema.
   the native S2 driver, with native charge cadence; no packet supplies pitch.
   Reliable cue IDs/tick offsets survive view-frame coalescing. Reconnect restores
   current sound ownership without replaying old charge cues. Guest-owned local
-  charge preview must not be played again when its accepted cues arrive.
+  charge preview must not be played again when its accepted cues arrive. Its
+  local duck/charge pose is render-only mode state; replace it with authoritative
+  presentation on acceptance without touching guest physics.
 - [ ] Disconnect holds the host even during PRE_RELEASE/WATCH, freezes course
   clocks and preserves an accepted shot. Rejoin with the assigned opaque room
   token, resend authoritative state/cached receipt, then resume once both ready.
@@ -563,6 +695,31 @@ capabilities, task dependencies, rollback/commit boundaries, native sound owners
 and future test scope. The unchecked lists above track future implementation and
 verification; no engine feasibility result is claimed by that review.
 
+## Independent review reconciliation — 2026-10-05
+
+Claude Opus 5.5 and OpenAI Codex GPT-6.1 Sol independently reviewed `1ca6fc6a9`
+read-only against the design and targeted engine source. Both found the overall
+direction suitable for early feasibility work, and both identified the missing
+held-tick replay contract. Opus rated that gap Critical; Sol rated it Important.
+It is a required plan correction before Task 2, not an observed gameplay failure.
+
+| Review finding | Reconciled plan treatment |
+| --- | --- |
+| Opus C1 / Sol I1: held-tick recording, replay and history boundaries | One mode iteration per tick; shared live/replay/capture coordinator; non-keyframe seek tests; retain past handoff/penalty history, isolate actual act loads |
+| Opus I2 / M6: held animation and audio ownership | Render-only native pose/dust phases; mode-ordinal audio stamps; controller-owned course-replacement audio policy, distinct from debug audio restore |
+| Opus I3: pinball velocity boost prevents settlement | Explicit zero-speed curled rule and native pinball regression coverage; audit object-forced uncurl paths |
+| Opus I4: capture point and guest resource session unproved too late | Mandatory Task 3a spike before presentation API finalization; ROM-art provenance/value capture; permanently held ROM-loaded guest resource session |
+| Opus I5: pause precedence and bypass entry points | Golf HOLD precedes native pause; all golf menus use HOLD even during WATCH; enumerate live/direct/headless/replay/capture entry points and explicit stock/setup exemptions |
+| Opus M7 / Sol I2: outcome timing and arbitration | Post-step typed candidates, scoped suppression of irreversible stock progression, one arbiter with explicit compound-outcome priority/tests |
+| Opus M8: controls, survey deformation and guest preview | B cancels before commitment; both local pads may feed one deduplicated stream; pure view transforms; guest pre-acceptance render-only pose |
+| Sol M3 / M4: outbound lifecycle and staged dependencies | Bounded reliable queue/write deadline; explicit early test extension/resolver; minimal practice launch seam in Task 5 |
+
+The reviewers' excluded topics remain outside this task: a security subsystem,
+transport-choice debate, measured shot-tuning values, and execution/build evidence.
+The native S2/solo-active-character scope and intentional golf physics differences
+remain explicit. No further review round, engine edit, test run, merge or push is
+implied by reconciling these documentation findings.
+
 ## Decisions and rejected approaches
 
 This plan retains the design and local naming commit `ac120c5f2`; it adds no
@@ -581,3 +738,7 @@ remain on develop. The following choices follow inspection at that commit:
   provide consistent turns without a new security project.
 - Candidate surface additions keep version 0.7.0 under current policy; a new
   published version would misrepresent the framework's release state.
+- The existing native pinball flag is unsuitable for retained rolling because it
+  restores ±0x400 inertia at roll stop; the scoped golf rule must allow zero speed.
+- Reusing native pause while golf menus hold the course would still service V-int;
+  golf menus use held admission in every phase instead.

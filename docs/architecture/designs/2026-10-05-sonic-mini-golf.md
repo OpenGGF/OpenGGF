@@ -117,7 +117,7 @@ against the S2 rolling and airborne profiles, with identical limits for both
 characters. It must cover short finishing putts and viable EHZ loop routes.
 Native spindash speed is a starting reference, not proof of a good golf range.
 
-Cancel returns to aim before the second timed hit is accepted and costs no
+**B** returns to aim before the second timed hit is accepted and costs no
 stroke. Acceptance of that final charge commits the shot and costs one stroke;
 the ensuing feedback, pause and automatic release cannot be used to cancel or
 retry it. Show the final power before the character departs.
@@ -141,6 +141,9 @@ Directional input cannot steer, brake or start another spindash after release.
 The camera follows the shot with lookahead. The active player may concede a
 stuck shot as a lost ball. Ordinary menus can pause a local game; an online
 room pause is a host-coordinated state, not a client stopping its own clock.
+**Start** opens the golf menu/pause in any shot phase. Golf pause holds course
+clocks and shot-feedback scheduling; it does not use stock S2's V-int-active
+native pause loop. Stock sessions retain their usual pause behavior.
 
 For the MVP, Sonic and Tails share the same golf response. That is an explicit
 mod rule, not a claim that all native character routines are identical. Their
@@ -179,6 +182,13 @@ forward reposition. Successful long rolling shots should remain possible.
 | Conceded or watchdog declared a lost ball | Same penalty and pre-shot restore |
 | Defeated a badnik while attacking | Normal rolling attack interaction; shot continues |
 | Picked up rings | Keep them as optional collectible statistics; they do not buy shots or prevent golf penalties |
+
+Resolve competing outcomes once at the completed step boundary: damaging hit
+or death first, then finish, valid settlement, explicit lost ball, and watchdog
+expiry. Damage therefore wins over a finish in the same step; a finish or valid
+settlement wins over a simultaneous timeout. Ignore lost-ball input after a
+shot has resolved. This is an explicit step-level rule, not a claim to reconstruct
+sub-frame collision chronology.
 
 Detect the finish as a swept crossing so a fast shot cannot pass through it
 between samples. The gate must span the intended finishing route. It is a
@@ -420,6 +430,13 @@ and pause, shots, penalties, handoffs and loads, including isolated timelines.
 Debug rewind within an offline test must capture the complete golf state,
 including charge stage, values and presentation timers; competitive UI does
 not expose a free retry.
+Record/replay one mode iteration per presentation tick, including held aiming
+ticks, through the same coordinator used for live input. Retain prior debug
+history across penalty/course handoff; real act loads reset history and isolate
+the new course generation. Held duck/charge/dust animation uses a render-only
+native-ROM pose phase, not world object updates, and native sound requests have
+their own correctly mapped iteration stamps. Guest charging uses this local
+render-only pose until authoritative acceptance arrives.
 Test supported viewport widths because the aim HUD and survey camera are part
 of play. All ROM-backed checks must use discovered absolute S2 ROM paths and
 report skips; no engine tests have been run to validate this proposal.
