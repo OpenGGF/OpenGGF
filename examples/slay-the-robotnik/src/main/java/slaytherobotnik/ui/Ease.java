@@ -14,6 +14,11 @@ public final class Ease {
         return 1f - u * u * u;
     }
 
+    public static float inCubic(float t) {
+        t = clamp(t);
+        return t * t * t;
+    }
+
     public static float inOutQuad(float t) {
         t = clamp(t);
         return t < 0.5f ? 2f * t * t : 1f - (float) Math.pow(-2f * t + 2f, 2) / 2f;

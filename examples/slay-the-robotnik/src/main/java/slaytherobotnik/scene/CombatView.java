@@ -110,6 +110,35 @@ final class CombatView implements RunScreen.RoomView {
 
     private final List<Fx> effects = new ArrayList<>();
 
+    /** Where each hand card is drawn; it eases toward its slot so draws and plays slide. */
+    private final Map<Card, float[]> handPos = new IdentityHashMap<>();
+
+    /** A card in flight: played (to the centre, then the discard pile) or discarded. */
+    private static final class Flight {
+        final Card card;
+        final float x0;
+        final float y0;
+        final float mx;
+        final float my;
+        final float x1;
+        final float y1;
+        final int life;
+        int age;
+
+        Flight(Card card, float x0, float y0, float mx, float my, float x1, float y1, int life) {
+            this.card = card;
+            this.x0 = x0;
+            this.y0 = y0;
+            this.mx = mx;
+            this.my = my;
+            this.x1 = x1;
+            this.y1 = y1;
+            this.life = life;
+        }
+    }
+
+    private final List<Flight> flights = new ArrayList<>();
+
     /** A floating number or word. */
     private static final class Popup {
         final String text;
@@ -221,6 +250,7 @@ final class CombatView implements RunScreen.RoomView {
     @Override
     public void update(Shell shell, RunScreen screen) {
         tickEffects();
+        easeHand(shell.width());
         boolean fast = shell.ctx.input().player1().actionHeldMask() != 0 || shell.in.mouse.leftDown();
         if (wait > 0) {
             wait -= (fast ? 3 : 1) * (shell.profile.get(SettingsScreen.FAST_COMBAT) == 1 ? 2 : 1);
@@ -281,6 +311,8 @@ final class CombatView implements RunScreen.RoomView {
             fx.y += fx.vy;
         }
         effects.removeIf(fx -> fx.age >= fx.life);
+        flights.forEach(fl -> fl.age++);
+        flights.removeIf(fl -> fl.age >= fl.life);
         popups.removeIf(p -> ++p.age > p.life);
         for (Popup p : popups) {
             p.y -= 0.35f;
@@ -291,6 +323,26 @@ final class CombatView implements RunScreen.RoomView {
         if (messageTicks > 0) {
             messageTicks--;
         }
+    }
+
+    /** Moves each hand card a third of the way to its slot; new cards start at the draw pile. */
+    private void easeHand(int w) {
+        handPos.keySet().removeIf(card -> !hand.contains(card));
+        for (int i = 0; i < hand.size(); i++) {
+            float[] pos = handPos.computeIfAbsent(hand.get(i), k -> new float[] {6, HAND_Y + 30});
+            pos[0] += (handX(i, hand.size(), w) - pos[0]) * 0.34f;
+            pos[1] += (HAND_Y - pos[1]) * 0.34f;
+        }
+    }
+
+    /** Where a hand card is drawn now (its eased position, or its slot). */
+    private float[] handPosition(Card card, int w) {
+        float[] pos = handPos.get(card);
+        if (pos != null) {
+            return pos;
+        }
+        int i = hand.indexOf(card);
+        return new float[] {i < 0 ? w / 2f : handX(i, hand.size(), w), HAND_Y};
     }
 
     private static <K> void tickMap(Map<K, Integer> map) {
@@ -322,6 +374,11 @@ final class CombatView implements RunScreen.RoomView {
                 yield 3;
             }
             case CombatEvent.CardPlayed p -> {
+                float[] from = handPosition(p.card(), shell.width());
+                float midX = shell.width() / 2f - CardRenderer.SMALL_W / 2f;
+                boolean power = p.card().type().equals(CardType.POWER);
+                flights.add(new Flight(p.card(), from[0], from[1], midX, 72, power ? midX : shell.width() - 30,
+                        power ? 40 : HAND_Y + 30, 24));
                 hand.remove(p.card());
                 if (p.card().type().equals(CardType.ATTACK)) {
                     lunge.put(combat.player(), 10);
@@ -334,6 +391,11 @@ final class CombatView implements RunScreen.RoomView {
                 yield 7;
             }
             case CombatEvent.CardDiscarded d -> {
+                if (hand.contains(d.card())) {
+                    float[] from = handPosition(d.card(), shell.width());
+                    flights.add(new Flight(d.card(), from[0], from[1], from[0], from[1] - 10, shell.width() - 30,
+                            HAND_Y + 30, 14));
+                }
                 hand.remove(d.card());
                 discardCount++;
                 yield d.manual() ? 4 : 1;
@@ -1051,11 +1113,12 @@ final class CombatView implements RunScreen.RoomView {
         int focusX = 0;
         for (int i = 0; i < hand.size(); i++) {
             Card card = hand.get(i);
-            int x = handX(i, hand.size(), w);
+            float[] pos = handPosition(card, w);
+            int x = Math.round(pos[0]);
             boolean focus = spots.isFocused("hand" + i)
                     || (choosingFromHand && options.contains(card) && spots.isFocused("opt" + options.indexOf(card)));
             boolean picked = choicePicks.contains(card) || card == selected;
-            int y = HAND_Y + (focus ? -8 : 0) + (picked ? -14 : 0);
+            int y = Math.round(pos[1]) + (focus ? -8 : 0) + (picked ? -14 : 0);
             boolean playable = myTurn && combat.canPlay(card);
             boolean dim = choosingFromHand && !options.contains(card);
             screen.cards.drawSmall(c, card, combat, x, y, playable, dim);
@@ -1063,6 +1126,22 @@ final class CombatView implements RunScreen.RoomView {
                 focusCard = card;
                 focusX = x;
             }
+        }
+        for (Flight fl : flights) {
+            // First half: to the middle point; second half: on to the pile.
+            float t = fl.age / (float) fl.life;
+            float fx;
+            float fy;
+            if (t < 0.5f) {
+                float k = Ease.outCubic(t * 2);
+                fx = fl.x0 + (fl.mx - fl.x0) * k;
+                fy = fl.y0 + (fl.my - fl.y0) * k;
+            } else {
+                float k = Ease.inCubic((t - 0.5f) * 2);
+                fx = fl.mx + (fl.x1 - fl.mx) * k;
+                fy = fl.my + (fl.y1 - fl.my) * k;
+            }
+            screen.cards.drawSmall(c, fl.card, combat, Math.round(fx), Math.round(fy), true, false);
         }
         if (focusCard != null && selected == null) {
             int bx = Math.max(4, Math.min(w - CardRenderer.BIG_W - 4, focusX + CardRenderer.SMALL_W / 2
