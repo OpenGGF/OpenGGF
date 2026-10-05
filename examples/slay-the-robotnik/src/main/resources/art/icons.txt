@@ -418,6 +418,112 @@ sprite pow_card
 ..KwwwwwK
 ..KKKKKKK
 
+sprite pow_bomb
+......KY.
+.....KyK.
+...KKKK..
+..KbbbbK.
+.KbBBbbbK
+.KbBbbbbK
+.KbbbbbbK
+..KbbbbK.
+...KKKK..
+
+sprite pow_retain
+..KKKKK..
+.KwwwwwK.
+.KwKKKwK.
+.KwK.KwK.
+KKKKKKKKK
+KYYYYYYYK
+KYYyKyYYK
+KYYYKYYYK
+KKKKKKKKK
+
+sprite pow_lockon
+....K....
+..KKRKK..
+.KR.K.RK.
+.K.....K.
+KRK.R.KRK
+.K.....K.
+.KR.K.RK.
+..KKRKK..
+....K....
+
+sprite pow_jammed
+KKKKKKKKK
+KwgwWgwgK
+KgWgwgWwK
+KwgwgWgwK
+KWgwgwgWK
+KgwWgwgwK
+KKKKKKKKK
+
+sprite pow_double
+KKKK.KKKK
+KYYK.KYYK
+KYKYKYKYK
+KYKYKYKYK
+KYKYKYKYK
+KYYK.KYYK
+KKKK.KKKK
+
+sprite pow_wrench
+.KK...KK.
+KwwK.KwwK
+KwgwKwgwK
+.KwwwwwK.
+..KwgwK..
+..KwgwK..
+..KwgwK..
+..KwgwK..
+...KKK...
+
+sprite pow_super
+....K....
+...KYK...
+KKKKWKKKK
+KYYYWYYYK
+.KYYYYYK.
+..KYYYK..
+.KYYKYYK.
+.KYK.KYK.
+.KK...KK.
+
+sprite pow_fire
+....K....
+...KOK...
+..KOYOK.K
+..KOYOKOK
+.KOYYYOOK
+.KOYWYYOK
+KOYYWWYOK
+KOOYYYOOK
+.KKKKKKK.
+
+sprite pow_shield
+..KKKKK..
+.KCCCCCK.
+KCWCCCCCK
+KCWCCCCCK
+KCCCCCCCK
+.KCCCCCK.
+.KCCCCCK.
+..KCCCK..
+...KKK...
+
+sprite pow_sleep
+.....KKKK
+.....KWWK
+......KK.
+.KKKKKKK.
+.KWWWWWK.
+....KWK..
+...KWK...
+..KWK....
+.KWWWWWK.
+
 # ---------------------------------------------------------------- UI glyphs
 
 sprite ui_heart

@@ -20,9 +20,17 @@ public final class Art {
     private final Map<String, SceneSpriteSet> romSets = new HashMap<>();
     private SceneImage blank;
 
-    public Art(SceneContext ctx, byte[] iconText) {
+    private final CardRecipes cards;
+
+    public Art(SceneContext ctx, byte[] iconText, byte[] cardText) {
         this.ctx = ctx;
         this.icons = TextArt.parse(ctx.art(), iconText);
+        this.cards = new CardRecipes(cardText);
+    }
+
+    /** Card illustrations from {@code art/cards.txt}. */
+    public CardRecipes cards() {
+        return cards;
     }
 
     /** True when ROM art is available (always, for this S3K patch mod). */

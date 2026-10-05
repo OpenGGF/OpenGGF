@@ -26,6 +26,7 @@ final class TitleScreen implements Screen {
             items.add(new String[] {"continue", "CONTINUE RUN"});
         }
         items.add(new String[] {"new", "NEW RUN"});
+        items.add(new String[] {"compendium", "COMPENDIUM"});
         items.add(new String[] {"stats", "RECORDS"});
         items.add(new String[] {"s3k", "PLAY SONIC 3 & KNUCKLES"});
         items.add(new String[] {"quit", "MASTER TITLE"});
@@ -35,7 +36,7 @@ final class TitleScreen implements Screen {
         spots.clear();
         int w = 150;
         int x = (shell.width() - w) / 2;
-        int y = 128;
+        int y = 120;
         for (String[] item : items) {
             spots.add(item[0], x, y, w, 13);
             y += 15;
@@ -63,6 +64,7 @@ final class TitleScreen implements Screen {
                 }
             }
             case "new" -> shell.go(new CharacterSelectScreen());
+            case "compendium" -> shell.go(new CompendiumScreen());
             case "stats" -> shell.go(new RecordsScreen());
             case "s3k" -> shell.ctx.exitToGameTitle();
             default -> shell.ctx.exitToMasterTitle();

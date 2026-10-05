@@ -1,0 +1,16 @@
+# Slay the Robotnik card illustrations (format: slaytherobotnik.art.CardRecipes).
+#
+#   card-id: layer; layer; ...        layers are drawn back to front
+#
+#   bg RRGGBB                         backdrop colour (default: red Attack, blue Skill, gold Power)
+#   hero sonic|tails|knuckles FRAME   a character mapping frame (hex), or anim=ID to animate
+#   rom KEY FRAME                     a ROM sprite frame (keys in art/RomSprites.java), or anim=F1/F2@TICKS
+#   icon NAME                         a text-art icon from icons.txt
+#   fx speed|burst|sparkle|stars|rings|fire|water|zap
+#
+# Then optionally: X,Y offset from the art window's centre (large-card pixels, 76x42 window),
+# flip, xSCALE (x2, x0.5) and aALPHA (a0.5). Small cards draw the same picture at half size.
+
+# ---------------------------------------------------------------- Sonic (basics)
+sonic:spin_attack: fx speed; hero sonic anim=0x2 -6,2; rom explosion anim=0/1/2/3/4@4 18,0 x0.75
+sonic:side_step: hero sonic 0xba; rom shield_insta anim=0/1/2/3/4/5/6@3 0,0

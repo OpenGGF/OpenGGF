@@ -143,6 +143,8 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
 
     /** One tick with the current input state, advancing key edges afterwards. */
     public void tick() {
+        // The game loop samples the mapped controls each frame; without this, directions never arrive.
+        input.refreshLogicalSnapshot();
         host.update(input);
         input.update();
     }

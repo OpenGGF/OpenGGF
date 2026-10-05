@@ -17,7 +17,9 @@ import java.util.List;
  *   s3k.gen s3k out.png art=0x367DCA comp=KOSINSKI_MODULED map=0x3616C0 line=1 \
  *   pal=0x0A8A3C:16:0 pal=0x0A8B7C:48:1 [dplc=0x36156E layout=OBJECT size=0xAA0 offset=0]
  * </pre>
- * {@code pal=address:colours:firstLine} may repeat. Origin: Slay the Robotnik, 2026-10-05.
+ * {@code pal=address:colours:firstLine} may repeat; {@code char=sonic} (or tails, knuckles, tails_tails)
+ * dumps a playable character's sheet and prints its animation scripts instead. Origin: Slay the
+ * Robotnik, 2026-10-05.
  */
 public final class SpriteSheetDump {
     private SpriteSheetDump() {
@@ -41,6 +43,7 @@ public final class SpriteSheetDump {
         RomSpriteRequest.Compression comp = RomSpriteRequest.Compression.NEMESIS;
         RomSpriteRequest.DplcLayout layout = RomSpriteRequest.DplcLayout.OBJECT;
         List<int[]> palettes = new ArrayList<>();
+        String character = null;
         for (int i = 3; i < args.length; i++) {
             String[] kv = args[i].split("=", 2);
             switch (kv[0]) {
@@ -51,6 +54,7 @@ public final class SpriteSheetDump {
                 case "line" -> line = Integer.decode(kv[1]);
                 case "offset" -> offset = Integer.decode(kv[1]);
                 case "comp" -> comp = RomSpriteRequest.Compression.valueOf(kv[1]);
+                case "char" -> character = kv[1];
                 case "layout" -> layout = RomSpriteRequest.DplcLayout.valueOf(kv[1]);
                 case "pal" -> {
                     String[] p = kv[1].split(":");
@@ -59,14 +63,45 @@ public final class SpriteSheetDump {
                 default -> throw new IllegalArgumentException("Unknown argument " + args[i]);
             }
         }
-        SceneRomArt romArt = SceneRomArtFactory.create(rom, game, () -> null, () -> null);
+        com.openggf.tools.HeadlessGameBoot boot = null;
+        SceneRomArt romArt;
+        if (character != null) {
+            // Character sheets come from the game module, which needs a booted session.
+            boot = new com.openggf.tools.HeadlessGameBoot(320, 224, 320, 224);
+            boot.boot(Path.of(args[0]), 0, 0);
+            var module = com.openggf.game.GameServices.module();
+            Object live = module.createGame(com.openggf.game.session.SessionManager.getCurrentWorldSession()
+                    .getDataSource());
+            romArt = SceneRomArtFactory.create(com.openggf.game.GameServices.rom().getRom(), game,
+                    () -> (com.openggf.data.PlayerSpriteArtProvider) live, module::loadTailsTailArt);
+        } else {
+            romArt = SceneRomArtFactory.create(rom, game, () -> null, () -> null);
+        }
         int[] palette = new int[64];
         for (int[] p : palettes) {
             int[] colors = romArt.palette(p[0], p[1]);
             System.arraycopy(colors, 0, palette, p[2] * 16, Math.min(colors.length, 64 - p[2] * 16));
         }
-        var request = new RomSpriteRequest(art, comp, size, map, dplc, layout, line, offset);
-        SceneSpriteSet set = romArt.sprites(request, palette);
+        SceneSpriteSet set;
+        if (character != null) {
+            // A playable character's sheet (char=sonic|tails|knuckles, or tails_tails for the tails object).
+            set = character.endsWith("_tails") ? romArt.characterAccessory(character.replace("_tails", ""))
+                    : romArt.character(character);
+            for (int anim = 0; anim < 0x40; anim++) {
+                int[] frames = set.animationFrames(anim);
+                if (frames.length > 0) {
+                    StringBuilder sb = new StringBuilder("anim 0x" + Integer.toHexString(anim) + " delay "
+                            + set.animationDelay(anim) + ":");
+                    for (int f : frames) {
+                        sb.append(" 0x").append(Integer.toHexString(f));
+                    }
+                    System.out.println(sb);
+                }
+            }
+        } else {
+            var request = new RomSpriteRequest(art, comp, size, map, dplc, layout, line, offset);
+            set = romArt.sprites(request, palette);
+        }
         int cell = 0;
         for (int f = 0; f < set.frameCount(); f++) {
             SceneSprite s = set.frame(f);
@@ -103,6 +138,9 @@ public final class SpriteSheetDump {
         }
         PngCodec.write(out, sheet);
         System.out.println(set.frameCount() + " frames -> " + out);
+        if (boot != null) {
+            boot.close();
+        }
     }
 
     private static void digits(PixelImage sheet, int value, int x, int y) {

@@ -18,7 +18,7 @@ final class DeckViewer {
     DeckViewer(String title, List<Card> cards) {
         this.title = title;
         this.cards = new ArrayList<>(cards);
-        this.grid = new CardGrid(this.cards, 44, 3);
+        this.grid = new CardGrid(this.cards, 44, 2, 5);
     }
 
     boolean closed() {
@@ -28,8 +28,9 @@ final class DeckViewer {
     void update(Shell shell, RunScreen screen) {
         spots.clear();
         grid.layout(spots, shell);
+        String before = spots.focused();
         spots.update(shell.in);
-        grid.scroll(shell, spots);
+        grid.scroll(shell, spots, before);
         if (shell.in.back || shell.in.deck || shell.in.mouse.rightPressed()) {
             closed = true;
             shell.sfx(Sounds.SFX_SWITCH);
@@ -46,7 +47,7 @@ final class DeckViewer {
             spots.clear();
             grid.layout(spots, shell);
         }
-        grid.draw(shell, screen, c, spots, null);
+        grid.draw(shell, screen.cards, c, spots, null);
         Card focus = grid.focusedCard(spots);
         if (focus != null) {
             screen.cards.drawBig(c, focus, null, null, shell.width() - CardRenderer.BIG_W - 14, 50, false);

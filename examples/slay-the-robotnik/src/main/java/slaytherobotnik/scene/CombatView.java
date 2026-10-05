@@ -78,6 +78,8 @@ final class CombatView implements RunScreen.RoomView {
     private int potionMenu = -1;
     private int targetingPotion = -1;
     private final Set<Card> choicePicks = new LinkedHashSet<>();
+    private CardGrid choiceGrid;
+    private List<Card> choiceGridOptions = List.of();
     private int endTimer;
 
     /** A floating number or word. */
@@ -668,22 +670,33 @@ final class CombatView implements RunScreen.RoomView {
                             CardRenderer.SMALL_W, CardRenderer.SMALL_H);
                 }
             }
+        } else if (options.size() > 4) {
+            // Long piles (draw, discard, exhaust) scroll in a small-card grid.
+            choiceGrid(options).layout(spots, shell);
         } else {
             int n = options.size();
-            int cardsPerRow = Math.min(n, 4);
             int gap = 8;
-            int total = cardsPerRow * CardRenderer.BIG_W + (cardsPerRow - 1) * gap;
-            for (int i = 0; i < n && i < 4; i++) {
+            int total = n * CardRenderer.BIG_W + (n - 1) * gap;
+            for (int i = 0; i < n; i++) {
                 spots.add("opt" + i, (w - total) / 2 + i * (CardRenderer.BIG_W + gap), 44, CardRenderer.BIG_W,
                         CardRenderer.BIG_H);
             }
         }
         boolean multi = request.max() > 1 || request.min() == 0;
+        boolean grid = !request.fromHand() && options.size() > 4;
         if (multi) {
-            spots.add("confirm", w - 74, HAND_Y - 18, 68, 14,
-                    choicePicks.size() >= Math.min(request.min(), options.size()));
+            boolean ready = choicePicks.size() >= Math.min(request.min(), options.size());
+            if (grid) {
+                spots.add("confirm", w - 100, shell.height() - 22, 86, 15, ready);
+            } else {
+                spots.add("confirm", w - 74, HAND_Y - 18, 68, 14, ready);
+            }
         }
+        String before = spots.focused();
         String picked = spots.update(shell.in);
+        if (grid) {
+            choiceGrid(options).scroll(shell, spots, before);
+        }
         if (picked == null) {
             return;
         }
@@ -693,7 +706,7 @@ final class CombatView implements RunScreen.RoomView {
             }
             return;
         }
-        Card card = options.get(Integer.parseInt(picked.substring(3)));
+        Card card = options.get(Integer.parseInt(picked.substring(picked.startsWith("card") ? 4 : 3)));
         if (!multi) {
             combat.resolveChoice(List.of(card));
             return;
@@ -702,6 +715,15 @@ final class CombatView implements RunScreen.RoomView {
             choicePicks.add(card);
         }
         shell.sfx(Sounds.SFX_CURSOR);
+    }
+
+    /** The scrolling grid for a long pile choice, kept while the same options are on offer. */
+    private CardGrid choiceGrid(List<Card> options) {
+        if (choiceGrid == null || !choiceGridOptions.equals(options)) {
+            choiceGridOptions = List.copyOf(options);
+            choiceGrid = new CardGrid(choiceGridOptions, 50, 2, 5);
+        }
+        return choiceGrid;
     }
 
     // ------------------------------------------------------------------ draw
@@ -997,6 +1019,15 @@ final class CombatView implements RunScreen.RoomView {
         if (!request.fromHand()) {
             c.fill(0, RunScreen.HUD_HEIGHT, w, shell.height() - RunScreen.HUD_HEIGHT, 0xC0000010);
             List<Card> options = combat.pendingOptions();
+            if (options.size() > 4) {
+                CardGrid grid = choiceGrid(options);
+                grid.draw(shell, screen.cards, c, spots, choicePicks);
+                Card focus = grid.focusedCard(spots);
+                if (focus != null) {
+                    screen.cards.drawBig(c, focus, combat, null, w - CardRenderer.BIG_W - 6, 50, false);
+                }
+                options = List.of();
+            }
             for (int i = 0; i < options.size() && i < 4; i++) {
                 Hotspots.Spot s = spots.spot("opt" + i);
                 if (s == null) {

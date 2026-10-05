@@ -28,7 +28,8 @@ public final class SlayTheRobotnikMod implements GgfMod {
     public void register(ModContext context) {
         byte[] font = asset(context, "art/font.txt");
         byte[] icons = asset(context, "art/icons.txt");
-        context.registerStartupScene(() -> new SlayScene(font, icons));
+        byte[] cards = asset(context, "art/cards.txt");
+        context.registerStartupScene(() -> new SlayScene(font, icons, cards));
         context.registerGamePatch(new WidescreenPatch());
     }
 

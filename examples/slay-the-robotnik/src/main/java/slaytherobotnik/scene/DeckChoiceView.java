@@ -27,7 +27,7 @@ final class DeckChoiceView {
         this.choice = choice;
         this.options = new ArrayList<>(choice.options());
         this.bigRow = options.size() <= 4 && choice.mode().equals(DeckChoice.PICK);
-        this.grid = new CardGrid(options, 44, 3);
+        this.grid = new CardGrid(options, 44, 2, choice.mode().equals(DeckChoice.UPGRADE) ? 3 : 5);
     }
 
     DeckChoice choice() {
@@ -57,9 +57,10 @@ final class DeckChoiceView {
 
     void update(Shell shell, RunScreen screen) {
         layout(shell);
+        String before = spots.focused();
         String picked = spots.update(shell.in);
         if (!bigRow) {
-            grid.scroll(shell, spots);
+            grid.scroll(shell, spots, before);
         }
         if ((shell.in.back || shell.in.mouse.rightPressed()) && choice.cancellable()) {
             shell.run.cancelDeckChoice();
@@ -117,7 +118,7 @@ final class DeckChoiceView {
                 }
             }
         } else {
-            grid.draw(shell, screen, c, spots, selected);
+            grid.draw(shell, screen.cards, c, spots, selected);
             Card focus = grid.focusedCard(spots);
             if (focus != null) {
                 int px = shell.width() - CardRenderer.BIG_W - 14;

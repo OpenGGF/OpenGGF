@@ -15,17 +15,19 @@ import slaytherobotnik.ui.SmallFont;
 public final class SlayScene implements ModScene {
     private final byte[] fontText;
     private final byte[] iconText;
+    private final byte[] cardText;
     private Shell shell;
 
-    public SlayScene(byte[] fontText, byte[] iconText) {
+    public SlayScene(byte[] fontText, byte[] iconText, byte[] cardText) {
         this.fontText = fontText;
         this.iconText = iconText;
+        this.cardText = cardText;
     }
 
     @Override
     public void enter(SceneContext ctx) {
         SmallFont font = new SmallFont(ctx.art(), fontText);
-        Art art = new Art(ctx, iconText);
+        Art art = new Art(ctx, iconText, cardText);
         shell = new Shell(ctx, font, art, Content.build());
         shell.goNow(new TitleScreen());
     }
@@ -50,9 +52,15 @@ public final class SlayScene implements ModScene {
     /**
      * Starts a run and jumps straight into one room, for screenshot tools and debugging:
      * {@code "sonic:42:fight:hcz:big_shaker"} or {@code "tails:7:event:event:slot_machine"}
-     * (character, seed, then {@code fight} or {@code event} and the id).
+     * (character, seed, then {@code fight} or {@code event} and the id), or {@code "compendium:2"}.
      */
     public void debugJump(String command) {
+        if (command.startsWith("compendium")) {
+            // "compendium:N" opens the compendium on tab N.
+            String[] c = command.split(":");
+            shell.goNow(new CompendiumScreen(c.length > 1 ? Integer.parseInt(c[1]) : 0));
+            return;
+        }
         String[] parts = command.split(":", 4);
         Run run = Run.start(shell.catalog, parts[0], Long.parseLong(parts[1]));
         shell.attach(run);
