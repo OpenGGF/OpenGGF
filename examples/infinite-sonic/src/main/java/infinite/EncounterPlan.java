@@ -23,7 +23,7 @@ public final class EncounterPlan {
         // A high route always has a ground patrol beneath it; a zone hazard section has no badnik.
         boolean route = RoutePlan.has(terrain, section);
         if (!route && HazardPlan.at(terrain, section) != null) return null;
-        long random = TerrainLibrary.random(section + TerrainLibrary.SEED + 0x4241444e494bL);
+        long random = TerrainLibrary.random(section + terrain.seed() + 0x4241444e494bL);
         // A quarter of sections are rest space. Separate randomness keeps terrain unchanged.
         int choice = (int) Long.remainderUnsigned(random, 8);
         if (choice < 2 && !route) return null;

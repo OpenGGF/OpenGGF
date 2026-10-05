@@ -73,6 +73,15 @@ Return the continuous matching rate from `gameplayAudioPlaybackRate()` (default
 pitch with the integer step budget. The host releases its audio rate at pause,
 rewind, death, scene changes and teardown; external trace/movie owners retain
 control of their own playback.
+
+A module can also drive the engine's live rewind itself by returning a
+`ScriptedRewind` from `GameModule.scriptedRewind()` (default `null`). While one is
+returned, level play records rewind history even with live rewind switched off. When
+its `requested()` is true the host rewinds with the ordinary presentation, taking
+`stepsThisFrame()` steps per frame and checking `reachedTarget()` on the restored
+state after each, then calls `ended(boolean)` once. Keep the implementation's own
+state out of `rewindAdapters()`: it decides where the restore stops. Infinite Sonic's
+CONTINUE is the worked example.
 The host advances complete simulation ticks, preserving per-tick collision and
 movement. Pause, rewind, external movie/trace ownership, transitions and non-level
 scenes retain their normal pacing. `GameLoop.step()` remains one deterministic tick;

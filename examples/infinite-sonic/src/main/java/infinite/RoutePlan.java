@@ -69,7 +69,7 @@ public final class RoutePlan {
         // Stationary kinds only: a falling platform would drop a rider onto the low path.
         var kinds = terrain.platformKinds().stream().filter(k -> !k.falls()).toList();
         if (kinds.isEmpty()) return null;
-        long random = TerrainLibrary.random(stretch + TerrainLibrary.SEED + 0x524f555445L);
+        long random = TerrainLibrary.random(stretch + terrain.seed() + 0x524f555445L);
         if (Long.remainderUnsigned(random, ODDS) != 0) return null;
         long start = stretch * 4 * 512 + START_OFFSET;
         long end = (stretch * 4 + 2) * 512 + END_OFFSET;

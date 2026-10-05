@@ -24,13 +24,13 @@ public final class MonitorPlan {
     public static Monitor at(TerrainLibrary terrain, long section) {
         if (section < FIRST_SECTION || terrain.isCorridor(section) || terrain.platformRun(section)) return null;
         if (HazardPlan.at(terrain, section) != null) return null;
-        long random = TerrainLibrary.random(section + TerrainLibrary.SEED + 0x534849454cL);
+        long random = TerrainLibrary.random(section + terrain.seed() + 0x534849454cL);
         if (RoutePlan.has(terrain, section)) {
             // Half of high roads carry a monitor on their last platform: the reward for the high line.
             var route = RoutePlan.route(terrain, Math.floorDiv(section, 4));
             var stone = route.stones()[route.stones().length - 1];
             if (Math.floorDiv(stone.worldX(), 512) != section || (random >>> 32 & 1) != 0) return null;
-            return new Monitor(stone.worldX(), stone.surface() - FLOOR_OFFSET, kind(section));
+            return new Monitor(stone.worldX(), stone.surface() - FLOOR_OFFSET, kind(terrain, section));
         }
         if (Long.remainderUnsigned(random, ODDS) != 0) return null;
         for (int offset : new int[] { OFFSET, FALLBACK_OFFSET }) {
@@ -41,14 +41,14 @@ public final class MonitorPlan {
                 int other = terrain.floorAt(x + dx);
                 flat = other >= 0 && Math.abs(other - floor) <= 4;
             }
-            if (flat) return new Monitor(x, floor - FLOOR_OFFSET, kind(section));
+            if (flat) return new Monitor(x, floor - FLOOR_OFFSET, kind(terrain, section));
         }
         return null;
     }
 
     /** Three in five shields, two in five Super Rings. */
-    private static int kind(long section) {
-        long random = TerrainLibrary.random(section + TerrainLibrary.SEED + 0x4b494e44L);
+    private static int kind(TerrainLibrary terrain, long section) {
+        long random = TerrainLibrary.random(section + terrain.seed() + 0x4b494e44L);
         int pick = (int) Long.remainderUnsigned(random, 10);
         return pick < 6 ? SHIELD : RINGS;
     }
