@@ -159,6 +159,48 @@ class TestGolfScenePresentation {
     }
 
     @RequiresRom(SonicGame.SONIC_2)
+    @Test void guestLocalPoseAndCharacterMonitorArtKeepAcceptedFrameAndWorldImmutable() throws Exception {
+        var fixture = launch(0, 352, "tails");
+        var level = GameServices.level();
+        var monitor = level.getCurrentLevel().getObjects().stream()
+                .filter(value -> value.objectId() == 0x26 && (value.subtype() & 15) == 1).findFirst().orElseThrow();
+        NativePositionOps.writeXPosResetSubpixel(fixture.sprite(), monitor.x());
+        NativePositionOps.writeYPosResetSubpixel(fixture.sprite(), Math.max(40, monitor.y() - 64));
+        fixture.camera().setX((short) Math.max(0, monitor.x() - 160));
+        fixture.camera().setY((short) Math.max(0, monitor.y() - 96));
+        fixture.sprite().setInvulnerableFrames(1000); fixture.stepIdleFrames(20);
+        var host = level.captureScene(101, PlayerPresentationPose.nativePose());
+        for (int i = 0; i < 64 && host.tiles().stream().noneMatch(tile -> tile.art().recipe().equals("life/tails")); i++) {
+            fixture.stepIdleFrames(1); host = level.captureScene(101, PlayerPresentationPose.nativePose());
+        }
+        assertTrue(host.tiles().stream().anyMatch(tile -> tile.layer() == ScenePresentationFrame.Layer.OBJECT
+                && tile.art().recipe().equals("life/tails")), "Fixture must display the native Tails 1-up face");
+        NativePositionOps.writeXPosResetSubpixel(fixture.sprite(), monitor.x() - 64);
+        host = level.captureScene(101, PlayerPresentationPose.nativePose());
+        int[] expected;
+        try (var view = level.createScenePresenter()) { view.accept(host); expected = view.image(0, 0).argb(); }
+        bootstrap.dispose(); bootstrap = null; launch(0, 352, "sonic");
+        var before = snapshot();
+        byte[] acceptedBytes = SceneFrameCodec.encode(host);
+        try (var guest = GameServices.level().createScenePresenter()) {
+            guest.accept(SceneFrameCodec.decode(acceptedBytes));
+            assertArrayEquals(expected, guest.image(0, 0).argb(), "Tails 1-up icon must not resolve as the local Sonic icon");
+            var pose = new ScenePlayerPose("tails", monitor.x(), monitor.y() - 32,
+                    new PlayerPresentationPose(PlayerPresentationPose.Kind.DUCK, 0, -1));
+            var local = guest.image(0, 0, pose);
+            guest.draw(7, 3, pose);
+            var charge = new ScenePlayerPose("tails", monitor.x(), monitor.y() - 32,
+                    new PlayerPresentationPose(PlayerPresentationPose.Kind.SPINDASH, 10, 1));
+            assertFalse(Arrays.equals(local.argb(), guest.image(0, 0, charge).argb()));
+            assertFalse(Arrays.equals(expected, local.argb()));
+            assertArrayEquals(expected, guest.image(0, 0).argb(), "Local meter pose must not replace the accepted host frame");
+            assertArrayEquals(acceptedBytes, SceneFrameCodec.encode(host));
+            assertEquals(101, guest.revision());
+            assertUnchanged(before, snapshot());
+        }
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
     @ParameterizedTest @ValueSource(ints = {0, 1})
     void everyPlacedEhzObjectKindUsesPortableProductionArt(int act) throws Exception {
         var fixture = launch(act, 800, "sonic");

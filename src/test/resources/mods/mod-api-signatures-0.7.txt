@@ -470,6 +470,7 @@ CF-ANNOTATION TYPE com.openggf.game.presentation.PlayerPresentationPose visible 
 CF-ANNOTATION TYPE com.openggf.game.presentation.PlayerPresentationPose$Kind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.presentation.SceneFrameCodec visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.presentation.SceneImage visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePlayerPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$ArtReference visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$Layer visible @com.openggf.game.ModApi
@@ -1309,6 +1310,7 @@ CONSTRUCTOR com.openggf.game.patch.ResolutionResult$Resolved public  <init>(com.
 CONSTRUCTOR com.openggf.game.patch.ResolutionResult$Resolved public  <init>(com.openggf.game.GameModule,java.util.Map<com.openggf.game.patch.PatchOwner,java.lang.Throwable>)
 CONSTRUCTOR com.openggf.game.presentation.PlayerPresentationPose public  <init>(com.openggf.game.presentation.PlayerPresentationPose$Kind,long,int)
 CONSTRUCTOR com.openggf.game.presentation.SceneImage public  <init>(int,int,int[])
+CONSTRUCTOR com.openggf.game.presentation.ScenePlayerPose public  <init>(java.lang.String,int,int,com.openggf.game.presentation.PlayerPresentationPose)
 CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame public  <init>(long,int,int,int,int,int,int,int[],java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Tile>,java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Primitive>)
 CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$ArtReference public  <init>(java.lang.String,int)
 CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$Primitive public  <init>(int,com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind,int,java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Vertex>)
@@ -6656,6 +6658,13 @@ METHOD com.openggf.game.presentation.SceneImage public  int[] argb()
 METHOD com.openggf.game.presentation.SceneImage public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.presentation.SceneImage public,final  int hashCode()
 METHOD com.openggf.game.presentation.SceneImage public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.ScenePlayerPose public  com.openggf.game.presentation.PlayerPresentationPose pose()
+METHOD com.openggf.game.presentation.ScenePlayerPose public  int centreX()
+METHOD com.openggf.game.presentation.ScenePlayerPose public  int centreY()
+METHOD com.openggf.game.presentation.ScenePlayerPose public  java.lang.String character()
+METHOD com.openggf.game.presentation.ScenePlayerPose public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.ScenePlayerPose public,final  int hashCode()
+METHOD com.openggf.game.presentation.ScenePlayerPose public,final  java.lang.String toString()
 METHOD com.openggf.game.presentation.ScenePresentationFrame public  int act()
 METHOD com.openggf.game.presentation.ScenePresentationFrame public  int backdropArgb()
 METHOD com.openggf.game.presentation.ScenePresentationFrame public  int cameraX()
@@ -6713,9 +6722,11 @@ METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public,final 
 METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public,final  java.lang.String toString()
 METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  boolean accept(com.openggf.game.presentation.ScenePresentationFrame)
 METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  com.openggf.game.presentation.SceneImage image(int,int)
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  com.openggf.game.presentation.SceneImage image(int,int,com.openggf.game.presentation.ScenePlayerPose)
 METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  long revision()
 METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  void close()
 METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  void draw(int,int)
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  void draw(int,int,com.openggf.game.presentation.ScenePlayerPose)
 METHOD com.openggf.game.profiles.touchresponse.TouchActorContextPolicy public,static  com.openggf.game.profiles.touchresponse.TouchActorContextPolicy valueOf(java.lang.String)
 METHOD com.openggf.game.profiles.touchresponse.TouchActorContextPolicy public,static  com.openggf.game.profiles.touchresponse.TouchActorContextPolicy[] values()
 METHOD com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy public,static  com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy valueOf(java.lang.String)
@@ -15061,6 +15072,10 @@ RECORD-COMPONENT com.openggf.game.presentation.PlayerPresentationPose tick long
 RECORD-COMPONENT com.openggf.game.presentation.SceneImage argb int[]
 RECORD-COMPONENT com.openggf.game.presentation.SceneImage height int
 RECORD-COMPONENT com.openggf.game.presentation.SceneImage width int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePlayerPose centreX int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePlayerPose centreY int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePlayerPose character java.lang.String
+RECORD-COMPONENT com.openggf.game.presentation.ScenePlayerPose pose com.openggf.game.presentation.PlayerPresentationPose
 RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame act int
 RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame backdropArgb int
 RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame cameraX int
@@ -17853,6 +17868,7 @@ TYPE record public,final com.openggf.game.mutation.MutationEffects SUPER java.la
 TYPE record public,final com.openggf.game.patch.GameplayLaunchRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.game.presentation.PlayerPresentationPose SUPER java.lang.Record
 TYPE record public,final com.openggf.game.presentation.SceneImage SUPER java.lang.Record
+TYPE record public,final com.openggf.game.presentation.ScenePlayerPose SUPER java.lang.Record
 TYPE record public,final com.openggf.game.presentation.ScenePresentationFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.game.profiles.touchresponse.TouchResponseProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.recording.RecordingDeterminismMetadata SUPER java.lang.Record
@@ -18616,6 +18632,7 @@ TYPE-ANNOTATION com.openggf.game.presentation.PlayerPresentationPose @com.opengg
 TYPE-ANNOTATION com.openggf.game.presentation.PlayerPresentationPose$Kind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.presentation.SceneFrameCodec @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.presentation.SceneImage @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePlayerPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$ArtReference @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$Layer @com.openggf.game.ModApi

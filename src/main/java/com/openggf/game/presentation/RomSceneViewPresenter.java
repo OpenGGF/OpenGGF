@@ -17,6 +17,7 @@ final class RomSceneViewPresenter implements SceneViewPresenter {
     private final RomSceneArtCatalog art;
     private final GraphicsManager graphics;
     private final int width, height;
+    private final ScenePoseProjector poses;
     private ScenePresentationFrame frame;
     private boolean closed;
     private TexturedQuadRenderer quad;
@@ -24,7 +25,11 @@ final class RomSceneViewPresenter implements SceneViewPresenter {
     private ByteBuffer rgba;
 
     RomSceneViewPresenter(RomSceneArtCatalog art, GraphicsManager graphics, int width, int height) {
-        this.art = art; this.graphics = graphics; this.width = width; this.height = height;
+        this(art, graphics, width, height, null);
+    }
+
+    RomSceneViewPresenter(RomSceneArtCatalog art, GraphicsManager graphics, int width, int height, ScenePoseProjector poses) {
+        this.art = art; this.graphics = graphics; this.width = width; this.height = height; this.poses = poses;
         if (width < 1 || width > 800 || height < 1 || height > 512) throw new IllegalArgumentException("Unsupported viewport");
     }
 
@@ -48,8 +53,40 @@ final class RomSceneViewPresenter implements SceneViewPresenter {
         return SceneCompositor.compose(frame, art, offsetX, offsetY);
     }
 
+    @Override public SceneImage image(int offsetX, int offsetY, ScenePlayerPose player) {
+        if (player.pose().kind() == PlayerPresentationPose.Kind.NATIVE) return image(offsetX, offsetY);
+        if (closed || frame == null) throw new IllegalStateException("No accepted scene");
+        if (poses == null) throw new IllegalStateException("No local native pose resources");
+        var tiles = new java.util.ArrayList<ScenePresentationFrame.Tile>();
+        int[] insertions = new int[frame.tiles().size() + 1];
+        boolean inserted = false;
+        boolean priority = frame.tiles().stream().filter(tile -> tile.layer() == ScenePresentationFrame.Layer.PLAYER)
+                .findFirst().map(ScenePresentationFrame.Tile::priority).orElse(false);
+        for (int i = 0; i < frame.tiles().size(); i++) {
+            insertions[i] = tiles.size();
+            var tile = frame.tiles().get(i);
+            if (tile.layer() == ScenePresentationFrame.Layer.PLAYER) {
+                if (!inserted) { poses.project(tiles, player, frame.cameraX(), frame.cameraY(), priority); inserted = true; }
+            } else tiles.add(tile);
+        }
+        insertions[frame.tiles().size()] = tiles.size();
+        if (!inserted) poses.project(tiles, player, frame.cameraX(), frame.cameraY(), priority);
+        var primitives = frame.primitives().stream().map(value -> new ScenePresentationFrame.Primitive(
+                insertions[value.beforeTile()], value.kind(), value.method(), value.vertices())).toList();
+        var view = new ScenePresentationFrame(frame.revision(), frame.act(), frame.width(), frame.height(),
+                frame.cameraX(), frame.cameraY(), frame.backdropArgb(), frame.paletteArgb(), tiles, primitives);
+        return SceneCompositor.compose(view, art, offsetX, offsetY);
+    }
+
+    @Override public void draw(int offsetX, int offsetY, ScenePlayerPose player) {
+        submit(image(offsetX, offsetY, player));
+    }
+
     @Override public void draw(int offsetX, int offsetY) {
-        SceneImage image = image(offsetX, offsetY);
+        submit(image(offsetX, offsetY));
+    }
+
+    private void submit(SceneImage image) {
         if (graphics.isHeadlessMode()) return;
         graphics.flushPatternBatch();
         graphics.registerCommand((cameraX, cameraY, cameraWidth, cameraHeight) -> drawImage(image));

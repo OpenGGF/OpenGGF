@@ -36,7 +36,7 @@ import java.util.logging.Logger;
  * This provider lazily initializes the art loader when first needed, obtaining the ROM
  * from RomManager.
  */
-public class Sonic2ObjectArtProvider implements ObjectArtProvider,
+public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.game.presentation.RomSceneArtSource,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArtProvider.class.getName());
 
@@ -62,6 +62,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
                     (artLoader, zoneIndex) -> artLoader.loadSidewaysPformSheet()));
 
     private Sonic2ObjectArt artLoader;
+    private Rom sceneRom;
     private ObjectArtData artData;
     private int currentZoneIndex = -2; // Use -2 to distinguish from explicit -1
     private int loadEpoch = 0;
@@ -129,6 +130,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
      */
     public Sonic2ObjectArtProvider(Rom rom, RomByteReader reader) {
         this.artLoader = new Sonic2ObjectArt(rom, reader);
+        this.sceneRom = rom;
         this.mainCharacterLifeIcon = null;
         this.sheetPatches = List.of();
         this.resultsSheetOverlay = java.util.function.UnaryOperator.identity();
@@ -141,6 +143,21 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
                 throw new IllegalStateException("ROM not loaded");
             }
             artLoader = new Sonic2ObjectArt(rom, RomByteReader.fromRom(rom));
+            sceneRom = rom;
+        }
+    }
+
+    /** Both stock life-counter source recipes stay resident independently of the lead character's VRAM slot.
+     * PlrList_Std1 and PlrList_TailsLife select these same native ROM Nemesis sources.
+     */
+    @Override
+    public Map<String, Pattern[]> sceneArtRecipes() {
+        if (sceneRom == null) throw new IllegalStateException("Object ROM resources are not loaded");
+        try {
+            return Map.of("life/sonic", com.openggf.util.PatternDecompressor.nemesis(sceneRom, Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR),
+                    "life/tails", com.openggf.util.PatternDecompressor.nemesis(sceneRom, Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR));
+        } catch (IOException e) {
+            throw new java.io.UncheckedIOException("Life-icon ROM recipes could not be decoded", e);
         }
     }
 
