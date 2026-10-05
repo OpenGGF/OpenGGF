@@ -557,3 +557,14 @@ Main checkout, `feature/ai-infinite-sonic`, base `2fd4004444`; mod, tests and do
 
 **195 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not covered:
 the GL-rendered ghost (headless draws nothing) and live play.
+
+## Danger sweat and the TOP line (0.21.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `72667b1958`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Danger state, flashing rings, TOP | `sonicSweatsAndTheRingCountFlashesWhileHeCannotPayTheToll` | 0 and 19 rings in danger, 20 rings and a shield not; the sweat counter runs and resets; the ring count alternates; TOP shows the saved best, then the run's own score once ahead |
+
+**196 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not covered:
+the rendered drops and HUD layout (headless draws nothing) and live play.

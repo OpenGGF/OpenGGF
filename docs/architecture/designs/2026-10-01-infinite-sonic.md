@@ -855,3 +855,18 @@ countdown and score wait; `ChallengeClock.resumeFrom` restores the death-time cl
 ramps back to the stage over 90 frames (a `step` field, in the snapshot, replaces the fixed
 ramp until the stage is reached). Previously Sonic was revived at full speed on the frame
 CONTINUE was pressed, at the full death-time pace.
+
+## Danger sweat and the TOP line (0.21.0)
+
+Follow-up on `72667b1958`, 2026-10-05. Requests: warn the player when Sonic has fewer than 20
+rings and is "in danger", perhaps by making him sweat; show the top score above the score.
+
+Danger means no shield and fewer rings than the 20-ring toll (`CourseGuard.RING_TOLL`), so the
+next hit takes every ring or is fatal; it is off during the death menu and the CONTINUE
+sequence. Rejected: recolouring Sonic's palette (line 0 is shared with other objects and the
+ROM art has no alternate pose). Instead the controller draws 4x5 code-drawn drops in world
+space in front of Sonic: one leaves the back of his head every 28 updates (14 with no rings),
+alternating sides, arcing up and falling over 18 updates and fading at the end; a
+`dangerFrames` counter (rewound with the controller) drives them. The HUD ring count flashes
+red eight updates on, eight off. The HUD now reads TOP (the zone's best, or the run's score
+once ahead), SCORE, SPEED and RINGS/LIVES; the speed-up warning moved down to y 72 to clear it.

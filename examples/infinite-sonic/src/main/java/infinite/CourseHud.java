@@ -75,13 +75,22 @@ public final class CourseHud {
     public static void draw(ObjectServices services, CourseController course) {
         float board = course.openingBoardAlpha();
         if (board > 0) drawBoard(services, course, board);
-        text(services, "SCORE " + services.gameState().getScore(), 16, 8, true);
-        text(services, speedText(course) + "  " + countdownText(course), 16, 24, true);
-        text(services, livesText(services, course), 16, 40, true);
+        text(services, topText(course), 16, 8, true);
+        text(services, "SCORE " + services.gameState().getScore(), 16, 24, true);
+        text(services, speedText(course) + "  " + countdownText(course), 16, 40, true);
+        String rings = "RINGS " + services.levelGamestate().getRings();
+        if (ringsFlashing(course)) {
+            // In danger the ring count flashes red, as the stock counter does at zero.
+            glyphs(services, rings, 17, 57, 2, 0f, 0f, 0f, 1f);
+            glyphs(services, rings, 16, 56, 2, 1f, 0.15f, 0.1f, 1f);
+        } else {
+            text(services, rings, 16, 56, true);
+        }
+        text(services, "  LIVES " + course.displayLives(), 16 + rings.length() * 8, 56, true);
         String warning = warningText(course);
         if (!warning.isEmpty()) {
             text(services, warning, (services.camera().getWidth() - warning.length() * 12) / 2,
-                    64, true, 3);
+                    72, true, 3);
         }
         if (course.celebrating() && course.celebrateFrames() / 6 % 2 == 0) {
             glyphs(services, TOP_SCORE, (services.camera().getWidth() - TOP_SCORE.length() * 12) / 2, 88, 3,
@@ -112,6 +121,14 @@ public final class CourseHud {
         int x = (services.camera().getWidth() - width * 8) / 2;
         for (int i = 0; i < lines.size(); i++) text(services, lines.get(i), x, top + i * 16, true);
         centred(services, "PRESS SPACE", top + lines.size() * 16 + 8);
+    }
+    /** The zone's top score, above the run's own score. */
+    public static String topText(CourseController course) {
+        return "TOP " + course.topScore();
+    }
+    /** The ring count flashes red (eight updates on, eight off) while Sonic is in danger. */
+    public static boolean ringsFlashing(CourseController course) {
+        return course.inDanger() && course.dangerFrames() / 8 % 2 == 0;
     }
     public static String livesText(ObjectServices services, CourseController course) {
         return "RINGS " + services.levelGamestate().getRings() + "  LIVES " + course.displayLives();

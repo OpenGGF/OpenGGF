@@ -447,6 +447,46 @@ class TestInfiniteSonic {
         assertEquals(5, submit.invoke(leaderboard(), 0, 100L, 100_009, 1.0), "a tie places after the earlier run");
     }
 
+    @Test void sonicSweatsAndTheRingCountFlashesWhileHeCannotPayTheToll() throws Exception {
+        Files.createDirectories(leaderboardFile().getParent());
+        Files.writeString(leaderboardFile(), "0 5000 125\n");
+        var fixture = launch(WidescreenAspect.NATIVE_4_3);
+        fixture.stepIdleFrames(2);
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(20000);
+        var hud = loader.loadClass("infinite.CourseHud");
+        var flashing = hud.getMethod("ringsFlashing", controller().getClass());
+        var rings = GameServices.level().getLevelGamestate();
+        assertEquals("TOP 5000", hud.getMethod("topText", controller().getClass()).invoke(null, controller()),
+                "the zone's top score heads the HUD");
+        rings.setRings(0);
+        assertTrue(controllerFlag("inDanger"), "no rings, no shield: one hit away");
+        boolean on = false, off = false;
+        for (int i = 0; i < 40; i++) {
+            stepTerrain(fixture, 1);
+            boolean flash = (boolean) flashing.invoke(null, controller());
+            on |= flash;
+            off |= !flash;
+        }
+        assertTrue(controllerInt("dangerFrames") >= 40, "the sweat clock runs");
+        assertTrue(on && off, "the ring count flashes");
+        rings.setRings(19);
+        stepTerrain(fixture, 1);
+        assertTrue(controllerFlag("inDanger"), "19 rings cannot pay the 20-ring toll");
+        rings.setRings(20);
+        stepTerrain(fixture, 1);
+        assertFalse(controllerFlag("inDanger"), "20 rings can");
+        assertEquals(0, controllerInt("dangerFrames"));
+        assertFalse((boolean) flashing.invoke(null, controller()));
+        rings.setRings(3);
+        player.giveShield();
+        stepTerrain(fixture, 1);
+        assertFalse(controllerFlag("inDanger"), "a shield takes the next hit");
+        GameServices.gameState().addScore(10_000);
+        assertEquals("TOP " + GameServices.gameState().getScore(),
+                hud.getMethod("topText", controller().getClass()).invoke(null, controller()), "a run ahead is the top");
+    }
+
     @Test void idleTitleShowsTheZoneLeaderboardsThenReturns() throws Exception {
         Files.createDirectories(leaderboardFile().getParent());
         Files.writeString(leaderboardFile(), "0 5000 125\n4 700 100\n");

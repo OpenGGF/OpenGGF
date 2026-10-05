@@ -45,6 +45,9 @@ public final class CourseController extends AbstractObjectInstance implements Re
     static final int READY_FRAMES = 120, READY_INPUT_DELAY = 20, GO_FRAMES = 40;
     // A restart spot needs pit-free floor this far ahead (about 1.4s at the course top speed).
     static final int RESUME_RUNWAY = 448;
+    // Sweat: a drop leaves Sonic's head every 28 updates while in danger, every 14 with no rings;
+    // each takes 18 updates to arc away and fall.
+    static final int SWEAT_PERIOD = 28, SWEAT_PERIOD_BROKE = 14, SWEAT_LIFE = 18;
     /** CONTINUE phases. */
     static final int RESUME_NONE = 0, RESUME_GLIDE = 1, RESUME_READY = 2;
     private int scrollFraction;
@@ -80,6 +83,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private int cameraFromX;
     private int cameraToX;
     private int goFrames;
+    // Updates spent in danger (fewer than 20 rings, no shield); drives the sweat drops.
+    private int dangerFrames;
     // Sonic's last living pose and where he died, which the ghost starts from.
     private int ghostFrame;
     private boolean ghostFlip;
@@ -112,6 +117,22 @@ public final class CourseController extends AbstractObjectInstance implements Re
     public float openingBoardAlpha() {
         if (!started || gameOver || openingFrames >= OPENING_BOARD_FRAMES) return 0f;
         return Math.min(1f, (float) (OPENING_BOARD_FRAMES - openingFrames) / OPENING_BOARD_FADE);
+    }
+    /**
+     * Sonic is in danger: no shield and too few rings to pay the 20-ring toll, so the next hit
+     * knocks him back and takes every ring (or, with none, is fatal).
+     */
+    public boolean inDanger() {
+        if (gameOver || resumePhase != RESUME_NONE) return false;
+        var player = services().camera().getFocusedSprite();
+        return player != null && !player.getDead() && !player.hasShield()
+                && services().levelGamestate().getRings() < CourseGuard.RING_TOLL;
+    }
+    /** Updates spent in danger, for the sweat and the flashing ring count. */
+    public int dangerFrames() { return dangerFrames; }
+    /** The zone's top score, counting this run once it is ahead. */
+    public int topScore() {
+        return Math.max(services().gameService(Leaderboard.class).best(zone(), runId()), services().gameState().getScore());
     }
     /** RESUME_NONE, RESUME_GLIDE (the ghost glides back) or RESUME_READY (waiting to go). */
     public int resumePhase() { return resumePhase; }
@@ -149,6 +170,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
     @Override public int getPriorityBucket() { return 0; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         drawGhost();
+        drawSweat();
         CourseHud.draw(services(), this);
     }
     private ChallengeClock clock() { return services().gameService(ChallengeClock.class); }
@@ -212,6 +234,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         scoreFraction %= 256;
         awardRingLives();
         celebrateTopScore();
+        dangerFrames = inDanger() ? dangerFrames + 1 : 0;
         rememberSafeSpot(player);
         var config = services().configuration();
         int fps = "PAL".equalsIgnoreCase(config.getString(com.openggf.configuration.SonicConfiguration.REGION))
@@ -480,6 +503,44 @@ public final class CourseController extends AbstractObjectInstance implements Re
             } finally {
                 graphics.flushPatternBatch();
                 graphics.endGhostRenderEffect();
+            }
+        }
+    }
+
+    /**
+     * Sweat while in danger: light-blue drops that leave the back of Sonic's head, arc away and
+     * fall. Code-drawn pixels in world space, in front of Sonic.
+     */
+    private void drawSweat() {
+        if (dangerFrames == 0 || !inDanger()) return;
+        var player = services().camera().getFocusedSprite();
+        if (player == null || player.isHidden()) return;
+        int period = services().levelGamestate().getRings() == 0 ? SWEAT_PERIOD_BROKE : SWEAT_PERIOD;
+        // Away from the way he faces: behind his head.
+        int away = player.getRenderHFlip() ? 1 : -1;
+        for (int born = dangerFrames - dangerFrames % period; born > dangerFrames - SWEAT_LIFE; born -= period) {
+            int age = dangerFrames - born;
+            if (born <= 0 || age < 0) continue;
+            // Alternate drops fly from either side of his head.
+            int side = (born / period) % 2 == 0 ? away : -away;
+            int x = player.getCentreX() + side * (6 + age);
+            int y = player.getCentreY() - 14 - 2 * age + age * age / 6;
+            drawDrop(x, y, age < SWEAT_LIFE - 4 ? 1f : (SWEAT_LIFE - age) / 4f);
+        }
+    }
+
+    /** A 4x5 teardrop with a white glint. */
+    private void drawDrop(int x, int y, float alpha) {
+        String[] rows = {".bb.", ".bb.", "bwbb", "bbbb", ".bb."};
+        var graphics = services().graphicsManager();
+        for (int row = 0; row < rows.length; row++) {
+            for (int column = 0; column < 4; column++) {
+                char c = rows[row].charAt(column);
+                if (c == '.') continue;
+                float r = c == 'w' ? 1f : 0.55f, g = c == 'w' ? 1f : 0.85f;
+                int px = x - 2 + column, py = y - 2 + row;
+                graphics.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, 0,
+                        GLCommand.BlendType.ONE_MINUS_SRC_ALPHA, r, g, 1f, alpha, px, py, px + 1, py + 1));
             }
         }
     }

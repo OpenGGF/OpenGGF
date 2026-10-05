@@ -84,7 +84,11 @@ palette and layout come from the zone's act 1 in your ROM. Both
 are drawn in code over the stock ROM title, which otherwise behaves normally. Course
 title cards show only the zone name (no "ACT n"), because each zone is a single endless run.
 
-The HUD shows score, current speed, time until the next speedup, rings and lives.
+The HUD shows the zone's top score (TOP, which becomes your own once you pass it), your score,
+current speed, time until the next speedup, rings and lives. While Sonic is **in danger** (no
+shield and fewer than 20 rings, so the next hit knocks him back and takes every ring, or kills
+him with none) he sweats: little drops fly off the back of his head (twice as often with no
+rings), and the ring count flashes red.
 The last five seconds also show a large centered countdown with a chime each
 second. Music and sound effects speed up and rise in pitch with the challenge;
 pause, rewind, game over and leaving the level release the playback rate.
