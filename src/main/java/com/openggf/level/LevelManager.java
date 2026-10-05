@@ -152,6 +152,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     Game game;
     GameModule gameModule;
     private boolean levelEntryBegun;
+    private com.openggf.game.presentation.LoadedLevelScene sceneResources;
+    private Level sceneResourceLevel;
+    private long sceneResourceGeneration = -1;
 
     public Game getGame() {
         return game;
@@ -159,6 +162,45 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     public GameModule getGameModule() {
         return gameModule;
+    }
+
+    /** Project the current visible course without ticking camera, objects, animation or loading windows. */
+    public com.openggf.game.presentation.ScenePresentationFrame captureScene(
+            long revision, com.openggf.game.presentation.PlayerPresentationPose pose) {
+        var resources = sceneResources();
+        var sprites = levelRenderer.captureSceneSpriteTable(spriteManager);
+        int[] horizontal = parallaxManager == null ? new int[cachedScreenHeight] : parallaxManager.getHScrollForShader().clone();
+        var renderMode = levelRenderer.getCurrentAdvancedRenderFrameState();
+        if (!renderMode.enableForegroundHeatHaze() && !renderMode.enablePerLineForegroundScroll()) {
+            // The production FG tile pass uses uniform camera X unless its render mode
+            // selects per-line scrolling. EHZ's unwritten final HScroll words affect BG only.
+            int foreground = (-camera.getXWithShake() & 0xFFFF) << 16;
+            for (int line = 0; line < horizontal.length; line++) horizontal[line] = foreground | (horizontal[line] & 0xFFFF);
+        }
+        int foregroundY = parallaxManager == null ? camera.getY() : parallaxManager.getVscrollFactorFG();
+        int backgroundY = parallaxManager == null ? 0 : parallaxManager.getVscrollFactorBG();
+        return resources.capture(revision, java.util.Objects.requireNonNull(pose), sprites, camera.getFocusedSprite(),
+                camera.getXWithShake(), camera.getYWithShake(), cachedScreenWidth, cachedScreenHeight,
+                horizontal, foregroundY, backgroundY);
+    }
+
+    /** Create a presentation-only consumer using art decoded from this session's own ROM load. */
+    public com.openggf.game.presentation.SceneViewPresenter createScenePresenter() {
+        return sceneResources().presenter(cachedScreenWidth, cachedScreenHeight);
+    }
+
+    private com.openggf.game.presentation.LoadedLevelScene sceneResources() {
+        if (level == null) throw new IllegalStateException("No loaded course resources");
+        if (sceneResources == null || sceneResourceLevel != level || sceneResourceGeneration != completedProductionLoadGeneration) {
+            try {
+                sceneResources = new com.openggf.game.presentation.LoadedLevelScene(this, graphicsManager);
+                sceneResourceLevel = level;
+                sceneResourceGeneration = completedProductionLoadGeneration;
+            } catch (IOException e) {
+                throw new java.io.UncheckedIOException("ROM scene resources could not be decoded", e);
+            }
+        }
+        return sceneResources;
     }
 
     GameModule activeGameModule() {

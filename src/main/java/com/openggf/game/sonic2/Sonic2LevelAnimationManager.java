@@ -16,7 +16,7 @@ import java.nio.ByteBuffer;
  * snapshot state from both halves so a rewind restores visual state fully.
  */
 public final class Sonic2LevelAnimationManager implements AnimatedPatternManager, AnimatedPaletteManager,
-        RewindSnapshottable<PatternAnimatorSnapshot> {
+        RewindSnapshottable<PatternAnimatorSnapshot>, com.openggf.game.presentation.RomSceneArtSource {
 
     /**
      * Magic byte distinguishing the combined (pattern + palette) extra-bytes
@@ -43,6 +43,11 @@ public final class Sonic2LevelAnimationManager implements AnimatedPatternManager
     @Override
     public String key() {
         return patternAnimator.key();
+    }
+
+    @Override
+    public java.util.Map<String, com.openggf.level.Pattern[]> sceneArtRecipes() {
+        return patternAnimator.sceneArtRecipes();
     }
 
     @Override

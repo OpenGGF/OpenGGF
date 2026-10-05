@@ -35,6 +35,7 @@ public final class SpritePresentation {
     }
 
     /** A version of a mutable virtual DPLC slot, packed as four immutable groups of sixteen pixels. */
+    @com.openggf.game.ModApi
     public record PatternVersion(long a, long b, long c, long d) { }
 
     public record Attributes(int palette, boolean hFlip, boolean vFlip, boolean priority) { }
@@ -150,6 +151,33 @@ public final class SpritePresentation {
 
     public static void layer(GraphicsManager graphics, Layer layer) {
         if (graphics.spritePresentationBuilder != null) graphics.spritePresentationBuilder.layer = layer;
+    }
+
+    /** Internal value bridge: procedural native sprite geometry becomes bounded scene values.
+     * GL command records stay package-private and are not added to the creator contract.
+     */
+    public static com.openggf.game.presentation.ScenePresentationFrame.Primitive scenePrimitive(Primitive primitive, int before) {
+        int method;
+        List<GLCommand.PresentationPrimitive> values;
+        if (primitive.primitive() instanceof GLCommand.PresentationPrimitive value) {
+            method = Math.max(0, value.method()); values = List.of(value);
+        } else if (primitive.primitive() instanceof GLCommandGroup.PresentationGroup group) {
+            method = group.method(); values = group.vertices();
+        } else throw new IllegalStateException("Opaque geometry cannot be transmitted");
+        var kind = values.getFirst().type() == GLCommand.CommandType.RECTI
+                ? com.openggf.game.presentation.ScenePresentationFrame.PrimitiveKind.RECTANGLE
+                : com.openggf.game.presentation.ScenePresentationFrame.PrimitiveKind.VERTEX;
+        var vertices = new ArrayList<com.openggf.game.presentation.ScenePresentationFrame.Vertex>();
+        for (var value : values) {
+            if (value.blend() != GLCommand.BlendType.SOLID && value.blend() != GLCommand.BlendType.ONE_MINUS_SRC_ALPHA) {
+                throw new IllegalStateException("Unsupported scene primitive blend");
+            }
+            int color = Math.round(value.alpha() * 255) << 24 | Math.round(value.red() * 255) << 16
+                    | Math.round(value.green() * 255) << 8 | Math.round(value.blue() * 255);
+            vertices.add(new com.openggf.game.presentation.ScenePresentationFrame.Vertex(
+                    value.x1(), value.y1(), value.x2(), value.y2(), color));
+        }
+        return new com.openggf.game.presentation.ScenePresentationFrame.Primitive(before, kind, method, vertices);
     }
 
 }

@@ -21,7 +21,8 @@ import java.util.logging.Logger;
 /**
  * Updates Sonic 2 zone animated tiles using the Dynamic_Normal scripts.
  */
-class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottable<PatternAnimatorSnapshot> {
+class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottable<PatternAnimatorSnapshot>,
+        com.openggf.game.presentation.RomSceneArtSource {
     private static final Logger LOGGER = Logger.getLogger(Sonic2PatternAnimator.class.getName());
     // Disassembly: loc_3FF94 (Animated_EHZ)
     private static final int ANIMATED_EHZ_ADDR = 0x3FF94;
@@ -158,6 +159,15 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
     @Override
     public String key() {
         return "pattern-animator";
+    }
+
+    @Override
+    public java.util.Map<String, com.openggf.level.Pattern[]> sceneArtRecipes() {
+        var recipes = new java.util.LinkedHashMap<String, com.openggf.level.Pattern[]>();
+        for (int i = 0; i < scripts.size(); i++) {
+            recipes.put("animation/" + i, scripts.get(i).copySceneArtPatterns());
+        }
+        return java.util.Map.copyOf(recipes);
     }
 
     @Override
