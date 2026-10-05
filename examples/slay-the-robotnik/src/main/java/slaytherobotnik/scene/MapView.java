@@ -205,7 +205,7 @@ final class MapView implements RunScreen.RoomView {
         int areaH = h - areaTop - LEGEND_H;
         SceneImage level = shell.art.levelOverview(shell.run.act().zone(), shell.run.act().zoneAct(), areaH);
         if (level == null) {
-            Backdrops.zone(shell, c, shell.run.act().zone(), (long) scroll * 2 + shell.ticks / 4);
+            Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), (long) scroll * 2 + shell.ticks / 4);
             c.fill(0, 0, w, h, 0x80000818);
             return;
         }

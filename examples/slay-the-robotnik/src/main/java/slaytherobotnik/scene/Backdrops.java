@@ -1,6 +1,8 @@
 package slaytherobotnik.scene;
 
+import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.scene.SceneDraw;
 import slaytherobotnik.ui.Colors;
 import slaytherobotnik.ui.Gfx;
 
@@ -43,6 +45,54 @@ public final class Backdrops {
      * 11 Death Egg.)
      */
     public static void zone(Shell shell, SceneCanvas c, int zone, long scroll) {
+        zone(shell, c, zone, 0, scroll);
+    }
+
+    /**
+     * The zone act's own background from the ROM, with its stock parallax bands, scrolled by
+     * {@code scroll}; the drawn hills below when the game cannot provide one.
+     */
+    public static void zone(Shell shell, SceneCanvas c, int zone, int act, long scroll) {
+        SceneBackdrop bg = shell.art.zoneBackdrop(zone, act);
+        if (bg != null) {
+            rom(c, bg, windowTop(zone, act), shell.width(), shell.height(), scroll, shell.ticks);
+            return;
+        }
+        drawn(shell, c, zone, scroll);
+    }
+
+    /** Which backdrop row sits at the top of the screen: the part of each zone that reads best. */
+    private static int windowTop(int zone, int act) {
+        return switch (zone) {
+            case 0 -> act == 0 ? 270 : 416;   // Angel Island: clouds over the sea; act 2: the burning trees
+            case 1 -> 230;                    // Hydrocity: the lower colonnade above the waterline
+            case 6 -> 20;                     // Launch Base: the Death Egg on its launch pad
+            case 10 -> 560;                   // Sky Sanctuary: open sky over the cloud sea
+            default -> 0;
+        };
+    }
+
+    /** Draws each band of {@code bg} that falls on screen, repeated across the width. */
+    private static void rom(SceneCanvas c, SceneBackdrop bg, int top, int w, int h, long scroll, long ticks) {
+        int imageW = bg.image().width();
+        int imageH = bg.image().height();
+        top = Math.max(0, Math.min(top, imageH - h));
+        for (SceneBackdrop.Band band : bg.bands()) {
+            int y0 = Math.max(band.top(), top);
+            int y1 = Math.min(band.top() + band.height(), top + h);
+            if (y0 >= y1) {
+                continue;
+            }
+            for (int x = -bg.column(band, scroll, ticks); x < w; x += imageW) {
+                c.drawRegion(bg.image(), 0, y0, imageW, y1 - y0, x, y0 - top, imageW, y1 - y0, SceneDraw.plain());
+            }
+        }
+        if (imageH - top < h) {
+            c.fill(0, imageH - top, w, h - (imageH - top), 0xFF000000);
+        }
+    }
+
+    private static void drawn(Shell shell, SceneCanvas c, int zone, long scroll) {
         int w = shell.width();
         int h = shell.height();
         int skyTop;

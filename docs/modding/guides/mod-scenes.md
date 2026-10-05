@@ -152,6 +152,14 @@ canvas.draw(rhinobot.frame(0), 200, 120, SceneDraw.plain());
   for its children. Slay the Robotnik's `scene/EnemyVisuals.java` does this for every
   boss it shows, citing the disassembly tables.
 
+For Sonic 3 & Knuckles, `rom.zoneBackdrop(zone, act)` returns a zone's background as a
+`SceneBackdrop`: one picture cut into horizontal bands with the stock parallax speeds (its
+javadoc shows the drawing loop), and `rom.levelOverview(zone, act, maxHeight)` returns a
+zoomed-out picture of the act's whole level. Both are built from the level data without
+starting a level and return null for zones the engine cannot picture. Slay the Robotnik
+draws fights in front of the backdrop (`scene/Backdrops`) and its act maps over the overview
+(`scene/MapView`).
+
 The engine's test tree has a CPU-only tool to see every frame of a sprite at once:
 
 ```bash

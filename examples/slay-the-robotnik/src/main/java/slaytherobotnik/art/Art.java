@@ -1,5 +1,6 @@
 package slaytherobotnik.art;
 
+import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneRomArt;
@@ -18,6 +19,8 @@ public final class Art {
     private final Map<String, SceneImage> icons;
     private final Map<String, SceneSpriteSet> characterSets = new HashMap<>();
     private final Map<String, SceneSpriteSet> romSets = new HashMap<>();
+    private final Map<String, SceneImage> overviews = new HashMap<>();
+    private final Map<String, SceneBackdrop> backdrops = new HashMap<>();
     private SceneImage blank;
 
     private final CardRecipes cards;
@@ -93,10 +96,35 @@ public final class Art {
 
     /**
      * A zoomed-out render of a zone act's level, at most {@code maxHeight} pixels tall, or null
-     * when the game cannot render one. Pending the engine's level-overview support.
+     * when the game cannot render one ({@link SceneRomArt#levelOverview}).
      */
     public SceneImage levelOverview(int zone, int act, int maxHeight) {
-        return null;
+        String key = zone + ":" + act + ":" + maxHeight;
+        if (!overviews.containsKey(key)) {
+            SceneImage image = null;
+            try {
+                image = hasRom() ? rom().levelOverview(zone, act, maxHeight) : null;
+            } catch (RuntimeException e) {
+                image = null;
+            }
+            overviews.put(key, image);
+        }
+        return overviews.get(key);
+    }
+
+    /** A zone act's parallax background from the ROM ({@link SceneRomArt#zoneBackdrop}), or null. */
+    public SceneBackdrop zoneBackdrop(int zone, int act) {
+        String key = zone + ":" + act;
+        if (!backdrops.containsKey(key)) {
+            SceneBackdrop backdrop = null;
+            try {
+                backdrop = hasRom() ? rom().zoneBackdrop(zone, act) : null;
+            } catch (RuntimeException e) {
+                backdrop = null;
+            }
+            backdrops.put(key, backdrop);
+        }
+        return backdrops.get(key);
     }
 
     /** One frame of a ROM sprite, or null. */

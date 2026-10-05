@@ -68,7 +68,7 @@ final class StartView implements RunScreen.RoomView {
     public void draw(Shell shell, RunScreen screen, SceneCanvas c) {
         int w = shell.width();
         long t = shell.ticks;
-        Backdrops.zone(shell, c, shell.run.act().zone(), t * 3);
+        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), t * 3);
         // The Tornado crossing the sky, with the hero standing on the wing.
         float bob = (float) Math.sin(t * 0.06) * 3;
         int px = 110 + (int) (Math.sin(t * 0.013) * 30);

@@ -63,7 +63,12 @@ behave as in *Slay the Spire*.
 To play a card, pick it and then pick a target. Card numbers show the damage the card
 would really deal to the highlighted enemy. Runs save at every room, so you can quit and
 **Continue** later. The title screen also has the **Compendium** (every card, upgraded or
-not; every relic; every monitor) and **Records** (runs, wins, best floor per hero).
+not; every relic; every monitor), **Records** (runs, wins, best floor per hero) and
+**Settings** (combat speed, screen shake, music and sound effects).
+
+Each act's map runs left to right over a zoomed-out picture of the zone's real level, and
+fights, events, Starposts and capsules play in front of the zone's own parallax background,
+both rendered from your ROM.
 
 ## What's in it
 
@@ -108,7 +113,9 @@ and sound effects, file storage under `saves/mods/slay-the-robotnik/`, and a
 `SceneCanvas` to draw on. Images come from PNGs, from pixels made in code (the text art),
 or from the ROM through `SceneRomArt`: `RomSprites` lists each sprite's art, mappings,
 DPLC and palette by its disassembly label, and `EnemyVisuals` assembles bosses from those
-frames using the offsets of the original child objects. See the
+frames using the offsets of the original child objects. `SceneRomArt.zoneBackdrop` and
+`levelOverview` supply the zone backgrounds (`scene/Backdrops`) and the map's level picture
+(`scene/MapView`). See the
 [mod scene guide](../../docs/modding/guides/mod-scenes.md) for the API itself.
 
 **Mod code has no static state.** The mod validator rejects enums, static collections and
@@ -160,5 +167,6 @@ against `EventContext` (`content/Events.java`). `ContentIntegrityTest` and
 
 ## Known gaps
 
-- Zone backgrounds are drawn in code; ROM backgrounds are planned.
 - Balance follows *Slay the Spire*'s numbers but has only been tested by the bot.
+- Backgrounds are still pictures: palette cycling, water tint and drifting HCZ waterlines
+  are frozen at one state.

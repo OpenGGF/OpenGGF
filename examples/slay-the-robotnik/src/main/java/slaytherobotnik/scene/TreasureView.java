@@ -42,7 +42,7 @@ final class TreasureView implements RunScreen.RoomView {
     @Override
     public void draw(Shell shell, RunScreen screen, SceneCanvas c) {
         int w = shell.width();
-        Backdrops.zone(shell, c, shell.run.act().zone(), shell.ticks / 8);
+        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 8);
         c.fill(0, 0, w, shell.height(), 0x50000020);
         var f = shell.font;
         String title = room.size().toUpperCase() + " EGG CAPSULE";

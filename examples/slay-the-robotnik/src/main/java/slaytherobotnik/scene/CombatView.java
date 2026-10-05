@@ -868,7 +868,7 @@ final class CombatView implements RunScreen.RoomView {
         int w = shell.width();
         int h = shell.height();
         int shake = shell.shakeOffset();
-        Backdrops.zone(shell, c, shell.run.act().zone(), shell.ticks / 6);
+        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 6);
         c.fill(0, GROUND, w, h - GROUND, 0x90000000);
         c.fill(0, GROUND, w, 1, 0x60FFFFFF);
         drawPlayer(shell, c, shake);

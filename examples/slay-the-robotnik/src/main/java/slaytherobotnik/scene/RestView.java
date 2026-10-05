@@ -60,7 +60,7 @@ final class RestView implements RunScreen.RoomView {
     @Override
     public void draw(Shell shell, RunScreen screen, SceneCanvas c) {
         int w = shell.width();
-        Backdrops.zone(shell, c, shell.run.act().zone(), shell.ticks / 8);
+        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 8);
         c.fill(0, 0, w, shell.height(), 0x50000020);
         SmallFont f = shell.font;
         f.drawOutlined(c, "STARPOST", (w - f.width("STARPOST") * 2) / 2, 36, Colors.GOLD, 2);
