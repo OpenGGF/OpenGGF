@@ -79,6 +79,13 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long stones0;
     private long stones1;
     private long stones2;
+    private long stones3;
+    private long stones4;
+    private long stones5;
+    private long stones6;
+    private long stones7;
+    // Stone slots per section: platform stretches use three, a high road up to seven (64px platforms 8px apart).
+    private static final int SECTION_STONES = 8;
     // One section bit per placed monitor.
     private long monitors;
     // One section bit per placed zone hazard.
@@ -318,7 +325,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             if (!forced) delta = 0;
             else {
                 for (var stone : live) stone.setDestroyed(true);
-                stones0 = stones1 = stones2 = 0;
+                stones0 = stones1 = stones2 = stones3 = stones4 = stones5 = stones6 = stones7 = 0;
             }
         }
         if (delta == 0) {
@@ -338,6 +345,11 @@ public final class CourseController extends AbstractObjectInstance implements Re
         stones0 = shiftSections(stones0, delta);
         stones1 = shiftSections(stones1, delta);
         stones2 = shiftSections(stones2, delta);
+        stones3 = shiftSections(stones3, delta);
+        stones4 = shiftSections(stones4, delta);
+        stones5 = shiftSections(stones5, delta);
+        stones6 = shiftSections(stones6, delta);
+        stones7 = shiftSections(stones7, delta);
         monitors = shiftSections(monitors, delta);
         hazards = shiftSections(hazards, delta);
         services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
@@ -395,7 +407,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
             if (!services().objectManager().hasFreeDynamicSlot()) return;
             var spawn = new ObjectSpawn(localX, hazard.floor(), 0, hazard.kind() | hazard.phase() << 4, 0, false,
                     hazard.floor(), -1, "infinite-sonic", "infinite-sonic:hazard");
-            spawnFreeChild(() -> new CourseHazard(spawn));
+            spawnFreeChild(() -> new CourseHazard(spawn, hazard.worldX()));
             hazards |= bit;
         }
     }
@@ -430,10 +442,13 @@ public final class CourseController extends AbstractObjectInstance implements Re
         var camera = services().camera();
         for (int section = 0; section < TerrainLibrary.WIDTH / 2; section++) {
             long bit = 1L << section;
-            if ((stones0 & stones1 & stones2 & bit) != 0) continue;
+            if ((stones0 & stones1 & stones2 & stones3 & stones4 & stones5 & stones6 & stones7 & bit) != 0) continue;
             var stones = PlatformPlan.at(library, origin / 2 + section);
-            for (int i = 0; i < PlatformPlan.MAX_STONES; i++) {
-                long mask = switch (i) { case 0 -> stones0; case 1 -> stones1; default -> stones2; };
+            for (int i = 0; i < SECTION_STONES; i++) {
+                long mask = switch (i) {
+                    case 0 -> stones0; case 1 -> stones1; case 2 -> stones2; case 3 -> stones3; case 4 -> stones4;
+                    case 5 -> stones5; case 6 -> stones6; default -> stones7;
+                };
                 if ((mask & bit) != 0) continue;
                 if (i < stones.length) {
                     var stone = stones[i];
@@ -446,7 +461,11 @@ public final class CourseController extends AbstractObjectInstance implements Re
                             stone.y(), -1);
                     spawnFreeChild(() -> (AbstractObjectInstance) registry.create(spawn));
                 }
-                switch (i) { case 0 -> stones0 |= bit; case 1 -> stones1 |= bit; default -> stones2 |= bit; }
+                switch (i) {
+                    case 0 -> stones0 |= bit; case 1 -> stones1 |= bit; case 2 -> stones2 |= bit;
+                    case 3 -> stones3 |= bit; case 4 -> stones4 |= bit; case 5 -> stones5 |= bit;
+                    case 6 -> stones6 |= bit; default -> stones7 |= bit;
+                }
             }
         }
     }

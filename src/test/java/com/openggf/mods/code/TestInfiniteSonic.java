@@ -1278,10 +1278,11 @@ class TestInfiniteSonic {
             assertFalse(isCorridor(section) || platformRun(section), "monitors stand on ordinary ground");
             assertNull(hazard(section), "no monitor in a hazard section");
             long x = (long) call(monitor, "worldX");
-            Object[] route = route(section);
-            if (route.length > 0) {
-                Object last = route[route.length - 1];
-                assertEquals((long) call(last, "worldX"), x, "a high route's monitor stands on its last platform");
+            Object road = roadOf(section);
+            if (road != null) {
+                Object[] all = (Object[]) call(road, "stones");
+                Object last = all[all.length - 1];
+                assertEquals((long) call(last, "worldX"), x, "a high road's monitor stands on its last platform");
                 assertEquals((int) call(last, "surface") - 15, (int) call(monitor, "y"));
                 continue;
             }
@@ -1289,13 +1290,15 @@ class TestInfiniteSonic {
             assertEquals(floor - 15, (int) call(monitor, "y"), "standing on the floor");
             for (long dx = -16; dx <= 16; dx++) assertTrue(Math.abs(floorAt(x + dx) - floor) <= 4, "level ground");
         }
-        assertTrue(monitors >= 40 && monitors <= 140, "about one in eight open sections: " + monitors);
-        // S1 monitor subtypes: 4 shield, 6 Super Ring, 5 Invincibility.
-        assertEquals(Set.of(4, 5, 6), kinds.keySet());
-        assertTrue(kinds.get(4) > kinds.get(6) && kinds.get(6) > kinds.get(5), "mostly shields: " + kinds);
+        // High-road sections hold at most one monitor up top, so fewer stand on the ground.
+        assertTrue(monitors >= 25 && monitors <= 140, "about one in eight open sections: " + monitors);
+        // S1 monitor subtypes: 4 shield, 6 Super Ring (no Invincibility).
+        assertEquals(Set.of(4, 6), kinds.keySet());
+        int shields = kinds.get(4), total = kinds.get(4) + kinds.get(6);
+        assertTrue(shields * 100 >= total * 35 && shields * 100 <= total * 85, "about three in five shields: " + kinds);
     }
 
-    @ParameterizedTest @ValueSource(ints = {4, 5, 6})
+    @ParameterizedTest @ValueSource(ints = {4, 6})
     void touchingAMonitorBreaksItGivesItsRewardAndReplays(int kind) throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
         fixture.stepIdleFrames(2);
@@ -1336,7 +1339,6 @@ class TestInfiniteSonic {
         assertTrue((boolean) call(monitor, "isBroken"), "any touch breaks the box, even without rolling");
         switch (kind) {
             case 4 -> assertTrue(player.hasShield(), "shield");
-            case 5 -> assertTrue(player.getInvincibleFrames() > 0, "invincibility");
             default -> assertEquals(13, rings.getRings(), "Super Ring: ten rings");
         }
         fixture.stepIdleFrames(8);
@@ -1365,110 +1367,183 @@ class TestInfiniteSonic {
         return switch (zone) { case 0 -> WRECKING_BALL; case 2 -> BIG_BALL; case 3 -> CHAIN; case 5 -> FLAME; default -> -1; };
     }
 
+    /** The high road over this section's stretch, or null (none over corridors). */
+    private Object roadOf(long section) throws Exception {
+        if (Math.floorMod(section, 4) == 3) return null;
+        return loader.loadClass("infinite.RoutePlan").getMethod("route", terrain().getClass(), long.class)
+                .invoke(null, terrain(), Math.floorDiv(section, 4));
+    }
+
     @ParameterizedTest(name = "zone {0} act {1}")
     @org.junit.jupiter.params.provider.MethodSource("courseActs")
-    void highRoutesHangTheActsStockPlatformsAboveLevelGround(int zone, int act) throws Exception {
+    void highRoadsClimbOnStockPlatformsToASeparatePathAboveTheGround(int zone, int act) throws Exception {
         launch(WidescreenAspect.NATIVE_4_3, zone, act);
         var stationary = new TreeSet<Integer>();
         for (Object kind : (List<?>) call(terrain(), "platformKinds")) {
             if (!(boolean) call(kind, "falls")) stationary.add((int) call(kind, "objectId"));
         }
-        int routes = 0, guarded = 0;
-        for (long section = 0; section < 1000; section++) {
-            Object[] stones = route(section);
-            if (stones.length == 0) continue;
-            routes++;
-            assertTrue(section >= 6);
-            assertFalse(isCorridor(section) || platformRun(section), "routes hang over open sections");
-            assertEquals(3, stones.length);
-            assertArrayEquals(stones, stones(section), "the controller spawns them as this section's stones");
-            int surface = (int) call(stones[0], "surface");
-            long left = (long) call(stones[0], "worldX") - (int) call(stones[0], "halfWidth");
-            long right = (long) call(stones[2], "worldX") + (int) call(stones[2], "halfWidth");
-            assertTrue(left >= section * 512 && right <= section * 512 + 512, "inside the section");
+        int roads = 0, guarded = 0, sections = 0;
+        for (long stretch = 0; stretch < 250; stretch++) {
+            Object road = roadOf(stretch * 4);
+            if (road == null) continue;
+            roads++;
+            assertTrue(stretch >= 2, "the first stretches stay on the ground");
+            Object[] stones = (Object[]) call(road, "stones");
+            int first = (int) call(road, "road");
+            int surface = (int) call(road, "roadSurface");
+            assertTrue(stones.length - first >= 3, "a road of at least three platforms");
+            long start = (long) call(stones[0], "worldX") - (int) call(stones[0], "halfWidth");
+            long end = (long) call(road, "roadEnd");
             int high = Integer.MAX_VALUE, low = Integer.MIN_VALUE;
-            for (long x = section * 512; x < section * 512 + 512; x++) {
+            for (long x = start - 160; x <= end; x++) {
                 high = Math.min(high, floorAt(x));
                 low = Math.max(low, floorAt(x));
             }
-            assertEquals(high - 48, surface, "48px above the highest floor beneath");
-            assertTrue(low - surface <= 64, "reachable even with a jump tilted by a hill (about 70px) from the lowest floor");
-            for (int i = 0; i < 3; i++) {
+            assertEquals(high - 128, surface, "the road runs 128px above the highest floor beneath it");
+            assertTrue(end <= (stretch * 4 + 2) * 512 + 320, "the road ends with ground left before the next corridor");
+            int previous = low;
+            long previousRight = start - 160;
+            for (int i = 0; i < stones.length; i++) {
+                int top = (int) call(stones[i], "surface");
+                long left = (long) call(stones[i], "worldX") - (int) call(stones[i], "halfWidth");
                 assertTrue(stationary.contains((int) call(stones[i], "objectId")), "a stationary stock platform the act places");
-                assertEquals(surface, (int) call(stones[i], "surface"), "one level ledge");
-                if (i > 0) {
-                    long gap = (long) call(stones[i], "worldX") - (int) call(stones[i], "halfWidth")
-                            - (long) call(stones[i - 1], "worldX") - (int) call(stones[i - 1], "halfWidth");
-                    assertEquals(24, gap, "close enough to run across");
+                assertTrue(previous - top >= 0 && previous - top <= 48, "each climb is at most 48px: " + (previous - top));
+                if (i >= first) {
+                    assertEquals(surface, top, "one level road");
+                    if (i > first) assertEquals(8, left - previousRight, "close enough to run across");
+                } else if (i > 0 && top != previous) {
+                    assertEquals(120, left - previousRight, "a step a held jump reaches");
+                }
+                previous = top;
+                previousRight = left + 2L * (int) call(stones[i], "halfWidth");
+            }
+            for (long section = stretch * 4; section < stretch * 4 + 3; section++) {
+                sections++;
+                assertNull(hazard(section), "no hazard under a road");
+                Object below = encounter(section);
+                if (below != null) {
+                    guarded++;
+                    assertFalse((boolean) call(below, "flying"), "patrols beneath are on the ground");
+                }
+                Object[] here = stones(section);
+                assertTrue(here.length <= 8, "fits the controller's eight stone slots per section");
+                for (Object stone : here) {
+                    assertEquals(section, Math.floorDiv((long) call(stone, "worldX"), 512), "spawned by its own section");
                 }
             }
-            Object below = encounter(section);
-            if (below != null) {
-                guarded++;
-                assertFalse((boolean) call(below, "flying"), "the patrol beneath is on the ground");
-            }
-            assertNull(hazard(section));
         }
-        if (stationary.isEmpty()) assertEquals(0, routes, "acts without wide stationary platforms have no high routes");
+        if (stationary.isEmpty()) assertEquals(0, roads, "acts without wide stationary platforms have no high roads");
         else {
-            assertTrue(routes >= 15 && routes <= 200, "high routes: " + routes);
-            // A patrol needs gentle footing across its whole beat, which a few routes lack.
-            assertTrue(guarded * 10 >= routes * 7, "most routes guard the low line: " + guarded + "/" + routes);
+            assertTrue(roads >= 5 && roads <= 120, "high roads: " + roads);
+            assertTrue(guarded * 10 >= sections * 6, "the low path is mostly guarded: " + guarded + "/" + sections);
         }
     }
 
-    /** Real physics: one jump from the ground lands on the act's first high route and runs its length. */
+    /**
+     * Real physics: a held-jump policy that only chooses when to jump (from the ground, then
+     * from each step) climbs onto the act's first high road and runs it to the end.
+     */
     @ParameterizedTest(name = "zone {0}")
     @ValueSource(ints = {0, 1, 2, 4, 5})
-    void sonicJumpsOntoAHighRouteAndRunsAcrossIt(int zone) throws Exception {
+    void sonicClimbsOntoAHighRoadAndRunsItsLength(int zone) throws Exception {
         var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
-        long section = 6;
-        while (route(section).length == 0) section++;
-        Object[] stones = route(section);
-        long left = (long) call(stones[0], "worldX") - (int) call(stones[0], "halfWidth");
-        long right = (long) call(stones[2], "worldX") + (int) call(stones[2], "halfWidth");
-        int surface = (int) call(stones[0], "surface");
+        long stretch = 2;
+        while (roadOf(stretch * 4) == null) stretch++;
+        Object road = roadOf(stretch * 4);
+        Object[] stones = (Object[]) call(road, "stones");
+        int first = (int) call(road, "road");
+        int surface = (int) call(road, "roadSurface");
+        long start = (long) call(stones[0], "worldX") - (int) call(stones[0], "halfWidth");
+        long end = (long) call(road, "roadEnd");
         fixture.stepIdleFrames(2);
         var player = fixture.sprite();
         player.setInvulnerableFrames(20000);
-        for (int frame = 0; frame < 20000 && originPixels() + player.getCentreX() < left - 400; frame++) {
+        // The policy crosses the corridor pit before the stretch; the climb starts on its far bank.
+        for (int frame = 0; frame < 20000 && originPixels() + player.getCentreX() < start - 250; frame++) {
             stepTerrain(fixture, 1);
         }
-        boolean jumped = false;
         Set<Long> rode = new TreeSet<>();
-        var trail = new StringBuilder();
-        for (int frame = 0; frame < 600 && originPixels() + player.getCentreX() < right + 32; frame++) {
+        boolean onRoad = false;
+        String lastState = "";
+        boolean heldJump = false;
+        var trail = new StringBuilder("plan");
+        for (Object stone : stones) {
+            trail.append(String.format(" %d..%d@%d", (long) call(stone, "worldX") - (int) call(stone, "halfWidth"),
+                    (long) call(stone, "worldX") + (int) call(stone, "halfWidth"), (int) call(stone, "surface")));
+        }
+        trail.append(" |");
+        for (int frame = 0; frame < 900 && originPixels() + player.getCentreX() < end - 8; frame++) {
             long x = originPixels() + player.getCentreX();
-            boolean jump;
-            // Plain running (no policy jumps) into one held jump from about 140px before the ledge.
-            if (x < left - 140 || !jumped && player.getAir()) {
-                trail.setLength(0);
-                setTicks(0);
-                fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
-                fixture.stepFrame(false, false, false, true, false);
-                continue;
+            long[] level = nextLevel(player, x, stones);
+            boolean want = level != null && landing(player, x, level, true) >= level[0] + 8
+                    && landing(player, x, level, true) <= level[1] - 8;
+            // Hold through a jump; a new jump needs a fresh press, so release for a frame after landing.
+            boolean jump = player.getAir() ? heldJump : want && !heldJump;
+            heldJump = jump;
+            int steer = 1;
+            if (player.getAir() && level != null) {
+                // Brake toward the front of the level, leaving runway for the next jump, as a player would.
+                long land = landing(player, x, level, false);
+                if (land != Long.MIN_VALUE && land > level[0] + 40) steer = -1;
+                else if (land != Long.MIN_VALUE && land > level[0] + 16) steer = 0;
             }
-            jump = !jumped || player.getAir();
-            jumped = true;
             setTicks(0);
             fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
-            fixture.stepFrame(false, false, false, true, jump);
+            fixture.stepFrame(false, false, steer < 0, steer > 0, jump);
             x = originPixels() + player.getCentreX();
-            if (x >= left - 24) trail.append(String.format(" [%d,%d air=%b obj=%b vy=%d]", x, player.getCentreY(),
-                    player.getAir(), player.isOnObject(), (int) player.getYSpeed()));
+            String state = player.getAir() ? "air" : player.isOnObject() ? "obj" : "gnd";
+            if (!state.equals(lastState)) {
+                trail.append(String.format(" %s@%d,%d(vx%d)", state, x, player.getCentreY(), (int) player.getXSpeed()));
+                lastState = state;
+            }
             assertFalse(player.getDead());
             if (!player.getAir() && player.isOnObject()) {
-                for (Object stone : stones) {
-                    if (Math.abs(x - (long) call(stone, "worldX")) <= (int) call(stone, "halfWidth")) rode.add((long) call(stone, "worldX"));
+                for (int i = 0; i < stones.length; i++) {
+                    if (Math.abs(x - (long) call(stones[i], "worldX")) <= (int) call(stones[i], "halfWidth")) {
+                        rode.add((long) call(stones[i], "worldX"));
+                        onRoad |= i >= first;
+                    }
                 }
             }
-            if (!rode.isEmpty() && x < right - 8) {
-                assertTrue(player.getCentreY() < surface, "stayed on the high line: " + trail);
+            if (onRoad) assertTrue(player.getCentreY() < surface, "stayed on the high road:" + trail);
+        }
+        assertTrue(onRoad, "reached the road:" + trail);
+        assertTrue(rode.contains((long) call(stones[stones.length - 1], "worldX")), "ran it to the end:" + trail);
+        assertTrue(originPixels() + player.getCentreX() >= end - 8);
+    }
+
+    /** {left, right, top} of the next platform level above Sonic's feet ahead of him, or null. */
+    private long[] nextLevel(com.openggf.sprites.playable.AbstractPlayableSprite player, long x, Object[] stones)
+            throws Exception {
+        int feet = player.getCentreY() + (player.getAir() ? 14 : 19);
+        long[] level = null;
+        for (Object stone : stones) {
+            int top = (int) call(stone, "surface");
+            long centre = (long) call(stone, "worldX");
+            int half = (int) call(stone, "halfWidth");
+            if (level == null) {
+                if (centre + half <= x || top >= feet - 4) continue;
+                level = new long[]{centre - half, centre + half, top};
+            } else if (top == level[2]) {
+                level[1] = centre + half;
+            } else {
+                break;
             }
         }
-        // A full-height jump can carry Sonic past the first platform; he still rides the ledge to its end.
-        assertTrue(rode.size() >= 2 && rode.contains((long) call(stones[2], "worldX")),
-                "landed on the ledge and ran across it: surface " + surface + " left " + left + trail);
+        return level;
+    }
+
+    /** Where Sonic's feet come down to the level's top: from a fresh held jump, or on his current arc. */
+    private long landing(com.openggf.sprites.playable.AbstractPlayableSprite player, long x, long[] level, boolean fresh) {
+        double g = 0x38 / 256.0;
+        double vx = (fresh ? player.getGSpeed() : player.getXSpeed()) / 256.0;
+        double vy = fresh ? -0x680 / 256.0 : player.getYSpeed() / 256.0;
+        double feet = player.getCentreY() + (fresh ? 19 : 14);
+        double drop = level[2] - feet; // negative: the top is above the feet
+        double disc = vy * vy + 2 * g * drop;
+        if (disc < 0) return Long.MIN_VALUE;
+        double t = (-vy + Math.sqrt(disc)) / g;
+        return t <= 0 ? Long.MIN_VALUE : x + Math.round(vx * t);
     }
 
     @ParameterizedTest(name = "zone {0} act {1}")
@@ -1498,7 +1573,7 @@ class TestInfiniteSonic {
             assertEquals(floorAt(x), (int) call(hazard, "floor"));
             assertNull(encounter(section), "no badnik shares a hazard section");
             assertNull(monitor(section));
-            assertEquals(0, route(section).length);
+            assertNull(roadOf(section), "no hazard under a high road");
         }
         assertTrue(counts.getOrDefault(SPIKES, 0) >= 10, "spike beds in every zone: " + counts);
         if (signature(zone) >= 0) assertTrue(counts.getOrDefault(signature(zone), 0) >= 20, "signature: " + counts);
@@ -1662,7 +1737,7 @@ class TestInfiniteSonic {
     private boolean underRoute(ObjectInstance enemy) {
         try {
             long anchor = (long) enemy.getClass().getMethod("worldAnchor").invoke(enemy);
-            return route(Math.floorDiv(anchor, 512)).length > 0;
+            return roadOf(Math.floorDiv(anchor, 512)) != null;
         } catch (Exception e) { throw new AssertionError(e); }
     }
 

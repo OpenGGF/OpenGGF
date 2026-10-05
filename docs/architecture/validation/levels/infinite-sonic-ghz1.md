@@ -496,3 +496,17 @@ Main checkout, `feature/ai-infinite-sonic`, base `e974573148`; mod, tests and do
 **187 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; the skips
 are the platform crossing in acts without platforms). Not covered: spike beds' timing trial
 (geometry and toll path are shared), a visual check of every hazard sprite, and live play.
+
+## Split paths, hazard frequency, no Invincibility (0.17.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `5bceccc8bc`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| High road geometry | `highRoadsClimbOnStockPlatformsToASeparatePathAboveTheGround` | All 18 acts, 250 stretches: stationary kinds the act places, climbs of at most 48 px with 120 px step gaps, a level road 128 px over the highest floor beneath with 8 px gaps, ends before the corridor, at most 8 stones per section, no hazards and mostly ground patrols beneath |
+| Climb and run the road | `sonicClimbsOntoAHighRoadAndRunsItsLength` | GHZ, MZ, SYZ, SLZ, SBZ act 1 at 16:9: a policy that only chooses jump timing and air braking reaches the road and runs it to its end without dropping |
+| Hazard frequency | `hazardsAreTheZonesOwnOnLevelGroundOrInPits` | Per 1000 act-1 sections: GHZ 160 wrecking balls (was 54), SYZ 146 balls, LZ 187 chains, SBZ 127 flames, MZ/SLZ 60 pit fireballs; spikes fill in elsewhere |
+| Monitors: shields and Super Rings only | `monitorsAreSeededOnLevelGroundWithAMixOfKinds`, `touchingAMonitorBreaksItGivesItsRewardAndReplays[4,6]` | |
+
+**186 run, 0 failures, 12 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not covered:
+live play and a visual check of the road and hazards.

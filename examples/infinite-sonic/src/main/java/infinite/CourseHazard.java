@@ -32,7 +32,8 @@ public final class CourseHazard extends AbstractObjectInstance
     private static final int FIREBALL_GRAVITY = 0x18;
     private static final int FIREBALL_PERIOD = 72;
 
-    // Giant spiked ball (Map_BBall spans +-$18): rolls BALL_TRAVEL px left of its anchor and back.
+    // Giant spiked ball (Map_BBall spans +-$18): rolls BALL_TRAVEL px left of its anchor and back,
+    // resting on the floor beneath it.
     static final int BALL_TRAVEL = 96;
     private static final int BALL_RADIUS = 0x18;
     private static final int BALL_PERIOD_SHIFT = 1; // angle step per tick: a 128-tick round trip
@@ -57,6 +58,7 @@ public final class CourseHazard extends AbstractObjectInstance
     private static final int WRECKING_SWING = 0x2c;
     private static final int WRECKING_PERIOD = 150;
 
+    private long worldAnchor;
     private int x;
     private int floor;
     private int ticks;
@@ -68,8 +70,14 @@ public final class CourseHazard extends AbstractObjectInstance
     private int launches;
     private int chainAngle;
 
+    /** Spawn-only constructor lets the rewind codec create its restoration probe. */
     public CourseHazard(ObjectSpawn spawn) {
+        this(spawn, spawn.x());
+    }
+
+    public CourseHazard(ObjectSpawn spawn, long worldAnchor) {
         super(spawn, "Course hazard");
+        this.worldAnchor = worldAnchor;
         x = spawn.x();
         floor = spawn.y();
         ticks = phase();
@@ -97,7 +105,7 @@ public final class CourseHazard extends AbstractObjectInstance
         updateDynamicSpawn(x, floor);
     }
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
-        return new CourseHazard(context.spawn());
+        return new CourseHazard(context.spawn(), 0);
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {
@@ -148,6 +156,12 @@ public final class CourseHazard extends AbstractObjectInstance
         return BALL_TRAVEL / 2 - (TrigLookupTable.cosHex(angle) * (BALL_TRAVEL / 2) >> 8);
     }
 
+    /** The world shift only moves X, so the course floor under the ball is its local Y too. */
+    private int ballY() {
+        int ground = services().gameService(TerrainLibrary.class).floorAt(worldAnchor - ballOffset());
+        return (ground < 0 ? floor : ground) - BALL_RADIUS;
+    }
+
     private int[] chainPoint(int radius) {
         int angle = (chainAngle >> 8) & 0xff;
         int pivotY = floor - CHAIN_PIVOT_HEIGHT;
@@ -168,8 +182,7 @@ public final class CourseHazard extends AbstractObjectInstance
             case HazardPlan.SPIKES -> new TouchRegion[]{new TouchRegion(x, floor - SPIKE_HALF_HEIGHT, HURT_40X32)};
             case HazardPlan.FIREBALL -> fireballFlying()
                     ? new TouchRegion[]{new TouchRegion(x, ballY / 256, HURT_16X16)} : new TouchRegion[0];
-            case HazardPlan.BIG_BALL -> new TouchRegion[]{
-                    new TouchRegion(x - ballOffset(), floor - BALL_RADIUS, HURT_32X32)};
+            case HazardPlan.BIG_BALL -> new TouchRegion[]{new TouchRegion(x - ballOffset(), ballY(), HURT_32X32)};
             case HazardPlan.CHAIN -> {
                 int[] tip = chainPoint(CHAIN_RADIUS);
                 yield new TouchRegion[]{new TouchRegion(tip[0], tip[1], HURT_16X16)};
@@ -210,8 +223,7 @@ public final class CourseHazard extends AbstractObjectInstance
                 draw(slz ? ObjectArtKeys.SLZ_FIREBALL : ObjectArtKeys.MZ_FIREBALL, (ticks / 6) & 1, x, ballY / 256,
                         false, ballSpeed > 0);
             }
-            case HazardPlan.BIG_BALL -> draw(ObjectArtKeys.SYZ_BIG_SPIKED_BALL, 0, x - ballOffset(), floor - BALL_RADIUS,
-                    false, false);
+            case HazardPlan.BIG_BALL -> draw(ObjectArtKeys.SYZ_BIG_SPIKED_BALL, 0, x - ballOffset(), ballY(), false, false);
             case HazardPlan.CHAIN -> {
                 // Map_SBall2: frame 2 the wall base at the pivot, frame 0 the links, frame 1 the spikeball.
                 for (int radius = 0; radius < CHAIN_RADIUS; radius += 0x10) {

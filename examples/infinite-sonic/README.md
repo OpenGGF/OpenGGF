@@ -31,10 +31,10 @@ half-second of blinking has passed. With no shield and fewer than 20
 rings the stock hit applies: Sonic is knocked back and drops every ring, and with no rings
 at all the hit is lethal. Pits and the left edge are unaffected by shields and rings.
 
-Monitors stand on level ground (or on a high route's last platform, below) in about one
-in eight open sections from the seventh section on (roughly one every 20 seconds at 1×): half are **shields**, three in ten
-**Super Rings** (ten rings, which count toward ring lives) and one in five **Invincibility**
-(the stock stars and music). They use the ROM monitor art and its flickering icons, but
+Monitors stand on level ground (or at the end of a high road, below) in about one in eight
+open sections from the seventh section on (roughly one every 20 seconds at 1×): three in
+five are **shields** and two in five **Super Rings** (ten rings, which count toward ring
+lives). They use the ROM monitor art and its flickering icons, but
 unlike the solid stock box any touch breaks them, so running into one never stalls Sonic
 against the scrolling edge. Breaking a shield box plays the stock break and shield sounds
 and puts the stock shield on Sonic; one broken while already shielded only plays the sound.
@@ -134,14 +134,17 @@ act's own stock layout places are used, and only those at least 64 pixels wide, 
 Labyrinth course (whose only block is 32 pixels) keeps ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
 stretches in one jump; wider ones need a platform. No enemies patrol platform stretches.
 
-About one in five open sections from the seventh on is a **high route** where the ground
-allows (it varies by at most 16 pixels): a ledge of three of those same stationary stock
-platforms, 48 pixels above the highest floor beneath and 24 pixels apart, so Sonic runs
-straight across once a jump has put him on it. The ledge carries the section's rings and,
-half the time, a monitor on its last platform, while a ground badnik patrols below. Taking
-the high line pays better and skips the badnik; missing it just leaves Sonic on the ground
-route. A jump from about 140 pixels before the ledge lands on it, from level ground or a
-hill (whose slope tilts part of the jump forward). Labyrinth has no high routes.
+Half of the stretches from the third on split into two paths where the ground
+allows (it varies by at most 64 pixels over the stretch): a **high road** built from those
+same stationary stock platforms runs above the ground path. Steps climb from the ground, two
+platforms wide (one for Marble's widest blocks), each at most 48 pixels above the last with a
+120-pixel gap, so a held jump from the back of one lands on the next. The road itself runs
+level, 128 pixels above the highest floor beneath it, with 8-pixel gaps Sonic runs straight
+across, until the middle of the stretch's third section; then he drops back to the ground
+well before the next jump corridor. The road carries the rings and, half the time, a monitor
+on its last platform, while ground badniks patrol the low path and no hazards stand under
+it. Missing a step just leaves Sonic on the low path. Labyrinth (whose only block is 32
+pixels wide) has no high roads.
 
 **Zone hazards** use each zone's own ROM art and the shipped hit boxes, and need timing:
 
@@ -154,8 +157,9 @@ hill (whose slope tilts part of the jump forward). Labyrinth has no high routes.
 | Scrap Brain | A floor pipe that bursts into a column of flame |
 
 Every zone also has **spike beds** (the stock three-spike art) to jump. Ground hazards take
-about one in four open sections from the sixth on, two in three of them the zone's signature
-(spikes only, in Marble and Star Light); fireballs take half of the pits from the third
+about one in three open sections from the sixth on, three in four of them the zone's
+signature, with a spike bed wherever the signature does not fit (spikes only, in Marble and
+Star Light); the rolling ball follows the ground. Fireballs take half of the pits from the third
 corridor on that are at least 96 pixels wide. None is solid, so none can stall Sonic, and a
 hazard section has no badnik or monitor. A hazard hit is treated like a badnik hit: a shield
 or the 20-ring toll absorbs it without knockback; otherwise the stock hit applies.

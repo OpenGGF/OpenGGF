@@ -729,3 +729,34 @@ from 87 s to 74 s.
 Found while testing: a stomp test picked a badnik under a high route, and the falling Sonic
 landed on the ledge; a monitor test's search crossed hazards and broke other monitors.
 Both tests now avoid the overlap.
+
+## Split paths, hazard frequency and no Invincibility (0.17.0)
+
+Follow-up on `5bceccc8bc`, same branch, main checkout, 2026-10-05. Play review: the 48 px
+ledges in GHZ and MZ were "virtually on the ground" and not a different path; Invincibility
+monitors are reserved for another plan; some hazards (the GHZ wrecking ball) were not seen.
+
+**High roads (replacing the one-section ledges).** Rejected for a true two-floor terrain: the
+generated layout already spends its 256 block slots on ground sections and tiers, so
+composite blocks with a second floor have no room. `RoutePlan` instead builds a second path
+per stretch (sections 4k-4k+2, one in two eligible from stretch 2; GHZ's hills leave about one in eight stretches eligible-and-chosen, SLZ/SBZ about two in five) out of the act's
+stationary stock platforms: steps (pairs of platforms under 128 px, single 128 px blocks; a single 96 px MZ block left too little runway to land late and jump again) climb in
+equal rises of at most 48 px with 120 px gaps (a step's pair sits flush; at 100 px a late landing on a step left no full jump to the next), then a level road 128 px above the highest floor
+under the whole route runs with 8 px gaps to offset 320 of section 4k+2, leaving ground before
+the next corridor. Floors may vary by 64 px over the stretch (at most three steps). The
+controller's per-section stone slots grew from three to six. Rings ride the road; half the
+roads end in a monitor; road sections force ground patrols and take no hazards. The physics
+test's policy chooses only when to jump and which way to steer in the air; a first version
+that required an exact landing window and a full-height jump failed because jumps off GHZ's
+gently curved floor rise about 70 px instead of 96. Then a 24 px gap inside an SLZ step caught a
+landing and dropped Sonic to the ground, so steps became flush pairs and road gaps 8 px.
+
+**Hazards.** A per-zone count over 1000 sections found every art sheet loaded and ready, and
+GHZ placing only 54 wrecking balls (about one every 30 s at 1x): its fit demanded level ground
+across the whole ±128 px swing, and a failed fit placed nothing. Ground hazards now take one
+in three eligible sections (was one in four), three in four signatures (was two in three),
+fall back to a spike bed when the signature does not fit, and only need level ground where
+the hazard meets the path (±48 px for the swing and chain); the Spring Yard ball follows the
+floor, so its run only has to be gentle.
+
+**Monitors.** Invincibility is removed: three in five shields, two in five Super Rings.

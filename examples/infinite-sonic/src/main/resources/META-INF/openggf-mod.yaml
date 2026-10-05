@@ -1,10 +1,10 @@
 formatVersion: 1
 id: infinite-sonic
 name: Infinite Sonic
-version: 0.16.0
+version: 0.17.0
 authors:
   - OpenGGF contributors
-description: Escalating auto-scroll survival generated from any Sonic 1 zone before Final Zone, with rings, pits, ledges, elevation changes, zone badniks, hop-arc ring rows, high routes on stock platforms, zone hazards, session lives with continue or exit to title, shield, ring and invincibility monitors, ring-toll hit protection, and speed-based scoring.
+description: Escalating auto-scroll survival generated from any Sonic 1 zone before Final Zone, with rings, pits, ledges, elevation changes, zone badniks, hop-arc ring rows, split paths with high roads of stock platforms, zone hazards, session lives with continue or exit to title, shield and ring monitors, ring-toll hit protection, and speed-based scoring.
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s1
