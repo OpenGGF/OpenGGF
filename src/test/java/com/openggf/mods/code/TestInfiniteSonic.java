@@ -327,18 +327,18 @@ class TestInfiniteSonic {
         assertEquals("SPEED UP IN 1", warning.invoke(null, controller()));
         setTicks(1800);
         assertEquals("", warning.invoke(null, controller()));
-        assertEquals(1.5, GameServices.module().gameplayAudioPlaybackRate());
+        assertEquals(1.25, GameServices.module().gameplayAudioPlaybackRate());
         clock().getClass().getMethod("restore", before.getClass()).invoke(clock(), before);
         assertEquals("SPEED UP IN 5", warning.invoke(null, controller()));
         assertEquals(1.0, GameServices.module().gameplayAudioPlaybackRate());
-        setTicks(9 * 1800 + 1500);
+        setTicks(124 * 1800 + 1500);
         assertEquals("", warning.invoke(null, controller()), "no warning at maximum speed");
         assertEquals(32.0, GameServices.module().gameplayAudioPlaybackRate());
         clock().getClass().getMethod("end").invoke(clock());
         assertEquals(1.0, GameServices.module().gameplayAudioPlaybackRate());
     }
 
-    @Test void speedAndCountdownUseThirtySecondCompoundingIntervals() throws Exception {
+    @Test void speedAndCountdownUseThirtySecondLinearIntervals() throws Exception {
         launch(WidescreenAspect.NATIVE_4_3);
         Object clock = clock();
         var tick = clock.getClass().getMethod("tick");
@@ -349,19 +349,19 @@ class TestInfiniteSonic {
         assertEquals(1.0, speed());
         assertEquals(1, seconds.invoke(clock));
         tick.invoke(clock);
-        assertEquals(1.5, speed());
+        assertEquals(1.25, speed());
         assertEquals(30, seconds.invoke(clock));
-        // 30 real seconds at 1.5x is 2700 simulation ticks, not another 1800.
-        for (int i = 0; i < 2699; i++) tick.invoke(clock);
-        assertEquals(1.5, speed());
+        // 30 real seconds at 1.25x is 2250 simulation ticks, not another 1800.
+        for (int i = 0; i < 2249; i++) tick.invoke(clock);
+        assertEquals(1.25, speed());
         tick.invoke(clock);
-        assertEquals(2.25, speed());
+        assertEquals(1.5, speed());
         assertEquals(30, seconds.invoke(clock));
         setTicks(0);
         var palTick = clock.getClass().getMethod("tick", int.class);
         for (int i = 0; i < 1500; i++) palTick.invoke(clock, 50);
-        assertEquals(1.5, speed(), "PAL still speeds up after 30 seconds");
-        setTicks(1800 * 20);
+        assertEquals(1.25, speed(), "PAL still speeds up after 30 seconds");
+        setTicks(1800 * 130);
         assertEquals(32.0, speed(), "bounded host pacing ceiling");
     }
 
@@ -482,7 +482,7 @@ class TestInfiniteSonic {
         assertEquals(1, controllerInt("displayLives"));
         assertEquals(0, GameServices.level().getLevelGamestate().getRings());
         assertTrue(GameServices.gameState().getScore() >= score, "score carries over");
-        assertEquals(2.25, speed(), "the run resumes at the speed it died at");
+        assertEquals(1.5, speed(), "the run resumes at the speed it died at");
         assertTrue(Math.abs(ticks() - (1800 * 2 + 100)) < 10, "and partway through that interval: " + ticks());
         assertTrue(fixture.camera().getX() < player.getCentreX() - player.getXRadius(), "Sonic is on screen");
         for (int i = 0; i < 4; i++) fixture.stepFrame(false, false, false, true, false);
@@ -602,7 +602,7 @@ class TestInfiniteSonic {
                 fixture.stepIdleFrames(1);
               }
             }
-            int expected = (int) (270 * Math.pow(1.5, stage / 1800));
+            int expected = (int) (270 * (1.0 + 0.25 * (stage / 1800)));
             assertEquals(expected, fixture.camera().getX() - startCamera, 1);
             assertEquals(expected, GameServices.gameState().getScore() - score, 1);
             assertFalse(player.getDead());
@@ -636,14 +636,14 @@ class TestInfiniteSonic {
                 player.setXSpeed((short) 0x600);
                 fixture.stepFrame(false, false, false, true, false);
                 int lead = player.getCentreX() - fixture.camera().getX();
-                assertTrue(lead >= initialLead, "Sonic must gain, not lose, ground at 1.5x");
+                assertTrue(lead >= initialLead, "Sonic must gain, not lose, ground at 1.25x");
                 // Controller precedes player integration: allow the current tick's 6px movement.
                 assertTrue(lead <= margin + 6, "right edge remains bounded");
                 reachedMargin |= lead >= margin;
                 assertFalse(player.getDead());
             }
         }
-        assertEquals(1.5, speed());
+        assertEquals(1.25, speed());
         assertTrue(reachedMargin, "Sonic reaches the right-hand margin at every viewport width");
         assertEquals(margin, player.getCentreX() - fixture.camera().getX(), 6);
     }
@@ -663,8 +663,8 @@ class TestInfiniteSonic {
         fixture.stepFrame(false, false, false, true, false);
         assertEquals(1800, ticks());
         assertEquals(0x600, player.getMax(), "whole-game pacing preserves native physics");
-        assertEquals(1.5, speed());
-        assertEquals("SPEED 1.50X", loader.loadClass("infinite.CourseHud")
+        assertEquals(1.25, speed());
+        assertEquals("SPEED 1.25X", loader.loadClass("infinite.CourseHud")
                 .getMethod("speedText", controller().getClass()).invoke(null, controller()));
         assertEquals("NEXT 30", loader.loadClass("infinite.CourseHud")
                 .getMethod("countdownText", controller().getClass()).invoke(null, controller()));
@@ -675,7 +675,7 @@ class TestInfiniteSonic {
         assertEquals(0x600, player.getMax());
         fixture.stepFrame(false, false, false, true, false);
         assertEquals(0x600, player.getMax(), "whole-game pacing preserves native physics");
-        assertEquals(1.5, speed());
+        assertEquals(1.25, speed());
         assertEquals(score, GameServices.gameState().getScore());
         assertEquals(camera, fixture.camera().getX());
         assertEquals(after.entries().get("infinite-sonic:clock"), registry.capture().entries().get("infinite-sonic:clock"));
@@ -708,7 +708,7 @@ class TestInfiniteSonic {
         }
         assertTrue(ticks() >= 1800);
         assertEquals(0x600, fixture.sprite().getMax());
-        assertEquals(1.5, speed());
+        assertEquals(1.25, speed());
         assertTrue(originPixels() > 0, "survive recycling under real scroll pressure");
     }
 

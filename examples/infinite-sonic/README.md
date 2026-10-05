@@ -10,7 +10,7 @@ and the debug level-select key are ignored). Final Zone and the ending stay stoc
 The mod always plays in **16:9** (the 400-pixel `WIDE_16_9` view), whatever the
 global aspect setting: the wider screen shows more of the course ahead at scroll
 speed. The player's own aspect returns at the master title. Trace test mode still
-forces native 4:3. Sonic starts running at normal speed. The whole game speeds up by **1.5× every 30 seconds of active play**: 1× → 1.5× → 2.25× → 3.375×. Pausing stops the countdown.
+forces native 4:3. Sonic starts running at normal speed. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Pausing stops the countdown.
 The camera scrolls at a minimum of **75% of Sonic’s normal maximum run speed**,
 letting Sonic gain ground until his centre reaches 60% of the screen width, just right of centre.
 There the camera follows his position, keeping him on screen while preserving
@@ -43,7 +43,7 @@ The last five seconds also show a large centered countdown with a chime each
 second. Music and sound effects speed up and rise in pitch with the challenge;
 pause, rewind, game over and leaving the level release the playback rate.
 Survival earns one point per minimum-scroll pixel: **270 points/second at 1×**,
-**405 at 1.5×**, and about **608 at 2.25×**, plus normal enemy points.
+about **337 at 1.25×**, and **405 at 1.5×**, plus normal enemy points.
 All movement, enemies, animation and gameplay clocks accelerate together; native
 per-tick jump and collision rules remain unchanged. The host caps pacing at 32×
 (the HUD then says MAX SPEED). There is no finish line or stock time limit. Disable the mod to restore the stock acts.

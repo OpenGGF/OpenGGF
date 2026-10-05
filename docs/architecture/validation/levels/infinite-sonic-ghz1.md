@@ -114,10 +114,10 @@ cadence), up to the bounded 32× host ceiling.
 | Contract | Evidence | Scope / gaps |
 | --- | --- | --- |
 | First speedup during traversal | `normalTraversalReachesFirstSpeedup` | All five widths; native physics, real scroll pressure and recycling; test-only enemy invulnerability |
-| 30-second compounding | `speedAndCountdownUseThirtySecondCompoundingIntervals` | Exact first two boundaries, 2700 simulation ticks for the second interval, PAL and ceiling |
-| Scroll and score | `minimumScrollAllowsFasterRunningAndSurvivalScoreScales` | 1×/1.5×/2.25×; actual camera and score over 60 paced frames; positioned above terrain to isolate timing |
+| 30-second linear steps | `speedAndCountdownUseThirtySecondLinearIntervals` | Exact first two boundaries (+0.25× each), 2250 simulation ticks for the second interval, PAL and ceiling |
+| Scroll and score | `minimumScrollAllowsFasterRunningAndSurvivalScoreScales` | 1×/1.25×/1.5×; actual camera and score over 60 paced frames; positioned above terrain to isolate timing |
 | Left-edge game over | `fallingBehindEndsRunDespiteRingsAndInvulnerability` | All five widths; partial visibility survives, complete exit kills, lives exhausted, score/clock/camera freeze |
-| Boundary rewind | `speedupBoundaryRestoresAndReplaysWithScoreCameraAndHud` | Positioned 1×→1.5× boundary; clock adapter, controller, score, camera and HUD text |
+| Boundary rewind | `speedupBoundaryRestoresAndReplaysWithScoreCameraAndHud` | Positioned 1×→1.25× boundary; clock adapter, controller, score, camera and HUD text |
 | Interactive host pacing | `TestGameLoop.customPresentationPacing*` | Complete-step budget, canonical single-step entry, scene boundaries, pause, rewind input and bounded creator budget |
 | Rendered HUD | `GameplayCaptureSession` diagnostic using actual `stepPresentationFrame()` and an explicitly wrapped module | Native 320px; frame 60 positions the clock at 29.98s to show the speedup without a long route |
 
@@ -203,7 +203,7 @@ physics, engine timing, API or rewind state shape changed.
 
 `sonicGainsGroundAcrossSpeedupAndIsHeldAtRightMargin` checks all five viewport
 widths through 600 presentation frames using the actual module step budget across
-1×→1.5×. It isolates horizontal integration from terrain by resetting height and
+1×→1.25×. It isolates horizontal integration from terrain by resetting height and
 vertical speed, supplies the normal 6px/tick running velocity, and verifies that
 Sonic gains ground, reaches the margin, remains bounded and survives. The separate
 normal traversal tests retain real terrain and movement. Scroll/score coverage
@@ -385,7 +385,7 @@ the engine is unchanged, so focused validation replaces an engine category run.
 | Indestructible hazards | `walkingBombsHurtInsteadOfBreaking` | SLZ1: a descending rolling Sonic loses rings and the bomb survives |
 | Stomp, score, explosion rewind | `aPhysicalStompDestroysTheBadnikAwardsScoreAndDoesNotRespawnIt` | GHZ1 Motobug and Buzz Bomber only |
 | Last-life game over | `lastLifeGameOverSkipsStockCardAndJumpRestartsTheCourse` | Held corpse, no stock card, press-space fresh session |
-| CONTINUE | `deathMenuContinueResumesScoreSpeedAndSessionLives` | Score, 2.25× stage and countdown position, session lives; a second death continues with the last life |
+| CONTINUE | `deathMenuContinueResumesScoreSpeedAndSessionLives` | Score, 1.5× (stage 2) and countdown position, session lives; a second death continues with the last life |
 | RESTART | `deathMenuRestartBeginsAFreshSession` | Edge-detected cursor, fresh 1× session with 3 lives |
 | Score extra lives | `everyFiftyThousandPointsAwardsASessionLife` | Survival and enemy points cross 50,000/100,000; one life per threshold; HUD lives text |
 | Left-edge death | `fallingBehindEndsRunDespiteRingsAndInvulnerability` | All five widths; now leaves two session lives and the CONTINUE menu |
@@ -407,7 +407,7 @@ Main checkout, `feature/ai-infinite-sonic`, base `9423b53e23`; mod, test and doc
 | --- | --- | --- |
 | Act-derived line-ups | `encountersUseTheZonesOwnBadniksWithLoadedRomArt` | Six zones' act 1 plus SBZ3; planned species come only from the act's line-up, all appear, art registered |
 | Ring-only lives | `livesComeOnlyFromEveryHundredRings` | 0 at start; 120,000 points award nothing; 100/200/300 each award one (no stock duplicate); re-reaching 100 after a loss |
-| In-place CONTINUE | `deathMenuContinueRevivesInPlaceAtTheLastSafeSpot` | After 900 frames of course: no respawn request, same controller, exact safe spot and floor Y, blink, one life spent, rings 0, score/2.25×/countdown kept, on screen, standing, scroll resumes; a second continue |
+| In-place CONTINUE | `deathMenuContinueRevivesInPlaceAtTheLastSafeSpot` | After 900 frames of course: no respawn request, same controller, exact safe spot and floor Y, blink, one life spent, rings 0, score/1.5×/countdown kept, on screen, standing, scroll resumes; a second continue |
 | CONTINUE after a pit | `continueAfterAPitDeathRevivesBeforeThePit` | Real fall into the next pit; revived at the recorded spot before it, standing |
 | No-lives game over | `lastLifeGameOverSkipsStockCardAndJumpRestartsTheCourse` | Restart gives a fresh session with 0 spare lives |
 | RESTART | `deathMenuRestartBeginsAFreshSession` | Cursor and fresh 0-life session |

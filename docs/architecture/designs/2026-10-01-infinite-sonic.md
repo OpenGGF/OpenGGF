@@ -158,13 +158,18 @@ coverage matrix for completed checks and remaining presentation/respawn gaps.
 ## Escalating survival challenge (0.4.0)
 
 Follow-up on `30f4e0654e79d3b56e0976277eede2919f0ad983`, current feature branch,
-main checkout, 2026-10-02. Whole-game speed compounds by 1.5 every 30 seconds
+main checkout, 2026-10-02. Whole-game speed originally compounded by 1.5 every 30 seconds
 of active play. `ChallengeClock` counts simulation time divided by the current
 rate and owns the fractional frame-step accumulator; its module rewind adapter
 restores both. Each rendered interactive frame pumps complete ordinary steps,
 leaving native movement, jumps, collision, objects and animation unchanged per tick.
 The host bounds creator pacing at 32 steps/frame; the challenge saturates at 32×
 and labels the HUD MAX SPEED. At high speeds machine throughput can limit delivery.
+
+Follow-up, 2026-10-05: the 1.5× compounding curve (1× → 1.5× → 2.25× → 3.375×)
+ramped too aggressively in play. Each stage now adds 0.25× linearly (1× → 1.25×
+→ 1.5× → 1.75× → 2×); the 32× ceiling and MAX SPEED label are unchanged but now
+sit far beyond a realistic run.
 
 The camera advances at least 4.5px per simulation tick, retaining fractional
 pixels and vertical tracking. Sonic can gain ground until his centre reaches a
@@ -184,7 +189,7 @@ cannot queue a second restart. The reload re-enters `loadLevelOverride` (clock
 reset) and the new controller resets score and lives on its first frame. Rings and hit
 invulnerability cannot prevent scrolling failure. Scoring earns one point per
 minimum-scroll pixel, retaining fractional credit: 270 points per real second at
-1× and 405 at 1.5×. Death freezes challenge scoring, progression and scrolling.
+1×, about 337 at 1.25× and 405 at 1.5×. Death freezes challenge scoring, progression and scrolling.
 
 The mod suppresses the stock HUD and draws score, speed/countdown, rings and
 game-over/restart text using code-drawn glyphs through the CPU presentation primitive path.
