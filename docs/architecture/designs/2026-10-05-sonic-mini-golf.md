@@ -8,6 +8,8 @@ Status: proposed gameplay and implementation brief; no golf implementation deliv
 
 Framework research base: `fa129ccf4` (`develop`, including Infinite Sonic)
 
+Implementation plan: [sequenced tasks and verification](../plans/2026-10-05-putt-putt-paradise.md)
+
 ## The game
 
 Play an entire Sonic act as a golf hole, using Sonic or Tails as the ball.
