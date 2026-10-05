@@ -56,7 +56,7 @@ public final class SlayScene implements ModScene {
      * {@code "sonic:42:fight:hcz:big_shaker"} or {@code "tails:7:event:event:slot_machine"}
      * (character, seed, then {@code fight} or {@code event} and the id, or {@code room} and a
      * room type such as {@code Shop:2} for a shop in act 2), {@code "compendium:2"},
-     * or {@code "kill"} to defeat every enemy in the current fight.
+     * {@code "kill"} to defeat every enemy in the current fight, or {@code "die"} to lose it.
      */
     public void debugJump(String command) {
         if (command.equals("kill") && shell.run != null
@@ -66,6 +66,12 @@ public final class SlayScene implements ModScene {
                 room.combat().loseHp(e, e.hp());
             }
             room.combat().checkVictory();
+            return;
+        }
+        if (command.equals("die") && shell.run != null
+                && shell.run.room() instanceof slaytherobotnik.run.CombatRoom room) {
+            // Lose the current fight (to see the game over screen).
+            room.combat().loseHp(room.combat().player(), room.combat().player().hp());
             return;
         }
         if (command.startsWith("compendium")) {

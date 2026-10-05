@@ -79,7 +79,8 @@ final class EnemyVisuals {
     private static float scale(Enemy enemy) {
         return switch (enemy.id()) {
             case "aiz:mega_rhinobot", "aiz:caterkiller_sr", "hcz:frenzy_chopper", "hcz:buggernaut_queen",
-                    "lbz:ribot_commander", "lbz:star_orbinaut", "lbz:snale_mother", "ssz:mecha_sonic" -> 2f;
+                    "lbz:ribot_commander", "lbz:star_orbinaut", "lbz:snale_mother" -> 2f;
+            case "ssz:mecha_sonic" -> 1.5f;
             default -> 1f;
         };
     }

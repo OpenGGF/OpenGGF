@@ -366,6 +366,11 @@ public final class Run {
         if (afterVictory != null) {
             afterVictory.run();
         }
+        if (type.equals(RoomType.BOSS) && state.act() >= state.catalog().actCount()) {
+            // The final boss ends the run at once, as the Heart does: no rewards to spend.
+            room = new VictoryRoom(score(true));
+            return;
+        }
         List<Reward> rewards = new RewardGenerator(state).combatRewards(type);
         rewards.addAll(eventRewards);
         eventRewards = List.of();
