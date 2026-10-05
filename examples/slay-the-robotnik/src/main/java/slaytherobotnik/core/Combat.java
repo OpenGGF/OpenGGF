@@ -490,9 +490,24 @@ public final class Combat {
         }
     }
 
-    /** The card currently resolving, or null. */
+    /**
+     * The card currently resolving, or null. While {@link #previewCardDamage} runs it is the
+     * card being previewed, so damage modifiers keyed on the card ("Ring Bombs deal 4
+     * additional damage") show in the card's text as well as when it is played.
+     */
     public Card cardBeingPlayed() {
         return cardBeingPlayed;
+    }
+
+    /** Attack damage {@code card} would deal to {@code target} (may be null) from a base of {@code base}. */
+    public int previewCardDamage(Card card, Enemy target, int base) {
+        Card resolving = cardBeingPlayed;
+        cardBeingPlayed = card;
+        try {
+            return calculateDamage(player, target, base, DamageType.ATTACK);
+        } finally {
+            cardBeingPlayed = resolving;
+        }
     }
 
     /** How many times a Combo effect on {@code card} repeats now: its Combo value plus Focus and bonuses. */

@@ -30,7 +30,7 @@ public final class Cards {
         if (combat == null) {
             return base;
         }
-        return combat.calculateDamage(combat.player(), target, base, DamageType.ATTACK);
+        return combat.previewCardDamage(card, target, base);
     }
 
     /** Block the card would give now. */
