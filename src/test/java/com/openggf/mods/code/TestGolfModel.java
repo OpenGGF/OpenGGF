@@ -57,6 +57,7 @@ class TestGolfModel {
     @Test void heldAAndPostCommitCancelCannotDuplicateTheStrokeOrLaunch() throws Exception { check("buttonEdges"); }
     @Test void cancelBeforeCommitRestartsWithoutLeakingThePreviousCharge() throws Exception { check("freeCancel"); }
     @Test void restoredMidChargeProducesTheSameAutomaticLaunchAndEvents() throws Exception { check("meterReplay"); }
+    @Test void higherPowerProducesMoreNativeChargeRequestsBeforeTheSameRelease() throws Exception { check("powerFeedback"); }
     @Test void aimingClampsElevationAndLocksItOnTheFirstA() throws Exception { check("aimLocks"); }
     @Test void allCharacterPairingsAlternateAndReverseTheSecondActStarter() throws Exception { check("pairings"); }
     @Test void compoundFailureBeatsFinishAndCannotAddAnotherPenaltyOnRetry() throws Exception { check("penaltiesAndDuplicates"); }

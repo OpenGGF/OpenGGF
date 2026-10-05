@@ -114,6 +114,9 @@ public interface TitleScreenProvider {
         return 0;
     }
 
+    /** Logical act selected by an alternative title, defaulting to the first act. */
+    default int startActIndex() { return 0; }
+
     default void setExitToLevelHandler(Runnable handler) {
         // Default: no-op.
     }

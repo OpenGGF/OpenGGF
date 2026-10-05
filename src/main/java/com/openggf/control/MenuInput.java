@@ -5,6 +5,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import static org.lwjgl.glfw.GLFW.*;
 
 /** Shared menu controls and hints, selected by the last intentional physical input. */
+@com.openggf.game.ModApi
 public final class MenuInput {
     private MenuInput() {
     }

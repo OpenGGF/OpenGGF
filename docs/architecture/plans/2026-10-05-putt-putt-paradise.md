@@ -4,7 +4,7 @@ Subtitle: **Sonic 2 Mini Golf**
 
 Date: 2026-10-05
 
-Status: implementation plan only; no golf implementation delivered
+Status: local implementation under final verification; retained branch/worktree, no merge or push
 
 Spec: [Putt Putt Paradise design](../designs/2026-10-05-sonic-mini-golf.md)
 
@@ -590,7 +590,7 @@ traversal, host migration, account service or broad security subsystem.
 ## Task 10 — menus, route evidence, API packaging and completion
 
 **Create/update:** `GolfMenu`, example README/build script; the existing design;
-`docs/architecture/validation/2026-10-05-putt-putt-paradise.md` for actual evidence;
+`docs/architecture/validation/levels/putt-putt-paradise-ehz.md` for route coverage;
 `docs/status/level-test-coverage.md` links to per-act/character route matrices.
 Update maintained API/creator/configuration guides and changelog where behavior
 changes require them, using the documentation obligation checklist.
@@ -607,7 +607,7 @@ changes require them, using the documentation obligation checklist.
   progression, camera/presentation/audio behavior and closes network resources.
 - [ ] Deliver EHZ1/Sonic, EHZ1/Tails, EHZ2/Sonic and EHZ2/Tails route matrices under
   the [level test standard](../../guide/contributing/level-test-standard.md).
-  Test real widths 320/400/512/640/800; list native S2 and solo active-character
+  Test actual menu widths 320/352/400/528/800; list native S2 and solo active-character
   scope, intentional rejected configurations and inherited gaps explicitly.
   All pairings need two-hole match coverage; online needs all supported common
   widths and both mixed/duplicate character behavior.
@@ -631,18 +631,18 @@ changes require them, using the documentation obligation checklist.
 
 ## Verification commands and limits
 
-These commands are for future implementation, not tests already run for this
-document. New test names above are planned files. Supply `-Dsonic2.rom.path=`
+These are the maintained implementation commands; completed runs and outcomes
+are recorded below. Earlier task-local test names are proposal names, consolidated
+into the actual test inventory in the coverage matrix. Supply `-Dsonic2.rom.path=`
 with the discovered, verified absolute S2 ROM path; inspect ROM-backed skips.
 Canonical S2 SHA-1 is `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, CRC32 `7B905383`.
 
 ```bash
 mvn -v  # Java 21; inspection only
 tools/testing/install-hooks.sh  # once in the implementation worktree
-python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestGameplayModeHold,TestCourseCheckpointIsolation,TestPlayableLaunchControl" test
-python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestPuttPuttParadise,TestGolfShotControls,TestGolfEhzCourseRules,TestGolfLocalMatch,TestGolfScenePresentation" "-Dsonic2.rom.path=/absolute/discovered/S2.gen" test
-python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestGolfProtocol,TestGolfNetworkMatch" "-Dsonic2.rom.path=/absolute/discovered/S2.gen" test
-python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestModApiSignatureSurface,TestModApiJavadocTool,TestModApiSdkPackager,TestInfiniteSonic" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestGolfModel,TestGolfMenu,TestGolfProtocol,TestGolfTransport,TestGolfOnlineIntegration,TestPuttPuttParadise,TestGolfScenePresentation,TestRewindRegistry" "-Dsonic2.rom.path=/absolute/discovered/S2.gen" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestModApiJavadocTool,TestModApiSdkPackager,TestGraphicsManagerHeadless,TestInfiniteSonic" "-Dsonic1.rom.path=/absolute/discovered/S1.gen" test
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards "-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestArchitecturalSourceGuard,TestArchitecturalReviewGuard" test
 python3 examples/putt-putt-paradise/build.py
 python3 tools/testing/run_categories.py --base <pre-implementation-sha>
 python3 tools/testing/run_categories.py --base <pre-implementation-sha> --preflight
@@ -668,9 +668,9 @@ Inspect `results.json`, including skips, then acknowledge the run to remove
 consumed diagnostics. No trace/native capture run is implied by an ordinary
 category pass; record domain/capture evidence separately.
 
-For this planning-only change, validate Markdown structure, local links,
-referenced existing file paths, design consistency, whitespace and commit policy.
-No Maven/engine test run is needed and none establishes feasibility at this stage.
+The initial planning commit used Markdown structure, local links, existing paths,
+design consistency, whitespace and commit-policy checks only. Implementation
+validation is recorded below; that planning check established no engine feasibility.
 
 ## Implementation review checklist
 
@@ -692,8 +692,10 @@ No Maven/engine test run is needed and none establishes feasibility at this stag
 
 Plan self-review covered the design's acceptance scenarios, current versus proposed
 capabilities, task dependencies, rollback/commit boundaries, native sound ownership
-and future test scope. The unchecked lists above track future implementation and
-verification; no engine feasibility result is claimed by that review.
+and future test scope. The task lists above preserve the original planning scope;
+the implementation evidence and coverage matrix below record what was delivered
+and which proposed coverage axes remain unsampled. The initial review itself
+made no execution claim.
 
 ## Independent review reconciliation — 2026-10-05
 
@@ -742,3 +744,172 @@ remain on develop. The following choices follow inspection at that commit:
   restores ±0x400 inertia at roll stop; the scoped golf rule must allow zero speed.
 - Reusing native pause while golf menus hold the course would still service V-int;
   golf menus use held admission in every phase instead.
+
+## Implementation delivery (local, 2026-10-05)
+
+Pinned pre-implementation base: `d5eaa3efc24b45e7f0d25b0a3392ef61dc5352a1`.
+The development checkout remains `feature/ai-putt-putt-paradise`; no integration
+into `develop` or remote push is authorized. Main `develop` stays at `fc4729c37`
+with unrelated user changes preserved. Earlier pushed concept history remains.
+The [course coverage matrix](../validation/levels/putt-putt-paradise-ehz.md)
+records both acts, characters, viewports, local pairings and remaining breadth.
+
+### Implemented behavior and ownership
+
+The real external creator sources compile separately and pass the normal SDK
+package/loader/trust/fault boundary. Model `c6b5db4f8`, TCP primitives `39e403de7`,
+menu `44df57112`, room `bbf678a86`, compiler-generated constant validation
+`f6257f027`, scene capture `551eac135`, build script `45dca6927`, ROM pose recipes
+`1abffc311`, owner boundaries `e97f46679`, independent pause/concession handling
+`66614664a` and finite creator-worker teardown `9fecd6499` were integrated locally
+from owned worker trees. The engine coordinator and full course adapter follow
+in the retained branch's implementation commit.
+
+Practice, local competition and direct TCP Host/Join use full ROM EHZ1/EHZ2.
+Sonic/Tails and duplicate pairings use one active physical golfer, independent
+whole-world lies and alternating turns. Two timed A locks commit one stroke;
+power-dependent feedback requests native charge sounds, then releases after a
+short fixed pause. Innate pitch remains in the native driver. No boss, CPU
+follower, airborne steering, artificial pinball boost or stock progression runs.
+
+One controller admission precedes native clocks, physics, objects, animations,
+PLC and hardware work. HOLD is a real mode/input/audio row for interactive,
+direct/headless, capture and live-rewind paths; setup is not a row. The shared
+runtime restores the real logical input after neutral WATCH simulation.
+Scoped rolling retention allows supported zero speed without affecting native
+pinball behavior. The controller stays outside course rollback by engine-bound
+adapter identity; full debug rewind includes both course and ledger. Checkpoints
+reject session/act/adapter-layout mismatches before any mutation, preserve past
+history and invalidate future on replacement. Actual act loads isolate timelines.
+
+The guest renders bounded authoritative values from its permanently held local
+ROM resource session. Native tiles, objects, priorities, poses and palette recipes
+remain local ROM assets. A gold finish flag is a view primitive. C surveys a
+bounded terrain envelope (half a viewport horizontally and 112 vertically),
+without widening native object admission or moving the simulation camera.
+Online snapshots coalesce; commands/receipts retain reliable bounded ordering.
+Pause ownership, crossing acceptance/rejection, reconnect receipts, concession,
+write deadlines and resource teardown have actual focused checks.
+
+### Review findings, failed approaches and corrections
+
+Opus 5.5's implementation review was static, with no execution claims. Its nine
+findings were resolved and checked: activate under stock S2 Sonic+Tails launch
+profiles; use session overrides and a single roster; finish entry fades during
+setup; retain independent online pause owners and release rejected guest meters;
+adjust standing-radius contact on character swaps; avoid restarting unchanged
+music on each restore; partition checkpoints by adapter identity rather than
+creator key prefixes; capture C's input latch; revert the inert controlled-left/
+right FixBugs edit. Sol's integration review also drove recording brackets,
+logical-input restoration, setup exclusion, player-two pause, C survey, normal
+boot checks and extraction of controlled iteration from the large GameLoop.
+
+The first artifact test failed because no implementation existed; the first HOLD
+check failed because dynamic-art clocks advanced. The corrected common path
+freezes those owners before admission. Initial ordinary enums/switches failed
+SDK validation: only compiler-shaped immutable enum constants and switch tables
+were admitted; author static object sentinels were replaced with factories.
+
+A lost-ball bound at decoded `maxY + 128` rejected EHZ1's legitimate lower floor.
+Native S2 treats decoded maxY as camera origin and checks centreY against
+`maxY + $E0`; the course bottom now derives that extent before its explicit lost
+margin. EHZ2's boss arena camera clamp prevented reaching ROM egg-prison X
+`$2B50`. Native escape `loc_2F460` opens maxX toward `$2AB0` (REV01 bytes at
+`$2F460`: `0c782ab0eeca64065478eeca`). The boss-free course opens the equivalent
+end view extent before capturing any lie, keeping the ROM placement as the gate.
+No stock physics constant or comparison trace row was used to fit a route.
+
+Wider object admission legitimately changes world encounters. Native-width route
+inputs failed at wider EHZ1's ninth shot (watchdog) and EHZ2's upper route (damage).
+The maintained wider routes alter only user shot choices and are replayed fresh;
+exploration checkpoints are not completion evidence. Full-viewport survey margins
+were rejected when 800px EHZ2 end data exceeded the existing bounded tile count.
+Half-width/112 margins retain the same wire bounds (800 end: 33,754 tiles,
+713,983 bytes), and unpanned pixels match the ordinary capture.
+
+Native captures caught an overlapping clear-air label, now above the HUD, and a
+320px manager viewport cache after wider title selection, now rebuilt from the
+live camera. The opaque checkpoint's UUID getter leaked an unaudited public type;
+it uses an engine-owned Object identity token instead, with no mutable owner
+cycles. A descriptor prose comment failed its strict key=value parser and was
+removed; the authoritative candidate remains 0.7.0 without changing topology or
+published status. MenuInput is an explicit curated candidate root.
+
+A compatibility run exposed the scene sampler rejecting native null art slots in
+Sonic 1 before any mod gameplay. The renderer already accepts these slots and
+retains previously uploaded bytes; sampling now follows that behavior without
+inventing fallback ROM art. A regression test first reproduces the null-slot
+failure, then checks untouched residency and preserved prior samples.
+
+Listener teardown originally lost accepted sockets after ownership transfer and
+some creator worker record/value classes loaded after the classloader closed.
+`9fecd6499` retains workers until completion and eagerly loads the finite wire
+shape before launching I/O. All thirteen raw wire forms are exercised with the
+creator loader closed immediately, without prior encoder warm-up.
+
+### Verification evidence
+
+All Maven invocations use `tools/testing/maven_queue.py`; category runs use its
+shared queue automatically. Java 21 and absolute S2 World REV01 ROM paths were
+verified; ROM SHA-1 is `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`.
+
+Native OpenGL framebuffer checks loaded the validated development mod through
+normal boot/trust/resolver with the stock S2 profile. Real menu, aim, survey,
+duck/charge, spindash, WATCH, pause and concession inputs produced checked images
+at 320 EHZ1 and 800 EHZ2. The finish-preview camera was moved for view evidence
+only. Durable PNGs are outside the repository at
+`${HOME}/scratch/gameplay-captures/putt-putt-paradise-20261005/`.
+
+The final focused commands, complete route inventory, API/architecture gates,
+SDK build and combined change-based run are recorded here when they complete.
+The broad ordinary inventory is approximately 2,976 classes plus structural
+guards, with historical cost around 24+10 minutes. Native ROM timing parity,
+PCM capture, all object subtype/contact combinations, movement donors and an
+exhaustive width × act rewind sweep remain outside observed coverage. The online
+integration executes two real turns and terminal concession; a continuous online
+two-act traversal is not separately sampled. These limits are not full stock EHZ
+certification, even when the mod's maintained completion routes pass.
+
+Focused gates completed before the final route/broad pass:
+
+- Combined scene/model/menu/room/checkpoint/Javadoc/SDK selection: 109 checks
+  passed, no skips; a separate Infinite Sonic consumer failed on 195 null art
+  loads, exposing the newly introduced sampler regression before gameplay.
+- Regression red: `TestGraphicsManagerHeadless#emptyRomArtSlotsKeepNativeResidencyAndDoNotInventSceneSamples`
+  failed on the null sample. After correction, `TestGraphicsManagerHeadless,TestInfiniteSonic`
+  passed: 220 run, 208 passed, 12 skipped (the existing
+  `sonicCrossesAPlatformStretchOnSpawnedStockPlatforms` cases 11/12, 19–24 and
+  33–36 without usable stock platform stretches), no failures/errors.
+- `-Pguards -Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestArchitecturalSourceGuard,TestArchitecturalReviewGuard`:
+  103 passed, no skips. Normalized candidate pin contains 19,401 lines, no
+  missing annotations or external signature leaks.
+- `TestPuttPuttParadise#liveGameLoopAndBk2DriverConsumeTheSameHeldChargePauseAndReleaseRows`:
+  passed 360 matching native-ball/meter/ledger rows through real GameLoop and
+  BK2 driver with held charge, independent Start pause/resume and automatic
+  release. An initial test assumed fixture setup was still pending; its first
+  GAMEPLAY_FRAME showed the fixture had already performed that setup, and the
+  assertion was corrected without changing production behavior.
+- `python3 examples/putt-putt-paradise/build.py`: separately compiled and
+  SDK-validated the current manifest/code-only jar at
+  `target/putt-putt-paradise/putt-putt-paradise.jar`.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base d5eaa3efc24b45e7f0d25b0a3392ef61dc5352a1 --preflight`:
+  Java 21, Lua 5.4 and PowerShell prerequisites passed; this runs no tests.
+
+Final focused acceptance on the implementation tree (`S2_ROM` below denotes the
+discovered absolute World REV01 path, checked against the SHA-1 above):
+
+- `python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestGolfModel,TestGolfMenu,TestGolfProtocol,TestGolfTransport,TestGolfOnlineIntegration,TestPuttPuttParadise,TestGolfScenePresentation,TestRewindRegistry,TestGraphicsManagerHeadless' "-Dsonic2.rom.path=${S2_ROM}" test`:
+  157 passed, no failures/errors/skips, 1 minute 25 seconds. This includes all
+  20 fresh act × character × advertised viewport routes and all four complete
+  alternating two-act local pairings. Each completion route retains zero penalties.
+- EHZ1 uses ten shots at each width. EHZ2 uses 26 shots at 320, 37 at 352/528,
+  54 at 400 and 16 at 800. The exact maintained inputs are in
+  `TestPuttPuttParadise.route`; fresh full-audio fixture replay is the completion
+  proof. Bounded temporary route explorers skipped PCM synthesis for search speed;
+  their checkpoints and results were not used as final execution evidence.
+
+The combined selection contains 2,976 ordinary classes and the separate structural
+guard lane. It remains required because frame admission, checkpoints, rendering
+and the public candidate contract are shared engine paths. Expected historical
+cost is 24 minutes ordinary plus 10 minutes guards; the runner uses a 40-minute
+combined invocation timeout and a 10-minute no-output timeout, excluding queue wait.

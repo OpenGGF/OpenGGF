@@ -61,6 +61,17 @@ The Hidden Palace completion adds `SpecialStageProvider.resultsExitFadesToWhite(
 `GameLoop.debugCompleteSpecialStageWithEmerald()`, the debug completion that capture tools
 request without reading a key binding. Both update the mutable `0.7` pin.
 
+The Putt Putt Paradise additions expose `GameplayFrameController`, `CourseControl`,
+opaque session/hole/layout-tagged `CourseCheckpoint`, `MenuInput`, title act
+selection, and typed ROM-backed scene values/presenters. The default controller
+is absent, retaining stock admission. Controlled HOLD is a recorded mode row;
+SETUP_ONLY is not. Opaque course rollback excludes the engine-bound controller
+adapter by identity and preserves past debug history; actual act loads reset it.
+Prepared scenes carry value/art identities, never ROM bytes or mutable snapshots.
+Compiler-generated immutable enum constants and switch tables are now accepted
+by the static initializer validator; arbitrary author static objects remain rejected.
+These extend the mutable candidate pin and keep `0.7.0` unpublished.
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:

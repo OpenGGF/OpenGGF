@@ -13,7 +13,7 @@ public final class ShotMeter {
     public enum Kind { DUCK, CHARGE, COMMIT, RELEASE, CANCEL }
 
     public record Input(boolean up, boolean down, boolean left, boolean right, boolean a, boolean b) {
-        public static final Input NONE = new Input(false, false, false, false, false, false);
+        public static Input none() { return new Input(false, false, false, false, false, false); }
     }
 
     /** shot is present on COMMIT/RELEASE and absent on pose/charge/cancel events. */
@@ -109,9 +109,14 @@ public final class ShotMeter {
                 meterPhase = (meterPhase + 1) % GolfRules.METER_PERIOD_TICKS;
             }
             case FEEDBACK -> {
-                if (--stageTicksRemaining == 0) {
+                int elapsed = GolfRules.CHARGE_FEEDBACK_TICKS - --stageTicksRemaining;
+                boolean charge = elapsed % GolfRules.EXTRA_CHARGE_INTERVAL_TICKS == 0
+                        && elapsed / GolfRules.EXTRA_CHARGE_INTERVAL_TICKS
+                        <= shot.normalizedPower() / GolfRules.EXTRA_CHARGE_POWER_STEP;
+                if (stageTicksRemaining == 0) {
                     stage = Stage.PRE_RELEASE; stageTicksRemaining = GolfRules.PRE_RELEASE_TICKS;
                 }
+                if (charge) return List.of(new Event(Kind.CHARGE, null));
             }
             case PRE_RELEASE -> {
                 if (--stageTicksRemaining == 0) {

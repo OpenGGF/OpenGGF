@@ -4,7 +4,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 
-import java.util.Map;
 import java.util.Objects;
 
 /** Small code-drawn 5x7 font and screen primitives. No bitmap/ROM payloads or camera mutation. */
@@ -15,26 +14,9 @@ public final class GolfText {
     public static final int BLUE = 0x205B73;
     public static final int GREEN = 0x278B69;
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final String[] GLYPHS = {
-            "0E11111F111111", "1E11111E11111E", "0F10101010100F", "1E11111111111E",
-            "1F10101E10101F", "1F10101E101010", "0F10101311110F", "1111111F111111",
-            "1F04040404041F", "0702020212120C", "11121418141211", "1010101010101F",
-            "111B1515111111", "11191513111111", "0E11111111110E", "1E11111E101010",
-            "0E11111115120D", "1E11111E141211", "0F10100E01011E", "1F040404040404",
-            "1111111111110E", "11111111110A04", "11111115151B11", "11110A040A1111",
-            "11110A04040404", "1F01020408101F", "0E11131519110E", "040C040404040E",
-            "0E11010204081F", "1E01010E01011E", "02060A121F0202", "1F10101E01011E",
-            "0E10101E11110E", "1F010204080808", "0E11110E11110E", "0E11110F01010E"
-    };
-    private static final Map<Character, String> PUNCTUATION = Map.ofEntries(
-            Map.entry('.', "00000000000004"), Map.entry(':', "00040000040000"),
-            Map.entry('-', "0000001F000000"), Map.entry('_', "0000000000001F"),
-            Map.entry('/', "01010204081010"), Map.entry('+', "0004041F040400"),
-            Map.entry('=', "00001F001F0000"), Map.entry('>', "10080402040810"),
-            Map.entry('<', "01020408040201"), Map.entry('!', "04040404040004"),
-            Map.entry('?', "0E110102040004"), Map.entry('%', "191A0204080B13"),
-            Map.entry('[', "0E08080808080E"), Map.entry(']', "0E02020202020E"),
-            Map.entry('(', "02040808080402"), Map.entry(')', "08040202020408"));
+    private static final String GLYPHS = "0E11111F1111111E11111E11111E0F10101010100F1E11111111111E1F10101E10101F1F10101E1010100F10101311110F1111111F1111111F04040404041F0702020212120C111214181412111010101010101F111B1515111111111915131111110E11111111110E1E11111E1010100E11111115120D1E11111E1412110F10100E01011E1F0404040404041111111111110E11111111110A0411111115151B1111110A040A111111110A040404041F01020408101F0E11131519110E040C040404040E0E11010204081F1E01010E01011E02060A121F02021F10101E01011E0E10101E11110E1F0102040808080E11110E11110E0E11110F01010E";
+    private static final String PUNCTUATION = ".:-_/+=><!?%[]()";
+    private static final String PUNCTUATION_GLYPHS = "00000000000004000400000400000000001F0000000000000000001F010102040810100004041F04040000001F001F00001008040204081001020408040201040404040400040E110102040004191A0204080B130E08080808080E0E02020202020E0204080808040208040202020408";
 
     private GolfText() { }
 
@@ -92,7 +74,13 @@ public final class GolfText {
             char c = Character.toUpperCase(text.charAt(letter));
             if (c == ' ') continue;
             int index = ALPHABET.indexOf(c);
-            String glyph = index >= 0 ? GLYPHS[index] : PUNCTUATION.getOrDefault(c, PUNCTUATION.get('?'));
+            String glyph;
+            if (index >= 0) glyph = GLYPHS.substring(index * 14, index * 14 + 14);
+            else {
+                int punctuation = PUNCTUATION.indexOf(c);
+                if (punctuation < 0) punctuation = PUNCTUATION.indexOf('?');
+                glyph = PUNCTUATION_GLYPHS.substring(punctuation * 14, punctuation * 14 + 14);
+            }
             for (int row = 0; row < 7; row++) {
                 int bits = Integer.parseInt(glyph.substring(row * 2, row * 2 + 2), 16);
                 for (int column = 0; column < 5; column++) {

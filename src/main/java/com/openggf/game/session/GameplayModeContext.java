@@ -84,6 +84,11 @@ import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 
 @com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
+    private final Object courseCheckpointIdentity = new Object();
+
+    /** Identity-only course tag; snapshots cannot retain the mutable session graph. */
+    public Object courseCheckpointIdentity() { return courseCheckpointIdentity; }
+
     private static final Logger LOG =
             Logger.getLogger(GameplayModeContext.class.getName());
     private static final String PATTERN_ANIMATOR_REWIND_KEY = "pattern-animator";
@@ -325,7 +330,7 @@ public final class GameplayModeContext implements ModeContext {
             dynamicArtLifecycle.beginRun();
         }
 
-        this.rewindRegistry = new RewindRegistry(profiler);
+        this.rewindRegistry = new RewindRegistry(profiler, worldSession.getGameModule().gameplayFrameController());
         this.levelEventExtraRewindKeys.clear();
         this.rewindRegistry.register(hardwareTiming);
         this.rewindRegistry.register(dynamicArtLifecycle);
@@ -1147,13 +1152,19 @@ public final class GameplayModeContext implements ModeContext {
         EngineServices.current().vIntRunCounter().unbindObjectClock();
         installGameplayInputFilter(GameplayInputFilter.IDENTITY);
         RuntimeException replayCloseFailure = null;
+        var frameController = worldSession.getGameModule().gameplayFrameController();
+        if (frameController != null) {
+            try { frameController.close(); }
+            catch (RuntimeException failure) { replayCloseFailure = failure; }
+        }
         Runnable replayClose = hardwareTimingReplayCloseHook;
         hardwareTimingReplayCloseHook = null;
         if (replayClose != null) {
             try {
                 replayClose.run();
             } catch (RuntimeException failure) {
-                replayCloseFailure = failure;
+                if (replayCloseFailure == null) replayCloseFailure = failure;
+                else replayCloseFailure.addSuppressed(failure);
             }
         }
         if (rewindRegistry != null) {

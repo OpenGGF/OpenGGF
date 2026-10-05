@@ -29,15 +29,24 @@ public final class RewindRegistry {
     private final Map<String, RewindSnapshottable<?>> entries = new LinkedHashMap<>();
     private final Map<String, Runnable> postRestoreCallbacks = new LinkedHashMap<>();
     private final SectionProfiler profiler;
+    private final Object modeAdapter;
     private long layoutVersion;
+    private long courseLayoutVersion;
     private LayoutState layoutState;
 
     public RewindRegistry() {
-        this.profiler = null;
+        this(null, null);
     }
 
     public RewindRegistry(SectionProfiler profiler) {
+        this(profiler, null);
+    }
+
+    /** The session supplies its actual controller; creator keys never select the partition. */
+    public RewindRegistry(SectionProfiler profiler,
+                          com.openggf.game.mode.GameplayFrameController controller) {
         this.profiler = profiler;
+        this.modeAdapter = controller instanceof RewindSnapshottable<?> ? controller : null;
     }
 
     public void register(RewindSnapshottable<?> s) {
@@ -48,11 +57,14 @@ public final class RewindRegistry {
                     "RewindSnapshottable already registered: " + key);
         }
         invalidateLayout();
+        if (s != modeAdapter) courseLayoutVersion++;
     }
 
     public void deregister(String key) {
-        if (entries.remove(key) != null) {
+        var removed = entries.remove(key);
+        if (removed != null) {
             invalidateLayout();
+            if (removed != modeAdapter) courseLayoutVersion++;
         }
     }
 
@@ -114,6 +126,43 @@ public final class RewindRegistry {
                 profiler.endSection("rewind.restore");
             }
         }
+    }
+
+    /** Registry generation changes even when an adapter is replaced under the same key. */
+    public long courseLayoutVersion() { return courseLayoutVersion; }
+
+    /** Captures a course partition, omitting only the session controller by identity. */
+    public CompositeSnapshot captureCourse() {
+        var values = new LinkedHashMap<String, Object>();
+        entries.forEach((key, adapter) -> {
+            if (adapter != modeAdapter) values.put(key, Objects.requireNonNull(adapter.capture(), key));
+        });
+        return new CompositeSnapshot(values);
+    }
+
+    /** Validates the entire partition before mutating any subsystem. */
+    public void requireCourseLayout(CompositeSnapshot snapshot) {
+        var keys = new java.util.LinkedHashSet<>(entries.keySet());
+        keys.removeIf(key -> entries.get(key) == modeAdapter);
+        if (!keys.equals(snapshot.entries().keySet()))
+            throw new IllegalArgumentException("Course checkpoint belongs to a different registry layout");
+    }
+
+    /** Restores the exact course partition while retaining the match/mode ledger. */
+    public void restoreCourse(CompositeSnapshot snapshot) {
+        requireCourseLayout(snapshot);
+        for (var entry : entries.entrySet()) {
+            String key = entry.getKey();
+            if (entry.getValue() != modeAdapter && !restoresAfterReconstruction(key))
+                restoreAdapter(entry.getValue(), snapshot.get(key));
+        }
+        if (snapshot.containsKey(GAME_RNG_KEY)) restoreAdapter(entries.get(GAME_RNG_KEY), snapshot.get(GAME_RNG_KEY));
+        postRestoreCallbacks.values().forEach(Runnable::run);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void restoreAdapter(RewindSnapshottable<?> adapter, Object snapshot) {
+        ((RewindSnapshottable<Object>) adapter).restore(snapshot);
     }
 
     private static boolean restoresAfterReconstruction(String key) {

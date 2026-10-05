@@ -446,7 +446,9 @@ public class Engine {
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
             com.openggf.editor.EditorCommandPalette.forController(levelEditorController).close();
-			// Keep projection at 320 for both modes
+			if (newMode == GameMode.LEVEL && GameServices.hasRuntime())
+                applyRequiredDisplayAspect(GameServices.module());
+            // Resolve module-selected dimensions before the title hands off.
 			projectionWidth = realWidth;
 		});
 		gameLoop.setEditorInputHandler(editorInputHandler);
@@ -1020,6 +1022,8 @@ public class Engine {
 		projectionWidth = realWidth;
 		graphicsManager.setProjectionWidth((int) projectionWidth);
 		graphicsManager.applyResolvedDisplayWidth((int) projectionWidth);
+        var camera = GameServices.cameraOrNull();
+        if (camera != null) camera.refreshViewportDimensions(configService);
 
 		if (glfwInitialized && window != 0L) {
 			FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();
@@ -4139,7 +4143,14 @@ public class Engine {
 	}
 
 	private void drawLevel() {
-		levelManager.drawWithSpritePriority(spriteManager);
+		var controller = com.openggf.game.mode.ControlledFrameRuntime.controller(
+				com.openggf.game.session.SessionManager.getCurrentGameplayMode());
+		if (controller == null || !controller.drawScene()) levelManager.drawWithSpritePriority(spriteManager);
+		if (controller != null) {
+			graphicsManager.flush();
+			controller.drawOverlay();
+			graphicsManager.flushScreenSpace();
+		}
 		drawActiveLevelTitleCardOverlay();
 	}
 

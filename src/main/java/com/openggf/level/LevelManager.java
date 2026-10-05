@@ -167,6 +167,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** Project the current visible course without ticking camera, objects, animation or loading windows. */
     public com.openggf.game.presentation.ScenePresentationFrame captureScene(
             long revision, com.openggf.game.presentation.PlayerPresentationPose pose) {
+        return captureScene(revision, pose, 0, 0);
+    }
+
+    /**
+     * Projects a bounded decoded-terrain envelope around the current native view.
+     * Surveying preserves the current animation/deformation phase and native
+     * visible object pass; it never moves the camera or loads another object window.
+     */
+    public com.openggf.game.presentation.ScenePresentationFrame captureScene(
+            long revision, com.openggf.game.presentation.PlayerPresentationPose pose, int marginX, int marginY) {
+        int width = camera.getWidth(), height = camera.getHeight();
+        if (marginX < 0 || marginX > width || marginY < 0 || marginY > height
+                || (long) (width + 2 * marginX) * (height + 2 * marginY) > 1_612_800) {
+            throw new IllegalArgumentException("Terrain survey envelope exceeds limits");
+        }
         var resources = sceneResources();
         var sprites = levelRenderer.captureSceneSpriteTable(spriteManager);
         int[] horizontal = parallaxManager == null ? new int[cachedScreenHeight] : parallaxManager.getHScrollForShader().clone();
@@ -180,13 +195,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         int foregroundY = parallaxManager == null ? camera.getY() : parallaxManager.getVscrollFactorFG();
         int backgroundY = parallaxManager == null ? 0 : parallaxManager.getVscrollFactorBG();
         return resources.capture(revision, java.util.Objects.requireNonNull(pose), sprites, camera.getFocusedSprite(),
-                camera.getXWithShake(), camera.getYWithShake(), cachedScreenWidth, cachedScreenHeight,
-                horizontal, foregroundY, backgroundY);
+                camera.getXWithShake(), camera.getYWithShake(), width, height,
+                horizontal, foregroundY, backgroundY, marginX, marginY);
     }
 
     /** Create a presentation-only consumer using art decoded from this session's own ROM load. */
     public com.openggf.game.presentation.SceneViewPresenter createScenePresenter() {
-        return sceneResources().presenter(cachedScreenWidth, cachedScreenHeight);
+        return sceneResources().presenter(camera.getWidth(), camera.getHeight());
     }
 
     private com.openggf.game.presentation.LoadedLevelScene sceneResources() {
@@ -817,6 +832,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (level == null) {
             return;
         }
+        // A creator title can select its session aspect after this manager was
+        // constructed. Rebuild native render geometry at the destination load.
+        cachedScreenWidth = camera.getWidth();
+        cachedScreenHeight = camera.getHeight();
         blockPixelSize = level.getBlockPixelSize();
         chunksPerBlockSide = level.getChunksPerBlockSide();
         debugRenderer = new LevelDebugRenderer(new LevelDebugContext(

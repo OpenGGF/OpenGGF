@@ -68,9 +68,20 @@ public final class LoadedLevelScene {
     public ScenePresentationFrame capture(long revision, PlayerPresentationPose pose, SpritePresentation.Frame sprites,
                                           AbstractPlayableSprite player, int cameraX, int cameraY, int width, int height,
                                           int[] horizontal, int foregroundY, int backgroundY) {
+        return capture(revision, pose, sprites, player, cameraX, cameraY, width, height,
+                horizontal, foregroundY, backgroundY, 0, 0);
+    }
+
+    public ScenePresentationFrame capture(long revision, PlayerPresentationPose pose, SpritePresentation.Frame sprites,
+                                          AbstractPlayableSprite player, int cameraX, int cameraY, int width, int height,
+                                          int[] horizontal, int foregroundY, int backgroundY, int marginX, int marginY) {
+        if (marginX < 0 || marginX > width || marginY < 0 || marginY > height
+                || (long) (width + 2 * marginX) * (height + 2 * marginY) > 1_612_800) {
+            throw new IllegalArgumentException("Terrain survey envelope exceeds limits");
+        }
         var tiles = new ArrayList<ScenePresentationFrame.Tile>();
-        projectTerrain(tiles, ScenePresentationFrame.Layer.BACKGROUND, width, height, horizontal, backgroundY);
-        projectTerrain(tiles, ScenePresentationFrame.Layer.FOREGROUND, width, height, horizontal, foregroundY);
+        projectTerrain(tiles, ScenePresentationFrame.Layer.BACKGROUND, width, height, horizontal, backgroundY, marginX, marginY);
+        projectTerrain(tiles, ScenePresentationFrame.Layer.FOREGROUND, width, height, horizontal, foregroundY, marginX, marginY);
         int terrainCount = tiles.size();
         var primitives = new ArrayList<ScenePresentationFrame.Primitive>();
         int[] mappedIndices = new int[sprites.tiles().size() + 1];
@@ -128,16 +139,19 @@ public final class LoadedLevelScene {
     }
 
     private void projectTerrain(List<ScenePresentationFrame.Tile> tiles, ScenePresentationFrame.Layer layer,
-                                int width, int height, int[] scroll, int vertical) {
+                                int width, int height, int[] scroll, int vertical, int marginX, int marginY) {
         // Per-line samples preserve EHZ's ripple and shipped last-two-line scroll bug.
         // Adjacent rows with identical tile geometry are merged below to bound ordinary views.
         var pending = new HashMap<RowKey, Integer>();
         var references = new HashMap<Integer, ScenePresentationFrame.ArtReference>();
-        for (int y = 0; y < height; y++) {
-            int packed = scroll.length == 0 ? 0 : scroll[Math.min(y, scroll.length - 1)];
+        // Survey reads decoded terrain beyond the native viewport. Its animation and
+        // deformation remain at the captured native phase: outside its scanline
+        // table, repeat the nearest captured band instead of advancing parallax.
+        for (int y = -marginY; y < height + marginY; y++) {
+            int packed = scroll.length == 0 ? 0 : scroll[Math.clamp(y, 0, scroll.length - 1)];
             int h = layer == ScenePresentationFrame.Layer.FOREGROUND ? (short) (packed >>> 16) : (short) packed;
             int worldY = y + vertical, row = Math.floorMod(worldY, 8), top = y - row;
-            for (int x = -Math.floorMod(-h, 8); x < width; x += 8) {
+            for (int x = -marginX - Math.floorMod(-marginX - h, 8); x < width + marginX; x += 8) {
                 int worldX = x - h;
                 int descriptor = layer == ScenePresentationFrame.Layer.FOREGROUND
                         ? level.getForegroundTileDescriptorAtWorld(worldX, worldY)
@@ -154,6 +168,9 @@ public final class LoadedLevelScene {
                     tiles.set(previous, new ScenePresentationFrame.Tile(layer, reference, old.palette(), old.hFlip(), old.vFlip(),
                             old.priority(), x, top, 8, 8, old.rowStart(), row + 1, 0, 255));
                 } else {
+                    if (tiles.size() == ScenePresentationFrame.MAX_TILES) {
+                        throw new IllegalArgumentException("Terrain survey exceeds scene tile limit");
+                    }
                     pending.put(key, tiles.size());
                     tiles.add(new ScenePresentationFrame.Tile(layer, reference, desc.getPaletteIndex(), desc.getHFlip(), desc.getVFlip(),
                             desc.getPriority(), x, top, 8, 8, row, row + 1, 0, 255));

@@ -85,11 +85,11 @@ public final class GolfMatch {
     /** holeAdvanced is true only on the original accepted EHZ1-to-EHZ2 transition. */
     public record Resolution(Decision decision, GolfOutcome outcome, boolean holeAdvanced) { }
 
-    private static final HoleScore EMPTY_SCORE = new HoleScore(0, 0, false, false);
+    private static HoleScore emptyScore() { return new HoleScore(0, 0, false, false); }
     private State state;
 
     private GolfMatch(Mode mode, List<Character> characters, int actIndex) {
-        var golfers = characters.stream().map(c -> new Golfer(c, List.of(EMPTY_SCORE, EMPTY_SCORE))).toList();
+        var golfers = characters.stream().map(c -> new Golfer(c, List.of(emptyScore(), emptyScore()))).toList();
         state = new State(mode, golfers, actIndex, actIndex, 0, 1, 1, null, null, Status.PLAYING, -1);
     }
 

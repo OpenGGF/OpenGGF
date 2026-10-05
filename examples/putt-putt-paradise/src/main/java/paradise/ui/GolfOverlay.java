@@ -51,12 +51,12 @@ public final class GolfOverlay {
             GolfText.panel(graphics, left, 65, panelWidth, 82, GolfText.INK, 0.94f);
             GolfText.frame(graphics, left, 65, panelWidth, 82, GolfText.GOLD);
             GolfText.centered(graphics, view.results() ? "SCORECARD" : "PAUSED", width, 77, 2, GolfText.GOLD);
-            for (int i = 0; i < view.players().size(); i++) {
+            for (int i = 0; view.results() && i < view.players().size(); i++) {
                 var golfer = view.players().get(i);
                 String line = golfer.name() + "  " + golfer.total() + (golfer.dnf() ? " DNF" : " STROKES");
                 GolfText.draw(graphics, GolfText.fit(line, panelWidth - 24, 1), left + 12, 101 + i * 13);
             }
-            GolfText.draw(graphics, GolfText.fit(view.message(), panelWidth - 24, 1), left + 12, 132, 1, GolfText.CREAM);
+            if (view.results()) GolfText.draw(graphics, GolfText.fit(view.message(), panelWidth - 24, 1), left + 12, 132, 1, GolfText.CREAM);
         }
 
         int bottom = 180;

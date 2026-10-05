@@ -9,9 +9,31 @@ public final class GolfRules {
     public static final int METER_PERIOD_TICKS = 120;
     public static final int CHARGE_FEEDBACK_TICKS = 12;
     public static final int PRE_RELEASE_TICKS = 18;
-    // ROM velocity units (256 = one pixel/step). Provisional range for route tuning.
+    public static final int EXTRA_CHARGE_INTERVAL_TICKS = 3;
+    public static final int EXTRA_CHARGE_POWER_STEP = 250;
+    // ROM velocity units (256 = one pixel/step), verified on complete EHZ routes.
     public static final int MIN_SPEED_FIXED = 0x80;
     public static final int MAX_SPEED_FIXED = 0xC00;
+
+    public static final int SETTLE_DWELL_TICKS = 20;
+    public static final int LOST_BALL_MARGIN = 128;
+    public static final int WATCHDOG_TICKS = 3600;
+
+    /** Includes the deterministic shot and resolution rules in the direct-connect handshake. */
+    public static String fingerprint() {
+        String rules = "golf-v1:" + MAX_ELEVATION_DEGREES + ":" + ELEVATION_STEP_DEGREES + ":"
+                + MAX_CHARGE + ":" + MAX_POWER + ":" + METER_PERIOD_TICKS + ":"
+                + CHARGE_FEEDBACK_TICKS + ":" + PRE_RELEASE_TICKS + ":" + MIN_SPEED_FIXED + ":"
+                + MAX_SPEED_FIXED + ":" + SETTLE_DWELL_TICKS + ":" + LOST_BALL_MARGIN + ":" + WATCHDOG_TICKS
+                + ":" + EXTRA_CHARGE_INTERVAL_TICKS + ":" + EXTRA_CHARGE_POWER_STEP
+                + ":damage,death,finish,settled,lost,watchdog:gate32,-96,48:independent-worlds:ehz1,ehz2";
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(rules.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
 
     private GolfRules() { }
 

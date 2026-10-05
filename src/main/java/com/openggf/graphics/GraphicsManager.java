@@ -635,7 +635,9 @@ public class GraphicsManager {
 	 * Cache a pattern texture (contains color indices) in the GPU.
 	 */
 	public void cachePatternTexture(Pattern pattern, int patternId) {
-		scenePatternSamples.put(patternId, com.openggf.game.presentation.RomSceneArtCatalog.version(pattern));
+		if (pattern != null) {
+			scenePatternSamples.put(patternId, com.openggf.game.presentation.RomSceneArtCatalog.version(pattern));
+		}
 		ensurePatternAtlas();
 		if (headlessMode || !glInitialized) {
 			patternAtlas.cachePatternHeadless(pattern, patternId);
@@ -645,7 +647,10 @@ public class GraphicsManager {
 	}
 
 	public void updatePatternTexture(Pattern pattern, int patternId) {
-		scenePatternSamples.put(patternId, com.openggf.game.presentation.RomSceneArtCatalog.version(pattern));
+		// Native null uploads allocate residency but leave existing GPU bytes intact.
+		if (pattern != null) {
+			scenePatternSamples.put(patternId, com.openggf.game.presentation.RomSceneArtCatalog.version(pattern));
+		}
 		ensurePatternAtlas();
 		if (headlessMode || !glInitialized) {
 			patternAtlas.updatePatternHeadless(pattern, patternId);

@@ -308,8 +308,16 @@ public final class GameplayCaptureSession implements AutoCloseable {
         }
         level.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
+        var controller = includeSprites ? com.openggf.game.mode.ControlledFrameRuntime.controller(
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode()) : null;
+        if (controller == null || !controller.drawScene())
+            level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
         graphics.flush();
+        if (controller != null) {
+            graphics.resetForFixedFunction();
+            controller.drawOverlay();
+            graphics.flushScreenSpace();
+        }
         var titleCard = showTitleCard ? loop.getTitleCardProvider() : null;
         if (titleCard != null && (loop.getCurrentGameMode() == GameMode.TITLE_CARD
                 || titleCard.isOverlayActive())) {

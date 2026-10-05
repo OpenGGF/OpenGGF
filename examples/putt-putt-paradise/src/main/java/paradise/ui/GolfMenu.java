@@ -173,8 +173,8 @@ public final class GolfMenu implements TitleScreenProvider {
         return switch (mode) {
             case PRACTICE -> List.of(Field.PLAYER_ONE, Field.ACT, Field.VIEWPORT, Field.START, Field.BACK);
             case LOCAL -> List.of(Field.PLAYER_ONE, Field.PLAYER_TWO, Field.VIEWPORT, Field.START, Field.BACK);
-            case HOST -> List.of(Field.PLAYER_ONE, Field.PLAYER_TWO, Field.VIEWPORT, Field.PORT, Field.START, Field.BACK);
-            case JOIN -> List.of(Field.PLAYER_ONE, Field.PLAYER_TWO, Field.VIEWPORT, Field.ADDRESS, Field.PORT, Field.START, Field.BACK);
+            case HOST -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.PORT, Field.START, Field.BACK);
+            case JOIN -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.ADDRESS, Field.PORT, Field.START, Field.BACK);
         };
     }
 
@@ -236,7 +236,7 @@ public final class GolfMenu implements TitleScreenProvider {
             int y = 98 + i * 13;
             if (i == row) GolfText.panel(graphics, left + 7, y - 3, panelWidth - 14, 12, GolfText.GREEN, 1);
             String label = switch (field) {
-                case PLAYER_ONE -> "PLAYER 1"; case PLAYER_TWO -> "PLAYER 2"; case ACT -> "PRACTICE ACT";
+                case PLAYER_ONE -> mode == Mode.HOST || mode == Mode.JOIN ? "YOUR CHARACTER" : "PLAYER 1"; case PLAYER_TWO -> "PLAYER 2"; case ACT -> "PRACTICE ACT";
                 case VIEWPORT -> "VIEWPORT"; case ADDRESS -> "HOST ADDRESS"; case PORT -> "PORT";
                 case START -> "READY - START"; case BACK -> "BACK TO MODES"; default -> "";
             };

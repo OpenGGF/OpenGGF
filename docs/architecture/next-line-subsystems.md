@@ -18,7 +18,15 @@ objects and art, complete Sonic 2 zones, ROM-art intake, owner-tagged playable c
 (`AbstractStandaloneGameModule`, durable `GameDataSource`, game-agnostic baked levels,
 namespaced slot-1 saves/audio), playable-subclass rewind capture hooks, the host-adapted
 S3K custom-zone/palette bridge, and exclusive game-start selection with destination-scoped
-launch teams, deterministic input filters, and row-only HUD profiles. Code-bearing mods
+launch teams, deterministic input filters, and row-only HUD profiles. Controlled level modes opt into `GameModule.gameplayFrameController()`:
+held iterations record mode input/audio while admitting no world clocks or physics.
+`CourseControl` exposes validated opaque whole-course checkpoints and native
+launch/audio operations; the controller's registered identity stays outside
+course rollback while full debug rewind includes it. Prepared value scenes are
+composed from locally ROM-loaded art and can be transmitted to a permanently held
+guest without importing gameplay state. See
+[Putt Putt Paradise](../../examples/putt-putt-paradise/README.md).
+Code-bearing mods
 stay namespaced, injected-service-only, rewind-recreatable, transactionally registered,
 and owner-fault-bounded. Complete new zones preserve tagged identities, not runtime
 indices. Maintained contracts live in [creator handbook](../modding/index.md) and

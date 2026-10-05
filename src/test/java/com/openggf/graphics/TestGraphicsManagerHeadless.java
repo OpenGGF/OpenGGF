@@ -129,6 +129,21 @@ public class TestGraphicsManagerHeadless {
         assertNotNull(graphicsManager.getPatternTextureId(5), "Pattern should be tracked after update in headless mode");
     }
 
+    @Test
+    public void emptyRomArtSlotsKeepNativeResidencyAndDoNotInventSceneSamples() {
+        graphicsManager.initHeadless();
+        assertDoesNotThrow(() -> graphicsManager.cachePatternTexture(null, 42));
+        assertNotNull(graphicsManager.getPatternTextureId(42));
+        assertNull(graphicsManager.scenePatternSample(42));
+
+        graphicsManager.cachePatternTexture(createTestPattern(), 42);
+        var resident = graphicsManager.scenePatternSample(42);
+        assertNotNull(resident);
+        assertDoesNotThrow(() -> graphicsManager.updatePatternTexture(null, 42));
+        assertEquals(resident, graphicsManager.scenePatternSample(42),
+                "A null native upload preserves the previously resident pattern");
+    }
+
     // ==================== Palette Caching Tests ====================
 
     @Test

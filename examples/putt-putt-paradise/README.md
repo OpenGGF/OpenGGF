@@ -66,7 +66,8 @@ engine settings.
 
 After the second charge, feedback and a short pause lead to automatic release.
 There is no extra launch button or accuracy stage. Further charge/cancel presses
-cannot undo the committed stroke. The golfer stays rolling until settled. The
+cannot undo the committed stroke. The golfer stays rolling until settled.
+Higher power requests more native charge sounds before the same brief pause. The
 charge/release sounds use the game's existing native spindash behavior and pitch
 rise; the mod adds no pitch calculation.
 
@@ -82,10 +83,21 @@ match results, Start returns to the title menu.
 
 ## Source and checks
 
-The engine-free model, menu/HUD, direct TCP room, and ROM course adapter are
-separate creator packages. Their focused engine-side wrappers compile the actual
-external Java sources: `TestGolfModel`, `TestGolfMenu`, and the golf transport,
-course, and scene checks maintained by the development checkout. Run focused
-Maven checks through `tools/testing/maven_queue.py`; consult the delivery plan
-for current ROM route and presentation evidence rather than assuming a route
-pass from a unit test.
+The model, menu/HUD, direct TCP room, and ROM course adapter live in separate
+creator packages. Engine-side tests compile these actual external sources.
+Use the existing ROM's absolute path so ROM tests execute:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Dtest=TestGolfModel,TestGolfMenu,TestGolfProtocol,TestGolfTransport,TestPuttPuttParadise,TestGolfOnlineIntegration" \
+  "-Dsonic2.rom.path=/absolute/path/to/sonic2.gen" test
+```
+
+`TestPuttPuttParadise` includes fresh full-act input routes for both characters
+at all five viewports, every local character pairing, held-course checkpoints,
+penalty rollback, non-keyframe live rewind, and the normal development loader's
+stock-profile/menu/fade launch. `TestGolfOnlineIntegration` uses separate host
+and guest JVMs and verifies real shots, scene images, scores, pause ownership,
+concession and teardown. The dated delivery plan records completed verification
+and its limits. Scene parity is a presentation check; it does not certify stock
+ROM timing or every possible shot through every object.

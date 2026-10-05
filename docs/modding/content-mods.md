@@ -340,3 +340,38 @@ enabled, only the named art lookup is decorated.
 
 For the complete CLI invocation and launcher details, see [the `ggfmod` guide](ggfmod.md).
 For streamed stock-music replacement metadata, see [Music packs](music-packs.md).
+
+## Controlled level modes and course views
+
+Return a stable `GameplayFrameController` from a patch's module and register that
+same controller through `rewindAdapters()` if its mode state is rewindable.
+The host invokes `beforeTick(CourseControl, LogicalInputSnapshot)` once per mode
+row: `false` holds course physics, objects, clocks, animation and PLC work; `true`
+admits one native step with neutral player input. `afterTick` receives whether
+that step ran. Keep aim, menus and feedback in the controller; keep physics in
+native gameplay. Stock modules return no controller and retain their normal path.
+Initial setup rows are excluded from movie/history input; subsequent HOLD rows
+are included. `allowsDebugRewind()` can restrict practice-only debugging.
+
+`CourseControl.capture()` returns an opaque whole-course checkpoint. Restore
+validates session, loaded hole and registry generation before changing character,
+world or audio. The controller adapter is excluded by its engine-bound identity,
+so a shot's ledger can survive course rollback; creator key prefixes do not grant
+exemption. Full debug rewind restores the controller too. Course replacement
+invalidates speculative future history and preserves past; actual act loads reset
+history. Checkpoints are in-process handles, not a network format.
+
+`CourseControl.launch()` applies a supported-surface-relative curled impulse;
+`chargeSound()` preserves the native sound driver's pitch behavior. Controllers
+can retain rolling without enabling pinball's minimum-speed boost, draw a
+presentation-only scene/overlay, and request title return. Use session overrides
+for selected characters and viewport rather than writing user preferences.
+
+`LevelManager.captureScene()` captures prepared terrain, object/player tiles,
+palette and procedural primitives. `SceneFrameCodec` provides a bounded value
+encoding; `SceneViewPresenter` resolves art identities from the local ROM and
+composes or draws a read-only view. It never steps the recipient's world, loads
+objects from the sender, or accepts ROM/art bytes as a fallback.
+[Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) demonstrates
+independent golfer checkpoints and a host-authoritative direct TCP room. Its
+transport is separate from time-attack ghost races.

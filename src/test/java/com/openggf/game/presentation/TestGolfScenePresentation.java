@@ -283,6 +283,83 @@ class TestGolfScenePresentation {
         }
     }
 
+    @RequiresRom(SonicGame.SONIC_2)
+    @ParameterizedTest @CsvSource({"0,320", "0,800", "1,320", "1,800"})
+    void terrainEnvelopePreservesNativeCenterCodecAndHeldWorld(int act, int width) throws Exception {
+        var fixture = launch(act, width, "sonic"); fixture.stepIdleFrames(20);
+        var level = GameServices.level();
+        var original = level.captureScene(1, PlayerPresentationPose.nativePose());
+        var before = snapshot();
+        var extended = level.captureScene(2, PlayerPresentationPose.nativePose(), width / 2, 112);
+        var decoded = SceneFrameCodec.decode(SceneFrameCodec.encode(extended));
+        assertEquals(width, decoded.width());
+        assertEquals(extended.tiles(), decoded.tiles());
+        assertTrue(decoded.tiles().stream().anyMatch(t -> t.layer() == ScenePresentationFrame.Layer.FOREGROUND
+                && t.x() < 0));
+        assertTrue(decoded.tiles().stream().anyMatch(t -> t.layer() == ScenePresentationFrame.Layer.FOREGROUND
+                && t.x() >= width));
+        try (var presenter = level.createScenePresenter()) {
+            presenter.accept(original); var center = presenter.image(0, 0).argb();
+            presenter.accept(decoded); assertArrayEquals(center, presenter.image(0, 0).argb());
+            presenter.image(width / 2, 112); presenter.image(-width / 2, -112);
+        }
+        assertThrows(IllegalArgumentException.class, () ->
+                level.captureScene(3, PlayerPresentationPose.nativePose(), -1, 0));
+        assertThrows(IllegalArgumentException.class, () ->
+                level.captureScene(3, PlayerPresentationPose.nativePose(), width + 1, 0));
+        assertThrows(IllegalArgumentException.class, () ->
+                level.captureScene(3, PlayerPresentationPose.nativePose(), 0, 225));
+        assertUnchanged(before, snapshot());
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
+    @Test void sceneUsesLiveViewportAfterTitleSelectionWithoutReloadingCourse() throws Exception {
+        var fixture = launch(0, 320, "sonic"); fixture.stepIdleFrames(20);
+        var config = SonicConfigurationService.getInstance();
+        // The fixture deliberately installs a raw pixel-width override. A real
+        // title uses derived aspect dimensions; remove that test-only override.
+        config.clearSessionOverrides();
+        config.setSessionOverride(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "SUPER_32_9");
+        config.resolveDisplayAspect();
+        fixture.camera().refreshViewportDimensions(config);
+        GameServices.graphics().setProjectionWidth(800);
+        var before = snapshot();
+        var frame = GameServices.level().captureScene(1, PlayerPresentationPose.nativePose());
+        assertEquals(800, frame.width());
+        try (var presenter = GameServices.level().createScenePresenter()) {
+            presenter.accept(frame); assertEquals(800, presenter.image(0, 0).width());
+        }
+        assertUnchanged(before, snapshot());
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
+    @ParameterizedTest @CsvSource({"0,320", "0,800", "1,320", "1,800"})
+    void terrainEnvelopeCoversRomEndBandsWithinWireLimit(int act, int width) throws Exception {
+        var fixture = launch(act, width, "sonic"); fixture.stepIdleFrames(20);
+        var level = GameServices.level();
+        var endpoint = level.getGame().loadLevel(act).getObjects().stream()
+                .filter(spawn -> spawn.objectId() == 0x0D || spawn.objectId() == 0x3E)
+                .max(java.util.Comparator.comparingInt(com.openggf.level.objects.ObjectSpawn::x)).orElseThrow();
+        fixture.camera().setX((short) (endpoint.x() - width / 2));
+        fixture.camera().setY((short) (endpoint.y() - 160));
+        GameServices.parallax().update(0, act, fixture.camera(), level.getFrameCounter(), level.getCurrentLevel());
+        var original = level.captureScene(1, PlayerPresentationPose.nativePose());
+        var before = snapshot();
+        var extended = level.captureScene(2, PlayerPresentationPose.nativePose(), width / 2, 112);
+        var wire = SceneFrameCodec.encode(extended);
+        assertTrue(wire.length <= SceneFrameCodec.MAX_BYTES);
+        assertTrue(extended.tiles().size() < ScenePresentationFrame.MAX_TILES);
+        try (var presenter = level.createScenePresenter()) {
+            presenter.accept(original); var center = presenter.image(0, 0).argb();
+            presenter.accept(SceneFrameCodec.decode(wire));
+            assertArrayEquals(center, presenter.image(0, 0).argb());
+            for (int dx : new int[]{-width / 2, width / 2})
+                for (int dy : new int[]{-112, 112}) presenter.image(dx, dy);
+        }
+        assertUnchanged(before, snapshot());
+    }
+
     private HeadlessTestFixture launch(int act, int width, String character) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, character);

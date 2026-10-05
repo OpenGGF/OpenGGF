@@ -303,104 +303,6 @@ public class GameLoop {
     private TraceCameraFocusController traceCameraFocusController;
     private GameplayModeContext liveRewindBoundaryReporterContext;
 
-    private final class LiveUserRecordingRuntime implements UserRecordingRuntimeControls.Runtime {
-        @Override
-        public int recordKey() {
-            return configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
-        }
-
-        @Override
-        public GameMode currentGameMode() {
-            return GameLoop.this.currentGameMode;
-        }
-
-        @Override
-        public boolean traceOrDebugSurfaceOwnsRecordingInput() {
-            return TraceSessionLauncher.active() != null
-                    || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
-                    || (debugShortcutsEnabled()
-                    && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER));
-        }
-
-        @Override
-        public boolean hasActiveRecording() {
-            return userRecordingSessionLauncher.hasActiveRecordingSession();
-        }
-
-        @Override
-        public void beginRecordingFromCurrentLevel() {
-            userRecordingSessionLauncher.beginRecordingFromCurrentLevel();
-        }
-
-        @Override
-        public void stopActiveRecording(UserRecordingStopReason reason) {
-            userRecordingSessionLauncher.stopActiveRecording(reason);
-        }
-
-        @Override
-        public void beforeActiveRecordingLevelFrame(InputHandler input) {
-            userRecordingSessionLauncher.beforeActiveRecordingLevelFrame(input);
-        }
-
-        @Override
-        public void afterActiveRecordingLevelFrame() {
-            userRecordingSessionLauncher.afterActiveRecordingLevelFrame();
-        }
-
-        @Override
-        public UserRecordingHudState activeRecordingHudState() {
-            return userRecordingSessionLauncher.activeRecordingHudState();
-        }
-
-        @Override
-        public com.openggf.game.recording.UserRecordingPlaybackOptions activePlaybackOptions() {
-            return userRecordingSessionLauncher.currentPlaybackOptions();
-        }
-
-        @Override
-        public UserRecordingPlaybackState activePlaybackState() {
-            return userRecordingSessionLauncher.currentPlaybackState();
-        }
-
-        @Override
-        public boolean playbackHasDesynced() {
-            return userRecordingSessionLauncher.activePlaybackHasDesynced();
-        }
-
-        @Override
-        public UserRecordingVerificationResult activePlaybackVerificationResult() {
-            return userRecordingSessionLauncher.currentPlaybackVerificationResult();
-        }
-
-        @Override
-        public int currentPlaybackFrame() {
-            return playbackDebugManager.getCursorFrame();
-        }
-
-        @Override
-        public int playbackFrameCount() {
-            return playbackDebugManager.getMovieFrameCount();
-        }
-
-        @Override
-        public void updatePlaybackState(UserRecordingPlaybackState state) {
-            userRecordingSessionLauncher.updateActivePlaybackState(state);
-        }
-
-        @Override
-        public void pauseEngineForPlayback() {
-            userPaused = true;
-            updateAudioPauseState();
-        }
-
-        @Override
-        public void endPlaybackDebugSession() {
-            userRecordingSessionLauncher.endPlaybackSession();
-            levelIterationAdmission.resetLastAppliedPlaybackFrame();
-        }
-
-    }
-
     /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
     @Deprecated
     @ModApi
@@ -432,7 +334,13 @@ public class GameLoop {
                 this::getActiveSpecialStageProvider);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(
-                new LiveUserRecordingRuntime(), this::returnToMasterTitle);
+                new LiveUserRecordingRuntime(configService, userRecordingSessionLauncher, playbackDebugManager,
+                        () -> currentGameMode,
+                        () -> TraceSessionLauncher.active() != null
+                                || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+                                || debugShortcutsEnabled() && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER),
+                        () -> { userPaused = true; updateAudioPauseState(); },
+                        levelIterationAdmission::resetLastAppliedPlaybackFrame), this::returnToMasterTitle);
         this.timeAttackRuntime = new TimeAttackRuntime(new GhostStore(java.nio.file.Path.of("ghosts")),
                 java.nio.file.Path.of("identity"),
                 () -> TraceSessionLauncher.active() != null
@@ -840,15 +748,21 @@ public class GameLoop {
 
     /** @see OuterFramePresentation#modeFor */
     public PresentationMode presentationModeForOuterFrame(boolean modalPicker, boolean frameStepRequested) {
-        return outerFramePresentation.modeFor(modalPicker, isPaused(), frameStepRequested);
+        return outerFramePresentation.modeFor(modalPicker, isPresentationPaused(), frameStepRequested);
     }
 
     /** @see OuterFramePresentation#present */
     public void presentOuterFrame(boolean modalPicker, boolean frameStepRequested) {
-        outerFramePresentation.present(modalPicker, isPaused(), frameStepRequested);
+        outerFramePresentation.present(modalPicker, isPresentationPaused(), frameStepRequested);
     }
 
     void setAudioPresentationProbe(OuterFramePresentation.Probe probe) { outerFramePresentation.setProbe(probe); }
+
+    private boolean isPresentationPaused() {
+        var controller = currentGameMode == GameMode.LEVEL
+                ? com.openggf.game.mode.ControlledFrameRuntime.controller(resolveGameplayModeContext()) : null;
+        return isPaused() || controller != null && controller.presentationPaused();
+    }
 
     /**
      * @return true if the game loop is currently paused (either by window or user)
@@ -1221,6 +1135,17 @@ public class GameLoop {
         levelIterationAdmission.beginIteration();
         refreshRuntimeBindings();
         GameplayModeContext lifecycleContext = resolveGameplayModeContext();
+        if (currentGameMode == GameMode.LEVEL
+                && com.openggf.game.mode.ControlledFrameRuntime.controller(lifecycleContext) != null) {
+            requireInputHandler();
+            audioUpdatedThisStep = false;
+            ControlledLevelIteration.step(lifecycleContext, inputHandler, escapeToMasterTitleController,
+                    userRecordingControls, liveRewindManager, playbackDebugManager,
+                    this::syncPlaybackInputBridge, this::beginGameplayAudioFrameForTick,
+                    () -> advanceGameplayAudioFrameForTick(false),
+                    () -> { audioManager.resume(); initializeTitleScreenMode(); });
+            return;
+        }
         if (lifecycleContext == null || !lifecycleContext.isGameplayRuntimeReady()) {
             stepInternalBody();
             return;
@@ -4067,11 +3992,19 @@ public class GameLoop {
         setGameMode(GameMode.LEVEL);
         GameServices.gameState().startNewGameFromTitle();
         try {
-            levelManager.loadZoneAndActForFreshRuntime(titleStartZone(), 0);
+            levelManager.loadZoneAndActForFreshRuntime(titleStartZone(),
+                    titleStartAct());
         } catch (IOException e) {
             throw new RuntimeException("Failed to load title screen start level", e);
         }
         GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+    }
+
+    private int titleStartAct() {
+        var provider = getTitleScreenProviderLazy();
+        var registry = GameServices.module().getZoneRegistry();
+        int count = Math.max(1, registry.getActCount(titleStartZone()));
+        return provider == null ? 0 : Math.clamp(provider.startActIndex(), 0, count - 1);
     }
 
     private int titleStartZone() {

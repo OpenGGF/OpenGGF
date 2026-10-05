@@ -118,6 +118,9 @@ public interface GameModule {
      */
     default int gameplayStepsPerFrame() { return 1; }
 
+    /** Optional session-owned controller for turn-based modes with fully held course rows. */
+    default com.openggf.game.mode.GameplayFrameController gameplayFrameController() { return null; }
+
     /**
      * Continuous audio playback rate accompanying custom interactive pacing.
      * Unlike the alternating integer step budget, this stays steady at fractional

@@ -89,6 +89,26 @@ public final class GolfModelChecks {
         require(held.tick(A).isEmpty(), "restored held A cannot become a new edge");
     }
 
+    public static void powerFeedback() {
+        long previous = -1;
+        for (int ticks : new int[]{1,15,30,45,60}) {
+            var meter = new ShotMeter();
+            press(meter); idle(meter,ticks); press(meter); idle(meter,ticks); press(meter);
+            var saved = meter.snapshot();
+            var events = new ArrayList<ShotMeter.Event>();
+            for (int i=0;i<GolfRules.CHARGE_FEEDBACK_TICKS + GolfRules.PRE_RELEASE_TICKS;i++)
+                events.addAll(meter.tick(NONE));
+            long charges = count(events, ShotMeter.Kind.CHARGE);
+            require(charges > previous, "more power produces more native charge requests"); previous = charges;
+            same(1L, count(events, ShotMeter.Kind.RELEASE), "fixed automatic release after feedback and pause");
+            meter.restore(saved);
+            var replay = new ArrayList<ShotMeter.Event>();
+            for (int i=0;i<GolfRules.CHARGE_FEEDBACK_TICKS + GolfRules.PRE_RELEASE_TICKS;i++)
+                replay.addAll(meter.tick(NONE));
+            same(events, replay, "feedback restore retains charge cadence");
+        }
+    }
+
     public static void aimLocks() {
         var meter = new ShotMeter();
         var upLeft = new ShotMeter.Input(true, false, true, false, false, false);
