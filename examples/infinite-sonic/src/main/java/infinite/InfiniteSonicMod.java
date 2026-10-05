@@ -46,6 +46,25 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public DynamicWaterHandler getDynamicHandler(int zoneId, int actId, PlayerCharacter character) { return null; }
     }
 
+    /** The stock profiles with the course's lower top running speed; everything else unchanged. */
+    private record CoursePhysics(PhysicsProvider stock) implements PhysicsProvider {
+        @Override public PhysicsProfile getProfile(String character) { return slower(stock.getProfile(character)); }
+        @Override public PhysicsProfile getInitProfile(String character) {
+            return slower(stock.getInitProfile(character));
+        }
+        @Override public PhysicsModifiers getModifiers() { return stock.getModifiers(); }
+        @Override public com.openggf.game.rules.GameRules getRules() { return stock.getRules(); }
+        private static PhysicsProfile slower(PhysicsProfile p) {
+            if (p == null) return null;
+            return new PhysicsProfile(p.runAccel(), p.runDecel(), p.friction(),
+                    (short) Math.min(p.max(), CourseController.COURSE_MAX_SPEED), p.jump(), p.slopeRunning(),
+                    p.slopeRollingUp(), p.slopeRollingDown(), p.rollDecel(), p.minStartRollSpeed(),
+                    p.minRollSpeed(), p.maxRoll(), p.rollHeight(), p.runHeight(), p.standXRadius(),
+                    p.standYRadius(), p.rollXRadius(), p.rollYRadius(), p.singleFacingBalance(),
+                    p.onObjectBalanceShift());
+        }
+    }
+
     public static final class Module extends DelegatingGameModule {
         private Game game;
         private TerrainLibrary library;
@@ -103,6 +122,11 @@ public final class InfiniteSonicMod implements GgfMod {
         }
         @Override public ZoneFeatureProvider getZoneFeatureProvider() {
             return active ? dryFeatures : super.getZoneFeatureProvider();
+        }
+        /** On the course Sonic's top running speed is {@link CourseController#COURSE_MAX_SPEED}. */
+        @Override public PhysicsProvider getPhysicsProvider() {
+            PhysicsProvider stock = super.getPhysicsProvider();
+            return active && stock != null ? new CoursePhysics(stock) : stock;
         }
         @Override public WaterDataProvider getWaterDataProvider() {
             WaterDataProvider stock = super.getWaterDataProvider();

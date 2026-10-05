@@ -617,3 +617,31 @@ escapes root": `ModAssetSnapshot` copied the tree under `Files.createTempDirecto
 which on macOS is `/var/...`, while the containment check compares each entry's real path
 (`/private/var/...`). The snapshot now returns its temp root as a real path.
 
+## Ring spill, lower top speed and a left follow point (0.14.0)
+
+Follow-up on `5220937207`, same branch, main checkout, 2026-10-05. Request: on a 20-ring
+toll the rings should actually come out of Sonic, still without knockback and with
+immediate invulnerability; lower Sonic's top speed a little; hold him about 30% of the way
+across the screen.
+
+**Spill.** `CourseGuard` sets the $78 flash before anything else (so the new rings start
+uncollectable, as after a stock hit: S1 collects lost rings only below flash time 90), then
+calls the stock `RingManager.spawnLostRings(player, 20, frame)`: the shipped bouncing-ring
+objects, spread and sound. That spawn empties the ring counter as stock damage does, so the
+guard restores the remainder immediately after. The shield branch spills nothing. Lost
+rings keep local coordinates and do not follow the 4096 px world shift, so the shift waits
+while any are live (forced at the same limits as for stock platforms); they expire in a few
+seconds.
+
+**Top speed.** The module wraps the S1 `PhysicsProvider` while a course is active and
+returns each profile with `max` capped at 0x540 (7/8 of 0x600); every other constant,
+including jump and roll speeds, is unchanged. The sprite resolves its profile at level
+start and in `resetState`, so CONTINUE keeps the course value and Final Zone stays stock.
+The running start and CONTINUE use 0x540. The 4 px/tick minimum scroll is now explicit
+(0x400, 76% of the new top speed). Every act's platform crossing still passes, so the
+144 px stone spans and 192 px pits remain jumpable.
+
+**Follow point.** 60% → 30% of the viewport width: Sonic can bank less lead, but sees far
+more of the course ahead. The CONTINUE placement (25%) and the course start (80 px) are
+both left of it.
+

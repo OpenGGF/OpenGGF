@@ -595,8 +595,9 @@ class TestInfiniteSonic {
             for (int frame = 0; frame < 60; frame++) {
               int steps = GameServices.module().gameplayStepsPerFrame();
               for (int step = 0; step < steps; step++) {
-                // Timing/scroll setup independent of terrain: airborne, well ahead, stationary.
-                NativePositionOps.writeXPosResetSubpixel(player, fixture.camera().getX() + 160);
+                // Timing/scroll setup independent of terrain: airborne, stationary, and left of
+                // the 30% follow point (96px at 4:3) so only the minimum scroll moves the camera.
+                NativePositionOps.writeXPosResetSubpixel(player, fixture.camera().getX() + 64);
                 NativePositionOps.writeYPosResetSubpixel(player, 600);
                 player.setAir(true); player.setXSpeed((short) 0); player.setYSpeed((short) 0);
                 fixture.stepIdleFrames(1);
@@ -616,15 +617,15 @@ class TestInfiniteSonic {
     }
 
     @ParameterizedTest @EnumSource(WidescreenAspect.class)
-    void sonicGainsGroundAcrossSpeedupAndIsHeldAtRightMargin(WidescreenAspect aspect) throws Exception {
+    void sonicGainsGroundAcrossSpeedupAndIsHeldAtTheFollowPoint(WidescreenAspect aspect) throws Exception {
         var fixture = launch(aspect);
         fixture.stepIdleFrames(2);
         var player = fixture.sprite();
         setTicks(1790);
-        int initialLead = 120;
+        int initialLead = 40;
         NativePositionOps.writeXPosResetSubpixel(player, 1000);
         fixture.camera().setX((short) (1000 - initialLead));
-        int margin = fixture.camera().getWidth() * 60 / 100;
+        int margin = fixture.camera().getWidth() * 30 / 100;
         boolean reachedMargin = false;
         // Real player integration and module pacing on each presentation frame.
         // Reset only height/vertical velocity to isolate scrolling from course obstacles.
@@ -634,18 +635,18 @@ class TestInfiniteSonic {
                 NativePositionOps.writeYPosResetSubpixel(player, 600);
                 player.setAir(true);
                 player.setYSpeed((short) 0);
-                player.setXSpeed((short) 0x600);
+                player.setXSpeed((short) 0x540); // The course top speed.
                 fixture.stepFrame(false, false, false, true, false);
                 int lead = player.getCentreX() - fixture.camera().getX();
                 assertTrue(lead >= initialLead, "Sonic must gain, not lose, ground at 1.25x");
                 // Controller precedes player integration: allow the current tick's 6px movement.
-                assertTrue(lead <= margin + 6, "right edge remains bounded");
+                assertTrue(lead <= margin + 6, "the follow point bounds his lead");
                 reachedMargin |= lead >= margin;
                 assertFalse(player.getDead());
             }
         }
         assertEquals(1.25, speed());
-        assertTrue(reachedMargin, "Sonic reaches the right-hand margin at every viewport width");
+        assertTrue(reachedMargin, "Sonic reaches the follow point at every viewport width");
         assertEquals(margin, player.getCentreX() - fixture.camera().getX(), 6);
     }
 
@@ -663,7 +664,7 @@ class TestInfiniteSonic {
         var before = registry.capture();
         fixture.stepFrame(false, false, false, true, false);
         assertEquals(1800, ticks());
-        assertEquals(0x600, player.getMax(), "whole-game pacing preserves native physics");
+        assertEquals(0x540, player.getMax(), "whole-game pacing keeps the course top speed");
         assertEquals(1.25, speed());
         assertEquals("SPEED 1.25X", loader.loadClass("infinite.CourseHud")
                 .getMethod("speedText", controller().getClass()).invoke(null, controller()));
@@ -673,9 +674,9 @@ class TestInfiniteSonic {
         int score = GameServices.gameState().getScore();
         int camera = fixture.camera().getX();
         registry.restore(before);
-        assertEquals(0x600, player.getMax());
+        assertEquals(0x540, player.getMax());
         fixture.stepFrame(false, false, false, true, false);
-        assertEquals(0x600, player.getMax(), "whole-game pacing preserves native physics");
+        assertEquals(0x540, player.getMax(), "whole-game pacing keeps the course top speed");
         assertEquals(1.25, speed());
         assertEquals(score, GameServices.gameState().getScore());
         assertEquals(camera, fixture.camera().getX());
@@ -708,7 +709,7 @@ class TestInfiniteSonic {
             assertFalse(fixture.sprite().getDead(), "challenge traversal frame " + frame);
         }
         assertTrue(ticks() >= 1800);
-        assertEquals(0x600, fixture.sprite().getMax());
+        assertEquals(0x540, fixture.sprite().getMax(), "the course lowers the 0x600 stock top speed");
         assertEquals(1.25, speed());
         assertTrue(originPixels() > 0, "survive recycling under real scroll pressure");
     }
@@ -1252,6 +1253,9 @@ class TestInfiniteSonic {
         assertEquals(0x400, player.getXSpeed(), "Sonic keeps running");
         assertTrue(player.getInvulnerableFrames() > 0x70, "post-hit blink");
         assertFalse(player.hasShield());
+        long spilled = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(o -> o instanceof com.openggf.level.rings.LostRingObjectInstance && !o.isDestroyed()).count();
+        assertEquals(guard.equals("toll") ? 20 : 0, spilled, "the toll's rings spill out of Sonic");
         // 25 - 20 for the toll; a shield keeps all 5.
         assertEquals(5, rings.getRings(), guard.equals("toll") ? "the toll costs exactly 20 rings"
                 : "a shield keeps every ring");

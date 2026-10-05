@@ -201,7 +201,7 @@ prevented Sonic from banking a lead; the camera now retains its 4.5px/tick minim
 until Sonic reaches a 48px right margin, then follows his position. No native
 physics, engine timing, API or rewind state shape changed.
 
-`sonicGainsGroundAcrossSpeedupAndIsHeldAtRightMargin` checks all five viewport
+`sonicGainsGroundAcrossSpeedupAndIsHeldAtTheFollowPoint` checks all five viewport
 widths through 600 presentation frames using the actual module step budget across
 1×→1.25×. It isolates horizontal integration from terrain by resetting height and
 vertical speed, supplies the normal 6px/tick running velocity, and verifies that
@@ -451,4 +451,18 @@ one-line `ModAssetSnapshot` temp-root fix.
 
 Not covered: the toll or shield against Orbinaut spikes, Rollers and flyers specifically
 (same listener path), and live play or a visual check of the monitor art.
+
+## Ring spill, top speed and follow point (0.14.0, 2026-10-05)
+
+Main checkout, `feature/ai-infinite-sonic`, base `5220937207`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Toll spills 20 stock lost rings, no knockback | `ringTollOrShieldAbsorbsAnEnemyHitWithoutKnockback[toll]` | 20 live `LostRingObjectInstance`s, 5 rings kept after 4 frames, blink on the contact frame |
+| Course top speed 0x540 | `normalTraversalReachesFirstSpeedup`, `speedupBoundaryRestoresAndReplaysWithScoreCameraAndHud` | Profile cap through the real physics provider, kept across speedup and rewind |
+| Follow point at 30% | `sonicGainsGroundAcrossSpeedupAndIsHeldAtTheFollowPoint`, `minimumScrollAllowsFasterRunningAndSurvivalScoreScales` | Every supported width |
+| Jumps still clear pits and stones | `sonicCrossesAPlatformStretchOnSpawnedStockPlatforms`, `everyZoneActBuildsATraversableDryCourse` | All acts with stones at 4:3 and 16:9 |
+
+**134 run, 0 failures, 14 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01). Not
+covered: a rebase deferred by live spilled rings, and live play.
 

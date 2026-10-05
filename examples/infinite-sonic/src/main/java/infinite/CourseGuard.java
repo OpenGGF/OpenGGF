@@ -7,7 +7,8 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
- * Mod design: a shield, or else a 20-ring toll, absorbs an enemy hit with no knockback.
+ * Mod design: a shield, or else a 20-ring toll that spills from Sonic, absorbs an enemy hit
+ * with no knockback.
  * Sonic keeps running and blinks for the stock post-hit time. With fewer than 20 rings and
  * no shield the stock hurt (losing every ring) or death applies.
  */
@@ -24,23 +25,33 @@ final class CourseGuard {
      * Called from a badnik's touch listener, which the engine runs before it applies damage.
      * Leaving Sonic flashing makes the engine's hurt pass return without knockback or ring loss.
      */
-    static boolean absorb(ObjectServices services, AbstractPlayableSprite player, TouchResponseResult result) {
+    static boolean absorb(ObjectServices services, AbstractPlayableSprite player, TouchResponseResult result,
+            int frameCounter) {
         if (player.getDead() || player.isDebugMode() || player.isCpuControlled() || player.getInvulnerable()) {
             return false;
         }
         boolean harmful = result.category() == TouchCategory.HURT
                 || result.category() == TouchCategory.ENEMY && !attacking(player);
         if (!harmful) return false;
+        if (!player.hasShield() && player.getRingCount() < RING_TOLL) return false;
+        // Flashing starts on the contact frame, before the spilled rings exist, so they cannot be
+        // re-collected until the stock threshold (flash time below 90) as after an ordinary hit.
+        player.setInvulnerableFrames(GUARD_INVULNERABLE_FRAMES);
         if (player.hasShield()) {
             player.removeShield();
             services.audioManager().playSfx(GameSound.HURT);
-        } else if (player.getRingCount() >= RING_TOLL) {
-            player.setRingCount(player.getRingCount() - RING_TOLL);
-            services.audioManager().playSfx(GameSound.RING_SPILL);
-        } else {
-            return false;
+            return true;
         }
-        player.setInvulnerableFrames(GUARD_INVULNERABLE_FRAMES);
+        int remaining = player.getRingCount() - RING_TOLL;
+        var rings = services.ringManager();
+        if (rings != null) {
+            // The stock spill (bouncing rings and its sound) for just the toll. It empties the
+            // counter as a stock hit does, so the rest is restored afterwards.
+            rings.spawnLostRings(player, RING_TOLL, frameCounter);
+        } else {
+            services.audioManager().playSfx(GameSound.RING_SPILL);
+        }
+        player.setRingCount(remaining);
         return true;
     }
 

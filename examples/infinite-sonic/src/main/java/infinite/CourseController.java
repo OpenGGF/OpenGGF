@@ -8,10 +8,11 @@ import java.util.List;
 
 /** Scalar origin is captured by the ordinary mod-object rewind codec. */
 public final class CourseController extends AbstractObjectInstance implements RewindRecreatable {
-    // S1 Sonic normal maximum is 0x600 in PhysicsProfile; the mod scrolls at two thirds (4px/tick).
-    private static final int NORMAL_RUN_SPEED = 0x600;
-    private static final int MINIMUM_SCROLL = NORMAL_RUN_SPEED * 2 / 3;
-    private static final int FOLLOW_PERCENT = 60;
+    // Mod design: Sonic's top running speed on the course, 7/8 of the stock S1 0x600.
+    public static final int COURSE_MAX_SPEED = 0x540;
+    // The camera's minimum scroll: 4px per tick, two thirds of the stock 0x600.
+    private static final int MINIMUM_SCROLL = 0x400;
+    private static final int FOLLOW_PERCENT = 30;
     // Ignore a jump already held while dying; about one second before a restart is accepted.
     private static final int RESTART_DELAY_FRAMES = 60;
     // Sonic's standing radius: his centre sits 19px above the floor.
@@ -90,8 +91,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
             setLives(0);
             ringsSeen = services().levelGamestate().getRings();
             // A running start gives the player room to react before the scrolling edge arrives.
-            player.setGSpeed((short) NORMAL_RUN_SPEED);
-            player.setXSpeed((short) NORMAL_RUN_SPEED);
+            player.setGSpeed((short) COURSE_MAX_SPEED);
+            player.setXSpeed((short) COURSE_MAX_SPEED);
         }
         var camera = services().camera();
         // Let Sonic bank a lead before following him just right of centre.
@@ -220,8 +221,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
         com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(sprite, y);
         sprite.resetPositionAndStatTableHistoryAtCentre((short) localX, (short) y);
         sprite.setDirection(com.openggf.physics.Direction.RIGHT);
-        sprite.setGSpeed((short) NORMAL_RUN_SPEED);
-        sprite.setXSpeed((short) NORMAL_RUN_SPEED);
+        sprite.setGSpeed((short) COURSE_MAX_SPEED);
+        sprite.setXSpeed((short) COURSE_MAX_SPEED);
         sprite.setYSpeed((short) 0);
         sprite.setInvulnerableFrames(RESUME_INVULNERABLE_FRAMES);
         // As a stock respawn, the run resumes with no rings.
@@ -254,6 +255,11 @@ public final class CourseController extends AbstractObjectInstance implements Re
         // window waits until none are loaded. The 16384px window leaves thousands of pixels
         // of slack; past the hard limit any still-loaded stones are dropped and re-spawned.
         var live = liveStones();
+        // Spilled rings keep their local coordinates too; let them settle before shifting.
+        if (delta != 0 && live.isEmpty() && spilledRings()) {
+            boolean forced = delta > 0 ? player.getCentreX() >= FORCED_REBASE_X : player.getCentreX() < 1024;
+            if (!forced) delta = 0;
+        }
         if (delta != 0 && !live.isEmpty()) {
             boolean forced = delta > 0 ? player.getCentreX() >= FORCED_REBASE_X : player.getCentreX() < 1024;
             if (!forced) delta = 0;
@@ -317,6 +323,13 @@ public final class CourseController extends AbstractObjectInstance implements Re
             spawnFreeChild(() -> new CourseMonitor(spawn));
             monitors |= bit;
         }
+    }
+
+    private boolean spilledRings() {
+        for (var object : services().objectManager().getActiveObjects()) {
+            if (object instanceof com.openggf.level.rings.LostRingObjectInstance && !object.isDestroyed()) return true;
+        }
+        return false;
     }
 
     /** Loaded stock platforms. The course places no other stock objects with these ids. */

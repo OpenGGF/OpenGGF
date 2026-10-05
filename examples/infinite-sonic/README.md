@@ -10,19 +10,23 @@ and the debug level-select key are ignored). Final Zone and the ending stay stoc
 The mod always plays in **16:9** (the 400-pixel `WIDE_16_9` view), whatever the
 global aspect setting: the wider screen shows more of the course ahead at scroll
 speed. The player's own aspect returns at the master title. Trace test mode still
-forces native 4:3. Sonic starts running at normal speed. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Pausing stops the countdown.
-The camera scrolls at a minimum of **two thirds of Sonic’s normal maximum run speed** (4 pixels per tick),
-letting Sonic gain ground until his centre reaches 60% of the screen width, just right of centre.
-There the camera follows his position, keeping him on screen while preserving
-his native running and jumping physics. Leaving the left edge
+forces native 4:3. On the course Sonic's top running speed is **7/8 of stock** (0x540
+instead of 0x600; acceleration, jumps and rolling are unchanged), and he starts running at
+that speed. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Pausing stops the countdown.
+The camera scrolls at a minimum of **two thirds of Sonic’s stock maximum run speed** (4 pixels per tick),
+letting Sonic gain ground until his centre reaches **30% of the screen width**, left of centre, so most
+of the screen shows the course ahead. There the camera follows his position, keeping him on screen
+while preserving his native running and jumping physics. Leaving the left edge
 completely loses a life, regardless of rings or invulnerability. Pits and lethal
 enemy hits also cost a life.
 
 Enemy hits are gentler than stock. A **shield** absorbs one hit: Sonic loses the shield,
 keeps every ring and keeps running with no knockback. Without a shield, carrying **20 or
-more rings** pays a 20-ring toll instead: the ring counter drops by 20 (with the
-ring-spill sound) and, again, there is no knockback. Either way Sonic blinks for the stock
-two seconds, so one contact cannot be charged twice. With no shield and fewer than 20
+more rings** pays a 20-ring toll instead: 20 rings burst out of Sonic as the stock bouncing
+rings (with the ring-spill sound), he keeps the rest, and again there is no knockback. Either
+way Sonic starts blinking on the contact frame for the stock two seconds, so one contact cannot
+be charged twice; as after a stock hit, the spilled rings can be grabbed back once the first
+half-second of blinking has passed. With no shield and fewer than 20
 rings the stock hit applies: Sonic is knocked back and drops every ring, and with no rings
 at all the hit is lethal. Pits and the left edge are unaffected by shields and rings.
 

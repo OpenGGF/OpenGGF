@@ -105,7 +105,7 @@ public final class CourseBadnik extends AbstractBadnikInstance
     /** Runs before the engine's hurt pass: a shield or 20 rings absorb the hit (see {@link CourseGuard}). */
     @Override public void onTouchResponse(PlayableEntity entity, TouchResponseResult result, int frameCounter) {
         if (!isDestroyed() && entity instanceof com.openggf.sprites.playable.AbstractPlayableSprite player) {
-            CourseGuard.absorb(services(), player, result);
+            CourseGuard.absorb(services(), player, result, frameCounter);
         }
     }
     @Override protected DestructionEffects.DestructionConfig getDestructionConfig() {
