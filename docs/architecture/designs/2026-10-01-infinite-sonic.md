@@ -646,32 +646,18 @@ more of the course ahead. The CONTINUE placement (25%) and the course start (80 
 both left of it.
 
 
-## Spring chasms, monitor variety, exit to title and the run frames (0.15.0)
+## Monitor variety, exit to title and the run frames (0.15.0)
 
 Follow-up on `2a4ca53aa0`, same branch, main checkout, 2026-10-05. Request: more variety in
 the levels; a way back to the title screen (EXIT at death, and Escape); show Sonic's
 full-speed running animation even though the course caps him below it.
 
-**Spring chasms.** The wide-pit terrain of platform stretches (sections 4k+2/4k+3, a
-320–448 px bottomless pit) now has a second crossing: a red launch spring 48 px before the
-pit. `TerrainLibrary.wideKind` keeps the old platform choice (a third of eligible
-stretches) and turns it into a spring chasm where the act has no usable platforms (MZ3, all
-of LZ, SLZ1, SBZ2 and SBZ3), so those courses gain their first
-set piece; acts with platforms also make half of another third of stretches spring chasms.
-The 0x504c4154 seed is unchanged, so every existing platform stretch stays where it was.
-`CourseSpring` draws Map_Spring with the stock `SPRING_VERTICAL` sheet (palette line 0, the
-red spring; S1 loads Nem_HSpring in every zone) and the Ani_Spring .up frames, and applies
-Spring_BounceUp's effects: -$1000 Y speed, air, not on an object, spring animation $10,
-the $F spring timer and hurt cleared. Mod differences, each forced by the scrolling edge:
-it is non-solid and fires anywhere over its plate up to 128 px above it (the stock spring
-fires only when stood on, and its side would stall Sonic); it clears the jump flag (a launch
-caught mid-jump would otherwise be cut to -$400 by Sonic_JumpHeight when the button is
-released); and it raises X speed to at least 0x400, whose 146-frame flight covers 584 px,
-beyond the widest pit plus the spring's lead. It re-arms after 30 frames rather than firing
-once, and CONTINUE clears the spring bits (skipping a spring still live) so a revive before
-a chasm always finds its spring. A rejected alternative was the solid stock Obj41 itself.
-Four rings trace the first 17 frames of a 0x4A0 flight, close enough to the launch that
-any speed from 0x400 to 0x540 collects most of them.
+**Spring chasms (removed).** The first cut of 0.15.0 added red launch springs before some
+wide pits (mod-drawn, non-solid, -$1000, the only wide-pit set piece in LZ/SLZ1). Real
+physics crossed them in all six zones, but in play review they were judged to add nothing:
+the launch is automatic, so the chasm asks nothing of the player. Removed before release;
+platform stretches are back to their 0.12.0 rules. A solid stock Obj41 was rejected earlier
+because its side stalls Sonic against the scrolling edge.
 
 **Monitor variety.** `ShieldPlan` became `MonitorPlan` (one in eight eligible sections,
 up from one in ten) with S1 Pow subtypes as kinds from a separate seed: 5/10 shield,

@@ -132,7 +132,6 @@ class TestInfiniteSonic {
         int backwardsRebases = 0;
         previous = fixture.sprite().getCentreX();
         for (int i = 0; i < 1800; i++) {
-            hopSpringChasmBackwards(fixture);
             stepTerrain(fixture, -1);
             int x = fixture.sprite().getCentreX();
             if (x - previous > 4000) backwardsRebases++;
@@ -822,9 +821,6 @@ class TestInfiniteSonic {
     private boolean platformRun(long section) throws Exception {
         return (boolean) terrain().getClass().getMethod("platformRun", long.class).invoke(terrain(), section);
     }
-    private boolean springStretch(long stretch) throws Exception {
-        return (boolean) terrain().getClass().getMethod("springStretch", long.class).invoke(terrain(), stretch);
-    }
     private long pitStart(long stretch) throws Exception {
         return (long) terrain().getClass().getMethod("platformPitStart", long.class).invoke(terrain(), stretch);
     }
@@ -848,7 +844,7 @@ class TestInfiniteSonic {
                 .loadLevel(levelIndex(zone, act)).getObjects()) stock.add(spawn.objectId());
         Set<Integer> kinds = platformKindIds();
         for (int id : kinds) assertTrue(stock.contains(id), "only platforms the act itself places: " + id);
-        int runs = 0, springs = 0;
+        int runs = 0;
         for (long stretch = 0; stretch < 250; stretch++) {
             long near = stretch * 4 + 2, far = stretch * 4 + 3;
             assertEquals(platformRun(near), platformRun(far), "a platform stretch spans two sections");
@@ -856,13 +852,8 @@ class TestInfiniteSonic {
                 assertEquals(0, stones(far).length);
                 continue;
             }
-            assertTrue(stretch >= 2, "the first two corridors teach ordinary jumps");
-            if (springStretch(stretch)) {
-                springs++;
-                assertEquals(0, stones(far).length, "a spring chasm has no platforms");
-                continue;
-            }
             runs++;
+            assertTrue(stretch >= 2, "the first two corridors teach ordinary jumps");
             assertTrue(Math.abs(stepHeight(far)) <= 32, "banks differ by at most a tier");
             assertNull(encounter(near));
             assertNull(encounter(far));
@@ -889,13 +880,8 @@ class TestInfiniteSonic {
             }
             assertTrue(end - edge >= 16 && end - edge <= 144, "final span " + (end - edge));
         }
-        if (kinds.isEmpty()) {
-            assertEquals(0, runs, "acts without stock platforms bridge no pits with them");
-            assertTrue(springs >= 25 && springs <= 120, "their wide pits are spring chasms instead: " + springs);
-        } else {
-            assertTrue(runs >= 25 && runs <= 120, "a share of corridors becomes a platform stretch: " + runs);
-            assertTrue(springs >= 8 && springs <= 60, "and a smaller share a spring chasm: " + springs);
-        }
+        if (kinds.isEmpty()) assertEquals(0, runs, "acts without stock platforms keep ordinary corridors");
+        else assertTrue(runs >= 25 && runs <= 120, "a share of corridors becomes a platform stretch: " + runs);
     }
 
     private static int levelIndex(int zone, int act) {
@@ -918,7 +904,7 @@ class TestInfiniteSonic {
         var fixture = launch(aspect, zone, act);
         org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty(), "act places no platforms");
         long stretch = 2;
-        while (!platformRun(stretch * 4 + 3) || springStretch(stretch)) stretch++;
+        while (!platformRun(stretch * 4 + 3)) stretch++;
         long start = pitStart(stretch), end = pitEnd(stretch);
         Object[] planned = stones(stretch * 4 + 3);
         fixture.stepIdleFrames(2);
@@ -1042,8 +1028,7 @@ class TestInfiniteSonic {
         assertEquals(Set.of(64, 96, 128, 160, 192), widths);
         assertEquals(Set.of(-64, -32, 0, 32, 64), steps);
         assertEquals(Set.of(896, 928, 960, 992), elevations, "four elevation tiers");
-        // Fewer since a share of eligible stretches became spring chasms.
-        assertTrue(gaps > 120 && gaps < 350, "occasional jumps with recovery sections: " + gaps);
+        assertTrue(gaps > 150 && gaps < 350, "occasional jumps with recovery sections: " + gaps);
         assertTrue(ledges > 10, "some drops are plain ledges: " + ledges);
     }
 
@@ -1335,7 +1320,7 @@ class TestInfiniteSonic {
         player.setXSpeed((short) 0); player.setGSpeed((short) 0); player.setYSpeed((short) 0);
         player.setAir(true);
         fixture.camera().setX((short) Math.max(0, monitor.getX() - 160));
-        // The search may have crossed a spring chasm, leaving the camera high above the box.
+        // The search leaves the camera wherever the policy ran; put the box in its touch window.
         fixture.camera().setY((short) Math.max(0, monitor.getY() - 112));
         var registry = fixture.runtime().getRewindRegistry();
         var before = registry.capture();
@@ -1356,116 +1341,6 @@ class TestInfiniteSonic {
     private Object monitor(long section) throws Exception {
         return loader.loadClass("infinite.MonitorPlan").getMethod("at", terrain().getClass(), long.class)
                 .invoke(null, terrain(), section);
-    }
-
-    private Object springPlan(long section) throws Exception {
-        return loader.loadClass("infinite.SpringPlan").getMethod("at", terrain().getClass(), long.class)
-                .invoke(null, terrain(), section);
-    }
-
-    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> springZones() {
-        return java.util.stream.IntStream.range(0, 6).boxed().flatMap(zone -> java.util.stream.Stream.of(
-                org.junit.jupiter.params.provider.Arguments.of(zone, false),
-                org.junit.jupiter.params.provider.Arguments.of(zone, true)));
-    }
-
-    /**
-     * Real physics: the act's first spring chasm launches Sonic clear of its pit whether he runs
-     * onto the spring holding right, or jumps at the pit's edge (the traversal policy).
-     */
-    @ParameterizedTest(name = "zone {0} jump at edge {1}")
-    @org.junit.jupiter.params.provider.MethodSource("springZones")
-    void springChasmLaunchesSonicOverTheWidePit(int zone, boolean jumpAtEdge) throws Exception {
-        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
-        long stretch = 2;
-        while (!springStretch(stretch)) stretch++;
-        assertTrue(stretch < 40, "every zone has spring chasms: first at stretch " + stretch);
-        assertFalse(platformStretch(stretch));
-        assertEquals(0, stones(stretch * 4 + 3).length);
-        long start = pitStart(stretch), end = pitEnd(stretch);
-        Object plan = springPlan(stretch * 4 + 2);
-        assertNotNull(plan);
-        long springX = (long) call(plan, "worldX");
-        int bank = floorAt(springX);
-        assertEquals(start - 48, springX, "the spring stands just before the pit");
-        assertEquals(bank - 8, (int) call(plan, "y"), "on the approach bank");
-        for (long x = springX - 64; x < start; x++) assertEquals(bank, floorAt(x), "flat approach");
-        for (long section = stretch * 4; section < stretch * 4 + 4; section++) {
-            if (section != stretch * 4 + 2) assertNull(springPlan(section), "one spring per chasm");
-        }
-        fixture.stepIdleFrames(2);
-        var player = fixture.sprite();
-        player.setInvulnerableFrames(20000);
-        for (int frame = 0; frame < 20000 && originPixels() + player.getCentreX() < springX - 400; frame++) {
-            stepTerrain(fixture, 1);
-            assertFalse(player.getDead());
-        }
-        int highest = Integer.MAX_VALUE;
-        int launches = 0;
-        for (int frame = 0; frame < 2000 && originPixels() + player.getCentreX() < end + 64; frame++) {
-            if (jumpAtEdge) {
-                stepTerrain(fixture, 1);
-            } else {
-                setTicks(0);
-                fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
-                fixture.stepFrame(false, false, false, true, false);
-            }
-            assertFalse(player.getDead(), "death at world x=" + (originPixels() + player.getCentreX())
-                    + ", pit " + start + ".." + end);
-            highest = Math.min(highest, player.getCentreY());
-            for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
-                if (object.getClass().getName().equals("infinite.CourseSpring")) {
-                    launches = Math.max(launches, (int) call(object, "launches"));
-                }
-            }
-        }
-        assertTrue(originPixels() + player.getCentreX() >= end, "crossed the chasm");
-        assertEquals(1, launches, "the spring fired once");
-        assertTrue(bank - 19 - highest > 300, "a red-spring launch: rose " + (bank - 19 - highest));
-        for (int i = 0; i < 240 && player.getAir(); i++) {
-            setTicks(0);
-            fixture.camera().setX((short) Math.max(0, player.getCentreX() - 160));
-            fixture.stepFrame(false, false, false, true, false);
-        }
-        assertFalse(player.getAir(), "landed on the far side");
-        assertFalse(player.getDead());
-    }
-
-    private boolean platformStretch(long stretch) throws Exception {
-        return (boolean) terrain().getClass().getMethod("platformStretch", long.class).invoke(terrain(), stretch);
-    }
-
-    /**
-     * Spring chasms are one-way: their 320-448px pit has a spring only on the approach bank. The
-     * backtracking check is about terrain recycling, so it carries Sonic over to the approach bank.
-     */
-    private void hopSpringChasmBackwards(HeadlessTestFixture fixture) throws Exception {
-        var player = fixture.sprite();
-        long x = originPixels() + player.getCentreX();
-        long stretch = Math.floorDiv(x, 2048);
-        if (player.getAir() || !springStretch(stretch) || x < pitEnd(stretch) || x >= pitEnd(stretch) + 64) return;
-        long landing = pitStart(stretch) - 64;
-        NativePositionOps.writeXPosResetSubpixel(player, (int) (landing - originPixels()));
-        NativePositionOps.writeYPosResetSubpixel(player, floorAt(landing) - 19);
-    }
-
-    @Test void springLaunchLineRingsTraceTheFlight() throws Exception {
-        launch(WidescreenAspect.NATIVE_4_3, 3, 0);
-        var rings = loader.loadClass("infinite.RingPlan").getMethod("at", terrain().getClass(), long.class);
-        long stretch = 2;
-        // A third of ring rows are seeded rests; take the first chasm that has one.
-        while (!springStretch(stretch) || rings.invoke(null, terrain(), stretch * 4 + 3) == null) stretch++;
-        assertTrue(stretch < 200);
-        Object plan = springPlan(stretch * 4 + 2);
-        Object row = rings.invoke(null, terrain(), stretch * 4 + 3);
-        long[] x = (long[]) call(row, "x");
-        int[] y = (int[]) call(row, "y");
-        assertEquals(4, x.length);
-        long springX = (long) call(plan, "worldX");
-        for (int i = 0; i < 4; i++) {
-            assertTrue(x[i] > springX && x[i] < springX + 100, "close after the spring: " + x[i]);
-            if (i > 0) assertTrue(y[i] < y[i - 1] - 40, "rising steeply");
-        }
     }
 
     @Test void deathMenuExitLeavesForTheTitleScreen() throws Exception {

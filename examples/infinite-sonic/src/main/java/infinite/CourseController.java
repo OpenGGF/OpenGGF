@@ -81,8 +81,6 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long stones2;
     // One section bit per placed monitor.
     private long monitors;
-    // One section bit per placed launch spring.
-    private long springs;
     public long originPixels() { return origin * 256; }
     public CourseController(ObjectSpawn spawn) { super(spawn, "Infinite Sonic course"); }
     @Override public boolean isPersistent() { return true; }
@@ -286,8 +284,6 @@ public final class CourseController extends AbstractObjectInstance implements Re
         camera.setX((short) Math.max(0, localX - camera.getWidth() / 4));
         camera.setY((short) Math.max(0, y - camera.getHeight() / 2));
         scrollFraction = 0;
-        // A revive before a spring chasm needs its spring even if it has left the screen.
-        springs = 0;
         gameOver = false;
         gameOverFrames = 0;
         menuChoice = 0;
@@ -328,7 +324,6 @@ public final class CourseController extends AbstractObjectInstance implements Re
             populateRings();
             populateStones();
             populateMonitors();
-            populateSprings();
             return;
         }
         origin += delta / 256;
@@ -341,7 +336,6 @@ public final class CourseController extends AbstractObjectInstance implements Re
         stones1 = shiftSections(stones1, delta);
         stones2 = shiftSections(stones2, delta);
         monitors = shiftSections(monitors, delta);
-        springs = shiftSections(springs, delta);
         services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
         var library = services().gameService(TerrainLibrary.class);
         var level = services().currentLevel();
@@ -362,7 +356,6 @@ public final class CourseController extends AbstractObjectInstance implements Re
         populateRings();
         populateStones();
         populateMonitors();
-        populateSprings();
     }
 
     private void populateMonitors() {
@@ -381,34 +374,6 @@ public final class CourseController extends AbstractObjectInstance implements Re
             spawnFreeChild(() -> new CourseMonitor(spawn));
             monitors |= bit;
         }
-    }
-
-    private void populateSprings() {
-        var library = services().gameService(TerrainLibrary.class);
-        var camera = services().camera();
-        for (int section = 0; section < TerrainLibrary.WIDTH / 2; section++) {
-            long bit = 1L << section;
-            if ((springs & bit) != 0) continue;
-            var spring = SpringPlan.at(library, origin / 2 + section);
-            if (spring == null) { springs |= bit; continue; }
-            int localX = (int) (spring.worldX() - originPixels());
-            if (localX < camera.getX() - 192 || localX > camera.getX() + camera.getWidth() + 192) continue;
-            // CONTINUE clears these bits so a spring that already left the screen returns; one
-            // still standing is simply re-marked.
-            if (liveSpringAt(localX)) { springs |= bit; continue; }
-            if (!services().objectManager().hasFreeDynamicSlot()) return;
-            var spawn = new ObjectSpawn(localX, spring.y(), 0, 0, 0, false, spring.y(), -1,
-                    "infinite-sonic", "infinite-sonic:spring");
-            spawnFreeChild(() -> new CourseSpring(spawn));
-            springs |= bit;
-        }
-    }
-
-    private boolean liveSpringAt(int localX) {
-        for (var object : services().objectManager().getActiveObjects()) {
-            if (object instanceof CourseSpring spring && !spring.isDestroyed() && spring.getX() == localX) return true;
-        }
-        return false;
     }
 
     private boolean spilledRings() {

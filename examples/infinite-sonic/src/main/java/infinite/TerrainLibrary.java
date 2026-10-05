@@ -395,34 +395,20 @@ public final class TerrainLibrary {
     }
 
     /**
-     * Wide-pit stretches: sections 4k+2 and 4k+3 become one 320-448px pit. Mod design: from the
-     * third corridor on, where the banks differ by at most one tier, a third of stretches are
-     * bridged by stock platforms ({@link PlatformPlan}), or crossed with a launch spring
-     * ({@link SpringPlan}) in acts that place no usable platforms. Where platforms exist, half
-     * of another third of stretches are spring chasms too. The approach keeps a flat bank of at
-     * least 352px and the far bank at least 160px before the next section.
+     * Platform stretches: sections 4k+2 and 4k+3 become one 320-448px pit, bridged by stock
+     * platforms ({@link PlatformPlan}). Mod design: a third of eligible stretches, from the
+     * third corridor on, where the banks differ by at most one tier. The approach keeps a
+     * flat bank of at least 352px and the far bank at least 160px before the next section.
      */
     public boolean platformRun(long section) {
         long part = Math.floorMod(section, 4);
-        return (part == 2 || part == 3) && wideKind(Math.floorDiv(section, 4)) != NARROW;
+        return (part == 2 || part == 3) && platformStretch(Math.floorDiv(section, 4));
     }
 
-    /** True when this stretch's wide pit is crossed with a launch spring rather than platforms. */
-    public boolean springStretch(long stretch) { return wideKind(stretch) == SPRING; }
-
-    /** True when stock platforms bridge this stretch's wide pit. */
-    public boolean platformStretch(long stretch) { return wideKind(stretch) == PLATFORMS; }
-
-    private static final int NARROW = 0, PLATFORMS = 1, SPRING = 2;
-
-    private int wideKind(long stretch) {
-        if (stretch < 2) return NARROW;
-        if (Math.abs(stepHeight(stretch * 4 + 3)) > TIER_STEP) return NARROW;
-        long random = random(stretch + SEED + 0x504c4154L);
-        long pick = Long.remainderUnsigned(random, 3);
-        if (pick == 0) return platformKinds.isEmpty() ? SPRING : PLATFORMS;
-        if (pick == 1 && !platformKinds.isEmpty() && Long.remainderUnsigned(random >>> 20, 2) == 0) return SPRING;
-        return NARROW;
+    public boolean platformStretch(long stretch) {
+        if (platformKinds.isEmpty() || stretch < 2) return false;
+        if (Math.abs(stepHeight(stretch * 4 + 3)) > TIER_STEP) return false;
+        return Long.remainderUnsigned(random(stretch + SEED + 0x504c4154L), 3) == 0;
     }
 
     /** Corridor cut index for the near (0) or far (1) edge of a platform stretch's pit. */

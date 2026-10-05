@@ -134,15 +134,6 @@ only block is 32 pixels) and the Star Light course (whose first act places none)
 ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
 stretches in one jump; wider ones need a platform. No enemies patrol platform stretches.
 
-Other wide pits are **spring chasms**: a red spring (the ROM spring art and sound) stands
-on the approach bank 48 pixels before the pit and launches Sonic with the stock red
-power, about 585 pixels high, clear across the chasm. A line of four rings rises off it
-along the flight. In Labyrinth and Star Light (no usable platforms) every wide pit is a
-spring chasm; elsewhere about one in six otherwise ordinary corridors from the third on
-becomes one. Unlike the solid stock spring, it fires whenever Sonic passes over it on the
-ground or low in a jump, so jumping at the pit's edge cannot miss it and running into it
-never stalls him; it lifts a slower Sonic to at least 4 pixels per frame forward. Chasms
-are one-way: there is no spring on the far bank.
 
 The other sections retain the ROM-derived hills and dips, raised or lowered to the
 current level; raised and lowered levels use fewer hill shapes because the layout

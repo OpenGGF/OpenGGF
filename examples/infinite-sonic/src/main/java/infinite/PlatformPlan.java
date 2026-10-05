@@ -13,8 +13,8 @@ public final class PlatformPlan {
 
     /** Stones for the pit that ends in this section (4k+3 of a platform stretch), left to right. */
     public static Stone[] at(TerrainLibrary terrain, long section) {
+        if (Math.floorMod(section, 4) != 3 || !terrain.platformRun(section)) return new Stone[0];
         long stretch = Math.floorDiv(section, 4);
-        if (Math.floorMod(section, 4) != 3 || !terrain.platformStretch(stretch)) return new Stone[0];
         long start = terrain.platformPitStart(stretch);
         long end = terrain.platformPitEnd(stretch);
         int width = (int) (end - start);
